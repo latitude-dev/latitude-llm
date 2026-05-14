@@ -134,23 +134,12 @@ export const markNotificationSeen = createServerFn({ method: "POST" })
   })
 
 const DAY_MS = 24 * 60 * 60 * 1000
-// 12h buckets — matches the issue detail drawer, gives ~4 bars across the
-// ±1 day window the notification card renders.
 const NOTIFICATION_TREND_BUCKET_SECONDS = 12 * 60 * 60
 
 interface IncidentTrendResult {
   readonly buckets: readonly IssueOccurrenceBucket[]
 }
 
-/**
- * Returns the per-day trend buckets for the issue tied to an alert incident,
- * scoped to a tight window around the moment the notification cares about:
- *   - `event: "opened"` → ±1 day around `incident.startedAt`
- *   - `event: "closed"` → ±1 day around `incident.endedAt`
- *
- * The window is clamped to `[incident.startedAt, now]` so we never query
- * before the incident's lifetime started or past the present.
- */
 export const getIncidentTrend = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
@@ -172,11 +161,7 @@ export const getIncidentTrend = createServerFn({ method: "GET" })
 
     const now = Date.now()
     const center = (data.event === "closed" ? incident.endedAt?.getTime() : incident.startedAt.getTime()) ?? now
-    // Window is ±1 day around `center`, clamped to `now` on the upper end. The
-    // chart shows issue occurrences (scores), not incident state — so we DO
-    // want pre-incident history here. That's the whole "leading up to
-    // escalation" story; clamping the lower bound to startedAt collapsed the
-    // window to a single day for `opened` events, giving only 2 bars at 12h.
+    // Pre-incident history matters — the chart shows issue activity, not incident state.
     const from = new Date(center - DAY_MS)
     const to = new Date(Math.min(center + DAY_MS, now))
 
@@ -203,18 +188,8 @@ export interface IncidentTargetResult {
   readonly projectSlug: string | null
 }
 
-/**
- * Resolves issue + project identity for an incident notification whose payload
- * snapshot is missing or partial. Legacy rows (created before the snapshot
- * landed) and rows whose fan-out lookup failed don't carry `issueId` /
- * `projectSlug`, so the renderer can't build a link from the payload alone.
- *
- * The alert_incident row is authoritative: `incident.sourceId` is the issueId
- * (for `sourceType: "issue"`, which is all current incident kinds) and
- * `incident.projectId` is the project's id. Missing issues/projects (deleted
- * since incident creation) surface as `null` fields — the renderer stays
- * non-interactive in that case.
- */
+// Fallback for incident notifications whose payload snapshot is missing fields:
+// the alert_incident row carries the issue + project ids authoritatively.
 export const getIncidentNotificationTarget = createServerFn({ method: "GET" })
   .inputValidator(z.object({ alertIncidentId: z.string() }))
   .handler(async ({ data }): Promise<IncidentTargetResult> => {

@@ -12,11 +12,7 @@ import { LIST_QUERY_KEY, UNREAD_QUERY_KEY } from "./notification-query-keys.ts"
 const HOVER_MARK_SEEN_DEBOUNCE_MS = 400
 
 interface BaseNotificationProps {
-  /**
-   * Notification id, used to fire per-row `markNotificationSeen` on hover /
-   * focus / click. `undefined` for synthetic / fallback cards where there's
-   * no real row to mark — those rows just don't wire the mark-seen handlers.
-   */
+  /** `undefined` for synthetic rows that don't correspond to a real notification. */
   readonly notificationId?: string
   readonly seenAt: Date | undefined
   readonly createdAt: Date
@@ -27,10 +23,6 @@ interface BaseNotificationProps {
   readonly children?: ReactNode
 }
 
-// "Unseen" is just "not yet seen" — once the row is optimistically marked seen
-// (on hover, click, or via "Mark all as read"), the visual state updates
-// immediately so the user gets feedback that the action took effect.
-
 type ListPage = {
   readonly items: readonly NotificationRecord[]
   readonly hasMore: boolean
@@ -38,17 +30,6 @@ type ListPage = {
 }
 type ListData = { readonly pages: readonly ListPage[]; readonly pageParams: readonly unknown[] }
 
-/**
- * Hover / focus / click handlers that fire `markNotificationSeen` for a
- * single row after a short debounce. Quick mouse passes don't mark items —
- * the user has to linger ~400ms (or click through, which fires immediately
- * and also covers touch devices). The first POST sets `firedRef` so
- * re-hovering doesn't churn the server.
- *
- * Optimistic update patches the cached list (sets `seenAt`) and decrements
- * the unread count so the badge updates instantly; `onSettled` invalidates
- * both keys so the next refetch reconciles with the server.
- */
 function useMarkSeenOnHover(notificationId: string | undefined, seenAt: Date | undefined) {
   const queryClient = useQueryClient()
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -85,7 +66,6 @@ function useMarkSeenOnHover(notificationId: string | undefined, seenAt: Date | u
     }
   }
 
-  // Clear the pending timer if the row unmounts (popover closed mid-debounce).
   useEffect(() => clearTimer, [])
 
   const canMark = notificationId !== undefined && seenAt === undefined
@@ -151,9 +131,6 @@ function BaseNotificationContent({
           )
         ) : null}
         {children}
-        {/* Timestamp anchored at the bottom of the body column — separates
-            meta-info from the content above and keeps the title row free to
-            wrap naturally without competing for horizontal space. */}
         <Text.H6 color="foregroundMuted" className="pt-1" noWrap>
           {relativeTime(createdAt)}
         </Text.H6>
@@ -163,18 +140,6 @@ function BaseNotificationContent({
   )
 }
 
-/**
- * Card-like row used by every per-type notification renderer in the bell
- * popover. Provides shared affordances — hover background, padding, optional
- * left icon — and routes the whole card through the TanStack `Link` when a
- * `url` is supplied so navigation stays SPA-internal.
- *
- * Hover / focus on an unread row fires `markNotificationSeen` after a 400ms
- * debounce; clicking through (when `url` is set) fires it immediately. The
- * no-url variant is used for parse-fail / placeholder rows that aren't
- * actionable, so we don't add a `tabIndex` — mouse-hover marking still works
- * there, and keyboard users skip them like any other static content.
- */
 export function BaseNotification({
   notificationId,
   seenAt,

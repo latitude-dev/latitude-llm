@@ -9,15 +9,6 @@ import {
   type IncidentTargetResult,
 } from "../../../../../../domains/notifications/notifications.functions.ts"
 
-/**
- * Live "name + status" refresh for the snapshot baked into the notification
- * payload at creation time. Returns `null` until the request resolves; the
- * caller falls back to the snapshot fields in the payload.
- *
- * Accepts an optional `fallback` (from `useIncidentLinkFallback`) so legacy
- * notifications without payload snapshots can still hydrate their summary
- * once the alert_incident → issue lookup resolves.
- */
 export function useLiveIssueSummary(
   payload: IncidentNotificationPayload,
   fallback: IncidentTargetResult | null = null,
@@ -34,16 +25,7 @@ export function useLiveIssueSummary(
   return data ?? null
 }
 
-/**
- * Resolves issueId / projectSlug / etc. from the underlying alert_incident
- * row when the notification payload doesn't carry them. Used for legacy rows
- * (created before payload snapshotting landed) and for rows where the
- * fan-out lookup failed. Returns `null` until resolved — the renderer falls
- * back to payload-only behavior in the meantime (non-interactive card).
- *
- * Only fires the network call when the payload is actually missing either
- * `issueId` or `projectSlug`. Healthy rows never trigger this lookup.
- */
+// Only fires when the payload snapshot is missing fields — healthy rows skip the network call.
 export function useIncidentLinkFallback(
   payload: IncidentNotificationPayload,
   alertIncidentId: string | null,
@@ -59,12 +41,7 @@ export function useIncidentLinkFallback(
   return data ?? null
 }
 
-/**
- * Deep-link to the issues route with the given issue's drawer pre-opened.
- * Returns `undefined` when neither the payload snapshot nor the live
- * fallback provides navigation targets — the renderer should drop the
- * `url` prop in that case so the card stays non-interactive.
- */
+// Returns `undefined` when neither the payload nor the fallback can produce a target.
 export function buildIssueUrl(
   payload: IncidentNotificationPayload,
   fallback: IncidentTargetResult | null = null,

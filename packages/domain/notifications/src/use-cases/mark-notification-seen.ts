@@ -10,13 +10,7 @@ export interface MarkNotificationSeenInput {
 
 export type MarkNotificationSeenError = RepositoryError
 
-/**
- * Mark a single notification as seen, scoped to the current user + org.
- * Idempotent: the underlying repo's WHERE clause requires `seen_at IS NULL`,
- * so re-marking an already-seen row is a no-op. Calls referencing a
- * notification that belongs to another user / org are silently no-ops too
- * — no row matches the WHERE, no error raised.
- */
+// Idempotent + ownership-scoped via the repo's WHERE clause; cross-tenant/user calls are silent no-ops.
 export const markNotificationSeenUseCase = (input: MarkNotificationSeenInput) =>
   Effect.gen(function* () {
     const repo = yield* NotificationRepository
