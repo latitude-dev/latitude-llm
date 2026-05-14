@@ -720,21 +720,59 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
+            // "Claude time" = sum-of-active-turn-bursts across all sessions.
+            //
+            // A Claude Code session contains many traces; each trace is one
+            // user turn (Claude processing one prompt → running tools →
+            // responding). The OLD implementation computed wall-clock as
+            // `max(end_time) - min(start_time)` grouped by `session_id`,
+            // which inflated the number with idle time *between* turns
+            // (user reading output, thinking, typing the next prompt).
+            // A 30-minute session of actual work could read as 4 hours.
+            //
+            // The fix: aggregate at the *trace* level first, then sum
+            // trace durations per session. Two nested GROUP BYs:
+            //
+            //   1. Inner GROUP BY trace_id  → per-trace wall-clock burst
+            //      (first span start to last span end of that trace).
+            //   2. Middle GROUP BY session_id → sum of trace durations
+            //      gives the session's "active work time."
+            //   3. Outer aggregation → total/longest across sessions.
+            //
+            // The PROJECT_WINDOW_FILTER already restricts to spans with
+            // `metadata['claude_code.version']` set, so traces from
+            // unrelated telemetry sources in the same project don't
+            // pollute the number.
             const result = await client.query({
               query: `
                 SELECT
-                  sumOrNull(duration_s)         AS total_duration_s,
-                  maxOrNull(duration_s)         AS longest_duration_s,
-                  argMax(workspace, duration_s) AS longest_workspace
+                  sumOrNull(session_duration_s)         AS total_duration_s,
+                  maxOrNull(session_duration_s)         AS longest_duration_s,
+                  argMax(workspace, session_duration_s) AS longest_workspace
                 FROM (
                   SELECT
-                    session_id,
-                    dateDiff('second', min(start_time), max(end_time)) AS duration_s,
-                    any(metadata['workspace.name'])                    AS workspace
-                  FROM spans
-                  WHERE ${PROJECT_WINDOW_FILTER}
-                    AND session_id != ''
-                  GROUP BY session_id
+                    sess_id,
+                    sum(trace_duration_s) AS session_duration_s,
+                    any(workspace)        AS workspace
+                  FROM (
+                    -- Aliases are deliberately NOT named after the underlying
+                    -- columns (e.g. \`any(session_id) AS sess_id\` rather than
+                    -- \`… AS session_id\`). ClickHouse's analyser resolves
+                    -- the WHERE clause against SELECT-list aliases and would
+                    -- otherwise complain "Aggregate function any(session_id)
+                    -- found in WHERE" when it sees \`AND session_id != ''\`.
+                    SELECT
+                      trace_id,
+                      any(session_id)                                    AS sess_id,
+                      any(metadata['workspace.name'])                    AS workspace,
+                      dateDiff('second', min(start_time), max(end_time)) AS trace_duration_s
+                    FROM spans
+                    WHERE ${PROJECT_WINDOW_FILTER}
+                      AND session_id != ''
+                      AND trace_id != ''
+                    GROUP BY trace_id
+                  )
+                  GROUP BY sess_id
                 )
               `,
               query_params: projectWindowParams(params),
