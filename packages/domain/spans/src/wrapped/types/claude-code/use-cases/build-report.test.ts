@@ -2,7 +2,30 @@ import type { Project } from "@domain/projects"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { reportV1Schema } from "../entities/report.ts"
-import { type AssembleReportInput, assembleReport, toolBucketFor } from "./build-report.ts"
+import type { ToolMixRow } from "../ports/claude-code-span-reader.ts"
+import {
+  type AssembleReportInput,
+  assembleReport,
+  classifyToolMixRow,
+  isGitWriteSegment,
+  toolBucketFor,
+} from "./build-report.ts"
+
+/**
+ * Convenience builder for `ToolMixRow` fixtures — most tests only care
+ * about the `(toolName, uses)` pair; the post-refactor row carries three
+ * extra fields (bash prefix, bash second token, file disposition) that we
+ * default to empty / "workspace" so the existing tests still exercise the
+ * pre-refactor routing.
+ */
+const row = (toolName: string, uses: number, extras: Partial<ToolMixRow> = {}): ToolMixRow => ({
+  toolName,
+  uses,
+  bashPrefix: "",
+  bashSecondToken: "",
+  fileDisposition: toolName === "Bash" ? "" : (extras.fileDisposition ?? ""),
+  ...extras,
+})
 
 const ORG_ID = OrganizationId("org-build".padEnd(24, "x").slice(0, 24))
 const PROJECT_ID = ProjectId("proj-build".padEnd(24, "x").slice(0, 24))
@@ -38,6 +61,7 @@ const baseInput: AssembleReportInput = {
     repos: 1,
     streakDays: 5,
     testsRun: 9,
+    gitWriteOps: 0,
   },
   durationStats: {
     totalDurationMs: 30 * 60 * 1000,
@@ -51,11 +75,11 @@ const baseInput: AssembleReportInput = {
     readLines: 9_200,
   },
   toolMix: [
-    { toolName: "Edit", uses: 50 },
-    { toolName: "Read", uses: 25 },
-    { toolName: "Bash", uses: 15 },
-    { toolName: "Write", uses: 5 },
-    { toolName: "Grep", uses: 5 },
+    row("Edit", 50, { fileDisposition: "workspace" }),
+    row("Read", 25, { fileDisposition: "workspace" }),
+    row("Bash", 15),
+    row("Write", 5, { fileDisposition: "workspace" }),
+    row("Grep", 5),
   ],
   topBash: [
     { pattern: "pnpm", uses: 9 },
@@ -131,6 +155,108 @@ describe("toolBucketFor", () => {
   })
 })
 
+describe("classifyToolMixRow — Bash sub-classification", () => {
+  it("routes investigation-style binaries to search", () => {
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "grep" }))).toBe("search")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "rg" }))).toBe("search")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "find" }))).toBe("search")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "ls" }))).toBe("search")
+  })
+
+  it("routes content-reading binaries (cat/head/tail) to read", () => {
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "cat" }))).toBe("read")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "head" }))).toBe("read")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "tail" }))).toBe("read")
+  })
+
+  it("routes curl / wget to research", () => {
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "curl" }))).toBe("research")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "wget" }))).toBe("research")
+  })
+
+  it("drops navigation-only commands (cd / pwd / open / claude)", () => {
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "cd" }))).toBe("excluded")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "pwd" }))).toBe("excluded")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "open" }))).toBe("excluded")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "claude" }))).toBe("excluded")
+  })
+
+  it("routes git status / log / diff to search (investigation)", () => {
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "status" }))).toBe("search")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "log" }))).toBe("search")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "diff" }))).toBe("search")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "blame" }))).toBe("search")
+  })
+
+  it("drops git checkout / switch / config (navigation / setup)", () => {
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "checkout" }))).toBe("excluded")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "switch" }))).toBe("excluded")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "config" }))).toBe("excluded")
+  })
+
+  it("keeps git commit / push / merge in bash (genuine shell orchestration)", () => {
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "commit" }))).toBe("bash")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "push" }))).toBe("bash")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "git", bashSecondToken: "merge" }))).toBe("bash")
+  })
+
+  it("keeps unrecognised binaries in bash (build / test / runtime / infra)", () => {
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "pnpm" }))).toBe("bash")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "xcodebuild" }))).toBe("bash")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "python3" }))).toBe("bash")
+    expect(classifyToolMixRow(row("Bash", 1, { bashPrefix: "railway" }))).toBe("bash")
+  })
+})
+
+describe("classifyToolMixRow — file-path disposition", () => {
+  it("routes plan-file edits/reads to the plan bucket", () => {
+    expect(classifyToolMixRow(row("Edit", 1, { fileDisposition: "plan-file" }))).toBe("plan")
+    expect(classifyToolMixRow(row("Write", 1, { fileDisposition: "plan-file" }))).toBe("plan")
+    expect(classifyToolMixRow(row("Read", 1, { fileDisposition: "plan-file" }))).toBe("plan")
+  })
+
+  it("drops `.claude/` config edits/reads entirely", () => {
+    expect(classifyToolMixRow(row("Edit", 1, { fileDisposition: "claude-noise" }))).toBe("excluded")
+    expect(classifyToolMixRow(row("Read", 1, { fileDisposition: "claude-noise" }))).toBe("excluded")
+  })
+
+  it("drops out-of-workspace edits/reads entirely", () => {
+    expect(classifyToolMixRow(row("Edit", 1, { fileDisposition: "external" }))).toBe("excluded")
+    expect(classifyToolMixRow(row("Read", 1, { fileDisposition: "external" }))).toBe("excluded")
+  })
+
+  it("counts workspace edits/reads via the existing tool-name map", () => {
+    expect(classifyToolMixRow(row("Edit", 1, { fileDisposition: "workspace" }))).toBe("edit")
+    expect(classifyToolMixRow(row("Write", 1, { fileDisposition: "workspace" }))).toBe("write")
+    expect(classifyToolMixRow(row("Read", 1, { fileDisposition: "workspace" }))).toBe("read")
+  })
+
+  it("falls back to the tool-name map when no file_path was on the call", () => {
+    expect(classifyToolMixRow(row("Edit", 1))).toBe("edit")
+    expect(classifyToolMixRow(row("Grep", 1))).toBe("search")
+    expect(classifyToolMixRow(row("TodoWrite", 1))).toBe("plan")
+  })
+})
+
+describe("isGitWriteSegment", () => {
+  it("returns true for the git write-ops subcommands", () => {
+    for (const sub of ["commit", "push", "merge", "rebase", "tag", "revert", "cherry-pick"]) {
+      expect(isGitWriteSegment(row("Bash", 1, { bashPrefix: "git", bashSecondToken: sub }))).toBe(true)
+    }
+  })
+
+  it("returns false for git investigation / navigation subcommands", () => {
+    for (const sub of ["status", "log", "diff", "checkout", "switch", "config"]) {
+      expect(isGitWriteSegment(row("Bash", 1, { bashPrefix: "git", bashSecondToken: sub }))).toBe(false)
+    }
+  })
+
+  it("returns false for non-git Bash segments and non-Bash rows", () => {
+    expect(isGitWriteSegment(row("Bash", 1, { bashPrefix: "pnpm" }))).toBe(false)
+    expect(isGitWriteSegment(row("Edit", 1, { fileDisposition: "workspace" }))).toBe(false)
+  })
+})
+
 describe("assembleReport", () => {
   it("produces a report that validates against the schema", () => {
     const report = assembleReport(baseInput)
@@ -153,9 +279,9 @@ describe("assembleReport", () => {
     const report = assembleReport({
       ...baseInput,
       toolMix: [
-        { toolName: "Edit", uses: 10 },
-        { toolName: "NotebookEdit", uses: 3 },
-        { toolName: "MultiEdit", uses: 2 },
+        row("Edit", 10, { fileDisposition: "workspace" }),
+        row("NotebookEdit", 3, { fileDisposition: "workspace" }),
+        row("MultiEdit", 2, { fileDisposition: "workspace" }),
       ],
     })
     expect(report.toolMix.edit).toBe(15)

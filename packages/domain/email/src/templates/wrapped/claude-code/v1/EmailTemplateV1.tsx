@@ -303,6 +303,7 @@ ClaudeCodeWrappedEmailV1.PreviewProps = {
       repos: 1,
       streakDays: 5,
       testsRun: 32,
+      gitWriteOps: 28,
     },
     toolMix: { bash: 87, read: 168, edit: 142, write: 21, search: 52, research: 4, plan: 12, other: 0 },
     loc: {

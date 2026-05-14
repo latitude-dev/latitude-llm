@@ -35,9 +35,15 @@ const QUERY_CONCURRENCY = 6
 const DEEP_DIVE_CONCURRENCY = 3
 
 /**
- * Tool-name → bucket map. Maps every Claude Code tool we ship today and
- * funnels everything else into `other` so the bucket sums always equal the
- * total tool-call count.
+ * Tool-name → bucket map. Used for two paths:
+ *   1. The non-Bash, non-path-aware classifier branch in `classifyToolMixRow`.
+ *   2. Coarse name-only mapping for `dominantTool` on the workspace deep
+ *      dive, where the display field is "what kind of tool was most-used
+ *      in this workspace" — a per-span path/command analysis would be
+ *      overkill for that bit of copy.
+ *
+ * `Bash` maps to `bash` here for case (2); the per-segment classifier in
+ * `classifyBashSegment` is what drives the toolMix shares.
  */
 const TOOL_NAME_TO_BUCKET: Record<string, ToolBucket> = {
   Bash: "bash",
@@ -59,6 +65,56 @@ const TOOL_NAME_TO_BUCKET: Record<string, ToolBucket> = {
 
 export const toolBucketFor = (toolName: string): ToolBucket => TOOL_NAME_TO_BUCKET[toolName] ?? "other"
 
+const PATH_AWARE_TOOLS = new Set(["Edit", "MultiEdit", "NotebookEdit", "Write", "Read", "NotebookRead"])
+
+// Bash command-prefix routing. Lowercased; the adapter does the lowercase.
+const BASH_SEARCH_PREFIXES = new Set(["grep", "rg", "ag", "find", "ls", "tree"])
+const BASH_READ_PREFIXES = new Set(["cat", "head", "tail"])
+const BASH_RESEARCH_PREFIXES = new Set(["curl", "wget"])
+const BASH_EXCLUDED_PREFIXES = new Set(["cd", "pwd", "pushd", "popd", "clear", "exit", "open", "claude"])
+
+// git sub-command routing.
+const GIT_SEARCH_SUBCOMMANDS = new Set(["status", "log", "diff", "show", "blame", "branch", "ls-files", "reflog"])
+const GIT_EXCLUDED_SUBCOMMANDS = new Set(["checkout", "switch", "restore", "config", "init", "remote"])
+const GIT_WRITE_SUBCOMMANDS = new Set(["commit", "push", "merge", "rebase", "tag", "revert", "cherry-pick"])
+
+/**
+ * Pure routing rule for one `ToolMixRow`. Returns the bucket the row counts
+ * toward, or `"excluded"` to drop it entirely (so the toolMix denominator
+ * isn't padded by navigation/scratch noise). Mirrors the SQL classification
+ * in the CH adapter — both live here so unit tests pin the contract.
+ */
+export const classifyToolMixRow = (row: ToolMixRow): ToolBucket | "excluded" => {
+  if (row.toolName === "Bash") {
+    return classifyBashSegment(row.bashPrefix, row.bashSecondToken)
+  }
+  if (PATH_AWARE_TOOLS.has(row.toolName)) {
+    if (row.fileDisposition === "plan-file") return "plan"
+    if (row.fileDisposition === "claude-noise" || row.fileDisposition === "external") return "excluded"
+    // "workspace" or "" (no file_path on this call) fall through to the
+    // tool-name map.
+  }
+  return TOOL_NAME_TO_BUCKET[row.toolName] ?? "other"
+}
+
+const classifyBashSegment = (prefix: string, secondToken: string): ToolBucket | "excluded" => {
+  if (BASH_SEARCH_PREFIXES.has(prefix)) return "search"
+  if (BASH_READ_PREFIXES.has(prefix)) return "read"
+  if (BASH_RESEARCH_PREFIXES.has(prefix)) return "research"
+  if (BASH_EXCLUDED_PREFIXES.has(prefix)) return "excluded"
+  if (prefix === "git") {
+    if (GIT_SEARCH_SUBCOMMANDS.has(secondToken)) return "search"
+    if (GIT_EXCLUDED_SUBCOMMANDS.has(secondToken)) return "excluded"
+    // Including GIT_WRITE_SUBCOMMANDS, GIT_NEUTRAL (add/rm/mv/stash/pull/…)
+    // and unknown subcommands — stays in `bash` (genuine shell orchestration).
+  }
+  return "bash"
+}
+
+/** True when this row's command segment increments `gitWriteOps`. */
+export const isGitWriteSegment = (row: ToolMixRow): boolean =>
+  row.toolName === "Bash" && row.bashPrefix === "git" && GIT_WRITE_SUBCOMMANDS.has(row.bashSecondToken)
+
 const emptyToolMix = (): ToolMix => ({
   bash: 0,
   read: 0,
@@ -73,7 +129,9 @@ const emptyToolMix = (): ToolMix => ({
 const bucketise = (rows: readonly ToolMixRow[]): ToolMix => {
   const mix = emptyToolMix()
   for (const row of rows) {
-    mix[toolBucketFor(row.toolName)] += row.uses
+    const bucket = classifyToolMixRow(row)
+    if (bucket === "excluded") continue
+    mix[bucket] += row.uses
   }
   return mix
 }
@@ -203,6 +261,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
     filesTouched: input.totals.filesTouched,
     commandsRun: input.totals.commandsRun,
     commits: input.totals.commits,
+    gitWriteOps: input.totals.gitWriteOps,
     testsRun: input.totals.testsRun,
     editAdded,
     writeLines,
@@ -245,6 +304,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
       repos: input.totals.repos,
       streakDays: input.totals.streakDays,
       testsRun: input.totals.testsRun,
+      gitWriteOps: input.totals.gitWriteOps,
     },
     toolMix,
     loc: {

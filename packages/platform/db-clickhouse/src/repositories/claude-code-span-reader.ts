@@ -40,6 +40,60 @@ const toClickhouseDateTime = (date: Date): string => date.toISOString().replace(
 // embedded SQL matches what the spans adapter actually inserts.
 const FILE_PATH_TOOLS = ["Read", "Edit", "Write", "NotebookEdit", "MultiEdit"] as const
 
+// SQL list literal for the path-aware tool set — `Read`/`Edit`/`Write` plus
+// the two notebook variants. Used by every query that filters or routes on
+// file path.
+const FILE_PATH_TOOLS_SQL = FILE_PATH_TOOLS.map((t) => `'${t}'`).join(",")
+const PATH_AWARE_TOOLS_SQL = `('Edit','MultiEdit','NotebookEdit','Write','Read','NotebookRead')`
+
+// Splits a Bash command string into its `&&` / `||` / `;` / `|`-separated
+// segments. Order in the alternation matters — `||` and `&&` are tried
+// before the single `|` so the two-char operators win at each position
+// (RE2 alternation is greedy left-to-right per position).
+//
+// Wraps each operator in optional whitespace so the resulting segments
+// come back already trimmed. Subshells (`$(…)`, backticks) are *not*
+// handled — rare enough that the regex approach is good enough and
+// proper handling needs a tokeniser.
+const BASH_SEGMENT_REGEX = "\\\\s*(?:&&|\\\\|\\\\||;|\\\\|)\\\\s*"
+
+// Path classifier used by every query that has to decide whether a file
+// touch counts. Mirrors the TS `classifyToolMixRow` rules in
+// `@domain/spans/.../build-report.ts` — both must move in lockstep.
+//
+//   plan-file:    `**/.claude/plans/<id>.md`            → routes to `plan`
+//   claude-noise: any other path under `**/.claude/**`  → excluded
+//   external:     outside the workspace root            → excluded
+//   workspace:    inside the workspace                  → existing bucket
+//   "":           the call carries no `file_path`       → existing bucket
+//
+// Empty string is the "no file_path" case (LS / a Read with `offset`
+// only / a malformed input) — the call still counts toward the existing
+// tool-name bucket; only path-bearing calls can be excluded by path.
+const filePathDispositionSql = (workspacePathExpr: string, filePathExpr: string): string => `
+  multiIf(
+    ${filePathExpr} = '', '',
+    match(${filePathExpr}, '/\\\\.claude/plans/[^/]+\\\\.md$'), 'plan-file',
+    positionUTF8(${filePathExpr}, '/.claude/') > 0, 'claude-noise',
+    ${workspacePathExpr} != '' AND NOT startsWith(${filePathExpr}, ${workspacePathExpr}), 'external',
+    'workspace'
+  )
+`
+
+/** SQL predicate selecting only file_paths that should count toward LOC stats. */
+const workspaceFilePathPredicate = (workspacePathExpr: string, filePathExpr: string): string => `
+  (
+    ${filePathExpr} = ''
+    OR (
+      positionUTF8(${filePathExpr}, '/.claude/') = 0
+      AND (${workspacePathExpr} = '' OR startsWith(${filePathExpr}, ${workspacePathExpr}))
+    )
+  )
+`
+
+// SQL list literals for the Bash sub-classification. Lowercased.
+const GIT_WRITE_SUBCOMMANDS_SQL = `('commit','push','merge','rebase','tag','revert','cherry-pick')`
+
 // Shared filter parameters appended to every project-window query so the same
 // keys are used everywhere and the centralised filter stays in sync.
 const projectWindowParams = (params: {
@@ -83,6 +137,7 @@ interface TotalsCHRow {
   readonly repos: number | string
   readonly streak_days: number | string
   readonly tests_run: number | string
+  readonly git_write_ops: number | string
 }
 
 interface LocStatsCHRow {
@@ -107,6 +162,9 @@ interface DurationStatsCHRow {
 
 interface ToolMixCHRow {
   readonly tool_name: string
+  readonly file_disposition: string
+  readonly bash_prefix: string
+  readonly bash_second_token: string
   readonly uses: number | string
 }
 
@@ -232,27 +290,46 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
+            // `commands_run`, `tests_run` and `git_write_ops` derive from
+            // *Bash segments* (so `cd foo && grep bar && git push` counts
+            // as three segments — one navigation, one search, one push).
+            // The bash_segments CTE explodes each Bash tool call into its
+            // operator-split segments; the outer query joins the segment
+            // counters in with the rest of the per-span aggregates.
             const result = await client.query({
               query: `
+                WITH bash_segments AS (
+                  SELECT
+                    lowerUTF8(splitByChar(' ', trim(segment))[1])                       AS prefix,
+                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 2))         AS second_token,
+                    segment
+                  FROM spans
+                  ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
+                                            JSONExtractString(tool_input, 'command')) AS segment
+                  WHERE ${PROJECT_WINDOW_FILTER}
+                    AND tool_name = 'Bash'
+                    AND segment != ''
+                )
                 SELECT
                   countDistinctIf(session_id, session_id != '')                                       AS sessions,
                   countIf(operation = 'execute_tool')                                                 AS tool_calls,
                   countDistinctIf(
                     JSONExtractString(tool_input, 'file_path'),
-                    tool_name IN (${FILE_PATH_TOOLS.map((t) => `'${t}'`).join(",")})
+                    tool_name IN (${FILE_PATH_TOOLS_SQL})
                     AND JSONExtractString(tool_input, 'file_path') != ''
+                    AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")}
                   )                                                                                   AS files_touched,
-                  countIf(tool_name = 'Bash')                                                         AS commands_run,
+                  (SELECT count() FROM bash_segments)                                                 AS commands_run,
                   countDistinctIf(metadata['workspace.name'], metadata['workspace.name'] != '')       AS workspaces,
                   countDistinctIf(metadata['git.branch'],     metadata['git.branch']     != '')       AS branches,
                   countDistinctIf(metadata['git.commit'],     metadata['git.commit']     != '')       AS commits,
                   countDistinctIf(metadata['git.repo'],       metadata['git.repo']       != '')       AS repos,
                   uniqExact(toDate(start_time))                                                       AS streak_days,
-                  countIf(
-                    tool_name = 'Bash'
-                    AND match(JSONExtractString(tool_input, 'command'),
-                      '(?i)(^|\\s)(test(\\s|:|$)|pytest|vitest|jest|mocha|rspec)')
-                  )                                                                                   AS tests_run
+                  (SELECT countIf(match(segment,
+                      '(?i)(^|\\\\s)(test(\\\\s|:|$)|pytest|vitest|jest|mocha|rspec)'))
+                    FROM bash_segments)                                                               AS tests_run,
+                  (SELECT countIf(prefix = 'git' AND second_token IN ${GIT_WRITE_SUBCOMMANDS_SQL})
+                    FROM bash_segments)                                                               AS git_write_ops
                 FROM spans
                 WHERE ${PROJECT_WINDOW_FILTER}
               `,
@@ -271,6 +348,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               repos: 0,
               streakDays: 0,
               testsRun: 0,
+              gitWriteOps: 0,
             }
             if (!row) return empty
             return {
@@ -284,6 +362,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               repos: num(row.repos),
               streakDays: num(row.streak_days),
               testsRun: num(row.tests_run),
+              gitWriteOps: num(row.git_write_ops),
             }
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "getTotalsForProject")))
@@ -297,25 +376,42 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
             // countSubstrings counts non-overlapping occurrences — equivalent
             // to "lines of code" when measured by '\n'. We treat the final
             // line as "complete enough" for the aggregate.
+            //
+            // Each per-tool-name aggregation also gates on
+            // `workspaceFilePathPredicate` so edits to `.claude/**` and
+            // out-of-workspace scratch files don't inflate the headline
+            // "lines written" / "lines read" numbers.
             const result = await client.query({
               query: `
                 SELECT
                   sumIf(countSubstrings(JSONExtractString(tool_input, 'content'),    '\\n'),
-                        tool_name = 'Write')                                          AS write_lines,
+                        tool_name = 'Write'
+                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                                                                                       AS write_lines,
                   sumIf(countSubstrings(JSONExtractString(tool_input, 'new_string'), '\\n'),
-                        tool_name IN ('Edit', 'NotebookEdit'))                        AS edit_added,
+                        tool_name IN ('Edit', 'NotebookEdit')
+                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                                                                                       AS edit_added,
                   sumIf(countSubstrings(JSONExtractString(tool_input, 'old_string'), '\\n'),
-                        tool_name IN ('Edit', 'NotebookEdit'))                        AS edit_removed,
+                        tool_name IN ('Edit', 'NotebookEdit')
+                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                                                                                       AS edit_removed,
                   sumIf(arraySum(arrayMap(
                           x -> countSubstrings(JSONExtractString(x, 'new_string'), '\\n'),
                           JSONExtractArrayRaw(tool_input, 'edits')
-                        )), tool_name = 'MultiEdit')                                  AS multiedit_added,
+                        )), tool_name = 'MultiEdit'
+                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                                                                                       AS multiedit_added,
                   sumIf(arraySum(arrayMap(
                           x -> countSubstrings(JSONExtractString(x, 'old_string'), '\\n'),
                           JSONExtractArrayRaw(tool_input, 'edits')
-                        )), tool_name = 'MultiEdit')                                  AS multiedit_removed,
+                        )), tool_name = 'MultiEdit'
+                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                                                                                       AS multiedit_removed,
                   sumIf(countSubstrings(tool_output, '\\n'),
-                        tool_name IN ('Read', 'NotebookRead'))                        AS read_lines
+                        tool_name IN ('Read', 'NotebookRead')
+                        AND ${workspaceFilePathPredicate("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")})
+                                                                                       AS read_lines
                 FROM spans
                 WHERE ${PROJECT_WINDOW_FILTER}
               `,
@@ -349,6 +445,11 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                 WHERE ${PROJECT_WINDOW_FILTER}
                   AND tool_name = 'Write'
                   AND JSONExtractString(tool_input, 'file_path') != ''
+                  AND positionUTF8(JSONExtractString(tool_input, 'file_path'), '/.claude/') = 0
+                  AND (
+                    metadata['workspace.path'] = ''
+                    OR startsWith(JSONExtractString(tool_input, 'file_path'), metadata['workspace.path'])
+                  )
                 ORDER BY lines DESC
                 LIMIT 1
               `,
@@ -408,14 +509,57 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
+            // The query unions two row sources:
+            //
+            //   1. Non-Bash tool calls — one row each, with a path
+            //      disposition tag for the path-aware tools (Read / Edit /
+            //      Write / NotebookEdit / NotebookRead / MultiEdit). The
+            //      domain-side classifier in `build-report.ts` uses the
+            //      disposition to route `.claude/plans/*.md` edits to the
+            //      `plan` bucket and drop `.claude/**` config + scratch
+            //      paths entirely.
+            //
+            //   2. Bash command *segments* — every Bash tool call is
+            //      exploded on `&&` / `||` / `;` / `|`, each segment's
+            //      first two tokens are lowercased, and the row carries
+            //      `(bash_prefix, bash_second_token)`. The classifier
+            //      routes by prefix (`grep` → search, `cat` → read, etc.)
+            //      and `git`-by-subcommand (`git status` → search,
+            //      `git push` → bash, `git checkout` → excluded).
+            //
+            // GROUP BY collapses repeats so the wire payload stays
+            // bounded; cardinality is bounded by tool names × distinct
+            // first-two-token pairs in user Bash + 4 disposition values.
             const result = await client.query({
               query: `
-                SELECT tool_name, count() AS uses
-                FROM spans
-                WHERE ${PROJECT_WINDOW_FILTER}
-                  AND operation = 'execute_tool'
-                  AND tool_name != ''
-                GROUP BY tool_name
+                SELECT tool_name, file_disposition, bash_prefix, bash_second_token, count() AS uses
+                FROM (
+                  SELECT
+                    tool_name,
+                    ${filePathDispositionSql("metadata['workspace.path']", "JSONExtractString(tool_input, 'file_path')")} AS file_disposition,
+                    ''  AS bash_prefix,
+                    ''  AS bash_second_token
+                  FROM spans
+                  WHERE ${PROJECT_WINDOW_FILTER}
+                    AND operation = 'execute_tool'
+                    AND tool_name != ''
+                    AND tool_name != 'Bash'
+
+                  UNION ALL
+
+                  SELECT
+                    'Bash' AS tool_name,
+                    ''     AS file_disposition,
+                    lowerUTF8(splitByChar(' ', trim(segment))[1])                       AS bash_prefix,
+                    lowerUTF8(arrayElement(splitByChar(' ', trim(segment)), 2))         AS bash_second_token
+                  FROM spans
+                  ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
+                                            JSONExtractString(tool_input, 'command')) AS segment
+                  WHERE ${PROJECT_WINDOW_FILTER}
+                    AND tool_name = 'Bash'
+                    AND segment != ''
+                )
+                GROUP BY tool_name, file_disposition, bash_prefix, bash_second_token
               `,
               query_params: projectWindowParams(params),
               format: "JSONEachRow",
@@ -424,7 +568,13 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
           })
           .pipe(
             Effect.map((rows): readonly ToolMixRow[] =>
-              rows.map((row) => ({ toolName: row.tool_name, uses: num(row.uses) })),
+              rows.map((row) => ({
+                toolName: row.tool_name,
+                fileDisposition: (row.file_disposition || "") as ToolMixRow["fileDisposition"],
+                bashPrefix: row.bash_prefix,
+                bashSecondToken: row.bash_second_token,
+                uses: num(row.uses),
+              })),
             ),
             Effect.mapError((error) => toRepositoryError(error, "getToolMix")),
           )
@@ -435,6 +585,10 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
+            // Excludes `.claude/**` and out-of-workspace paths — the
+            // "top files" table reflects *this project's* hot files only,
+            // so a Read against `/Users/x/notes.md` or an Edit on
+            // `.claude/settings.local.json` doesn't crowd the list.
             const result = await client.query({
               query: `
                 SELECT
@@ -442,8 +596,13 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   count() AS touches
                 FROM spans
                 WHERE ${PROJECT_WINDOW_FILTER}
-                  AND tool_name IN (${FILE_PATH_TOOLS.map((t) => `'${t}'`).join(",")})
+                  AND tool_name IN (${FILE_PATH_TOOLS_SQL})
                   AND JSONExtractString(tool_input, 'file_path') != ''
+                  AND positionUTF8(JSONExtractString(tool_input, 'file_path'), '/.claude/') = 0
+                  AND (
+                    metadata['workspace.path'] = ''
+                    OR startsWith(JSONExtractString(tool_input, 'file_path'), metadata['workspace.path'])
+                  )
                 GROUP BY path
                 ORDER BY touches DESC
                 LIMIT 5
@@ -466,15 +625,21 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         return yield* chSqlClient
           .query(async (client) => {
+            // Counts segments, not whole tool calls — `cd foo && grep bar`
+            // contributes a `cd` and a `grep` rather than just the `cd`.
+            // Without the split, the most-chained-after commands (which
+            // are usually the *important* ones) get under-counted.
             const result = await client.query({
               query: `
                 SELECT
-                  splitByChar(' ', trim(BOTH ' ' FROM JSONExtractString(tool_input, 'command')))[1] AS pattern,
+                  splitByChar(' ', trim(segment))[1] AS pattern,
                   count() AS uses
                 FROM spans
+                ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
+                                          JSONExtractString(tool_input, 'command')) AS segment
                 WHERE ${PROJECT_WINDOW_FILTER}
                   AND tool_name = 'Bash'
-                  AND JSONExtractString(tool_input, 'command') != ''
+                  AND segment != ''
                 GROUP BY pattern
                 ORDER BY uses DESC
                 LIMIT 5
@@ -589,21 +754,28 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   FROM spans
                   WHERE ${PROJECT_WINDOW_FILTER}
                     AND metadata['workspace.name'] = {workspaceName:String}
-                    AND tool_name IN ('Read','NotebookRead','Edit','NotebookEdit','MultiEdit','Write')
+                    AND tool_name IN ${PATH_AWARE_TOOLS_SQL}
                     AND JSONExtractString(tool_input, 'file_path') != ''
+                    AND positionUTF8(JSONExtractString(tool_input, 'file_path'), '/.claude/') = 0
+                    AND (
+                      metadata['workspace.path'] = ''
+                      OR startsWith(JSONExtractString(tool_input, 'file_path'), metadata['workspace.path'])
+                    )
                   GROUP BY path
                   ORDER BY touches DESC
                   LIMIT 3
                 ),
                 commands AS (
                   SELECT
-                    splitByChar(' ', trim(BOTH ' ' FROM JSONExtractString(tool_input, 'command')))[1] AS pattern,
+                    splitByChar(' ', trim(segment))[1] AS pattern,
                     count() AS uses
                   FROM spans
+                  ARRAY JOIN splitByRegexp('${BASH_SEGMENT_REGEX}',
+                                            JSONExtractString(tool_input, 'command')) AS segment
                   WHERE ${PROJECT_WINDOW_FILTER}
                     AND metadata['workspace.name'] = {workspaceName:String}
                     AND tool_name = 'Bash'
-                    AND JSONExtractString(tool_input, 'command') != ''
+                    AND segment != ''
                   GROUP BY pattern
                   ORDER BY uses DESC
                   LIMIT 3
