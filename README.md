@@ -24,7 +24,7 @@ Latitude shows you **what will break next** in your AI Agent and helps you fix i
 - **[Issue-centric](https://docs.latitude.so/issues/overview#issues)**: failed traces grouped into tracked issues, with status, size, and trend.
 - **[Human-aligned evals](https://docs.latitude.so/evaluations/alignment#evaluation-alignment)**: evals built automatically from your team's judgments, with an alignment score that tracks drift from human judgment over time.
 - **[Agent-native traces](https://docs.latitude.so/observability/overview#observability-overview)**: multi-turn sessions, tool calls, and full execution paths in one view.
-- **Semantic search** _(coming soon)_: find traces by meaning, even when the exact words don't match.
+- **Semantic search**: find traces by meaning, even when the exact words don't match.
 - **[Simulations](https://docs.latitude.so/simulations/overview#simulations-overview)** _(coming soon)_: replay agents against saved scenarios before shipping.
 
 
@@ -89,7 +89,7 @@ Works in the terminal, the Desktop app, and IDE extensions.
 - [x] Issue discovery + clustering
 - [x] Issue-to-eval generation with alignment optimization
 - [x] Eval alignment tracking (MCC, coverage)
-- [ ] Semantic search: find traces by meaning *(in progress)*
+- [x] Semantic search: find traces by meaning
 - [ ] Potential issues: track failure modes you already know about
 - [ ] Stable v2 release
 
