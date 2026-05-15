@@ -9,12 +9,7 @@ import {
 } from "@domain/notifications"
 import { ProjectRepository } from "@domain/projects"
 import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
-import {
-  AlertIncidentId,
-  IssueId,
-  type NotificationPreferences,
-  notificationPreferencesSchema,
-} from "@domain/shared"
+import { AlertIncidentId, IssueId, type NotificationPreferences, notificationPreferencesSchema } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
