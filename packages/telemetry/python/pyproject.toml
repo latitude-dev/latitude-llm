@@ -66,6 +66,10 @@ dev = [
 # Mini Shai-Hulud campaign for why). Relative durations land a rolling cutoff
 # — no need to bump a fixed date.
 exclude-newer = "7d"
+override-dependencies = [
+    # litellm (dev) pins pydantic==2.12.5; keep the library on the same pydantic as prod deps.
+    "pydantic==2.13.3",
+]
 
 [tool.pyright]
 pythonVersion = "3.11"
