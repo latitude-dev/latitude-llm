@@ -238,7 +238,7 @@ describe("requestIncidentNotificationsUseCase", () => {
 
   it("skips when project settings disable the matching alert kind", async () => {
     const { incidentId, layer } = setup({
-      projectSettings: { alertNotifications: { "issue.new": false } },
+      projectSettings: { notifications: { incidents: { "issue.new": false } } },
     })
 
     const result = await Effect.runPromise(
@@ -254,7 +254,7 @@ describe("requestIncidentNotificationsUseCase", () => {
 
   it("does not skip when settings disable a different kind", async () => {
     const { incidentId, layer } = setup({
-      projectSettings: { alertNotifications: { "issue.escalating": false } },
+      projectSettings: { notifications: { incidents: { "issue.escalating": false } } },
     })
 
     const result = await Effect.runPromise(

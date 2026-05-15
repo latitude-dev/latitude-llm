@@ -6,7 +6,7 @@ import {
   AlertIncidentId,
   generateId,
   IssueId,
-  isAlertNotificationEnabled,
+  isIncidentNotificationEnabled,
   type NotFoundError,
   NotificationId,
   type OrganizationId,
@@ -66,8 +66,8 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
 
     const reader = yield* SettingsReader
     const projectSettings = yield* reader.getProjectSettings(incident.projectId)
-    if (!isAlertNotificationEnabled(projectSettings, incident.kind)) {
-      yield* Effect.annotateCurrentSpan("skipped", "alert-notifications-disabled")
+    if (!isIncidentNotificationEnabled(projectSettings, incident.kind)) {
+      yield* Effect.annotateCurrentSpan("skipped", "incident-kind-disabled")
       return { status: "skipped", reason: "kind-disabled" } as const
     }
 

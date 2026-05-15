@@ -83,17 +83,16 @@ function ProjectIssuesSettingsPage() {
 
   const sensitivityForm = useForm({
     defaultValues: {
-      escalationSensitivity:
-        currentProject.settings.alertNotifications?.escalationSensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K,
+      sensitivity: currentProject.settings.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K,
     },
-    onSubmit: createFormSubmitHandler<{ escalationSensitivity: number }, void>(
-      async ({ escalationSensitivity }) => {
+    onSubmit: createFormSubmitHandler<{ sensitivity: number }, void>(
+      async ({ sensitivity }) => {
         const transaction = updateProjectMutation(currentProject.id, {
           settings: {
             ...currentProject.settings,
-            alertNotifications: {
-              ...(currentProject.settings.alertNotifications ?? {}),
-              escalationSensitivity,
+            escalation: {
+              ...(currentProject.settings.escalation ?? {}),
+              sensitivity,
             },
           },
         })
@@ -111,7 +110,7 @@ function ProjectIssuesSettingsPage() {
   })
 
   const handleSensitivityChange = (value: number) => {
-    sensitivityForm.setFieldValue("escalationSensitivity", value)
+    sensitivityForm.setFieldValue("sensitivity", value)
     void sensitivityForm.handleSubmit()
   }
 
@@ -123,7 +122,13 @@ function ProjectIssuesSettingsPage() {
       const transaction = updateProjectMutation(currentProject.id, {
         settings: {
           ...currentProject.settings,
-          alertNotifications: { ...(currentProject.settings.alertNotifications ?? {}), [kind]: checked },
+          notifications: {
+            ...(currentProject.settings.notifications ?? {}),
+            incidents: {
+              ...(currentProject.settings.notifications?.incidents ?? {}),
+              [kind]: checked,
+            },
+          },
         },
       })
       await transaction.isPersisted.promise
@@ -157,7 +162,7 @@ function ProjectIssuesSettingsPage() {
           <>
             {ALERT_NOTIFICATION_TOGGLES.map((toggle) => {
               const inputId = `alert-notification-${toggle.kind}`
-              const checked = currentProject.settings.alertNotifications?.[toggle.kind] ?? true
+              const checked = currentProject.settings.notifications?.incidents?.[toggle.kind] ?? true
               return (
                 <div
                   key={toggle.kind}
@@ -177,9 +182,7 @@ function ProjectIssuesSettingsPage() {
               )
             })}
             <EscalationSensitivityControl
-              value={
-                currentProject.settings.alertNotifications?.escalationSensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
-              }
+              value={currentProject.settings.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K}
               onChange={handleSensitivityChange}
             />
           </>

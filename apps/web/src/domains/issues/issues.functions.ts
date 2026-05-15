@@ -445,11 +445,11 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         const tagsFrom = new Date(now)
         tagsFrom.setUTCDate(tagsFrom.getUTCDate() - TAG_AGGREGATION_FALLBACK_DAYS)
 
-        // `escalationSensitivity` is the user-facing `k_short` knob on the
+        // `escalation.sensitivity` is the user-facing `k_short` knob on the
         // seasonal detector — read raw here (not via `resolveSettings`) since
         // the cascade only surfaces `keepMonitoring` today.
         const projectSettings = yield* settingsReader.getProjectSettings(projectId)
-        const kShort = projectSettings?.alertNotifications?.escalationSensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
+        const kShort = projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
 
         const [occurrences, trend, thresholdSeries, evaluationPage, tagsAggregates, settings] = yield* Effect.all([
           scoreAnalyticsRepository.aggregateByIssues({

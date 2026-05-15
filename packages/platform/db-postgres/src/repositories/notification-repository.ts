@@ -168,9 +168,7 @@ export const NotificationRepositoryLive = Layer.effect(
           const deleted = yield* sqlClient.query((db) =>
             db
               .delete(notifications)
-              .where(
-                and(eq(notifications.organizationId, organizationId), eq(notifications.projectId, projectId)),
-              )
+              .where(and(eq(notifications.organizationId, organizationId), eq(notifications.projectId, projectId)))
               .returning({ id: notifications.id }),
           )
           return { deleted: deleted.length }

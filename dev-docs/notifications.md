@@ -22,7 +22,7 @@ Source domain event (IncidentCreated / IncidentClosed / WrappedReady / ...)
   → routed by apps/workers/src/workers/domain-events.ts
 notifications:request-{incident,wrapped-report}-notifications
   → apps/workers/src/workers/notifications.ts
-     – gate (incidents only): projectSettings.alertNotifications[kind]
+     – gate (incidents only): projectSettings.notifications.incidents[alertKind]
      – resolveRecipients (today: all org members)
      – snapshot issue/project identity
      – publish N create-notification tasks
@@ -94,7 +94,7 @@ Source events, the producer step, the in-app feed, and the kind registry are all
 | Setting | Default | Reason |
 | --- | --- | --- |
 | User's `notification_preferences` | `null` (treated as "all groups: email on") | Opt-out matches the in-app default of "all org members get every notification." |
-| Project's `alertNotifications[kind]` | unset (treated as enabled) | Existing behaviour; only relevant for incidents. |
+| Project's `notifications.incidents[alertKind]` | unset (treated as enabled) | Per-alert-kind project-level opt-out. Lives in `projects.settings`; sibling of `escalation.sensitivity` (which is the detector knob, not a notification toggle). |
 
 ## Idempotency under outbox redelivery
 
