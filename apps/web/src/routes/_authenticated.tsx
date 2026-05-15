@@ -1,9 +1,10 @@
 import { PRO_PLAN_CONFIG } from "@domain/billing"
 import { show as showIntercom } from "@intercom/messenger-js-sdk"
 import { Avatar, Button, cn, DropdownMenu, Icon, LatitudeLogo, Text, Tooltip, useToast } from "@repo/ui"
+import { extractLeadingEmoji } from "@repo/utils"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
-import { ChevronsUpDown, HatGlassesIcon, LifeBuoy, Moon, ShieldAlertIcon, Sun } from "lucide-react"
+import { ChevronsUpDown, HatGlassesIcon, LifeBuoy, Moon, Plus, ShieldAlertIcon, Sun } from "lucide-react"
 import { useState } from "react"
 import { createBillingCheckoutSession, getBillingOverview } from "../domains/billing/billing.functions.ts"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
@@ -17,6 +18,7 @@ import { isLatitudeStaffEmail, resetPostHog } from "../lib/posthog/posthog-clien
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
+import { CreateOrganizationModal } from "./_authenticated/-components/create-organization-modal.tsx"
 import { ImpersonationBanner } from "./_authenticated/-components/impersonation-banner.tsx"
 import { NotificationBell } from "./_authenticated/-components/notifications/notification-bell.tsx"
 import { isProjectOnboardingPathname } from "./_authenticated/-lib/is-project-onboarding-pathname.ts"
@@ -106,7 +108,7 @@ function BillingCreditCounter({ organizationId }: { readonly organizationId: str
     setIsUpgradePending(true)
     try {
       const data = await createBillingCheckoutSession({
-        data: { plan: PRO_PLAN_CONFIG.slug, returnUrl: "/settings/billing" },
+        data: { plan: PRO_PLAN_CONFIG.slug, returnUrl: "/" },
       })
 
       if (data.url) {
@@ -129,11 +131,7 @@ function BillingCreditCounter({ organizationId }: { readonly organizationId: str
       <Tooltip
         asChild
         trigger={
-          <Link
-            to="/settings/billing"
-            aria-label={tooltip}
-            className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-foreground transition-colors hover:bg-muted"
-          >
+          <div className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-foreground">
             <span className="relative flex h-5 w-5 items-center justify-center" aria-hidden="true">
               <svg aria-hidden="true" className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
                 <circle
@@ -167,7 +165,7 @@ function BillingCreditCounter({ organizationId }: { readonly organizationId: str
                 {usageLabel}
               </Text.H6>
             </div>
-          </Link>
+          </div>
         }
       >
         {tooltip}
@@ -189,12 +187,12 @@ function NavHeader() {
   })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
-  const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
   const router = useRouter()
   const isAdmin = (user as { role?: string }).role === "admin"
   const initialTheme = useRootThemePreference()
   const { theme, setTheme } = useThemePreference(initialTheme)
   const nextTheme = theme === "dark" ? "light" : "dark"
+  const [createOrgModalOpen, setCreateOrgModalOpen] = useState(false)
 
   if (!org) return null
 
@@ -206,6 +204,17 @@ function NavHeader() {
     window.location.href = "/"
   }
 
+  const orgOptions = (allOrgs ?? []).map((o) => {
+    const [emoji, rest] = extractLeadingEmoji(o.name)
+    return {
+      label: rest || o.name,
+      leading: emoji ? <span className="text-base leading-none">{emoji}</span> : null,
+      onClick: () => void handleOrgSwitch(o.id),
+    }
+  })
+
+  const [activeOrgEmoji, activeOrgName] = extractLeadingEmoji(org.name)
+
   return (
     <header className="w-full bg-background border-b border-border h-12 flex items-center px-4 shrink-0">
       <div className="flex items-center gap-2 flex-1">
@@ -213,29 +222,30 @@ function NavHeader() {
           <LatitudeLogo className="h-5 w-5" />
         </Link>
         <span className="text-muted-foreground text-sm select-none">/</span>
-        {hasMultipleOrgs ? (
-          <DropdownMenu
-            side="bottom"
-            align="start"
-            options={
-              allOrgs?.map((o) => ({
-                label: o.name,
-                onClick: () => void handleOrgSwitch(o.id),
-              })) ?? []
-            }
-            trigger={() => (
-              <button
-                type="button"
-                className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
-              >
-                <span className="text-sm font-medium text-foreground">{org.name}</span>
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-              </button>
-            )}
-          />
-        ) : (
-          <span className="text-sm font-medium text-foreground px-2 py-1">{org.name}</span>
-        )}
+        <DropdownMenu
+          side="bottom"
+          align="start"
+          options={[
+            ...orgOptions,
+            { type: "separator" },
+            {
+              label: "Create new organization",
+              iconProps: { icon: Plus, size: "sm" as const },
+              onClick: () => setCreateOrgModalOpen(true),
+            },
+          ]}
+          trigger={() => (
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+            >
+              {activeOrgEmoji ? <span className="text-base leading-none">{activeOrgEmoji}</span> : null}
+              <span className="text-sm font-medium text-foreground">{activeOrgName || org.name}</span>
+              <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
+        />
+        <CreateOrganizationModal open={createOrgModalOpen} onOpenChange={setCreateOrgModalOpen} />
         <BreadcrumbTrail />
       </div>
       <div className="flex items-center gap-4">
@@ -259,9 +269,6 @@ function NavHeader() {
         >
           Docs
         </a>
-        <Link to="/settings" className="text-sm text-foreground hover:text-muted-foreground transition-colors">
-          Settings
-        </Link>
         <DropdownMenu
           side="bottom"
           align="end"

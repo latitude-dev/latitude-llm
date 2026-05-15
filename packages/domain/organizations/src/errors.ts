@@ -19,7 +19,7 @@ export class NotOwnerError extends Data.TaggedError("NotOwnerError")<{
   readonly userId: string
 }> {
   readonly httpStatus = 403
-  readonly httpMessage = "Only the organization owner can transfer ownership"
+  readonly httpMessage = "Only the organization owner can perform this action"
 }
 
 export class CannotTransferToSelfError extends Data.TaggedError("CannotTransferToSelfError")<{

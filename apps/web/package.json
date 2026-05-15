@@ -74,7 +74,6 @@
     "rosetta-ai": "catalog:",
     "satori": "0.18.4",
     "ua-parser-js": "2.0.9",
-    "use-debounce": "10.1.1",
     "zod": "catalog:"
   },
   "devDependencies": {

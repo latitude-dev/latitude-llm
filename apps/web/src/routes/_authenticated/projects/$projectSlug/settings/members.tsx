@@ -2,7 +2,6 @@ import {
   Avatar,
   Button,
   CloseTrigger,
-  Container,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRoot,
@@ -36,13 +35,13 @@ import {
   transferOwnershipMutation,
   updateMemberRoleMutation,
   useMembersCollection,
-} from "../../../domains/members/members.collection.ts"
-import type { MemberRecord } from "../../../domains/members/members.functions.ts"
-import { toUserMessage } from "../../../lib/errors.ts"
-import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../lib/form-server-action.ts"
-import { useAuthenticatedUser } from "../-route-data.ts"
+} from "../../../../../domains/members/members.collection.ts"
+import type { MemberRecord } from "../../../../../domains/members/members.functions.ts"
+import { toUserMessage } from "../../../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
+import { useAuthenticatedUser } from "../../../-route-data.ts"
 
-export const Route = createFileRoute("/_authenticated/settings/members")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/members")({
   component: MembersSettingsPage,
 })
 
@@ -538,28 +537,26 @@ function MembersSettingsPage() {
   const isAdmin = isOwner || currentUserMembership?.role === "admin"
 
   return (
-    <Container className="flex flex-col gap-8 pt-14">
-      <section className="flex flex-col gap-4">
-        <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <Text.H4 weight="bold">Members</Text.H4>
-            <Text.H5 color="foregroundMuted">Members and pending invitations of this organization</Text.H5>
-          </div>
-          {isAdmin ? (
-            <Button variant="outline" onClick={() => setInviteOpen(true)}>
-              <Icon size="sm" icon={UserPlusIcon} />
-              Member
-            </Button>
-          ) : null}
+    <section className="flex flex-col gap-4">
+      <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
+      <div className="flex flex-row items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <Text.H4 weight="bold">Members</Text.H4>
+          <Text.H5 color="foregroundMuted">Members and pending invitations of this organization</Text.H5>
         </div>
-        <div className="flex flex-col gap-2">
-          {isLoading ? <TableSkeleton cols={6} rows={3} /> : null}
-          {!isLoading && members.length > 0 ? (
-            <MembersTable members={members} currentUserId={user.id} isOwner={isOwner} isAdmin={isAdmin} />
-          ) : null}
-        </div>
-      </section>
-    </Container>
+        {isAdmin ? (
+          <Button variant="outline" onClick={() => setInviteOpen(true)}>
+            <Icon size="sm" icon={UserPlusIcon} />
+            Member
+          </Button>
+        ) : null}
+      </div>
+      <div className="flex flex-col gap-2">
+        {isLoading ? <TableSkeleton cols={6} rows={3} /> : null}
+        {!isLoading && members.length > 0 ? (
+          <MembersTable members={members} currentUserId={user.id} isOwner={isOwner} isAdmin={isAdmin} />
+        ) : null}
+      </div>
+    </section>
   )
 }

@@ -2,7 +2,6 @@ import {
   Avatar,
   Button,
   CloseTrigger,
-  Container,
   CopyableText,
   FormWrapper,
   Icon,
@@ -30,14 +29,14 @@ import {
   insertApiKeyMutation,
   updateApiKeyMutation,
   useApiKeysCollection,
-} from "../../../domains/api-keys/api-keys.collection.ts"
-import type { ApiKeyRecord } from "../../../domains/api-keys/api-keys.functions.ts"
-import { revokeOAuthKeyMutation, useOAuthKeysCollection } from "../../../domains/oauth/oauth-keys.collection.ts"
-import type { OAuthKeyRecord } from "../../../domains/oauth/oauth-keys.functions.ts"
-import { toUserMessage } from "../../../lib/errors.ts"
-import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../lib/form-server-action.ts"
+} from "../../../../../domains/api-keys/api-keys.collection.ts"
+import type { ApiKeyRecord } from "../../../../../domains/api-keys/api-keys.functions.ts"
+import { revokeOAuthKeyMutation, useOAuthKeysCollection } from "../../../../../domains/oauth/oauth-keys.collection.ts"
+import type { OAuthKeyRecord } from "../../../../../domains/oauth/oauth-keys.functions.ts"
+import { toUserMessage } from "../../../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 
-export const Route = createFileRoute("/_authenticated/settings/keys")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/keys")({
   component: KeysSettingsPage,
 })
 
@@ -399,7 +398,7 @@ function KeysSettingsPage() {
   const oauthKeys = (oauthKeyData ?? []).slice().sort(byCreatedAtDesc)
 
   return (
-    <Container className="flex flex-col gap-12 pt-14">
+    <>
       <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} />
 
       <section className="flex flex-col gap-4">
@@ -449,6 +448,6 @@ function KeysSettingsPage() {
           )}
         </div>
       </section>
-    </Container>
+    </>
   )
 }
