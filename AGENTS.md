@@ -22,7 +22,7 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 
 Detailed policies, command examples, and code samples live under **`.agents/skills/<skill-name>/SKILL.md`**. Load narrow skills instead of memorizing the entire monorepo at once.
 
-**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **22** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
+**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **23** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
 
 ## Skill glossary
 
@@ -45,6 +45,7 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 | **Effect and errors** | [.agents/skills/effect-and-errors/SKILL.md](.agents/skills/effect-and-errors/SKILL.md) | `Effect` composition, `Data.TaggedError`, `HttpError`, boundary error handling |
 | **Environment configuration** | [.agents/skills/env-configuration/SKILL.md](.agents/skills/env-configuration/SKILL.md) | **`LAT_*` / `VITE_LAT_*`**, `.env.example`, **`parseEnv` / `parseEnvOptional`** |
 | **GitHub issues** | [.agents/skills/gh-issue/SKILL.md](.agents/skills/gh-issue/SKILL.md) | Creating clear, actionable GitHub issues for bugs, features, and improvements, optimized for LLM/actionability |
+| **Notifications** | [.agents/skills/notifications/SKILL.md](.agents/skills/notifications/SKILL.md) | Adding a notification **kind**, **group**, or **channel**; in-app + email delivery; `NOTIFICATION_KIND_META` / `NOTIFICATION_GROUPS`; per-user prefs (`users.notification_preferences`); project-level gates (`projects.settings.notifications`); idempotency + cascade-on-`ProjectDeleted` |
 | **Review PR comments** | [.agents/skills/review-pr-comments/SKILL.md](.agents/skills/review-pr-comments/SKILL.md) | Loading issue-level and inline PR feedback with GitHub CLI/API, deduping comments, replying in the right thread, and resolving addressed review threads |
 | **Temporal workflows** | [.agents/skills/temporal-developer/SKILL.md](.agents/skills/temporal-developer/SKILL.md) | Editing workflows or activities in **`apps/workflows`**, **reordering/inserting activities** in a running workflow, **`patched()` / `deprecatePatch()` / Worker Versioning**, debugging **non-determinism errors**, terminating stuck workflows, replay/history semantics |
 | **Testing** | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md) | Vitest layers, PGlite/chdb testkit, **`/testing` package exports**, avoiding `vi.mock` for repositories |
