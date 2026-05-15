@@ -1,7 +1,7 @@
 import {
-  type BarChartDataPoint,
   Badge,
   BarChart,
+  type BarChartDataPoint,
   Card,
   CardContent,
   CardHeader,
