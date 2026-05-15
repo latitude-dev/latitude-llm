@@ -1571,7 +1571,7 @@
     {
       "name": "listTraces",
       "title": "List project traces",
-      "description": "Returns a cursor-paginated page of traces in the project. Combine `filters` with `searchQuery` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.",
+      "description": "Returns a cursor-paginated page of traces in the project. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -1612,7 +1612,7 @@
               "desc"
             ]
           },
-          "searchQuery": {
+          "query": {
             "description": "Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND.",
             "type": "string",
             "maxLength": 500
@@ -3823,6 +3823,1465 @@
         },
         "required": [
           "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listSavedSearches",
+      "title": "List saved searches",
+      "description": "Returns every saved search in the project. The response uses the standard paginated shape; the saved-search list currently fits in a single page (`nextCursor` is always `null`).",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable saved-search identifier."
+                },
+                "organizationId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Organization that owns this saved search."
+                },
+                "projectId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Project this saved search belongs to."
+                },
+                "slug": {
+                  "type": "string",
+                  "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Human-readable name."
+                },
+                "query": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Free-text semantic query applied alongside `filters`. `null` when the search is filter-only. At least one of `query` or `filters` must be set."
+                },
+                "filters": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "eq",
+                            "neq",
+                            "gt",
+                            "gte",
+                            "lt",
+                            "lte",
+                            "in",
+                            "notIn",
+                            "contains",
+                            "notContains",
+                            "gtePercentile"
+                          ],
+                          "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
+                },
+                "assignedUserId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 24,
+                      "maxLength": 24
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "User this search is assigned to, if any. `null` when the search is unassigned."
+                },
+                "createdByUserId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "User who created the saved search."
+                },
+                "deletedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the search was deleted. `null` while active."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of creation."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the last update."
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "projectId",
+                "slug",
+                "name",
+                "query",
+                "filters",
+                "assignedUserId",
+                "createdByUserId",
+                "deletedAt",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getSavedSearch",
+      "title": "Get saved search",
+      "description": "Returns a single saved search by slug.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "searchSlug": {
+            "type": "string",
+            "description": "Saved-search slug (human-readable identifier within the project)."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "searchSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable saved-search identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this saved search."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this saved search belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-text semantic query applied alongside `filters`. `null` when the search is filter-only. At least one of `query` or `filters` must be set."
+          },
+          "filters": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
+          },
+          "assignedUserId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
+          },
+          "createdByUserId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "User who created the saved search."
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the search was deleted. `null` while active."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "query",
+          "filters",
+          "assignedUserId",
+          "createdByUserId",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "createSavedSearch",
+      "title": "Create saved search",
+      "description": "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only — the authenticated user becomes the search's `createdByUserId`.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Human-readable name. Used to derive the slug."
+          },
+          "query": {
+            "default": null,
+            "description": "Free-text semantic query. `null` (default) when the search is filter-only. At least one of `query` or `filters` must be set.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filters": {
+            "default": {},
+            "description": "Structured filter set. Defaults to `{}` (no filters). At least one of `query` or `filters` must be set.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "assignedUserId": {
+            "default": null,
+            "description": "User to assign the search to. `null` (default) leaves the search unassigned.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "name",
+          "query",
+          "filters",
+          "assignedUserId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable saved-search identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this saved search."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this saved search belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-text semantic query applied alongside `filters`. `null` when the search is filter-only. At least one of `query` or `filters` must be set."
+          },
+          "filters": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
+          },
+          "assignedUserId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
+          },
+          "createdByUserId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "User who created the saved search."
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the search was deleted. `null` while active."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "query",
+          "filters",
+          "assignedUserId",
+          "createdByUserId",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "updateSavedSearch",
+      "title": "Update saved search",
+      "description": "Updates a saved search. Renaming may regenerate the slug — clients should re-read the response or rely on the `id` for stable references.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "searchSlug": {
+            "type": "string",
+            "description": "Saved-search slug (human-readable identifier within the project)."
+          },
+          "name": {
+            "description": "New human-readable name. Triggers slug regeneration when the change affects the slug form (cosmetic edits like capitalization keep the URL stable).",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "query": {
+            "description": "Replace the free-text query. Pass `null` to clear it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filters": {
+            "description": "Replace the structured filter set.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "assignedUserId": {
+            "description": "Replace the assignee. Pass `null` to clear it. Use the dedicated `/assign` endpoint to validate membership.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "searchSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable saved-search identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this saved search."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this saved search belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-text semantic query applied alongside `filters`. `null` when the search is filter-only. At least one of `query` or `filters` must be set."
+          },
+          "filters": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
+          },
+          "assignedUserId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
+          },
+          "createdByUserId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "User who created the saved search."
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the search was deleted. `null` while active."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "query",
+          "filters",
+          "assignedUserId",
+          "createdByUserId",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "deleteSavedSearch",
+      "title": "Delete saved search",
+      "description": "Deletes a saved search by slug.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "searchSlug": {
+            "type": "string",
+            "description": "Saved-search slug (human-readable identifier within the project)."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "searchSlug"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "assignSavedSearch",
+      "title": "Assign saved search",
+      "description": "Assigns the saved search to a user, or clears the current assignment when `userId` is `null`. The assignee must be a member of the requesting organization — otherwise the request is rejected with 400.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "searchSlug": {
+            "type": "string",
+            "description": "Saved-search slug (human-readable identifier within the project)."
+          },
+          "userId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User to assign the search to, or `null` to clear the current assignment."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "searchSlug",
+          "userId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable saved-search identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this saved search."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this saved search belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-text semantic query applied alongside `filters`. `null` when the search is filter-only. At least one of `query` or `filters` must be set."
+          },
+          "filters": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
+          },
+          "assignedUserId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
+          },
+          "createdByUserId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "User who created the saved search."
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the search was deleted. `null` while active."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "query",
+          "filters",
+          "assignedUserId",
+          "createdByUserId",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listSavedSearchTraces",
+      "title": "List traces matching a saved search",
+      "description": "Returns a cursor-paginated page of traces that match the saved search's `query` + `filters`. Each row uses the same `Trace` shape as `listTraces` — use the trace point-lookup endpoints (`getTrace`, `listTraceSpans`, `getTraceSpan`, `listTraceAnnotations`) to drill into individual traces.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "searchSlug": {
+            "type": "string",
+            "description": "Saved-search slug (human-readable identifier within the project)."
+          },
+          "cursor": {
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 200.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "sortBy": {
+            "default": "startTime",
+            "description": "Field to sort by. Defaults to `startTime`.",
+            "type": "string",
+            "enum": [
+              "startTime",
+              "endTime",
+              "durationNs",
+              "tokensTotal",
+              "costTotalMicrocents"
+            ]
+          },
+          "sortDirection": {
+            "default": "desc",
+            "description": "Sort direction. Defaults to `desc` (most recent first).",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "required": [
+          "projectSlug",
+          "searchSlug",
+          "limit",
+          "sortBy",
+          "sortDirection"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "organizationId": {
+                  "type": "string",
+                  "description": "Organization that owns this trace."
+                },
+                "projectId": {
+                  "type": "string",
+                  "description": "Project this trace belongs to."
+                },
+                "traceId": {
+                  "type": "string",
+                  "description": "32-character trace identifier."
+                },
+                "spanCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Total number of spans in the trace."
+                },
+                "errorCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of spans flagged with an error status."
+                },
+                "startTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the trace's earliest span."
+                },
+                "endTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the trace's latest span."
+                },
+                "durationNs": {
+                  "type": "number",
+                  "description": "Wall-clock duration of the trace in nanoseconds."
+                },
+                "timeToFirstTokenNs": {
+                  "type": "number",
+                  "description": "Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured."
+                },
+                "tokensInput": {
+                  "type": "number",
+                  "description": "Total input tokens across LLM spans."
+                },
+                "tokensOutput": {
+                  "type": "number",
+                  "description": "Total output tokens across LLM spans."
+                },
+                "tokensCacheRead": {
+                  "type": "number",
+                  "description": "Total tokens served from the provider's prompt cache."
+                },
+                "tokensCacheCreate": {
+                  "type": "number",
+                  "description": "Total tokens written to the provider's prompt cache."
+                },
+                "tokensReasoning": {
+                  "type": "number",
+                  "description": "Total reasoning tokens reported by the model."
+                },
+                "tokensTotal": {
+                  "type": "number",
+                  "description": "Sum of all token counters."
+                },
+                "costInputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                },
+                "costOutputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                },
+                "costTotalMicrocents": {
+                  "type": "number",
+                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                },
+                "sessionId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Conversation/session identifier set by the SDK. `null` when absent."
+                },
+                "userId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "End-user identifier set by the SDK. `null` when absent."
+                },
+                "simulationId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "CUID of the simulation that produced this trace. `null` when not a simulation."
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Free-form tags attached at ingest time."
+                },
+                "models": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Model identifiers seen across the trace's LLM spans."
+                },
+                "providers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "LLM-provider identifiers seen across the trace's spans."
+                },
+                "serviceNames": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "OpenTelemetry `service.name` values seen in the trace."
+                },
+                "rootSpanId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Identifier of the trace's root span. `null` when no root span has been ingested."
+                },
+                "rootSpanName": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+                }
+              },
+              "required": [
+                "organizationId",
+                "projectId",
+                "traceId",
+                "spanCount",
+                "errorCount",
+                "startTime",
+                "endTime",
+                "durationNs",
+                "timeToFirstTokenNs",
+                "tokensInput",
+                "tokensOutput",
+                "tokensCacheRead",
+                "tokensCacheCreate",
+                "tokensReasoning",
+                "tokensTotal",
+                "costInputMicrocents",
+                "costOutputMicrocents",
+                "costTotalMicrocents",
+                "sessionId",
+                "userId",
+                "simulationId",
+                "tags",
+                "models",
+                "providers",
+                "serviceNames",
+                "rootSpanId",
+                "rootSpanName"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
         ],
         "additionalProperties": false
       }
