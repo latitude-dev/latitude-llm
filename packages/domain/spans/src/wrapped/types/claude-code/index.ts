@@ -24,6 +24,16 @@ export {
 } from "./entities/report.ts"
 export { pickReadAnchor, pickWrittenAnchor } from "./helpers/anchors.ts"
 export {
+  type AssignPersonalityInput,
+  assignPersonality,
+  BASELINE_SHARE,
+  consultantGatePasses,
+  scholarGatePasses,
+  shipperGatePasses,
+  strategistGatePasses,
+  testerGatePasses,
+} from "./use-cases/assign-personality.ts"
+export {
   type BashPatternRow,
   type BiggestWriteRow,
   type BranchRow,

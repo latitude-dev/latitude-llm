@@ -13,7 +13,7 @@ import type { Personality, PersonalityKind, ToolBucket, ToolMix } from "../entit
  * on direction for each bucket; values rounded to two decimals so the
  * row sums to 1.00.
  */
-const BASELINE_SHARE: Record<ToolBucket, number> = {
+export const BASELINE_SHARE: Record<ToolBucket, number> = {
   read: 0.22,
   bash: 0.4,
   edit: 0.15,
@@ -97,7 +97,7 @@ const normaliseScore = (value: number, low: number, high: number): number => {
 const formatPercent = (n: number): string => `${Math.round(n * 100)}%`
 const formatCount = (n: number): string => n.toLocaleString("en-US")
 
-interface AssignPersonalityInput {
+export interface AssignPersonalityInput {
   readonly toolMix: ToolMix
   readonly sessions: number
   readonly filesTouched: number
@@ -122,6 +122,60 @@ interface Candidate {
   readonly gatePasses: boolean
   readonly score: number
   readonly buildEvidence: () => readonly [string, string, string]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Conditional-archetype gate predicates.
+//
+// Each one is the exact gate-floor check that lives inside `assignPersonality`,
+// extracted as a named pure function. Two callers:
+//
+//   1. `assignPersonality` itself — the rest of the file calls each predicate
+//      to build its candidate's `gatePasses` boolean.
+//   2. Backoffice analytics tooling — `apps/web/src/domains/admin/
+//      wrapped-analytics.functions.ts` replays these predicates over a cohort
+//      of persisted reports to report per-gate pass-rates. Avoids duplicating
+//      the gate constants in the analytics layer.
+//
+// The always-firing archetypes (Surgeon / Architect / Detective / Conductor)
+// have no gate (they're always candidates) so they don't get a predicate.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const planExcessOf = (input: AssignPersonalityInput): number => {
+  const total = sumMix(input.toolMix)
+  if (total === 0) return 0
+  return input.toolMix.plan / total - BASELINE_SHARE.plan
+}
+
+const researchExcessOf = (input: AssignPersonalityInput): number => {
+  const total = sumMix(input.toolMix)
+  if (total === 0) return 0
+  return input.toolMix.research / total - BASELINE_SHARE.research
+}
+
+export const strategistGatePasses = (input: AssignPersonalityInput): boolean =>
+  planExcessOf(input) >= STRATEGIST_GATE_EXCESS && input.toolMix.plan >= STRATEGIST_GATE_CALLS
+
+export const scholarGatePasses = (input: AssignPersonalityInput): boolean =>
+  researchExcessOf(input) >= SCHOLAR_GATE_EXCESS && input.toolMix.research >= SCHOLAR_GATE_CALLS
+
+export const consultantGatePasses = (input: AssignPersonalityInput): boolean => {
+  const linesTouchedTotal = input.editAdded + input.writeLines
+  return input.sessions >= CONSULTANT_GATE_SESSIONS && linesTouchedTotal < CONSULTANT_GATE_MAX_LINES
+}
+
+export const shipperGatePasses = (input: AssignPersonalityInput): boolean => {
+  const commitsPerSession = input.sessions > 0 ? input.commits / input.sessions : 0
+  const writeOpsPerSession = input.sessions > 0 ? input.gitWriteOps / input.sessions : 0
+  return (
+    (input.commits >= SHIPPER_GATE_COMMITS || input.gitWriteOps >= SHIPPER_GATE_WRITE_OPS) &&
+    (commitsPerSession >= SHIPPER_GATE_COMMITS_PER_SESSION || writeOpsPerSession >= SHIPPER_GATE_WRITE_OPS_PER_SESSION)
+  )
+}
+
+export const testerGatePasses = (input: AssignPersonalityInput): boolean => {
+  const testsPerSession = input.sessions > 0 ? input.testsRun / input.sessions : 0
+  return input.testsRun >= TESTER_GATE_TESTS && testsPerSession >= TESTER_GATE_RATIO
 }
 
 /**
@@ -191,7 +245,7 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
   const candidates: readonly Candidate[] = [
     {
       kind: "strategist",
-      gatePasses: planExcess >= STRATEGIST_GATE_EXCESS && toolMix.plan >= STRATEGIST_GATE_CALLS,
+      gatePasses: strategistGatePasses(input),
       score: applyRareBonus(normaliseScore(planExcess, STRATEGIST_SCORE_LOW, STRATEGIST_SCORE_HIGH)),
       buildEvidence: () => [
         `${formatPercent(shareOf("plan"))} of your tool calls were planning steps`,
@@ -201,7 +255,7 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     },
     {
       kind: "scholar",
-      gatePasses: researchExcess >= SCHOLAR_GATE_EXCESS && toolMix.research >= SCHOLAR_GATE_CALLS,
+      gatePasses: scholarGatePasses(input),
       score: applyRareBonus(normaliseScore(researchExcess, SCHOLAR_SCORE_LOW, SCHOLAR_SCORE_HIGH)),
       buildEvidence: () => [
         `${formatPercent(shareOf("research"))} of your tool calls were web research`,
@@ -211,7 +265,7 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     },
     {
       kind: "consultant",
-      gatePasses: sessions >= CONSULTANT_GATE_SESSIONS && linesTouchedTotal < CONSULTANT_GATE_MAX_LINES,
+      gatePasses: consultantGatePasses(input),
       score: applyRareBonus(normaliseScore(sessions, CONSULTANT_SCORE_LOW, CONSULTANT_SCORE_HIGH)),
       buildEvidence: () => [
         `${formatCount(sessions)} session${sessions === 1 ? "" : "s"} this week`,
@@ -223,10 +277,7 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     },
     {
       kind: "shipper",
-      gatePasses:
-        (commits >= SHIPPER_GATE_COMMITS || gitWriteOps >= SHIPPER_GATE_WRITE_OPS) &&
-        (commitsPerSession >= SHIPPER_GATE_COMMITS_PER_SESSION ||
-          writeOpsPerSession >= SHIPPER_GATE_WRITE_OPS_PER_SESSION),
+      gatePasses: shipperGatePasses(input),
       score: applyRareBonus(
         Math.max(
           normaliseScore(commitsPerSession, SHIPPER_COMMITS_PER_SESSION_LOW, SHIPPER_COMMITS_PER_SESSION_HIGH),
@@ -245,7 +296,7 @@ export function assignPersonality(input: AssignPersonalityInput): Personality {
     },
     {
       kind: "tester",
-      gatePasses: testsRun >= TESTER_GATE_TESTS && testsPerSession >= TESTER_GATE_RATIO,
+      gatePasses: testerGatePasses(input),
       score: applyRareBonus(normaliseScore(testsPerSession, TESTER_SCORE_LOW, TESTER_SCORE_HIGH)),
       buildEvidence: () => [
         `${formatCount(testsRun)} test run${testsRun === 1 ? "" : "s"} this week`,

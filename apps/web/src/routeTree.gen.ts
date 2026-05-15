@@ -22,6 +22,7 @@ import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
 import { Route as DesignSystemColorsRouteImport } from './routes/design-system/colors'
 import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
 import { Route as CcWrappedIdRouteImport } from './routes/cc-wrapped/$id'
+import { Route as BackofficeWrappedRouteImport } from './routes/backoffice/wrapped'
 import { Route as BackofficeSearchRouteImport } from './routes/backoffice/search'
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as AuthConsentRouteImport } from './routes/auth/consent'
@@ -122,6 +123,11 @@ const CcWrappedIdRoute = CcWrappedIdRouteImport.update({
   id: '/cc-wrapped/$id',
   path: '/cc-wrapped/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BackofficeWrappedRoute = BackofficeWrappedRouteImport.update({
+  id: '/wrapped',
+  path: '/wrapped',
+  getParentRoute: () => BackofficeRouteRoute,
 } as any)
 const BackofficeSearchRoute = BackofficeSearchRouteImport.update({
   id: '/search',
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
+  '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
@@ -387,6 +394,7 @@ export interface FileRoutesByTo {
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
+  '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
@@ -438,6 +446,7 @@ export interface FileRoutesById {
   '/auth/consent': typeof AuthConsentRoute
   '/auth/invite': typeof AuthInviteRoute
   '/backoffice/search': typeof BackofficeSearchRoute
+  '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/design-system/button': typeof DesignSystemButtonRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
@@ -491,6 +500,7 @@ export interface FileRouteTypes {
     | '/auth/consent'
     | '/auth/invite'
     | '/backoffice/search'
+    | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/design-system/button'
     | '/design-system/colors'
@@ -537,6 +547,7 @@ export interface FileRouteTypes {
     | '/auth/consent'
     | '/auth/invite'
     | '/backoffice/search'
+    | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/design-system/button'
     | '/design-system/colors'
@@ -587,6 +598,7 @@ export interface FileRouteTypes {
     | '/auth/consent'
     | '/auth/invite'
     | '/backoffice/search'
+    | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/design-system/button'
     | '/design-system/colors'
@@ -740,6 +752,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cc-wrapped/$id'
       preLoaderRoute: typeof CcWrappedIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/backoffice/wrapped': {
+      id: '/backoffice/wrapped'
+      path: '/wrapped'
+      fullPath: '/backoffice/wrapped'
+      preLoaderRoute: typeof BackofficeWrappedRouteImport
+      parentRoute: typeof BackofficeRouteRoute
     }
     '/backoffice/search': {
       id: '/backoffice/search'
@@ -998,6 +1017,7 @@ declare module '@tanstack/react-router' {
 
 interface BackofficeRouteRouteChildren {
   BackofficeSearchRoute: typeof BackofficeSearchRoute
+  BackofficeWrappedRoute: typeof BackofficeWrappedRoute
   BackofficeIndexRoute: typeof BackofficeIndexRoute
   BackofficeOrganizationsOrganizationIdRoute: typeof BackofficeOrganizationsOrganizationIdRoute
   BackofficeProjectsProjectIdRoute: typeof BackofficeProjectsProjectIdRoute
@@ -1008,6 +1028,7 @@ interface BackofficeRouteRouteChildren {
 
 const BackofficeRouteRouteChildren: BackofficeRouteRouteChildren = {
   BackofficeSearchRoute: BackofficeSearchRoute,
+  BackofficeWrappedRoute: BackofficeWrappedRoute,
   BackofficeIndexRoute: BackofficeIndexRoute,
   BackofficeOrganizationsOrganizationIdRoute:
     BackofficeOrganizationsOrganizationIdRoute,
