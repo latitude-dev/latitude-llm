@@ -11,8 +11,8 @@ import {
   NotificationRepositoryLive,
   ProjectRepositoryLive,
   UserRepositoryLive,
-  withPostgres,
   WrappedReportRepositoryLive,
+  withPostgres,
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv } from "@platform/env"

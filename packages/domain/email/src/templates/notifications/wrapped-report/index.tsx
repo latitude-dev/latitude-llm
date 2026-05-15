@@ -1,5 +1,11 @@
 import { WrappedReportId } from "@domain/shared"
-import { CURRENT_REPORT_VERSION, type Report, type ReportVersion, type WrappedReportType, WrappedReportRepository } from "@domain/spans"
+import {
+  CURRENT_REPORT_VERSION,
+  type Report,
+  type ReportVersion,
+  WrappedReportRepository,
+  type WrappedReportType,
+} from "@domain/spans"
 import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers (tsx/esbuild classic transform)

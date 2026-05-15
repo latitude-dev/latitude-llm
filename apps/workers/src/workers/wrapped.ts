@@ -10,8 +10,8 @@ import {
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
-  withPostgres,
   WrappedReportRepositoryLive,
+  withPostgres,
 } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
