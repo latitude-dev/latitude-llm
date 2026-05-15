@@ -229,6 +229,7 @@ Latitude works alongside your existing observability tools. In TypeScript, `new 
 ### With Datadog (TypeScript)
 
 ```ts
+import OpenAI from "openai"
 import tracer from "dd-trace"
 import { Latitude } from "@latitude-data/telemetry"
 
@@ -237,13 +238,14 @@ tracer.init({ service: "my-app", env: "production" })
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 ```
 
 ### With Sentry (TypeScript)
 
 ```ts
+import OpenAI from "openai"
 import * as Sentry from "@sentry/node"
 import { Latitude } from "@latitude-data/telemetry"
 
@@ -255,7 +257,7 @@ Sentry.init({
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 ```
 
@@ -265,12 +267,13 @@ Enable New Relic's OpenTelemetry bridge first, then construct `new Latitude()`. 
 
 ```ts
 import "newrelic"
+import OpenAI from "openai"
 import { Latitude } from "@latitude-data/telemetry"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 ```
 
@@ -279,6 +282,7 @@ const latitude = new Latitude({
 Start Honeycomb's `HoneycombSDK` first, then construct `new Latitude()`. Honeycomb registers an OpenTelemetry provider that Latitude can reuse.
 
 ```ts
+import OpenAI from "openai"
 import { HoneycombSDK } from "@honeycombio/opentelemetry-node"
 import { Latitude } from "@latitude-data/telemetry"
 
@@ -288,7 +292,7 @@ honeycomb.start()
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 ```
 

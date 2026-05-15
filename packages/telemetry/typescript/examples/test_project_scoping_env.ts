@@ -31,7 +31,7 @@ const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: DEFAULT_SLUG,
   disableBatch: true,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 
 const OVERRIDE_SLUG = "evaluation-runs"

@@ -18,12 +18,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["replicate"],
+    instrumentations={"replicate": replicate},
     disable_batch=True,
 )
 
 
-@capture("test-replicate-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-replicate-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_replicate_completion():
     output = replicate.run(
         "meta/meta-llama-3-8b-instruct",

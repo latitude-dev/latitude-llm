@@ -19,12 +19,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["cohere"],
+    instrumentations={"cohere": cohere},
     disable_batch=True,
 )
 
 
-@capture("test-cohere-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-cohere-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_cohere_completion():
     client = cohere.Client(api_key=os.environ["COHERE_API_KEY"])
 

@@ -10,6 +10,7 @@ Install: uv add together
 
 import os
 
+import together
 from together import Together
 
 from latitude_telemetry import Latitude, capture
@@ -18,12 +19,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["together"],
+    instrumentations={"togetherai": together},
     disable_batch=True,
 )
 
 
-@capture("test-together-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-together-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_together_completion():
     client = Together()
 

@@ -12,13 +12,15 @@ Install: uv add openai
 
 import os
 
+import openai
+
 from latitude_telemetry import Latitude, capture
 
 # Initialize telemetry BEFORE importing openai so instrumentation can patch it
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
     disable_batch=True,
 )
 
@@ -26,7 +28,7 @@ latitude = Latitude(
 from openai import AzureOpenAI
 
 
-@capture("test-azure-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-azure-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_azure_completion():
     client = AzureOpenAI(
         api_key=os.environ["AZURE_OPENAI_API_KEY"],

@@ -74,11 +74,12 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
           BedrockRuntimeClient,
           InvokeModelCommand,
         } from "@aws-sdk/client-bedrock-runtime"
+        import * as BedrockSDK from "@aws-sdk/client-bedrock-runtime"
 
         const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-          instrumentations: ["bedrock"],
+          instrumentations: { bedrock: BedrockSDK },
         })
 
         await latitude.ready
@@ -105,13 +106,15 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       <Tab title="Python">
         ```python
         import json
-        from latitude_telemetry import Latitude, capture
+
         import boto3
+
+        from latitude_telemetry import Latitude, capture
 
         latitude = Latitude(
             api_key="your-api-key",
             project_slug="your-project-slug",
-            instrumentations=["bedrock"],
+            instrumentations={"bedrock": boto3},
         )
 
         client = boto3.client("bedrock-runtime", region_name="us-east-1")

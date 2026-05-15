@@ -20,12 +20,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["vertexai"],
+    instrumentations={"vertexai": vertexai},
     disable_batch=True,
 )
 
 
-@capture("test-vertex-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-vertex-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_vertex_completion():
     # Initialize Vertex AI
     vertexai.init(

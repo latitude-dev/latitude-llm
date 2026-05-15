@@ -19,7 +19,7 @@ from opentelemetry.trace import NoOpTracerProvider, ProxyTracerProvider
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from latitude_telemetry.sdk.instrumentations import register_latitude_instrumentations
-from latitude_telemetry.sdk.types import InstrumentationType, SmartFilterOptions
+from latitude_telemetry.sdk.types import InstrumentationsInput, SmartFilterOptions
 from latitude_telemetry.telemetry.latitude_span_processor import LatitudeSpanProcessor, LatitudeSpanProcessorOptions
 from latitude_telemetry.telemetry.redact_span_processor import RedactSpanProcessorOptions
 
@@ -74,7 +74,7 @@ class Latitude:
         *,
         api_key: str,
         project_slug: str | None = None,
-        instrumentations: list[InstrumentationType] | None = None,
+        instrumentations: InstrumentationsInput | None = None,
         disable_redact: bool = False,
         redact: RedactSpanProcessorOptions | None = None,
         disable_batch: bool = False,
@@ -194,7 +194,7 @@ class Latitude:
 def init_latitude(
     api_key: str,
     project_slug: str | None = None,
-    instrumentations: list[InstrumentationType] | None = None,
+    instrumentations: InstrumentationsInput | None = None,
     disable_redact: bool = False,
     redact: RedactSpanProcessorOptions | None = None,
     disable_batch: bool = False,

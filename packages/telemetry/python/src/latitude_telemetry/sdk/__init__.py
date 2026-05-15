@@ -8,6 +8,8 @@ from latitude_telemetry.sdk.instrumentations import register_latitude_instrument
 from latitude_telemetry.sdk.types import (
     ContextOptions,
     InitLatitudeOptions,
+    InstrumentationName,
+    InstrumentationsInput,
     InstrumentationType,
     LatitudeOptions,
     LatitudeSpanProcessorOptions,
@@ -22,6 +24,8 @@ __all__ = [
     "register_latitude_instrumentations",
     "ContextOptions",
     "InitLatitudeOptions",
+    "InstrumentationName",
+    "InstrumentationsInput",
     "InstrumentationType",
     "LatitudeOptions",
     "LatitudeSpanProcessorOptions",

@@ -17,6 +17,7 @@ Run from `packages/telemetry/python/`:
 
 import os
 
+import openai
 from openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
@@ -24,12 +25,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
     disable_batch=True,
 )
 
 
-@capture("greet")
+@capture("greet", {"tags": ["python"]})
 def greet() -> None:
     client = OpenAI()
     r = client.chat.completions.create(
@@ -40,7 +41,7 @@ def greet() -> None:
     print("greet →", r.choices[0].message.content)
 
 
-@capture("summarize", {"tags": ["demo"]})
+@capture("summarize", {"tags": ["python", "demo"]})
 def summarize() -> None:
     client = OpenAI()
     r = client.chat.completions.create(

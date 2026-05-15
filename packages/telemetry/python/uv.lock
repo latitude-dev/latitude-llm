@@ -1084,7 +1084,7 @@ wheels = [
 
 [[package]]
 name = "latitude-telemetry"
-version = "3.0.0a6"
+version = "3.0.0a7"
 source = { editable = "." }
 dependencies = [
     { name = "openai-agents" },

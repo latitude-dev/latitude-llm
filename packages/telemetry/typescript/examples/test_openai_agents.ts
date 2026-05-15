@@ -10,6 +10,7 @@
  */
 
 import { Agent, run, tool } from "@openai/agents"
+import * as OpenAIAgentsSDK from "@openai/agents"
 import { z } from "zod"
 import { capture, Latitude } from "../src"
 
@@ -17,7 +18,7 @@ const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: ["openai-agents"],
+  instrumentations: { "openai-agents": OpenAIAgentsSDK },
 })
 
 const getWeather = tool({
