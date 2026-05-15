@@ -53,7 +53,12 @@ def _first_remote_message(value: Any, depth: int = 0) -> str | None:
     if depth >= 4 or not isinstance(value, dict):
         return None
 
-    obj = cast(dict[str, Any], value)
+    # Runtime: mapping only. Checker: `isinstance(..., dict)` is still
+    # `dict[Unknown, Unknown]` under strict pyright; widen values so `.items()`
+    # is not `Unknown`. We stringify keys when copying — no claim that keys were
+    # already str.
+    d = cast(dict[Any, Any], value)
+    obj: dict[str, Any] = {str(k): v for k, v in d.items()}
     for key in ("message", "httpMessage", "_tag", "name", "type"):
         candidate = obj.get(key)
         if isinstance(candidate, str) and candidate.strip():
