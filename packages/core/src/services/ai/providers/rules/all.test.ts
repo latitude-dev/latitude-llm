@@ -46,6 +46,35 @@ describe('rules', () => {
     })
   })
 
+  it('wraps Azure providerOptions under the openai key', () => {
+    expect(
+      applyAllRules({
+        providerType: Providers.Azure,
+        messages: [],
+        config: {
+          model: 'gpt-5.1',
+          reasoning_effort: 'high',
+          azure: { resourceName: 'my-resource' },
+        },
+      }),
+    ).toEqual({
+      rules: [],
+      messages: [],
+      config: {
+        model: 'gpt-5.1',
+        reasoning_effort: 'high',
+        azure: { resourceName: 'my-resource' },
+        providerOptions: {
+          openai: {
+            model: 'gpt-5.1',
+            reasoningEffort: 'high',
+            azure: { resourceName: 'my-resource' },
+          },
+        },
+      },
+    })
+  })
+
   it('camelCase all providerOptions', () => {
     expect(
       applyAllRules({

@@ -8,7 +8,7 @@ export const PROVIDER_TO_METADATA_KEY: Record<Providers, string> = {
   [Providers.Anthropic]: 'anthropic',
   [Providers.Groq]: 'groq',
   [Providers.Mistral]: 'mistral',
-  [Providers.Azure]: 'azure',
+  [Providers.Azure]: 'openai',
   [Providers.Google]: 'google',
   [Providers.Custom]: 'custom',
   [Providers.GoogleVertex]: 'google',
