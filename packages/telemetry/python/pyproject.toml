@@ -50,7 +50,7 @@ dev = [
     "pytest-xdist==3.8.0",
     "pytest==9.0.3",
     "pyright==1.1.409",
-    "ruff==0.14.14",
+    "ruff==0.15.12",
     "sh==2.2.2",
     "openai==2.30.0",
     # Note: 0.41.0 onwards made Prompt Caching generally available
