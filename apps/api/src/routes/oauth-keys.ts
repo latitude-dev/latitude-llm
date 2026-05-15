@@ -11,6 +11,7 @@ import { OAuthTokenCacheInvalidatorLive } from "@platform/oauth-token-auth"
 import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
+import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { jsonResponse, openApiNoContentResponses, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -169,6 +170,8 @@ const revokeOAuthKey = oauthKeyEndpoint({
 
 export const createOAuthKeysRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
-  for (const ep of [listOAuthKeys, getOAuthKey, revokeOAuthKey]) ep.mountHttp(app)
+  listOAuthKeys.mountHttp(app, createTierRateLimiter("low"))
+  getOAuthKey.mountHttp(app, createTierRateLimiter("low"))
+  revokeOAuthKey.mountHttp(app, createTierRateLimiter("low"))
   return app
 }

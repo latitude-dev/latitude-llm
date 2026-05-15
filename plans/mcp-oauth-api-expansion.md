@@ -739,14 +739,17 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [x] `DELETE /{oauthKeyId}` — revoke, mounted under the `low` tier prefix; reuses `revokeOAuthKeyUseCase` (cache-invalidates each removed token and disables the application when the last token is gone). 204 on success and on idempotent re-revoke; 404 only for cross-tenant / malformed ids.
   - [x] `apps/api/src/routes/oauth-keys.ts` — new file, `defineApiEndpoint`-native. Wires `OAuthTokenCacheInvalidatorLive(c.var.redis)` + `OAuthKeyRepositoryLive`. Composite id parsed via `lastIndexOf(":")` since `userId` is a CUID (no colons).
   - [x] No POST / PATCH. Out-of-scope notes in the "Endpoint inventory" section.
+- **M4 — Traces + bulk export** (3 endpoints, prefix `/projects/{projectSlug}/traces`)
+  - [x] `GET /` — list with filters + searchQuery + cursor, `Paginated(TraceSchema, "PaginatedTraces")`. Cursor is base64url-encoded JSON of `{sortValue, traceId}` so the public API surface stays a plain opaque string. `filters` accepted as URL-encoded JSON, decoded + validated against `filterSetSchema` inside the Effect. `sortBy` constrained to `{startTime,endTime,durationNs,tokensTotal,costTotalMicrocents}` with `startTime desc` defaults.
+  - [x] `GET /{traceId}` — get; returns `TraceDetail` (includes `systemInstructions` + `inputMessages` / `outputMessages` / `allMessages`). rosetta-ai message payloads exposed as opaque `Record<string, unknown>` per item — modelling every provider's union would balloon the schema for limited downstream value.
+  - [x] `POST /export` — `tracesRef` + `recipientEmail`. Recipient validated via `MembershipRepository.findMemberByEmail` (RLS-scoped). Enqueues the existing `"exports" / "generate"` worker; route-level adapter translates `TracesRef → { selection | filters }` so `buildTracesExportUseCase` stays as-is (per D8 note: "adapter is simpler"). Returns 202.
+  - [x] Per-endpoint rate-limit tiers: traces prefix mounted at `medium` (existing single-tier-per-prefix convention); `app.use("/export", createTierRateLimiter("critical"))` adds the `critical` ceiling on the export endpoint. Hono runs both matching middlewares so the stricter `critical` limit (3/min/org) governs export.
+  - [x] `apps/api/src/openapi/entities/trace.ts` — `TraceSchema` + `TraceDetailSchema` with field-by-field descriptions; spread shared `traceFields` so both schemas stay named distinct components for SDK + MCP consumers.
+  - [x] `apps/api/src/routes/traces.test.ts` — 8 integration tests cover the auth gate, empty-result listing, cursor + filters validation, get 404, recipient-member enforcement on export, and the happy-path 202.
+  - [x] `buildTracesExportUseCase` refactor deferred — keeping the queue contract (`filters? + selection? + searchQuery?`) stable means the web caller stays unchanged and the API route translates at the boundary. Use-case keeps its current shape.
 
 ### Outstanding
 
-- **M4 — Traces + bulk export** (3 endpoints, prefix `/projects/{projectSlug}/traces`)
-  - [ ] `GET /` — list with filters + searchQuery + cursor, `Paginated(TraceSchema, "PaginatedTraces")` (`high` tier)
-  - [ ] `GET /{traceId}` — get (`medium` tier)
-  - [ ] `POST /export` — `tracesRef` + `recipientEmail`, validates recipient is an org member, enqueues worker (`critical` tier)
-  - [ ] `packages/domain/spans/src/use-cases/build-traces-export.ts` — accept `TracesRef`
 - **M5 — Saved Searches** (6 endpoints, prefix `/projects/{projectSlug}/searches`, `medium` tier across)
   - [ ] `GET /`, `GET /{searchSlug}`, `POST /`, `PATCH /{searchSlug}`, `DELETE /{searchSlug}`
   - [ ] `POST /{searchSlug}/assign` — new `assignSavedSearchUseCase` in `@domain/saved-searches` (validates assignee membership)
