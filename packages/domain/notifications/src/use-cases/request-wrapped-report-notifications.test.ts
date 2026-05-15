@@ -1,5 +1,5 @@
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
-import { OrganizationId, SqlClient, UserId } from "@domain/shared"
+import { OrganizationId, ProjectId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -9,6 +9,7 @@ const cuid = (seed: string) => seed.padEnd(24, "0")
 
 function setup(memberUserIds: readonly string[] = [cuid("ua"), cuid("ub")]) {
   const orgId = OrganizationId(cuid("o"))
+  const projectId = ProjectId(cuid("p"))
   const wrappedReportId = cuid("wr")
 
   const members: MemberWithUser[] = memberUserIds.map((uid, i) => ({
@@ -53,16 +54,17 @@ function setup(memberUserIds: readonly string[] = [cuid("ua"), cuid("ub")]) {
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
 
-  return { orgId, wrappedReportId, layer }
+  return { orgId, projectId, wrappedReportId, layer }
 }
 
 describe("requestWrappedReportNotificationsUseCase", () => {
   it("emits one request per org member with a kind-anchored idempotency key", async () => {
-    const { orgId, wrappedReportId, layer } = setup([cuid("ua"), cuid("ub"), cuid("uc")])
+    const { orgId, projectId, wrappedReportId, layer } = setup([cuid("ua"), cuid("ub"), cuid("uc")])
 
     const result = await Effect.runPromise(
       requestWrappedReportNotificationsUseCase({
         organizationId: orgId,
+        projectId,
         wrappedReportId,
         projectName: "Sample project",
         link: `https://app.example/wrapped/${wrappedReportId}`,
@@ -75,17 +77,19 @@ describe("requestWrappedReportNotificationsUseCase", () => {
     for (const req of result.requests) {
       expect(req.kind).toBe("wrapped.report")
       expect(req.idempotencyKey).toBe(`wrapped.report:${wrappedReportId}`)
+      expect(req.projectId).toBe(projectId)
       expect(req.payload.wrappedReportId).toBe(wrappedReportId)
       expect(req.payload.projectName).toBe("Sample project")
     }
   })
 
   it("skips with reason 'no-recipients' when the org has no members", async () => {
-    const { orgId, wrappedReportId, layer } = setup([])
+    const { orgId, projectId, wrappedReportId, layer } = setup([])
 
     const result = await Effect.runPromise(
       requestWrappedReportNotificationsUseCase({
         organizationId: orgId,
+        projectId,
         wrappedReportId,
         projectName: "Sample project",
         link: `https://app.example/wrapped/${wrappedReportId}`,

@@ -198,6 +198,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     for (const req of result.requests) {
       expect(req.kind).toBe("incident.opened")
       expect(req.idempotencyKey).toBe(`incident.opened:${incidentId}`)
+      expect(req.projectId).toBe(cuid("p"))
       expect(req.payload.incidentKind).toBe("issue.new")
       expect(req.payload.alertIncidentId).toBe(incidentId)
       expect(req.payload.issueId).toBe(cuid("i"))

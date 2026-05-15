@@ -115,6 +115,7 @@ const _registry = {
      */
     "request-wrapped-report-notifications": {
       readonly organizationId: string
+      readonly projectId: string
       readonly wrappedReportId: string
       readonly projectName: string
       readonly link: string
@@ -130,6 +131,9 @@ const _registry = {
      * them as `string` / `Record<string, unknown>` here so this package
      * stays free of a dep on `@domain/notifications`. Consumers validate
      * with `payloadSchemaFor(kind).parse(payload)`.
+     *
+     * `projectId` is the cascade anchor: `null` for kinds with no
+     * natural project (`custom.message`), set for incident/wrapped kinds.
      */
     "create-notification": {
       readonly organizationId: string
@@ -137,7 +141,17 @@ const _registry = {
       readonly notificationId: string
       readonly kind: string
       readonly idempotencyKey: string
+      readonly projectId: string | null
       readonly payload: Record<string, unknown>
+    }
+    /**
+     * Cascade cleanup. Fired by the domain-events worker on
+     * `ProjectDeleted`. The consumer deletes every notification anchored
+     * to the project from the bell feed across all users.
+     */
+    "delete-by-project": {
+      readonly organizationId: string
+      readonly projectId: string
     }
   }>(),
 

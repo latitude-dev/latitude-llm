@@ -12,6 +12,13 @@ import { cuid, latitudeSchema, organizationRLSPolicy, tzTimestamp } from "../sch
  * event never produces two rows. `emailed_at` is stamped by the email
  * channel worker after a successful render+send.
  *
+ * `project_id` is the optional anchor for kinds that are tied to a
+ * project (`incident.*`, `wrapped.report`). When the project is deleted
+ * the notifications are removed at the application layer via the
+ * `ProjectDeleted` domain event → `delete-by-project` task; per the
+ * platform's no-FK convention we keep it as a plain cuid column with an
+ * index for the cleanup query.
+ *
  * RLS is org-scoped only; per-user filtering is enforced explicitly in
  * read use cases. The worker that creates notifications for all members
  * of an org needs to write rows for arbitrary userIds, which would
@@ -26,6 +33,8 @@ export const notifications = latitudeSchema.table(
     kind: varchar("kind", { length: 64 }).$type<NotificationKind>().notNull(),
     /** Producer-computed dedupe anchor; see `buildIdempotencyKey`. */
     idempotencyKey: text("idempotency_key").notNull(),
+    /** Optional project anchor for kinds tied to a project (incidents, wrapped). */
+    projectId: cuid("project_id"),
     payload: jsonb("payload").notNull(),
     createdAt: tzTimestamp("created_at").defaultNow().notNull(),
     seenAt: tzTimestamp("seen_at"),
@@ -40,5 +49,7 @@ export const notifications = latitudeSchema.table(
     index("notifications_user_org_unread_idx").on(t.userId, t.organizationId).where(sql`${t.seenAt} is null`),
     // Idempotency anchor — see `idempotency_key` doc.
     uniqueIndex("notifications_idempotency_uq").on(t.organizationId, t.userId, t.idempotencyKey),
+    // Cascade-delete query when the project goes away.
+    index("notifications_org_project_idx").on(t.organizationId, t.projectId).where(sql`${t.projectId} is not null`),
   ],
 )

@@ -91,6 +91,18 @@ export const createFakeNotificationRepository = () => {
           }
         }
       }),
+    deleteByProjectId: ({ organizationId, projectId }) =>
+      Effect.sync(() => {
+        let deleted = 0
+        for (let i = rows.length - 1; i >= 0; i--) {
+          const r = rows[i]
+          if (r && r.organizationId === organizationId && r.projectId === projectId) {
+            rows.splice(i, 1)
+            deleted++
+          }
+        }
+        return { deleted }
+      }),
   }
 
   return { repo, rows }

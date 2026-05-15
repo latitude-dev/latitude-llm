@@ -10,6 +10,7 @@ import {
   type NotFoundError,
   NotificationId,
   type OrganizationId,
+  type ProjectId,
   type RepositoryError,
   SettingsReader,
   type SqlClient,
@@ -35,6 +36,8 @@ export interface IncidentNotificationRequest {
   readonly payload: IncidentOpenedPayload | IncidentClosedPayload
   /** Pre-generated row id so producer + consumer can share it for retries. */
   readonly notificationId: NotificationId
+  /** Project anchor for cascade-delete on `ProjectDeleted`. */
+  readonly projectId: ProjectId
 }
 
 export type RequestIncidentNotificationsResult =
@@ -106,6 +109,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       idempotencyKey,
       payload,
       notificationId: NotificationId(generateId()),
+      projectId: incident.projectId,
     }))
 
     return { status: "ok", requests } as const

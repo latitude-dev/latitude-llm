@@ -312,7 +312,13 @@ export const createDomainEventsWorker = ({
     DatasetCreated: () => Effect.void,
     EvaluationConfigured: () => Effect.void,
     AnnotationQueueItemCompleted: () => Effect.void,
-    ProjectDeleted: () => Effect.void,
+    ProjectDeleted: (event) =>
+      pub.publish(
+        "notifications",
+        "delete-by-project",
+        { organizationId: event.payload.organizationId, projectId: event.payload.projectId },
+        { dedupeKey: `notifications:delete-by-project:${event.payload.projectId}` },
+      ),
     FlaggerToggled: () => Effect.void,
     SavedSearchCreated: () => Effect.void,
     // Impersonation events are audit-only — their value is being

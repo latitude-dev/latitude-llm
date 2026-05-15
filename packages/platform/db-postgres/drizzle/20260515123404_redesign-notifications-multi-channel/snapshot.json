@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "9e54e4fa-8745-4c6a-ba03-13ed62821015",
+  "id": "a8ce927f-0308-4abd-9771-a01820cf11d4",
   "prevIds": [
     "af5a7d32-276b-4b41-a3b3-e5ae50166e87"
   ],
@@ -3683,6 +3683,19 @@
       "table": "notifications"
     },
     {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "notifications"
+    },
+    {
       "type": "jsonb",
       "typeSchema": null,
       "notNull": true,
@@ -5883,6 +5896,34 @@
       "method": "btree",
       "concurrently": false,
       "name": "notifications_idempotency_uq",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "notifications"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "project_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"project_id\" is not null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "notifications_org_project_idx",
       "entityType": "indexes",
       "schema": "latitude",
       "table": "notifications"

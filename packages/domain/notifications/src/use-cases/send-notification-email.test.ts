@@ -66,6 +66,7 @@ const makeStoredNotification = (params: {
   userId: params.userId,
   kind: "incident.opened",
   idempotencyKey: `incident.opened:${cuid("ai")}`,
+  projectId: null,
   payload: { incidentKind: "issue.new", alertIncidentId: cuid("ai") },
   createdAt: new Date(),
   seenAt: null,

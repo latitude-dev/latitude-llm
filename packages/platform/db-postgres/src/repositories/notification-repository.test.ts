@@ -4,7 +4,7 @@ import {
   type NotificationRepositoryShape,
   notificationSchema,
 } from "@domain/notifications"
-import { generateId, NotificationId, OrganizationId, type SqlClient, UserId } from "@domain/shared"
+import { generateId, NotificationId, OrganizationId, ProjectId, type SqlClient, UserId } from "@domain/shared"
 import { Effect } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 import { notifications } from "../schema/notifications.ts"
@@ -24,6 +24,9 @@ const runWithLive = <A, E>(
   org: OrganizationId = ORG_A,
 ) => Effect.runPromise(effect.pipe(withPostgres(NotificationRepositoryLive, pg.adminPostgresClient, org)))
 
+const PROJECT_1 = ProjectId("p1".padEnd(24, "0"))
+const PROJECT_2 = ProjectId("p2".padEnd(24, "0"))
+
 const makeNotification = (overrides: Partial<Notification> = {}): Notification =>
   notificationSchema.parse({
     id: NotificationId(generateId()),
@@ -31,6 +34,7 @@ const makeNotification = (overrides: Partial<Notification> = {}): Notification =
     userId: USER_1,
     kind: "incident.opened",
     idempotencyKey: `incident.opened:${"ai".padEnd(24, "0")}`,
+    projectId: PROJECT_1,
     payload: { incidentKind: "issue.new", alertIncidentId: "ai".padEnd(24, "0") },
     createdAt: new Date(),
     seenAt: null,
@@ -290,6 +294,43 @@ describe("NotificationRepositoryLive", () => {
     )
     expect(fromA.items).toHaveLength(1)
     expect(fromA.items[0]?.organizationId).toBe(ORG_A)
+  })
+
+  it("deleteByProjectId removes only the project's notifications, scoped to the org", async () => {
+    const project1Row = makeNotification({
+      idempotencyKey: `incident.opened:${"ai-p1".padEnd(24, "0")}`,
+      projectId: PROJECT_1,
+    })
+    const project2Row = makeNotification({
+      idempotencyKey: `incident.opened:${"ai-p2".padEnd(24, "0")}`,
+      projectId: PROJECT_2,
+    })
+    const otherUserOnProject1 = makeNotification({
+      userId: USER_2,
+      idempotencyKey: `incident.opened:${"ai-p1b".padEnd(24, "0")}`,
+      projectId: PROJECT_1,
+    })
+
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        yield* repo.insertIfAbsent(project1Row)
+        yield* repo.insertIfAbsent(project2Row)
+        yield* repo.insertIfAbsent(otherUserOnProject1)
+      }),
+    )
+
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        return yield* repo.deleteByProjectId({ organizationId: ORG_A, projectId: ProjectId(PROJECT_1) })
+      }),
+    )
+
+    expect(result.deleted).toBe(2)
+    const remaining = await pg.db.select().from(notifications)
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0]?.projectId).toBe(PROJECT_2)
   })
 })
 

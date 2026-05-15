@@ -11,6 +11,7 @@ const toInsertRow = (n: Notification): typeof notifications.$inferInsert => ({
   userId: n.userId,
   kind: n.kind,
   idempotencyKey: n.idempotencyKey,
+  projectId: n.projectId,
   payload: n.payload,
   createdAt: n.createdAt,
   seenAt: n.seenAt,
@@ -24,6 +25,7 @@ const toDomain = (row: typeof notifications.$inferSelect): Notification =>
     userId: row.userId,
     kind: row.kind,
     idempotencyKey: row.idempotencyKey,
+    projectId: row.projectId,
     payload: row.payload,
     createdAt: row.createdAt,
     seenAt: row.seenAt,
@@ -158,6 +160,20 @@ export const NotificationRepositoryLive = Layer.effect(
                 ),
               ),
           )
+        }),
+
+      deleteByProjectId: ({ organizationId, projectId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const deleted = yield* sqlClient.query((db) =>
+            db
+              .delete(notifications)
+              .where(
+                and(eq(notifications.organizationId, organizationId), eq(notifications.projectId, projectId)),
+              )
+              .returning({ id: notifications.id }),
+          )
+          return { deleted: deleted.length }
         }),
     }),
   ),

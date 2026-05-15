@@ -3,6 +3,7 @@ import {
   generateId,
   NotificationId,
   type OrganizationId,
+  type ProjectId,
   type RepositoryError,
   type SqlClient,
   type UserId,
@@ -14,6 +15,7 @@ import { resolveRecipients } from "../helpers/resolve-recipients.ts"
 
 export interface RequestWrappedReportNotificationsInput {
   readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
   readonly wrappedReportId: string
   readonly projectName: string
   /** Absolute URL to `/wrapped/<id>`. */
@@ -27,6 +29,7 @@ export interface WrappedReportNotificationRequest {
   readonly idempotencyKey: string
   readonly payload: WrappedReportPayload
   readonly notificationId: NotificationId
+  readonly projectId: ProjectId
 }
 
 export type RequestWrappedReportNotificationsResult =
@@ -70,6 +73,7 @@ export const requestWrappedReportNotificationsUseCase = (input: RequestWrappedRe
       idempotencyKey,
       payload,
       notificationId: NotificationId(generateId()),
+      projectId: input.projectId,
     }))
 
     return { status: "ok", requests } as const

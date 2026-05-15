@@ -1,8 +1,10 @@
 import {
   ALERT_INCIDENT_KINDS,
+  cuidSchema,
   type NotificationGroup,
   notificationIdSchema,
   organizationIdSchema,
+  ProjectId,
   userIdSchema,
 } from "@domain/shared"
 import { z } from "zod"
@@ -92,6 +94,13 @@ export const notificationSchema = z.object({
    * outbox redelivery so the same source event never produces two rows.
    */
   idempotencyKey: z.string(),
+  /**
+   * Optional project anchor. Populated for kinds tied to a project
+   * (`incident.*`, `wrapped.report`); `null` for cross-project kinds
+   * (`custom.message`). When the project is deleted, rows with this set
+   * are removed via the `delete-by-project` cascade task.
+   */
+  projectId: cuidSchema.transform(ProjectId).nullable(),
   payload: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   seenAt: z.date().nullable(),

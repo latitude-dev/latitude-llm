@@ -48,6 +48,11 @@ export type {
 } from "./use-cases/create-notification.ts"
 export { createNotificationUseCase } from "./use-cases/create-notification.ts"
 export type {
+  DeleteNotificationsByProjectError,
+  DeleteNotificationsByProjectInput,
+} from "./use-cases/delete-notifications-by-project.ts"
+export { deleteNotificationsByProjectUseCase } from "./use-cases/delete-notifications-by-project.ts"
+export type {
   GetUnreadNotificationCountError,
   GetUnreadNotificationCountInput,
 } from "./use-cases/get-unread-notification-count.ts"

@@ -67,6 +67,7 @@ describe("createNotificationUseCase", () => {
         notificationId: NotificationId(generateId()),
         kind: "incident.opened",
         idempotencyKey: `incident.opened:${alertIncidentId}`,
+        projectId: null,
         payload: incidentPayload(alertIncidentId),
       }).pipe(Effect.provide(layer)),
     )
@@ -88,6 +89,7 @@ describe("createNotificationUseCase", () => {
         notificationId: NotificationId(generateId()),
         kind: "incident.opened",
         idempotencyKey,
+        projectId: null,
         payload: incidentPayload(alertIncidentId),
       }).pipe(Effect.provide(layer)),
     )
@@ -99,6 +101,7 @@ describe("createNotificationUseCase", () => {
         notificationId: NotificationId(generateId()),
         kind: "incident.opened",
         idempotencyKey,
+        projectId: null,
         payload: incidentPayload(alertIncidentId),
       }).pipe(Effect.provide(layer)),
     )
@@ -119,6 +122,7 @@ describe("createNotificationUseCase", () => {
         notificationId: NotificationId(generateId()),
         kind: "incident.opened",
         idempotencyKey: `incident.opened:${cuid("ai")}`,
+        projectId: null,
         payload: incidentPayload(cuid("ai")),
       }).pipe(Effect.provide(layer)),
     )
@@ -138,6 +142,7 @@ describe("createNotificationUseCase", () => {
         notificationId: NotificationId(generateId()),
         kind: "wrapped.report",
         idempotencyKey: `wrapped.report:${cuid("wr")}`,
+        projectId: null,
         payload: { wrappedReportId: cuid("wr"), projectName: "X", link: "https://example/x" },
       }).pipe(Effect.provide(layer)),
     )

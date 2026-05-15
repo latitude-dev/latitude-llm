@@ -1,10 +1,11 @@
 import {
   createNotificationUseCase,
+  deleteNotificationsByProjectUseCase,
   requestIncidentNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { OrganizationId } from "@domain/shared"
+import { OrganizationId, ProjectId } from "@domain/shared"
 import {
   AlertIncidentRepositoryLive,
   IssueRepositoryLive,
@@ -42,6 +43,7 @@ const createLayer = Layer.mergeAll(NotificationRepositoryLive, UserRepositoryLiv
  *   request-* (producer)       → publishes N create-notification tasks
  *   create-notification        → writes in-app row + conditionally publishes notification-email
  *   notification-email:send    → handled in `notification-emailer.ts`
+ *   delete-by-project          → cascade cleanup on `ProjectDeleted`
  *
  * The producer step lives here (rather than inline in `domain-events.ts`)
  * because it needs DB access — incidents require a project-settings gate
@@ -76,6 +78,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
                   notificationId: req.notificationId,
                   kind: req.kind,
                   idempotencyKey: req.idempotencyKey,
+                  projectId: req.projectId,
                   payload: req.payload,
                 },
                 { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
@@ -97,6 +100,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
     "request-wrapped-report-notifications": (payload) =>
       requestWrappedReportNotificationsUseCase({
         organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
         wrappedReportId: payload.wrappedReportId,
         projectName: payload.projectName,
         link: payload.link,
@@ -119,6 +123,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
                   notificationId: req.notificationId,
                   kind: req.kind,
                   idempotencyKey: req.idempotencyKey,
+                  projectId: req.projectId,
                   payload: req.payload,
                 },
                 { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
@@ -144,6 +149,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         notificationId: payload.notificationId as Parameters<typeof createNotificationUseCase>[0]["notificationId"],
         kind: payload.kind as Parameters<typeof createNotificationUseCase>[0]["kind"],
         idempotencyKey: payload.idempotencyKey,
+        projectId: payload.projectId === null ? null : ProjectId(payload.projectId),
         payload: payload.payload,
       }).pipe(
         Effect.flatMap((result) => {
@@ -170,6 +176,26 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
           ),
         ),
         withPostgres(createLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
+    "delete-by-project": (payload) =>
+      deleteNotificationsByProjectUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        projectId: ProjectId(payload.projectId),
+      }).pipe(
+        Effect.tap((result) =>
+          Effect.sync(() =>
+            logger.info(`notifications.delete-by-project projectId=${payload.projectId} deleted=${result.deleted}`),
+          ),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`notifications.delete-by-project failed projectId=${payload.projectId}`, error),
+          ),
+        ),
+        withPostgres(NotificationRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
         Effect.asVoid,
         withTracing,
       ),

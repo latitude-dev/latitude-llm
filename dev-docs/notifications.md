@@ -12,6 +12,7 @@ Multi-channel notification system. Producers fan out to channel-specific workers
 | **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category. The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. |
 | **Channel** | `apps/workers/src/workers/notification-*.ts` + per-channel registries | Delivery surface (in-app, email; Slack and others later). Each channel is one queue topic + one worker + one renderer registry keyed on `NotificationKind`. |
 | **Idempotency key** | `idempotency_key` column on `notifications` | Producer-computed (`buildIdempotencyKey` in `@domain/notifications`). The unique index `(organization_id, user_id, idempotency_key)` absorbs at-least-once redelivery from the outbox + queue layers. |
+| **Project anchor** | `project_id` column on `notifications` (nullable) | Cascade anchor for kinds tied to a project (`incident.*`, `wrapped.report`). On `ProjectDeleted` the domain-events worker fires `notifications:delete-by-project`, which removes every row anchored to the deleted project. Per the platform's no-FK rule, referential integrity is application-layer. |
 | **Preferences** | `users.notification_preferences` (jsonb) | Per-user, per-group, per-channel switch (today only `email`). Missing entries default to opt-in (`true`). |
 
 ## Pipeline
@@ -34,6 +35,12 @@ notification-email:send
      – markEmailed (UPDATE … WHERE emailed_at IS NULL, RETURNING id)
      – per-kind renderer from NOTIFICATION_EMAIL_RENDERERS
      – sendEmail via @platform/email-transport
+
+ProjectDeleted (domain event, separate path)
+  → apps/workers/src/workers/domain-events.ts
+notifications:delete-by-project
+  → apps/workers/src/workers/notifications.ts
+     – DELETE FROM notifications WHERE organization_id = $1 AND project_id = $2
 ```
 
 Per-channel **claim-then-act** ordering (stamp `emailed_at` before sending) guarantees zero duplicate emails under at-least-once redelivery, at the cost of dropping the email if SMTP fails mid-claim. Documented trade-off (per design discussion).

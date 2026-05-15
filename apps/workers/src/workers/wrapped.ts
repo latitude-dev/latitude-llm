@@ -136,6 +136,7 @@ export const createWrappedWorker = ({
                 "request-wrapped-report-notifications",
                 {
                   organizationId: payload.organizationId,
+                  projectId: payload.projectId,
                   wrappedReportId: result.reportId,
                   projectName: result.projectName,
                   link: `${webAppUrl}/wrapped/${result.reportId}`,

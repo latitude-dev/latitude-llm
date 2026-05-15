@@ -85,6 +85,16 @@ Each channel keeps its own renderer registry keyed on `NotificationKind`, with t
 
 The settings UI at `/settings/account` renders one switch per group (label/description from `NOTIFICATION_GROUP_META`); adding a kind to an existing group automatically inherits the user's current setting.
 
+### Project cascade
+
+Kinds tied to a project (`incident.*`, `wrapped.report`) carry the project id in a top-level `project_id` column (not just the payload — the payload field is for renderers). When the project is deleted:
+
+- `apps/web/src/domains/projects/projects.functions.ts` writes a `ProjectDeleted` event to the outbox.
+- The `domain-events` worker routes it to `notifications:delete-by-project`.
+- The notifications worker calls `deleteNotificationsByProjectUseCase`, which deletes every row with that `project_id` in the current org.
+
+No FK constraint (per the codebase's no-FK rule); the partial index `(organization_id, project_id) WHERE project_id IS NOT NULL` keeps the cleanup query cheap. `custom.message` and other project-less kinds have `project_id = NULL` and are unaffected.
+
 ### Idempotency keys
 
 `buildIdempotencyKey({ kind, payload })` in `@domain/notifications/helpers/idempotency-key.ts` computes:
@@ -102,6 +112,7 @@ CREATE TABLE latitude.notifications (
   user_id         varchar(24) NOT NULL,
   kind            varchar(64) NOT NULL,        -- NotificationKind
   idempotency_key text        NOT NULL,        -- producer-computed
+  project_id      varchar(24),                 -- cascade anchor; null for project-less kinds
   payload         jsonb       NOT NULL,
   created_at      timestamptz NOT NULL DEFAULT now(),
   seen_at         timestamptz,
@@ -116,6 +127,9 @@ CREATE INDEX notifications_user_org_unread_idx
 
 CREATE UNIQUE INDEX notifications_idempotency_uq
   ON latitude.notifications (organization_id, user_id, idempotency_key);
+
+CREATE INDEX notifications_org_project_idx
+  ON latitude.notifications (organization_id, project_id) WHERE project_id IS NOT NULL;
 ```
 
 ```sql

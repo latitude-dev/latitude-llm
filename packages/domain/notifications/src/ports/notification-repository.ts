@@ -1,4 +1,12 @@
-import type { NotFoundError, NotificationId, OrganizationId, RepositoryError, SqlClient, UserId } from "@domain/shared"
+import type {
+  NotFoundError,
+  NotificationId,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  SqlClient,
+  UserId,
+} from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Notification } from "../entities/notification.ts"
 
@@ -75,6 +83,18 @@ export interface NotificationRepositoryShape {
    * no-ops (no row matches the WHERE), not errors.
    */
   markSeen(input: MarkNotificationSeenInput): Effect.Effect<void, RepositoryError, SqlClient>
+
+  /**
+   * Cascade cleanup. Removes every notification anchored to the given
+   * project across all users of the (current RLS-scoped) organization.
+   * Called by the `ProjectDeleted` domain-event handler — per the
+   * platform's no-FK rule, referential integrity for `project_id` is
+   * application-layer.
+   */
+  deleteByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+  }): Effect.Effect<{ readonly deleted: number }, RepositoryError, SqlClient>
 }
 
 export class NotificationRepository extends Context.Service<NotificationRepository, NotificationRepositoryShape>()(
