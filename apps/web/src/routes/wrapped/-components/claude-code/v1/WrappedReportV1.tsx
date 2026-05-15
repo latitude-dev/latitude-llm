@@ -1,6 +1,8 @@
 import type { WrappedReportRecord } from "@domain/spans"
+import { GenerateYourOwnCTA } from "./GenerateYourOwnCTA.tsx"
 import { InteractiveHeatmap } from "./InteractiveHeatmap.tsx"
 import { MomentsRow } from "./MomentsRow.tsx"
+import { PrivateSectionSeparator } from "./PrivateSectionSeparator.tsx"
 import { DESCRIPTOR_FOR_KIND, TITLE_FOR_KIND, WRAPPED_COLORS } from "./personality-copy.ts"
 import { ShareSection } from "./ShareSection.tsx"
 import { WorkspaceDeepDiveSection } from "./WorkspaceDeepDiveSection.tsx"
@@ -18,6 +20,17 @@ import { WorkspaceDeepDiveSection } from "./WorkspaceDeepDiveSection.tsx"
 
 interface WrappedReportV1Props {
   readonly record: WrappedReportRecord
+  /**
+   * Drives the layout: members of the wrapped's org see the full report
+   * (workspaces, top bash command, two share sections, no setup link),
+   * everyone else sees a summary-only view (no workspaces / top bash /
+   * share; a "Generate your own" CTA at the bottom).
+   *
+   * The data shape arrives already redacted server-side for non-members
+   * (see `redactForPublic` in `wrapped.functions.ts`); this prop just
+   * picks the matching layout.
+   */
+  readonly isMember: boolean
 }
 
 const RANGE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
@@ -174,8 +187,10 @@ function TopBashCommand({ command }: { command: WrappedReportRecord["report"]["t
   if (!command) return null
   return (
     <section className="text-center">
-      <p className="text-lg sm:text-xl" style={{ color: INK, fontFamily: "Georgia, serif" }}>
-        {"Your favorite command: "}
+      <h2 className="text-2xl sm:text-3xl" style={{ fontFamily: "Georgia, serif", color: INK, fontWeight: 500 }}>
+        Your favorite command
+      </h2>
+      <p className="mt-3 text-lg sm:text-xl" style={{ color: INK, fontFamily: "Georgia, serif" }}>
         <span
           className="mx-1 rounded-md px-2 py-0.5 font-mono text-base"
           style={{ backgroundColor: "#E8E4D8", color: ACCENT }}
@@ -218,10 +233,18 @@ function WorkspaceSections({
 }) {
   if (deepDives.length === 0) return null
   return (
-    <section className="space-y-10">
-      {deepDives.map((ws) => (
-        <WorkspaceDeepDiveSection key={ws.name} workspace={ws} />
-      ))}
+    <section className="space-y-6">
+      <h2
+        className="text-center text-2xl sm:text-3xl"
+        style={{ fontFamily: "Georgia, serif", color: INK, fontWeight: 500 }}
+      >
+        Top workspaces
+      </h2>
+      <div className="space-y-10">
+        {deepDives.map((ws) => (
+          <WorkspaceDeepDiveSection key={ws.name} workspace={ws} />
+        ))}
+      </div>
       {otherCount > 0 ? (
         <p className="text-xs" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
           {`You also touched ${otherCount} other workspace${otherCount === 1 ? "" : "s"}.`}
@@ -275,7 +298,12 @@ function PersonalityReveal({ personality }: { personality: WrappedReportRecord["
   )
 }
 
-export function WrappedReportV1({ record }: WrappedReportV1Props) {
+// Short reminder shown beneath each share button (member view). Short on
+// purpose — the per-section "Private" pills carry the granular signal,
+// and the share button is the just-in-time confirmation.
+const SHARE_DISCLAIMER = "Workspaces and files won't be shared."
+
+export function WrappedReportV1({ record, isMember }: WrappedReportV1Props) {
   const { report, ownerName } = record
   const archetypeTitle = TITLE_FOR_KIND[report.personality.kind] ?? "The Wrapped"
   return (
@@ -291,22 +319,38 @@ export function WrappedReportV1({ record }: WrappedReportV1Props) {
         <BreadthStrip totals={report.totals} />
         <LocHeadline loc={report.loc} />
         <ReadWriteRatio loc={report.loc} />
+
         <HeatmapSection heatmap={report.heatmap} />
-        <MomentsRow moments={report.moments} />
-        <TopBashCommand command={report.topBashCommand} />
-        <WorkspaceSections deepDives={report.workspaceDeepDives} otherCount={report.otherWorkspaceCount} />
+        <MomentsRow moments={report.moments} isMember={isMember} />
+
+        {/* Personality reveal is the page's climax in both views — the
+            archetype is what readers came for. Placed before the share
+            CTA so the action sits at the natural high point. */}
         <PersonalityReveal personality={report.personality} />
-        <ShareSection personalityKind={report.personality.kind} archetypeTitle={archetypeTitle} />
-        <p className="text-center text-sm" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
-          <a
-            href="https://docs.latitude.so/telemetry/claude-code"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4 hover:no-underline"
-          >
-            How is this generated? Set up your own →
-          </a>
-        </p>
+
+        {/* Page splits cleanly at the personality reveal:
+              - Members get the share CTA, the "Just for you" separator,
+                and the private block below (favorite command + top
+                workspaces). Data for the private block is redacted to
+                null / [] in the wire payload for non-members (see
+                `redactForPublic`), so a rendering bug couldn't leak it.
+              - Public viewers get the "Generate your own" CTA pointing
+                at the Claude Code telemetry docs. */}
+        {isMember ? (
+          <>
+            <ShareSection
+              personalityKind={report.personality.kind}
+              archetypeTitle={archetypeTitle}
+              disclaimer={SHARE_DISCLAIMER}
+            />
+            <PrivateSectionSeparator />
+            <TopBashCommand command={report.topBashCommand} />
+            <WorkspaceSections deepDives={report.workspaceDeepDives} otherCount={report.otherWorkspaceCount} />
+          </>
+        ) : (
+          <GenerateYourOwnCTA />
+        )}
+
         <footer className="mt-8 text-center text-xs" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
           Generated by Latitude · Claude Code Wrapped
         </footer>
