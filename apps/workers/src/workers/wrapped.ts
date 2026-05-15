@@ -138,7 +138,6 @@ export const createWrappedWorker = ({
                   organizationId: payload.organizationId,
                   projectId: payload.projectId,
                   wrappedReportId: result.reportId,
-                  projectName: result.projectName,
                   link: `${webAppUrl}/wrapped/${result.reportId}`,
                 },
                 { dedupeKey: `notifications:request-wrapped:${result.reportId}` },

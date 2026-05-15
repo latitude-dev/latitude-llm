@@ -6,9 +6,9 @@ import { BaseNotification } from "../base-notification.tsx"
 /**
  * Renders a Claude Code Wrapped notification — broadcast to every org
  * member when the per-project pipeline finishes a run. The payload
- * carries the project name and the absolute URL to the public report
- * page; the `wrappedReportId` doubles as the dedupe anchor (see
- * `idempotency_key`).
+ * carries the absolute URL to the public report page; the row's
+ * `projectId` is the anchor the bell uses to surface the project name
+ * (resolved live by `BaseNotification`).
  */
 export function WrappedReportNotification({ notification }: { readonly notification: NotificationRecord }) {
   const parsed = wrappedReportPayloadSchema.safeParse(notification.payload)
@@ -23,18 +23,17 @@ export function WrappedReportNotification({ notification }: { readonly notificat
     )
   }
 
-  const { projectName, link } = parsed.data
-  const title = `Your Claude Code Wrapped for ${projectName} is ready`
-  const description = "Click here to see it"
+  const { link } = parsed.data
 
   return (
     <BaseNotification
       notificationId={notification.id}
       seenAt={seenAt}
       createdAt={createdAt}
+      projectId={notification.projectId}
       icon={<Icon icon={ClaudeCodeIcon} className="h-5 w-5 text-foreground-muted" />}
-      title={title}
-      description={description}
+      title="Your Claude Code Wrapped is ready"
+      description="Click here to see it"
       url={link}
     />
   )

@@ -17,7 +17,6 @@ export interface RequestWrappedReportNotificationsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly wrappedReportId: string
-  readonly projectName: string
   /** Absolute URL to `/wrapped/<id>`. */
   readonly link: string
 }
@@ -61,7 +60,6 @@ export const requestWrappedReportNotificationsUseCase = (input: RequestWrappedRe
 
     const payload: WrappedReportPayload = {
       wrappedReportId: input.wrappedReportId,
-      projectName: input.projectName,
       link: input.link,
     }
     const idempotencyKey = buildIdempotencyKey({ kind: "wrapped.report", payload })

@@ -40,7 +40,6 @@ export type IncidentClosedPayload = z.infer<typeof incidentClosedPayloadSchema>
 
 export const wrappedReportPayloadSchema = z.object({
   wrappedReportId: z.string(),
-  projectName: z.string(),
   /** Absolute URL to `/wrapped/<id>`. */
   link: z.string(),
 })

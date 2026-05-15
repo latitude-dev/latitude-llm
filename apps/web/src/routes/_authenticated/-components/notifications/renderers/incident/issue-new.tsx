@@ -20,6 +20,7 @@ export function IssueNewNotification({ notification, payload }: IncidentRenderer
       notificationId={notification.id}
       seenAt={seenAt}
       createdAt={createdAt}
+      projectId={notification.projectId}
       icon={<ShieldAlertIcon />}
       title="A new issue has been detected."
       url={url}

@@ -159,11 +159,19 @@ Source events, the producer step, the in-app feed, and the kind registry are all
 
 ## Project anchor
 
-Set `projectId` on the `CreateNotificationRequest` for any kind tied to a project. This populates the `notifications.project_id` column, which is what the `ProjectDeleted` cascade reads.
+Set `projectId` on the `CreateNotificationRequest` for any kind tied to a project. This populates the `notifications.project_id` column, which serves three jobs:
 
-- For incidents: the `requestIncidentNotificationsUseCase` reads `incident.projectId` and threads it through.
-- For wrapped reports: the wrapped worker passes `payload.projectId` in the `request-wrapped-report-notifications` queue task; the use case threads it through.
-- For project-less kinds (`custom.message`, future cross-project announcements): set `projectId: null`. The cascade ignores those rows.
+1. **Cascade-delete** on `ProjectDeleted`: see the pipeline section.
+2. **Bell-row footer**: `BaseNotification` reads `notification.projectId` and resolves the project name live via `useProjectsCollection` — so the project label stays in sync if a user renames a project, and renderers don't need to carry a snapshot.
+3. **Email rendering**: `sendNotificationEmailUseCase` looks up the project once (via `ProjectRepository.findById`) and passes `{ id, name, slug }` to the per-kind email template. Templates fall back to neutral wording when the project was deleted between request and send (`project: null`).
+
+Producers:
+
+- Incidents: `requestIncidentNotificationsUseCase` reads `incident.projectId` and threads it through.
+- Wrapped reports: the wrapped worker passes `payload.projectId` in the `request-wrapped-report-notifications` queue task; the use case threads it through.
+- Project-less kinds (`custom.message`, future cross-project announcements): set `projectId: null`. The cascade ignores those rows; the bell footer omits the project label; the email template gets `project: null`.
+
+**Don't snapshot project name/slug in notification payloads.** Use the row-level `projectId` and let renderers resolve names lazily. The old `wrappedReportPayload.projectName` was removed for this reason — it could go stale and bloated every row with redundant data. Incident payloads still carry `projectSlug` because the renderer builds the issue URL from it (`/projects/${projectSlug}/issues/...`); that's a routing concern, not a display one, and falling back to a live lookup for URL construction would block paint.
 
 No FK constraint on `project_id` (per the database-postgres skill's no-FK rule). The partial index `notifications_org_project_idx` on `(organization_id, project_id) WHERE project_id IS NOT NULL` keeps the cascade query cheap.
 

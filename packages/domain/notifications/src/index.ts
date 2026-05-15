@@ -85,6 +85,7 @@ export type {
 } from "./use-cases/request-wrapped-report-notifications.ts"
 export { requestWrappedReportNotificationsUseCase } from "./use-cases/request-wrapped-report-notifications.ts"
 export type {
+  NotificationEmailProject,
   NotificationEmailRecipient,
   NotificationEmailRenderer,
   NotificationEmailSender,

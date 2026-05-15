@@ -42,6 +42,7 @@ export interface NotificationRecord {
   readonly id: string
   readonly kind: Notification["kind"]
   readonly idempotencyKey: string
+  readonly projectId: string | null
   readonly payload: JsonRecord
   readonly createdAt: string
   readonly seenAt: string | null
@@ -52,6 +53,7 @@ const toNotificationRecord = (n: Notification): NotificationRecord => ({
   id: n.id,
   kind: n.kind,
   idempotencyKey: n.idempotencyKey,
+  projectId: n.projectId,
   payload: n.payload as JsonRecord,
   createdAt: n.createdAt.toISOString(),
   seenAt: n.seenAt?.toISOString() ?? null,

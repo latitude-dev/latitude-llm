@@ -22,6 +22,7 @@ export function CustomMessageNotification({ notification }: { readonly notificat
       notificationId={notification.id}
       seenAt={seenAt}
       createdAt={createdAt}
+      projectId={notification.projectId}
       icon={
         <Icon
           icon={parsed.data.link ? ExternalLinkIcon : MessageCircleIcon}

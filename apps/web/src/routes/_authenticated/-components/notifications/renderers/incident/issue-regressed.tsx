@@ -21,6 +21,7 @@ export function IssueRegressedNotification({ notification, payload }: IncidentRe
       notificationId={notification.id}
       seenAt={seenAt}
       createdAt={createdAt}
+      projectId={notification.projectId}
       icon={<ShieldAlertIcon />}
       title="A resolved issue has regressed."
       url={url}

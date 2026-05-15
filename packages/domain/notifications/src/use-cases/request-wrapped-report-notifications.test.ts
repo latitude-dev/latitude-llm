@@ -66,7 +66,6 @@ describe("requestWrappedReportNotificationsUseCase", () => {
         organizationId: orgId,
         projectId,
         wrappedReportId,
-        projectName: "Sample project",
         link: `https://app.example/wrapped/${wrappedReportId}`,
       }).pipe(Effect.provide(layer)),
     )
@@ -79,7 +78,7 @@ describe("requestWrappedReportNotificationsUseCase", () => {
       expect(req.idempotencyKey).toBe(`wrapped.report:${wrappedReportId}`)
       expect(req.projectId).toBe(projectId)
       expect(req.payload.wrappedReportId).toBe(wrappedReportId)
-      expect(req.payload.projectName).toBe("Sample project")
+      expect(req.payload.link).toBe(`https://app.example/wrapped/${wrappedReportId}`)
     }
   })
 
@@ -91,7 +90,6 @@ describe("requestWrappedReportNotificationsUseCase", () => {
         organizationId: orgId,
         projectId,
         wrappedReportId,
-        projectName: "Sample project",
         link: `https://app.example/wrapped/${wrappedReportId}`,
       }).pipe(Effect.provide(layer)),
     )

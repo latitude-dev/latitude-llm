@@ -143,7 +143,7 @@ describe("createNotificationUseCase", () => {
         kind: "wrapped.report",
         idempotencyKey: `wrapped.report:${cuid("wr")}`,
         projectId: null,
-        payload: { wrappedReportId: cuid("wr"), projectName: "X", link: "https://example/x" },
+        payload: { wrappedReportId: cuid("wr"), link: "https://example/x" },
       }).pipe(Effect.provide(layer)),
     )
 

@@ -28,6 +28,7 @@ export function IssueEscalatingNotification({ notification, payload, event }: In
       notificationId={notification.id}
       seenAt={seenAt}
       createdAt={createdAt}
+      projectId={notification.projectId}
       icon={<Icon icon={icon} />}
       title={opened ? "An issue is escalating." : "An issue stopped escalating."}
       url={url}

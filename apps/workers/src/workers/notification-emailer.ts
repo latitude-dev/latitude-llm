@@ -7,7 +7,12 @@ import {
 } from "@domain/notifications"
 import type { QueueConsumer } from "@domain/queue"
 import { NotificationId, OrganizationId } from "@domain/shared"
-import { NotificationRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  NotificationRepositoryLive,
+  ProjectRepositoryLive,
+  UserRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
@@ -20,7 +25,7 @@ interface NotificationEmailerDeps {
   consumer: QueueConsumer
 }
 
-const repoLayer = Layer.mergeAll(NotificationRepositoryLive, UserRepositoryLive)
+const repoLayer = Layer.mergeAll(NotificationRepositoryLive, ProjectRepositoryLive, UserRepositoryLive)
 
 const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
@@ -44,11 +49,11 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   // Adapter: the domain use case takes its own opaque error tags so it
   // doesn't depend on @domain/email types. Wrap the registry dispatch and
   // the transport-level send to match the use case's contract.
-  const renderEmailAdapter: NotificationEmailRenderer = ({ kind, payload, recipient }) =>
+  const renderEmailAdapter: NotificationEmailRenderer = ({ kind, payload, recipient, project }) =>
     Effect.tryPromise({
       try: async () => {
         const parsedPayload = payloadSchemaFor(kind).parse(payload)
-        const ctx: NotificationEmailRenderContext = { webAppUrl, recipient }
+        const ctx: NotificationEmailRenderContext = { webAppUrl, recipient, project }
         const renderer = NOTIFICATION_EMAIL_RENDERERS[kind]
         // Each renderer in the registry accepts its kind's narrowed payload;
         // payloadSchemaFor already returns the same schema used at the call

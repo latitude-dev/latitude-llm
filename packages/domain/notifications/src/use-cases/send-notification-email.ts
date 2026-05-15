@@ -1,3 +1,4 @@
+import { ProjectRepository } from "@domain/projects"
 import type { NotFoundError, NotificationId, RepositoryError, SqlClient } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
@@ -17,6 +18,18 @@ export interface NotificationEmailRecipient {
 }
 
 /**
+ * Minimal project snapshot threaded to renderers when the notification is
+ * project-anchored. Looked up server-side at email-send time so
+ * notification payloads don't have to carry stale `projectName` /
+ * `projectSlug` fields.
+ */
+export interface NotificationEmailProject {
+  readonly id: string
+  readonly name: string
+  readonly slug: string
+}
+
+/**
  * Boundary contract that channel adapters (today: `@domain/email`'s
  * notification template registry) implement. Keeps `@domain/notifications`
  * unaware of React Email internals — the use case just calls back.
@@ -25,6 +38,8 @@ export type NotificationEmailRenderer = (input: {
   readonly kind: NotificationKind
   readonly payload: Record<string, unknown>
   readonly recipient: NotificationEmailRecipient
+  /** `null` when the notification has no `projectId`, or when the project lookup missed. */
+  readonly project: NotificationEmailProject | null
 }) => Effect.Effect<RenderedEmailBoundary, RenderNotificationEmailError>
 
 /**
@@ -70,6 +85,11 @@ export type SendNotificationEmailError =
  * stamped, the user never gets the email for this notification. We
  * prefer that to the alternative (send-then-stamp), which can produce
  * duplicate emails on at-least-once redelivery.
+ *
+ * Project lookup: if `notification.projectId` is set, we resolve the
+ * project once here and pass a snapshot to the renderer. A missing
+ * project (deleted between request and send) is non-fatal — the
+ * renderer sees `project: null` and chooses fallback wording.
  */
 export const sendNotificationEmailUseCase =
   ({
@@ -85,6 +105,7 @@ export const sendNotificationEmailUseCase =
 
       const notifications = yield* NotificationRepository
       const users = yield* UserRepository
+      const projects = yield* ProjectRepository
 
       const notification: Notification = yield* notifications.findById(input.notificationId)
 
@@ -98,10 +119,20 @@ export const sendNotificationEmailUseCase =
 
       const user = yield* users.findById(notification.userId)
 
+      // Optional project snapshot. Catch NotFoundError so a project
+      // deletion between request and send doesn't break the email.
+      const project: NotificationEmailProject | null = notification.projectId
+        ? yield* projects.findById(notification.projectId).pipe(
+            Effect.map((p): NotificationEmailProject => ({ id: p.id, name: p.name, slug: p.slug })),
+            Effect.catchTag("NotFoundError", () => Effect.succeed<NotificationEmailProject | null>(null)),
+          )
+        : null
+
       const rendered = yield* renderEmail({
         kind: notification.kind,
         payload: notification.payload,
         recipient: { userId: user.id, name: user.name, email: user.email },
+        project,
       })
 
       yield* sendEmail({
@@ -115,5 +146,5 @@ export const sendNotificationEmailUseCase =
     }).pipe(Effect.withSpan("notifications.sendNotificationEmail")) as Effect.Effect<
       { readonly sent: boolean },
       SendNotificationEmailError,
-      SqlClient | NotificationRepository | UserRepository
+      SqlClient | NotificationRepository | ProjectRepository | UserRepository
     >
