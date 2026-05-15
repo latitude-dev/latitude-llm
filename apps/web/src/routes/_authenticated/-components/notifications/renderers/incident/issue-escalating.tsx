@@ -6,7 +6,12 @@ import type { NotificationRecord } from "../../../../../../domains/notifications
 import { getIncidentTrend } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { IssueTrendBar } from "../../../../projects/$projectSlug/issues/-components/issue-trend-bar.tsx"
 import { BaseNotification } from "../../base-notification.tsx"
-import { buildIssueUrl, useIncidentLinkFallback, useLiveIssueSummary } from "./-incident-helpers.ts"
+import {
+  buildIssueUrl,
+  useIncidentLinkFallback,
+  useIncidentProjectName,
+  useLiveIssueSummary,
+} from "./-incident-helpers.ts"
 import { IssueSummaryCard } from "./issue-summary-card.tsx"
 
 export function IssueEscalatingNotification({
@@ -21,6 +26,7 @@ export function IssueEscalatingNotification({
   const fallback = useIncidentLinkFallback(payload, notification.sourceId)
   const live = useLiveIssueSummary(payload, fallback)
   const issueName = live?.name ?? payload.issueName ?? fallback?.issueName ?? undefined
+  const projectName = useIncidentProjectName(payload, fallback)
   const opened = payload.event === "opened"
   // Snapshot status for opened is "escalating"; for closed we genuinely
   // don't know (the escalation just ended — the issue could be ongoing,
@@ -38,6 +44,7 @@ export function IssueEscalatingNotification({
       icon={<Icon icon={icon} />}
       title={opened ? "An issue is escalating." : "An issue stopped escalating."}
       url={url}
+      projectName={projectName}
     >
       {issueName ? <IssueSummaryCard name={issueName} states={states} /> : null}
       <EscalatingTrend notificationSourceId={notification.sourceId} event={payload.event} states={states} />

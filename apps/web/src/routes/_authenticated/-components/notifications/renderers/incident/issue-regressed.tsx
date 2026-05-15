@@ -2,7 +2,12 @@ import type { IncidentNotificationPayload } from "@domain/notifications"
 import { ShieldAlertIcon } from "lucide-react"
 import type { NotificationRecord } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../../base-notification.tsx"
-import { buildIssueUrl, useIncidentLinkFallback, useLiveIssueSummary } from "./-incident-helpers.ts"
+import {
+  buildIssueUrl,
+  useIncidentLinkFallback,
+  useIncidentProjectName,
+  useLiveIssueSummary,
+} from "./-incident-helpers.ts"
 import { IssueSummaryCard } from "./issue-summary-card.tsx"
 
 export function IssueRegressedNotification({
@@ -17,6 +22,7 @@ export function IssueRegressedNotification({
   const fallback = useIncidentLinkFallback(payload, notification.sourceId)
   const live = useLiveIssueSummary(payload, fallback)
   const issueName = live?.name ?? payload.issueName ?? fallback?.issueName ?? undefined
+  const projectName = useIncidentProjectName(payload, fallback)
   // Snapshot status for issue.regressed is "regressed". If the user has
   // already re-resolved the issue by the time they read the notification,
   // the live lookup will upgrade the badge to "resolved".
@@ -31,6 +37,7 @@ export function IssueRegressedNotification({
       icon={<ShieldAlertIcon />}
       title="A resolved issue has regressed."
       url={url}
+      projectName={projectName}
     >
       {issueName ? <IssueSummaryCard name={issueName} states={states} /> : null}
     </BaseNotification>

@@ -2,7 +2,12 @@ import type { IncidentNotificationPayload } from "@domain/notifications"
 import { ShieldAlertIcon } from "lucide-react"
 import type { NotificationRecord } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../../base-notification.tsx"
-import { buildIssueUrl, useIncidentLinkFallback, useLiveIssueSummary } from "./-incident-helpers.ts"
+import {
+  buildIssueUrl,
+  useIncidentLinkFallback,
+  useIncidentProjectName,
+  useLiveIssueSummary,
+} from "./-incident-helpers.ts"
 import { IssueSummaryCard } from "./issue-summary-card.tsx"
 
 export function IssueNewNotification({
@@ -17,6 +22,7 @@ export function IssueNewNotification({
   const fallback = useIncidentLinkFallback(payload, notification.sourceId)
   const live = useLiveIssueSummary(payload, fallback)
   const issueName = live?.name ?? payload.issueName ?? fallback?.issueName ?? undefined
+  const projectName = useIncidentProjectName(payload, fallback)
   // Snapshot status for issue.new is always "new"; the live lookup may
   // upgrade this if the issue moved on (resolved, escalated, etc.).
   const states = live?.states ?? ["new"]
@@ -30,6 +36,7 @@ export function IssueNewNotification({
       icon={<ShieldAlertIcon />}
       title="A new issue has been detected."
       url={url}
+      projectName={projectName}
     >
       {issueName ? <IssueSummaryCard name={issueName} states={states} /> : null}
     </BaseNotification>

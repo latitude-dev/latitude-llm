@@ -21,6 +21,7 @@ interface BaseNotificationProps {
   readonly description?: ReactNode
   readonly url?: string | undefined
   readonly children?: ReactNode
+  readonly projectName?: string | undefined
 }
 
 type ListPage = {
@@ -106,6 +107,7 @@ function BaseNotificationContent({
   title,
   description,
   children,
+  projectName,
 }: Omit<BaseNotificationProps, "url" | "notificationId">) {
   const isUnseen = seenAt === undefined
 
@@ -132,7 +134,7 @@ function BaseNotificationContent({
         ) : null}
         {children}
         <Text.H6 color="foregroundMuted" className="pt-1" noWrap>
-          {relativeTime(createdAt)}
+          {projectName ? `${projectName} · ${relativeTime(createdAt)}` : relativeTime(createdAt)}
         </Text.H6>
       </div>
       {isUnseen && <div aria-hidden className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
@@ -149,10 +151,18 @@ export function BaseNotification({
   description,
   url,
   children,
+  projectName,
 }: BaseNotificationProps) {
   const handlers = useMarkSeenOnHover(notificationId, seenAt)
   const content = (
-    <BaseNotificationContent seenAt={seenAt} createdAt={createdAt} icon={icon} title={title} description={description}>
+    <BaseNotificationContent
+      seenAt={seenAt}
+      createdAt={createdAt}
+      icon={icon}
+      title={title}
+      description={description}
+      projectName={projectName}
+    >
       {children}
     </BaseNotificationContent>
   )
