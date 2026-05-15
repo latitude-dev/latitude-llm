@@ -1,11 +1,25 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { JobTitle } from "@domain/users"
-import { Button, Checkbox, CodeBlock, CopyButton, ProviderIcon, Tabs, Text, useMountEffect, useToast } from "@repo/ui"
+import {
+  Button,
+  CodeBlock,
+  CopyButton,
+  cn,
+  Icon,
+  Input,
+  ProviderIcon,
+  Tabs,
+  Text,
+  useMountEffect,
+  useToast,
+} from "@repo/ui"
 import { eq } from "@tanstack/react-db"
+import { useForm } from "@tanstack/react-form"
 import type { LucideIcon } from "lucide-react"
 import {
   Bot,
   Braces,
+  Check,
   ChevronLeft,
   ChevronRight,
   FileCode2,
@@ -19,6 +33,7 @@ import { useProjectsCollection } from "../../../../../domains/projects/projects.
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 import {
   type CodingMachineAgentId,
   getCodingAgentTelemetryPrompt,
@@ -413,9 +428,7 @@ export function OnboardingFlow({
   const { toast } = useToast()
   const [step, setStep] = useState<OnboardingStep>("role")
   const [role, setRole] = useState<OnboardingRole>("engineer")
-  const [customJobTitle, setCustomJobTitle] = useState("")
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
-  const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false)
   const [codingMachineAgent, setCodingMachineAgent] = useState<CodingMachineAgentId>("claude-code")
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
     PROVIDER_ENTRIES[0] ?? { id: "openai", name: "OpenAI", icon: "openai" },
@@ -423,6 +436,35 @@ export function OnboardingFlow({
   const [telemetrySetupMode, setTelemetrySetupMode] = useState<TelemetrySetupMode>("coding-agent")
   const [integrationPanel, setIntegrationPanel] = useState<IntegrationPanel>("typescript")
   const [otelExporterLanguage, setOtelExporterLanguage] = useState<OtelExporterLanguageId>("go")
+
+  const form = useForm({
+    defaultValues: {
+      customJobTitle: "",
+    },
+    onSubmit: createFormSubmitHandler(
+      async ({ customJobTitle }) => {
+        const stack = stackChoice as StackChoice
+        const onboardingData =
+          role === "other" ? { customJobTitle, stackChoice: stack } : { jobTitle: role, stackChoice: stack }
+        await submitOnboarding({ data: onboardingData })
+      },
+      {
+        onSuccess: () => setStep("telemetry"),
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
+  })
+
+  const handleAdvanceFromRole = async () => {
+    if (role === "other") {
+      await form.validateField("customJobTitle", "change")
+      const meta = form.getFieldMeta("customJobTitle")
+      if (meta && meta.errors.length > 0) return
+    }
+    setStep("stack")
+  }
 
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project: p }) => eq(p.id, projectId)).findOne(),
@@ -558,33 +600,61 @@ export function OnboardingFlow({
                     <button
                       key={option.id}
                       type="button"
-                      className={`w-full rounded-lg border p-4 flex flex-row items-start justify-between text-left ${selected ? "border-primary bg-accent/20" : "border-border"}`}
-                      onClick={() => setRole(option.id)}
+                      className={cn(
+                        "flex w-full flex-row items-start justify-between rounded-lg border p-4 text-left cursor-pointer hover:bg-accent/10",
+                        "border-border",
+                        {
+                          "border-primary bg-accent/20": selected,
+                        },
+                      )}
+                      onClick={() => {
+                        setRole(option.id)
+                        if (option.id !== "other") {
+                          form.setFieldMeta("customJobTitle", (prev) => ({
+                            ...prev,
+                            errorMap: {},
+                          }))
+                        }
+                      }}
                     >
                       <div className="flex flex-col gap-1">
                         <Text.H4 weight="medium">{option.title}</Text.H4>
                         <Text.H5 color="foregroundMuted">{option.description}</Text.H5>
                       </div>
                       <div className="pt-1">
-                        <Checkbox checked={selected} />
+                        <span
+                          aria-hidden
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}
+                        >
+                          {selected ? <Icon icon={Check} size="xs" /> : null}
+                        </span>
                       </div>
                     </button>
                   )
                 })}
               </div>
               {role === "other" && (
-                <input
-                  type="text"
-                  aria-label="Custom job title"
-                  placeholder="What's your role?"
-                  value={customJobTitle}
-                  onChange={(e) => setCustomJobTitle(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-                  maxLength={256}
-                />
+                <form.Field
+                  name="customJobTitle"
+                  validators={{
+                    onChange: ({ value }) => (value.trim() === "" ? "Please tell us your role" : undefined),
+                  }}
+                >
+                  {(field) => (
+                    <Input
+                      type="text"
+                      aria-label="Custom job title"
+                      placeholder="What's your role?"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                      maxLength={256}
+                    />
+                  )}
+                </form.Field>
               )}
               <div>
-                <Button onClick={() => setStep("stack")}>Next</Button>
+                <Button onClick={() => void handleAdvanceFromRole()}>Next</Button>
               </div>
             </div>
           </div>
@@ -609,7 +679,10 @@ export function OnboardingFlow({
                     <button
                       key={option.id}
                       type="button"
-                      className={`flex w-full flex-row items-start justify-between gap-4 rounded-lg border p-4 text-left ${selected ? "border-primary bg-accent/20" : "border-border"}`}
+                      className={cn(
+                        "flex w-full flex-row items-start justify-between gap-4 rounded-lg border p-4 text-left cursor-pointer transition-colors hover:bg-accent/10",
+                        selected ? "border-primary bg-accent/20" : "border-border",
+                      )}
                       onClick={() => setStackChoice(option.id)}
                     >
                       <div className="flex min-w-0 flex-1 flex-row items-start gap-4">
@@ -632,7 +705,12 @@ export function OnboardingFlow({
                         </div>
                       </div>
                       <div className="pt-1">
-                        <Checkbox checked={selected} />
+                        <span
+                          aria-hidden
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}
+                        >
+                          {selected ? <Icon icon={Check} size="xs" /> : null}
+                        </span>
                       </div>
                     </button>
                   )
@@ -643,22 +721,10 @@ export function OnboardingFlow({
                   Back
                 </Button>
                 <Button
-                  disabled={
-                    stackChoice === null || isSubmittingOnboarding || (role === "other" && !customJobTitle.trim())
-                  }
-                  onClick={async () => {
-                    if (stackChoice === null || isSubmittingOnboarding) return
-                    setIsSubmittingOnboarding(true)
-                    try {
-                      const onboardingData =
-                        role === "other" ? { customJobTitle, stackChoice } : { jobTitle: role, stackChoice }
-                      await submitOnboarding({ data: onboardingData })
-                      setStep("telemetry")
-                    } catch (error) {
-                      toast({ variant: "destructive", description: toUserMessage(error) })
-                    } finally {
-                      setIsSubmittingOnboarding(false)
-                    }
+                  disabled={stackChoice === null || form.state.isSubmitting}
+                  onClick={() => {
+                    if (stackChoice === null) return
+                    void form.handleSubmit()
                   }}
                 >
                   Continue
