@@ -20,7 +20,15 @@ import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { AnnotationSchema, toAnnotationResponse } from "../openapi/entities/annotation.ts"
 import { SpanDetailSchema, SpanSchema, toSpanDetailResponse, toSpanResponse } from "../openapi/entities/span.ts"
-import { TraceDetailSchema, TraceSchema, toTraceDetailResponse, toTraceResponse } from "../openapi/entities/trace.ts"
+import {
+  decodeTraceCursor,
+  encodeTraceCursor,
+  PaginatedTracesSchema,
+  TRACE_SORT_FIELDS,
+  TraceDetailSchema,
+  toTraceDetailResponse,
+  toTraceResponse,
+} from "../openapi/entities/trace.ts"
 import { Paginated, PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
   FilterSetSchema,
@@ -40,8 +48,6 @@ const tracesFernGroup = (methodName: string) =>
     "x-fern-sdk-method-name": methodName,
   }) as const
 
-const TRACE_SORT_FIELDS = ["startTime", "endTime", "durationNs", "tokensTotal", "costTotalMicrocents"] as const
-
 const ListBodySchema = z
   .object({
     cursor: z
@@ -54,7 +60,7 @@ const ListBodySchema = z
       .enum(["asc", "desc"])
       .default("desc")
       .describe("Sort direction. Defaults to `desc` (most recent first)."),
-    searchQuery: z
+    query: z
       .string()
       .max(500)
       .optional()
@@ -64,8 +70,6 @@ const ListBodySchema = z
     filters: FilterSetSchema.optional(),
   })
   .openapi("ListTracesBody")
-
-const PaginatedTracesSchema = Paginated(TraceSchema, "PaginatedTraces")
 
 const ExportBodySchema = z
   .object({
@@ -85,30 +89,6 @@ const ExportResponseSchema = z
       .describe('Always `"queued"`. The CSV is built asynchronously and emailed to `recipient` when ready.'),
   })
   .openapi("ExportTracesResponse")
-
-// Opaque cursor over the wire — base64url JSON of `{ sortValue, traceId }`.
-// Keeps the API surface a plain `string` while letting the ClickHouse repo
-// hand back its tuple cursor unchanged.
-const encodeTraceCursor = (cursor: { sortValue: string; traceId: string }): string =>
-  Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url")
-
-const decodeTraceCursor = (raw: string): { sortValue: string; traceId: string } | null => {
-  try {
-    const json = Buffer.from(raw, "base64url").toString("utf8")
-    const parsed = JSON.parse(json) as unknown
-    if (
-      parsed === null ||
-      typeof parsed !== "object" ||
-      typeof (parsed as { sortValue?: unknown }).sortValue !== "string" ||
-      typeof (parsed as { traceId?: unknown }).traceId !== "string"
-    ) {
-      return null
-    }
-    return parsed as { sortValue: string; traceId: string }
-  } catch {
-    return null
-  }
-}
 
 // Annotation cursor — base64url JSON of `{ offset: number }`. The underlying
 // score-listing use-case is offset-based; encoding offset as an opaque cursor
@@ -153,7 +133,7 @@ const listTraces = traceEndpoint({
     ...tracesFernGroup("list"),
     summary: "List project traces",
     description:
-      "Returns a cursor-paginated page of traces in the project. Combine `filters` with `searchQuery` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.",
+      "Returns a cursor-paginated page of traces in the project. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.",
     security: PROTECTED_SECURITY,
     request: {
       params: ProjectParamsSchema,
@@ -190,7 +170,7 @@ const listTraces = traceEndpoint({
             sortDirection: body.sortDirection,
             ...(cursor ? { cursor } : {}),
             ...(body.filters ? { filters: body.filters } : {}),
-            ...(body.searchQuery ? { searchQuery: body.searchQuery } : {}),
+            ...(body.query ? { searchQuery: body.query } : {}),
           },
         })
       }).pipe(

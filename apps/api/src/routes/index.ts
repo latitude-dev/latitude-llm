@@ -12,6 +12,7 @@ import { registerHealthRoute } from "./health.ts"
 import { createMembersRoutes, membersPath } from "./members.ts"
 import { createOAuthKeysRoutes, oauthKeysPath } from "./oauth-keys.ts"
 import { createProjectsRoutes, projectsPath } from "./projects.ts"
+import { createSavedSearchesRoutes, savedSearchesPath } from "./saved-searches.ts"
 import { createScoresRoutes, scoresPath } from "./scores.ts"
 import { createTracesRoutes, tracesPath } from "./traces.ts"
 import { registerWellKnownRoutes } from "./well-known.ts"
@@ -49,6 +50,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route(scoresPath, createScoresRoutes())
   routes.route(annotationsPath, createAnnotationsRoutes())
   routes.route(tracesPath, createTracesRoutes())
+  routes.route(savedSearchesPath, createSavedSearchesRoutes())
   routes.route(apiKeysPath, createApiKeysRoutes())
   routes.route(oauthKeysPath, createOAuthKeysRoutes())
   routes.route(accountPath, createAccountRoutes())

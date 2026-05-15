@@ -35,3 +35,10 @@ export class InvalidSavedSearchNameError extends Data.TaggedError("InvalidSavedS
     return this.message
   }
 }
+
+export class AssigneeNotOrgMemberError extends Data.TaggedError("AssigneeNotOrgMemberError")<{
+  readonly userId: string
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Assignee must be a member of the organization."
+}

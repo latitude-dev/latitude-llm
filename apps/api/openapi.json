@@ -1483,7 +1483,7 @@
             "default": "desc",
             "description": "Sort direction. Defaults to `desc` (most recent first)."
           },
-          "searchQuery": {
+          "query": {
             "type": "string",
             "maxLength": 500,
             "description": "Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND."
@@ -2493,6 +2493,224 @@
           }
         ],
         "description": "Which traces to include in the export — either explicit ids or a filter set."
+      },
+      "PaginatedSavedSearches": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavedSearch"
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "SavedSearch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable saved-search identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this saved search."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this saved search belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Free-text semantic query applied alongside `filters`. `null` when the search is filter-only. At least one of `query` or `filters` must be set."
+          },
+          "filters": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilterSet"
+              },
+              {
+                "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
+              }
+            ]
+          },
+          "assignedUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
+          },
+          "createdByUserId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "User who created the saved search."
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the search was deleted. `null` while active."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "query",
+          "filters",
+          "assignedUserId",
+          "createdByUserId",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateSavedSearchBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Human-readable name. Used to derive the slug."
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "default": null,
+            "description": "Free-text semantic query. `null` (default) when the search is filter-only. At least one of `query` or `filters` must be set."
+          },
+          "filters": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilterSet"
+              },
+              {
+                "description": "Structured filter set. Defaults to `{}` (no filters). At least one of `query` or `filters` must be set."
+              }
+            ]
+          },
+          "assignedUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "default": null,
+            "description": "User to assign the search to. `null` (default) leaves the search unassigned."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateSavedSearchBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "New human-readable name. Triggers slug regeneration when the change affects the slug form (cosmetic edits like capitalization keep the URL stable)."
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "description": "Replace the free-text query. Pass `null` to clear it."
+          },
+          "filters": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilterSet"
+              },
+              {
+                "description": "Replace the structured filter set."
+              }
+            ]
+          },
+          "assignedUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Replace the assignee. Pass `null` to clear it. Use the dedicated `/assign` endpoint to validate membership."
+          }
+        }
+      },
+      "AssignSavedSearchBody": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "User to assign the search to, or `null` to clear the current assignment."
+          }
+        },
+        "required": [
+          "userId"
+        ]
       },
       "ApiKey": {
         "type": "object",
@@ -3566,7 +3784,7 @@
         "x-fern-sdk-group-name": "traces",
         "x-fern-sdk-method-name": "list",
         "summary": "List project traces",
-        "description": "Returns a cursor-paginated page of traces in the project. Combine `filters` with `searchQuery` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.",
+        "description": "Returns a cursor-paginated page of traces in the project. Combine `filters` with `query` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -4145,6 +4363,616 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExportTracesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/searches": {
+      "get": {
+        "tags": [
+          "Saved Searches"
+        ],
+        "x-fern-sdk-group-name": "savedSearches",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List saved searches",
+        "description": "Returns every saved search in the project. The response uses the standard paginated shape; the saved-search list currently fits in a single page (`nextCursor` is always `null`).",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listSavedSearches",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of saved searches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedSavedSearches"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Saved Searches"
+        ],
+        "x-fern-sdk-group-name": "savedSearches",
+        "x-fern-sdk-method-name": "create",
+        "summary": "Create saved search",
+        "description": "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only — the authenticated user becomes the search's `createdByUserId`.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "createSavedSearch",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSavedSearchBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Saved search created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedSearch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/searches/{searchSlug}": {
+      "get": {
+        "tags": [
+          "Saved Searches"
+        ],
+        "x-fern-sdk-group-name": "savedSearches",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get saved search",
+        "description": "Returns a single saved search by slug.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getSavedSearch",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Saved-search slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Saved-search slug (human-readable identifier within the project).",
+            "name": "searchSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved search",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedSearch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Saved Searches"
+        ],
+        "x-fern-sdk-group-name": "savedSearches",
+        "x-fern-sdk-method-name": "update",
+        "summary": "Update saved search",
+        "description": "Updates a saved search. Renaming may regenerate the slug — clients should re-read the response or rely on the `id` for stable references.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "updateSavedSearch",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Saved-search slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Saved-search slug (human-readable identifier within the project).",
+            "name": "searchSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSavedSearchBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated saved search",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedSearch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Saved Searches"
+        ],
+        "x-fern-sdk-group-name": "savedSearches",
+        "x-fern-sdk-method-name": "delete",
+        "summary": "Delete saved search",
+        "description": "Deletes a saved search by slug.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "deleteSavedSearch",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Saved-search slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Saved-search slug (human-readable identifier within the project).",
+            "name": "searchSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Saved search deleted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/searches/{searchSlug}/assign": {
+      "post": {
+        "tags": [
+          "Saved Searches"
+        ],
+        "x-fern-sdk-group-name": "savedSearches",
+        "x-fern-sdk-method-name": "assign",
+        "summary": "Assign saved search",
+        "description": "Assigns the saved search to a user, or clears the current assignment when `userId` is `null`. The assignee must be a member of the requesting organization — otherwise the request is rejected with 400.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "assignSavedSearch",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Saved-search slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Saved-search slug (human-readable identifier within the project).",
+            "name": "searchSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignSavedSearchBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated saved search",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedSearch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/searches/{searchSlug}/traces": {
+      "get": {
+        "tags": [
+          "Saved Searches"
+        ],
+        "x-fern-sdk-group-name": "savedSearches",
+        "x-fern-sdk-method-name": "listTraces",
+        "summary": "List traces matching a saved search",
+        "description": "Returns a cursor-paginated page of traces that match the saved search's `query` + `filters`. Each row uses the same `Trace` shape as `listTraces` — use the trace point-lookup endpoints (`getTrace`, `listTraceSpans`, `getTraceSpan`, `listTraceAnnotations`) to drill into individual traces.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listSavedSearchTraces",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Saved-search slug (human-readable identifier within the project)."
+            },
+            "required": true,
+            "description": "Saved-search slug (human-readable identifier within the project).",
+            "name": "searchSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."
+            },
+            "required": false,
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Page size. Defaults to 50; max 200."
+            },
+            "required": false,
+            "description": "Page size. Defaults to 50; max 200.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "startTime",
+                "endTime",
+                "durationNs",
+                "tokensTotal",
+                "costTotalMicrocents"
+              ],
+              "default": "startTime",
+              "description": "Field to sort by. Defaults to `startTime`."
+            },
+            "required": false,
+            "description": "Field to sort by. Defaults to `startTime`.",
+            "name": "sortBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc",
+              "description": "Sort direction. Defaults to `desc` (most recent first)."
+            },
+            "required": false,
+            "description": "Sort direction. Defaults to `desc` (most recent first).",
+            "name": "sortDirection",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of traces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTraces"
                 }
               }
             }

@@ -1,8 +1,42 @@
 import type { Trace, TraceDetail } from "@domain/spans"
 import { z } from "@hono/zod-openapi"
+import { Paginated } from "../pagination.ts"
 
 const nullableString = () => z.string().nullable()
 const emptyToNull = (value: string): string | null => (value === "" ? null : value)
+
+/**
+ * Fields the trace repository accepts as `sortBy`. The API surface narrows the
+ * domain's free-form string sort param to a stable allow-list so the SDK and
+ * MCP tool inputs document exactly what's tunable.
+ */
+export const TRACE_SORT_FIELDS = ["startTime", "endTime", "durationNs", "tokensTotal", "costTotalMicrocents"] as const
+
+/**
+ * Opaque cursor over the wire — base64url JSON of `{ sortValue, traceId }`.
+ * Keeps the public API surface a plain `string` while letting the ClickHouse
+ * repo hand back its tuple cursor unchanged.
+ */
+export const encodeTraceCursor = (cursor: { sortValue: string; traceId: string }): string =>
+  Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url")
+
+export const decodeTraceCursor = (raw: string): { sortValue: string; traceId: string } | null => {
+  try {
+    const json = Buffer.from(raw, "base64url").toString("utf8")
+    const parsed = JSON.parse(json) as unknown
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      typeof (parsed as { sortValue?: unknown }).sortValue !== "string" ||
+      typeof (parsed as { traceId?: unknown }).traceId !== "string"
+    ) {
+      return null
+    }
+    return parsed as { sortValue: string; traceId: string }
+  } catch {
+    return null
+  }
+}
 
 const traceFields = {
   organizationId: z.string().describe("Organization that owns this trace."),
@@ -42,7 +76,9 @@ const traceFields = {
   ),
 } as const
 
-export const TraceSchema = z.object(traceFields).openapi("Trace")
+const TraceSchema = z.object(traceFields).openapi("Trace")
+
+export const PaginatedTracesSchema = Paginated(TraceSchema, "PaginatedTraces")
 
 const GenAIMessageSchema = z
   .record(z.string(), z.unknown())

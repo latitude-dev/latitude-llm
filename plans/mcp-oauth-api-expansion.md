@@ -748,11 +748,15 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [x] `apps/api/src/routes/traces.test.ts` — 8 integration tests cover the auth gate, empty-result listing, cursor + filters validation, get 404, recipient-member enforcement on export, and the happy-path 202.
   - [x] `buildTracesExportUseCase` refactor deferred — keeping the queue contract (`filters? + selection? + searchQuery?`) stable means the web caller stays unchanged and the API route translates at the boundary. Use-case keeps its current shape.
 
-### Outstanding
-
-- **M5 — Saved Searches** (6 endpoints, prefix `/projects/{projectSlug}/searches`, `medium` tier across)
-  - [ ] `GET /`, `GET /{searchSlug}`, `POST /`, `PATCH /{searchSlug}`, `DELETE /{searchSlug}`
-  - [ ] `POST /{searchSlug}/assign` — new `assignSavedSearchUseCase` in `@domain/saved-searches` (validates assignee membership)
+- **M5 — Saved Searches** (6 endpoints, prefix `/projects/{projectSlug}/searches`)
+  - [x] `GET /` — list, `low` tier. Uses the standard paginated wrapper; fits in a single page (`nextCursor` always `null`).
+  - [x] `GET /{searchSlug}` — get, `low` tier.
+  - [x] `POST /` — create, `low` tier. **OAuth-only** (the authenticated user becomes `createdByUserId`); API-key callers hit 403 via `requireOAuthUserId`. Slug derived from `name`; 400 on empty search (no query and no filters).
+  - [x] `PATCH /{searchSlug}` — update, `low` tier. Slug regenerates when the name change affects the slug form (reuses `updateSavedSearch`).
+  - [x] `DELETE /{searchSlug}` — delete (soft-delete), `low` tier.
+  - [x] `POST /{searchSlug}/assign` — assign (or clear with `userId: null`), `low` tier. New `assignSavedSearchUseCase` in `@domain/saved-searches` adds a cross-domain dep on `@domain/organizations` to validate via `MembershipRepository.isMember`; new `AssigneeNotOrgMemberError` (400). The use-case delegates to `updateSavedSearch` once membership is confirmed, so slug regeneration / name validation paths stay shared.
+  - [x] `apps/api/src/openapi/entities/saved-search.ts` — `SavedSearchSchema` with field-by-field descriptions; `filterSet` reuses the named `FilterSet` OpenAPI component.
+  - [x] `apps/api/src/routes/saved-searches.test.ts` — 11 integration tests cover auth gate, empty list, OAuth-only create + 403, happy-path create, empty-search 400, get 404, get-after-create, rename + slug regen, delete + 404 after, assign-non-member 400, assign + clear round-trip.
 - **M6 — Issues** (8 endpoints, prefix `/projects/{projectSlug}/issues`)
   - [ ] `IssueRepository.findBySlug` + `existsBySlug`
   - [ ] Wire `generateUniqueSlug` into `createIssueFromScoreUseCase` + `discoverIssueUseCase`
