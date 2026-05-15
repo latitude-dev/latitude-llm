@@ -1,6 +1,6 @@
 import json
 import traceback
-from typing import Any
+from typing import Any, cast
 
 from op_gepa_engine.util import Field, Model
 
@@ -53,12 +53,13 @@ def _first_remote_message(value: Any, depth: int = 0) -> str | None:
     if depth >= 4 or not isinstance(value, dict):
         return None
 
+    obj = cast(dict[str, Any], value)
     for key in ("message", "httpMessage", "_tag", "name", "type"):
-        candidate = value.get(key)
+        candidate = obj.get(key)
         if isinstance(candidate, str) and candidate.strip():
             return candidate.strip()
 
-    return _first_remote_message(value.get("cause"), depth + 1)
+    return _first_remote_message(obj.get("cause"), depth + 1)
 
 
 class RpcRemoteError(RuntimeError):

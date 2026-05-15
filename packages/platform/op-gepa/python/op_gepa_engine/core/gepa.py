@@ -168,8 +168,15 @@ async def handle_gepa_optimize(server: RpcServer, params: GepaOptimizeParams) ->
         GepaStopReason.COMPLETED,
     )
 
+    # GEPA 0.1+ types `best_candidate` as str | dict for string vs dict seeds;
+    # this engine always seeds with a component→script map.
+    best = result.best_candidate
+    if isinstance(best, str):
+        raise TypeError("GEPA returned a string candidate; Latitude expects dict-shaped candidates.")
+    optimized: System = best
+
     return GepaOptimizeResult(
-        optimized=result.best_candidate,
+        optimized=optimized,
         stopReason=stop_reason,
         totalIterations=iteration_counter.iterations,
         # Subtract the seed candidate; remaining entries in the pool are
