@@ -4,6 +4,12 @@ import { useCallback, useEffect, useState } from "react"
 interface ShareSectionProps {
   readonly personalityKind: PersonalityKind
   readonly archetypeTitle: string
+  /**
+   * Optional muted line rendered beneath the share buttons. Used by the
+   * member view to remind sharers that org-internal sections won't be
+   * included in the shared link — "Only the summary above is shared."
+   */
+  readonly disclaimer?: string
 }
 
 /**
@@ -18,7 +24,7 @@ interface ShareSectionProps {
  * this week. My Claude Code Wrapped →"). The arrow is part of the canned
  * text on purpose — most chat surfaces render it crisply.
  */
-export function ShareSection({ archetypeTitle }: ShareSectionProps) {
+export function ShareSection({ archetypeTitle, disclaimer }: ShareSectionProps) {
   const [copied, setCopied] = useState(false)
   const [pageUrl, setPageUrl] = useState<string>("")
 
@@ -99,6 +105,11 @@ export function ShareSection({ archetypeTitle }: ShareSectionProps) {
           {copied ? "Link copied to clipboard" : "or copy the link"}
         </button>
       </div>
+      {disclaimer ? (
+        <p className="mt-3 text-xs" style={{ color: "#6E6A5E", fontFamily: "Georgia, serif" }}>
+          {disclaimer}
+        </p>
+      ) : null}
     </section>
   )
 }
