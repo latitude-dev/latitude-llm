@@ -1,4 +1,4 @@
-import { userIdSchema } from "@domain/shared"
+import { notificationPreferencesSchema, userIdSchema } from "@domain/shared"
 import { z } from "zod"
 
 /**
@@ -29,6 +29,12 @@ export const userSchema = z.object({
   emailVerified: z.boolean(),
   image: z.string().nullable(),
   role: userRoleSchema,
+  /**
+   * Per-channel notification preferences keyed by `NotificationGroup`.
+   * `null` when the user has never visited the settings page — readers
+   * (`shouldSendEmail`) treat null as "all defaults" (opt-out model).
+   */
+  notificationPreferences: notificationPreferencesSchema.nullable(),
   createdAt: z.date(),
 })
 

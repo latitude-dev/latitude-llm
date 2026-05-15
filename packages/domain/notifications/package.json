@@ -21,6 +21,7 @@
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/users": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   },

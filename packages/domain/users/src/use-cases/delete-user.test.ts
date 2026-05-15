@@ -26,6 +26,7 @@ const createTestUser = (id: string): User => ({
   emailVerified: true,
   image: null,
   role: "user",
+  notificationPreferences: null,
   createdAt: new Date(),
 })
 

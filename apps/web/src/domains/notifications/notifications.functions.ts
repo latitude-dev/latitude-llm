@@ -2,7 +2,6 @@ import { AlertIncidentRepository } from "@domain/alerts"
 import { IssueRepository } from "@domain/issues"
 import {
   getUnreadNotificationCountUseCase,
-  INCIDENT_NOTIFICATION_EVENTS,
   listNotificationsUseCase,
   markAllNotificationsSeenUseCase,
   markNotificationSeenUseCase,
@@ -31,29 +30,30 @@ const notificationCursorSchema = z.object({
   id: z.string(),
 })
 
-// `payload` is a JSON object whose shape depends on `type`. The renderer
-// narrows it via `incidentNotificationPayloadSchema` /
-// `customMessageNotificationPayloadSchema` at the consumption site.
+// `payload` is a JSON object whose shape depends on `kind`. The renderer
+// narrows it via `payloadSchemaFor(kind)` at the consumption site.
 // Index signature uses `{}` to match TanStack Start's JSON-serialized return
 // inference (Record<string, unknown> would over-narrow during the round-trip).
 type JsonRecord = Readonly<Record<string, object>>
 
 export interface NotificationRecord {
   readonly id: string
-  readonly type: Notification["type"]
-  readonly sourceId: string | null
+  readonly kind: Notification["kind"]
+  readonly idempotencyKey: string
   readonly payload: JsonRecord
   readonly createdAt: string
   readonly seenAt: string | null
+  readonly emailedAt: string | null
 }
 
 const toNotificationRecord = (n: Notification): NotificationRecord => ({
   id: n.id,
-  type: n.type,
-  sourceId: n.sourceId,
+  kind: n.kind,
+  idempotencyKey: n.idempotencyKey,
   payload: n.payload as JsonRecord,
   createdAt: n.createdAt.toISOString(),
   seenAt: n.seenAt?.toISOString() ?? null,
+  emailedAt: n.emailedAt?.toISOString() ?? null,
 })
 
 interface ListNotificationsResultRecord {
@@ -144,7 +144,7 @@ export const getIncidentTrend = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       alertIncidentId: z.string(),
-      event: z.enum(INCIDENT_NOTIFICATION_EVENTS),
+      event: z.enum(["opened", "closed"]),
     }),
   )
   .handler(async ({ data }): Promise<IncidentTrendResult> => {

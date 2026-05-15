@@ -56,6 +56,7 @@ describe("registerContact", () => {
       emailVerified: true,
       image: null,
       role: "user",
+      notificationPreferences: null,
       createdAt: CREATED_AT,
     })
 

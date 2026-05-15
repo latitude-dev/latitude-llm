@@ -1,3 +1,4 @@
+import { NotFoundError, type NotificationId } from "@domain/shared"
 import { Effect } from "effect"
 import type { Notification } from "../entities/notification.ts"
 import type {
@@ -11,29 +12,34 @@ import type {
 
 /**
  * Minimal in-memory NotificationRepository for unit tests. Mirrors the
- * partial-unique-index dedupe behaviour of the real repo: bulkInsert keys on
- * `(organizationId, userId, sourceId, payload.event)` for type=incident rows
- * and silently drops conflicts.
+ * real repo's unique-index dedupe behaviour: `insertIfAbsent` keys on
+ * `(organizationId, userId, idempotencyKey)` and returns `null` on
+ * conflict instead of throwing. `markEmailed` is a conditional stamp on
+ * `emailed_at IS NULL` returning whether we claimed.
  */
 export const createFakeNotificationRepository = () => {
   const rows: Notification[] = []
-
-  const dedupeKey = (n: Notification): string | null => {
-    if (n.type !== "incident" || n.sourceId === null) return null
-    const event = (n.payload as { event?: string }).event ?? ""
-    return `${n.organizationId}:${n.userId}:${n.sourceId}:${event}`
-  }
+  const keyOf = (n: Notification) => `${n.organizationId}:${n.userId}:${n.idempotencyKey}`
 
   const repo: NotificationRepositoryShape = {
-    bulkInsert: (incoming) =>
+    insertIfAbsent: (row) =>
       Effect.sync(() => {
-        const seen = new Set(rows.map(dedupeKey).filter((k): k is string => k !== null))
-        for (const n of incoming) {
-          const key = dedupeKey(n)
-          if (key !== null && seen.has(key)) continue
-          if (key !== null) seen.add(key)
-          rows.push(n)
-        }
+        const existing = rows.find((r) => keyOf(r) === keyOf(row))
+        if (existing) return null
+        rows.push(row)
+        return row
+      }),
+    findById: (id: NotificationId) =>
+      Effect.suspend(() => {
+        const row = rows.find((r) => r.id === id)
+        return row ? Effect.succeed(row) : Effect.fail(new NotFoundError({ entity: "Notification", id }))
+      }),
+    markEmailed: (id: NotificationId) =>
+      Effect.sync(() => {
+        const row = rows.find((r) => r.id === id)
+        if (!row || row.emailedAt !== null) return false
+        ;(row as { emailedAt: Date | null }).emailedAt = new Date()
+        return true
       }),
     list: ({ organizationId, userId, limit, cursor }: ListNotificationsInput) =>
       Effect.sync<ListNotificationsResult>(() => {

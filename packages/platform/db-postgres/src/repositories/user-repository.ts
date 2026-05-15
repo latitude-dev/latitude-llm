@@ -1,4 +1,10 @@
-import { NotFoundError, SqlClient, type SqlClientShape, type UserId } from "@domain/shared"
+import {
+  NotFoundError,
+  type NotificationPreferences,
+  SqlClient,
+  type SqlClientShape,
+  type UserId,
+} from "@domain/shared"
 import type { User } from "@domain/users"
 import { UserRepository } from "@domain/users"
 import { and, eq, isNull, or, sql } from "drizzle-orm"
@@ -14,6 +20,7 @@ const toDomainUser = (row: typeof users.$inferSelect): User => ({
   emailVerified: row.emailVerified,
   image: row.image ?? null,
   role: row.role,
+  notificationPreferences: (row.notificationPreferences as NotificationPreferences | null) ?? null,
   createdAt: row.createdAt,
 })
 
@@ -85,6 +92,26 @@ export const UserRepositoryLive = Layer.effect(
               .update(users)
               .set({
                 jobTitle: trimmed,
+                updatedAt: new Date(),
+              })
+              .where(eq(users.id, userId)),
+          )
+        }),
+
+      updateNotificationPreferences: ({
+        userId,
+        preferences,
+      }: {
+        userId: string
+        preferences: NotificationPreferences
+      }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db) =>
+            db
+              .update(users)
+              .set({
+                notificationPreferences: preferences,
                 updatedAt: new Date(),
               })
               .where(eq(users.id, userId)),

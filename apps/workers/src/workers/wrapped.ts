@@ -127,16 +127,21 @@ export const createWrappedWorker = ({
               `wrapped: sent to ${result.recipientCount} recipient(s) for ${projectId} (report ${result.reportId})`,
             )
             // Fan out an in-app notification per org member, linking to the
-            // public report URL. `sourceId = wrappedReportId` gives natural
-            // idempotency at the DB level — re-deliveries of the BullMQ job
-            // won't duplicate notifications.
+            // public report URL. The notifications worker handles the
+            // recipient fan-out + per-user idempotency (the `(org, user,
+            // idempotency_key)` unique index dedupes BullMQ redelivery).
             yield* publisher
-              .publish("notifications", "create-from-wrapped-report", {
-                organizationId: payload.organizationId,
-                wrappedReportId: result.reportId,
-                projectName: result.projectName,
-                link: `${webAppUrl}/wrapped/${result.reportId}`,
-              })
+              .publish(
+                "notifications",
+                "request-wrapped-report-notifications",
+                {
+                  organizationId: payload.organizationId,
+                  wrappedReportId: result.reportId,
+                  projectName: result.projectName,
+                  link: `${webAppUrl}/wrapped/${result.reportId}`,
+                },
+                { dedupeKey: `notifications:request-wrapped:${result.reportId}` },
+              )
               .pipe(
                 Effect.tapError((cause) =>
                   Effect.sync(() => logger.error(`wrapped notification publish failed for ${projectId}`, cause)),

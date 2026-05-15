@@ -54,6 +54,7 @@ describe("updateContactOnboarding", () => {
       emailVerified: true,
       image: null,
       role: "user",
+      notificationPreferences: null,
       createdAt: new Date("2025-06-01T12:00:00.000Z"),
     })
 
@@ -86,6 +87,7 @@ describe("updateContactOnboarding", () => {
       emailVerified: true,
       image: null,
       role: "user",
+      notificationPreferences: null,
       createdAt: new Date("2025-06-01T12:00:00.000Z"),
     })
 

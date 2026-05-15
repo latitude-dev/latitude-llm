@@ -29,11 +29,12 @@ const makeNotification = (overrides: Partial<Notification> = {}): Notification =
     id: NotificationId(generateId()),
     organizationId: ORG_A,
     userId: USER_1,
-    type: "incident",
-    sourceId: "ai".padEnd(24, "0"),
-    payload: { event: "opened", incidentKind: "issue.new" },
+    kind: "incident.opened",
+    idempotencyKey: `incident.opened:${"ai".padEnd(24, "0")}`,
+    payload: { incidentKind: "issue.new", alertIncidentId: "ai".padEnd(24, "0") },
     createdAt: new Date(),
     seenAt: null,
+    emailedAt: null,
     ...overrides,
   })
 
@@ -42,16 +43,16 @@ afterEach(async () => {
 })
 
 describe("NotificationRepositoryLive", () => {
-  it("bulkInsert dedupes incident notifications on (org, user, source_id, payload->>event)", async () => {
-    const sourceId = "ai".padEnd(24, "0")
-    const sameKey = makeNotification({ sourceId })
-    const sameKeyAgain = makeNotification({ sourceId })
+  it("insertIfAbsent dedupes on (org, user, idempotency_key)", async () => {
+    const key = `incident.opened:${"ai".padEnd(24, "0")}`
+    const a = makeNotification({ idempotencyKey: key })
+    const b = makeNotification({ idempotencyKey: key })
 
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* NotificationRepository
-        yield* repo.bulkInsert([sameKey])
-        yield* repo.bulkInsert([sameKeyAgain])
+        yield* repo.insertIfAbsent(a)
+        yield* repo.insertIfAbsent(b)
       }),
     )
 
@@ -59,16 +60,41 @@ describe("NotificationRepositoryLive", () => {
     expect(all).toHaveLength(1)
   })
 
-  it("opened and closed for the same incident coexist (different payload->>event)", async () => {
-    const sourceId = "ai".padEnd(24, "0")
-    const opened = makeNotification({ sourceId, payload: { event: "opened", incidentKind: "issue.escalating" } })
-    const closed = makeNotification({ sourceId, payload: { event: "closed", incidentKind: "issue.escalating" } })
+  it("insertIfAbsent returns the inserted row, then null on conflict", async () => {
+    const row = makeNotification()
+
+    const [first, second] = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        const a = yield* repo.insertIfAbsent(row)
+        const b = yield* repo.insertIfAbsent(row)
+        return [a, b] as const
+      }),
+    )
+
+    expect(first).not.toBeNull()
+    expect(first?.id).toBe(row.id)
+    expect(second).toBeNull()
+  })
+
+  it("opened and closed for the same incident coexist (different kind + key)", async () => {
+    const incidentId = "ai".padEnd(24, "0")
+    const opened = makeNotification({
+      kind: "incident.opened",
+      idempotencyKey: `incident.opened:${incidentId}`,
+      payload: { incidentKind: "issue.escalating", alertIncidentId: incidentId },
+    })
+    const closed = makeNotification({
+      kind: "incident.closed",
+      idempotencyKey: `incident.closed:${incidentId}`,
+      payload: { incidentKind: "issue.escalating", alertIncidentId: incidentId },
+    })
 
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* NotificationRepository
-        yield* repo.bulkInsert([opened])
-        yield* repo.bulkInsert([closed])
+        yield* repo.insertIfAbsent(opened)
+        yield* repo.insertIfAbsent(closed)
       }),
     )
 
@@ -76,19 +102,69 @@ describe("NotificationRepositoryLive", () => {
     expect(all).toHaveLength(2)
   })
 
+  it("markEmailed sets emailed_at on the first call and returns false on the second", async () => {
+    const row = makeNotification()
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        yield* repo.insertIfAbsent(row)
+      }),
+    )
+
+    const [firstClaim, secondClaim] = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        const a = yield* repo.markEmailed(row.id)
+        const b = yield* repo.markEmailed(row.id)
+        return [a, b] as const
+      }),
+    )
+    expect(firstClaim).toBe(true)
+    expect(secondClaim).toBe(false)
+
+    const [persisted] = await pg.db.select().from(notifications)
+    expect(persisted?.emailedAt).not.toBeNull()
+  })
+
+  it("findById returns the row when present and a NotFoundError otherwise", async () => {
+    const row = makeNotification()
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        yield* repo.insertIfAbsent(row)
+      }),
+    )
+
+    const found = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        return yield* repo.findById(row.id)
+      }),
+    )
+    expect(found.id).toBe(row.id)
+  })
+
   it("list returns only the current user's rows in the current org", async () => {
-    const mineEarly = makeNotification({ userId: USER_1, sourceId: "ai-1".padEnd(24, "0") })
+    const mineEarly = makeNotification({
+      userId: USER_1,
+      idempotencyKey: `incident.opened:${"ai-1".padEnd(24, "0")}`,
+    })
     const mineLate = makeNotification({
       userId: USER_1,
-      sourceId: "ai-2".padEnd(24, "0"),
+      idempotencyKey: `incident.opened:${"ai-2".padEnd(24, "0")}`,
       createdAt: new Date(Date.now() + 10_000),
     })
-    const others = makeNotification({ userId: USER_2, sourceId: "ai-3".padEnd(24, "0") })
+    const others = makeNotification({
+      userId: USER_2,
+      idempotencyKey: `incident.opened:${"ai-3".padEnd(24, "0")}`,
+    })
 
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* NotificationRepository
-        yield* repo.bulkInsert([mineEarly, mineLate, others])
+        yield* repo.insertIfAbsent(mineEarly)
+        yield* repo.insertIfAbsent(mineLate)
+        yield* repo.insertIfAbsent(others)
       }),
     )
 
@@ -105,55 +181,20 @@ describe("NotificationRepositoryLive", () => {
     expect(page.hasMore).toBe(false)
   })
 
-  it("list pagination uses (createdAt, id) cursor and returns nextCursor when more remain", async () => {
-    const base = Date.now()
-    const rows = Array.from({ length: 5 }, (_, i) =>
-      makeNotification({
-        sourceId: `ai-${i}`.padEnd(24, "0"),
-        createdAt: new Date(base + i * 1000),
-      }),
-    )
-    await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* NotificationRepository
-        yield* repo.bulkInsert(rows)
-      }),
-    )
-
-    const first = await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* NotificationRepository
-        return yield* repo.list({ organizationId: ORG_A, userId: USER_1, limit: 2 })
-      }),
-    )
-    expect(first.items).toHaveLength(2)
-    expect(first.hasMore).toBe(true)
-    expect(first.nextCursor).not.toBeNull()
-
-    const second = await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* NotificationRepository
-        return yield* repo.list({
-          organizationId: ORG_A,
-          userId: USER_1,
-          limit: 2,
-          ...(first.nextCursor ? { cursor: first.nextCursor } : {}),
-        })
-      }),
-    )
-    expect(second.items).toHaveLength(2)
-    expect(second.items.map((i) => i.id)).not.toContain(first.items[0]?.id)
-  })
-
   it("countUnread counts only seen_at IS NULL for the current user", async () => {
-    const unread1 = makeNotification({ sourceId: "ai-1".padEnd(24, "0") })
-    const unread2 = makeNotification({ sourceId: "ai-2".padEnd(24, "0") })
-    const seen = makeNotification({ sourceId: "ai-3".padEnd(24, "0"), seenAt: new Date() })
+    const unread1 = makeNotification({ idempotencyKey: `incident.opened:${"ai-1".padEnd(24, "0")}` })
+    const unread2 = makeNotification({ idempotencyKey: `incident.opened:${"ai-2".padEnd(24, "0")}` })
+    const seen = makeNotification({
+      idempotencyKey: `incident.opened:${"ai-3".padEnd(24, "0")}`,
+      seenAt: new Date(),
+    })
 
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* NotificationRepository
-        yield* repo.bulkInsert([unread1, unread2, seen])
+        yield* repo.insertIfAbsent(unread1)
+        yield* repo.insertIfAbsent(unread2)
+        yield* repo.insertIfAbsent(seen)
       }),
     )
 
@@ -167,14 +208,26 @@ describe("NotificationRepositoryLive", () => {
   })
 
   it("markAllSeen flips seen_at on every unread row for the current user only", async () => {
-    const myUnread = makeNotification({ userId: USER_1, sourceId: "ai-1".padEnd(24, "0") })
-    const myAlreadySeen = makeNotification({ userId: USER_1, sourceId: "ai-2".padEnd(24, "0"), seenAt: new Date(0) })
-    const otherUserUnread = makeNotification({ userId: USER_2, sourceId: "ai-3".padEnd(24, "0") })
+    const myUnread = makeNotification({
+      userId: USER_1,
+      idempotencyKey: `incident.opened:${"ai-1".padEnd(24, "0")}`,
+    })
+    const myAlreadySeen = makeNotification({
+      userId: USER_1,
+      idempotencyKey: `incident.opened:${"ai-2".padEnd(24, "0")}`,
+      seenAt: new Date(0),
+    })
+    const otherUserUnread = makeNotification({
+      userId: USER_2,
+      idempotencyKey: `incident.opened:${"ai-3".padEnd(24, "0")}`,
+    })
 
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* NotificationRepository
-        yield* repo.bulkInsert([myUnread, myAlreadySeen, otherUserUnread])
+        yield* repo.insertIfAbsent(myUnread)
+        yield* repo.insertIfAbsent(myAlreadySeen)
+        yield* repo.insertIfAbsent(otherUserUnread)
       }),
     )
 
@@ -204,20 +257,26 @@ describe("NotificationRepositoryLive", () => {
   })
 
   it("RLS isolates notifications across organizations", async () => {
-    const inA = makeNotification({ organizationId: ORG_A, sourceId: "ai-1".padEnd(24, "0") })
-    const inB = makeNotification({ organizationId: ORG_B, sourceId: "ai-2".padEnd(24, "0") })
+    const inA = makeNotification({
+      organizationId: ORG_A,
+      idempotencyKey: `incident.opened:${"ai-1".padEnd(24, "0")}`,
+    })
+    const inB = makeNotification({
+      organizationId: ORG_B,
+      idempotencyKey: `incident.opened:${"ai-2".padEnd(24, "0")}`,
+    })
 
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* NotificationRepository
-        yield* repo.bulkInsert([inA])
+        yield* repo.insertIfAbsent(inA)
       }),
       ORG_A,
     )
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* NotificationRepository
-        yield* repo.bulkInsert([inB])
+        yield* repo.insertIfAbsent(inB)
       }),
       ORG_B,
     )

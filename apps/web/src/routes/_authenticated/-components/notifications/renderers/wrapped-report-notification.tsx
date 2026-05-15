@@ -1,16 +1,17 @@
-import { wrappedReportNotificationPayloadSchema } from "@domain/notifications"
+import { wrappedReportPayloadSchema } from "@domain/notifications"
 import { ClaudeCodeIcon, Icon, Text } from "@repo/ui"
 import type { NotificationRecord } from "../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../base-notification.tsx"
 
 /**
  * Renders a Claude Code Wrapped notification — broadcast to every org
- * member when the per-project pipeline finishes a run. The persisted
- * Wrapped row id is the notification's `sourceId`; the payload carries
- * only the project name and the absolute URL to the public report page.
+ * member when the per-project pipeline finishes a run. The payload
+ * carries the project name and the absolute URL to the public report
+ * page; the `wrappedReportId` doubles as the dedupe anchor (see
+ * `idempotency_key`).
  */
 export function WrappedReportNotification({ notification }: { readonly notification: NotificationRecord }) {
-  const parsed = wrappedReportNotificationPayloadSchema.safeParse(notification.payload)
+  const parsed = wrappedReportPayloadSchema.safeParse(notification.payload)
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
   const createdAt = new Date(notification.createdAt)
 

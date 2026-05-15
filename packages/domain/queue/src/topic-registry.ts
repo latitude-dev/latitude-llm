@@ -97,19 +97,62 @@ const _registry = {
   }>(),
 
   notifications: payloads<{
-    "create-from-incident-opened": {
+    /**
+     * Producer step for incidents. Fired by the domain-events router on
+     * `IncidentCreated` / `IncidentClosed`. The consumer applies the
+     * project-level alert-kind gate, snapshots issue + project identity,
+     * resolves recipients, and emits N `create-notification` tasks.
+     */
+    "request-incident-notifications": {
       readonly organizationId: string
       readonly alertIncidentId: string
+      readonly kind: "incident.opened" | "incident.closed"
     }
-    "create-from-incident-closed": {
-      readonly organizationId: string
-      readonly alertIncidentId: string
-    }
-    "create-from-wrapped-report": {
+    /**
+     * Producer step for Wrapped reports. Fired by the wrapped worker
+     * after a report is generated. The consumer resolves recipients and
+     * emits N `create-notification` tasks.
+     */
+    "request-wrapped-report-notifications": {
       readonly organizationId: string
       readonly wrappedReportId: string
       readonly projectName: string
       readonly link: string
+    }
+    /**
+     * Creator step. One message per recipient. The consumer writes the
+     * in-app row idempotently via the `(org_id, user_id, idempotency_key)`
+     * unique index and then fans out to channel-specific delivery jobs
+     * (e.g. `notification-email`) when user preferences allow.
+     *
+     * `kind` matches `NotificationKind` from `@domain/notifications`;
+     * `payload` matches that kind's per-kind payload schema. We keep
+     * them as `string` / `Record<string, unknown>` here so this package
+     * stays free of a dep on `@domain/notifications`. Consumers validate
+     * with `payloadSchemaFor(kind).parse(payload)`.
+     */
+    "create-notification": {
+      readonly organizationId: string
+      readonly userId: string
+      readonly notificationId: string
+      readonly kind: string
+      readonly idempotencyKey: string
+      readonly payload: Record<string, unknown>
+    }
+  }>(),
+
+  "notification-email": payloads<{
+    /**
+     * Emailer step. Fired by the notifications worker after the in-app
+     * row was inserted AND the recipient's preferences allow email for
+     * the kind's group. The consumer renders the per-kind email template
+     * and sends via the email transport, conditionally stamping
+     * `emailed_at` on the row (the WHERE-clause guard absorbs
+     * at-least-once redelivery).
+     */
+    send: {
+      readonly organizationId: string
+      readonly notificationId: string
     }
   }>(),
 

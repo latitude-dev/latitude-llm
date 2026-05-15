@@ -1,11 +1,11 @@
-import { customMessageNotificationPayloadSchema } from "@domain/notifications"
+import { customMessagePayloadSchema } from "@domain/notifications"
 import { Icon, Text } from "@repo/ui"
 import { ExternalLinkIcon, MessageCircleIcon } from "lucide-react"
 import type { NotificationRecord } from "../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../base-notification.tsx"
 
 export function CustomMessageNotification({ notification }: { readonly notification: NotificationRecord }) {
-  const parsed = customMessageNotificationPayloadSchema.safeParse(notification.payload)
+  const parsed = customMessagePayloadSchema.safeParse(notification.payload)
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
   const createdAt = new Date(notification.createdAt)
 

@@ -191,17 +191,25 @@ export const createDomainEventsWorker = ({
     IncidentCreated: (event) =>
       pub.publish(
         "notifications",
-        "create-from-incident-opened",
-        { organizationId: event.payload.organizationId, alertIncidentId: event.payload.alertIncidentId },
-        { dedupeKey: `notifications:incident-opened:${event.payload.alertIncidentId}` },
+        "request-incident-notifications",
+        {
+          organizationId: event.payload.organizationId,
+          alertIncidentId: event.payload.alertIncidentId,
+          kind: "incident.opened",
+        },
+        { dedupeKey: `notifications:request-incident-opened:${event.payload.alertIncidentId}` },
       ),
 
     IncidentClosed: (event) =>
       pub.publish(
         "notifications",
-        "create-from-incident-closed",
-        { organizationId: event.payload.organizationId, alertIncidentId: event.payload.alertIncidentId },
-        { dedupeKey: `notifications:incident-closed:${event.payload.alertIncidentId}` },
+        "request-incident-notifications",
+        {
+          organizationId: event.payload.organizationId,
+          alertIncidentId: event.payload.alertIncidentId,
+          kind: "incident.closed",
+        },
+        { dedupeKey: `notifications:request-incident-closed:${event.payload.alertIncidentId}` },
       ),
 
     AnnotationDeleted: (event) => {
