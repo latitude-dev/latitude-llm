@@ -5,12 +5,15 @@ Instruments AI provider calls and forwards traces to Latitude.
 Built on OpenTelemetry.
 
 Example (Bootstrap - Recommended):
+    import anthropic
+    import openai
+
     from latitude_telemetry import Latitude, capture
 
     latitude = Latitude(
         api_key="your-api-key",
         project_slug="my-project",
-        instrumentations=["openai", "anthropic"],
+        instrumentations={"openai": openai, "anthropic": anthropic},
     )
 
     @capture("agent-run", {"tags": ["prod"], "user_id": "user_123"})
@@ -25,6 +28,8 @@ Example (Bootstrap - Recommended):
     latitude.shutdown()
 
 Example (Advanced - Existing OTel Setup):
+    import openai
+
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
     from latitude_telemetry import LatitudeSpanProcessor, register_latitude_instrumentations
@@ -33,13 +38,15 @@ Example (Advanced - Existing OTel Setup):
     provider.add_span_processor(LatitudeSpanProcessor("api-key", "project-slug"))
     trace.set_tracer_provider(provider)
 
-    register_latitude_instrumentations(["openai"], provider)
+    register_latitude_instrumentations({"openai": openai}, provider)
 """
 
 from latitude_telemetry.constants import ATTRIBUTES
 from latitude_telemetry.sdk import (
     ContextOptions,
     InitLatitudeOptions,
+    InstrumentationName,
+    InstrumentationsInput,
     InstrumentationType,
     Latitude,
     LatitudeOptions,
@@ -77,6 +84,8 @@ __all__ = [
     # Types
     "ContextOptions",
     "InitLatitudeOptions",
+    "InstrumentationName",
+    "InstrumentationsInput",
     "InstrumentationType",
     "LatitudeOptions",
     "LatitudeSpanProcessorOptions",

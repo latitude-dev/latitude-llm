@@ -1,11 +1,39 @@
 import type { TracerProvider } from "@opentelemetry/api"
 import { type Instrumentation, registerInstrumentations } from "@opentelemetry/instrumentation"
 
-/**
- * Supported LLM instrumentation types.
- * Use these string identifiers to enable auto-instrumentation.
- */
-export type InstrumentationType =
+const DOCS_URL = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/typescript#readme"
+
+interface LlmInstrumentation extends Instrumentation {
+  manuallyInstrument?(module: unknown): void
+}
+
+type InstrumentationCtor = new (config?: Record<string, unknown>) => LlmInstrumentation
+
+interface IntegrationDef {
+  /** Async loader for the underlying instrumentation ctor. */
+  loadCtor: () => Promise<InstrumentationCtor>
+  /** npm package the instrumentation is published from (surfaced in install hints). */
+  packageName: string
+  /** Optional shape normalizer — only set when the SDK accepts more than one valid input shape. */
+  normalize?: (mod: unknown) => unknown
+  /** Optional Traceloop ctor flag. */
+  enrichTokens?: boolean
+}
+
+/** Exported for direct unit testing — internal otherwise. */
+export const normalizeOpenAI = (mod: unknown): unknown => {
+  const ns = mod as { OpenAI?: unknown; default?: unknown } | null | undefined
+  return ns?.OpenAI ?? ns?.default ?? mod
+}
+
+/** Exported for direct unit testing — internal otherwise. */
+export const normalizeAnthropic = (mod: unknown): unknown => {
+  const hasAnthropicField = mod !== null && typeof mod === "object" && "Anthropic" in (mod as object)
+  return hasAnthropicField ? mod : { Anthropic: mod }
+}
+
+/** Supported integration keys — exhaustive list. */
+export type InstrumentationName =
   | "openai"
   | "openai-agents"
   | "anthropic"
@@ -17,199 +45,147 @@ export type InstrumentationType =
   | "vertexai"
   | "aiplatform"
 
-/**
- * Minimal interface for LLM instrumentation instances.
- * Extends OpenTelemetry's Instrumentation interface.
- */
-interface LlmInstrumentation extends Instrumentation {
-  manuallyInstrument?(module: unknown): void
-}
-
-/**
- * Options for creating LLM instrumentations.
- */
-interface CreateInstrumentationsOptions {
-  /** List of instrumentation types to enable. */
-  instrumentations: InstrumentationType[]
-  /**
-   * Optional module references for auto-instrumentation.
-   * If not provided, the instrumentation will attempt to require the module.
-   * Used for Traceloop-based instrumentations.
-   */
-  modules?: Partial<Record<InstrumentationType, unknown>>
-  /**
-   * Per-instrumentation token enrichment settings.
-   * @default { openai: true }
-   */
-  enrichTokens?: Partial<Record<InstrumentationType, boolean>>
-}
-
-type InstrumentationCtor = new (config?: Record<string, unknown>) => LlmInstrumentation
-
-interface InstrumentationConfig {
-  loadCtor: () => Promise<InstrumentationCtor>
-  packageName: string
-  moduleName: string
-  defaultEnrichTokens?: boolean
-  /**
-   * Picks the object handed to `manuallyInstrument`. Defaults to the imported namespace.
-   * Traceloop's `manuallyInstrument` shape is inconsistent across SDKs — anthropic's
-   * reads `module.Anthropic.Messages`, but openai's reads `module.Chat.Completions`,
-   * so the openai entry unwraps to the `OpenAI` class rather than the namespace.
-   */
-  resolveInstrumentationTarget?: (moduleRef: unknown) => unknown
-}
-
-const resolveOpenAITarget = (moduleRef: unknown): unknown => {
-  const ns = moduleRef as { OpenAI?: unknown; default?: unknown } | null | undefined
-  return ns?.OpenAI ?? ns?.default ?? moduleRef
-}
-
-const INSTRUMENTATION_MAP: Record<InstrumentationType, InstrumentationConfig> = {
+const INTEGRATIONS: Record<InstrumentationName, IntegrationDef> = {
   openai: {
     loadCtor: async () =>
       (await import("./instrumentations/openai/instrumentation.ts")).OpenAIInstrumentationWithResponses,
     packageName: "@traceloop/instrumentation-openai",
-    moduleName: "openai",
-    defaultEnrichTokens: true,
-    resolveInstrumentationTarget: resolveOpenAITarget,
+    normalize: normalizeOpenAI,
+    enrichTokens: true,
   },
   "openai-agents": {
     loadCtor: async () =>
       (await import("./instrumentations/openai-agents/instrumentation.ts")).OpenAIAgentsInstrumentation,
     packageName: "@openai/agents",
-    moduleName: "@openai/agents",
   },
   anthropic: {
     loadCtor: async () => (await import("@traceloop/instrumentation-anthropic")).AnthropicInstrumentation,
     packageName: "@traceloop/instrumentation-anthropic",
-    moduleName: "@anthropic-ai/sdk",
+    normalize: normalizeAnthropic,
   },
   bedrock: {
     loadCtor: async () => (await import("@traceloop/instrumentation-bedrock")).BedrockInstrumentation,
     packageName: "@traceloop/instrumentation-bedrock",
-    moduleName: "@aws-sdk/client-bedrock-runtime",
   },
   cohere: {
     loadCtor: async () => (await import("@traceloop/instrumentation-cohere")).CohereInstrumentation,
     packageName: "@traceloop/instrumentation-cohere",
-    moduleName: "cohere-ai",
   },
   langchain: {
     loadCtor: async () => (await import("@traceloop/instrumentation-langchain")).LangChainInstrumentation,
     packageName: "@traceloop/instrumentation-langchain",
-    moduleName: "langchain",
   },
   llamaindex: {
     loadCtor: async () => (await import("@traceloop/instrumentation-llamaindex")).LlamaIndexInstrumentation,
     packageName: "@traceloop/instrumentation-llamaindex",
-    moduleName: "llamaindex",
   },
   togetherai: {
     loadCtor: async () => (await import("@traceloop/instrumentation-together")).TogetherInstrumentation,
     packageName: "@traceloop/instrumentation-together",
-    moduleName: "together-ai",
-    defaultEnrichTokens: false,
+    enrichTokens: false,
   },
   vertexai: {
     loadCtor: async () => (await import("@traceloop/instrumentation-vertexai")).VertexAIInstrumentation,
     packageName: "@traceloop/instrumentation-vertexai",
-    moduleName: "@google-cloud/vertexai",
   },
   aiplatform: {
     loadCtor: async () => (await import("@traceloop/instrumentation-vertexai")).AIPlatformInstrumentation,
     packageName: "@traceloop/instrumentation-vertexai",
-    moduleName: "@google-cloud/aiplatform",
   },
 }
 
 /**
- * Internal function to create LLM instrumentation instances.
- * Not exported publicly - use registerLatitudeInstrumentations instead.
+ * Map of integration name → LLM SDK module reference the consumer uses in app code.
+ *
+ * The value type is `object`, which admits both class constructors (functions,
+ * like the default-export `OpenAI` class) and namespace imports (like
+ * `import * as AnthropicSDK from "@anthropic-ai/sdk"`), but rejects primitives
+ * (`true`, `42`, `"openai"`, `null`) at the type level.
+ *
+ * ```ts
+ * import OpenAI from "openai"
+ * import * as AnthropicSDK from "@anthropic-ai/sdk"
+ *
+ * new Latitude({
+ *   apiKey: "...",
+ *   instrumentations: {
+ *     openai: OpenAI,
+ *     anthropic: AnthropicSDK,
+ *   },
+ * })
+ * ```
  */
-async function createLatitudeInstrumentations(options: CreateInstrumentationsOptions): Promise<LlmInstrumentation[]> {
+export type InstrumentationsInput = Partial<Record<InstrumentationName, object | undefined>>
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+async function createLatitudeInstrumentations(input: InstrumentationsInput): Promise<LlmInstrumentation[]> {
+  if (!isPlainObject(input)) {
+    throw new TypeError(
+      `[Latitude] instrumentations must be an object mapping integration names to LLM SDK modules ` +
+        `(e.g. { openai: OpenAI, anthropic: AnthropicSDK }). Received: ${JSON.stringify(input)}. See ${DOCS_URL}.`,
+    )
+  }
+
   const result: LlmInstrumentation[] = []
 
-  for (const type of options.instrumentations) {
-    const config = INSTRUMENTATION_MAP[type]
-    if (!config) {
-      console.warn(`[Latitude] Unknown instrumentation type: ${type}`)
-      continue
+  for (const [name, mod] of Object.entries(input)) {
+    if (mod === undefined) continue
+    const def = (INTEGRATIONS as Record<string, IntegrationDef | undefined>)[name]
+    if (!def) {
+      throw new TypeError(
+        `[Latitude] instrumentations: unknown integration "${name}". ` +
+          `Expected one of: ${Object.keys(INTEGRATIONS).join(", ")}. See ${DOCS_URL}.`,
+      )
     }
 
     let Ctor: InstrumentationCtor
     try {
-      Ctor = await config.loadCtor()
+      Ctor = await def.loadCtor()
     } catch {
       console.warn(
-        `[Latitude] Instrumentation package not installed for ${type}: ${config.packageName}. Add it as a dependency to enable this instrumentation.`,
+        `[Latitude] Instrumentation package not installed for ${name}: ${def.packageName}. Add it as a dependency to enable this instrumentation.`,
       )
       continue
     }
 
-    const enrichTokens = options.enrichTokens?.[type] ?? config.defaultEnrichTokens
-    const inst = new Ctor(enrichTokens !== undefined ? { enrichTokens } : undefined)
-
-    // Get module from explicit options or try to auto-require
-    const moduleRef = options.modules?.[type] ?? (await tryRequire(config.moduleName))
-    if (!moduleRef) {
-      console.warn(
-        `[Latitude] Module not found for ${type}: ${config.moduleName}. Install it or pass it explicitly in 'modules'.`,
-      )
-      continue
-    }
-    const target = config.resolveInstrumentationTarget?.(moduleRef) ?? moduleRef
+    const inst = new Ctor(def.enrichTokens !== undefined ? { enrichTokens: def.enrichTokens } : undefined)
+    const target = def.normalize ? def.normalize(mod) : mod
     inst.manuallyInstrument?.(target)
-
     result.push(inst)
   }
 
   return result
 }
 
-async function tryRequire(moduleName: string): Promise<unknown | undefined> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require(moduleName)
-  } catch {
-    // Fallback to dynamic import for ESM environments. Return the full module
-    // namespace; traceloop instrumentations expect the namespace shape (e.g.
-    // anthropic reaches into `module.Anthropic.Messages.prototype`).
-    try {
-      return await import(/* @vite-ignore */ moduleName)
-    } catch {
-      return undefined
-    }
-  }
-}
-
 /**
  * Registers LLM instrumentations with the global OpenTelemetry instrumentation registry.
  *
- * This is a convenience wrapper around `createLatitudeInstrumentations` and
- * `@opentelemetry/instrumentation`'s `registerInstrumentations`.
- *
  * @example
  * ```typescript
+ * import OpenAI from "openai"
  * import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
- * import { registerLatitudeInstrumentations, LatitudeSpanProcessor } from "@latitude-data/telemetry"
+ * import { LatitudeSpanProcessor, registerLatitudeInstrumentations } from "@latitude-data/telemetry"
  *
  * const provider = new NodeTracerProvider({
  *   spanProcessors: [new LatitudeSpanProcessor(apiKey, projectSlug)],
  * })
  *
  * await registerLatitudeInstrumentations({
- *   instrumentations: ["openai", "anthropic"],
+ *   instrumentations: { openai: OpenAI },
  *   tracerProvider: provider,
  * })
  *
  * provider.register()
  * ```
  */
-export async function registerLatitudeInstrumentations(
-  options: CreateInstrumentationsOptions & { tracerProvider: TracerProvider },
-): Promise<void> {
-  const instrumentations = await createLatitudeInstrumentations(options)
+export async function registerLatitudeInstrumentations(options: {
+  instrumentations: InstrumentationsInput
+  tracerProvider: TracerProvider
+}): Promise<void> {
+  const instrumentations = await createLatitudeInstrumentations(options.instrumentations)
   registerInstrumentations({
     instrumentations,
     tracerProvider: options.tracerProvider,

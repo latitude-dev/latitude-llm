@@ -10,6 +10,7 @@ import {
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
+import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
@@ -109,6 +110,6 @@ const toResponse = (result: GetAccountResult) => ({
 
 export const createAccountRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
-  getAccount.mountHttp(app)
+  getAccount.mountHttp(app, createTierRateLimiter("low"))
   return app
 }

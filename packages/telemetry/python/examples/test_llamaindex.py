@@ -10,6 +10,7 @@ Install: uv add llama-index llama-index-llms-openai
 
 import os
 
+import llama_index
 from llama_index.llms.openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
@@ -18,12 +19,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["llamaindex"],
+    instrumentations={"llamaindex": llama_index},
     disable_batch=True,
 )
 
 
-@capture("test-llamaindex-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-llamaindex-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_llamaindex_completion():
     llm = OpenAI(model="gpt-4o-mini", max_tokens=50)
 

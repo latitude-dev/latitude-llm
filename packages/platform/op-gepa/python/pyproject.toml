@@ -5,7 +5,7 @@ description = "Latitude GEPA optimization runtime"
 requires-python = ">=3.13, <3.14"
 dependencies = [
     "gepa==0.0.27",
-    "pydantic==2.12.5",
+    "pydantic==2.13.3",
     "typing-extensions==4.15.0",
 ]
 
@@ -15,8 +15,8 @@ dev = [
     "pytest-xdist==3.8.0",
     "pytest==9.0.3",
     "respx==0.23.1",
-    "pyright==1.1.408",
-    "ruff==0.15.9",
+    "pyright==1.1.409",
+    "ruff==0.15.12",
     "sh==2.2.2",
     "psutil==7.2.2",
 ]

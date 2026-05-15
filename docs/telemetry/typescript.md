@@ -18,23 +18,28 @@ npm install @latitude-data/telemetry
 The fastest way to start. One class detects an existing OpenTelemetry pipeline (Sentry, Datadog, New Relic, Honeycomb, etc.) or creates one when none exists, then adds LLM auto-instrumentation and the Latitude exporter:
 
 ```ts
+import OpenAI from "openai"
 import { Latitude } from "@latitude-data/telemetry"
+
+const client = new OpenAI()
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 
 await latitude.ready
 
-const response = await openai.chat.completions.create({
+const response = await client.chat.completions.create({
   model: "gpt-4o",
   messages: [{ role: "user", content: "Hello" }],
 })
 
 await latitude.shutdown()
 ```
+
+`instrumentations` takes a plain object mapping integration name (`openai`, `anthropic`, …) to the LLM SDK module the consumer imports in app code. The same module instance is used for both the patch and the actual LLM call, sidestepping the CJS/ESM dual-load class of bugs.
 
 `new Latitude()` returns **immediately**. Instrumentation registration happens in the background. This avoids top-level await issues in CommonJS environments while still supporting ESM.
 
@@ -52,12 +57,13 @@ Auto-instrumentation traces LLM calls without `capture()`. Use `capture()` when 
 - **Filter and analyze**: Use tags and metadata to filter traces in Latitude
 
 ```ts
+import OpenAI from "openai"
 import { Latitude, capture } from "@latitude-data/telemetry"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 
 await latitude.ready
@@ -95,6 +101,7 @@ await latitude.shutdown()
 For Sentry, Datadog, New Relic, Honeycomb, and other OpenTelemetry-compatible SDKs, initialize the existing SDK first and construct `new Latitude()` second. Latitude detects the installed provider and attaches its processor when possible without replacing the existing SDK's context manager, propagator, sampler, or processors:
 
 ```ts
+import OpenAI from "openai"
 import * as Sentry from "@sentry/node"
 import { Latitude } from "@latitude-data/telemetry"
 
@@ -106,7 +113,7 @@ Sentry.init({
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 
 await latitude.ready
@@ -119,6 +126,7 @@ await latitude.shutdown()
 If you want full control over provider construction, add Latitude alongside your existing processors explicitly:
 
 ```ts
+import OpenAI from "openai"
 import { NodeSDK } from "@opentelemetry/sdk-node"
 import {
   LatitudeSpanProcessor,
@@ -138,7 +146,7 @@ const sdk = new NodeSDK({
 sdk.start()
 
 await registerLatitudeInstrumentations({
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
   tracerProvider: sdk.getTracerProvider(),
 })
 ```
@@ -163,8 +171,10 @@ Bootstraps a complete OpenTelemetry setup with LLM instrumentations and Latitude
 ```ts
 type LatitudeOptions = {
   apiKey: string
-  projectSlug: string
-  instrumentations?: InstrumentationType[]
+  projectSlug?: string
+  // Map of integration name → LLM SDK module reference (e.g. { openai: OpenAI }).
+  // Anything else (string array, primitive, unknown key, non-object) throws at register time.
+  instrumentations?: InstrumentationsInput
   serviceName?: string
   disableBatch?: boolean
   disableSmartFilter?: boolean
@@ -242,8 +252,9 @@ type LatitudeSpanProcessorOptions = {
 Registers patch-based AI SDK instrumentations against a specific tracer provider.
 
 ```ts
-type InstrumentationType =
+type InstrumentationName =
   | "openai"
+  | "openai-agents"
   | "anthropic"
   | "bedrock"
   | "cohere"
@@ -253,32 +264,55 @@ type InstrumentationType =
   | "vertexai"
   | "aiplatform"
 
+// `object | undefined` rejects primitive values (`true`, `42`, `"openai"`, …)
+// at compile time while still admitting class constructors (functions),
+// namespace imports, and explicit-undefined-for-conditional-config.
+type InstrumentationsInput = Partial<Record<InstrumentationName, object | undefined>>
+
 function registerLatitudeInstrumentations(options: {
-  instrumentations: InstrumentationType[]
+  // Map of integration name → LLM SDK module reference (e.g. { openai: OpenAI }).
+  // Anything else throws at register time.
+  instrumentations: InstrumentationsInput
   tracerProvider: TracerProvider
-  modules?: Partial<Record<InstrumentationType, unknown>>
-  enrichTokens?: Partial<Record<InstrumentationType, boolean>>
 }): Promise<void>
 ```
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `modules` | `Partial<Record<InstrumentationType, unknown>>` | Auto-required | Explicit module references for instrumentations that can't be auto-required |
-| `enrichTokens` | `Partial<Record<InstrumentationType, boolean>>` | `{ openai: true, togetherai: false }` | Enable or disable token usage enrichment per instrumentation |
-
 ## Supported Providers
 
-| Identifier | Package |
-|---|---|
-| `"openai"` | `openai` |
-| `"anthropic"` | `@anthropic-ai/sdk` |
-| `"bedrock"` | `@aws-sdk/client-bedrock-runtime` |
-| `"cohere"` | `cohere-ai` |
-| `"langchain"` | `langchain` |
-| `"llamaindex"` | `llamaindex` |
-| `"togetherai"` | `together-ai` |
-| `"vertexai"` | `@google-cloud/vertexai` |
-| `"aiplatform"` | `@google-cloud/aiplatform` |
+Set the integration's key on the `instrumentations` object to the LLM SDK module the consumer imports. For SDKs whose Traceloop patch reads off the package namespace, pass `import * as X from "<package>"`.
+
+| Key | Package | What to pass |
+|---|---|---|
+| `openai` | `openai` | `openai: OpenAI` (default class — also accepts the namespace) |
+| `openai-agents` | `@openai/agents` | `"openai-agents": OpenAIAgentsSDK` (namespace) |
+| `anthropic` | `@anthropic-ai/sdk` | `anthropic: AnthropicSDK` (namespace; bare default class also accepted and rewrapped) |
+| `bedrock` | `@aws-sdk/client-bedrock-runtime` | `bedrock: BedrockSDK` (namespace) |
+| `cohere` | `cohere-ai` | `cohere: CohereSDK` (namespace) |
+| `langchain` | `langchain` | `langchain: LangChain` (namespace) |
+| `llamaindex` | `llamaindex` | `llamaindex: LlamaIndex` (namespace) |
+| `togetherai` | `together-ai` | `togetherai: TogetherSDK` (namespace) |
+| `vertexai` | `@google-cloud/vertexai` | `vertexai: VertexAISDK` (namespace) |
+| `aiplatform` | `@google-cloud/aiplatform` | `aiplatform: AIPlatformSDK` (namespace) |
+
+## Migrating from `instrumentations: ["openai"]` (3.0.0-alpha.10 and earlier)
+
+The string-array form is removed with no fallback in `3.0.0-alpha.11`. Anything other than a plain object — including the old string array — **throws at register time**, so any existing install below `alpha.11` must be bumped *and* its call sites rewritten in the same change. Migration:
+
+```diff
+- import { Latitude } from "@latitude-data/telemetry"
++ import OpenAI from "openai"
++ import * as AnthropicSDK from "@anthropic-ai/sdk"
++ import { Latitude } from "@latitude-data/telemetry"
+
+  new Latitude({
+    apiKey: process.env.LATITUDE_API_KEY!,
+    projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+-   instrumentations: ["openai", "anthropic"],
++   instrumentations: { openai: OpenAI, anthropic: AnthropicSDK },
+  })
+```
+
+The `modules` option on `registerLatitudeInstrumentations` is also removed — pass the SDK module under its integration key on `instrumentations` instead.
 
 ## Configuration
 
@@ -332,9 +366,10 @@ new LatitudeSpanProcessor(apiKey, projectSlug, {
 
 1. **Check API key and project slug**: Must be non-empty strings.
 2. **Verify instrumentations are registered**: Use `await latitude.ready` or `await registerLatitudeInstrumentations()`.
-3. **Flush before exit**: Call `await latitude.flush()` or `await provider.forceFlush()`.
-4. **Check smart filter**: Only LLM spans are exported by default. Use `disableSmartFilter: true` to export all spans.
-5. **Ensure `capture()` wraps the code that creates spans**: `capture()` itself doesn't create spans; it only attaches context.
+3. **Did the bootstrap throw a migration error?**: On `3.0.0-alpha.11`+, `instrumentations: ["openai"]` (or any non-object value) throws `TypeError: [Latitude] instrumentations must be an object mapping…`. Migrate to `instrumentations: { openai: OpenAI }`. See the Migration section above.
+4. **Flush before exit**: Call `await latitude.flush()` or `await provider.forceFlush()`.
+5. **Check smart filter**: Only LLM spans are exported by default. Use `disableSmartFilter: true` to export all spans.
+6. **Ensure `capture()` wraps the code that creates spans**: `capture()` itself doesn't create spans; it only attaches context.
 
 ### No spans created inside `capture()`
 

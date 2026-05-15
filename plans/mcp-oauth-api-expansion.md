@@ -739,17 +739,24 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [x] `DELETE /{oauthKeyId}` — revoke, mounted under the `low` tier prefix; reuses `revokeOAuthKeyUseCase` (cache-invalidates each removed token and disables the application when the last token is gone). 204 on success and on idempotent re-revoke; 404 only for cross-tenant / malformed ids.
   - [x] `apps/api/src/routes/oauth-keys.ts` — new file, `defineApiEndpoint`-native. Wires `OAuthTokenCacheInvalidatorLive(c.var.redis)` + `OAuthKeyRepositoryLive`. Composite id parsed via `lastIndexOf(":")` since `userId` is a CUID (no colons).
   - [x] No POST / PATCH. Out-of-scope notes in the "Endpoint inventory" section.
-
-### Outstanding
-
 - **M4 — Traces + bulk export** (3 endpoints, prefix `/projects/{projectSlug}/traces`)
-  - [ ] `GET /` — list with filters + searchQuery + cursor, `Paginated(TraceSchema, "PaginatedTraces")` (`high` tier)
-  - [ ] `GET /{traceId}` — get (`medium` tier)
-  - [ ] `POST /export` — `tracesRef` + `recipientEmail`, validates recipient is an org member, enqueues worker (`critical` tier)
-  - [ ] `packages/domain/spans/src/use-cases/build-traces-export.ts` — accept `TracesRef`
-- **M5 — Saved Searches** (6 endpoints, prefix `/projects/{projectSlug}/searches`, `medium` tier across)
-  - [ ] `GET /`, `GET /{searchSlug}`, `POST /`, `PATCH /{searchSlug}`, `DELETE /{searchSlug}`
-  - [ ] `POST /{searchSlug}/assign` — new `assignSavedSearchUseCase` in `@domain/saved-searches` (validates assignee membership)
+  - [x] `GET /` — list with filters + searchQuery + cursor, `Paginated(TraceSchema, "PaginatedTraces")`. Cursor is base64url-encoded JSON of `{sortValue, traceId}` so the public API surface stays a plain opaque string. `filters` accepted as URL-encoded JSON, decoded + validated against `filterSetSchema` inside the Effect. `sortBy` constrained to `{startTime,endTime,durationNs,tokensTotal,costTotalMicrocents}` with `startTime desc` defaults.
+  - [x] `GET /{traceId}` — get; returns `TraceDetail` (includes `systemInstructions` + `inputMessages` / `outputMessages` / `allMessages`). rosetta-ai message payloads exposed as opaque `Record<string, unknown>` per item — modelling every provider's union would balloon the schema for limited downstream value.
+  - [x] `POST /export` — `tracesRef` + `recipientEmail`. Recipient validated via `MembershipRepository.findMemberByEmail` (RLS-scoped). Enqueues the existing `"exports" / "generate"` worker; route-level adapter translates `TracesRef → { selection | filters }` so `buildTracesExportUseCase` stays as-is (per D8 note: "adapter is simpler"). Returns 202.
+  - [x] Per-endpoint rate-limit tiers: traces prefix mounted at `medium` (existing single-tier-per-prefix convention); `app.use("/export", createTierRateLimiter("critical"))` adds the `critical` ceiling on the export endpoint. Hono runs both matching middlewares so the stricter `critical` limit (3/min/org) governs export.
+  - [x] `apps/api/src/openapi/entities/trace.ts` — `TraceSchema` + `TraceDetailSchema` with field-by-field descriptions; spread shared `traceFields` so both schemas stay named distinct components for SDK + MCP consumers.
+  - [x] `apps/api/src/routes/traces.test.ts` — 8 integration tests cover the auth gate, empty-result listing, cursor + filters validation, get 404, recipient-member enforcement on export, and the happy-path 202.
+  - [x] `buildTracesExportUseCase` refactor deferred — keeping the queue contract (`filters? + selection? + searchQuery?`) stable means the web caller stays unchanged and the API route translates at the boundary. Use-case keeps its current shape.
+
+- **M5 — Saved Searches** (6 endpoints, prefix `/projects/{projectSlug}/searches`)
+  - [x] `GET /` — list, `low` tier. Uses the standard paginated wrapper; fits in a single page (`nextCursor` always `null`).
+  - [x] `GET /{searchSlug}` — get, `low` tier.
+  - [x] `POST /` — create, `low` tier. **OAuth-only** (the authenticated user becomes `createdByUserId`); API-key callers hit 403 via `requireOAuthUserId`. Slug derived from `name`; 400 on empty search (no query and no filters).
+  - [x] `PATCH /{searchSlug}` — update, `low` tier. Slug regenerates when the name change affects the slug form (reuses `updateSavedSearch`).
+  - [x] `DELETE /{searchSlug}` — delete (soft-delete), `low` tier.
+  - [x] `POST /{searchSlug}/assign` — assign (or clear with `userId: null`), `low` tier. New `assignSavedSearchUseCase` in `@domain/saved-searches` adds a cross-domain dep on `@domain/organizations` to validate via `MembershipRepository.isMember`; new `AssigneeNotOrgMemberError` (400). The use-case delegates to `updateSavedSearch` once membership is confirmed, so slug regeneration / name validation paths stay shared.
+  - [x] `apps/api/src/openapi/entities/saved-search.ts` — `SavedSearchSchema` with field-by-field descriptions; `filterSet` reuses the named `FilterSet` OpenAPI component.
+  - [x] `apps/api/src/routes/saved-searches.test.ts` — 11 integration tests cover auth gate, empty list, OAuth-only create + 403, happy-path create, empty-search 400, get 404, get-after-create, rename + slug regen, delete + 404 after, assign-non-member 400, assign + clear round-trip.
 - **M6 — Issues** (8 endpoints, prefix `/projects/{projectSlug}/issues`)
   - [ ] `IssueRepository.findBySlug` + `existsBySlug`
   - [ ] Wire `generateUniqueSlug` into `createIssueFromScoreUseCase` + `discoverIssueUseCase`

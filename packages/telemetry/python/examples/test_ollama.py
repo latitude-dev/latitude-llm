@@ -20,12 +20,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["ollama"],
+    instrumentations={"ollama": ollama},
     disable_batch=True,
 )
 
 
-@capture("test-ollama-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-ollama-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_ollama_completion():
     response = ollama.chat(
         model="llama3.2",

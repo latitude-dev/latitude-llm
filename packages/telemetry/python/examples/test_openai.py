@@ -11,6 +11,7 @@ Install: uv add openai
 
 import os
 
+import openai
 from openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
@@ -19,7 +20,7 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
     disable_batch=True,
 )
 
@@ -48,7 +49,7 @@ def test_openai_completion():
 @capture(
     "test-openai-streaming",
     {
-        "tags": ["test"],
+        "tags": ["python", "test"],
         "session_id": "example",
         "user_id": "user_123",
         "metadata": {"test_type": "streaming", "environment": "local"},
@@ -100,7 +101,7 @@ def test_openai_completion_callback():
         "test-openai-callback",
         make_completion,
         {
-            "tags": ["callback-test"],
+            "tags": ["python", "callback-test"],
             "session_id": "callback-example",
             "user_id": "user_callback",
             "metadata": {"test_type": "callback", "environment": "local"},

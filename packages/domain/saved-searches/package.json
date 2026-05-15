@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@domain/events": "workspace:*",
+    "@domain/organizations": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"

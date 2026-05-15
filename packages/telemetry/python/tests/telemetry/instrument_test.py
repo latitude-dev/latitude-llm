@@ -3,6 +3,7 @@
 from datetime import datetime
 from unittest import mock
 
+import openai as openai_module
 from openai import OpenAI
 from openai.types.chat import ChatCompletion as OpenAIChatCompletion
 from openai.types.chat import ChatCompletionMessage as OpenAIChatCompletionMessage
@@ -15,7 +16,7 @@ from tests.utils import TestCase
 
 class TestInstrument(TestCase):
     def create_openai_mock(self):
-        openai = OpenAI(api_key="fake-api-key")
+        client = OpenAI(api_key="fake-api-key")
 
         completion = OpenAIChatCompletion(
             object="chat.completion",
@@ -39,15 +40,15 @@ class TestInstrument(TestCase):
             created=int(datetime.now().timestamp()),
         )
 
-        return openai, completion
+        return client, completion
 
     def test_success_instruments_openai(self):
         """Test that OpenAI instrumentation creates spans with correct attributes."""
-        openai, completion = self.create_openai_mock()
+        client, completion = self.create_openai_mock()
 
         with mock.patch("openai.resources.chat.completions.Completions.create", return_value=completion):
-            register_latitude_instrumentations(["openai"], self.provider)
-            openai.chat.completions.create(
+            register_latitude_instrumentations({"openai": openai_module}, self.provider)
+            client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": "Hello..."}],
             )
@@ -62,3 +63,15 @@ class TestInstrument(TestCase):
         self.assert_span_has_attribute(span, "gen_ai.response.model", "gpt-4o-mini")
         self.assert_span_has_attribute(span, "gen_ai.usage.input_tokens", 10)
         self.assert_span_has_attribute(span, "gen_ai.usage.output_tokens", 20)
+
+    def test_rejects_legacy_list_form(self):
+        """Passing a list (legacy form) raises TypeError with a migration hint."""
+        with self.assertRaises(TypeError) as ctx:
+            register_latitude_instrumentations(["openai"], self.provider)  # type: ignore[arg-type]
+        self.assertIn("must be a dict mapping", str(ctx.exception))
+
+    def test_rejects_unknown_integration_key(self):
+        """Passing a key not in the registry raises TypeError naming the supported keys."""
+        with self.assertRaises(TypeError) as ctx:
+            register_latitude_instrumentations({"nope": openai_module}, self.provider)  # type: ignore[arg-type]
+        self.assertIn("unknown integration", str(ctx.exception))

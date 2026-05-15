@@ -11,6 +11,7 @@ Install: uv add openai
 
 import os
 
+import openai
 from openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
@@ -18,7 +19,7 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
     disable_batch=True,
 )
 

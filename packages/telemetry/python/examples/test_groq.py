@@ -10,6 +10,7 @@ Install: uv add groq
 
 import os
 
+import groq
 from groq import Groq
 
 from latitude_telemetry import Latitude, capture
@@ -18,12 +19,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["groq"],
+    instrumentations={"groq": groq},
     disable_batch=True,
 )
 
 
-@capture("test-groq-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-groq-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_groq_completion():
     client = Groq()
 

@@ -22,12 +22,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["sagemaker"],
+    instrumentations={"sagemaker": boto3},
     disable_batch=True,
 )
 
 
-@capture("test-sagemaker-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-sagemaker-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_sagemaker_completion():
     client = boto3.client(
         "sagemaker-runtime",

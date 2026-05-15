@@ -18,6 +18,7 @@ import {
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
+import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import { Paginated } from "../openapi/pagination.ts"
 import {
   jsonBody,
@@ -348,8 +349,10 @@ const deleteProject = projectEndpoint({
 
 export const createProjectsRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
-  for (const ep of [createProject, listProjects, getProject, updateProject, deleteProject]) {
-    ep.mountHttp(app)
-  }
+  createProject.mountHttp(app, createTierRateLimiter("high"))
+  listProjects.mountHttp(app, createTierRateLimiter("low"))
+  getProject.mountHttp(app, createTierRateLimiter("low"))
+  updateProject.mountHttp(app, createTierRateLimiter("low"))
+  deleteProject.mountHttp(app, createTierRateLimiter("low"))
   return app
 }

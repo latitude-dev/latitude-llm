@@ -4,33 +4,33 @@ This directory contains examples demonstrating how to use the Latitude Telemetry
 
 ## Quick Start (Happy Path)
 
-The simplest way to use Latitude is with `LatitudeTelemetry` — no existing OpenTelemetry setup required.
+The simplest way to use Latitude is with `new Latitude({...})` — no existing OpenTelemetry setup required.
 
 ```typescript
-import { LatitudeTelemetry } from "@latitude-data/telemetry"
 import OpenAI from "openai"
+import { Latitude, capture } from "@latitude-data/telemetry"
 
-const telemetry = new LatitudeTelemetry(
-  process.env.LATITUDE_API_KEY!,
-  process.env.LATITUDE_PROJECT_SLUG!,
-  {
-    instrumentations: ["openai"], // Auto-instrument OpenAI
-  }
-)
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  instrumentations: { openai: OpenAI }, // Pass the LLM SDK module you use in app code.
+})
 
+await latitude.ready
 const client = new OpenAI()
 
-await telemetry.capture(
-  { tags: ["production"], userId: "user-123" },
+await capture(
+  "chat-call",
   async () => {
     return await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: "Hello!" }],
     })
-  }
+  },
+  { tags: ["production"], userId: "user-123" },
 )
 
-await telemetry.flush()
+await latitude.flush()
 ```
 
 See `test_openai.ts` for a complete working example.
@@ -133,6 +133,7 @@ Use composable mode when:
 - You need multiple telemetry backends simultaneously
 
 ```typescript
+import OpenAI from "openai"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { LatitudeSpanProcessor, registerLatitudeInstrumentations } from "@latitude-data/telemetry"
 
@@ -143,7 +144,7 @@ const provider = new NodeTracerProvider({
 })
 
 await registerLatitudeInstrumentations({
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
   tracerProvider: provider,
 })
 
@@ -208,17 +209,10 @@ Check the Latitude dashboard to verify:
 
 ### ESM module loading issues
 
-If auto-instrumentation fails, pass modules explicitly:
-
-```typescript
-import * as OpenAI from "openai"
-
-await registerLatitudeInstrumentations({
-  instrumentations: ["openai"],
-  modules: { openai: OpenAI },
-  tracerProvider: provider,
-})
-```
+The object form of `instrumentations` always passes the consumer's own module reference,
+so ESM/CJS dual-bundle mismatches can't happen by design. If spans are still missing, make
+sure the module you pass is the same one your LLM client is constructed from (e.g. one
+`openai` resolution in the dependency tree, not two duplicates).
 
 ### Type errors in examples
 

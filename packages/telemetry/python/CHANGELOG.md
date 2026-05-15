@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0a7] - 2026-05-15
+
+### Breaking Changes
+
+- **`instrumentations` is now a dict mapping integration name → LLM SDK module.** Replaces the list-of-strings form. Example: `instrumentations={"openai": openai, "anthropic": anthropic}`. The caller passes the module they already imported in app code, so the patch lands on the same module instance the app actually uses. Mirrors the TypeScript SDK's object-form API for full feature parity.
+- **The list-of-strings form (`instrumentations=["openai"]`) is removed with no fallback.** Anything other than a plain dict — including the old list — raises `TypeError` at register time with a migration hint. See the README's "Migrating from `instrumentations=[\"openai\"]`" section.
+- **Unknown integration keys raise `TypeError`.** Previously a typo in an integration name silently no-op'd with a `logging.warning`. Now the bootstrap fails loudly, naming the supported keys.
+
+### Added
+
+- New `InstrumentationName` literal type and `InstrumentationsInput` alias exported from `latitude_telemetry`.
+- **13 additional integrations** wired into the registry (the PyPI deps were already pinned in `pyproject.toml` but the registry only registered 10): `aleph_alpha`, `crewai`, `dspy`, `google_generativeai`, `groq`, `haystack`, `litellm`, `mistralai`, `ollama`, `replicate`, `sagemaker`, `transformers`, `watsonx`. Each takes the corresponding user-imported module.
+
+### Removed
+
+- The internal `INSTRUMENTATION_MAP` lookup with its `module/class/package/manual` fields, replaced by the typed `IntegrationDef` dataclass + a flat `INTEGRATIONS` dict.
+- Internal `__import__` of the user's SDK module — the user now passes it directly.
+
 ## [3.0.0a6] - 2026-05-14
 
 ### Added

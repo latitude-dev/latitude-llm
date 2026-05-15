@@ -17,6 +17,7 @@ Install: uv add openai
 
 import os
 
+import openai
 from openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
@@ -25,7 +26,7 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
     disable_batch=True,
 )
 
@@ -33,7 +34,7 @@ latitude = Latitude(
 @capture(
     "agent-with-custom-spans",
     {
-        "tags": ["manual-instrumentation", "test"],
+        "tags": ["python", "manual-instrumentation", "test"],
         "session_id": "manual-test-session",
         "user_id": "manual-test-user",
         "metadata": {"agent_type": "custom-span-test"},
@@ -94,7 +95,7 @@ def agent_with_manual_spans():
 @capture(
     "nested-capture-with-manual-spans",
     {
-        "tags": ["nested-manual"],
+        "tags": ["python", "nested-manual"],
         "session_id": "nested-session",
         "metadata": {"outer": True},
     },
@@ -127,7 +128,7 @@ def outer_with_manual_spans():
 @capture(
     "inner-capture-manual",
     {
-        "tags": ["inner-manual"],
+        "tags": ["python", "inner-manual"],
         "metadata": {"inner": True},
     },
 )
@@ -187,7 +188,7 @@ def test_manual_spans_with_callback():
         "callback-manual-test",
         agent_logic,
         {
-            "tags": ["callback-manual"],
+            "tags": ["python", "callback-manual"],
             "session_id": "callback-session",
             "metadata": {"test_type": "callback"},
         },
