@@ -1,9 +1,11 @@
+import { NOTIFICATION_GROUP_META, NOTIFICATION_GROUPS, type NotificationPreferences } from "@domain/shared"
 import {
   Button,
   FormWrapper,
   Icon,
   Input,
   Modal,
+  SwitchInput,
   Table,
   TableBody,
   TableCell,
@@ -31,6 +33,10 @@ import {
   Watch,
 } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+} from "../../../../../domains/notifications/notifications.functions.ts"
 import { deleteCurrentUser, updateUserName } from "../../../../../domains/sessions/session.functions.ts"
 import {
   listUserSessions,
@@ -324,6 +330,64 @@ function SessionsSection() {
   )
 }
 
+function NotificationsSection() {
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const { data, isLoading } = useQuery({
+    queryKey: ["notificationPreferences"],
+    queryFn: () => getNotificationPreferences(),
+  })
+
+  // Local prefs mirror server prefs; saves run in the background per change.
+  // Missing entries are treated as "email on" so a fresh user sees every
+  // toggle in the on position (matches the opt-out default).
+  const prefs: NotificationPreferences = data?.preferences ?? {}
+
+  const setGroupEmail = async (group: (typeof NOTIFICATION_GROUPS)[number], enabled: boolean) => {
+    const next: NotificationPreferences = {
+      ...prefs,
+      [group]: { ...(prefs[group] ?? {}), email: enabled },
+    }
+    // Optimistic update so the toggle never lags behind the user's intent.
+    queryClient.setQueryData(["notificationPreferences"], { preferences: next })
+    try {
+      await updateNotificationPreferences({ data: { preferences: next } })
+    } catch (error) {
+      // Roll back on failure.
+      queryClient.setQueryData(["notificationPreferences"], { preferences: prefs })
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <Text.H5 weight="semibold">Email notifications</Text.H5>
+        <Text.H5 color="foregroundMuted">
+          Choose which kinds of notifications you'd like to receive by email. In-app notifications always appear in the
+          bell.
+        </Text.H5>
+      </div>
+      <div className="flex max-w-lg flex-col gap-3">
+        {NOTIFICATION_GROUPS.map((group) => {
+          const meta = NOTIFICATION_GROUP_META[group]
+          const enabled = prefs[group]?.email ?? true
+          return (
+            <SwitchInput
+              key={group}
+              label={meta.label}
+              description={meta.description}
+              checked={enabled}
+              disabled={isLoading}
+              onCheckedChange={(checked) => void setGroupEmail(group, checked)}
+            />
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 function AccountSettingsPage() {
   const user = useAuthenticatedUser()
   const { toast } = useToast()
@@ -364,6 +428,7 @@ function AccountSettingsPage() {
           placeholder="Your name"
         />
       </div>
+      <NotificationsSection />
       <SessionsSection />
       <div className="flex flex-col gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-6">
         <Text.H4 weight="bold" color="destructive">

@@ -9,13 +9,20 @@ import {
 } from "@domain/notifications"
 import { ProjectRepository } from "@domain/projects"
 import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
-import { AlertIncidentId, IssueId } from "@domain/shared"
+import {
+  AlertIncidentId,
+  IssueId,
+  type NotificationPreferences,
+  notificationPreferencesSchema,
+} from "@domain/shared"
+import { UserRepository } from "@domain/users"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
   IssueRepositoryLive,
   NotificationRepositoryLive,
   ProjectRepositoryLive,
+  UserRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -179,6 +186,37 @@ export const getIncidentTrend = createServerFn({ method: "GET" })
     )
 
     return { buckets }
+  })
+
+export const getNotificationPreferences = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{ readonly preferences: NotificationPreferences | null }> => {
+    const { userId, organizationId } = await requireSession()
+    const pgClient = getPostgresClient()
+
+    const preferences = await Effect.runPromise(
+      Effect.gen(function* () {
+        const users = yield* UserRepository
+        const user = yield* users.findById(userId)
+        return user.notificationPreferences
+      }).pipe(withPostgres(UserRepositoryLive, pgClient, organizationId), withTracing),
+    )
+
+    return { preferences }
+  },
+)
+
+export const updateNotificationPreferences = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ preferences: notificationPreferencesSchema }))
+  .handler(async ({ data }): Promise<void> => {
+    const { userId, organizationId } = await requireSession()
+    const pgClient = getPostgresClient()
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const users = yield* UserRepository
+        yield* users.updateNotificationPreferences({ userId, preferences: data.preferences })
+      }).pipe(withPostgres(UserRepositoryLive, pgClient, organizationId), withTracing),
+    )
   })
 
 export interface IncidentTargetResult {
