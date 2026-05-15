@@ -1,4 +1,12 @@
-import { ProjectId, projectIdSchema, WrappedReportId, wrappedReportIdSchema } from "@domain/shared"
+import { MembershipRepository } from "@domain/organizations"
+import {
+  OrganizationId,
+  ProjectId,
+  projectIdSchema,
+  UserId,
+  WrappedReportId,
+  wrappedReportIdSchema,
+} from "@domain/shared"
 import {
   WRAPPED_REPORT_TYPES,
   type WrappedReportRecord,
@@ -6,39 +14,112 @@ import {
   type WrappedReportSummary,
   type WrappedReportType,
 } from "@domain/spans"
-import { WrappedReportRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { MembershipRepositoryLive, WrappedReportRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
+import { getSession } from "../sessions/session.functions.ts"
 
 const byIdInputSchema = z.object({ id: wrappedReportIdSchema })
 
 /**
- * Resolve a persisted Wrapped report by its public CUID. No auth — the
- * route is intentionally public, and the CUID is the only access control.
- * Uses the admin Postgres client (BYPASSRLS role) so cross-org reads
- * succeed; the share URL has no org context to route on.
+ * Server-side redaction for non-member viewers of the public Wrapped page.
  *
- * Returns the record on hit, `null` on miss. The route loader collapses
- * null → `notFound()`; any other error (DB outage, parse failure, …)
- * propagates as a 500 so it surfaces in logs.
+ * The Wrapped record carries org-internal details (workspace names, file
+ * paths, branch names, top bash command) that shouldn't reach viewers
+ * outside the wrapped's organization. This helper rewrites the report
+ * blob into a "summary only" shape before the data ever crosses the
+ * wire — defence-in-depth on top of the dual-layout rendering on the
+ * client so a rendering bug can't leak private fields.
+ *
+ * Fields zeroed out:
+ *   - moments.longestSession.workspace → null
+ *   - moments.biggestWrite.displayName → "" (schema requires string)
+ *   - topBashCommand → null
+ *   - workspaceDeepDives → []
+ *   - otherWorkspaceCount → 0
+ *
+ * Everything else (counts, owner name, project name, heatmap, personality)
+ * stays — those fields are public-safe by design.
  */
-export const getWrappedReportById = createServerFn({ method: "GET" })
+const redactForPublic = (record: WrappedReportRecord): WrappedReportRecord => ({
+  ...record,
+  report: {
+    ...record.report,
+    topBashCommand: null,
+    workspaceDeepDives: [],
+    otherWorkspaceCount: 0,
+    moments: {
+      ...record.report.moments,
+      longestSession: record.report.moments.longestSession
+        ? { ...record.report.moments.longestSession, workspace: null }
+        : null,
+      biggestWrite: record.report.moments.biggestWrite
+        ? { ...record.report.moments.biggestWrite, displayName: "" }
+        : null,
+    },
+  },
+})
+
+type WrappedPageData =
+  | { readonly found: false }
+  | {
+      readonly found: true
+      /** Full record for members; redacted for non-members. */
+      readonly record: WrappedReportRecord
+      /** True iff the viewer is logged in AND belongs to the wrapped's org. */
+      readonly isMember: boolean
+      readonly loggedIn: boolean
+    }
+
+/**
+ * Single endpoint the public `/wrapped/$id` route hits — bundles the
+ * record lookup, viewer auth, and org-membership check so the loader is
+ * one round-trip. Non-member viewers receive a redacted record (see
+ * `redactForPublic`); members receive the full record.
+ *
+ * Same admin-client + system-org pattern `getWrappedReportById` uses
+ * (the route is public, no org context in the URL).
+ */
+export const getWrappedPageData = createServerFn({ method: "GET" })
   .inputValidator(byIdInputSchema)
-  .handler(async ({ data }): Promise<WrappedReportRecord | null> => {
-    return Effect.runPromise(
+  .handler(async ({ data }): Promise<WrappedPageData> => {
+    const adminClient = getAdminPostgresClient()
+
+    const record = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* WrappedReportRepository
         return yield* repo.findById(WrappedReportId(data.id))
       }).pipe(
         Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
-        withPostgres(WrappedReportRepositoryLive, getAdminPostgresClient()),
+        withPostgres(WrappedReportRepositoryLive, adminClient),
         withTracing,
       ),
     )
+    if (!record) return { found: false }
+
+    const session = await getSession()
+    const userId = session?.user?.id ?? null
+
+    let isMember = false
+    if (userId !== null) {
+      isMember = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* MembershipRepository
+          return yield* repo.isMember(OrganizationId(record.organizationId), UserId(userId))
+        }).pipe(withPostgres(MembershipRepositoryLive, adminClient), withTracing),
+      )
+    }
+
+    return {
+      found: true,
+      record: isMember ? record : redactForPublic(record),
+      isMember,
+      loggedIn: userId !== null,
+    }
   })
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000

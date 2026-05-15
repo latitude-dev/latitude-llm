@@ -2,6 +2,15 @@ import type { WrappedReportRecord } from "@domain/spans"
 
 interface MomentsRowProps {
   readonly moments: WrappedReportRecord["report"]["moments"]
+  /**
+   * When false, the cards strip workspace + filename details before
+   * rendering — `Longest session` shows duration only, and
+   * `Biggest single write` promotes the line count to be the primary
+   * value with no secondary detail. Defence-in-depth: the wire payload
+   * already arrives redacted for non-members, but this guarantees the
+   * UI matches even if the data shape ever drifts.
+   */
+  readonly isMember: boolean
 }
 
 const formatDuration = (ms: number): string => {
@@ -47,17 +56,28 @@ function MomentCard({ label, value, detail }: { label: string; value: string; de
   )
 }
 
-export function MomentsRow({ moments }: MomentsRowProps) {
+export function MomentsRow({ moments, isMember }: MomentsRowProps) {
   const hasAny = moments.longestSession || moments.busiestDay || moments.biggestWrite
   if (!hasAny) return null
 
-  const longestSessionDetail = moments.longestSession?.workspace ?? undefined
+  // Workspace name on the longest-session card is only visible to org
+  // members — strip it for the public view.
+  const longestSessionDetail = isMember ? (moments.longestSession?.workspace ?? undefined) : undefined
+
   const busiestDayDetail = moments.busiestDay
     ? `${moments.busiestDay.toolCalls.toLocaleString("en-US")} tool calls`
     : undefined
-  const biggestWriteDetail = moments.biggestWrite
+
+  // For members the filename is the headline value and the line count is
+  // the detail. For non-members the filename isn't shipped (server-side
+  // redaction empties `displayName`), so promote the line count to be
+  // the headline value with no secondary detail.
+  const biggestWriteLines = moments.biggestWrite
     ? `${moments.biggestWrite.lines.toLocaleString("en-US")} line${moments.biggestWrite.lines === 1 ? "" : "s"}`
-    : undefined
+    : "—"
+  const biggestWriteValue =
+    isMember && moments.biggestWrite?.displayName ? moments.biggestWrite.displayName : biggestWriteLines
+  const biggestWriteDetail = isMember && moments.biggestWrite ? biggestWriteLines : undefined
 
   return (
     <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -73,7 +93,7 @@ export function MomentsRow({ moments }: MomentsRowProps) {
       />
       <MomentCard
         label="Biggest single write"
-        value={moments.biggestWrite?.displayName ?? "—"}
+        value={biggestWriteValue}
         {...(biggestWriteDetail ? { detail: biggestWriteDetail } : {})}
       />
     </section>

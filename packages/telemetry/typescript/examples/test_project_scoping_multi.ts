@@ -30,7 +30,7 @@ import { capture, Latitude } from "../src"
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   disableBatch: true,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 
 const FULL_STACK_AGENT_SLUG = "primary"

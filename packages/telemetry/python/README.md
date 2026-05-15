@@ -17,12 +17,17 @@ Requires Python 3.11+.
 The fastest way to start tracing your LLM calls. One class sets up everything:
 
 ```python
+import openai
+from openai import OpenAI
+
 from latitude_telemetry import Latitude
+
+client = OpenAI()
 
 latitude = Latitude(
     api_key="your-api-key",
     project_slug="your-project-slug",
-    instrumentations=["openai"],  # Auto-instrument OpenAI, Anthropic, etc.
+    instrumentations={"openai": openai},  # Pass the LLM SDK module you use in app code.
 )
 
 # Your LLM calls will now be traced and sent to Latitude
@@ -33,6 +38,8 @@ response = client.chat.completions.create(
 
 latitude.shutdown()
 ```
+
+`instrumentations` takes a dict mapping integration name (`openai`, `anthropic`, …) to the LLM SDK module the consumer imports. Passing the module reference the consumer's own code uses sidesteps a class of import-cache bugs where the SDK could patch a different module instance than the app loads.
 
 **What this does:**
 
@@ -54,6 +61,9 @@ latitude.shutdown()
 If your app already uses OpenTelemetry, add Latitude alongside your existing setup:
 
 ```python
+import openai
+from openai import OpenAI
+
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from latitude_telemetry import LatitudeSpanProcessor, register_latitude_instrumentations
@@ -67,11 +77,12 @@ trace.set_tracer_provider(provider)
 
 # Enable LLM auto-instrumentation
 register_latitude_instrumentations(
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
     tracer_provider=provider,
 )
 
 # Your LLM calls will now be traced and sent to Latitude
+client = OpenAI()
 response = client.chat.completions.create(
     model="gpt-4",
     messages=[{"role": "user", "content": "Hello"}],
@@ -104,12 +115,14 @@ You don't need `capture()` to get started—auto-instrumentation handles LLM cal
 ### Example
 
 ```python
+import openai
+
 from latitude_telemetry import Latitude, capture
 
 latitude = Latitude(
     api_key="your-api-key",
     project_slug="your-project-slug",
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
 )
 
 # Wrap a request or agent run to add context
@@ -169,8 +182,11 @@ class Latitude:
         self,
         *,
         api_key: str,
-        project_slug: str,
-        instrumentations: list[str] | None = None,
+        project_slug: str | None = None,
+        # Dict mapping integration name → the LLM SDK module the consumer imports.
+        # Example: {"openai": openai, "anthropic": anthropic}.
+        # Anything else (list, primitive, unknown key, non-dict) raises TypeError at register time.
+        instrumentations: InstrumentationsInput | None = None,
         service_name: str | None = None,
         disable_batch: bool = False,
         disable_smart_filter: bool = False,
@@ -249,26 +265,71 @@ def capture(
 Registers LLM auto-instrumentations against a specific tracer provider.
 
 ```python
+# InstrumentationName = Literal[
+#   "openai", "openai-agents", "anthropic", "bedrock", "cohere",
+#   "langchain", "llamaindex", "togetherai", "vertexai", "aiplatform",
+#   "aleph_alpha", "crewai", "dspy", "google_generativeai", "groq",
+#   "haystack", "litellm", "mistralai", "ollama", "replicate",
+#   "sagemaker", "transformers", "watsonx",
+# ]
+# InstrumentationsInput = dict[InstrumentationName, object]
+
 def register_latitude_instrumentations(
-    instrumentations: list[str],
+    # Dict mapping integration name → the LLM SDK module the consumer imports.
+    # Anything else throws at register time.
+    instrumentations: InstrumentationsInput,
     tracer_provider: TracerProvider,
 ) -> None:
     ...
 ```
 
+## Migrating from `instrumentations=["openai"]` (3.0.0a6 and earlier)
+
+The list-of-strings form is removed with no fallback in `3.0.0a7`. Anything other than a plain dict — including the old string list — **raises `TypeError`** at register time. Migration:
+
+```diff
+- from latitude_telemetry import Latitude
++ import openai
++ import anthropic
++ from latitude_telemetry import Latitude
+
+  latitude = Latitude(
+      api_key="your-api-key",
+      project_slug="your-project-slug",
+-     instrumentations=["openai", "anthropic"],
++     instrumentations={"openai": openai, "anthropic": anthropic},
+  )
+```
+
 ## Supported AI Providers
 
-| Identifier     | Package                           |
-| -------------- | --------------------------------- |
-| `"openai"`     | `openai`                          |
-| `"anthropic"`  | `anthropic`                       |
-| `"bedrock"`    | `boto3`                           |
-| `"cohere"`     | `cohere`                          |
-| `"langchain"`  | `langchain-core`                  |
-| `"llamaindex"` | `llama-index`                     |
-| `"togetherai"` | `together`                        |
-| `"vertexai"`   | `google-cloud-aiplatform`         |
-| `"aiplatform"` | `google-cloud-aiplatform`         |
+Set the integration's key on the `instrumentations` dict to the LLM SDK module the consumer imports.
+
+| Key                   | PyPI package                | What to pass                                |
+| --------------------- | --------------------------- | ------------------------------------------- |
+| `openai`              | `openai`                    | `import openai` → `openai`                  |
+| `openai-agents`       | `openai-agents`             | `import agents` → `agents`                  |
+| `anthropic`           | `anthropic`                 | `import anthropic` → `anthropic`            |
+| `bedrock`             | `boto3`                     | `import boto3` → `boto3`                    |
+| `cohere`              | `cohere`                    | `import cohere` → `cohere`                  |
+| `langchain`           | `langchain-core`            | `import langchain_core` → `langchain_core`  |
+| `llamaindex`          | `llama-index`               | `import llama_index` → `llama_index`        |
+| `togetherai`          | `together`                  | `import together` → `together`              |
+| `vertexai`            | `google-cloud-aiplatform`   | `import vertexai` → `vertexai`              |
+| `aiplatform`          | `google-cloud-aiplatform`   | `import google.cloud.aiplatform` → that module |
+| `aleph_alpha`         | `aleph-alpha-client`        | `import aleph_alpha_client`                 |
+| `crewai`              | `crewai`                    | `import crewai`                             |
+| `dspy`                | `dspy-ai`                   | `import dspy`                               |
+| `google_generativeai` | `google-generativeai`       | `from google import genai` → `genai`        |
+| `groq`                | `groq`                      | `import groq`                               |
+| `haystack`            | `haystack-ai`               | `import haystack`                           |
+| `litellm`             | `litellm`                   | `import litellm`                            |
+| `mistralai`           | `mistralai`                 | `import mistralai`                          |
+| `ollama`              | `ollama`                    | `import ollama`                             |
+| `replicate`           | `replicate`                 | `import replicate`                          |
+| `sagemaker`           | `boto3`                     | `import boto3` → `boto3`                    |
+| `transformers`        | `transformers`              | `import transformers`                       |
+| `watsonx`             | `ibm-watson-machine-learning` | `import ibm_watsonx_ai`                   |
 
 ## Context Options
 

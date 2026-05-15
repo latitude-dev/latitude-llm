@@ -39,6 +39,7 @@ export {
   enrichAnnotationForPublicationUseCase,
   formatGenAIMessagesForEnrichmentPrompt,
 } from "./use-cases/enrich-annotation-for-publication.ts"
+export { type GetTraceAnnotationInput, getTraceAnnotationUseCase } from "./use-cases/get-trace-annotation.ts"
 export {
   type ListAnnotationsError,
   type ListTraceAnnotationsInput,

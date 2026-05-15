@@ -11,13 +11,14 @@
  */
 
 import { VertexAI } from "@google-cloud/vertexai"
+import * as VertexAISDK from "@google-cloud/vertexai"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: ["vertexai"],
+  instrumentations: { vertexai: VertexAISDK },
 })
 
 async function main() {

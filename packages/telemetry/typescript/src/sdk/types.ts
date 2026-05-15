@@ -1,6 +1,6 @@
 import type { TracerProvider } from "@opentelemetry/api"
 import type { SpanExporter } from "@opentelemetry/sdk-trace-node"
-import type { InstrumentationType } from "./instrumentations.ts"
+import type { InstrumentationsInput } from "./instrumentations.ts"
 import type { RedactSpanProcessorOptions } from "./redact.ts"
 import type { SmartFilterOptions } from "./span-filter.ts"
 
@@ -32,7 +32,12 @@ export type LatitudeOptions = SmartFilterOptions & {
    * OTEL resource attribute `latitude.project` → `X-Latitude-Project` header.
    */
   projectSlug?: string
-  instrumentations?: InstrumentationType[]
+  /**
+   * Map of integration name → LLM SDK module reference the user imports in app code.
+   * Example: `{ openai: OpenAI, anthropic: AnthropicSDK }`. The patch lands on the same
+   * prototype the consumer's code calls.
+   */
+  instrumentations?: InstrumentationsInput
   disableRedact?: boolean
   redact?: RedactSpanProcessorOptions
   disableBatch?: boolean
@@ -71,6 +76,5 @@ export type LatitudeSpanProcessorOptions = SmartFilterOptions & {
   serviceName?: string
 }
 
-export type { InstrumentationType } from "./instrumentations.ts"
 export type { RedactSpanProcessorOptions } from "./redact.ts"
 export type { SmartFilterOptions } from "./span-filter.ts"

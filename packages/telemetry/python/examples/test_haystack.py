@@ -10,6 +10,7 @@ Install: uv add haystack-ai
 
 import os
 
+import haystack
 from haystack import Pipeline
 from haystack.components.builders import PromptBuilder
 from haystack.components.generators import OpenAIGenerator
@@ -20,12 +21,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["haystack"],
+    instrumentations={"haystack": haystack},
     disable_batch=True,
 )
 
 
-@capture("test-haystack-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-haystack-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_haystack_completion():
     # Build a simple pipeline
     pipeline = Pipeline()

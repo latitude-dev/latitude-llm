@@ -182,7 +182,7 @@ describe("checkIssueEscalationUseCase", () => {
   })
 
   it("does not emit IssueEscalated while the issue is still new", async () => {
-    const issue = makeIssue({ createdAt: new Date("2026-05-08T10:00:00.000Z") })
+    const issue = makeIssue({ createdAt: new Date(Date.now() - 60 * 60 * 1000) })
     const events: OutboxWriteEvent[] = []
     const { apply } = provideTestLayers({
       issue,

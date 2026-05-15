@@ -23,6 +23,7 @@ import { parseEnv } from "@platform/env"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
+import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import {
   IdParamsSchema,
   jsonBody,
@@ -314,8 +315,10 @@ const removeMember = memberEndpoint({
 
 export const createMembersRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
-  for (const ep of [listMembers, inviteMember, getMember, updateMemberRole, removeMember]) {
-    ep.mountHttp(app)
-  }
+  listMembers.mountHttp(app, createTierRateLimiter("low"))
+  inviteMember.mountHttp(app, createTierRateLimiter("high"))
+  getMember.mountHttp(app, createTierRateLimiter("low"))
+  updateMemberRole.mountHttp(app, createTierRateLimiter("low"))
+  removeMember.mountHttp(app, createTierRateLimiter("low"))
   return app
 }

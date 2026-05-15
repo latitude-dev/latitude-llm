@@ -9,14 +9,14 @@
  * Install: npm install @anthropic-ai/sdk
  */
 
-import Anthropic from "@anthropic-ai/sdk"
+import Anthropic, * as AnthropicSDK from "@anthropic-ai/sdk"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: ["anthropic"],
+  instrumentations: { anthropic: AnthropicSDK },
 })
 
 async function main() {

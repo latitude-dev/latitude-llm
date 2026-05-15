@@ -32,9 +32,6 @@ const ErrorSchema = z
 // schemas referenced inside the domain's discriminated union — the entire
 // chain has to be rebuilt with named instances.
 
-// `FilterConditionSchema` and `FilterSetSchema` aren't exported because nothing
-// imports them directly — they exist only as references in the `TraceRefSchema`
-// chain so each level emits as a named OpenAPI component.
 const FilterConditionSchema = z
   .object({
     op: z
@@ -48,7 +45,7 @@ const FilterConditionSchema = z
   })
   .openapi("FilterCondition")
 
-const FilterSetSchema = z
+export const FilterSetSchema = z
   .record(z.string(), z.array(FilterConditionSchema))
   .describe(
     "Filter set keyed by field name. Each entry holds an array of conditions ANDed together for that field; field-level groups are also ANDed across the set.",

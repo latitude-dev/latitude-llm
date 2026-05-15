@@ -16,7 +16,7 @@ const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 })
 
 async function main() {

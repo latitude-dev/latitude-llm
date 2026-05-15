@@ -11,13 +11,14 @@
 
 import { HumanMessage } from "@langchain/core/messages"
 import { ChatOpenAI } from "@langchain/openai"
+import * as LangChain from "langchain"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: ["langchain"],
+  instrumentations: { langchain: LangChain },
 })
 
 async function main() {

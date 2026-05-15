@@ -9,6 +9,7 @@ Install: uv add transformers torch
 
 import os
 
+import transformers
 from transformers import pipeline
 
 from latitude_telemetry import Latitude, capture
@@ -17,12 +18,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["transformers"],
+    instrumentations={"transformers": transformers},
     disable_batch=True,
 )
 
 
-@capture("test-transformers-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-transformers-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_transformers_completion():
     # Using a small model for testing
     generator = pipeline(

@@ -10,13 +10,14 @@
  */
 
 import { CohereClient } from "cohere-ai"
+import * as CohereSDK from "cohere-ai"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: ["cohere"],
+  instrumentations: { cohere: CohereSDK },
 })
 
 async function main() {

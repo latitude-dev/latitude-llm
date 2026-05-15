@@ -15,19 +15,22 @@ npm install @latitude-data/telemetry
 The fastest way to start tracing your LLM calls. One class sets up everything:
 
 ```typescript
+import OpenAI from "openai";
 import { Latitude } from "@latitude-data/telemetry";
+
+const client = new OpenAI();
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"], // Auto-instrument OpenAI, Anthropic, etc.
+  instrumentations: { openai: OpenAI }, // Pass the LLM SDK module you use in app code.
 });
 
 // Optionally wait for instrumentations to be ready
 await latitude.ready;
 
 // Your LLM calls will now be traced and sent to Latitude
-const response = await openai.chat.completions.create({
+const response = await client.chat.completions.create({
   model: "gpt-4",
   messages: [{ role: "user", content: "Hello" }],
 });
@@ -62,6 +65,7 @@ await latitude.shutdown();
 If your app already uses Sentry or another OpenTelemetry-compatible SDK, initialize that SDK first and then construct `new Latitude()`:
 
 ```typescript
+import OpenAI from "openai";
 import * as Sentry from "@sentry/node";
 import { Latitude } from "@latitude-data/telemetry";
 
@@ -73,7 +77,7 @@ Sentry.init({
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 });
 
 await latitude.ready;
@@ -86,6 +90,7 @@ await latitude.shutdown(); // Does not shut down Sentry.
 For fully custom OTel setups, you can also wire the Latitude processor explicitly:
 
 ```typescript
+import OpenAI from "openai";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import {
   LatitudeSpanProcessor,
@@ -106,12 +111,13 @@ sdk.start();
 
 // Enable LLM auto-instrumentation
 await registerLatitudeInstrumentations({
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
   tracerProvider: sdk.getTracerProvider(),
 });
 
 // Your LLM calls will now be traced and sent to Latitude
-const response = await openai.chat.completions.create({
+const client = new OpenAI();
+const response = await client.chat.completions.create({
   model: "gpt-4",
   messages: [{ role: "user", content: "Hello" }],
 });
@@ -150,12 +156,13 @@ You don't need `capture()` to get started—auto-instrumentation handles LLM cal
 ### Example
 
 ```typescript
+import OpenAI from "openai";
 import { Latitude, capture } from "@latitude-data/telemetry";
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 });
 
 // Optional: wait for instrumentations before starting
@@ -208,8 +215,10 @@ The primary entry point. Bootstraps a complete OpenTelemetry setup with LLM inst
 ```typescript
 type LatitudeOptions = {
   apiKey: string;
-  projectSlug: string;
-  instrumentations?: InstrumentationType[]; // ["openai", "anthropic", etc.]
+  projectSlug?: string;
+  // Map of integration name → LLM SDK module the consumer imports.
+  // Anything else (string array, unknown key, non-object) throws at register time.
+  instrumentations?: InstrumentationsInput;
   serviceName?: string;
   disableBatch?: boolean;
   disableSmartFilter?: boolean;
@@ -286,7 +295,7 @@ function capture<T>(
 Registers patch-based AI SDK instrumentations against a specific tracer provider.
 
 ```typescript
-type InstrumentationType =
+type InstrumentationName =
   | "openai"
   | "openai-agents"
   | "anthropic"
@@ -298,10 +307,16 @@ type InstrumentationType =
   | "vertexai"
   | "aiplatform";
 
+// `object | undefined` rejects primitive values (`true`, `42`, `"openai"`, …)
+// at compile time while still admitting class constructors (functions),
+// namespace imports, and explicit-undefined-for-conditional-config.
+type InstrumentationsInput = Partial<Record<InstrumentationName, object | undefined>>;
+
 function registerLatitudeInstrumentations(options: {
-  instrumentations: InstrumentationType[];
+  // Map of integration name → LLM SDK module reference (e.g. { openai: OpenAI }).
+  // Anything else throws at register time.
+  instrumentations: InstrumentationsInput;
   tracerProvider: TracerProvider;
-  instrumentationModules?: Partial<Record<InstrumentationType, unknown>>;
 }): Promise<void>;
 ```
 
@@ -314,6 +329,7 @@ For users with existing observability infrastructure.
 Initialize Datadog first, then construct `new Latitude()` so Latitude can attach to Datadog's OTel provider when possible:
 
 ```typescript
+import OpenAI from "openai";
 import tracer from "dd-trace";
 import { Latitude } from "@latitude-data/telemetry";
 
@@ -322,7 +338,7 @@ tracer.init({ service: "my-app", env: "production" });
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 });
 
 await latitude.ready;
@@ -339,6 +355,7 @@ await latitude.shutdown(); // Does not shut down Datadog.
 Initialize Sentry first, then Latitude. Sentry installs an OpenTelemetry `BasicTracerProvider`; Latitude detects it and adds its processor without replacing Sentry's context manager, propagator, sampler, or span processor:
 
 ```typescript
+import OpenAI from "openai";
 import * as Sentry from "@sentry/node";
 import { Latitude } from "@latitude-data/telemetry";
 
@@ -350,7 +367,7 @@ Sentry.init({
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 });
 
 await latitude.ready;
@@ -368,12 +385,13 @@ Enable New Relic's OpenTelemetry bridge first, then construct `new Latitude()`. 
 
 ```typescript
 import "newrelic";
+import OpenAI from "openai";
 import { Latitude } from "@latitude-data/telemetry";
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 });
 ```
 
@@ -382,6 +400,7 @@ const latitude = new Latitude({
 Start Honeycomb's `HoneycombSDK` first, then construct `new Latitude()`. Honeycomb extends OpenTelemetry's `NodeSDK`, so Latitude reuses the global provider created by `sdk.start()`.
 
 ```typescript
+import OpenAI from "openai";
 import { HoneycombSDK } from "@honeycombio/opentelemetry-node";
 import { Latitude } from "@latitude-data/telemetry";
 
@@ -391,9 +410,34 @@ honeycomb.start();
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
 });
 ```
+
+## Migrating from `instrumentations: ["openai"]` (3.0.0-alpha.10 and earlier)
+
+The string-array form is removed with no fallback in `3.0.0-alpha.11`. Passing
+a string array — or anything other than a plain object — throws at register
+time. Switch to the object form, mapping integration name → LLM SDK module:
+
+```diff
+- import { Latitude } from "@latitude-data/telemetry";
++ import OpenAI from "openai";
++ import * as AnthropicSDK from "@anthropic-ai/sdk";
++ import { Latitude } from "@latitude-data/telemetry";
+
+  new Latitude({
+    apiKey: process.env.LATITUDE_API_KEY!,
+    projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+-   instrumentations: ["openai", "anthropic"],
++   instrumentations: { openai: OpenAI, anthropic: AnthropicSDK },
+  });
+```
+
+For `anthropic`, pass the namespace (`import * as AnthropicSDK from "@anthropic-ai/sdk"`)
+— the underlying Traceloop patch reads `module.Anthropic.Messages.prototype`. The
+SDK also accepts a bare default-export class (it wraps it back into `{ Anthropic }`),
+but the namespace form is the recommended shape.
 
 ## Supported AI Providers
 
@@ -476,9 +520,10 @@ new LatitudeSpanProcessor(apiKey, projectSlug, {
 
 1. **Check API key and project slug** — Must be non-empty strings
 2. **Verify instrumentations are registered** — Use `await registerLatitudeInstrumentations()`
-3. **Flush before exit** — Call `await latitude.flush()` or `await provider.forceFlush()`
-4. **Check smart filter** — Only LLM spans are exported by default. Use `disableSmartFilter: true` to export all spans
-5. **Ensure `capture()` wraps the code that creates spans** — `capture()` itself doesn't create spans; it only attaches context to spans created by instrumentations
+3. **Did the bootstrap throw a migration error?** — `instrumentations: ["openai"]` (or any array / non-object form) is no longer accepted in `3.0.0-alpha.11`+. Switch to the object form: `instrumentations: { openai: OpenAI }`. See the Migration section above.
+4. **Flush before exit** — Call `await latitude.flush()` or `await provider.forceFlush()`
+5. **Check smart filter** — Only LLM spans are exported by default. Use `disableSmartFilter: true` to export all spans
+6. **Ensure `capture()` wraps the code that creates spans** — `capture()` itself doesn't create spans; it only attaches context to spans created by instrumentations
 
 ### No spans created inside `capture()`
 

@@ -12,6 +12,7 @@ Install: uv add ibm-watsonx-ai
 
 import os
 
+import ibm_watsonx_ai
 from ibm_watsonx_ai.foundation_models import Model
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 
@@ -21,12 +22,12 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["watsonx"],
+    instrumentations={"watsonx": ibm_watsonx_ai},
     disable_batch=True,
 )
 
 
-@capture("test-watsonx-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-watsonx-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_watsonx_completion():
     model = Model(
         model_id="ibm/granite-13b-chat-v2",

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.11] - 2026-05-14
+
+### Breaking Changes
+
+- **`instrumentations` is now an object mapping integration name → LLM SDK module.** Replaces the magic-string array form. Example: `instrumentations: { openai: OpenAI, anthropic: AnthropicSDK }`. The consumer passes the LLM SDK module they already imported, so the patch lands on the same prototype their app code calls.
+- **The string-array form (`instrumentations: ["openai"]`) is removed with no fallback.** Passing a string array — or anything other than a plain object — throws at register time. Migration: `instrumentations: { openai: OpenAI }`. See the README's "Migrating from `instrumentations: ["openai"]`" section.
+- **`modules` option on `registerLatitudeInstrumentations` is removed.** Pass the module directly under its integration key on `instrumentations`.
+- **Why:** `tryRequire` inside the telemetry package's ESM-compiled `__require` shim loaded the CJS build of dual-bundled LLM SDKs (`openai@6`, `@anthropic-ai/sdk@0.96`, …), while the consumer app loaded the ESM build. Patching the CJS class had no effect on instances the app code actually called, so no traces appeared while the SDK reported a healthy bootstrap. Forcing the consumer to pass the module makes that bug impossible to express.
+
+### Added
+
+- New `InstrumentationName` and `InstrumentationsInput` types exported from `@latitude-data/telemetry`.
+
+### Removed
+
+- `tryRequire` fallback (the CJS/ESM auto-resolver behind the string-array path).
+- Legacy `LEGACY_INSTRUMENTATION_MAP` lookup table.
+
 ## [3.0.0-alpha.10] - 2026-05-14
 
 ### Added
