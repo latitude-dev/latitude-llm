@@ -1304,7 +1304,7 @@
             "type": "string",
             "minLength": 24,
             "maxLength": 24,
-            "description": "Stable annotation-score identifier."
+            "description": "Stable annotation identifier."
           },
           "organizationId": {
             "type": "string",
@@ -1329,7 +1329,7 @@
                 "type": "null"
               }
             ],
-            "description": "Session id lifted from the trace, when set. `null` when the trace has no session."
+            "description": "Session id lifted from the annotated trace. `null` when the trace has no session."
           },
           "traceId": {
             "anyOf": [
@@ -1389,7 +1389,7 @@
             "type": "number",
             "minimum": 0,
             "maximum": 1,
-            "description": "Normalized score value in [0, 1]."
+            "description": "Normalized score value in [0, 1]. Higher = better."
           },
           "passed": {
             "type": "boolean",
@@ -1425,13 +1425,13 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991,
-            "description": "Total LLM tokens consumed generating the score, if any. `0` for human annotations."
+            "description": "Total LLM tokens consumed generating the score. `0` for human annotations."
           },
           "cost": {
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991,
-            "description": "Total LLM cost in microcents (1/1,000,000 of a USD). `0` for human annotations."
+            "description": "Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."
           },
           "draftedAt": {
             "anyOf": [
@@ -1444,7 +1444,7 @@
                 "type": "null"
               }
             ],
-            "description": "Always `null` for public-API annotations — they're written as published."
+            "description": "ISO-8601 timestamp at which the annotation was drafted. `null` for published annotations."
           },
           "annotatorId": {
             "anyOf": [
@@ -1457,7 +1457,7 @@
                 "type": "null"
               }
             ],
-            "description": "User who authored the annotation. `null` for API-key callers (organization-scoped); set to the authenticated user for OAuth callers."
+            "description": "User who authored the annotation. `null` when not attributed to a user."
           },
           "createdAt": {
             "type": "string",
@@ -1474,7 +1474,7 @@
           "source": {
             "type": "string",
             "const": "annotation",
-            "description": "Always `\"annotation\"` for this endpoint's responses."
+            "description": "Always `\"annotation\"` for this shape."
           },
           "sourceId": {
             "anyOf": [
@@ -1492,14 +1492,14 @@
                 "maxLength": 24
               }
             ],
-            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows. Public-API annotations are always `\"API\"`."
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
           },
           "metadata": {
             "type": "object",
             "properties": {
               "rawFeedback": {
                 "type": "string",
-                "description": "Original feedback text before enrichment. Human-authored for human annotations, model-authored for system drafts."
+                "description": "Original feedback text as written by the annotator, before any server-side enrichment."
               },
               "messageIndex": {
                 "description": "0-based message index inside the conversation. Omit for conversation-level annotations.",
@@ -1564,6 +1564,2265 @@
           "source",
           "sourceId",
           "metadata"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listTraces",
+      "title": "List project traces",
+      "description": "Returns a cursor-paginated page of traces in the project. Combine `filters` with `searchQuery` (free-text semantic search) to narrow the result set. Trace list rows exclude per-message LLM content — use `getTrace` for the full conversation view.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "cursor": {
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 200.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "sortBy": {
+            "default": "startTime",
+            "description": "Field to sort by. Defaults to `startTime`.",
+            "type": "string",
+            "enum": [
+              "startTime",
+              "endTime",
+              "durationNs",
+              "tokensTotal",
+              "costTotalMicrocents"
+            ]
+          },
+          "sortDirection": {
+            "default": "desc",
+            "description": "Sort direction. Defaults to `desc` (most recent first).",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "searchQuery": {
+            "description": "Free-text semantic search across the trace's input and output messages. Combined with `filters` via AND.",
+            "type": "string",
+            "maxLength": 500
+          },
+          "filters": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "in",
+                      "notIn",
+                      "contains",
+                      "notContains",
+                      "gtePercentile"
+                    ],
+                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "required": [
+          "projectSlug",
+          "limit",
+          "sortBy",
+          "sortDirection"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "organizationId": {
+                  "type": "string",
+                  "description": "Organization that owns this trace."
+                },
+                "projectId": {
+                  "type": "string",
+                  "description": "Project this trace belongs to."
+                },
+                "traceId": {
+                  "type": "string",
+                  "description": "32-character trace identifier."
+                },
+                "spanCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Total number of spans in the trace."
+                },
+                "errorCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of spans flagged with an error status."
+                },
+                "startTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the trace's earliest span."
+                },
+                "endTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp of the trace's latest span."
+                },
+                "durationNs": {
+                  "type": "number",
+                  "description": "Wall-clock duration of the trace in nanoseconds."
+                },
+                "timeToFirstTokenNs": {
+                  "type": "number",
+                  "description": "Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured."
+                },
+                "tokensInput": {
+                  "type": "number",
+                  "description": "Total input tokens across LLM spans."
+                },
+                "tokensOutput": {
+                  "type": "number",
+                  "description": "Total output tokens across LLM spans."
+                },
+                "tokensCacheRead": {
+                  "type": "number",
+                  "description": "Total tokens served from the provider's prompt cache."
+                },
+                "tokensCacheCreate": {
+                  "type": "number",
+                  "description": "Total tokens written to the provider's prompt cache."
+                },
+                "tokensReasoning": {
+                  "type": "number",
+                  "description": "Total reasoning tokens reported by the model."
+                },
+                "tokensTotal": {
+                  "type": "number",
+                  "description": "Sum of all token counters."
+                },
+                "costInputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                },
+                "costOutputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                },
+                "costTotalMicrocents": {
+                  "type": "number",
+                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                },
+                "sessionId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Conversation/session identifier set by the SDK. `null` when absent."
+                },
+                "userId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "End-user identifier set by the SDK. `null` when absent."
+                },
+                "simulationId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "CUID of the simulation that produced this trace. `null` when not a simulation."
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Free-form tags attached at ingest time."
+                },
+                "models": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Model identifiers seen across the trace's LLM spans."
+                },
+                "providers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "LLM-provider identifiers seen across the trace's spans."
+                },
+                "serviceNames": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "OpenTelemetry `service.name` values seen in the trace."
+                },
+                "rootSpanId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Identifier of the trace's root span. `null` when no root span has been ingested."
+                },
+                "rootSpanName": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+                }
+              },
+              "required": [
+                "organizationId",
+                "projectId",
+                "traceId",
+                "spanCount",
+                "errorCount",
+                "startTime",
+                "endTime",
+                "durationNs",
+                "timeToFirstTokenNs",
+                "tokensInput",
+                "tokensOutput",
+                "tokensCacheRead",
+                "tokensCacheCreate",
+                "tokensReasoning",
+                "tokensTotal",
+                "costInputMicrocents",
+                "costOutputMicrocents",
+                "costTotalMicrocents",
+                "sessionId",
+                "userId",
+                "simulationId",
+                "tags",
+                "models",
+                "providers",
+                "serviceNames",
+                "rootSpanId",
+                "rootSpanName"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getTrace",
+      "title": "Get project trace",
+      "description": "Returns a single trace by id, including the captured system instructions and the conversation messages from the trace's last LLM-completion span.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character trace identifier."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "traceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this trace."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Project this trace belongs to."
+          },
+          "traceId": {
+            "type": "string",
+            "description": "32-character trace identifier."
+          },
+          "spanCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total number of spans in the trace."
+          },
+          "errorCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Number of spans flagged with an error status."
+          },
+          "startTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the trace's earliest span."
+          },
+          "endTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the trace's latest span."
+          },
+          "durationNs": {
+            "type": "number",
+            "description": "Wall-clock duration of the trace in nanoseconds."
+          },
+          "timeToFirstTokenNs": {
+            "type": "number",
+            "description": "Nanoseconds from the start of the first LLM span to its first emitted token. `0` if not measured."
+          },
+          "tokensInput": {
+            "type": "number",
+            "description": "Total input tokens across LLM spans."
+          },
+          "tokensOutput": {
+            "type": "number",
+            "description": "Total output tokens across LLM spans."
+          },
+          "tokensCacheRead": {
+            "type": "number",
+            "description": "Total tokens served from the provider's prompt cache."
+          },
+          "tokensCacheCreate": {
+            "type": "number",
+            "description": "Total tokens written to the provider's prompt cache."
+          },
+          "tokensReasoning": {
+            "type": "number",
+            "description": "Total reasoning tokens reported by the model."
+          },
+          "tokensTotal": {
+            "type": "number",
+            "description": "Sum of all token counters."
+          },
+          "costInputMicrocents": {
+            "type": "number",
+            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+          },
+          "costOutputMicrocents": {
+            "type": "number",
+            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+          },
+          "costTotalMicrocents": {
+            "type": "number",
+            "description": "Total cost in microcents (1/1,000,000 USD)."
+          },
+          "sessionId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Conversation/session identifier set by the SDK. `null` when absent."
+          },
+          "userId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "End-user identifier set by the SDK. `null` when absent."
+          },
+          "simulationId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CUID of the simulation that produced this trace. `null` when not a simulation."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Free-form tags attached at ingest time."
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Model identifiers seen across the trace's LLM spans."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "LLM-provider identifiers seen across the trace's spans."
+          },
+          "serviceNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "OpenTelemetry `service.name` values seen in the trace."
+          },
+          "rootSpanId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the trace's root span. `null` when no root span has been ingested."
+          },
+          "rootSpanName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Free-form metadata attached at ingest time."
+          },
+          "systemInstructions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {},
+            "description": "System instructions in OpenTelemetry GenAI format."
+          },
+          "inputMessages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {},
+              "description": "Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls)."
+            },
+            "description": "Input messages sent into the first LLM span of the trace, in OpenTelemetry GenAI format."
+          },
+          "outputMessages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {},
+              "description": "Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls)."
+            },
+            "description": "Output messages from the last LLM span of the trace, in OpenTelemetry GenAI format."
+          },
+          "allMessages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {},
+              "description": "Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls)."
+            },
+            "description": "Full conversation view for the trace's final turn — the last span's input messages followed by its output messages, in OpenTelemetry GenAI format."
+          }
+        },
+        "required": [
+          "organizationId",
+          "projectId",
+          "traceId",
+          "spanCount",
+          "errorCount",
+          "startTime",
+          "endTime",
+          "durationNs",
+          "timeToFirstTokenNs",
+          "tokensInput",
+          "tokensOutput",
+          "tokensCacheRead",
+          "tokensCacheCreate",
+          "tokensReasoning",
+          "tokensTotal",
+          "costInputMicrocents",
+          "costOutputMicrocents",
+          "costTotalMicrocents",
+          "sessionId",
+          "userId",
+          "simulationId",
+          "tags",
+          "models",
+          "providers",
+          "serviceNames",
+          "rootSpanId",
+          "rootSpanName",
+          "metadata",
+          "systemInstructions",
+          "inputMessages",
+          "outputMessages",
+          "allMessages"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listTraceSpans",
+      "title": "List trace spans",
+      "description": "Returns every span belonging to the trace, ordered by `startTime` ascending. Spans carry the OpenTelemetry envelope (kind, status, attributes, resource) plus Latitude's GenAI enrichment (tokens, cost, operation, provider, model). Per-message LLM content is excluded for size; use a span point-lookup for the conversation payload.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character trace identifier."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "traceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "organizationId": {
+                  "type": "string",
+                  "description": "Organization that owns this span."
+                },
+                "projectId": {
+                  "type": "string",
+                  "description": "Project this span belongs to."
+                },
+                "traceId": {
+                  "type": "string",
+                  "description": "Identifier of the trace this span belongs to."
+                },
+                "spanId": {
+                  "type": "string",
+                  "description": "Stable span identifier within the trace."
+                },
+                "parentSpanId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Identifier of the parent span. `null` for root spans."
+                },
+                "sessionId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Conversation/session identifier set by the SDK. `null` when absent."
+                },
+                "userId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "End-user identifier set by the SDK. `null` when absent."
+                },
+                "simulationId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "CUID of the simulation that produced this span. `null` when not a simulation."
+                },
+                "apiKeyId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Latitude API key used to ingest the span. `null` when ingested without an API key."
+                },
+                "startTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which the span started."
+                },
+                "endTime": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which the span ended."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Span name (e.g. the entry-point function or route)."
+                },
+                "serviceName": {
+                  "type": "string",
+                  "description": "OpenTelemetry `service.name` of the emitting service."
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "unspecified",
+                    "internal",
+                    "server",
+                    "client",
+                    "producer",
+                    "consumer"
+                  ],
+                  "description": "OpenTelemetry span kind."
+                },
+                "statusCode": {
+                  "type": "string",
+                  "enum": [
+                    "unset",
+                    "ok",
+                    "error"
+                  ],
+                  "description": "OpenTelemetry span status code."
+                },
+                "statusMessage": {
+                  "type": "string",
+                  "description": "OpenTelemetry status message. Empty when not set."
+                },
+                "traceFlags": {
+                  "type": "number",
+                  "description": "OpenTelemetry trace flags bitfield."
+                },
+                "traceState": {
+                  "type": "string",
+                  "description": "OpenTelemetry trace state (vendor-specific propagation). Empty when not set."
+                },
+                "errorType": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Error class/type label when the span errored. `null` for successful spans."
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Free-form tags attached at ingest time."
+                },
+                "operation": {
+                  "type": "string",
+                  "description": "GenAI operation category (e.g. `\"chat\"`, `\"embeddings\"`, `\"execute_tool\"`, `\"invoke_agent\"`) or a custom string for non-GenAI spans."
+                },
+                "provider": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "LLM provider id. `null` for non-LLM spans."
+                },
+                "model": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Model id as requested. `null` for non-LLM spans."
+                },
+                "responseModel": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Model id reported by the provider's response. `null` for non-LLM spans."
+                },
+                "tokensInput": {
+                  "type": "number",
+                  "description": "Input tokens consumed by this span."
+                },
+                "tokensOutput": {
+                  "type": "number",
+                  "description": "Output tokens produced by this span."
+                },
+                "tokensCacheRead": {
+                  "type": "number",
+                  "description": "Tokens served from the provider's prompt cache."
+                },
+                "tokensCacheCreate": {
+                  "type": "number",
+                  "description": "Tokens written to the provider's prompt cache."
+                },
+                "tokensReasoning": {
+                  "type": "number",
+                  "description": "Reasoning tokens reported by the model."
+                },
+                "costInputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+                },
+                "costOutputMicrocents": {
+                  "type": "number",
+                  "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+                },
+                "costTotalMicrocents": {
+                  "type": "number",
+                  "description": "Total cost in microcents (1/1,000,000 USD)."
+                },
+                "costIsEstimated": {
+                  "type": "boolean",
+                  "description": "`true` when the cost was derived from public pricing tables instead of the provider's bill."
+                },
+                "timeToFirstTokenNs": {
+                  "type": "number",
+                  "description": "Nanoseconds from the start of the span to its first emitted token. `0` if not measured."
+                },
+                "isStreaming": {
+                  "type": "boolean",
+                  "description": "`true` when the span was produced by a streaming LLM call."
+                },
+                "responseId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Response identifier returned by the LLM. `null` when the provider didn't return one."
+                },
+                "finishReasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Per-choice finish reasons reported by the LLM provider."
+                },
+                "scopeName": {
+                  "type": "string",
+                  "description": "OpenTelemetry instrumentation scope name. Empty when not set."
+                },
+                "scopeVersion": {
+                  "type": "string",
+                  "description": "OpenTelemetry instrumentation scope version. Empty when not set."
+                },
+                "retentionDays": {
+                  "description": "Per-span retention override in days. Omitted when the project default applies.",
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "ingestedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which Latitude received this span."
+                }
+              },
+              "required": [
+                "organizationId",
+                "projectId",
+                "traceId",
+                "spanId",
+                "parentSpanId",
+                "sessionId",
+                "userId",
+                "simulationId",
+                "apiKeyId",
+                "startTime",
+                "endTime",
+                "name",
+                "serviceName",
+                "kind",
+                "statusCode",
+                "statusMessage",
+                "traceFlags",
+                "traceState",
+                "errorType",
+                "tags",
+                "operation",
+                "provider",
+                "model",
+                "responseModel",
+                "tokensInput",
+                "tokensOutput",
+                "tokensCacheRead",
+                "tokensCacheCreate",
+                "tokensReasoning",
+                "costInputMicrocents",
+                "costOutputMicrocents",
+                "costTotalMicrocents",
+                "costIsEstimated",
+                "timeToFirstTokenNs",
+                "isStreaming",
+                "responseId",
+                "finishReasons",
+                "scopeName",
+                "scopeVersion",
+                "ingestedAt"
+              ],
+              "additionalProperties": false
+            },
+            "description": "All spans belonging to the trace, ordered by `startTime` ascending."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getTraceSpan",
+      "title": "Get trace span",
+      "description": "Returns one span by id, including the LLM conversation (system instructions, input messages, output messages), tool data (definitions, call id, input, output), and the full OpenTelemetry payload (attributes, resource, events, links) that's excluded from the lighter list shape.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character trace identifier."
+          },
+          "spanId": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 16,
+            "description": "16-character span identifier."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "traceId",
+          "spanId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns this span."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Project this span belongs to."
+          },
+          "traceId": {
+            "type": "string",
+            "description": "Identifier of the trace this span belongs to."
+          },
+          "spanId": {
+            "type": "string",
+            "description": "Stable span identifier within the trace."
+          },
+          "parentSpanId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the parent span. `null` for root spans."
+          },
+          "sessionId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Conversation/session identifier set by the SDK. `null` when absent."
+          },
+          "userId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "End-user identifier set by the SDK. `null` when absent."
+          },
+          "simulationId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CUID of the simulation that produced this span. `null` when not a simulation."
+          },
+          "apiKeyId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Latitude API key used to ingest the span. `null` when ingested without an API key."
+          },
+          "startTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the span started."
+          },
+          "endTime": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the span ended."
+          },
+          "name": {
+            "type": "string",
+            "description": "Span name (e.g. the entry-point function or route)."
+          },
+          "serviceName": {
+            "type": "string",
+            "description": "OpenTelemetry `service.name` of the emitting service."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "unspecified",
+              "internal",
+              "server",
+              "client",
+              "producer",
+              "consumer"
+            ],
+            "description": "OpenTelemetry span kind."
+          },
+          "statusCode": {
+            "type": "string",
+            "enum": [
+              "unset",
+              "ok",
+              "error"
+            ],
+            "description": "OpenTelemetry span status code."
+          },
+          "statusMessage": {
+            "type": "string",
+            "description": "OpenTelemetry status message. Empty when not set."
+          },
+          "traceFlags": {
+            "type": "number",
+            "description": "OpenTelemetry trace flags bitfield."
+          },
+          "traceState": {
+            "type": "string",
+            "description": "OpenTelemetry trace state (vendor-specific propagation). Empty when not set."
+          },
+          "errorType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error class/type label when the span errored. `null` for successful spans."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Free-form tags attached at ingest time."
+          },
+          "operation": {
+            "type": "string",
+            "description": "GenAI operation category (e.g. `\"chat\"`, `\"embeddings\"`, `\"execute_tool\"`, `\"invoke_agent\"`) or a custom string for non-GenAI spans."
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "LLM provider id. `null` for non-LLM spans."
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Model id as requested. `null` for non-LLM spans."
+          },
+          "responseModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Model id reported by the provider's response. `null` for non-LLM spans."
+          },
+          "tokensInput": {
+            "type": "number",
+            "description": "Input tokens consumed by this span."
+          },
+          "tokensOutput": {
+            "type": "number",
+            "description": "Output tokens produced by this span."
+          },
+          "tokensCacheRead": {
+            "type": "number",
+            "description": "Tokens served from the provider's prompt cache."
+          },
+          "tokensCacheCreate": {
+            "type": "number",
+            "description": "Tokens written to the provider's prompt cache."
+          },
+          "tokensReasoning": {
+            "type": "number",
+            "description": "Reasoning tokens reported by the model."
+          },
+          "costInputMicrocents": {
+            "type": "number",
+            "description": "Cost of input tokens in microcents (1/1,000,000 USD)."
+          },
+          "costOutputMicrocents": {
+            "type": "number",
+            "description": "Cost of output tokens in microcents (1/1,000,000 USD)."
+          },
+          "costTotalMicrocents": {
+            "type": "number",
+            "description": "Total cost in microcents (1/1,000,000 USD)."
+          },
+          "costIsEstimated": {
+            "type": "boolean",
+            "description": "`true` when the cost was derived from public pricing tables instead of the provider's bill."
+          },
+          "timeToFirstTokenNs": {
+            "type": "number",
+            "description": "Nanoseconds from the start of the span to its first emitted token. `0` if not measured."
+          },
+          "isStreaming": {
+            "type": "boolean",
+            "description": "`true` when the span was produced by a streaming LLM call."
+          },
+          "responseId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Response identifier returned by the LLM. `null` when the provider didn't return one."
+          },
+          "finishReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Per-choice finish reasons reported by the LLM provider."
+          },
+          "scopeName": {
+            "type": "string",
+            "description": "OpenTelemetry instrumentation scope name. Empty when not set."
+          },
+          "scopeVersion": {
+            "type": "string",
+            "description": "OpenTelemetry instrumentation scope version. Empty when not set."
+          },
+          "retentionDays": {
+            "description": "Per-span retention override in days. Omitted when the project default applies.",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ingestedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which Latitude received this span."
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Free-form metadata attached at ingest time."
+          },
+          "systemInstructions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {},
+            "description": "System instructions in OpenTelemetry GenAI format."
+          },
+          "inputMessages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {},
+              "description": "Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls)."
+            },
+            "description": "Input messages sent into this LLM span, in OpenTelemetry GenAI format."
+          },
+          "outputMessages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {},
+              "description": "Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls)."
+            },
+            "description": "Output messages returned by this LLM span, in OpenTelemetry GenAI format."
+          },
+          "toolDefinitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Tool name as exposed to the LLM."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Tool description as exposed to the LLM."
+                },
+                "parameters": {
+                  "description": "JSON Schema for the tool's parameters, as provided by the caller."
+                }
+              },
+              "required": [
+                "name",
+                "description",
+                "parameters"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Tool/function definitions made available to the LLM for this span."
+          },
+          "toolCallId": {
+            "type": "string",
+            "description": "Tool-call id this span answers. Empty when the span isn't an `execute_tool` span."
+          },
+          "toolName": {
+            "type": "string",
+            "description": "Name of the executed tool. Empty when the span isn't an `execute_tool` span."
+          },
+          "toolInput": {
+            "type": "string",
+            "description": "Stringified arguments passed to the tool. Empty when the span isn't an `execute_tool` span."
+          },
+          "toolOutput": {
+            "type": "string",
+            "description": "Stringified tool output. Empty when the span isn't an `execute_tool` span."
+          },
+          "attrString": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "OpenTelemetry attributes with string values."
+          },
+          "attrInt": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "OpenTelemetry attributes with integer values."
+          },
+          "attrFloat": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "OpenTelemetry attributes with floating-point values."
+          },
+          "attrBool": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "OpenTelemetry attributes with boolean values."
+          },
+          "resourceString": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "OpenTelemetry resource attributes captured at ingest."
+          },
+          "eventsJson": {
+            "type": "string",
+            "description": "JSON-encoded OpenTelemetry events array. Empty when the span has no events."
+          },
+          "linksJson": {
+            "type": "string",
+            "description": "JSON-encoded OpenTelemetry span-links array. Empty when the span has no links."
+          }
+        },
+        "required": [
+          "organizationId",
+          "projectId",
+          "traceId",
+          "spanId",
+          "parentSpanId",
+          "sessionId",
+          "userId",
+          "simulationId",
+          "apiKeyId",
+          "startTime",
+          "endTime",
+          "name",
+          "serviceName",
+          "kind",
+          "statusCode",
+          "statusMessage",
+          "traceFlags",
+          "traceState",
+          "errorType",
+          "tags",
+          "operation",
+          "provider",
+          "model",
+          "responseModel",
+          "tokensInput",
+          "tokensOutput",
+          "tokensCacheRead",
+          "tokensCacheCreate",
+          "tokensReasoning",
+          "costInputMicrocents",
+          "costOutputMicrocents",
+          "costTotalMicrocents",
+          "costIsEstimated",
+          "timeToFirstTokenNs",
+          "isStreaming",
+          "responseId",
+          "finishReasons",
+          "scopeName",
+          "scopeVersion",
+          "ingestedAt",
+          "metadata",
+          "systemInstructions",
+          "inputMessages",
+          "outputMessages",
+          "toolDefinitions",
+          "toolCallId",
+          "toolName",
+          "toolInput",
+          "toolOutput",
+          "attrString",
+          "attrInt",
+          "attrFloat",
+          "attrBool",
+          "resourceString",
+          "eventsJson",
+          "linksJson"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "listTraceAnnotations",
+      "title": "List trace annotations",
+      "description": "Returns a cursor-paginated page of annotations pinned to the trace, including both published annotations and drafts.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character trace identifier."
+          },
+          "cursor": {
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size. Defaults to 50; max 200.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "required": [
+          "projectSlug",
+          "traceId",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable annotation identifier."
+                },
+                "organizationId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Organization that owns this annotation."
+                },
+                "projectId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Project this annotation lives in."
+                },
+                "sessionId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 128,
+                      "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Session id lifted from the annotated trace. `null` when the trace has no session."
+                },
+                "traceId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 32,
+                      "maxLength": 32,
+                      "description": "32-character trace identifier."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Identifier of the annotated trace."
+                },
+                "spanId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 16,
+                      "maxLength": 16,
+                      "description": "16-character span identifier."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Span the annotation pins to. Defaults to the trace's last LLM-completion span."
+                },
+                "simulationId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 24,
+                      "maxLength": 24
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Simulation reference, if any."
+                },
+                "issueId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 24,
+                      "maxLength": 24
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Issue this annotation contributes to, if any."
+                },
+                "value": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Normalized score value in [0, 1]. Higher = better."
+                },
+                "passed": {
+                  "type": "boolean",
+                  "description": "Whether the annotation marks the output as passing."
+                },
+                "feedback": {
+                  "type": "string",
+                  "description": "Free-text feedback explaining the score."
+                },
+                "error": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Generation error text, when the annotation itself errored. `null` for successful annotations."
+                },
+                "errored": {
+                  "type": "boolean",
+                  "description": "`true` when the annotation could not be generated successfully."
+                },
+                "duration": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Generation duration in nanoseconds. `0` for human annotations."
+                },
+                "tokens": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Total LLM tokens consumed generating the score. `0` for human annotations."
+                },
+                "cost": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."
+                },
+                "draftedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the annotation was drafted. `null` for published annotations."
+                },
+                "annotatorId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 24,
+                      "maxLength": 24
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "User who authored the annotation. `null` when not attributed to a user."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "description": "ISO-8601 timestamp at which the annotation was created."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "description": "ISO-8601 timestamp of the last metadata update."
+                },
+                "source": {
+                  "type": "string",
+                  "const": "annotation",
+                  "description": "Always `\"annotation\"` for this shape."
+                },
+                "sourceId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "UI",
+                        "API",
+                        "SYSTEM"
+                      ]
+                    },
+                    {
+                      "type": "string",
+                      "minLength": 24,
+                      "maxLength": 24
+                    }
+                  ],
+                  "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
+                },
+                "metadata": {
+                  "type": "object",
+                  "properties": {
+                    "rawFeedback": {
+                      "type": "string",
+                      "description": "Original feedback text as written by the annotator, before any server-side enrichment."
+                    },
+                    "messageIndex": {
+                      "description": "0-based message index inside the conversation. Omit for conversation-level annotations.",
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "partIndex": {
+                      "description": "0-based index into the target message's `parts[]`. Requires `messageIndex`.",
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "startOffset": {
+                      "description": "Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.",
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "endOffset": {
+                      "description": "Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.",
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "textFormat": {
+                      "description": "UI-side text transform applied before the offsets were captured (e.g. `\"pretty-json\"`). Resolvers must apply the same transform before slicing.",
+                      "type": "string",
+                      "enum": [
+                        "pretty-json"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "rawFeedback"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Annotation-specific metadata: `rawFeedback` plus a snapshot of the anchor at write time."
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "projectId",
+                "sessionId",
+                "traceId",
+                "spanId",
+                "simulationId",
+                "issueId",
+                "value",
+                "passed",
+                "feedback",
+                "error",
+                "errored",
+                "duration",
+                "tokens",
+                "cost",
+                "draftedAt",
+                "annotatorId",
+                "createdAt",
+                "updatedAt",
+                "source",
+                "sourceId",
+                "metadata"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getTraceAnnotation",
+      "title": "Get trace annotation",
+      "description": "Returns one annotation by id pinned to the trace.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character trace identifier."
+          },
+          "annotationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable annotation identifier."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "traceId",
+          "annotationId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable annotation identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this annotation."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this annotation lives in."
+          },
+          "sessionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "description": "Session identifier lifted from instrumentation. Up to 128 characters."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Session id lifted from the annotated trace. `null` when the trace has no session."
+          },
+          "traceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 32,
+                "maxLength": 32,
+                "description": "32-character trace identifier."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the annotated trace."
+          },
+          "spanId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 16,
+                "maxLength": 16,
+                "description": "16-character span identifier."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Span the annotation pins to. Defaults to the trace's last LLM-completion span."
+          },
+          "simulationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Simulation reference, if any."
+          },
+          "issueId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Issue this annotation contributes to, if any."
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Normalized score value in [0, 1]. Higher = better."
+          },
+          "passed": {
+            "type": "boolean",
+            "description": "Whether the annotation marks the output as passing."
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Free-text feedback explaining the score."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Generation error text, when the annotation itself errored. `null` for successful annotations."
+          },
+          "errored": {
+            "type": "boolean",
+            "description": "`true` when the annotation could not be generated successfully."
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Generation duration in nanoseconds. `0` for human annotations."
+          },
+          "tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total LLM tokens consumed generating the score. `0` for human annotations."
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Total LLM cost in microcents (1/1,000,000 USD). `0` for human annotations."
+          },
+          "draftedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the annotation was drafted. `null` for published annotations."
+          },
+          "annotatorId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User who authored the annotation. `null` when not attributed to a user."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "description": "ISO-8601 timestamp at which the annotation was created."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "description": "ISO-8601 timestamp of the last metadata update."
+          },
+          "source": {
+            "type": "string",
+            "const": "annotation",
+            "description": "Always `\"annotation\"` for this shape."
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "UI",
+                  "API",
+                  "SYSTEM"
+                ]
+              },
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              }
+            ],
+            "description": "Origin marker. Sentinel `\"UI\"` / `\"API\"` / `\"SYSTEM\"` for drafts and automation, or an annotation-queue CUID for queue-authored rows."
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "rawFeedback": {
+                "type": "string",
+                "description": "Original feedback text as written by the annotator, before any server-side enrichment."
+              },
+              "messageIndex": {
+                "description": "0-based message index inside the conversation. Omit for conversation-level annotations.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "partIndex": {
+                "description": "0-based index into the target message's `parts[]`. Requires `messageIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "startOffset": {
+                "description": "Inclusive start offset for substring annotations. Must be paired with `endOffset` and `partIndex`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "endOffset": {
+                "description": "Exclusive end offset for substring annotations. Must be paired with `startOffset` and `partIndex`, and `>= startOffset`.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "textFormat": {
+                "description": "UI-side text transform applied before the offsets were captured (e.g. `\"pretty-json\"`). Resolvers must apply the same transform before slicing.",
+                "type": "string",
+                "enum": [
+                  "pretty-json"
+                ]
+              }
+            },
+            "required": [
+              "rawFeedback"
+            ],
+            "additionalProperties": false,
+            "description": "Annotation-specific metadata: `rawFeedback` plus a snapshot of the anchor at write time."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "sessionId",
+          "traceId",
+          "spanId",
+          "simulationId",
+          "issueId",
+          "value",
+          "passed",
+          "feedback",
+          "error",
+          "errored",
+          "duration",
+          "tokens",
+          "cost",
+          "draftedAt",
+          "annotatorId",
+          "createdAt",
+          "updatedAt",
+          "source",
+          "sourceId",
+          "metadata"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "exportTraces",
+      "title": "Export project traces (async)",
+      "description": "Enqueues a CSV export of the traces matched by `traces`. The export runs asynchronously; a download link is emailed to `recipient` when the file is ready. The response returns immediately with `status = \"queued\"`. The recipient must already be a member of the requesting organization.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "traces": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "const": "ids",
+                    "description": "Match an explicit list of traces by their identifiers. Pair with `ids`."
+                  },
+                  "ids": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 32,
+                      "maxLength": 32,
+                      "description": "32-character trace identifier."
+                    },
+                    "description": "Non-empty list of trace identifiers."
+                  }
+                },
+                "required": [
+                  "by",
+                  "ids"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "const": "filters",
+                    "description": "Match every trace produced by a filter set. Pair with `filters`; result count is not bounded."
+                  },
+                  "filters": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "eq",
+                              "neq",
+                              "gt",
+                              "gte",
+                              "lt",
+                              "lte",
+                              "in",
+                              "notIn",
+                              "contains",
+                              "notContains",
+                              "gtePercentile"
+                            ],
+                            "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
+                          }
+                        },
+                        "required": [
+                          "op",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "by",
+                  "filters"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Which traces to include in the export — either explicit ids or a filter set."
+          },
+          "recipient": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "description": "Email address the export download link is sent to. Must belong to a member of the requesting organization — otherwise the request is rejected with 400."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "traces",
+          "recipient"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "description": "Always `\"queued\"`. The CSV is built asynchronously and emailed to `recipient` when ready."
+          }
+        },
+        "required": [
+          "status"
         ],
         "additionalProperties": false
       }

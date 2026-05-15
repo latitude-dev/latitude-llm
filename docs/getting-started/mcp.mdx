@@ -73,8 +73,17 @@ The MCP is compatible with all the most common agents, harnesses or IDEs you use
         }
         ```
       </Step>
+      <Step title="Verify installation">
+        Verify the Latitude MCP was added running:
+        ```bash
+        agent mcp list
+        ```
+      </Step>
       <Step title="Authenticate">
-        Launch `cursor-agent`, list MCP servers, and trigger the `latitude` server's OAuth flow.
+        Run (outside of Cursor CLI):
+        ```bash
+        agent mcp login latitude
+        ```
       </Step>
       <Step title="Authorize">
         Sign in (if needed) and pick the organization you want this Cursor Agent to access in the consent screen.

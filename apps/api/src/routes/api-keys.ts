@@ -14,6 +14,7 @@ import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@plat
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
+import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import {
   errorResponse,
   IdParamsSchema,
@@ -270,6 +271,10 @@ const revokeApiKey = apiKeyEndpoint({
 
 export const createApiKeysRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
-  for (const ep of [createApiKey, listApiKeys, getApiKey, updateApiKey, revokeApiKey]) ep.mountHttp(app)
+  createApiKey.mountHttp(app, createTierRateLimiter("high"))
+  listApiKeys.mountHttp(app, createTierRateLimiter("low"))
+  getApiKey.mountHttp(app, createTierRateLimiter("low"))
+  updateApiKey.mountHttp(app, createTierRateLimiter("low"))
+  revokeApiKey.mountHttp(app, createTierRateLimiter("low"))
   return app
 }

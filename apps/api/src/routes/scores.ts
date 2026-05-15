@@ -18,6 +18,7 @@ import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, with
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
+import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import {
   jsonBody,
   openApiResponses,
@@ -309,6 +310,6 @@ const createScore = scoreEndpoint({
 
 export const createScoresRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
-  createScore.mountHttp(app)
+  createScore.mountHttp(app, createTierRateLimiter("low"))
   return app
 }
