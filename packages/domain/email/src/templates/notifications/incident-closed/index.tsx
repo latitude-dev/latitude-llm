@@ -1,4 +1,5 @@
-import type { NotificationEmailRenderer } from "../types.ts"
+import { Effect } from "effect"
+import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 
 const ALERT_KIND_TO_LABEL = {
   "issue.new": "New issue",
@@ -9,12 +10,10 @@ const ALERT_KIND_TO_LABEL = {
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")
 
-/**
- * Minimal text-first template for `incident.closed`. Step 5 of the
- * multi-channel notifications PR replaces this with a React Email
- * component matching the rest of the email surface.
- */
-export const incidentClosedTemplate: NotificationEmailRenderer<"incident.closed"> = async (payload, ctx) => {
+const buildIncidentClosedHtml = async (
+  payload: Parameters<NotificationEmailRenderer<"incident.closed">>[0],
+  ctx: NotificationEmailRenderContext,
+) => {
   const label = ALERT_KIND_TO_LABEL[payload.incidentKind] ?? payload.incidentKind
   const issueRef = payload.issueName ?? "an issue"
   const recipient = ctx.recipient.name ?? "there"
@@ -26,3 +25,13 @@ export const incidentClosedTemplate: NotificationEmailRenderer<"incident.closed"
   const html = `<p>Hi ${escapeHtml(recipient)},</p><p>${escapeHtml(label)} resolved for "<strong>${escapeHtml(issueRef)}</strong>".</p><p><a href="${link}">View issue</a></p><p>— Latitude</p>`
   return { subject, html, text }
 }
+
+export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"> = (payload, ctx) =>
+  Effect.tryPromise({
+    try: () => buildIncidentClosedHtml(payload, ctx),
+    catch: (cause) => ({
+      _tag: "RenderNotificationEmailError" as const,
+      message: "Failed to render incident.closed email",
+      cause,
+    }),
+  })

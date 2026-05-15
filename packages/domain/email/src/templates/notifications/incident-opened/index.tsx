@@ -1,4 +1,5 @@
-import type { NotificationEmailRenderer } from "../types.ts"
+import { Effect } from "effect"
+import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 
 const ALERT_KIND_TO_LABEL = {
   "issue.new": "New issue",
@@ -10,11 +11,14 @@ const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")
 
 /**
- * Minimal text-first template for `incident.opened`. Step 5 of the
- * multi-channel notifications PR replaces this with a React Email
- * component matching the rest of the email surface.
+ * Pure HTML builder for `incident.opened`. The Effect-wrapped renderer
+ * below is what the registry exports — keeping the HTML build separate
+ * makes the template easy to unit test without an Effect runtime.
  */
-export const incidentOpenedTemplate: NotificationEmailRenderer<"incident.opened"> = async (payload, ctx) => {
+const buildIncidentOpenedHtml = async (
+  payload: Parameters<NotificationEmailRenderer<"incident.opened">>[0],
+  ctx: NotificationEmailRenderContext,
+) => {
   const label = ALERT_KIND_TO_LABEL[payload.incidentKind] ?? payload.incidentKind
   const issueRef = payload.issueName ?? "an issue"
   const recipient = ctx.recipient.name ?? "there"
@@ -26,3 +30,13 @@ export const incidentOpenedTemplate: NotificationEmailRenderer<"incident.opened"
   const html = `<p>Hi ${escapeHtml(recipient)},</p><p>${escapeHtml(label)} opened for "<strong>${escapeHtml(issueRef)}</strong>".</p><p><a href="${link}">View issue</a></p><p>— Latitude</p>`
   return { subject, html, text }
 }
+
+export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"> = (payload, ctx) =>
+  Effect.tryPromise({
+    try: () => buildIncidentOpenedHtml(payload, ctx),
+    catch: (cause) => ({
+      _tag: "RenderNotificationEmailError" as const,
+      message: "Failed to render incident.opened email",
+      cause,
+    }),
+  })

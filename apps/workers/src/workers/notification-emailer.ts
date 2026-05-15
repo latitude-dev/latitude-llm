@@ -12,6 +12,7 @@ import {
   ProjectRepositoryLive,
   UserRepositoryLive,
   withPostgres,
+  WrappedReportRepositoryLive,
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv } from "@platform/env"
@@ -25,7 +26,20 @@ interface NotificationEmailerDeps {
   consumer: QueueConsumer
 }
 
+/**
+ * Layers the email-send use case itself needs (Notification / User /
+ * Project repos for the row + recipient + project lookups).
+ */
 const repoLayer = Layer.mergeAll(NotificationRepositoryLive, ProjectRepositoryLive, UserRepositoryLive)
+
+/**
+ * Layers the per-kind renderers need on top of `repoLayer`. Each kind's
+ * renderer declares its services on its Effect's `R` channel; the
+ * adapter provides this layer locally so those requirements don't leak
+ * into the use case's signature. Add to this when a new kind needs a
+ * new repo for server-side rendering.
+ */
+const rendererLayer = WrappedReportRepositoryLive
 
 const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
@@ -35,7 +49,8 @@ const resolveWebAppUrl = (): string => {
 /**
  * Channel worker: consumes `notification-email:send` tasks, looks up the
  * stored notification + recipient, dispatches to the per-kind email
- * template via the registry, then sends through the email transport.
+ * renderer Effect via the registry, then sends through the email
+ * transport.
  *
  * Idempotency: `sendNotificationEmailUseCase` claims the right to send
  * by stamping `emailed_at` (conditional on `IS NULL`); a redelivered
@@ -46,26 +61,21 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   const transportSendEmail = sendEmail({ emailSender: emailTransport })
   const webAppUrl = resolveWebAppUrl()
 
-  // Adapter: the domain use case takes its own opaque error tags so it
-  // doesn't depend on @domain/email types. Wrap the registry dispatch and
-  // the transport-level send to match the use case's contract.
+  // Adapter: bridges the use case's renderer-callback boundary to the
+  // per-kind renderer Effects in `@domain/email`. The renderers are
+  // `Effect`s that pull their own services (e.g. `wrapped.report` yields
+  // `WrappedReportRepository.findById`); we provide those services
+  // locally so the use case's R channel stays minimal.
   const renderEmailAdapter: NotificationEmailRenderer = ({ kind, payload, recipient, project }) =>
-    Effect.tryPromise({
-      try: async () => {
-        const parsedPayload = payloadSchemaFor(kind).parse(payload)
-        const ctx: NotificationEmailRenderContext = { webAppUrl, recipient, project }
-        const renderer = NOTIFICATION_EMAIL_RENDERERS[kind]
-        // Each renderer in the registry accepts its kind's narrowed payload;
-        // payloadSchemaFor already returns the same schema used at the call
-        // site, so this cast is safe.
-        return renderer(parsedPayload as never, ctx)
-      },
-      catch: (cause) => ({
-        _tag: "RenderNotificationEmailError" as const,
-        message: cause instanceof Error ? cause.message : "Failed to render notification email",
-        cause,
-      }),
-    })
+    Effect.suspend(() => {
+      const parsedPayload = payloadSchemaFor(kind).parse(payload)
+      const ctx: NotificationEmailRenderContext = { webAppUrl, recipient, project }
+      const renderer = NOTIFICATION_EMAIL_RENDERERS[kind]
+      // Each renderer in the registry accepts its kind's narrowed payload;
+      // payloadSchemaFor already returns the same schema used at the call
+      // site, so this cast is safe.
+      return renderer(parsedPayload as never, ctx)
+    }).pipe(Effect.provide(rendererLayer))
 
   const sendEmailAdapter: NotificationEmailSender = (message) =>
     transportSendEmail({

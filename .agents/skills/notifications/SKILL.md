@@ -41,7 +41,7 @@ Producers compute everything; consumers act idempotently. See dev-doc for detail
 3. Extend `buildIdempotencyKey` (`helpers/idempotency-key.ts`) with the new kind. Pattern: `${kind}:${naturalEntityId}` if there is one, else `${kind}:${generateId()}`.
 4. Add per-channel renderers (TS will fail the build until each is present):
    - In-app: `apps/web/src/routes/_authenticated/-components/notifications/renderers/<kind>.tsx` + entry in `notification-item.tsx`'s dispatch.
-   - Email: `packages/domain/email/src/templates/notifications/<kind>/index.tsx` + entry in `registry.ts`.
+   - Email: `packages/domain/email/src/templates/notifications/<kind>/index.tsx` + entry in `registry.ts`. The renderer is an `Effect` — it can `yield*` any services it needs (e.g. `WrappedReportRepository` for `wrapped.report`). If the renderer needs services beyond `SqlClient`, wire the matching `*Live` layer into the email worker's `rendererLayer` in `apps/workers/src/workers/notification-emailer.ts`. Renderers that only need payload + context use `Effect.tryPromise(() => buildHtml(...))`.
 5. If the kind has its own source flow (not just wrapping an existing one):
    - Add a `request-<kind>-notifications` task to the `notifications` queue topic.
    - Write `requestXxxNotificationsUseCase` in `@domain/notifications`.

@@ -1,8 +1,8 @@
-import { customMessageTemplate } from "./custom-message/index.tsx"
-import { incidentClosedTemplate } from "./incident-closed/index.tsx"
-import { incidentOpenedTemplate } from "./incident-opened/index.tsx"
+import { customMessageRenderer } from "./custom-message/index.tsx"
+import { incidentClosedRenderer } from "./incident-closed/index.tsx"
+import { incidentOpenedRenderer } from "./incident-opened/index.tsx"
 import type { NotificationEmailRendererRegistry } from "./types.ts"
-import { wrappedReportTemplate } from "./wrapped-report/index.tsx"
+import { wrappedReportRenderer } from "./wrapped-report/index.tsx"
 
 /**
  * Exhaustive registry mapping `NotificationKind` → email renderer. Adding a
@@ -10,8 +10,8 @@ import { wrappedReportTemplate } from "./wrapped-report/index.tsx"
  * matching renderer is added.
  */
 export const NOTIFICATION_EMAIL_RENDERERS: NotificationEmailRendererRegistry = {
-  "incident.opened": incidentOpenedTemplate,
-  "incident.closed": incidentClosedTemplate,
-  "wrapped.report": wrappedReportTemplate,
-  "custom.message": customMessageTemplate,
+  "incident.opened": incidentOpenedRenderer,
+  "incident.closed": incidentClosedRenderer,
+  "wrapped.report": wrappedReportRenderer,
+  "custom.message": customMessageRenderer,
 }

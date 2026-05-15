@@ -27,8 +27,4 @@ export {
 } from "./templates/signup-magic-link/index.tsx"
 // Templates
 export type { RenderedEmail } from "./templates/types.ts"
-export {
-  type WrappedEmailData,
-  wrappedEmailTemplate,
-} from "./templates/wrapped/index.tsx"
 export { type SendEmail, sendEmail } from "./use-cases/send-email.ts"

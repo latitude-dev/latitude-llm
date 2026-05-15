@@ -163,5 +163,4 @@ The user-facing preferences surface stays stable — a new kind under an existin
 - Per-(user, project, kind) subscription filtering (`resolveRecipients` seam preserved).
 - Email digesting / batching (one email per notification, real-time).
 - Bypass-preferences flag for "must-deliver" kinds.
-- React Email polish for the per-kind templates (skeletons land first; a follow-up replaces them with `@react-email/components`-based layouts matching the rest of the email surface).
-- Deduping the `wrapped.report` notification email with the existing rich Wrapped email sent directly from `apps/workers/src/workers/wrapped.ts`. For now, recipients with `wrapped_reports.email = true` get both. Follow-up will consolidate.
+- React Email polish for the per-kind templates other than `wrapped.report` (skeletons land first; a follow-up replaces incident + custom-message HTML with `@react-email/components`-based layouts matching the rest of the email surface).

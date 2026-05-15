@@ -3,8 +3,8 @@ import { Img } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
-import { EmailHeading } from "../../../../components/EmailHeading.tsx"
-import { emailDesignTokens } from "../../../../tokens/design-system.ts"
+import { EmailHeading } from "../../../../../components/EmailHeading.tsx"
+import { emailDesignTokens } from "../../../../../tokens/design-system.ts"
 
 interface PersonalityCardProps {
   readonly kind: PersonalityKind

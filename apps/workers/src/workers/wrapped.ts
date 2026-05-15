@@ -1,4 +1,3 @@
-import { sendEmail, wrappedEmailTemplate } from "@domain/email"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { runWrappedUseCase } from "@domain/spans"
@@ -11,10 +10,9 @@ import {
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
-  WrappedReportRepositoryLive,
   withPostgres,
+  WrappedReportRepositoryLive,
 } from "@platform/db-postgres"
-import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
@@ -25,11 +23,10 @@ const logger = createLogger("wrapped")
 const WINDOW_DURATION_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
- * Resolves the public base URL of the web app. The template derives every
- * downstream link from this — personality PNGs (`/email-branding/…`), the
- * project deep-link (`/projects/<slug>`), the unsubscribe / settings page
- * (`/settings/account`), the Latitude logo (`/latitude-logo.png`), and the
- * `/wrapped/<id>` share URL.
+ * Resolves the public base URL of the web app. Used for the public
+ * `/wrapped/<id>` share link threaded through the notification payload —
+ * the rich email layout looks up the same URL via the renderer's ctx
+ * when it builds CTAs.
  */
 const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
@@ -51,8 +48,6 @@ export const createWrappedWorker = ({
   adminPostgresClient,
   clickhouseClient,
 }: WrappedWorkerDeps) => {
-  const emailSender = createEmailTransportSender()
-  const sendEmailUseCase = sendEmail({ emailSender })
   const webAppUrl = resolveWebAppUrl()
 
   consumer.subscribe("wrapped", {
@@ -100,6 +95,14 @@ export const createWrappedWorker = ({
      * Today `payload.type` is always `"claude_code"`; the
      * `runWrappedUseCase` is hardcoded to that path. When a second type
      * lands, this becomes a registry dispatch keyed on `payload.type`.
+     *
+     * Two-step delivery: compute + persist the report here, then publish
+     * a `request-wrapped-report-notifications` task. The notification
+     * pipeline owns recipient resolution, per-user opt-out (via
+     * `users.notification_preferences.wrapped_reports.email`), in-app
+     * bell rows, and per-recipient email rendering+sending. The email
+     * worker's `wrapped.report` renderer fetches this report's row via
+     * `WrappedReportRepository` to produce the rich layout.
      */
     runForProject: (payload) => {
       const organizationId = OrganizationId(payload.organizationId)
@@ -108,10 +111,6 @@ export const createWrappedWorker = ({
       const windowEnd = new Date(payload.windowEndIso)
 
       return runWrappedUseCase({
-        renderEmail: ({ userName, report, reportId }) =>
-          wrappedEmailTemplate({ userName, type: "claude_code", report, webAppUrl, reportId }),
-        sendEmail: sendEmailUseCase,
-      })({
         organizationId,
         projectId,
         windowStart,
@@ -123,13 +122,14 @@ export const createWrappedWorker = ({
               logger.info(`wrapped: skipped ${projectId} (${result.reason})`)
               return
             }
-            logger.info(
-              `wrapped: sent to ${result.recipientCount} recipient(s) for ${projectId} (report ${result.reportId})`,
-            )
-            // Fan out an in-app notification per org member, linking to the
-            // public report URL. The notifications worker handles the
-            // recipient fan-out + per-user idempotency (the `(org, user,
-            // idempotency_key)` unique index dedupes BullMQ redelivery).
+            logger.info(`wrapped: report persisted for ${projectId} (report ${result.reportId})`)
+            // Hand off to the notification pipeline — it'll fan out to
+            // org members, write bell rows, and (for opted-in users)
+            // render + send the rich email via the per-kind renderer.
+            // Dedupes via the queue's `dedupeKey` + the notifications
+            // table's `(org, user, idempotency_key)` unique index, so
+            // BullMQ retries can't produce duplicate notifications or
+            // emails.
             yield* publisher
               .publish(
                 "notifications",

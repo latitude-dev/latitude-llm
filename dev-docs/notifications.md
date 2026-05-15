@@ -34,7 +34,10 @@ notifications:create-notification (one per recipient)
 notification-email:send
   → apps/workers/src/workers/notification-emailer.ts
      – markEmailed (UPDATE … WHERE emailed_at IS NULL, RETURNING id)
-     – per-kind renderer from NOTIFICATION_EMAIL_RENDERERS
+     – per-kind renderer Effect from NOTIFICATION_EMAIL_RENDERERS
+       (yields whatever services it needs — wrapped.report fetches the
+        wrapped_reports row via WrappedReportRepository; payload-only
+        kinds yield nothing)
      – sendEmail via @platform/email-transport
 
 ProjectDeleted (domain event, separate path)
@@ -94,7 +97,7 @@ For an existing group:
    ```
 4. **Add per-channel renderers** — the exhaustive `Record<NotificationKind, ...>` shape forces TS errors until each is in place:
    - **In-app**: `apps/web/src/routes/_authenticated/-components/notifications/renderers/<kind>.tsx` and the dispatch in `notification-item.tsx`.
-   - **Email**: `packages/domain/email/src/templates/notifications/<kind>/index.tsx` and the entry in `NOTIFICATION_EMAIL_RENDERERS` (`registry.ts`).
+   - **Email**: `packages/domain/email/src/templates/notifications/<kind>/index.tsx` and the entry in `NOTIFICATION_EMAIL_RENDERERS` (`registry.ts`). The renderer is an `Effect`: yield whatever services it needs (`yield* WrappedReportRepository`, etc.). If the renderer needs services beyond `SqlClient` (which the use case already provides), wire the `*Live` layer into the email worker's `rendererLayer` (`apps/workers/src/workers/notification-emailer.ts`) so the local `Effect.provide(rendererLayer)` covers it. Renderers that only need payload + context use `Effect.tryPromise(() => buildHtml(...))`.
 5. **Producer**: if the new kind has a source event flow:
    - Add a new task to the `notifications` queue topic (`request-<kind>-notifications`) in `packages/domain/queue/src/topic-registry.ts` if no existing producer fits.
    - Write a new `requestXxxNotificationsUseCase` in `@domain/notifications` that returns one request per recipient.

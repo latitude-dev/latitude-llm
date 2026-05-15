@@ -33,6 +33,14 @@ export interface NotificationEmailProject {
  * Boundary contract that channel adapters (today: `@domain/email`'s
  * notification template registry) implement. Keeps `@domain/notifications`
  * unaware of React Email internals — the use case just calls back.
+ *
+ * Allowing `SqlClient` in the `R` channel lets renderers that need
+ * server-side data (e.g. wrapped-report fetches its row via
+ * `WrappedReportRepository`) yield through the use case's existing
+ * SqlClient scope. Renderers requiring more specific services
+ * (`WrappedReportRepository`, future incident repos, ...) are expected
+ * to be `Effect.provide`d at the worker-adapter boundary so only the
+ * `SqlClient` requirement reaches this contract.
  */
 export type NotificationEmailRenderer = (input: {
   readonly kind: NotificationKind
@@ -40,7 +48,7 @@ export type NotificationEmailRenderer = (input: {
   readonly recipient: NotificationEmailRecipient
   /** `null` when the notification has no `projectId`, or when the project lookup missed. */
   readonly project: NotificationEmailProject | null
-}) => Effect.Effect<RenderedEmailBoundary, RenderNotificationEmailError>
+}) => Effect.Effect<RenderedEmailBoundary, RenderNotificationEmailError, SqlClient>
 
 /**
  * Same minimal contract as `@domain/email`'s `sendEmail`. We don't import

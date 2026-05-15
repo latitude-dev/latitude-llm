@@ -1,13 +1,5 @@
 import { type Project, ProjectRepository } from "@domain/projects"
-import {
-  generateId,
-  NotFoundError,
-  NotificationId,
-  OrganizationId,
-  ProjectId,
-  SqlClient,
-  UserId,
-} from "@domain/shared"
+import { generateId, NotFoundError, NotificationId, OrganizationId, ProjectId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { type User, UserRepository } from "@domain/users"
 import { createFakeUserRepository } from "@domain/users/testing"
