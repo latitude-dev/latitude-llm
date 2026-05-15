@@ -12,6 +12,7 @@ Install: uv add openai-agents
 import asyncio
 import os
 
+import agents
 from agents import Agent, Runner, function_tool
 
 from latitude_telemetry import Latitude, capture
@@ -20,7 +21,7 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["openai-agents"],
+    instrumentations={"openai-agents": agents},
     disable_batch=True,
 )
 
@@ -48,7 +49,7 @@ def test_openai_agents_run():
         "weather-agent-run",
         lambda: asyncio.run(run_agent()),
         {
-            "tags": ["test", "openai-agents"],
+            "tags": ["python", "test", "openai-agents"],
             "session_id": "example",
             "user_id": "user_123",
             "metadata": {"test_type": "agent_run", "environment": "local"},

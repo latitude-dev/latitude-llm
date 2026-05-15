@@ -70,12 +70,12 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       <Tab title="TypeScript">
         ```ts
         import { Latitude, capture } from "@latitude-data/telemetry"
-        import Together from "together-ai"
+        import Together, * as TogetherSDK from "together-ai"
 
         const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-          instrumentations: ["togetherai"],
+          instrumentations: { togetherai: TogetherSDK },
         })
 
         await latitude.ready
@@ -95,13 +95,15 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       </Tab>
       <Tab title="Python">
         ```python
-        from latitude_telemetry import Latitude, capture
+        import together
         from together import Together
+
+        from latitude_telemetry import Latitude, capture
 
         latitude = Latitude(
             api_key="your-api-key",
             project_slug="your-project-slug",
-            instrumentations=["togetherai"],
+            instrumentations={"togetherai": together},
         )
 
         client = Together()

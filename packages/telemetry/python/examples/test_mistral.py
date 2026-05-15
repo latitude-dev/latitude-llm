@@ -10,21 +10,21 @@ Install: uv add mistralai
 
 import os
 
+import mistralai
+from mistralai import Mistral
+
 from latitude_telemetry import Latitude, capture
 
-# Initialize telemetry BEFORE importing mistralai so instrumentation can patch it
+# Initialize telemetry pointing to local instance
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["mistralai"],
+    instrumentations={"mistralai": mistralai},
     disable_batch=True,
 )
 
-# Import after telemetry is initialized
-from mistralai import Mistral
 
-
-@capture("test-mistral-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-mistral-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_mistral_completion():
     from mistralai.models import UserMessage
 

@@ -10,13 +10,14 @@
  */
 
 import { OpenAI } from "llamaindex"
+import * as LlamaIndex from "llamaindex"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: ["llamaindex"],
+  instrumentations: { llamaindex: LlamaIndex },
 })
 
 async function main() {

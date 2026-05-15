@@ -71,11 +71,12 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
         ```ts
         import { Latitude, capture } from "@latitude-data/telemetry"
         import { CohereClient } from "cohere-ai"
+        import * as CohereSDK from "cohere-ai"
 
         const latitude = new Latitude({
           apiKey: process.env.LATITUDE_API_KEY!,
           projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
-          instrumentations: ["cohere"],
+          instrumentations: { cohere: CohereSDK },
         })
 
         await latitude.ready
@@ -95,13 +96,14 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
       </Tab>
       <Tab title="Python">
         ```python
-        from latitude_telemetry import Latitude, capture
         import cohere
+
+        from latitude_telemetry import Latitude, capture
 
         latitude = Latitude(
             api_key="your-api-key",
             project_slug="your-project-slug",
-            instrumentations=["cohere"],
+            instrumentations={"cohere": cohere},
         )
 
         client = cohere.Client()

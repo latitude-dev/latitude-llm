@@ -45,7 +45,7 @@ provider.register()
 
 // Enable LLM auto-instrumentation
 await registerLatitudeInstrumentations({
-  instrumentations: ["openai"],
+  instrumentations: { openai: OpenAI },
   tracerProvider: provider,
 })
 

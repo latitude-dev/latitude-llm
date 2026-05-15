@@ -9,14 +9,14 @@
  * Install: npm install together-ai
  */
 
-import Together from "together-ai"
+import Together, * as TogetherSDK from "together-ai"
 import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
   projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: ["togetherai"],
+  instrumentations: { togetherai: TogetherSDK },
 })
 
 async function main() {

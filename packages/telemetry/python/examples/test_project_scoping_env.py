@@ -25,6 +25,7 @@ Run from `packages/telemetry/python/`:
 
 import os
 
+import openai
 from openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
@@ -32,14 +33,14 @@ from latitude_telemetry import Latitude, capture
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["openai"],
+    instrumentations={"openai": openai},
     disable_batch=True,
 )
 
 OVERRIDE_SLUG = "evaluation-runs"
 
 
-@capture("default-route")
+@capture("default-route", {"tags": ["python"]})
 def default_route() -> None:
     client = OpenAI()
     r = client.chat.completions.create(
@@ -50,7 +51,7 @@ def default_route() -> None:
     print("default-route →", r.choices[0].message.content)
 
 
-@capture("evaluation-batch", {"project_slug": OVERRIDE_SLUG})
+@capture("evaluation-batch", {"project_slug": OVERRIDE_SLUG, "tags": ["python"]})
 def evaluation_batch() -> None:
     client = OpenAI()
     r = client.chat.completions.create(

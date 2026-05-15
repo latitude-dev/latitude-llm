@@ -109,11 +109,14 @@ const listWidgets = widgetEndpoint({
 })
 
 // Step 5: export a factory that mounts every endpoint onto a fresh sub-app.
-// `mountHttp` registers each tool-eligible endpoint with the MCP registry
-// using the prefix baked in at factory time (step 2), so MCP picks them up.
+// `mountHttp(app, ...middlewares)` accepts variadic Hono middleware that's
+// attached to *this exact endpoint only* (method + path) — pass the per-
+// endpoint rate-limit tier here. MCP registration is a side effect of
+// `mountHttp` using the prefix baked in at factory time (step 2).
 export const createWidgetsRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
-  for (const ep of [createWidget, listWidgets]) ep.mountHttp(app)
+  createWidget.mountHttp(app, createTierRateLimiter("low"))
+  listWidgets.mountHttp(app, createTierRateLimiter("low"))
   return app
 }
 ```
@@ -123,11 +126,10 @@ export const createWidgetsRoutes = () => {
 ```ts
 import { createWidgetsRoutes, widgetsPath } from "./widgets.ts"
 // ...
-routes.use(widgetsPath, createTierRateLimiter("low"))   // pick a tier — see below
 routes.route(widgetsPath, createWidgetsRoutes())
 ```
 
-The `routes.route(...)` call is plain Hono mount — MCP registration is a side effect of `mountHttp` inside `createWidgetsRoutes()`. The `routes.use(...)` line is the rate-limit tier — **don't skip it** (see "Rate limiting" below).
+Just the mount — **no** `routes.use(prefix, createTierRateLimiter(...))` here. Tier middleware lives next to each endpoint inside `createWidgetsRoutes()` (see "Rate limiting" below).
 
 ### 3. Regenerate manifests
 
@@ -214,16 +216,23 @@ deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the proje
 
 Same rule for the verbs used in route/operation `summary`: "Delete project" beats "Soft-delete project".
 
-## Rate limiting — every new endpoint group needs a tier
+## Rate limiting — every endpoint needs its own tier
 
-`createTierRateLimiter(tier)` is keyed on the authenticated org id (not IP), so one tenant's traffic doesn't eat another's quota. Apply it at the parent router, **before** the matching `routes.route(prefix, …)` call:
+`createTierRateLimiter(tier)` is keyed on the authenticated org id (not IP), so one tenant's traffic doesn't eat another's quota. Pass it as a variadic middleware argument to `mountHttp(app, ...middlewares)` — the middleware is attached to **this exact (method, path) pair only**, so a stricter tier on `DELETE /:id` doesn't fire on `GET /:id`:
 
 ```ts
-routes.use(myPath, createTierRateLimiter("low"))
-routes.route(myPath, createMyRoutes())
+export const createWidgetsRoutes = () => {
+  const app = new OpenAPIHono<OrganizationScopedEnv>()
+  createWidget.mountHttp(app, createTierRateLimiter("low"))
+  getWidget.mountHttp(app, createTierRateLimiter("low"))
+  updateWidget.mountHttp(app, createTierRateLimiter("low"))
+  deleteWidget.mountHttp(app, createTierRateLimiter("medium"))
+  exportWidgets.mountHttp(app, createTierRateLimiter("critical"))
+  return app
+}
 ```
 
-One tier per sub-app — Hono's `routes.use(prefix, …)` covers everything mounted under that prefix. Method-level granularity is possible (apply the limiter inside the route file per endpoint) but rarely worth the code spread.
+Under the hood, `mountHttp` injects the middleware via the OpenAPIHono route config's `middleware` field, which Hono scopes to that single endpoint. Don't use `app.use(path, mw)` for tiers — it's path-matched (not method-matched), so it ends up running for every method that shares the path and stacks when called multiple times for the same path.
 
 ### Picking a tier
 
@@ -232,19 +241,15 @@ Default to `low`. Most CRUD endpoints don't need more — `low` is 100 req/min/o
 | Tier | Quota (per org / min) | Pick this when… |
 | --- | --- | --- |
 | `low` | 100 | **The default**: id-keyed CRUD, list of bounded size, simple lookups, account/settings reads. Most endpoints land here. |
-| `medium` | 60 | Mutations with non-trivial side effects (publishing events, writing to multiple tables, cache invalidation that fan-outs). |
+| `medium` | 60 | Mutations with non-trivial side effects (sending email, fan-out writes, destructive ops that cascade across user surfaces). |
 | `high` | 15 | Bulk reads with filter / search / semantic / vector load that scan large data sets per request. |
 | `critical` | 3 | Workflow-kicking ops: imports, exports, monitor-issue, anything that sends email or enqueues a heavy job. |
 
 Don't be harsh. A tighter tier doesn't make the API safer in any meaningful way for cheap endpoints — it just frustrates legitimate callers. When in doubt, pick `low` and bump it later if a specific endpoint shows up in incident traffic.
 
-### What if a sub-app mixes cheap and expensive endpoints?
+### Always pass a tier
 
-Size to the heaviest endpoint in the group, OR split the sub-app. A pure-CRUD sub-app with one expensive export endpoint deserves `low` for the CRUD and `critical` for the export — easiest to express by giving the export its own sub-app (`/widgets/export`).
-
-### Always add the line
-
-This is in the recipe (step 2) for a reason: **shipping a route group without a tier means it inherits no per-route limit at all** — only the global IP-keyed brute-force guard. That's an easy oversight in PR review. The `routes.use(myPath, createTierRateLimiter(...))` line is part of "wiring up", not optional.
+`mountHttp(app)` without a tier middleware means the endpoint inherits no per-route limit at all — only the global IP-keyed brute-force guard. The tier belongs in the same line; an unparented `mountHttp(app)` is an easy oversight in PR review.
 
 ## Choosing route names and shapes
 
@@ -277,7 +282,7 @@ pnpm mcp:emit && git diff --exit-code apps/api/mcp.json           # no drift
 
 Spot-check both manifests by hand: open `apps/api/mcp.json` and `apps/api/openapi.json`, find your operation, confirm every field has a `description`. If something is missing, it'll silently degrade SDK docs and agent UX — fix it at the Zod schema, not in the JSON output.
 
-And glance at `apps/api/src/routes/index.ts` next to your `routes.route(prefix, …)` line — there should be a `routes.use(prefix, createTierRateLimiter("…"))` on the line above. If it's missing, your endpoints are uncapped per-org.
+And glance at your `createXxxRoutes()` factory — every `mountHttp(app, …)` call should pass a `createTierRateLimiter("…")` as its second argument. A bare `ep.mountHttp(app)` leaves the endpoint uncapped per-org.
 
 ## Where the machinery lives
 

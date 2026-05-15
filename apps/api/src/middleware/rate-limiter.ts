@@ -1,5 +1,3 @@
-import { parseEnv } from "@platform/env"
-import { Effect } from "effect"
 import type { Context, Next } from "hono"
 
 /**
@@ -8,12 +6,9 @@ import type { Context, Next } from "hono"
  * Uses Redis INCR and EXPIRE for atomic counter operations.
  * Supports distributed deployments across multiple API instances.
  *
- * Two consumers today:
- * 1. {@link createAuthRateLimiter} — IP-keyed brute-force guard applied
- *    globally before the auth middleware runs.
- * 2. {@link createTierRateLimiter} — organization-keyed quota tier applied
- *    per route group (low / medium / high / critical), used to give cheap
- *    endpoints more headroom and expensive ones tighter limits.
+ * Used by {@link createTierRateLimiter} as an organization-keyed quota tier
+ * applied per route group (low / medium / high / critical), giving cheap
+ * endpoints more headroom and expensive ones tighter limits.
  */
 
 interface RateLimitConfig {
@@ -97,28 +92,6 @@ const createRedisRateLimiter = (config: RateLimitConfig) => {
       await next()
     }
   }
-}
-
-/**
- * Rate limiter for authentication attempts by IP address
- * 10 attempts per 15 minutes in production, 100 attempts per 15 minutes in development
- * This protects against brute force attacks on API keys and JWT tokens
- */
-export const createAuthRateLimiter = () => {
-  // In development, be more permissive
-  const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
-  const isDevelopment = nodeEnv === "development"
-
-  return createRedisRateLimiter({
-    maxRequests: isDevelopment ? 100 : 10,
-    windowSeconds: 15 * 60, // 15 minutes
-    keyPrefix: "ratelimit:auth:ip",
-    keyGenerator: (c: Context) => {
-      const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown"
-      return ip.split(",")[0].trim()
-    },
-    errorMessage: "Too many authentication attempts. Please try again later.",
-  })
 }
 
 type RateLimitTier = "low" | "medium" | "high" | "critical"

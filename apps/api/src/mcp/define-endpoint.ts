@@ -1,5 +1,5 @@
 import type { OpenAPIHono, RouteConfig, RouteHandler } from "@hono/zod-openapi"
-import type { Env } from "hono"
+import type { Env, MiddlewareHandler } from "hono"
 import { honoPathToOpenApi } from "./normalize-path.ts"
 import { registerEndpoint } from "./registry.ts"
 
@@ -36,7 +36,13 @@ interface ApiEndpoint<R extends AppRouteConfig, E extends Env> {
   readonly tool: boolean
   /** Path prefix the endpoint will be mounted at — used to rebuild the dispatch URL. */
   readonly prefix: string
-  mountHttp(app: OpenAPIHono<E>): void
+  /**
+   * Mounts the route on `app`. Any `middlewares` are attached *to this exact
+   * endpoint only* (method + path), so a per-endpoint rate-limit tier on
+   * `GET /:id` doesn't fire on `DELETE /:id`. Implemented by passing them
+   * through `createRoute({ middleware })` at mount time.
+   */
+  mountHttp(app: OpenAPIHono<E>, ...middlewares: ReadonlyArray<MiddlewareHandler>): void
 }
 
 /**
@@ -50,7 +56,7 @@ export interface AnyApiEndpoint {
   readonly tool: boolean
   readonly prefix: string
   // biome-ignore lint/suspicious/noExplicitAny: type-erased registry view — see comment above
-  mountHttp(app: OpenAPIHono<any>): void
+  mountHttp(app: OpenAPIHono<any>, ...middlewares: ReadonlyArray<MiddlewareHandler>): void
 }
 
 /**
@@ -125,12 +131,18 @@ export const defineApiEndpoint =
       handler,
       tool,
       prefix: normalizedPrefix,
-      mountHttp(app) {
+      mountHttp(app, ...middlewares) {
+        // Per-endpoint middleware rides on the OpenAPIHono route config's
+        // `middleware` field — Hono pulls it out and registers it scoped to
+        // this exact (method, path) pair, unlike `app.use(path, mw)` which
+        // matches every method on the path.
+        const routeWithMiddleware =
+          middlewares.length > 0 ? ({ ...routeForHono, middleware: middlewares } as unknown as R) : routeForHono
         // Cast through `any` because OpenAPIHono.openapi is parameterised on a
-        // concrete RouteConfig, not our AppRouteConfig superset. The runtime call
-        // is identical to `app.openapi(route, handler)`.
+        // concrete RouteConfig, not our AppRouteConfig superset. The runtime
+        // call is identical to `app.openapi(route, handler)`.
         // biome-ignore lint/suspicious/noExplicitAny: see comment above
-        ;(app as any).openapi(routeForHono, handler)
+        ;(app as any).openapi(routeWithMiddleware, handler)
         if (tool) registerEndpoint(endpoint as unknown as AnyApiEndpoint)
       },
     }

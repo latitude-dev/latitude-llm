@@ -10,13 +10,15 @@ Install: uv add langchain-core langchain-openai
 
 import os
 
+import langchain_core
+
 from latitude_telemetry import Latitude, capture
 
 # Initialize telemetry BEFORE importing langchain so instrumentation can patch it
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
     project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
-    instrumentations=["langchain"],
+    instrumentations={"langchain": langchain_core},
     disable_batch=True,
 )
 
@@ -25,7 +27,7 @@ from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
 
-@capture("test-langchain-completion", {"tags": ["test"], "session_id": "example"})
+@capture("test-langchain-completion", {"tags": ["python", "test"], "session_id": "example"})
 def test_langchain_completion():
     llm = ChatOpenAI(model="gpt-4o-mini", max_tokens=50)
 
