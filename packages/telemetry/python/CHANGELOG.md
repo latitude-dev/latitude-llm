@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0a8] - 2026-05-16
+
+### Changed
+
+- **Renamed `project_slug` → `project` on the `Latitude` constructor, `init_latitude()`, and `capture()` options.** The `Slug` suffix leaked an internal database concept into the SDK surface. Affects:
+  - `Latitude(api_key=..., project=...)`
+  - `init_latitude(api_key=..., project=...)`
+  - `capture("name", fn, {"project": ...})`
+
+### Deprecated
+
+- `project_slug` on both the constructor and `capture()` options still works but logs a one-time `logging.warning` and will be removed in a future release. When both `project` and `project_slug` are passed, `project` wins.
+
+### Migration
+
+```diff
+- Latitude(api_key=..., project_slug="my-project")
++ Latitude(api_key=..., project="my-project")
+
+- capture("run", fn, {"project_slug": "evaluations"})
++ capture("run", fn, {"project": "evaluations"})
+```
+
+The `X-Latitude-Project` HTTP header name, the `latitude.project` span attribute, and the `LATITUDE_PROJECT_SLUG` environment variable convention are all unchanged — they're independent of the SDK option name.
+
 ## [3.0.0a7] - 2026-05-15
 
 ### Breaking Changes

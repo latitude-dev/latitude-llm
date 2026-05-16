@@ -12,7 +12,7 @@ Example (Bootstrap - Recommended):
 
     latitude = Latitude(
         api_key="your-api-key",
-        project_slug="my-project",
+        project="my-project",
         instrumentations={"openai": openai, "anthropic": anthropic},
     )
 
@@ -35,7 +35,7 @@ Example (Advanced - Existing OTel Setup):
     from latitude_telemetry import LatitudeSpanProcessor, register_latitude_instrumentations
 
     provider = TracerProvider()
-    provider.add_span_processor(LatitudeSpanProcessor("api-key", "project-slug"))
+    provider.add_span_processor(LatitudeSpanProcessor("api-key", "my-project"))
     trace.set_tracer_provider(provider)
 
     register_latitude_instrumentations({"openai": openai}, provider)

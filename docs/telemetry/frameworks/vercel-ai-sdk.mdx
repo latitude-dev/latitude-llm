@@ -62,7 +62,7 @@ The Vercel AI SDK has built-in OpenTelemetry support via its `experimental_telem
 
     const latitude = new Latitude({
       apiKey: process.env.LATITUDE_API_KEY!,
-      projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+      project: process.env.LATITUDE_PROJECT_SLUG!,
     })
 
     await latitude.ready

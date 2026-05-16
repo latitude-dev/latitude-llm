@@ -22,7 +22,7 @@ const client = new OpenAI();
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI }, // Pass the LLM SDK module you use in app code.
 });
 
@@ -76,7 +76,7 @@ Sentry.init({
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 });
 
@@ -161,7 +161,7 @@ import { Latitude, capture } from "@latitude-data/telemetry";
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 });
 
@@ -215,6 +215,15 @@ The primary entry point. Bootstraps a complete OpenTelemetry setup with LLM inst
 ```typescript
 type LatitudeOptions = {
   apiKey: string;
+  /**
+   * Default project slug for spans. Optional — every `capture()` can override.
+   * Sent as the `X-Latitude-Project` header on every export.
+   */
+  project?: string;
+  /**
+   * @deprecated Renamed to `project`. Still accepted for backwards compatibility
+   * and will be removed in a future release. When both are set, `project` wins.
+   */
   projectSlug?: string;
   // Map of integration name → LLM SDK module the consumer imports.
   // Anything else (string array, unknown key, non-object) throws at register time.
@@ -247,7 +256,7 @@ Span processor for shared-provider setups. Reads Latitude context from OTel cont
 class LatitudeSpanProcessor implements SpanProcessor {
   constructor(
     apiKey: string,
-    projectSlug: string,
+    project: string | undefined,
     options?: LatitudeSpanProcessorOptions,
   );
 }
@@ -274,6 +283,16 @@ type ContextOptions = {
   sessionId?: string;
   tags?: string[];
   metadata?: Record<string, unknown>;
+  /**
+   * Routes this capture (and its child spans) to a specific Latitude project.
+   * Overrides the constructor's `project` default for the duration of the capture.
+   */
+  project?: string;
+  /**
+   * @deprecated Renamed to `project`. Still accepted for backwards compatibility
+   * and will be removed in a future release.
+   */
+  projectSlug?: string;
 };
 
 function capture<T>(
@@ -337,7 +356,7 @@ tracer.init({ service: "my-app", env: "production" });
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 });
 
@@ -366,7 +385,7 @@ Sentry.init({
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 });
 
@@ -390,7 +409,7 @@ import { Latitude } from "@latitude-data/telemetry";
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 });
 ```
@@ -409,7 +428,7 @@ honeycomb.start();
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 });
 ```
@@ -428,7 +447,7 @@ time. Switch to the object form, mapping integration name → LLM SDK module:
 
   new Latitude({
     apiKey: process.env.LATITUDE_API_KEY!,
-    projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+    project: process.env.LATITUDE_PROJECT_SLUG!,
 -   instrumentations: ["openai", "anthropic"],
 +   instrumentations: { openai: OpenAI, anthropic: AnthropicSDK },
   });
@@ -473,7 +492,7 @@ but the namespace form is the recommended shape.
 By default, only LLM-relevant spans are exported:
 
 ```typescript
-new LatitudeSpanProcessor(apiKey, projectSlug, {
+new LatitudeSpanProcessor(apiKey, project, {
   disableSmartFilter: true, // Export all spans
 });
 ```
@@ -490,7 +509,7 @@ PII redaction is enabled by default for security-sensitive attributes only:
 - Database statements
 
 ```typescript
-new LatitudeSpanProcessor(apiKey, projectSlug, {
+new LatitudeSpanProcessor(apiKey, project, {
   disableRedact: true, // Disable all redaction
   redact: {
     attributes: [/^password$/i, /secret/i], // Add custom patterns
@@ -502,7 +521,7 @@ new LatitudeSpanProcessor(apiKey, projectSlug, {
 ### Custom Filtering
 
 ```typescript
-new LatitudeSpanProcessor(apiKey, projectSlug, {
+new LatitudeSpanProcessor(apiKey, project, {
   shouldExportSpan: (span) => span.attributes["custom"] === true,
   blockedInstrumentationScopes: ["opentelemetry.instrumentation.fs"],
 });

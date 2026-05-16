@@ -1,9 +1,12 @@
 """Tests for the capture() function and context propagation."""
 
+import logging
+
 import pytest
 from opentelemetry import context as otel_context
 
 from latitude_telemetry import capture, get_latitude_context
+from latitude_telemetry.sdk._deprecation import reset_project_slug_deprecation_warning_for_testing
 
 
 class TestCaptureFunction:
@@ -230,3 +233,43 @@ class TestCaptureOptions:
         assert captured_ctx.metadata == {}
         assert captured_ctx.session_id is None
         assert captured_ctx.user_id is None
+
+
+class TestCaptureProjectOption:
+    """Tests covering the new `project` option and legacy `project_slug` alias on capture()."""
+
+    def setup_method(self):
+        reset_project_slug_deprecation_warning_for_testing()
+
+    def test_project_option_lands_on_context(self):
+        captured = {}
+
+        def fn():
+            ctx = get_latitude_context(otel_context.get_current())
+            captured["project"] = ctx.project if ctx else None
+
+        capture("scoped", fn, {"project": "call-summariser"})
+        assert captured["project"] == "call-summariser"
+
+    def test_legacy_project_slug_still_works_and_logs_deprecation(self, caplog):
+        captured = {}
+
+        def fn():
+            ctx = get_latitude_context(otel_context.get_current())
+            captured["project"] = ctx.project if ctx else None
+
+        with caplog.at_level(logging.WARNING, logger="latitude_telemetry.sdk._deprecation"):
+            capture("legacy", fn, {"project_slug": "legacy-slug"})
+
+        assert captured["project"] == "legacy-slug"
+        assert any("`project_slug` on capture()" in r.message for r in caplog.records)
+
+    def test_project_wins_when_both_keys_present(self):
+        captured = {}
+
+        def fn():
+            ctx = get_latitude_context(otel_context.get_current())
+            captured["project"] = ctx.project if ctx else None
+
+        capture("both", fn, {"project": "new-name", "project_slug": "old-name"})
+        assert captured["project"] == "new-name"
