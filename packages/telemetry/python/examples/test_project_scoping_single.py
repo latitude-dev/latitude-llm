@@ -1,7 +1,7 @@
 """
 Project scoping — single-project default (existing pattern).
 
-`Latitude(api_key=..., project_slug=...)` sets a default project for every span. `capture()`
+`Latitude(api_key=..., project=...)` sets a default project for every span. `capture()`
 inherits it, so all spans land in the same Latitude project. This is the recommended setup
 for processes that emit to one project.
 
@@ -24,7 +24,7 @@ from latitude_telemetry import Latitude, capture
 
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations={"openai": openai},
     disable_batch=True,
 )

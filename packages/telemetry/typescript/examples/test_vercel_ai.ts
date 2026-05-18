@@ -20,19 +20,19 @@ import { generateText, streamText } from "ai"
 import { capture, Latitude } from "../src"
 
 const apiKey = process.env.LATITUDE_API_KEY
-const projectSlug = process.env.LATITUDE_PROJECT_SLUG
+const project = process.env.LATITUDE_PROJECT_SLUG
 
 if (!apiKey) {
   throw new Error("LATITUDE_API_KEY is required")
 }
 
-if (!projectSlug) {
+if (!project) {
   throw new Error("LATITUDE_PROJECT_SLUG is required")
 }
 
 const latitude = new Latitude({
   apiKey,
-  projectSlug,
+  project,
   disableBatch: true,
 })
 

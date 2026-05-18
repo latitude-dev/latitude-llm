@@ -2,14 +2,14 @@
 Project scoping — env-driven default + per-capture override.
 
 Reads the default project slug from `LATITUDE_PROJECT_SLUG` and lets specific captures
-override it via `capture({"project_slug": ...})`. A common shape for services that run in
+override it via `capture({"project": ...})`. A common shape for services that run in
 many environments (staging/prod each have their own project slug) but still need to route
 a subset of spans elsewhere.
 
 Resolution precedence (highest → lowest):
-  1. capture({"project_slug": ...})         — emits `latitude.project` on the span
+  1. capture({"project": ...})              — emits `latitude.project` on the span
   2. OTEL resource attribute `latitude.project`  — bare-OTEL setups
-  3. ctor `project_slug`                    — sent as `X-Latitude-Project` header
+  3. constructor `project`                  — sent as `X-Latitude-Project` header
 
 The override slug (`evaluation-runs` below) must exist in the same org as `LATITUDE_API_KEY`.
 
@@ -32,7 +32,7 @@ from latitude_telemetry import Latitude, capture
 
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations={"openai": openai},
     disable_batch=True,
 )
@@ -51,7 +51,7 @@ def default_route() -> None:
     print("default-route →", r.choices[0].message.content)
 
 
-@capture("evaluation-batch", {"project_slug": OVERRIDE_SLUG, "tags": ["python"]})
+@capture("evaluation-batch", {"project": OVERRIDE_SLUG, "tags": ["python"]})
 def evaluation_batch() -> None:
     client = OpenAI()
     r = client.chat.completions.create(

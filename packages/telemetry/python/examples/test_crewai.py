@@ -21,7 +21,7 @@ from latitude_telemetry import Latitude, capture
 # Note: CrewAI uses OpenAI by default, so we instrument both
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations={"crewai": crewai, "openai": openai},
     disable_batch=True,
 )

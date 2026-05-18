@@ -59,16 +59,22 @@ class ContextOptions(TypedDict, total=False):
     session_id: str
     user_id: str
     # Route the capture (and all child spans) to a specific Latitude project.
-    # Overrides the ctor `project_slug` default for this capture only.
+    # Overrides the constructor `project` default for this capture only.
+    project: str
+    # DEPRECATED: renamed to `project`. Still accepted for backwards compatibility and will
+    # be removed in a future release. When both are set, `project` wins.
     project_slug: str
 
 
 class LatitudeOptions(SmartFilterOptions, total=False):
     api_key: Required[str]
-    # Optional default project slug. When omitted, every `capture()` MUST set its own
-    # `project_slug` (or rely on a per-span / OTEL resource attribute). When set, the SDK
+    # Optional default project. When omitted, every `capture()` MUST set its own
+    # `project` (or rely on a per-span / OTEL resource attribute). When set, the SDK
     # forwards it as the `X-Latitude-Project` header so spans without a per-span override
     # land in this project.
+    project: NotRequired[str]
+    # DEPRECATED: renamed to `project`. Still accepted for backwards compatibility and will
+    # be removed in a future release. When both are set, `project` wins.
     project_slug: NotRequired[str]
     instrumentations: InstrumentationsInput
     disable_redact: bool

@@ -770,6 +770,28 @@ export function OnboardingFlow({
                     up Latitude telemetry in your project.
                   </Text.H5>
                   <CodeBlock value={codingAgentPrompt} copyable wrapLines />
+                  <Text.H5 color="foregroundMuted">
+                    For the smoothest experience, install both the{" "}
+                    <a
+                      href="https://github.com/latitude-dev/skills"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline-offset-2 hover:underline"
+                    >
+                      Latitude telemetry skill
+                    </a>{" "}
+                    and the{" "}
+                    <a
+                      href="https://docs.latitude.so/getting-started/mcp"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline-offset-2 hover:underline"
+                    >
+                      Latitude MCP server
+                    </a>{" "}
+                    in your agent. The MCP lets the agent create projects and look up API keys directly; the skill wires
+                    tracing into your codebase.
+                  </Text.H5>
                 </div>
               ) : (
                 <>

@@ -26,7 +26,7 @@ client = OpenAI()
 
 latitude = Latitude(
     api_key="your-api-key",
-    project_slug="your-project-slug",
+    project="your-project-slug",
     instrumentations={"openai": openai},  # Pass the LLM SDK module you use in app code.
 )
 
@@ -121,7 +121,7 @@ from latitude_telemetry import Latitude, capture
 
 latitude = Latitude(
     api_key="your-api-key",
-    project_slug="your-project-slug",
+    project="your-project-slug",
     instrumentations={"openai": openai},
 )
 
@@ -182,6 +182,11 @@ class Latitude:
         self,
         *,
         api_key: str,
+        # Default project for spans. Optional — every `capture()` can override.
+        # Sent as the `X-Latitude-Project` header on every export.
+        project: str | None = None,
+        # DEPRECATED alias for `project`. Still accepted; logs a one-time warning and will be
+        # removed in a future release. When both are passed, `project` wins.
         project_slug: str | None = None,
         # Dict mapping integration name → the LLM SDK module the consumer imports.
         # Example: {"openai": openai, "anthropic": anthropic}.
@@ -215,7 +220,7 @@ class LatitudeSpanProcessor:
     def __init__(
         self,
         api_key: str,
-        project_slug: str,
+        project: str | None,
         options: LatitudeSpanProcessorOptions | None = None,
     ):
         ...
@@ -250,6 +255,9 @@ def capture(
 #     "session_id": str | None,  # Session identifier (user.id attribute)
 #     "tags": list[str] | None,  # Tags for filtering traces
 #     "metadata": dict | None,   # Arbitrary key-value metadata
+#     "project": str | None,     # Route this capture (and child spans) to a specific
+#                                # Latitude project, overriding the constructor default.
+#     "project_slug": str | None, # DEPRECATED alias for `project`. Still accepted.
 # }
 ```
 
@@ -295,7 +303,7 @@ The list-of-strings form is removed with no fallback in `3.0.0a7`. Anything othe
 
   latitude = Latitude(
       api_key="your-api-key",
-      project_slug="your-project-slug",
+      project="your-project-slug",
 -     instrumentations=["openai", "anthropic"],
 +     instrumentations={"openai": openai, "anthropic": anthropic},
   )

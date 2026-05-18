@@ -12,7 +12,7 @@ import { Latitude, capture } from "@latitude-data/telemetry"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI }, // Pass the LLM SDK module you use in app code.
 })
 
@@ -139,7 +139,7 @@ import { LatitudeSpanProcessor, registerLatitudeInstrumentations } from "@latitu
 
 const provider = new NodeTracerProvider({
   spanProcessors: [
-    new LatitudeSpanProcessor(apiKey, projectSlug),
+    new LatitudeSpanProcessor(apiKey, project),
   ],
 })
 

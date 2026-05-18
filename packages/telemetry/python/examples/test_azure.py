@@ -19,7 +19,7 @@ from latitude_telemetry import Latitude, capture
 # Initialize telemetry BEFORE importing openai so instrumentation can patch it
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations={"openai": openai},
     disable_batch=True,
 )
