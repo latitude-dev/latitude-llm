@@ -246,7 +246,6 @@ function buildIssueRow(input: {
 
   return {
     id: IssueId(input.issueId),
-    uuid: input.issueUuid,
     organizationId: input.organizationId,
     projectId: input.projectId,
     // Seeds run before the migration backfill is exercised; we provide a slug

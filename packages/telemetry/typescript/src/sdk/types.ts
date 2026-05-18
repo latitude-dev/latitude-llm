@@ -13,8 +13,13 @@ export type ContextOptions = {
   /**
    * Route the capture (and all child spans) to a specific Latitude project.
    *
-   * Overrides the ctor `projectSlug` default for this capture only. Useful when one process
-   * emits to multiple projects (e.g. multiple agents in the same service).
+   * Overrides the constructor `project` default for this capture only. Useful when one
+   * process emits to multiple projects (e.g. multiple agents in the same service).
+   */
+  project?: string
+  /**
+   * @deprecated Renamed to `project`. Still accepted for backwards compatibility and will be
+   * removed in a future release. When both are set, `project` wins.
    */
   projectSlug?: string
 }
@@ -22,14 +27,19 @@ export type ContextOptions = {
 export type LatitudeOptions = SmartFilterOptions & {
   apiKey: string
   /**
-   * Default project slug for spans emitted by this SDK instance.
+   * Default project for spans emitted by this SDK instance.
    *
-   * Optional — when omitted, every `capture()` call MUST set its own `projectSlug` (or rely on
+   * Optional — when omitted, every `capture()` call MUST set its own `project` (or rely on
    * an OTEL resource attribute / per-span attribute). When set, the SDK forwards it as the
    * `X-Latitude-Project` header so spans without a per-span override land in this project.
    *
    * Precedence on the server (highest first): span attribute `latitude.project` →
    * OTEL resource attribute `latitude.project` → `X-Latitude-Project` header.
+   */
+  project?: string
+  /**
+   * @deprecated Renamed to `project`. Still accepted for backwards compatibility and will be
+   * removed in a future release. When both are set, `project` wins.
    */
   projectSlug?: string
   /**

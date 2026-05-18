@@ -10,6 +10,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from latitude_telemetry import Latitude, init_latitude
+from latitude_telemetry.sdk._deprecation import reset_project_slug_deprecation_warning_for_testing
 
 
 class TestTracerAccess:
@@ -21,7 +22,7 @@ class TestTracerAccess:
         with patch("latitude_telemetry.telemetry.latitude_span_processor.create_exporter"):
             lat = Latitude(
                 api_key="test-api-key",
-                project_slug="test-project",
+                project="test-project",
                 disable_batch=True,
                 tracer_provider=TracerProvider(),
             )
@@ -56,7 +57,7 @@ class TestTracerAccess:
         with patch("latitude_telemetry.telemetry.latitude_span_processor.create_exporter"):
             lat = init_latitude(
                 api_key="test-api-key",
-                project_slug="test-project",
+                project="test-project",
                 disable_batch=True,
             )
 
@@ -74,7 +75,7 @@ class TestServiceNameOverride:
 
         lat = Latitude(
             api_key="test-api-key",
-            project_slug="test-project",
+            project="test-project",
             disable_batch=True,
             # No tracer_provider: Latitude owns the provider.
             service_name="latitude-service",
@@ -105,7 +106,7 @@ class TestServiceNameOverride:
 
         lat = Latitude(
             api_key="test-api-key",
-            project_slug="test-project",
+            project="test-project",
             disable_batch=True,
             tracer_provider=host_provider,
             service_name="latitude-service",  # explicitly passed — should be ignored
@@ -143,7 +144,7 @@ class TestUnattachableProvider:
         ):
             lat = Latitude(
                 api_key="test-api-key",
-                project_slug="test-project",
+                project="test-project",
                 disable_batch=True,
                 tracer_provider=opaque,  # type: ignore[arg-type]
             )
@@ -152,4 +153,41 @@ class TestUnattachableProvider:
         # Fallback creates a Latitude-owned provider that is NOT the passed-in opaque one.
         assert lat.provider is not opaque
 
+        lat.shutdown()
+
+
+class TestProjectArgRename:
+    """The constructor accepts both `project` (new) and `project_slug` (deprecated)."""
+
+    def setup_method(self):
+        reset_project_slug_deprecation_warning_for_testing()
+
+    def test_legacy_project_slug_still_works_and_logs_deprecation(self, caplog):
+        with (
+            patch("latitude_telemetry.telemetry.latitude_span_processor.create_exporter"),
+            caplog.at_level(logging.WARNING, logger="latitude_telemetry.sdk._deprecation"),
+        ):
+            lat = Latitude(
+                api_key="test-api-key",
+                project_slug="legacy-slug",
+                disable_batch=True,
+                tracer_provider=TracerProvider(),
+            )
+
+        assert any("`project_slug` is deprecated" in r.message for r in caplog.records)
+        lat.shutdown()
+
+    def test_project_argument_does_not_log_deprecation(self, caplog):
+        with (
+            patch("latitude_telemetry.telemetry.latitude_span_processor.create_exporter"),
+            caplog.at_level(logging.WARNING, logger="latitude_telemetry.sdk._deprecation"),
+        ):
+            lat = Latitude(
+                api_key="test-api-key",
+                project="my-project",
+                disable_batch=True,
+                tracer_provider=TracerProvider(),
+            )
+
+        assert not any("deprecated" in r.message for r in caplog.records)
         lat.shutdown()

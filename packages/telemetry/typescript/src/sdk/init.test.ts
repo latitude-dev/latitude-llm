@@ -2,10 +2,15 @@ import { context, propagation, type Tracer, type TracerProvider, trace } from "@
 import { resourceFromAttributes } from "@opentelemetry/resources"
 import { InMemorySpanExporter, NodeTracerProvider, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-node"
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { resetProjectSlugDeprecationWarningForTesting } from "./_deprecation.ts"
 import { initLatitude, Latitude } from "./init.ts"
 
 describe("Latitude", () => {
+  beforeEach(() => {
+    resetProjectSlugDeprecationWarningForTesting()
+  })
+
   afterEach(() => {
     trace.disable()
     context.disable()
@@ -13,18 +18,25 @@ describe("Latitude", () => {
   })
 
   it("should throw if apiKey is missing", () => {
-    expect(() => new Latitude({ apiKey: "", projectSlug: "test" })).toThrow("apiKey is required")
+    expect(() => new Latitude({ apiKey: "", project: "test" })).toThrow("apiKey is required")
   })
 
-  it("accepts an empty or omitted projectSlug (per-capture scoping covers the rest)", () => {
-    expect(() => new Latitude({ apiKey: "test", projectSlug: "" })).not.toThrow()
+  it("accepts an empty or omitted project (per-capture scoping covers the rest)", () => {
+    expect(() => new Latitude({ apiKey: "test", project: "" })).not.toThrow()
     expect(() => new Latitude({ apiKey: "test" })).not.toThrow()
+  })
+
+  it("accepts the deprecated `projectSlug` alias and logs a deprecation warning", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    expect(() => new Latitude({ apiKey: "test", projectSlug: "legacy-slug" })).not.toThrow()
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("`projectSlug` is deprecated"))
+    warnSpy.mockRestore()
   })
 
   it("should return provider, flush, shutdown, and ready functions", async () => {
     const result = new Latitude({
       apiKey: "test-key",
-      projectSlug: "test-project",
+      project: "test-project",
     })
     expect(result.provider).toBeDefined()
     expect(result.flush).toBeTypeOf("function")
@@ -35,7 +47,7 @@ describe("Latitude", () => {
   it("keeps initLatitude as a deprecated compatibility wrapper", async () => {
     const result = initLatitude({
       apiKey: "test-key",
-      projectSlug: "test-project",
+      project: "test-project",
     })
 
     expect(result).toBeInstanceOf(Latitude)
@@ -56,7 +68,7 @@ describe("Latitude", () => {
 
     const result = new Latitude({
       apiKey: "test-key",
-      projectSlug: "test-project",
+      project: "test-project",
       exporter: latitudeExporter,
       disableBatch: true,
     })
@@ -86,7 +98,7 @@ describe("Latitude", () => {
 
     const result = new Latitude({
       apiKey: "test-key",
-      projectSlug: "test-project",
+      project: "test-project",
       tracerProvider: explicitProvider,
     })
 
@@ -107,7 +119,7 @@ describe("Latitude", () => {
 
     const result = new Latitude({
       apiKey: "test-key",
-      projectSlug: "test-project",
+      project: "test-project",
       tracerProvider: datadogLikeProvider,
     })
 
@@ -128,7 +140,7 @@ describe("Latitude", () => {
 
     const result = new Latitude({
       apiKey: "test-key",
-      projectSlug: "test-project",
+      project: "test-project",
       tracerProvider: nodeSdkLikeProvider,
     })
 
@@ -144,7 +156,7 @@ describe("Latitude", () => {
 
     const result = new Latitude({
       apiKey: "test-key",
-      projectSlug: "test-project",
+      project: "test-project",
       tracerProvider: opaqueProvider,
     })
 
@@ -163,7 +175,7 @@ describe("Latitude", () => {
 
     const result = new Latitude({
       apiKey: "test-key",
-      projectSlug: "test-project",
+      project: "test-project",
       serviceName: "custom-service",
       exporter: latitudeExporter,
       disableBatch: true,
@@ -196,7 +208,7 @@ describe("Latitude", () => {
 
     const result = new Latitude({
       apiKey: "test-key",
-      projectSlug: "test-project",
+      project: "test-project",
       serviceName: "latitude-service", // explicitly passed — should be ignored when piggy-backing
       exporter: latitudeExporter,
       disableBatch: true,

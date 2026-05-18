@@ -24,3 +24,5 @@ export async function inviteMagicLinkTemplate(data: InviteMagicLinkEmailData): P
     text: `${data.inviterName} wants you to join the ${data.organizationName} workspace on Latitude. Accept here: ${data.magicLinkUrl}`,
   }
 }
+
+export default InviteMagicLinkEmail

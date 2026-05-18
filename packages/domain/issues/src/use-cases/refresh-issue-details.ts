@@ -5,7 +5,6 @@ import { generateSlug, IssueId, ProjectId, type RepositoryError, SqlClient } fro
 import { Effect } from "effect"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { type GenerateIssueDetailsError, generateIssueDetailsUseCase } from "./generate-issue-details.ts"
-import { syncIssueProjectionsUseCase } from "./sync-projections.ts"
 
 export interface RefreshIssueDetailsInput {
   readonly organizationId: string
@@ -146,13 +145,6 @@ export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
         } satisfies RefreshIssueDetailsResult
       }),
     )
-
-    if (result.action === "updated") {
-      yield* syncIssueProjectionsUseCase({
-        organizationId: input.organizationId,
-        issueId: result.issueId,
-      })
-    }
 
     if (result.action !== "not-found") {
       yield* enqueueLinkedEvaluationAlignments(input)

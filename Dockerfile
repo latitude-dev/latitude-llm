@@ -297,4 +297,4 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 USER latitude
 
-CMD ["sh", "-c", "pnpm --filter @platform/db-postgres pg:migrate && pnpm --filter @platform/db-clickhouse ch:up && pnpm --filter @platform/db-weaviate wv:migrate"]
+CMD ["sh", "-c", "pnpm --filter @platform/db-postgres pg:migrate && pnpm --filter @platform/db-clickhouse ch:up"]

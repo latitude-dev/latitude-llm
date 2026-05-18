@@ -23,6 +23,11 @@ export interface WrappedReportSummary {
  *    `null` when none exists. RLS scopes the visible rows to the caller's
  *    org; this method intentionally skips the JSONB schema parse since
  *    the caller only needs the id for navigation.
+ *  - `listLatestPerProjectAdmin` — used by the backoffice analytics page
+ *    to build a cross-org cohort. Returns one record per project (the
+ *    most recent of `type` whose `created_at <= olderThan`) with the
+ *    JSONB blob parsed. Cross-org read: caller MUST provide the admin
+ *    Postgres client (BYPASSRLS), same constraint as `findById`.
  */
 export interface WrappedReportRepositoryShape {
   save: (record: WrappedReportRecord) => Effect.Effect<void, RepositoryError, SqlClient>
@@ -34,6 +39,11 @@ export interface WrappedReportRepositoryShape {
     readonly type: WrappedReportType
     readonly sinceCreatedAt: Date
   }) => Effect.Effect<WrappedReportSummary | null, RepositoryError, SqlClient>
+
+  listLatestPerProjectAdmin: (params: {
+    readonly type: WrappedReportType
+    readonly olderThan: Date
+  }) => Effect.Effect<readonly WrappedReportRecord[], RepositoryError, SqlClient>
 }
 
 export class WrappedReportRepository extends Context.Service<WrappedReportRepository, WrappedReportRepositoryShape>()(

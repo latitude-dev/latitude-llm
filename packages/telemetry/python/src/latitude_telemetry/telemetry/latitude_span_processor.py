@@ -100,7 +100,7 @@ class LatitudeSpanProcessor(SpanProcessor):
     def __init__(
         self,
         api_key: str,
-        project_slug: str | None,
+        project: str | None,
         options: LatitudeSpanProcessorOptions | None = None,
     ):
         options = options or LatitudeSpanProcessorOptions()
@@ -108,7 +108,7 @@ class LatitudeSpanProcessor(SpanProcessor):
         base_exporter = options.exporter or create_exporter(
             ExporterOptions(
                 api_key=api_key,
-                project_slug=project_slug,
+                project=project,
                 endpoint=env.EXPORTER_URL,
                 timeout=30,
             )
@@ -165,8 +165,8 @@ class LatitudeSpanProcessor(SpanProcessor):
                 span.set_attribute(ATTRIBUTES.session_id, latitude_data.session_id)
             if latitude_data.user_id:
                 span.set_attribute(ATTRIBUTES.user_id, latitude_data.user_id)
-            if latitude_data.project_slug:
-                span.set_attribute(ATTRIBUTES.project, latitude_data.project_slug)
+            if latitude_data.project:
+                span.set_attribute(ATTRIBUTES.project, latitude_data.project)
 
         self._tail.on_start(span, parent_context)
 

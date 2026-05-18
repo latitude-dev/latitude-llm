@@ -47,7 +47,7 @@ Rules:
 - system-created queue drafts still use the queue CUID as `source_id`
 - they are created by the `systemQueueFlaggerWorkflow` started from the debounced `trace-end:run` runtime for that trace
 - system-created queue drafts do not use the automatic publication path; they wait for explicit human review
-- drafts do not participate in issue discovery, issue-centroid mutation, Weaviate projection sync, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
+- drafts do not participate in issue discovery, issue-centroid mutation, issue search-vector maintenance, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
 - if a draft annotation carries `issueId`, that value is editable issue intent only until publication clears `draftedAt`
 - once a draft is published, it should no longer be edited; it may still be deleted later
 - drafts exist to support immediate managed review without relying on temporary browser-only or Redis-only state
@@ -65,7 +65,7 @@ Explicit link choices are human overrides:
 
 - while the annotation is still drafted, they store editable issue intent on the canonical score row
 - once published, they bypass similarity-based candidate selection for that annotation score
-- publication clears `draftedAt`, emits `ScoreCreated` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation, refresh event write when needed, projection sync, and ClickHouse analytics sync
+- publication clears `draftedAt`, emits `ScoreCreated` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation (which transparently refreshes the derived `centroid_embedding` inside `IssueRepository.save`), refresh event write when needed, and ClickHouse analytics sync
 - explicitly linked issues remain immediately visible only after publication
 
 ## Managed Queue Review
@@ -132,11 +132,12 @@ User annotations are often too short or vague to cluster well.
 
 Before issue discovery:
 
-- preserve the original human text in metadata
+- preserve the original human text in `metadata.rawFeedback`
 - enrich the canonical `feedback` field with surrounding context
-- use the enriched canonical feedback for clustering
+- use the enriched canonical feedback for the primary clustering pass
+- if the primary pass finds no existing issue and the raw text differs from the enriched feedback, run a fallback discovery pass with the raw feedback before creating a new issue
 
-This lets the system cluster annotation-derived feedback without losing the raw human signal.
+This lets the system cluster annotation-derived feedback with contextual, generalized wording without losing the raw human signal when the enrichment over-generalizes or shifts vocabulary.
 
 Concrete v1 behavior worth understanding:
 
@@ -154,7 +155,7 @@ Important v2 carry-forward:
 2. write or update the canonical Postgres score row, keeping `draftedAt` set while the annotation is still a draft
 3. preserve raw human text in metadata
 4. enrich the canonical feedback when needed
-5. while `draftedAt` is still set, keep the score out of issue discovery, issue-centroid mutation, Weaviate projection sync, evaluation alignment, and ClickHouse analytics
+5. while `draftedAt` is still set, keep the score out of issue discovery, issue-centroid mutation, issue search-vector maintenance, evaluation alignment, and ClickHouse analytics
 6. if the annotator selected an existing issue while drafting, keep that `issue_id` only as editable draft intent
 7. when the human-editable draft becomes due, the `annotation-scores:publish` task clears `draftedAt`
 8. if the published annotation had a linked issue selected while drafted and is failed/non-errored, the emitted `ScoreCreated` payload carries that selected `issueId` for centralized direct assignment

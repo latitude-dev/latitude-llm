@@ -64,24 +64,38 @@
                     "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
-                  "alertNotifications": {
-                    "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
+                  "notifications": {
+                    "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
                     "type": "object",
                     "properties": {
-                      "issue.new": {
-                        "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
-                        "type": "boolean"
-                      },
-                      "issue.regressed": {
-                        "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
-                        "type": "boolean"
-                      },
-                      "issue.escalating": {
-                        "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
-                        "type": "boolean"
-                      },
-                      "escalationSensitivity": {
-                        "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                      "incidents": {
+                        "description": "Per-alert-kind opt-out for incident notifications.",
+                        "type": "object",
+                        "properties": {
+                          "issue.new": {
+                            "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          },
+                          "issue.regressed": {
+                            "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          },
+                          "issue.escalating": {
+                            "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "escalation": {
+                    "description": "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
+                    "type": "object",
+                    "properties": {
+                      "sensitivity": {
+                        "description": "Sensitivity of the escalation detector, 1 (most sensitive, more incidents) to 6 (least sensitive, fewer incidents). Defaults to a balanced value when omitted.",
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 6
@@ -192,24 +206,38 @@
                           "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                           "type": "boolean"
                         },
-                        "alertNotifications": {
-                          "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
+                        "notifications": {
+                          "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
                           "type": "object",
                           "properties": {
-                            "issue.new": {
-                              "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
-                              "type": "boolean"
-                            },
-                            "issue.regressed": {
-                              "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
-                              "type": "boolean"
-                            },
-                            "issue.escalating": {
-                              "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
-                              "type": "boolean"
-                            },
-                            "escalationSensitivity": {
-                              "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                            "incidents": {
+                              "description": "Per-alert-kind opt-out for incident notifications.",
+                              "type": "object",
+                              "properties": {
+                                "issue.new": {
+                                  "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                                  "type": "boolean"
+                                },
+                                "issue.regressed": {
+                                  "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                                  "type": "boolean"
+                                },
+                                "issue.escalating": {
+                                  "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                                  "type": "boolean"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "escalation": {
+                          "description": "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
+                          "type": "object",
+                          "properties": {
+                            "sensitivity": {
+                              "description": "Sensitivity of the escalation detector, 1 (most sensitive, more incidents) to 6 (least sensitive, fewer incidents). Defaults to a balanced value when omitted.",
                               "type": "integer",
                               "minimum": 1,
                               "maximum": 6
@@ -348,24 +376,38 @@
                     "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
-                  "alertNotifications": {
-                    "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
+                  "notifications": {
+                    "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
                     "type": "object",
                     "properties": {
-                      "issue.new": {
-                        "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
-                        "type": "boolean"
-                      },
-                      "issue.regressed": {
-                        "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
-                        "type": "boolean"
-                      },
-                      "issue.escalating": {
-                        "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
-                        "type": "boolean"
-                      },
-                      "escalationSensitivity": {
-                        "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                      "incidents": {
+                        "description": "Per-alert-kind opt-out for incident notifications.",
+                        "type": "object",
+                        "properties": {
+                          "issue.new": {
+                            "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          },
+                          "issue.regressed": {
+                            "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          },
+                          "issue.escalating": {
+                            "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "escalation": {
+                    "description": "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
+                    "type": "object",
+                    "properties": {
+                      "sensitivity": {
+                        "description": "Sensitivity of the escalation detector, 1 (most sensitive, more incidents) to 6 (least sensitive, fewer incidents). Defaults to a balanced value when omitted.",
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 6
@@ -457,24 +499,38 @@
                 "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                 "type": "boolean"
               },
-              "alertNotifications": {
-                "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
+              "notifications": {
+                "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
                 "type": "object",
                 "properties": {
-                  "issue.new": {
-                    "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
-                    "type": "boolean"
-                  },
-                  "issue.regressed": {
-                    "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
-                    "type": "boolean"
-                  },
-                  "issue.escalating": {
-                    "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
-                    "type": "boolean"
-                  },
-                  "escalationSensitivity": {
-                    "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                  "incidents": {
+                    "description": "Per-alert-kind opt-out for incident notifications.",
+                    "type": "object",
+                    "properties": {
+                      "issue.new": {
+                        "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "issue.regressed": {
+                        "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      },
+                      "issue.escalating": {
+                        "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "escalation": {
+                "description": "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
+                "type": "object",
+                "properties": {
+                  "sensitivity": {
+                    "description": "Sensitivity of the escalation detector, 1 (most sensitive, more incidents) to 6 (least sensitive, fewer incidents). Defaults to a balanced value when omitted.",
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 6
@@ -542,24 +598,38 @@
                     "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
                     "type": "boolean"
                   },
-                  "alertNotifications": {
-                    "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
+                  "notifications": {
+                    "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
                     "type": "object",
                     "properties": {
-                      "issue.new": {
-                        "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
-                        "type": "boolean"
-                      },
-                      "issue.regressed": {
-                        "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
-                        "type": "boolean"
-                      },
-                      "issue.escalating": {
-                        "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
-                        "type": "boolean"
-                      },
-                      "escalationSensitivity": {
-                        "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
+                      "incidents": {
+                        "description": "Per-alert-kind opt-out for incident notifications.",
+                        "type": "object",
+                        "properties": {
+                          "issue.new": {
+                            "description": "Send a notification when a new issue is discovered. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          },
+                          "issue.regressed": {
+                            "description": "Send a notification when a previously-resolved issue regresses. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          },
+                          "issue.escalating": {
+                            "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "escalation": {
+                    "description": "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
+                    "type": "object",
+                    "properties": {
+                      "sensitivity": {
+                        "description": "Sensitivity of the escalation detector, 1 (most sensitive, more incidents) to 6 (least sensitive, fewer incidents). Defaults to a balanced value when omitted.",
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 6

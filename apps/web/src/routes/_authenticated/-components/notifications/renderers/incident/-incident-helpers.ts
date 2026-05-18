@@ -1,4 +1,4 @@
-import type { IncidentNotificationPayload } from "@domain/notifications"
+import type { IncidentOpenedPayload } from "@domain/notifications"
 import { useQuery } from "@tanstack/react-query"
 import {
   getIssueLifecycleSummary,
@@ -10,7 +10,7 @@ import {
 } from "../../../../../../domains/notifications/notifications.functions.ts"
 
 export function useLiveIssueSummary(
-  payload: IncidentNotificationPayload,
+  payload: IncidentOpenedPayload,
   fallback: IncidentTargetResult | null = null,
 ): IssueLifecycleSummaryRecord | null {
   const projectId = payload.projectId ?? fallback?.projectId ?? undefined
@@ -27,7 +27,7 @@ export function useLiveIssueSummary(
 
 // Only fires when the payload snapshot is missing fields — healthy rows skip the network call.
 export function useIncidentLinkFallback(
-  payload: IncidentNotificationPayload,
+  payload: IncidentOpenedPayload,
   alertIncidentId: string | null,
 ): IncidentTargetResult | null {
   const needsFallback = !payload.issueId || !payload.projectSlug
@@ -43,7 +43,7 @@ export function useIncidentLinkFallback(
 
 // Returns `undefined` when neither the payload nor the fallback can produce a target.
 export function buildIssueUrl(
-  payload: IncidentNotificationPayload,
+  payload: IncidentOpenedPayload,
   fallback: IncidentTargetResult | null = null,
 ): string | undefined {
   const issueId = payload.issueId ?? fallback?.issueId

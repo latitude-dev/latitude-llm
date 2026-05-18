@@ -155,8 +155,11 @@ describe("assignPersonality (gate-then-rank)", () => {
   })
 
   it("returns Surgeon when Edit excess wins after baseline subtraction", () => {
+    // Edit 40% (excess +25pp → score 0.83) beats Detective at read 30%
+    // (excess +7pp → score 0.23). Bash 30% sits below the 40% baseline so
+    // Conductor doesn't score either.
     const result = run({
-      toolMix: { ...baseMix, edit: 40, read: 50, bash: 10 },
+      toolMix: { ...baseMix, edit: 40, read: 30, bash: 30 },
       filesTouched: 80,
     })
     expect(result.kind).toBe("surgeon")
@@ -164,9 +167,11 @@ describe("assignPersonality (gate-then-rank)", () => {
   })
 
   it("returns Architect when Write excess wins after baseline subtraction", () => {
-    // Write 25% → excess 20pp; Detective (read 50 → 10pp, search 0 → -10pp) = 0.
+    // Write 25% → excess +20pp → score 0.67. Everything else sits at or
+    // below baseline (read 22 / edit 15 / bash 38), so Architect is the
+    // only archetype with a positive score.
     const result = run({
-      toolMix: { ...baseMix, write: 25, edit: 15, read: 50, bash: 10 },
+      toolMix: { ...baseMix, write: 25, edit: 15, read: 22, bash: 38 },
     })
     expect(result.kind).toBe("architect")
     expect(result.evidence[0]).toContain("25%")
@@ -233,12 +238,19 @@ describe("assignPersonality (gate-then-rank)", () => {
     expect(result.kind).toBe("shipper")
   })
 
-  it("regression: light explorer (User B) lands on Consultant, not Conductor", () => {
+  it("regression: light explorer (User B) lands on Detective under calibrated baselines", () => {
     // Snapshot of User B: 6 sessions, only 90 lines touched, 48 commands.
     // After bash sub-classification, most of those 48 commands route
     // away from `bash`: 8 ls + 6 grep → search, 1 cat → read, 1 curl →
-    // research, 2 excluded (open + claude). Remaining bash bucket is
-    // tiny; Consultant's gate (sessions ≥ 5 AND lines < 200) wins.
+    // research, 2 excluded (open + claude). Remaining bash bucket is tiny.
+    //
+    // With the calibrated baselines (read 0.22, search 0.01), the
+    // user's read+search share of 64% gives Detective an excess of
+    // ~+41pp — saturated score 1.0. That beats Consultant's gate-pass
+    // score (sessions = 6, normalised + rare-bonused to ~0.75). The
+    // earlier "lands on Consultant" expectation reflected the older
+    // pre-calibration baselines (read 0.40, search 0.10) which masked
+    // the read-heaviness of this snapshot.
     const result = run({
       toolMix: {
         ...baseMix,
@@ -261,7 +273,7 @@ describe("assignPersonality (gate-then-rank)", () => {
       writeLines: 10,
       linesRead: 800,
     })
-    expect(result.kind).toBe("consultant")
+    expect(result.kind).toBe("detective")
   })
 
   it("Shipper fires when shipping happens via `gh pr create` / `merge` even with zero git commits", () => {

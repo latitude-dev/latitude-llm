@@ -19,7 +19,6 @@ const makeListIssuesResult = (): ListIssuesResult => ({
   items: [
     {
       id: "issue-a",
-      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       projectId: "project-1",
       name: "Issue A",
       description: "First issue",
@@ -42,7 +41,6 @@ const makeListIssuesResult = (): ListIssuesResult => ({
     },
     {
       id: "issue-b",
-      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       projectId: "project-1",
       name: "Issue B",
       description: "Second issue",

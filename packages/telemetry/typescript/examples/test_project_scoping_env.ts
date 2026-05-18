@@ -2,14 +2,14 @@
  * Project scoping — env-driven default + per-capture override.
  *
  * Reads the default project slug from `LATITUDE_PROJECT_SLUG` and lets specific captures
- * override it via `capture({ projectSlug })`. A common shape for services that run in many
+ * override it via `capture({ project })`. A common shape for services that run in many
  * environments (staging/prod each have their own project slug) but still need to route a
  * subset of spans elsewhere.
  *
  * Resolution precedence (highest → lowest):
- *   1. `capture({ projectSlug })`           — emits `latitude.project` on the span
+ *   1. `capture({ project })`               — emits `latitude.project` on the span
  *   2. OTEL resource attribute `latitude.project`  — bare-OTEL setups
- *   3. ctor `projectSlug`                   — sent as `X-Latitude-Project` header
+ *   3. constructor `project`                — sent as `X-Latitude-Project` header
  *
  * The override slug (`evaluation-runs` below) must exist in the same org as `LATITUDE_API_KEY`.
  *
@@ -29,7 +29,7 @@ import { capture, Latitude } from "../src"
 const DEFAULT_SLUG = process.env.LATITUDE_PROJECT_SLUG!
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: DEFAULT_SLUG,
+  project: DEFAULT_SLUG,
   disableBatch: true,
   instrumentations: { openai: OpenAI },
 })
@@ -50,7 +50,7 @@ async function main() {
     console.log("default-route →", r.choices[0]?.message?.content)
   })
 
-  // Per-capture override beats the ctor default. Routes to `evaluation-runs` regardless of env.
+  // Per-capture override beats the constructor default. Routes to `evaluation-runs` regardless of env.
   await capture(
     "evaluation-batch",
     async () => {
@@ -61,7 +61,7 @@ async function main() {
       })
       console.log(`${OVERRIDE_SLUG} →`, r.choices[0]?.message?.content)
     },
-    { projectSlug: OVERRIDE_SLUG },
+    { project: OVERRIDE_SLUG },
   )
 
   await latitude.flush()

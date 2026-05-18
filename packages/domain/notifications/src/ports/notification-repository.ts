@@ -1,4 +1,12 @@
-import type { OrganizationId, RepositoryError, SqlClient, UserId } from "@domain/shared"
+import type {
+  NotFoundError,
+  NotificationId,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  SqlClient,
+  UserId,
+} from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Notification } from "../entities/notification.ts"
 
@@ -40,12 +48,23 @@ export interface MarkNotificationSeenInput {
 
 export interface NotificationRepositoryShape {
   /**
-   * Insert a batch of notification rows. Conflicts on the
-   * `(organization_id, user_id, source_id, payload->>'event')` partial unique
-   * index (incident notifications) are silently dropped — the create-incident
-   * use case relies on this for idempotent outbox redelivery.
+   * Insert a row, deduping on the `(organization_id, user_id,
+   * idempotency_key)` unique index. Returns the inserted row, or `null`
+   * when the conflict path silently dropped the insert (outbox redelivery
+   * — the row already exists).
    */
-  bulkInsert(notifications: readonly Notification[]): Effect.Effect<void, RepositoryError, SqlClient>
+  insertIfAbsent(row: Notification): Effect.Effect<Notification | null, RepositoryError, SqlClient>
+
+  /** Used by the email worker to fetch the row before rendering. */
+  findById(id: NotificationId): Effect.Effect<Notification, NotFoundError | RepositoryError, SqlClient>
+
+  /**
+   * Conditionally stamp `emailed_at = now()` on a row, scoped to
+   * `WHERE emailed_at IS NULL`. Returns `true` when we won the race and
+   * are the one who should send the email; `false` when another delivery
+   * (or a retry) already stamped it.
+   */
+  markEmailed(id: NotificationId): Effect.Effect<boolean, RepositoryError, SqlClient>
 
   list(input: ListNotificationsInput): Effect.Effect<ListNotificationsResult, RepositoryError, SqlClient>
 
@@ -64,6 +83,18 @@ export interface NotificationRepositoryShape {
    * no-ops (no row matches the WHERE), not errors.
    */
   markSeen(input: MarkNotificationSeenInput): Effect.Effect<void, RepositoryError, SqlClient>
+
+  /**
+   * Cascade cleanup. Removes every notification anchored to the given
+   * project across all users of the (current RLS-scoped) organization.
+   * Called by the `ProjectDeleted` domain-event handler — per the
+   * platform's no-FK rule, referential integrity for `project_id` is
+   * application-layer.
+   */
+  deleteByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+  }): Effect.Effect<{ readonly deleted: number }, RepositoryError, SqlClient>
 }
 
 export class NotificationRepository extends Context.Service<NotificationRepository, NotificationRepositoryShape>()(

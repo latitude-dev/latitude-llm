@@ -65,5 +65,35 @@ describe("embedScoreFeedbackUseCase", () => {
     })
     expect(result.normalizedEmbedding[0]).toBeCloseTo(0.6)
     expect(result.normalizedEmbedding[1]).toBeCloseTo(0.8)
+    expect(result.rawFeedback).toBeUndefined()
+    expect(result.rawNormalizedEmbedding).toBeUndefined()
+  })
+
+  it("also embeds raw annotation feedback when it differs from enriched feedback", async () => {
+    const score = makeScore({
+      feedback: "Clusterable enriched feedback",
+      metadata: { rawFeedback: "raw human feedback" },
+    })
+    const { repository, scores } = createFakeScoreRepository()
+    scores.set(score.id, score)
+
+    const { layer: aiLayer, calls: aiCalls } = createFakeAI({
+      embed: (input) => Effect.succeed({ embedding: input.text === score.feedback ? [3, 4] : [5, 12] }),
+    })
+
+    const result = await Effect.runPromise(
+      embedScoreFeedbackUseCase({ organizationId, projectId, scoreId: score.id }).pipe(
+        Effect.provide(aiLayer),
+        Effect.provideService(ScoreRepository, repository),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
+      ),
+    )
+
+    expect(aiCalls.embed.map((call) => call.text)).toEqual([score.feedback, "raw human feedback"])
+    expect(result.normalizedEmbedding[0]).toBeCloseTo(0.6)
+    expect(result.normalizedEmbedding[1]).toBeCloseTo(0.8)
+    expect(result.rawFeedback).toBe("raw human feedback")
+    expect(result.rawNormalizedEmbedding?.[0]).toBeCloseTo(5 / 13)
+    expect(result.rawNormalizedEmbedding?.[1]).toBeCloseTo(12 / 13)
   })
 })

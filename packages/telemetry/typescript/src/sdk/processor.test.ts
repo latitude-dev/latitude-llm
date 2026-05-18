@@ -25,18 +25,18 @@ describe("LatitudeSpanProcessor", () => {
   })
 
   const apiKey = "test-api-key"
-  const projectSlug = "test-project"
+  const project = "test-project"
 
   it("should throw if apiKey is empty", () => {
-    expect(() => new LatitudeSpanProcessor("", projectSlug)).toThrow("apiKey is required")
+    expect(() => new LatitudeSpanProcessor("", project)).toThrow("apiKey is required")
   })
 
-  it("allows an undefined projectSlug (per-capture scoping covers the rest)", () => {
+  it("allows an undefined project (per-capture scoping covers the rest)", () => {
     expect(() => new LatitudeSpanProcessor(apiKey, undefined)).not.toThrow()
     expect(() => new LatitudeSpanProcessor(apiKey, "")).not.toThrow()
   })
 
-  it("stamps `latitude.project` on the span when capture sets projectSlug", () => {
+  it("stamps `latitude.project` on the span when capture sets project", () => {
     const processor = new LatitudeSpanProcessor(apiKey, "fallback-slug")
     const mockSpan = createMockRootSpan()
 
@@ -48,11 +48,11 @@ describe("LatitudeSpanProcessor", () => {
 
         expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTRIBUTES.project, "call-summariser")
       },
-      { projectSlug: "call-summariser" },
+      { project: "call-summariser" },
     )
   })
 
-  it("does not stamp `latitude.project` when no projectSlug is provided anywhere", () => {
+  it("does not stamp `latitude.project` when no project is provided anywhere", () => {
     const processor = new LatitudeSpanProcessor(apiKey, undefined)
     const mockSpan = createMockRootSpan()
 
@@ -65,7 +65,7 @@ describe("LatitudeSpanProcessor", () => {
   })
 
   it("should stamp latitude attributes from context on span start", () => {
-    const processor = new LatitudeSpanProcessor(apiKey, projectSlug)
+    const processor = new LatitudeSpanProcessor(apiKey, project)
     const mockSpan = createMockRootSpan()
 
     capture(
@@ -86,7 +86,7 @@ describe("LatitudeSpanProcessor", () => {
   })
 
   it("should not stamp attributes when no latitude context exists", () => {
-    const processor = new LatitudeSpanProcessor(apiKey, projectSlug)
+    const processor = new LatitudeSpanProcessor(apiKey, project)
     const mockSpan = createMockSpan()
     const ctx = context.active()
 
@@ -99,7 +99,7 @@ describe("LatitudeSpanProcessor", () => {
   it("should NOT stamp service.name as a span attribute when serviceName option is set", () => {
     // service.name is a resource attribute per OTel semantic conventions, not a span attribute.
     // It's applied via the exporter wrapper instead — covered by the init.test.ts integration tests.
-    const processor = new LatitudeSpanProcessor(apiKey, projectSlug, { serviceName: "billing-api" })
+    const processor = new LatitudeSpanProcessor(apiKey, project, { serviceName: "billing-api" })
     const mockSpan = createMockSpan()
     const ctx = context.active()
 
@@ -109,7 +109,7 @@ describe("LatitudeSpanProcessor", () => {
   })
 
   it("should not stamp empty tags", () => {
-    const processor = new LatitudeSpanProcessor(apiKey, projectSlug)
+    const processor = new LatitudeSpanProcessor(apiKey, project)
     const mockSpan = createMockSpan()
 
     capture(
@@ -126,7 +126,7 @@ describe("LatitudeSpanProcessor", () => {
   })
 
   it("should not stamp empty metadata", () => {
-    const processor = new LatitudeSpanProcessor(apiKey, projectSlug)
+    const processor = new LatitudeSpanProcessor(apiKey, project)
     const mockSpan = createMockSpan()
 
     capture(
@@ -143,7 +143,7 @@ describe("LatitudeSpanProcessor", () => {
   })
 
   it("should use name from options when provided", () => {
-    const processor = new LatitudeSpanProcessor(apiKey, projectSlug)
+    const processor = new LatitudeSpanProcessor(apiKey, project)
     const mockSpan = createMockRootSpan()
 
     capture("outer", () => {

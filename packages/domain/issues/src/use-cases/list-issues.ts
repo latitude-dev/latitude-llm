@@ -21,8 +21,7 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { type IssueSource, IssueState } from "../entities/issue.ts"
 import { deriveIssueLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
-import { type IssueProjectionCandidate, IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
-import { IssueRepository, type IssueWithLifecycle } from "../ports/issue-repository.ts"
+import { IssueRepository, type IssueSearchCandidate, type IssueWithLifecycle } from "../ports/issue-repository.ts"
 
 export const issuesLifecycleGroupSchema = z.enum(["active", "archived"])
 export type IssuesLifecycleGroup = z.infer<typeof issuesLifecycleGroupSchema>
@@ -89,7 +88,6 @@ export interface IssueListAnalytics {
 
 export interface IssueListItem {
   readonly id: string
-  readonly uuid: string
   readonly projectId: string
   readonly name: string
   readonly description: string
@@ -409,12 +407,7 @@ export const listIssuesUseCase = (
 ): Effect.Effect<
   ListIssuesResult,
   ListIssuesError,
-  | ChSqlClient
-  | EvaluationRepository
-  | IssueProjectionRepository
-  | IssueRepository
-  | ScoreAnalyticsRepository
-  | SqlClient
+  ChSqlClient | EvaluationRepository | IssueRepository | ScoreAnalyticsRepository | SqlClient
 > =>
   Effect.gen(function* () {
     const parsed = listIssuesInputSchema.parse(input)
@@ -422,7 +415,6 @@ export const listIssuesUseCase = (
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const issueRepository = yield* IssueRepository
     const evaluationRepository = yield* EvaluationRepository
-    const issueProjectionRepository = yield* IssueProjectionRepository
     const now = parsed.now ?? new Date()
     const selectedTimeRange = toScoreAnalyticsTimeRange(parsed.timeRange)
 
@@ -433,12 +425,12 @@ export const listIssuesUseCase = (
     })
 
     const searchCandidatesEffect = parsed.search
-      ? issueProjectionRepository.hybridSearch({
+      ? issueRepository.hybridSearch({
           projectId: parsed.projectId,
           query: parsed.search.query,
-          vector: parsed.search.normalizedEmbedding,
+          normalizedEmbedding: parsed.search.normalizedEmbedding,
         })
-      : Effect.succeed([] satisfies readonly IssueProjectionCandidate[])
+      : Effect.succeed([] satisfies readonly IssueSearchCandidate[])
 
     const [windowMetrics, searchCandidates, totalTraces] = yield* Effect.all([
       windowMetricsEffect,
@@ -450,7 +442,10 @@ export const listIssuesUseCase = (
       }),
     ])
 
-    const candidateIssueIds = windowMetrics.map((metric) => metric.issueId)
+    const windowMetricsByIssueId = new Map(windowMetrics.map((metric) => [metric.issueId, metric] as const))
+    const candidateIssueIds = parsed.search
+      ? searchCandidates.map((candidate) => candidate.issueId).filter((issueId) => windowMetricsByIssueId.has(issueId))
+      : windowMetrics.map((metric) => metric.issueId)
     const histogramTimeRange = resolveHistogramTimeRange({
       timeRange: parsed.timeRange,
       now,
@@ -492,19 +487,15 @@ export const listIssuesUseCase = (
       } satisfies ListIssuesResult
     }
 
-    const searchScoresByUuid = new Map(searchCandidates.map((candidate) => [candidate.uuid, candidate.score] as const))
-    const windowMetricsByIssueId = new Map(windowMetrics.map((metric) => [metric.issueId, metric] as const))
+    const searchScoresByIssueId = new Map(
+      searchCandidates.map((candidate) => [candidate.issueId, candidate.score] as const),
+    )
     const canonicalIssues = yield* issueRepository.findByIds({
       projectId: parsed.projectId,
       issueIds: candidateIssueIds,
     })
 
-    const searchMatchedIssues =
-      parsed.search === undefined
-        ? canonicalIssues
-        : canonicalIssues.filter((issue) => searchScoresByUuid.has(issue.uuid))
-
-    const matchedIssueIds = searchMatchedIssues.map((issue) => issue.id)
+    const matchedIssueIds = canonicalIssues.map((issue) => issue.id)
     const fullHistoryOccurrences =
       matchedIssueIds.length === 0
         ? []
@@ -517,7 +508,7 @@ export const listIssuesUseCase = (
       fullHistoryOccurrences.map((occurrence) => [occurrence.issueId, occurrence] as const),
     )
 
-    const analyticsCandidates = searchMatchedIssues
+    const analyticsCandidates = canonicalIssues
       .map((issue) => {
         const windowMetric = windowMetricsByIssueId.get(issue.id)
         if (!windowMetric) {
@@ -528,7 +519,7 @@ export const listIssuesUseCase = (
           issue,
           windowMetric,
           occurrence: occurrencesByIssueId.get(issue.id) ?? null,
-          similarityScore: searchScoresByUuid.get(issue.uuid) ?? null,
+          similarityScore: searchScoresByIssueId.get(issue.id) ?? null,
           now,
         })
       })
@@ -629,7 +620,6 @@ export const listIssuesUseCase = (
       },
       items: pageCandidates.map((candidate) => ({
         id: candidate.issue.id,
-        uuid: candidate.issue.uuid,
         projectId: candidate.issue.projectId,
         name: candidate.issue.name,
         description: candidate.issue.description,

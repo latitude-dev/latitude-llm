@@ -131,13 +131,25 @@
             "type": "boolean",
             "description": "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted."
           },
-          "alertNotifications": {
-            "$ref": "#/components/schemas/AlertNotificationsSetting"
+          "notifications": {
+            "$ref": "#/components/schemas/NotificationsSetting"
+          },
+          "escalation": {
+            "$ref": "#/components/schemas/EscalationSetting"
           }
         },
         "description": "Per-project settings overrides. `null` means inherit from the organization."
       },
-      "AlertNotificationsSetting": {
+      "NotificationsSetting": {
+        "type": "object",
+        "properties": {
+          "incidents": {
+            "$ref": "#/components/schemas/IncidentNotificationsSetting"
+          }
+        },
+        "description": "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside."
+      },
+      "IncidentNotificationsSetting": {
         "type": "object",
         "properties": {
           "issue.new": {
@@ -151,15 +163,21 @@
           "issue.escalating": {
             "type": "boolean",
             "description": "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted."
-          },
-          "escalationSensitivity": {
+          }
+        },
+        "description": "Per-alert-kind opt-out for incident notifications."
+      },
+      "EscalationSetting": {
+        "type": "object",
+        "properties": {
+          "sensitivity": {
             "type": "integer",
             "minimum": 1,
             "maximum": 6,
-            "description": "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted."
+            "description": "Sensitivity of the escalation detector, 1 (most sensitive, more incidents) to 6 (least sensitive, fewer incidents). Defaults to a balanced value when omitted."
           }
         },
-        "description": "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values."
+        "description": "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled."
       },
       "Error": {
         "type": "object",

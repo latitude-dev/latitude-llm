@@ -20,7 +20,6 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { type Issue, IssueState } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
-import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
 import { listIssuesUseCase } from "./list-issues.ts"
@@ -30,7 +29,6 @@ const projectId = ProjectId("p".repeat(24))
 
 const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   id: IssueId("i".repeat(24)),
-  uuid: "11111111-1111-4111-8111-111111111111",
   organizationId: organizationId as string,
   projectId: projectId as string,
   slug: "test-issue",
@@ -199,27 +197,24 @@ const createScoreAnalyticsRepository = (input: {
   return { repository, windowMetricInputs, aggregateInputs, histogramInputs, trendInputs, tagsInputs }
 }
 
-const createIssueProjectionRepository = (
+const createIssueSearch = (
   candidates: readonly {
-    uuid: string
-    title: string
+    issueId: IssueId
+    name: string
     description: string
     score: number
   }[],
 ) => {
-  const calls: Array<{ query: string; vector: readonly number[] }> = []
+  const calls: Array<{ query: string; normalizedEmbedding: readonly number[] }> = []
 
-  const repository = {
-    upsert: () => Effect.die("Unexpected IssueProjectionRepository.upsert in listIssuesUseCase test"),
-    delete: () => Effect.die("Unexpected IssueProjectionRepository.delete in listIssuesUseCase test"),
-    hybridSearch: (input: { readonly query: string; readonly vector: readonly number[] }) =>
+  return {
+    calls,
+    hybridSearch: (input: { readonly query: string; readonly normalizedEmbedding: readonly number[] }) =>
       Effect.sync(() => {
-        calls.push({ query: input.query, vector: input.vector })
+        calls.push({ query: input.query, normalizedEmbedding: input.normalizedEmbedding })
         return candidates
       }),
   }
-
-  return { repository, calls }
 }
 
 describe("listIssuesUseCase", () => {
@@ -227,14 +222,12 @@ describe("listIssuesUseCase", () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
     const newestIssue = makeIssue({
       id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),
-      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       createdAt: new Date("2026-04-07T08:00:00.000Z"),
       updatedAt: new Date("2026-04-07T08:00:00.000Z"),
       clusteredAt: new Date("2026-04-07T08:00:00.000Z"),
     })
     const regressedIssue = makeIssue({
       id: IssueId("bbbbbbbbbbbbbbbbbbbbbbbb"),
-      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       resolvedAt: new Date("2026-04-01T12:00:00.000Z"),
       createdAt: new Date("2026-03-20T08:00:00.000Z"),
       updatedAt: new Date("2026-03-20T08:00:00.000Z"),
@@ -242,7 +235,6 @@ describe("listIssuesUseCase", () => {
     })
     const ignoredIssue = makeIssue({
       id: IssueId("cccccccccccccccccccccccc"),
-      uuid: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       ignoredAt: new Date("2026-04-02T12:00:00.000Z"),
       createdAt: new Date("2026-03-10T08:00:00.000Z"),
       updatedAt: new Date("2026-03-10T08:00:00.000Z"),
@@ -304,7 +296,7 @@ describe("listIssuesUseCase", () => {
       ],
       totalTraces: 0,
     })
-    const { repository: issueProjectionRepository, calls } = createIssueProjectionRepository([])
+    const { calls } = createIssueSearch([])
 
     const result = await Effect.runPromise(
       listIssuesUseCase({
@@ -319,7 +311,6 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(IssueRepository, issueRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
@@ -369,18 +360,15 @@ describe("listIssuesUseCase", () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
     const activeIssue = makeIssue({
       id: IssueId("a".repeat(24)),
-      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       name: "Active issue",
     })
     const regressedIssue = makeIssue({
       id: IssueId("b".repeat(24)),
-      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       name: "Regressed issue",
       resolvedAt: new Date("2026-04-05T00:00:00.000Z"),
     })
     const archivedIssue = makeIssue({
       id: IssueId("c".repeat(24)),
-      uuid: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       name: "Archived issue",
       resolvedAt: new Date("2026-04-07T00:00:00.000Z"),
     })
@@ -465,7 +453,7 @@ describe("listIssuesUseCase", () => {
       ],
       totalTraces: 10,
     })
-    const { repository: issueProjectionRepository, calls } = createIssueProjectionRepository([])
+    const { calls } = createIssueSearch([])
 
     const result = await Effect.runPromise(
       listIssuesUseCase({
@@ -479,7 +467,6 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(IssueRepository, issueRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
@@ -521,11 +508,9 @@ describe("listIssuesUseCase", () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
     const taggedIssue = makeIssue({
       id: IssueId("a".repeat(24)),
-      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     })
     const untaggedIssue = makeIssue({
       id: IssueId("b".repeat(24)),
-      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     })
 
     const { repository: issueRepository } = createFakeIssueRepository([taggedIssue, untaggedIssue])
@@ -541,7 +526,7 @@ describe("listIssuesUseCase", () => {
       ],
       tagsAggregates: [{ issueId: taggedIssue.id, tags: ["checkout", "billing"] }],
     })
-    const { repository: issueProjectionRepository } = createIssueProjectionRepository([])
+    createIssueSearch([])
 
     const result = await Effect.runPromise(
       listIssuesUseCase({ organizationId, projectId, now }).pipe(
@@ -550,7 +535,6 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(IssueRepository, issueRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
@@ -573,14 +557,14 @@ describe("listIssuesUseCase", () => {
 
   it("honors the operator-selected time range when aggregating tags", async () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
-    const issue = makeIssue({ id: IssueId("a".repeat(24)), uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" })
+    const issue = makeIssue({ id: IssueId("a".repeat(24)) })
     const { repository: issueRepository } = createFakeIssueRepository([issue])
     const { repository: evaluationRepository } = createEvaluationRepository()
     const { repository: scoreAnalyticsRepository, tagsInputs } = createScoreAnalyticsRepository({
       windowMetrics: [makeWindowMetric({ issueId: issue.id })],
       fullHistoryOccurrences: [makeOccurrence({ issueId: issue.id })],
     })
-    const { repository: issueProjectionRepository } = createIssueProjectionRepository([])
+    createIssueSearch([])
 
     const selectedFrom = new Date("2026-04-01T00:00:00.000Z")
     const selectedTo = new Date("2026-04-08T23:59:59.999Z")
@@ -597,7 +581,6 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(IssueRepository, issueRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
@@ -686,7 +669,6 @@ describe("listIssuesUseCase", () => {
       const now = new Date("2026-04-10T12:00:00.000Z")
       const issue = makeIssue({
         id: IssueId("m".repeat(24)),
-        uuid: "56565656-5656-4565-8565-565656565656",
         name: "Histogram issue",
       })
 
@@ -713,7 +695,7 @@ describe("listIssuesUseCase", () => {
         ],
         totalTraces: 3,
       })
-      const { repository: issueProjectionRepository } = createIssueProjectionRepository([])
+      createIssueSearch([])
 
       const result = await Effect.runPromise(
         listIssuesUseCase({
@@ -727,7 +709,6 @@ describe("listIssuesUseCase", () => {
               Layer.succeed(IssueRepository, issueRepository),
               Layer.succeed(EvaluationRepository, evaluationRepository),
               Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-              Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
               Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
               Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
             ),
@@ -758,21 +739,34 @@ describe("listIssuesUseCase", () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
     const firstIssue = makeIssue({
       id: IssueId("d".repeat(24)),
-      uuid: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
       name: "First search match",
     })
     const secondIssue = makeIssue({
       id: IssueId("e".repeat(24)),
-      uuid: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
       name: "Second search match",
     })
     const thirdIssue = makeIssue({
       id: IssueId("f".repeat(24)),
-      uuid: "ffffffff-ffff-4fff-8fff-ffffffffffff",
       name: "Filtered by search",
     })
 
-    const { repository: issueRepository } = createFakeIssueRepository([firstIssue, secondIssue, thirdIssue])
+    const issueSearch = createIssueSearch([
+      {
+        issueId: secondIssue.id,
+        name: secondIssue.name,
+        description: secondIssue.description,
+        score: 0.9,
+      },
+      {
+        issueId: firstIssue.id,
+        name: firstIssue.name,
+        description: firstIssue.description,
+        score: 0.6,
+      },
+    ])
+    const { repository: issueRepository } = createFakeIssueRepository([firstIssue, secondIssue, thirdIssue], {
+      hybridSearch: issueSearch.hybridSearch,
+    })
     const { repository: evaluationRepository } = createEvaluationRepository()
     const { repository: scoreAnalyticsRepository, histogramInputs } = createScoreAnalyticsRepository({
       windowMetrics: [
@@ -799,20 +793,7 @@ describe("listIssuesUseCase", () => {
       histogramBuckets: [{ bucket: "2026-04-09", count: 8 }],
       totalTraces: 20,
     })
-    const { repository: issueProjectionRepository, calls } = createIssueProjectionRepository([
-      {
-        uuid: secondIssue.uuid,
-        title: secondIssue.name,
-        description: secondIssue.description,
-        score: 0.9,
-      },
-      {
-        uuid: firstIssue.uuid,
-        title: firstIssue.name,
-        description: firstIssue.description,
-        score: 0.6,
-      },
-    ])
+    const { calls } = issueSearch
 
     const result = await Effect.runPromise(
       listIssuesUseCase({
@@ -829,7 +810,6 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(IssueRepository, issueRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
@@ -840,29 +820,26 @@ describe("listIssuesUseCase", () => {
     expect(calls).toEqual([
       {
         query: "search query",
-        vector: [0.1, 0.9],
+        normalizedEmbedding: [0.1, 0.9],
       },
     ])
     expect(result.items.map((item) => item.id)).toEqual([secondIssue.id, firstIssue.id])
     expect(result.items.map((item) => item.similarityScore)).toEqual([0.9, 0.6])
-    expect(histogramInputs[0]?.issueIds).toEqual([firstIssue.id, secondIssue.id])
+    expect(histogramInputs[0]?.issueIds).toEqual([secondIssue.id, firstIssue.id])
   })
 
   it("sorts by occurrences and paginates visible rows", async () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
     const firstIssue = makeIssue({
       id: IssueId("g".repeat(24)),
-      uuid: "77777777-7777-4777-8777-777777777777",
       name: "First issue",
     })
     const secondIssue = makeIssue({
       id: IssueId("h".repeat(24)),
-      uuid: "88888888-8888-4888-8888-888888888888",
       name: "Second issue",
     })
     const thirdIssue = makeIssue({
       id: IssueId("j".repeat(24)),
-      uuid: "99999999-9999-4999-8999-999999999999",
       name: "Third issue",
     })
 
@@ -893,7 +870,7 @@ describe("listIssuesUseCase", () => {
       ],
       totalTraces: 5,
     })
-    const { repository: issueProjectionRepository } = createIssueProjectionRepository([])
+    createIssueSearch([])
 
     const result = await Effect.runPromise(
       listIssuesUseCase({
@@ -912,7 +889,6 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(IssueRepository, issueRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),
@@ -931,12 +907,10 @@ describe("listIssuesUseCase", () => {
     const now = new Date("2026-04-10T12:00:00.000Z")
     const oldestIssue = makeIssue({
       id: IssueId("k".repeat(24)),
-      uuid: "12121212-1212-4121-8121-121212121212",
       name: "Oldest issue",
     })
     const newestIssue = makeIssue({
       id: IssueId("l".repeat(24)),
-      uuid: "34343434-3434-4343-8343-343434343434",
       name: "Newest issue",
     })
 
@@ -961,7 +935,7 @@ describe("listIssuesUseCase", () => {
       ],
       totalTraces: 4,
     })
-    const { repository: issueProjectionRepository } = createIssueProjectionRepository([])
+    createIssueSearch([])
 
     const result = await Effect.runPromise(
       listIssuesUseCase({
@@ -978,7 +952,6 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(IssueRepository, issueRepository),
             Layer.succeed(EvaluationRepository, evaluationRepository),
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
-            Layer.succeed(IssueProjectionRepository, issueProjectionRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
           ),

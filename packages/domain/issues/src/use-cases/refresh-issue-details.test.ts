@@ -25,9 +25,8 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
-import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueProjectionRepository, createFakeIssueRepository } from "../testing/index.ts"
+import { createFakeIssueRepository } from "../testing/index.ts"
 import { refreshIssueDetailsUseCase } from "./refresh-issue-details.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
@@ -35,7 +34,6 @@ const projectId = "pppppppppppppppppppppppp"
 
 const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
-  uuid: "11111111-1111-4111-8111-111111111111",
   slug: "test-issue",
   organizationId,
   projectId,
@@ -157,7 +155,6 @@ describe("refreshIssueDetailsUseCase", () => {
         return Effect.succeed(lockedIssue)
       },
     })
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const { repository: scoreRepository } = createFakeScoreRepository({
       listByIssueId: () =>
         Effect.succeed({
@@ -176,7 +173,6 @@ describe("refreshIssueDetailsUseCase", () => {
         issueId: initialIssue.id,
       }).pipe(
         Effect.provide(aiLayer),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(
@@ -210,16 +206,6 @@ describe("refreshIssueDetailsUseCase", () => {
     expect(savedIssue?.centroid).toEqual(lockedIssue.centroid)
     expect(savedIssue?.clusteredAt).toEqual(lockedIssue.clusteredAt)
     expect(savedIssue?.updatedAt.getTime()).toBeGreaterThan(lockedIssue.updatedAt.getTime())
-    expect(store.size).toBe(1)
-    expect(Array.from(store.values())[0]).toEqual(
-      expect.objectContaining({
-        uuid: lockedIssue.uuid,
-        title: "Refreshed issue title",
-        description: "Refreshed issue description",
-        organizationId,
-        projectId,
-      }),
-    )
     expect(published).toHaveLength(2)
     expect(published).toEqual(
       expect.arrayContaining([
@@ -264,7 +250,6 @@ describe("refreshIssueDetailsUseCase", () => {
     const { layer: aiLayer } = createFakeAI({
       generate: createGenerateIssueDetails("Stable issue title", "Stable issue description"),
     })
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const { repository: issueRepository } = createFakeIssueRepository([issue], {
       save: () =>
         Effect.sync(() => {
@@ -289,7 +274,6 @@ describe("refreshIssueDetailsUseCase", () => {
         issueId: issue.id,
       }).pipe(
         Effect.provide(aiLayer),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(
@@ -313,7 +297,6 @@ describe("refreshIssueDetailsUseCase", () => {
       issueId: issue.id,
     })
     expect(saveCalls).toBe(0)
-    expect(store.size).toBe(0)
     expect(published).toEqual([
       {
         queue: "evaluations",
@@ -337,7 +320,6 @@ describe("refreshIssueDetailsUseCase", () => {
     const { layer: aiLayer, calls } = createFakeAI({
       generate: createGenerateIssueDetails("Refreshed issue title", "Refreshed issue description"),
     })
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const { repository: issueRepository } = createFakeIssueRepository([existingIssue], {
       findByIdForUpdate: () => Effect.fail(new NotFoundError({ entity: "Issue", id: existingIssue.id })),
     })
@@ -359,7 +341,6 @@ describe("refreshIssueDetailsUseCase", () => {
         issueId: existingIssue.id,
       }).pipe(
         Effect.provide(aiLayer),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(
@@ -383,7 +364,6 @@ describe("refreshIssueDetailsUseCase", () => {
       issueId: existingIssue.id,
     })
     expect(calls.generate).toHaveLength(1)
-    expect(store.size).toBe(0)
     expect(published).toEqual([])
   })
 
@@ -395,7 +375,6 @@ describe("refreshIssueDetailsUseCase", () => {
     const { layer: aiLayer } = createFakeAI({
       generate: createGenerateIssueDetails("Stable issue title", "Stable issue description"),
     })
-    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
     const { repository: issueRepository } = createFakeIssueRepository([issue])
     const { repository: scoreRepository } = createFakeScoreRepository({
       listByIssueId: () =>
@@ -425,7 +404,6 @@ describe("refreshIssueDetailsUseCase", () => {
         issueId: issue.id,
       }).pipe(
         Effect.provide(aiLayer),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(

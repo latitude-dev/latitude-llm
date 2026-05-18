@@ -17,3 +17,5 @@ export async function signupMagicLinkTemplate(data: SignupMagicLinkEmailData): P
     text: `Hi ${data.userName}, confirm your email to get started with Latitude: ${data.magicLinkUrl}`,
   }
 }
+
+export default SignupMagicLinkEmail

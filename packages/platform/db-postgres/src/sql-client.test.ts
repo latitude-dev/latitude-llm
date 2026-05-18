@@ -66,11 +66,17 @@ function extractSetConfigOrgId(stmt: unknown): string | null {
   if (
     stmt !== null &&
     typeof stmt === "object" &&
-    "params" in stmt &&
-    Array.isArray((stmt as { params: unknown }).params)
+    (("params" in stmt && Array.isArray((stmt as { params: unknown }).params)) ||
+      ("queryChunks" in stmt && Array.isArray((stmt as { queryChunks: unknown }).queryChunks)))
   ) {
-    const params = (stmt as { params: unknown[] }).params
-    if (params.length >= 2 && typeof params[1] === "string") return params[1]
+    const params =
+      "params" in stmt && Array.isArray((stmt as { params: unknown }).params)
+        ? (stmt as { params: unknown[] }).params
+        : (stmt as { queryChunks: unknown[] }).queryChunks
+    for (let index = params.length - 1; index >= 0; index -= 1) {
+      const param = params[index]
+      if (typeof param === "string") return param
+    }
   }
   return null
 }
@@ -113,7 +119,7 @@ describe("SqlClientLive", () => {
 
       expect(result).toBe(42)
       expect(state.transactionCallCount).toBe(1)
-      expect(state.executedStatements.length).toBe(1)
+      expect(state.executedStatements.length).toBe(2)
     })
 
     it("invokes set_config (RLS context) once per transaction", async () => {
@@ -123,8 +129,8 @@ describe("SqlClientLive", () => {
       await runWithSqlClient(client, orgId, (sql) => sql.transaction(Effect.succeed(null)))
 
       expect(state.transactionCallCount).toBe(1)
-      expect(state.executedStatements.length).toBe(1)
-      const orgFromStmt = extractSetConfigOrgId(state.executedStatements[0])
+      expect(state.executedStatements.length).toBe(2)
+      const orgFromStmt = state.executedStatements.map(extractSetConfigOrgId).find((value) => value === "tenant-abc")
       if (orgFromStmt !== null) expect(orgFromStmt).toBe("tenant-abc")
     })
   })
@@ -227,8 +233,10 @@ describe("SqlClientLive", () => {
 
       expect(result).toBe("result")
       expect(state.transactionCallCount).toBe(1)
-      expect(state.executedStatements.length).toBe(1)
-      const orgFromStmt = extractSetConfigOrgId(state.executedStatements[0])
+      expect(state.executedStatements.length).toBe(2)
+      const orgFromStmt = state.executedStatements
+        .map(extractSetConfigOrgId)
+        .find((value) => value === "org-query-alone")
       if (orgFromStmt !== null) expect(orgFromStmt).toBe("org-query-alone")
     })
   })
@@ -272,7 +280,7 @@ describe("SqlClientLive", () => {
       const result = await Effect.runPromise(effect)
 
       expect(result).toBe(defaultOrgId)
-      expect(state.executedStatements.length).toBe(0)
+      expect(state.executedStatements.length).toBe(1)
     })
   })
 

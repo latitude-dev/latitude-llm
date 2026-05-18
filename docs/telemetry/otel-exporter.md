@@ -237,7 +237,7 @@ tracer.init({ service: "my-app", env: "production" })
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 })
 ```
@@ -256,7 +256,7 @@ Sentry.init({
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 })
 ```
@@ -272,7 +272,7 @@ import { Latitude } from "@latitude-data/telemetry"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 })
 ```
@@ -291,7 +291,7 @@ honeycomb.start()
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   instrumentations: { openai: OpenAI },
 })
 ```
