@@ -233,6 +233,53 @@ describe("listIssuesUseCase", () => {
     traceCount = 0
   })
 
+  it("returns the empty issue shape without querying ClickHouse when the project has no issues", async () => {
+    const now = new Date("2026-04-10T00:00:00.000Z")
+    const { repository: issueRepository } = createFakeIssueRepository([])
+    const { repository: evaluationRepository } = createEvaluationRepository()
+    const {
+      repository: scoreAnalyticsRepository,
+      windowMetricInputs,
+      aggregateInputs,
+      histogramInputs,
+    } = createScoreAnalyticsRepository({
+      windowMetrics: [],
+      fullHistoryOccurrences: [],
+    })
+    let traceCountCalls = 0
+    const { repository: traceRepository } = createFakeTraceRepository({
+      countByProjectId: () =>
+        Effect.sync(() => {
+          traceCountCalls += 1
+          return 0
+        }),
+    })
+
+    const result = await Effect.runPromise(
+      listIssuesUseCase({ organizationId, projectId, now }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(IssueRepository, issueRepository),
+            Layer.succeed(EvaluationRepository, evaluationRepository),
+            Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+            Layer.succeed(TraceRepository, traceRepository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+          ),
+        ),
+      ),
+    )
+
+    expect(result.items).toEqual([])
+    expect(result.totalCount).toBe(0)
+    expect(result.analytics.totalTraces).toBe(0)
+    expect(result.analytics.histogram.length).toBeGreaterThan(0)
+    expect(windowMetricInputs).toEqual([])
+    expect(aggregateInputs).toEqual([])
+    expect(histogramInputs).toEqual([])
+    expect(traceCountCalls).toBe(0)
+  })
+
   it("enriches the default listing with derived lifecycle states", async () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
     const newestIssue = makeIssue({
