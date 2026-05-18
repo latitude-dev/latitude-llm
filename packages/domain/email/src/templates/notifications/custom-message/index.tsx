@@ -41,3 +41,5 @@ export const customMessageRenderer: NotificationEmailRenderer<"custom.message"> 
       cause,
     }),
   })
+
+export default CustomMessageEmail

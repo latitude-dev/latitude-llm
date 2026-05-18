@@ -53,3 +53,5 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
       cause,
     }),
   })
+
+export default IncidentOpenedEmail

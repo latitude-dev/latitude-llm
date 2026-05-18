@@ -22,3 +22,5 @@ export async function exportFailedTemplate(data: ExportFailedEmailData): Promise
     text: `Hi, we couldn't complete your Latitude export "${data.exportName}". Please try again from Latitude. If it keeps failing, contact support and we'll investigate.`,
   }
 }
+
+export default ExportFailedEmail

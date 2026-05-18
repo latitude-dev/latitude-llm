@@ -46,3 +46,5 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
       cause,
     }),
   })
+
+export default IncidentClosedEmail

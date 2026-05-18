@@ -110,3 +110,5 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
       }),
     })
   })
+
+export default ClaudeCodeWrappedEmailV1

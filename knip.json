@@ -31,6 +31,7 @@
       "project": []
     },
     "packages/domain/email": {
+      "entry": ["src/templates/**/index.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignoreDependencies": []
     },
