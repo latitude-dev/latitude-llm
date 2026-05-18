@@ -11,10 +11,7 @@ import { CustomMessageEmail } from "./EmailTemplate.tsx"
  * are prefixed with `ctx.webAppUrl`; already-absolute links are passed
  * through.
  */
-const resolveLinkUrl = (
-  ctx: NotificationEmailRenderContext,
-  link: string | undefined,
-): string | undefined => {
+const resolveLinkUrl = (ctx: NotificationEmailRenderContext, link: string | undefined): string | undefined => {
   if (!link) return undefined
   return link.startsWith("http") ? link : `${ctx.webAppUrl}${link}`
 }
@@ -26,12 +23,7 @@ const buildCustomMessageHtml = async (
   const userName = ctx.recipient.name ?? "there"
   const linkUrl = resolveLinkUrl(ctx, payload.link)
   const html = await renderEmail(
-    <CustomMessageEmail
-      userName={userName}
-      title={payload.title}
-      content={payload.content}
-      linkUrl={linkUrl}
-    />,
+    <CustomMessageEmail userName={userName} title={payload.title} content={payload.content} linkUrl={linkUrl} />,
   )
   return {
     html,
