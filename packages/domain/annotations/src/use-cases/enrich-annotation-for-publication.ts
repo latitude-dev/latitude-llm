@@ -33,12 +33,12 @@ const annotationPublicationEnrichmentSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "Exactly one sentence describing the underlying failure pattern, suitable for clustering similar failures",
+      "Exactly one sentence describing the underlying failure pattern for issue discovery: keep the same concrete mechanism and tool or subsystem together, but do not erase distinctions between different tools, transports, or error types",
     ),
 })
 
 const ENRICHMENT_SYSTEM_PROMPT = `
-You are a reliability annotation publication assistant. Your job is to transform raw human feedback about an LLM agent interaction into a concise, structured sentence suitable for clustering similar failure patterns.
+You are a reliability annotation publication assistant. Your job is to transform raw human feedback about an LLM agent interaction into a concise, structured sentence that downstream issue discovery can match and group.
 
 You will receive the full canonical conversation when available, plus optional raw human feedback and an optional exact highlighted substring when the human selected specific text. Use the full conversation for context; the highlight alone is often too short to interpret (e.g. a single word). When there is no highlight, the feedback refers to the conversation as a whole.
 
@@ -49,7 +49,8 @@ Rules for \`enrichedFeedback\`:
 - Be specific about what went wrong, not just that something was wrong
 - Remove references to specific entities, dates, or details that are incidental to the failure pattern
 - Keep the language neutral and descriptive
-- The output must be useful for grouping similar failures together
+- Preserve materially different technical signals: if the conversation or feedback identifies a specific tool, API, command, HTTP status, timeout vs validation vs permission error, or other incompatible failure channel, name it so distinct mechanisms are not collapsed into one vague label (for example do not reduce different tool failures to only "tool errors")
+- When the same mechanism repeats across conversations, keep wording stable so similar failures still cluster
 - Keep it short and use simple, plain words — avoid jargon, filler, and long phrasing
 
 Examples (only \`enrichedFeedback\` — you still supply reasoning in your output):
