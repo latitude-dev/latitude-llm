@@ -44,7 +44,9 @@ async function findImportsRecursive(
   const metadata = await getDocumentMetadata({ document, getDocumentByPath })
   const config = metadata.config as LatitudePromptConfig
 
-  const snippetsPaths = Array.from(metadata.includedPromptPaths)
+  const snippetsPaths = Array.from(metadata.includedPromptPaths).filter(
+    (path): path is string => typeof path === 'string',
+  )
   const agentsPaths = Array.from(config.agents ?? []).map(absolutePath)
   const snippets = snippetsPaths
     .map(getDocumentByPath)
