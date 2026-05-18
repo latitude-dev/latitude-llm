@@ -1,3 +1,4 @@
+import { EMAIL_NOTIFICATIONS_FLAG, FeatureFlagRepository } from "@domain/feature-flags"
 import {
   createNotificationUseCase,
   deleteNotificationsByProjectUseCase,
@@ -8,6 +9,7 @@ import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import {
   AlertIncidentRepositoryLive,
+  FeatureFlagRepositoryLive,
   IssueRepositoryLive,
   MembershipRepositoryLive,
   NotificationRepositoryLive,
@@ -35,7 +37,7 @@ const requestLayer = Layer.mergeAll(
   SettingsReaderLive,
 )
 
-const createLayer = Layer.mergeAll(NotificationRepositoryLive, UserRepositoryLive)
+const createLayer = Layer.mergeAll(FeatureFlagRepositoryLive, NotificationRepositoryLive, UserRepositoryLive)
 
 /**
  * Multi-step notification pipeline:
@@ -142,33 +144,41 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
       ),
 
     "create-notification": (payload) =>
-      createNotificationUseCase({
-        organizationId: OrganizationId(payload.organizationId),
-        userId: payload.userId as Parameters<typeof createNotificationUseCase>[0]["userId"],
-        notificationId: payload.notificationId as Parameters<typeof createNotificationUseCase>[0]["notificationId"],
-        kind: payload.kind as Parameters<typeof createNotificationUseCase>[0]["kind"],
-        idempotencyKey: payload.idempotencyKey,
-        projectId: payload.projectId === null ? null : ProjectId(payload.projectId),
-        payload: payload.payload,
+      Effect.gen(function* () {
+        const result = yield* createNotificationUseCase({
+          organizationId: OrganizationId(payload.organizationId),
+          userId: payload.userId as Parameters<typeof createNotificationUseCase>[0]["userId"],
+          notificationId: payload.notificationId as Parameters<typeof createNotificationUseCase>[0]["notificationId"],
+          kind: payload.kind as Parameters<typeof createNotificationUseCase>[0]["kind"],
+          idempotencyKey: payload.idempotencyKey,
+          projectId: payload.projectId === null ? null : ProjectId(payload.projectId),
+          payload: payload.payload,
+        })
+        if (!result.notification) {
+          logger.info(`notifications.create dedup idempotencyKey=${payload.idempotencyKey} userId=${payload.userId}`)
+          return
+        }
+        if (!result.emailEligible) return
+
+        // Org-level kill switch: if the `email-notifications` flag is off
+        // for this org, we never enqueue the email-send task. The in-app
+        // row is already written; the bell still works. Flag is checked
+        // here (creator step) rather than in the emailer because it's
+        // cheaper to skip the publish than to enqueue + ack a no-op.
+        const flags = yield* FeatureFlagRepository
+        const emailEnabled = yield* flags.isEnabledForOrganization(EMAIL_NOTIFICATIONS_FLAG)
+        if (!emailEnabled) return
+
+        yield* publisher.publish(
+          "notification-email",
+          "send",
+          {
+            organizationId: result.notification.organizationId,
+            notificationId: result.notification.id,
+          },
+          { dedupeKey: `notification-email:send:${result.notification.id}` },
+        )
       }).pipe(
-        Effect.flatMap((result) => {
-          if (!result.notification) {
-            logger.info(`notifications.create dedup idempotencyKey=${payload.idempotencyKey} userId=${payload.userId}`)
-            return Effect.void
-          }
-          if (!result.emailEligible) return Effect.void
-          return publisher
-            .publish(
-              "notification-email",
-              "send",
-              {
-                organizationId: result.notification.organizationId,
-                notificationId: result.notification.id,
-              },
-              { dedupeKey: `notification-email:send:${result.notification.id}` },
-            )
-            .pipe(Effect.asVoid)
-        }),
         Effect.tapError((error) =>
           Effect.sync(() =>
             logger.error(`notifications.create failed userId=${payload.userId} key=${payload.idempotencyKey}`, error),

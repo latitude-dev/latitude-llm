@@ -1,3 +1,4 @@
+import { EMAIL_NOTIFICATIONS_FLAG } from "@domain/feature-flags"
 import { NOTIFICATION_GROUP_META, NOTIFICATION_GROUPS, type NotificationPreferences } from "@domain/shared"
 import {
   Button,
@@ -35,6 +36,7 @@ import {
   Watch,
 } from "lucide-react"
 import { useState } from "react"
+import { hasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.functions.ts"
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
@@ -336,9 +338,20 @@ function SessionsSection() {
 function NotificationsSection() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
+
+  // Hide the entire section when the org doesn't have the email channel
+  // enabled — toggles for an inactive channel would just confuse users.
+  // The notifications backend also gates the email send on this flag,
+  // so the UI mirrors what the worker actually does.
+  const { data: emailNotificationsEnabled = false } = useQuery({
+    queryKey: ["feature-flag", EMAIL_NOTIFICATIONS_FLAG],
+    queryFn: () => hasFeatureFlag({ data: { identifier: EMAIL_NOTIFICATIONS_FLAG } }),
+  })
+
   const { data, isLoading } = useQuery({
     queryKey: ["notificationPreferences"],
     queryFn: () => getNotificationPreferences(),
+    enabled: emailNotificationsEnabled,
   })
 
   // Local prefs mirror server prefs; saves run in the background per change.
@@ -361,6 +374,8 @@ function NotificationsSection() {
       toast({ variant: "destructive", description: toUserMessage(error) })
     }
   }
+
+  if (!emailNotificationsEnabled) return null
 
   return (
     <section className="flex flex-col gap-4">
