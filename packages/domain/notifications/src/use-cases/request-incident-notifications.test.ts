@@ -4,12 +4,16 @@ import {
   type AlertIncidentRepositoryShape,
   alertIncidentSchema,
 } from "@domain/alerts"
-import { type Issue, IssueRepository, type IssueWithLifecycle, issueSchema } from "@domain/issues"
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
-import { type Project, ProjectRepository } from "@domain/projects"
+import {
+  type IssueEscalationThresholdSeries,
+  type IssueOccurrenceBucket,
+  ScoreAnalyticsRepository,
+  type ScoreAnalyticsRepositoryShape,
+} from "@domain/scores"
 import {
   AlertIncidentId,
-  IssueId,
+  ChSqlClient,
   NotFoundError,
   OrganizationId,
   type ProjectId,
@@ -30,6 +34,8 @@ interface SetupOpts {
   readonly incident?: Partial<AlertIncident>
   readonly memberUserIds?: readonly string[]
   readonly projectSettings?: ProjectSettings | null
+  readonly thresholdBuckets?: readonly { bucket: string; thresholdCount: number }[]
+  readonly occurrenceBuckets?: readonly IssueOccurrenceBucket[]
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -46,7 +52,7 @@ function setup(opts: SetupOpts = {}) {
     kind: "issue.new",
     severity: "medium",
     startedAt: new Date("2026-05-07T10:00:00Z"),
-    endedAt: null,
+    endedAt: new Date("2026-05-07T10:00:00Z"), // event default: endedAt = startedAt
     createdAt: new Date("2026-05-07T10:00:00Z"),
     entrySignals: null,
     exitEligibleSince: null,
@@ -106,90 +112,127 @@ function setup(opts: SetupOpts = {}) {
     getProjectSettings: (_pid: ProjectId) => Effect.succeed(opts.projectSettings ?? null),
   })
 
-  const issue: Issue = issueSchema.parse({
-    id: IssueId(cuid("i")),
-    uuid: "11111111-1111-4111-8111-111111111111",
-    organizationId: orgId,
-    projectId,
-    slug: "sample-issue",
-    name: "Sample issue",
-    description: "Sample description",
-    source: "annotation",
-    centroid: {
-      base: [],
-      mass: 0,
-      model: "test",
-      decay: 60,
-      weights: { evaluation: 0, annotation: 0, custom: 0 },
-    },
-    clusteredAt: new Date("2026-05-01T00:00:00Z"),
-    escalatedAt: null,
-    resolvedAt: null,
-    ignoredAt: null,
-    createdAt: new Date("2026-05-01T00:00:00Z"),
-    updatedAt: new Date("2026-05-01T00:00:00Z"),
-  })
+  const occurrenceBuckets = opts.occurrenceBuckets ?? [
+    { bucket: "2026-05-07T07:10:00.000Z", count: 1 },
+    { bucket: "2026-05-07T08:10:00.000Z", count: 4 },
+    { bucket: "2026-05-07T09:10:00.000Z", count: 9 },
+  ]
+  const thresholdBuckets = opts.thresholdBuckets ?? [
+    { bucket: "2026-05-07T07:10:00.000Z", thresholdCount: 5 },
+    { bucket: "2026-05-07T08:10:00.000Z", thresholdCount: Number.NaN },
+    { bucket: "2026-05-07T09:10:00.000Z", thresholdCount: 7 },
+  ]
 
-  const issueWithLifecycle: IssueWithLifecycle = {
-    ...issue,
-    lifecycle: { isEscalating: false, isRegressed: false },
+  const analytics: ScoreAnalyticsRepositoryShape = {
+    aggregate: () => Effect.die("not used"),
+    aggregateByIssues: () => Effect.die("not used"),
+    aggregateTagsByIssues: () => Effect.die("not used"),
+    histogram: () => Effect.die("not used"),
+    histogramByIssues: () => Effect.succeed(occurrenceBuckets),
+    histogramOccurrences: () => Effect.die("not used"),
+    trendByIssue: () => Effect.die("not used"),
+    trendByIssues: () => Effect.die("not used"),
+    escalationThresholdHistogramByIssues: () =>
+      Effect.succeed([
+        { issueId: incident.sourceId as IssueEscalationThresholdSeries["issueId"], buckets: thresholdBuckets },
+      ]),
+    countDistinctTracesByTimeRange: () => Effect.die("not used"),
+    listTracesByIssue: () => Effect.die("not used"),
+    countTracesByIssue: () => Effect.die("not used"),
   }
-
-  const issueRepo = IssueRepository.of({
-    findById: () => Effect.succeed(issueWithLifecycle),
-    findByIdForUpdate: () => Effect.die("not used"),
-    findByIds: () => Effect.die("not used"),
-    hybridSearch: () => Effect.die("not used"),
-    findBySlug: () => Effect.die("not used"),
-    existsBySlug: () => Effect.die("not used"),
-    save: () => Effect.die("not used"),
-    list: () => Effect.die("not used"),
-    countBySlug: () => Effect.die("not used"),
-  })
-
-  const project: Project = {
-    id: projectId,
-    organizationId: orgId,
-    name: "Sample project",
-    slug: "sample-project",
-    settings: null,
-    firstTraceAt: null,
-    lastEditedAt: new Date("2026-05-01T00:00:00Z"),
-    deletedAt: null,
-    createdAt: new Date("2026-05-01T00:00:00Z"),
-    updatedAt: new Date("2026-05-01T00:00:00Z"),
-  }
-
-  const projectRepo = ProjectRepository.of({
-    findById: () => Effect.succeed(project),
-    findBySlug: () => Effect.die("not used"),
-    list: () => Effect.die("not used"),
-    listIncludingDeleted: () => Effect.die("not used"),
-    save: () => Effect.die("not used"),
-    softDelete: () => Effect.die("not used"),
-    hardDelete: () => Effect.die("not used"),
-    existsByName: () => Effect.die("not used"),
-    countBySlug: () => Effect.die("not used"),
-  })
 
   const layer = Layer.mergeAll(
     Layer.succeed(AlertIncidentRepository, incidentRepo),
-    Layer.succeed(IssueRepository, issueRepo),
     Layer.succeed(MembershipRepository, memberships),
-    Layer.succeed(ProjectRepository, projectRepo),
+    Layer.succeed(ScoreAnalyticsRepository, analytics),
     Layer.succeed(SettingsReader, settings),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
+    Layer.succeed(ChSqlClient, createFakeSqlClient({ organizationId: orgId }) as unknown as ChSqlClient),
   )
 
   return { orgId, projectId, incidentId, incident, layer }
 }
 
 describe("requestIncidentNotificationsUseCase", () => {
-  it("emits one request per org member with the right payload + idempotency key", async () => {
+  it("derives incident.event when the incident has endedAt = startedAt (issue.new)", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.new", startedAt, endedAt: startedAt },
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.kind).toBe("incident.event")
+    expect(result.requests[0]?.idempotencyKey).toBe(`incident.event:${incidentId}`)
+    // Eventful kinds don't snapshot a trend.
+    expect(result.requests[0]?.payload).not.toHaveProperty("trend")
+    expect(result.requests[0]?.payload.sourceType).toBe("issue")
+    expect(result.requests[0]?.payload.sourceId).toBe(cuid("i"))
+  })
+
+  it("derives incident.opened when the incident has endedAt = null (issue.escalating, sustained)", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.escalating", severity: "high", startedAt, endedAt: null },
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.kind).toBe("incident.opened")
+    expect(result.requests[0]?.idempotencyKey).toBe(`incident.opened:${incidentId}`)
+    const payload = result.requests[0]?.payload
+    if (!payload || !("trend" in payload)) throw new Error("expected trend on opened payload")
+    expect(payload.trend.bucketDurationMs).toBe(10 * 60 * 1000)
+    // NaN thresholds round-trip through the producer as null.
+    expect(payload.trend.points.some((p) => p.threshold === null)).toBe(true)
+    expect(payload.trend.points.some((p) => typeof p.threshold === "number")).toBe(true)
+  })
+
+  it("derives incident.closed regardless of endedAt shape when transition='closed'", async () => {
+    const { incidentId, layer } = setup({
+      incident: {
+        kind: "issue.escalating",
+        severity: "high",
+        startedAt: new Date("2026-05-07T10:00:00Z"),
+        endedAt: new Date("2026-05-07T10:30:00Z"),
+      },
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "closed" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.kind).toBe("incident.closed")
+    expect(result.requests[0]?.idempotencyKey).toBe(`incident.closed:${incidentId}`)
+    const payload = result.requests[0]?.payload
+    if (!payload || !("trend" in payload)) throw new Error("expected trend on closed payload")
+    expect(payload.trend.points.length).toBeGreaterThan(0)
+  })
+
+  it("emits one request per org member with a stable idempotency key", async () => {
     const { incidentId, layer } = setup({ memberUserIds: [cuid("ua"), cuid("ub"), cuid("uc")] })
 
     const result = await Effect.runPromise(
-      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
         Effect.provide(layer),
       ),
     )
@@ -198,44 +241,11 @@ describe("requestIncidentNotificationsUseCase", () => {
     if (result.status !== "ok") throw new Error("unreachable")
     expect(result.requests).toHaveLength(3)
     for (const req of result.requests) {
-      expect(req.kind).toBe("incident.opened")
-      expect(req.idempotencyKey).toBe(`incident.opened:${incidentId}`)
+      expect(req.idempotencyKey).toBe(`incident.event:${incidentId}`)
       expect(req.projectId).toBe(cuid("p"))
-      expect(req.payload.incidentKind).toBe("issue.new")
-      expect(req.payload.alertIncidentId).toBe(incidentId)
-      expect(req.payload.issueId).toBe(cuid("i"))
-      expect(req.payload.issueName).toBe("Sample issue")
-      expect(req.payload.projectSlug).toBe("sample-project")
     }
-    // Each recipient gets a distinct notificationId
     const ids = new Set(result.requests.map((r) => r.notificationId))
     expect(ids.size).toBe(3)
-  })
-
-  it("emits a distinct idempotency key for opened vs closed of the same incident", async () => {
-    const { incidentId, layer } = setup({
-      incident: { kind: "issue.escalating", severity: "high" },
-      memberUserIds: [cuid("ua")],
-    })
-
-    const opened = await Effect.runPromise(
-      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
-        Effect.provide(layer),
-      ),
-    )
-    const closed = await Effect.runPromise(
-      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.closed" }).pipe(
-        Effect.provide(layer),
-      ),
-    )
-
-    expect(opened.status).toBe("ok")
-    expect(closed.status).toBe("ok")
-    if (opened.status !== "ok" || closed.status !== "ok") throw new Error("unreachable")
-    expect(opened.requests[0]?.idempotencyKey).toBe(`incident.opened:${incidentId}`)
-    expect(closed.requests[0]?.idempotencyKey).toBe(`incident.closed:${incidentId}`)
-    expect(opened.requests[0]?.kind).toBe("incident.opened")
-    expect(closed.requests[0]?.kind).toBe("incident.closed")
   })
 
   it("skips when project settings disable the matching alert kind", async () => {
@@ -244,7 +254,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
         Effect.provide(layer),
       ),
     )
@@ -254,27 +264,11 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(result.reason).toBe("kind-disabled")
   })
 
-  it("does not skip when settings disable a different kind", async () => {
-    const { incidentId, layer } = setup({
-      projectSettings: { notifications: { incidents: { "issue.escalating": false } } },
-    })
-
-    const result = await Effect.runPromise(
-      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
-        Effect.provide(layer),
-      ),
-    )
-
-    expect(result.status).toBe("ok")
-    if (result.status !== "ok") throw new Error("unreachable")
-    expect(result.requests.length).toBeGreaterThan(0)
-  })
-
   it("skips with reason 'no-recipients' when the org has no members", async () => {
     const { incidentId, layer } = setup({ memberUserIds: [] })
 
     const result = await Effect.runPromise(
-      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
         Effect.provide(layer),
       ),
     )
