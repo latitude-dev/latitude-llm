@@ -180,9 +180,15 @@ importers:
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../packages/domain/api-keys
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../../packages/domain/evaluations
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../../packages/domain/issues
       '@domain/oauth-keys':
         specifier: workspace:*
         version: link:../../packages/domain/oauth-keys
@@ -252,6 +258,9 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
+      '@platform/workflows-temporal':
+        specifier: workspace:*
+        version: link:../../packages/platform/workflows-temporal
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -271,12 +280,6 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@domain/evaluations':
-        specifier: workspace:*
-        version: link:../../packages/domain/evaluations
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../../packages/domain/issues
       '@modelcontextprotocol/inspector':
         specifier: 'catalog:'
         version: 0.21.2(@cfworker/json-schema@4.1.1)(@swc/core@1.15.30)(@types/node@25.6.2)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(typescript@6.0.3)
@@ -1118,6 +1121,9 @@ importers:
       '@domain/optimizations':
         specifier: workspace:*
         version: link:../optimizations
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../queue
       '@domain/scores':
         specifier: workspace:*
         version: link:../scores

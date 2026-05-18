@@ -11,12 +11,16 @@ import {
 import {
   type ChSqlClient,
   cuidSchema,
+  type FilterCondition,
+  type FilterSet,
+  type IssueId,
+  issueIdSchema,
   OrganizationId,
   ProjectId,
   type RepositoryError,
   type SqlClient,
 } from "@domain/shared"
-import { pickTraceHistogramBucketSeconds } from "@domain/spans"
+import { pickTraceHistogramBucketSeconds, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { type IssueSource, IssueState } from "../entities/issue.ts"
@@ -45,6 +49,13 @@ export const issueSearchSchema = z.object({
 const listIssuesInputSchema = z.object({
   organizationId: cuidSchema.transform(OrganizationId),
   projectId: cuidSchema.transform(ProjectId),
+  /**
+   * Restrict the result to a specific subset of issues. Skips the
+   * windowMetrics-driven candidate selection so callers can fetch a known
+   * issue even when it had no activity in the selected time range — the
+   * use-case returns it with synthetic zero metrics in that case.
+   */
+  issueIds: z.array(issueIdSchema).optional(),
   lifecycleGroup: issuesLifecycleGroupSchema.optional(),
   search: issueSearchSchema.optional(),
   timeRange: issuesTimeRangeSchema.optional(),
@@ -89,6 +100,7 @@ export interface IssueListAnalytics {
 export interface IssueListItem {
   readonly id: string
   readonly projectId: string
+  readonly slug: string
   readonly name: string
   readonly description: string
   readonly source: IssueSource
@@ -330,10 +342,15 @@ const sortCandidates = (
         return occurrencesComparison
       }
     } else if (input.field === "state") {
+      // Priority numbers go low → high in importance order
+      // (`Regressed = 0`, `Escalating = 1`, …, `Ignored = 5`). The user-
+      // facing convention is "sort by state descending = highest-priority
+      // first", so `desc` keeps the smaller priority number on top and
+      // `asc` flips that — opposite to the raw numeric comparison.
       const leftPriority = getPrimaryStatePriority(left.lifecycleStates)
       const rightPriority = getPrimaryStatePriority(right.lifecycleStates)
       const stateComparison =
-        input.direction === "asc" ? compareAsc(leftPriority, rightPriority) : compareDesc(leftPriority, rightPriority)
+        input.direction === "asc" ? compareDesc(leftPriority, rightPriority) : compareAsc(leftPriority, rightPriority)
       if (stateComparison !== 0) {
         return stateComparison
       }
@@ -407,7 +424,7 @@ export const listIssuesUseCase = (
 ): Effect.Effect<
   ListIssuesResult,
   ListIssuesError,
-  ChSqlClient | EvaluationRepository | IssueRepository | ScoreAnalyticsRepository | SqlClient
+  ChSqlClient | EvaluationRepository | IssueRepository | ScoreAnalyticsRepository | SqlClient | TraceRepository
 > =>
   Effect.gen(function* () {
     const parsed = listIssuesInputSchema.parse(input)
@@ -415,6 +432,7 @@ export const listIssuesUseCase = (
     const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const issueRepository = yield* IssueRepository
     const evaluationRepository = yield* EvaluationRepository
+    const traceRepository = yield* TraceRepository
     const now = parsed.now ?? new Date()
     const selectedTimeRange = toScoreAnalyticsTimeRange(parsed.timeRange)
 
@@ -422,6 +440,7 @@ export const listIssuesUseCase = (
       organizationId: parsed.organizationId,
       projectId: parsed.projectId,
       ...(selectedTimeRange ? { timeRange: selectedTimeRange } : {}),
+      ...(parsed.issueIds ? { issueIds: parsed.issueIds } : {}),
     })
 
     const searchCandidatesEffect = parsed.search
@@ -432,20 +451,43 @@ export const listIssuesUseCase = (
         })
       : Effect.succeed([] satisfies readonly IssueSearchCandidate[])
 
+    // The denominator for `affectedTracesPercent` must be counted against
+    // `traces.start_time` (not `scores.created_at`) so the percentage stays
+    // consistent with what the web table shows and with the totals other
+    // trace-side endpoints report. Async scoring can produce `scores` whose
+    // `created_at` falls outside the trace's `start_time` window, which would
+    // otherwise drift the numerator and denominator out of sync.
+    const startTimeConditions: FilterCondition[] = []
+    if (parsed.timeRange?.from) {
+      startTimeConditions.push({ op: "gte", value: parsed.timeRange.from.toISOString() })
+    }
+    if (parsed.timeRange?.to) {
+      startTimeConditions.push({ op: "lte", value: parsed.timeRange.to.toISOString() })
+    }
+    const traceCountFilters: FilterSet | undefined =
+      startTimeConditions.length > 0 ? { startTime: startTimeConditions } : undefined
+
     const [windowMetrics, searchCandidates, totalTraces] = yield* Effect.all([
       windowMetricsEffect,
       searchCandidatesEffect,
-      scoreAnalyticsRepository.countDistinctTracesByTimeRange({
+      traceRepository.countByProjectId({
         organizationId: parsed.organizationId,
         projectId: parsed.projectId,
-        ...(selectedTimeRange ? { timeRange: selectedTimeRange } : {}),
+        ...(traceCountFilters ? { filters: traceCountFilters } : {}),
       }),
     ])
 
     const windowMetricsByIssueId = new Map(windowMetrics.map((metric) => [metric.issueId, metric] as const))
-    const candidateIssueIds = parsed.search
+    const baseCandidateIds = parsed.search
       ? searchCandidates.map((candidate) => candidate.issueId).filter((issueId) => windowMetricsByIssueId.has(issueId))
       : windowMetrics.map((metric) => metric.issueId)
+    // When the caller passed an explicit `issueIds` filter, include those
+    // issues in the candidate set even if they had no activity in the
+    // window — they get synthesized zero `windowMetric` rows below so the
+    // analytics pipeline still produces a stable shape.
+    const candidateIssueIds = parsed.issueIds
+      ? Array.from(new Set<IssueId>([...baseCandidateIds, ...parsed.issueIds]))
+      : baseCandidateIds
     const histogramTimeRange = resolveHistogramTimeRange({
       timeRange: parsed.timeRange,
       now,
@@ -490,6 +532,7 @@ export const listIssuesUseCase = (
     const searchScoresByIssueId = new Map(
       searchCandidates.map((candidate) => [candidate.issueId, candidate.score] as const),
     )
+    const forceIncludeIssueIds = parsed.issueIds ? new Set<string>(parsed.issueIds) : null
     const canonicalIssues = yield* issueRepository.findByIds({
       projectId: parsed.projectId,
       issueIds: candidateIssueIds,
@@ -510,14 +553,18 @@ export const listIssuesUseCase = (
 
     const analyticsCandidates = canonicalIssues
       .map((issue) => {
-        const windowMetric = windowMetricsByIssueId.get(issue.id)
-        if (!windowMetric) {
+        const windowMetric = windowMetricsByIssueId.get(issue.id) ?? null
+        // Issues without window metrics are normally filtered out — but when
+        // the caller passed `issueIds`, force-include them with a synthesized
+        // zero-activity metric so a point-lookup over a known issue id still
+        // returns a stable analytics shape.
+        if (!windowMetric && !forceIncludeIssueIds?.has(issue.id)) {
           return null
         }
 
         return toCandidate({
           issue,
-          windowMetric,
+          windowMetric: windowMetric ?? ({ issueId: issue.id, occurrences: 0 } as unknown as IssueWindowMetric),
           occurrence: occurrencesByIssueId.get(issue.id) ?? null,
           similarityScore: searchScoresByIssueId.get(issue.id) ?? null,
           now,
@@ -621,6 +668,7 @@ export const listIssuesUseCase = (
       items: pageCandidates.map((candidate) => ({
         id: candidate.issue.id,
         projectId: candidate.issue.projectId,
+        slug: candidate.issue.slug,
         name: candidate.issue.name,
         description: candidate.issue.description,
         source: candidate.issue.source,

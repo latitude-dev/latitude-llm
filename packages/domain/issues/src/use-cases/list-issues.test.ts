@@ -16,8 +16,10 @@ import {
 } from "@domain/scores"
 import { ChSqlClient, EvaluationId, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import { TraceRepository } from "@domain/spans"
+import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import { type Issue, IssueState } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
@@ -129,7 +131,6 @@ const createScoreAnalyticsRepository = (input: {
   readonly histogramBuckets?: readonly IssueOccurrenceBucket[]
   readonly trendSeries?: readonly IssueTrendSeries[]
   readonly tagsAggregates?: readonly IssueTagsAggregate[]
-  readonly totalTraces?: number
 }) => {
   const windowMetricInputs: unknown[] = []
   const aggregateInputs: unknown[] = []
@@ -187,7 +188,7 @@ const createScoreAnalyticsRepository = (input: {
         })
         return input.trendSeries ?? []
       }),
-    countDistinctTracesByTimeRange: () => Effect.succeed(input.totalTraces ?? 0),
+    countDistinctTracesByTimeRange: () => Effect.die("Unexpected countDistinctTracesByTimeRange"),
     listTracesByIssue: () => Effect.die("Unexpected listTracesByIssue"),
     countTracesByIssue: () => Effect.die("Unexpected countTracesByIssue"),
     escalationSignalsByIssues: () => Effect.die("Unexpected escalationSignalsByIssues"),
@@ -196,6 +197,16 @@ const createScoreAnalyticsRepository = (input: {
 
   return { repository, windowMetricInputs, aggregateInputs, histogramInputs, trendInputs, tagsInputs }
 }
+
+// `provideTraceRepository` reads from this module-level counter at call time
+// (via `Effect.sync`), so each test just sets `traceCount = N` before it runs
+// `Effect.runPromise(listIssuesUseCase(...))`. Vitest runs tests sequentially
+// within a file, so the shared variable doesn't race.
+let traceCount = 0
+const provideTraceRepository = Layer.succeed(
+  TraceRepository,
+  createFakeTraceRepository({ countByProjectId: () => Effect.sync(() => traceCount) }).repository,
+)
 
 const createIssueSearch = (
   candidates: readonly {
@@ -218,6 +229,10 @@ const createIssueSearch = (
 }
 
 describe("listIssuesUseCase", () => {
+  beforeEach(() => {
+    traceCount = 0
+  })
+
   it("enriches the default listing with derived lifecycle states", async () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
     const newestIssue = makeIssue({
@@ -294,7 +309,6 @@ describe("listIssuesUseCase", () => {
           lastSeenAt: new Date("2026-04-02T08:00:00.000Z"),
         }),
       ],
-      totalTraces: 0,
     })
     const { calls } = createIssueSearch([])
 
@@ -313,6 +327,7 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideTraceRepository,
           ),
         ),
       ),
@@ -451,9 +466,9 @@ describe("listIssuesUseCase", () => {
           buckets: [{ bucket: "2026-04-08", count: 4 }],
         },
       ],
-      totalTraces: 10,
     })
     const { calls } = createIssueSearch([])
+    traceCount = 10
 
     const result = await Effect.runPromise(
       listIssuesUseCase({
@@ -469,6 +484,7 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideTraceRepository,
           ),
         ),
       ),
@@ -537,6 +553,7 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideTraceRepository,
           ),
         ),
       ),
@@ -583,6 +600,7 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideTraceRepository,
           ),
         ),
       ),
@@ -693,9 +711,9 @@ describe("listIssuesUseCase", () => {
             lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
           }),
         ],
-        totalTraces: 3,
       })
       createIssueSearch([])
+      traceCount = 3
 
       const result = await Effect.runPromise(
         listIssuesUseCase({
@@ -711,6 +729,7 @@ describe("listIssuesUseCase", () => {
               Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
               Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
               Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+              provideTraceRepository,
             ),
           ),
         ),
@@ -791,9 +810,9 @@ describe("listIssuesUseCase", () => {
         makeOccurrence({ issueId: secondIssue.id, lastSeenAt: new Date("2026-04-09T00:00:00.000Z") }),
       ],
       histogramBuckets: [{ bucket: "2026-04-09", count: 8 }],
-      totalTraces: 20,
     })
     const { calls } = issueSearch
+    traceCount = 20
 
     const result = await Effect.runPromise(
       listIssuesUseCase({
@@ -812,6 +831,7 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideTraceRepository,
           ),
         ),
       ),
@@ -868,9 +888,9 @@ describe("listIssuesUseCase", () => {
           buckets: [{ bucket: "2026-04-08", count: 1 }],
         },
       ],
-      totalTraces: 5,
     })
     createIssueSearch([])
+    traceCount = 5
 
     const result = await Effect.runPromise(
       listIssuesUseCase({
@@ -891,6 +911,7 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideTraceRepository,
           ),
         ),
       ),
@@ -933,9 +954,9 @@ describe("listIssuesUseCase", () => {
         makeOccurrence({ issueId: oldestIssue.id, lastSeenAt: new Date("2026-04-02T00:00:00.000Z") }),
         makeOccurrence({ issueId: newestIssue.id, lastSeenAt: new Date("2026-04-09T00:00:00.000Z") }),
       ],
-      totalTraces: 4,
     })
     createIssueSearch([])
+    traceCount = 4
 
     const result = await Effect.runPromise(
       listIssuesUseCase({
@@ -954,6 +975,7 @@ describe("listIssuesUseCase", () => {
             Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
             Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+            provideTraceRepository,
           ),
         ),
       ),

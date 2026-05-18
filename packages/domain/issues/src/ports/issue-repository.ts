@@ -58,6 +58,19 @@ export interface IssueRepositoryShape {
     readonly normalizedEmbedding: readonly number[]
   }): Effect.Effect<readonly IssueSearchCandidate[], RepositoryError, SqlClient>
   /**
+   * Point-lookup by `(projectId, slug)`. Slugs are unique within a project,
+   * so this is the natural read path for slug-keyed API endpoints.
+   */
+  findBySlug(input: {
+    readonly projectId: ProjectId
+    readonly slug: string
+  }): Effect.Effect<IssueWithLifecycle, NotFoundError | RepositoryError, SqlClient>
+  /** Cheap existence check for slug uniqueness paths. */
+  existsBySlug(input: {
+    readonly projectId: ProjectId
+    readonly slug: string
+  }): Effect.Effect<boolean, RepositoryError, SqlClient>
+  /**
    * Returns the number of non-deleted issues with this slug in the project,
    * scoped to the active organization (issues aren't soft-deleted, so this
    * is a simple COUNT). Powers the `exists` callback of `generateSlug`.

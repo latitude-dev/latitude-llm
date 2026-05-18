@@ -164,7 +164,11 @@ function generateIssuesExport(
   if (!trimmedSearchQuery) {
     return buildIssuesExportUseCase(baseEffectInput).pipe(
       withPostgres(Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive), getPostgresClient(), organizationId),
-      withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), organizationId),
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        getClickhouseClient(),
+        organizationId,
+      ),
     )
   }
 
@@ -182,7 +186,11 @@ function generateIssuesExport(
       },
     }).pipe(
       withPostgres(Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive), getPostgresClient(), organizationId),
-      withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), organizationId),
+      withClickHouse(
+        Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
+        getClickhouseClient(),
+        organizationId,
+      ),
     )
   })
 }

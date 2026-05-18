@@ -65,6 +65,16 @@ export const createFakeIssueRepository = (
           })),
       ),
 
+    findBySlug: ({ projectId, slug }) =>
+      Effect.gen(function* () {
+        const issue = [...issues.values()].find((i) => i.projectId === projectId && i.slug === slug)
+        if (!issue) return yield* new NotFoundError({ entity: "Issue", id: slug })
+        return withLifecycle(issue)
+      }),
+
+    existsBySlug: ({ projectId, slug }) =>
+      Effect.sync(() => [...issues.values()].some((i) => i.projectId === projectId && i.slug === slug)),
+
     save: (issue) =>
       Effect.sync(() => {
         issues.set(issue.id, issue)

@@ -24,6 +24,7 @@
     "@domain/events": "workspace:*",
     "@domain/models": "workspace:*",
     "@domain/optimizations": "workspace:*",
+    "@domain/queue": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
