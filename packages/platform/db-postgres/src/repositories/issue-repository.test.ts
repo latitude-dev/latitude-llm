@@ -510,7 +510,7 @@ describe("IssueRepositoryLive", () => {
       expect(result.lifecycle.isEscalating).toBe(false)
     })
 
-    it("findById attaches isRegressed=true when any issue.regressed row exists", async () => {
+    it("findById attaches isRegressed=true when an unresolved issue has a regressed incident", async () => {
       const issue = makeIssue()
 
       await Effect.runPromise(
@@ -529,7 +529,7 @@ describe("IssueRepositoryLive", () => {
         kind: "issue.regressed",
         severity: "high",
         startedAt: new Date("2026-04-15T00:00:00.000Z"),
-        endedAt: null,
+        endedAt: new Date("2026-04-15T00:00:00.000Z"),
       })
 
       const result = await Effect.runPromise(
@@ -540,6 +540,40 @@ describe("IssueRepositoryLive", () => {
       )
 
       expect(result.lifecycle.isRegressed).toBe(true)
+    })
+
+    it("findById attaches isRegressed=false when the issue has been resolved again after regressing", async () => {
+      const issue = makeIssue({ resolvedAt: new Date("2026-04-20T00:00:00.000Z") })
+
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          yield* repository.save(issue)
+        }).pipe(makeProvider(database)),
+      )
+
+      // Historical regression incident is preserved in the table, but
+      // `isRegressed` should clear because the issue was resolved again.
+      await database.db.insert(alertIncidentsTable).values({
+        id: "ai-reg-resolved-aaaaaaaa",
+        organizationId,
+        projectId: issue.projectId,
+        sourceType: "issue",
+        sourceId: issue.id,
+        kind: "issue.regressed",
+        severity: "high",
+        startedAt: new Date("2026-04-15T00:00:00.000Z"),
+        endedAt: new Date("2026-04-15T00:00:00.000Z"),
+      })
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          return yield* repository.findById(issue.id)
+        }).pipe(makeProvider(database)),
+      )
+
+      expect(result.lifecycle.isRegressed).toBe(false)
     })
 
     it("list and findByIds populate the same lifecycle flags as findById", async () => {

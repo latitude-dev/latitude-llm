@@ -60,7 +60,7 @@
     "@tailwindcss/typography": "0.5.19",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "postcss": "8.5.10",
+    "postcss": "8.5.14",
     "react": "catalog:",
     "react-dom": "catalog:",
     "rosetta-ai": "catalog:",

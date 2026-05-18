@@ -454,9 +454,6 @@ export const createSavedSearchesRoutes = () => {
   updateSavedSearchEndpoint.mountHttp(app, createTierRateLimiter("low"))
   deleteSavedSearchEndpoint.mountHttp(app, createTierRateLimiter("low"))
   assignSavedSearch.mountHttp(app, createTierRateLimiter("low"))
-  // Same tier as the regular `POST /traces/list` — runs the same ClickHouse
-  // semantic-search query, just with the saved search's filters + query
-  // resolved server-side.
   listSavedSearchTraces.mountHttp(app, createTierRateLimiter("medium"))
   return app
 }

@@ -259,7 +259,24 @@ export interface EventPayloads {
     readonly searchId: string
     readonly name: string
   }
-  EvaluationConfigured: {
+  /**
+   * Fired the first time an issue is monitored: a brand-new evaluation
+   * generation job has been kicked off (no existing evaluation existed for
+   * the issue).
+   */
+  EvaluationCreated: {
+    readonly organizationId: string
+    readonly actorUserId: string
+    readonly projectId: string
+    readonly evaluationId: string
+    readonly issueId: string
+  }
+  /**
+   * Fired when an existing evaluation for an issue is realigned (re-trained
+   * against current annotations / failures). The evaluation row already
+   * existed; this is a refresh, not a creation.
+   */
+  EvaluationAligned: {
     readonly organizationId: string
     readonly actorUserId: string
     readonly projectId: string

@@ -19,9 +19,8 @@ import {
   type EvaluationSummaryRecord,
   getIssueAlignmentState,
   type IssueAlignmentStateRecord,
-  softDeleteIssueEvaluation,
-  startEvaluationAlignment,
-  triggerManualEvaluationRealignment,
+  monitorIssue,
+  unmonitorIssue,
   updateIssueEvaluationSampling,
 } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
 import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.collection.ts"
@@ -303,10 +302,10 @@ export function IssueDrawerEvaluations({
   const handleGenerate = async () => {
     setIsStartingGenerate(true)
     try {
-      await startEvaluationAlignment({
+      const { evaluationId } = await monitorIssue({
         data: { projectId, issueId },
       })
-      setTracked({ kind: "initial" })
+      setTracked(evaluationId ? { kind: "realign", evaluationId } : { kind: "initial" })
       setMonitorModalOpen(false)
     } catch (error) {
       toast({
@@ -318,13 +317,13 @@ export function IssueDrawerEvaluations({
     }
   }
 
-  const handleRealign = async (evaluationId: string) => {
+  const handleRealign = async (_evaluationId: string) => {
     setIsStartingRealign(true)
     try {
-      await triggerManualEvaluationRealignment({
-        data: { projectId, issueId, evaluationId },
+      const { evaluationId } = await monitorIssue({
+        data: { projectId, issueId },
       })
-      setTracked({ kind: "realign", evaluationId })
+      setTracked(evaluationId ? { kind: "realign", evaluationId } : { kind: "initial" })
       setRealignEvaluationId(null)
     } catch (error) {
       toast({
@@ -343,12 +342,8 @@ export function IssueDrawerEvaluations({
 
     setIsDeleting(true)
     try {
-      await softDeleteIssueEvaluation({
-        data: {
-          projectId,
-          issueId,
-          evaluationId: deleteEvaluationId,
-        },
+      await unmonitorIssue({
+        data: { projectId, issueId },
       })
       await invalidateIssueQueries(projectId, issueId)
       toast({ description: "Evaluation removed." })

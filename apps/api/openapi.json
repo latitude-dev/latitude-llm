@@ -2730,6 +2730,720 @@
           "userId"
         ]
       },
+      "PaginatedIssues": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "description": "Page of items, in the requested sort order."
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque cursor for fetching the next page. `null` when there are no more pages. Pass it back in `cursor` to continue."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "`true` when there is at least one more page after this one."
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "Issue": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable issue identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this issue."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this issue belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Unique within the project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the issue."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "annotation",
+              "flagger",
+              "custom"
+            ],
+            "description": "Where the issue originated from."
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "new",
+                "escalating",
+                "ongoing",
+                "resolved",
+                "regressed",
+                "ignored"
+              ]
+            },
+            "description": "Active lifecycle states. An issue may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+          },
+          "resolvedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the issue was resolved, or `null`."
+          },
+          "ignoredAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the issue was ignored, or `null`."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          },
+          "trend": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IssueTrendBucket"
+            },
+            "description": "Daily occurrence counts over the past 14 days."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags seen on the issue's occurrences."
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the earliest occurrence in the time window."
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the latest occurrence in the time window."
+          },
+          "occurrences": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of occurrences in the time window."
+          },
+          "affectedTracesPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Fraction of project traces affected by this issue in the time window, in `[0, 1]`."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "description",
+          "source",
+          "states",
+          "resolvedAt",
+          "ignoredAt",
+          "createdAt",
+          "updatedAt",
+          "trend",
+          "tags",
+          "firstSeenAt",
+          "lastSeenAt",
+          "occurrences",
+          "affectedTracesPercent"
+        ]
+      },
+      "IssueTrendBucket": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "UTC day bucket (`YYYY-MM-DD`)."
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of occurrences within the bucket."
+          }
+        },
+        "required": [
+          "bucket",
+          "count"
+        ]
+      },
+      "IssueDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable issue identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this issue."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this issue belongs to."
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from `name`. Unique within the project."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the issue."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "annotation",
+              "flagger",
+              "custom"
+            ],
+            "description": "Where the issue originated from."
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "new",
+                "escalating",
+                "ongoing",
+                "resolved",
+                "regressed",
+                "ignored"
+              ]
+            },
+            "description": "Active lifecycle states. An issue may carry multiple states at once (e.g. `escalating` + `ongoing`)."
+          },
+          "resolvedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the issue was resolved, or `null`."
+          },
+          "ignoredAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the issue was ignored, or `null`."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          },
+          "trend": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IssueTrendBucket"
+            },
+            "description": "Daily occurrence counts over the past 14 days."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags seen on the issue's occurrences."
+          },
+          "firstSeenAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp of the earliest occurrence over the issue's lifetime, or `null` if none yet."
+          },
+          "lastSeenAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp of the latest occurrence over the issue's lifetime, or `null` if none yet."
+          },
+          "occurrences": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Lifetime occurrence count."
+          },
+          "affectedTracesPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Lifetime fraction of project traces affected by this issue, in `[0, 1]`."
+          },
+          "evaluations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evaluation"
+            },
+            "description": "Active evaluations monitoring the issue. Archived and deleted evaluations are excluded."
+          },
+          "monitoringState": {
+            "$ref": "#/components/schemas/IssueMonitoringState"
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "slug",
+          "name",
+          "description",
+          "source",
+          "states",
+          "resolvedAt",
+          "ignoredAt",
+          "createdAt",
+          "updatedAt",
+          "trend",
+          "tags",
+          "firstSeenAt",
+          "lastSeenAt",
+          "occurrences",
+          "affectedTracesPercent",
+          "evaluations",
+          "monitoringState"
+        ]
+      },
+      "Evaluation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable evaluation identifier."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Generated description of the evaluation."
+          },
+          "alignedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the evaluation was last realigned."
+          },
+          "archivedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the evaluation was archived, or `null`."
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the evaluation was deleted, or `null`."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of creation."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          },
+          "sampling": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Sampling rate as a percentage in `[0, 100]`. `0` means the evaluation is paused."
+          },
+          "alignment": {
+            "$ref": "#/components/schemas/EvaluationAlignmentMetrics"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "alignedAt",
+          "archivedAt",
+          "deletedAt",
+          "createdAt",
+          "updatedAt",
+          "sampling",
+          "alignment"
+        ]
+      },
+      "EvaluationAlignmentMetrics": {
+        "type": "object",
+        "properties": {
+          "alignmentMetric": {
+            "type": "number",
+            "description": "Headline score that judges how well the evaluation tracks human annotations."
+          },
+          "accuracy": {
+            "type": "number",
+            "description": "Accuracy: `(TP + TN) / total`."
+          },
+          "precision": {
+            "type": "number",
+            "description": "Precision: `TP / (TP + FP)`."
+          },
+          "recall": {
+            "type": "number",
+            "description": "Recall / sensitivity: `TP / (TP + FN)`."
+          },
+          "specificity": {
+            "type": "number",
+            "description": "Specificity: `TN / (TN + FP)`."
+          },
+          "trueness": {
+            "type": "number",
+            "description": "Mean of precision and negative predictive value."
+          },
+          "f1": {
+            "type": "number",
+            "description": "F1 score: harmonic mean of precision and recall."
+          },
+          "balancedAccuracy": {
+            "type": "number",
+            "description": "Balanced accuracy: mean of recall and specificity."
+          },
+          "matthewsCorrelationCoefficient": {
+            "type": "number",
+            "description": "Matthews correlation coefficient, in `[-1, 1]`."
+          }
+        },
+        "required": [
+          "alignmentMetric",
+          "accuracy",
+          "precision",
+          "recall",
+          "specificity",
+          "trueness",
+          "f1",
+          "balancedAccuracy",
+          "matthewsCorrelationCoefficient"
+        ],
+        "description": "Alignment metrics computed from the evaluation's confusion matrix."
+      },
+      "IssueMonitoringState": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "automatic"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "description": "The issue is automatically monitored by the system and does not need an evaluation."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "idle"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "description": "The issue is not currently being monitored."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "generating"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "description": "An evaluation is being generated for this issue. The issue has no active evaluation yet."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "realigning"
+                ]
+              },
+              "evaluationId": {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24,
+                "description": "Id of the evaluation currently being realigned."
+              }
+            },
+            "required": [
+              "kind",
+              "evaluationId"
+            ],
+            "description": "An active evaluation is being realigned."
+          }
+        ],
+        "description": "Whether the issue is currently being monitored: `automatic`, `idle`, `generating`, or `realigning`."
+      },
+      "IssueHistogram": {
+        "type": "object",
+        "properties": {
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IssueHistogramBucket"
+            },
+            "description": "One entry per 12-hour UTC-aligned bucket in the requested range, including empty buckets (`count: 0`)."
+          }
+        },
+        "required": [
+          "buckets"
+        ]
+      },
+      "IssueHistogramBucket": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "ISO-8601 UTC timestamp of the bucket's start."
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of occurrences within the bucket."
+          }
+        },
+        "required": [
+          "bucket",
+          "count"
+        ]
+      },
+      "IssuesLifecycleResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IssueLifecycleItem"
+            },
+            "description": "Per-issue result, in the order requested."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "IssueLifecycleItem": {
+        "type": "object",
+        "properties": {
+          "issueId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Issue this entry applies to."
+          },
+          "resolvedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the issue was resolved, or `null`."
+          },
+          "ignoredAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO-8601 timestamp at which the issue was ignored, or `null`."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp of the last update."
+          },
+          "changed": {
+            "type": "boolean",
+            "description": "`true` when this call changed the issue, `false` when it was already in that state."
+          }
+        },
+        "required": [
+          "issueId",
+          "resolvedAt",
+          "ignoredAt",
+          "updatedAt",
+          "changed"
+        ]
+      },
+      "ResolveIssuesBody": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/IssuesLifecycleBody"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "keepMonitoring": {
+                "type": "boolean",
+                "description": "When `true`, monitoring continues after the issues are resolved. When `false`, monitoring stops. Defaults to the project setting."
+              }
+            }
+          }
+        ]
+      },
+      "IssuesLifecycleBody": {
+        "type": "object",
+        "properties": {
+          "issueIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24
+            },
+            "minItems": 1,
+            "description": "Non-empty list of issue ids. Operations are idempotent — already-applied issues are unchanged."
+          }
+        },
+        "required": [
+          "issueIds"
+        ]
+      },
+      "MonitorIssueResponse": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Identifier of the monitor job."
+          },
+          "evaluationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "The id of the evaluation being realigned, or `null` when a brand-new evaluation is being generated."
+          }
+        },
+        "required": [
+          "jobId",
+          "evaluationId"
+        ]
+      },
+      "ExportIssuesResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued"
+            ],
+            "description": "Always `\"queued\"`. The CSV is emailed to `recipient` when ready."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "ExportIssuesBody": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address the download link is sent to. Must belong to a member of the requesting organization."
+          },
+          "issueIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24
+            },
+            "description": "Restrict the export to this subset of issues. Omit to export every issue in the project."
+          },
+          "lifecycleGroup": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "description": "`\"active\"` for unresolved/unignored issues; `\"archived\"` for the rest. Omit to include both."
+          }
+        },
+        "required": [
+          "recipient"
+        ]
+      },
       "ApiKey": {
         "type": "object",
         "properties": {
@@ -4991,6 +5705,997 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedTraces"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues": {
+      "get": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "list",
+        "summary": "List project issues",
+        "description": "Returns a cursor-paginated page of issues in the project. Each item includes lifecycle `states` plus time-window stats: `firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `trend`, and `tags`.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listIssues",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."
+            },
+            "required": false,
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Page size. Defaults to 50; max 200."
+            },
+            "required": false,
+            "description": "Page size. Defaults to 50; max 200.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500,
+              "description": "Free-text semantic search across the issues' names and descriptions."
+            },
+            "required": false,
+            "description": "Free-text semantic search across the issues' names and descriptions.",
+            "name": "query",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "archived"
+              ],
+              "description": "`\"active\"` for unresolved/unignored issues; `\"archived\"` for the rest. Omit to include both."
+            },
+            "required": false,
+            "description": "`\"active\"` for unresolved/unignored issues; `\"archived\"` for the rest. Omit to include both.",
+            "name": "lifecycleGroup",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "lastSeen",
+                "occurrences",
+                "state"
+              ],
+              "default": "lastSeen",
+              "description": "Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority."
+            },
+            "required": false,
+            "description": "Sort field. `lastSeen` orders by most recent occurrence; `occurrences` by total count in the time window; `state` by lifecycle priority.",
+            "name": "sortBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc",
+              "description": "Sort direction. Defaults to `desc`."
+            },
+            "required": false,
+            "description": "Sort direction. Defaults to `desc`.",
+            "name": "sortDirection",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Lower bound (inclusive) of the time window. Defaults to ~6 days ago."
+            },
+            "required": false,
+            "description": "Lower bound (inclusive) of the time window. Defaults to ~6 days ago.",
+            "name": "fromIso",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Upper bound (inclusive) of the time window. Defaults to now."
+            },
+            "required": false,
+            "description": "Upper bound (inclusive) of the time window. Defaults to now.",
+            "name": "toIso",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of issues",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedIssues"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/{issueSlug}": {
+      "get": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "get",
+        "summary": "Get project issue",
+        "description": "Returns the full-history detail view of one issue: lifecycle `states`, lifetime activity stats (`firstSeenAt`, `lastSeenAt`, `occurrences`, `affectedTracesPercent`, `tags`), a 14-day occurrence `trend`, the active `evaluations` monitoring it, and the current `monitoringState`.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getIssue",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Issue slug."
+            },
+            "required": true,
+            "description": "Issue slug.",
+            "name": "issueSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Issue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/{issueSlug}/trend": {
+      "get": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "trend",
+        "summary": "Get issue occurrence histogram",
+        "description": "Returns the occurrence histogram for one issue over `[fromIso, toIso]`. The default range is the trailing 14 days. Buckets are 12-hour wide and UTC-aligned.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "getIssueTrend",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Issue slug."
+            },
+            "required": true,
+            "description": "Issue slug.",
+            "name": "issueSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Lower bound (inclusive). Defaults to ~14 days before `toIso`."
+            },
+            "required": false,
+            "description": "Lower bound (inclusive). Defaults to ~14 days before `toIso`.",
+            "name": "fromIso",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Upper bound (inclusive). Defaults to now."
+            },
+            "required": false,
+            "description": "Upper bound (inclusive). Defaults to now.",
+            "name": "toIso",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Occurrence histogram",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueHistogram"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/{issueSlug}/traces": {
+      "get": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "listTraces",
+        "summary": "List issue traces",
+        "description": "Returns the page of distinct traces that contributed at least one occurrence of the issue, ordered by most recent activity first.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "listIssueTraces",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Issue slug."
+            },
+            "required": true,
+            "description": "Issue slug.",
+            "name": "issueSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."
+            },
+            "required": false,
+            "description": "Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page.",
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Page size. Defaults to 50; max 200."
+            },
+            "required": false,
+            "description": "Page size. Defaults to 50; max 200.",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of traces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTraces"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/resolve": {
+      "post": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "resolve",
+        "summary": "Resolve issues",
+        "description": "Marks each issue in `issueIds` as resolved. When `keepMonitoring` is `false`, monitoring is also stopped for each resolved issue; when omitted, the project's default applies.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "resolveIssues",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveIssuesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-issue result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuesLifecycleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/unresolve": {
+      "post": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "unresolve",
+        "summary": "Unresolve issues",
+        "description": "Reverts each issue in `issueIds` to the unresolved state.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "unresolveIssues",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuesLifecycleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-issue result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuesLifecycleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/ignore": {
+      "post": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "ignore",
+        "summary": "Ignore issues",
+        "description": "Marks each issue in `issueIds` as ignored. Monitoring is also stopped for each ignored issue.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "ignoreIssues",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuesLifecycleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-issue result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuesLifecycleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/unignore": {
+      "post": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "unignore",
+        "summary": "Unignore issues",
+        "description": "Reverts each issue in `issueIds` to a non-ignored state.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "unignoreIssues",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuesLifecycleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-issue result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuesLifecycleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/{issueSlug}/monitor": {
+      "post": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "monitor",
+        "summary": "Monitor issue",
+        "description": "Starts (or realigns) monitoring for the issue. When the issue has no active evaluation, a new one is generated. When an active evaluation exists, the call realigns it. The work runs asynchronously and the response returns immediately. Returns 400 when monitoring is already in progress for this issue.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "monitorIssue",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Issue slug."
+            },
+            "required": true,
+            "description": "Issue slug.",
+            "name": "issueSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Monitor job enqueued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorIssueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/{issueSlug}/unmonitor": {
+      "post": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "unmonitor",
+        "summary": "Unmonitor issue",
+        "description": "Stops monitoring the issue. Idempotent — issues that aren't being monitored return 204 without changing anything.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "unmonitorIssue",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Issue slug."
+            },
+            "required": true,
+            "description": "Issue slug.",
+            "name": "issueSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Issue unmonitored"
+          }
+        }
+      }
+    },
+    "/v1/projects/{projectSlug}/issues/export": {
+      "post": {
+        "tags": [
+          "Issues"
+        ],
+        "x-fern-sdk-group-name": "issues",
+        "x-fern-sdk-method-name": "export",
+        "summary": "Export project issues (async)",
+        "description": "Enqueues an asynchronous CSV export. The response returns immediately; the download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "exportIssues",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportIssuesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Export enqueued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportIssuesResponse"
                 }
               }
             }

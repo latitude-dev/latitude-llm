@@ -59,3 +59,7 @@ export {
   type EvaluationRepositoryShape,
   evaluationListLifecycleSchema,
 } from "./ports/evaluation-repository.ts"
+export {
+  deriveIssueAlignmentState,
+  type IssueAlignmentState,
+} from "./use-cases/get-issue-alignment-state.ts"

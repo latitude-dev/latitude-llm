@@ -154,6 +154,24 @@ export {
   type IssueOccurrenceInput,
 } from "./use-cases/generate-issue-details.ts"
 export {
+  type GetIssueDetailsError,
+  type GetIssueDetailsInput,
+  getIssueDetailsUseCase,
+  type IssueDetails,
+} from "./use-cases/get-issue-details.ts"
+export {
+  type GetIssueTrendError,
+  type GetIssueTrendInput,
+  type GetIssueTrendResult,
+  getIssueTrendUseCase,
+} from "./use-cases/get-issue-trend.ts"
+export {
+  type ListIssueTracesError,
+  type ListIssueTracesInput,
+  type ListIssueTracesResult,
+  listIssueTracesUseCase,
+} from "./use-cases/list-issue-traces.ts"
+export {
   type IssueListAnalytics,
   type IssueListAnalyticsCounts,
   type IssueListItem,
