@@ -38,9 +38,14 @@ const temporalExternal: (string | RegExp)[] = [
 // @opentelemetry/sdk-trace-web (an optional peer, browser-only). The SSR
 // bundle never reaches the web SDK path, but Rolldown's resolver scans it.
 // Externalize so Rolldown does not attempt to resolve the missing peer.
+//
+// @resvg/resvg-js ships a native .node binding (loaded via `require` at
+// runtime). Bundlers cannot read .node files, so it must stay external in
+// both the Vite SSR pass and the Nitro production bundle.
 const ssrExternal: (string | RegExp)[] = [
   ...temporalExternal,
   "@opentelemetry/sdk-trace-web",
+  "@resvg/resvg-js",
 ]
 
 export default defineConfig({
@@ -63,7 +68,11 @@ export default defineConfig({
       "protobufjs",
       "long",
       "@opentelemetry/sdk-trace-web",
+      "@resvg/resvg-js",
     ],
+  },
+  optimizeDeps: {
+    exclude: ["@resvg/resvg-js"],
   },
   resolve: {
     conditions: ["source", "browser"],
