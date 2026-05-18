@@ -67,14 +67,23 @@ describe("MarkdownContent", () => {
     expect(markup).toMatch(/<div[^>]*\boverflow-x-auto\b[^>]*>\s*<table\b/)
   })
 
-  it("falls back to a guarded plain-text view for oversized content", () => {
-    const oversizedContent = `${"a".repeat(LARGE_MARKDOWN_CONTENT_THRESHOLD + 1)}END_MARKER`
+  it("splits oversized content into head + collapsed middle + tail rendered as Markdown", () => {
+    const head = "# Head heading\n\n"
+    const filler = "a".repeat(LARGE_MARKDOWN_CONTENT_THRESHOLD)
+    const tail = "\n\n## Tail heading END_MARKER"
+    const oversizedContent = `${head}${filler}${tail}`
 
     const markup = renderToStaticMarkup(<MarkdownContent content={oversizedContent} />)
 
-    expect(markup).toContain("This content is too large to render as Markdown safely")
-    expect(markup).not.toContain("Render markdown anyway")
-    expect(markup).not.toContain("END_MARKER")
+    // Head and tail are rendered as Markdown.
+    expect(markup).toContain("Head heading")
+    expect(markup).toContain("Tail heading")
+    expect(markup).toContain("END_MARKER")
+    expect(markup).toContain("<h1")
+    expect(markup).toContain("<h2")
+    // The collapsed middle exposes a "Show … more characters" affordance,
+    // and the middle bytes themselves are NOT in the initial markup.
+    expect(markup).toMatch(/Show [\d,]+ more characters/)
   })
 
   it("routes JSON object content to the JSON code-block renderer", () => {
@@ -169,13 +178,13 @@ describe("MarkdownContent", () => {
     expect(markup).toContain("<strong>")
   })
 
-  it("falls back to plain-text preview for oversized JSON instead of JsonContent", () => {
+  it("does not route oversized JSON through JsonContent (falls through to the Markdown split fallback)", () => {
     const filler = `"x": "${"a".repeat(LARGE_MARKDOWN_CONTENT_THRESHOLD)}"`
     const oversizedJson = `{${filler}}`
 
     const markup = renderToStaticMarkup(<MarkdownContent content={oversizedJson} />)
 
-    expect(markup).toContain("This content is too large to render as Markdown safely")
     expect(markup).not.toContain('data-content-type="json"')
+    expect(markup).toMatch(/Show [\d,]+ more characters/)
   })
 })
