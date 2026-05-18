@@ -39,7 +39,7 @@ dependencies = [
     "opentelemetry-instrumentation-transformers==0.50.1",
     "opentelemetry-instrumentation-vertexai==0.50.1",
     "opentelemetry-instrumentation-watsonx==0.50.1",
-    "pydantic==2.12.5",
+    "pydantic==2.13.4",
     "typing-extensions==4.15.0",
     "openai-agents==0.15.1",
 ]
