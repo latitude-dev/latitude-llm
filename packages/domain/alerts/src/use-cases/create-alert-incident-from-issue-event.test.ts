@@ -70,7 +70,8 @@ describe("createAlertIncidentFromIssueEventUseCase", () => {
       sourceType: "issue",
       sourceId: cuid("i"),
       startedAt: occurredAt,
-      endedAt: null,
+      // Eventful kinds collapse to a single point in time: endedAt mirrors startedAt.
+      endedAt: occurredAt,
     })
 
     expect(events).toHaveLength(1)
@@ -90,8 +91,9 @@ describe("createAlertIncidentFromIssueEventUseCase", () => {
     })
   })
 
-  it("uses high severity for issue.regressed", async () => {
+  it("uses high severity and mirrors endedAt onto startedAt for issue.regressed", async () => {
     const { inserted, layer } = createTestLayers()
+    const occurredAt = new Date("2026-05-06T11:00:00Z")
 
     await Effect.runPromise(
       createAlertIncidentFromIssueEventUseCase({
@@ -99,11 +101,32 @@ describe("createAlertIncidentFromIssueEventUseCase", () => {
         organizationId: cuid("o"),
         projectId: cuid("p"),
         issueId: cuid("i"),
-        occurredAt: new Date(),
+        occurredAt,
       }).pipe(Effect.provide(layer)),
     )
 
     expect(inserted[0]?.severity).toBe("high")
     expect(inserted[0]?.kind).toBe("issue.regressed")
+    expect(inserted[0]?.startedAt).toEqual(occurredAt)
+    expect(inserted[0]?.endedAt).toEqual(occurredAt)
+  })
+
+  it("leaves endedAt null for issue.escalating so the lifecycle can be closed later", async () => {
+    const { inserted, layer } = createTestLayers()
+    const occurredAt = new Date("2026-05-06T12:00:00Z")
+
+    await Effect.runPromise(
+      createAlertIncidentFromIssueEventUseCase({
+        kind: "issue.escalating",
+        organizationId: cuid("o"),
+        projectId: cuid("p"),
+        issueId: cuid("i"),
+        occurredAt,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(inserted[0]?.kind).toBe("issue.escalating")
+    expect(inserted[0]?.startedAt).toEqual(occurredAt)
+    expect(inserted[0]?.endedAt).toBeNull()
   })
 })
