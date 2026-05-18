@@ -27,6 +27,7 @@ const githubOwner = config.get("githubOwner") ?? "latitude-dev"
 const githubRepo = config.get("githubRepo") ?? "latitude"
 const bastionAmiId = config.require("bastionAmiId")
 const datadogSite = config.get("datadogSite") ?? "datadoghq.eu"
+const datadogSlackAlertHandle = config.get("datadogSlackAlertHandle") ?? "@slack-alerts"
 const enableDatadogSynthetics = config.getBoolean("enableDatadogSynthetics") ?? false
 
 const temporalCloudAddress = config.get("temporalCloudAddress") ?? `${envConfig.region}.aws.api.temporal.io:7233`
@@ -110,7 +111,10 @@ const ecs = createEcs(
 )
 
 const datadogSynthetics = environment === "production" && enableDatadogSynthetics
-  ? createDatadogSynthetics(name, envConfig, datadogSite)
+  ? createDatadogSynthetics(name, envConfig, {
+      datadogSite,
+      slackAlertHandle: datadogSlackAlertHandle,
+    })
   : undefined
 
 const githubActions = createGithubActionsOidc(name, environment, githubOwner, githubRepo)

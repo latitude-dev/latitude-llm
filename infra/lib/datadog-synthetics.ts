@@ -16,9 +16,14 @@ function datadogApiUrl(site: string): string {
   return `https://api.${site}`
 }
 
-export function createDatadogSynthetics(name: string, envConfig: EnvironmentConfig, datadogSite: string) {
+interface DatadogSyntheticsOptions {
+  datadogSite: string
+  slackAlertHandle: string
+}
+
+export function createDatadogSynthetics(name: string, envConfig: EnvironmentConfig, options: DatadogSyntheticsOptions) {
   const provider = new datadog.Provider(`${name}-datadog`, {
-    apiUrl: datadogApiUrl(datadogSite),
+    apiUrl: datadogApiUrl(options.datadogSite),
   })
 
   const tests = Object.fromEntries(
@@ -71,7 +76,7 @@ export function createDatadogSynthetics(name: string, envConfig: EnvironmentConf
               notificationPresetName: "show_all",
             },
           },
-          message: `Synthetic health check for ${url} failed.\n\ncc @infra/`,
+          message: `Synthetic health check for ${url} failed.\n\n${options.slackAlertHandle} cc @infra/`,
           tags: [
             "app:latitude",
             `env:${envConfig.name}`,
