@@ -135,4 +135,89 @@ describe("Claude Code OTLP span expansion", () => {
     expect(d.timeToFirstTokenNs).toBe(1_953_000_000)
     expect(d.isStreaming).toBe(true)
   })
+
+  it("maps Agent SDK native span names (claude_code.*) when span.type is absent", () => {
+    const interaction: OtlpSpan = {
+      traceId: TRACE_ID,
+      spanId: "1111111111111111",
+      parentSpanId: "",
+      name: "claude_code.interaction",
+      kind: 1,
+      startTimeUnixNano: "1710590400000000000",
+      endTimeUnixNano: "1710590402008000000",
+      attributes: [str("session.id", SESSION), str("user.id", USER_ID), str("user_prompt", "hello from agent sdk")],
+      status: { code: 1 },
+    }
+    expect(runTransform(interaction).operation).toBe("prompt")
+
+    const llm: OtlpSpan = {
+      traceId: TRACE_ID,
+      spanId: "2222222222222222",
+      parentSpanId: "1111111111111111",
+      name: "claude_code.llm_request",
+      kind: 3,
+      startTimeUnixNano: "1710590402100000000",
+      endTimeUnixNano: "1710590404091000000",
+      attributes: [
+        str("session.id", SESSION),
+        str("user.id", USER_ID),
+        str("model", "claude-sonnet-4-20250514"),
+        int("input_tokens", 5),
+        int("output_tokens", 7),
+        int("ttft_ms", 100),
+      ],
+      status: { code: 1 },
+    }
+    const llmDetail = runTransform(llm)
+    expect(llmDetail.operation).toBe("chat")
+    expect(llmDetail.provider).toBe("anthropic")
+    expect(llmDetail.model).toBe("claude-sonnet-4-20250514")
+
+    const tool: OtlpSpan = {
+      traceId: TRACE_ID,
+      spanId: "3333333333333333",
+      parentSpanId: "1111111111111111",
+      name: "claude_code.tool",
+      kind: 1,
+      startTimeUnixNano: "1710590404100000000",
+      endTimeUnixNano: "1710590404200000000",
+      attributes: [
+        str("session.id", SESSION),
+        str("user.id", USER_ID),
+        str("tool.name", "Read"),
+        str("tool.input", "{}"),
+        str("tool.output", "ok"),
+      ],
+      status: { code: 1 },
+    }
+    expect(runTransform(tool).operation).toBe("execute_tool")
+
+    const toolChild: OtlpSpan = {
+      traceId: TRACE_ID,
+      spanId: "4444444444444444",
+      parentSpanId: "3333333333333333",
+      name: "claude_code.tool.execution",
+      kind: 1,
+      startTimeUnixNano: "1710590404110000000",
+      endTimeUnixNano: "1710590404190000000",
+      attributes: [str("session.id", SESSION)],
+      status: { code: 1 },
+    }
+    expect(runTransform(toolChild).operation).toBe("execute_tool")
+  })
+
+  it("maps span.type tool to execute_tool (native OTEL)", () => {
+    const span: OtlpSpan = {
+      traceId: TRACE_ID,
+      spanId: "5555555555555555",
+      parentSpanId: "",
+      name: "claude_code.tool",
+      kind: 1,
+      startTimeUnixNano: "1710590400000000000",
+      endTimeUnixNano: "1710590401000000000",
+      attributes: [str("span.type", "tool"), str("session.id", SESSION), str("tool.name", "Glob")],
+      status: { code: 1 },
+    }
+    expect(runTransform(span).operation).toBe("execute_tool")
+  })
 })

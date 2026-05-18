@@ -128,25 +128,25 @@ describe("resolveAttributes", () => {
   describe("provider resolution", () => {
     it("resolves from gen_ai.provider.name", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.provider.name", "openai")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.provider).toBe("openai")
     })
 
     it("resolves from gen_ai.system (deprecated)", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.system", "anthropic")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.provider).toBe("anthropic")
     })
 
     it("resolves from OpenInference llm.system", () => {
       const attrs: OtlpKeyValue[] = [strAttr("llm.system", "openai")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.provider).toBe("openai")
     })
 
     it("resolves from Vercel ai.model.provider and strips suffix", () => {
       const attrs: OtlpKeyValue[] = [strAttr("ai.model.provider", "openai.chat")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.provider).toBe("openai")
     })
 
@@ -164,13 +164,13 @@ describe("resolveAttributes", () => {
 
       for (const [key, input, expected] of cases) {
         const attrs: OtlpKeyValue[] = [strAttr(key, input)]
-        const result = resolveAttributes(attrs, "unset")
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.provider).toBe(expected)
       }
     })
 
     it("returns empty string for missing provider", () => {
-      const result = resolveAttributes([], "unset")
+      const result = resolveAttributes({ spanAttrs: [], statusCode: "unset" })
       expect(result.provider).toBe("")
     })
   })
@@ -178,25 +178,25 @@ describe("resolveAttributes", () => {
   describe("model resolution", () => {
     it("resolves from gen_ai.request.model", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.request.model", "gpt-4o")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.model).toBe("gpt-4o")
     })
 
     it("resolves from OpenInference llm.model_name", () => {
       const attrs: OtlpKeyValue[] = [strAttr("llm.model_name", "claude-3-opus")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.model).toBe("claude-3-opus")
     })
 
     it("resolves from Vercel ai.model.id", () => {
       const attrs: OtlpKeyValue[] = [strAttr("ai.model.id", "gpt-4o-mini")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.model).toBe("gpt-4o-mini")
     })
 
     it("resolves from embedding.model_name", () => {
       const attrs: OtlpKeyValue[] = [strAttr("embedding.model_name", "text-embedding-3-small")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.model).toBe("text-embedding-3-small")
     })
   })
@@ -204,13 +204,13 @@ describe("resolveAttributes", () => {
   describe("response model resolution", () => {
     it("resolves from gen_ai.response.model", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.response.model", "gpt-4o-2024-05-13")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.responseModel).toBe("gpt-4o-2024-05-13")
     })
 
     it("resolves from ai.response.model", () => {
       const attrs: OtlpKeyValue[] = [strAttr("ai.response.model", "gpt-4o-mini")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.responseModel).toBe("gpt-4o-mini")
     })
   })
@@ -218,7 +218,7 @@ describe("resolveAttributes", () => {
   describe("operation resolution", () => {
     it("resolves from gen_ai.operation.name", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.operation.name", "chat")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.operation).toBe("chat")
     })
 
@@ -236,7 +236,7 @@ describe("resolveAttributes", () => {
 
       for (const [kind, expected] of cases) {
         const attrs: OtlpKeyValue[] = [strAttr("openinference.span.kind", kind)]
-        const result = resolveAttributes(attrs, "unset")
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.operation).toBe(expected)
       }
     })
@@ -251,7 +251,7 @@ describe("resolveAttributes", () => {
 
       for (const [type, expected] of cases) {
         const attrs: OtlpKeyValue[] = [strAttr("llm.request.type", type)]
-        const result = resolveAttributes(attrs, "unset")
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.operation).toBe(expected)
       }
     })
@@ -269,7 +269,7 @@ describe("resolveAttributes", () => {
 
       for (const [opId, expected] of cases) {
         const attrs: OtlpKeyValue[] = [strAttr("ai.operationId", opId)]
-        const result = resolveAttributes(attrs, "unset")
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.operation).toBe(expected)
       }
     })
@@ -281,7 +281,7 @@ describe("resolveAttributes", () => {
         intAttr("gen_ai.usage.input_tokens", 100),
         intAttr("gen_ai.usage.output_tokens", 50),
       ]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.tokensInput).toBe(100)
       expect(result.tokensOutput).toBe(50)
     })
@@ -291,21 +291,21 @@ describe("resolveAttributes", () => {
         intAttr("gen_ai.usage.prompt_tokens", 200),
         intAttr("gen_ai.usage.completion_tokens", 75),
       ]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.tokensInput).toBe(200)
       expect(result.tokensOutput).toBe(75)
     })
 
     it("resolves OpenInference token counts", () => {
       const attrs: OtlpKeyValue[] = [intAttr("llm.token_count.prompt", 300), intAttr("llm.token_count.completion", 100)]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.tokensInput).toBe(300)
       expect(result.tokensOutput).toBe(100)
     })
 
     it("resolves Vercel AI token counts", () => {
       const attrs: OtlpKeyValue[] = [intAttr("ai.usage.promptTokens", 500), intAttr("ai.usage.completionTokens", 200)]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.tokensInput).toBe(500)
       expect(result.tokensOutput).toBe(200)
     })
@@ -317,7 +317,7 @@ describe("resolveAttributes", () => {
         intAttr("ai.usage.cachedInputTokens", 4429),
         intAttr("ai.usage.inputTokenDetails.cacheWriteTokens", 4761),
       ]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.tokensInput).toBe(1)
       expect(result.tokensCacheRead).toBe(4429)
       expect(result.tokensCacheCreate).toBe(4761)
@@ -332,7 +332,7 @@ describe("resolveAttributes", () => {
         intAttr("gen_ai.usage.cache_creation.input_tokens", 200),
         intAttr("gen_ai.usage.reasoning_tokens", 100),
       ]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.tokensCacheRead).toBe(800)
       expect(result.tokensCacheCreate).toBe(200)
       expect(result.tokensReasoning).toBe(100)
@@ -346,14 +346,14 @@ describe("resolveAttributes", () => {
         intAttr("llm.token_count.prompt_details.cache_write", 100),
         intAttr("llm.token_count.completion_details.reasoning", 200),
       ]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.tokensCacheRead).toBe(700)
       expect(result.tokensCacheCreate).toBe(100)
       expect(result.tokensReasoning).toBe(200)
     })
 
     it("defaults all token counts to zero when missing", () => {
-      const result = resolveAttributes([], "unset")
+      const result = resolveAttributes({ spanAttrs: [], statusCode: "unset" })
       expect(result.tokensInput).toBe(0)
       expect(result.tokensOutput).toBe(0)
       expect(result.tokensCacheRead).toBe(0)
@@ -370,7 +370,7 @@ describe("resolveAttributes", () => {
         floatAttr("llm.cost.prompt", 0.001),
         floatAttr("llm.cost.completion", 0.002),
       ]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.costInputMicrocents).toBe(100_000)
       expect(result.costOutputMicrocents).toBe(200_000)
       expect(result.costIsEstimated).toBe(false)
@@ -384,7 +384,7 @@ describe("resolveAttributes", () => {
         floatAttr("llm.cost.completion", 0.002),
         floatAttr("llm.cost.total", 0.005),
       ]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.costTotalMicrocents).toBe(500_000)
     })
 
@@ -393,7 +393,7 @@ describe("resolveAttributes", () => {
         intAttr("gen_ai.usage.input_tokens", 100),
         intAttr("gen_ai.usage.output_tokens", 50),
       ]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.costTotalMicrocents).toBe(0)
     })
   })
@@ -401,19 +401,19 @@ describe("resolveAttributes", () => {
   describe("response metadata", () => {
     it("resolves response ID", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.response.id", "chatcmpl-abc123")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.responseId).toBe("chatcmpl-abc123")
     })
 
     it("resolves Vercel response ID", () => {
       const attrs: OtlpKeyValue[] = [strAttr("ai.response.id", "resp-xyz")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.responseId).toBe("resp-xyz")
     })
 
     it("resolves finish reasons from GenAI array", () => {
       const attrs: OtlpKeyValue[] = [arrayAttr("gen_ai.response.finish_reasons", ["stop"])]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.finishReasons).toEqual(["stop"])
     })
 
@@ -427,7 +427,7 @@ describe("resolveAttributes", () => {
 
       for (const [vercelReason, expected] of cases) {
         const attrs: OtlpKeyValue[] = [strAttr("ai.response.finishReason", vercelReason)]
-        const result = resolveAttributes(attrs, "unset")
+        const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
         expect(result.finishReasons).toEqual([expected])
       }
     })
@@ -436,13 +436,13 @@ describe("resolveAttributes", () => {
   describe("session ID resolution", () => {
     it("resolves from gen_ai.conversation.id", () => {
       const attrs: OtlpKeyValue[] = [strAttr("gen_ai.conversation.id", "conv-123")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.sessionId).toBe("conv-123")
     })
 
     it("resolves from OpenInference session.id", () => {
       const attrs: OtlpKeyValue[] = [strAttr("session.id", "sess-456")]
-      const result = resolveAttributes(attrs, "unset")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "unset" })
       expect(result.sessionId).toBe("sess-456")
     })
   })
@@ -450,13 +450,13 @@ describe("resolveAttributes", () => {
   describe("error type", () => {
     it("resolves error.type when status is error", () => {
       const attrs: OtlpKeyValue[] = [strAttr("error.type", "TimeoutError")]
-      const result = resolveAttributes(attrs, "error")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "error" })
       expect(result.errorType).toBe("TimeoutError")
     })
 
     it("returns empty string when status is not error", () => {
       const attrs: OtlpKeyValue[] = [strAttr("error.type", "TimeoutError")]
-      const result = resolveAttributes(attrs, "ok")
+      const result = resolveAttributes({ spanAttrs: attrs, statusCode: "ok" })
       expect(result.errorType).toBe("")
     })
   })
