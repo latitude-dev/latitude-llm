@@ -14,6 +14,7 @@ import {
   SpanId,
   SqlClient,
   TraceId,
+  UserId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import type { TraceDetail } from "@domain/spans"
@@ -106,6 +107,7 @@ function buildDraftAnnotationScore(): Score {
     tokens: 0,
     cost: 0,
     draftedAt: new Date("2026-03-24T00:00:00.000Z"),
+    annotatorId: UserId("u".repeat(24)),
     createdAt: new Date("2026-03-24T00:00:00.000Z"),
     updatedAt: new Date("2026-03-24T00:00:00.000Z"),
   } as Score
@@ -225,6 +227,34 @@ describe("enrichAnnotationForPublicationUseCase", () => {
     expect(capturedPrompt).not.toContain("partIndex")
     expect(capturedPrompt).not.toContain("startOffset")
     expect(capturedPrompt).not.toContain("endOffset")
+  })
+
+  it("persists raw feedback without calling AI for system-authored (e.g. flagger) annotation drafts", async () => {
+    const draft = {
+      ...buildDraftAnnotationScore(),
+      sourceId: "SYSTEM",
+      annotatorId: null,
+      metadata: {
+        rawFeedback: "Tool invocation failed with HTTP 502 from the payments connector",
+      },
+    } as Score
+
+    let generateCalls = 0
+    const { layer } = createEnrichLayers(draft, <T>(_input: GenerateInput<T>) => {
+      generateCalls += 1
+      return Effect.die("AI must not run for system-authored publication enrichment") as never
+    })
+
+    const result = await Effect.runPromise(
+      enrichAnnotationForPublicationUseCase({ scoreId: scoreCuid }).pipe(Effect.provide(layer)),
+    )
+
+    expect(generateCalls).toBe(0)
+    expect(result.status).toBe("enriched")
+    if (result.status !== "enriched") throw new Error("expected enriched")
+    expect(result.enrichedFeedback).toBe("Tool invocation failed with HTTP 502 from the payments connector")
+    expect(result.resolvedSessionId).toBe("session")
+    expect(result.resolvedSpanId).toBe(String(publishResolvedSpanId))
   })
 
   it("includes full conversation but no highlighted excerpt for conversation-level annotations", async () => {
