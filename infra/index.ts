@@ -2,6 +2,7 @@ import * as pulumi from "@pulumi/pulumi"
 import { defaults, type EnvironmentConfig, productionConfig, stagingConfig } from "./config.ts"
 import { createAlb } from "./lib/alb.ts"
 import { createBastion } from "./lib/bastion.ts"
+import { createDatadogSynthetics } from "./lib/datadog-synthetics.ts"
 import { createCertificate, createDnsRecords, createHostedZone, createTryLatitudeDnsRecords } from "./lib/dns.ts"
 import { createEcs } from "./lib/ecs.ts"
 import { createGithubActionsOidc } from "./lib/github-actions.ts"
@@ -25,6 +26,9 @@ const domainName = config.get("domainName") ?? defaults.domainName
 const githubOwner = config.get("githubOwner") ?? "latitude-dev"
 const githubRepo = config.get("githubRepo") ?? "latitude"
 const bastionAmiId = config.require("bastionAmiId")
+const datadogSite = config.get("datadogSite") ?? "datadoghq.eu"
+const datadogSlackAlertHandle = config.get("datadogSlackAlertHandle") ?? "@slack-alerts"
+const enableDatadogSynthetics = config.getBoolean("enableDatadogSynthetics") ?? false
 
 const temporalCloudAddress = config.get("temporalCloudAddress") ?? `${envConfig.region}.aws.api.temporal.io:7233`
 const temporalCloudNamespace = config.get("temporalCloudNamespace") ?? ""
@@ -106,6 +110,13 @@ const ecs = createEcs(
   },
 )
 
+const datadogSynthetics = environment === "production" && enableDatadogSynthetics
+  ? createDatadogSynthetics(name, envConfig, {
+      datadogSite,
+      slackAlertHandle: datadogSlackAlertHandle,
+    })
+  : undefined
+
 const githubActions = createGithubActionsOidc(name, environment, githubOwner, githubRepo)
 
 export const outputs = {
@@ -146,6 +157,14 @@ export const outputs = {
     : {}),
 
   domains: envConfig.domains,
+
+  ...(datadogSynthetics
+    ? {
+        datadogSyntheticTestIds: Object.fromEntries(
+          Object.entries(datadogSynthetics.tests).map(([service, test]) => [service, test.id]),
+        ),
+      }
+    : {}),
 
   ...(tryLatitudeZone ? {
     tryLatitudeZoneId: tryLatitudeZone.zone.zoneId,

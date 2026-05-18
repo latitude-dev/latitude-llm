@@ -8,7 +8,11 @@ import {
   groupIncidentsByBucket,
   INCIDENT_SEVERITY_COLOR,
 } from "../../../../../../domains/alerts/incident-markers.ts"
-import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from "./issue-formatters.ts"
+import {
+  formatHistogramBucketDayLabel,
+  formatHistogramBucketLabel,
+  formatHistogramBucketTooltipLabel,
+} from "./issue-formatters.ts"
 
 const DEFAULT_MAX_VISIBLE_BUCKET_LABELS = 6
 const MIN_VISIBLE_BAR_HEIGHT_PERCENT = 12
@@ -306,17 +310,25 @@ export function IssueTrendBar({
     if (escalationThresholds) {
       for (const entry of escalationThresholds) thresholdByBucket.set(entry.bucket, entry.thresholdCount)
     }
+    // The detail-drawer variant deliberately drops the sub-day hour from axis labels —
+    // they crowd the legend. The row mini-bar keeps the existing bucket-size-aware label
+    // (daily buckets render as `month day` either way).
+    const formatBucketAxisLabel = (bucket: string) =>
+      barVariant === "details"
+        ? formatHistogramBucketDayLabel(bucket)
+        : formatHistogramBucketLabel(bucket, bucketSeconds)
+
     return buckets.map((bucket) => {
       const threshold = thresholdByBucket.get(bucket.bucket)
       return {
         key: bucket.bucket,
-        label: formatHistogramBucketLabel(bucket.bucket, bucketSeconds),
+        label: formatBucketAxisLabel(bucket.bucket),
         tooltipLabel: formatHistogramBucketTooltipLabel(bucket.bucket, bucketSeconds),
         count: bucket.count,
         thresholdCount: threshold !== undefined && Number.isFinite(threshold) ? threshold : null,
       }
     })
-  }, [buckets, escalationThresholds, bucketSeconds])
+  }, [buckets, escalationThresholds, bucketSeconds, barVariant])
 
   const hasSeasonalThresholds = useMemo(
     () => chartBuckets.some((bucket) => bucket.thresholdCount !== null),

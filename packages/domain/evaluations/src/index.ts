@@ -160,6 +160,13 @@ export {
 } from "./use-cases/alignment/load-alignment-state-or-inactive.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
+  deriveIssueAlignmentState,
+  type GetIssueAlignmentStateError,
+  type GetIssueAlignmentStateInput,
+  getIssueAlignmentStateUseCase,
+  type IssueAlignmentState,
+} from "./use-cases/get-issue-alignment-state.ts"
+export {
   buildLiveTraceEndEvaluationSelectionKey,
   buildTraceEndEvaluationSelectionInputs,
 } from "./use-cases/live/build-trace-end-evaluation-selection.ts"
@@ -194,4 +201,14 @@ export {
   type RunLiveEvaluationResult,
   runLiveEvaluationUseCase,
 } from "./use-cases/live/run-live-evaluation.ts"
+export {
+  type MonitorIssueError,
+  type MonitorIssueInput,
+  monitorIssueUseCase,
+} from "./use-cases/monitor-issue.ts"
 export { evaluateOptimizationCandidate } from "./use-cases/optimization/evaluate-optimization-candidate.ts"
+export {
+  type UnmonitorIssueError,
+  type UnmonitorIssueInput,
+  unmonitorIssueUseCase,
+} from "./use-cases/unmonitor-issue.ts"

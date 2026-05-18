@@ -73,6 +73,32 @@ const assistantToolCallWithText = (name: string, args: unknown, text: string): T
   ],
 })
 
+const assistantReasoning = (reasoning: string): TraceMessage => ({
+  role: "assistant",
+  parts: [{ type: "reasoning", content: reasoning }],
+})
+
+const assistantReasoningAndToolCall = (reasoning: string, name: string, args: unknown): TraceMessage => ({
+  role: "assistant",
+  parts: [
+    { type: "reasoning", content: reasoning },
+    { type: "tool_call", id: `tc_${++toolCallCounter}`, name, arguments: args },
+  ],
+})
+
+const assistantReasoningAndText = (reasoning: string, text: string): TraceMessage => ({
+  role: "assistant",
+  parts: [
+    { type: "reasoning", content: reasoning },
+    { type: "text", content: text },
+  ],
+})
+
+const tool = (id: string, response: unknown): TraceMessage => ({
+  role: "tool",
+  parts: [{ type: "tool_call_response", id, response }],
+})
+
 // ---------------------------------------------------------------------------
 // Trashing
 // ---------------------------------------------------------------------------
@@ -588,6 +614,67 @@ describe("emptyResponseStrategy.detectDeterministically", () => {
 
     it("no-match on empty conversation", () => {
       expect(emptyResponseStrategy.detectDeterministically?.(makeTrace([]))).toEqual({ kind: "no-match" })
+    })
+
+    it("no-match when the final assistant message has only reasoning (no text, no tool_call)", () => {
+      const trace = makeTrace([user("solve this"), assistantReasoning("Let me think through the steps…")])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("no-match when the final assistant message has reasoning + tool_call (typical agentic step)", () => {
+      const trace = makeTrace([
+        user("check the weather"),
+        assistantReasoningAndToolCall("Need current weather; call the tool.", "get_weather", { city: "NYC" }),
+      ])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("no-match when the final assistant message has reasoning + a real text answer", () => {
+      const trace = makeTrace([
+        user("hi"),
+        assistantReasoningAndText("They greeted me; respond warmly.", "Hello! How can I help?"),
+      ])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("no-match when a reasoning-only intermediate precedes a real final text response", () => {
+      const trace = makeTrace([
+        user("solve this"),
+        assistantReasoning("Let me think this through…"),
+        assistant("Here's the answer: 42"),
+      ])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("no-match when an empty-text intermediate assistant precedes a real final response", () => {
+      // Same shape from a different angle: an empty-text intermediate (e.g.,
+      // a streaming chunk artifact) used to win the forward scan. Now it's
+      // ignored because it's not the most recent assistant turn.
+      const trace = makeTrace([
+        user("hi"),
+        assistant(""),
+        user("did you hear me?"),
+        assistant("Hello! How can I help?"),
+      ])
+      expect(emptyResponseStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("matches when an empty final response follows several valid tool-call iterations", () => {
+      const trace = makeTrace([
+        user("write a Python script"),
+        assistantReasoningAndToolCall("First, read the spec.", "read_file", { path: "spec.md" }),
+        tool("tc_3", { content: "spec body…" }),
+        assistantReasoningAndToolCall("Now write the script.", "write_file", { path: "out.py" }),
+        tool("tc_4", { ok: true }),
+        assistant(""),
+      ])
+      const result = emptyResponseStrategy.detectDeterministically?.(trace)
+      expect(result?.kind).toBe("matched")
+      if (result?.kind === "matched") {
+        expect(result.feedback).toBe("Assistant response was empty or whitespace only")
+        // Should anchor to the final assistant turn, not an earlier reasoning step.
+        expect(result.messageIndex).toBe(5)
+      }
     })
   })
 

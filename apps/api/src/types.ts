@@ -1,6 +1,6 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type { Organization } from "@domain/organizations"
-import type { QueuePublisherShape } from "@domain/queue"
+import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import type { OrganizationId, UserId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient, PostgresDb } from "@platform/db-postgres"
@@ -49,6 +49,8 @@ export type AppEnv = {
     redis: RedisClient
     clickhouse: ClickHouseClient
     queuePublisher: QueuePublisherShape
+    workflowStarter: WorkflowStarterShape
+    workflowQuerier: WorkflowQuerierShape
   }
 }
 
@@ -68,6 +70,8 @@ declare module "hono" {
     redis: AppEnv["Variables"]["redis"]
     clickhouse: AppEnv["Variables"]["clickhouse"]
     queuePublisher: AppEnv["Variables"]["queuePublisher"]
+    workflowStarter: AppEnv["Variables"]["workflowStarter"]
+    workflowQuerier: AppEnv["Variables"]["workflowQuerier"]
     organization?: Organization
   }
 }
@@ -93,6 +97,8 @@ export interface ApiOptions {
   clickhouse: ClickHouseClient
   redis: RedisClient
   queuePublisher: QueuePublisherShape
+  workflowStarter: WorkflowStarterShape
+  workflowQuerier: WorkflowQuerierShape
   logTouchBuffer: boolean
   /** Override for tests that provide an in-memory admin Postgres client for auth lookups */
   adminDatabase?: PostgresClient

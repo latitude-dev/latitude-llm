@@ -41,6 +41,12 @@ export const createAlertIncidentFromIssueEventUseCase = (input: CreateAlertIncid
         const outboxEventWriter = yield* OutboxEventWriter
 
         const now = new Date()
+        // `issue.escalating` opens with `endedAt: null` and is closed later by
+        // `closeAlertIncidentFromIssueEventUseCase`. Eventful kinds have no
+        // close step — collapse them to a point in time by setting `endedAt`
+        // equal to `startedAt` so the rendering layer can decide point-vs-range
+        // purely from timestamps.
+        const endedAt = input.kind === "issue.escalating" ? null : input.occurredAt
         const incident: AlertIncident = {
           id: AlertIncidentId(generateId()),
           organizationId: OrganizationId(input.organizationId),
@@ -50,7 +56,7 @@ export const createAlertIncidentFromIssueEventUseCase = (input: CreateAlertIncid
           kind: input.kind,
           severity: SEVERITY_FOR_KIND[input.kind],
           startedAt: input.occurredAt,
-          endedAt: null,
+          endedAt,
           createdAt: now,
           entrySignals: input.entrySignals ?? null,
           exitEligibleSince: null,

@@ -8,7 +8,14 @@ import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { logger as honoLogger } from "hono/logger"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "./clients.ts"
+import {
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getRedisClient,
+  getWorkflowQuerier,
+  getWorkflowStarter,
+} from "./clients.ts"
 import { API_INFO } from "./constants.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
 import { honoErrorHandler } from "./middleware/error-handler.ts"
@@ -42,13 +49,19 @@ const startServer = async () => {
 
   registerCorsMiddleware(app as unknown as Hono, { nodeEnv })
 
-  const queuePublisher = await getQueuePublisher()
+  const [queuePublisher, workflowStarter, workflowQuerier] = await Promise.all([
+    getQueuePublisher(),
+    getWorkflowStarter(),
+    getWorkflowQuerier(),
+  ])
 
   registerRoutes(app, {
     database: getPostgresClient(),
     clickhouse: getClickhouseClient(),
     redis: getRedisClient(),
     queuePublisher,
+    workflowStarter,
+    workflowQuerier,
     logTouchBuffer: true,
   })
 

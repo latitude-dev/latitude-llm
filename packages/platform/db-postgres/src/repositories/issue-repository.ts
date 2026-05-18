@@ -43,13 +43,17 @@ const isEscalatingExpr = sql<boolean>`exists (
     and ${alertIncidents.endedAt} is null
 )`
 
-const isRegressedExpr = sql<boolean>`exists (
+// Gated on `issues.resolved_at IS NULL` so a "resolved → regressed → resolved
+// again" issue doesn't keep showing as regressed forever — the historical
+// regression incident stays in the table, but the flag clears once the issue is
+// resolved again.
+const isRegressedExpr = sql<boolean>`(${issues.resolvedAt} is null and exists (
   select 1
   from ${alertIncidents}
   where ${alertIncidents.sourceType} = 'issue'
     and ${alertIncidents.sourceId} = ${outerIssueId}
     and ${alertIncidents.kind} = 'issue.regressed'
-)`
+))`
 
 const issueColumnsWithLifecycle = {
   ...getTableColumns(issues),
@@ -362,6 +366,47 @@ const issueRepositoryCoreLive = Layer.effect(
             db.select({ count: sql<number>`count(*)::int` }).from(issues).where(conditions),
           )
           return row?.count ?? 0
+        }),
+
+      findBySlug: ({ projectId, slug }: { readonly projectId: ProjectId; readonly slug: string }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .select(issueColumnsWithLifecycle)
+                .from(issues)
+                .where(
+                  and(
+                    eq(issues.organizationId, organizationId),
+                    eq(issues.projectId, projectId),
+                    eq(issues.slug, slug),
+                  ),
+                )
+                .limit(1),
+            )
+            .pipe(
+              Effect.flatMap((rows) => {
+                const row = rows[0]
+                if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id: slug }))
+                return Effect.succeed(toIssueWithLifecycle(row))
+              }),
+            )
+        }),
+
+      existsBySlug: ({ projectId, slug }: { readonly projectId: ProjectId; readonly slug: string }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const [row] = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select({ id: issues.id })
+              .from(issues)
+              .where(
+                and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.slug, slug)),
+              )
+              .limit(1),
+          )
+          return row !== undefined
         }),
     }
   }),

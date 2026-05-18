@@ -101,6 +101,18 @@ export function formatHistogramBucketLabel(bucket: string, bucketSeconds: number
   })
 }
 
+/**
+ * X-axis tick label that always renders just `month day`, regardless of bucket width.
+ * Used by the issue detail trend bar — the precise sub-day timestamp stays available via
+ * `formatHistogramBucketTooltipLabel`, so dropping it from the axis just keeps the legend
+ * uncluttered.
+ */
+export function formatHistogramBucketDayLabel(bucket: string): string {
+  const date = parseHistogramBucket(bucket)
+  if (Number.isNaN(date.getTime())) return bucket
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+}
+
 export function formatHistogramBucketTooltipLabel(bucket: string, bucketSeconds: number): string {
   const date = parseHistogramBucket(bucket)
   if (Number.isNaN(date.getTime())) return bucket

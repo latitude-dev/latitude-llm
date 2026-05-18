@@ -213,30 +213,43 @@ export function detectOutputSchemaValidationFlagger(trace: TraceDetail): Determi
 }
 
 export function detectEmptyResponseFlagger(trace: TraceDetail): DeterministicFlaggerMatch {
-  for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
-    const message = trace.allMessages[msgIdx]!
-    if (message.role !== "assistant") continue
-
-    let hasToolCall = false
-    const textParts: string[] = []
-
-    for (const part of message.parts) {
-      if (part.type === "tool_call") {
-        hasToolCall = true
-        continue
-      }
-      if (part.type === "text") {
-        const content = (part as { content?: unknown }).content
-        if (typeof content === "string") textParts.push(content)
-      }
+  // Only the most recent assistant turn matters — earlier "empty-looking" entries
+  // are intermediate agentic-loop steps in `lastInput` history, not the final response.
+  // `reasoning` and `tool_call` parts both signal model activity, so a message containing
+  // either is not empty regardless of whether a text part is present.
+  let lastAssistantIdx = -1
+  for (let i = trace.allMessages.length - 1; i >= 0; i--) {
+    if (trace.allMessages[i]!.role === "assistant") {
+      lastAssistantIdx = i
+      break
     }
+  }
+  if (lastAssistantIdx === -1) return NO_MATCH
 
-    if (hasToolCall) continue
-    const accumulatedText = textParts.join("").trim()
-    if (accumulatedText === "") return match("Assistant response was empty or whitespace only", msgIdx)
-    if (accumulatedText.length >= 3 && new Set(accumulatedText).size === 1) {
-      return match(`Assistant response was degenerate: only the character "${accumulatedText[0]}" repeated`, msgIdx)
+  const message = trace.allMessages[lastAssistantIdx]!
+  let hasNonTextProduction = false
+  const textParts: string[] = []
+
+  for (const part of message.parts) {
+    if (part.type === "tool_call" || part.type === "reasoning") {
+      hasNonTextProduction = true
+      continue
     }
+    if (part.type === "text") {
+      const content = (part as { content?: unknown }).content
+      if (typeof content === "string") textParts.push(content)
+    }
+  }
+
+  if (hasNonTextProduction) return NO_MATCH
+
+  const accumulatedText = textParts.join("").trim()
+  if (accumulatedText === "") return match("Assistant response was empty or whitespace only", lastAssistantIdx)
+  if (accumulatedText.length >= 3 && new Set(accumulatedText).size === 1) {
+    return match(
+      `Assistant response was degenerate: only the character "${accumulatedText[0]}" repeated`,
+      lastAssistantIdx,
+    )
   }
 
   return NO_MATCH
