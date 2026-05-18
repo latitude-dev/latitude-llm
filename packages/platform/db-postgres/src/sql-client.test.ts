@@ -73,8 +73,10 @@ function extractSetConfigOrgId(stmt: unknown): string | null {
       "params" in stmt && Array.isArray((stmt as { params: unknown }).params)
         ? (stmt as { params: unknown[] }).params
         : (stmt as { queryChunks: unknown[] }).queryChunks
-    const lastParam = params.findLast((param): param is string => typeof param === "string")
-    if (lastParam) return lastParam
+    for (let index = params.length - 1; index >= 0; index -= 1) {
+      const param = params[index]
+      if (typeof param === "string") return param
+    }
   }
   return null
 }
