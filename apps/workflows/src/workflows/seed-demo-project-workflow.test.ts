@@ -9,9 +9,6 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     seedDemoProjectClickHouseActivity: vi.fn(async () => {
       callOrder.push("clickhouse")
     }),
-    seedDemoProjectWeaviateActivity: vi.fn(async () => {
-      callOrder.push("weaviate")
-    }),
   }
   return { callOrder, mockActivities }
 })
@@ -36,10 +33,10 @@ describe("seedDemoProjectWorkflow", () => {
     vi.clearAllMocks()
   })
 
-  it("runs Postgres → ClickHouse → Weaviate in dependency order", async () => {
+  it("runs Postgres → ClickHouse in dependency order", async () => {
     const result = await seedDemoProjectWorkflow(baseInput)
 
-    expect(callOrder).toEqual(["postgres", "clickhouse", "weaviate"])
+    expect(callOrder).toEqual(["postgres", "clickhouse"])
     expect(result).toEqual({ action: "seeded", projectId: "proj-demo" })
   })
 
@@ -48,7 +45,6 @@ describe("seedDemoProjectWorkflow", () => {
 
     expect(mockActivities.seedDemoProjectPostgresActivity).toHaveBeenCalledWith(baseInput)
     expect(mockActivities.seedDemoProjectClickHouseActivity).toHaveBeenCalledWith(baseInput)
-    expect(mockActivities.seedDemoProjectWeaviateActivity).toHaveBeenCalledWith(baseInput)
   })
 
   it("propagates failure from the Postgres activity and skips downstream activities", async () => {
@@ -58,6 +54,5 @@ describe("seedDemoProjectWorkflow", () => {
 
     await expect(seedDemoProjectWorkflow(baseInput)).rejects.toThrow("postgres seed failed")
     expect(mockActivities.seedDemoProjectClickHouseActivity).not.toHaveBeenCalled()
-    expect(mockActivities.seedDemoProjectWeaviateActivity).not.toHaveBeenCalled()
   })
 })

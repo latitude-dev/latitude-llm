@@ -45,7 +45,7 @@ const projectsFernGroup = (methodName: string) =>
 // design). The field-by-field shape mirrors `projectSettingsSchema` from
 // `@domain/shared`; the per-alert-kind toggles are spelled out so each one is
 // individually documented for SDK / MCP consumers.
-const AlertNotificationsSettingSchema = z
+const IncidentNotificationsSettingSchema = z
   .object({
     "issue.new": z
       .boolean()
@@ -61,27 +61,40 @@ const AlertNotificationsSettingSchema = z
       .describe(
         "Send a notification when an active issue is escalating in volume or severity. Defaults to `true` when omitted.",
       ),
-    escalationSensitivity: z
-      .number()
-      .int()
-      .min(1)
-      .max(6)
-      .optional()
-      .describe(
-        "Sensitivity of the escalation detector, 1 (most sensitive, more notifications) to 6 (least sensitive, fewer notifications). Defaults to a balanced value when omitted.",
-      ),
   })
-  .openapi("AlertNotificationsSetting")
+  .openapi("IncidentNotificationsSetting")
 
 // Assert at compile time that the API schema covers every alert kind the
 // domain knows about — adding a new entry to `ALERT_INCIDENT_KINDS` makes
 // this assertion fail until we describe the new key here too.
 type _AlertKindsCovered = Exclude<
   (typeof ALERT_INCIDENT_KINDS)[number],
-  keyof z.infer<typeof AlertNotificationsSettingSchema>
+  keyof z.infer<typeof IncidentNotificationsSettingSchema>
 >
 const _alertKindsAreCovered: _AlertKindsCovered extends never ? true : false = true
 void _alertKindsAreCovered
+
+const NotificationsSettingSchema = z
+  .object({
+    incidents: IncidentNotificationsSettingSchema.optional().describe(
+      "Per-alert-kind opt-out for incident notifications.",
+    ),
+  })
+  .openapi("NotificationsSetting")
+
+const EscalationSettingSchema = z
+  .object({
+    sensitivity: z
+      .number()
+      .int()
+      .min(1)
+      .max(6)
+      .optional()
+      .describe(
+        "Sensitivity of the escalation detector, 1 (most sensitive, more incidents) to 6 (least sensitive, fewer incidents). Defaults to a balanced value when omitted.",
+      ),
+  })
+  .openapi("EscalationSetting")
 
 const ProjectSettingsSchema = z
   .object({
@@ -91,8 +104,11 @@ const ProjectSettingsSchema = z
       .describe(
         "When `true`, the evaluation linked to an issue keeps running after the issue is resolved. When `false`, resolving the issue stops the evaluation. Defaults to `true` when omitted.",
       ),
-    alertNotifications: AlertNotificationsSettingSchema.optional().describe(
-      "Per-alert-kind in-app notification toggles plus escalation-detector tuning. Omit to keep current values.",
+    notifications: NotificationsSettingSchema.optional().describe(
+      "Per-group project-level notification toggles. Today only `incidents` exists; future groups (wrapped reports, etc.) slot in alongside.",
+    ),
+    escalation: EscalationSettingSchema.optional().describe(
+      "Tuning parameters for the escalation detector. Affects detector behaviour regardless of whether notifications are enabled.",
     ),
   })
   .openapi("ProjectSettings")

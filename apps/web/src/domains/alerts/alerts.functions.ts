@@ -34,8 +34,6 @@ export interface AlertIncidentRecord {
   readonly endedAt: string | null
   /** Resolved name of the issue tied to the incident; `null` if not found (e.g., deleted). */
   readonly issueName: string | null
-  /** Stable issue uuid used for deep-linking from `/projects/:slug/issues?issueId=...`. */
-  readonly issueUuid: string | null
 }
 
 const toRecord = (incident: AlertIncident, issue: IssueWithLifecycle | undefined): AlertIncidentRecord => ({
@@ -48,7 +46,6 @@ const toRecord = (incident: AlertIncident, issue: IssueWithLifecycle | undefined
   startedAt: incident.startedAt.toISOString(),
   endedAt: incident.endedAt?.toISOString() ?? null,
   issueName: issue?.name ?? null,
-  issueUuid: issue?.uuid ?? null,
 })
 
 /**

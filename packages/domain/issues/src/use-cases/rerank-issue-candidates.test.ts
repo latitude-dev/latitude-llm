@@ -1,4 +1,5 @@
 import { createFakeAI } from "@domain/ai/testing"
+import { IssueId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import {
@@ -19,8 +20,8 @@ describe("rerankIssueCandidatesUseCase", () => {
         query: "agent exposes tokens",
         candidates: [
           {
-            uuid: "issue-1",
-            title: "Token leakage",
+            issueId: IssueId("issue-1"),
+            name: "Token leakage",
             description: "Agent exposed API tokens",
             score: 0.8,
           },
@@ -32,7 +33,7 @@ describe("rerankIssueCandidatesUseCase", () => {
     expect(aiCalls.rerank[0]?.model).toBe(ISSUE_DISCOVERY_RERANK_MODEL)
     expect(aiCalls.rerank[0]?.documents).toEqual(["Token leakage\n\nAgent exposed API tokens"])
     expect(result).toEqual({
-      matchedIssueUuid: "issue-1",
+      matchedIssueId: "issue-1",
       similarityScore: 0.92,
     })
   })
@@ -42,8 +43,8 @@ describe("rerankIssueCandidatesUseCase", () => {
       rerank: () => Effect.succeed([{ index: ISSUE_DISCOVERY_RERANK_CANDIDATES - 1, relevanceScore: 0.95 }]),
     })
     const candidates = Array.from({ length: ISSUE_DISCOVERY_RERANK_CANDIDATES + 1 }, (_, index) => ({
-      uuid: `issue-${index + 1}`,
-      title: `Issue ${index + 1}`,
+      issueId: IssueId(`issue-${index + 1}`),
+      name: `Issue ${index + 1}`,
       description: `Description ${index + 1}`,
       score: 1 - index / 100,
     }))
@@ -56,7 +57,7 @@ describe("rerankIssueCandidatesUseCase", () => {
     )
 
     expect(result).toEqual({
-      matchedIssueUuid: `issue-${ISSUE_DISCOVERY_RERANK_CANDIDATES}`,
+      matchedIssueId: `issue-${ISSUE_DISCOVERY_RERANK_CANDIDATES}`,
       similarityScore: 0.95,
     })
     expect(aiCalls.rerank[0]?.documents).toHaveLength(ISSUE_DISCOVERY_RERANK_CANDIDATES)
@@ -72,12 +73,12 @@ describe("rerankIssueCandidatesUseCase", () => {
     const result = await Effect.runPromise(
       rerankIssueCandidatesUseCase({
         query: "agent exposes tokens",
-        candidates: [{ uuid: "issue-1", title: "bad", description: "candidate one", score: 0.8 }],
+        candidates: [{ issueId: IssueId("issue-1"), name: "bad", description: "candidate one", score: 0.8 }],
       }).pipe(Effect.provide(aiLayer)),
     )
 
     expect(result).toEqual({
-      matchedIssueUuid: null,
+      matchedIssueId: null,
       similarityScore: 0,
     })
   })

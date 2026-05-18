@@ -24,3 +24,5 @@ export async function datasetExportTemplate(data: DatasetExportEmailData): Promi
     text: `Hi, your Latitude dataset "${data.datasetName}" has been exported. Download it here: ${data.downloadUrl}`,
   }
 }
+
+export default DatasetExportEmail

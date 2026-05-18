@@ -43,6 +43,16 @@ export {
   type WrappedTotalsRow,
 } from "./ports/claude-code-span-reader.ts"
 export {
+  type AssignPersonalityInput,
+  assignPersonality,
+  BASELINE_SHARE,
+  consultantGatePasses,
+  scholarGatePasses,
+  shipperGatePasses,
+  strategistGatePasses,
+  testerGatePasses,
+} from "./use-cases/assign-personality.ts"
+export {
   type AssembleReportInput,
   assembleReport,
   type BuildReportInput,

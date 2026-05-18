@@ -11,11 +11,21 @@ Once connected, every LLM execution becomes a trace in Latitude that you can ins
 
 The fastest way to add Latitude is to let your coding agent (Claude Code, Cursor, Windsurf, etc.) install it for you. The [Latitude skill](https://github.com/latitude-dev/skills) guides the agent through codebase discovery (existing OpenTelemetry, conflicting LLM-observability vendors, which LLM SDKs are in use, where LLM calls actually happen), picks the right install path, places initialization correctly, and verifies that traces land in your project.
 
+<Tip>
+  **Fastest path: skill + MCP together.** Install the [Latitude MCP server](../getting-started/mcp)
+  in your agent alongside the telemetry skill. The MCP lets the agent create the Latitude project
+  and look up your API key directly; the skill then wires tracing into your codebase. Together they
+  finish the install without you leaving the editor.
+</Tip>
+
 ### Ask your coding agent
 
 Paste this prompt into your agent:
 
-> Install the Latitude AI skill from github.com/latitude-dev/skills and use it to add tracing to this application with Latitude following best practices.
+```text
+Install the Latitude AI skill from github.com/latitude-dev/skills and use
+it to add tracing to this application with Latitude following best practices.
+```
 
 The agent will fetch the skill, read your codebase, ask only the questions it can't answer from the code, and produce a working install.
 
@@ -29,7 +39,9 @@ npx skills add latitude-dev/skills --skill "latitude-telemetry"
 
 Then in your agent:
 
-> Add tracing to this application with Latitude following best practices.
+```text
+Add tracing to this application with Latitude following best practices.
+```
 
 The skill covers TypeScript and Python, the providers and frameworks listed in [Supported Integrations](#supported-integrations), and audits existing OpenTelemetry setups for compatibility.
 
@@ -49,7 +61,7 @@ One SDK bootstrap class sets up everything: auto-instrumentation, the Latitude e
 
     const latitude = new Latitude({
       apiKey: process.env.LATITUDE_API_KEY!,
-      projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+      project: process.env.LATITUDE_PROJECT_SLUG!,
       instrumentations: { openai: OpenAI },
     })
 
@@ -77,7 +89,7 @@ One SDK bootstrap class sets up everything: auto-instrumentation, the Latitude e
 
     latitude = Latitude(
         api_key="your-api-key",
-        project_slug="your-project-slug",
+        project="your-project-slug",
         instrumentations={"openai": openai},
     )
 
@@ -94,6 +106,14 @@ One SDK bootstrap class sets up everything: auto-instrumentation, the Latitude e
 
 That's it. Your LLM calls now appear as traces in Latitude.
 
+<Note>
+  **Tracing several agents into separate Latitude projects from one process?** You don't need
+  a separate SDK instance per project. Skip the constructor `project` and pass `project` on each
+  `capture()` instead — spans route to whichever project the active capture declares. See
+  [Project scoping](./project-scoping) for the full pattern, the precedence rules, and the
+  bare-OpenTelemetry alternative.
+</Note>
+
 ## Adding Context with `capture()`
 
 Auto-instrumentation traces LLM calls without any extra code. Use `capture()` when you want to attach business context such as user IDs, session IDs, tags, or metadata to group and filter traces in Latitude.
@@ -106,7 +126,7 @@ Auto-instrumentation traces LLM calls without any extra code. Use `capture()` wh
 
     const latitude = new Latitude({
       apiKey: process.env.LATITUDE_API_KEY!,
-      projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+      project: process.env.LATITUDE_PROJECT_SLUG!,
       instrumentations: { openai: OpenAI },
     })
 
@@ -140,7 +160,7 @@ Auto-instrumentation traces LLM calls without any extra code. Use `capture()` wh
 
     latitude = Latitude(
         api_key="your-api-key",
-        project_slug="your-project-slug",
+        project="your-project-slug",
         instrumentations={"openai": openai},
     )
 

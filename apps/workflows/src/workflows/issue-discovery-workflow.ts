@@ -3,16 +3,9 @@ import type * as activities from "../activities/index.ts"
 import { runWithLockRetry } from "./lock-retry.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
-const {
-  checkEligibility,
-  embedScoreFeedback,
-  hybridSearchIssues,
-  rerankIssueCandidates,
-  resolveMatchedIssue,
-  serializeIssueDiscovery,
-  assignScoreToIssue,
-  syncScoreAnalytics,
-} = proxyActivities<typeof activities>({
+const { checkEligibility, embedScoreFeedback, assignOrCreateIssue, syncScoreAnalytics } = proxyActivities<
+  typeof activities
+>({
   startToCloseTimeout: "5 minutes",
   retry: defaultActivityRetryPolicy,
 })
@@ -29,44 +22,21 @@ export const issueDiscoveryWorkflow = async (input: {
 
   const embeddedScoreFeedback = await embedScoreFeedback(input)
 
-  const hybridSearch = await hybridSearchIssues({
-    organizationId: input.organizationId,
-    projectId: input.projectId,
-    query: embeddedScoreFeedback.feedback,
-    normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
-  })
-
-  const retrieval = await rerankIssueCandidates({
-    query: embeddedScoreFeedback.feedback,
-    candidates: hybridSearch.candidates,
-  })
-
-  const matchedIssue = await resolveMatchedIssue({
-    organizationId: input.organizationId,
-    projectId: input.projectId,
-    matchedIssueUuid: retrieval.matchedIssueUuid,
-  })
-
-  const result =
-    matchedIssue.issueId === null
-      ? await runWithLockRetry(() =>
-          serializeIssueDiscovery({
-            organizationId: input.organizationId,
-            projectId: input.projectId,
-            scoreId: input.scoreId,
-            feedback: embeddedScoreFeedback.feedback,
-            normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
-          }),
-        )
-      : await runWithLockRetry(() =>
-          assignScoreToIssue({
-            organizationId: input.organizationId,
-            projectId: input.projectId,
-            scoreId: input.scoreId,
-            issueId: matchedIssue.issueId!,
-            normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
-          }),
-        )
+  const result = await runWithLockRetry(() =>
+    assignOrCreateIssue({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      scoreId: input.scoreId,
+      feedback: embeddedScoreFeedback.feedback,
+      normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+      ...(embeddedScoreFeedback.rawFeedback !== undefined && embeddedScoreFeedback.rawNormalizedEmbedding !== undefined
+        ? {
+            rawFeedback: embeddedScoreFeedback.rawFeedback,
+            rawNormalizedEmbedding: embeddedScoreFeedback.rawNormalizedEmbedding,
+          }
+        : {}),
+    }),
+  )
 
   if (result.status === "skipped") {
     return { action: "skipped" as const, reason: result.reason }

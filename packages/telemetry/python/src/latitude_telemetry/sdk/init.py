@@ -18,6 +18,7 @@ from opentelemetry.sdk.trace.export import SpanExporter
 from opentelemetry.trace import NoOpTracerProvider, ProxyTracerProvider
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+from latitude_telemetry.sdk._deprecation import warn_project_slug_deprecated
 from latitude_telemetry.sdk.instrumentations import register_latitude_instrumentations
 from latitude_telemetry.sdk.types import InstrumentationsInput, SmartFilterOptions
 from latitude_telemetry.telemetry.latitude_span_processor import LatitudeSpanProcessor, LatitudeSpanProcessorOptions
@@ -73,6 +74,7 @@ class Latitude:
         self,
         *,
         api_key: str,
+        project: str | None = None,
         project_slug: str | None = None,
         instrumentations: InstrumentationsInput | None = None,
         disable_redact: bool = False,
@@ -87,7 +89,11 @@ class Latitude:
     ):
         if not api_key or not api_key.strip():
             raise ValueError("[Latitude] api_key is required and cannot be empty")
-        normalized_project_slug = project_slug.strip() if project_slug and project_slug.strip() else None
+
+        if project is None and project_slug is not None:
+            warn_project_slug_deprecated("constructor")
+        resolved_project = project if project is not None else project_slug
+        normalized_project = resolved_project.strip() if resolved_project and resolved_project.strip() else None
 
         target_provider = tracer_provider or _get_registered_tracer_provider()
 
@@ -99,7 +105,7 @@ class Latitude:
 
         self._latitude_processor = LatitudeSpanProcessor(
             api_key=api_key,
-            project_slug=normalized_project_slug,
+            project=normalized_project,
             options=LatitudeSpanProcessorOptions(
                 disable_batch=disable_batch,
                 disable_redact=disable_redact,
@@ -193,6 +199,7 @@ class Latitude:
 
 def init_latitude(
     api_key: str,
+    project: str | None = None,
     project_slug: str | None = None,
     instrumentations: InstrumentationsInput | None = None,
     disable_redact: bool = False,
@@ -214,6 +221,7 @@ def init_latitude(
 
     latitude = Latitude(
         api_key=api_key,
+        project=project,
         project_slug=project_slug,
         instrumentations=instrumentations,
         disable_batch=disable_batch,

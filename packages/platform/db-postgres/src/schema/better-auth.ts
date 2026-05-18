@@ -1,4 +1,4 @@
-import type { OrganizationSettings } from "@domain/shared"
+import type { NotificationPreferences, OrganizationSettings } from "@domain/shared"
 import { boolean, index, integer, jsonb, text, varchar } from "drizzle-orm/pg-core"
 import {
   cuid,
@@ -55,6 +55,12 @@ export const users = latitudeSchema.table("users", {
    * when set.
    */
   jobTitle: text("job_title"),
+  /**
+   * Per-channel notification preferences keyed by `NotificationGroup`.
+   * `null` when the user has never visited the settings page — readers
+   * (`shouldSendEmail`) treat that as "all defaults" (opt-out model).
+   */
+  notificationPreferences: jsonb("notification_preferences").$type<NotificationPreferences>(),
   ...timestamps(),
 })
 

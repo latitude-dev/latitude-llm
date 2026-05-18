@@ -15,7 +15,7 @@ The default seed world is **Acme Inc.**, a company that uses AI across customer 
 - **Coherence over isolated demos**. Prefer one believable project graph where data models connect to each other. Avoid adding standalone records that only exist to light up one screen when the same UI state can be represented inside the main narrative.
 - **Realism first, humor second**. Acme conversations can be funny, but spans, sessions, costs, models, metadata, and state transitions should still feel like real observability data.
 - **Ambient plus deterministic layers**. The seed combines broad generated telemetry for browsing and analytics with a smaller deterministic trace layer for workflows that require stable links.
-- **Cross-store integrity**. When Postgres, ClickHouse, and Weaviate all participate in a workflow, the seeded entities should describe the same organization, project, issue family, and lifecycle state.
+- **Cross-store integrity**. When Postgres and ClickHouse both participate in a workflow, the seeded entities should describe the same organization, project, issue family, and lifecycle state.
 - **Extend the story before inventing a new one**. New seeds should usually deepen the existing Acme support project or one of its agents before introducing a disconnected scenario.
 
 The workflow that matters most is:
@@ -49,7 +49,7 @@ The default seed should support these development needs:
 - issue, evaluation, dataset, simulation, score, and queue UIs are backed by connected data instead of disconnected samples
 - at least two issue families show a mature end-to-end lifecycle, while at least one issue remains intentionally generate-ready for evaluation creation workflows
 - any score, queue item, or simulation drilldown that links to a trace or span resolves to a real deterministic ClickHouse record
-- Postgres owns canonical lifecycle state, ClickHouse owns telemetry and analytics mirrors, and Weaviate owns the issue search projection
+- Postgres owns canonical lifecycle state (including the derived pgvector + tsvector that power issue hybrid search), and ClickHouse owns telemetry and analytics mirrors
 
 ## Implementation Layout
 
@@ -94,12 +94,6 @@ ClickHouse is split into two responsibilities:
 - dataset row storage for seeded datasets
 
 Use ClickHouse when a workflow needs real trace/span content, analytics joins, simulation trace tabs, or dataset row browsing.
-
-### Weaviate
-
-Weaviate seeds live in `packages/platform/db-weaviate/src/seeds/all.ts` and currently project issues only.
-
-Use Weaviate when an issue needs its searchable tenant-scoped document and UUID projection to stay aligned with the canonical Postgres issue row.
 
 ## Default Seed Graph
 
@@ -237,7 +231,7 @@ When a new seeded concept crosses module or store boundaries:
 
 1. add or update stable IDs in `packages/domain/shared/src/seeds.ts`
 2. place reusable narrative content in `packages/domain/shared/src/seed-content/*`
-3. wire Postgres, ClickHouse, and Weaviate seeders to those shared definitions
+3. wire Postgres and ClickHouse seeders to those shared definitions
 
 Do not scatter hardcoded IDs or story text independently across seeders.
 
@@ -254,7 +248,7 @@ That usually means:
 - annotation queues
 - dataset/version metadata
 
-Then add the supporting ClickHouse or Weaviate data required to make the workflow complete.
+Then add the supporting ClickHouse data required to make the workflow complete.
 
 ### 5. Preserve cross-store link integrity
 
@@ -262,7 +256,6 @@ When adding or changing trace-linked workflow data:
 
 - any score or queue item with a `traceId` or `spanId` should resolve to a real ClickHouse trace/span
 - any passed simulation should reference a real dataset and real evaluation IDs
-- any issue that exists in Weaviate should describe the same issue family, UUID, organization, and project as Postgres
 - any dataset row counts and simulation metadata should remain consistent with the seeded dataset content
 - any issue-state example that relies on escalation, resolution, or regression should be backed by score occurrence timing that still produces that state against the rolling `now()` window used by analytics
 

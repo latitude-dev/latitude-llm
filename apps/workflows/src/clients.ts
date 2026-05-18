@@ -2,7 +2,6 @@ import type { QueuePublisherShape } from "@domain/queue"
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
-import { createWeaviateClient, type WeaviateClient } from "@platform/db-weaviate"
 import { parseEnv } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { Effect } from "effect"
@@ -10,7 +9,6 @@ import { Effect } from "effect"
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseClientInstance: ClickHouseClient | undefined
-let weaviateClientInstancePromise: Promise<WeaviateClient> | undefined
 let redisInstance: RedisClient | undefined
 let queuePublisherPromise: Promise<QueuePublisherShape> | undefined
 
@@ -48,14 +46,6 @@ export const getClickhouseClient = (): ClickHouseClient => {
   }
 
   return clickhouseClientInstance
-}
-
-export const getWeaviateClient = (): Promise<WeaviateClient> => {
-  if (!weaviateClientInstancePromise) {
-    weaviateClientInstancePromise = createWeaviateClient()
-  }
-
-  return weaviateClientInstancePromise
 }
 
 export const getRedisClient = (): RedisClient => {

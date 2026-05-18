@@ -21,3 +21,5 @@ export async function signupExistingAccountMagicLinkTemplate(
     text: `Hi ${data.userName}, it looks like you already have an account. Sign in here: ${data.magicLinkUrl}`,
   }
 }
+
+export default SignupExistingAccountMagicLinkEmail

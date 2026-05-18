@@ -53,7 +53,8 @@ Its text format is intentionally part of the reliability design:
 
 - it must be readable and useful to both humans and LLMs
 - it must be phrased so similar failures can cluster together cleanly
-- it is the canonical text used both for semantic similarity search over issue centroids and for BM25 text search against issue names/descriptions
+- it is the canonical text used for the primary semantic similarity search over issue centroids and lexical text search against issue names/descriptions
+- for annotation scores, `metadata.rawFeedback` preserves the original wording and may be used as a fallback issue-discovery query when the canonical feedback pass finds no match
 - it should describe the underlying failure pattern, not just dump incidental raw context
 
 `error` is only for true failures. Draft state must not be encoded through sentinel error strings.

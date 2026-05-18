@@ -32,26 +32,33 @@ const TriggerButton = ({ label, variant = "outline", className: cln, ...buttonPr
   )
 }
 
-export type MenuOption = {
+type SeparatorOption = { type: "separator"; hidden?: boolean }
+
+type ItemOption = {
   label: string
   onClick?: () => void
   closeDropdown?: () => void
   onElementClick?: (e: MouseEvent) => void
   type?: "normal" | "destructive"
   iconProps?: IconProps
+  /** Custom element rendered before the label, replacing `iconProps` (used for emojis / avatars). */
+  leading?: ReactNode
   disabled?: boolean
   hidden?: boolean
 }
 
+export type MenuOption = ItemOption | SeparatorOption
+
 function DropdownItem({
   iconProps,
+  leading,
   onClick,
   closeDropdown,
   onElementClick,
   type = "normal",
   label,
   disabled,
-}: MenuOption) {
+}: ItemOption) {
   const onSelect = useCallback(() => {
     if (disabled) return
     onClick?.()
@@ -67,7 +74,7 @@ function DropdownItem({
         "cursor-auto pointer-events-none": !onClick,
       })}
     >
-      {iconProps ? <Icon {...iconProps} /> : null}
+      {leading ?? (iconProps ? <Icon {...iconProps} /> : null)}
       <div className="w-full">
         <Text.H5 color={type === "destructive" ? "destructive" : "foreground"}>{label}</Text.H5>
       </div>
@@ -142,9 +149,12 @@ function DropdownMenu({
           )}
           {options
             .filter((option) => !option.hidden)
-            .map((option) => (
-              <DropdownItem key={option.label} {...option} closeDropdown={closeDropdown} />
-            ))}
+            .map((option, index) => {
+              if (option.type === "separator") {
+                return <DropdownMenuSeparator key={`__sep-${index}`} />
+              }
+              return <DropdownItem key={option.label} {...option} closeDropdown={closeDropdown} />
+            })}
         </DropdownMenuContent>
       </DropdownMenuPortal>
     </DropdownMenuRoot>

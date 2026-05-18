@@ -27,7 +27,7 @@ The system uses:
 
 - PostgreSQL for configuration, lifecycle, relational ownership data, and canonical mutable score rows
 - ClickHouse for immutable score rows and analytical queries
-- Weaviate for issue search and clustering projections
+- Postgres pgvector for issue search
 
 Implementation constraints for this repository:
 
@@ -65,7 +65,7 @@ Postgres indexing rules for this spec:
 - each domain foundation phase defines the required secondary indexes at the same time as the table/entity definitions
 - required indexes should be expressed directly in the Drizzle model definition itself, not only as prose beneath the snippet; single-column `.unique()` constraints may stay inline on the column when that is the clearest shape
 - index design should start from real project-scoped query shapes: tenant scope first, then lifecycle/filter columns, then the dominant sort column
-- do not add speculative GIN/JSONB/text indexes when the query path is already served by owner-row primary keys, Weaviate, or ClickHouse
+- do not add speculative GIN/JSONB/text indexes when the query path is already served by owner-row primary keys, Postgres pgvector, or ClickHouse
 
 This system spans these new domains:
 
@@ -120,7 +120,7 @@ The first phase that needs each external provider capability should introduce it
 
 - `@platform/ai-vercel` for calling LLMs
 - `@platform/ai-voyage` for embeddings and reranking
-- `@platform/db-weaviate` for issue vector/text projection storage and search
+- `@platform/db-postgres` for issue vector/text projection storage and search
 
 Optimizer abstractions live in domain packages, while concrete optimizer implementations live in platform packages:
 
@@ -233,7 +233,7 @@ Rationale for the mixed publication rails:
 
 - `TracesIngested` stays on direct `createEventsPublisher(queuePublisher)` publication because it comes from a high-volume append-only flow whose upstream write is already durable before publication.
 - `ScoreCreated` and `ScoreAssignedToIssue` intentionally use the transactional outbox rail so canonical Postgres writes stay atomic with downstream issue discovery, annotation publication, or debounced refresh requests.
-- ClickHouse analytics sync and Weaviate projection sync are intentionally not routed through an extra domain-event hop; they run directly after the owning Postgres transaction succeeds so the non-Postgres projections do not stay stale longer than necessary.
+- ClickHouse analytics sync and Postgres issue-search maintenance are intentionally not routed through an extra domain-event hop; they run directly after the owning Postgres transaction succeeds so the non-Postgres projections do not stay stale longer than necessary.
 
 Initial reliability topic/task contracts:
 
@@ -655,7 +655,7 @@ The proposer and details-generator should use Latitude-owned prompts, stored in 
 
 - `@platform/ai-vercel`
 - `@platform/ai-voyage`
-- `@platform/db-weaviate`
+- `@platform/db-postgres`
 - `@domain/optimizations`
 - `@platform/op-gepa`
 
@@ -911,7 +911,7 @@ Rules:
 - draft state is represented by `draftedAt`, not by fake error strings
 - human-created UI annotations are written as drafts in Postgres immediately so they remain visible on refresh while the user is still editing
 - system-created annotation queues may also create draft annotations before a human has reviewed the trace
-- draft annotations do not enter issue discovery, issue-centroid mutation, Weaviate projection sync, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
+- draft annotations do not enter issue discovery, issue-centroid mutation, Postgres issue-search maintenance, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
 - if a draft annotation carries `issueId`, treat that value as editable draft intent only until publication clears `draftedAt`
 - a human-reviewed annotation can later confirm, edit, or replace a draft while it is still drafted; once published, it should only support deletion
 
@@ -928,7 +928,7 @@ Rules:
 
 - explicit link choices are human overrides and bypass similarity-based candidate selection for that annotation score once the draft is published
 - while the annotation is still drafted, a selected existing issue is stored only as editable draft intent on the canonical score row
-- publication of that linked draft emits `ScoreCreated` carrying the selected `issueId`, and the centralized `issues:discovery` task then performs the canonical ownership claim plus Weaviate/ClickHouse sync after the Postgres transaction commits; if the score is added to an existing issue, that same transaction also writes `ScoreAssignedToIssue` for the later debounced refresh
+- publication of that linked draft emits `ScoreCreated` carrying the selected `issueId`, and the centralized `issues:discovery` task then performs the canonical ownership claim plus Postgres issue-search maintenance and ClickHouse sync after the Postgres transaction commits; if the score is added to an existing issue, that same transaction also writes `ScoreAssignedToIssue` for the later debounced refresh
 - explicitly linked annotation issues are immediately visible in the product only after publication
 
 ### Annotation Enrichment
@@ -1732,7 +1732,7 @@ Issue discovery must remain close to the original proposal and to the proven par
 3. validate that the score is eligible for issue discovery
 4. if the score comes from an annotation, enrich the annotation feedback first
 5. embed the canonical feedback with VoyageAI `voyage-4-large` at `2048` dimensions
-6. run hybrid search against current issue centroids and text projections in Weaviate
+6. run hybrid search against current issue centroids and text directly in Postgres
 7. use `RelativeScore` fusion for vector + BM25 search
 8. filter out candidates that do not pass the minimum similarity (both vector and BM25) threshold
 9. rerank candidates with VoyageAI `rerank-2.5`
@@ -1752,7 +1752,7 @@ Discovery/refresh execution rules:
 - subsequent issue name/description regeneration should run through a debounced BullMQ task on the `issues:refresh` topic once the refresh window elapses
 - the debounced `issues:refresh` path must generate from the last `25` assigned issue occurrences plus the current persisted issue name/description as the stabilization baseline
 - after generation, `issues:refresh` must re-lock and re-read the canonical issue row before saving any new details so it does not overwrite newer centroid or lifecycle updates
-- after `issues:refresh` persists changed issue details, it must upsert the Weaviate issue projection again; if the issue no longer exists or the generated details are unchanged, it should skip the projection write
+- after `issues:refresh` persists changed issue details, it must upsert the Postgres issue-search state again; if the issue no longer exists or the generated details are unchanged, it should skip the projection write
 - workflows and debounced tasks should recheck persisted Postgres eligibility and current ownership state for correctness and idempotency rather than trusting queue or workflow history alone
 
 Proven v1 retrieval defaults to carry forward and revalidate:
@@ -1778,9 +1778,9 @@ Exact v1-backed discovery mechanics that coding agents should understand:
 
 - v1 eligibility required all of these: failed, non-errored, usable clusterable reasoning, not already assigned to a non-merged issue, not composite, and not generated by the optimizer itself
 - the closest v2 translation is: `draftedAt = null`, `passed = false`, `errored = false`, canonical `feedback` present, and no existing canonical `score.issue_id`
-- discovery embedded the canonical reason/feedback, normalized that embedding, and searched Weaviate with hybrid search using the same text as the keyword query
+- discovery embedded the canonical reason/feedback, normalized that embedding, and searched Postgres with hybrid search using the same text as the keyword query
 - hybrid search used `alpha = 0.75`, cosine `distance <= 0.2`, `RelativeScore` fusion, BM25 `OR` with `minimumMatch = 1`, and an initial candidate limit of `1000`
-- merged issues were filtered out after the Weaviate query, then only the top `20` surviving candidates were sent to reranking
+- merged issues were filtered out after the Postgres hybrid-search query, then only the top `20` surviving candidates were sent to reranking
 - reranking used `rerank-2.5` over candidate descriptions only, rejected candidates below `0.3` relevance, and selected the first surviving reranked item as the match
 - even a single candidate still went through reranking so the relevance threshold could reject it
 - once an evaluation was linked to an issue, future failures from that evaluation stopped re-entering discovery and assigned directly to that issue
@@ -1797,7 +1797,7 @@ Concurrency and ownership rules learned from v1:
 
 Legacy v1 reference paths for this section:
 
-- `packages/core/src/weaviate/index.ts`
+- ``
 - `packages/core/src/voyage/index.ts`
 - `packages/core/src/services/issues/results/validate.ts`
 - `packages/core/src/services/issues/discover.ts`
@@ -1840,7 +1840,7 @@ Concrete v1 math that should be preserved conceptually:
 - compute the effective contribution mass `m = weights[source] * beta`
 - add uses `S' = alpha * S + m * x̂` and `M' = alpha * M + m`
 - remove uses `S' = alpha * S - m * x̂` and `M' = alpha * M - m`
-- the vector emitted to Weaviate/search is `normalize(S')`, not `S' / M'`
+- the vector emitted to Postgres search is `normalize(S')`, not `S' / M'`
 
 Critical v2 corrections relative to v1:
 
@@ -1850,8 +1850,8 @@ Critical v2 corrections relative to v1:
 - fail fast on embedding-dimension mismatches
 - clamp future-dated contributions with `max(0, t - score.createdAt)` so clock skew cannot amplify a contribution
 - if removal drives `mass <= 0`, zero both `base` and `mass` or rebuild from membership; never keep a negative/nonzero base with zero mass
-- centroid state updates must not depend on Weaviate availability; vector sync may lag or retry, but centroid math should still advance
-- do not make an issue searchable in Weaviate until it has a non-empty centroid / real evidence
+- centroid state updates must not depend on derived search-vector availability; vector sync may lag or retry, but centroid math should still advance
+- do not make an issue searchable in Postgres pgvector until it has a non-empty centroid / real evidence
 
 Legacy v1 reference path for this section:
 
@@ -1929,7 +1929,7 @@ export const issues = latitudeSchema.table(
   "issues",
   {
     id: cuid("id").primaryKey(),
-    uuid: uuid("uuid").notNull().unique(), // links the Postgres row with the Weaviate object
+    uuid: uuid("uuid").notNull().unique(), // links the Postgres row with the derived search-vector state
     organizationId: cuid("organization_id").notNull(), // owning organization
     projectId: cuid("project_id").notNull(), // owning project
     name: varchar("name", { length: 128 }).notNull(), // generated from clustered score feedback and related evaluation/annotation context when useful, but generic enough to represent the shared failure pattern across different backgrounds/details
@@ -1950,10 +1950,10 @@ export const issues = latitudeSchema.table(
 
 Required Postgres indexes:
 
-- single-column unique constraint on `uuid` for Postgres/Weaviate linkage and hydration; Postgres backs it with a unique index
+- single-column unique constraint on `uuid` for legacy UUID linkage and hydration; Postgres backs it with a unique index
 - btree on `(organization_id, project_id, ignored_at, resolved_at, created_at)` for project-scoped lifecycle filtering and management actions
-- do not add Postgres text-search indexes on `name` or `description`; issue search lives in Weaviate
-- do not add JSONB indexes on `centroid` in the issues foundation phase; centroid search is served by the Weaviate projection and centroid updates are driven by explicit ownership events
+- do not add Postgres text-search indexes on `name` or `description`; issue search lives in Postgres pgvector columns
+- do not add JSONB indexes on `centroid` in the issues foundation phase; centroid search is served by derived Postgres search state and centroid updates are driven by explicit ownership events
 
 Issue naming and centroid semantics:
 
@@ -1964,9 +1964,9 @@ Issue naming and centroid semantics:
 - synchronous first-generation and later asynchronous `issues:refresh` regeneration must both call the same shared issue-details generation use case so prompt logic, score selection, and stabilization behavior live in one place
 - for existing issues, that shared use case should generate from the last `25` assigned issue occurrences' canonical feedback, using the previous issue `name` and `description` as baseline context so the model avoids unnecessary churn and may keep the current details unchanged when they already capture the underlying issue well
 - for brand-new issues, that shared use case must accept optional explicit occurrence input as an array of issue occurrences, because the synchronous first-generation path runs before the score is yet linked to the new issue and therefore cannot rely only on repository-loaded assigned issue occurrences
-- after asynchronous issue detail regeneration changes the canonical Postgres `name` or `description`, the Weaviate issue projection must be upserted again so BM25-searchable text stays in sync with Postgres
+- after asynchronous issue detail regeneration changes the canonical Postgres `name` or `description`, the Postgres issue-search state must be upserted again so BM25-searchable text stays in sync with Postgres
 
-Search projection in Weaviate:
+Search projection in Postgres pgvector:
 
 ```typescript
 export const Collection = {
@@ -1991,7 +1991,7 @@ export type IssuesCollection = {
 };
 ```
 
-Weaviate collection requirements:
+Postgres issue-search requirements:
 
 - multi-tenancy enabled
 - tenant scope `${organizationId}_${projectId}`
@@ -2009,8 +2009,8 @@ Exact v1 configuration that should inform the v2 implementation:
 - `description` used word tokenization with `skipVectorization = true`
 - BM25 used `b = 0.35` and `k1 = 1.1`
 - the vector index used self-provided vectors, cosine distance, dynamic indexing with threshold `10_000`, and quantization disabled
-- v1 tenant scope was `${workspaceId}_${projectId}_${documentUuid}`; v2 is intentionally changing that to `${organizationId}_${projectId}` so issues become project-scoped rather than document-scoped (underscore separator because Weaviate tenant names only allow alphanumeric, underscore, and hyphen)
-- v1 user-facing issue search still relied on Postgres title search while Weaviate was mainly used for discovery and merge candidate lookup; v2 is intentionally upgrading the product search surface to hybrid search in Weaviate
+- v1 tenant scope was `${workspaceId}_${projectId}_${documentUuid}`; v2 is intentionally changing that to `${organizationId}_${projectId}` so issues become project-scoped rather than document-scoped (underscore separator because legacy tenant names only allow alphanumeric, underscore, and hyphen)
+- v1 user-facing issue search still relied on Postgres title search while vector search was mainly used for discovery and merge candidate lookup; v2 is intentionally upgrading the product search surface to hybrid search in Postgres pgvector
 
 Exact legacy v1 reference collection configuration code to preserve (must be adapted though):
 
@@ -2070,7 +2070,7 @@ export async function getIssuesCollection({ tenantName }: { tenantName: string }
   // Note: even though the collection is configured with auto-tenant-creation, it seems
   // that for read and search operations it still fails when the tenant is not created yet
 
-  const client = await weaviate();
+  const client = await pgvector();
   const collection = client.collections.use<Collection.Issues, IssuesCollection>(Collection.Issues);
 
   const exists = await collection.tenants.getByName(tenantName);
@@ -2082,7 +2082,7 @@ export async function getIssuesCollection({ tenantName }: { tenantName: string }
 }
 ```
 
-This code is preserved verbatim as a v1 reference. Do not copy it blindly into v2 without also applying the intentional v2 changes documented above, especially the project-scoped tenant name and UUID-backed Postgres/Weaviate linkage.
+This code is preserved verbatim as a v1 reference. Do not copy it blindly into v2 without also applying the intentional v2 changes documented above, especially the project-scoped tenant name and UUID-backed legacy UUID linkage.
 
 ### Issues Page
 
@@ -2129,24 +2129,24 @@ The issues page list read is intentionally multi-store and must not be simplifie
 Read responsibilities:
 
 - ClickHouse owns score-backed time filtering, analytics, and per-issue occurrence/trend metrics
-- Weaviate owns issue hybrid search and similarity scores
+- Postgres owns issue hybrid search and similarity scores
 - Postgres owns canonical issue rows, lifecycle group filtering, and linked evaluation hydration
 
 Execution order:
 
 1. Build the score-backed ClickHouse predicate from the selected time range.
 2. Build the canonical issue-row Postgres predicate from lifecycle group state (`Active` / `Archived`).
-3. If search text is present, run Weaviate hybrid search without rerank, rely on the shared AI-layer Redis cache for the query embedding, and capture the matched issue UUIDs plus similarity scores.
+3. If search text is present, run Postgres hybrid search without rerank, rely on the shared AI-layer Redis cache for the query embedding, and capture the matched issue UUIDs plus similarity scores.
 4. Run ClickHouse reads first to determine the issue ids that match the selected time range and to compute the issue-page analytics data needed for the panel and table.
-5. Intersect the ClickHouse candidate issue ids with the Weaviate search candidates when search text is present.
+5. Intersect the ClickHouse candidate issue ids with the Postgres search candidates when search text is present.
 6. Query canonical Postgres issues using `IN (...)` clauses on the matched issue ids / UUIDs and apply the lifecycle-group filter there.
 7. Hydrate linked evaluations from Postgres after the canonical issue rows are known.
-8. Perform final table ordering and pagination after merging Postgres rows with ClickHouse metrics and optional Weaviate similarity scores, so the cross-store sort keys are preserved.
+8. Perform final table ordering and pagination after merging Postgres rows with ClickHouse metrics and optional Postgres similarity scores, so the cross-store sort keys are preserved.
 
 Control application rules:
 
 - the selected time range applies to the final issues table and the analytics panel through ClickHouse-backed issue candidate selection
-- search applies to the final issues table and the analytics panel through Weaviate candidate selection
+- search applies to the final issues table and the analytics panel through Postgres candidate selection
 - lifecycle-group filtering in Postgres does not affect the analytics panel
 - no generic trace-filter builder or filter drawer is part of the Issues page surface
 - Postgres score rows must not be used for issue-page filtering or aggregations
@@ -2582,13 +2582,13 @@ Row click opens a detailed view with:
 **Parallelization notes**: can run in parallel with phases 5 through 7 once Phase 2 lands.
 
 - [x] Define the canonical shared Zod schemas for issues, `IssueCentroid`, and issue lifecycle; infer TypeScript types.
-- [x] Add the Postgres `issues` table with full Drizzle definition using repo-convention helpers, the stored `issues.uuid` used to link with Weaviate, centroid JSONB, `clusteredAt`, lifecycle timestamps, RLS, and the exact secondary indexes defined by this spec.
-- [x] Add the Weaviate `Issues` collection definition with the required BM25, vector, and multi-tenancy settings.
+- [x] Add the Postgres `issues` table with full Drizzle definition using repo-convention helpers, the stored `issues.uuid` retained for backwards compatibility, centroid JSONB, `clusteredAt`, lifecycle timestamps, RLS, and the exact secondary indexes defined by this spec.
+- [x] Add the Postgres issue-search columns and indexes.
 - [x] Add representative seed data for issues and their initial search/projection state.
 - [x] Define the issues-domain named constants for discovery thresholds, centroid decay/weights, refresh debounce, and denoising visibility in the owning package.
 - [x] Document the centroid math, decay anchor (`clusteredAt`), and source-weight rules for later discovery phases.
 
-**Exit gate**: issues schema, Postgres table, and Weaviate collection are complete; later phases can build discovery and lifecycle.
+**Exit gate**: issues schema, Postgres table, and Postgres issue-search state are complete; later phases can build discovery and lifecycle.
 
 ### (LAT-462) Phase 5 - Evaluations Foundations
 
@@ -2689,7 +2689,7 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: after this phase lands, Phase 12 can start while Phase 14 waits for both issue discovery and evaluation generation.
 
-Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core/src/voyage/index.ts`, `packages/core/src/services/issues/results/validate.ts`, `packages/core/src/services/issues/discover.ts`, `packages/core/src/services/issues/shared.ts`. Checkout branch `latitude-v1` in the old repository before using.
+Legacy v1 reference paths: ``, `packages/core/src/voyage/index.ts`, `packages/core/src/services/issues/results/validate.ts`, `packages/core/src/services/issues/discover.ts`, `packages/core/src/services/issues/shared.ts`. Checkout branch `latitude-v1` in the old repository before using.
 
 - [x] Implement score eligibility validation for issue discovery, including the explicit exclusion of errored scores, drafted scores with `draftedAt != null`, missing canonical feedback, already-owned scores, and any source classes explicitly excluded from clustering.
 - [x] Centralize known-issue routing for failed non-errored non-draft scores behind `ScoreCreated` plus a deduped `issues:discovery` task, so selected annotation issue intent and issue-linked evaluation routing are resolved in one place before either direct assignment or the Temporal `issue-discovery` workflow starts.
@@ -2697,20 +2697,20 @@ Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core
   - [x] Add Voyage embedding support to the shared AI service surface (`AI.embed`) via `@platform/ai-voyage`.
   - [x] Wire issue-discovery embedding calls to enforce `voyage-4-large` with `2048` dimensions.
   - [x] Wire embedding caching in the issue-discovery embedding flow.
-- [x] Implement hybrid search in Weaviate with `RelativeScore` fusion over centroid vectors plus BM25 text search, including explicit tenant-existence guards on read/search paths.
+- [x] Implement hybrid search in Postgres pgvector with `RelativeScore` fusion over centroid vectors plus BM25 text search, including explicit tenant-existence guards on read/search paths.
 - [x] Implement reranking with `rerank-2.5`, fixed threshold constants, and the v1-style search sequence of hybrid retrieval first and rerank second.
   - [x] Add Voyage reranking support to the shared AI service surface (`AI.rerank`) via `@platform/ai-voyage`.
   - [x] Wire issue-discovery rerank calls to enforce `rerank-2.5`.
   - [x] Implement and verify the retrieval order: hybrid retrieval first, rerank second.
 - [x] Implement the running centroid math with source weights and decay, adapting the v1 math to the new `IssueCentroid` shape while using `clusteredAt` as the decay anchor instead of generic row `updatedAt`.
-- [x] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, matched-issue resolution against canonical Postgres state, synchronous first issue-details generation inside the create-from-score path for brand-new issues, separate issue creation and existing-issue assignment mutations, direct `syncIssueProjectionsUseCase` Weaviate projection sync before direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse save after the score becomes immutable; reuse the shared `@domain/issues` centroid helpers (`createIssueCentroid`, `updateIssueCentroid`, `normalizeIssueCentroid`) plus the shared hybrid-search path instead of reimplementing centroid math or raw Weaviate issue search in workflow/activity code.
-  - [x] Wire the current `issue-discovery` workflow and activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, canonical matched-issue resolution, separate create-from-score and assign-to-issue mutations, direct `syncIssueProjectionsUseCase` Weaviate projection sync before direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work and single-owner `scores.issue_id` claiming.
+- [x] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, feedback embedding/normalization, hybrid Postgres pgvector search, reranking, matched-issue resolution against canonical Postgres state, synchronous first issue-details generation inside the create-from-score path for brand-new issues, separate issue creation and existing-issue assignment mutations, direct `syncIssueProjectionsUseCase` Postgres issue-search maintenance before direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse save after the score becomes immutable; reuse the shared `@domain/issues` centroid helpers (`createIssueCentroid`, `updateIssueCentroid`, `normalizeIssueCentroid`) plus the shared hybrid-search path instead of reimplementing centroid math or raw Postgres pgvector issue search in workflow/activity code.
+  - [x] Wire the current `issue-discovery` workflow and activities for eligibility recheck, feedback embedding/normalization, hybrid Postgres pgvector search, reranking, canonical matched-issue resolution, separate create-from-score and assign-to-issue mutations, direct `syncIssueProjectionsUseCase` Postgres issue-search maintenance before direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work and single-owner `scores.issue_id` claiming.
   - [x] Lock the canonical issue row during existing-issue assignment so concurrent discovery workflows updating the same issue serialize centroid mutations instead of losing one occurrence.
   - [x] Generate the first issue name/description synchronously inside `issue-discovery` from the initial score before the new issue row is first persisted; this must happen in its own retryable workflow activity outside and before the final create/assign transaction, and that transaction must persist the new issue already carrying those generated details. It must reuse the same shared issue-details generation use case that later async refreshes also call.
-- [x] Implement asynchronous subsequent issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issues:refresh` topic with dedupe/debounce options, reusing the same shared issue-details generation use case as the synchronous new-issue path, generating from the last `25` assigned occurrences plus previous issue details as baseline, and upserting the Weaviate issue projection again after any persisted name/description change.
+- [x] Implement asynchronous subsequent issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issues:refresh` topic with dedupe/debounce options, reusing the same shared issue-details generation use case as the synchronous new-issue path, generating from the last `25` assigned occurrences plus previous issue details as baseline, and upserting the Postgres issue-search state again after any persisted name/description change.
 - [x] Implement the baseline denoising visibility rule for low-evidence, non-annotation issues, with the visibility threshold kept configurable.
 - [x] Implement immutable-score save into ClickHouse after issue assignment through the shared direct `syncScoreAnalyticsUseCase` path, without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
-- [x] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue and ignored-issue rematching, stale Weaviate-candidate fallback after final Postgres existence check, one-time immutable ClickHouse save, and explicit human annotation assignment bypasses.
+- [x] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue and ignored-issue rematching, stale Postgres-candidate fallback after final Postgres existence check, one-time immutable ClickHouse save, and explicit human annotation assignment bypasses.
 
 **Exit gate**: new failed scores can match existing issues or create new ones; issue centroids move correctly over time; canonical score ownership cannot race into multiple active issues; issue visibility is denoised without reintroducing the v1 merge system.
 
@@ -2762,9 +2762,9 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 - [x] Implement derived issue lifecycle states: `new`, `escalating`, `resolved`, `regressed`, and `ignored`.
 - [x] Implement manual resolve/unresolve/ignore/unignore commands, including both single-item and bulk variants, `apps/web` server-function actions for managed product use, and matching public APIs for approved agent-facing access, including the resolve-action override for keeping linked evaluations active, the confirmation-modal default from `keepMonitoring`, and the immediate archival of linked evaluations when an issue is ignored.
-- [x] Implement the issues-page read contract that splits time range, search, and lifecycle controls across ClickHouse, Weaviate, and Postgres; runs ClickHouse first, invokes Weaviate only when search text is present, and then queries canonical Postgres issues through `IN (...)` clauses while preserving cross-store sort keys for final pagination.
+- [x] Implement the issues-page read contract that splits time range, search, and lifecycle controls across ClickHouse and Postgres; runs ClickHouse first, invokes Postgres hybrid search only when search text is present, and then queries canonical Postgres issues through `IN (...)` clauses while preserving cross-store sort keys for final pagination.
 - [x] Implement ClickHouse-backed issue-page analytics reads for histogram buckets, lifecycle aggregate counts, per-issue occurrences in the selected time range, per-issue last seen values, per-issue 14-day trend buckets, and the selected-window total trace count used by `Affected traces`.
-- [x] Implement project-level issue search with Weaviate hybrid search, no rerank, shared AI-layer Redis caching for query embeddings, and propagation of search similarity scores into the final table ordering.
+- [x] Implement project-level issue search with Postgres hybrid search, no rerank, shared AI-layer Redis caching for query embeddings, and propagation of search similarity scores into the final table ordering.
 - [x] Implement the `apps/web` issues domain server functions and collections for the new issues-page state model, including time-range state, columns state, Active/Archived lifecycle tab state, search state, infinite pagination, and next-page prefetch.
 - [x] Build the issues-page action row in `apps/web` so it mirrors the Traces-page structure with time range, columns, Active/Archived tabs, and search.
 - [x] Build the issues-page analytics panel in `apps/web` using the Traces-page aggregate-plus-histogram component pattern, including the default 7-day histogram fallback rules and aggregate counts for `new`, `escalating`, `regressed`, `resolved`, and `seen occurrences`.
@@ -2774,7 +2774,7 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 - [x] Keep the Phase 14 issue management surface web-only for now: implement search, analytics, drawer reads, lifecycle commands, and monitor-generation status through `apps/web` server functions and do not expose public `apps/api` issue routes yet.
 - [x] Add backend regression coverage for bulk lifecycle actions, the multi-store control split, analytics-vs-table control application rules, hybrid search ordering, ClickHouse-backed issue-trace pagination, ignore-driven archival, resolve defaults from `keepMonitoring`, regression reopening behavior, and the web-private issue read orchestration; do not add dedicated React/UI tests for this product surface.
 
-**Exit gate**: users can filter, search, inspect, and manage issues end to end through an Issues page that mirrors the Traces page shell; analytics, search, and table rows stay consistent across ClickHouse, Weaviate, and Postgres reads; the issue drawer exposes lifecycle and monitoring controls with the specified full-history behavior; and the managed issue surface remains web-only until a later phase explicitly introduces a public API contract.
+**Exit gate**: users can filter, search, inspect, and manage issues end to end through an Issues page that mirrors the Traces page shell; analytics, search, and table rows stay consistent across ClickHouse and Postgres reads; the issue drawer exposes lifecycle and monitoring controls with the specified full-history behavior; and the managed issue surface remains web-only until a later phase explicitly introduces a public API contract.
 
 ### (LAT-472) Phase 15 - Evaluations Product Surface And API
 

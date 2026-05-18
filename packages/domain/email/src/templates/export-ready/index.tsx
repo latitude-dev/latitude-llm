@@ -24,3 +24,5 @@ export async function exportReadyTemplate(data: ExportReadyEmailData): Promise<R
     text: `Hi, your Latitude export "${data.exportName}" has been generated. Download it here: ${data.downloadUrl}`,
   }
 }
+
+export default ExportReadyEmail

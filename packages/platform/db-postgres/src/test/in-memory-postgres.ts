@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url"
 import { PGlite } from "@electric-sql/pglite"
+import { vector } from "@electric-sql/pglite/vector"
 import { sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/pglite"
 import { migrate } from "drizzle-orm/pglite/migrator"
@@ -58,8 +59,11 @@ const createAppRoleClient = (postgresDb: PostgresDb): PostgresClient => {
 }
 
 export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
-  const client = new PGlite()
+  const client = new PGlite({ extensions: { vector } })
   await client.exec("CREATE ROLE latitude_app NOLOGIN")
+  // Match migrated Postgres: extension migrations run with `latitude` first in
+  // the search path, so pgvector's `vector` type is installed in that schema.
+  await client.exec("SET search_path TO latitude, public")
 
   const db = drizzle({ client })
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })

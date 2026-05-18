@@ -6,7 +6,6 @@ import { createPostHogClient, loadPostHogConfig, type PostHogClientShape } from 
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, type ClickhouseConfig, createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
-import { createWeaviateClient, type WeaviateClient, type WeaviateConfig } from "@platform/db-weaviate"
 import { parseEnv } from "@platform/env"
 import { createLatitudeApiClient, loadLatitudeApiConfig } from "@platform/latitude-api"
 import { createLoopsContactsSender, loadLoopsConfig } from "@platform/loops"
@@ -17,7 +16,6 @@ import { Effect } from "effect"
 let pgClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
-let weaviateInstancePromise: Promise<WeaviateClient> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 let redisInstance: RedisClient | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
@@ -50,14 +48,6 @@ export const getClickhouseClient = (config?: ClickhouseConfig): ClickHouseClient
   }
 
   return clickhouseInstance
-}
-
-export const getWeaviateClient = (config?: WeaviateConfig): Promise<WeaviateClient> => {
-  if (!weaviateInstancePromise) {
-    weaviateInstancePromise = createWeaviateClient(config)
-  }
-
-  return weaviateInstancePromise
 }
 
 export const getStorageDisk = (): StorageDiskPort => {

@@ -38,6 +38,7 @@ import { TracesView } from "../-components/traces-view.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { SaveSearchModal } from "./-components/save-search-modal.tsx"
 import { SavedSearchesList } from "./-components/saved-searches-list.tsx"
+import { SearchSyntaxLegend } from "./-components/search-syntax-legend.tsx"
 
 const SEARCH_QUERY_MAX_LENGTH = 500
 
@@ -217,6 +218,7 @@ function SearchPage() {
               </Tooltip>
             ) : null}
             <SearchInput key={q} initialValue={q} onSubmit={setQ} />
+            <SearchSyntaxLegend />
           </div>
         </Layout.ActionsRow>
       </Layout.Actions>

@@ -13,15 +13,23 @@ agents that should each show up as a distinct Latitude project).
 For every span Latitude ingests, the server applies this order (highest priority first):
 
 1. **Span attribute** `latitude.project`
-   Set by `capture({ projectSlug })` in the TypeScript SDK or `capture({"project_slug": ...})`
-   in Python. The slug travels on the span itself, so a single OTLP export can carry spans
+   Set by `capture({ project })` in the TypeScript SDK or `capture({"project": ...})` in
+   Python. The slug travels on the span itself, so a single OTLP export can carry spans
    for multiple projects.
 2. **OTEL resource attribute** `latitude.project`
    For bare-OpenTelemetry setups: set `latitude.project` once on the SDK's `Resource` and every
    span inherits it.
 3. **HTTP header** `X-Latitude-Project`
-   The Latitude SDKs send this automatically when a `projectSlug` is passed to the constructor.
+   The Latitude SDKs send this automatically when `project` is passed to the SDK constructor.
    Acts as the per-batch default.
+
+<Note>
+  The SDK option was renamed from `projectSlug` / `project_slug` to `project` in
+  `@latitude-data/telemetry` ≥ `3.0.0-alpha.12` and `latitude-telemetry` ≥ `3.0.0a8`. The old
+  names still work but log a deprecation warning — see each SDK's CHANGELOG for the migration
+  diff. The `X-Latitude-Project` header name and the `latitude.project` span attribute are
+  unchanged.
+</Note>
 
 If none of those resolve to a project that belongs to your organization, the span is rejected.
 
@@ -52,7 +60,7 @@ Three runnable examples ship with each SDK. Start with the one that matches your
 
 ### 1. Single-project default (existing setup)
 
-For services that emit to exactly one Latitude project. The ctor `projectSlug` is sent on
+For services that emit to exactly one Latitude project. The constructor `project` is sent on
 every export as `X-Latitude-Project`, and every `capture()` inherits it.
 
 **TypeScript** — see [`examples/test_project_scoping_single.ts`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/typescript/examples/test_project_scoping_single.ts):
@@ -62,7 +70,7 @@ import { capture, Latitude } from "@latitude-data/telemetry"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
 })
 
 await capture("greet", async () => {
@@ -77,7 +85,7 @@ from latitude_telemetry import Latitude, capture
 
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
 )
 
 @capture("greet")
@@ -85,10 +93,10 @@ def greet():
     ...  # routed to LATITUDE_PROJECT_SLUG
 ```
 
-### 2. Multi-project from day 1 (no ctor default)
+### 2. Multi-project from day 1 (no constructor default)
 
 For services that emit to multiple Latitude projects — e.g. one process that runs several
-agents. Skip the ctor `projectSlug` and set `projectSlug` on every `capture()`.
+agents. Skip the constructor `project` and set `project` on every `capture()`.
 
 **TypeScript** — see [`examples/test_project_scoping_multi.ts`](https://github.com/latitude-dev/latitude-llm/blob/main/packages/telemetry/typescript/examples/test_project_scoping_multi.ts):
 
@@ -100,13 +108,13 @@ const latitude = new Latitude({ apiKey: process.env.LATITUDE_API_KEY! })
 await capture(
   "full-stack-agent-run",
   async () => { /* ... */ },
-  { projectSlug: "full-stack-agent" },
+  { project: "full-stack-agent" },
 )
 
 await capture(
   "call-summariser-run",
   async () => { /* ... */ },
-  { projectSlug: "call-summariser" },
+  { project: "call-summariser" },
 )
 ```
 
@@ -117,16 +125,16 @@ from latitude_telemetry import Latitude, capture
 
 latitude = Latitude(api_key=os.environ["LATITUDE_API_KEY"])
 
-@capture("full-stack-agent-run", {"project_slug": "full-stack-agent"})
+@capture("full-stack-agent-run", {"project": "full-stack-agent"})
 def run_full_stack_agent():
     ...
 
-@capture("call-summariser-run", {"project_slug": "call-summariser"})
+@capture("call-summariser-run", {"project": "call-summariser"})
 def run_call_summariser():
     ...
 ```
 
-A `capture()` that doesn't set `projectSlug` AND a SDK that doesn't have a ctor default →
+A `capture()` that doesn't set `project` AND an SDK that doesn't have a constructor default →
 the spans are rejected with `partialSuccess`. Pick one of the two so every span has a route.
 
 ### 3. Per-span override on top of a default
@@ -139,17 +147,17 @@ elsewhere (e.g. shipping evaluation runs to a separate project).
 ```ts
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,  // env-driven default
+  project: process.env.LATITUDE_PROJECT_SLUG!,  // env-driven default
 })
 
 // inherits the default
 await capture("default-route", async () => { /* ... */ })
 
-// per-capture override — wins over the ctor default
+// per-capture override — wins over the constructor default
 await capture(
   "evaluation-batch",
   async () => { /* ... */ },
-  { projectSlug: "evaluation-runs" },
+  { project: "evaluation-runs" },
 )
 ```
 
@@ -158,14 +166,14 @@ await capture(
 ```python
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
 )
 
 @capture("default-route")
 def default_route():
     ...
 
-@capture("evaluation-batch", {"project_slug": "evaluation-runs"})
+@capture("evaluation-batch", {"project": "evaluation-runs"})
 def evaluation_batch():
     ...
 ```

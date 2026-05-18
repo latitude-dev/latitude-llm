@@ -18,7 +18,7 @@ from latitude_telemetry import Latitude, capture
 # Initialize telemetry pointing to local instance
 latitude = Latitude(
     api_key=os.environ["LATITUDE_API_KEY"],
-    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    project=os.environ["LATITUDE_PROJECT_SLUG"],
     instrumentations={"cohere": cohere},
     disable_batch=True,
 )

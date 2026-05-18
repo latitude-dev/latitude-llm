@@ -170,7 +170,7 @@ async function createLatitudeInstrumentations(input: InstrumentationsInput): Pro
  * import { LatitudeSpanProcessor, registerLatitudeInstrumentations } from "@latitude-data/telemetry"
  *
  * const provider = new NodeTracerProvider({
- *   spanProcessors: [new LatitudeSpanProcessor(apiKey, projectSlug)],
+ *   spanProcessors: [new LatitudeSpanProcessor(apiKey, project)],
  * })
  *
  * await registerLatitudeInstrumentations({

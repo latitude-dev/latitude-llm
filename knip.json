@@ -31,6 +31,7 @@
       "project": []
     },
     "packages/domain/email": {
+      "entry": ["src/templates/**/index.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignoreDependencies": []
     },
@@ -39,9 +40,6 @@
     },
     "packages/platform/db-postgres": {
       "entry": ["src/seeds/index.ts"],
-      "project": ["src/**/*.ts"]
-    },
-    "packages/platform/db-weaviate": {
       "project": ["src/**/*.ts"]
     },
     "packages/platform/*": {

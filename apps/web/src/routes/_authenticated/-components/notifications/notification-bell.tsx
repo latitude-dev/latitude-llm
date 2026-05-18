@@ -1,7 +1,7 @@
-import { Button, Icon, Popover, PopoverContent, PopoverTrigger, Skeleton, Text, useMountEffect } from "@repo/ui"
+import { Button, Icon, Popover, PopoverContent, PopoverTrigger, Skeleton, Text } from "@repo/ui"
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Bell } from "lucide-react"
-import { useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { hasFeatureFlag } from "../../../../domains/feature-flags/feature-flags.functions.ts"
 import {
   getUnreadNotificationCount,
@@ -15,7 +15,7 @@ const NOTIFICATIONS_FEATURE_FLAG = "notifications"
 const UNREAD_COUNT_REFETCH_INTERVAL_MS = 60_000
 
 function formatBadgeCount(count: number): string {
-  if (count > 9) return "9+"
+  if (count > 99) return "99+"
   return String(count)
 }
 
@@ -116,7 +116,6 @@ function NotificationHeader({
 }
 
 function NotificationFeed() {
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useInfiniteQuery({
     queryKey: LIST_QUERY_KEY,
     initialPageParam: undefined as { createdAt: string; id: string } | undefined,
@@ -128,15 +127,16 @@ function NotificationFeed() {
     staleTime: 30_000,
   })
 
-  // Infinite scroll inside the popover — fetch the next page when the sentinel
-  // at the list bottom enters view. Use `useMountEffect` per the web-frontend
-  // skill: the IntersectionObserver is a one-time subscribe-to-external-system.
-  // The callback reads the latest query state through a ref so we don't
-  // re-wire the observer every time TanStack Query updates.
+  // Infinite scroll: attach the IntersectionObserver via a callback ref so it
+  // wires up the moment the sentinel mounts (it doesn't exist on first render
+  // while data is loading). The observer reads the latest query state through
+  // a ref so node attachment isn't re-run on every TanStack Query update.
   const latestQueryStateRef = useRef({ fetchNextPage, hasNextPage, isFetchingNextPage })
   latestQueryStateRef.current = { fetchNextPage, hasNextPage, isFetchingNextPage }
-  useMountEffect(() => {
-    const node = sentinelRef.current
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect()
+    observerRef.current = null
     if (!node) return
     const observer = new IntersectionObserver(
       (entries) => {
@@ -150,8 +150,8 @@ function NotificationFeed() {
       { threshold: 0.1 },
     )
     observer.observe(node)
-    return () => observer.disconnect()
-  })
+    observerRef.current = observer
+  }, [])
 
   if (isLoading) {
     return (

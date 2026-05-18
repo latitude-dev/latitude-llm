@@ -1,14 +1,21 @@
 import { EvaluationIssueRepository } from "@domain/evaluations"
 import {
+  CENTROID_EMBEDDING_DIMENSIONS,
+  CENTROID_EMBEDDING_MODEL,
+  ISSUE_DISCOVERY_MIN_SIMILARITY,
+  ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY,
+  ISSUE_DISCOVERY_SEARCH_CANDIDATES,
+  ISSUE_DISCOVERY_SEARCH_RATIO,
   type Issue,
   type IssueLifecycleFlags,
   IssueRepository,
   type IssueWithLifecycle,
   issueSchema,
   MIN_OCCURRENCES_FOR_VISIBILITY,
+  normalizeIssueCentroid,
 } from "@domain/issues"
-import { type IssueId, NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm"
+import { IssueId, NotFoundError, type ProjectId, RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
+import { and, asc, desc, eq, getTableColumns, inArray, isNotNull, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
@@ -58,7 +65,6 @@ type IssueRowWithLifecycle = typeof issues.$inferSelect & {
 const toDomainIssue = (row: typeof issues.$inferSelect): Issue =>
   issueSchema.parse({
     id: row.id,
-    uuid: row.uuid,
     organizationId: row.organizationId,
     projectId: row.projectId,
     slug: row.slug,
@@ -83,9 +89,61 @@ const toIssueWithLifecycle = (row: IssueRowWithLifecycle): IssueWithLifecycle =>
   return Object.assign({}, issue, { lifecycle })
 }
 
-const toInsertRow = (issue: Issue): typeof issues.$inferInsert => ({
+const validateVector = (
+  vector: readonly number[],
+  operation: string,
+): Effect.Effect<readonly number[], RepositoryError> => {
+  if (vector.length !== CENTROID_EMBEDDING_DIMENSIONS) {
+    return Effect.fail(
+      new RepositoryError({
+        operation,
+        cause: new Error(`Expected ${CENTROID_EMBEDDING_DIMENSIONS} dimensions, received ${vector.length}`),
+      }),
+    )
+  }
+
+  const nonFiniteIndex = vector.findIndex((value) => !Number.isFinite(value))
+  if (nonFiniteIndex !== -1) {
+    return Effect.fail(
+      new RepositoryError({
+        operation,
+        cause: new Error(`Vector contains non-finite value at index ${nonFiniteIndex}`),
+      }),
+    )
+  }
+
+  return Effect.succeed(vector)
+}
+
+const toCentroidEmbedding = (issue: Issue): Effect.Effect<readonly number[] | null, RepositoryError> => {
+  if (issue.centroid.mass <= 0) {
+    return Effect.succeed(null)
+  }
+
+  if (issue.centroid.model !== CENTROID_EMBEDDING_MODEL) {
+    return Effect.fail(
+      new RepositoryError({
+        operation: "IssueRepository.save",
+        cause: new Error(`Unsupported centroid model ${issue.centroid.model}`),
+      }),
+    )
+  }
+
+  const vector = normalizeIssueCentroid(issue.centroid)
+  if (vector.length === 0) {
+    return Effect.fail(
+      new RepositoryError({
+        operation: "IssueRepository.save",
+        cause: new Error("Positive-mass centroid normalized to an empty vector"),
+      }),
+    )
+  }
+
+  return validateVector(vector, "IssueRepository.save")
+}
+
+const toInsertRow = (issue: Issue, centroidEmbedding: readonly number[] | null): typeof issues.$inferInsert => ({
   id: issue.id,
-  uuid: issue.uuid,
   organizationId: issue.organizationId,
   projectId: issue.projectId,
   slug: issue.slug,
@@ -93,6 +151,7 @@ const toInsertRow = (issue: Issue): typeof issues.$inferInsert => ({
   description: issue.description,
   source: issue.source,
   centroid: issue.centroid,
+  centroidEmbedding: centroidEmbedding === null ? null : [...centroidEmbedding],
   clusteredAt: issue.clusteredAt,
   escalatedAt: issue.escalatedAt,
   resolvedAt: issue.resolvedAt,
@@ -213,36 +272,58 @@ const issueRepositoryCoreLive = Layer.effect(
             .pipe(Effect.map((rows) => rows.map(toIssueWithLifecycle)))
         }),
 
-      findByUuid: ({ projectId, uuid }: { readonly projectId: ProjectId; readonly uuid: string }) =>
+      hybridSearch: ({ projectId, query, normalizedEmbedding }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          return yield* sqlClient
-            .query((db, organizationId) =>
-              db
-                .select(issueColumnsWithLifecycle)
-                .from(issues)
-                .where(
-                  and(
-                    eq(issues.organizationId, organizationId),
-                    eq(issues.projectId, projectId),
-                    eq(issues.uuid, uuid),
-                  ),
-                )
-                .limit(1),
-            )
-            .pipe(
-              Effect.flatMap((rows) => {
-                const row = rows[0]
-                if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id: uuid }))
-                return Effect.succeed(toIssueWithLifecycle(row))
-              }),
-            )
+          const vector = yield* validateVector(normalizedEmbedding, "IssueRepository.hybridSearch")
+          // pgvector's wire format expects a `vector` literal; node-postgres binds a JS
+          // number[] as a Postgres array parameter, which cannot be cast to `vector`.
+          // Inline the vector literal instead. This is safe because `validateVector` enforces
+          // the exact dimension count and that every value is a finite number.
+          const queryVector = sql.raw(`'[${vector.join(",")}]'::vector`)
+
+          const lexicalQuery = sql`websearch_to_tsquery('english', ${query})`
+          const vectorScore = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
+          const lexicalScore = sql<number>`least(
+            1::double precision,
+            greatest(0::double precision, ts_rank_cd(${issues.searchDocument}, ${lexicalQuery})::double precision)
+          )`
+          const score = sql<number>`(${ISSUE_DISCOVERY_SEARCH_RATIO}::double precision * ${vectorScore} + ${
+            1 - ISSUE_DISCOVERY_SEARCH_RATIO
+          }::double precision * ${lexicalScore})`
+
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select({
+                issueId: issues.id,
+                name: issues.name,
+                description: issues.description,
+                score,
+              })
+              .from(issues)
+              .where(
+                and(
+                  eq(issues.organizationId, organizationId),
+                  eq(issues.projectId, projectId),
+                  isNotNull(issues.centroidEmbedding),
+                  sql`(${score} >= ${ISSUE_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
+                ),
+              )
+              .orderBy(desc(score), desc(vectorScore), desc(issues.updatedAt), asc(issues.id))
+              .limit(ISSUE_DISCOVERY_SEARCH_CANDIDATES),
+          )
+
+          return rows.map((row) => ({
+            ...row,
+            issueId: IssueId(row.issueId),
+          }))
         }),
 
       save: (issue: Issue) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const row = toInsertRow(issue)
+          const centroidEmbedding = yield* toCentroidEmbedding(issue)
+          const row = toInsertRow(issue, centroidEmbedding)
 
           yield* sqlClient.query((db) =>
             db
@@ -251,13 +332,13 @@ const issueRepositoryCoreLive = Layer.effect(
               .onConflictDoUpdate({
                 target: issues.id,
                 set: {
-                  uuid: row.uuid,
                   projectId: row.projectId,
                   slug: row.slug,
                   name: row.name,
                   description: row.description,
                   source: row.source,
                   centroid: row.centroid,
+                  centroidEmbedding: row.centroidEmbedding,
                   clusteredAt: row.clusteredAt,
                   escalatedAt: row.escalatedAt,
                   resolvedAt: row.resolvedAt,

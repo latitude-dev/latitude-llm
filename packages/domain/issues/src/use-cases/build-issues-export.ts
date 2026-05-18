@@ -53,7 +53,7 @@ export const buildIssuesExportUseCase = Effect.fn("issues.buildIssuesExport")(fu
     input.selection?.mode === "all" || input.selection === undefined ? null : new Set(input.selection.rowIds)
   const remainingSelectedIds = input.selection?.mode === "selected" ? new Set(input.selection.rowIds) : null
   const csvRows: string[][] = [
-    ["id", "uuid", "name", "description", "createdAt", "updatedAt", "escalatedAt", "resolvedAt", "ignoredAt"],
+    ["id", "name", "description", "createdAt", "updatedAt", "escalatedAt", "resolvedAt", "ignoredAt"],
   ]
 
   let offset = 0
@@ -83,7 +83,6 @@ export const buildIssuesExportUseCase = Effect.fn("issues.buildIssuesExport")(fu
 
       csvRows.push([
         issue.id,
-        issue.uuid,
         escapeCsvField(issue.name),
         escapeCsvField(issue.description),
         issue.createdAt.toISOString(),
