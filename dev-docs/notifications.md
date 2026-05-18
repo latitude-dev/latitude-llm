@@ -2,7 +2,9 @@
 
 Multi-channel notification system. Producers fan out to channel-specific workers; each channel keeps its own renderer registry keyed on `NotificationKind`.
 
-> Behind the `"notifications"` feature flag on the frontend bell. The backend writes rows and (depending on user prefs) sends emails regardless of the flag — gating happens on the read side so notification history isn't lost when the flag flips.
+> Two independent feature flags gate this system:
+> - **`"notifications"`** — frontend bell + in-app feed visibility. The backend writes rows regardless, so flipping the flag doesn't lose notification history.
+> - **`"email-notifications"`** — org-level kill switch for the email channel. Checked in the notifications worker's creator step (`apps/workers/src/workers/notifications.ts`) before publishing `notification-email:send`. Also gates the user-prefs settings UI (the "Email notifications" section is hidden when off). When off, in-app rows still land in the bell; only email is suppressed.
 
 ## Concepts
 
