@@ -1,4 +1,3 @@
-import { listIssueAlertIncidentsUseCase } from "@domain/alerts"
 import { monitorIssueUseCase, unmonitorIssueUseCase } from "@domain/evaluations"
 import {
   applyIssueLifecycleCommandUseCase,
@@ -19,7 +18,6 @@ import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
-  AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
   IssueRepositoryLive,
   MembershipRepositoryLive,
@@ -32,7 +30,6 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
-import { AlertIncidentSchema, toAlertIncidentResponse } from "../openapi/entities/alert-incident.ts"
 import {
   IssueDetailSchema,
   IssueHistogramSchema,
@@ -471,71 +468,6 @@ const getIssueTrend = issueEndpoint({
   },
 })
 
-const IssueIncidentsResponseSchema = z
-  .object({
-    incidents: z
-      .array(AlertIncidentSchema)
-      .describe("Incidents whose lifetime overlaps the requested range, oldest first."),
-  })
-  .openapi("IssueIncidentsResponse")
-
-const listIssueIncidents = issueEndpoint({
-  route: createRoute({
-    method: "get",
-    path: "/{issueSlug}/incidents",
-    name: "listIssueIncidents",
-    tags: ["Issues"],
-    ...issuesFernGroup("listIncidents"),
-    summary: "List issue incidents",
-    description:
-      "Returns alert incidents tied to one issue whose lifetime overlaps `[fromIso, toIso]`, oldest first. The default range is the trailing 14 days.",
-    security: PROTECTED_SECURITY,
-    request: { params: IssueSlugParamsSchema, query: TimeRangeQuerySchema },
-    responses: openApiResponses({
-      status: 200,
-      schema: IssueIncidentsResponseSchema,
-      description: "Issue incidents in range",
-    }),
-  }),
-  handler: async (c) => {
-    const { projectSlug, issueSlug } = c.req.valid("param")
-    const { fromIso, toIso } = c.req.valid("query")
-    const organizationId = c.var.organization.id
-
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-
-        const issueRepo = yield* IssueRepository
-        const issue = yield* issueRepo.findBySlug({ projectId: project.id, slug: issueSlug })
-
-        return yield* listIssueAlertIncidentsUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          projectId: project.id,
-          issueId: IssueId(issue.id as string),
-          ...(fromIso ? { from: new Date(fromIso) } : {}),
-          ...(toIso ? { to: new Date(toIso) } : {}),
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, IssueRepositoryLive, AlertIncidentRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
-    )
-
-    return c.json(
-      {
-        incidents: result.items.map(toAlertIncidentResponse),
-      },
-      200,
-    )
-  },
-})
-
 const ListIssueTracesQuerySchema = PaginatedQueryParamsSchema
 
 const listIssueTraces = issueEndpoint({
@@ -768,7 +700,6 @@ export const createIssuesRoutes = () => {
   listIssues.mountHttp(app, createTierRateLimiter("low"))
   getIssue.mountHttp(app, createTierRateLimiter("low"))
   getIssueTrend.mountHttp(app, createTierRateLimiter("medium"))
-  listIssueIncidents.mountHttp(app, createTierRateLimiter("medium"))
   listIssueTraces.mountHttp(app, createTierRateLimiter("medium"))
   resolveIssues.mountHttp(app, createTierRateLimiter("medium"))
   unresolveIssues.mountHttp(app, createTierRateLimiter("medium"))

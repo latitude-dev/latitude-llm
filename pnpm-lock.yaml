@@ -174,9 +174,6 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.18.3
-      '@domain/alerts':
-        specifier: workspace:*
-        version: link:../../packages/domain/alerts
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations

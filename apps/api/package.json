@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
-    "@domain/alerts": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/evaluations": "workspace:*",
