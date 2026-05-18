@@ -246,7 +246,9 @@ describe('POST /projects/:projectId/versions/:versionUuid/documents/logs', () =>
       expect(completionSpan!.commitUuid).toBe(commitUuid)
 
       expect(mocks.diskPutBuffer).toHaveBeenCalledTimes(2)
-      expect(mocks.cacheDel).toHaveBeenCalledTimes(3)
+      // cacheDel calls: latte usage + getData document cache (via the
+      // createDocumentVersion setup) + prompt metadata + completion metadata.
+      expect(mocks.cacheDel).toHaveBeenCalledTimes(4)
 
       const diskPutCalls = mocks.diskPutBuffer.mock.calls
       expect(
