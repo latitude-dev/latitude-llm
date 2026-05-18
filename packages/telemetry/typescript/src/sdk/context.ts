@@ -1,4 +1,5 @@
 import { type Context, context, createContextKey, type Span, trace } from "@opentelemetry/api"
+import { warnProjectSlugDeprecated } from "./_deprecation.ts"
 import type { ContextOptions } from "./types.ts"
 
 export const LATITUDE_CONTEXT_KEY = createContextKey("latitude-internal-context")
@@ -20,7 +21,7 @@ type LatitudeContextData = {
   metadata: Record<string, unknown> | undefined
   sessionId: string | undefined
   userId: string | undefined
-  projectSlug: string | undefined
+  project: string | undefined
 }
 
 export function getLatitudeContext(ctx: Context): LatitudeContextData | undefined {
@@ -44,13 +45,18 @@ export function capture<T>(name: string, fn: () => T | Promise<T>, options: Cont
   const shouldReuseTrace = shouldReuseActiveLatitudeTrace(currentContext)
   const parentContext = shouldReuseTrace ? currentContext : trace.deleteSpan(currentContext)
 
+  if (options.project === undefined && options.projectSlug !== undefined) {
+    warnProjectSlugDeprecated("capture")
+  }
+  const projectFromOptions = options.project ?? options.projectSlug
+
   const mergedData: LatitudeContextData = {
     name: options.name ?? name,
     tags: mergeArrays(existingData?.tags, options.tags),
     metadata: { ...existingData?.metadata, ...options.metadata },
     sessionId: options.sessionId ?? existingData?.sessionId,
     userId: options.userId ?? existingData?.userId,
-    projectSlug: options.projectSlug ?? existingData?.projectSlug,
+    project: projectFromOptions ?? existingData?.project,
   }
 
   const newContext = parentContext.setValue(LATITUDE_CONTEXT_KEY, mergedData)

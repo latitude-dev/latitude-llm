@@ -7,7 +7,6 @@ import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedByIssueError } from "../errors.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
-import { syncIssueProjectionsUseCase } from "./sync-projections.ts"
 
 export interface DiscoverIssueInput {
   readonly organizationId: string
@@ -160,10 +159,6 @@ export const discoverIssueUseCase = Effect.fn("issues.discoverIssue")(function* 
   }
 
   if (eligibilityResult.action === "already-assigned") {
-    yield* syncIssueProjectionsUseCase({
-      organizationId: input.organizationId,
-      issueId: eligibilityResult.issueId,
-    })
     yield* syncScoreAnalyticsUseCase({
       organizationId: input.organizationId,
       scoreId: input.scoreId,

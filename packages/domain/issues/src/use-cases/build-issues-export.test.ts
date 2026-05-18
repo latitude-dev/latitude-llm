@@ -7,7 +7,6 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
-import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
 import { buildIssuesExportUseCase } from "./build-issues-export.ts"
@@ -19,7 +18,6 @@ const projectId = ProjectId("p".repeat(24))
 const makeIssue = (overrides: Partial<Issue> = {}): Issue =>
   ({
     id: IssueId("i".repeat(24)),
-    uuid: "11111111-1111-4111-8111-111111111111",
     slug: "test-issue",
     organizationId,
     projectId,
@@ -59,18 +57,15 @@ describe("buildIssuesExportUseCase", () => {
   it("applies lifecycle filtering, selected rows, sort order, and time range", async () => {
     const activeIssue = makeIssue({
       id: IssueId("a".repeat(24)),
-      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       name: "Active issue",
     })
     const archivedIssue = makeIssue({
       id: IssueId("b".repeat(24)),
-      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       name: "Archived issue",
       ignoredAt: new Date("2026-04-04T00:00:00.000Z"),
     })
     const secondArchivedIssue = makeIssue({
       id: IssueId("c".repeat(24)),
-      uuid: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       name: "Second archived issue",
       ignoredAt: new Date("2026-04-05T00:00:00.000Z"),
     })
@@ -146,11 +141,6 @@ describe("buildIssuesExportUseCase", () => {
         },
         now: new Date("2026-04-25T00:00:00.000Z"),
       }).pipe(
-        Effect.provideService(IssueProjectionRepository, {
-          upsert: () => Effect.void,
-          delete: () => Effect.void,
-          hybridSearch: () => Effect.succeed([]),
-        }),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(EvaluationRepository, createEvaluationRepository()),
         Effect.provideService(IssueRepository, issueRepository),
@@ -175,15 +165,23 @@ describe("buildIssuesExportUseCase", () => {
   it("applies search scoping before exporting issues", async () => {
     const firstIssue = makeIssue({
       id: IssueId("a".repeat(24)),
-      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       name: "Timeout issue",
     })
     const secondIssue = makeIssue({
       id: IssueId("b".repeat(24)),
-      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       name: "Rate limit issue",
     })
-    const { repository: issueRepository } = createFakeIssueRepository([firstIssue, secondIssue])
+    const { repository: issueRepository } = createFakeIssueRepository([firstIssue, secondIssue], {
+      hybridSearch: () =>
+        Effect.succeed([
+          {
+            issueId: secondIssue.id,
+            name: secondIssue.name,
+            description: secondIssue.description,
+            score: 0.9,
+          },
+        ]),
+    })
     const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
       listIssueWindowMetrics: () =>
         Effect.succeed([
@@ -233,19 +231,6 @@ describe("buildIssuesExportUseCase", () => {
           normalizedEmbedding: Array.from(encoder.encode("rate-limit"), (value) => value / 255),
         },
       }).pipe(
-        Effect.provideService(IssueProjectionRepository, {
-          upsert: () => Effect.void,
-          delete: () => Effect.void,
-          hybridSearch: () =>
-            Effect.succeed([
-              {
-                uuid: secondIssue.uuid,
-                title: secondIssue.name,
-                description: secondIssue.description,
-                score: 0.9,
-              },
-            ]),
-        }),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(EvaluationRepository, createEvaluationRepository()),
         Effect.provideService(IssueRepository, issueRepository),

@@ -6,7 +6,7 @@ from latitude_telemetry.util import Model
 
 class ExporterOptions(Model):
     api_key: str
-    project_slug: str | None
+    project: str | None
     endpoint: str
     timeout: float
 
@@ -18,8 +18,8 @@ def create_exporter(options: ExporterOptions) -> SpanExporter:
     headers = {
         "Authorization": f"Bearer {options.api_key}",
     }
-    if options.project_slug:
-        headers["X-Latitude-Project"] = options.project_slug
+    if options.project:
+        headers["X-Latitude-Project"] = options.project
     return OTLPSpanExporter(
         endpoint=f"{options.endpoint}/v1/traces",
         headers=headers,

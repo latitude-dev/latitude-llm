@@ -7,9 +7,7 @@ import { IssueId, OrganizationId, ScoreId, SqlClient, type SqlClientShape } from
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
-import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueProjectionRepository } from "../testing/fake-issue-projection-repository.ts"
 import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
 import { createIssueFromScoreUseCase } from "./create-issue-from-score.ts"
 
@@ -113,10 +111,6 @@ describe("createIssueFromScoreUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(OutboxEventWriter, outbox.service),
-        Effect.provideService(
-          IssueProjectionRepository,
-          createFakeIssueProjectionRepository({ organizationId }).service,
-        ),
       ),
     )
 
@@ -159,10 +153,6 @@ describe("createIssueFromScoreUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
-        Effect.provideService(
-          IssueProjectionRepository,
-          createFakeIssueProjectionRepository({ organizationId }).service,
-        ),
       ),
     )
 
@@ -211,10 +201,6 @@ describe("createIssueFromScoreUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
         Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
-        Effect.provideService(
-          IssueProjectionRepository,
-          createFakeIssueProjectionRepository({ organizationId }).service,
-        ),
       ),
     )
 
@@ -274,10 +260,6 @@ describe("createIssueFromScoreUseCase", () => {
             Effect.provideService(IssueRepository, issueRepository),
             Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
             Effect.provideService(OutboxEventWriter, createFakeOutboxEventWriter().service),
-            Effect.provideService(
-              IssueProjectionRepository,
-              createFakeIssueProjectionRepository({ organizationId }).service,
-            ),
           ),
         )
 

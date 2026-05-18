@@ -88,7 +88,6 @@ start_infra_services() {
   NODE_ENV=development docker compose up -d \
     postgres \
     clickhouse \
-    weaviate \
     redis \
     redis-bullmq \
     mailpit \
@@ -130,7 +129,6 @@ run_migrations() {
   info "Running database migrations."
   run_postgres_migrations
   run_clickhouse_migrations
-  pnpm --filter @platform/db-weaviate wv:migrate
 }
 
 run_optional_seeds() {

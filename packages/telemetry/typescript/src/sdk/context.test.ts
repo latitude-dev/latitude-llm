@@ -1,11 +1,15 @@
 import { context } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { resetProjectSlugDeprecationWarningForTesting } from "./_deprecation.ts"
 import { capture, getLatitudeContext } from "./context.ts"
 
 describe("capture", () => {
   beforeAll(() => {
     context.setGlobalContextManager(new AsyncLocalStorageContextManager())
+  })
+  beforeEach(() => {
+    resetProjectSlugDeprecationWarningForTesting()
   })
   it("should set context data for synchronous functions", () => {
     capture(
@@ -73,19 +77,19 @@ describe("capture", () => {
     )
   })
 
-  it("propagates projectSlug from capture options onto the context", () => {
+  it("propagates project from capture options onto the context", () => {
     capture(
       "scoped",
       () => {
         const ctx = context.active()
         const data = getLatitudeContext(ctx)
-        expect(data?.projectSlug).toBe("call-summariser")
+        expect(data?.project).toBe("call-summariser")
       },
-      { projectSlug: "call-summariser" },
+      { project: "call-summariser" },
     )
   })
 
-  it("nested capture without projectSlug inherits the outer one", () => {
+  it("nested capture without project inherits the outer one", () => {
     capture(
       "outer",
       () => {
@@ -94,16 +98,16 @@ describe("capture", () => {
           () => {
             const ctx = context.active()
             const data = getLatitudeContext(ctx)
-            expect(data?.projectSlug).toBe("primary")
+            expect(data?.project).toBe("primary")
           },
           { tags: ["inner"] },
         )
       },
-      { projectSlug: "primary" },
+      { project: "primary" },
     )
   })
 
-  it("inner capture's projectSlug overrides the outer default", () => {
+  it("inner capture's project overrides the outer default", () => {
     capture(
       "outer",
       () => {
@@ -112,12 +116,39 @@ describe("capture", () => {
           () => {
             const ctx = context.active()
             const data = getLatitudeContext(ctx)
-            expect(data?.projectSlug).toBe("evaluation-runs")
+            expect(data?.project).toBe("evaluation-runs")
           },
-          { projectSlug: "evaluation-runs" },
+          { project: "evaluation-runs" },
         )
       },
-      { projectSlug: "primary" },
+      { project: "primary" },
+    )
+  })
+
+  it("accepts the deprecated `projectSlug` option and logs a deprecation warning", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    capture(
+      "legacy",
+      () => {
+        const ctx = context.active()
+        const data = getLatitudeContext(ctx)
+        expect(data?.project).toBe("legacy-slug")
+      },
+      { projectSlug: "legacy-slug" },
+    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("`projectSlug` on capture()"))
+    warnSpy.mockRestore()
+  })
+
+  it("`project` wins when both `project` and `projectSlug` are passed", () => {
+    capture(
+      "both",
+      () => {
+        const ctx = context.active()
+        const data = getLatitudeContext(ctx)
+        expect(data?.project).toBe("new-name")
+      },
+      { project: "new-name", projectSlug: "old-name" },
     )
   })
 

@@ -26,6 +26,7 @@ const testUser: User = {
   emailVerified: true,
   image: null,
   role: "user",
+  notificationPreferences: null,
   createdAt: new Date("2026-01-01T00:00:00Z"),
 }
 

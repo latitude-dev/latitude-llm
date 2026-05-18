@@ -35,7 +35,6 @@ const issueId = "iiiiiiiiiiiiiiiiiiiiiiii"
 
 const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   id: IssueId(issueId),
-  uuid: "11111111-1111-4111-8111-111111111111",
   slug: "test-issue",
   organizationId,
   projectId,
@@ -327,7 +326,7 @@ describe("checkIssueEscalationUseCase", () => {
     })
   })
 
-  it("uses projectSettings.alertNotifications.escalationSensitivity to widen the band", async () => {
+  it("uses projectSettings.escalation.sensitivity to widen the band", async () => {
     // Signals trip the default k=3 (band1h ≈ 19.5) but should not trip k=6 (band1h ≈ 29).
     const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
     const events: OutboxWriteEvent[] = []
@@ -336,7 +335,7 @@ describe("checkIssueEscalationUseCase", () => {
       isEscalating: false,
       signals: makeSignals({ recent1h: 25, recent6h: 120, recent24h: 240 }),
       events,
-      projectSettings: { alertNotifications: { escalationSensitivity: 6 } },
+      projectSettings: { escalation: { sensitivity: 6 } },
     })
 
     const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))

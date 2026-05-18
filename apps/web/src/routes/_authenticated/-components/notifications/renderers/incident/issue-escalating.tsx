@@ -1,27 +1,20 @@
-import type { IncidentNotificationPayload } from "@domain/notifications"
 import { Icon } from "@repo/ui"
 import { useQuery } from "@tanstack/react-query"
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react"
-import type { NotificationRecord } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { getIncidentTrend } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { IssueTrendBar } from "../../../../projects/$projectSlug/issues/-components/issue-trend-bar.tsx"
 import { BaseNotification } from "../../base-notification.tsx"
 import { buildIssueUrl, useIncidentLinkFallback, useLiveIssueSummary } from "./-incident-helpers.ts"
+import type { IncidentEvent, IncidentRendererProps } from "./index.tsx"
 import { IssueSummaryCard } from "./issue-summary-card.tsx"
 
-export function IssueEscalatingNotification({
-  notification,
-  payload,
-}: {
-  readonly notification: NotificationRecord
-  readonly payload: IncidentNotificationPayload
-}) {
+export function IssueEscalatingNotification({ notification, payload, event }: IncidentRendererProps) {
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
   const createdAt = new Date(notification.createdAt)
-  const fallback = useIncidentLinkFallback(payload, notification.sourceId)
+  const fallback = useIncidentLinkFallback(payload, payload.alertIncidentId ?? null)
   const live = useLiveIssueSummary(payload, fallback)
   const issueName = live?.name ?? payload.issueName ?? fallback?.issueName ?? undefined
-  const opened = payload.event === "opened"
+  const opened = event === "opened"
   // Snapshot status for opened is "escalating"; for closed we genuinely
   // don't know (the escalation just ended — the issue could be ongoing,
   // resolved, or regressed). Wait for the live lookup in that case.
@@ -35,12 +28,13 @@ export function IssueEscalatingNotification({
       notificationId={notification.id}
       seenAt={seenAt}
       createdAt={createdAt}
+      projectId={notification.projectId}
       icon={<Icon icon={icon} />}
       title={opened ? "An issue is escalating." : "An issue stopped escalating."}
       url={url}
     >
       {issueName ? <IssueSummaryCard name={issueName} states={states} /> : null}
-      <EscalatingTrend notificationSourceId={notification.sourceId} event={payload.event} states={states} />
+      <EscalatingTrend alertIncidentId={payload.alertIncidentId ?? null} event={event} states={states} />
     </BaseNotification>
   )
 }
@@ -52,20 +46,20 @@ export function IssueEscalatingNotification({
  * doesn't shift jarringly.
  */
 function EscalatingTrend({
-  notificationSourceId,
+  alertIncidentId,
   event,
   states,
 }: {
-  readonly notificationSourceId: string | null
-  readonly event: "opened" | "closed"
+  readonly alertIncidentId: string | null
+  readonly event: IncidentEvent
   readonly states: readonly string[]
 }) {
-  const enabled = notificationSourceId !== null
+  const enabled = alertIncidentId !== null
   const { data, isLoading } = useQuery({
-    queryKey: ["notifications", "incident-trend", notificationSourceId, event],
+    queryKey: ["notifications", "incident-trend", alertIncidentId, event],
     queryFn: () =>
       getIncidentTrend({
-        data: { alertIncidentId: notificationSourceId ?? "", event },
+        data: { alertIncidentId: alertIncidentId ?? "", event },
       }),
     enabled,
     staleTime: 30_000,

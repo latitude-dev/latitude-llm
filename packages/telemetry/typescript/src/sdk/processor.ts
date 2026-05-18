@@ -62,17 +62,17 @@ class ServiceNameResourceExporter implements SpanExporter {
 export class LatitudeSpanProcessor implements SpanProcessor {
   private readonly tail: SpanProcessor
 
-  constructor(apiKey: string, projectSlug: string | undefined, options?: LatitudeSpanProcessorOptions) {
+  constructor(apiKey: string, project: string | undefined, options?: LatitudeSpanProcessorOptions) {
     if (!apiKey || apiKey.trim() === "") {
       throw new Error("[Latitude] apiKey is required and cannot be empty")
     }
 
-    const normalizedProjectSlug = projectSlug && projectSlug.trim() !== "" ? projectSlug : undefined
+    const normalizedProject = project && project.trim() !== "" ? project : undefined
     const headers: Record<string, string> = {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     }
-    if (normalizedProjectSlug) headers["X-Latitude-Project"] = normalizedProjectSlug
+    if (normalizedProject) headers["X-Latitude-Project"] = normalizedProject
 
     const baseExporter =
       options?.exporter ??
@@ -127,8 +127,8 @@ export class LatitudeSpanProcessor implements SpanProcessor {
       if (latitudeData.userId) {
         span.setAttribute(ATTRIBUTES.userId, latitudeData.userId)
       }
-      if (latitudeData.projectSlug) {
-        span.setAttribute(ATTRIBUTES.project, latitudeData.projectSlug)
+      if (latitudeData.project) {
+        span.setAttribute(ATTRIBUTES.project, latitudeData.project)
       }
     }
 

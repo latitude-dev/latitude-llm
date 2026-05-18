@@ -10,6 +10,7 @@ from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.context import Context
 
+from latitude_telemetry.sdk._deprecation import warn_project_slug_deprecated
 from latitude_telemetry.sdk.types import ContextOptions
 
 LATITUDE_CONTEXT_KEY = "latitude-internal-context"
@@ -43,14 +44,14 @@ class _LatitudeContextData:
         metadata: dict[str, object] | None = None,
         session_id: str | None = None,
         user_id: str | None = None,
-        project_slug: str | None = None,
+        project: str | None = None,
     ):
         self.name = name
         self.tags = tags
         self.metadata = metadata
         self.session_id = session_id
         self.user_id = user_id
-        self.project_slug = project_slug
+        self.project = project
 
 
 def get_latitude_context(ctx: Context) -> _LatitudeContextData | None:
@@ -78,13 +79,17 @@ def _set_capture_context(name: str, base_context: Context, options: ContextOptio
     child_metadata = opts.get("metadata") or {}
     merged_metadata: dict[str, object] = {**parent_metadata, **child_metadata}
 
+    if "project" not in opts and "project_slug" in opts:
+        warn_project_slug_deprecated("capture")
+    project_from_opts = opts.get("project") or opts.get("project_slug")
+
     merged_data = _LatitudeContextData(
         name=opts.get("name") or name,
         tags=_merge_arrays(existing_data.tags if existing_data else None, opts.get("tags")),
         metadata=merged_metadata,
         session_id=opts.get("session_id") or (existing_data.session_id if existing_data else None),
         user_id=opts.get("user_id") or (existing_data.user_id if existing_data else None),
-        project_slug=opts.get("project_slug") or (existing_data.project_slug if existing_data else None),
+        project=project_from_opts or (existing_data.project if existing_data else None),
     )
 
     return otel_context.set_value(LATITUDE_CONTEXT_KEY, merged_data, base_context)

@@ -53,12 +53,17 @@ export const createFakeIssueRepository = (
           .map(withLifecycle),
       ),
 
-    findByUuid: ({ projectId, uuid }) =>
-      Effect.gen(function* () {
-        const issue = [...issues.values()].find((i) => i.projectId === projectId && i.uuid === uuid)
-        if (!issue) return yield* new NotFoundError({ entity: "Issue", id: uuid })
-        return withLifecycle(issue)
-      }),
+    hybridSearch: ({ projectId }) =>
+      Effect.sync(() =>
+        [...issues.values()]
+          .filter((issue) => issue.projectId === projectId)
+          .map((issue) => ({
+            issueId: issue.id,
+            name: issue.name,
+            description: issue.description,
+            score: 1,
+          })),
+      ),
 
     save: (issue) =>
       Effect.sync(() => {

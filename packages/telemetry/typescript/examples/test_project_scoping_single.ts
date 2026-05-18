@@ -1,7 +1,7 @@
 /**
  * Project scoping — single-project default (existing pattern).
  *
- * `new Latitude({ apiKey, projectSlug })` sets a default project for every span. `capture()`
+ * `new Latitude({ apiKey, project })` sets a default project for every span. `capture()`
  * inherits it, so all spans land in the same Latitude project. This is the recommended setup
  * for processes that emit to one project.
  *
@@ -20,7 +20,7 @@ import { capture, Latitude } from "../src"
 
 const latitude = new Latitude({
   apiKey: process.env.LATITUDE_API_KEY!,
-  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+  project: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
   instrumentations: { openai: OpenAI },
 })
@@ -29,7 +29,7 @@ async function main() {
   await latitude.ready
   const client = new OpenAI()
 
-  // Both captures inherit the ctor `projectSlug` (sent as the `X-Latitude-Project` header).
+  // Both captures inherit the constructor's `project` (sent as the `X-Latitude-Project` header).
   // The OpenAI spans land in the default project alongside the capture root span.
   await capture("greet", async () => {
     const r = await client.chat.completions.create({

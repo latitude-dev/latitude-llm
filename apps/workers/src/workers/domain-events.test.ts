@@ -242,7 +242,7 @@ describe("domain-events dispatcher", () => {
     expect(throttled?.options?.debounceMs).toBeUndefined()
   })
 
-  it("routes IncidentCreated to notifications:create-from-incident-opened with stable dedupe key", async () => {
+  it("routes IncidentCreated to notifications:request-incident-notifications with stable dedupe key", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("IncidentCreated", {
@@ -259,12 +259,12 @@ describe("domain-events dispatcher", () => {
     expect(published).toHaveLength(1)
     const job = published[0]
     expect(job?.queue).toBe("notifications")
-    expect(job?.task).toBe("create-from-incident-opened")
-    expect(job?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1" })
-    expect(job?.options?.dedupeKey).toBe("notifications:incident-opened:ai-1")
+    expect(job?.task).toBe("request-incident-notifications")
+    expect(job?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1", kind: "incident.opened" })
+    expect(job?.options?.dedupeKey).toBe("notifications:request-incident-opened:ai-1")
   })
 
-  it("routes IncidentClosed to notifications:create-from-incident-closed with stable dedupe key", async () => {
+  it("routes IncidentClosed to notifications:request-incident-notifications with stable dedupe key", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("IncidentClosed", {
@@ -281,9 +281,25 @@ describe("domain-events dispatcher", () => {
     expect(published).toHaveLength(1)
     const job = published[0]
     expect(job?.queue).toBe("notifications")
-    expect(job?.task).toBe("create-from-incident-closed")
-    expect(job?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1" })
-    expect(job?.options?.dedupeKey).toBe("notifications:incident-closed:ai-1")
+    expect(job?.task).toBe("request-incident-notifications")
+    expect(job?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1", kind: "incident.closed" })
+    expect(job?.options?.dedupeKey).toBe("notifications:request-incident-closed:ai-1")
+  })
+
+  it("routes ProjectDeleted to notifications:delete-by-project for cascade cleanup", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("ProjectDeleted", {
+      organizationId: "org-1",
+      projectId: "proj-x",
+      actorUserId: "user-1",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    const notif = published.find((p) => p.queue === "notifications" && p.task === "delete-by-project")
+    expect(notif?.payload).toEqual({ organizationId: "org-1", projectId: "proj-x" })
+    expect(notif?.options?.dedupeKey).toBe("notifications:delete-by-project:proj-x")
   })
 
   it("fans out whitelisted events to posthog-analytics:track in addition to the primary handler", async () => {

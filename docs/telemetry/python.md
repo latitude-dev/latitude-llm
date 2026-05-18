@@ -27,7 +27,7 @@ from latitude_telemetry import Latitude
 
 latitude = Latitude(
     api_key="your-api-key",
-    project_slug="your-project-slug",
+    project="your-project-slug",
     instrumentations={"openai": openai},
 )
 
@@ -58,7 +58,7 @@ from latitude_telemetry import Latitude, capture
 
 latitude = Latitude(
     api_key="your-api-key",
-    project_slug="your-project-slug",
+    project="your-project-slug",
     instrumentations={"openai": openai},
 )
 
@@ -138,6 +138,10 @@ class Latitude:
         self,
         *,
         api_key: str,
+        # Default project for spans. Optional — every `capture()` can override.
+        # Sent as the `X-Latitude-Project` header on every export.
+        project: str | None = None,
+        # DEPRECATED alias for `project`. Still accepted; logs a one-time warning.
         project_slug: str | None = None,
         # Dict mapping integration name → the LLM SDK module the consumer imports.
         # Anything else (list, primitive, unknown key, non-dict) raises TypeError.
@@ -180,6 +184,9 @@ def capture(
 #     "session_id": str | None,
 #     "tags": list[str] | None,
 #     "metadata": dict | None,
+#     "project": str | None,        # Route this capture (and child spans) to a
+#                                   # specific Latitude project, overriding the default.
+#     "project_slug": str | None,   # DEPRECATED alias for `project`. Still accepted.
 # }
 ```
 
@@ -190,6 +197,7 @@ def capture(
 | `metadata` | `dict[str, Any]` | `latitude.metadata` | Arbitrary key-value metadata |
 | `session_id` | `str` | `session.id` | Group traces by session |
 | `user_id` | `str` | `user.id` | Associate traces with a user |
+| `project` | `str` | `latitude.project` | Route this capture to a specific Latitude project (overrides the constructor default) |
 
 ### `LatitudeSpanProcessor`
 
@@ -200,7 +208,7 @@ class LatitudeSpanProcessor:
     def __init__(
         self,
         api_key: str,
-        project_slug: str,
+        project: str | None,
         options: LatitudeSpanProcessorOptions | None = None,
     ):
         ...
@@ -252,7 +260,7 @@ The list-of-strings form is removed with no fallback in `3.0.0a7`. Anything othe
 
   latitude = Latitude(
       api_key="your-api-key",
-      project_slug="your-project-slug",
+      project="your-project-slug",
 -     instrumentations=["openai", "anthropic"],
 +     instrumentations={"openai": openai, "anthropic": anthropic},
   )

@@ -15,41 +15,61 @@ export const organizationSettingsSchema = z.object({
 })
 
 /**
- * Per-alert-kind switch for in-app notifications. Missing entries default to
- * `true` (alert notifications are on by default; users opt out per kind).
+ * Per-alert-kind switch for incident notifications. Missing entries
+ * default to `true` (notifications are on by default; users opt out per
+ * kind, per project). Built from `ALERT_INCIDENT_KINDS` so adding a new
+ * alert kind automatically extends the schema.
  *
- * `escalationSensitivity` (1-6) tunes the seasonal anomaly detector: it's the
- * `k_short` multiplier on σ for the 1h window (the 6h `k_long` is derived as
- * `k_short - 1` so the long window provides independent confirmation). Lower
- * = noisier (trips more easily); higher = quieter. Optional; the detector
- * falls back to `DEFAULT_ESCALATION_SENSITIVITY_K` when missing. Carried on
- * `alertNotifications` because it only matters when at least one kind is
- * enabled.
- *
- * Built from `ALERT_INCIDENT_KINDS` so adding a new alert kind automatically
- * extends the schema. Modelled as a plain `z.object` rather than a record
- * intersection because `z.record(z.enum(...))` validates keys against the
- * enum and would reject the non-enum `escalationSensitivity` key.
+ * Modelled as a plain `z.object` rather than a record intersection
+ * because `z.record(z.enum(...))` validates keys against the enum and is
+ * needlessly strict here — we want explicit per-key types.
  */
-const alertNotificationsKindShape = Object.fromEntries(
+const incidentNotificationsKindShape = Object.fromEntries(
   ALERT_INCIDENT_KINDS.map((kind) => [kind, z.boolean().optional()] as const),
 ) as { [K in AlertIncidentKind]: z.ZodOptional<z.ZodBoolean> }
 
-export const alertNotificationsSettingSchema = z.object({
-  ...alertNotificationsKindShape,
-  escalationSensitivity: z.number().int().min(1).max(6).optional(),
+export const incidentNotificationsSettingSchema = z.object(incidentNotificationsKindShape)
+export type IncidentNotificationsSetting = z.infer<typeof incidentNotificationsSettingSchema>
+
+/**
+ * Project-level "should this notification be requested at all" settings,
+ * keyed by `NotificationGroup`. Mirrors the user-prefs structure
+ * (`users.notification_preferences.<group>`); the per-group inner shape
+ * varies by what's useful at the project level — for `incidents`, it's a
+ * per-alert-kind opt-out matrix (different alert kinds have different
+ * signal-to-noise ratios).
+ *
+ * Future groups (`wrapped_reports`, etc.) get their own slot.
+ */
+export const notificationsSettingSchema = z.object({
+  incidents: incidentNotificationsSettingSchema.optional(),
 })
-export type AlertNotificationsSetting = z.infer<typeof alertNotificationsSettingSchema>
+export type NotificationsSetting = z.infer<typeof notificationsSettingSchema>
+
+/**
+ * Detector-tuning parameters. Separate from `notifications` because
+ * `sensitivity` is not a notification toggle — it's the `k_short`
+ * multiplier on σ for the seasonal escalation detector's 1h window
+ * (the 6h `k_long` is derived as `k_short - 1`). Lower = noisier (trips
+ * more easily); higher = quieter. Optional; the detector falls back to
+ * `DEFAULT_ESCALATION_SENSITIVITY_K` when missing. Affects detector
+ * behaviour regardless of notification state.
+ */
+export const escalationSettingSchema = z.object({
+  sensitivity: z.number().int().min(1).max(6).optional(),
+})
+export type EscalationSetting = z.infer<typeof escalationSettingSchema>
 
 export const projectSettingsSchema = z.object({
   keepMonitoring: z.boolean().optional(),
-  alertNotifications: alertNotificationsSettingSchema.optional(),
+  notifications: notificationsSettingSchema.optional(),
+  escalation: escalationSettingSchema.optional(),
 })
 
-export const isAlertNotificationEnabled = (
+export const isIncidentNotificationEnabled = (
   settings: ProjectSettings | null | undefined,
   kind: AlertIncidentKind,
-): boolean => settings?.alertNotifications?.[kind] ?? true
+): boolean => settings?.notifications?.incidents?.[kind] ?? true
 
 export type OrganizationSettings = z.infer<typeof organizationSettingsSchema>
 

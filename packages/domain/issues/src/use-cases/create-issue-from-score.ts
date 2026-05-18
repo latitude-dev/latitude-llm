@@ -10,7 +10,6 @@ import { IssueRepository } from "../ports/issue-repository.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 import type { GenerateIssueDetailsError } from "./generate-issue-details.ts"
 import { generateIssueDetailsUseCase } from "./generate-issue-details.ts"
-import { syncIssueProjectionsUseCase } from "./sync-projections.ts"
 
 export interface CreateIssueFromScoreInput {
   readonly organizationId: string
@@ -97,7 +96,6 @@ const buildNewIssueFromScore = ({
 
   return {
     id: generateId<"IssueId">(),
-    uuid: crypto.randomUUID(),
     organizationId: score.organizationId,
     projectId: score.projectId,
     slug,
@@ -213,13 +211,6 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
         } satisfies CreateIssueFromScoreResult
       }),
     )
-
-    if (assignment.action === "created") {
-      yield* syncIssueProjectionsUseCase({
-        organizationId: input.organizationId,
-        issueId: assignment.issueId,
-      })
-    }
 
     return assignment
   }).pipe(Effect.withSpan("issues.createIssueFromScore")) as Effect.Effect<

@@ -1,8 +1,8 @@
 /**
  * Project scoping — multi-project per-capture override.
  *
- * `new Latitude({ apiKey })` is initialized *without* a default `projectSlug`. Every `capture()`
- * must declare its own `projectSlug` and spans are routed per-capture via the
+ * `new Latitude({ apiKey })` is initialized *without* a default `project`. Every `capture()`
+ * must declare its own `project` and spans are routed per-capture via the
  * `latitude.project` span attribute. Use this when a single process emits to several Latitude
  * projects (e.g. multiple agents sharing one runtime).
  *
@@ -50,7 +50,7 @@ async function main() {
       })
       console.log(`${FULL_STACK_AGENT_SLUG} →`, r.choices[0]?.message?.content)
     },
-    { projectSlug: FULL_STACK_AGENT_SLUG, tags: ["agent:full-stack"] },
+    { project: FULL_STACK_AGENT_SLUG, tags: ["agent:full-stack"] },
   )
 
   await capture(
@@ -63,12 +63,12 @@ async function main() {
       })
       console.log(`${CALL_SUMMARISER_SLUG} →`, r.choices[0]?.message?.content)
     },
-    { projectSlug: CALL_SUMMARISER_SLUG, tags: ["agent:summariser"] },
+    { project: CALL_SUMMARISER_SLUG, tags: ["agent:summariser"] },
   )
 
-  // Spans with no `projectSlug` AND no ctor default are rejected by the ingest service with
-  // a `partial_success` body — exporters log the rejection but don't retry. Always set a slug
-  // either on the ctor or on each `capture()` when running this pattern.
+  // Spans with no `project` AND no constructor default are rejected by the ingest service with
+  // a `partial_success` body — exporters log the rejection but don't retry. Always set a project
+  // either on the constructor or on each `capture()` when running this pattern.
 
   await latitude.flush()
 }

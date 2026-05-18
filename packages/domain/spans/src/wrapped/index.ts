@@ -18,11 +18,8 @@ export {
 // to importing from the specific type's barrel.
 export * from "./types/claude-code/index.ts"
 export {
-  type RunWrappedDeps,
   type RunWrappedInput,
   type RunWrappedResult,
   type RunWrappedSkippedReason,
   runWrappedUseCase,
-  type WrappedEmailSender,
-  type WrappedRenderedEmail,
 } from "./use-cases/run-wrapped.ts"

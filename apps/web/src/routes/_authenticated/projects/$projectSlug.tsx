@@ -1,13 +1,37 @@
-import { ClaudeCodeIcon, CopyableText } from "@repo/ui"
+import { ProjectRepository } from "@domain/projects"
+import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { withTracing } from "@repo/observability"
+import { ClaudeCodeIcon, CopyableText, useMountEffect } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
+import { createServerFn } from "@tanstack/react-start"
+import { Effect } from "effect"
 import { DatabaseIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
+import { z } from "zod"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
-import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
+import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
 import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
+import { requireSession } from "../../../server/auth.ts"
+import { getPostgresClient } from "../../../server/clients.ts"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
+
+const getProjectBySlug = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ slug: z.string() }))
+  .handler(async ({ data }): Promise<ProjectRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    const project = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ProjectRepository
+        return yield* repo.findBySlug(data.slug)
+      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId), withTracing),
+    )
+
+    return toRecord(project)
+  })
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
   staticData: {
@@ -133,6 +157,10 @@ function ProjectLayout() {
   const project: ProjectRecord = projectFromCollection ?? projectFromLoader
   const pathname = useRouterState({ select: (state) => state.location.pathname.replace(/\/$/, "") || "/" })
   const isOnboarding = pathname === `/projects/${projectSlug}/onboarding`
+
+  useMountEffect(() => {
+    void rememberLastProjectSlug({ data: { slug: projectSlug } })
+  })
 
   if (isOnboarding) {
     return (

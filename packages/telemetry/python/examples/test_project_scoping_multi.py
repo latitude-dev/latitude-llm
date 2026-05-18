@@ -1,8 +1,8 @@
 """
 Project scoping — multi-project per-capture override.
 
-`Latitude(api_key=...)` is initialized *without* a default `project_slug`. Every `capture()`
-must declare its own `project_slug` and spans are routed per-capture via the
+`Latitude(api_key=...)` is initialized *without* a default `project`. Every `capture()`
+must declare its own `project` and spans are routed per-capture via the
 `latitude.project` span attribute. Use this when a single process emits to several Latitude
 projects (e.g. multiple agents sharing one runtime).
 
@@ -43,7 +43,7 @@ CALL_SUMMARISER_SLUG = os.environ.get("LATITUDE_SECONDARY_PROJECT_SLUG", "second
 
 @capture(
     "full-stack-agent-run",
-    {"project_slug": FULL_STACK_AGENT_SLUG, "tags": ["python", "agent:full-stack"]},
+    {"project": FULL_STACK_AGENT_SLUG, "tags": ["python", "agent:full-stack"]},
 )
 def run_full_stack_agent() -> None:
     client = OpenAI()
@@ -57,7 +57,7 @@ def run_full_stack_agent() -> None:
 
 @capture(
     "call-summariser-run",
-    {"project_slug": CALL_SUMMARISER_SLUG, "tags": ["python", "agent:summariser"]},
+    {"project": CALL_SUMMARISER_SLUG, "tags": ["python", "agent:summariser"]},
 )
 def run_call_summariser() -> None:
     client = OpenAI()
@@ -73,9 +73,9 @@ def main() -> None:
     run_full_stack_agent()
     run_call_summariser()
 
-    # Spans with no `project_slug` AND no ctor default are rejected by the ingest service
+    # Spans with no `project` AND no constructor default are rejected by the ingest service
     # with a `partial_success` body — exporters log the rejection but don't retry. Always
-    # set a slug either on the ctor or on each `capture()` when running this pattern.
+    # set a project either on the constructor or on each `capture()` when running this pattern.
 
     latitude.flush()
 

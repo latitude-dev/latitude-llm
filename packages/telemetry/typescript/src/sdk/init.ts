@@ -4,6 +4,7 @@ import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } 
 import { resourceFromAttributes } from "@opentelemetry/resources"
 import { NodeTracerProvider, type SpanProcessor } from "@opentelemetry/sdk-trace-node"
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
+import { warnProjectSlugDeprecated } from "./_deprecation.ts"
 import { registerLatitudeInstrumentations } from "./instrumentations.ts"
 import { LatitudeSpanProcessor } from "./processor.ts"
 import type { InitLatitudeOptions, LatitudeOptions } from "./types.ts"
@@ -71,11 +72,16 @@ export class Latitude {
   private readonly ownsProvider: boolean
 
   constructor(options: LatitudeOptions) {
-    const { apiKey, projectSlug, instrumentations = {}, tracerProvider, ...processorOptionsRaw } = options
+    const { apiKey, project, projectSlug, instrumentations = {}, tracerProvider, ...processorOptionsRaw } = options
 
     if (!apiKey || apiKey.trim() === "") {
       throw new Error("[Latitude] apiKey is required and cannot be empty")
     }
+
+    if (project === undefined && projectSlug !== undefined) {
+      warnProjectSlugDeprecated("constructor")
+    }
+    const resolvedProject = project ?? projectSlug
 
     const targetProvider = tracerProvider ?? getRegisteredTracerProvider()
 
@@ -89,7 +95,7 @@ export class Latitude {
       processorOptions = rest
     }
 
-    this.latitudeProcessor = new LatitudeSpanProcessor(apiKey, projectSlug, processorOptions)
+    this.latitudeProcessor = new LatitudeSpanProcessor(apiKey, resolvedProject, processorOptions)
     const attached = targetProvider ? addSpanProcessor(targetProvider, this.latitudeProcessor) : false
 
     if (targetProvider && !attached) {

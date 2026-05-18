@@ -1,31 +1,32 @@
 import { DropdownMenu, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { useParams } from "@tanstack/react-router"
 import { ChevronsUpDown, PlusIcon } from "lucide-react"
 import { useState } from "react"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
+import { useRouteProject } from "../projects/$projectSlug/-route-data.ts"
 import { CreateProjectModal } from "./create-project-modal.tsx"
 
 /**
- * Project switcher / label for the header breadcrumb. Registered on `projects/$projectSlug`
- * and on `settings` (where there's no slug — renders a "Select project" placeholder).
+ * Project switcher / label for the header breadcrumb. Registered on `projects/$projectSlug`.
+ *
+ * Looks up the active project by ID (from the route loader) rather than by URL slug, so
+ * renames that regenerate the slug still resolve to the live project record without needing
+ * to redirect the URL.
  */
 export function ProjectBreadcrumbSegment() {
-  const { projectSlug } = useParams({ strict: false })
+  const routeProject = useRouteProject()
   const [createOpen, setCreateOpen] = useState(false)
 
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project: p }) => eq(p.slug, projectSlug ?? "\u0000")).findOne(),
-    [projectSlug],
+  const { data: liveProject } = useProjectsCollection(
+    (projects) => projects.where(({ project: p }) => eq(p.id, routeProject.id)).findOne(),
+    [routeProject.id],
   )
+  const project = liveProject ?? routeProject
 
   const { data: allProjects } = useProjectsCollection()
 
-  // Slug in URL but no matching project: don't render a wrong label.
-  if (projectSlug && !project) return null
-
-  const [emoji, title] = project ? extractLeadingEmoji(project.name) : ["", "Select project"]
+  const [emoji, title] = extractLeadingEmoji(project.name)
 
   return (
     <>

@@ -17,3 +17,5 @@ export async function magicLinkTemplate(data: MagicLinkEmailData): Promise<Rende
     text: `Hi ${data.userName}, use this link to sign in to Latitude: ${data.magicLinkUrl}`,
   }
 }
+
+export default MagicLinkEmail
