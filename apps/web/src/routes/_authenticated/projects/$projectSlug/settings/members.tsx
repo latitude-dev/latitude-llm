@@ -40,6 +40,7 @@ import type { MemberRecord } from "../../../../../domains/members/members.functi
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 import { useAuthenticatedUser } from "../../../-route-data.ts"
+import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/members")({
   component: MembersSettingsPage,
@@ -537,26 +538,25 @@ function MembersSettingsPage() {
   const isAdmin = isOwner || currentUserMembership?.role === "admin"
 
   return (
-    <section className="flex flex-col gap-4">
-      <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
-      <div className="flex flex-row items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <Text.H4 weight="bold">Members</Text.H4>
-          <Text.H5 color="foregroundMuted">Members and pending invitations of this organization</Text.H5>
-        </div>
-        {isAdmin ? (
+    <SettingsPage
+      title="Members"
+      description="Members and pending invitations of this organization"
+      actions={
+        isAdmin ? (
           <Button variant="outline" onClick={() => setInviteOpen(true)}>
             <Icon size="sm" icon={UserPlusIcon} />
             Member
           </Button>
-        ) : null}
-      </div>
+        ) : null
+      }
+    >
+      <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
       <div className="flex flex-col gap-2">
         {isLoading ? <TableSkeleton cols={6} rows={3} /> : null}
         {!isLoading && members.length > 0 ? (
           <MembersTable members={members} currentUserId={user.id} isOwner={isOwner} isAdmin={isAdmin} />
         ) : null}
       </div>
-    </section>
+    </SettingsPage>
   )
 }

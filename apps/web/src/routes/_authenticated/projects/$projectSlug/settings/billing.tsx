@@ -12,6 +12,7 @@ import {
 } from "../../../../../domains/billing/billing.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
+import { SettingsPage, SettingsPageTitle } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/billing")({
   loader: async () => ({
@@ -23,16 +24,10 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
 
 function BillingUnavailableFallback({ error, reset }: { error: unknown; reset: () => void }) {
   return (
-    <>
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-1">
-          <Text.H4 weight="bold">Billing</Text.H4>
-          <Text.H5 color="foregroundMuted">
-            We couldn't load your billing data right now. This usually clears up after a refresh. If it keeps happening,
-            contact support.
-          </Text.H5>
-        </div>
-      </div>
+    <SettingsPage
+      title="Billing"
+      description="We couldn't load your billing data right now. This usually clears up after a refresh. If it keeps happening, contact support."
+    >
       <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-5">
         <Text.H6 color="destructive">Billing data unavailable</Text.H6>
         <Text.H6 color="foregroundMuted">{toUserMessage(error)}</Text.H6>
@@ -40,7 +35,7 @@ function BillingUnavailableFallback({ error, reset }: { error: unknown; reset: (
       <div>
         <Button onClick={() => reset()}>Try again</Button>
       </div>
-    </>
+    </SettingsPage>
   )
 }
 
@@ -343,24 +338,22 @@ function BillingSettingsPage() {
   const overview = Route.useLoaderData({ select: (data) => data.overview })
 
   return (
-    <>
-      <div className="flex flex-col gap-2">
+    <SettingsPage
+      title={
         <div className="flex items-center gap-3">
-          <Text.H4 weight="bold">Billing</Text.H4>
+          <SettingsPageTitle>Billing</SettingsPageTitle>
           <Badge
             variant={overview.planSlug === "free" ? "secondary" : overview.planSlug === "pro" ? "default" : "outline"}
           >
             {overview.planSlug?.toUpperCase()}
           </Badge>
         </div>
-        <Text.H5 color="foregroundMuted">
-          Current period: {formatPeriodDate(overview.periodStart)} to {formatPeriodDate(overview.periodEnd)}
-        </Text.H5>
-      </div>
-
+      }
+      description={`Current period: ${formatPeriodDate(overview.periodStart)} to ${formatPeriodDate(overview.periodEnd)}`}
+    >
       <BillingOverviewCards />
       <BillingActionsSection />
       <SpendingLimitSection key={overview.spendingLimitCents ?? "no-limit"} />
-    </>
+    </SettingsPage>
   )
 }

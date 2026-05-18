@@ -35,6 +35,7 @@ import { revokeOAuthKeyMutation, useOAuthKeysCollection } from "../../../../../d
 import type { OAuthKeyRecord } from "../../../../../domains/oauth/oauth-keys.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
+import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/keys")({
   component: KeysSettingsPage,
@@ -398,21 +399,24 @@ function KeysSettingsPage() {
   const oauthKeys = (oauthKeyData ?? []).slice().sort(byCreatedAtDesc)
 
   return (
-    <>
+    <SettingsPage
+      title="Keys"
+      description="Manage API keys and OAuth connections for this organization"
+      actions={
+        <Button variant="outline" onClick={() => setCreateOpen(true)}>
+          <Icon size="sm" icon={PlusIcon} />
+          API Key
+        </Button>
+      }
+    >
       <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} />
 
       <section className="flex flex-col gap-4">
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <Text.H4 weight="bold">API Keys</Text.H4>
-            <Text.H5 color="foregroundMuted">
-              Application keys with access to this organization (through API or SDK)
-            </Text.H5>
-          </div>
-          <Button variant="outline" onClick={() => setCreateOpen(true)}>
-            <Icon size="sm" icon={PlusIcon} />
-            API Key
-          </Button>
+        <div className="flex flex-col gap-1">
+          <Text.H4 weight="bold">API Keys</Text.H4>
+          <Text.H5 color="foregroundMuted">
+            Application keys with access to this organization (through API or SDK)
+          </Text.H5>
         </div>
         <div className="flex flex-col gap-2">
           {apiKeysLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
@@ -448,6 +452,6 @@ function KeysSettingsPage() {
           )}
         </div>
       </section>
-    </>
+    </SettingsPage>
   )
 }
