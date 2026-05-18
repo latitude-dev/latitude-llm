@@ -26,7 +26,7 @@ dependencies = [
     "opentelemetry-instrumentation-groq==0.50.1",
     "opentelemetry-instrumentation-haystack==0.50.1",
     "opentelemetry-instrumentation-langchain==0.50.1",
-    "openinference-instrumentation-litellm==0.1.6",
+    "openinference-instrumentation-litellm==0.1.32",
     "opentelemetry-instrumentation-llamaindex==0.50.1",
     "opentelemetry-instrumentation-mistralai==0.50.1",
     "opentelemetry-instrumentation-ollama==0.50.1",
