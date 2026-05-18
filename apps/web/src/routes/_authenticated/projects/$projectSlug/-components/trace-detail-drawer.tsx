@@ -95,18 +95,7 @@ function getSpansTabSuffix(spanCount: number | undefined): ReactNode {
   return <span className={cn(tabCountPillClass, "tabular-nums")}>{spanCount}</span>
 }
 
-export function TraceDetailDrawer({
-  traceId,
-  trace,
-  projectId,
-  filters,
-  onFiltersChange,
-  onClose,
-  onNextTrace,
-  onPrevTrace,
-  canNavigateNext,
-  canNavigatePrev,
-}: {
+export type TraceDetailDrawerProps = {
   readonly traceId: string
   readonly trace?: TraceRecord | undefined
   readonly projectId: string
@@ -117,7 +106,91 @@ export function TraceDetailDrawer({
   readonly onPrevTrace?: () => void
   readonly canNavigateNext: boolean
   readonly canNavigatePrev: boolean
-}) {
+  /**
+   * When true (default), trace tab + span selection sync to URL search params.
+   * Set false for nested contexts (e.g. issue drawer overlay) so the parent route URL stays clean.
+   */
+  readonly urlSyncedTabs?: boolean
+  /** Used when `urlSyncedTabs` is false; defaults to `"trace"`. */
+  readonly initialTab?: TabId
+  /** Overrides the default close control tooltip / screen-reader hint. */
+  readonly closeLabel?: ReactNode
+  /** LocalStorage key for persisted drawer width. */
+  readonly drawerStoreKey?: string
+}
+
+export function TraceDetailDrawer({ urlSyncedTabs = true, ...props }: TraceDetailDrawerProps) {
+  if (urlSyncedTabs) {
+    return <TraceDetailDrawerWithUrlTabs {...props} />
+  }
+  return <TraceDetailDrawerWithLocalTabs {...props} />
+}
+
+function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSyncedTabs">) {
+  const { initialTab: _initialTabIgnored, closeLabel, drawerStoreKey, ...rest } = props
+  const [activeTab, setActiveTab] = useParamState("traceDetailTab", "trace", {
+    validate: isTraceDetailTab,
+  })
+  const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
+  return (
+    <TraceDetailDrawerShell
+      {...(rest as Omit<TraceDetailDrawerProps, "urlSyncedTabs" | "initialTab" | "closeLabel" | "drawerStoreKey">)}
+      activeTab={activeTab}
+      onActiveTabChange={setActiveTab}
+      selectedSpanId={selectedSpanId}
+      onSelectedSpanIdChange={setSelectedSpanId}
+      {...(closeLabel !== undefined ? { closeLabel } : {})}
+      {...(drawerStoreKey !== undefined ? { drawerStoreKey } : {})}
+    />
+  )
+}
+
+function TraceDetailDrawerWithLocalTabs(props: Omit<TraceDetailDrawerProps, "urlSyncedTabs">) {
+  const { initialTab, closeLabel, drawerStoreKey, ...rest } = props
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "trace")
+  const [selectedSpanId, setSelectedSpanId] = useState("")
+  return (
+    <TraceDetailDrawerShell
+      {...(rest as Omit<TraceDetailDrawerProps, "urlSyncedTabs" | "initialTab" | "closeLabel" | "drawerStoreKey">)}
+      activeTab={activeTab}
+      onActiveTabChange={setActiveTab}
+      selectedSpanId={selectedSpanId}
+      onSelectedSpanIdChange={setSelectedSpanId}
+      {...(closeLabel !== undefined ? { closeLabel } : {})}
+      {...(drawerStoreKey !== undefined ? { drawerStoreKey } : {})}
+    />
+  )
+}
+
+type TraceDetailTabControlProps = {
+  readonly activeTab: TabId
+  readonly onActiveTabChange: (tab: TabId) => void
+  readonly selectedSpanId: string
+  readonly onSelectedSpanIdChange: (spanId: string) => void
+}
+
+function TraceDetailDrawerShell({
+  traceId,
+  trace,
+  projectId,
+  filters,
+  onFiltersChange,
+  onClose,
+  onNextTrace,
+  onPrevTrace,
+  canNavigateNext,
+  canNavigatePrev,
+  activeTab,
+  onActiveTabChange,
+  selectedSpanId,
+  onSelectedSpanIdChange,
+  closeLabel,
+  drawerStoreKey = "trace-detail-drawer-width",
+}: Omit<TraceDetailDrawerProps, "urlSyncedTabs" | "initialTab" | "closeLabel" | "drawerStoreKey"> &
+  TraceDetailTabControlProps & {
+    readonly closeLabel?: ReactNode
+    readonly drawerStoreKey?: string
+  }) {
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
     traceId,
@@ -153,11 +226,7 @@ export function TraceDetailDrawer({
       }),
     [annotationTabSuffix, spansTabSuffix],
   )
-  const [activeTab, setActiveTab] = useParamState("traceDetailTab", "trace", {
-    validate: isTraceDetailTab,
-  })
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set([activeTab]))
-  const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const textSelectionPopoverControlsRef = useRef<TextSelectionPopoverControls | null>(null)
 
@@ -173,7 +242,7 @@ export function TraceDetailDrawer({
   }, [activeTab])
 
   function handleSetActiveTab(tab: TabId) {
-    setActiveTab(tab)
+    onActiveTabChange(tab)
     setVisitedTabs((prev) => new Set([...prev, tab]))
   }
 
@@ -190,7 +259,7 @@ export function TraceDetailDrawer({
 
   function navigateToSpan(spanId: string | null) {
     handleSetActiveTab("spans")
-    setSelectedSpanId(spanId ?? "")
+    onSelectedSpanIdChange(spanId ?? "")
   }
 
   useHotkeys([
@@ -212,12 +281,14 @@ export function TraceDetailDrawer({
 
   return (
     <DetailDrawer
-      storeKey="trace-detail-drawer-width"
+      storeKey={drawerStoreKey}
       onClose={onClose}
       closeLabel={
-        <>
-          Close <HotkeyBadge hotkey="Escape" />
-        </>
+        closeLabel ?? (
+          <>
+            Close <HotkeyBadge hotkey="Escape" />
+          </>
+        )
       }
       actions={
         <>
