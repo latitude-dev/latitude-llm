@@ -3,6 +3,7 @@ import {
   CENTROID_EMBEDDING_DIMENSIONS,
   CENTROID_EMBEDDING_MODEL,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
+  ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY,
   ISSUE_DISCOVERY_SEARCH_CANDIDATES,
   ISSUE_DISCOVERY_SEARCH_RATIO,
   type Issue,
@@ -275,13 +276,14 @@ const issueRepositoryCoreLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const vector = yield* validateVector(normalizedEmbedding, "IssueRepository.hybridSearch")
-          // pgvector's wire format expects a `vector` literal; drizzle/postgres-js cannot bind a
-          // JS number[] as a parameter of type `vector`, so we inline the literal and cast it.
-          // Safe against injection because `validateVector` enforces length + numeric finiteness.
-          const queryVector = `[${vector.join(",")}]`
+          // pgvector's wire format expects a `vector` literal; node-postgres binds a JS
+          // number[] as a Postgres array parameter, which cannot be cast to `vector`.
+          // Inline the vector literal instead. This is safe because `validateVector` enforces
+          // the exact dimension count and that every value is a finite number.
+          const queryVector = sql.raw(`'[${vector.join(",")}]'::vector`)
 
           const lexicalQuery = sql`websearch_to_tsquery('english', ${query})`
-          const vectorScore = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}::vector))`
+          const vectorScore = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
           const lexicalScore = sql<number>`least(
             1::double precision,
             greatest(0::double precision, ts_rank_cd(${issues.searchDocument}, ${lexicalQuery})::double precision)
@@ -304,7 +306,7 @@ const issueRepositoryCoreLive = Layer.effect(
                   eq(issues.organizationId, organizationId),
                   eq(issues.projectId, projectId),
                   isNotNull(issues.centroidEmbedding),
-                  sql`${score} >= ${ISSUE_DISCOVERY_MIN_SIMILARITY}`,
+                  sql`(${score} >= ${ISSUE_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
               )
               .orderBy(desc(score), desc(vectorScore), desc(issues.updatedAt), asc(issues.id))

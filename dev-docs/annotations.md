@@ -132,11 +132,12 @@ User annotations are often too short or vague to cluster well.
 
 Before issue discovery:
 
-- preserve the original human text in metadata
+- preserve the original human text in `metadata.rawFeedback`
 - enrich the canonical `feedback` field with surrounding context
-- use the enriched canonical feedback for clustering
+- use the enriched canonical feedback for the primary clustering pass
+- if the primary pass finds no existing issue and the raw text differs from the enriched feedback, run a fallback discovery pass with the raw feedback before creating a new issue
 
-This lets the system cluster annotation-derived feedback without losing the raw human signal.
+This lets the system cluster annotation-derived feedback with contextual, generalized wording without losing the raw human signal when the enrichment over-generalizes or shifts vocabulary.
 
 Concrete v1 behavior worth understanding:
 

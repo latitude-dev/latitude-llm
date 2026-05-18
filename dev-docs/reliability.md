@@ -199,7 +199,7 @@ For the initial reliability events, `TracesIngested` publishes directly through 
 - immutable-score analytics sync runs directly after the owning Postgres transaction commits through the shared `syncScoreAnalyticsUseCase`, which re-checks current Postgres immutability and dedupes by score id
 - annotation-originated feedback can be enriched before issue discovery through the `annotation-publication` workflow, which runs after the debounced `annotation-scores:publishHumanAnnotation` task coalesces rapid draft edits
 - draft annotations use the same annotation score model, but stay drafts through `draftedAt` instead of a fake error value
-- the canonical `feedback` text must stay human/LLM-friendly and intentionally clusterable, because discovery uses it for both embeddings and BM25 matching
+- the canonical `feedback` text must stay human/LLM-friendly and intentionally clusterable, because discovery uses it for the primary embedding and lexical matching pass; annotation scores also preserve `metadata.rawFeedback` so discovery can run a raw-feedback fallback pass before creating a new issue
 - scores can optionally attach to spans, traces, sessions, simulations, and issues
 
 ### Annotation queues
@@ -225,7 +225,7 @@ For the initial reliability events, `TracesIngested` publishes directly through 
 - new issues are named from occurrences; users can later generate evaluations from those issues when they want active monitoring
 - ignoring an issue archives its linked evaluations immediately, while resolution still uses `keepMonitoring`
 - issue search uses canonical Postgres issue rows: `centroid_embedding vector(2048)` for exact cosine relevance plus generated full-text `search_document` for a bounded lexical boost, then Voyage reranking
-- in the `issue-discovery` workflow, feedback embedding/normalization runs first and the search/rerank/create-or-assign decision runs inside locked serialization
+- in the `issue-discovery` workflow, feedback embedding/normalization runs first and the search/rerank/create-or-assign decision runs inside locked serialization; annotation scores search with enriched canonical feedback first and raw annotation feedback second when the enriched pass has no match
 - the shared issue-details generation use case serves both paths: synchronous first-details generation before a new issue is persisted, and later debounced refresh generation for existing issues from the last `25` assigned occurrences plus the current details as the stabilization baseline
 - rerank candidates carry canonical issue ids from Postgres search, so no projection UUID resolution step is needed before assignment
 - the create-from-score and assign-to-issue activities re-check canonical Postgres state, conditionally claim `scores.issue_id`, and persist the canonical issue row, centroid update, and derived pgvector state; after commit the workflow runs direct `syncScoreAnalyticsUseCase` so immutable scores reach ClickHouse; only assignments into an existing issue write `ScoreAssignedToIssue` transactionally for later debounced issue-details regeneration

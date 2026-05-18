@@ -148,6 +148,9 @@ export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75
 /** Minimum fused hybrid score to consider a candidate: 80% relevance after vector/BM25 fusion. */
 export const ISSUE_DISCOVERY_MIN_SIMILARITY = 0.8
 
+/** Minimum semantic similarity to consider a candidate even when lexical overlap is low. */
+export const ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY = 0.75
+
 /** Maximum candidates returned from the hybrid search stage. */
 export const ISSUE_DISCOVERY_SEARCH_CANDIDATES = 1000
 

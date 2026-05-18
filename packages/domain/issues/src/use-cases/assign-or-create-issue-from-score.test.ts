@@ -144,6 +144,62 @@ describe("assignOrCreateIssueUseCase", () => {
     expect(fakeAi.calls.generate).toHaveLength(0)
   })
 
+  it("tries raw annotation feedback before creating a new issue", async () => {
+    const existingIssue = makeIssue()
+    const score = makeScore({
+      feedback: "Generic enriched feedback",
+      metadata: { rawFeedback: "raw human report about token leakage" },
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue], {
+      hybridSearch: ({ query }) =>
+        Effect.succeed(
+          query === "raw human report about token leakage"
+            ? [
+                {
+                  issueId: existingIssue.id,
+                  name: existingIssue.name,
+                  description: existingIssue.description,
+                  score: 1,
+                },
+              ]
+            : [],
+        ),
+    })
+    const fakeAi = createFakeAI({
+      rerank: () => Effect.succeed([{ index: 0, relevanceScore: 0.95 }]),
+    })
+
+    scores.set(score.id, score)
+
+    const result = await Effect.runPromise(
+      assignOrCreateIssueUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        feedback: score.feedback,
+        normalizedEmbedding: makeEmbedding(),
+        rawFeedback: "raw human report about token leakage",
+        rawNormalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(fakeAi.layer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(IssueDiscoveryLockRepository, {
+          withLock: (_input, effect) => effect,
+        }),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+      ),
+    )
+
+    expect(result).toEqual({ action: "assigned", issueId: existingIssue.id })
+    expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
+    expect(issues.size).toBe(1)
+    expect(fakeAi.calls.rerank.map((call) => call.query)).toEqual(["raw human report about token leakage"])
+    expect(fakeAi.calls.generate).toHaveLength(0)
+  })
+
   it("falls through to the project lock before creating a new issue", async () => {
     const score = makeScore()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()

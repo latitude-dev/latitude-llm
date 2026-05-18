@@ -29,6 +29,12 @@ export const issueDiscoveryWorkflow = async (input: {
       scoreId: input.scoreId,
       feedback: embeddedScoreFeedback.feedback,
       normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+      ...(embeddedScoreFeedback.rawFeedback !== undefined && embeddedScoreFeedback.rawNormalizedEmbedding !== undefined
+        ? {
+            rawFeedback: embeddedScoreFeedback.rawFeedback,
+            rawNormalizedEmbedding: embeddedScoreFeedback.rawNormalizedEmbedding,
+          }
+        : {}),
     }),
   )
 

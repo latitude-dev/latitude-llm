@@ -35,6 +35,14 @@ const issueBase = {
   updatedAt: new Date("2026-04-01T00:00:00.000Z"),
 }
 
+const makeEmbedding = (values: Record<number, number>): number[] => {
+  const embedding = createIssueCentroid().base
+  for (const [index, value] of Object.entries(values)) {
+    embedding[Number(index)] = value
+  }
+  return embedding
+}
+
 const makeIssue = (overrides: Partial<Issue> = {}): Issue => {
   const name = overrides.name ?? "Secret leakage"
   return issueSchema.parse({
@@ -228,6 +236,65 @@ describe("IssueRepositoryLive", () => {
     )
 
     expect(items).toEqual([])
+  })
+
+  it("runs hybrid search against existing issue vectors", async () => {
+    const centroid = createIssueCentroid()
+    const normalizedEmbedding = makeEmbedding({ 0: 1 })
+
+    const items = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* IssueRepository
+        yield* repository.save(
+          makeIssue({
+            centroid: {
+              ...centroid,
+              base: normalizedEmbedding,
+              mass: 1,
+            },
+          }),
+        )
+
+        return yield* repository.hybridSearch({
+          projectId,
+          query: "secret leakage",
+          normalizedEmbedding,
+        })
+      }).pipe(makeProvider(database)),
+    )
+
+    expect(items.map((item) => item.issueId)).toEqual([issueId])
+  })
+
+  it("keeps semantically similar issue candidates even with no lexical overlap", async () => {
+    const centroid = createIssueCentroid()
+    const normalizedEmbedding = makeEmbedding({ 0: 1 })
+    const candidateEmbedding = makeEmbedding({ 0: 0.76, 1: Math.sqrt(1 - 0.76 ** 2) })
+
+    const items = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* IssueRepository
+        yield* repository.save(
+          makeIssue({
+            name: "Billing reconciliation drift",
+            description: "Ledger totals differ from invoice exports.",
+            centroid: {
+              ...centroid,
+              base: candidateEmbedding,
+              mass: 1,
+            },
+          }),
+        )
+
+        return yield* repository.hybridSearch({
+          projectId,
+          query: "wizard mentioned quidditch during password reset",
+          normalizedEmbedding,
+        })
+      }).pipe(makeProvider(database)),
+    )
+
+    expect(items.map((item) => item.issueId)).toEqual([issueId])
   })
 
   it("lists only visible issues scoped to project, newest-first, and paginates with hasMore", async () => {

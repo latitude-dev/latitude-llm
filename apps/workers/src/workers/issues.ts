@@ -1,5 +1,6 @@
 import {
   checkIssueEscalationUseCase,
+  type DiscoverIssueResult,
   discoverIssueUseCase,
   refreshIssueDetailsUseCase,
   removeScoreFromIssueUseCase,
@@ -36,6 +37,17 @@ import { getAdminPostgresClient, getClickhouseClient, getPostgresClient, getRedi
 
 const logger = createLogger("issues")
 
+const formatDiscoveryOutcome = (outcome: DiscoverIssueResult) => {
+  switch (outcome.action) {
+    case "workflow-started":
+      return `${outcome.action}:${outcome.workflow}`
+    case "skipped":
+      return `${outcome.action}:${outcome.reason}`
+    case "already-assigned":
+      return `${outcome.action}:${outcome.issueId}`
+  }
+}
+
 interface IssuesDeps {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
@@ -70,9 +82,9 @@ export const createIssuesWorker = async ({
       discoverIssueUseCase(payload).pipe(
         Effect.tap((outcome) =>
           Effect.sync(() => {
-            const detail =
-              outcome.action === "workflow-started" ? `${outcome.action}:${outcome.workflow}` : outcome.action
-            logger.info(`Processed issue discovery for ${payload.projectId}/${payload.scoreId} (${detail})`)
+            logger.info(
+              `Processed issue discovery for ${payload.projectId}/${payload.scoreId} (${formatDiscoveryOutcome(outcome)})`,
+            )
           }),
         ),
         Effect.tapError((error) =>

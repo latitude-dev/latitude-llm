@@ -147,18 +147,19 @@ Issue discovery should follow the original proposal closely:
 1. observe a non-draft failed, non-errored canonical score in Postgres
 2. emit `ScoreCreated` after the canonical Postgres write commits; that payload may carry a selected `issueId` for published annotations
 3. let the deduped `issues:discovery` task recheck canonical eligibility and decide whether a selected issue or issue-linked evaluation should be assigned directly before any similarity search runs
-4. enrich annotation-originated feedback first when needed
-5. embed canonical feedback with `voyage-4-large` at `2048` dimensions
+4. enrich annotation-originated feedback first when needed, while preserving the original annotation text as `metadata.rawFeedback`
+5. embed canonical feedback with `voyage-4-large` at `2048` dimensions; for annotation scores whose raw text differs from the enriched canonical feedback, also embed the raw feedback for fallback retrieval
 6. run project-scoped hybrid search directly against Postgres issues using pgvector cosine relevance plus `english` full-text rank
-7. use the fixed weighted fusion (`0.75` vector, `0.25` lexical) and filter candidates below the `0.8` hybrid threshold
+7. use the fixed weighted fusion (`0.75` vector, `0.25` lexical) and keep candidates that pass either the `0.8` hybrid threshold or the `0.75` vector-only semantic threshold
 8. rerank candidates with `rerank-2.5`
 9. filter out candidates that do not pass the minimum rerank relevance threshold
-10. match an existing canonical issue id or create a new issue when the centralized gate did not already route to a known issue
-11. when the final path is a brand-new issue, generate the first issue name/description synchronously from the initial issue occurrence inside the dedicated create-from-score workflow activity before starting the create transaction
-12. write `scores.issue_id` in Postgres
-13. if the score was added to an existing issue, write `ScoreAssignedToIssue` transactionally so later issue-details regeneration can debounce safely
-14. after the transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
-15. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `ScoreAssignedToIssue`, reusing the shared issue-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
+10. when enriched-feedback retrieval/rerank finds no match and raw annotation feedback is available, repeat the same retrieval/rerank pass with raw feedback before allowing new issue creation
+11. match an existing canonical issue id or create a new issue when the centralized gate did not already route to a known issue
+12. when the final path is a brand-new issue, generate the first issue name/description synchronously from the initial issue occurrence inside the dedicated create-from-score workflow activity before starting the create transaction
+13. write `scores.issue_id` in Postgres
+14. if the score was added to an existing issue, write `ScoreAssignedToIssue` transactionally so later issue-details regeneration can debounce safely
+15. after the transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
+16. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `ScoreAssignedToIssue`, reusing the shared issue-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
 
 Execution rules:
 
@@ -168,13 +169,13 @@ Execution rules:
 - when initial workflow retrieval resolves to no known issue, the workflow must call the bounded locked serialization activity instead of creating an issue directly
 - `issues:refresh` runs after the configured throttle window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
-- in workflow orchestration, do feedback embedding first and then enter locked serialization; the search/rerank/create-or-assign decision runs under the Redis serialization gates
+- in workflow orchestration, do feedback embedding first and then enter locked serialization; annotation scores may carry both enriched and raw feedback embeddings, and the search/rerank/create-or-assign decision runs under the Redis serialization gates
 - the brand-new issue path must generate its first name/description before the issue row is first persisted, and that synchronous generation step must reuse the same shared issue-details generation use case that later debounced refreshes call
 - the debounced `issues:refresh` path must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
 - after `issues:refresh` persists changed details, no explicit search sync is required because Postgres derives `search_document` from canonical issue text
 - rerank results already carry canonical issue ids from Postgres search, so there is no projection UUID resolution step
-- the no-match path is only provisional; before creating a new issue, serialization must first acquire a feedback-scoped Redis lock and re-run hybrid search and rerank
-- if the feedback-scoped re-check still finds no issue, serialization must acquire the project-scoped Redis lock and re-run retrieval again before creating
+- the no-match path is only provisional; before creating a new issue, serialization must first acquire a feedback-scoped Redis lock and re-run hybrid search and rerank, trying enriched feedback first and raw annotation feedback second when raw feedback is available
+- if the feedback-scoped re-check still finds no issue, serialization must acquire the project-scoped Redis lock and re-run the enriched-then-raw retrieval sequence again before creating
 - each Redis lock acquisition must be non-blocking; if the lock is already held, serialization returns a lock-unavailable result so the workflow sleeps durably and retries at that point instead of holding a database connection while waiting
 - both the create-from-score step and the assign-to-issue step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical issue row and centroid stay transactionally consistent
 - the assign-to-issue path must lock the canonical issue row before recomputing and saving the centroid so parallel score assignments into the same issue do not lose centroid contributions
@@ -190,12 +191,13 @@ Inside locked serialization must:
 
 1. re-fetch the score by id
 2. acquire the feedback-scoped Redis lock
-3. re-run hybrid issue search against Postgres using the same canonical feedback and normalized embedding
-4. re-run rerank over canonical issue candidates
-5. assign the score to the matched issue if the locked re-check now finds one
-6. otherwise acquire the project-scoped Redis lock and repeat the retrieval/rerank check
-7. assign to the project-lock match if one is found
-8. otherwise generate issue details, create one new issue, and claim `scores.issue_id`
+3. re-run hybrid issue search against Postgres using the enriched canonical feedback and normalized embedding
+4. re-run rerank over enriched-feedback candidates
+5. if no match is found and the score is an annotation with distinct raw feedback, repeat hybrid search and rerank with the raw feedback and raw-feedback embedding
+6. assign the score to the matched issue if either locked re-check finds one
+7. otherwise acquire the project-scoped Redis lock and repeat the enriched-then-raw retrieval/rerank sequence
+8. assign to the project-lock match if one is found
+9. otherwise generate issue details, create one new issue, and claim `scores.issue_id`
 
 This intentionally moves the long external retrieval/rerank/generation section outside Postgres transactions. Lock acquisition must use Redis `SET ... NX EX`; if the key is already held, serialization exits immediately and the workflow performs an explicit sleep-and-retry loop instead of occupying a database connection as a lock waiter. Redis lock keys must be organization-prefixed (`org:${organizationId}:...`) and released with token comparison so one worker cannot release another worker's lock after TTL expiry.
 
@@ -218,6 +220,8 @@ Concrete v1 mechanics worth carrying forward:
 Current v2 starting defaults layered on top of those v1 learnings:
 
 - rerank limit: `100`
+- retrieval admits candidates that meet either the fused hybrid threshold (`0.8`) or a vector-only semantic threshold (`0.75`) so low-lexical-overlap candidates still reach reranking
+- annotation discovery uses enriched feedback first, then raw feedback as a fallback retrieval/rerank pass before issue creation
 - issue details regeneration throttle: `8 hours` (at most once per issue, fires at most 8h after the first assignment)
 - keep the low-evidence visibility threshold configurable instead of hard-coding it into the issue model
 

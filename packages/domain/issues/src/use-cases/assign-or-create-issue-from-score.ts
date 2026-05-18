@@ -26,6 +26,8 @@ export interface AssignOrCreateIssueInput {
   readonly scoreId: string
   readonly feedback: string
   readonly normalizedEmbedding: readonly number[]
+  readonly rawFeedback?: string
+  readonly rawNormalizedEmbedding?: readonly number[]
 }
 
 export type AssignOrCreateIssueResult =
@@ -52,13 +54,16 @@ const checkEligibility = (input: AssignOrCreateIssueInput) =>
     Effect.catchIf(isEligibilityError, (error) => Effect.succeed({ status: "skipped" as const, reason: error._tag })),
   )
 
-const findAssignedIssueId = (input: AssignOrCreateIssueInput) =>
+const findAssignedIssueId = (
+  input: AssignOrCreateIssueInput,
+  search: { readonly feedback: string; readonly normalizedEmbedding: readonly number[] },
+) =>
   Effect.gen(function* () {
     const issueRepository = yield* IssueRepository
     const candidates = yield* issueRepository.hybridSearch({
       projectId: ProjectId(input.projectId),
-      query: input.feedback,
-      normalizedEmbedding: input.normalizedEmbedding,
+      query: search.feedback,
+      normalizedEmbedding: search.normalizedEmbedding,
     })
 
     // TODO(issue-discovery-rerank): remove this third-party rerank step once we
@@ -66,11 +71,29 @@ const findAssignedIssueId = (input: AssignOrCreateIssueInput) =>
     // is small and already scored by the highest-quality embedding model, so
     // Postgres hybrid search should become the sole matching decision source.
     const retrieval = yield* rerankIssueCandidatesUseCase({
-      query: input.feedback,
+      query: search.feedback,
       candidates,
     })
 
     return retrieval.matchedIssueId
+  })
+
+const findAssignedIssueIdWithFallback = (input: AssignOrCreateIssueInput) =>
+  Effect.gen(function* () {
+    const feedbackAssignedIssueId = yield* findAssignedIssueId(input, {
+      feedback: input.feedback,
+      normalizedEmbedding: input.normalizedEmbedding,
+    })
+    if (feedbackAssignedIssueId !== null) return feedbackAssignedIssueId
+
+    if (input.rawFeedback === undefined || input.rawNormalizedEmbedding === undefined) {
+      return null
+    }
+
+    return yield* findAssignedIssueId(input, {
+      feedback: input.rawFeedback,
+      normalizedEmbedding: input.rawNormalizedEmbedding,
+    })
   })
 
 const assignToIssue = (input: AssignOrCreateIssueInput, issueId: string) =>
@@ -106,7 +129,7 @@ export const assignOrCreateIssueUseCase = (input: AssignOrCreateIssueInput) =>
         ttlSeconds: ISSUE_DISCOVERY_FEEDBACK_LOCK_TTL_SECONDS,
       },
       Effect.gen(function* () {
-        const feedbackAssignedIssueId = yield* findAssignedIssueId(input)
+        const feedbackAssignedIssueId = yield* findAssignedIssueIdWithFallback(input)
         if (feedbackAssignedIssueId !== null) {
           return yield* assignToIssue(input, feedbackAssignedIssueId)
         }
@@ -124,7 +147,7 @@ export const assignOrCreateIssueUseCase = (input: AssignOrCreateIssueInput) =>
               return { action: "skipped" as const, reason: eligibility.reason }
             }
 
-            const projectAssignedIssueId = yield* findAssignedIssueId(input)
+            const projectAssignedIssueId = yield* findAssignedIssueIdWithFallback(input)
             if (projectAssignedIssueId !== null) {
               return yield* assignToIssue(input, projectAssignedIssueId)
             }

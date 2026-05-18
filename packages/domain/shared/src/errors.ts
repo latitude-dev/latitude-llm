@@ -2,20 +2,39 @@ import { Data } from "effect"
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
+const MAX_CAUSE_MESSAGE_LENGTH = 500
+
 const toNonEmptyString = (value: unknown): string | null =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : null
 
+const isFailedQueryMessage = (message: string): boolean => message.startsWith("Failed query:")
+
+const sanitizeCauseMessage = (message: string): string => {
+  if (isFailedQueryMessage(message)) {
+    return "Database query failed"
+  }
+
+  if (message.length > MAX_CAUSE_MESSAGE_LENGTH) {
+    return `${message.slice(0, MAX_CAUSE_MESSAGE_LENGTH)}…`
+  }
+
+  return message
+}
+
 const toCauseMessage = (cause: unknown): string | null => {
   if (cause instanceof Error) {
-    return toNonEmptyString(cause.message)
+    const message = toNonEmptyString(cause.message)
+    return message ? sanitizeCauseMessage(message) : null
   }
 
   if (typeof cause === "string") {
-    return toNonEmptyString(cause)
+    const message = toNonEmptyString(cause)
+    return message ? sanitizeCauseMessage(message) : null
   }
 
   if (isRecord(cause)) {
-    return toNonEmptyString(cause.message) ?? toNonEmptyString(cause.detail)
+    const message = toNonEmptyString(cause.message) ?? toNonEmptyString(cause.detail)
+    return message ? sanitizeCauseMessage(message) : null
   }
 
   return null
@@ -48,11 +67,16 @@ const findCauseStack = (cause: unknown): string | undefined => {
     seen.add(current)
 
     if (current instanceof Error && current.stack) {
-      return current.stack
+      if (!isFailedQueryMessage(current.message)) {
+        return current.stack
+      }
     }
 
     if (isRecord(current) && typeof current.stack === "string" && current.stack.length > 0) {
-      return current.stack
+      const message = typeof current.message === "string" ? current.message : ""
+      if (!isFailedQueryMessage(message)) {
+        return current.stack
+      }
     }
 
     current = isRecord(current) ? current.cause : undefined
