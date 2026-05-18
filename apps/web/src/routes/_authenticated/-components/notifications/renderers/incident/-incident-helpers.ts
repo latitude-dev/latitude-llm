@@ -1,53 +1,46 @@
-import type { IncidentOpenedPayload } from "@domain/notifications"
 import { useQuery } from "@tanstack/react-query"
+import { eq } from "@tanstack/react-db"
 import {
   getIssueLifecycleSummary,
   type IssueLifecycleSummaryRecord,
 } from "../../../../../../domains/issues/issues.functions.ts"
-import {
-  getIncidentNotificationTarget,
-  type IncidentTargetResult,
-} from "../../../../../../domains/notifications/notifications.functions.ts"
+import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 
-export function useLiveIssueSummary(
-  payload: IncidentOpenedPayload,
-  fallback: IncidentTargetResult | null = null,
-): IssueLifecycleSummaryRecord | null {
-  const projectId = payload.projectId ?? fallback?.projectId ?? undefined
-  const issueId = payload.issueId ?? fallback?.issueId ?? undefined
-  const enabled = Boolean(projectId && issueId)
+interface IncidentTarget {
+  readonly projectId: string | null | undefined
+  readonly sourceId: string
+}
+
+/**
+ * Live-resolve the source issue's name + lifecycle states. The payload
+ * snapshot dropped `issueName` in favor of `sourceId`, so every render
+ * does a live lookup (cached for 30s). Returns `null` while the query is
+ * in flight or when the issue can't be resolved.
+ */
+export function useLiveIssueSummary(target: IncidentTarget): IssueLifecycleSummaryRecord | null {
+  const enabled = Boolean(target.projectId)
   const { data } = useQuery({
-    queryKey: ["notifications", "issue-summary", projectId, issueId],
-    queryFn: () => getIssueLifecycleSummary({ data: { projectId: projectId ?? "", issueId: issueId ?? "" } }),
+    queryKey: ["notifications", "issue-summary", target.projectId, target.sourceId],
+    queryFn: () =>
+      getIssueLifecycleSummary({ data: { projectId: target.projectId ?? "", issueId: target.sourceId } }),
     enabled,
     staleTime: 30_000,
   })
   return data ?? null
 }
 
-// Only fires when the payload snapshot is missing fields — healthy rows skip the network call.
-export function useIncidentLinkFallback(
-  payload: IncidentOpenedPayload,
-  alertIncidentId: string | null,
-): IncidentTargetResult | null {
-  const needsFallback = !payload.issueId || !payload.projectSlug
-  const enabled = needsFallback && alertIncidentId !== null
-  const { data } = useQuery({
-    queryKey: ["notifications", "incident-target", alertIncidentId],
-    queryFn: () => getIncidentNotificationTarget({ data: { alertIncidentId: alertIncidentId ?? "" } }),
-    enabled,
-    staleTime: 60_000,
-  })
-  return data ?? null
-}
-
-// Returns `undefined` when neither the payload nor the fallback can produce a target.
-export function buildIssueUrl(
-  payload: IncidentOpenedPayload,
-  fallback: IncidentTargetResult | null = null,
-): string | undefined {
-  const issueId = payload.issueId ?? fallback?.issueId
-  const projectSlug = payload.projectSlug ?? fallback?.projectSlug
-  if (!projectSlug || !issueId) return undefined
-  return `/projects/${projectSlug}/issues?issueId=${encodeURIComponent(issueId)}`
+/**
+ * Build the `/projects/<slug>/issues?issueId=<id>` deep link by looking
+ * up the project slug from the live projects collection (same source the
+ * `BaseNotification` footer uses for the project name). Returns
+ * `undefined` while the collection is loading or when the project has
+ * been deleted between notification create and view.
+ */
+export function useIssueUrl(target: IncidentTarget): string | undefined {
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project: p }) => eq(p.id, target.projectId ?? " ")).findOne(),
+    [target.projectId ?? null],
+  )
+  if (!project) return undefined
+  return `/projects/${project.slug}/issues?issueId=${encodeURIComponent(target.sourceId)}`
 }
