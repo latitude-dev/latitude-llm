@@ -1,6 +1,7 @@
 import {
   Button,
   CloseTrigger,
+  cn,
   DetailDrawer,
   DetailSection,
   Icon,
@@ -26,7 +27,7 @@ import {
   TextAlignStartIcon,
   XIcon,
 } from "lucide-react"
-import { type ReactNode, useMemo, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
@@ -45,6 +46,7 @@ import {
   ProjectTracesTable,
   type TraceColumnId,
 } from "../../-components/project-traces-table.tsx"
+import { TraceDetailDrawer } from "../../-components/trace-detail-drawer.tsx"
 import { IssueDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
 import { formatIssueAgeAgoLabel, formatSeenAgeParts } from "./issue-formatters.ts"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
@@ -143,7 +145,6 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
 }
 
 export function IssueDetailDrawer({
-  projectSlug,
   projectId,
   issueId,
   onClose,
@@ -152,7 +153,6 @@ export function IssueDetailDrawer({
   canNavigateNext,
   canNavigatePrev,
 }: {
-  readonly projectSlug: string
   readonly projectId: string
   readonly issueId: string
   readonly onClose: () => void
@@ -177,6 +177,11 @@ export function IssueDetailDrawer({
   const [keepMonitoring, setKeepMonitoring] = useState(true)
   const [isLifecycleLoading, setIsLifecycleLoading] = useState(false)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
+  const [traceOverlayTraceId, setTraceOverlayTraceId] = useState<string | null>(null)
+  const [tracePanelEntered, setTracePanelEntered] = useState(false)
+  const traceOverlayClosingRef = useRef(false)
+  const tracePanelRef = useRef<HTMLDivElement>(null)
+  const previousTraceOverlayIdRef = useRef<string | null>(null)
 
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
   const totalTraceCount = useIssueTracesCount({ projectId, issueId, enabled: issue !== null })
@@ -216,17 +221,74 @@ export function IssueDetailDrawer({
     issue?.evaluations.some((evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null) ?? false
   const lifecycleConfirmation = lifecycleConfirmAction ? getLifecycleConfirmation(lifecycleConfirmAction) : null
 
-  const getTraceHref = (trace: { readonly traceId: string }) => {
-    return `/projects/${projectSlug}?tab=traces&traceId=${trace.traceId}&traceDetailTab=annotations`
+  const finishCloseTraceOverlay = useCallback(() => {
+    traceOverlayClosingRef.current = false
+    setTraceOverlayTraceId(null)
+  }, [])
+
+  const requestCloseTraceOverlay = useCallback(() => {
+    if (traceOverlayTraceId === null) return
+    traceOverlayClosingRef.current = true
+    setTracePanelEntered(false)
+  }, [traceOverlayTraceId])
+
+  useEffect(() => {
+    if (traceOverlayTraceId === null) {
+      setTracePanelEntered(false)
+      previousTraceOverlayIdRef.current = null
+      return
+    }
+    const wasAlreadyOpen = previousTraceOverlayIdRef.current !== null
+    previousTraceOverlayIdRef.current = traceOverlayTraceId
+    if (wasAlreadyOpen) {
+      setTracePanelEntered(true)
+      return
+    }
+    setTracePanelEntered(false)
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setTracePanelEntered(true))
+    })
+    return () => cancelAnimationFrame(id)
+  }, [traceOverlayTraceId])
+
+  useEffect(() => {
+    const el = tracePanelRef.current
+    if (!el || traceOverlayTraceId === null) return
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.propertyName !== "transform") return
+      if (traceOverlayClosingRef.current) {
+        finishCloseTraceOverlay()
+      }
+    }
+    el.addEventListener("transitionend", onTransitionEnd)
+    return () => el.removeEventListener("transitionend", onTransitionEnd)
+  }, [traceOverlayTraceId, finishCloseTraceOverlay])
+
+  const traceOverlayIndex = traceOverlayTraceId ? traceIds.indexOf(traceOverlayTraceId) : -1
+  const canNavigateNextTraceInOverlay =
+    traceOverlayTraceId !== null &&
+    traceIds.length > 0 &&
+    (traceOverlayIndex < 0 || traceOverlayIndex < traceIds.length - 1)
+  const canNavigatePrevTraceInOverlay =
+    traceOverlayTraceId !== null && traceIds.length > 0 && (traceOverlayIndex < 0 || traceOverlayIndex > 0)
+
+  const onNextTraceInOverlay = () => {
+    if (!traceOverlayTraceId) return
+    const idx = traceIds.indexOf(traceOverlayTraceId)
+    const next = idx < 0 ? traceIds[0] : traceIds[idx + 1]
+    if (next) setTraceOverlayTraceId(next)
   }
 
-  const openTraceInNewTab = (traceId: string) => {
-    window.open(getTraceHref({ traceId }), "_blank", "noopener,noreferrer")
+  const onPrevTraceInOverlay = () => {
+    if (!traceOverlayTraceId) return
+    const idx = traceIds.indexOf(traceOverlayTraceId)
+    const prev = idx <= 0 ? undefined : traceIds[idx - 1]
+    if (prev) setTraceOverlayTraceId(prev)
   }
 
   const getTraceRowAriaLabel = (input: { readonly traceId: string; readonly rootSpanName: string }) => {
     const shortName = input.rootSpanName || input.traceId.slice(0, 8)
-    return `Open trace ${shortName} with annotations tab in a new tab`
+    return `Open trace ${shortName} in the conversation panel`
   }
 
   const runLifecycleCommand = async (command: "resolve" | "unresolve" | "ignore" | "unignore", override?: boolean) => {
@@ -267,12 +329,17 @@ export function IssueDetailDrawer({
     {
       hotkey: "Alt+ArrowDown",
       callback: () => onNextIssue?.(),
-      options: { enabled: canNavigateNext && !!onNextIssue },
+      options: { enabled: canNavigateNext && !!onNextIssue && traceOverlayTraceId === null },
     },
     {
       hotkey: "Alt+ArrowUp",
       callback: () => onPrevIssue?.(),
-      options: { enabled: canNavigatePrev && !!onPrevIssue },
+      options: { enabled: canNavigatePrev && !!onPrevIssue && traceOverlayTraceId === null },
+    },
+    {
+      hotkey: "Escape",
+      callback: requestCloseTraceOverlay,
+      options: { enabled: traceOverlayTraceId !== null, ignoreInputs: true },
     },
   ])
 
@@ -476,11 +543,13 @@ export function IssueDetailDrawer({
               isLoading={tracesLoading}
               visibleColumnIds={ISSUE_TRACE_COLUMN_IDS}
               defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
-              onTraceClick={(trace) => openTraceInNewTab(trace.traceId)}
+              onTraceClick={(trace) => {
+                traceOverlayClosingRef.current = false
+                setTraceOverlayTraceId(trace.traceId)
+              }}
               getTraceRowAriaLabel={getTraceRowAriaLabel}
-              getTraceHref={getTraceHref}
-              linkTarget="_blank"
-              rowInteractionRole="link"
+              rowInteractionRole="button"
+              activeTraceId={traceOverlayTraceId ?? undefined}
               selection={traceSelection}
               infiniteScroll={infiniteScroll}
               blankSlate="This issue has not been seen on any traces yet."
@@ -564,6 +633,47 @@ export function IssueDetailDrawer({
           </Modal.Footer>
         </Modal.Content>
       </Modal.Root>
+
+      {traceOverlayTraceId !== null ? (
+        <>
+          <button
+            type="button"
+            aria-label="Close trace panel"
+            className={cn(
+              "fixed inset-0 z-[45] bg-foreground/10 transition-opacity duration-200",
+              tracePanelEntered ? "opacity-100" : "pointer-events-none opacity-0",
+            )}
+            onClick={requestCloseTraceOverlay}
+          />
+          <div
+            ref={tracePanelRef}
+            className={cn(
+              "fixed inset-y-0 right-0 z-[50] flex max-h-dvh shadow-2xl will-change-transform transition-transform duration-300 ease-out",
+              tracePanelEntered ? "translate-x-0" : "translate-x-full",
+            )}
+          >
+            <TraceDetailDrawer
+              key={traceOverlayTraceId}
+              projectId={projectId}
+              traceId={traceOverlayTraceId}
+              trace={traces.find((t) => t.traceId === traceOverlayTraceId)}
+              onClose={requestCloseTraceOverlay}
+              onNextTrace={onNextTraceInOverlay}
+              onPrevTrace={onPrevTraceInOverlay}
+              canNavigateNext={canNavigateNextTraceInOverlay}
+              canNavigatePrev={canNavigatePrevTraceInOverlay}
+              urlSyncedTabs={false}
+              initialTab="conversation"
+              drawerStoreKey="issue-trace-detail-drawer-width"
+              closeLabel={
+                <>
+                  Back to issue <HotkeyBadge hotkey="Escape" />
+                </>
+              }
+            />
+          </div>
+        </>
+      ) : null}
     </>
   )
 }

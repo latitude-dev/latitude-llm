@@ -109,7 +109,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issu
 })
 
 function IssuesPage() {
-  const { projectSlug } = Route.useParams()
   const project = useRouteProject()
   const [activeIssueId, setActiveIssueId] = useParamState("issueId", "")
   const [lifecycleGroup, setLifecycleGroup] = useParamState("issuesLifecycle", "active", {
@@ -506,7 +505,6 @@ function IssuesPage() {
         <Layout.Aside>
           <IssueDetailDrawer
             key={activeIssueId}
-            projectSlug={projectSlug}
             projectId={project.id}
             issueId={activeIssueId}
             onClose={() => setActiveIssueId("")}
