@@ -10,6 +10,13 @@ export { type ExportFailedEmailData, exportFailedTemplate } from "./templates/ex
 export { type ExportReadyEmailData, exportReadyTemplate } from "./templates/export-ready/index.tsx"
 export { type InviteMagicLinkEmailData, inviteMagicLinkTemplate } from "./templates/invite-magic-link/index.tsx"
 export { type MagicLinkEmailData, magicLinkTemplate } from "./templates/magic-link/index.tsx"
+// Notification email registry (multi-channel notifications)
+export { NOTIFICATION_EMAIL_RENDERERS } from "./templates/notifications/registry.ts"
+export type {
+  NotificationEmailRenderContext,
+  NotificationEmailRenderer,
+  NotificationEmailRendererRegistry,
+} from "./templates/notifications/types.ts"
 export {
   type SignupExistingAccountMagicLinkEmailData,
   signupExistingAccountMagicLinkTemplate,
@@ -20,8 +27,4 @@ export {
 } from "./templates/signup-magic-link/index.tsx"
 // Templates
 export type { RenderedEmail } from "./templates/types.ts"
-export {
-  type WrappedEmailData,
-  wrappedEmailTemplate,
-} from "./templates/wrapped/index.tsx"
 export { type SendEmail, sendEmail } from "./use-cases/send-email.ts"

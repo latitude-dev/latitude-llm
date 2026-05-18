@@ -1,23 +1,34 @@
+// Entities
+
 export type {
-  CustomMessageNotificationPayload,
-  IncidentNotificationEvent,
-  IncidentNotificationPayload,
+  CustomMessagePayload,
+  IncidentClosedPayload,
+  IncidentOpenedPayload,
   Notification,
-  NotificationType,
-  WrappedReportNotificationPayload,
+  NotificationKind,
+  WrappedReportPayload,
 } from "./entities/notification.ts"
 export {
-  customMessageNotificationPayloadSchema,
-  INCIDENT_NOTIFICATION_EVENTS,
-  incidentNotificationEventSchema,
-  incidentNotificationPayloadSchema,
-  NOTIFICATION_TYPES,
+  customMessagePayloadSchema,
+  groupOf,
+  incidentClosedPayloadSchema,
+  incidentOpenedPayloadSchema,
+  NOTIFICATION_KIND_META,
+  NOTIFICATION_KINDS,
+  notificationKindSchema,
   notificationSchema,
-  notificationTypeSchema,
-  wrappedReportNotificationPayloadSchema,
+  payloadSchemaFor,
+  wrappedReportPayloadSchema,
 } from "./entities/notification.ts"
+export { shouldSendEmail } from "./entities/notification-preferences.ts"
+
+// Helpers
+export type { BuildIdempotencyKeyInput } from "./helpers/idempotency-key.ts"
+export { buildIdempotencyKey } from "./helpers/idempotency-key.ts"
 export type { ResolveRecipientsInput } from "./helpers/resolve-recipients.ts"
 export { resolveRecipients } from "./helpers/resolve-recipients.ts"
+
+// Ports
 export type {
   GetUnreadNotificationCountInput as RepositoryGetUnreadNotificationCountInput,
   ListNotificationsInput as RepositoryListNotificationsInput,
@@ -28,16 +39,19 @@ export type {
   NotificationRepositoryShape,
 } from "./ports/notification-repository.ts"
 export { NotificationRepository } from "./ports/notification-repository.ts"
+
+// Use cases
 export type {
-  CreateIncidentNotificationsError,
-  CreateIncidentNotificationsInput,
-} from "./use-cases/create-incident-notifications.ts"
-export { createIncidentNotificationsUseCase } from "./use-cases/create-incident-notifications.ts"
+  CreateNotificationError,
+  CreateNotificationInput,
+  CreateNotificationResult,
+} from "./use-cases/create-notification.ts"
+export { createNotificationUseCase } from "./use-cases/create-notification.ts"
 export type {
-  CreateWrappedReportNotificationsError,
-  CreateWrappedReportNotificationsInput,
-} from "./use-cases/create-wrapped-report-notifications.ts"
-export { createWrappedReportNotificationsUseCase } from "./use-cases/create-wrapped-report-notifications.ts"
+  DeleteNotificationsByProjectError,
+  DeleteNotificationsByProjectInput,
+} from "./use-cases/delete-notifications-by-project.ts"
+export { deleteNotificationsByProjectUseCase } from "./use-cases/delete-notifications-by-project.ts"
 export type {
   GetUnreadNotificationCountError,
   GetUnreadNotificationCountInput,
@@ -55,3 +69,30 @@ export type {
   MarkNotificationSeenInput,
 } from "./use-cases/mark-notification-seen.ts"
 export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.ts"
+export type {
+  IncidentNotificationKind,
+  IncidentNotificationRequest,
+  RequestIncidentNotificationsError,
+  RequestIncidentNotificationsInput,
+  RequestIncidentNotificationsResult,
+} from "./use-cases/request-incident-notifications.ts"
+export { requestIncidentNotificationsUseCase } from "./use-cases/request-incident-notifications.ts"
+export type {
+  RequestWrappedReportNotificationsError,
+  RequestWrappedReportNotificationsInput,
+  RequestWrappedReportNotificationsResult,
+  WrappedReportNotificationRequest,
+} from "./use-cases/request-wrapped-report-notifications.ts"
+export { requestWrappedReportNotificationsUseCase } from "./use-cases/request-wrapped-report-notifications.ts"
+export type {
+  NotificationEmailProject,
+  NotificationEmailRecipient,
+  NotificationEmailRenderer,
+  NotificationEmailSender,
+  RenderedEmailBoundary,
+  RenderNotificationEmailError,
+  SendNotificationEmailError,
+  SendNotificationEmailInput,
+  SendNotificationEmailTransportError,
+} from "./use-cases/send-notification-email.ts"
+export { sendNotificationEmailUseCase } from "./use-cases/send-notification-email.ts"

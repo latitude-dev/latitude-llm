@@ -32,7 +32,8 @@ const toRecord = (project: Project) => ({
   slug: project.slug,
   settings: {
     keepMonitoring: project.settings?.keepMonitoring,
-    alertNotifications: project.settings?.alertNotifications,
+    notifications: project.settings?.notifications,
+    escalation: project.settings?.escalation,
   },
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   createdAt: project.createdAt.toISOString(),

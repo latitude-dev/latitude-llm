@@ -1,7 +1,7 @@
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
-import { emailDesignTokens } from "../../../../tokens/design-system.ts"
+import { emailDesignTokens } from "../../../../../tokens/design-system.ts"
 
 interface StatCardProps {
   readonly label: string

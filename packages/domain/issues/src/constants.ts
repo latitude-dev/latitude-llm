@@ -35,9 +35,9 @@ export const ESCALATION_MIN_OCCURRENCES_THRESHOLD = 20
 export const ESCALATION_EXIT_THRESHOLD_FACTOR = 0.7
 
 /**
- * Default seasonal sensitivity exposed to users as `escalationSensitivity`
- * on `projectSettings.alertNotifications`. Interpreted as `k_short` —
- * the multiplier on σ for the 1h window. `k_long = k_short − 1` for the
+ * Default seasonal sensitivity exposed to users as `sensitivity` on
+ * `projectSettings.escalation`. Interpreted as `k_short` — the
+ * multiplier on σ for the 1h window. `k_long = k_short − 1` for the
  * 6h window so the short-window can prove "now" without the long window
  * dominating it (multi-window-multi-burn-rate SRE pattern). Default 3
  * approximates 99% confidence under a normal assumption.

@@ -191,17 +191,25 @@ export const createDomainEventsWorker = ({
     IncidentCreated: (event) =>
       pub.publish(
         "notifications",
-        "create-from-incident-opened",
-        { organizationId: event.payload.organizationId, alertIncidentId: event.payload.alertIncidentId },
-        { dedupeKey: `notifications:incident-opened:${event.payload.alertIncidentId}` },
+        "request-incident-notifications",
+        {
+          organizationId: event.payload.organizationId,
+          alertIncidentId: event.payload.alertIncidentId,
+          kind: "incident.opened",
+        },
+        { dedupeKey: `notifications:request-incident-opened:${event.payload.alertIncidentId}` },
       ),
 
     IncidentClosed: (event) =>
       pub.publish(
         "notifications",
-        "create-from-incident-closed",
-        { organizationId: event.payload.organizationId, alertIncidentId: event.payload.alertIncidentId },
-        { dedupeKey: `notifications:incident-closed:${event.payload.alertIncidentId}` },
+        "request-incident-notifications",
+        {
+          organizationId: event.payload.organizationId,
+          alertIncidentId: event.payload.alertIncidentId,
+          kind: "incident.closed",
+        },
+        { dedupeKey: `notifications:request-incident-closed:${event.payload.alertIncidentId}` },
       ),
 
     AnnotationDeleted: (event) => {
@@ -304,7 +312,13 @@ export const createDomainEventsWorker = ({
     DatasetCreated: () => Effect.void,
     EvaluationConfigured: () => Effect.void,
     AnnotationQueueItemCompleted: () => Effect.void,
-    ProjectDeleted: () => Effect.void,
+    ProjectDeleted: (event) =>
+      pub.publish(
+        "notifications",
+        "delete-by-project",
+        { organizationId: event.payload.organizationId, projectId: event.payload.projectId },
+        { dedupeKey: `notifications:delete-by-project:${event.payload.projectId}` },
+      ),
     FlaggerToggled: () => Effect.void,
     SavedSearchCreated: () => Effect.void,
     // Impersonation events are audit-only — their value is being

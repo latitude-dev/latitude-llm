@@ -42,6 +42,14 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
         }
       }),
 
+    updateNotificationPreferences: (params) =>
+      Effect.sync(() => {
+        const existing = users.get(params.userId)
+        if (existing) {
+          users.set(params.userId, { ...existing, notificationPreferences: params.preferences })
+        }
+      }),
+
     delete: (userId) =>
       Effect.sync(() => {
         users.delete(userId)

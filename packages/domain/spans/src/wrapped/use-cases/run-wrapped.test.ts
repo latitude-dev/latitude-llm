@@ -17,7 +17,6 @@ import {
   ProjectId,
   SqlClient,
   UserId,
-  type WrappedReportId,
 } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -28,7 +27,7 @@ import {
   ClaudeCodeSpanReader,
   type ClaudeCodeSpanReaderShape,
 } from "../types/claude-code/ports/claude-code-span-reader.ts"
-import { runWrappedUseCase, type WrappedRenderedEmail } from "./run-wrapped.ts"
+import { runWrappedUseCase } from "./run-wrapped.ts"
 
 const ORG_ID = OrganizationId("org-cc-wrapped".padEnd(24, "x").slice(0, 24))
 const PROJECT_ID = ProjectId("proj-cc-wrapped".padEnd(24, "x").slice(0, 24))
@@ -152,7 +151,6 @@ interface TestHarness {
     | SqlClient
     | ChSqlClient
   >
-  readonly sent: Array<{ to: string; subject: string; html: string; text: string }>
   readonly saved: WrappedReportRecord[]
   readonly enableFlag: () => Promise<void>
 }
@@ -204,7 +202,6 @@ const setupHarness = (options: {
 
   return {
     layer,
-    sent: [],
     saved,
     enableFlag: async () => {
       if (!options.enableFlag) return
@@ -221,32 +218,23 @@ const setupHarness = (options: {
   }
 }
 
-const makeDeps = (sent: TestHarness["sent"]) => ({
-  renderEmail: async ({
-    userName,
-    report,
-    reportId,
-  }: {
-    userName: string
-    report: { project: { name: string } }
-    reportId: WrappedReportId
-  }): Promise<WrappedRenderedEmail> => ({
-    html: `<p>Hi ${userName}, your week in ${report.project.name}</p><a href="/wrapped/${reportId}">See it</a>`,
-    subject: `Wrapped: ${report.project.name}`,
-    text: `Hi ${userName}, your week in ${report.project.name} — /wrapped/${reportId}`,
-  }),
-  sendEmail: (email: { to: string; subject: string; html: string; text: string }) =>
-    Effect.sync(() => {
-      sent.push(email)
-    }),
-})
+const runUseCase = (harness: TestHarness) =>
+  Effect.runPromise(
+    runWrappedUseCase({
+      organizationId: ORG_ID,
+      projectId: PROJECT_ID,
+      windowStart: WINDOW_START,
+      windowEnd: WINDOW_END,
+    }).pipe(Effect.provide(harness.layer)),
+  )
 
 describe("runWrappedUseCase", () => {
   let harness: TestHarness
-  let sent: TestHarness["sent"]
 
   beforeEach(() => {
-    sent = []
+    // Each test sets up its own harness; placeholder so harness is
+    // always assigned-before-read in TS's flow analysis.
+    harness = setupHarness({ members: [], sessions: 0, enableFlag: false })
   })
 
   it("skips when the feature flag is off", async () => {
@@ -256,17 +244,10 @@ describe("runWrappedUseCase", () => {
       enableFlag: false,
     })
 
-    const result = await Effect.runPromise(
-      runWrappedUseCase(makeDeps(sent))({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        windowStart: WINDOW_START,
-        windowEnd: WINDOW_END,
-      }).pipe(Effect.provide(harness.layer)),
-    )
+    const result = await runUseCase(harness)
 
     expect(result).toEqual({ status: "skipped", reason: "flag-off" })
-    expect(sent).toHaveLength(0)
+    expect(harness.saved).toHaveLength(0)
   })
 
   it("skips when there is no Claude Code activity in the window", async () => {
@@ -277,81 +258,41 @@ describe("runWrappedUseCase", () => {
     })
     await harness.enableFlag()
 
-    const result = await Effect.runPromise(
-      runWrappedUseCase(makeDeps(sent))({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        windowStart: WINDOW_START,
-        windowEnd: WINDOW_END,
-      }).pipe(Effect.provide(harness.layer)),
-    )
+    const result = await runUseCase(harness)
 
     expect(result).toEqual({ status: "skipped", reason: "no-activity" })
-    expect(sent).toHaveLength(0)
+    expect(harness.saved).toHaveLength(0)
   })
 
-  it("skips when no member has a verified email", async () => {
-    harness = setupHarness({
-      members: [makeMember("a", "a@test.com", false), makeMember("b", "b@test.com", false)],
-      sessions: 7,
-      enableFlag: true,
-    })
-    await harness.enableFlag()
-
-    const result = await Effect.runPromise(
-      runWrappedUseCase(makeDeps(sent))({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        windowStart: WINDOW_START,
-        windowEnd: WINDOW_END,
-      }).pipe(Effect.provide(harness.layer)),
-    )
-
-    expect(result).toEqual({ status: "skipped", reason: "no-recipients" })
-    expect(sent).toHaveLength(0)
-  })
-
-  it("sends one email to every verified recipient", async () => {
+  it("persists a report and returns its id when the flag is on and the window has activity", async () => {
+    // Recipient resolution + email delivery moved to the notification pipeline,
+    // so this use case no longer cares which members have verified emails — it
+    // computes + persists the report and hands the id off via the return value.
     harness = setupHarness({
       members: [
         makeMember("a", "alice@test.com", true),
-        makeMember("b", "bob@test.com", true),
-        makeMember("c", "charlie@test.com", false),
+        makeMember("b", "bob@test.com", false), // unverified — irrelevant here now
       ],
       sessions: 12,
       enableFlag: true,
     })
     await harness.enableFlag()
 
-    const result = await Effect.runPromise(
-      runWrappedUseCase(makeDeps(sent))({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        windowStart: WINDOW_START,
-        windowEnd: WINDOW_END,
-      }).pipe(Effect.provide(harness.layer)),
-    )
+    const result = await runUseCase(harness)
 
     expect(result.status).toBe("sent")
     if (result.status !== "sent") throw new Error("unreachable")
-    expect(result.recipientCount).toBe(2)
     expect(result.projectName).toBe("Test project")
     expect(typeof result.reportId).toBe("string")
     expect(result.reportId.length).toBeGreaterThan(0)
-    expect(sent.map((e) => e.to).sort()).toEqual(["alice@test.com", "bob@test.com"])
-    for (const email of sent) {
-      expect(email.subject).toBe("Wrapped: Test project")
-      expect(email.html).toContain("Test project")
-      expect(email.html).toContain(`/wrapped/${result.reportId}`)
-    }
-    // The report was persisted exactly once before the emails went out.
+    // The report was persisted exactly once.
     expect(harness.saved).toHaveLength(1)
     expect(harness.saved[0]?.id).toBe(result.reportId)
     expect(harness.saved[0]?.organizationId).toBe(ORG_ID)
     expect(harness.saved[0]?.projectId).toBe(PROJECT_ID)
   })
 
-  it("uses the org owner's name for the persisted ownerName (web greeting); the email still gets the recipient's name", async () => {
+  it("uses the org owner's name for the persisted ownerName (web greeting + email greeting)", async () => {
     harness = setupHarness({
       members: [
         { ...makeMember("a", "owner@test.com", true), role: "owner", name: "Alex Owner" },
@@ -362,14 +303,7 @@ describe("runWrappedUseCase", () => {
     })
     await harness.enableFlag()
 
-    await Effect.runPromise(
-      runWrappedUseCase(makeDeps(sent))({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        windowStart: WINDOW_START,
-        windowEnd: WINDOW_END,
-      }).pipe(Effect.provide(harness.layer)),
-    )
+    await runUseCase(harness)
 
     expect(harness.saved[0]?.ownerName).toBe("Alex Owner")
   })
@@ -388,14 +322,7 @@ describe("runWrappedUseCase", () => {
     })
     await harness.enableFlag()
 
-    await Effect.runPromise(
-      runWrappedUseCase(makeDeps(sent))({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        windowStart: WINDOW_START,
-        windowEnd: WINDOW_END,
-      }).pipe(Effect.provide(harness.layer)),
-    )
+    await runUseCase(harness)
 
     expect(harness.saved[0]?.ownerName).toBe("Alex Owner")
   })
@@ -408,14 +335,7 @@ describe("runWrappedUseCase", () => {
     })
     await harness.enableFlag()
 
-    await Effect.runPromise(
-      runWrappedUseCase(makeDeps(sent))({
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        windowStart: WINDOW_START,
-        windowEnd: WINDOW_END,
-      }).pipe(Effect.provide(harness.layer)),
-    )
+    await runUseCase(harness)
 
     expect(harness.saved[0]?.ownerName).toBe("Acme")
   })

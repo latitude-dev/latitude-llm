@@ -2,7 +2,6 @@ import { AlertIncidentRepository } from "@domain/alerts"
 import { IssueRepository } from "@domain/issues"
 import {
   getUnreadNotificationCountUseCase,
-  INCIDENT_NOTIFICATION_EVENTS,
   listNotificationsUseCase,
   markAllNotificationsSeenUseCase,
   markNotificationSeenUseCase,
@@ -10,13 +9,15 @@ import {
 } from "@domain/notifications"
 import { ProjectRepository } from "@domain/projects"
 import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
-import { AlertIncidentId, IssueId } from "@domain/shared"
+import { AlertIncidentId, IssueId, type NotificationPreferences, notificationPreferencesSchema } from "@domain/shared"
+import { UserRepository } from "@domain/users"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
   IssueRepositoryLive,
   NotificationRepositoryLive,
   ProjectRepositoryLive,
+  UserRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -31,29 +32,32 @@ const notificationCursorSchema = z.object({
   id: z.string(),
 })
 
-// `payload` is a JSON object whose shape depends on `type`. The renderer
-// narrows it via `incidentNotificationPayloadSchema` /
-// `customMessageNotificationPayloadSchema` at the consumption site.
+// `payload` is a JSON object whose shape depends on `kind`. The renderer
+// narrows it via `payloadSchemaFor(kind)` at the consumption site.
 // Index signature uses `{}` to match TanStack Start's JSON-serialized return
 // inference (Record<string, unknown> would over-narrow during the round-trip).
 type JsonRecord = Readonly<Record<string, object>>
 
 export interface NotificationRecord {
   readonly id: string
-  readonly type: Notification["type"]
-  readonly sourceId: string | null
+  readonly kind: Notification["kind"]
+  readonly idempotencyKey: string
+  readonly projectId: string | null
   readonly payload: JsonRecord
   readonly createdAt: string
   readonly seenAt: string | null
+  readonly emailedAt: string | null
 }
 
 const toNotificationRecord = (n: Notification): NotificationRecord => ({
   id: n.id,
-  type: n.type,
-  sourceId: n.sourceId,
+  kind: n.kind,
+  idempotencyKey: n.idempotencyKey,
+  projectId: n.projectId,
   payload: n.payload as JsonRecord,
   createdAt: n.createdAt.toISOString(),
   seenAt: n.seenAt?.toISOString() ?? null,
+  emailedAt: n.emailedAt?.toISOString() ?? null,
 })
 
 interface ListNotificationsResultRecord {
@@ -144,7 +148,7 @@ export const getIncidentTrend = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       alertIncidentId: z.string(),
-      event: z.enum(INCIDENT_NOTIFICATION_EVENTS),
+      event: z.enum(["opened", "closed"]),
     }),
   )
   .handler(async ({ data }): Promise<IncidentTrendResult> => {
@@ -179,6 +183,37 @@ export const getIncidentTrend = createServerFn({ method: "GET" })
     )
 
     return { buckets }
+  })
+
+export const getNotificationPreferences = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{ readonly preferences: NotificationPreferences | null }> => {
+    const { userId, organizationId } = await requireSession()
+    const pgClient = getPostgresClient()
+
+    const preferences = await Effect.runPromise(
+      Effect.gen(function* () {
+        const users = yield* UserRepository
+        const user = yield* users.findById(userId)
+        return user.notificationPreferences
+      }).pipe(withPostgres(UserRepositoryLive, pgClient, organizationId), withTracing),
+    )
+
+    return { preferences }
+  },
+)
+
+export const updateNotificationPreferences = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ preferences: notificationPreferencesSchema }))
+  .handler(async ({ data }): Promise<void> => {
+    const { userId, organizationId } = await requireSession()
+    const pgClient = getPostgresClient()
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const users = yield* UserRepository
+        yield* users.updateNotificationPreferences({ userId, preferences: data.preferences })
+      }).pipe(withPostgres(UserRepositoryLive, pgClient, organizationId), withTracing),
+    )
   })
 
 export interface IncidentTargetResult {

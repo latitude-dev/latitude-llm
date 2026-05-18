@@ -1,5 +1,5 @@
 import { type Notification, NotificationRepository, notificationSchema } from "@domain/notifications"
-import { SqlClient, type SqlClientShape } from "@domain/shared"
+import { NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -9,11 +9,13 @@ const toInsertRow = (n: Notification): typeof notifications.$inferInsert => ({
   id: n.id,
   organizationId: n.organizationId,
   userId: n.userId,
-  type: n.type,
-  sourceId: n.sourceId,
+  kind: n.kind,
+  idempotencyKey: n.idempotencyKey,
+  projectId: n.projectId,
   payload: n.payload,
   createdAt: n.createdAt,
   seenAt: n.seenAt,
+  emailedAt: n.emailedAt,
 })
 
 const toDomain = (row: typeof notifications.$inferSelect): Notification =>
@@ -21,53 +23,58 @@ const toDomain = (row: typeof notifications.$inferSelect): Notification =>
     id: row.id,
     organizationId: row.organizationId,
     userId: row.userId,
-    type: row.type,
-    sourceId: row.sourceId,
+    kind: row.kind,
+    idempotencyKey: row.idempotencyKey,
+    projectId: row.projectId,
     payload: row.payload,
     createdAt: row.createdAt,
     seenAt: row.seenAt,
+    emailedAt: row.emailedAt,
   })
 
 export const NotificationRepositoryLive = Layer.effect(
   NotificationRepository,
   Effect.succeed(
     NotificationRepository.of({
-      bulkInsert: (incoming) =>
+      insertIfAbsent: (row) =>
         Effect.gen(function* () {
-          if (incoming.length === 0) return
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const rows = incoming.map(toInsertRow)
-          // Conflict target is the partial unique index defined in
-          // `schema/notifications.ts` (`notifications_incident_event_uq`).
-          // We target it explicitly — by column list + the index's WHERE
-          // predicate — so PK collisions and other constraint violations
-          // still surface as errors instead of being silently swallowed.
-          // Done via raw SQL because Drizzle's typed `target` array
-          // can't express the `(payload->>'event')` index expression.
-          yield* sqlClient.query((db) =>
-            db.execute(sql`
-              insert into ${notifications}
-                (id, organization_id, user_id, type, source_id, payload, created_at, seen_at)
-              values ${sql.join(
-                rows.map(
-                  (r) => sql`(
-                    ${r.id},
-                    ${r.organizationId},
-                    ${r.userId},
-                    ${r.type},
-                    ${r.sourceId},
-                    ${JSON.stringify(r.payload)}::jsonb,
-                    ${r.createdAt},
-                    ${r.seenAt}
-                  )`,
-                ),
-                sql`, `,
-              )}
-              on conflict (organization_id, user_id, source_id, ((payload->>'event')))
-                where type = 'incident' and source_id is not null
-              do nothing
-            `),
+          const inserted = yield* sqlClient.query((db) =>
+            db
+              .insert(notifications)
+              .values(toInsertRow(row))
+              // The unique index target — see schema/notifications.ts.
+              .onConflictDoNothing({
+                target: [notifications.organizationId, notifications.userId, notifications.idempotencyKey],
+              })
+              .returning(),
           )
+          const [first] = inserted
+          return first ? toDomain(first) : null
+        }),
+
+      findById: (id) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db.select().from(notifications).where(eq(notifications.id, id)).limit(1),
+          )
+          const [first] = rows
+          if (!first) return yield* Effect.fail(new NotFoundError({ entity: "Notification", id }))
+          return toDomain(first)
+        }),
+
+      markEmailed: (id) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const updated = yield* sqlClient.query((db) =>
+            db
+              .update(notifications)
+              .set({ emailedAt: new Date() })
+              .where(and(eq(notifications.id, id), isNull(notifications.emailedAt)))
+              .returning({ id: notifications.id }),
+          )
+          return updated.length > 0
         }),
 
       list: ({ organizationId, userId, limit, cursor }) =>
@@ -153,6 +160,18 @@ export const NotificationRepositoryLive = Layer.effect(
                 ),
               ),
           )
+        }),
+
+      deleteByProjectId: ({ organizationId, projectId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const deleted = yield* sqlClient.query((db) =>
+            db
+              .delete(notifications)
+              .where(and(eq(notifications.organizationId, organizationId), eq(notifications.projectId, projectId)))
+              .returning({ id: notifications.id }),
+          )
+          return { deleted: deleted.length }
         }),
     }),
   ),

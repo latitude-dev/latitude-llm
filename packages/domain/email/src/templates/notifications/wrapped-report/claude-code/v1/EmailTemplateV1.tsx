@@ -3,9 +3,9 @@ import type { Report } from "@domain/spans"
 import { Img, Link, Section } from "@react-email/components"
 // biome-ignore lint/style/useImportType: React is required at runtime for JSX in workers (tsx/esbuild classic transform). Do not downgrade to `import type`.
 import React from "react"
-import { EmailHeading } from "../../../../components/EmailHeading.tsx"
-import { WrappedLayout } from "../../../../components/WrappedLayout.tsx"
-import { emailDesignTokens } from "../../../../tokens/design-system.ts"
+import { EmailHeading } from "../../../../../components/EmailHeading.tsx"
+import { WrappedLayout } from "../../../../../components/WrappedLayout.tsx"
+import { emailDesignTokens } from "../../../../../tokens/design-system.ts"
 import { PersonalityCard } from "../-components/PersonalityCard.tsx"
 import { StatCard } from "../-components/StatCard.tsx"
 

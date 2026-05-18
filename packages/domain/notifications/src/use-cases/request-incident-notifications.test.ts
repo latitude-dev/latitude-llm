@@ -5,8 +5,7 @@ import {
   alertIncidentSchema,
 } from "@domain/alerts"
 import { type Issue, IssueRepository, type IssueWithLifecycle, issueSchema } from "@domain/issues"
-import type { MembershipRole } from "@domain/organizations"
-import { type Membership, MembershipRepository, type MemberWithUser } from "@domain/organizations"
+import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
 import { type Project, ProjectRepository } from "@domain/projects"
 import {
   AlertIncidentId,
@@ -23,9 +22,7 @@ import {
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { NotificationRepository } from "../ports/notification-repository.ts"
-import { createFakeNotificationRepository } from "../testing/fake-notification-repository.ts"
-import { createIncidentNotificationsUseCase } from "./create-incident-notifications.ts"
+import { requestIncidentNotificationsUseCase } from "./request-incident-notifications.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
 
@@ -173,99 +170,115 @@ function setup(opts: SetupOpts = {}) {
     countBySlug: () => Effect.die("not used"),
   })
 
-  const { repo: notificationRepo, rows } = createFakeNotificationRepository()
-
   const layer = Layer.mergeAll(
     Layer.succeed(AlertIncidentRepository, incidentRepo),
     Layer.succeed(IssueRepository, issueRepo),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ProjectRepository, projectRepo),
     Layer.succeed(SettingsReader, settings),
-    Layer.succeed(NotificationRepository, notificationRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )
 
-  return { orgId, projectId, incidentId, incident, rows, layer }
+  return { orgId, projectId, incidentId, incident, layer }
 }
 
-describe("createIncidentNotificationsUseCase", () => {
-  it("inserts one notification per org member with the right payload", async () => {
-    const { incidentId, projectId, rows, layer } = setup({ memberUserIds: [cuid("ua"), cuid("ub"), cuid("uc")] })
+describe("requestIncidentNotificationsUseCase", () => {
+  it("emits one request per org member with the right payload + idempotency key", async () => {
+    const { incidentId, layer } = setup({ memberUserIds: [cuid("ua"), cuid("ub"), cuid("uc")] })
 
     const result = await Effect.runPromise(
-      createIncidentNotificationsUseCase({ alertIncidentId: incidentId, event: "opened" }).pipe(Effect.provide(layer)),
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
+        Effect.provide(layer),
+      ),
     )
 
-    expect(result).toEqual({ inserted: 3, skipped: false })
-    expect(rows).toHaveLength(3)
-    for (const row of rows) {
-      expect(row.type).toBe("incident")
-      // source_id points at the incident itself, not the underlying issue —
-      // see notification entity / schema design.
-      expect(row.sourceId).toBe(incidentId)
-      expect(row.payload).toEqual({
-        event: "opened",
-        incidentKind: "issue.new",
-        issueId: cuid("i"),
-        issueName: "Sample issue",
-        projectId,
-        projectSlug: "sample-project",
-      })
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests).toHaveLength(3)
+    for (const req of result.requests) {
+      expect(req.kind).toBe("incident.opened")
+      expect(req.idempotencyKey).toBe(`incident.opened:${incidentId}`)
+      expect(req.projectId).toBe(cuid("p"))
+      expect(req.payload.incidentKind).toBe("issue.new")
+      expect(req.payload.alertIncidentId).toBe(incidentId)
+      expect(req.payload.issueId).toBe(cuid("i"))
+      expect(req.payload.issueName).toBe("Sample issue")
+      expect(req.payload.projectSlug).toBe("sample-project")
     }
+    // Each recipient gets a distinct notificationId
+    const ids = new Set(result.requests.map((r) => r.notificationId))
+    expect(ids.size).toBe(3)
   })
 
-  it("differentiates opened vs closed payloads on the same incident", async () => {
-    const { incidentId, rows, layer } = setup({
+  it("emits a distinct idempotency key for opened vs closed of the same incident", async () => {
+    const { incidentId, layer } = setup({
       incident: { kind: "issue.escalating", severity: "high" },
       memberUserIds: [cuid("ua")],
     })
 
-    await Effect.runPromise(
-      createIncidentNotificationsUseCase({ alertIncidentId: incidentId, event: "opened" }).pipe(Effect.provide(layer)),
+    const opened = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
+        Effect.provide(layer),
+      ),
     )
-    await Effect.runPromise(
-      createIncidentNotificationsUseCase({ alertIncidentId: incidentId, event: "closed" }).pipe(Effect.provide(layer)),
-    )
-
-    expect(rows).toHaveLength(2)
-    expect(rows.map((r) => (r.payload as { event: string }).event)).toEqual(["opened", "closed"])
-  })
-
-  it("is idempotent under re-run for the same (incident, event) pair", async () => {
-    const { incidentId, rows, layer } = setup({ memberUserIds: [cuid("ua"), cuid("ub")] })
-
-    await Effect.runPromise(
-      createIncidentNotificationsUseCase({ alertIncidentId: incidentId, event: "opened" }).pipe(Effect.provide(layer)),
-    )
-    await Effect.runPromise(
-      createIncidentNotificationsUseCase({ alertIncidentId: incidentId, event: "opened" }).pipe(Effect.provide(layer)),
+    const closed = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.closed" }).pipe(
+        Effect.provide(layer),
+      ),
     )
 
-    expect(rows).toHaveLength(2) // still just one per user, second run dedupes
+    expect(opened.status).toBe("ok")
+    expect(closed.status).toBe("ok")
+    if (opened.status !== "ok" || closed.status !== "ok") throw new Error("unreachable")
+    expect(opened.requests[0]?.idempotencyKey).toBe(`incident.opened:${incidentId}`)
+    expect(closed.requests[0]?.idempotencyKey).toBe(`incident.closed:${incidentId}`)
+    expect(opened.requests[0]?.kind).toBe("incident.opened")
+    expect(closed.requests[0]?.kind).toBe("incident.closed")
   })
 
   it("skips when project settings disable the matching alert kind", async () => {
-    const { incidentId, rows, layer } = setup({
-      projectSettings: { alertNotifications: { "issue.new": false } },
+    const { incidentId, layer } = setup({
+      projectSettings: { notifications: { incidents: { "issue.new": false } } },
     })
 
     const result = await Effect.runPromise(
-      createIncidentNotificationsUseCase({ alertIncidentId: incidentId, event: "opened" }).pipe(Effect.provide(layer)),
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
+        Effect.provide(layer),
+      ),
     )
 
-    expect(result).toEqual({ inserted: 0, skipped: true })
-    expect(rows).toHaveLength(0)
+    expect(result.status).toBe("skipped")
+    if (result.status !== "skipped") throw new Error("unreachable")
+    expect(result.reason).toBe("kind-disabled")
   })
 
   it("does not skip when settings disable a different kind", async () => {
-    const { incidentId, rows, layer } = setup({
-      projectSettings: { alertNotifications: { "issue.escalating": false } },
+    const { incidentId, layer } = setup({
+      projectSettings: { notifications: { incidents: { "issue.escalating": false } } },
     })
 
-    await Effect.runPromise(
-      createIncidentNotificationsUseCase({ alertIncidentId: incidentId, event: "opened" }).pipe(Effect.provide(layer)),
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
+        Effect.provide(layer),
+      ),
     )
 
-    expect(rows.length).toBeGreaterThan(0)
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests.length).toBeGreaterThan(0)
+  })
+
+  it("skips with reason 'no-recipients' when the org has no members", async () => {
+    const { incidentId, layer } = setup({ memberUserIds: [] })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, kind: "incident.opened" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("skipped")
+    if (result.status !== "skipped") throw new Error("unreachable")
+    expect(result.reason).toBe("no-recipients")
   })
 })

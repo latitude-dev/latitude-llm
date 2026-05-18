@@ -1072,6 +1072,9 @@ importers:
 
   packages/domain/email:
     dependencies:
+      '@domain/notifications':
+        specifier: workspace:*
+        version: link:../notifications
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -1296,6 +1299,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/users':
+        specifier: workspace:*
+        version: link:../users
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57

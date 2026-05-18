@@ -101,7 +101,7 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
       return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckIssueEscalationResult
     }
 
-    const kShort = projectSettings?.alertNotifications?.escalationSensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
+    const kShort = projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
 
     const decision = evaluateSeasonalEscalation({
       signals,
