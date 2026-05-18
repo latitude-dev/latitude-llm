@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."issues" ALTER COLUMN "uuid" SET DEFAULT gen_random_uuid();

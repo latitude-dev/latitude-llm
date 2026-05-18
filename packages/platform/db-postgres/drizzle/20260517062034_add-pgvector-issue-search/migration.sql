@@ -16,3 +16,5 @@ ALTER TABLE "latitude"."issues" ADD CONSTRAINT "issues_centroid_embedding_consis
 );
 --> statement-breakpoint
 CREATE INDEX "issues_search_document_idx" ON "latitude"."issues" USING gin ("search_document");
+--> statement-breakpoint
+ALTER TABLE "latitude"."issues" ALTER COLUMN "uuid" SET DEFAULT gen_random_uuid();
