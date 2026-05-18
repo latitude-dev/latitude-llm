@@ -252,6 +252,10 @@ const formatTimeShort = (iso: string): string => {
     : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
 }
 
+/** Scroll incident rows when many overlap one bucket; bounds tooltip height for ECharts confine. */
+const INCIDENT_TOOLTIP_SCROLL_STYLE =
+  "max-height:min(45vh,360px);overflow-y:auto;overscroll-behavior:contain;margin-top:4px;padding-right:6px"
+
 /**
  * Renders the per-bucket incident block appended below the bar tooltip body. Returns an empty
  * string when no incidents fall in the bucket — callers can concatenate unconditionally.
@@ -283,7 +287,7 @@ export function renderIncidentsTooltipBlock(
       return `<div style="margin-top:4px">${dot}<b>${kindLabel}</b> · <span style="opacity:0.75">${sevLabel}</span><div style="margin-left:14px;opacity:0.65;font-size:11px">${escapeHtml(timing)}</div>${issueLine}</div>`
     })
     .join("")
-  return `${header}${items}`
+  return `${header}<div style="${INCIDENT_TOOLTIP_SCROLL_STYLE}">${items}</div>`
 }
 
 export function formatIncidentKindLabel(kind: AlertIncidentKind): string {
