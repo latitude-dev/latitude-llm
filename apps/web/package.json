@@ -12,8 +12,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests --dir src",
-    "record:issue-trace": "node ./scripts/record-issue-trace-overlay.mjs"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@domain/admin": "workspace:*",
@@ -87,7 +86,6 @@
     "agentation": "3.0.2",
     "dotenv": "catalog:",
     "jsdom": "29.0.2",
-    "playwright": "1.52.0",
     "postcss": "8.5.10",
     "rollup-plugin-visualizer": "7.0.1",
     "vite": "catalog:",
