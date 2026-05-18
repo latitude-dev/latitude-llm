@@ -1,12 +1,17 @@
-import { buildIdempotencyKey, type IncidentOpenedPayload } from "@domain/notifications"
-import { ALERT_INCIDENT_KINDS, type AlertIncidentKind, NotificationId } from "@domain/shared"
+import {
+  buildIdempotencyKey,
+  type IncidentClosedPayload,
+  type IncidentEventPayload,
+  type IncidentOpenedPayload,
+  type IncidentTrend,
+} from "@domain/notifications"
+import { ALERT_INCIDENT_KINDS, type AlertIncidentKind, NotificationId, SEVERITY_FOR_KIND } from "@domain/shared"
 import { and, eq, inArray } from "drizzle-orm"
 import { Effect } from "effect"
 import { alertIncidents } from "../../schema/alert-incidents.ts"
 import { members } from "../../schema/better-auth.ts"
 import { issues } from "../../schema/issues.ts"
 import { notifications } from "../../schema/notifications.ts"
-import { projects } from "../../schema/projects.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 interface IncidentRow {
@@ -22,16 +27,41 @@ interface IncidentRow {
 const isAlertIncidentKind = (k: string): k is AlertIncidentKind =>
   (ALERT_INCIDENT_KINDS as readonly string[]).includes(k)
 
+const TREND_BUCKET_MS = 10 * 60 * 1000
+const TREND_POINTS = 18
+
+/**
+ * Synthetic trend block matching what `requestIncidentNotificationsUseCase`
+ * snapshots for sustained kinds: 18 points × 10-min buckets ending at the
+ * transition timestamp. Counts ramp up toward the trailing edge for an
+ * opened-side feel; thresholds sit slightly above the ramp peak so the
+ * dashed line stays visible across all buckets. Pure cosmetic seed data —
+ * the runtime uses ClickHouse aggregates.
+ */
+const buildSyntheticTrend = (anchor: Date): IncidentTrend => {
+  const anchorMs = anchor.getTime()
+  const points = Array.from({ length: TREND_POINTS }, (_, i) => {
+    const tMs = anchorMs - (TREND_POINTS - 1 - i) * TREND_BUCKET_MS
+    // Bell-curve-ish ramp: low → high → settle. Mostly cosmetic.
+    const ramp = Math.max(0, i - 4)
+    const count = Math.round(2 + ramp * 1.5)
+    const threshold = 8 + Math.sin(i / 3) * 1.2
+    return { t: new Date(tMs).toISOString(), count, threshold }
+  })
+  return { bucketDurationMs: TREND_BUCKET_MS, points }
+}
+
 /**
  * Spawn one in-app notification per (org member, seeded incident) so a
  * fresh `pg:seed` populates the bell with realistic data instead of an
  * empty popover. Mirrors the payload shape that the runtime
  * `requestIncidentNotificationsUseCase` + `createNotificationUseCase`
- * pipeline produces.
+ * pipeline produces:
  *
- * One escalating incident additionally gets a synthetic `incident.closed`
- * notification (with `endedAt = now`) so the closed-event renderer is
- * also visible in the seeded feed.
+ * - Eventful kinds (issue.new, issue.regressed) get `incident.event`.
+ * - The escalating incident gets `incident.opened` plus a synthetic
+ *   `incident.closed` (with `endedAt` stamped now) so both sustained
+ *   renderers are visible in the seeded feed.
  */
 const seedIncidentNotifications: Seeder = {
   name: "notifications/incident-fanout",
@@ -70,7 +100,7 @@ const seedIncidentNotifications: Seeder = {
         }
 
         const issueIds = [...new Set(orgIncidents.map((i) => i.sourceId))]
-        const issueRows = await ctx.db
+        await ctx.db
           .select({ id: issues.id, name: issues.name })
           .from(issues)
           .where(
@@ -80,17 +110,9 @@ const seedIncidentNotifications: Seeder = {
               inArray(issues.id, issueIds),
             ),
           )
-        const issueNameById = new Map(issueRows.map((r) => [r.id, r.name]))
 
-        const projectRow = (
-          await ctx.db
-            .select({ id: projects.id, slug: projects.slug })
-            .from(projects)
-            .where(eq(projects.id, ctx.scope.projectId))
-            .limit(1)
-        )[0]
-        const projectSlug = projectRow?.slug
-
+        // Stamp endedAt on the seeded escalating incident so the closed-side
+        // notification has a real transition timestamp to anchor the trend.
         const closedDemoIncident = orgIncidents.find((i) => i.kind === "issue.escalating")
         const now = new Date()
         const closedAt = new Date(now.getTime() - 30 * 60 * 1000)
@@ -102,19 +124,52 @@ const seedIncidentNotifications: Seeder = {
         }
 
         const rows: (typeof notifications.$inferInsert)[] = []
+        let eventCount = 0
         let openedCount = 0
         let closedCount = 0
 
         for (const incident of orgIncidents) {
-          const issueName = issueNameById.get(incident.sourceId)
-          const payload: IncidentOpenedPayload = {
-            incidentKind: incident.kind,
-            alertIncidentId: incident.id,
-            ...(issueName !== undefined ? { issueId: incident.sourceId, issueName } : {}),
-            ...(projectSlug !== undefined ? { projectId: incident.projectId, projectSlug } : {}),
+          const isSustained = incident.kind === "issue.escalating"
+          const severity = SEVERITY_FOR_KIND[incident.kind]
+
+          if (!isSustained) {
+            // Eventful kinds (issue.new, issue.regressed) → incident.event
+            const payload: IncidentEventPayload = {
+              alertIncidentId: incident.id,
+              sourceType: "issue",
+              sourceId: incident.sourceId,
+              incidentKind: incident.kind,
+              severity,
+            }
+            const idempotencyKey = buildIdempotencyKey({ kind: "incident.event", payload })
+            for (const member of orgMembers) {
+              rows.push({
+                id: NotificationId(ctx.scope.cuid(`notification:${incident.id}:${member.userId}:event`)),
+                organizationId: incident.organizationId,
+                userId: member.userId,
+                kind: "incident.event",
+                idempotencyKey,
+                projectId: incident.projectId,
+                payload,
+                createdAt: incident.startedAt,
+                seenAt: null,
+                emailedAt: null,
+              })
+              eventCount++
+            }
+            continue
           }
 
-          const openedKey = buildIdempotencyKey({ kind: "incident.opened", payload })
+          // issue.escalating → opened (+ closed for the demo incident)
+          const openedPayload: IncidentOpenedPayload = {
+            alertIncidentId: incident.id,
+            sourceType: "issue",
+            sourceId: incident.sourceId,
+            incidentKind: incident.kind,
+            severity,
+            trend: buildSyntheticTrend(incident.startedAt),
+          }
+          const openedKey = buildIdempotencyKey({ kind: "incident.opened", payload: openedPayload })
           for (const member of orgMembers) {
             rows.push({
               id: NotificationId(ctx.scope.cuid(`notification:${incident.id}:${member.userId}:opened`)),
@@ -123,7 +178,7 @@ const seedIncidentNotifications: Seeder = {
               kind: "incident.opened",
               idempotencyKey: openedKey,
               projectId: incident.projectId,
-              payload,
+              payload: openedPayload,
               createdAt: incident.startedAt,
               seenAt: null,
               emailedAt: null,
@@ -132,7 +187,15 @@ const seedIncidentNotifications: Seeder = {
           }
 
           if (closedDemoIncident && incident.id === closedDemoIncident.id) {
-            const closedKey = buildIdempotencyKey({ kind: "incident.closed", payload })
+            const closedPayload: IncidentClosedPayload = {
+              alertIncidentId: incident.id,
+              sourceType: "issue",
+              sourceId: incident.sourceId,
+              incidentKind: incident.kind,
+              severity,
+              trend: buildSyntheticTrend(closedAt),
+            }
+            const closedKey = buildIdempotencyKey({ kind: "incident.closed", payload: closedPayload })
             for (const member of orgMembers) {
               rows.push({
                 id: NotificationId(ctx.scope.cuid(`notification:${incident.id}:${member.userId}:closed`)),
@@ -141,7 +204,7 @@ const seedIncidentNotifications: Seeder = {
                 kind: "incident.closed",
                 idempotencyKey: closedKey,
                 projectId: incident.projectId,
-                payload,
+                payload: closedPayload,
                 createdAt: closedAt,
                 seenAt: null,
                 emailedAt: null,
@@ -158,7 +221,7 @@ const seedIncidentNotifications: Seeder = {
         }
 
         console.log(
-          `  -> notifications: ${rows.length} rows (${openedCount} opened, ${closedCount} closed) across ${orgMembers.length} member(s)`,
+          `  -> notifications: ${rows.length} rows (${eventCount} event, ${openedCount} opened, ${closedCount} closed) across ${orgMembers.length} member(s)`,
         )
       },
       catch: (error) => new SeedError({ reason: "Failed to seed notifications", cause: error }),

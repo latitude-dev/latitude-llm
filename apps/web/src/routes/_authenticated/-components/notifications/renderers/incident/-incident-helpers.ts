@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
 import { eq } from "@tanstack/react-db"
+import { useQuery } from "@tanstack/react-query"
 import {
   getIssueLifecycleSummary,
   type IssueLifecycleSummaryRecord,
@@ -21,8 +21,7 @@ export function useLiveIssueSummary(target: IncidentTarget): IssueLifecycleSumma
   const enabled = Boolean(target.projectId)
   const { data } = useQuery({
     queryKey: ["notifications", "issue-summary", target.projectId, target.sourceId],
-    queryFn: () =>
-      getIssueLifecycleSummary({ data: { projectId: target.projectId ?? "", issueId: target.sourceId } }),
+    queryFn: () => getIssueLifecycleSummary({ data: { projectId: target.projectId ?? "", issueId: target.sourceId } }),
     enabled,
     staleTime: 30_000,
   })

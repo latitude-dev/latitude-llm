@@ -1,9 +1,9 @@
 import {
   type IncidentClosedPayload,
-  incidentClosedPayloadSchema,
   type IncidentEventPayload,
-  incidentEventPayloadSchema,
   type IncidentOpenedPayload,
+  incidentClosedPayloadSchema,
+  incidentEventPayloadSchema,
   incidentOpenedPayloadSchema,
   type NotificationKind,
 } from "@domain/notifications"
@@ -76,15 +76,19 @@ export function IncidentNotification({ notification }: { readonly notification: 
   }
   if (kind === "incident.opened") {
     const parsed = incidentOpenedPayloadSchema.safeParse(notification.payload)
-    return parsed.success
-      ? renderSustained(notification, parsed.data, "opened")
-      : <Unsupported notification={notification} />
+    return parsed.success ? (
+      renderSustained(notification, parsed.data, "opened")
+    ) : (
+      <Unsupported notification={notification} />
+    )
   }
   if (kind === "incident.closed") {
     const parsed = incidentClosedPayloadSchema.safeParse(notification.payload)
-    return parsed.success
-      ? renderSustained(notification, parsed.data, "closed")
-      : <Unsupported notification={notification} />
+    return parsed.success ? (
+      renderSustained(notification, parsed.data, "closed")
+    ) : (
+      <Unsupported notification={notification} />
+    )
   }
   return <Unsupported notification={notification} />
 }
