@@ -530,9 +530,6 @@ importers:
       ua-parser-js:
         specifier: 2.0.9
         version: 2.0.9
-      use-debounce:
-        specifier: 10.1.1
-        version: 10.1.1(react@19.2.5)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -11986,12 +11983,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-
-  use-debounce@10.1.1:
-    resolution: {integrity: sha512-kvds8BHR2k28cFsxW8k3nc/tRga2rs1RHYCqmmGqb90MEeE++oALwzh2COiuBLO1/QXiOuShXoSN2ZpWnMmvuQ==}
-    engines: {node: '>= 16.0.0'}
-    peerDependencies:
-      react: '*'
 
   use-isomorphic-layout-effect@1.2.1:
     resolution: {integrity: sha512-tpZZ+EX0gaghDAiFR37hj5MgY6ZN55kLiPkJsKxBMZ6GZdOSPJXiOzPM984oPYZ5AnehYx5WQp1+ME8I/P/pRA==}
@@ -23769,10 +23760,6 @@ snapshots:
       react: 19.2.5
     optionalDependencies:
       '@types/react': 19.2.14
-
-  use-debounce@10.1.1(react@19.2.5):
-    dependencies:
-      react: 19.2.5
 
   use-isomorphic-layout-effect@1.2.1(@types/react@19.2.14)(react@19.2.5):
     dependencies:

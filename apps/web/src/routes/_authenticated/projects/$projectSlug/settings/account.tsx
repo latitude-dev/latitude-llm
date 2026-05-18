@@ -1,6 +1,5 @@
 import {
   Button,
-  Container,
   FormWrapper,
   Icon,
   Input,
@@ -32,18 +31,18 @@ import {
   Watch,
 } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
-import { deleteCurrentUser, updateUserName } from "../../../domains/sessions/session.functions.ts"
+import { deleteCurrentUser, updateUserName } from "../../../../../domains/sessions/session.functions.ts"
 import {
   listUserSessions,
   revokeAllOtherUserSessions,
   revokeUserSession,
   type UserSessionDto,
-} from "../../../domains/sessions/user-sessions.functions.ts"
-import { authClient } from "../../../lib/auth-client.ts"
-import { toUserMessage } from "../../../lib/errors.ts"
-import { useAuthenticatedUser } from "../-route-data.ts"
+} from "../../../../../domains/sessions/user-sessions.functions.ts"
+import { authClient } from "../../../../../lib/auth-client.ts"
+import { toUserMessage } from "../../../../../lib/errors.ts"
+import { useAuthenticatedUser } from "../../../-route-data.ts"
 
-export const Route = createFileRoute("/_authenticated/settings/account")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/account")({
   component: AccountSettingsPage,
 })
 
@@ -350,9 +349,9 @@ function AccountSettingsPage() {
   )
 
   return (
-    <Container className="flex flex-col gap-8 pt-14">
+    <>
       <Text.H4 weight="bold">Account</Text.H4>
-      <div className="flex max-w-lg flex-col gap-6">
+      <div className="flex w-full flex-col gap-6 @[800px]:w-1/2">
         <Input
           required
           type="text"
@@ -381,6 +380,6 @@ function AccountSettingsPage() {
           </Button>
         </div>
       </div>
-    </Container>
+    </>
   )
 }

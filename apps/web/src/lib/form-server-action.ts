@@ -13,6 +13,14 @@ export function fieldErrorsAsStrings(errors: readonly unknown[]): string[] | und
 interface ServerSubmitOptions<TResult> {
   onSuccess?: (result: TResult) => void | Promise<void>
   onError?: (error: unknown) => void
+  /**
+   * Reset the form to its mount-time defaults after a successful submit.
+   * Defaults to `true`. Set to `false` for in-place edit forms where the
+   * just-submitted value should become the new baseline (a `reset()` would
+   * snap the field back to the stale mount-time default and the input would
+   * appear to "revert").
+   */
+  resetOnSuccess?: boolean
 }
 
 type SetFieldMeta = (field: string, updater: (prev: { errorMap: Record<string, unknown> }) => unknown) => void
@@ -20,7 +28,7 @@ type SetFieldMeta = (field: string, updater: (prev: { errorMap: Record<string, u
 /**
  * Creates an onSubmit handler that calls a server function and handles Zod validation errors.
  *
- * - On success: resets form, calls onSuccess callback
+ * - On success: optionally resets form (see `resetOnSuccess`), calls onSuccess callback
  * - On Zod validation error: sets field errors via formApi.setFieldMeta
  * - On other errors: calls onError callback
  *
@@ -34,6 +42,7 @@ export function createFormSubmitHandler<TFormValues, TResult>(
   formApi: { reset: () => void; setFieldMeta: (field: never, updater: never) => void }
 }) => Promise<void> {
   let previouslyErroredFields: string[] = []
+  const resetOnSuccess = options.resetOnSuccess ?? true
 
   return async ({ value, formApi }) => {
     const setFieldMeta = formApi.setFieldMeta as SetFieldMeta
@@ -48,7 +57,7 @@ export function createFormSubmitHandler<TFormValues, TResult>(
 
     try {
       const result = await action(value)
-      formApi.reset()
+      if (resetOnSuccess) formApi.reset()
       await options.onSuccess?.(result)
     } catch (error) {
       const fieldErrors = extractFieldErrors(error)

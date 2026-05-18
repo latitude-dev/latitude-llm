@@ -1,5 +1,5 @@
 import { PRO_PLAN_CONFIG } from "@domain/billing"
-import { Badge, Button, Container, Icon, Input, Text, useToast } from "@repo/ui"
+import { Badge, Button, Icon, Input, Text, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { PencilIcon } from "lucide-react"
@@ -9,11 +9,11 @@ import {
   createBillingPortalSession,
   getFreshBillingOverview,
   updateBillingSpendingLimit,
-} from "../../../domains/billing/billing.functions.ts"
-import { toUserMessage } from "../../../lib/errors.ts"
-import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../lib/form-server-action.ts"
+} from "../../../../../domains/billing/billing.functions.ts"
+import { toUserMessage } from "../../../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 
-export const Route = createFileRoute("/_authenticated/settings/billing")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/billing")({
   loader: async () => ({
     overview: await getFreshBillingOverview(),
   }),
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/settings/billing")({
 
 function BillingUnavailableFallback({ error, reset }: { error: unknown; reset: () => void }) {
   return (
-    <Container className="flex flex-col gap-6 pt-14">
+    <>
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-1">
           <Text.H4 weight="bold">Billing</Text.H4>
@@ -40,7 +40,7 @@ function BillingUnavailableFallback({ error, reset }: { error: unknown; reset: (
       <div>
         <Button onClick={() => reset()}>Try again</Button>
       </div>
-    </Container>
+    </>
   )
 }
 
@@ -343,7 +343,7 @@ function BillingSettingsPage() {
   const overview = Route.useLoaderData({ select: (data) => data.overview })
 
   return (
-    <Container className="flex flex-col gap-8 pt-14">
+    <>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <Text.H4 weight="bold">Billing</Text.H4>
@@ -361,6 +361,6 @@ function BillingSettingsPage() {
       <BillingOverviewCards />
       <BillingActionsSection />
       <SpendingLimitSection key={overview.spendingLimitCents ?? "no-limit"} />
-    </Container>
+    </>
   )
 }
