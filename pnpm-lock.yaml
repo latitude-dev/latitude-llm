@@ -849,6 +849,9 @@ importers:
       '@pulumi/awsx':
         specifier: 3.5.0
         version: 3.5.0(ts-node@10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3))(typescript@6.0.3)
+      '@pulumi/datadog':
+        specifier: 5.1.0
+        version: 5.1.0(ts-node@10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3))(typescript@6.0.3)
       '@pulumi/pulumi':
         specifier: 3.232.0
         version: 3.232.0(ts-node@10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3))(typescript@6.0.3)
@@ -5746,6 +5749,9 @@ packages:
 
   '@pulumi/awsx@3.5.0':
     resolution: {integrity: sha512-sYEKL7SmgYrI/vUFrlWxLgGHTLgFeO/KYGc8YhHssNKb5gSdtAUEGqFHaUDy0a+ie5lKMwRATyzrdYyvbdeTXA==}
+
+  '@pulumi/datadog@5.1.0':
+    resolution: {integrity: sha512-Ul2BLj+Aiu1u+6NZUfp7GHqIhxsGjw7zEfsFqR5hlnYIpJTuFOTHzN7KriAHuaOwLNg0+dRSOmdx1H4I2MDR9A==}
 
   '@pulumi/docker-build@0.0.14':
     resolution: {integrity: sha512-dLCta3BOrYRxHyp22QnVh06qlSiSORtmIypcQ6yb4+GZ2+ThbML06pINyERc5ClgJXGQFSVTtuWhMSiurTWU2w==}
@@ -16550,6 +16556,14 @@ snapshots:
       mime: 2.6.0
     transitivePeerDependencies:
       - aws-crt
+      - supports-color
+      - ts-node
+      - typescript
+
+  '@pulumi/datadog@5.1.0(ts-node@10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3))(typescript@6.0.3)':
+    dependencies:
+      '@pulumi/pulumi': 3.232.0(ts-node@10.9.2(@swc/core@1.15.30)(@types/node@22.19.17)(typescript@6.0.3))(typescript@6.0.3)
+    transitivePeerDependencies:
       - supports-color
       - ts-node
       - typescript
