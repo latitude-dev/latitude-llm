@@ -72,6 +72,9 @@ export function buildBarChartOption(
     },
     tooltip: {
       trigger: "axis",
+      // Keep HTML tooltips inside the chart so tall content (e.g. long incident lists with scroll)
+      // does not paint past the viewport edge when flipped above the pointer.
+      confine: true,
       // `enterable` lets users move into the tooltip to follow links inside it (e.g., per-incident
       // anchors in overlay-enriched tooltips); harmless for plain bar tooltips.
       enterable: true,
