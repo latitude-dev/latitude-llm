@@ -1,7 +1,9 @@
 import { Providers } from '@latitude-data/constants'
 import { describe, expect, it } from 'vitest'
+import { database } from '../../client'
+import { documentVersions } from '../../schema/models/documentVersions'
 import { mergeCommit } from '../../services/commits'
-import { updateDocument } from '../../services/documents'
+import { destroyDocument, updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
 import { DocumentVersionsRepository } from './index'
 
@@ -343,5 +345,102 @@ describe('getDocumentByPath', () => {
     })
     expect(newPathResult.ok).toBe(true)
     expect(newPathResult.unwrap().content).toContain('CONTENT')
+  })
+
+  it('returns the active document when a previously deleted document held the same path', async (ctx) => {
+    const { project, user, workspace, providers } =
+      await ctx.factories.createProject()
+
+    // commit1: create and merge "shared-path" as docA
+    const { commit: draft1 } = await factories.createDraft({ project, user })
+    const { documentVersion: docA } = await factories.createDocumentVersion({
+      workspace,
+      user,
+      commit: draft1,
+      path: 'shared-path',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'DELETED_CONTENT',
+      }),
+    })
+    await mergeCommit(draft1).then((r) => r.unwrap())
+
+    // commit2: soft-delete docA. The soft-delete row preserves the path.
+    const { commit: draft2 } = await factories.createDraft({ project, user })
+    await destroyDocument({ document: docA, commit: draft2, workspace }).then(
+      (r) => r.unwrap(),
+    )
+    await mergeCommit(draft2).then((r) => r.unwrap())
+
+    // commit3: create a new docB at the same path
+    const { commit: draft3 } = await factories.createDraft({ project, user })
+    await factories.createDocumentVersion({
+      workspace,
+      user,
+      commit: draft3,
+      path: 'shared-path',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'ACTIVE_CONTENT',
+      }),
+    })
+    const merged3 = await mergeCommit(draft3).then((r) => r.unwrap())
+
+    const repo = new DocumentVersionsRepository(project.workspaceId)
+    const result = await repo
+      .getDocumentByPath({ commit: merged3, path: 'shared-path' })
+      .then((r) => r.unwrap())
+
+    expect(result.deletedAt).toBeNull()
+    expect(result.content).toContain('ACTIVE_CONTENT')
+  })
+
+  it('does not let a deleted shadow with a higher documentUuid mask the active document at the same path', async (ctx) => {
+    // Forces the failure mode deterministically: the SELECT DISTINCT ON
+    // subquery emits rows in `document_uuid DESC` order, so a deleted shadow
+    // whose UUID sorts above the active row would be returned first by the
+    // outer LIMIT 1 without the explicit `deletedAt IS NULL` filter.
+    const { project, user, workspace, providers } =
+      await ctx.factories.createProject()
+
+    const { commit: draft1 } = await factories.createDraft({ project, user })
+    const { documentVersion: active } = await factories.createDocumentVersion({
+      workspace,
+      user,
+      commit: draft1,
+      path: 'shared-path',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'ACTIVE_CONTENT',
+      }),
+    })
+    const merged1 = await mergeCommit(draft1).then((r) => r.unwrap())
+
+    // A second merged commit holds a deleted shadow at the same path with a
+    // documentUuid that sorts above the active row.
+    const shadowCommit = await factories.createCommit({
+      projectId: project.id,
+      user,
+      mergedAt: new Date(merged1.mergedAt!.getTime() + 1000),
+    })
+
+    const higherUuid = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+    expect(higherUuid > active.documentUuid).toBe(true)
+
+    await database.insert(documentVersions).values({
+      documentUuid: higherUuid,
+      commitId: shadowCommit.id,
+      path: 'shared-path',
+      content: 'shadow',
+      deletedAt: new Date(),
+    })
+
+    const repo = new DocumentVersionsRepository(project.workspaceId)
+    const result = await repo
+      .getDocumentByPath({ commit: shadowCommit, path: 'shared-path' })
+      .then((r) => r.unwrap())
+
+    expect(result.documentUuid).toBe(active.documentUuid)
+    expect(result.content).toContain('ACTIVE_CONTENT')
   })
 })

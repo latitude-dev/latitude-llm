@@ -356,6 +356,10 @@ export class DocumentVersionsRepository extends Repository<DocumentVersionDto> {
    * Returns the latest merged version of a document at the given path, using a
    * subquery so the path filter runs after the DISTINCT ON — avoiding the need
    * to fetch all documents and filter in application memory.
+   *
+   * The outer query excludes soft-deleted latest versions (when not
+   * `includeDeleted`) so a deleted document that historically held the same
+   * path cannot shadow an active one in the `LIMIT 1` selection.
    */
   private async getLatestMergedDocumentByPath({
     projectId,
@@ -381,10 +385,14 @@ export class DocumentVersionsRepository extends Repository<DocumentVersionDto> {
       .orderBy(desc(documentVersions.documentUuid), desc(commits.mergedAt))
       .as('latest_versions')
 
+    const outerFilter = this.opts.includeDeleted
+      ? eq(latestVersions.path, path)
+      : and(eq(latestVersions.path, path), isNull(latestVersions.deletedAt))
+
     const [document] = await this.db
       .select()
       .from(latestVersions)
-      .where(eq(latestVersions.path, path))
+      .where(outerFilter)
       .limit(1)
 
     return document
