@@ -9,8 +9,8 @@ import {
   type IssueEscalationThresholdSeries,
   type IssueOccurrenceBucket,
   ScoreAnalyticsRepository,
-  type ScoreAnalyticsRepositoryShape,
 } from "@domain/scores"
+import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
   AlertIncidentId,
   ChSqlClient,
@@ -23,7 +23,7 @@ import {
   SqlClient,
   UserId,
 } from "@domain/shared"
-import { createFakeSqlClient } from "@domain/shared/testing"
+import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { requestIncidentNotificationsUseCase } from "./request-incident-notifications.ts"
@@ -123,23 +123,15 @@ function setup(opts: SetupOpts = {}) {
     { bucket: "2026-05-07T09:10:00.000Z", thresholdCount: 7 },
   ]
 
-  const analytics: ScoreAnalyticsRepositoryShape = {
-    aggregate: () => Effect.die("not used"),
-    aggregateByIssues: () => Effect.die("not used"),
-    aggregateTagsByIssues: () => Effect.die("not used"),
-    histogram: () => Effect.die("not used"),
+  // Stub only the methods the producer calls; the rest stay as the
+  // default `Effect.die` placeholders from the fake factory.
+  const { repository: analytics } = createFakeScoreAnalyticsRepository({
     histogramByIssues: () => Effect.succeed(occurrenceBuckets),
-    histogramOccurrences: () => Effect.die("not used"),
-    trendByIssue: () => Effect.die("not used"),
-    trendByIssues: () => Effect.die("not used"),
     escalationThresholdHistogramByIssues: () =>
       Effect.succeed([
         { issueId: incident.sourceId as IssueEscalationThresholdSeries["issueId"], buckets: thresholdBuckets },
       ]),
-    countDistinctTracesByTimeRange: () => Effect.die("not used"),
-    listTracesByIssue: () => Effect.die("not used"),
-    countTracesByIssue: () => Effect.die("not used"),
-  }
+  })
 
   const layer = Layer.mergeAll(
     Layer.succeed(AlertIncidentRepository, incidentRepo),
@@ -147,7 +139,7 @@ function setup(opts: SetupOpts = {}) {
     Layer.succeed(ScoreAnalyticsRepository, analytics),
     Layer.succeed(SettingsReader, settings),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
-    Layer.succeed(ChSqlClient, createFakeSqlClient({ organizationId: orgId }) as unknown as ChSqlClient),
+    Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: orgId })),
   )
 
   return { orgId, projectId, incidentId, incident, layer }
