@@ -4,8 +4,9 @@ import {
   FormWrapper,
   Icon,
   Input,
+  Label,
   Modal,
-  SwitchInput,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -18,6 +19,7 @@ import {
   useToast,
 } from "@repo/ui"
 import { relativeTime, toTitle } from "@repo/utils"
+import { useForm } from "@tanstack/react-form"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import {
@@ -32,7 +34,7 @@ import {
   Tv,
   Watch,
 } from "lucide-react"
-import { useCallback, useRef, useState } from "react"
+import { useState } from "react"
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
@@ -46,6 +48,7 @@ import {
 } from "../../../../../domains/sessions/user-sessions.functions.ts"
 import { authClient } from "../../../../../lib/auth-client.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 import { useAuthenticatedUser } from "../../../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/account")({
@@ -368,19 +371,28 @@ function NotificationsSection() {
           bell.
         </Text.H5>
       </div>
-      <div className="flex max-w-lg flex-col gap-3">
+      <div className="flex w-full flex-col gap-1">
         {NOTIFICATION_GROUPS.map((group) => {
           const meta = NOTIFICATION_GROUP_META[group]
           const enabled = prefs[group]?.email ?? true
+          const inputId = `notification-pref-${group}`
           return (
-            <SwitchInput
+            <div
               key={group}
-              label={meta.label}
-              description={meta.description}
-              checked={enabled}
-              disabled={isLoading}
-              onCheckedChange={(checked) => void setGroupEmail(group, checked)}
-            />
+              className="flex w-full flex-row items-center justify-between gap-4 rounded-lg bg-muted/30 p-4"
+            >
+              <div className="flex flex-col gap-1">
+                <Label htmlFor={inputId}>{meta.label}</Label>
+                <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
+              </div>
+              <Switch
+                id={inputId}
+                checked={enabled}
+                disabled={isLoading}
+                onCheckedChange={(checked) => void setGroupEmail(group, checked)}
+                aria-label={`Toggle email notifications for ${meta.label}`}
+              />
+            </div>
           )
         })}
       </div>
@@ -392,42 +404,61 @@ function AccountSettingsPage() {
   const user = useAuthenticatedUser()
   const { toast } = useToast()
   const router = useRouter()
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
-  const [name, setName] = useState(user.name ?? "")
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const saveField = useCallback(
-    (newName: string) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(async () => {
-        try {
-          await updateUserName({ data: { name: newName } })
+  const form = useForm({
+    defaultValues: { name: user.name ?? "" },
+    onSubmit: createFormSubmitHandler(
+      async ({ name }) => {
+        await updateUserName({ data: { name: name.trim() } })
+      },
+      {
+        resetOnSuccess: false,
+        onSuccess: () => {
           toast({ description: "Name updated" })
+          // `useAuthenticatedUser` is sourced from route data; refresh so
+          // the new name shows up wherever the user is rendered.
           void router.invalidate()
-        } catch (error) {
+        },
+        onError: (error) => {
           toast({ variant: "destructive", description: toUserMessage(error) })
-        }
-      }, 600)
-    },
-    [toast, router],
-  )
+        },
+      },
+    ),
+  })
 
   return (
     <>
       <Text.H4 weight="bold">Account</Text.H4>
-      <div className="flex w-full flex-col gap-6 @[800px]:w-1/2">
-        <Input
-          required
-          type="text"
-          label="Name"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value)
-            saveField(e.target.value)
-          }}
-          placeholder="Your name"
-        />
-      </div>
+      <form
+        className="flex w-full flex-col gap-3 @[800px]:w-1/2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
+        <form.Field name="name">
+          {(field) => (
+            <Input
+              key={user.id}
+              required
+              type="text"
+              name={field.name}
+              label="Name"
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              errors={fieldErrorsAsStrings(field.state.meta.errors)}
+              placeholder="Your name"
+              aria-label="Your name"
+            />
+          )}
+        </form.Field>
+        <div className="self-start">
+          <Button type="submit" isLoading={form.state.isSubmitting}>
+            Save
+          </Button>
+        </div>
+      </form>
       <NotificationsSection />
       <SessionsSection />
       <div className="flex flex-col gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-6">
