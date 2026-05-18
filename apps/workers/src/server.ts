@@ -7,9 +7,9 @@ import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import {
+  createBullBoardQueues,
   createBullMqQueueConsumer,
   createBullMqQueuePublisher,
-  createBullBoardQueues,
   createEventsPublisher,
   loadBullMqConfig,
 } from "@platform/queue-bullmq"
