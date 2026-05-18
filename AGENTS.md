@@ -6,7 +6,7 @@ High-level guide for coding agents working in this repository.
 
 Multi-tenant LLM observability platform. The repo is a **pnpm** workspace orchestrated with **Turbo**.
 
-At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use-cases); **`packages/domain/*`** own business rules and ports; **`packages/platform/*`** implement infrastructure adapters; **`@repo/utils`** holds cross-cutting pure helpers. Telemetry and control data flow through **Postgres**, **ClickHouse**, **Weaviate**, **Redis**, and object storage, with **organization-scoped** access everywhere at the boundary.
+At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use-cases); **`packages/domain/*`** own business rules and ports; **`packages/platform/*`** implement infrastructure adapters; **`@repo/utils`** holds cross-cutting pure helpers. Telemetry and control data flow through **Postgres**, **ClickHouse**, **Redis**, and object storage, with **organization-scoped** access everywhere at the boundary.
 
 ## Repo-wide conventions
 
@@ -39,7 +39,7 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 | **CI watchdog** | [.agents/skills/ci-watchdog/SKILL.md](.agents/skills/ci-watchdog/SKILL.md) | Watching GitHub PR checks, monitoring CI status, diagnosing failures from logs, and looping on fixes until checks pass |
 | **Code style and TypeScript** | [.agents/skills/code-style/SKILL.md](.agents/skills/code-style/SKILL.md) | Biome, imports, strict TS, naming, **Zod-first shared contracts**, literal-union enums, named constants, generated files |
 | **Create PR** | [.agents/skills/create-pr/SKILL.md](.agents/skills/create-pr/SKILL.md) | Creating PRs, writing PR descriptions, summarizing changes, and preparing a reviewable pull request |
-| **ClickHouse and Weaviate** | [.agents/skills/database-clickhouse-weaviate/SKILL.md](.agents/skills/database-clickhouse-weaviate/SKILL.md) | Parameterized CH queries, Goose migrations, append-only migration rules, Weaviate collections/migrations |
+| **ClickHouse** | [.agents/skills/database-clickhouse/SKILL.md](.agents/skills/database-clickhouse/SKILL.md) | Parameterized CH queries, Goose migrations, append-only migration rules |
 | **Postgres and SqlClient** | [.agents/skills/database-postgres/SKILL.md](.agents/skills/database-postgres/SKILL.md) | Drizzle schema, RLS, SqlClient, migrations (Drizzle Kit), no-FK rules, repository mappers |
 | **Documentation and specs** | [.agents/skills/docs/SKILL.md](.agents/skills/docs/SKILL.md) | **`dev-docs/*.md`** (domain), **`docs/`** (ADRs, Mintlify), **`specs/*.md`**, durable documentation sync, spec structure, promoting stable knowledge into `dev-docs/` |
 | **Effect and errors** | [.agents/skills/effect-and-errors/SKILL.md](.agents/skills/effect-and-errors/SKILL.md) | `Effect` composition, `Data.TaggedError`, `HttpError`, boundary error handling |

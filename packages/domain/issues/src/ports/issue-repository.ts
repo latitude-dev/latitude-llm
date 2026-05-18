@@ -27,6 +27,13 @@ export interface IssueListPage {
   readonly offset: number
 }
 
+export interface IssueSearchCandidate {
+  readonly issueId: IssueId
+  readonly name: string
+  readonly description: string
+  readonly score: number
+}
+
 export interface ListIssuesRepositoryInput {
   readonly projectId: ProjectId
   readonly limit: number
@@ -45,10 +52,11 @@ export interface IssueRepositoryShape {
     readonly projectId: ProjectId
     readonly issueIds: readonly IssueId[]
   }): Effect.Effect<readonly IssueWithLifecycle[], RepositoryError, SqlClient>
-  findByUuid(input: {
+  hybridSearch(input: {
     readonly projectId: ProjectId
-    readonly uuid: string
-  }): Effect.Effect<IssueWithLifecycle, NotFoundError | RepositoryError, SqlClient>
+    readonly query: string
+    readonly normalizedEmbedding: readonly number[]
+  }): Effect.Effect<readonly IssueSearchCandidate[], RepositoryError, SqlClient>
   /**
    * Returns the number of non-deleted issues with this slug in the project,
    * scoped to the active organization (issues aren't soft-deleted, so this

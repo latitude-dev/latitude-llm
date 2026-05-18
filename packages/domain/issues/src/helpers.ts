@@ -102,7 +102,7 @@ export interface UpdateIssueCentroidInput {
  * This is used when a score is attached to or removed from an issue: first
  * decay the stored running sum/mass from `clusteredAt`, then normalize the
  * score embedding, weight it by source and recency, and finally update the
- * persisted centroid state that will later be projected to Weaviate.
+ * persisted centroid state that will later be materialized into search vectors.
  */
 export const updateIssueCentroid = ({
   centroid,
@@ -150,8 +150,8 @@ export const updateIssueCentroid = ({
 
 /**
  * Convert the persisted running sum into the unit vector used for cosine
- * search. Use this only when emitting an issue centroid to Weaviate or other
- * retrieval code; the stored centroid `base` itself stays unnormalized.
+ * search. Use this only when emitting an issue centroid to retrieval code;
+ * the stored centroid `base` itself stays unnormalized.
  */
 export const normalizeIssueCentroid = (centroid: IssueCentroid): number[] => {
   if (centroid.mass <= 0 || centroid.base.length === 0) {

@@ -20,7 +20,6 @@ const otherProjectId = "qqqqqqqqqqqqqqqqqqqqqqqq"
 
 const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
-  uuid: "11111111-1111-4111-8111-111111111111",
   slug: "test-issue",
   organizationId,
   projectId,
@@ -226,11 +225,9 @@ describe("applyIssueLifecycleCommandUseCase", () => {
     const now = new Date("2026-04-11T09:00:00.000Z")
     const firstIssue = makeIssue({
       id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),
-      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     })
     const secondIssue = makeIssue({
       id: IssueId("bbbbbbbbbbbbbbbbbbbbbbbb"),
-      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     })
     const firstEvaluation = makeEvaluation({
       id: EvaluationId("cccccccccccccccccccccccc"),

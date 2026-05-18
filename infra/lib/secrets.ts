@@ -152,28 +152,6 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["clickhouse-migration-url"] = clickhouseMigrationUrl.secret
   secretVersions["clickhouse-migration-url"] = clickhouseMigrationUrl.secretVersion
 
-  const weaviateUrl = createSingleSecret(
-    baseName,
-    "weaviate-url",
-    "Weaviate Cloud URL",
-    process.env.LAT_WEAVIATE_URL ?? "https://placeholder.weaviate.cloud",
-    environment,
-    immutableSecretResourceOptions,
-  )
-  secrets["weaviate-url"] = weaviateUrl.secret
-  secretVersions["weaviate-url"] = weaviateUrl.secretVersion
-
-  const weaviateApiKey = createSingleSecret(
-    baseName,
-    "weaviate-api-key",
-    "Weaviate Cloud API key",
-    process.env.LAT_WEAVIATE_API_KEY ?? "placeholder-change-me",
-    environment,
-    immutableSecretResourceOptions,
-  )
-  secrets["weaviate-api-key"] = weaviateApiKey.secret
-  secretVersions["weaviate-api-key"] = weaviateApiKey.secretVersion
-
   const voyageApiKey = createSingleSecret(
     baseName,
     "voyage-api-key",

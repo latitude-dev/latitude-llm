@@ -5,23 +5,26 @@ import {
   ISSUE_DISCOVERY_RERANK_CANDIDATES,
   ISSUE_DISCOVERY_RERANK_MODEL,
 } from "../constants.ts"
-import type { IssueProjectionCandidate } from "../ports/issue-projection-repository.ts"
+import type { IssueSearchCandidate } from "../ports/issue-repository.ts"
 
 const collapseWhitespace = (text: string) => text.replace(/\s+/g, " ").trim()
 
-const buildRerankDocument = (candidate: IssueProjectionCandidate): string =>
-  [collapseWhitespace(candidate.title), collapseWhitespace(candidate.description)].join("\n\n")
+const buildRerankDocument = (candidate: IssueSearchCandidate): string =>
+  [collapseWhitespace(candidate.name), collapseWhitespace(candidate.description)].join("\n\n")
 
 export interface RerankIssueCandidatesInput {
   readonly query: string
-  readonly candidates: readonly IssueProjectionCandidate[]
+  readonly candidates: readonly IssueSearchCandidate[]
 }
 
 export interface RetrievalResult {
-  readonly matchedIssueUuid: string | null
+  readonly matchedIssueId: string | null
   readonly similarityScore: number
 }
 
+// TODO(issue-discovery-rerank): delete this use case when discovery matching
+// moves to pgvector-only top-candidate selection with calibrated thresholds.
+// Keeping this isolated makes the temporary third-party dependency easy to remove.
 export const rerankIssueCandidatesUseCase = Effect.fn("issues.rerankIssueCandidates")(function* (
   input: RerankIssueCandidatesInput,
 ) {
@@ -32,7 +35,7 @@ export const rerankIssueCandidatesUseCase = Effect.fn("issues.rerankIssueCandida
 
   if (limitedCandidates.length === 0) {
     return {
-      matchedIssueUuid: null,
+      matchedIssueId: null,
       similarityScore: 0,
     } satisfies RetrievalResult
   }
@@ -57,7 +60,7 @@ export const rerankIssueCandidatesUseCase = Effect.fn("issues.rerankIssueCandida
 
   if (!best) {
     return {
-      matchedIssueUuid: null,
+      matchedIssueId: null,
       similarityScore: 0,
     } satisfies RetrievalResult
   }
@@ -65,13 +68,13 @@ export const rerankIssueCandidatesUseCase = Effect.fn("issues.rerankIssueCandida
   const matchedIssue = limitedCandidates[best.index]
   if (!matchedIssue) {
     return {
-      matchedIssueUuid: null,
+      matchedIssueId: null,
       similarityScore: 0,
     } satisfies RetrievalResult
   }
 
   return {
-    matchedIssueUuid: matchedIssue.uuid,
+    matchedIssueId: matchedIssue.issueId,
     similarityScore: best.relevanceScore,
   } satisfies RetrievalResult
 })

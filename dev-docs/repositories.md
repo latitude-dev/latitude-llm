@@ -58,13 +58,12 @@ The following lists **current** port methods in `packages/domain/*/src/ports/*re
 - **ProjectRepository** — `findById`, `findBySlug`, `list`, `listIncludingDeleted`, `save`, `softDelete`, `hardDelete`, `existsByName`, `existsBySlug`.
 - **DatasetRepository** — `findById`, `listByProject`, `softDelete`, `save` split into `create` / `updateName` / … is acceptable for partial updates.
 - **ScoreRepository** — `findById` → `NotFoundError` if missing; `listBy`*, `save`, `delete`, `assignIssueIfUnowned`, plus specialized `existsByEvaluationIdAndScope` / `existsByEvaluationIdAndTraceId` reads for live-monitoring canonical-state checks.
-- **IssueProjectionRepository** — `upsert`, `delete`, `hybridSearch` (projection store).
 - **InvitationRepository** — `findPublicPendingPreviewById` → `NotFoundError` if missing, invalid, or expired (unauthenticated preview).
 - **UserRepository** — `findByEmail`, `setNameIfMissing`, `delete`.
 - **ApiKeyRepository** — `list`, `findById`, `findByTokenHash`, `save`, `delete`, `touch`, `touchBatch`.
 - **OrganizationRepository** — `listByUserId` for many orgs per user.
 - **MembershipRepository** — `listByOrganizationId`, `listByUserId`, `listMembersWithUser`.
-- **IssueRepository** — `findById`, `findByIdForUpdate`, `findByUuid` → `NotFoundError` if missing.
+- **IssueRepository** — `findById`, `findByIdForUpdate` → `NotFoundError` if missing; `findByIds`, `list`, `countBySlug`, `save`, and specialized `hybridSearch` over canonical Postgres issue rows.
 - **TraceRepository** / **SessionRepository** — `listByProjectId`, `listByTraceIds` (trace only), `countByProjectId`, `aggregateMetricsByProjectId` (zero-filled when no rows), `histogramByProjectId` (trace only), `distinctFilterValues`; **TraceRepository** `findByTraceId` → `NotFoundError` if missing, plus specialized `matchesFiltersByTraceId` for boolean reuse of the canonical trace filter semantics on one known trace.
 - **SpanRepository** — `listByTraceId`, `listByProjectId`; `findBySpanId` → `NotFoundError` if missing.
 - **BillingOverrideRepository** — `findOptionalByOrganizationId` (most orgs have no override), `upsert`, `deleteByOrganizationId`.

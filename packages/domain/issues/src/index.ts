@@ -17,6 +17,7 @@ export {
   ISSUE_DETAILS_MAX_OCCURRENCES,
   ISSUE_DISCOVERY_MIN_RELEVANCE,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
+  ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY,
   ISSUE_DISCOVERY_RERANK_CANDIDATES,
   ISSUE_DISCOVERY_RERANK_MODEL,
   ISSUE_DISCOVERY_SEARCH_CANDIDATES,
@@ -80,18 +81,11 @@ export {
   type IssueDiscoveryLockRepositoryShape,
 } from "./ports/issue-discovery-lock-repository.ts"
 export {
-  type DeleteIssueProjectionInput,
-  type HybridSearchInput,
-  type IssueProjectionCandidate,
-  IssueProjectionRepository,
-  type IssuesCollectionProperties,
-  type UpsertIssueProjectionInput,
-} from "./ports/issue-projection-repository.ts"
-export {
   type IssueLifecycleFlags,
   type IssueListPage,
   IssueRepository,
   type IssueRepositoryShape,
+  type IssueSearchCandidate,
   type IssueWithLifecycle,
   type ListIssuesRepositoryInput,
 } from "./ports/issue-repository.ts"
@@ -104,6 +98,12 @@ export {
   type IssueLifecycleCommandItem,
   issueLifecycleCommandSchema,
 } from "./use-cases/apply-issue-lifecycle-command.ts"
+export {
+  type AssignOrCreateIssueError,
+  type AssignOrCreateIssueInput,
+  type AssignOrCreateIssueResult,
+  assignOrCreateIssueUseCase,
+} from "./use-cases/assign-or-create-issue-from-score.ts"
 export {
   type AssignScoreToIssueError,
   type AssignScoreToIssueInput,
@@ -154,11 +154,6 @@ export {
   type IssueOccurrenceInput,
 } from "./use-cases/generate-issue-details.ts"
 export {
-  type HybridSearchIssuesInput,
-  type HybridSearchIssuesResult,
-  hybridSearchIssuesUseCase,
-} from "./use-cases/hybrid-search-issues.ts"
-export {
   type IssueListAnalytics,
   type IssueListAnalyticsCounts,
   type IssueListItem,
@@ -194,19 +189,7 @@ export {
   rerankIssueCandidatesUseCase,
 } from "./use-cases/rerank-issue-candidates.ts"
 export {
-  type ResolvedIssueMatch,
-  type ResolveMatchedIssueInput,
-  resolveMatchedIssueUseCase,
-} from "./use-cases/resolve-matched-issue.ts"
-export {
-  type SerializeIssueDiscoveryError,
-  type SerializeIssueDiscoveryInput,
-  type SerializeIssueDiscoveryResult,
-  serializeIssueDiscoveryUseCase,
-} from "./use-cases/serialize-issue-discovery.ts"
-export {
   type SweepEscalatingIssuesPublish,
   type SweepEscalatingIssuesResult,
   sweepEscalatingIssuesUseCase,
 } from "./use-cases/sweep-escalating-issues.ts"
-export { type SyncIssueProjectionsInput, syncIssueProjectionsUseCase } from "./use-cases/sync-projections.ts"

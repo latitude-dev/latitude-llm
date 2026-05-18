@@ -1,5 +1,7 @@
 import {
+  type AssignOrCreateIssueInput,
   type AssignScoreToIssueInput,
+  assignOrCreateIssueUseCase,
   assignScoreToIssueUseCase,
   type CheckEligibilityInput,
   type CreateIssueFromScoreInput,
@@ -7,18 +9,8 @@ import {
   createIssueFromScoreUseCase,
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,
-  type HybridSearchIssuesInput,
-  hybridSearchIssuesUseCase,
   IssueDiscoveryLockUnavailableError,
   isEligibilityError,
-  type RerankIssueCandidatesInput,
-  type ResolveMatchedIssueInput,
-  rerankIssueCandidatesUseCase,
-  resolveMatchedIssueUseCase,
-  type SerializeIssueDiscoveryInput,
-  type SyncIssueProjectionsInput,
-  serializeIssueDiscoveryUseCase,
-  syncIssueProjectionsUseCase,
 } from "@domain/issues"
 import { type SyncScoreAnalyticsInput, syncScoreAnalyticsUseCase } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
@@ -28,10 +20,9 @@ import { AIEmbedLive, AIRerankLive } from "@platform/ai-voyage"
 import { RedisIssueDiscoveryLockRepositoryLive } from "@platform/cache-redis"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("workflows-issue-discovery")
 
@@ -72,25 +63,6 @@ export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
     ),
   )
 
-export const hybridSearchIssues = async (input: HybridSearchIssuesInput) =>
-  Effect.runPromise(
-    hybridSearchIssuesUseCase(input).pipe(
-      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
-      withTracing,
-    ),
-  )
-
-export const rerankIssueCandidates = async (input: RerankIssueCandidatesInput) =>
-  Effect.runPromise(rerankIssueCandidatesUseCase(input).pipe(withAi(AIRerankLive, getRedisClient()), withTracing))
-
-export const resolveMatchedIssue = async (input: ResolveMatchedIssueInput) =>
-  Effect.runPromise(
-    resolveMatchedIssueUseCase(input).pipe(
-      withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
-      withTracing,
-    ),
-  )
-
 export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
   Effect.runPromise(
     createIssueFromScoreUseCase(input).pipe(
@@ -99,22 +71,22 @@ export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
-      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
     ),
   )
 
-export const serializeIssueDiscovery = async (input: SerializeIssueDiscoveryInput) =>
+export const assignOrCreateIssue = async (input: AssignOrCreateIssueInput) =>
   Effect.runPromise(
-    serializeIssueDiscoveryUseCase(input).pipe(
+    assignOrCreateIssueUseCase(input).pipe(
       withPostgres(
         Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive),
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
       Effect.provide(RedisIssueDiscoveryLockRepositoryLive(getRedisClient())),
-      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
+      // TODO(issue-discovery-rerank): drop AIRerankLive when assignOrCreateIssue
+      // relies on Postgres pgvector hybrid search directly.
       withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
       withTracing,
       Effect.match({
@@ -142,7 +114,6 @@ export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
         OrganizationId(input.organizationId),
       ),
       Effect.provide(RedisIssueDiscoveryLockRepositoryLive(getRedisClient())),
-      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
       withTracing,
       Effect.match({
         onFailure: (error) => {
@@ -162,15 +133,6 @@ export const syncScoreAnalytics = async (input: SyncScoreAnalyticsInput) =>
     syncScoreAnalyticsUseCase(input).pipe(
       withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
-      withTracing,
-    ),
-  )
-
-export const syncIssueProjections = async (input: SyncIssueProjectionsInput) =>
-  Effect.runPromise(
-    syncIssueProjectionsUseCase(input).pipe(
-      withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
-      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
       withTracing,
     ),
   )

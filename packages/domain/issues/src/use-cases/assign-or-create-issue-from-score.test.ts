@@ -10,10 +10,9 @@ import type { Issue } from "../entities/issue.ts"
 import { IssueDiscoveryLockUnavailableError } from "../errors.ts"
 import { createIssueCentroid } from "../helpers.ts"
 import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
-import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueProjectionRepository, createFakeIssueRepository } from "../testing/index.ts"
-import { serializeIssueDiscoveryUseCase } from "./serialize-issue-discovery.ts"
+import { createFakeIssueRepository } from "../testing/index.ts"
+import { assignOrCreateIssueUseCase } from "./assign-or-create-issue-from-score.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
@@ -57,7 +56,6 @@ const makeScore = (overrides: Partial<Score> = {}): Score =>
 
 const makeIssue = (overrides?: Partial<Issue>): Issue => ({
   id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
-  uuid: "11111111-1111-4111-8111-111111111111",
   slug: "test-issue",
   organizationId,
   projectId,
@@ -84,13 +82,12 @@ const createPassthroughSqlClient = (id: string): SqlClientShape => {
   return sqlClient
 }
 
-describe("serializeIssueDiscoveryUseCase", () => {
+describe("assignOrCreateIssueUseCase", () => {
   it("re-runs retrieval under the bounded discovery lock before creating a duplicate issue", async () => {
     const existingIssue = makeIssue()
     const score = makeScore()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
     const lockCalls: string[] = []
     const writtenEvents: unknown[] = []
     const fakeAi = createFakeAI({
@@ -107,17 +104,8 @@ describe("serializeIssueDiscoveryUseCase", () => {
     })
 
     scores.set(score.id, score)
-    store.set(`${organizationId}_${projectId}::${existingIssue.uuid}`, {
-      organizationId,
-      projectId,
-      uuid: existingIssue.uuid,
-      title: existingIssue.name,
-      description: existingIssue.description,
-      vector: makeEmbedding(),
-    })
-
     const result = await Effect.runPromise(
-      serializeIssueDiscoveryUseCase({
+      assignOrCreateIssueUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
@@ -127,7 +115,6 @@ describe("serializeIssueDiscoveryUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueDiscoveryLockRepository, {
           withLock: (input, effect) =>
             Effect.gen(function* () {
@@ -157,11 +144,66 @@ describe("serializeIssueDiscoveryUseCase", () => {
     expect(fakeAi.calls.generate).toHaveLength(0)
   })
 
+  it("tries raw annotation feedback before creating a new issue", async () => {
+    const existingIssue = makeIssue()
+    const score = makeScore({
+      feedback: "Generic enriched feedback",
+      metadata: { rawFeedback: "raw human report about token leakage" },
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue], {
+      hybridSearch: ({ query }) =>
+        Effect.succeed(
+          query === "raw human report about token leakage"
+            ? [
+                {
+                  issueId: existingIssue.id,
+                  name: existingIssue.name,
+                  description: existingIssue.description,
+                  score: 1,
+                },
+              ]
+            : [],
+        ),
+    })
+    const fakeAi = createFakeAI({
+      rerank: () => Effect.succeed([{ index: 0, relevanceScore: 0.95 }]),
+    })
+
+    scores.set(score.id, score)
+
+    const result = await Effect.runPromise(
+      assignOrCreateIssueUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        feedback: score.feedback,
+        normalizedEmbedding: makeEmbedding(),
+        rawFeedback: "raw human report about token leakage",
+        rawNormalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provide(fakeAi.layer),
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(IssueDiscoveryLockRepository, {
+          withLock: (_input, effect) => effect,
+        }),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+      ),
+    )
+
+    expect(result).toEqual({ action: "assigned", issueId: existingIssue.id })
+    expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
+    expect(issues.size).toBe(1)
+    expect(fakeAi.calls.rerank.map((call) => call.query)).toEqual(["raw human report about token leakage"])
+    expect(fakeAi.calls.generate).toHaveLength(0)
+  })
+
   it("falls through to the project lock before creating a new issue", async () => {
     const score = makeScore()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository, issues } = createFakeIssueRepository()
-    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
     const lockCalls: string[] = []
     const fakeAi = createFakeAI({
       generate: (input) =>
@@ -178,7 +220,7 @@ describe("serializeIssueDiscoveryUseCase", () => {
     scores.set(score.id, score)
 
     const result = await Effect.runPromise(
-      serializeIssueDiscoveryUseCase({
+      assignOrCreateIssueUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
@@ -188,7 +230,6 @@ describe("serializeIssueDiscoveryUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueDiscoveryLockRepository, {
           withLock: (input, effect) =>
             Effect.gen(function* () {
@@ -216,13 +257,12 @@ describe("serializeIssueDiscoveryUseCase", () => {
     const score = makeScore()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository, issues } = createFakeIssueRepository()
-    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI()
 
     scores.set(score.id, score)
 
     const exit = await Effect.runPromiseExit(
-      serializeIssueDiscoveryUseCase({
+      assignOrCreateIssueUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
@@ -232,7 +272,6 @@ describe("serializeIssueDiscoveryUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueDiscoveryLockRepository, {
           withLock: (input) =>
             Effect.fail(
@@ -270,13 +309,12 @@ describe("serializeIssueDiscoveryUseCase", () => {
     const score = makeScore({ issueId: winningIssueId })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository, issues } = createFakeIssueRepository()
-    const { service: issueProjectionRepository } = createFakeIssueProjectionRepository({ organizationId })
     const fakeAi = createFakeAI()
 
     scores.set(score.id, score)
 
     const result = await Effect.runPromise(
-      serializeIssueDiscoveryUseCase({
+      assignOrCreateIssueUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
@@ -286,7 +324,6 @@ describe("serializeIssueDiscoveryUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueDiscoveryLockRepository, {
           withLock: (_input, effect) => effect,
         }),

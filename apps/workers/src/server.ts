@@ -7,6 +7,7 @@ import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import {
+  createBullBoardQueues,
   createBullMqQueueConsumer,
   createBullMqQueuePublisher,
   createEventsPublisher,
@@ -108,7 +109,6 @@ const bootstrap = async () => {
 
     // Set up bull-board dashboard with read-only Queue instances
     const { TOPIC_NAMES } = await import("@domain/queue")
-    const { createBullBoardQueues } = await import("@platform/queue-bullmq")
     const bullBoardQueues = createBullBoardQueues(bullMqConfig, TOPIC_NAMES)
 
     const bullBoardUser = Effect.runSync(parseEnv("LAT_BULL_BOARD_USERNAME", "string"))

@@ -10,7 +10,6 @@ import { updateIssueCentroid } from "../helpers.ts"
 import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
-import { syncIssueProjectionsUseCase } from "./sync-projections.ts"
 
 export interface AssignScoreToIssueInput {
   readonly organizationId: string
@@ -220,13 +219,6 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
             } satisfies AssignScoreToIssueResult
           }),
         )
-
-        if (assignment.action === "assigned") {
-          yield* syncIssueProjectionsUseCase({
-            organizationId: input.organizationId,
-            issueId: assignment.issueId,
-          })
-        }
 
         return assignment
       }),

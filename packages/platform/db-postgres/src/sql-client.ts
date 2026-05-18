@@ -32,9 +32,14 @@ const sqlClientLogger = createLogger("db-postgres/sql-client")
  * connections. Use separate `SqlClientLive` layer instances instead.
  * A concurrent call is detected at runtime and fails with ConcurrentSqlTransactionError.
  */
-const setRlsContext = (tx: Operator, organizationId: OrganizationId) => {
-  if (organizationId === "system") return Promise.resolve()
-  return tx.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
+const setTransactionContext = async (tx: Operator, organizationId: OrganizationId) => {
+  // Keep `latitude` first so unqualified extension types installed by migrations
+  // (notably pgvector's `vector`) resolve in application queries. Keep `public`
+  // second for test environments and standard extension installs.
+  await tx.execute(sql`select set_config('search_path', 'latitude, public', true)`)
+
+  if (organizationId === "system") return
+  await tx.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
 }
 
 export const SqlClientLive = (client: PostgresClient, organizationId: OrganizationId = OrganizationId("system")) =>
@@ -67,7 +72,7 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
             })
 
             const txPromise = client.transaction(async (tx) => {
-              await setRlsContext(tx as Operator, organizationId)
+              await setTransactionContext(tx as Operator, organizationId)
               resolveTxReady(tx as Operator)
               const result = await effectDone
               if (!result.ok) throw result.error
@@ -134,7 +139,7 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
             return yield* Effect.tryPromise({
               try: () =>
                 client.transaction(async (tx) => {
-                  await setRlsContext(tx as Operator, organizationId)
+                  await setTransactionContext(tx as Operator, organizationId)
                   return fn(tx as Operator, organizationId)
                 }),
               catch: (error) => toRepositoryError(error, "query"),
