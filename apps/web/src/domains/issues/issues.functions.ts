@@ -16,6 +16,7 @@ import {
   issuesSortFieldSchema,
   type ListIssuesResult,
   listIssuesUseCase,
+  listIssueTracesUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
 } from "@domain/issues"
 import {
@@ -24,7 +25,7 @@ import {
   ScoreAnalyticsRepository,
 } from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, resolveSettings, SettingsReader } from "@domain/shared"
-import { type TraceDetail, TraceRepository } from "@domain/spans"
+import type { TraceDetail } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -42,7 +43,6 @@ import {
   toEvaluationSummaryRecord,
 } from "../evaluations/evaluation-alignment.functions.ts"
 import { type TraceRecord, toTraceRecord } from "../traces/traces.functions.ts"
-import { buildIssuesTraceCountFilters, withIssuesTraceTotals } from "./issues-list-metrics.ts"
 
 const listIssuesInputSchema = z.object({
   projectId: z.string(),
@@ -254,16 +254,13 @@ export const listIssues = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<IssuesListResultRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
-    const projectId = ProjectId(data.projectId)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
     const redisClient = getRedisClient()
     const trimmedSearchQuery = data.searchQuery?.trim() || undefined
-    const traceCountFilters = buildIssuesTraceCountFilters(data.timeRange)
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
-        const traceRepository = yield* TraceRepository
         const search = trimmedSearchQuery
           ? yield* embedIssueSearchQueryUseCase({
               organizationId,
@@ -280,32 +277,23 @@ export const listIssues = createServerFn({ method: "GET" })
               }
             : undefined
 
-        const [issues, totalTraces] = yield* Effect.all([
-          listIssuesUseCase({
-            organizationId,
-            projectId: data.projectId,
-            ...(data.limit !== undefined ? { limit: data.limit } : {}),
-            ...(data.offset !== undefined ? { offset: data.offset } : {}),
-            ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
-            ...(data.sort ? { sort: data.sort } : {}),
-            ...(timeRange ? { timeRange } : {}),
-            ...(search
-              ? {
-                  search: {
-                    query: search.query,
-                    normalizedEmbedding: search.normalizedEmbedding,
-                  },
-                }
-              : {}),
-          }),
-          traceRepository.countByProjectId({
-            organizationId: orgId,
-            projectId,
-            ...(traceCountFilters ? { filters: traceCountFilters } : {}),
-          }),
-        ])
-
-        return withIssuesTraceTotals(issues, totalTraces)
+        return yield* listIssuesUseCase({
+          organizationId,
+          projectId: data.projectId,
+          ...(data.limit !== undefined ? { limit: data.limit } : {}),
+          ...(data.offset !== undefined ? { offset: data.offset } : {}),
+          ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+          ...(data.sort ? { sort: data.sort } : {}),
+          ...(timeRange ? { timeRange } : {}),
+          ...(search
+            ? {
+                search: {
+                  query: search.query,
+                  normalizedEmbedding: search.normalizedEmbedding,
+                },
+              }
+            : {}),
+        })
       }).pipe(
         withPostgres(Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
         withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
@@ -522,50 +510,25 @@ export const listIssueTraces = createServerFn({ method: "GET" })
     const projectId = ProjectId(data.projectId)
     const issueId = IssueId(data.issueId)
 
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
-        const traceRepository = yield* TraceRepository
-
-        const tracePage = yield* scoreAnalyticsRepository.listTracesByIssue({
-          organizationId: orgId,
-          projectId,
-          issueId,
-          ...(data.limit !== undefined ? { limit: data.limit } : {}),
-          ...(data.offset !== undefined ? { offset: data.offset } : {}),
-        })
-
-        if (tracePage.items.length === 0) {
-          return toIssueTracePageRecord({
-            items: [],
-            hasMore: false,
-            limit: tracePage.limit,
-            offset: tracePage.offset,
-          })
-        }
-
-        const traces = yield* traceRepository.listByTraceIds({
-          organizationId: orgId,
-          projectId,
-          traceIds: tracePage.items.map((item) => item.traceId),
-        })
-        const traceById = new Map(traces.map((trace) => [trace.traceId, trace] as const))
-
-        return toIssueTracePageRecord({
-          items: tracePage.items
-            .map((item) => traceById.get(item.traceId))
-            .filter((trace): trace is TraceDetail => trace !== undefined)
-            .map(toIssueTraceRecord),
-          hasMore: tracePage.hasMore,
-          limit: tracePage.limit,
-          offset: tracePage.offset,
-        })
+    const result = await Effect.runPromise(
+      listIssueTracesUseCase({
+        organizationId: orgId,
+        projectId,
+        issueId,
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
+        ...(data.offset !== undefined ? { offset: data.offset } : {}),
       }).pipe(
         withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
-        withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
     )
+
+    return toIssueTracePageRecord({
+      items: result.items.map(toIssueTraceRecord),
+      hasMore: result.hasMore,
+      limit: result.limit,
+      offset: result.offset,
+    })
   })
 
 export const countIssueTraces = createServerFn({ method: "GET" })

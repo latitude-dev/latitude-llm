@@ -16,9 +16,12 @@
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
+    "@domain/alerts": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
+    "@domain/evaluations": "workspace:*",
     "@domain/flaggers": "workspace:*",
+    "@domain/issues": "workspace:*",
     "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
@@ -42,6 +45,7 @@
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
+    "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
@@ -50,8 +54,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@domain/evaluations": "workspace:*",
-    "@domain/issues": "workspace:*",
     "@modelcontextprotocol/inspector": "catalog:",
     "@platform/testkit": "workspace:*",
     "tsdown": "catalog:"

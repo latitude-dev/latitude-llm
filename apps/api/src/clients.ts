@@ -1,11 +1,17 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import type { QueuePublisherShape } from "@domain/queue"
+import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import type { RedisClient } from "@platform/cache-redis"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
+import {
+  createTemporalClient,
+  createWorkflowQuerier,
+  createWorkflowStarter,
+  loadTemporalConfig,
+} from "@platform/workflows-temporal"
 import { withTracing } from "@repo/observability"
 import { Effect } from "effect"
 
@@ -14,6 +20,9 @@ let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
 let queuePublisherPromise: Promise<QueuePublisherShape> | undefined
+let temporalClientPromise: ReturnType<typeof createTemporalClient> | undefined
+let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
+let workflowQuerierPromise: Promise<WorkflowQuerierShape> | undefined
 
 export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
@@ -68,4 +77,40 @@ export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
     })
   }
   return queuePublisherPromise
+}
+
+const getTemporalClient = (): ReturnType<typeof createTemporalClient> => {
+  if (!temporalClientPromise) {
+    const config = loadTemporalConfig()
+    temporalClientPromise = createTemporalClient(config).catch((error) => {
+      temporalClientPromise = undefined
+      throw error
+    })
+  }
+  return temporalClientPromise
+}
+
+export const getWorkflowStarter = (): Promise<WorkflowStarterShape> => {
+  if (!workflowStarterPromise) {
+    const config = loadTemporalConfig()
+    workflowStarterPromise = getTemporalClient()
+      .then((client) => createWorkflowStarter(client, config))
+      .catch((error) => {
+        workflowStarterPromise = undefined
+        throw error
+      })
+  }
+  return workflowStarterPromise
+}
+
+export const getWorkflowQuerier = (): Promise<WorkflowQuerierShape> => {
+  if (!workflowQuerierPromise) {
+    workflowQuerierPromise = getTemporalClient()
+      .then((client) => createWorkflowQuerier(client))
+      .catch((error) => {
+        workflowQuerierPromise = undefined
+        throw error
+      })
+  }
+  return workflowQuerierPromise
 }

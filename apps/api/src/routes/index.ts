@@ -9,6 +9,7 @@ import { accountPath, createAccountRoutes } from "./account.ts"
 import { annotationsPath, createAnnotationsRoutes } from "./annotations.ts"
 import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
+import { createIssuesRoutes, issuesPath } from "./issues.ts"
 import { createMembersRoutes, membersPath } from "./members.ts"
 import { createOAuthKeysRoutes, oauthKeysPath } from "./oauth-keys.ts"
 import { createProjectsRoutes, projectsPath } from "./projects.ts"
@@ -33,6 +34,8 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
     c.set("redis", options.redis)
     c.set("clickhouse", options.clickhouse)
     c.set("queuePublisher", options.queuePublisher)
+    c.set("workflowStarter", options.workflowStarter)
+    c.set("workflowQuerier", options.workflowQuerier)
     await next()
   })
 
@@ -51,6 +54,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route(annotationsPath, createAnnotationsRoutes())
   routes.route(tracesPath, createTracesRoutes())
   routes.route(savedSearchesPath, createSavedSearchesRoutes())
+  routes.route(issuesPath, createIssuesRoutes())
   routes.route(apiKeysPath, createApiKeysRoutes())
   routes.route(oauthKeysPath, createOAuthKeysRoutes())
   routes.route(accountPath, createAccountRoutes())

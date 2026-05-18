@@ -1,5 +1,5 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import type { QueuePublisherShape } from "@domain/queue"
+import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import { generateId } from "@domain/shared"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
@@ -99,12 +99,24 @@ export const setupTestApi = () => {
       close: () => Effect.void,
     }
 
+    const fakeWorkflowStarter: WorkflowStarterShape = {
+      start: () => Effect.void,
+      signalWithStart: () => Effect.void,
+    }
+
+    const fakeWorkflowQuerier: WorkflowQuerierShape = {
+      describe: () => Effect.succeed(null),
+      query: () => Effect.succeed(null),
+    }
+
     registerRoutes(app, {
       database: database.appPostgresClient,
       adminDatabase: database.adminPostgresClient,
       clickhouse: clickhouse.client,
       redis,
       queuePublisher: fakePublisher,
+      workflowStarter: fakeWorkflowStarter,
+      workflowQuerier: fakeWorkflowQuerier,
       logTouchBuffer: false,
     })
   })

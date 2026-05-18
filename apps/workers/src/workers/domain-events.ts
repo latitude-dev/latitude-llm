@@ -310,7 +310,8 @@ export const createDomainEventsWorker = ({
     ApiKeyCreated: () => Effect.void,
     OAuthKeyCreated: () => Effect.void,
     DatasetCreated: () => Effect.void,
-    EvaluationConfigured: () => Effect.void,
+    EvaluationCreated: () => Effect.void,
+    EvaluationAligned: () => Effect.void,
     AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: (event) =>
       pub.publish(
