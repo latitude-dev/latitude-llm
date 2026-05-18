@@ -77,6 +77,7 @@ export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.
 export type {
   IncidentNotificationKind,
   IncidentNotificationRequest,
+  IncidentTransition,
   RequestIncidentNotificationsError,
   RequestIncidentNotificationsInput,
   RequestIncidentNotificationsResult,
