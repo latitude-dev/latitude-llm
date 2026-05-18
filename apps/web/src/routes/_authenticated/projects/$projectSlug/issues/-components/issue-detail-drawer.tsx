@@ -1,6 +1,7 @@
 import {
   Button,
   CloseTrigger,
+  CopyableText,
   cn,
   DetailDrawer,
   DetailSection,
@@ -432,7 +433,14 @@ export function IssueDetailDrawer({
                 <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
               )}
             </div>
-            {!isLoading && !!issue?.tags.length && <TagList tags={issue.tags} wrap />}
+            {!isLoading && issue && (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex min-w-[33%] max-w-max flex-1">
+                  <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
+                </div>
+                {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
+              </div>
+            )}
           </div>
         }
       >

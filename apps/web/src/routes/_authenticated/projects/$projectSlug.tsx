@@ -89,7 +89,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
   return (
     <AppSidebar
       title={project.name}
-      subtitle={<CopyableText value={project.slug} size="sm" tooltip="Copy project slug" />}
+      subtitle={<CopyableText value={project.slug} size="sm" tooltip="Copy project slug" ellipsis />}
       footer={({ collapsed }) => (
         <>
           {latestWrapped ? (

@@ -23,6 +23,7 @@ import {
   MembershipRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
+  ScoreRepositoryLive,
   SettingsReaderLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -38,7 +39,7 @@ import {
   toIssueHistogramResponse,
   toIssueResponse,
 } from "../openapi/entities/issue.ts"
-import { PaginatedTracesSchema, toTraceResponse } from "../openapi/entities/trace.ts"
+import { fetchTraceIndicators, PaginatedTracesSchema, toTraceResponse } from "../openapi/entities/trace.ts"
 import { PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import { jsonBody, openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
@@ -513,9 +514,19 @@ const listIssueTraces = issueEndpoint({
           limit: query.limit,
           offset,
         })
-        return { result, offset }
+
+        const indicators = yield* fetchTraceIndicators({
+          projectId: project.id,
+          traceIds: result.items.map((trace) => trace.traceId),
+        })
+
+        return { result, offset, indicators }
       }).pipe(
-        withPostgres(Layer.mergeAll(ProjectRepositoryLive, IssueRepositoryLive), c.var.postgresClient, organizationId),
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, IssueRepositoryLive, ScoreRepositoryLive),
+          c.var.postgresClient,
+          organizationId,
+        ),
         withClickHouse(
           Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
           c.var.clickhouse,
@@ -527,7 +538,7 @@ const listIssueTraces = issueEndpoint({
 
     return c.json(
       {
-        items: page.result.items.map(toTraceResponse),
+        items: page.result.items.map((trace) => toTraceResponse(trace, page.indicators)),
         nextCursor: page.result.hasMore ? encodeIssueOffsetCursor(page.offset + page.result.items.length) : null,
         hasMore: page.result.hasMore,
       },

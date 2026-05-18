@@ -200,6 +200,7 @@ const toIssueDetailRecord = (input: {
   readonly keepMonitoringDefault: boolean
 }) => ({
   id: input.issue.id,
+  slug: input.issue.slug,
   projectId: input.issue.projectId,
   name: input.issue.name,
   description: input.issue.description,
@@ -261,13 +262,38 @@ export const listIssues = createServerFn({ method: "GET" })
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
-        const search = trimmedSearchQuery
-          ? yield* embedIssueSearchQueryUseCase({
-              organizationId,
-              projectId: data.projectId,
-              query: trimmedSearchQuery,
+        // Direct-match lookup: if the user typed an exact issue id or slug, narrow the listing
+        // to that issue and skip the (expensive) semantic-search embed call entirely. When
+        // neither matches, fall through to the semantic search path. The id lookup is org-
+        // scoped via RLS but not project-scoped — guard against cross-project leakage by
+        // comparing the returned `projectId` to the request's project before accepting it.
+        const directMatch = trimmedSearchQuery
+          ? yield* Effect.gen(function* () {
+              const issueRepo = yield* IssueRepository
+              const [byId, bySlug] = yield* Effect.all(
+                [
+                  issueRepo
+                    .findById(IssueId(trimmedSearchQuery))
+                    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+                  issueRepo
+                    .findBySlug({ projectId: ProjectId(data.projectId), slug: trimmedSearchQuery })
+                    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+                ],
+                { concurrency: 2 },
+              )
+              const idMatch = byId && byId.projectId === data.projectId ? byId : null
+              return idMatch ?? bySlug
             })
-          : undefined
+          : null
+
+        const search =
+          trimmedSearchQuery && !directMatch
+            ? yield* embedIssueSearchQueryUseCase({
+                organizationId,
+                projectId: data.projectId,
+                query: trimmedSearchQuery,
+              })
+            : undefined
 
         const timeRange =
           data.timeRange?.fromIso || data.timeRange?.toIso
@@ -285,14 +311,16 @@ export const listIssues = createServerFn({ method: "GET" })
           ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
           ...(data.sort ? { sort: data.sort } : {}),
           ...(timeRange ? { timeRange } : {}),
-          ...(search
-            ? {
-                search: {
-                  query: search.query,
-                  normalizedEmbedding: search.normalizedEmbedding,
-                },
-              }
-            : {}),
+          ...(directMatch
+            ? { issueIds: [directMatch.id] }
+            : search
+              ? {
+                  search: {
+                    query: search.query,
+                    normalizedEmbedding: search.normalizedEmbedding,
+                  },
+                }
+              : {}),
         })
       }).pipe(
         withPostgres(Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
