@@ -2,8 +2,7 @@ import { ApiKeyId, OrganizationId, ProjectId } from "@domain/shared"
 import { createSeedScope, type SeedScope } from "@domain/shared/seeding"
 import { seedDemoProjectClickHouse } from "@platform/db-clickhouse"
 import { seedDemoProjectPostgres } from "@platform/db-postgres"
-import { seedDemoProjectWeaviate } from "@platform/db-weaviate"
-import { getAdminPostgresClient, getClickhouseClient, getWeaviateClient } from "../clients.ts"
+import { getAdminPostgresClient, getClickhouseClient } from "../clients.ts"
 
 /**
  * Plain-data input that the workflow hands every activity. Workflow code
@@ -11,7 +10,7 @@ import { getAdminPostgresClient, getClickhouseClient, getWeaviateClient } from "
  * api-key lookup happen in the request handler (server function →
  * use-case) and arrive here as plain strings.
  *
- * `timelineAnchorIso` is captured at workflow-start time so all three
+ * `timelineAnchorIso` is captured at workflow-start time so both
  * datastores end up with seeded rows pinned to the same "now". Using
  * `new Date()` inside an activity would drift between retries.
  */
@@ -60,12 +59,3 @@ export const seedDemoProjectPostgresActivity = (input: SeedDemoProjectActivityIn
  */
 export const seedDemoProjectClickHouseActivity = (input: SeedDemoProjectActivityInput): Promise<void> =>
   seedDemoProjectClickHouse({ client: getClickhouseClient(), scope: buildScope(input) })
-
-/**
- * Weaviate content seed: issue projections, derived from the Postgres
- * issue rows the upstream activity wrote.
- */
-export const seedDemoProjectWeaviateActivity = async (input: SeedDemoProjectActivityInput): Promise<void> => {
-  const client = await getWeaviateClient()
-  await seedDemoProjectWeaviate({ client, scope: buildScope(input) })
-}

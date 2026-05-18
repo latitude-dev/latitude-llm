@@ -42,9 +42,6 @@
       "entry": ["src/seeds/index.ts"],
       "project": ["src/**/*.ts"]
     },
-    "packages/platform/db-weaviate": {
-      "project": ["src/**/*.ts"]
-    },
     "packages/platform/*": {
       "project": ["src/**/*.ts"]
     },

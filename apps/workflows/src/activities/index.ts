@@ -33,5 +33,4 @@ export {
   type SeedDemoProjectActivityInput,
   seedDemoProjectClickHouseActivity,
   seedDemoProjectPostgresActivity,
-  seedDemoProjectWeaviateActivity,
 } from "./seed-demo-project-activities.ts"

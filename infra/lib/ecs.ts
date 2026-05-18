@@ -337,8 +337,6 @@ function createTaskDefinition(
       secrets["clickhouse-user"].arn,
       secrets["clickhouse-password"].arn,
       secrets["clickhouse-db"].arn,
-      secrets["weaviate-url"].arn,
-      secrets["weaviate-api-key"].arn,
       secrets["voyage-api-key"].arn,
       secrets["mailgun-api-key"].arn,
       secrets["mailgun-domain"].arn,
@@ -381,8 +379,6 @@ function createTaskDefinition(
         clickhouseUserArn,
         clickhousePasswordArn,
         clickhouseDbArn,
-        weaviateUrlArn,
-        weaviateApiKeyArn,
         voyageApiKeyArn,
         mailgunApiKeyArn,
         mailgunDomainArn,
@@ -466,8 +462,6 @@ function createTaskDefinition(
           { name: "CLICKHOUSE_USER", valueFrom: clickhouseUserArn },
           { name: "CLICKHOUSE_PASSWORD", valueFrom: clickhousePasswordArn },
           { name: "CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
-          { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
-          { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
           { name: "LAT_VOYAGE_API_KEY", valueFrom: voyageApiKeyArn },
           { name: "LAT_MAILGUN_API_KEY", valueFrom: mailgunApiKeyArn },
           { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
@@ -714,11 +708,7 @@ function createMigrationTaskDefinition(
       secrets["clickhouse-user"].arn,
       secrets["clickhouse-password"].arn,
       secrets["clickhouse-db"].arn,
-      secrets["weaviate-url"].arn,
-      secrets["weaviate-api-key"].arn,
       secrets["voyage-api-key"].arn,
-      secrets["latitude-telemetry-api-key"].arn,
-      secrets["latitude-telemetry-project-slug"].arn,
     ])
     .apply(
       ([
@@ -729,11 +719,7 @@ function createMigrationTaskDefinition(
         clickhouseUserArn,
         clickhousePasswordArn,
         clickhouseDbArn,
-        weaviateUrlArn,
-        weaviateApiKeyArn,
         voyageApiKeyArn,
-        latitudeTelemetryApiKeyArn,
-        latitudeTelemetryProjectSlugArn,
       ]) => {
         const def = {
           name: "migrations",
@@ -759,11 +745,7 @@ function createMigrationTaskDefinition(
             { name: "CLICKHOUSE_USER", valueFrom: clickhouseUserArn },
             { name: "CLICKHOUSE_PASSWORD", valueFrom: clickhousePasswordArn },
             { name: "CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
-            { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
-            { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
             { name: "LAT_VOYAGE_API_KEY", valueFrom: voyageApiKeyArn },
-            // { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
-            // { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           ],
         }
         return JSON.stringify([def])

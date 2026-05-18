@@ -146,7 +146,7 @@ This section records the durable choices that shaped the feature. Future contrib
 
 ### Why ClickHouse for semantic search
 
-The plan explicitly rejected introducing a new database (Weaviate, Pinecone, pgvector). Trace search had to share the existing trace query pipeline so lexical results, filters, and aggregates stay consistent. ClickHouse gives us `cosineDistance` and vector-column storage out of the box; at realistic per-project scale linear scan is fast enough.
+The plan explicitly rejected introducing a new database (an external vector database). Trace search had to share the existing trace query pipeline so lexical results, filters, and aggregates stay consistent. ClickHouse gives us `cosineDistance` and vector-column storage out of the box; at realistic per-project scale linear scan is fast enough.
 
 ### Why `UNION ALL + GROUP BY` instead of `FULL OUTER JOIN`
 

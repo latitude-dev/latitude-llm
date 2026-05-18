@@ -15,7 +15,7 @@ The default seed world is **Acme Inc.**, a company that uses AI across customer 
 - **Coherence over isolated demos**. Prefer one believable project graph where data models connect to each other. Avoid adding standalone records that only exist to light up one screen when the same UI state can be represented inside the main narrative.
 - **Realism first, humor second**. Acme conversations can be funny, but spans, sessions, costs, models, metadata, and state transitions should still feel like real observability data.
 - **Ambient plus deterministic layers**. The seed combines broad generated telemetry for browsing and analytics with a smaller deterministic trace layer for workflows that require stable links.
-- **Cross-store integrity**. When Postgres and ClickHouse both participate in a workflow, the seeded entities should describe the same organization, project, issue family, and lifecycle state. The legacy Weaviate seeder still runs for the demo project but no longer feeds canonical reads.
+- **Cross-store integrity**. When Postgres and ClickHouse both participate in a workflow, the seeded entities should describe the same organization, project, issue family, and lifecycle state.
 - **Extend the story before inventing a new one**. New seeds should usually deepen the existing Acme support project or one of its agents before introducing a disconnected scenario.
 
 The workflow that matters most is:
@@ -94,12 +94,6 @@ ClickHouse is split into two responsibilities:
 - dataset row storage for seeded datasets
 
 Use ClickHouse when a workflow needs real trace/span content, analytics joins, simulation trace tabs, or dataset row browsing.
-
-### Weaviate (deprecated for issue search)
-
-Weaviate seeds live in `packages/platform/db-weaviate/src/seeds/all.ts` and currently project issues only.
-
-The seeder still runs from the demo-project workflow, but no canonical read path queries it anymore — issue hybrid search is served by Postgres pgvector + tsvector. Treat these seeds as dormant: they exist for backwards compatibility with the legacy Weaviate tenant data and should not be relied on by new features.
 
 ## Default Seed Graph
 
@@ -237,7 +231,7 @@ When a new seeded concept crosses module or store boundaries:
 
 1. add or update stable IDs in `packages/domain/shared/src/seeds.ts`
 2. place reusable narrative content in `packages/domain/shared/src/seed-content/*`
-3. wire Postgres and ClickHouse seeders to those shared definitions (the dormant Weaviate seeder may pick up issue data via Postgres reads, but new cross-store concepts should not depend on Weaviate)
+3. wire Postgres and ClickHouse seeders to those shared definitions
 
 Do not scatter hardcoded IDs or story text independently across seeders.
 
@@ -262,7 +256,6 @@ When adding or changing trace-linked workflow data:
 
 - any score or queue item with a `traceId` or `spanId` should resolve to a real ClickHouse trace/span
 - any passed simulation should reference a real dataset and real evaluation IDs
-- if the dormant Weaviate issue seeder still runs against new fixtures, the projected tenant data should describe the same issue family, organization, and project as the canonical Postgres row
 - any dataset row counts and simulation metadata should remain consistent with the seeded dataset content
 - any issue-state example that relies on escalation, resolution, or regression should be backed by score occurrence timing that still produces that state against the rolling `now()` window used by analytics
 

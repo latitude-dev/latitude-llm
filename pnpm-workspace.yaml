@@ -49,7 +49,6 @@ catalog:
   vitest: 4.1.0
   zod: 4.3.6
   voyageai: 0.2.1
-  weaviate-client: 3.11.0
   "@modelcontextprotocol/sdk": 1.29.0
   "@modelcontextprotocol/inspector": 0.21.2
 
