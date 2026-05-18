@@ -320,16 +320,18 @@ export function AppSidebar({
 
         <div className="flex min-h-0 flex-1 flex-col">
           <nav
-            className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-6", {
-              "items-center": collapsed,
+            className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto py-6", {
+              "items-center px-2": collapsed,
+              "px-6": !collapsed,
             })}
           >
             {children({ collapsed })}
           </nav>
           {footer ? (
             <nav
-              className={cn("flex shrink-0 flex-col gap-1 px-6 pb-6", {
-                "items-center": collapsed,
+              className={cn("flex shrink-0 flex-col gap-1 pb-6", {
+                "items-center px-2": collapsed,
+                "px-6": !collapsed,
               })}
             >
               {footer({ collapsed })}
