@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'
+import { cache } from '../../cache'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
 import { recomputeChanges } from './recomputeChanges'
 import { updateDocument } from './update'
+import { getDataCacheKey } from './getDataCacheKey'
 import { NotFoundError } from '@latitude-data/constants/errors'
 
 describe('updateDocument', () => {
@@ -348,6 +350,87 @@ This prompt contains empty tools
 
     expect(result.ok).toBe(false)
     expect(result.error!.message).toBe('Cannot modify a merged commit')
+  })
+
+  it('invalidates the gateway getData cache for the document path after editing a draft', async (ctx) => {
+    const { workspace, project, user, documents } =
+      await ctx.factories.createProject({
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          doc1: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 1',
+          }),
+        },
+      })
+    const doc1 = documents.find((d) => d.path === 'doc1')!
+    const { commit: draft } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
+
+    const cacheKey = getDataCacheKey({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      commitUuid: draft.uuid,
+      documentPath: doc1.path,
+    })
+    const redis = await cache()
+    await redis.set(cacheKey, 'stale')
+
+    await updateDocument({
+      commit: draft,
+      document: doc1,
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'Doc 1 v2',
+      }),
+    }).then((r) => r.unwrap())
+
+    expect(await redis.get(cacheKey)).toBeNull()
+  })
+
+  it('invalidates the gateway getData cache for both old and new paths when renaming a draft document', async (ctx) => {
+    const { workspace, project, user, documents } =
+      await ctx.factories.createProject({
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          doc1: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 1',
+          }),
+        },
+      })
+    const doc1 = documents.find((d) => d.path === 'doc1')!
+    const { commit: draft } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
+
+    const oldPathKey = getDataCacheKey({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      commitUuid: draft.uuid,
+      documentPath: 'doc1',
+    })
+    const newPathKey = getDataCacheKey({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      commitUuid: draft.uuid,
+      documentPath: 'doc1-renamed',
+    })
+    const redis = await cache()
+    await redis.set(oldPathKey, 'stale-old')
+    await redis.set(newPathKey, 'stale-new')
+
+    await updateDocument({
+      commit: draft,
+      document: doc1,
+      path: 'doc1-renamed',
+    }).then((r) => r.unwrap())
+
+    expect(await redis.get(oldPathKey)).toBeNull()
+    expect(await redis.get(newPathKey)).toBeNull()
   })
 
   it('invalidates the resolvedContent for all documents in the commit', async (ctx) => {
