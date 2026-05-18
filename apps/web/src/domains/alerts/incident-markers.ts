@@ -20,8 +20,8 @@ type TopSymbol = NonNullable<BarChartOverlayLine["topSymbol"]>
 const KIND_TOP_SYMBOL: Record<AlertIncidentKind, TopSymbol> = {
   "issue.new": { shape: "circle", size: 7 },
   "issue.regressed": { shape: "diamond", size: 8 },
-  // Escalating renders as an area, but we still render a tiny tick at the start so a 1-bucket
-  // escalation that snaps to a single cell stays visible.
+  // Escalating typically renders as an area, but we still render a tiny tick at the start so a
+  // 1-bucket escalation that snaps to a single cell stays visible.
   "issue.escalating": { shape: "rect", size: 6 },
 }
 
@@ -36,7 +36,22 @@ const SEVERITY_LABELS: Record<AlertSeverity, string> = {
   high: "High",
 }
 
-const RANGED_KINDS: ReadonlySet<AlertIncidentKind> = new Set<AlertIncidentKind>(["issue.escalating"])
+/**
+ * Whether an incident should render as a time range (area) vs a single point (line):
+ *
+ * - `endedAt === null`  → open lifecycle incident, range extending to `now`.
+ * - `endedAt > startedAt` → closed lifecycle incident, range from start to end.
+ * - `endedAt === startedAt` → point-in-time event (eventful kinds), render only the start line.
+ *
+ * Decoupled from `kind` so adding a new eventful or lifecycle kind doesn't require touching the
+ * rendering layer.
+ */
+function isRangedIncident(incident: AlertIncidentRecord): boolean {
+  if (incident.endedAt === null) return true
+  const startMs = Date.parse(incident.startedAt)
+  const endMs = Date.parse(incident.endedAt)
+  return Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+}
 
 /**
  * Snaps a moment to the **index** of the bucket whose half-open `[start, start + width)` range
@@ -70,7 +85,7 @@ interface IncidentGrouping {
    * tooltips so a bucket in the middle of an escalation surfaces the escalation, not nothing.
    */
   readonly incidentsTouchingBucketIndex: ReadonlyMap<number, readonly AlertIncidentRecord[]>
-  /** Ranges (start..end inclusive bucket indices) for ranged kinds like `issue.escalating`. */
+  /** Ranges (start..end inclusive bucket indices) for incidents that span more than one instant. */
   readonly ranges: readonly IncidentRange[]
 }
 
@@ -126,10 +141,10 @@ export function groupIncidentsByBucket({
     incidentsByBucketIndex.set(startIdx, list)
     pushTouching(startIdx, incident)
 
-    if (RANGED_KINDS.has(incident.kind)) {
+    if (isRangedIncident(incident)) {
       const endMs = incident.endedAt ? Date.parse(incident.endedAt) : nowMs
       const snapped = snapMsToBucketIndex(endMs, firstStartMs, bucketWidthMs, lastIndex)
-      // Clamp past-end to the last visible bucket so an in-progress escalation paints to the edge.
+      // Clamp past-end to the last visible bucket so an in-progress incident paints to the edge.
       const endIdx = snapped ?? (Number.isFinite(endMs) && endMs >= firstStartMs ? lastIndex : null)
       if (endIdx !== null) {
         ranges.push({ startIndex: startIdx, endIndex: endIdx, incident })
@@ -163,11 +178,11 @@ interface BuildIncidentMarkersResult {
 
 /**
  * Builds eCharts overlays from a list of incidents:
- * - point-in-time kinds (`issue.new`, `issue.regressed`) → vertical mark lines snapped to the
- *   bucket containing `startedAt`
- * - ranged kinds (`issue.escalating`) → translucent mark areas spanning `startedAt → endedAt`
- *   (clamped to `nowMs` when ongoing). When start and end snap to the same bucket the area would
- *   render zero-width — we still draw the start line so it stays discoverable.
+ * - point-in-time incidents (`endedAt === startedAt`) → vertical mark lines snapped to the bucket
+ *   containing `startedAt`
+ * - ranged incidents (`endedAt > startedAt`, or `endedAt === null` for an open lifecycle) →
+ *   translucent mark areas spanning `startedAt → endedAt` (clamped to `nowMs` when ongoing). The
+ *   start line is always drawn so a 1-bucket range stays discoverable.
  */
 export function buildIncidentMarkers({
   bucketStartsMs,
@@ -260,10 +275,10 @@ export function renderIncidentsTooltipBlock(
           ? `<div style="opacity:0.85;margin-left:14px;">${escapeHtml(incident.issueName)}</div>`
           : ""
       const timing =
-        incident.kind === "issue.escalating" && incident.endedAt
-          ? `${formatTimeShort(incident.startedAt)} → ${formatTimeShort(incident.endedAt)}`
-          : incident.kind === "issue.escalating"
-            ? `${formatTimeShort(incident.startedAt)} → ongoing`
+        incident.endedAt === null
+          ? `${formatTimeShort(incident.startedAt)} → ongoing`
+          : isRangedIncident(incident)
+            ? `${formatTimeShort(incident.startedAt)} → ${formatTimeShort(incident.endedAt)}`
             : formatTimeShort(incident.startedAt)
       return `<div style="margin-top:4px">${dot}<b>${kindLabel}</b> · <span style="opacity:0.75">${sevLabel}</span><div style="margin-left:14px;opacity:0.65;font-size:11px">${escapeHtml(timing)}</div>${issueLine}</div>`
     })

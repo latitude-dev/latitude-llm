@@ -43,13 +43,17 @@ const isEscalatingExpr = sql<boolean>`exists (
     and ${alertIncidents.endedAt} is null
 )`
 
-const isRegressedExpr = sql<boolean>`exists (
+// Gated on `issues.resolved_at IS NULL` so a "resolved → regressed → resolved
+// again" issue doesn't keep showing as regressed forever — the historical
+// regression incident stays in the table, but the flag clears once the issue is
+// resolved again.
+const isRegressedExpr = sql<boolean>`(${issues.resolvedAt} is null and exists (
   select 1
   from ${alertIncidents}
   where ${alertIncidents.sourceType} = 'issue'
     and ${alertIncidents.sourceId} = ${outerIssueId}
     and ${alertIncidents.kind} = 'issue.regressed'
-)`
+))`
 
 const issueColumnsWithLifecycle = {
   ...getTableColumns(issues),

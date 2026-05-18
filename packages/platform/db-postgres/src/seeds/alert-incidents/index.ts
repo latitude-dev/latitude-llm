@@ -115,7 +115,8 @@ const seedAlertIncidents: Seeder = {
               sourceId: issueId,
               kind: "issue.new",
               startedAt: fixtureDates.createdAt,
-              endedAt: null,
+              // Eventful kinds collapse to a single point in time.
+              endedAt: fixtureDates.createdAt,
             }),
           )
         }
@@ -168,7 +169,7 @@ const seedAlertIncidents: Seeder = {
               sourceId: scopedIssueId,
               kind: "issue.regressed",
               startedAt: regressionStartedAt,
-              endedAt: null,
+              endedAt: regressionStartedAt,
             }),
           )
         }
