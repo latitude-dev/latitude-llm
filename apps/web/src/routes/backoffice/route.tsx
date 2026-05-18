@@ -1,6 +1,6 @@
 import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, notFound, Outlet, useRouter } from "@tanstack/react-router"
-import { ArrowLeft, Building2, Flag, Search, ShieldAlertIcon } from "lucide-react"
+import { ArrowLeft, Building2, Flag, Search, ShieldAlertIcon, Sparkles } from "lucide-react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
 import { requireAdminSession } from "../../server/admin-auth.ts"
@@ -103,6 +103,13 @@ function BackofficeLayout() {
                 label="Feature Flags"
                 to="/backoffice/feature-flags"
                 active={pathname === "/backoffice/feature-flags" || pathname === "/backoffice/feature-flags/"}
+                collapsed={collapsed}
+              />
+              <NavItem
+                icon={Sparkles}
+                label="Wrapped"
+                to="/backoffice/wrapped"
+                active={pathname === "/backoffice/wrapped" || pathname === "/backoffice/wrapped/"}
                 collapsed={collapsed}
               />
             </>

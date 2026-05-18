@@ -19,7 +19,7 @@ import {
   type WrappedReportSummary,
   type WrappedReportType,
 } from "@domain/spans"
-import { and, desc, eq, gte } from "drizzle-orm"
+import { and, asc, desc, eq, gte, lte } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { wrappedReports } from "../schema/wrapped-reports.ts"
@@ -138,6 +138,46 @@ export const WrappedReportRepositoryLive = Layer.effect(
         )
         if (!row) return null
         return { id: WrappedReportId(row.id), createdAt: row.createdAt }
+      }),
+
+    listLatestPerProjectAdmin: ({
+      type,
+      olderThan,
+    }: {
+      type: WrappedReportType
+      olderThan: Date
+    }): Effect.Effect<readonly WrappedReportRecord[], ReturnType<typeof toRepositoryError>, SqlClient> =>
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        // Cross-org read for the backoffice analytics page — requires the
+        // admin Postgres client (BYPASSRLS), same constraint as `findById`.
+        //
+        // Approach: order by (project_id, created_at DESC) so rows for each
+        // project are contiguous with the most recent first, then dedupe to
+        // first-seen-per-project client-side. Equivalent to PG's
+        // `DISTINCT ON (project_id)` without the dialect-specific syntax,
+        // and at backoffice scale (hundreds of rows) the constant factor
+        // is irrelevant. If the cohort ever grows past ~10k rows, switch
+        // to a raw `DISTINCT ON` query.
+        const rows = yield* sqlClient.query((db) =>
+          db
+            .select()
+            .from(wrappedReports)
+            .where(and(eq(wrappedReports.type, type), lte(wrappedReports.createdAt, olderThan)))
+            .orderBy(asc(wrappedReports.projectId), desc(wrappedReports.createdAt)),
+        )
+        const seen = new Set<string>()
+        const latest: typeof rows = []
+        for (const row of rows) {
+          if (seen.has(row.projectId)) continue
+          seen.add(row.projectId)
+          latest.push(row)
+        }
+        const records: WrappedReportRecord[] = []
+        for (const row of latest) {
+          records.push(yield* toDomainRecord(row))
+        }
+        return records
       }),
   }),
 )

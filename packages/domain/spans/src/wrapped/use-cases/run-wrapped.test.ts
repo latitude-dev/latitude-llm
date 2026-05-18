@@ -188,6 +188,7 @@ const setupHarness = (options: {
       }),
     findById: (id) => Effect.fail(new NotFoundError({ entity: "WrappedReport", id })),
     findLatestForProject: () => Effect.succeed(null),
+    listLatestPerProjectAdmin: () => Effect.succeed([]),
   }
 
   const layer = Layer.mergeAll(
