@@ -1,29 +1,40 @@
 import { Effect } from "effect"
+// @ts-expect-error TS6133 - React required at runtime for JSX in workers
+// biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
+import React from "react"
+import { renderEmail } from "../../../utils/render.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
+import { ALERT_KIND_TO_LABEL, IncidentClosedEmail } from "./EmailTemplate.tsx"
 
-const ALERT_KIND_TO_LABEL = {
-  "issue.new": "New issue",
-  "issue.regressed": "Regressed issue",
-  "issue.escalating": "Escalating issue",
-} as const
-
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")
+const buildIssueUrl = (
+  ctx: NotificationEmailRenderContext,
+  payload: Parameters<NotificationEmailRenderer<"incident.closed">>[0],
+): string | undefined => {
+  if (!payload.projectSlug || !payload.issueId) return undefined
+  return `${ctx.webAppUrl}/projects/${payload.projectSlug}/issues?issueId=${encodeURIComponent(payload.issueId)}`
+}
 
 const buildIncidentClosedHtml = async (
   payload: Parameters<NotificationEmailRenderer<"incident.closed">>[0],
   ctx: NotificationEmailRenderContext,
 ) => {
-  const label = ALERT_KIND_TO_LABEL[payload.incidentKind] ?? payload.incidentKind
+  const userName = ctx.recipient.name ?? "there"
+  const label = ALERT_KIND_TO_LABEL[payload.incidentKind]
   const issueRef = payload.issueName ?? "an issue"
-  const recipient = ctx.recipient.name ?? "there"
-  const linkPath =
-    payload.projectSlug && payload.issueId ? `/projects/${payload.projectSlug}/issues/${payload.issueId}` : "/projects"
-  const link = `${ctx.webAppUrl}${linkPath}`
-  const subject = `[Latitude] ${label} resolved: ${issueRef}`
-  const text = `Hi ${recipient},\n\n${label} resolved for "${issueRef}".\n\n${link}\n\n— Latitude`
-  const html = `<p>Hi ${escapeHtml(recipient)},</p><p>${escapeHtml(label)} resolved for "<strong>${escapeHtml(issueRef)}</strong>".</p><p><a href="${link}">View issue</a></p><p>— Latitude</p>`
-  return { subject, html, text }
+  const issueUrl = buildIssueUrl(ctx, payload)
+  const html = await renderEmail(
+    <IncidentClosedEmail
+      userName={userName}
+      incidentKind={payload.incidentKind}
+      issueName={payload.issueName}
+      issueUrl={issueUrl}
+    />,
+  )
+  return {
+    html,
+    subject: `[Latitude] ${label} resolved: ${issueRef}`,
+    text: `Hi ${userName},\n\n${label} resolved: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
+  }
 }
 
 export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"> = (payload, ctx) =>

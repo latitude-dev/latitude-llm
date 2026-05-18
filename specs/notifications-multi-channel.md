@@ -163,4 +163,3 @@ The user-facing preferences surface stays stable — a new kind under an existin
 - Per-(user, project, kind) subscription filtering (`resolveRecipients` seam preserved).
 - Email digesting / batching (one email per notification, real-time).
 - Bypass-preferences flag for "must-deliver" kinds.
-- React Email polish for the per-kind templates other than `wrapped.report` (skeletons land first; a follow-up replaces incident + custom-message HTML with `@react-email/components`-based layouts matching the rest of the email surface).

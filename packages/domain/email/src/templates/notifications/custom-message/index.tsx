@@ -1,24 +1,43 @@
 import { Effect } from "effect"
+// @ts-expect-error TS6133 - React required at runtime for JSX in workers
+// biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
+import React from "react"
+import { renderEmail } from "../../../utils/render.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
+import { CustomMessageEmail } from "./EmailTemplate.tsx"
 
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")
+/**
+ * Resolves a payload link to an absolute URL. Bare paths (`/projects/...`)
+ * are prefixed with `ctx.webAppUrl`; already-absolute links are passed
+ * through.
+ */
+const resolveLinkUrl = (
+  ctx: NotificationEmailRenderContext,
+  link: string | undefined,
+): string | undefined => {
+  if (!link) return undefined
+  return link.startsWith("http") ? link : `${ctx.webAppUrl}${link}`
+}
 
 const buildCustomMessageHtml = async (
   payload: Parameters<NotificationEmailRenderer<"custom.message">>[0],
   ctx: NotificationEmailRenderContext,
 ) => {
-  const recipient = ctx.recipient.name ?? "there"
-  const body = payload.content ?? ""
-  const link = payload.link
-    ? payload.link.startsWith("http")
-      ? payload.link
-      : `${ctx.webAppUrl}${payload.link}`
-    : undefined
-  const subject = `[Latitude] ${payload.title}`
-  const text = `Hi ${recipient},\n\n${body}${link ? `\n\n${link}` : ""}\n\n— Latitude`
-  const html = `<p>Hi ${escapeHtml(recipient)},</p>${body ? `<p>${escapeHtml(body)}</p>` : ""}${link ? `<p><a href="${link}">Open</a></p>` : ""}<p>— Latitude</p>`
-  return { subject, html, text }
+  const userName = ctx.recipient.name ?? "there"
+  const linkUrl = resolveLinkUrl(ctx, payload.link)
+  const html = await renderEmail(
+    <CustomMessageEmail
+      userName={userName}
+      title={payload.title}
+      content={payload.content}
+      linkUrl={linkUrl}
+    />,
+  )
+  return {
+    html,
+    subject: `[Latitude] ${payload.title}`,
+    text: `Hi ${userName},\n\n${payload.content ?? payload.title}${linkUrl ? `\n\n${linkUrl}` : ""}\n\n— Latitude`,
+  }
 }
 
 export const customMessageRenderer: NotificationEmailRenderer<"custom.message"> = (payload, ctx) =>
