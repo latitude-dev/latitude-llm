@@ -89,10 +89,10 @@ function buildDraftAnnotationScore(): Score {
     organizationId: cuid,
     projectId: projectCuid,
     sessionId: null,
-    traceId: traceIdRaw,
+    traceId,
     spanId: null,
     source: "annotation",
-    sourceId: "UI",
+    sourceId: "UI" as const,
     simulationId: null,
     issueId: null,
     value: 0.2,
@@ -232,7 +232,7 @@ describe("enrichAnnotationForPublicationUseCase", () => {
   it("persists raw feedback without calling AI for system-authored (e.g. flagger) annotation drafts", async () => {
     const draft = {
       ...buildDraftAnnotationScore(),
-      sourceId: "SYSTEM",
+      sourceId: "SYSTEM" as const,
       annotatorId: null,
       metadata: {
         rawFeedback: "Tool invocation failed with HTTP 502 from the payments connector",
