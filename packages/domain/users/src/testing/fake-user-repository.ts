@@ -7,9 +7,7 @@ type UserRepositoryShape = (typeof UserRepository)["Service"]
 
 export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape>) => {
   const users = new Map<string, User>()
-  const namesSet: { userId: string; name: string }[] = []
-
-  const jobTitlesSet: { userId: string; jobTitle: string }[] = []
+  const updates: { userId: string; jobTitle?: string; phoneNumber?: string }[] = []
 
   const repository: UserRepositoryShape = {
     findById: (userId) => {
@@ -24,21 +22,23 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
       return Effect.succeed(user)
     },
 
-    setNameIfMissing: (params) =>
+    update: (params) =>
       Effect.sync(() => {
-        if (params.name.trim()) {
-          namesSet.push(params)
-        }
-      }),
-
-    setJobTitle: (params) =>
-      Effect.sync(() => {
-        const trimmed = params.jobTitle.trim()
-        if (!trimmed) return
-        jobTitlesSet.push({ userId: params.userId, jobTitle: trimmed })
+        const trimmedJobTitle = params.jobTitle?.trim() || undefined
+        const trimmedPhoneNumber = params.phoneNumber?.trim() || undefined
+        if (!trimmedJobTitle && !trimmedPhoneNumber) return
+        updates.push({
+          userId: params.userId,
+          ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
+          ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
+        })
         const existing = users.get(params.userId)
         if (existing) {
-          users.set(params.userId, { ...existing, jobTitle: trimmed })
+          users.set(params.userId, {
+            ...existing,
+            ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
+            ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
+          })
         }
       }),
 
@@ -57,5 +57,5 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
     ...overrides,
   }
 
-  return { repository, users, namesSet, jobTitlesSet }
+  return { repository, users, updates }
 }
