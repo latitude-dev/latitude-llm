@@ -52,6 +52,7 @@ import { authClient } from "../../../../../lib/auth-client.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 import { useAuthenticatedUser } from "../../../-route-data.ts"
+import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/account")({
   component: AccountSettingsPage,
@@ -443,8 +444,7 @@ function AccountSettingsPage() {
   })
 
   return (
-    <>
-      <Text.H4 weight="bold">Account</Text.H4>
+    <SettingsPage title="Account" description="Manage your personal account">
       <form
         className="flex w-full flex-col gap-3 @[800px]:w-1/2"
         onSubmit={(e) => {
@@ -491,6 +491,6 @@ function AccountSettingsPage() {
           </Button>
         </div>
       </div>
-    </>
+    </SettingsPage>
   )
 }
