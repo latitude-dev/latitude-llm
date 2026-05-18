@@ -2,11 +2,9 @@ import { generateId, OrganizationId, ProjectId } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
-import { useQueries } from "@tanstack/react-query"
-import { useMemo } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
-import type { ProjectRecord, ProjectStats } from "./projects.functions.ts"
-import { createProject, deleteProject, getProjectStats, listProjects, updateProject } from "./projects.functions.ts"
+import type { ProjectRecord } from "./projects.functions.ts"
+import { createProject, deleteProject, listProjects, updateProject } from "./projects.functions.ts"
 
 const queryClient = getQueryClient()
 
@@ -79,12 +77,6 @@ export function createProjectMutation(name: string) {
   return { projectId, transaction }
 }
 
-export function renameProjectMutation(id: string, name: string) {
-  return projectsCollection.update(ProjectId(id), (draft) => {
-    draft.name = name
-  })
-}
-
 export function updateProjectMutation(id: string, patch: Partial<ProjectRecord>) {
   return projectsCollection.update(ProjectId(id), (draft) => {
     Object.assign(draft, patch)
@@ -112,29 +104,4 @@ export const useProjectsCollection = <TContext extends Context = ProjectsContext
     if (queryFn) return queryFn(projects)
     return projects as unknown as QueryBuilder<TContext>
   }, deps)
-}
-
-export function useProjectsStats(projectIds: readonly string[]) {
-  const queries = useQueries({
-    queries: projectIds.map((projectId) => ({
-      queryKey: ["project-stats", projectId],
-      queryFn: () => getProjectStats({ data: { projectId } }),
-      staleTime: 60_000,
-    })),
-  })
-
-  const statsByProjectId = useMemo(() => {
-    const map = new Map<string, ProjectStats>()
-    projectIds.forEach((projectId, index) => {
-      const query = queries[index]
-      if (query.data) {
-        map.set(projectId, query.data)
-      }
-    })
-    return map
-  }, [projectIds, queries])
-
-  const isLoading = queries.some((q) => q.isLoading)
-
-  return { statsByProjectId, isLoading }
 }

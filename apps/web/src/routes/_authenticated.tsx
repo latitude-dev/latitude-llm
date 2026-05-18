@@ -3,7 +3,7 @@ import { show as showIntercom } from "@intercom/messenger-js-sdk"
 import { Avatar, Button, cn, DropdownMenu, Icon, LatitudeLogo, Text, Tooltip, useToast } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, HatGlassesIcon, LifeBuoy, Moon, Plus, ShieldAlertIcon, Sun } from "lucide-react"
 import { useState } from "react"
 import { createBillingCheckoutSession, getBillingOverview } from "../domains/billing/billing.functions.ts"
@@ -218,9 +218,7 @@ function NavHeader() {
   return (
     <header className="w-full bg-background border-b border-border h-12 flex items-center px-4 shrink-0">
       <div className="flex items-center gap-2 flex-1">
-        <Link to="/">
-          <LatitudeLogo className="h-5 w-5" />
-        </Link>
+        <LatitudeLogo className="h-5 w-5" />
         <span className="text-muted-foreground text-sm select-none">/</span>
         <DropdownMenu
           side="bottom"

@@ -9,7 +9,7 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
-import { and, eq, isNull, ne, sql } from "drizzle-orm"
+import { and, asc, eq, isNull, ne, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { projects } from "../schema/projects.ts"
@@ -51,7 +51,8 @@ export const ProjectRepositoryLive = Layer.effect(
             db
               .select()
               .from(projects)
-              .where(and(eq(projects.organizationId, organizationId), isNull(projects.deletedAt))),
+              .where(and(eq(projects.organizationId, organizationId), isNull(projects.deletedAt)))
+              .orderBy(asc(projects.createdAt), asc(projects.id)),
           )
           .pipe(Effect.map((results) => results.map(toDomainProject)))
       })
@@ -60,7 +61,13 @@ export const ProjectRepositoryLive = Layer.effect(
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         return yield* sqlClient
-          .query((db, organizationId) => db.select().from(projects).where(eq(projects.organizationId, organizationId)))
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(projects)
+              .where(eq(projects.organizationId, organizationId))
+              .orderBy(asc(projects.createdAt), asc(projects.id)),
+          )
           .pipe(Effect.map((results) => results.map(toDomainProject)))
       })
 
