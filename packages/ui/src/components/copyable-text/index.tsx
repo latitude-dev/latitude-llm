@@ -69,11 +69,12 @@ export function CopyableText({
       type="button"
       onClick={handleCopy}
       className={cn(
-        "inline-flex w-fit max-w-full shrink-0 items-center self-start rounded-xl cursor-pointer transition-colors",
+        "inline-flex w-fit max-w-full items-center self-start rounded-xl cursor-pointer transition-colors",
         "border bg-secondary text-muted-foreground hover:bg-muted",
         config.paddingClass,
         config.roundedClass,
-        ellipsis && "min-w-0",
+
+        ellipsis ? "min-w-0" : "shrink-0",
       )}
     >
       <Label color="foregroundMuted" ellipsis={ellipsis}>

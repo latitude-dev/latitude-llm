@@ -1,5 +1,8 @@
+import { ScoreRepository, type TraceAnnotationCounts } from "@domain/scores"
+import type { ProjectId, RepositoryError, SqlClient, TraceId } from "@domain/shared"
 import type { Trace, TraceDetail } from "@domain/spans"
 import { z } from "@hono/zod-openapi"
+import { Effect } from "effect"
 import { Paginated } from "../pagination.ts"
 
 const nullableString = () => z.string().nullable()
@@ -74,6 +77,16 @@ const traceFields = {
   rootSpanName: nullableString().describe(
     "`name` attribute of the root span. `null` when no root span has been ingested.",
   ),
+  positiveAnnotationCount: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe("Number of `passed = true` annotations attached to this trace."),
+  negativeAnnotationCount: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe("Number of `passed = false` annotations attached to this trace."),
 } as const
 
 const TraceSchema = z.object(traceFields).openapi("Trace")
@@ -85,10 +98,14 @@ const GenAIMessageSchema = z
   .openapi("GenAIMessage")
   .describe("Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls).")
 
+// `GenAISystem` from `rosetta-ai` is an *array* of part objects (`text`, `tool_definition`, …),
+// not a single record. The previous record-shaped schema rejected real responses inside MCP
+// clients with `expected: "record", received: "array"`. The array shape now matches the runtime
+// value emitted by `toTraceDetailResponse` / `toSpanDetailResponse`.
 const GenAISystemSchema = z
-  .record(z.string(), z.unknown())
+  .array(z.record(z.string(), z.unknown()))
   .openapi("GenAISystem")
-  .describe("System instructions in OpenTelemetry GenAI format.")
+  .describe("System instructions in OpenTelemetry GenAI format — an array of part objects.")
 
 export const TraceDetailSchema = z
   .object({
@@ -109,49 +126,75 @@ export const TraceDetailSchema = z
   })
   .openapi("TraceDetail")
 
+// Indicators data — positive/negative annotation counts shown in the trace table's
+// "Indicators" column — comes from a separate Postgres read (the `scores` table), not
+// from the ClickHouse-backed trace row. Shared across every trace-returning endpoint so
+// the inline indicators on each `TraceSchema` row are fetched in exactly one place:
+// handlers call `fetchTraceIndicators` after listing traces, then pass the resulting
+// `Map` to `toTraceResponse` / `toTraceDetailResponse`. Missing entries default to `0/0`
+// inside the mapper so callers never see `undefined` for these fields.
+type TraceIndicators = ReadonlyMap<string, TraceAnnotationCounts>
+
+export const fetchTraceIndicators = (input: {
+  readonly projectId: ProjectId
+  readonly traceIds: readonly TraceId[]
+}): Effect.Effect<TraceIndicators, RepositoryError, ScoreRepository | SqlClient> =>
+  Effect.gen(function* () {
+    if (input.traceIds.length === 0) return new Map<string, TraceAnnotationCounts>()
+    const scoreRepo = yield* ScoreRepository
+    const counts = yield* scoreRepo.countAnnotationsByTraceIds(input)
+    return new Map(counts.map((entry) => [entry.traceId as string, entry] as const))
+  })
+
 // ClickHouse doesn't support NULL in our trace columns, so the domain entity
 // uses `""` as the absent sentinel for SDK-optional ids. Normalise here so
 // the public API surface exposes a proper `string | null` instead of leaking
 // the storage-layer encoding.
-export const toTraceResponse = (trace: Trace) => ({
-  organizationId: trace.organizationId as string,
-  projectId: trace.projectId as string,
-  traceId: trace.traceId as string,
-  spanCount: trace.spanCount,
-  errorCount: trace.errorCount,
-  startTime: trace.startTime.toISOString(),
-  endTime: trace.endTime.toISOString(),
-  durationNs: trace.durationNs,
-  timeToFirstTokenNs: trace.timeToFirstTokenNs,
-  tokensInput: trace.tokensInput,
-  tokensOutput: trace.tokensOutput,
-  tokensCacheRead: trace.tokensCacheRead,
-  tokensCacheCreate: trace.tokensCacheCreate,
-  tokensReasoning: trace.tokensReasoning,
-  tokensTotal: trace.tokensTotal,
-  costInputMicrocents: trace.costInputMicrocents,
-  costOutputMicrocents: trace.costOutputMicrocents,
-  costTotalMicrocents: trace.costTotalMicrocents,
-  sessionId: emptyToNull(trace.sessionId as string),
-  userId: emptyToNull(trace.userId as string),
-  simulationId: emptyToNull(trace.simulationId as string),
-  tags: [...trace.tags],
-  models: [...trace.models],
-  providers: [...trace.providers],
-  serviceNames: [...trace.serviceNames],
-  rootSpanId: emptyToNull(trace.rootSpanId as string),
-  rootSpanName: emptyToNull(trace.rootSpanName),
-})
+export const toTraceResponse = (trace: Trace, indicators?: TraceIndicators | TraceAnnotationCounts) => {
+  const traceIndicators =
+    indicators instanceof Map ? indicators.get(trace.traceId as string) : (indicators ?? undefined)
+  return {
+    organizationId: trace.organizationId as string,
+    projectId: trace.projectId as string,
+    traceId: trace.traceId as string,
+    spanCount: trace.spanCount,
+    errorCount: trace.errorCount,
+    startTime: trace.startTime.toISOString(),
+    endTime: trace.endTime.toISOString(),
+    durationNs: trace.durationNs,
+    timeToFirstTokenNs: trace.timeToFirstTokenNs,
+    tokensInput: trace.tokensInput,
+    tokensOutput: trace.tokensOutput,
+    tokensCacheRead: trace.tokensCacheRead,
+    tokensCacheCreate: trace.tokensCacheCreate,
+    tokensReasoning: trace.tokensReasoning,
+    tokensTotal: trace.tokensTotal,
+    costInputMicrocents: trace.costInputMicrocents,
+    costOutputMicrocents: trace.costOutputMicrocents,
+    costTotalMicrocents: trace.costTotalMicrocents,
+    sessionId: emptyToNull(trace.sessionId as string),
+    userId: emptyToNull(trace.userId as string),
+    simulationId: emptyToNull(trace.simulationId as string),
+    tags: [...trace.tags],
+    models: [...trace.models],
+    providers: [...trace.providers],
+    serviceNames: [...trace.serviceNames],
+    rootSpanId: emptyToNull(trace.rootSpanId as string),
+    rootSpanName: emptyToNull(trace.rootSpanName),
+    positiveAnnotationCount: traceIndicators?.positiveCount ?? 0,
+    negativeAnnotationCount: traceIndicators?.negativeCount ?? 0,
+  }
+}
 
 // rosetta-ai's `GenAIMessage` / `GenAISystem` types declare more specific
 // shapes than `Record<string, unknown>` and TS rejects the direct cast as
 // non-overlapping. Going through `unknown` is the documented escape hatch —
 // the payload IS a JSON object at runtime, the cast is purely a type-level
 // bridge for the response schema.
-export const toTraceDetailResponse = (trace: TraceDetail) => ({
-  ...toTraceResponse(trace),
+export const toTraceDetailResponse = (trace: TraceDetail, indicators?: TraceIndicators | TraceAnnotationCounts) => ({
+  ...toTraceResponse(trace, indicators),
   metadata: { ...trace.metadata },
-  systemInstructions: trace.systemInstructions as unknown as Record<string, unknown>,
+  systemInstructions: trace.systemInstructions.map((part) => part as unknown as Record<string, unknown>),
   inputMessages: trace.inputMessages.map((m) => m as unknown as Record<string, unknown>),
   outputMessages: trace.outputMessages.map((m) => m as unknown as Record<string, unknown>),
   allMessages: trace.allMessages.map((m) => m as unknown as Record<string, unknown>),

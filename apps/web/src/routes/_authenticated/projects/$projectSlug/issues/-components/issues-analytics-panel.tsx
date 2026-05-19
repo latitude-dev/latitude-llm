@@ -9,9 +9,9 @@ import type { IssuesListResultRecord } from "../../../../../../domains/issues/is
 import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from "./issue-formatters.ts"
 
 const COUNT_CARDS = [
+  { key: "ongoingIssues", label: "Ongoing" },
   { key: "newIssues", label: "New" },
   { key: "escalatingIssues", label: "Escalating" },
-  { key: "ongoingIssues", label: "Ongoing" },
   { key: "regressedIssues", label: "Regressed" },
   { key: "resolvedIssues", label: "Resolved" },
   { key: "seenOccurrences", label: "Occurrences" },

@@ -1926,6 +1926,18 @@
                     }
                   ],
                   "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+                },
+                "positiveAnnotationCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of `passed = true` annotations attached to this trace."
+                },
+                "negativeAnnotationCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of `passed = false` annotations attached to this trace."
                 }
               },
               "required": [
@@ -1955,7 +1967,9 @@
                 "providers",
                 "serviceNames",
                 "rootSpanId",
-                "rootSpanName"
+                "rootSpanName",
+                "positiveAnnotationCount",
+                "negativeAnnotationCount"
               ],
               "additionalProperties": false
             },
@@ -2173,6 +2187,18 @@
             ],
             "description": "`name` attribute of the root span. `null` when no root span has been ingested."
           },
+          "positiveAnnotationCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Number of `passed = true` annotations attached to this trace."
+          },
+          "negativeAnnotationCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Number of `passed = false` annotations attached to this trace."
+          },
           "metadata": {
             "type": "object",
             "propertyNames": {
@@ -2184,12 +2210,15 @@
             "description": "Free-form metadata attached at ingest time."
           },
           "systemInstructions": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
             },
-            "additionalProperties": {},
-            "description": "System instructions in OpenTelemetry GenAI format."
+            "description": "System instructions in OpenTelemetry GenAI format — an array of part objects."
           },
           "inputMessages": {
             "type": "array",
@@ -2256,6 +2285,8 @@
           "serviceNames",
           "rootSpanId",
           "rootSpanName",
+          "positiveAnnotationCount",
+          "negativeAnnotationCount",
           "metadata",
           "systemInstructions",
           "inputMessages",
@@ -2910,12 +2941,15 @@
             "description": "Free-form metadata attached at ingest time."
           },
           "systemInstructions": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
             },
-            "additionalProperties": {},
-            "description": "System instructions in OpenTelemetry GenAI format."
+            "description": "System instructions in OpenTelemetry GenAI format — an array of part objects."
           },
           "inputMessages": {
             "type": "array",
@@ -5297,6 +5331,18 @@
                     }
                   ],
                   "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+                },
+                "positiveAnnotationCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of `passed = true` annotations attached to this trace."
+                },
+                "negativeAnnotationCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of `passed = false` annotations attached to this trace."
                 }
               },
               "required": [
@@ -5326,7 +5372,9 @@
                 "providers",
                 "serviceNames",
                 "rootSpanId",
-                "rootSpanName"
+                "rootSpanName",
+                "positiveAnnotationCount",
+                "negativeAnnotationCount"
               ],
               "additionalProperties": false
             },
@@ -6298,6 +6346,18 @@
                     }
                   ],
                   "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+                },
+                "positiveAnnotationCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of `passed = true` annotations attached to this trace."
+                },
+                "negativeAnnotationCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Number of `passed = false` annotations attached to this trace."
                 }
               },
               "required": [
@@ -6327,7 +6387,9 @@
                 "providers",
                 "serviceNames",
                 "rootSpanId",
-                "rootSpanName"
+                "rootSpanName",
+                "positiveAnnotationCount",
+                "negativeAnnotationCount"
               ],
               "additionalProperties": false
             },
@@ -6985,7 +7047,7 @@
                 },
                 "token": {
                   "type": "string",
-                  "description": "Masked token preview safe to display in lists. Use `GET /api-keys/{id}` to retrieve the full token."
+                  "description": "Masked token preview safe to display in lists. Use `GET /api-keys/{apiKeyId}` to retrieve the full token."
                 },
                 "lastUsedAt": {
                   "anyOf": [
@@ -7046,13 +7108,14 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "id": {
+          "apiKeyId": {
             "type": "string",
-            "description": "Resource ID"
+            "minLength": 1,
+            "description": "API-key identifier."
           }
         },
         "required": [
-          "id"
+          "apiKeyId"
         ],
         "additionalProperties": false
       },
@@ -7128,9 +7191,10 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "id": {
+          "apiKeyId": {
             "type": "string",
-            "description": "Resource ID"
+            "minLength": 1,
+            "description": "API-key identifier."
           },
           "name": {
             "type": "string",
@@ -7139,7 +7203,7 @@
           }
         },
         "required": [
-          "id",
+          "apiKeyId",
           "name"
         ],
         "additionalProperties": false
@@ -7216,13 +7280,14 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "id": {
+          "apiKeyId": {
             "type": "string",
-            "description": "Resource ID"
+            "minLength": 1,
+            "description": "API-key identifier."
           }
         },
         "required": [
-          "id"
+          "apiKeyId"
         ],
         "additionalProperties": false
       }
@@ -7869,13 +7934,14 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "id": {
+          "memberId": {
             "type": "string",
-            "description": "Resource ID"
+            "minLength": 1,
+            "description": "Membership identifier."
           }
         },
         "required": [
-          "id"
+          "memberId"
         ],
         "additionalProperties": false
       },
@@ -7962,9 +8028,10 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "id": {
+          "memberId": {
             "type": "string",
-            "description": "Resource ID"
+            "minLength": 1,
+            "description": "Membership identifier."
           },
           "role": {
             "type": "string",
@@ -7976,7 +8043,7 @@
           }
         },
         "required": [
-          "id",
+          "memberId",
           "role"
         ],
         "additionalProperties": false
@@ -8064,13 +8131,14 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "id": {
+          "memberId": {
             "type": "string",
-            "description": "Resource ID"
+            "minLength": 1,
+            "description": "Membership identifier."
           }
         },
         "required": [
-          "id"
+          "memberId"
         ],
         "additionalProperties": false
       }

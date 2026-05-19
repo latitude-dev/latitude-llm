@@ -96,10 +96,6 @@ export const TracesRefSchema = z
 // (resolved by `createAuthMiddleware` + `createOrganizationContextMiddleware`),
 // so the path schemas carry only resource identifiers — not the organization.
 
-export const IdParamsSchema = z.object({
-  id: z.string().describe("Resource ID"),
-})
-
 export const ProjectParamsSchema = z.object({
   projectSlug: z.string().describe("Project slug (human-readable identifier)"),
 })
