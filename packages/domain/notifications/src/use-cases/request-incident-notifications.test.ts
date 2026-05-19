@@ -6,6 +6,7 @@ import {
 } from "@domain/alerts"
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
 import type { AnnotationScore, EvaluationScore } from "@domain/scores"
+import type { IncidentEventPayload } from "../entities/notification.ts"
 import {
   type IssueEscalationThresholdSeries,
   type IssueOccurrenceBucket,
@@ -312,7 +313,8 @@ describe("requestIncidentNotificationsUseCase", () => {
 
     expect(result.status).toBe("ok")
     if (result.status !== "ok") throw new Error("unreachable")
-    expect(result.requests[0]?.payload.tags).toEqual(["alpha", "bravo", "Charlie", "delta", "echo"])
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.tags).toEqual(["alpha", "bravo", "Charlie", "delta", "echo"])
   })
 
   it("omits tags when the issue has none", async () => {
@@ -326,7 +328,8 @@ describe("requestIncidentNotificationsUseCase", () => {
 
     expect(result.status).toBe("ok")
     if (result.status !== "ok") throw new Error("unreachable")
-    expect(result.requests[0]?.payload.tags).toBeUndefined()
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.tags).toBeUndefined()
   })
 
   it("skips tags on incident.closed (recovery emails don't show source context)", async () => {
@@ -395,7 +398,8 @@ describe("requestIncidentNotificationsUseCase", () => {
 
     expect(result.status).toBe("ok")
     if (result.status !== "ok") throw new Error("unreachable")
-    expect(result.requests[0]?.payload.sampleExcerpt).toEqual({
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.sampleExcerpt).toEqual({
       source: "annotation",
       text: "Reviewer flagged a tool-call loop.",
       truncated: false,
@@ -443,7 +447,8 @@ describe("requestIncidentNotificationsUseCase", () => {
 
     expect(result.status).toBe("ok")
     if (result.status !== "ok") throw new Error("unreachable")
-    expect(result.requests[0]?.payload.sampleExcerpt).toEqual({
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.sampleExcerpt).toEqual({
       source: "evaluation",
       text: "Output mentioned the customer's competitor.",
       truncated: false,
@@ -491,8 +496,9 @@ describe("requestIncidentNotificationsUseCase", () => {
 
     expect(result.status).toBe("ok")
     if (result.status !== "ok") throw new Error("unreachable")
-    expect(result.requests[0]?.payload.sampleExcerpt?.truncated).toBe(true)
-    expect(result.requests[0]?.payload.sampleExcerpt?.text.length).toBe(200)
+    const truncatedPayload = result.requests[0]?.payload as IncidentEventPayload
+    expect(truncatedPayload.sampleExcerpt?.truncated).toBe(true)
+    expect(truncatedPayload.sampleExcerpt?.text.length).toBe(200)
   })
 
   it("snapshots breach scalars on incident.opened when entrySignals are present", async () => {

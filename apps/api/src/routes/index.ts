@@ -30,7 +30,10 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
 
   registerHealthRoute({ app })
   registerWellKnownRoutes({ app })
-  registerIncidentTrendChartRoute({ app, adminDatabase: options.adminDatabase })
+  registerIncidentTrendChartRoute({
+    app,
+    ...(options.adminDatabase ? { adminDatabase: options.adminDatabase } : {}),
+  })
 
   v1.use("*", async (c, next) => {
     c.set("db", options.database.db)
