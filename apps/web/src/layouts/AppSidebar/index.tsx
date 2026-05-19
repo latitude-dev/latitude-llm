@@ -322,7 +322,8 @@ export function AppSidebar({
           <nav
             className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto py-6", {
               "items-center px-2": collapsed,
-              "px-6": !collapsed,
+              // Match title block horizontal inset (`p-4` above) so nav rows line up with the header.
+              "px-4": !collapsed,
             })}
           >
             {children({ collapsed })}
@@ -331,7 +332,7 @@ export function AppSidebar({
             <nav
               className={cn("flex shrink-0 flex-col gap-1 pb-6", {
                 "items-center px-2": collapsed,
-                "px-6": !collapsed,
+                "px-4": !collapsed,
               })}
             >
               {footer({ collapsed })}
