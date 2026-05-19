@@ -40,7 +40,7 @@ catalog:
   react: 19.2.5
   react-dom: 19.2.5
   rosetta-ai: 2.0.0
-  protobufjs: 8.0.2
+  protobufjs: 8.2.0
   tsdown: 0.21.9
   tsx: 4.21.0
   turbo: 2.5.8
