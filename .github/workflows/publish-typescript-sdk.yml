@@ -2,7 +2,17 @@ name: Publish TypeScript SDK
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
 
 jobs:
   publish:
@@ -14,6 +24,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - name: Publish
         uses: ./.github/actions/publish-npm-package
         with:
@@ -22,3 +34,4 @@ jobs:
           pnpm_filter: "@latitude-data/sdk"
           tag_prefix: typescript-sdk
           release_name: TypeScript SDK
+          target_commitish: ${{ inputs.ref || github.sha }}

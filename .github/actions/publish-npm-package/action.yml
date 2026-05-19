@@ -21,6 +21,10 @@ inputs:
   release_name:
     description: GitHub release name prefix (e.g. TypeScript Telemetry).
     required: true
+  target_commitish:
+    description: Commit SHA or branch that the GitHub release tag should point at.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -79,13 +83,6 @@ runs:
       shell: bash
       run: pnpm --filter ${{ inputs.pnpm_filter }} test
 
-    - name: Publish to npm
-      if: steps.check_version.outputs.should_publish == 'true'
-      shell: bash
-      run: pnpm publish --access public --provenance --filter ${{ inputs.pnpm_filter }} --no-git-checks
-      env:
-        NODE_AUTH_TOKEN: ""
-
     - name: Extract changelog
       if: steps.check_version.outputs.should_publish == 'true'
       id: changelog
@@ -93,20 +90,33 @@ runs:
       run: |
         VERSION="${{ steps.get_version.outputs.version }}"
         CHANGELOG="${{ inputs.package_path }}/CHANGELOG.md"
-        if [ -f "$CHANGELOG" ]; then
-          awk -v ver="$VERSION" '
-            /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
-            found { print }
-          ' "$CHANGELOG" > release_notes.md
+        if [ ! -f "$CHANGELOG" ]; then
+          echo "Missing changelog: ${CHANGELOG}"
+          exit 1
         fi
+
+        awk -v ver="$VERSION" '
+          /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
+          found { print }
+        ' "$CHANGELOG" > release_notes.md
+
         if [ ! -s release_notes.md ]; then
-          echo "Package updates and improvements" > release_notes.md
+          echo "Missing changelog entry for version ${VERSION} in ${CHANGELOG}"
+          exit 1
         fi
+
         {
           echo "body<<EOF"
           cat release_notes.md
           echo "EOF"
         } >> $GITHUB_OUTPUT
+
+    - name: Publish to npm
+      if: steps.check_version.outputs.should_publish == 'true'
+      shell: bash
+      run: pnpm publish --access public --provenance --filter ${{ inputs.pnpm_filter }} --no-git-checks
+      env:
+        NODE_AUTH_TOKEN: ""
 
     - name: Create GitHub Release
       if: steps.check_version.outputs.should_publish == 'true'
@@ -115,6 +125,7 @@ runs:
         tag_name: ${{ inputs.tag_prefix }}-${{ steps.get_version.outputs.version }}
         name: ${{ inputs.release_name }} v${{ steps.get_version.outputs.version }}
         body: ${{ steps.changelog.outputs.body }}
+        target_commitish: ${{ inputs.target_commitish }}
         draft: false
         prerelease: ${{ contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'rc') }}
         token: ${{ github.token }}

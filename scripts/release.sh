@@ -2,188 +2,120 @@
 
 set -euo pipefail
 
-# Prevent gh and git from invoking a pager (less) on long output — otherwise
-# `gh pr list` or `gh pr create` can drop the terminal into a `less` screen
-# that traps keys other than `q`, making it confusing to dismiss.
-export GH_PAGER=cat
 export GIT_PAGER=cat
-
-force_release=false
 
 usage() {
   cat <<EOF
-Usage: $0 [--force]
+Usage: $0 [--patch|--minor|--major] [version]
 
-Options:
-  --force   Continue even when main has non-release commits that the guard
-            cannot verify in development. Use only after confirming those
-            changes are present in development or intentionally dropped.
-  -h, --help
-            Show this help message.
+Tags the current commit for production and pushes the tag. Production deploys are
+triggered by pushed vX.Y.Z tags.
+
+If version is omitted, the script finds the latest vX.Y.Z tag and bumps to the
+next patch version (vX.Y.(Z+1)). Use --minor or --major to bump a different
+component. If no release tag exists yet, it starts at v0.1.0.
+
+Examples:
+  $0
+  $0 --minor
+  $0 --major
+  $0 v1.2.3
 EOF
 }
 
+bump_kind="patch"
+version=""
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
-  --force)
-    force_release=true
-    shift
-    ;;
-  -h | --help)
-    usage
-    exit 0
-    ;;
-  *)
-    echo "Unknown argument: $1"
-    echo ""
-    usage
-    exit 1
-    ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --patch)
+      bump_kind="patch"
+      shift
+      ;;
+    --minor)
+      bump_kind="minor"
+      shift
+      ;;
+    --major)
+      bump_kind="major"
+      shift
+      ;;
+    v*)
+      if [ -n "${version}" ]; then
+        usage
+        exit 1
+      fi
+      version="$1"
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      echo ""
+      usage
+      exit 1
+      ;;
   esac
 done
 
-if ! command -v gh >/dev/null 2>&1; then
-  echo "GitHub CLI (gh) is required. Install: https://cli.github.com"
+if [ -n "${version}" ] && [ "${bump_kind}" != "patch" ]; then
+  echo "Do not combine an explicit version with --minor or --major."
   exit 1
 fi
 
-echo "Fetching origin..."
-git fetch origin main development
-
-if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
-  echo "origin/main was not found."
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "Working tree has uncommitted changes. Commit or stash them before preparing a release."
   exit 1
 fi
 
-if ! git rev-parse --verify origin/development >/dev/null 2>&1; then
-  echo "origin/development was not found."
+echo "Fetching origin/development and tags..."
+git fetch origin development --tags --quiet
+
+target_sha=$(git rev-parse HEAD)
+if ! git merge-base --is-ancestor "${target_sha}" origin/development; then
+  echo "HEAD (${target_sha}) is not reachable from origin/development."
+  echo "Merge/push the commit to development before tagging it for production."
   exit 1
 fi
 
-if git diff --quiet origin/main..origin/development; then
-  echo "No commits to promote from development to main."
-  exit 0
-fi
+latest_tag=$(git tag --sort=-v:refname 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
 
-echo "Development differs from main:"
-git diff --shortstat origin/main..origin/development
-echo ""
-
-# Candidate main-only commits by SHA reachability. We verify each below by:
-# - reverse-applying the commit's patch against an `origin/development`
-#   worktree, which catches changes that were integrated as a net tree diff
-#   across one or more different commits;
-# - falling back to `git cherry` patch-id equivalence, which catches ordinary
-#   cherry-picks even when later development changes make the reverse patch too
-#   context-sensitive to apply cleanly.
-candidate_shas=$(git log \
-  --format='%H' \
-  --right-only \
-  --invert-grep \
-  --grep='^Deploy production' \
-  --grep='^Release -' \
-  origin/development...origin/main)
-
-verify_worktree=$(mktemp -d -t release-verify.XXXXXX)
-trap 'git worktree remove --force "$verify_worktree" >/dev/null 2>&1; rm -rf "$verify_worktree"' EXIT
-git worktree add --detach --quiet "$verify_worktree" origin/development
-
-main_only_commits=""
-while IFS= read -r sha; do
-  [ -z "$sha" ] && continue
-  if git diff --binary "$sha^..$sha" | git -C "$verify_worktree" apply --check --reverse >/dev/null 2>&1; then
-    continue
-  fi
-
-  cherry_status=$(git cherry origin/development "$sha" "$sha^" | awk 'NR == 1 { print $1 }')
-  if [ "$cherry_status" = "-" ]; then
-    continue
-  fi
-
-  main_only_commits+="$(git log -1 --format='%h %s' "$sha")"$'\n'
-done <<<"$candidate_shas"
-
-if [ -n "$main_only_commits" ]; then
-  echo "main has non-release commits that development does not contain:"
-  printf '%s' "$main_only_commits"
-  echo ""
-
-  if [ "$force_release" = true ]; then
-    echo "WARNING: --force supplied; skipping the main-only commit guard."
-    echo "Confirm these changes are present in development or intentionally dropped before merging the release PR."
-    echo ""
+if [ -z "${version}" ]; then
+  if [ -z "${latest_tag}" ]; then
+    version="v0.1.0"
   else
-    echo "Promoting development would remove these changes from production."
-    echo "Cherry-pick or merge them into development first, then run this script again."
-    exit 1
+    semver="${latest_tag#v}"
+    IFS=. read -r major minor patch <<<"${semver}"
+    case "${bump_kind}" in
+      patch)
+        version="v${major}.${minor}.$((patch + 1))"
+        ;;
+      minor)
+        version="v${major}.$((minor + 1)).0"
+        ;;
+      major)
+        version="v$((major + 1)).0.0"
+        ;;
+    esac
   fi
 fi
 
-existing_pr=$(gh pr list \
-  --base main \
-  --state open \
-  --limit 100 \
-  --json number,headRefName,url \
-  --jq '[.[] | select(.headRefName | startswith("release/"))]' \
-  </dev/null)
-
-if [ "$(echo "$existing_pr" | jq 'length')" -gt 0 ]; then
-  url=$(echo "$existing_pr" | jq -r '.[0].url')
-  branch=$(echo "$existing_pr" | jq -r '.[0].headRefName')
-  echo "A release PR is already open: $url ($branch)"
-  echo "Merge or close it before opening a new one."
+if ! echo "${version}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "Release version must look like v1.2.3. Got: ${version}"
   exit 1
 fi
 
-read -r -p "Open a release PR now? [y/N] " confirm
-case "$confirm" in
-y | Y | yes | YES) ;;
-*)
-  echo "Aborted."
-  exit 0
-  ;;
-esac
-
-timestamp=$(TZ=Europe/Madrid date +%d-%m-%Y-%H-%M)
-branch="release/${timestamp}"
-
-echo "Creating production snapshot ${branch} from origin/development with origin/main as parent..."
-snapshot_commit=$(git commit-tree "$(git rev-parse 'origin/development^{tree}')" \
-  -p origin/main \
-  -m "Release - ${timestamp}")
-git push origin "${snapshot_commit}:refs/heads/${branch}"
-
-# The release snapshot has `origin/main` as its only parent but carries the
-# tree of `origin/development` at release time. Development's individual
-# commits never enter main's ancestry, so `origin/main..origin/development`
-# would list every commit going back to the previous release, not just what
-# is new in this one. Find the development commit whose tree matches
-# `origin/main` (the last released state) and list from there.
-main_tree=$(git rev-parse 'origin/main^{tree}')
-# awk must read the full stream rather than `exit` on first match: an early
-# exit closes stdin, `git log` gets SIGPIPE, and `set -o pipefail` would
-# abort the script after the branch push but before `gh pr create`.
-last_released_dev_sha=$(git log --format='%H %T' origin/development \
-  | awk -v t="$main_tree" 'sha == "" && $2 == t { sha = $1 } END { print sha }')
-
-if [ -z "$last_released_dev_sha" ]; then
-  last_released_dev_sha=$(git merge-base origin/main origin/development)
+if git rev-parse --verify "refs/tags/${version}" >/dev/null 2>&1; then
+  existing_sha=$(git rev-list -n 1 "refs/tags/${version}")
+  echo "Tag ${version} already exists at ${existing_sha}. Choose a new release version."
+  exit 1
 fi
 
-commits=$(git log --max-count=50 --pretty=format:'- %h %s' "${last_released_dev_sha}..origin/development")
-body=$(
-  cat <<EOF
-Promotes \`development\` to \`main\` for a release.
+echo "Tagging ${target_sha} as ${version}..."
+git tag "${version}" "${target_sha}"
+git push origin "refs/tags/${version}"
 
-## Commits
-
-${commits}
-EOF
-)
-
-gh pr create \
-  --base main \
-  --head "$branch" \
-  --title "Release ${timestamp}" \
-  --body "$body" \
-  </dev/null
+echo "Pushed ${version}. The production deploy workflow will deploy the tagged commit after validation."

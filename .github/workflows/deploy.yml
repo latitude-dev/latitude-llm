@@ -2,7 +2,9 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [development, main]
+    branches: [development]
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       environment:
@@ -11,59 +13,159 @@ on:
         type: choice
         options:
           - staging
-          - production
-  workflow_call:
-    inputs:
-      environment:
-        description: "Environment to deploy"
-        required: true
-        type: string
 
 permissions:
   contents: read
+  deployments: read
   packages: write
 
 jobs:
   validate-target:
     runs-on: ubuntu-latest
+    outputs:
+      target_sha: ${{ steps.target.outputs.target_sha }}
+      staging_should_deploy: ${{ steps.target.outputs.staging_should_deploy }}
+      production_should_deploy: ${{ steps.target.outputs.production_should_deploy }}
     steps:
-      - name: Validate manual deployment branch
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve deployment target
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
         run: |
-          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            exit 0
+          set -euo pipefail
+
+          staging_should_deploy=false
+          production_should_deploy=false
+          target_sha=""
+
+          git fetch origin development --quiet
+
+          require_staging_deployment() {
+            local sha="$1"
+            local deployments
+            deployments=$(gh api "/repos/${GITHUB_REPOSITORY}/deployments?environment=staging&sha=${sha}&per_page=20")
+
+            local deployment_ids
+            deployment_ids=$(echo "${deployments}" | jq -r '.[].id')
+            if [ -z "${deployment_ids}" ]; then
+              echo "No staging deployment was found for ${sha}. Deploy it to staging before production release."
+              exit 1
+            fi
+
+            while IFS= read -r deployment_id; do
+              [ -z "${deployment_id}" ] && continue
+              state=$(gh api "/repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses?per_page=1" --jq '.[0].state // ""')
+              if [ "${state}" = "success" ]; then
+                return 0
+              fi
+            done <<<"${deployment_ids}"
+
+            echo "No successful staging deployment was found for ${sha}."
+            exit 1
+          }
+
+          if [ "${EVENT_NAME}" = "push" ]; then
+            if [ "${REF_TYPE}" = "tag" ]; then
+              target_sha=$(git rev-parse "${REF_NAME}^{commit}")
+              production_should_deploy=true
+
+              if ! echo "${REF_NAME}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+                echo "Production tags must look like v1.2.3. Got: ${REF_NAME}"
+                exit 1
+              fi
+            else
+              if [ "${REF_NAME}" != "development" ]; then
+                echo "Branch push deployments only run from development."
+                exit 1
+              fi
+
+              target_sha="${CURRENT_SHA}"
+              staging_should_deploy=true
+            fi
+          else
+            if [ "${REF_NAME}" != "development" ]; then
+              echo "Manual deployments must be dispatched from the development branch."
+              exit 1
+            fi
+
+            if [ "${INPUT_ENVIRONMENT}" = "production" ]; then
+              echo "Production deploys are triggered by release tag pushes only. Use scripts/release.sh from the commit to deploy."
+              exit 1
+            elif [ "${INPUT_ENVIRONMENT}" = "staging" ]; then
+              target_sha="${CURRENT_SHA}"
+              staging_should_deploy=true
+            else
+              echo "Unsupported environment: ${INPUT_ENVIRONMENT}"
+              exit 1
+            fi
           fi
 
-          if [ "${{ inputs.environment }}" = "staging" ] && [ "${{ github.ref }}" != "refs/heads/development" ]; then
-            echo "Manual staging deploys must be dispatched from the development branch."
+          if ! echo "${target_sha}" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "Invalid deployment target SHA: ${target_sha}"
             exit 1
           fi
 
-          if [ "${{ inputs.environment }}" = "production" ] && [ "${{ github.ref }}" != "refs/heads/main" ]; then
-            echo "Manual production deploys must be dispatched from the main branch."
+          if ! git cat-file -e "${target_sha}^{commit}"; then
+            echo "Target SHA does not exist: ${target_sha}"
             exit 1
           fi
+
+          if ! git merge-base --is-ancestor "${target_sha}" origin/development; then
+            echo "Target SHA ${target_sha} is not reachable from origin/development."
+            exit 1
+          fi
+
+          if [ "${production_should_deploy}" = "true" ]; then
+            require_staging_deployment "${target_sha}"
+          fi
+
+          {
+            echo "target_sha=${target_sha}"
+            echo "staging_should_deploy=${staging_should_deploy}"
+            echo "production_should_deploy=${production_should_deploy}"
+          } >> "${GITHUB_OUTPUT}"
 
   check:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (inputs.environment == 'production' && github.ref == 'refs/heads/main')
+    needs: validate-target
+    if: needs.validate-target.outputs.production_should_deploy == 'true'
     uses: ./.github/workflows/check.yml
+    with:
+      ref: ${{ needs.validate-target.outputs.target_sha }}
 
   typecheck:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (inputs.environment == 'production' && github.ref == 'refs/heads/main')
+    needs: validate-target
+    if: needs.validate-target.outputs.production_should_deploy == 'true'
     uses: ./.github/workflows/typecheck.yml
+    with:
+      ref: ${{ needs.validate-target.outputs.target_sha }}
 
   test:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (inputs.environment == 'production' && github.ref == 'refs/heads/main')
+    needs: validate-target
+    if: needs.validate-target.outputs.production_should_deploy == 'true'
     uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ needs.validate-target.outputs.target_sha }}
 
   # ── Staging ──────────────────────────────────────────────
 
   staging-build:
     needs: validate-target
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/development') || (inputs.environment == 'staging' && github.ref == 'refs/heads/development')
+    if: needs.validate-target.outputs.staging_should_deploy == 'true'
     uses: ./.github/workflows/build-images.yml
     with:
       environment: staging
-      ref: ${{ github.sha }}
+      ref: ${{ needs.validate-target.outputs.target_sha }}
       push: true
     secrets: inherit
 
@@ -377,6 +479,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.staging-build.outputs.git_commit_sha }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -404,7 +508,7 @@ jobs:
       - name: Upload sourcemaps to Datadog
         run: |
           # Full git SHA matches DD_VERSION / DD_GIT_COMMIT_SHA in container images (Datadog requires a long release id).
-          RELEASE="${{ github.sha }}"
+          RELEASE="${{ needs.staging-build.outputs.git_commit_sha }}"
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/public \
             --service web \
             --release-version "$RELEASE" \
@@ -432,11 +536,11 @@ jobs:
 
   production-build:
     needs: [validate-target, check, typecheck, test]
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (inputs.environment == 'production' && github.ref == 'refs/heads/main')
+    if: needs.validate-target.outputs.production_should_deploy == 'true'
     uses: ./.github/workflows/build-images.yml
     with:
       environment: production
-      ref: ${{ github.sha }}
+      ref: ${{ needs.validate-target.outputs.target_sha }}
       push: true
     secrets: inherit
 
@@ -750,6 +854,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.production-build.outputs.git_commit_sha }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -776,7 +882,7 @@ jobs:
 
       - name: Upload sourcemaps to Datadog
         run: |
-          RELEASE="${{ github.sha }}"
+          RELEASE="${{ needs.production-build.outputs.git_commit_sha }}"
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/public \
             --service web \
             --release-version "$RELEASE" \
@@ -799,54 +905,3 @@ jobs:
         env:
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
           DATADOG_SITE: ${{ vars.DATADOG_SITE }}
-
-  # ── Publish public packages (after production rollout) ──
-  # Each publish workflow no-ops when the repo version already matches the
-  # registry, so it's safe to call them on every successful production deploy.
-
-  publish-typescript-telemetry:
-    needs: production-apply
-    permissions:
-      contents: write
-      id-token: write
-    uses: ./.github/workflows/publish-typescript-telemetry.yml
-    secrets: inherit
-
-  publish-typescript-sdk:
-    needs: production-apply
-    permissions:
-      contents: write
-      id-token: write
-    uses: ./.github/workflows/publish-typescript-sdk.yml
-    secrets: inherit
-
-  publish-claude-code-telemetry:
-    needs: production-apply
-    permissions:
-      contents: write
-      id-token: write
-    uses: ./.github/workflows/publish-claude-code-telemetry.yml
-    secrets: inherit
-
-  publish-openclaw-telemetry:
-    needs: production-apply
-    permissions:
-      contents: write
-      id-token: write
-    uses: ./.github/workflows/publish-openclaw-telemetry.yml
-    secrets: inherit
-
-  publish-openclaw-telemetry-cli:
-    needs: production-apply
-    permissions:
-      contents: write
-      id-token: write
-    uses: ./.github/workflows/publish-openclaw-telemetry-cli.yml
-    secrets: inherit
-
-  publish-python-telemetry:
-    needs: production-apply
-    permissions:
-      contents: write
-    uses: ./.github/workflows/publish-python-telemetry.yml
-    secrets: inherit
