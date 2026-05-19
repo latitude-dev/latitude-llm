@@ -25,10 +25,16 @@ export interface NotificationEmailRenderContext {
    * `<Img>` points at the `apps/api` chart endpoint scoped to this row.
    */
   readonly notificationId: string
+  /** When the row was created. Anchors "X ago" copy in the rendered email. */
+  readonly notificationCreatedAt: Date
   readonly recipient: {
     readonly userId: string
     readonly name: string | null
     readonly email: string
+  }
+  readonly organization: {
+    readonly id: string
+    readonly name: string
   }
   readonly project: {
     readonly id: string
