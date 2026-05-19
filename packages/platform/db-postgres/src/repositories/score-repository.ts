@@ -449,18 +449,21 @@ export const ScoreRepositoryLive = Layer.effect(
       listByIssueId: ({
         projectId,
         issueId,
+        source,
         options,
       }: {
         readonly projectId: ProjectId
         readonly issueId: IssueId
+        readonly source?: ScoreSource
         readonly options?: ScoreListOptions
-      }) =>
-        list({
-          baseWhere:
-            and(eq(scores.projectId, projectId), eq(scores.issueId, issueId as string)) ??
-            eq(scores.projectId, projectId),
+      }) => {
+        const filters = [eq(scores.projectId, projectId), eq(scores.issueId, issueId as string)]
+        if (source !== undefined) filters.push(eq(scores.source, source))
+        return list({
+          baseWhere: and(...filters) ?? eq(scores.projectId, projectId),
           options,
-        }),
+        })
+      },
 
       findPublishedSystemAnnotationByTraceAndFeedback: ({
         projectId,

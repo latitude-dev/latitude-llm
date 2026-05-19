@@ -9,8 +9,9 @@ import {
   type IssueEscalationThresholdSeries,
   type IssueOccurrenceBucket,
   ScoreAnalyticsRepository,
+  ScoreRepository,
 } from "@domain/scores"
-import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
+import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   AlertIncidentId,
   ChSqlClient,
@@ -133,10 +134,13 @@ function setup(opts: SetupOpts = {}) {
       ]),
   })
 
+  const { repository: scoreRepository } = createFakeScoreRepository()
+
   const layer = Layer.mergeAll(
     Layer.succeed(AlertIncidentRepository, incidentRepo),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ScoreAnalyticsRepository, analytics),
+    Layer.succeed(ScoreRepository, scoreRepository),
     Layer.succeed(SettingsReader, settings),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: orgId })),

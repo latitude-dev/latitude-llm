@@ -116,7 +116,13 @@ export const incidentOpenedPayloadSchema = z.object({
   ...incidentBasePayloadShape,
   trend: incidentTrendSchema,
   tags: incidentTagsSchema.optional(),
-  breach: incidentBreachSchema,
+  /**
+   * Optional: legacy escalating incidents opened before
+   * `alert_incidents.entrySignals` started being captured have no
+   * breach scalars to snapshot. The email template falls back to a
+   * generic line in that case.
+   */
+  breach: incidentBreachSchema.optional(),
 })
 export type IncidentOpenedPayload = z.infer<typeof incidentOpenedPayloadSchema>
 

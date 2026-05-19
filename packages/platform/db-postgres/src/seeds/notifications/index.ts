@@ -181,6 +181,7 @@ const seedIncidentNotifications: Seeder = {
               incidentKind: incident.kind,
               severity,
               trend: buildSyntheticTrend(closedAt),
+              recovery: { durationMs: closedAt.getTime() - incident.startedAt.getTime() },
             }
             const closedKey = buildIdempotencyKey({ kind: "incident.closed", payload: closedPayload })
             for (const member of orgMembers) {

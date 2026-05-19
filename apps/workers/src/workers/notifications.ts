@@ -14,6 +14,7 @@ import {
   MembershipRepositoryLive,
   NotificationRepositoryLive,
   ProjectRepositoryLive,
+  ScoreRepositoryLive,
   SettingsReaderLive,
   UserRepositoryLive,
   withPostgres,
@@ -33,6 +34,7 @@ const requestLayer = Layer.mergeAll(
   AlertIncidentRepositoryLive,
   MembershipRepositoryLive,
   ProjectRepositoryLive,
+  ScoreRepositoryLive,
   SettingsReaderLive,
 )
 
