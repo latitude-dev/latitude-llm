@@ -24,11 +24,9 @@ For every span Latitude ingests, the server applies this order (highest priority
    Acts as the per-batch default.
 
 <Note>
-  The SDK option was renamed from `projectSlug` / `project_slug` to `project` in
-  `@latitude-data/telemetry` ≥ `3.0.0-alpha.12` and `latitude-telemetry` ≥ `3.0.0a8`. The old
-  names still work but log a deprecation warning — see each SDK's CHANGELOG for the migration
-  diff. The `X-Latitude-Project` header name and the `latitude.project` span attribute are
-  unchanged.
+  The Latitude SDKs accept `project` on the constructor and on `capture()`; older releases also
+  accepted `projectSlug` / `project_slug` as aliases (deprecated, may log a warning). The
+  `X-Latitude-Project` header name and the `latitude.project` span attribute are unchanged.
 </Note>
 
 If none of those resolve to a project that belongs to your organization, the span is rejected.

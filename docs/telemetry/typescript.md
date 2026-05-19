@@ -303,26 +303,6 @@ Set the integration's key on the `instrumentations` object to the LLM SDK module
 | `vertexai` | `@google-cloud/vertexai` | `vertexai: VertexAISDK` (namespace) |
 | `aiplatform` | `@google-cloud/aiplatform` | `aiplatform: AIPlatformSDK` (namespace) |
 
-## Migrating from `instrumentations: ["openai"]` (3.0.0-alpha.10 and earlier)
-
-The string-array form is removed with no fallback in `3.0.0-alpha.11`. Anything other than a plain object — including the old string array — **throws at register time**, so any existing install below `alpha.11` must be bumped *and* its call sites rewritten in the same change. Migration:
-
-```diff
-- import { Latitude } from "@latitude-data/telemetry"
-+ import OpenAI from "openai"
-+ import * as AnthropicSDK from "@anthropic-ai/sdk"
-+ import { Latitude } from "@latitude-data/telemetry"
-
-  new Latitude({
-    apiKey: process.env.LATITUDE_API_KEY!,
-    project: process.env.LATITUDE_PROJECT_SLUG!,
--   instrumentations: ["openai", "anthropic"],
-+   instrumentations: { openai: OpenAI, anthropic: AnthropicSDK },
-  })
-```
-
-The `modules` option on `registerLatitudeInstrumentations` is also removed — pass the SDK module under its integration key on `instrumentations` instead.
-
 ## Configuration
 
 ### Smart Filtering
@@ -375,7 +355,7 @@ new LatitudeSpanProcessor(apiKey, project, {
 
 1. **Check API key and project slug**: Must be non-empty strings.
 2. **Verify instrumentations are registered**: Use `await latitude.ready` or `await registerLatitudeInstrumentations()`.
-3. **Did the bootstrap throw a migration error?**: On `3.0.0-alpha.11`+, `instrumentations: ["openai"]` (or any non-object value) throws `TypeError: [Latitude] instrumentations must be an object mapping…`. Migrate to `instrumentations: { openai: OpenAI }`. See the Migration section above.
+3. **Check `instrumentations` shape**: It must be a plain object mapping each integration key to the LLM SDK module your app imports (see Supported Providers). Other shapes throw at register time with a `TypeError` from Latitude.
 4. **Flush before exit**: Call `await latitude.flush()` or `await provider.forceFlush()`.
 5. **Check smart filter**: Only LLM spans are exported by default. Use `disableSmartFilter: true` to export all spans.
 6. **Ensure `capture()` wraps the code that creates spans**: `capture()` itself doesn't create spans; it only attaches context.

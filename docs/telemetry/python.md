@@ -248,24 +248,6 @@ def register_latitude_instrumentations(
     ...
 ```
 
-## Migrating from `instrumentations=["openai"]` (3.0.0a6 and earlier)
-
-The list-of-strings form is removed with no fallback in `3.0.0a7`. Anything other than a plain dict raises `TypeError` at register time. Migration:
-
-```diff
-- from latitude_telemetry import Latitude
-+ import openai
-+ import anthropic
-+ from latitude_telemetry import Latitude
-
-  latitude = Latitude(
-      api_key="your-api-key",
-      project="your-project-slug",
--     instrumentations=["openai", "anthropic"],
-+     instrumentations={"openai": openai, "anthropic": anthropic},
-  )
-```
-
 ## Supported Providers
 
 Set the integration's key on the `instrumentations` dict to the LLM SDK module the consumer imports.
