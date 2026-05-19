@@ -26,8 +26,7 @@
     "sdk:check": "./fern/invoke.sh check",
     "generate:sdk": "pnpm openapi:emit && pnpm sdk:check && ./fern/invoke.sh generate --group local --local --force",
     "docs:dev": "cd docs && pnpm dlx mint dev",
-    "docs:sync-telemetry-changelog": "node ./scripts/sync-telemetry-typescript-changelog.mjs",
-    "docs:check": "node ./scripts/sync-telemetry-typescript-changelog.mjs --check && cd docs && pnpm dlx mint broken-links",
+    "docs:check": "cd docs && pnpm dlx mint broken-links",
     "prepare": "pnpm hooks && effect-language-service patch"
   },
   "devDependencies": {

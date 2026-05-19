@@ -70,7 +70,6 @@
           "telemetry/project-scoping",
           "telemetry/otel-exporter",
           "telemetry/typescript",
-          "telemetry/typescript-changelog",
           "telemetry/python",
           "telemetry/claude-code",
           "telemetry/openclaw",
