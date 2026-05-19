@@ -9,7 +9,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests --dir src",
+    "test": "pnpm --filter @platform/testkit chdb:build && vitest run --passWithNoTests --dir src",
     "openapi:emit": "tsx scripts/emit-openapi.ts",
     "mcp:emit": "tsx scripts/emit-mcp.ts",
     "mcp:inspect": "mcp-inspector --server-url 'http://localhost:3001/v1/mcp' --transport http"
