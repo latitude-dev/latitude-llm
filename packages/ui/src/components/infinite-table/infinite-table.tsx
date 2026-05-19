@@ -14,8 +14,22 @@ import { useHeaderLayoutLock } from "./use-header-layout-lock.ts"
 
 const ROW_HEIGHT = 40
 const SKELETON_ROW_COUNT = 8
-const EXPANDED_SKELETON_COUNT = 3
 const SELECTION_COLUMN_WIDTH = 48
+
+function renderBlankSlateMessage(message: string, compact = false) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg w-full flex flex-col gap-4 items-center justify-center bg-linear-to-b from-secondary to-transparent px-4",
+        compact ? "py-8" : "py-40",
+      )}
+    >
+      <Text.H5 align="center" display="block" color="foregroundMuted">
+        {message}
+      </Text.H5>
+    </div>
+  )
+}
 
 function nextSortDirection(current: SortDirection | null): SortDirection | null {
   if (current === null) return "desc"
@@ -130,19 +144,12 @@ export function InfiniteTable<T>({
   const lastRow = virtualRows[virtualRows.length - 1]
   const paddingBottom = lastRow ? virtualizer.getTotalSize() - lastRow.end : 0
   const showBlankSlate = !isLoading && data.length === 0
-  const blankSlateText = blankSlate && blankSlate === "string" ? blankSlate : "No data"
   const blankSlateContent =
-    showBlankSlate && blankSlate !== undefined ? (
-      typeof blankSlate === "string" ? (
-        <div className="rounded-lg w-full py-40 flex flex-col gap-4 items-center justify-center bg-linear-to-b from-secondary to-transparent px-4">
-          <Text.H5 align="center" display="block" color="foregroundMuted">
-            {blankSlateText}
-          </Text.H5>
-        </div>
-      ) : (
-        blankSlate
-      )
-    ) : null
+    showBlankSlate && blankSlate !== undefined
+      ? typeof blankSlate === "string"
+        ? renderBlankSlateMessage(blankSlate)
+        : blankSlate
+      : null
   return (
     <div className={cn("flex flex-col min-h-0", scrollAreaLayout === "fill" ? "flex-1" : "w-full max-w-full")}>
       {blankSlateContent ? (
@@ -287,12 +294,25 @@ export function InfiniteTable<T>({
                       : {})}
                     dataIndex={virtualRow.index}
                   />
-                  {expanded?.isLoading &&
-                    Array.from({ length: EXPANDED_SKELETON_COUNT }).map((_, i) => (
-                      <tr key={`exp-skel-${i}`} style={{ opacity: 1 - i / EXPANDED_SKELETON_COUNT }}>
-                        <td colSpan={colCount} className="h-9" />
+                  {expanded?.isLoading && (
+                    <tr>
+                      <td colSpan={colCount} className="p-0 border-none">
+                        {renderBlankSlateMessage("Loading...", true)}
+                      </td>
+                    </tr>
+                  )}
+                  {expanded &&
+                    !expanded.isLoading &&
+                    expanded.data.length === 0 &&
+                    expanded.blankSlate !== undefined && (
+                      <tr>
+                        <td colSpan={colCount} className="p-0 border-none">
+                          {typeof expanded.blankSlate === "string"
+                            ? renderBlankSlateMessage(expanded.blankSlate, true)
+                            : expanded.blankSlate}
+                        </td>
                       </tr>
-                    ))}
+                    )}
                   {expanded &&
                     !expanded.isLoading &&
                     expanded.data.map((subRow) => {
@@ -332,7 +352,7 @@ export function InfiniteTable<T>({
                         />
                       )
                     })}
-                  {isExpanded && (
+                  {isExpanded && expanded && !expanded.isLoading && expanded.data.length > 0 && (
                     <tr>
                       <td colSpan={colCount} className="h-px p-0 border-t border-border pb-2" />
                     </tr>
