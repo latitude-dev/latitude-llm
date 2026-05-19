@@ -69,12 +69,13 @@ echo "Development differs from main:"
 git diff --shortstat origin/main..origin/development
 echo ""
 
-# Candidate main-only commits by SHA reachability. We verify each below by
-# reverse-applying the commit's patch against an `origin/development`
-# worktree — this is what `git rebase` uses to detect already-applied
-# commits, and it catches squash-merged cherry-picks even when development
-# has additional changes on the same files (which a per-file diff check
-# would misreport as missing).
+# Candidate main-only commits by SHA reachability. We verify each below by:
+# - reverse-applying the commit's patch against an `origin/development`
+#   worktree, which catches changes that were integrated as a net tree diff
+#   across one or more different commits;
+# - falling back to `git cherry` patch-id equivalence, which catches ordinary
+#   cherry-picks even when later development changes make the reverse patch too
+#   context-sensitive to apply cleanly.
 candidate_shas=$(git log \
   --format='%H' \
   --right-only \
@@ -93,6 +94,12 @@ while IFS= read -r sha; do
   if git diff --binary "$sha^..$sha" | git -C "$verify_worktree" apply --check --reverse >/dev/null 2>&1; then
     continue
   fi
+
+  cherry_status=$(git cherry origin/development "$sha" "$sha^" | awk 'NR == 1 { print $1 }')
+  if [ "$cherry_status" = "-" ]; then
+    continue
+  fi
+
   main_only_commits+="$(git log -1 --format='%h %s' "$sha")"$'\n'
 done <<<"$candidate_shas"
 
