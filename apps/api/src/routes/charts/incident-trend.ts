@@ -2,8 +2,6 @@ import { incidentClosedPayloadSchema, incidentOpenedPayloadSchema, NotificationR
 import { NotificationId, OrganizationId } from "@domain/shared"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { NotificationRepositoryLive, type PostgresClient, withPostgres } from "@platform/db-postgres"
-import { parseEnv } from "@platform/env"
-import { verifySignedNotificationChartToken } from "@platform/storage-object"
 import { Effect } from "effect"
 import type { Context } from "hono"
 import { getAdminPostgresClient } from "../../clients.ts"
@@ -15,8 +13,7 @@ const PATH = "/charts/incident-trend"
 /**
  * Long-lived cache so mail clients with image proxies (Gmail, etc.)
  * happily serve the same PNG to every subsequent open without
- * re-hitting the server. Rotating `LAT_NOTIFICATION_CHART_SECRET`
- * invalidates every previously-signed URL.
+ * re-hitting the server.
  */
 const PNG_CACHE_HEADER = "public, max-age=31536000, immutable" as const
 
@@ -29,49 +26,42 @@ const respondPng = (c: Context, buffer: Buffer) =>
 
 const respondTransparent = (c: Context) => respondPng(c, TRANSPARENT_1x1_PNG)
 
-const resolveSecret = (): string => Effect.runSync(parseEnv("LAT_NOTIFICATION_CHART_SECRET", "string"))
-
 /**
  * Public endpoint that serves the trend chart referenced from
- * notification emails. Emails are sent to arbitrary recipients and may
- * be opened months after delivery, so the route can't rely on a session
- * — the URL's HMAC signature is the credential. Verification yields the
- * `notificationId`; the row is loaded via the admin Postgres client
- * (bypassing RLS, since the cred is the signature, not an org context).
+ * notification emails. The endpoint is unauthenticated and identifies
+ * rows by the raw `notificationId` (a CUID — ~128 bits of entropy,
+ * not enumerable in practice). The chart payload is project-internal
+ * trend data with no PII / credentials, so the cost of a leaked id is
+ * bounded.
+ *
+ * TODO: if `notificationId` ever leaks to less-trusted surfaces, or
+ * the rendered chart starts carrying more sensitive payloads, swap
+ * the raw id for an HMAC-signed token here and a matching
+ * `buildSignedChartUrl` helper on the email side. The threat model
+ * shift is the trigger, not a routine concern.
  *
  * Failure modes degrade gracefully:
- * - Missing/tampered token → 401.
- * - Notification row not found / kind has no trend → 1×1 transparent
- *   PNG so the `<Img>` tag in the email still renders an element
- *   instead of an alt-text fallback.
+ * - Missing `nid` query param → 1×1 transparent PNG so the `<Img>`
+ *   tag in the email still renders an element instead of an alt-text
+ *   fallback.
+ * - Notification row not found / kind has no trend → same fallback.
+ *
+ * The row is loaded via the admin Postgres client (RLS bypass) since
+ * there's no organization context until the row is read.
  */
 export const registerIncidentTrendChartRoute = ({
   app,
   adminDatabase,
 }: {
   readonly app: OpenAPIHono<AppEnv>
-  /**
-   * Admin Postgres client used to bypass RLS — the request has no
-   * organization context until the notification row is loaded, and the
-   * URL's HMAC is the credential. In production, defaults to the
-   * singleton; tests inject a PGlite-backed admin client.
-   */
+  /** In production, defaults to the singleton; tests inject a PGlite-backed admin client. */
   readonly adminDatabase?: PostgresClient
 }) => {
   app.get(PATH, async (c) => {
-    const token = c.req.query("token")
-    if (!token) return c.text("Missing token", 401)
+    const notificationIdRaw = c.req.query("nid")
+    if (!notificationIdRaw) return respondTransparent(c)
 
-    const secret = resolveSecret()
-    const verification = await Effect.runPromise(
-      verifySignedNotificationChartToken(token, secret).pipe(
-        Effect.map((id) => ({ ok: true as const, id })),
-        Effect.catchTag("SignedNotificationChartTokenError", () => Effect.succeed({ ok: false as const })),
-      ),
-    )
-    if (!verification.ok) return c.text("Invalid token", 401)
-
-    const notificationId = NotificationId(verification.id)
+    const notificationId = NotificationId(notificationIdRaw)
     const adminClient = adminDatabase ?? getAdminPostgresClient()
 
     // Load the notification row. RLS is bypassed via the admin role on

@@ -4,7 +4,7 @@ import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
-import { buildSignedChartUrl } from "../../../helpers/signed-chart-url.ts"
+import { buildChartUrl } from "../../../helpers/chart-url.ts"
 import { renderEmail } from "../../../utils/render.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { ALERT_KIND_TO_LABEL, IncidentOpenedEmail } from "./EmailTemplate.tsx"
@@ -39,10 +39,9 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
     const issueRef = issue?.name ?? "an issue"
     const issueUrl = buildSourceUrl(ctx, payload)
 
-    const chartUrl = yield* buildSignedChartUrl({
+    const chartUrl = buildChartUrl({
       notificationId: ctx.notificationId,
       apiBaseUrl: ctx.apiBaseUrl,
-      secret: ctx.chartSecret,
     })
 
     const html = yield* Effect.tryPromise({

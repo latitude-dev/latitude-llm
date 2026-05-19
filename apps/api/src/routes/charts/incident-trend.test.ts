@@ -1,18 +1,7 @@
 import { generateId } from "@domain/shared"
 import { notifications } from "@platform/db-postgres/schema/notifications"
-import { createSignedNotificationChartToken } from "@platform/storage-object"
 import { describe, expect, it } from "vitest"
 import { type ApiTestContext, setupTestApi } from "../../test-utils/create-test-app.ts"
-
-// The chart route is unauthenticated; the URL's HMAC signature is the
-// credential. Both the route handler and the test sign with the same
-// secret; we install one into `process.env` if the test runner hasn't
-// already so `parseEnv("LAT_NOTIFICATION_CHART_SECRET", ...)` resolves
-// deterministically inside the route.
-if (!process.env.LAT_NOTIFICATION_CHART_SECRET) {
-  process.env.LAT_NOTIFICATION_CHART_SECRET = "test-chart-secret-do-not-use-in-prod"
-}
-const TEST_SECRET = process.env.LAT_NOTIFICATION_CHART_SECRET
 
 const buildTrend = () => ({
   bucketDurationMs: 10 * 60 * 1000,
@@ -26,17 +15,15 @@ const buildTrend = () => ({
 describe("GET /charts/incident-trend", () => {
   setupTestApi()
 
-  it<ApiTestContext>("returns 401 when the token query param is missing", async ({ app }) => {
+  it<ApiTestContext>("returns the transparent PNG when the nid query param is missing", async ({ app }) => {
     const res = await app.fetch(new Request("http://localhost/charts/incident-trend"))
-    expect(res.status).toBe(401)
+    expect(res.status).toBe(200)
+    const body = await res.arrayBuffer()
+    // 1×1 PNG fallback is under 200 bytes; a real render is much larger.
+    expect(body.byteLength).toBeLessThan(200)
   })
 
-  it<ApiTestContext>("returns 401 when the signature doesn't verify", async ({ app }) => {
-    const res = await app.fetch(new Request("http://localhost/charts/incident-trend?token=not-a-real-token"))
-    expect(res.status).toBe(401)
-  })
-
-  it<ApiTestContext>("renders a PNG with cache headers for a valid token + opened notification", async ({
+  it<ApiTestContext>("renders a PNG with cache headers for an existing opened notification", async ({
     app,
     database,
   }) => {
@@ -67,9 +54,8 @@ describe("GET /charts/incident-trend", () => {
       emailedAt: null,
     })
 
-    const token = await createSignedNotificationChartToken(notificationId, TEST_SECRET)
     const res = await app.fetch(
-      new Request(`http://localhost/charts/incident-trend?token=${encodeURIComponent(token)}`),
+      new Request(`http://localhost/charts/incident-trend?nid=${encodeURIComponent(notificationId)}`),
     )
 
     expect(res.status).toBe(200)
@@ -86,15 +72,13 @@ describe("GET /charts/incident-trend", () => {
   }, 30_000)
 
   it<ApiTestContext>("returns the 1×1 transparent PNG when the notification row is gone", async ({ app }) => {
-    const token = await createSignedNotificationChartToken(generateId(), TEST_SECRET)
     const res = await app.fetch(
-      new Request(`http://localhost/charts/incident-trend?token=${encodeURIComponent(token)}`),
+      new Request(`http://localhost/charts/incident-trend?nid=${encodeURIComponent(generateId())}`),
     )
 
     expect(res.status).toBe(200)
     expect(res.headers.get("content-type")).toBe("image/png")
     const body = await res.arrayBuffer()
-    // The 1×1 PNG fallback is well under 100 bytes; a real render is far larger.
     expect(body.byteLength).toBeLessThan(200)
   })
 
@@ -126,9 +110,8 @@ describe("GET /charts/incident-trend", () => {
       emailedAt: null,
     })
 
-    const token = await createSignedNotificationChartToken(notificationId, TEST_SECRET)
     const res = await app.fetch(
-      new Request(`http://localhost/charts/incident-trend?token=${encodeURIComponent(token)}`),
+      new Request(`http://localhost/charts/incident-trend?nid=${encodeURIComponent(notificationId)}`),
     )
 
     expect(res.status).toBe(200)

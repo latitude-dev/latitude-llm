@@ -15,7 +15,6 @@
     "@domain/notifications": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
-    "@platform/storage-object": "workspace:*",
     "@react-email/components": "1.0.12",
     "effect": "catalog:",
     "react": "catalog:",

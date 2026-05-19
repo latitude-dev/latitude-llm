@@ -268,9 +268,6 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
-      '@platform/storage-object':
-        specifier: workspace:*
-        version: link:../../packages/platform/storage-object
       '@platform/workflows-temporal':
         specifier: workspace:*
         version: link:../../packages/platform/workflows-temporal
@@ -313,7 +310,7 @@ importers:
         version: 19.2.14
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
 
   apps/ingest:
     dependencies:
@@ -374,7 +371,7 @@ importers:
     devDependencies:
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@6.0.3)
+        version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
 
   apps/web:
     dependencies:
@@ -1103,9 +1100,6 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
-      '@platform/storage-object':
-        specifier: workspace:*
-        version: link:../../platform/storage-object
       '@react-email/components':
         specifier: 1.0.12
         version: 1.0.12(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

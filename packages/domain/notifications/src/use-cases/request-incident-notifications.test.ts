@@ -6,7 +6,6 @@ import {
 } from "@domain/alerts"
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
 import type { AnnotationScore, EvaluationScore } from "@domain/scores"
-import type { IncidentEventPayload } from "../entities/notification.ts"
 import {
   type IssueEscalationThresholdSeries,
   type IssueOccurrenceBucket,
@@ -30,6 +29,7 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import type { IncidentEventPayload } from "../entities/notification.ts"
 import { requestIncidentNotificationsUseCase } from "./request-incident-notifications.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")

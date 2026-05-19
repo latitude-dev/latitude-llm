@@ -56,8 +56,6 @@ const resolveApiBaseUrl = (): string => {
   return apiUrl.replace(/\/$/, "")
 }
 
-const resolveChartSecret = (): string => Effect.runSync(parseEnv("LAT_NOTIFICATION_CHART_SECRET", "string"))
-
 /**
  * Channel worker: consumes `notification-email:send` tasks, looks up the
  * stored notification + recipient, dispatches to the per-kind email
@@ -73,7 +71,6 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   const transportSendEmail = sendEmail({ emailSender: emailTransport })
   const webAppUrl = resolveWebAppUrl()
   const apiBaseUrl = resolveApiBaseUrl()
-  const chartSecret = resolveChartSecret()
 
   // Adapter: bridges the use case's renderer-callback boundary to the
   // per-kind renderer Effects in `@domain/email`. The renderers are
@@ -93,7 +90,6 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
       const ctx: NotificationEmailRenderContext = {
         webAppUrl,
         apiBaseUrl,
-        chartSecret,
         notificationId,
         recipient,
         project,
