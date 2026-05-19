@@ -28,6 +28,9 @@ on:
       registry:
         description: "Container registry URL"
         value: ${{ jobs.metadata.outputs.registry }}
+      git_commit_sha:
+        description: "Full Git commit SHA that was built"
+        value: ${{ jobs.metadata.outputs.git_commit_sha }}
 
 permissions:
   contents: read

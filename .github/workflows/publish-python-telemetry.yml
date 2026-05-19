@@ -2,7 +2,17 @@ name: Publish Python Telemetry
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
 
 jobs:
   publish:
@@ -14,6 +24,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Get current version
         id: get_version
@@ -62,29 +74,38 @@ jobs:
           cd packages/telemetry/python
           uv build
 
-      - name: Publish to PyPI
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          cd packages/telemetry/python
-          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
-
       - name: Extract changelog
         if: steps.check_version.outputs.should_publish == 'true'
         id: changelog
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
+          CHANGELOG="packages/telemetry/python/CHANGELOG.md"
+          if [ ! -f "$CHANGELOG" ]; then
+            echo "Missing changelog: ${CHANGELOG}"
+            exit 1
+          fi
+
           awk -v ver="$VERSION" '
             /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
             found { print }
-          ' packages/telemetry/python/CHANGELOG.md > release_notes.md
+          ' "$CHANGELOG" > release_notes.md
+
           if [ ! -s release_notes.md ]; then
-            echo "Package updates and improvements" > release_notes.md
+            echo "Missing changelog entry for version ${VERSION} in ${CHANGELOG}"
+            exit 1
           fi
+
           {
             echo "body<<EOF"
             cat release_notes.md
             echo "EOF"
           } >> $GITHUB_OUTPUT
+
+      - name: Publish to PyPI
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
 
       - name: Create GitHub Release
         if: steps.check_version.outputs.should_publish == 'true'
@@ -93,5 +114,6 @@ jobs:
           tag_name: python-telemetry-${{ steps.get_version.outputs.version }}
           name: Python Telemetry v${{ steps.get_version.outputs.version }}
           body: ${{ steps.changelog.outputs.body }}
+          target_commitish: ${{ inputs.ref || github.sha }}
           draft: false
           prerelease: ${{ contains(steps.get_version.outputs.version, 'a') || contains(steps.get_version.outputs.version, 'b') || contains(steps.get_version.outputs.version, 'rc') }}

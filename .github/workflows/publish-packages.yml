@@ -1,0 +1,67 @@
+name: Publish Packages
+
+on:
+  push:
+    branches:
+      - development
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-packages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish-typescript-telemetry:
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish-typescript-telemetry.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
+  publish-typescript-sdk:
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish-typescript-sdk.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
+  publish-claude-code-telemetry:
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish-claude-code-telemetry.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
+  publish-openclaw-telemetry:
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish-openclaw-telemetry.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
+  publish-openclaw-telemetry-cli:
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish-openclaw-telemetry-cli.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
+  publish-python-telemetry:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-python-telemetry.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit

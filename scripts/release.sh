@@ -2,188 +2,178 @@
 
 set -euo pipefail
 
-# Prevent gh and git from invoking a pager (less) on long output — otherwise
-# `gh pr list` or `gh pr create` can drop the terminal into a `less` screen
-# that traps keys other than `q`, making it confusing to dismiss.
 export GH_PAGER=cat
 export GIT_PAGER=cat
 
-force_release=false
-
 usage() {
   cat <<EOF
-Usage: $0 [--force]
+Usage: $0 [version]
 
-Options:
-  --force   Continue even when main has non-release commits that the guard
-            cannot verify in development. Use only after confirming those
-            changes are present in development or intentionally dropped.
-  -h, --help
-            Show this help message.
+Creates a monorepo release PR against development. The PR updates the root
+CHANGELOG.md with a monorepo release version. After the PR merges and staging
+succeeds, the deploy workflow tags the merged commit with that version; the tag
+push triggers production deployment.
+
+This does not update npm/Python package versions or package changelogs; package
+releases remain developer-managed.
+
+If version is omitted, the script finds the latest vX.Y.Z tag merged into
+development and bumps to the next minor version (vX.(Y+1).0). If no release tag
+exists yet, it starts at v0.1.0.
+
+Examples:
+  $0
+  $0 v1.2.3
 EOF
 }
 
-while [ "$#" -gt 0 ]; do
-  case "$1" in
-  --force)
-    force_release=true
-    shift
-    ;;
-  -h | --help)
-    usage
-    exit 0
-    ;;
-  *)
-    echo "Unknown argument: $1"
-    echo ""
-    usage
-    exit 1
-    ;;
-  esac
-done
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+if [ "$#" -gt 1 ]; then
+  usage
+  exit 1
+fi
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "GitHub CLI (gh) is required. Install: https://cli.github.com"
   exit 1
 fi
 
-echo "Fetching origin..."
-git fetch origin main development
-
-if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
-  echo "origin/main was not found."
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq is required."
   exit 1
 fi
 
-if ! git rev-parse --verify origin/development >/dev/null 2>&1; then
-  echo "origin/development was not found."
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "Working tree has uncommitted changes. Commit or stash them before preparing a release."
   exit 1
 fi
 
-if git diff --quiet origin/main..origin/development; then
-  echo "No commits to promote from development to main."
-  exit 0
-fi
+echo "Fetching origin/development and tags..."
+git fetch origin development --tags --quiet
 
-echo "Development differs from main:"
-git diff --shortstat origin/main..origin/development
-echo ""
+latest_tag=$(git tag --merged origin/development --sort=-v:refname 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
 
-# Candidate main-only commits by SHA reachability. We verify each below by:
-# - reverse-applying the commit's patch against an `origin/development`
-#   worktree, which catches changes that were integrated as a net tree diff
-#   across one or more different commits;
-# - falling back to `git cherry` patch-id equivalence, which catches ordinary
-#   cherry-picks even when later development changes make the reverse patch too
-#   context-sensitive to apply cleanly.
-candidate_shas=$(git log \
-  --format='%H' \
-  --right-only \
-  --invert-grep \
-  --grep='^Deploy production' \
-  --grep='^Release -' \
-  origin/development...origin/main)
-
-verify_worktree=$(mktemp -d -t release-verify.XXXXXX)
-trap 'git worktree remove --force "$verify_worktree" >/dev/null 2>&1; rm -rf "$verify_worktree"' EXIT
-git worktree add --detach --quiet "$verify_worktree" origin/development
-
-main_only_commits=""
-while IFS= read -r sha; do
-  [ -z "$sha" ] && continue
-  if git diff --binary "$sha^..$sha" | git -C "$verify_worktree" apply --check --reverse >/dev/null 2>&1; then
-    continue
-  fi
-
-  cherry_status=$(git cherry origin/development "$sha" "$sha^" | awk 'NR == 1 { print $1 }')
-  if [ "$cherry_status" = "-" ]; then
-    continue
-  fi
-
-  main_only_commits+="$(git log -1 --format='%h %s' "$sha")"$'\n'
-done <<<"$candidate_shas"
-
-if [ -n "$main_only_commits" ]; then
-  echo "main has non-release commits that development does not contain:"
-  printf '%s' "$main_only_commits"
-  echo ""
-
-  if [ "$force_release" = true ]; then
-    echo "WARNING: --force supplied; skipping the main-only commit guard."
-    echo "Confirm these changes are present in development or intentionally dropped before merging the release PR."
-    echo ""
+if [ "$#" -eq 1 ]; then
+  version="$1"
+else
+  if [ -z "${latest_tag}" ]; then
+    version="v0.1.0"
   else
-    echo "Promoting development would remove these changes from production."
-    echo "Cherry-pick or merge them into development first, then run this script again."
-    exit 1
+    semver="${latest_tag#v}"
+    IFS=. read -r major minor patch <<<"${semver}"
+    version="v${major}.$((minor + 1)).0"
   fi
+fi
+
+if ! echo "${version}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "Release version must look like v1.2.3. Got: ${version}"
+  exit 1
+fi
+
+if git rev-parse --verify "refs/tags/${version}" >/dev/null 2>&1; then
+  echo "Tag ${version} already exists. Choose a new release version."
+  exit 1
 fi
 
 existing_pr=$(gh pr list \
-  --base main \
+  --base development \
   --state open \
   --limit 100 \
   --json number,headRefName,url \
-  --jq '[.[] | select(.headRefName | startswith("release/"))]' \
-  </dev/null)
+  --jq '[.[] | select(.headRefName | startswith("release/"))]')
 
-if [ "$(echo "$existing_pr" | jq 'length')" -gt 0 ]; then
-  url=$(echo "$existing_pr" | jq -r '.[0].url')
-  branch=$(echo "$existing_pr" | jq -r '.[0].headRefName')
-  echo "A release PR is already open: $url ($branch)"
+if [ "$(echo "${existing_pr}" | jq 'length')" -gt 0 ]; then
+  url=$(echo "${existing_pr}" | jq -r '.[0].url')
+  branch=$(echo "${existing_pr}" | jq -r '.[0].headRefName')
+  echo "A release PR is already open: ${url} (${branch})"
   echo "Merge or close it before opening a new one."
   exit 1
 fi
 
-read -r -p "Open a release PR now? [y/N] " confirm
-case "$confirm" in
-y | Y | yes | YES) ;;
-*)
-  echo "Aborted."
-  exit 0
-  ;;
-esac
-
-timestamp=$(TZ=Europe/Madrid date +%d-%m-%Y-%H-%M)
-branch="release/${timestamp}"
-
-echo "Creating production snapshot ${branch} from origin/development with origin/main as parent..."
-snapshot_commit=$(git commit-tree "$(git rev-parse 'origin/development^{tree}')" \
-  -p origin/main \
-  -m "Release - ${timestamp}")
-git push origin "${snapshot_commit}:refs/heads/${branch}"
-
-# The release snapshot has `origin/main` as its only parent but carries the
-# tree of `origin/development` at release time. Development's individual
-# commits never enter main's ancestry, so `origin/main..origin/development`
-# would list every commit going back to the previous release, not just what
-# is new in this one. Find the development commit whose tree matches
-# `origin/main` (the last released state) and list from there.
-main_tree=$(git rev-parse 'origin/main^{tree}')
-# awk must read the full stream rather than `exit` on first match: an early
-# exit closes stdin, `git log` gets SIGPIPE, and `set -o pipefail` would
-# abort the script after the branch push but before `gh pr create`.
-last_released_dev_sha=$(git log --format='%H %T' origin/development \
-  | awk -v t="$main_tree" 'sha == "" && $2 == t { sha = $1 } END { print sha }')
-
-if [ -z "$last_released_dev_sha" ]; then
-  last_released_dev_sha=$(git merge-base origin/main origin/development)
+if [ -n "${latest_tag}" ]; then
+  range="${latest_tag}..origin/development"
+else
+  range="origin/development"
 fi
 
-commits=$(git log --max-count=50 --pretty=format:'- %h %s' "${last_released_dev_sha}..origin/development")
-body=$(
-  cat <<EOF
-Promotes \`development\` to \`main\` for a release.
+commits=$(git log --max-count=100 --pretty=format:'- %h %s' "${range}")
+if [ -z "${commits}" ]; then
+  commits="- No code changes since ${latest_tag}."
+fi
 
-## Commits
+branch="release/${version}"
+base_branch=$(git rev-parse --abbrev-ref HEAD)
+cleanup() {
+  git checkout "${base_branch}" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+git checkout -b "${branch}" origin/development
+
+entry=$(mktemp -t release-entry.XXXXXX)
+updated_changelog=$(mktemp -t release-changelog.XXXXXX)
+trap 'rm -f "${entry}" "${updated_changelog}"; cleanup' EXIT
+
+cat > "${entry}" <<EOF
+## ${version}
+
+${commits}
+
+EOF
+
+if [ -f CHANGELOG.md ]; then
+  latest_changelog_version=$(grep -m1 -E '^## +\[?v[0-9]+\.[0-9]+\.[0-9]+\]?' CHANGELOG.md | sed -E 's/^## +\[?(v[0-9]+\.[0-9]+\.[0-9]+)\]?.*/\1/' || true)
+  if [ "${latest_changelog_version}" = "${version}" ]; then
+    echo "CHANGELOG.md already starts with ${version}."
+    exit 1
+  fi
+
+  if [ "$(head -n 1 CHANGELOG.md)" = "# Changelog" ]; then
+    {
+      head -n 1 CHANGELOG.md
+      echo ""
+      cat "${entry}"
+      tail -n +2 CHANGELOG.md
+    } > "${updated_changelog}"
+  else
+    {
+      echo "# Changelog"
+      echo ""
+      cat "${entry}"
+      cat CHANGELOG.md
+    } > "${updated_changelog}"
+  fi
+else
+  {
+    echo "# Changelog"
+    echo ""
+    cat "${entry}"
+  } > "${updated_changelog}"
+fi
+
+cp "${updated_changelog}" CHANGELOG.md
+
+git add CHANGELOG.md
+git commit -m "Release ${version}"
+git push origin "${branch}"
+
+body=$(cat <<EOF
+Prepares monorepo release \`${version}\`.
+
+This PR updates the root \`CHANGELOG.md\`. After it is merged into \`development\` and the merged commit deploys successfully to staging, the deploy workflow will create tag \`${version}\`. That tag push triggers the production deployment for the tagged commit.
+
+## Commits since ${latest_tag:-the beginning}
 
 ${commits}
 EOF
 )
 
 gh pr create \
-  --base main \
-  --head "$branch" \
-  --title "Release ${timestamp}" \
-  --body "$body" \
-  </dev/null
+  --base development \
+  --head "${branch}" \
+  --title "Release ${version}" \
+  --body "${body}"
