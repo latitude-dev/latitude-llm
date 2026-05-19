@@ -160,6 +160,10 @@
       {
         "group": "Simulations",
         "pages": ["simulations/overview"]
+      },
+      {
+        "group": "Best Practices",
+        "pages": ["best-practices/search", "best-practices/annotations"]
       }
     ]
   },

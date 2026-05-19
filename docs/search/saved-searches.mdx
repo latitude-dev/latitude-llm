@@ -5,7 +5,9 @@ description: Bookmark useful searches, assign ownership, and track what your tea
 
 # Saved Searches
 
-A saved search is a named bookmark for a search query plus its filters. Instead of re-typing _"failed payments where cost is over five dollars in the last seven days"_ every Monday, you save it once and the whole team can return to it from the Search landing page.
+A saved search is a named query plus filters that defines which traces belong together. It stores your search syntax as you typed it — semantic text, `"literals"`, and `` `ordered phrases` `` — so reopening the saved search runs the same query again. Instead of re-typing _"failed payments where cost is over five dollars in the last seven days"_ every Monday, you save it once and the whole team can return to it from the Search landing page.
+
+See [Saved searches](../getting-started/concepts#saved-searches) in Core Concepts. For naming, sizing, and watches, see [Search Best Practices](../best-practices/search).
 
 <Frame>
   <img src="/images/search/saved-searches-list.png" alt="Saved searches table with columns for last found, assignee, annotated count, and total count" />
@@ -47,7 +49,7 @@ Click a row to open the saved search. Latitude loads it back into the search pag
 You'll land back on the Search page, with the saved search loaded. The new entry will be visible in the saved searches table the next time you clear the search.
 
 <Tip>
-  Good names describe what's in the cohort, not how you searched for it. _"Failed payments last week"_ is more useful at a glance than _"q: payment errors filter: status=error"_.
+  Good names describe what's in the group of traces, not how you searched for it. _"Failed payments last week"_ is more useful at a glance than _"q: payment errors filter: status=error"_.
 </Tip>
 
 ## Assigning Ownership
@@ -59,7 +61,7 @@ To assign or reassign:
 - Open the row's actions menu and pick **Assign to**, or
 - Click the assignee cell directly in the table and choose a member from the dropdown.
 
-The **Annotated / Total** ratio in the table makes assignment more useful: the assignee can see, at a glance, how much of their cohort still needs review.
+The **Annotated / Total** ratio in the table makes assignment more useful: the assignee can see, at a glance, how much of the saved search still needs review.
 
 ## Renaming and Deleting
 
@@ -83,24 +85,15 @@ This is the right pattern for two common cases:
 
 The Update action is disabled until there's an actual change to save.
 
-## Saved Searches Replace Annotation Queues
+## Tracking Review Progress
 
-If your team used annotation queues, saved searches are the direct replacement for the queue-list and queue-review workflows. The mapping is straightforward:
+Saved searches are a lightweight way to scope a set of traces and work through them over time. Assign an owner, open matching traces from the saved search, and annotate inline. The **Annotated / Total** ratio shows how much of the current match set has been reviewed; **Last found** tells you whether new matches are still arriving.
 
-| Old concept | New concept |
-| --- | --- |
-| Manual annotation queue | Saved search with no automatic refresh — assign someone and have them annotate the matches |
-| Live annotation queue | Saved search with filters that match the same cohort; the Total and Annotated counts refresh automatically |
-| System annotation queue | A [flagger](../annotations/flaggers), configured in project settings |
-| Queue review screen | The trace detail view — open a matching trace and annotate inline |
-| Queue assignee | The saved search's assignee |
-| Queue completion | The Annotated / Total ratio plus your team's own definition of "done" |
-
-The conceptual shift is from a managed queue with explicit completion to a working set you scope yourself and chip away at. The same coverage signals are still available — Annotated count tells you progress, assignee tells you ownership, and the Last found timestamp tells you whether new matches are arriving.
+For automatic detection of common failure categories — without manual review of every match — use [flaggers](../annotations/flaggers) in project settings.
 
 ## Workflows
 
-### Investigate a specific cohort
+### Investigate checkout confusion
 
 You're investigating reports that the agent gets confused on multi-turn checkout flows.
 
@@ -117,7 +110,7 @@ You've resolved an issue around tool retries and want to make sure it doesn't co
 2. Save it as _"Tool retry regressions"_.
 3. Check it weekly; the Last found timestamp tells you when the latest matching trace appeared.
 
-### Share a cohort with a teammate
+### Share a saved search with a teammate
 
 You've built a search that surfaces interesting jailbreak attempts. You want a teammate to take a closer look.
 
@@ -125,12 +118,11 @@ You've built a search that surfaces interesting jailbreak attempts. You want a t
 2. Reassign it to the teammate.
 3. They'll see it in the table with their avatar on it the next time they open the Search page.
 
-## What Saved Searches Don't Do
 
-Saved searches are bookmarks, not subscriptions. They don't notify you when a new trace matches, don't generate evaluation scores, and don't run any background processing. If you want automated detection that produces scores and feeds issue discovery, see [Flaggers](../annotations/flaggers).
 
 ## Next Steps
 
+- [Search Best Practices](../best-practices/search): Naming, sizing, investigation vs watches
 - [Search Overview](./overview): How search itself works
 - [Flaggers](../annotations/flaggers): Automatic annotators for common failure categories
 - [Inline Annotations](../annotations/inline-annotations): Leave feedback on traces from your saved search

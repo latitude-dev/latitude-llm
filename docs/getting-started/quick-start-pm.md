@@ -37,7 +37,7 @@ Use the filter sidebar to narrow traces by status, cost, duration, model, provid
 
 ## Finding Traces with Search
 
-The **Search** page is where you go to investigate a specific kind of trace. Type a plain-English query — _"failed payments"_, _"frustrated user"_, _"long latency on signup"_ — and Latitude returns the most relevant traces, ranked by a hybrid of keyword and semantic match. Use `"quotes"` for exact phrases.
+The **Search** page is where you go to investigate a specific kind of trace. Type plain words to search by meaning (_failed payments_, _frustrated user_), wrap exact text in `"quotes"`, or use backticks for words in order (`` `refund payment failed` ``). See [Search Overview](../search/overview#search-syntax) for the full syntax.
 
 Filters work alongside the query, so you can scope to a time range, a specific model, traces with errors, or any custom metadata your application sends.
 
@@ -49,7 +49,7 @@ When a search is one you'll come back to, click **Save search** in the toolbar. 
 - **Annotated**: How many matching traces have been reviewed
 - **Total**: How many traces currently match
 
-This is the workflow that used to live in the old **Annotation Queues** page. Instead of a managed queue with start/finish semantics, you scope your own cohort with a saved search and the Annotated/Total ratio tells you how far through it your team is. See [Saved Searches](../search/saved-searches) for details.
+Use saved searches when you want a named, repeatable scope of traces to review over time. **Annotated / Total** shows how far through the current matches your team has gotten. See [Saved Searches](../search/saved-searches) for details.
 
 ## Automatic Detection with Flaggers
 
@@ -66,7 +66,7 @@ Some failure categories are common enough that Latitude detects them for you. Ev
 - **Output Schema Validation**: Structured output didn't conform to the declared schema
 - **Empty Response**: The assistant returned an empty or degenerate response
 
-When a flagger matches, it writes an annotation directly on the trace — no queue, no human approval step. That annotation feeds into [issue discovery](../issues/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list and detection logic.
+When a flagger matches, it writes an annotation directly on the trace — no human approval step. That annotation feeds into [issue discovery](../issues/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list and detection logic.
 
 ## Reviewing Traces
 
@@ -121,8 +121,8 @@ Scores appear throughout the product: on traces, in evaluation dashboards, in is
 
 ## What's Next
 
-- [Search](../search/overview): Build cohorts of traces with hybrid search
-- [Saved Searches](../search/saved-searches): Bookmark useful searches and assign ownership
+- [Search](../search/overview): Find traces by meaning and save useful searches
+- [Saved Searches](../search/saved-searches): Assign ownership and track review progress
 - [Flaggers](../annotations/flaggers): Built-in automatic annotators for common failures
 - [Scores](../scores/overview): Deep dive into how scores work
 - [Annotations](../annotations/overview): Human review workflows

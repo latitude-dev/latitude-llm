@@ -1,0 +1,165 @@
+---
+title: Search Best Practices
+description: How to find the right traces, save useful searches, and keep them useful over time
+---
+
+# Search Best Practices
+
+Search finds traces; **Save search** turns a query plus filters into a [saved search](../search/saved-searches) you can revisit, assign, and track.
+
+For how search works, see [Search Overview](../search/overview). For creating, assigning, and editing saved searches, see [Saved Searches](../search/saved-searches). Once your saved search is scoped, see [Annotation Best Practices](./annotations) for review habits.
+
+## Use query and filters together
+
+When both are on, a trace has to match the query _and_ pass the filters.
+
+| You want to find… | Use… | Example |
+| --- | --- | --- |
+| Conversations that _sound like_ something | **Semantic** (plain words) | `user frustrated about billing` |
+| Traces that contain exact text | **Literal** (`"..."`) | `"401 Unauthorized"` |
+| Traces with words in a specific order | **Phrase** (backticks) | `` `refund payment failed` `` |
+| Traces in a flow or environment | **Filters / metadata** | `metadata.flow = "checkout"` |
+| Traces your app already tagged | **Tags or status** | `status = error`, tag `refund` |
+
+
+
+### Search syntax
+
+| Mode | Syntax | Example | Behavior |
+| --- | --- | --- | --- |
+| **Semantic** | Plain words | `checkout error` | Search by meaning. Results don't need to contain the exact text. |
+| **Literal** | Double quotes | `"401 Unauthorized"` | Exact match, including capitalization and punctuation. |
+| **Phrase** | Backticks | `` `refund payment failed` `` | Match these words in this order. Capitalization is ignored. |
+
+- **Mix freely**: `"checkout" `payment failed` frustrated user` narrows with a literal and an ordered phrase, then ranks the rest by meaning.
+- **Saved searches remember syntax**: The query string is stored as you typed it — literals, backticks, and semantic text all reload unchanged.
+
+<Tip>
+  Empty results? Drop literals and backticks first, widen the time window, then
+  loosen filters. Over-specific `"exact strings"` are the most common miss.
+</Tip>
+
+## Keep your saved searches a manageable length
+
+Before you click **Save search**, check that you could work through the matches and that they're varied enough to learn from.
+
+- **Small enough to finish**: If `Total` is in the thousands and you're reviewing by hand, tighten filters or shorten the time range until a week of review feels realistic. You can always broaden later.
+- **Varied enough to learn**: Two hundred near-identical traces teach less than twenty different ones. If every match looks the same, add a filter (model, metadata, span count) or tweak the query for edge cases.
+
+
+## Name saved searches for what's in them
+
+Good names describe the traces in the saved search, not the query syntax:
+
+| Less useful | More useful |
+| --- | --- |
+| `q: payment errors` | `Failed payments last 7 days` |
+| `search v2` | `Checkout flows over 5 steps` |
+| `jailbreak test` | `Jailbreak attempts without refusal` |
+
+When you save:
+
+1. Run the query and filters until the result set looks right.
+2. **Save search** with a name your teammate can understand without opening it.
+3. **Assign an owner** for saved searches you're actively reviewing — it's who should look at matches, not who can see them.
+4. Open matches from the trace detail view; use **Annotated / Total** for progress.
+
+## Investigation, review, and watch
+
+A saved search can be temporary exploration, bounded review, or an ongoing watch — same feature, different intent:
+
+**Investigation** (may stay unsaved)
+
+- Narrow time window, specific query.
+- You may delete the saved search when done — or **Save as new** if you want a permanent watch derived from what you learned.
+
+**Review** (bounded work)
+
+- Stable query + filters so `Total` means something.
+- Work matches until your team agrees you're through it; track **Annotated**.
+- Leave the saved search in place if you might need to re-sample later.
+
+**Regression watch** (ongoing)
+
+- Filters on metadata or tags that won't break when wording changes (e.g. `metadata.flow = "checkout"`, not a one-off phrase from a single bad trace).
+- Check **Last found** weekly — if it hasn't moved but `Total` is steady, the issue may be gone or the search may be stale.
+- Update or delete watches when the product changes. Unused saved searches just get in the way.
+
+<Note>
+  Saved searches don't send notifications. **Last found** is how you know
+  new matches showed up — build a habit of checking watches you own.
+</Note>
+
+## Update or save as new
+
+When a loaded saved search drifts from what you want:
+
+- **Update saved search** — same search, refined scope (e.g. extend from 7 to 30 days, add a model filter everyone agrees on).
+- **Save as new search** — a related saved search (e.g. same checkout flow but errors only vs all outcomes).
+
+Save as new when two teams need similar but different views. Update when everyone shares one saved search definition.
+
+## Flaggers vs saved searches
+
+[Flaggers](../annotations/flaggers) and saved searches both find traces, but for different jobs:
+
+| | **Flaggers** | **Saved searches** |
+| --- | --- | --- |
+| **Who finds matches** | Latitude, on every completed trace | You, when you run or reopen the search |
+| **Best for** | Known failure categories (jailbreak, frustration, tool errors) | Product-specific saved searches flaggers don't cover |
+| **Output** | Automatic annotations | A bookmarked working set — annotate, export, or inspect manually |
+| **Configuration** | Project settings (enable, sampling) | Query + filters + name |
+
+Use flaggers for the built-in failure types. Use saved searches for flows, metadata combinations, and regressions only your product can name. Many teams use both: flaggers cast a wide net; saved searches go deep on the areas they care about.
+
+## Export and datasets
+
+When a saved search (or ad-hoc search) looks right, you can act on matches in bulk:
+
+- **Export traces** — offline analysis or sharing with someone outside Latitude.
+- **Add to dataset** — regression suites and [simulations](../simulations/overview).
+
+Export uses whatever query and filters are active, so narrow the saved search before you select all rows. Messy search → messy dataset.
+
+## Send metadata and tags your future self will use
+
+The easiest searches start in your app: fields and tags you'll still recognize in a few months.
+
+- **Stable keys**: `metadata.flow`, `metadata.environment`, `metadata.feature` — not one-off debug strings.
+- **Values you will filter on**: If you care about "refunds over $100", emit `metadata.refund_tier = "high"` (or a numeric field) rather than hoping the dollar amount appears in user messages.
+- **Tags for cross-cutting flags**: `production`, `canary`, `beta-user` — easy filter targets alongside semantic search.
+
+You don't need a perfect schema on day one. Add fields when you find yourself re-running the same awkward query twice.
+
+## Keep saved searches up to date
+
+Saved searches go stale when the product, model, or prompts change.
+
+- **Check `Last found` and `Total` monthly** for watches you still care about. No new matches for months often means update or delete.
+- **Avoid duplicates** — two names for the same matches split review progress and confuse assignees.
+- **Watch filter-only saves** — filters with no query and no time limit can grow forever; long-lived watches should lean on metadata that stays meaningful.
+
+## Common pitfalls
+
+- **Searching for what only lives in tool results.** Use metadata filters instead.
+- **Over-literal quoting.** `"the user wants a refund because the order was damaged"` must appear exactly; use semantic search or `` `refund damaged order` `` plus a metadata filter if you have one.
+- **Saving before the result set looks right.** `Total` and `Annotated` only help if the saved search definition is correct.
+- **Giant unbounded saved searches.** Assign someone 5,000 traces and it won't get finished.
+- **Confusing flaggers with search.** Flaggers annotate automatically; saved searches are for work you scope and review yourself.
+- **Expecting alerts.** No email when a new trace matches; check `Last found` or make watch review a recurring task.
+
+## What teams often do
+
+- **One owner per saved search under review** — one person responsible; everyone else can still see and open it.
+- **Saved searches owned by the team that knows that area** — checkout with payments, support flows with the team that ships them.
+- **A quick pass on new matches** — owners skim recent hits on their watches before weekly planning.
+- **Save as new instead of arguing** — when two squads need slightly different views of the same flow, don't overwrite a shared search.
+
+## Next Steps
+
+- [Search Overview](../search/overview): Semantic, literal, and phrase syntax plus filters
+- [Saved Searches](../search/saved-searches): Creating, assigning, updating, and deleting saved searches
+- [Core Concepts — Saved searches](../getting-started/concepts#saved-searches): What a saved search is and typical uses
+- [Filters](../observability/filters): The shared filter system used in search and elsewhere
+- [Annotation Best Practices](./annotations): Review habits once your saved search is scoped
+- [Flaggers](../annotations/flaggers): Automatic annotation for common failure categories (not saved searches)

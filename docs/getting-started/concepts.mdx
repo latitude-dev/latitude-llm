@@ -30,7 +30,7 @@ A project is the main product boundary for reliability workflows. Each project t
 Everything you work with day-to-day is project-scoped:
 
 - **Traces and sessions**: Your agent's captured interactions
-- **Search and saved searches**: Find traces by meaning and bookmark useful cohorts
+- **Search and saved searches**: Find traces by meaning and bookmark searches your team revisits
 - **Flaggers**: Automatic annotators that surface common failure categories
 - **Evaluations**: Automated monitoring scripts
 - **Issues**: Discovered failure patterns
@@ -44,6 +44,21 @@ When you create a project, Latitude provisions a full set of [flaggers](../annot
 Projects can override organization-level defaults:
 
 - **Keep monitoring**: Controls whether issue-linked evaluations stay active after an issue is resolved. When set at the project level, it overrides the organization default. When a user resolves an issue, this setting determines the default state of the "keep monitoring" toggle in the confirmation dialog.
+
+## Saved searches
+
+A **saved search** is a named query plus filters that defines a group of traces you care about — a flow, a failure mode, a time window, or any mix. Saved searches are how teams scope review work in Latitude: they're bounded so you can tell when you've covered the matches, share progress, and watch for regressions later.
+
+Run a search on the [Search](../search/overview) page — plain words for meaning, `"quotes"` for exact text, backticks for ordered phrases — tune filters until the matches look right, then click **Save search**. You get a name, an optional assignee, **Annotated / Total** for review progress, and **Last found** for whether new matches are still showing up.
+
+Typical saved searches:
+
+- A flow you're monitoring — _"checkout sessions over 5 steps"_
+- A failure mode — _"NSFW flagger matches without a paired refusal"_
+- A time window — _"refunds in the last 7 days"_
+- A regression watch — _"tool retry traces"_ left in place after a fix
+
+See [Search Best Practices](../best-practices/search) for how to define and maintain useful saved searches.
 
 ## How Settings Cascade
 

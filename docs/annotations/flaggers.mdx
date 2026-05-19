@@ -7,7 +7,7 @@ description: Automatic annotators that surface common failure categories on ever
 
 Flaggers are Latitude's built-in automatic annotators. Every project is provisioned with a fixed set of flaggers — one per known failure category — and each completed trace is checked against the enabled flaggers. When a flagger matches, Latitude writes an annotation score directly on the trace, no human review required.
 
-Flaggers replace what used to be called **system annotation queues**. The categories and detection logic are the same; the surface is different. Instead of routing matches into a queue for review, flaggers write a published annotation immediately and that annotation flows through the rest of the system: scores, issue discovery, analytics, and alignment.
+Flaggers detect known failure categories on every completed trace and write a published annotation immediately. That annotation flows through the rest of the system: scores, issue discovery, analytics, and alignment.
 
 ## Available Flaggers
 
@@ -98,7 +98,7 @@ Sampling is the main lever for cost and noise control. A flagger that's too nois
 | Surface | Best for |
 | --- | --- |
 | **Flaggers** | Automatic, project-wide detection of known failure categories. You don't pick the matches; the flagger does. |
-| **[Saved searches](../search/saved-searches)** | Building custom cohorts around anything Latitude doesn't already flag for you. |
+| **[Saved searches](../search/saved-searches)** | Custom saved searches for anything flaggers don't cover. |
 | **[Inline annotations](./inline-annotations)** | Leaving human feedback on individual traces, either as a quick spot check or as the human side of an evaluation alignment loop. |
 
 All three feed the same scores system, the same issue discovery pipeline, and the same alignment metrics. The difference is who decides which trace gets attention: a flagger, a person searching, or a person opening a trace directly.
@@ -113,5 +113,5 @@ This is the simplest way to see flaggers in action: enable them on a project, le
 
 - [Annotations Overview](./overview): How annotations connect to scores, issues, and evaluations
 - [Inline Annotations](./inline-annotations): Leave human feedback on traces
-- [Search](../search/overview): Build cohorts that flaggers don't cover
+- [Search](../search/overview): Saved searches for scopes flaggers don't cover
 - [Issues](../issues/overview): How flagger annotations become trackable failure patterns

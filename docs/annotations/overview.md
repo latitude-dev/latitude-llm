@@ -34,7 +34,7 @@ Annotations save as drafts immediately (so you won't lose work if the page refre
 
 Open any trace, anywhere in the product — from the Traces page, from a search result, from an issue's logs — and use the annotation panel on the right. This is the primary annotation surface.
 
-A common workflow is to build a [saved search](../search/saved-searches) that scopes you to the cohort you want to review, then work through the matching traces one at a time, annotating from the detail view.
+A common workflow is to open a [saved search](../search/saved-searches) for the traces you want to review, then work through matches one at a time, annotating from the detail view.
 
 See [Inline Annotations](./inline-annotations) for details on the annotation panel and scope choices.
 
@@ -64,12 +64,12 @@ Annotations are the foundation of Latitude's reliability loop. They serve three 
 | **[Issues](../issues/overview)**           | Failed annotations enter the issue discovery pipeline, where similar failures are clustered into trackable issues     |
 | **[Evaluations](../evaluations/overview)** | Annotations provide ground truth for measuring evaluation accuracy                                                    |
 | **[Alignment](../evaluations/alignment)**  | When human and machine scores overlap on the same traces, Latitude computes alignment metrics (MCC, confusion matrix) |
-| **[Search](../search/overview)**           | Search and saved searches are the primary way to scope yourself to a cohort of traces to annotate                     |
+| **[Search](../search/overview)**           | Saved searches are the primary way to scope which traces to annotate                               |
 | **[Flaggers](./flaggers)**                 | Automatic annotators that handle a fixed list of common failure categories without human review                       |
 
 ## Next Steps
 
 - [Inline Annotations](./inline-annotations): Annotate directly from trace views
 - [Flaggers](./flaggers): Automatic annotators for common failure categories
-- [Search](../search/overview): Build cohorts to annotate
+- [Search](../search/overview): Save searches to scope traces for annotation
 - [Evaluation Alignment](../evaluations/alignment): See how annotations calibrate your evaluations
