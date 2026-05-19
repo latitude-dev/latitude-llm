@@ -1,5 +1,5 @@
 import type { IncidentRecovery } from "@domain/notifications"
-import type { AlertIncidentKind } from "@domain/shared"
+import type { AlertSeverity } from "@domain/shared"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -8,34 +8,76 @@ import { ContainerLayout } from "../../../components/ContainerLayout.tsx"
 import { EmailButton } from "../../../components/EmailButton.tsx"
 import { EmailText } from "../../../components/EmailText.tsx"
 import { emailDesignTokens } from "../../../tokens/design-system.ts"
-import { humanizeDurationMs, IncidentTrendChartImage } from "../-incident-components.tsx"
+import {
+  EmailMetadataTable,
+  formatScope,
+  humanizeDurationMs,
+  IncidentTrendChartImage,
+  SectionHeader,
+  SeverityBadge,
+  TimestampIdRow,
+} from "../-incident-components.tsx"
 
 interface IncidentClosedEmailProps {
-  readonly userName: string
-  readonly incidentKind: AlertIncidentKind
+  readonly severity: AlertSeverity
+  readonly issueId: string
   readonly issueName: string | undefined
+  readonly issueDescription: string | undefined
   readonly issueUrl: string | undefined
   readonly chartUrl: string
+  readonly notificationCreatedAt: Date
+  readonly organizationName: string
+  readonly projectName: string | undefined
   readonly recovery: IncidentRecovery
 }
 
-export function IncidentClosedEmail({ userName, issueName, issueUrl, chartUrl, recovery }: IncidentClosedEmailProps) {
+export function IncidentClosedEmail({
+  severity,
+  issueId,
+  issueName,
+  issueDescription,
+  issueUrl,
+  chartUrl,
+  notificationCreatedAt,
+  organizationName,
+  projectName,
+  recovery,
+}: IncidentClosedEmailProps) {
   const issueRef = issueName ?? "an issue"
+  const scope = formatScope(organizationName, projectName)
   const duration = humanizeDurationMs(recovery.durationMs)
+
+  const metadataRows = [
+    { label: "Project", value: scope },
+    { label: "Severity", value: <SeverityBadge severity={severity} /> },
+  ]
 
   return (
     <ContainerLayout previewText={`Resolved: escalation on ${issueRef}`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        {`Resolved: escalation on ${issueRef}`}
+        Resolved escalation
       </EmailText>
-      <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`Hi ${userName}, the occurrence rate has returned to baseline.`}
+      <EmailText variant="body">
+        We notified everyone watching this project — the occurrence rate has returned to baseline.
       </EmailText>
 
-      <EmailText variant="bodySmall" className="text-muted-foreground">
+      <SectionHeader label="Issue" />
+
+      <EmailText variant="heading">{issueRef}</EmailText>
+      {issueDescription ? (
+        <EmailText variant="bodySmall" className="text-muted-foreground">
+          {issueDescription}
+        </EmailText>
+      ) : null}
+
+      <TimestampIdRow timestamp={notificationCreatedAt} id={issueId} />
+
+      <EmailMetadataTable rows={metadataRows} />
+
+      <SectionHeader label="Recovery" />
+      <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
         {`Elevated for ${duration} — no further action needed unless the issue regresses again.`}
       </EmailText>
-
       <IncidentTrendChartImage src={chartUrl} />
 
       {issueUrl ? (
@@ -48,10 +90,14 @@ export function IncidentClosedEmail({ userName, issueName, issueUrl, chartUrl, r
 }
 
 IncidentClosedEmail.PreviewProps = {
-  userName: "Alex",
-  incidentKind: "issue.escalating",
+  severity: "high",
+  issueId: "dds0rt8sqgpuku4u4wabze9r",
   issueName: "Token leakage in responses",
+  issueDescription: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
   issueUrl: "https://console.latitude.so/projects/sample-project/issues?issueId=preview-issue",
   chartUrl: "https://placehold.co/600x200/dbe5ff/3b5bff?text=Trend+chart",
+  notificationCreatedAt: new Date("2026-03-18T10:37:00Z"),
+  organizationName: "Acme Inc.",
+  projectName: "Support agent",
   recovery: { durationMs: 32 * 60 * 1000 },
 } satisfies IncidentClosedEmailProps

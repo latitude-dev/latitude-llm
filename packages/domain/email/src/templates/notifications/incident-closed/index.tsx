@@ -19,8 +19,6 @@ const buildSourceUrl = (
 
 export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"> = (payload, ctx) =>
   Effect.gen(function* () {
-    const userName = ctx.recipient.name ?? "there"
-
     const issues = yield* IssueRepository
     const issue = yield* issues.findById(IssueId(payload.sourceId)).pipe(
       Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
@@ -44,11 +42,15 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
       try: () =>
         renderEmail(
           <IncidentClosedEmail
-            userName={userName}
-            incidentKind={payload.incidentKind}
+            severity={payload.severity}
+            issueId={payload.sourceId}
             issueName={issue?.name ?? undefined}
+            issueDescription={issue?.description ?? undefined}
             issueUrl={issueUrl}
             chartUrl={chartUrl}
+            notificationCreatedAt={ctx.notificationCreatedAt}
+            organizationName={ctx.organization.name}
+            projectName={ctx.project?.name}
             recovery={payload.recovery}
           />,
         ),
@@ -61,8 +63,8 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
 
     return {
       html,
-      subject: `[Latitude] Resolved: escalation on ${issueRef}`,
-      text: `Hi ${userName},\n\nResolved: escalation on ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
+      subject: `Resolved: escalation on ${issueRef}`,
+      text: `Resolved: escalation on ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
     }
   })
 

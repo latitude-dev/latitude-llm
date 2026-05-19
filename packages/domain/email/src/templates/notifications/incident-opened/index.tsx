@@ -7,7 +7,7 @@ import React from "react"
 import { buildChartUrl } from "../../../helpers/chart-url.ts"
 import { renderEmail } from "../../../utils/render.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
-import { ALERT_KIND_TO_LABEL, IncidentOpenedEmail } from "./EmailTemplate.tsx"
+import { IncidentOpenedEmail } from "./EmailTemplate.tsx"
 
 const buildSourceUrl = (
   ctx: NotificationEmailRenderContext,
@@ -19,12 +19,6 @@ const buildSourceUrl = (
 
 export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"> = (payload, ctx) =>
   Effect.gen(function* () {
-    const userName = ctx.recipient.name ?? "there"
-    const label = ALERT_KIND_TO_LABEL[payload.incidentKind]
-
-    // Live-resolve the issue's display name — the payload only carries
-    // `sourceId`, and a snapshot would go stale on rename. Falls back to
-    // a generic label if the issue can't be found (e.g. hard-deleted).
     const issues = yield* IssueRepository
     const issue = yield* issues.findById(IssueId(payload.sourceId)).pipe(
       Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
@@ -48,13 +42,18 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
       try: () =>
         renderEmail(
           <IncidentOpenedEmail
-            userName={userName}
-            incidentKind={payload.incidentKind}
+            severity={payload.severity}
+            issueId={payload.sourceId}
             issueName={issue?.name ?? undefined}
+            issueDescription={issue?.description ?? undefined}
             issueUrl={issueUrl}
             chartUrl={chartUrl}
+            notificationCreatedAt={ctx.notificationCreatedAt}
+            organizationName={ctx.organization.name}
+            projectName={ctx.project?.name}
             tags={payload.tags}
             breach={payload.breach}
+            sampleExcerpt={payload.sampleExcerpt}
           />,
         ),
       catch: (cause) => ({
@@ -66,8 +65,8 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
 
     return {
       html,
-      subject: `[Latitude] Escalating: ${issueRef}`,
-      text: `Hi ${userName},\n\n${label}: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
+      subject: `Escalating: ${issueRef}`,
+      text: `Escalating issue: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
     }
   })
 

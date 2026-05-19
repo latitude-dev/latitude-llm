@@ -73,9 +73,7 @@ function setup(opts: { readonly project?: Project | null | typeof DEFAULT_PROJEC
   }
   const organizationRepo = OrganizationRepository.of({
     findById: (id) =>
-      id === orgId
-        ? Effect.succeed(organization)
-        : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+      id === orgId ? Effect.succeed(organization) : Effect.fail(new NotFoundError({ entity: "Organization", id })),
     listByUserId: () => Effect.die("not used"),
     save: () => Effect.die("not used"),
     delete: () => Effect.die("not used"),
