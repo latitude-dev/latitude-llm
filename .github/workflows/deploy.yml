@@ -26,7 +26,6 @@ jobs:
       target_sha: ${{ steps.target.outputs.target_sha }}
       staging_should_deploy: ${{ steps.target.outputs.staging_should_deploy }}
       production_should_deploy: ${{ steps.target.outputs.production_should_deploy }}
-      create_release_tag: ${{ steps.target.outputs.create_release_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -46,10 +45,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          changelog_file="CHANGELOG.md"
           staging_should_deploy=false
           production_should_deploy=false
-          create_release_tag=false
           target_sha=""
 
           git fetch origin development --quiet
@@ -78,11 +75,6 @@ jobs:
             exit 1
           }
 
-          extract_latest_changelog_version() {
-            local ref="$1"
-            git show "${ref}:${changelog_file}" | grep -m1 -E '^## +\[?v[0-9]+\.[0-9]+\.[0-9]+\]?' | sed -E 's/^## +\[?(v[0-9]+\.[0-9]+\.[0-9]+)\]?.*/\1/'
-          }
-
           if [ "${EVENT_NAME}" = "push" ]; then
             if [ "${REF_TYPE}" = "tag" ]; then
               target_sha=$(git rev-parse "${REF_NAME}^{commit}")
@@ -90,12 +82,6 @@ jobs:
 
               if ! echo "${REF_NAME}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
                 echo "Production tags must look like v1.2.3. Got: ${REF_NAME}"
-                exit 1
-              fi
-
-              changelog_version=$(extract_latest_changelog_version "${target_sha}" || true)
-              if [ "${changelog_version}" != "${REF_NAME}" ]; then
-                echo "Tag ${REF_NAME} does not match the latest ${changelog_file} release heading (${changelog_version:-none})."
                 exit 1
               fi
             else
@@ -106,19 +92,6 @@ jobs:
 
               target_sha="${CURRENT_SHA}"
               staging_should_deploy=true
-
-              if [ "${BEFORE_SHA}" = "0000000000000000000000000000000000000000" ]; then
-                changed_files=$(git diff-tree --no-commit-id --name-only -r "${CURRENT_SHA}")
-                previous_changelog_version=""
-              else
-                changed_files=$(git diff --name-only "${BEFORE_SHA}" "${CURRENT_SHA}")
-                previous_changelog_version=$(extract_latest_changelog_version "${BEFORE_SHA}" || true)
-              fi
-
-              current_changelog_version=$(extract_latest_changelog_version "${CURRENT_SHA}" || true)
-              if [ "${changed_files}" = "${changelog_file}" ] && [ -n "${current_changelog_version}" ] && [ "${current_changelog_version}" != "${previous_changelog_version}" ]; then
-                create_release_tag=true
-              fi
             fi
           else
             if [ "${REF_NAME}" != "development" ]; then
@@ -127,7 +100,7 @@ jobs:
             fi
 
             if [ "${INPUT_ENVIRONMENT}" = "production" ]; then
-              echo "Production deploys are triggered by release tag pushes only. Use scripts/release.sh to open a release PR."
+              echo "Production deploys are triggered by release tag pushes only. Use scripts/release.sh from the commit to deploy."
               exit 1
             elif [ "${INPUT_ENVIRONMENT}" = "staging" ]; then
               target_sha="${CURRENT_SHA}"
@@ -161,7 +134,6 @@ jobs:
             echo "target_sha=${target_sha}"
             echo "staging_should_deploy=${staging_should_deploy}"
             echo "production_should_deploy=${production_should_deploy}"
-            echo "create_release_tag=${create_release_tag}"
           } >> "${GITHUB_OUTPUT}"
 
   check:
@@ -559,49 +531,6 @@ jobs:
         env:
           DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
           DATADOG_SITE: ${{ vars.DATADOG_SITE }}
-
-  create-production-release-tag:
-    needs: [validate-target, staging-apply]
-    if: needs.validate-target.outputs.create_release_tag == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout release commit
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ needs.validate-target.outputs.target_sha }}
-          fetch-depth: 0
-
-      - name: Create production release tag
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          TARGET_SHA: ${{ needs.validate-target.outputs.target_sha }}
-        run: |
-          set -euo pipefail
-
-          version=$(grep -m1 -E '^## +\[?v[0-9]+\.[0-9]+\.[0-9]+\]?' CHANGELOG.md | sed -E 's/^## +\[?(v[0-9]+\.[0-9]+\.[0-9]+)\]?.*/\1/')
-          if [ -z "${version}" ]; then
-            echo "The latest CHANGELOG.md release heading must look like '## v1.2.3'."
-            exit 1
-          fi
-
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch origin "refs/tags/${version}:refs/tags/${version}" 2>/dev/null || true
-
-          if git rev-parse --verify "refs/tags/${version}" >/dev/null 2>&1; then
-            existing_sha=$(git rev-list -n 1 "refs/tags/${version}")
-            if [ "${existing_sha}" = "${TARGET_SHA}" ]; then
-              echo "Tag ${version} already points at ${TARGET_SHA}; nothing to do."
-              exit 0
-            fi
-
-            echo "Tag ${version} already exists and points at ${existing_sha}, not ${TARGET_SHA}."
-            exit 1
-          fi
-
-          git tag "${version}" "${TARGET_SHA}"
-          git push origin "refs/tags/${version}"
 
   # ── Production ───────────────────────────────────────────
 
