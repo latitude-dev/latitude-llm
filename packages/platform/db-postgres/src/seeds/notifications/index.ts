@@ -6,11 +6,10 @@ import {
   type IncidentTrend,
 } from "@domain/notifications"
 import { ALERT_INCIDENT_KINDS, type AlertIncidentKind, NotificationId, SEVERITY_FOR_KIND } from "@domain/shared"
-import { and, eq, inArray } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { alertIncidents } from "../../schema/alert-incidents.ts"
 import { members } from "../../schema/better-auth.ts"
-import { issues } from "../../schema/issues.ts"
 import { notifications } from "../../schema/notifications.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
@@ -98,18 +97,6 @@ const seedIncidentNotifications: Seeder = {
           console.log("  -> notifications: no org members to deliver to, skipping")
           return
         }
-
-        const issueIds = [...new Set(orgIncidents.map((i) => i.sourceId))]
-        await ctx.db
-          .select({ id: issues.id, name: issues.name })
-          .from(issues)
-          .where(
-            and(
-              eq(issues.organizationId, ctx.scope.organizationId),
-              eq(issues.projectId, ctx.scope.projectId),
-              inArray(issues.id, issueIds),
-            ),
-          )
 
         // Stamp endedAt on the seeded escalating incident so the closed-side
         // notification has a real transition timestamp to anchor the trend.
