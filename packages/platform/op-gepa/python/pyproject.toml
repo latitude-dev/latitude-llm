@@ -5,7 +5,7 @@ description = "Latitude GEPA optimization runtime"
 requires-python = ">=3.13, <3.14"
 dependencies = [
     "gepa==0.0.27",
-    "pydantic==2.13.3",
+    "pydantic==2.13.4",
     "typing-extensions==4.15.0",
 ]
 
