@@ -123,6 +123,13 @@ export const incidentOpenedPayloadSchema = z.object({
    * generic line in that case.
    */
   breach: incidentBreachSchema.optional(),
+  /**
+   * Optional: latest annotation rawFeedback or evaluation feedback —
+   * same shape as on `incident.event`. The escalating email shows it
+   * as a "what triggered this" preview so the recipient sees the
+   * actual content without clicking through.
+   */
+  sampleExcerpt: incidentSampleExcerptSchema.optional(),
 })
 export type IncidentOpenedPayload = z.infer<typeof incidentOpenedPayloadSchema>
 

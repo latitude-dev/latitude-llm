@@ -297,6 +297,7 @@ const buildPayload = (input: {
       trend,
       ...(mutableTags ? { tags: mutableTags } : {}),
       ...(breach ? { breach } : {}),
+      ...(sampleExcerpt ? { sampleExcerpt } : {}),
     }
   }
   return {
@@ -340,13 +341,14 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
 
     const kShort = projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
     // Snapshot trend + tags + sample-excerpt in parallel. Closed kind
-    // skips tags (the email focuses on recovery) and sample excerpt
-    // (the template is excerpt-free).
+    // skips both: the recovery email focuses on the descent, not the
+    // source context. Event + opened both get the excerpt so the
+    // recipient sees what triggered the alert without clicking through.
     const [trend, tags, sampleExcerpt] = yield* Effect.all(
       [
         snapshotTrend({ incident, kind: notificationKind, kShort }),
         notificationKind === "incident.closed" ? Effect.succeed(undefined) : snapshotTags(incident),
-        notificationKind === "incident.event" ? snapshotSampleExcerpt(incident) : Effect.succeed(undefined),
+        notificationKind === "incident.closed" ? Effect.succeed(undefined) : snapshotSampleExcerpt(incident),
       ],
       { concurrency: "unbounded" },
     )
