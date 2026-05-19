@@ -6,6 +6,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
+    "chdb:build": "node ../../../scripts/ensure-chdb-built.mjs",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",

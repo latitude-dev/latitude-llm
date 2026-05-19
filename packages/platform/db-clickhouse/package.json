@@ -22,7 +22,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests --dir src"
+    "test": "pnpm --filter @platform/testkit chdb:build && vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",

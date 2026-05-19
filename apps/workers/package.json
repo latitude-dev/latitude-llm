@@ -11,7 +11,7 @@
     "trace-search:backfill": "tsx src/scripts/backfill-trace-search.ts",
     "trace-search:backfill:dist": "node --enable-source-maps dist/scripts/backfill-trace-search.cjs",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests --dir src"
+    "test": "pnpm --filter @platform/testkit chdb:build && vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@bull-board/api": "catalog:",

@@ -54,11 +54,11 @@ catalog:
 
 ignoredBuiltDependencies:
   - "@prisma/engines"
+  - chdb
   - msw
   - prisma
   - protobufjs
 
 onlyBuiltDependencies:
   - "@biomejs/biome"
-  - chdb
   - esbuild

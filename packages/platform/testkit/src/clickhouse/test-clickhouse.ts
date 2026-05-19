@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs"
+import { createRequire } from "node:module"
 import { resolve } from "node:path"
 import type { ClickHouseClient } from "@clickhouse/client"
-import { Session } from "chdb"
+import type { Session } from "chdb"
 import { afterAll, beforeAll, beforeEach } from "vitest"
 
-type ChdbSession = InstanceType<typeof Session>
+type ChdbSession = Session
+type ChdbModule = { Session: new () => ChdbSession }
+
+const require = createRequire(import.meta.url)
 
 export interface TestClickHouse {
   readonly client: ClickHouseClient
@@ -47,6 +51,7 @@ function rewriteUnsupportedChdbFunctions(sql: string): string {
 }
 
 export function createTestClickHouse(): TestClickHouse {
+  const { Session } = require("chdb") as ChdbModule
   const session = new Session()
   const client = {
     async query(params: { query: string; query_params?: Record<string, unknown>; format?: string }) {
