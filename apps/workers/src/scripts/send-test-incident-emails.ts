@@ -23,7 +23,11 @@ Options:
 
 const INCIDENT_KINDS = ["incident.event", "incident.opened", "incident.closed"] as const
 
-loadDevelopmentEnvironments(import.meta.url)
+// Pass a synthetic URL one level up so `loadDevelopmentEnvironments`'s
+// `../../../.env.<NODE_ENV>` traversal lands at the monorepo root —
+// scripts live one directory deeper than `server.ts`. Same trick the
+// `backfill-trace-search` script uses.
+loadDevelopmentEnvironments(new URL("../server.ts", import.meta.url).href)
 
 async function main(): Promise<void> {
   const parsed = parseArgs({
