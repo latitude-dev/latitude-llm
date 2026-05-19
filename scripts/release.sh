@@ -6,28 +6,63 @@ export GIT_PAGER=cat
 
 usage() {
   cat <<EOF
-Usage: $0 [version]
+Usage: $0 [--patch|--minor|--major] [version]
 
 Tags the current commit for production and pushes the tag. Production deploys are
 triggered by pushed vX.Y.Z tags.
 
 If version is omitted, the script finds the latest vX.Y.Z tag and bumps to the
-next minor version (vX.(Y+1).0). If no release tag exists yet, it starts at
-v0.1.0.
+next patch version (vX.Y.(Z+1)). Use --minor or --major to bump a different
+component. If no release tag exists yet, it starts at v0.1.0.
 
 Examples:
   $0
+  $0 --minor
+  $0 --major
   $0 v1.2.3
 EOF
 }
 
-if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
-  usage
-  exit 0
-fi
+bump_kind="patch"
+version=""
 
-if [ "$#" -gt 1 ]; then
-  usage
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --patch)
+      bump_kind="patch"
+      shift
+      ;;
+    --minor)
+      bump_kind="minor"
+      shift
+      ;;
+    --major)
+      bump_kind="major"
+      shift
+      ;;
+    v*)
+      if [ -n "${version}" ]; then
+        usage
+        exit 1
+      fi
+      version="$1"
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      echo ""
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ -n "${version}" ] && [ "${bump_kind}" != "patch" ]; then
+  echo "Do not combine an explicit version with --minor or --major."
   exit 1
 fi
 
@@ -48,15 +83,23 @@ fi
 
 latest_tag=$(git tag --sort=-v:refname 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
 
-if [ "$#" -eq 1 ]; then
-  version="$1"
-else
+if [ -z "${version}" ]; then
   if [ -z "${latest_tag}" ]; then
     version="v0.1.0"
   else
     semver="${latest_tag#v}"
     IFS=. read -r major minor patch <<<"${semver}"
-    version="v${major}.$((minor + 1)).0"
+    case "${bump_kind}" in
+      patch)
+        version="v${major}.${minor}.$((patch + 1))"
+        ;;
+      minor)
+        version="v${major}.$((minor + 1)).0"
+        ;;
+      major)
+        version="v$((major + 1)).0.0"
+        ;;
+    esac
   fi
 fi
 

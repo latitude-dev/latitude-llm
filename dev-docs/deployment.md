@@ -2,7 +2,7 @@
 
 Deployment is single-branch by default. `development` is the trunk branch and normal merges to it deploy the merged commit to staging.
 
-Production deployments are release-tag based. A developer deploys a commit to production by pushing a `vX.Y.Z` tag that points at a commit already reachable from `origin/development`. Use `scripts/release.sh [version]` from the commit to tag and push it. If no version is supplied, the script finds the latest `vX.Y.Z` tag and bumps to the next minor version, for example `v1.4.2` → `v1.5.0`; if no release tag exists, it starts at `v0.1.0`.
+Production deployments are release-tag based. A developer deploys a commit to production by pushing a `vX.Y.Z` tag that points at a commit already reachable from `origin/development`. Use `scripts/release.sh [version]` from the commit to tag and push it. If no version is supplied, the script finds the latest `vX.Y.Z` tag and bumps to the next patch version, for example `v1.4.2` → `v1.4.3`; use `--minor` or `--major` to bump those components instead. If no release tag exists, it starts at `v0.1.0`.
 
 The production workflow validates that the tag is a `vX.Y.Z` tag, that the tagged commit is reachable from `origin/development`, and that the tagged commit already has a successful staging deployment.
 
