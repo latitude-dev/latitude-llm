@@ -30,7 +30,7 @@
         "default": "./dist/index.js"
       },
       "require": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
     }
@@ -79,14 +79,5 @@
     "typescript": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
-  },
-  "peerDependencies": {
-    "@openai/agents": ">=0.9.0",
-    "typescript": "^6.0.3"
-  },
-  "peerDependenciesMeta": {
-    "@openai/agents": {
-      "optional": true
-    }
   }
 }
