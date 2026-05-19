@@ -78,5 +78,5 @@
     }
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],
-  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/datadog", "@pulumi/random", "fern-api"]
+  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/datadog", "@pulumi/random", "fern-api", "chdb"]
 }
