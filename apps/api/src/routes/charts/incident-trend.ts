@@ -82,10 +82,17 @@ export const registerIncidentTrendChartRoute = ({
     if (!parsed.success) return respondTransparent(c)
 
     const breach = "breach" in parsed.data ? parsed.data.breach : undefined
-    const png = await renderIncidentTrendPng({
-      trend: parsed.data.trend,
-      ...(breach ? { breach } : {}),
-    })
-    return respondPng(c, png)
+    try {
+      const png = await renderIncidentTrendPng({
+        trend: parsed.data.trend,
+        ...(breach ? { breach } : {}),
+      })
+      return respondPng(c, png)
+    } catch {
+      // Render failures (font CDN timeout, satori throw, resvg panic)
+      // degrade to the transparent fallback instead of a 500 — a broken
+      // image in the recipient's inbox is worse than a missing one.
+      return respondTransparent(c)
+    }
   })
 }

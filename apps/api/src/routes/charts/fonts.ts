@@ -7,15 +7,18 @@
  * surfaces render on the same node.
  *
  * Cached in module scope; concurrent callers share an in-flight
- * promise.
+ * promise. The fetch carries an `AbortSignal.timeout` so a slow CDN
+ * doesn't hang an inbound chart request indefinitely — the caller
+ * catches the throw and degrades to the 1×1 transparent PNG fallback.
  */
 const FONT_URL = "https://cdn.jsdelivr.net/npm/@expo-google-fonts/source-serif-pro@0.2.3/SourceSerifPro_400Regular.ttf"
+const FONT_FETCH_TIMEOUT_MS = 5_000
 
 let cached: ArrayBuffer | null = null
 let inFlight: Promise<ArrayBuffer> | null = null
 
 const fetchFont = async (): Promise<ArrayBuffer> => {
-  const res = await fetch(FONT_URL)
+  const res = await fetch(FONT_URL, { signal: AbortSignal.timeout(FONT_FETCH_TIMEOUT_MS) })
   if (!res.ok) throw new Error(`Failed to fetch chart font: ${res.status} ${res.statusText}`)
   return res.arrayBuffer()
 }
