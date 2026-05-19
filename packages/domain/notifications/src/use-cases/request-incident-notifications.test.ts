@@ -66,7 +66,7 @@ function setup(opts: SetupOpts = {}) {
     updateExitDwell: () => Effect.die("updateExitDwell not used"),
     findById: (id) =>
       id === incidentId ? Effect.succeed(incident) : Effect.fail(new NotFoundError({ entity: "AlertIncident", id })),
-    listByProjectInRange: () => Effect.die("listByProjectInRange not used"),
+    listByProjectId: () => Effect.die("listByProjectId not used"),
     listOpenByKind: () => Effect.die("listOpenByKind not used"),
   }
 

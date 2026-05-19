@@ -1,6 +1,6 @@
 import { type AlertIncident, AlertIncidentRepository, alertIncidentSchema } from "@domain/alerts"
 import { type AlertIncidentId, NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, eq, gte, isNull, lte, or } from "drizzle-orm"
+import { and, asc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
@@ -92,7 +92,7 @@ export const AlertIncidentRepositoryLive = Layer.effect(
             db.update(alertIncidents).set({ exitEligibleSince }).where(eq(alertIncidents.id, id)),
           )
         }),
-      listByProjectInRange: ({ organizationId, projectId, from, to, sourceType, sourceId }) =>
+      listByProjectId: ({ organizationId, projectId, from, to, sourceTypes, sourceId, kinds, severities }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db) =>
@@ -103,10 +103,12 @@ export const AlertIncidentRepositoryLive = Layer.effect(
                 and(
                   eq(alertIncidents.organizationId, organizationId),
                   eq(alertIncidents.projectId, projectId),
-                  lte(alertIncidents.startedAt, to),
-                  or(isNull(alertIncidents.endedAt), gte(alertIncidents.endedAt, from)),
-                  sourceType ? eq(alertIncidents.sourceType, sourceType) : undefined,
+                  to ? lte(alertIncidents.startedAt, to) : undefined,
+                  from ? or(isNull(alertIncidents.endedAt), gte(alertIncidents.endedAt, from)) : undefined,
+                  sourceTypes && sourceTypes.length > 0 ? inArray(alertIncidents.sourceType, sourceTypes) : undefined,
                   sourceId ? eq(alertIncidents.sourceId, sourceId) : undefined,
+                  kinds && kinds.length > 0 ? inArray(alertIncidents.kind, kinds) : undefined,
+                  severities && severities.length > 0 ? inArray(alertIncidents.severity, severities) : undefined,
                 ),
               )
               .orderBy(asc(alertIncidents.startedAt)),

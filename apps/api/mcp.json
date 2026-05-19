@@ -7355,6 +7355,175 @@
       }
     },
     {
+      "name": "listIncidents",
+      "title": "List project incidents",
+      "description": "Returns incidents in the project, ordered from oldest to newest. The time window defaults to the trailing 7 days.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time window. Returns incidents whose lifetime overlaps `[fromIso, toIso]`. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time window. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "sourceTypes": {
+            "description": "Restrict to incidents whose source type matches any value in this list.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "issue"
+              ]
+            }
+          },
+          "sourceId": {
+            "description": "Restrict to incidents tied to a single source entity (e.g. one issue id).",
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24
+          },
+          "kinds": {
+            "description": "Restrict to incidents whose kind matches any value in this list.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "issue.new",
+                "issue.regressed",
+                "issue.escalating"
+              ]
+            }
+          },
+          "severities": {
+            "description": "Restrict to incidents whose severity matches any value in this list.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "medium",
+                "high"
+              ]
+            }
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Stable incident identifier."
+                },
+                "organizationId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Organization that owns this incident."
+                },
+                "projectId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Project this incident belongs to."
+                },
+                "sourceType": {
+                  "type": "string",
+                  "enum": [
+                    "issue"
+                  ],
+                  "description": "Kind of entity that triggered the incident. Currently always `\"issue\"`."
+                },
+                "sourceId": {
+                  "type": "string",
+                  "minLength": 24,
+                  "maxLength": 24,
+                  "description": "Id of the entity that triggered the incident (matches `sourceType`)."
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "issue.new",
+                    "issue.regressed",
+                    "issue.escalating"
+                  ],
+                  "description": "Reason the incident opened. `issue.new` fires when a brand-new issue is discovered; `issue.regressed` when a resolved issue starts occurring again; `issue.escalating` when an existing issue's occurrence rate exceeds its seasonal baseline."
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "medium",
+                    "high"
+                  ],
+                  "description": "Severity bucket assigned to the incident. `issue.new` is `medium`; `issue.regressed` and `issue.escalating` are `high`."
+                },
+                "startedAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which the incident opened."
+                },
+                "endedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "ISO-8601 timestamp at which the incident closed, or `null` if still open."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO-8601 timestamp at which the incident row was created."
+                }
+              },
+              "required": [
+                "id",
+                "organizationId",
+                "projectId",
+                "sourceType",
+                "sourceId",
+                "kind",
+                "severity",
+                "startedAt",
+                "endedAt",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Incidents matching the filters, ordered by `startedAt` ascending."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "createApiKey",
       "title": "Generate API key",
       "description": "Generates a new API key for the organization. The token is only returned once — store it securely.",

@@ -48,7 +48,7 @@ const provideRepository = (incidents: readonly AlertIncident[]): AlertIncidentRe
   findOpen: () => Effect.die("findOpen not used"),
   closeOpen: () => Effect.die("closeOpen not used"),
   updateExitDwell: () => Effect.die("updateExitDwell not used"),
-  listByProjectInRange: () => Effect.die("listByProjectInRange not used"),
+  listByProjectId: () => Effect.die("listByProjectId not used"),
   listOpenByKind: (kind) =>
     kind === "issue.escalating" ? Effect.succeed(incidents) : Effect.die(`unexpected kind ${kind}`),
 })
