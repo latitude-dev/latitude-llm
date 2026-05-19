@@ -149,6 +149,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         // `input: false` keeps it out of Better Auth's signup / update API
         // surface — we write it via our own onboarding server function.
         jobTitle: { type: "string", required: false, input: false },
+        phoneNumber: { type: "string", required: false, input: false },
       },
     },
     /**

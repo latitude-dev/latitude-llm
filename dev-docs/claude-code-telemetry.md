@@ -38,7 +38,9 @@ Each turn produces three kinds of spans, all routed through the existing `apps/i
 | --- | --- | --- |
 | `interaction` | `prompt` | Root of the turn. `user_prompt`, `session.id`, `interaction.duration_ms`. |
 | `llm_request` | `chat` | Child of interaction. `model`, token counts (input/output/cache_read/cache_creation), `gen_ai.input.messages`, `gen_ai.output.messages` (full conversation as JSON). |
-| `tool_execution` | `execute_tool` | Child of llm_request, one per tool call. `tool.name`, `tool.id`, `tool.input`, `tool.output`. |
+| `tool_execution` or `tool` | `execute_tool` | Child of llm_request, one per tool call. `tool.name`, `tool.id`, `tool.input`, `tool.output`. |
+
+The [Anthropic Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview) uses the same CLI and can emit OTLP without the hook ([observability](https://code.claude.com/docs/en/agent-sdk/observability)). Native exports often use span **names** such as `claude_code.interaction`, `claude_code.llm_request`, and `claude_code.tool`; ingest maps those to the same operations as `span.type`-based spans (`resolveOperation` in `operation.ts`).
 
 Server-side routing lives in `packages/domain/spans/src/otlp/resolvers/operation.ts` (`CLAUDE_CODE_OPERATION` map) and `packages/domain/spans/src/otlp/content/claude-code.ts`. The `gen_ai.input.messages` / `gen_ai.output.messages` attributes are parsed by the generic `parseGenAICurrent` parser, which takes precedence over `parseClaudeCode`.
 

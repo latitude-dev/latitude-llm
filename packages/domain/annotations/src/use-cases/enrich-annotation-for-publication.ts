@@ -174,6 +174,20 @@ export const enrichAnnotationForPublicationUseCase = Effect.fn("annotations.enri
     }
   }
 
+  // Human reviewers own the publication-enrichment model pass. System-authored rows (flaggers,
+  // queues, API automation) carry model- or rule-generated `metadata.rawFeedback` and must not
+  // be rewritten by this step — persist that text as the published clusterable feedback.
+  if (annotationScore.annotatorId == null) {
+    const enrichedFeedback = metadata.rawFeedback.trim() || annotationScore.feedback.trim() || metadata.rawFeedback
+
+    return {
+      status: "enriched" as const,
+      enrichedFeedback,
+      resolvedSessionId: resolvedSessionId === null ? null : String(resolvedSessionId),
+      resolvedSpanId: resolvedSpanId === null ? null : String(resolvedSpanId),
+    }
+  }
+
   const result = yield* ai.generate({
     ...ANNOTATION_ENRICHMENT_MODEL,
     telemetry: {

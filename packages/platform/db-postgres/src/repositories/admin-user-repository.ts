@@ -38,6 +38,7 @@ export const AdminUserRepositoryLive = Layer.effect(
                 email: users.email,
                 name: users.name,
                 image: users.image,
+                phoneNumber: users.phoneNumber,
                 role: users.role,
                 createdAt: users.createdAt,
               })
@@ -129,6 +130,7 @@ export const AdminUserRepositoryLive = Layer.effect(
             email: row.email,
             name: row.name ?? null,
             image: row.image ?? null,
+            phoneNumber: row.phoneNumber ?? null,
             role: row.role as UserRoleValue,
             memberships: membershipRows.map((m) => ({
               organizationId: m.organizationId,

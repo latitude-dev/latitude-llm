@@ -1434,6 +1434,16 @@
               "null"
             ],
             "description": "`name` attribute of the root span. `null` when no root span has been ingested."
+          },
+          "positiveAnnotationCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of `passed = true` annotations attached to this trace."
+          },
+          "negativeAnnotationCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of `passed = false` annotations attached to this trace."
           }
         },
         "required": [
@@ -1463,7 +1473,9 @@
           "providers",
           "serviceNames",
           "rootSpanId",
-          "rootSpanName"
+          "rootSpanName",
+          "positiveAnnotationCount",
+          "negativeAnnotationCount"
         ]
       },
       "ListTracesBody": {
@@ -1651,6 +1663,16 @@
             ],
             "description": "`name` attribute of the root span. `null` when no root span has been ingested."
           },
+          "positiveAnnotationCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of `passed = true` annotations attached to this trace."
+          },
+          "negativeAnnotationCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of `passed = false` annotations attached to this trace."
+          },
           "metadata": {
             "type": "object",
             "additionalProperties": {
@@ -1711,6 +1733,8 @@
           "serviceNames",
           "rootSpanId",
           "rootSpanName",
+          "positiveAnnotationCount",
+          "negativeAnnotationCount",
           "metadata",
           "systemInstructions",
           "inputMessages",
@@ -1719,9 +1743,12 @@
         ]
       },
       "GenAISystem": {
-        "type": "object",
-        "additionalProperties": {},
-        "description": "System instructions in OpenTelemetry GenAI format."
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "description": "System instructions in OpenTelemetry GenAI format — an array of part objects."
       },
       "GenAIMessage": {
         "type": "object",
@@ -2372,9 +2399,12 @@
         ]
       },
       "GenAISpanSystem": {
-        "type": "object",
-        "additionalProperties": {},
-        "description": "System instructions in OpenTelemetry GenAI format."
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "description": "System instructions in OpenTelemetry GenAI format — an array of part objects."
       },
       "GenAISpanMessage": {
         "type": "object",
@@ -3541,7 +3571,7 @@
           },
           "token": {
             "type": "string",
-            "description": "Masked token preview safe to display in lists. Use `GET /api-keys/{id}` to retrieve the full token."
+            "description": "Masked token preview safe to display in lists. Use `GET /api-keys/{apiKeyId}` to retrieve the full token."
           },
           "lastUsedAt": {
             "type": [
@@ -6839,7 +6869,7 @@
         }
       }
     },
-    "/v1/api-keys/{id}": {
+    "/v1/api-keys/{apiKeyId}": {
       "get": {
         "tags": [
           "API Keys"
@@ -6858,11 +6888,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "Resource ID"
+              "minLength": 1,
+              "description": "API-key identifier."
             },
             "required": true,
-            "description": "Resource ID",
-            "name": "id",
+            "description": "API-key identifier.",
+            "name": "apiKeyId",
             "in": "path"
           }
         ],
@@ -6927,11 +6958,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "Resource ID"
+              "minLength": 1,
+              "description": "API-key identifier."
             },
             "required": true,
-            "description": "Resource ID",
-            "name": "id",
+            "description": "API-key identifier.",
+            "name": "apiKeyId",
             "in": "path"
           }
         ],
@@ -7006,11 +7038,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "Resource ID"
+              "minLength": 1,
+              "description": "API-key identifier."
             },
             "required": true,
-            "description": "Resource ID",
-            "name": "id",
+            "description": "API-key identifier.",
+            "name": "apiKeyId",
             "in": "path"
           }
         ],
@@ -7380,7 +7413,7 @@
         }
       }
     },
-    "/v1/members/{id}": {
+    "/v1/members/{memberId}": {
       "get": {
         "tags": [
           "Members"
@@ -7399,11 +7432,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "Resource ID"
+              "minLength": 1,
+              "description": "Membership identifier."
             },
             "required": true,
-            "description": "Resource ID",
-            "name": "id",
+            "description": "Membership identifier.",
+            "name": "memberId",
             "in": "path"
           }
         ],
@@ -7468,11 +7502,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "Resource ID"
+              "minLength": 1,
+              "description": "Membership identifier."
             },
             "required": true,
-            "description": "Resource ID",
-            "name": "id",
+            "description": "Membership identifier.",
+            "name": "memberId",
             "in": "path"
           }
         ],
@@ -7547,11 +7582,12 @@
           {
             "schema": {
               "type": "string",
-              "description": "Resource ID"
+              "minLength": 1,
+              "description": "Membership identifier."
             },
             "required": true,
-            "description": "Resource ID",
-            "name": "id",
+            "description": "Membership identifier.",
+            "name": "memberId",
             "in": "path"
           }
         ],

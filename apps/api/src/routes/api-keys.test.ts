@@ -93,7 +93,7 @@ describe("API Keys Routes Integration", () => {
     expect(authKey?.token).not.toBe(tenant.apiKeyToken)
   })
 
-  it<ApiTestContext>("GET /v1/api-keys/:id returns the full unmasked token", async ({ app, database }) => {
+  it<ApiTestContext>("GET /v1/api-keys/:apiKeyId returns the full unmasked token", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
 
     const response = await app.fetch(
@@ -108,7 +108,7 @@ describe("API Keys Routes Integration", () => {
     expect(body.token).toBe(tenant.apiKeyToken)
   })
 
-  it<ApiTestContext>("GET /v1/api-keys/:id is org-scoped (404 across tenants)", async ({ app, database }) => {
+  it<ApiTestContext>("GET /v1/api-keys/:apiKeyId is org-scoped (404 across tenants)", async ({ app, database }) => {
     const tenantA = await createTenantSetup(database)
     const tenantB = await createTenantSetup(database)
 
@@ -121,7 +121,7 @@ describe("API Keys Routes Integration", () => {
     expect(response.status).toBe(404)
   })
 
-  it<ApiTestContext>("PATCH /v1/api-keys/:id renames the key", async ({ app, database }) => {
+  it<ApiTestContext>("PATCH /v1/api-keys/:apiKeyId renames the key", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
 
     const response = await app.fetch(
@@ -140,7 +140,7 @@ describe("API Keys Routes Integration", () => {
     expect(body.token).toBe(tenant.apiKeyToken)
   })
 
-  it<ApiTestContext>("PATCH /v1/api-keys/:id is org-scoped (404 across tenants)", async ({ app, database }) => {
+  it<ApiTestContext>("PATCH /v1/api-keys/:apiKeyId is org-scoped (404 across tenants)", async ({ app, database }) => {
     const tenantA = await createTenantSetup(database)
     const tenantB = await createTenantSetup(database)
 
@@ -155,7 +155,7 @@ describe("API Keys Routes Integration", () => {
     expect(response.status).toBe(404)
   })
 
-  it<ApiTestContext>("DELETE /v1/api-keys/:id cannot revoke cross-tenant keys", async ({ app, database }) => {
+  it<ApiTestContext>("DELETE /v1/api-keys/:apiKeyId cannot revoke cross-tenant keys", async ({ app, database }) => {
     const tenantA = await createTenantSetup(database)
     const tenantB = await createTenantSetup(database)
     const tenantBKey = await createApiKeyRecord(database, tenantB.organizationId, "tenant-b-key")

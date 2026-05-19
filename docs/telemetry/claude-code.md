@@ -162,6 +162,26 @@ The package also ships an optional Bun preload script that wraps `fetch` to capt
 
 The hook is **fail-open**. If anything goes wrong (network error, bad API key, parse error), it logs to stderr (visible with `LATITUDE_DEBUG=1`) and exits cleanly. Claude Code is never blocked by a telemetry failure.
 
+## Anthropic Agent SDK (native OpenTelemetry)
+
+The [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview) runs the same Claude Code CLI in a child process. That CLI can export **OpenTelemetry** traces, metrics, and logs directly to an OTLP endpoint ([Agent SDK observability](https://code.claude.com/docs/en/agent-sdk/observability)). You do **not** need the Stop hook or `@latitude-data/claude-code-telemetry` when you use this path: configure the CLI’s OTLP exporter to point at Latitude’s ingest URL instead.
+
+1. Create a Latitude **API key** and note your project **slug** (same as the hook flow above).
+2. Set the telemetry switches Anthropic documents, including **`CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`** if you want **traces** (beta), not only metrics or log events.
+3. Aim the OTLP **trace** exporter at Latitude and attach auth headers. The wire format is standard OTLP over HTTP; see [OpenTelemetry exporter (OTEL)](https://docs.latitude.so/telemetry/otel-exporter) for the exact URL and header names. In practice you will set variables along the lines of:
+
+   - `CLAUDE_CODE_ENABLE_TELEMETRY=1`
+   - `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` (required for trace spans such as `claude_code.interaction` and `claude_code.llm_request`)
+   - `OTEL_TRACES_EXPORTER=otlp` (and optionally metrics/logs exporters if you want those signals too)
+   - `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://ingest.latitude.so/v1/traces`
+   - `OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer YOUR_API_KEY,X-Latitude-Project=YOUR_PROJECT_SLUG`
+
+   Use `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` unless your deployment requires gRPC. For short-lived agent runs, shorten the export intervals (`OTEL_TRACES_EXPORT_INTERVAL`, and the metric/log counterparts) so batches flush before the process exits, as described in Anthropic’s docs.
+
+4. If you already use the Latitude **TypeScript or Python SDK** in the host app, you can still rely on the Agent SDK’s **native** export for the subprocess: the CLI emits its own OTLP batches. Optionally start a root span in your app before `query()`; Anthropic propagates W3C `TRACEPARENT` into the CLI so agent spans can nest under your trace.
+
+Latitude’s ingest pipeline maps Claude Code’s span names and attributes into the same trace model as the Stop-hook integration (`claude_code.*` spans and `span.type` values such as `llm_request` and `tool`).
+
 ## Privacy
 
 You should treat this hook as full-fidelity telemetry. Once installed, Latitude receives the verbatim content of every turn: prompts, responses, tool I/O, system prompts, and tool schemas. Important properties:

@@ -10,7 +10,7 @@ Multi-channel notification system. Producers fan out to channel-specific workers
 
 | Concept | Where | What it is |
 | --- | --- | --- |
-| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, ...). Each kind declares its group and its payload Zod schema. |
+| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, ...). Each kind declares its group and its payload Zod schema. Incidents fan out across three kinds reflecting the alerts lifecycle: `incident.event` for one-shot kinds (issue.new, issue.regressed — `endedAt = startedAt`), `incident.opened` and `incident.closed` for sustained kinds (issue.escalating). |
 | **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category. The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. |
 | **Channel** | `apps/workers/src/workers/notification-*.ts` + per-channel registries | Delivery surface (in-app, email; Slack and others later). Each channel is one queue topic + one worker + one renderer registry keyed on `NotificationKind`. |
 | **Idempotency key** | `idempotency_key` column on `notifications` | Producer-computed (`buildIdempotencyKey` in `@domain/notifications`). The unique index `(organization_id, user_id, idempotency_key)` absorbs at-least-once redelivery from the outbox + queue layers. |
@@ -23,11 +23,19 @@ Multi-channel notification system. Producers fan out to channel-specific workers
 ```
 Source domain event (IncidentCreated / IncidentClosed / WrappedReady / ...)
   → routed by apps/workers/src/workers/domain-events.ts
+     (incidents: forwards a transition hint — "created" / "closed" —
+      not a hardcoded notification kind)
 notifications:request-{incident,wrapped-report}-notifications
   → apps/workers/src/workers/notifications.ts
+     – incidents: derive kind from incident.endedAt
+       (endedAt = startedAt → incident.event;
+        endedAt IS NULL     → incident.opened;
+        endedAt > startedAt → incident.closed)
      – gate (incidents only): projectSettings.notifications.incidents[alertKind]
      – resolveRecipients (today: all org members)
-     – snapshot issue/project identity
+     – snapshot trend window (sustained kinds: 3h ending at the
+       transition, 18 buckets × 10min, both occurrence counts and
+       per-bucket escalation thresholds via ScoreAnalyticsRepository)
      – publish N create-notification tasks
 notifications:create-notification (one per recipient)
   → apps/workers/src/workers/notifications.ts
@@ -78,7 +86,7 @@ Per-channel **claim-then-act** ordering (stamp `emailed_at` before sending) guar
 
 ## Naming conventions
 
-- **Kind**: `<source>.<event>` style. Examples: `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`. Keep it lowercase and dot-separated. The first segment names the source aggregate or domain area; the second names what happened or what kind of thing it is.
+- **Kind**: `<source>.<event>` style. Examples: `incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`. Keep it lowercase and dot-separated. The first segment names the source aggregate or domain area; the second names what happened or what kind of thing it is. When a source has both eventful (one-shot) and sustained (open-then-close) flavors, split them into distinct kinds rather than overloading `opened` for both — the kind should reflect what the user actually receives.
 - **Group**: lowercase plural noun (`incidents`, `wrapped_reports`, `custom_messages`). Group keys are user-visible (the settings page label comes from `NOTIFICATION_GROUP_META`), but the keys themselves should be stable since they're persisted in `users.notification_preferences` jsonb.
 - **Queue task** for a new source: `request-<group>-notifications` (e.g. `request-incident-notifications`). Mirrors the existing pattern.
 - **Idempotency key**: `${kind}:${naturalEntityId}` when there is a natural source entity, or `${kind}:${generatedId}` when every event is unique by intent (custom messages).
@@ -176,7 +184,7 @@ Producers:
 - Wrapped reports: the wrapped worker passes `payload.projectId` in the `request-wrapped-report-notifications` queue task; the use case threads it through.
 - Project-less kinds (`custom.message`, future cross-project announcements): set `projectId: null`. The cascade ignores those rows; the bell footer omits the project label; the email template gets `project: null`.
 
-**Don't snapshot project name/slug in notification payloads.** Use the row-level `projectId` and let renderers resolve names lazily. The old `wrappedReportPayload.projectName` was removed for this reason — it could go stale and bloated every row with redundant data. Incident payloads still carry `projectSlug` because the renderer builds the issue URL from it (`/projects/${projectSlug}/issues/...`); that's a routing concern, not a display one, and falling back to a live lookup for URL construction would block paint.
+**Don't snapshot project name/slug in notification payloads.** Use the row-level `projectId` and let renderers resolve names lazily. The old `wrappedReportPayload.projectName` was removed for this reason — it could go stale and bloated every row with redundant data. Incident payloads only carry a generic `sourceType`/`sourceId` (the issue id today); the bell renderer resolves the project slug from `notification.projectId` via `useProjectsCollection`, and the email renderer reads it from `ctx.project.slug` (looked up once in the email use case). Snapshotting **derived** data like trends, breach numbers, or per-bucket thresholds is fine and encouraged — those are point-in-time facts about the event, not live entity attributes.
 
 No FK constraint on `project_id` (per the database-postgres skill's no-FK rule). The partial index `notifications_org_project_idx` on `(organization_id, project_id) WHERE project_id IS NOT NULL` keeps the cascade query cheap.
 
@@ -201,7 +209,7 @@ Each step in the pipeline is therefore idempotent:
 ## Anti-patterns
 
 - **Don't gate inside the renderer.** The producer/creator decides whether to send; once the row is written + the email task is published, the channel worker just renders and delivers. Filtering at the renderer is a smell.
-- **Don't put routing info in the kind name.** `incident.opened` describes what happened, not who needs to know. Recipient resolution and channel selection live in the producer/creator step.
+- **Don't put routing info in the kind name.** `incident.event` describes what happened, not who needs to know. Recipient resolution and channel selection live in the producer/creator step.
 - **Don't read user prefs in the producer step.** Prefs are per-channel and live with the channel decision; the producer step doesn't know about channels.
 - **Don't dedupe by source entity id alone.** `notifications.idempotency_key` is per-occurrence — multiple incidents on the same issue must produce multiple notifications. `buildIdempotencyKey` is the single place that enforces this.
 - **Don't add an FK constraint on `project_id`.** Per the database-postgres skill; use the application-layer cascade via `ProjectDeleted` → `delete-by-project`.

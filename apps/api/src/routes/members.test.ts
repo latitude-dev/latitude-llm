@@ -144,7 +144,10 @@ describe("Members routes — reads", () => {
     expect(rows.map((r) => r.email)).not.toContain("invited-leak@example.com")
   })
 
-  it<ApiTestContext>("GET /v1/members/:id returns the active member by membership id", async ({ app, database }) => {
+  it<ApiTestContext>("GET /v1/members/:memberId returns the active member by membership id", async ({
+    app,
+    database,
+  }) => {
     const tenant = await createTenantSetup(database)
     const extra = await seedExtraMember(database, tenant.organizationId, {
       role: "admin",
@@ -166,7 +169,7 @@ describe("Members routes — reads", () => {
     expect(body.role).toBe("admin")
   })
 
-  it<ApiTestContext>("GET /v1/members/:id is org-scoped (404 across tenants)", async ({ app, database }) => {
+  it<ApiTestContext>("GET /v1/members/:memberId is org-scoped (404 across tenants)", async ({ app, database }) => {
     const tenantA = await createTenantSetup(database)
     const tenantB = await createTenantSetup(database)
     const inTenantB = await seedExtraMember(database, tenantB.organizationId)
@@ -198,7 +201,7 @@ describe("Members routes — mutations require OAuth", () => {
     expect(response.status).toBe(403)
   })
 
-  it<ApiTestContext>("PATCH /v1/members/:id refuses API-key callers (403)", async ({ app, database }) => {
+  it<ApiTestContext>("PATCH /v1/members/:memberId refuses API-key callers (403)", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const target = await seedExtraMember(database, tenant.organizationId, { role: "member" })
 
@@ -213,7 +216,7 @@ describe("Members routes — mutations require OAuth", () => {
     expect(response.status).toBe(403)
   })
 
-  it<ApiTestContext>("DELETE /v1/members/:id refuses API-key callers (403)", async ({ app, database }) => {
+  it<ApiTestContext>("DELETE /v1/members/:memberId refuses API-key callers (403)", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const target = await seedExtraMember(database, tenant.organizationId)
 
@@ -263,7 +266,7 @@ describe("Members routes — OAuth mutations happy path", () => {
     expect(rows.find((r) => r.id === body.id && r.status === "invited")).toBeDefined()
   })
 
-  it<ApiTestContext>("PATCH /v1/members/:id promotes a member to admin", async ({ app, database }) => {
+  it<ApiTestContext>("PATCH /v1/members/:memberId promotes a member to admin", async ({ app, database }) => {
     const tenant = await createOAuthTenantSetup(database)
     const target = await seedExtraMember(database, tenant.organizationId, { role: "member" })
 
@@ -282,7 +285,7 @@ describe("Members routes — OAuth mutations happy path", () => {
     expect(body.role).toBe("admin")
   })
 
-  it<ApiTestContext>("DELETE /v1/members/:id removes a member", async ({ app, database }) => {
+  it<ApiTestContext>("DELETE /v1/members/:memberId removes a member", async ({ app, database }) => {
     const tenant = await createOAuthTenantSetup(database)
     const target = await seedExtraMember(database, tenant.organizationId)
 
@@ -301,7 +304,7 @@ describe("Members routes — OAuth mutations happy path", () => {
     expect(after.find((m) => m.id === target.memberId)).toBeUndefined()
   })
 
-  it<ApiTestContext>("DELETE /v1/members/:id rejects removing the owner (4xx)", async ({ app, database }) => {
+  it<ApiTestContext>("DELETE /v1/members/:memberId rejects removing the owner (4xx)", async ({ app, database }) => {
     const tenant = await createOAuthTenantSetup(database)
     // Caller is an admin; seed a separate owner so caller isn't blocked by self-removal.
     await seedExtraMember(database, tenant.organizationId, { role: "admin" })
@@ -320,7 +323,10 @@ describe("Members routes — OAuth mutations happy path", () => {
     expect(after.find((m) => m.id === owner.memberId)).toBeDefined()
   })
 
-  it<ApiTestContext>("PATCH /v1/members/:id rejects changing the owner's role (4xx)", async ({ app, database }) => {
+  it<ApiTestContext>("PATCH /v1/members/:memberId rejects changing the owner's role (4xx)", async ({
+    app,
+    database,
+  }) => {
     const tenant = await createOAuthTenantSetup(database)
     const owner = await seedExtraMember(database, tenant.organizationId, { role: "owner" })
 
@@ -335,7 +341,7 @@ describe("Members routes — OAuth mutations happy path", () => {
     expect(response.status).toBeLessThan(500)
   })
 
-  it<ApiTestContext>("DELETE /v1/members/:id rejects self-removal (4xx)", async ({ app, database }) => {
+  it<ApiTestContext>("DELETE /v1/members/:memberId rejects self-removal (4xx)", async ({ app, database }) => {
     const tenant = await createOAuthTenantSetup(database)
     const all = await listMembersJson(app, createOAuthAuthHeaders(tenant.oauthAccessToken))
     const ownMembership = all.find((m) => m.status === "active" && m.userId === tenant.userId)

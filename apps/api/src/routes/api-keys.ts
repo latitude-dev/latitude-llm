@@ -17,7 +17,6 @@ import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
 import {
   errorResponse,
-  IdParamsSchema,
   jsonBody,
   jsonResponse,
   openApiNoContentResponses,
@@ -56,7 +55,9 @@ const ListItemSchema = z
     name: z.string().describe("Human-readable name."),
     token: z
       .string()
-      .describe("Masked token preview safe to display in lists. Use `GET /api-keys/{id}` to retrieve the full token."),
+      .describe(
+        "Masked token preview safe to display in lists. Use `GET /api-keys/{apiKeyId}` to retrieve the full token.",
+      ),
     lastUsedAt: z
       .string()
       .nullable()
@@ -71,6 +72,10 @@ const ListItemSchema = z
   .openapi("ApiKeyListItem")
 
 const ListResponseSchema = z.object({ apiKeys: z.array(ListItemSchema) }).openapi("ApiKeyList")
+
+const ApiKeyIdParamsSchema = z.object({
+  apiKeyId: z.string().min(1).describe("API-key identifier."),
+})
 
 const CreateApiKeyBody = z
   .object({
@@ -189,7 +194,7 @@ const listApiKeys = apiKeyEndpoint({
 const getApiKey = apiKeyEndpoint({
   route: createRoute({
     method: "get",
-    path: "/{id}",
+    path: "/{apiKeyId}",
     name: "getApiKey",
     tags: ["API Keys"],
     ...apiKeysFernGroup("get"),
@@ -197,18 +202,20 @@ const getApiKey = apiKeyEndpoint({
     description:
       "Returns a single API key including the full unmasked `token`. Useful for retrieving a stored token by id without rotating it.",
     security: PROTECTED_SECURITY,
-    request: { params: IdParamsSchema },
+    request: { params: ApiKeyIdParamsSchema },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "API key" }),
   }),
   handler: async (c) => {
-    const { id: idParam } = c.req.valid("param")
+    const { apiKeyId } = c.req.valid("param")
 
     const apiKey = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         return yield* repo
-          .findById(ApiKeyId(idParam))
-          .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(new ApiKeyNotFoundError({ id: ApiKeyId(idParam) }))))
+          .findById(ApiKeyId(apiKeyId))
+          .pipe(
+            Effect.catchTag("NotFoundError", () => Effect.fail(new ApiKeyNotFoundError({ id: ApiKeyId(apiKeyId) }))),
+          )
       }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
     return c.json(toResponse(apiKey), 200)
@@ -218,22 +225,22 @@ const getApiKey = apiKeyEndpoint({
 const updateApiKey = apiKeyEndpoint({
   route: createRoute({
     method: "patch",
-    path: "/{id}",
+    path: "/{apiKeyId}",
     name: "updateApiKey",
     tags: ["API Keys"],
     ...apiKeysFernGroup("update"),
     summary: "Update API key",
     description: "Renames an API key. The token itself is immutable — use create + revoke if you need a new value.",
     security: PROTECTED_SECURITY,
-    request: { params: IdParamsSchema, body: jsonBody(UpdateApiKeyBody) },
+    request: { params: ApiKeyIdParamsSchema, body: jsonBody(UpdateApiKeyBody) },
     responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "API key updated" }),
   }),
   handler: async (c) => {
-    const { id: idParam } = c.req.valid("param")
+    const { apiKeyId } = c.req.valid("param")
     const { name } = c.req.valid("json")
 
     const apiKey = await Effect.runPromise(
-      updateApiKeyUseCase({ id: ApiKeyId(idParam), name }).pipe(
+      updateApiKeyUseCase({ id: ApiKeyId(apiKeyId), name }).pipe(
         withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
         withTracing,
       ),
@@ -245,21 +252,21 @@ const updateApiKey = apiKeyEndpoint({
 const revokeApiKey = apiKeyEndpoint({
   route: createRoute({
     method: "delete",
-    path: "/{id}",
+    path: "/{apiKeyId}",
     name: "revokeApiKey",
     tags: ["API Keys"],
     ...apiKeysFernGroup("revoke"),
     summary: "Revoke API key",
     description: "Revokes an API key.",
     security: PROTECTED_SECURITY,
-    request: { params: IdParamsSchema },
+    request: { params: ApiKeyIdParamsSchema },
     responses: openApiNoContentResponses({ description: "API key revoked" }),
   }),
   handler: async (c) => {
-    const { id: idParam } = c.req.valid("param")
+    const { apiKeyId } = c.req.valid("param")
 
     await Effect.runPromise(
-      revokeApiKeyUseCase({ id: ApiKeyId(idParam) }).pipe(
+      revokeApiKeyUseCase({ id: ApiKeyId(apiKeyId) }).pipe(
         Effect.provide(ApiKeyCacheInvalidatorLive(c.var.redis)),
         withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
         withTracing,

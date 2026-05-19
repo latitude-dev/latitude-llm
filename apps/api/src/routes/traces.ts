@@ -23,6 +23,7 @@ import { SpanDetailSchema, SpanSchema, toSpanDetailResponse, toSpanResponse } fr
 import {
   decodeTraceCursor,
   encodeTraceCursor,
+  fetchTraceIndicators,
   PaginatedTracesSchema,
   TRACE_SORT_FIELDS,
   TraceDetailSchema,
@@ -146,7 +147,7 @@ const listTraces = traceEndpoint({
     const body = c.req.valid("json")
     const organizationId = c.var.organization.id
 
-    const page = await Effect.runPromise(
+    const result = await Effect.runPromise(
       Effect.gen(function* () {
         let cursor: { sortValue: string; traceId: string } | undefined
         if (body.cursor) {
@@ -159,11 +160,12 @@ const listTraces = traceEndpoint({
 
         const projectRepo = yield* ProjectRepository
         const project = yield* projectRepo.findBySlug(projectSlug)
+        const projectId = ProjectId(project.id as string)
 
         const traceRepo = yield* TraceRepository
-        return yield* traceRepo.listByProjectId({
+        const page = yield* traceRepo.listByProjectId({
           organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
+          projectId,
           options: {
             limit: body.limit,
             sortBy: body.sortBy,
@@ -173,8 +175,15 @@ const listTraces = traceEndpoint({
             ...(body.query ? { searchQuery: body.query } : {}),
           },
         })
+
+        const indicators = yield* fetchTraceIndicators({
+          projectId,
+          traceIds: page.items.map((trace) => trace.traceId),
+        })
+
+        return { page, indicators }
       }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
+        withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), c.var.postgresClient, organizationId),
         withClickHouse(TraceRepositoryLive, c.var.clickhouse, organizationId),
         withAi(AIEmbedLive, c.var.redis),
         withTracing,
@@ -183,9 +192,9 @@ const listTraces = traceEndpoint({
 
     return c.json(
       {
-        items: page.items.map(toTraceResponse),
-        nextCursor: page.nextCursor ? encodeTraceCursor(page.nextCursor) : null,
-        hasMore: page.hasMore,
+        items: result.page.items.map((trace) => toTraceResponse(trace, result.indicators)),
+        nextCursor: result.page.nextCursor ? encodeTraceCursor(result.page.nextCursor) : null,
+        hasMore: result.page.hasMore,
       },
       200,
     )
@@ -212,26 +221,34 @@ const getTrace = traceEndpoint({
     const { projectSlug, traceId } = c.req.valid("param")
     const organizationId = c.var.organization.id
 
-    const trace = await Effect.runPromise(
+    const result = await Effect.runPromise(
       Effect.gen(function* () {
         const projectRepo = yield* ProjectRepository
         const project = yield* projectRepo.findBySlug(projectSlug)
+        const projectId = ProjectId(project.id as string)
 
         const traceRepo = yield* TraceRepository
-        return yield* traceRepo.findByTraceId({
+        const trace = yield* traceRepo.findByTraceId({
           organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
+          projectId,
           traceId: TraceId(traceId),
         })
+
+        const indicators = yield* fetchTraceIndicators({
+          projectId,
+          traceIds: [TraceId(traceId)],
+        })
+
+        return { trace, indicators }
       }).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
+        withPostgres(Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive), c.var.postgresClient, organizationId),
         withClickHouse(TraceRepositoryLive, c.var.clickhouse, organizationId),
         withAi(AIEmbedLive, c.var.redis),
         withTracing,
       ),
     )
 
-    return c.json(toTraceDetailResponse(trace), 200)
+    return c.json(toTraceDetailResponse(result.trace, result.indicators), 200)
   },
 })
 

@@ -125,7 +125,11 @@ function transformSpan({
   const resourceAttrs = resource?.attributes ?? []
   const statusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
 
-  const resolved = resolveAttributes(spanAttrs, statusCode)
+  const resolved = resolveAttributes({
+    spanAttrs,
+    statusCode,
+    spanName: span.name ?? "",
+  })
   const content = parseContent(spanAttrs)
   const serviceName = stringAttr(resourceAttrs, "service.name") ?? ""
   const performance = resolvePerformance({

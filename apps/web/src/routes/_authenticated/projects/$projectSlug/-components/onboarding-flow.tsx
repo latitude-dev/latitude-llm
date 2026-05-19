@@ -440,12 +440,15 @@ export function OnboardingFlow({
   const form = useForm({
     defaultValues: {
       customJobTitle: "",
+      phoneNumber: "",
     },
     onSubmit: createFormSubmitHandler(
-      async ({ customJobTitle }) => {
+      async ({ customJobTitle, phoneNumber }) => {
         const stack = stackChoice as StackChoice
         const onboardingData =
-          role === "other" ? { customJobTitle, stackChoice: stack } : { jobTitle: role, stackChoice: stack }
+          role === "other"
+            ? { customJobTitle, phoneNumber, stackChoice: stack }
+            : { jobTitle: role, phoneNumber, stackChoice: stack }
         await submitOnboarding({ data: onboardingData })
       },
       {
@@ -593,6 +596,21 @@ export function OnboardingFlow({
                   <Text.H4 color="foregroundMuted">Help Latitude personalize your experience.</Text.H4>
                 </div>
               </div>
+              <form.Field name="phoneNumber">
+                {(field) => (
+                  <Input
+                    type="tel"
+                    label="Phone number (optional)"
+                    description="Helpful if we need to reach you about your setup."
+                    placeholder="+1 555 0100"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                    maxLength={64}
+                    autoComplete="tel"
+                  />
+                )}
+              </form.Field>
               <div className="flex flex-col gap-3">
                 {ROLE_OPTIONS.map((option) => {
                   const selected = role === option.id

@@ -260,8 +260,8 @@ describe("domain-events dispatcher", () => {
     const job = published[0]
     expect(job?.queue).toBe("notifications")
     expect(job?.task).toBe("request-incident-notifications")
-    expect(job?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1", kind: "incident.opened" })
-    expect(job?.options?.dedupeKey).toBe("notifications:request-incident-opened:ai-1")
+    expect(job?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1", transition: "created" })
+    expect(job?.options?.dedupeKey).toBe("notifications:request-incident-created:ai-1")
   })
 
   it("routes IncidentClosed to notifications:request-incident-notifications with stable dedupe key", async () => {
@@ -282,7 +282,7 @@ describe("domain-events dispatcher", () => {
     const job = published[0]
     expect(job?.queue).toBe("notifications")
     expect(job?.task).toBe("request-incident-notifications")
-    expect(job?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1", kind: "incident.closed" })
+    expect(job?.payload).toEqual({ organizationId: "org-1", alertIncidentId: "ai-1", transition: "closed" })
     expect(job?.options?.dedupeKey).toBe("notifications:request-incident-closed:ai-1")
   })
 
