@@ -50,22 +50,20 @@ const renderEvent = (notification: NotificationRecord, payload: IncidentEventPay
   }
 }
 
-const renderSustained = (
-  notification: NotificationRecord,
-  payload: IncidentOpenedPayload | IncidentClosedPayload,
-  event: "opened" | "closed",
-) => {
+const renderOpened = (notification: NotificationRecord, payload: IncidentOpenedPayload) => {
   if (payload.incidentKind !== "issue.escalating") {
-    // Eventful kinds shouldn't land as opened/closed; defensive fallback.
+    // Eventful kinds shouldn't land as opened; defensive fallback.
     return <Unsupported notification={notification} />
   }
-  return (
-    <IssueEscalatingNotification
-      notification={notification}
-      payload={payload as IncidentOpenedPayload & IncidentClosedPayload}
-      event={event}
-    />
-  )
+  return <IssueEscalatingNotification notification={notification} payload={payload} event="opened" />
+}
+
+const renderClosed = (notification: NotificationRecord, payload: IncidentClosedPayload) => {
+  if (payload.incidentKind !== "issue.escalating") {
+    // Eventful kinds shouldn't land as closed; defensive fallback.
+    return <Unsupported notification={notification} />
+  }
+  return <IssueEscalatingNotification notification={notification} payload={payload} event="closed" />
 }
 
 export function IncidentNotification({ notification }: { readonly notification: NotificationRecord }) {
@@ -76,19 +74,11 @@ export function IncidentNotification({ notification }: { readonly notification: 
   }
   if (kind === "incident.opened") {
     const parsed = incidentOpenedPayloadSchema.safeParse(notification.payload)
-    return parsed.success ? (
-      renderSustained(notification, parsed.data, "opened")
-    ) : (
-      <Unsupported notification={notification} />
-    )
+    return parsed.success ? renderOpened(notification, parsed.data) : <Unsupported notification={notification} />
   }
   if (kind === "incident.closed") {
     const parsed = incidentClosedPayloadSchema.safeParse(notification.payload)
-    return parsed.success ? (
-      renderSustained(notification, parsed.data, "closed")
-    ) : (
-      <Unsupported notification={notification} />
-    )
+    return parsed.success ? renderClosed(notification, parsed.data) : <Unsupported notification={notification} />
   }
   return <Unsupported notification={notification} />
 }

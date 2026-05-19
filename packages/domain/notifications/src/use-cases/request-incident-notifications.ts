@@ -206,9 +206,20 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     }
 
     const payload = buildPayload({ incident, kind: notificationKind, trend })
-    const idempotencyKey = buildIdempotencyKey({ kind: notificationKind, payload } as Parameters<
-      typeof buildIdempotencyKey
-    >[0])
+    // Per-kind switch preserves the discriminated-union narrowing
+    // `buildIdempotencyKey`'s input requires. A widening cast would
+    // silently lose exhaustiveness if a future kind keys off a
+    // different payload field.
+    const idempotencyKey: string = (() => {
+      switch (notificationKind) {
+        case "incident.event":
+          return buildIdempotencyKey({ kind: "incident.event", payload: payload as IncidentEventPayload })
+        case "incident.opened":
+          return buildIdempotencyKey({ kind: "incident.opened", payload: payload as IncidentOpenedPayload })
+        case "incident.closed":
+          return buildIdempotencyKey({ kind: "incident.closed", payload: payload as IncidentClosedPayload })
+      }
+    })()
 
     const requests: IncidentNotificationRequest[] = recipients.map((userId) => ({
       organizationId: incident.organizationId,
