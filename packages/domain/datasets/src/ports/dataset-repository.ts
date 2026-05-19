@@ -38,6 +38,15 @@ export class DatasetRepository extends Context.Service<
 
     findById(id: DatasetId): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
 
+    /**
+     * Point-lookup by `(projectId, slug)`. Slugs are unique within a project, so this is the
+     * natural read path for slug-keyed API endpoints. Soft-deleted datasets are not returned.
+     */
+    findBySlug(args: {
+      readonly projectId: ProjectId
+      readonly slug: string
+    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError, SqlClient>
+
     listByProject(args: {
       readonly projectId: ProjectId
       readonly options?: DatasetListOptions

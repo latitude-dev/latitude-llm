@@ -305,4 +305,30 @@ describe("DatasetRepositoryLive listByProject", () => {
       }
     })
   })
+
+  describe("findBySlug", () => {
+    it("returns the dataset matching `(projectId, slug)`", async () => {
+      const dataset = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* DatasetRepository
+          return yield* repo.findBySlug({ projectId: PROJECT_ID, slug: "banana" })
+        }),
+      )
+
+      expect(dataset.name).toBe("Banana")
+      expect(dataset.slug).toBe("banana")
+      expect(dataset.id).toBe(makeId("ds2"))
+    })
+
+    it("raises DatasetNotFoundError when no dataset matches the slug in the project", async () => {
+      await expect(
+        runWithLive(
+          Effect.gen(function* () {
+            const repo = yield* DatasetRepository
+            return yield* repo.findBySlug({ projectId: PROJECT_ID, slug: "does-not-exist" })
+          }),
+        ),
+      ).rejects.toThrow()
+    })
+  })
 })

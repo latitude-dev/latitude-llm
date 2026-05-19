@@ -99,6 +99,15 @@ export const createFakeDatasetRepository = (
         return toPublic(row)
       }),
 
+    findBySlug: ({ projectId, slug }) =>
+      Effect.gen(function* () {
+        const row = [...datasets.values()].find(
+          (d) => d.projectId === projectId && d.slug === slug && d.deletedAt === null,
+        )
+        if (!row) return yield* new DatasetNotFoundError({ datasetId: slug })
+        return toPublic(row)
+      }),
+
     listByProject: (args: { readonly projectId: ProjectId; readonly options?: DatasetListOptions }) =>
       Effect.sync(() => {
         const limit = args.options?.limit ?? 50

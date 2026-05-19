@@ -89,10 +89,8 @@ export const registerMcpRoute = ({
             "X-Forwarded-For": c.req.header("X-Forwarded-For") ?? "",
           })
 
-          const hasJsonBody = body !== undefined && !methodHasNoBody(descriptor.httpMethod)
-
           const response = await app.fetch(
-            new Request(url, { method, headers, ...(hasJsonBody ? { body: JSON.stringify(body) } : {}) }),
+            new Request(url, { method, headers, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }),
           )
           const output = await response.text()
 
@@ -116,10 +114,6 @@ export const registerMcpRoute = ({
     return transport.handleRequest(c.req.raw)
   })
 }
-
-const NO_BODY_METHODS = new Set(["get", "head", "delete"])
-
-const methodHasNoBody = (method: string): boolean => NO_BODY_METHODS.has(method.toLowerCase())
 
 interface InternalRoute {
   readonly routerPrefix: string

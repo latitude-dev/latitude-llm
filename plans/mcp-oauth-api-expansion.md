@@ -816,14 +816,18 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
     - Integration tests: auth gate, empty-project happy path, ordering, each filter (`kind`, `severity`, `sourceId`), `[fromIso, toIso]` overlap scoping, malformed `kind` → 400.
 
 - **M7 — Datasets** (10 endpoints, prefix `/projects/{projectSlug}/datasets`)
-  - [ ] `DatasetRepository.findBySlug` + `existsBySlug`
-  - [ ] Slug generation in `createDataset`; slug regeneration in `renameDataset` + `updateDatasetDetails`
-  - [ ] Datasets CRUD: `GET /` (`low`), `GET /{datasetSlug}` (`low`), `POST /` (`medium`), `PATCH /{datasetSlug}` (`medium`), `DELETE /{datasetSlug}` (`medium`)
-  - [ ] Rows: `GET /{datasetSlug}/rows` (`high`), `POST /{datasetSlug}/rows` (`medium`), `DELETE /{datasetSlug}/rows` (`medium`)
-  - [ ] `POST /{datasetSlug}/rows/import/traces` (`critical`) — takes `tracesRef`
-  - [ ] `POST /{datasetSlug}/rows/export` (`critical`) — recipient-email validated
-  - [ ] CSV import (`POST /rows/import/files`) — **deferred (D16)**; leave `// TODO(file-imports)` comment
-  - [ ] Refactor `addTracesToDataset` to take `TracesRef` (or thin route-level adapter)
+  - [x] `DatasetRepository.findBySlug` — port + Postgres adapter + fake (test in `packages/platform/db-postgres/src/repositories/dataset-repository.test.ts`). `existsBySlug` deliberately not added; `countBySlug > 0` already covers the slug-generation paths that needed it, and the API uses `findBySlug` directly.
+  - [x] Slug generation in `createDataset`; slug regeneration in `renameDataset` + `updateDatasetDetails` — already wired in M1 groundwork, no changes needed.
+  - [x] Datasets CRUD: `GET /` (`low`), `GET /{datasetSlug}` (`low`), `POST /` (`medium`), `PATCH /{datasetSlug}` (`medium`), `DELETE /{datasetSlug}` (`medium`). `PATCH` accepts partial `{ name?, description? }`; route fetches the current dataset and fills in unchanged fields so `updateDatasetDetails` (which still requires both) stays untouched. `DELETE` is soft-delete; slug becomes reusable.
+  - [x] `apps/api/src/openapi/entities/dataset.ts` — `DatasetSchema` + `PaginatedDatasetsSchema`. Public fields only: `id`, `organizationId`, `projectId`, `slug`, `name`, `description`, `currentVersion`, `createdAt`, `updatedAt`. The internal `fileKey` and opaque `latestVersionId` are deliberately omitted.
+  - [x] Integration tests in `apps/api/src/routes/datasets.test.ts` (11 cases): auth gate, empty list, happy-path create + 400 on empty name, get 404 + happy-path get, rename + slug regen + old-slug 404, description-only PATCH keeping slug, empty-PATCH 400, soft-delete + slug reuse, list ordering by `updatedAt` desc.
+  - [x] Rows: `GET /{datasetSlug}/rows` (`high`), `POST /{datasetSlug}/rows` (`medium`), `DELETE /{datasetSlug}/rows` (`medium`). List takes optional `search` + a base64url-encoded keyset cursor (`{ createdAt, rowId }`). Insert accepts `{ rows: [{ id?, input, output?, metadata? }] }`; cell values accept `string | object | number | boolean | null`. Delete body carries the shared `ExportSelection` (`selected` / `all` / `allExcept`) so the SDK and MCP surface use one selection shape across endpoints.
+  - [x] `POST /{datasetSlug}/rows/import/traces` (`critical`) — takes `{ traces: TracesRef }`. Route resolves the ref to a concrete `TraceId[]` via `resolveTraceIdsFromRef`, then calls `addTracesToDataset` with `source: { kind: "project" }` + `selection: { mode: "selected", traceIds }`. Use-case unchanged.
+  - [x] `POST /{datasetSlug}/rows/export` (`critical`) — body: `{ selection?: ExportSelection, recipient }`. Recipient validated via `MembershipRepository.findMemberByEmail`. Enqueues `kind: "dataset"` on the existing `"exports" / "generate"` worker contract. Returns 202.
+  - [x] CSV import (`POST /rows/import/files`) — **deferred (D16)**. `TODO(file-imports)` comment near the import endpoint records the open question.
+  - [x] `addTracesToDataset` refactor deferred — kept the richer `{ source, selection }` shape and added a thin route-level adapter, per the plan's "adapter is simpler" note. Web caller unchanged.
+  - [x] `apps/api/src/openapi/entities/dataset-row.ts` — `DatasetRowSchema` with field-by-field descriptions. Row cell values typed as `string | Record<string, unknown>` (reads) — inserts widen to also accept `number | boolean | null`.
+  - [x] Integration tests in `apps/api/src/routes/datasets.test.ts` (9 additional cases on top of the CRUD set, 20 total): empty-rows page, insert + version bump, empty-insert 400, `mode: all` delete with `deletedCount`, non-existent row id → 404, export rejects non-member, export 202 happy path, export `recipient` shape 400, import-from-traces empty filter set → 201 + zero rows.
 - **Wrap-up**
   - [ ] `pnpm generate:sdk` — batched at the end of the plan, single PR (per the standing memo)
   - [ ] CI drift jobs for `apps/api/openapi.json` and `apps/api/mcp.json` (verification §)
