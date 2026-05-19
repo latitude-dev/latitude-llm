@@ -65,6 +65,7 @@ function BackofficeUserDetailPage() {
   const propertyEntries: PropertiesStripEntry[] = [
     { label: "User id", value: user.id },
     { label: "Email", value: user.email },
+    ...(user.phoneNumber ? [{ label: "Phone", value: user.phoneNumber }] : []),
     { label: "Created", value: new Date(user.createdAt).toISOString() },
   ]
 

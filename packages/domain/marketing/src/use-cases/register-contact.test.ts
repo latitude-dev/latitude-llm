@@ -53,6 +53,7 @@ describe("registerContact", () => {
       email: "ada@example.com",
       name: "Ada Lovelace",
       jobTitle: null,
+      phoneNumber: null,
       emailVerified: true,
       image: null,
       role: "user",

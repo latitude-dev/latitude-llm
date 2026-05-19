@@ -36,6 +36,7 @@ export const updateContactOnboarding = ({ marketingContacts }: { readonly market
       email: user.email,
       firstName: user.name,
       jobTitle: user.jobTitle,
+      phoneNumber: user.phoneNumber,
       userGroup: stackChoiceToUserGroup(input.stackChoice),
     })
   })

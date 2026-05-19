@@ -7,7 +7,7 @@ import {
 } from "@domain/shared"
 import type { User } from "@domain/users"
 import { UserRepository } from "@domain/users"
-import { and, eq, isNull, or, sql } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { users } from "../schema/better-auth.ts"
@@ -17,6 +17,7 @@ const toDomainUser = (row: typeof users.$inferSelect): User => ({
   email: row.email,
   name: row.name ?? null,
   jobTitle: row.jobTitle ?? null,
+  phoneNumber: row.phoneNumber ?? null,
   emailVerified: row.emailVerified,
   image: row.image ?? null,
   role: row.role,
@@ -63,35 +64,27 @@ export const UserRepositoryLive = Layer.effect(
             )
         }),
 
-      setNameIfMissing: ({ userId, name }: { userId: string; name: string }) =>
+      update: ({
+        userId,
+        jobTitle,
+        phoneNumber,
+      }: {
+        userId: string
+        jobTitle?: string | undefined
+        phoneNumber?: string | undefined
+      }) =>
         Effect.gen(function* () {
-          if (!name.trim()) return
+          const trimmedJobTitle = jobTitle?.trim() || undefined
+          const trimmedPhoneNumber = phoneNumber?.trim() || undefined
+          if (!trimmedJobTitle && !trimmedPhoneNumber) return
 
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           yield* sqlClient.query((db) =>
             db
               .update(users)
               .set({
-                name: name.trim(),
-                updatedAt: new Date(),
-              })
-              .where(
-                and(eq(users.id, userId), or(isNull(users.name), eq(users.name, ""), sql`trim(${users.name}) = ''`)),
-              ),
-          )
-        }),
-
-      setJobTitle: ({ userId, jobTitle }: { userId: string; jobTitle: string }) =>
-        Effect.gen(function* () {
-          const trimmed = jobTitle.trim()
-          if (!trimmed) return
-
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          yield* sqlClient.query((db) =>
-            db
-              .update(users)
-              .set({
-                jobTitle: trimmed,
+                ...(trimmedJobTitle ? { jobTitle: trimmedJobTitle } : {}),
+                ...(trimmedPhoneNumber ? { phoneNumber: trimmedPhoneNumber } : {}),
                 updatedAt: new Date(),
               })
               .where(eq(users.id, userId)),

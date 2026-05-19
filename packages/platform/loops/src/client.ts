@@ -110,6 +110,7 @@ export const createLoopsContactsSender = (config: LoopsConfig | undefined): Mark
               email: parsed.email,
               firstName: sanitizeString(parsed.firstName),
               jobTitle: sanitizeString(parsed.jobTitle),
+              phoneNumber: sanitizeString(parsed.phoneNumber),
               userGroup: parsed.userGroup,
               telemetryEnabled: parsed.telemetryEnabled,
             }),

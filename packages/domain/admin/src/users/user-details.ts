@@ -56,6 +56,7 @@ export const adminUserDetailsSchema = z.object({
   email: z.string(),
   name: z.string().nullable(),
   image: z.string().nullable(),
+  phoneNumber: z.string().nullable(),
   role: z.enum(["user", "admin"]),
   memberships: z.array(adminUserMembershipSchema),
   /**

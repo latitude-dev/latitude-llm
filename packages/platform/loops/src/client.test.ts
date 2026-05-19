@@ -115,6 +115,7 @@ describe("createLoopsContactsSender", () => {
         userId: "user_123",
         email: "new@b.co",
         jobTitle: longTitle,
+        phoneNumber: " +1 555 0100 ",
         telemetryEnabled: true,
       }),
     )
@@ -124,6 +125,7 @@ describe("createLoopsContactsSender", () => {
       properties: {
         email: "new@b.co",
         jobTitle: "x".repeat(MARKETING_FIELD_MAX_LENGTH),
+        phoneNumber: "+1 555 0100",
         telemetryEnabled: true,
       },
     })
