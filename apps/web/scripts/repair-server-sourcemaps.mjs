@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs"
 import { dirname, extname, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -119,14 +119,14 @@ function resolveSourcePath(source, sourceMapDir) {
 }
 
 function createJsModuleAlias(targetModulePath) {
-  const aliasPath = `${targetModulePath.slice(0, -4)}.js`
+  const aliasPath = targetModulePath.slice(0, -4) + ".js"
   const moduleContents = readFileSync(targetModulePath, "utf8")
   const aliasedContents = moduleContents.replace(/\.mjs\.map$/m, ".js.map")
   writeFileSync(aliasPath, aliasedContents)
 }
 
 function createJsMapAlias(targetMapPath) {
-  const aliasPath = `${targetMapPath.slice(0, -8)}.js.map`
+  const aliasPath = targetMapPath.slice(0, -8) + ".js.map"
   const targetMap = JSON.parse(readFileSync(targetMapPath, "utf8"))
   const aliasedMap = {
     ...targetMap,

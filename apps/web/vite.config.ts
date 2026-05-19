@@ -42,7 +42,11 @@ const temporalExternal: (string | RegExp)[] = [
 // @resvg/resvg-js ships a native .node binding (loaded via `require` at
 // runtime). Bundlers cannot read .node files, so it must stay external in
 // both the Vite SSR pass and the Nitro production bundle.
-const ssrExternal: (string | RegExp)[] = [...temporalExternal, "@opentelemetry/sdk-trace-web", "@resvg/resvg-js"]
+const ssrExternal: (string | RegExp)[] = [
+  ...temporalExternal,
+  "@opentelemetry/sdk-trace-web",
+  "@resvg/resvg-js",
+]
 
 export default defineConfig({
   // Nitro server bundle uses its own sourcemap flag (Vite `build.sourcemap` is client-only).
