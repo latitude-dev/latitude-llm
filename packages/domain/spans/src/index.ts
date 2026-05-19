@@ -146,6 +146,15 @@ export type {
   BuildTracesExportResult,
 } from "./use-cases/build-traces-export.ts"
 export { buildTracesExportUseCase } from "./use-cases/build-traces-export.ts"
+export type {
+  GetTraceAnalyticsError,
+  GetTraceAnalyticsInput,
+  GetTraceAnalyticsResult,
+  TraceAnalyticsBucket,
+  TraceAnalyticsMedianMetric,
+  TraceAnalyticsTotalMetric,
+} from "./use-cases/get-trace-analytics.ts"
+export { getTraceAnalyticsUseCase } from "./use-cases/get-trace-analytics.ts"
 export type { GetTraceCohortSummaryByTagsInput } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export { getTraceCohortSummaryByTagsUseCase } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"

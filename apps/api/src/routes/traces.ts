@@ -3,7 +3,7 @@ import { MembershipRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import type { AnnotationScore } from "@domain/scores"
 import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
-import { SpanRepository, TraceRepository } from "@domain/spans"
+import { getTraceAnalyticsUseCase, SpanRepository, TraceRepository } from "@domain/spans"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
@@ -30,6 +30,7 @@ import {
   toTraceDetailResponse,
   toTraceResponse,
 } from "../openapi/entities/trace.ts"
+import { TraceAnalyticsResponseSchema, toTraceAnalyticsResponse } from "../openapi/entities/trace-analytics.ts"
 import { Paginated, PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
   FilterSetSchema,
@@ -515,9 +516,67 @@ const exportTraces = traceEndpoint({
   },
 })
 
+const AnalyticsQuerySchema = z.object({
+  fromIso: z.iso
+    .datetime()
+    .optional()
+    .describe("Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`."),
+  toIso: z.iso.datetime().optional().describe("Upper bound (inclusive) of the time range. Defaults to now."),
+})
+
+const getTraceAnalytics = traceEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/analytics",
+    name: "getTraceAnalytics",
+    tags: ["Traces"],
+    ...tracesFernGroup("analytics"),
+    summary: "Get project trace analytics",
+    description:
+      "Returns trace analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+    security: PROTECTED_SECURITY,
+    request: { params: ProjectParamsSchema, query: AnalyticsQuerySchema },
+    responses: openApiResponses({
+      status: 200,
+      schema: TraceAnalyticsResponseSchema,
+      description: "Trace analytics",
+    }),
+  }),
+  handler: async (c) => {
+    const { projectSlug } = c.req.valid("param")
+    const { fromIso, toIso } = c.req.valid("query")
+    const organizationId = c.var.organization.id
+
+    if (fromIso && toIso && Date.parse(toIso) < Date.parse(fromIso)) {
+      return c.json({ error: "`toIso` must be greater than or equal to `fromIso`." }, 400)
+    }
+
+    const analytics = await Effect.runPromise(
+      Effect.gen(function* () {
+        const projectRepo = yield* ProjectRepository
+        const project = yield* projectRepo.findBySlug(projectSlug)
+
+        return yield* getTraceAnalyticsUseCase({
+          organizationId: OrganizationId(organizationId as string),
+          projectId: ProjectId(project.id as string),
+          ...(fromIso ? { from: new Date(fromIso) } : {}),
+          ...(toIso ? { to: new Date(toIso) } : {}),
+        })
+      }).pipe(
+        withPostgres(ProjectRepositoryLive, c.var.postgresClient, organizationId),
+        withClickHouse(TraceRepositoryLive, c.var.clickhouse, organizationId),
+        withTracing,
+      ),
+    )
+
+    return c.json(toTraceAnalyticsResponse(analytics), 200)
+  },
+})
+
 export const createTracesRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
   listTraces.mountHttp(app, createTierRateLimiter("medium"))
+  getTraceAnalytics.mountHttp(app, createTierRateLimiter("medium"))
   getTrace.mountHttp(app, createTierRateLimiter("low"))
   listTraceSpans.mountHttp(app, createTierRateLimiter("low"))
   getTraceSpan.mountHttp(app, createTierRateLimiter("low"))
