@@ -4,18 +4,11 @@ import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
+import { buildSignedChartUrl } from "../../../helpers/signed-chart-url.ts"
 import { renderEmail } from "../../../utils/render.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { ALERT_KIND_TO_LABEL, IncidentOpenedEmail } from "./EmailTemplate.tsx"
 
-/**
- * Build the deep link to the source issue. Returns `undefined` when the
- * project context wasn't passed (e.g. the project was deleted between
- * notification create and email send), in which case the email omits the
- * CTA rather than linking to a broken path. `sourceId` is the issue id
- * for V1 — when a non-issue source type lands, dispatch on
- * `payload.sourceType` to pick the right URL shape.
- */
 const buildSourceUrl = (
   ctx: NotificationEmailRenderContext,
   payload: Parameters<NotificationEmailRenderer<"incident.opened">>[0],
@@ -46,6 +39,12 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
     const issueRef = issue?.name ?? "an issue"
     const issueUrl = buildSourceUrl(ctx, payload)
 
+    const chartUrl = yield* buildSignedChartUrl({
+      notificationId: ctx.notificationId,
+      apiBaseUrl: ctx.apiBaseUrl,
+      secret: ctx.chartSecret,
+    })
+
     const html = yield* Effect.tryPromise({
       try: () =>
         renderEmail(
@@ -54,6 +53,9 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
             incidentKind={payload.incidentKind}
             issueName={issue?.name ?? undefined}
             issueUrl={issueUrl}
+            chartUrl={chartUrl}
+            tags={payload.tags}
+            breach={payload.breach}
           />,
         ),
       catch: (cause) => ({
@@ -65,7 +67,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
 
     return {
       html,
-      subject: `[Latitude] ${label}: ${issueRef}`,
+      subject: `[Latitude] Escalating: ${issueRef}`,
       text: `Hi ${userName},\n\n${label}: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
     }
   })

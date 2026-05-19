@@ -4,9 +4,10 @@ import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
+import { buildSignedChartUrl } from "../../../helpers/signed-chart-url.ts"
 import { renderEmail } from "../../../utils/render.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
-import { ALERT_KIND_TO_LABEL, IncidentClosedEmail } from "./EmailTemplate.tsx"
+import { IncidentClosedEmail } from "./EmailTemplate.tsx"
 
 const buildSourceUrl = (
   ctx: NotificationEmailRenderContext,
@@ -19,7 +20,6 @@ const buildSourceUrl = (
 export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"> = (payload, ctx) =>
   Effect.gen(function* () {
     const userName = ctx.recipient.name ?? "there"
-    const label = ALERT_KIND_TO_LABEL[payload.incidentKind]
 
     const issues = yield* IssueRepository
     const issue = yield* issues.findById(IssueId(payload.sourceId)).pipe(
@@ -35,6 +35,12 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
     const issueRef = issue?.name ?? "an issue"
     const issueUrl = buildSourceUrl(ctx, payload)
 
+    const chartUrl = yield* buildSignedChartUrl({
+      notificationId: ctx.notificationId,
+      apiBaseUrl: ctx.apiBaseUrl,
+      secret: ctx.chartSecret,
+    })
+
     const html = yield* Effect.tryPromise({
       try: () =>
         renderEmail(
@@ -43,6 +49,8 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
             incidentKind={payload.incidentKind}
             issueName={issue?.name ?? undefined}
             issueUrl={issueUrl}
+            chartUrl={chartUrl}
+            recovery={payload.recovery}
           />,
         ),
       catch: (cause) => ({
@@ -54,8 +62,8 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
 
     return {
       html,
-      subject: `[Latitude] ${label} resolved: ${issueRef}`,
-      text: `Hi ${userName},\n\n${label} resolved: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
+      subject: `[Latitude] Resolved: escalation on ${issueRef}`,
+      text: `Hi ${userName},\n\nResolved: escalation on ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
     }
   })
 

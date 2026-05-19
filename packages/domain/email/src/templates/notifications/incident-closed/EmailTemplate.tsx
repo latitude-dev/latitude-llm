@@ -1,3 +1,4 @@
+import type { IncidentRecovery } from "@domain/notifications"
 import type { AlertIncidentKind } from "@domain/shared"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -7,45 +8,35 @@ import { ContainerLayout } from "../../../components/ContainerLayout.tsx"
 import { EmailButton } from "../../../components/EmailButton.tsx"
 import { EmailText } from "../../../components/EmailText.tsx"
 import { emailDesignTokens } from "../../../tokens/design-system.ts"
-
-/**
- * Per-alert-kind copy for closed incidents. The `incident.closed` kind
- * only fires for sustained kinds today (`issue.escalating`); the other
- * keys are defensive defaults so future closed-kind additions render
- * something sensible.
- */
-export const ALERT_KIND_TO_LABEL: Record<AlertIncidentKind, string> = {
-  "issue.new": "New issue",
-  "issue.regressed": "Regressed issue",
-  "issue.escalating": "Escalating issue",
-}
-
-const ALERT_KIND_TO_DESCRIPTION: Record<AlertIncidentKind, string> = {
-  "issue.new": "Resolved — no further action needed.",
-  "issue.regressed": "Resolved again — no further action needed.",
-  "issue.escalating": "Occurrence rate returned to baseline.",
-}
+import { humanizeDurationMs, IncidentTrendChartImage } from "../-incident-components.tsx"
 
 interface IncidentClosedEmailProps {
   readonly userName: string
   readonly incidentKind: AlertIncidentKind
   readonly issueName: string | undefined
   readonly issueUrl: string | undefined
+  readonly chartUrl: string
+  readonly recovery: IncidentRecovery
 }
 
-export function IncidentClosedEmail({ userName, incidentKind, issueName, issueUrl }: IncidentClosedEmailProps) {
-  const label = ALERT_KIND_TO_LABEL[incidentKind]
-  const description = ALERT_KIND_TO_DESCRIPTION[incidentKind]
+export function IncidentClosedEmail({ userName, issueName, issueUrl, chartUrl, recovery }: IncidentClosedEmailProps) {
   const issueRef = issueName ?? "an issue"
+  const duration = humanizeDurationMs(recovery.durationMs)
 
   return (
-    <ContainerLayout previewText={`${label} resolved: ${issueRef}`}>
+    <ContainerLayout previewText={`Resolved: escalation on ${issueRef}`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        {`${label} resolved: ${issueRef}`}
+        {`Resolved: escalation on ${issueRef}`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`Hi ${userName}, ${description}`}
+        {`Hi ${userName}, the occurrence rate has returned to baseline.`}
       </EmailText>
+
+      <EmailText variant="bodySmall" className="text-muted-foreground">
+        {`Elevated for ${duration} — no further action needed unless the issue regresses again.`}
+      </EmailText>
+
+      <IncidentTrendChartImage src={chartUrl} />
 
       {issueUrl ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
@@ -61,4 +52,6 @@ IncidentClosedEmail.PreviewProps = {
   incidentKind: "issue.escalating",
   issueName: "Token leakage in responses",
   issueUrl: "https://console.latitude.so/projects/sample-project/issues?issueId=preview-issue",
+  chartUrl: "https://placehold.co/600x200/dbe5ff/3b5bff?text=Trend+chart",
+  recovery: { durationMs: 32 * 60 * 1000 },
 } satisfies IncidentClosedEmailProps

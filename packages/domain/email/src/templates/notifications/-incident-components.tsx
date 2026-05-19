@@ -1,5 +1,5 @@
 import type { IncidentSampleExcerpt } from "@domain/notifications"
-import { Row, Section, Text } from "@react-email/components"
+import { Img, Row, Section, Text } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
@@ -73,3 +73,59 @@ export function SampleExcerptCard({ excerpt }: { readonly excerpt: IncidentSampl
   )
 }
 
+/**
+ * Inline trend chart. The image points at the `apps/api`
+ * `/charts/incident-trend` endpoint scoped to the notification via an
+ * HMAC-signed token. Width/height match the renderer (600×200) so the
+ * `<Img>` reserves the right slot when mail clients render before the
+ * image loads, and the alt text reads sensibly in plain-text clients.
+ */
+export function IncidentTrendChartImage({ src }: { readonly src: string }) {
+  return (
+    <Section style={{ marginTop: 16 }}>
+      <Img
+        src={src}
+        alt="Incident trend chart"
+        width="600"
+        height="200"
+        style={{
+          display: "block",
+          width: "100%",
+          maxWidth: 600,
+          height: "auto",
+          borderRadius: 6,
+          border: "1px solid #E5E7EB",
+        }}
+      />
+    </Section>
+  )
+}
+
+/**
+ * Single-line "X/hr" rate formatter shared between the email and the
+ * chart caption. Rounds to integer for clean copy; sub-1 rates render
+ * as one decimal place (e.g. 0.5/hr) since rounding to 0 would be
+ * misleading.
+ */
+export const formatRatePerHour = (rate: number): string => {
+  if (rate < 1) return `${rate.toFixed(1)}/hr`
+  return `${Math.round(rate)}/hr`
+}
+
+/**
+ * Humanizes a duration in ms for the recovery copy ("elevated for
+ * 32m"). Bands are coarse on purpose — exact second-precision is
+ * noise for an email summary.
+ */
+export const humanizeDurationMs = (ms: number): string => {
+  if (ms < 60_000) return "under a minute"
+  const minutes = Math.round(ms / 60_000)
+  if (minutes < 60) return `${minutes}m`
+  const hours = minutes / 60
+  if (hours < 24) {
+    const rounded = Math.round(hours * 10) / 10
+    return `${rounded}h`
+  }
+  const days = Math.round(hours / 24)
+  return `${days}d`
+}

@@ -51,6 +51,13 @@ const resolveWebAppUrl = (): string => {
   return webUrl.replace(/\/$/, "")
 }
 
+const resolveApiBaseUrl = (): string => {
+  const apiUrl = Effect.runSync(parseEnv("LAT_API_URL", "string", "http://localhost:3001"))
+  return apiUrl.replace(/\/$/, "")
+}
+
+const resolveChartSecret = (): string => Effect.runSync(parseEnv("LAT_NOTIFICATION_CHART_SECRET", "string"))
+
 /**
  * Channel worker: consumes `notification-email:send` tasks, looks up the
  * stored notification + recipient, dispatches to the per-kind email
@@ -65,6 +72,8 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   const emailTransport = createEmailTransportSender()
   const transportSendEmail = sendEmail({ emailSender: emailTransport })
   const webAppUrl = resolveWebAppUrl()
+  const apiBaseUrl = resolveApiBaseUrl()
+  const chartSecret = resolveChartSecret()
 
   // Adapter: bridges the use case's renderer-callback boundary to the
   // per-kind renderer Effects in `@domain/email`. The renderers are
@@ -81,7 +90,14 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   const renderEmailAdapter: NotificationEmailRenderer = ({ notificationId, kind, payload, recipient, project }) =>
     Effect.suspend((): Effect.Effect<RenderedEmail, RenderNotificationEmailError, RendererSupersetR> => {
       const parsedPayload = payloadSchemaFor(kind).parse(payload)
-      const ctx: NotificationEmailRenderContext = { webAppUrl, notificationId, recipient, project }
+      const ctx: NotificationEmailRenderContext = {
+        webAppUrl,
+        apiBaseUrl,
+        chartSecret,
+        notificationId,
+        recipient,
+        project,
+      }
       const renderer = NOTIFICATION_EMAIL_RENDERERS[kind]
       // Each renderer in the registry accepts its kind's narrowed payload;
       // payloadSchemaFor already returns the same schema used at the call

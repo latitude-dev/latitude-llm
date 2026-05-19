@@ -17,6 +17,10 @@ import type { RenderedEmail } from "../types.ts"
  */
 export interface NotificationEmailRenderContext {
   readonly webAppUrl: string
+  /** Base URL for `apps/api` — used to mint signed chart URLs in the sustained-incident templates. */
+  readonly apiBaseUrl: string
+  /** HMAC secret for chart URL signing (`LAT_NOTIFICATION_CHART_SECRET`). */
+  readonly chartSecret: string
   /**
    * Stable id of the notification row being rendered. Sustained-incident
    * renderers feed this through `buildSignedChartUrl` so the embedded
