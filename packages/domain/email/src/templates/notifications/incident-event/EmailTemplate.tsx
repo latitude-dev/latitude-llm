@@ -11,11 +11,12 @@ import { emailDesignTokens } from "../../../tokens/design-system.ts"
 import {
   EmailMetadataTable,
   formatScope,
+  IssueIdFooter,
+  IssueTimestamp,
   SampleExcerptCard,
   SectionHeader,
   SeverityBadge,
   TagsChips,
-  TimestampIdRow,
 } from "../-incident-components.tsx"
 
 const ALERT_KIND_TO_HEADING: Record<AlertIncidentKind, string> = {
@@ -85,7 +86,7 @@ export function IncidentEventEmail({
         </EmailText>
       ) : null}
 
-      <TimestampIdRow timestamp={notificationCreatedAt} id={issueId} />
+      <IssueTimestamp timestamp={notificationCreatedAt} />
 
       <EmailMetadataTable rows={metadataRows} />
 
@@ -95,6 +96,8 @@ export function IncidentEventEmail({
           <SampleExcerptCard excerpt={sampleExcerpt} />
         </>
       ) : null}
+
+      <IssueIdFooter issueId={issueId} />
 
       {issueUrl ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>

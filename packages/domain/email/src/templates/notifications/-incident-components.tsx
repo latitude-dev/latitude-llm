@@ -1,6 +1,6 @@
 import type { IncidentSampleExcerpt } from "@domain/notifications"
 import type { AlertSeverity } from "@domain/shared"
-import { Img, Row, Section, Text } from "@react-email/components"
+import { Img, Section, Text } from "@react-email/components"
 import type { ReactNode } from "react"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -104,32 +104,33 @@ export function SeverityBadge({ severity }: { readonly severity: AlertSeverity }
 }
 
 /**
- * Inline tag chips for the metadata table's "Tags" value cell. Compact
- * style — wraps if the row is narrow.
+ * Inline tag chips for the metadata table's "Tags" value cell. Rendered
+ * as a flow of inline-block spans so the chips sit flush left next to
+ * each other; React Email's `Row` was producing equal-width cells that
+ * spread the chips across the full row.
  */
 export function TagsChips({ tags }: { readonly tags: readonly string[] }) {
   if (tags.length === 0) return null
   return (
-    <Row>
-      {tags.map((tag) => (
-        <td key={tag} style={{ width: "auto", paddingRight: 6 }}>
-          <span
-            style={{
-              display: "inline-block",
-              padding: "2px 8px",
-              borderRadius: 999,
-              backgroundColor: "#F1F5F9",
-              color: "#0F172A",
-              fontSize: 12,
-              lineHeight: "16px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {tag}
-          </span>
-        </td>
+    <span style={{ display: "inline-block", lineHeight: "20px" }}>
+      {tags.map((tag, idx) => (
+        <span
+          key={tag}
+          style={{
+            display: "inline-block",
+            padding: "2px 8px",
+            marginRight: idx === tags.length - 1 ? 0 : 6,
+            borderRadius: 999,
+            backgroundColor: "#F1F5F9",
+            color: "#0F172A",
+            fontSize: 12,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {tag}
+        </span>
       ))}
-    </Row>
+    </span>
   )
 }
 
@@ -190,24 +191,35 @@ export function IncidentTrendChartImage({ src }: { readonly src: string }) {
 }
 
 /**
- * Heading-area block: timestamp on the left, short id on the right.
- * Renders as a two-column row to match the Sentry email's
- * "Sept. 30, 2025, 10:05 a.m. UTC      ID: 5741644..." line.
+ * Single-line absolute timestamp under the issue name. The Sentry email
+ * pairs this with an issue id in a two-column row; we surface the full
+ * id separately at the card footer so it doesn't get truncated.
  */
-export function TimestampIdRow({ timestamp, id }: { readonly timestamp: Date; readonly id: string }) {
-  const formatted = formatEmailTimestamp(timestamp)
-  // Short id: last 8 chars — enough to reference in a support thread,
-  // not so long the line breaks awkwardly.
-  const shortId = id.length > 8 ? `…${id.slice(-8)}` : id
+export function IssueTimestamp({ timestamp }: { readonly timestamp: Date }) {
   return (
-    <table style={{ width: "100%", marginTop: 12 }}>
-      <tbody>
-        <tr>
-          <td style={{ color: "#64748B", fontSize: 12 }}>{formatted}</td>
-          <td style={{ color: "#64748B", fontSize: 12, textAlign: "right", fontFamily: "monospace" }}>ID: {shortId}</td>
-        </tr>
-      </tbody>
-    </table>
+    <Text style={{ margin: "8px 0 0 0", color: "#64748B", fontSize: 12 }}>{formatEmailTimestamp(timestamp)}</Text>
+  )
+}
+
+/**
+ * Full issue id rendered as a small monospace footer line — matches the
+ * "Project id: …" / "Org id: …" strip on the backoffice project page.
+ * Sits below the per-kind content so the rest of the card stays
+ * scannable.
+ */
+export function IssueIdFooter({ issueId }: { readonly issueId: string }) {
+  return (
+    <Text
+      style={{
+        margin: "16px 0 0 0",
+        color: "#94A3B8",
+        fontSize: 11,
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+        wordBreak: "break-all",
+      }}
+    >
+      Issue ID: {issueId}
+    </Text>
   )
 }
 

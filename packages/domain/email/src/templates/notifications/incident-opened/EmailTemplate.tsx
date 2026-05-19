@@ -13,11 +13,12 @@ import {
   formatRatePerHour,
   formatScope,
   IncidentTrendChartImage,
+  IssueIdFooter,
+  IssueTimestamp,
   SampleExcerptCard,
   SectionHeader,
   SeverityBadge,
   TagsChips,
-  TimestampIdRow,
 } from "../-incident-components.tsx"
 
 interface IncidentOpenedEmailProps {
@@ -89,7 +90,7 @@ export function IncidentOpenedEmail({
         </EmailText>
       ) : null}
 
-      <TimestampIdRow timestamp={notificationCreatedAt} id={issueId} />
+      <IssueTimestamp timestamp={notificationCreatedAt} />
 
       <EmailMetadataTable rows={metadataRows} />
 
@@ -107,6 +108,8 @@ export function IncidentOpenedEmail({
           <SampleExcerptCard excerpt={sampleExcerpt} />
         </>
       ) : null}
+
+      <IssueIdFooter issueId={issueId} />
 
       {issueUrl ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>

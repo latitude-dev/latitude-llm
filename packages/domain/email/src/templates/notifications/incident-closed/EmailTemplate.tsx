@@ -13,9 +13,10 @@ import {
   formatScope,
   humanizeDurationMs,
   IncidentTrendChartImage,
+  IssueIdFooter,
+  IssueTimestamp,
   SectionHeader,
   SeverityBadge,
-  TimestampIdRow,
 } from "../-incident-components.tsx"
 
 interface IncidentClosedEmailProps {
@@ -70,7 +71,7 @@ export function IncidentClosedEmail({
         </EmailText>
       ) : null}
 
-      <TimestampIdRow timestamp={notificationCreatedAt} id={issueId} />
+      <IssueTimestamp timestamp={notificationCreatedAt} />
 
       <EmailMetadataTable rows={metadataRows} />
 
@@ -79,6 +80,8 @@ export function IncidentClosedEmail({
         {`Elevated for ${duration} — no further action needed unless the issue regresses again.`}
       </EmailText>
       <IncidentTrendChartImage src={chartUrl} />
+
+      <IssueIdFooter issueId={issueId} />
 
       {issueUrl ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
