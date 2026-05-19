@@ -181,42 +181,74 @@ export function SampleExcerptCard({ excerpt }: { readonly excerpt: IncidentSampl
  * - `evaluation`:  the evaluation name only (evaluations don't have
  *                  faces and the eyebrow label already says "From an
  *                  evaluation").
+ *
+ * Rendered as a single-row `<table>` (matches `EmailMetadataTable`) so
+ * the avatar/name/badge cells line up reliably in Outlook and older
+ * clients — `display: inline-flex` / `gap` aren't safe there, and
+ * `<Text>` (which becomes a `<p>`) can't be nested in a `<span>`.
  */
 function SampleAuthorRow({ author }: { readonly author: IncidentSampleAuthor }) {
-  if (author.kind === "evaluation") {
-    return <Text style={inlineNameStyle}>{author.name}</Text>
-  }
-  if (author.kind === "system") {
-    return (
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <LatitudeMonogram />
-        <Text style={inlineNameStyle}>Latitude</Text>
-        <AgentBadge />
-      </span>
-    )
-  }
-  // user
-  const initials = computeInitials(author.name)
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      {author.imageUrl ? (
-        <UserAvatarImage imageUrl={author.imageUrl} name={author.name} />
-      ) : (
-        <InitialsAvatar text={initials} />
-      )}
-      <Text style={inlineNameStyle}>{author.name}</Text>
-    </span>
+    <table role="presentation" cellPadding={0} cellSpacing={0} style={{ borderCollapse: "collapse" }}>
+      <tbody>
+        <tr>
+          <SampleAuthorCells author={author} />
+        </tr>
+      </tbody>
+    </table>
   )
 }
 
-const inlineNameStyle: CSSProperties = {
-  margin: 0,
-  display: "inline-block",
+function SampleAuthorCells({ author }: { readonly author: IncidentSampleAuthor }) {
+  if (author.kind === "evaluation") {
+    return (
+      <td style={authorCellStyle}>
+        <span style={authorNameStyle}>{author.name}</span>
+      </td>
+    )
+  }
+  if (author.kind === "system") {
+    return (
+      <>
+        <td style={authorCellStyle}>
+          <LatitudeMonogram />
+        </td>
+        <td style={{ ...authorCellStyle, paddingLeft: 6 }}>
+          <span style={authorNameStyle}>Latitude</span>
+        </td>
+        <td style={{ ...authorCellStyle, paddingLeft: 6 }}>
+          <AgentBadge />
+        </td>
+      </>
+    )
+  }
+  const initials = computeInitials(author.name)
+  return (
+    <>
+      <td style={authorCellStyle}>
+        {author.imageUrl ? (
+          <UserAvatarImage imageUrl={author.imageUrl} name={author.name} />
+        ) : (
+          <InitialsAvatar text={initials} />
+        )}
+      </td>
+      <td style={{ ...authorCellStyle, paddingLeft: 8 }}>
+        <span style={authorNameStyle}>{author.name}</span>
+      </td>
+    </>
+  )
+}
+
+const authorCellStyle: CSSProperties = {
+  padding: 0,
+  verticalAlign: "middle",
+}
+
+const authorNameStyle: CSSProperties = {
   color: "#0F172A",
   fontSize: 13,
   fontWeight: 600,
   lineHeight: "20px",
-  verticalAlign: "middle",
 }
 
 const AVATAR_SIZE = 20
