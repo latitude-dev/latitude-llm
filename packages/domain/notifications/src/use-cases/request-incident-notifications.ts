@@ -253,8 +253,7 @@ const buildBreach = (incident: AlertIncident, trend: IncidentTrend | null): Inci
  * for 32m").
  */
 const buildRecovery = (incident: AlertIncident): IncidentRecovery => ({
-  durationMs:
-    incident.endedAt !== null ? Math.max(0, incident.endedAt.getTime() - incident.startedAt.getTime()) : 0,
+  durationMs: incident.endedAt !== null ? Math.max(0, incident.endedAt.getTime() - incident.startedAt.getTime()) : 0,
 })
 
 const buildPayload = (input: {

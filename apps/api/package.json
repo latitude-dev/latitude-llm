@@ -24,6 +24,7 @@
     "@domain/exports": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",
+    "@domain/notifications": "workspace:*",
     "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
@@ -47,17 +48,22 @@
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
+    "@platform/storage-object": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
+    "@resvg/resvg-js": "2.6.2",
     "effect": "catalog:",
     "hono": "catalog:",
+    "react": "catalog:",
+    "satori": "0.18.4",
     "tsx": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@modelcontextprotocol/inspector": "catalog:",
     "@platform/testkit": "workspace:*",
+    "@types/react": "catalog:",
     "tsdown": "catalog:"
   }
 }

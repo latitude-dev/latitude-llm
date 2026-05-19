@@ -43,6 +43,7 @@ export interface NotificationEmailProject {
  * `SqlClient` requirement reaches this contract.
  */
 export type NotificationEmailRenderer = (input: {
+  readonly notificationId: NotificationId
   readonly kind: NotificationKind
   readonly payload: Record<string, unknown>
   readonly recipient: NotificationEmailRecipient
@@ -137,6 +138,7 @@ export const sendNotificationEmailUseCase =
         : null
 
       const rendered = yield* renderEmail({
+        notificationId: notification.id,
         kind: notification.kind,
         payload: notification.payload,
         recipient: { userId: user.id, name: user.name, email: user.email },

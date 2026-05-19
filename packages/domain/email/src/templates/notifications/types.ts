@@ -17,6 +17,13 @@ import type { RenderedEmail } from "../types.ts"
  */
 export interface NotificationEmailRenderContext {
   readonly webAppUrl: string
+  /**
+   * Stable id of the notification row being rendered. Sustained-incident
+   * renderers feed this through `buildSignedChartUrl` so the embedded
+   * chart `<Img>` points at the `apps/api` chart endpoint scoped to this
+   * row.
+   */
+  readonly notificationId: string
   readonly recipient: {
     readonly userId: string
     readonly name: string | null

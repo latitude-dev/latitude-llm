@@ -78,10 +78,10 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   // dispatch result to the layer's superset and let `Effect.provide`
   // strip everything except `SqlClient` (the boundary contract).
   type RendererSupersetR = IssueRepository | WrappedReportRepository | SqlClient
-  const renderEmailAdapter: NotificationEmailRenderer = ({ kind, payload, recipient, project }) =>
+  const renderEmailAdapter: NotificationEmailRenderer = ({ notificationId, kind, payload, recipient, project }) =>
     Effect.suspend((): Effect.Effect<RenderedEmail, RenderNotificationEmailError, RendererSupersetR> => {
       const parsedPayload = payloadSchemaFor(kind).parse(payload)
-      const ctx: NotificationEmailRenderContext = { webAppUrl, recipient, project }
+      const ctx: NotificationEmailRenderContext = { webAppUrl, notificationId, recipient, project }
       const renderer = NOTIFICATION_EMAIL_RENDERERS[kind]
       // Each renderer in the registry accepts its kind's narrowed payload;
       // payloadSchemaFor already returns the same schema used at the call
