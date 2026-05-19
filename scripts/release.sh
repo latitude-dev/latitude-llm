@@ -81,7 +81,7 @@ if ! git merge-base --is-ancestor "${target_sha}" origin/development; then
   exit 1
 fi
 
-latest_tag=$(git tag --sort=-v:refname 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+latest_tag=$(git tag -l 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
 
 if [ -z "${version}" ]; then
   if [ -z "${latest_tag}" ]; then
