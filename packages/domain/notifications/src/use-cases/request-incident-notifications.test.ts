@@ -29,7 +29,7 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { IncidentEventPayload } from "../entities/notification.ts"
+import type { IncidentEventPayload, IncidentOpenedPayload } from "../entities/notification.ts"
 import { requestIncidentNotificationsUseCase } from "./request-incident-notifications.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -537,6 +537,106 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(payload.breach?.threshold).toBe(7.5)
     // triggerRate is derived from peak trend count × per-hour scale; verify it's a positive number.
     expect(payload.breach?.triggerRate).toBeGreaterThan(0)
+  })
+
+  it("snapshots sampleExcerpt on incident.opened too (escalating gets the same triage excerpt)", async () => {
+    const annotation = {
+      id: cuid("score-a"),
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      sessionId: null,
+      traceId: null,
+      spanId: null,
+      simulationId: null,
+      issueId: cuid("i"),
+      value: 0,
+      passed: false,
+      feedback: "f",
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      source: "annotation" as const,
+      sourceId: "UI" as const,
+      metadata: { rawFeedback: "Annotator flagged the response for hallucinating a refund policy." },
+    } as unknown as AnnotationScore
+
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.escalating", severity: "high", endedAt: null },
+      latestAnnotation: annotation,
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.kind).toBe("incident.opened")
+    const payload = result.requests[0]?.payload as IncidentOpenedPayload
+    expect(payload.sampleExcerpt).toEqual({
+      source: "annotation",
+      text: "Annotator flagged the response for hallucinating a refund policy.",
+      truncated: false,
+    })
+  })
+
+  it("skips sampleExcerpt on incident.closed (recovery emails focus on the descent)", async () => {
+    const annotation = {
+      id: cuid("score-a"),
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      sessionId: null,
+      traceId: null,
+      spanId: null,
+      simulationId: null,
+      issueId: cuid("i"),
+      value: 0,
+      passed: false,
+      feedback: "f",
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      source: "annotation" as const,
+      sourceId: "UI" as const,
+      metadata: { rawFeedback: "Some feedback here." },
+    } as unknown as AnnotationScore
+
+    const { incidentId, layer } = setup({
+      incident: {
+        kind: "issue.escalating",
+        severity: "high",
+        startedAt: new Date("2026-05-07T10:00:00Z"),
+        endedAt: new Date("2026-05-07T10:30:00Z"),
+      },
+      latestAnnotation: annotation,
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "closed" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.kind).toBe("incident.closed")
+    expect((result.requests[0]?.payload as { sampleExcerpt?: unknown }).sampleExcerpt).toBeUndefined()
   })
 
   it("snapshots recovery durationMs on incident.closed", async () => {

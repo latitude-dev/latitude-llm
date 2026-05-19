@@ -67,9 +67,22 @@ Sustained-incident emails (`incident.opened` / `incident.closed`) embed a server
 | --- | --- | --- |
 | `trend.points` | Sustained kinds | `incident.opened`, `incident.closed` — 3h × 10-min buckets (18 points) ending at the transition timestamp. Each point has `{ t, count, threshold \| null }`. |
 | `tags` | Top-5 alphabetical | `incident.event`, `incident.opened`. From `ScoreAnalyticsRepository.aggregateTagsByIssues` with a 30-day lookback. Closed skips — the email focuses on recovery. |
-| `sampleExcerpt` | One-shot triage card | `incident.event` only. Prefers latest annotation `rawFeedback`; falls back to latest evaluation `feedback`. Capped at 200 chars; `truncated: true` when cropped. |
+| `sampleExcerpt` | One-shot triage card | `incident.event` and `incident.opened`. Prefers latest annotation `rawFeedback`; falls back to latest evaluation `feedback`. Capped at 200 chars; `truncated: true` when cropped. Closed kind skips — the recovery email focuses on the descent, not the source. |
 | `breach { triggerRate, baselineRate, threshold }` | Per-hour rates | `incident.opened` only, when the alert incident has `entrySignals`. `baselineRate` = `expected1h`, `threshold` = `entryThreshold1h`, `triggerRate` is derived from the peak trend bucket converted to per-hour. Omitted on legacy incidents missing `entrySignals`. |
 | `recovery.durationMs` | `endedAt - startedAt` | `incident.closed` only. Drives the "elevated for X" copy in the email. |
+
+### Email layout
+
+The three incident emails follow a Sentry-style sectioned shape so recipients can scan section labels and drill into the part that matters:
+
+1. **Heading + subtitle** — alert-type heading (`New issue` / `Regressed issue` / `Escalating issue` / `Resolved escalation`) and an audience subtitle that explains who got the email and why.
+2. **`ISSUE` section** — issue name, description (when set on the entity), `{absolute timestamp}   ID: …{shortId}` row, then a 2-column metadata table with Project (`{orgName} / {projectName}`), Severity badge, and Tags chips when present.
+3. **Per-kind section** — `BREACH` (opened, with breach copy + chart), `RECOVERY` (closed, with elapsed-time copy + chart), or `LATEST OCCURRENCE` (event/opened, with the annotation or evaluation excerpt card).
+4. **View issue CTA** at the bottom.
+
+Shared building blocks live in `packages/domain/email/src/templates/notifications/-incident-components.tsx`: `SectionHeader`, `EmailMetadataTable`, `SeverityBadge`, `TagsChips`, `TimestampIdRow`, `IncidentTrendChartImage`, `SampleExcerptCard`, plus the `formatRatePerHour` / `humanizeDurationMs` / `formatScope` helpers. Renderers consume `ctx.notificationCreatedAt` and `ctx.organization` (threaded through the send-notification-email use case) for the timestamp + "Acme / project-name" scope line.
+
+Subject lines: no `[Latitude]` prefix. The alert-type prefix (`New issue:`, `Escalating:`, `Resolved: escalation on …`) is the actual inbox-skim signal.
 
 ### Server-rendered trend chart
 
