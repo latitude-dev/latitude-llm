@@ -43,6 +43,8 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
             incidentKind={payload.incidentKind}
             issueName={issue?.name ?? undefined}
             issueUrl={issueUrl}
+            tags={payload.tags}
+            sampleExcerpt={payload.sampleExcerpt}
           />,
         ),
       catch: (cause) => ({

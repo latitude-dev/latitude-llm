@@ -1,3 +1,4 @@
+import type { IncidentSampleExcerpt } from "@domain/notifications"
 import type { AlertIncidentKind } from "@domain/shared"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -7,6 +8,7 @@ import { ContainerLayout } from "../../../components/ContainerLayout.tsx"
 import { EmailButton } from "../../../components/EmailButton.tsx"
 import { EmailText } from "../../../components/EmailText.tsx"
 import { emailDesignTokens } from "../../../tokens/design-system.ts"
+import { SampleExcerptCard, TagsChips } from "../-incident-components.tsx"
 
 /**
  * Per-alert-kind copy for one-shot incidents (`incident.event`). Only
@@ -31,9 +33,18 @@ interface IncidentEventEmailProps {
   readonly incidentKind: AlertIncidentKind
   readonly issueName: string | undefined
   readonly issueUrl: string | undefined
+  readonly tags: readonly string[] | undefined
+  readonly sampleExcerpt: IncidentSampleExcerpt | undefined
 }
 
-export function IncidentEventEmail({ userName, incidentKind, issueName, issueUrl }: IncidentEventEmailProps) {
+export function IncidentEventEmail({
+  userName,
+  incidentKind,
+  issueName,
+  issueUrl,
+  tags,
+  sampleExcerpt,
+}: IncidentEventEmailProps) {
   const label = ALERT_KIND_TO_LABEL[incidentKind]
   const description = ALERT_KIND_TO_DESCRIPTION[incidentKind]
   const issueRef = issueName ?? "an issue"
@@ -46,6 +57,9 @@ export function IncidentEventEmail({ userName, incidentKind, issueName, issueUrl
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
         {`Hi ${userName}, ${description}`}
       </EmailText>
+
+      {tags && tags.length > 0 ? <TagsChips tags={tags} /> : null}
+      {sampleExcerpt ? <SampleExcerptCard excerpt={sampleExcerpt} /> : null}
 
       {issueUrl ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
@@ -61,4 +75,10 @@ IncidentEventEmail.PreviewProps = {
   incidentKind: "issue.new",
   issueName: "Token leakage in responses",
   issueUrl: "https://console.latitude.so/projects/sample-project/issues?issueId=preview-issue",
+  tags: ["env:prod", "model:claude-3.5-sonnet", "service:agents"],
+  sampleExcerpt: {
+    source: "annotation",
+    text: "Reviewer flagged a tool-call loop after the third retry — model kept invoking `search` with the same query.",
+    truncated: false,
+  },
 } satisfies IncidentEventEmailProps
