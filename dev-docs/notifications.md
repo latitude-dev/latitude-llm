@@ -83,6 +83,10 @@ The chart embedded in sustained-incident emails is rendered server-side:
 
 If `notificationId` ever leaks to less-trusted surfaces, or chart payloads start carrying more sensitive data, the route handler has a `TODO` flagging the swap to an HMAC-signed token — contained change: sign in `buildChartUrl`, verify in the route.
 
+### Testing emails locally
+
+`pnpm --filter @app/workers test-emails:incidents` publishes a `notification-email:send` task for every seeded incident notification (event / opened / closed) in the Acme org. Prereqs: docker compose up, the `notification-emailer` worker running (`pnpm --filter @app/workers dev`), and the `email-notifications` flag on. Emails land in Mailpit at [localhost:8025](http://localhost:8025) within a second. Pass `--force` to clear `emailed_at` first so the same rows re-fire on a second run, or `--organization-id <id>` to target a non-Acme org.
+
 ## Files
 
 | File | Purpose |
