@@ -88,7 +88,7 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check_version.outputs.should_publish == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: python-telemetry-${{ steps.get_version.outputs.version }}
           name: Python Telemetry v${{ steps.get_version.outputs.version }}
