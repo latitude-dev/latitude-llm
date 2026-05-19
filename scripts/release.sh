@@ -8,6 +8,40 @@ set -euo pipefail
 export GH_PAGER=cat
 export GIT_PAGER=cat
 
+force_release=false
+
+usage() {
+  cat <<EOF
+Usage: $0 [--force]
+
+Options:
+  --force   Continue even when main has non-release commits that the guard
+            cannot verify in development. Use only after confirming those
+            changes are present in development or intentionally dropped.
+  -h, --help
+            Show this help message.
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  --force)
+    force_release=true
+    shift
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown argument: $1"
+    echo ""
+    usage
+    exit 1
+    ;;
+  esac
+done
+
 if ! command -v gh >/dev/null 2>&1; then
   echo "GitHub CLI (gh) is required. Install: https://cli.github.com"
   exit 1
@@ -66,9 +100,16 @@ if [ -n "$main_only_commits" ]; then
   echo "main has non-release commits that development does not contain:"
   printf '%s' "$main_only_commits"
   echo ""
-  echo "Promoting development would remove these changes from production."
-  echo "Cherry-pick or merge them into development first, then run this script again."
-  exit 1
+
+  if [ "$force_release" = true ]; then
+    echo "WARNING: --force supplied; skipping the main-only commit guard."
+    echo "Confirm these changes are present in development or intentionally dropped before merging the release PR."
+    echo ""
+  else
+    echo "Promoting development would remove these changes from production."
+    echo "Cherry-pick or merge them into development first, then run this script again."
+    exit 1
+  fi
 fi
 
 existing_pr=$(gh pr list \
