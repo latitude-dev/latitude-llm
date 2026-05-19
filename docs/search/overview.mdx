@@ -7,6 +7,8 @@ description: Find traces by meaning, not just keywords, and save the searches yo
 
 Search is how you find traces in Latitude. You describe what you're looking for in plain language, and Latitude returns the most relevant traces in your project. When a search becomes a regular part of your workflow, you can save it so the whole team can come back to it.
 
+For habits around query design, saving searches, and keeping them useful over time, see [Search Best Practices](../best-practices/search).
+
 <Frame>
   <img
     src="/images/search/search-overview.png"
@@ -16,12 +18,19 @@ Search is how you find traces in Latitude. You describe what you're looking for 
 
 ## How Search Works
 
-When you type into the search bar, Latitude compares your query against the conversations in every recent trace and returns the best matches. There are two ways to ask:
+When you type into the search bar, Latitude compares your query against the conversations in every recent trace and returns the best matches. You can combine three query styles in one search:
 
-- **Search by meaning** (default): Type a description in plain language and Latitude ranks traces by how close their conversation is to what you described. Paraphrases like _"user complaining"_, _"failed payments"_, or _"long latency on signup"_ work even when the trace doesn't contain those exact words.
-- **Require specific words**: Wrap a word or phrase in `"quotes"` to require it to appear in the trace. Multiple quoted phrases must all appear, but their order isn't enforced.
+### Search syntax
 
-You can mix the two — for example, `"checkout" users abandoning cart` requires the word _checkout_ to appear and ranks the matches by how close they are to _"users abandoning cart"_.
+| Mode | Syntax | Example | Behavior |
+| --- | --- | --- | --- |
+| **Semantic** | Plain words | `checkout error` | Search by meaning. Results don't need to contain the exact text. |
+| **Literal** | Double quotes | `"401 Unauthorized"` | Exact match, including capitalization and punctuation. |
+| **Phrase** | Backticks | `` `refund payment failed` `` | Match these words in this order. Capitalization is ignored. |
+
+You can mix all three. For example, `"checkout" `refund failed` frustrated user` requires the literal _checkout_, the ordered phrase _refund failed_, and ranks _frustrated user_ by meaning.
+
+Saved searches store your query exactly as you typed it, so these rules apply when you reopen a saved search too.
 
 ### What Search Looks At
 
@@ -56,10 +65,10 @@ The Search page lives in the left navigation of every project.
   />
 </Frame>
 
-1. **Type your query** in the search bar and press Enter. Use `"quotes"` to require specific words.
+1. **Type your query** in the search bar and press Enter. Use `"quotes"` for literals and backticks for ordered phrases.
 2. **Add filters** to narrow further. The same [shared filter system](../observability/filters) used everywhere else in Latitude applies here. Filter by status, model, cost, duration, tags, custom metadata, and more.
 3. **Pick a time range** with the time filter dropdown if you only care about a recent window.
-4. **Sort, scroll, and open** matching traces. When you search by meaning, results are ordered by relevance. When your query is only quoted words, results fall back to the usual chronological order and the column headers control the sort.
+4. **Sort, scroll, and open** matching traces. When you search semantically, results are ordered by relevance. When your query uses only literals or backtick phrases (no plain words), results fall back to chronological order and the column headers control the sort.
 
 Each trace row shows the same metadata you'd see on the Traces page. Clicking a row opens the full trace detail, including conversation, spans, scores, and the annotation panel.
 
@@ -79,25 +88,25 @@ When you select one or more traces from a result set, two actions become availab
 - **Export traces**: Download the matching traces as a file. You'll get an email when the export is ready.
 - **Add to dataset**: Push the matching traces into a dataset for offline analysis, regression suites, or [simulations](../simulations/overview).
 
-These actions respect the active query and filters, so you can build up a precise cohort with search and then operate on it as a group.
+These actions respect the active query and filters, so you can narrow to a precise group of traces and operate on them in bulk.
 
-## Saving a Search
+## Saving a search
 
-When a query plus filters becomes something you want to come back to, save it.
+When a query plus filters defines a group you want to revisit, save it:
 
 1. Run the search.
 2. Click **Save search** in the toolbar.
 3. Give it a name like _"Failed payments last week"_ or _"Long latency on signup"_.
 
-The saved search appears in the table on the Search landing page along with everyone else's. See [Saved Searches](./saved-searches) for the full lifecycle, including assignment, renaming, and detecting drift between a saved search and its current state.
+The saved search keeps your query and filters, plus a name, assignee, and **Annotated / Total** on the Search landing page. See [Saved Searches](./saved-searches) for assignment, renaming, and updating when the query drifts.
 
 ## Empty Results
 
 If a search returns nothing, the most useful adjustments are usually:
 
-- **Reword the query**: Close paraphrases often work — try a different framing of the same intent.
-- **Drop the quotes**: A quoted phrase has to appear word-for-word. Removing the quotes lets Latitude rank by meaning instead.
-- **Use fewer or more specific keywords**: A vague single word can return too many noisy matches; an over-specific phrase can return none.
+- **Reword the query**: Close paraphrases often work on the semantic part — try a different framing of the same intent.
+- **Drop literals or backticks**: If `"exact text"` or `` `ordered words` `` is too strict, remove them and search by meaning instead.
+- **Use fewer or more specific keywords**: A vague single word can return too many noisy matches; an over-specific literal can return none.
 - **Widen filters**: A status filter or tight time range can hide otherwise good matches.
 - **Check the time window**: Word-based search only covers the last 90 days. Search by meaning is bounded by your plan's telemetry retention (30 days on Free, 90 days on Pro, 1 year on Enterprise).
 
@@ -105,12 +114,13 @@ If a search returns nothing, the most useful adjustments are usually:
 
 | Feature                                                     | Relationship                                                                                                             |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **[Saved searches](./saved-searches)**                      | Bookmark a query plus filters so the whole team can revisit it later                                                     |
-| **[Flaggers](../annotations/flaggers)**                     | Automatic annotators that surface common failure categories; search lets you build your own cohorts around anything else |
+| **[Saved searches](./saved-searches)**                      | Bookmark a query plus filters so the team can revisit the same matches later                                             |
+| **[Flaggers](../annotations/flaggers)**                     | Automatic annotators for common failure categories; saved searches cover everything else your product needs to scope   |
 | **[Inline annotations](../annotations/inline-annotations)** | Once you open a trace from a search result, you can annotate it directly                                                 |
 
 ## Next Steps
 
+- [Search Best Practices](../best-practices/search): Query design, sizing saved searches, and keeping them useful
 - [Saved Searches](./saved-searches): Keep useful searches around and assign ownership
 - [Flaggers](../annotations/flaggers): Automatic detection of common failure categories
 - [Inline Annotations](../annotations/inline-annotations): Leave human feedback on traces you find through search

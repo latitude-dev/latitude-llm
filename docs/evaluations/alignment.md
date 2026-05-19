@@ -89,5 +89,5 @@ This iterative calibration process is how you keep automated evaluations trustwo
 
 - [Annotations](../annotations/overview): How human review produces the ground truth for alignment
 - [Flaggers](../annotations/flaggers): Automatic annotators that contribute to alignment data
-- [Search](../search/overview): Build cohorts of traces to annotate
+- [Search](../search/overview): Save searches to scope traces for annotation
 - [Issues](../issues/overview): How failed evaluations become trackable issues

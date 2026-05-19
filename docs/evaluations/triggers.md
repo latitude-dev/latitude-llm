@@ -85,7 +85,7 @@ Triggers, search, and annotations form a feedback loop:
 
 1. An evaluation monitors traces with a broad trigger
 2. Failed scores feed into [issue discovery](../issues/overview)
-3. A [saved search](../search/saved-searches) scopes a reviewer to the failing cohort
+3. A [saved search](../search/saved-searches) scopes a reviewer to the failing traces
 4. Reviewers leave [inline annotations](../annotations/inline-annotations) on those traces
 5. Human annotations measure alignment with the evaluation
 
@@ -96,4 +96,4 @@ Triggers determine the scope of automated monitoring; saved searches and annotat
 - [Alignment](./alignment): How human annotations calibrate evaluations
 - [Evaluations Overview](./overview): How evaluation scripts work
 - [Annotations](../annotations/overview): The human side of the feedback loop
-- [Search](../search/overview): Build cohorts of traces to review
+- [Search](../search/overview): Save searches to scope traces for review

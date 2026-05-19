@@ -49,21 +49,21 @@ Your project starts with default [flaggers](../annotations/flaggers) that automa
 
 ## Step 5: Explore with Search and Annotate
 
-Open the **Search** page in your project. This is where you build cohorts of traces to investigate or review.
+Open the **Search** page in your project. Run a query and save it when the matches look right.
 
-1. Type a query like _"failed payments"_ or _"frustrated user"_. Search blends keywords and meaning, so close paraphrases work.
+1. Type a semantic query like _failed payments_ or _frustrated user_ (plain words). Use `"quotes"` for exact text or backticks for words in order — see [Search syntax](../search/overview#search-syntax).
 2. Add filters from the toolbar to narrow further (status, model, cost, custom metadata, etc.).
 3. Click into any matching trace to read the conversation.
 4. Use the annotation panel on the right to leave human feedback. Pick conversation-level, message-level, or text-range scope, give a thumbs-up or thumbs-down verdict, and add a short explanation.
 
-When a search becomes a regular part of your workflow, click **Save search** to bookmark it. Saved searches surface on the Search landing page with assignee, last-found timestamp, and annotated-vs-total review progress. See [Saved Searches](../search/saved-searches) for the full lifecycle.
+When a search becomes a regular part of your workflow, click **Save search**. It appears on the Search landing page with assignee, last-found timestamp, and annotated-vs-total review progress. See [Saved Searches](../search/saved-searches) for the full lifecycle.
 
 Your annotations feed into issue discovery and evaluation alignment alongside the annotations that flaggers create automatically.
 
 ## What's Next
 
 - [Observability](../observability/overview): Understand spans, traces, and sessions in depth
-- [Search](../search/overview): Find traces by meaning and bookmark useful cohorts
+- [Search](../search/overview): Find traces by meaning and save useful searches
 - [Scores](../scores/overview): Learn how the scoring system works
 - [Annotations](../annotations/overview): Build human review workflows
 - [Flaggers](../annotations/flaggers): Automatic annotators for common failure categories
