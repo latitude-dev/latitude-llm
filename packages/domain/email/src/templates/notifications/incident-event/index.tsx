@@ -6,32 +6,21 @@ import { Effect } from "effect"
 import React from "react"
 import { renderEmail } from "../../../utils/render.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
-import { ALERT_KIND_TO_LABEL, IncidentOpenedEmail } from "./EmailTemplate.tsx"
+import { ALERT_KIND_TO_LABEL, IncidentEventEmail } from "./EmailTemplate.tsx"
 
-/**
- * Build the deep link to the source issue. Returns `undefined` when the
- * project context wasn't passed (e.g. the project was deleted between
- * notification create and email send), in which case the email omits the
- * CTA rather than linking to a broken path. `sourceId` is the issue id
- * for V1 — when a non-issue source type lands, dispatch on
- * `payload.sourceType` to pick the right URL shape.
- */
 const buildSourceUrl = (
   ctx: NotificationEmailRenderContext,
-  payload: Parameters<NotificationEmailRenderer<"incident.opened">>[0],
+  payload: Parameters<NotificationEmailRenderer<"incident.event">>[0],
 ): string | undefined => {
   if (!ctx.project) return undefined
   return `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${encodeURIComponent(payload.sourceId)}`
 }
 
-export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"> = (payload, ctx) =>
+export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> = (payload, ctx) =>
   Effect.gen(function* () {
     const userName = ctx.recipient.name ?? "there"
     const label = ALERT_KIND_TO_LABEL[payload.incidentKind]
 
-    // Live-resolve the issue's display name — the payload only carries
-    // `sourceId`, and a snapshot would go stale on rename. Falls back to
-    // a generic label if the issue can't be found (e.g. hard-deleted).
     const issues = yield* IssueRepository
     const issue = yield* issues.findById(IssueId(payload.sourceId)).pipe(
       Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
@@ -49,7 +38,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
     const html = yield* Effect.tryPromise({
       try: () =>
         renderEmail(
-          <IncidentOpenedEmail
+          <IncidentEventEmail
             userName={userName}
             incidentKind={payload.incidentKind}
             issueName={issue?.name ?? undefined}
@@ -58,7 +47,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
         ),
       catch: (cause) => ({
         _tag: "RenderNotificationEmailError" as const,
-        message: "Failed to render incident.opened email",
+        message: "Failed to render incident.event email",
         cause,
       }),
     })
@@ -70,4 +59,4 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
     }
   })
 
-export default IncidentOpenedEmail
+export default IncidentEventEmail

@@ -1,19 +1,18 @@
 import { ShieldAlertIcon } from "lucide-react"
 import { BaseNotification } from "../../base-notification.tsx"
-import { buildIssueUrl, useIncidentLinkFallback, useLiveIssueSummary } from "./-incident-helpers.ts"
+import { useIssueUrl, useLiveIssueSummary } from "./-incident-helpers.ts"
 import type { IncidentRendererProps } from "./index.tsx"
 import { IssueSummaryCard } from "./issue-summary-card.tsx"
 
-export function IssueNewNotification({ notification, payload }: IncidentRendererProps) {
+export function IssueNewNotification({ notification, payload }: IncidentRendererProps<"event">) {
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
   const createdAt = new Date(notification.createdAt)
-  const fallback = useIncidentLinkFallback(payload, payload.alertIncidentId ?? null)
-  const live = useLiveIssueSummary(payload, fallback)
-  const issueName = live?.name ?? payload.issueName ?? fallback?.issueName ?? undefined
+  const target = { projectId: notification.projectId, sourceId: payload.sourceId }
+  const live = useLiveIssueSummary(target)
   // Snapshot status for issue.new is always "new"; the live lookup may
-  // upgrade this if the issue moved on (resolved, escalated, etc.).
+  // upgrade this if the issue has moved on (resolved, escalated, etc.).
   const states = live?.states ?? ["new"]
-  const url = buildIssueUrl(payload, fallback)
+  const url = useIssueUrl(target)
 
   return (
     <BaseNotification
@@ -25,7 +24,7 @@ export function IssueNewNotification({ notification, payload }: IncidentRenderer
       title="A new issue has been detected."
       url={url}
     >
-      {issueName ? <IssueSummaryCard name={issueName} states={states} /> : null}
+      {live?.name ? <IssueSummaryCard name={live.name} states={states} /> : null}
     </BaseNotification>
   )
 }

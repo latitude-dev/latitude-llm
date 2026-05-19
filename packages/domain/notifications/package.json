@@ -20,6 +20,7 @@
     "@domain/issues": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
+    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/users": "workspace:*",
     "effect": "catalog:",

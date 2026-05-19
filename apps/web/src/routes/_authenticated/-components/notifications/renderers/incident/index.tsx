@@ -1,42 +1,84 @@
-import { type IncidentOpenedPayload, incidentOpenedPayloadSchema, type NotificationKind } from "@domain/notifications"
+import {
+  type IncidentClosedPayload,
+  type IncidentEventPayload,
+  type IncidentOpenedPayload,
+  incidentClosedPayloadSchema,
+  incidentEventPayloadSchema,
+  incidentOpenedPayloadSchema,
+  type NotificationKind,
+} from "@domain/notifications"
 import { Text } from "@repo/ui"
-import type { ComponentType } from "react"
 import type { NotificationRecord } from "../../../../../../domains/notifications/notifications.functions.ts"
 import { BaseNotification } from "../../base-notification.tsx"
 import { IssueEscalatingNotification } from "./issue-escalating.tsx"
 import { IssueNewNotification } from "./issue-new.tsx"
 import { IssueRegressedNotification } from "./issue-regressed.tsx"
 
-export type IncidentEvent = "opened" | "closed"
+/**
+ * Notification kinds map 1:1 to lifecycle events:
+ * - `incident.event`  → one-shot (issue.new, issue.regressed)
+ * - `incident.opened` → sustained start (issue.escalating)
+ * - `incident.closed` → sustained close (issue.escalating)
+ */
+export type IncidentEvent = "event" | "opened" | "closed"
 
-const eventFromKind = (kind: NotificationKind): IncidentEvent | null =>
-  kind === "incident.opened" ? "opened" : kind === "incident.closed" ? "closed" : null
+export type IncidentRendererProps<E extends IncidentEvent> = E extends "event"
+  ? { readonly notification: NotificationRecord; readonly payload: IncidentEventPayload; readonly event: "event" }
+  : E extends "opened"
+    ? { readonly notification: NotificationRecord; readonly payload: IncidentOpenedPayload; readonly event: "opened" }
+    : { readonly notification: NotificationRecord; readonly payload: IncidentClosedPayload; readonly event: "closed" }
 
-export type IncidentRendererProps = {
-  readonly notification: NotificationRecord
-  readonly payload: IncidentOpenedPayload
-  readonly event: IncidentEvent
+const Unsupported = ({ notification }: { readonly notification: NotificationRecord }) => {
+  const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
+  const createdAt = new Date(notification.createdAt)
+  return (
+    <BaseNotification notificationId={notification.id} seenAt={seenAt} createdAt={createdAt}>
+      <Text.H6 color="foregroundMuted">Unsupported notification</Text.H6>
+    </BaseNotification>
+  )
 }
 
-const RENDERERS_BY_KIND: Record<IncidentOpenedPayload["incidentKind"], ComponentType<IncidentRendererProps>> = {
-  "issue.new": IssueNewNotification,
-  "issue.regressed": IssueRegressedNotification,
-  "issue.escalating": IssueEscalatingNotification,
+const renderEvent = (notification: NotificationRecord, payload: IncidentEventPayload) => {
+  switch (payload.incidentKind) {
+    case "issue.new":
+      return <IssueNewNotification notification={notification} payload={payload} event="event" />
+    case "issue.regressed":
+      return <IssueRegressedNotification notification={notification} payload={payload} event="event" />
+    case "issue.escalating":
+      // Sustained kind shouldn't land as incident.event; defensive fallback.
+      return <Unsupported notification={notification} />
+  }
+}
+
+const renderOpened = (notification: NotificationRecord, payload: IncidentOpenedPayload) => {
+  if (payload.incidentKind !== "issue.escalating") {
+    // Eventful kinds shouldn't land as opened; defensive fallback.
+    return <Unsupported notification={notification} />
+  }
+  return <IssueEscalatingNotification notification={notification} payload={payload} event="opened" />
+}
+
+const renderClosed = (notification: NotificationRecord, payload: IncidentClosedPayload) => {
+  if (payload.incidentKind !== "issue.escalating") {
+    // Eventful kinds shouldn't land as closed; defensive fallback.
+    return <Unsupported notification={notification} />
+  }
+  return <IssueEscalatingNotification notification={notification} payload={payload} event="closed" />
 }
 
 export function IncidentNotification({ notification }: { readonly notification: NotificationRecord }) {
-  const parsed = incidentOpenedPayloadSchema.safeParse(notification.payload)
-  const event = eventFromKind(notification.kind)
-  if (!parsed.success || event === null) {
-    const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
-    const createdAt = new Date(notification.createdAt)
-    return (
-      <BaseNotification notificationId={notification.id} seenAt={seenAt} createdAt={createdAt}>
-        <Text.H6 color="foregroundMuted">Unsupported notification</Text.H6>
-      </BaseNotification>
-    )
+  const kind: NotificationKind = notification.kind
+  if (kind === "incident.event") {
+    const parsed = incidentEventPayloadSchema.safeParse(notification.payload)
+    return parsed.success ? renderEvent(notification, parsed.data) : <Unsupported notification={notification} />
   }
-
-  const Renderer = RENDERERS_BY_KIND[parsed.data.incidentKind]
-  return <Renderer notification={notification} payload={parsed.data} event={event} />
+  if (kind === "incident.opened") {
+    const parsed = incidentOpenedPayloadSchema.safeParse(notification.payload)
+    return parsed.success ? renderOpened(notification, parsed.data) : <Unsupported notification={notification} />
+  }
+  if (kind === "incident.closed") {
+    const parsed = incidentClosedPayloadSchema.safeParse(notification.payload)
+    return parsed.success ? renderClosed(notification, parsed.data) : <Unsupported notification={notification} />
+  }
+  return <Unsupported notification={notification} />
 }

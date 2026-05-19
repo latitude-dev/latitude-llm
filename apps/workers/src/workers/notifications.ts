@@ -7,10 +7,10 @@ import {
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
+import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
   FeatureFlagRepositoryLive,
-  IssueRepositoryLive,
   MembershipRepositoryLive,
   NotificationRepositoryLive,
   ProjectRepositoryLive,
@@ -20,7 +20,7 @@ import {
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getPostgresClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("notifications")
 
@@ -31,7 +31,6 @@ interface NotificationsDeps {
 
 const requestLayer = Layer.mergeAll(
   AlertIncidentRepositoryLive,
-  IssueRepositoryLive,
   MembershipRepositoryLive,
   ProjectRepositoryLive,
   SettingsReaderLive,
@@ -55,12 +54,13 @@ const createLayer = Layer.mergeAll(FeatureFlagRepositoryLive, NotificationReposi
  */
 export const createNotificationsWorker = ({ consumer, publisher }: NotificationsDeps) => {
   const pgClient = getPostgresClient()
+  const chClient = getClickhouseClient()
 
   consumer.subscribe("notifications", {
     "request-incident-notifications": (payload) =>
       requestIncidentNotificationsUseCase({
         alertIncidentId: payload.alertIncidentId,
-        kind: payload.kind,
+        transition: payload.transition,
       }).pipe(
         Effect.flatMap((result) => {
           if (result.status === "skipped") {
@@ -95,6 +95,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
           ),
         ),
         withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, OrganizationId(payload.organizationId)),
         Effect.asVoid,
         withTracing,
       ),

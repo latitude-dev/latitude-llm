@@ -1,13 +1,18 @@
+import type { RenderedEmail } from "@domain/email"
 import { NOTIFICATION_EMAIL_RENDERERS, type NotificationEmailRenderContext, sendEmail } from "@domain/email"
+import type { IssueRepository } from "@domain/issues"
 import {
   type NotificationEmailRenderer,
   type NotificationEmailSender,
   payloadSchemaFor,
+  type RenderNotificationEmailError,
   sendNotificationEmailUseCase,
 } from "@domain/notifications"
 import type { QueueConsumer } from "@domain/queue"
-import { NotificationId, OrganizationId } from "@domain/shared"
+import { NotificationId, OrganizationId, type SqlClient } from "@domain/shared"
+import type { WrappedReportRepository } from "@domain/spans"
 import {
+  IssueRepositoryLive,
   NotificationRepositoryLive,
   ProjectRepositoryLive,
   UserRepositoryLive,
@@ -39,7 +44,7 @@ const repoLayer = Layer.mergeAll(NotificationRepositoryLive, ProjectRepositoryLi
  * into the use case's signature. Add to this when a new kind needs a
  * new repo for server-side rendering.
  */
-const rendererLayer = WrappedReportRepositoryLive
+const rendererLayer = Layer.mergeAll(IssueRepositoryLive, WrappedReportRepositoryLive)
 
 const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
@@ -66,15 +71,26 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   // `Effect`s that pull their own services (e.g. `wrapped.report` yields
   // `WrappedReportRepository.findById`); we provide those services
   // locally so the use case's R channel stays minimal.
+  // Per-kind renderers in the registry have heterogeneous R channels
+  // (incident kinds need `IssueRepository`, wrapped needs
+  // `WrappedReportRepository`). The union doesn't unify through
+  // `Effect.suspend` for TS's call-signature narrowing, so widen the
+  // dispatch result to the layer's superset and let `Effect.provide`
+  // strip everything except `SqlClient` (the boundary contract).
+  type RendererSupersetR = IssueRepository | WrappedReportRepository | SqlClient
   const renderEmailAdapter: NotificationEmailRenderer = ({ kind, payload, recipient, project }) =>
-    Effect.suspend(() => {
+    Effect.suspend((): Effect.Effect<RenderedEmail, RenderNotificationEmailError, RendererSupersetR> => {
       const parsedPayload = payloadSchemaFor(kind).parse(payload)
       const ctx: NotificationEmailRenderContext = { webAppUrl, recipient, project }
       const renderer = NOTIFICATION_EMAIL_RENDERERS[kind]
       // Each renderer in the registry accepts its kind's narrowed payload;
       // payloadSchemaFor already returns the same schema used at the call
       // site, so this cast is safe.
-      return renderer(parsedPayload as never, ctx)
+      return renderer(parsedPayload as never, ctx) as Effect.Effect<
+        RenderedEmail,
+        RenderNotificationEmailError,
+        RendererSupersetR
+      >
     }).pipe(Effect.provide(rendererLayer))
 
   const sendEmailAdapter: NotificationEmailSender = (message) =>

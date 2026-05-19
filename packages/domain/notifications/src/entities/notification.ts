@@ -1,5 +1,7 @@
 import {
-  ALERT_INCIDENT_KINDS,
+  alertIncidentKindSchema,
+  alertIncidentSourceTypeSchema,
+  alertSeveritySchema,
   cuidSchema,
   type NotificationGroup,
   notificationIdSchema,
@@ -10,31 +12,74 @@ import {
 import { z } from "zod"
 
 /**
- * Per-kind payload schemas. Each kind is a flat enum value with its own
- * payload shape (no nested event discriminator). The schema for a kind is
- * looked up at the boundary (queue consumer, renderer) to narrow the
- * loosely-typed `payload` jsonb.
+ * Per-bucket trend point snapshotted into sustained-incident payloads.
+ * `threshold` is `null` for buckets with no historical data (the seasonal
+ * grid had no samples for that day-of-week × hour-of-day cell); both the
+ * bell sparkline and the email chart break the dashed line across these
+ * gaps. Counts are integers from the issue's occurrence histogram.
+ */
+export const incidentTrendPointSchema = z.object({
+  t: z.iso.datetime(),
+  count: z.number().int().min(0),
+  threshold: z.number().nullable(),
+})
+
+/**
+ * Bucketed trend window snapshotted at incident-transition time. Window is
+ * 3h ending at `startedAt` (`incident.opened`) or `endedAt`
+ * (`incident.closed`); bucket size is currently 10 min (18 buckets), bumped
+ * via `bucketDurationMs` so consumers don't hardcode it.
+ */
+export const incidentTrendSchema = z.object({
+  bucketDurationMs: z.number().int().positive(),
+  points: z.array(incidentTrendPointSchema).max(64),
+})
+export type IncidentTrend = z.infer<typeof incidentTrendSchema>
+
+/**
+ * Base shape shared by every incident notification kind. Fields are
+ * generic on the incident source (`sourceType` + `sourceId` mirror
+ * `alert_incidents`) so the same payload shape extends naturally if a
+ * future alert kind has a non-issue source. Project and issue display
+ * data are resolved live downstream from `notification.projectId` +
+ * `payload.sourceId` — no snapshot duplication here.
+ */
+const incidentBasePayloadShape = {
+  alertIncidentId: cuidSchema,
+  sourceType: alertIncidentSourceTypeSchema,
+  sourceId: cuidSchema,
+  incidentKind: alertIncidentKindSchema,
+  severity: alertSeveritySchema,
+}
+
+/**
+ * One-shot incident notifications. Today fires for `issue.new` and
+ * `issue.regressed` (the alerts side stamps `endedAt = startedAt` for
+ * these). No partner `incident.closed` notification ever lands.
+ */
+export const incidentEventPayloadSchema = z.object(incidentBasePayloadShape)
+export type IncidentEventPayload = z.infer<typeof incidentEventPayloadSchema>
+
+/**
+ * Sustained incident opening. Fires when an alert incident enters an open
+ * window (`endedAt IS NULL`); today only `issue.escalating`. Carries the
+ * snapshotted trend window leading up to the open so the bell sparkline
+ * and the email chart render from one source.
  */
 export const incidentOpenedPayloadSchema = z.object({
-  incidentKind: z.enum(ALERT_INCIDENT_KINDS),
-  alertIncidentId: z.string(),
-  issueId: z.string().optional(),
-  issueName: z.string().optional(),
-  projectId: z.string().optional(),
-  projectSlug: z.string().optional(),
+  ...incidentBasePayloadShape,
+  trend: incidentTrendSchema,
 })
 export type IncidentOpenedPayload = z.infer<typeof incidentOpenedPayloadSchema>
 
-// Same shape as `incident.opened` today, but kept as a distinct schema so
-// `incident.closed` can diverge (e.g., add a `closedAt` snapshot) without
-// touching every call site.
+/**
+ * Sustained incident close. Fires when the same incident's `endedAt`
+ * transitions to non-null. Carries the trend ending at the close so the
+ * recovery is visible in the chart.
+ */
 export const incidentClosedPayloadSchema = z.object({
-  incidentKind: z.enum(ALERT_INCIDENT_KINDS),
-  alertIncidentId: z.string(),
-  issueId: z.string().optional(),
-  issueName: z.string().optional(),
-  projectId: z.string().optional(),
-  projectSlug: z.string().optional(),
+  ...incidentBasePayloadShape,
+  trend: incidentTrendSchema,
 })
 export type IncidentClosedPayload = z.infer<typeof incidentClosedPayloadSchema>
 
@@ -60,6 +105,7 @@ export type CustomMessagePayload = z.infer<typeof customMessagePayloadSchema>
  * each channel's renderer registry to fail until the new kind is handled.
  */
 export const NOTIFICATION_KIND_META = {
+  "incident.event": { group: "incidents", payload: incidentEventPayloadSchema },
   "incident.opened": { group: "incidents", payload: incidentOpenedPayloadSchema },
   "incident.closed": { group: "incidents", payload: incidentClosedPayloadSchema },
   "wrapped.report": { group: "wrapped_reports", payload: wrappedReportPayloadSchema },
