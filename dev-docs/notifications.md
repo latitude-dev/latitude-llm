@@ -59,6 +59,31 @@ notifications:delete-by-project
 
 Per-channel **claim-then-act** ordering (stamp `emailed_at` before sending) guarantees zero duplicate emails under at-least-once redelivery, at the cost of dropping the email if SMTP fails mid-claim. Documented trade-off (per design discussion).
 
+## Incident email payloads + chart
+
+Sustained-incident emails (`incident.opened` / `incident.closed`) embed a server-rendered trend chart sized so recipients can triage from inbox without clicking through. All incident payloads carry a generic source base (`sourceType`, `sourceId`, `incidentKind`, `severity`) plus per-kind extras:
+
+| Field | Where it lives | Snapshotted on |
+| --- | --- | --- |
+| `trend.points` | Sustained kinds | `incident.opened`, `incident.closed` — 3h × 10-min buckets (18 points) ending at the transition timestamp. Each point has `{ t, count, threshold \| null }`. |
+| `tags` | Top-5 alphabetical | `incident.event`, `incident.opened`. From `ScoreAnalyticsRepository.aggregateTagsByIssues` with a 30-day lookback. Closed skips — the email focuses on recovery. |
+| `sampleExcerpt` | One-shot triage card | `incident.event` only. Prefers latest annotation `rawFeedback`; falls back to latest evaluation `feedback`. Capped at 200 chars; `truncated: true` when cropped. |
+| `breach { triggerRate, baselineRate, threshold }` | Per-hour rates | `incident.opened` only, when the alert incident has `entrySignals`. `baselineRate` = `expected1h`, `threshold` = `entryThreshold1h`, `triggerRate` is derived from the peak trend bucket converted to per-hour. Omitted on legacy incidents missing `entrySignals`. |
+| `recovery.durationMs` | `endedAt - startedAt` | `incident.closed` only. Drives the "elevated for X" copy in the email. |
+
+### Server-rendered trend chart
+
+The chart embedded in sustained-incident emails is rendered server-side:
+
+- **Route:** `GET /charts/incident-trend?token=<hmac>` in `apps/api`. Unauthenticated — the URL is the credential.
+- **Token:** HMAC-SHA256 over the `notificationId`, base64url-encoded, signed with `LAT_NOTIFICATION_CHART_SECRET`. No expiry on the payload (emails sit in inboxes for months); rotating the secret is the kill switch and invalidates every previously-sent chart link.
+- **Rendering:** `satori` builds a 600×200 SVG from the snapshotted `trend.points` (bars for `count`, dashed per-bucket curve for `threshold`, peak bucket emphasised, optional baseline reference line when the payload has `breach`). `@resvg/resvg-js` rasterises to PNG.
+- **DB access:** the route uses the admin Postgres client (RLS bypass) — there's no organization context until the row is loaded, and the signature is the credential.
+- **Fallback:** missing notification row, wrong kind, or unparseable payload → 1×1 transparent PNG returned with the same 200 status so the `<Img>` element in the email keeps rendering an image (not an alt-text fallback). Tampered signatures return 401.
+- **Cache:** `Cache-Control: public, max-age=31536000, immutable`. Mail-client image proxies cache the PNG; rotating the secret invalidates old URLs and forces a re-fetch.
+
+`LAT_NOTIFICATION_CHART_SECRET` must be set in every environment that delivers email (workers + API need the same value). A dev placeholder lives in `.env.example`.
+
 ## Files
 
 | File | Purpose |
@@ -79,7 +104,10 @@ Per-channel **claim-then-act** ordering (stamp `emailed_at` before sending) guar
 | `packages/platform/db-postgres/src/schema/better-auth.ts` | `users.notificationPreferences` jsonb column. |
 | `apps/workers/src/workers/domain-events.ts` | Routes source events to `request-*` / `delete-by-project` tasks. |
 | `apps/workers/src/workers/notifications.ts` | Consumes `request-*` + `create-notification` + `delete-by-project`. |
-| `apps/workers/src/workers/notification-emailer.ts` | Consumes `notification-email:send`. |
+| `apps/workers/src/workers/notification-emailer.ts` | Consumes `notification-email:send`. Resolves `LAT_WEB_URL`, `LAT_API_URL`, and `LAT_NOTIFICATION_CHART_SECRET` at boot and threads them through `NotificationEmailRenderContext` so per-kind renderers can mint signed chart URLs. |
+| `apps/api/src/routes/charts/incident-trend.ts` | Public `GET /charts/incident-trend?token=<hmac>` endpoint that renders the per-notification trend PNG via `satori` + `@resvg/resvg-js`. HMAC over `notificationId` signed with `LAT_NOTIFICATION_CHART_SECRET`; row loaded via the admin client (RLS bypass). |
+| `packages/domain/email/src/helpers/signed-chart-url.ts` | `buildSignedChartUrl` — mints the `apps/api` chart endpoint URL used by the sustained-incident templates. |
+| `packages/platform/storage-object/src/signed-notification-chart-token.ts` | HMAC-SHA256 sign/verify for the chart endpoint. No expiry — emails are long-lived, rotation is via the secret. |
 | `apps/web/src/routes/_authenticated/-components/notifications/` | Bell + feed + per-kind renderers. |
 | `apps/web/src/routes/_authenticated/settings/account.tsx` | "Email notifications" section with per-group toggles. |
 | `apps/web/src/routes/_authenticated/projects/$projectSlug/settings.tsx` | Project-level incident-kind toggles + escalation sensitivity. |

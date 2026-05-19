@@ -84,6 +84,19 @@ Group keys are persisted in `users.notification_preferences` jsonb — picking a
 
 Source events, the producer step, the in-app feed, and the kind registry are all unchanged.
 
+## Embedding server-rendered images in emails
+
+Pattern lives in `apps/api/src/routes/charts/incident-trend.ts` — useful when a new kind wants a richer email visual than HTML/CSS can produce.
+
+1. **Sign**: mint URLs at render time with an HMAC-signed token over a stable id (notification id). The helper for the chart endpoint is `createSignedNotificationChartToken` in `@platform/storage-object`. No expiry — emails sit in inboxes for months; rotation = rotate the secret.
+2. **Render**: top-level `app.get` route in `apps/api`. Use `satori` (JSX → SVG) + `@resvg/resvg-js` (SVG → PNG). Already in `apps/api`'s deps.
+3. **Auth**: the URL is the credential. The route uses the admin Postgres client (RLS bypass — no org context until the row is loaded). Inject the client via the route factory's `adminDatabase` parameter so tests can hand it a PGlite-backed admin client.
+4. **Fallback**: invalid signature → 401. Anything else (row gone, wrong kind, unparseable payload) → 200 with a 1×1 transparent PNG so the `<Img>` keeps rendering an element.
+5. **Cache**: `Cache-Control: public, max-age=31536000, immutable`. Mail-client image proxies cache the response; rotating the signing secret invalidates URLs naturally.
+6. **Email side**: build the URL inside the renderer Effect via `buildSignedChartUrl` from `@domain/email`. `NotificationEmailRenderContext` carries `notificationId`, `apiBaseUrl`, and `chartSecret`, all resolved once at email-worker boot.
+
+Add a new env var to `.env.example` + docker/CI envs whenever a new HMAC secret is introduced. Don't share `LAT_NOTIFICATION_CHART_SECRET` across image surfaces — each surface should rotate independently.
+
 ## Idempotency rules
 
 - Producers publish with deterministic `dedupeKey`. The queue layer drops duplicate emits.
