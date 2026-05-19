@@ -1,4 +1,4 @@
-import { Button, DropdownMenu, Input, Label, Modal, Text, toast } from "@repo/ui"
+import { Button, CopyableText, DropdownMenu, Input, Label, Modal, Text, toast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
 import { Loader2, Trash2 } from "lucide-react"
 import { useCallback, useState } from "react"
@@ -89,6 +89,9 @@ export function DatasetNameEdit({
       <div className="flex flex-col gap-1 min-w-0 flex-1">
         <div className="flex flex-row items-center gap-2 min-w-0">
           <Text.H3M className="min-w-0 flex-1 truncate">{dataset.name}</Text.H3M>
+          <div className="flex min-w-0 max-w-max shrink-0">
+            <CopyableText value={dataset.slug} size="sm" tooltip="Copy dataset slug" />
+          </div>
           <DropdownMenu
             align="end"
             triggerButtonProps={{
