@@ -1,7 +1,7 @@
 import { incidentClosedPayloadSchema, incidentOpenedPayloadSchema, NotificationRepository } from "@domain/notifications"
 import { NotificationId, OrganizationId } from "@domain/shared"
 import type { OpenAPIHono } from "@hono/zod-openapi"
-import { NotificationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { NotificationRepositoryLive, type PostgresClient, withPostgres } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { verifySignedNotificationChartToken } from "@platform/storage-object"
 import { Effect } from "effect"
@@ -45,7 +45,19 @@ const resolveSecret = (): string => Effect.runSync(parseEnv("LAT_NOTIFICATION_CH
  *   PNG so the `<Img>` tag in the email still renders an element
  *   instead of an alt-text fallback.
  */
-export const registerIncidentTrendChartRoute = ({ app }: { app: OpenAPIHono<AppEnv> }) => {
+export const registerIncidentTrendChartRoute = ({
+  app,
+  adminDatabase,
+}: {
+  readonly app: OpenAPIHono<AppEnv>
+  /**
+   * Admin Postgres client used to bypass RLS — the request has no
+   * organization context until the notification row is loaded, and the
+   * URL's HMAC is the credential. In production, defaults to the
+   * singleton; tests inject a PGlite-backed admin client.
+   */
+  readonly adminDatabase?: PostgresClient
+}) => {
   app.get(PATH, async (c) => {
     const token = c.req.query("token")
     if (!token) return c.text("Missing token", 401)
@@ -60,7 +72,7 @@ export const registerIncidentTrendChartRoute = ({ app }: { app: OpenAPIHono<AppE
     if (!verification.ok) return c.text("Invalid token", 401)
 
     const notificationId = NotificationId(verification.id)
-    const adminClient = getAdminPostgresClient()
+    const adminClient = adminDatabase ?? getAdminPostgresClient()
 
     // Load the notification row. RLS is bypassed via the admin role on
     // `adminClient`; the system organizationId tells `SqlClient` not to
