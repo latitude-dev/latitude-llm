@@ -51,6 +51,8 @@ export interface InfiniteTableSorting {
 export interface ExpandedRows<T> {
   data: readonly T[]
   isLoading?: boolean
+  /** Shown when expanded data finished loading and `data` is empty. */
+  blankSlate?: ReactNode | string
 }
 
 export interface InfiniteTableSharedProps<T> {

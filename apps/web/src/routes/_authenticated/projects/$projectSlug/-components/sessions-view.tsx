@@ -87,10 +87,11 @@ function useExpandedSessionTraces(
       const r = results[i]
       const sessionId = expandedSessionIds[i]
       if (!r || !sessionId) continue
+      const isLoading = r.isPending || (r.isFetching && r.data === undefined)
       if (r.data) {
-        traceMap.set(r.data.sessionId, { data: r.data.traces, isLoading: r.isLoading })
+        traceMap.set(r.data.sessionId, { data: r.data.traces, isLoading })
       } else {
-        traceMap.set(sessionId, { data: [], isLoading: r.isLoading })
+        traceMap.set(sessionId, { data: [], isLoading })
       }
     }
     return traceMap
@@ -430,6 +431,7 @@ export function SessionsView({
     return {
       data: entry.data.map((trace): SessionTableRow => ({ kind: "trace", trace })),
       isLoading: entry.isLoading,
+      blankSlate: "No traces in this session",
     }
   }
 
