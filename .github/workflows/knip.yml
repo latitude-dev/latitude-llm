@@ -7,6 +7,9 @@ on:
       - main
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   knip:
     runs-on: ubuntu-latest

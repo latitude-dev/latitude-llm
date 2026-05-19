@@ -9,6 +9,9 @@ on:
       - packages/telemetry/python/**
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-test:
     name: Lint and Test
