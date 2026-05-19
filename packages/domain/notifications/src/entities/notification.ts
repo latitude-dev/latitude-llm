@@ -53,11 +53,57 @@ const incidentBasePayloadShape = {
 }
 
 /**
+ * Top-N tag chips snapshotted from the issue's recent traces. Sorted
+ * alphabetically and capped so the email body stays compact. The
+ * producer slices to 5 entries; the schema enforces the cap.
+ */
+export const incidentTagsSchema = z.array(z.string()).max(5)
+
+/**
+ * One-line excerpt from a recent annotation (`rawFeedback`) or
+ * automatic evaluation result. Lets the recipient triage from inbox
+ * without clicking through. `truncated` is true when the source text
+ * exceeded 200 chars and was cropped.
+ */
+export const incidentSampleExcerptSchema = z.object({
+  source: z.enum(["annotation", "evaluation"]),
+  text: z.string().max(200),
+  truncated: z.boolean(),
+})
+export type IncidentSampleExcerpt = z.infer<typeof incidentSampleExcerptSchema>
+
+/**
+ * Breach scalars snapshotted at incident open. Drives the email's
+ * "rate climbed to X/hr — Nx the baseline of Y/hr" summary line.
+ * Rates are in occurrences/hour.
+ */
+export const incidentBreachSchema = z.object({
+  triggerRate: z.number(),
+  baselineRate: z.number(),
+  threshold: z.number(),
+})
+export type IncidentBreach = z.infer<typeof incidentBreachSchema>
+
+/**
+ * Recovery scalars snapshotted at incident close. Drives the email's
+ * "elevated for {humanizedDuration}" summary line. `peakRate` left out
+ * of V1 — copy reads fine without it.
+ */
+export const incidentRecoverySchema = z.object({
+  durationMs: z.number().int().min(0),
+})
+export type IncidentRecovery = z.infer<typeof incidentRecoverySchema>
+
+/**
  * One-shot incident notifications. Today fires for `issue.new` and
  * `issue.regressed` (the alerts side stamps `endedAt = startedAt` for
  * these). No partner `incident.closed` notification ever lands.
  */
-export const incidentEventPayloadSchema = z.object(incidentBasePayloadShape)
+export const incidentEventPayloadSchema = z.object({
+  ...incidentBasePayloadShape,
+  tags: incidentTagsSchema.optional(),
+  sampleExcerpt: incidentSampleExcerptSchema.optional(),
+})
 export type IncidentEventPayload = z.infer<typeof incidentEventPayloadSchema>
 
 /**
@@ -69,17 +115,21 @@ export type IncidentEventPayload = z.infer<typeof incidentEventPayloadSchema>
 export const incidentOpenedPayloadSchema = z.object({
   ...incidentBasePayloadShape,
   trend: incidentTrendSchema,
+  tags: incidentTagsSchema.optional(),
+  breach: incidentBreachSchema,
 })
 export type IncidentOpenedPayload = z.infer<typeof incidentOpenedPayloadSchema>
 
 /**
  * Sustained incident close. Fires when the same incident's `endedAt`
  * transitions to non-null. Carries the trend ending at the close so the
- * recovery is visible in the chart.
+ * recovery is visible in the chart, plus the duration so the copy can
+ * say "elevated for X minutes".
  */
 export const incidentClosedPayloadSchema = z.object({
   ...incidentBasePayloadShape,
   trend: incidentTrendSchema,
+  recovery: incidentRecoverySchema,
 })
 export type IncidentClosedPayload = z.infer<typeof incidentClosedPayloadSchema>
 
