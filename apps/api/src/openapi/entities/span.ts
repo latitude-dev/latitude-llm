@@ -87,10 +87,13 @@ const GenAIMessageSchema = z
   .openapi("GenAISpanMessage")
   .describe("Message in OpenTelemetry GenAI format (`role` + content parts + optional tool calls).")
 
+// `GenAISystem` from `rosetta-ai` is an *array* of part objects (`text`, `tool_definition`, …),
+// not a single record. See the matching comment in `entities/trace.ts` — the trace and span
+// details both surface the same runtime shape.
 const GenAISystemSchema = z
-  .record(z.string(), z.unknown())
+  .array(z.record(z.string(), z.unknown()))
   .openapi("GenAISpanSystem")
-  .describe("System instructions in OpenTelemetry GenAI format.")
+  .describe("System instructions in OpenTelemetry GenAI format — an array of part objects.")
 
 // Fields returned only on the span detail point-lookup. Conversation content
 // (system, input, output messages) and tool data are the agent-facing payload
@@ -173,7 +176,7 @@ export const toSpanResponse = (span: Span) => ({
 export const toSpanDetailResponse = (span: SpanDetail) => ({
   ...toSpanResponse(span),
   metadata: { ...span.metadata },
-  systemInstructions: span.systemInstructions as unknown as Record<string, unknown>,
+  systemInstructions: span.systemInstructions.map((part) => part as unknown as Record<string, unknown>),
   inputMessages: span.inputMessages.map((m) => m as unknown as Record<string, unknown>),
   outputMessages: span.outputMessages.map((m) => m as unknown as Record<string, unknown>),
   toolDefinitions: span.toolDefinitions.map((t) => ({

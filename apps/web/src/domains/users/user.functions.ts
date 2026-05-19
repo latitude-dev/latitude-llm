@@ -30,6 +30,12 @@ const submitOnboardingSchema = z
       .transform((v) => v.trim())
       .pipe(z.string().min(1))
       .optional(),
+    phoneNumber: z
+      .string()
+      .max(64)
+      .transform((v) => v.trim())
+      .transform((v) => (v.length > 0 ? v : undefined))
+      .optional(),
     stackChoice: z.enum(["coding-agent-machine", "production-agent"]),
   })
   .refine((d) => d.jobTitle !== undefined || d.customJobTitle !== undefined, {
@@ -37,6 +43,7 @@ const submitOnboardingSchema = z
   })
   .transform((d) => ({
     resolvedJobTitle: d.jobTitle ?? d.customJobTitle!,
+    phoneNumber: d.phoneNumber,
     stackChoice: d.stackChoice,
   }))
 
@@ -54,7 +61,11 @@ export const submitOnboarding = createServerFn({ method: "POST" })
 
         yield* sqlClient.transaction(
           Effect.gen(function* () {
-            yield* userRepo.setJobTitle({ userId, jobTitle: data.resolvedJobTitle })
+            yield* userRepo.update({
+              userId,
+              jobTitle: data.resolvedJobTitle,
+              phoneNumber: data.phoneNumber,
+            })
             yield* outbox.write({
               eventName: "UserOnboardingCompleted",
               aggregateType: "user",

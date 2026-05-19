@@ -24,13 +24,7 @@ import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
 import { createTierRateLimiter } from "../middleware/rate-limiter.ts"
-import {
-  IdParamsSchema,
-  jsonBody,
-  openApiNoContentResponses,
-  openApiResponses,
-  PROTECTED_SECURITY,
-} from "../openapi/schemas.ts"
+import { jsonBody, openApiNoContentResponses, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 import { requireOAuthUserId } from "../utils/require-oauth.ts"
 
@@ -103,6 +97,10 @@ const fern = (methodName: string) =>
     "x-fern-sdk-method-name": methodName,
   }) as const
 
+const MemberIdParamsSchema = z.object({
+  memberId: z.string().min(1).describe("Membership identifier."),
+})
+
 // ────────────────────────────────────────────────────────────── helpers ───
 
 const toActiveMember = (member: MemberWithUser) => ({
@@ -165,20 +163,20 @@ const listMembers = memberEndpoint({
 const getMember = memberEndpoint({
   route: createRoute({
     method: "get",
-    path: "/{id}",
+    path: "/{memberId}",
     name: "getMember",
     tags: ["Members"],
     ...fern("get"),
     summary: "Get member",
     description: "Returns a single member of the caller's organization, including their role and user details.",
     security: PROTECTED_SECURITY,
-    request: { params: IdParamsSchema },
+    request: { params: MemberIdParamsSchema },
     responses: openApiResponses({ status: 200, schema: ActiveMemberSchema, description: "Member" }),
   }),
   handler: async (c) => {
-    const { id: idParam } = c.req.valid("param")
+    const { memberId } = c.req.valid("param")
     const member = await Effect.runPromise(
-      getMemberUseCase({ membershipId: MembershipId(idParam) }).pipe(
+      getMemberUseCase({ membershipId: MembershipId(memberId) }).pipe(
         withPostgres(MembershipRepositoryLive, c.var.postgresClient, c.var.organization.id),
         withTracing,
       ),
@@ -244,7 +242,7 @@ const inviteMember = memberEndpoint({
 const updateMemberRole = memberEndpoint({
   route: createRoute({
     method: "patch",
-    path: "/{id}",
+    path: "/{memberId}",
     name: "updateMember",
     tags: ["Members"],
     ...fern("update"),
@@ -252,7 +250,7 @@ const updateMemberRole = memberEndpoint({
     description:
       "Updates a member of the caller's organization. Today only the role is mutable. The caller must be an admin or owner; owners cannot be demoted via this endpoint. Requires OAuth authentication.",
     security: PROTECTED_SECURITY,
-    request: { params: IdParamsSchema, body: jsonBody(UpdateRoleRequestSchema) },
+    request: { params: MemberIdParamsSchema, body: jsonBody(UpdateRoleRequestSchema) },
     responses: openApiResponses({
       status: 200,
       schema: ActiveMemberSchema,
@@ -261,7 +259,7 @@ const updateMemberRole = memberEndpoint({
   }),
   handler: async (c) => {
     const requestingUserId = requireOAuthUserId(c)
-    const { id: idParam } = c.req.valid("param")
+    const { memberId } = c.req.valid("param")
     const { role } = c.req.valid("json")
 
     const member = await Effect.runPromise(
@@ -270,14 +268,14 @@ const updateMemberRole = memberEndpoint({
         // `updateMemberRoleUseCase` takes `targetUserId` (legacy from the web
         // path where roles are addressed by user); the API addresses members
         // by membership id, so we translate here.
-        const target = yield* getMemberUseCase({ membershipId: MembershipId(idParam) })
+        const target = yield* getMemberUseCase({ membershipId: MembershipId(memberId) })
         yield* updateMemberRoleUseCase({
           organizationId: c.var.organization.id,
           requestingUserId,
           targetUserId: UserId(target.userId),
           newRole: role,
         })
-        return yield* getMemberUseCase({ membershipId: MembershipId(idParam) })
+        return yield* getMemberUseCase({ membershipId: MembershipId(memberId) })
       }).pipe(withPostgres(MembershipRepositoryLive, c.var.postgresClient, c.var.organization.id), withTracing),
     )
 
@@ -288,7 +286,7 @@ const updateMemberRole = memberEndpoint({
 const removeMember = memberEndpoint({
   route: createRoute({
     method: "delete",
-    path: "/{id}",
+    path: "/{memberId}",
     name: "removeMember",
     tags: ["Members"],
     ...fern("remove"),
@@ -296,15 +294,15 @@ const removeMember = memberEndpoint({
     description:
       "Removes a member from the caller's organization. Self-removal and removing the organization owner are rejected — transfer ownership first. Requires OAuth authentication.",
     security: PROTECTED_SECURITY,
-    request: { params: IdParamsSchema },
+    request: { params: MemberIdParamsSchema },
     responses: openApiNoContentResponses({ description: "Member removed" }),
   }),
   handler: async (c) => {
     const requestingUserId = requireOAuthUserId(c)
-    const { id: idParam } = c.req.valid("param")
+    const { memberId } = c.req.valid("param")
 
     await Effect.runPromise(
-      removeMemberUseCase({ membershipId: MembershipId(idParam), requestingUserId }).pipe(
+      removeMemberUseCase({ membershipId: MembershipId(memberId), requestingUserId }).pipe(
         withPostgres(MembershipRepositoryLive, c.var.postgresClient, c.var.organization.id),
         withTracing,
       ),

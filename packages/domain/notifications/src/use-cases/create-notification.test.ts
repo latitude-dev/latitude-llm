@@ -31,6 +31,7 @@ function setup(opts: SetupOpts = {}) {
     email: "user@test.com",
     name: "User",
     jobTitle: null,
+    phoneNumber: null,
     emailVerified: true,
     image: null,
     role: "user",

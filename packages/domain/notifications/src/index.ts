@@ -3,7 +3,9 @@
 export type {
   CustomMessagePayload,
   IncidentClosedPayload,
+  IncidentEventPayload,
   IncidentOpenedPayload,
+  IncidentTrend,
   Notification,
   NotificationKind,
   WrappedReportPayload,
@@ -12,7 +14,10 @@ export {
   customMessagePayloadSchema,
   groupOf,
   incidentClosedPayloadSchema,
+  incidentEventPayloadSchema,
   incidentOpenedPayloadSchema,
+  incidentTrendPointSchema,
+  incidentTrendSchema,
   NOTIFICATION_KIND_META,
   NOTIFICATION_KINDS,
   notificationKindSchema,
@@ -72,6 +77,7 @@ export { markNotificationSeenUseCase } from "./use-cases/mark-notification-seen.
 export type {
   IncidentNotificationKind,
   IncidentNotificationRequest,
+  IncidentTransition,
   RequestIncidentNotificationsError,
   RequestIncidentNotificationsInput,
   RequestIncidentNotificationsResult,

@@ -429,12 +429,59 @@ export const listIssuesUseCase = (
   Effect.gen(function* () {
     const parsed = listIssuesInputSchema.parse(input)
     yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
-    const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
     const issueRepository = yield* IssueRepository
-    const evaluationRepository = yield* EvaluationRepository
-    const traceRepository = yield* TraceRepository
     const now = parsed.now ?? new Date()
     const selectedTimeRange = toScoreAnalyticsTimeRange(parsed.timeRange)
+
+    if (!parsed.issueIds) {
+      const firstIssuePage = yield* issueRepository.list({
+        projectId: parsed.projectId,
+        limit: 1,
+        offset: 0,
+      })
+
+      if (firstIssuePage.items.length === 0) {
+        const histogramTimeRange = resolveHistogramTimeRange({
+          timeRange: parsed.timeRange,
+          now,
+        })
+        const histogramBucketSeconds = pickTraceHistogramBucketSeconds(
+          histogramTimeRange.from.getTime(),
+          histogramTimeRange.to.getTime(),
+        )
+        const histogramScaffold = buildHistogramBucketScaffold({
+          from: histogramTimeRange.from,
+          to: histogramTimeRange.to,
+          bucketSeconds: histogramBucketSeconds,
+        })
+
+        return {
+          analytics: {
+            counts: {
+              newIssues: 0,
+              escalatingIssues: 0,
+              ongoingIssues: 0,
+              regressedIssues: 0,
+              resolvedIssues: 0,
+              seenOccurrences: 0,
+            },
+            histogram: fillBuckets({ scaffold: histogramScaffold, buckets: [] }),
+            histogramBucketSeconds,
+            totalTraces: 0,
+          },
+          items: [],
+          totalCount: 0,
+          hasMore: false,
+          limit: parsed.limit,
+          offset: parsed.offset,
+          occurrencesSum: 0,
+        } satisfies ListIssuesResult
+      }
+    }
+
+    const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+    const evaluationRepository = yield* EvaluationRepository
+    const traceRepository = yield* TraceRepository
 
     const windowMetricsEffect = scoreAnalyticsRepository.listIssueWindowMetrics({
       organizationId: parsed.organizationId,

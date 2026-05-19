@@ -6,6 +6,7 @@ import { IncidentNotification } from "./renderers/incident/index.tsx"
 import { WrappedReportNotification } from "./renderers/wrapped-report-notification.tsx"
 
 const RENDERERS: Record<NotificationKind, ComponentType<{ readonly notification: NotificationRecord }>> = {
+  "incident.event": IncidentNotification,
   "incident.opened": IncidentNotification,
   "incident.closed": IncidentNotification,
   "wrapped.report": WrappedReportNotification,

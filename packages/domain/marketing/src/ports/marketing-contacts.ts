@@ -19,6 +19,7 @@ export const marketingUpdateContactInputSchema = z.object({
   email: z.email().optional(),
   firstName: z.string().nullish(),
   jobTitle: z.string().nullish(),
+  phoneNumber: z.string().nullish(),
   userGroup: marketingUserGroupSchema.optional(),
   telemetryEnabled: z.boolean().optional(),
 })

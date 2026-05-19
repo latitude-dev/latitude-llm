@@ -20,6 +20,7 @@ import {
   OutboxEventWriterLive,
   ProjectRepositoryLive,
   SavedSearchRepositoryLive,
+  ScoreRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -30,6 +31,7 @@ import { SavedSearchSchema, toSavedSearchResponse } from "../openapi/entities/sa
 import {
   decodeTraceCursor,
   encodeTraceCursor,
+  fetchTraceIndicators,
   PaginatedTracesSchema,
   TRACE_SORT_FIELDS,
   toTraceResponse,
@@ -395,7 +397,7 @@ const listSavedSearchTraces = savedSearchEndpoint({
     const query = c.req.valid("query")
     const organizationId = c.var.organization.id
 
-    const page = await Effect.runPromise(
+    const result = await Effect.runPromise(
       Effect.gen(function* () {
         let cursor: { sortValue: string; traceId: string } | undefined
         if (query.cursor) {
@@ -408,12 +410,13 @@ const listSavedSearchTraces = savedSearchEndpoint({
 
         const projectRepo = yield* ProjectRepository
         const project = yield* projectRepo.findBySlug(projectSlug)
+        const projectId = ProjectId(project.id as string)
         const search = yield* getSavedSearchBySlug({ projectId: project.id, slug: searchSlug })
 
         const traceRepo = yield* TraceRepository
-        return yield* traceRepo.listByProjectId({
+        const page = yield* traceRepo.listByProjectId({
           organizationId: OrganizationId(organizationId as string),
-          projectId: ProjectId(project.id as string),
+          projectId,
           options: {
             limit: query.limit,
             sortBy: query.sortBy,
@@ -423,9 +426,16 @@ const listSavedSearchTraces = savedSearchEndpoint({
             ...(search.query ? { searchQuery: search.query } : {}),
           },
         })
+
+        const indicators = yield* fetchTraceIndicators({
+          projectId,
+          traceIds: page.items.map((trace) => trace.traceId),
+        })
+
+        return { page, indicators }
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive),
+          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive, ScoreRepositoryLive),
           c.var.postgresClient,
           organizationId,
         ),
@@ -437,9 +447,9 @@ const listSavedSearchTraces = savedSearchEndpoint({
 
     return c.json(
       {
-        items: page.items.map(toTraceResponse),
-        nextCursor: page.nextCursor ? encodeTraceCursor(page.nextCursor) : null,
-        hasMore: page.hasMore,
+        items: result.page.items.map((trace) => toTraceResponse(trace, result.indicators)),
+        nextCursor: result.page.nextCursor ? encodeTraceCursor(result.page.nextCursor) : null,
+        hasMore: result.page.hasMore,
       },
       200,
     )

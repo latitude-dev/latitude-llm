@@ -1,3 +1,5 @@
+import { IssueRepository } from "@domain/issues"
+import { IssueId } from "@domain/shared"
 import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -7,51 +9,65 @@ import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "
 import { ALERT_KIND_TO_LABEL, IncidentOpenedEmail } from "./EmailTemplate.tsx"
 
 /**
- * Mirrors the in-app `buildIssueUrl` (see
- * `apps/web/src/routes/_authenticated/-components/notifications/renderers/incident/-incident-helpers.ts`).
- * Returns `undefined` when the payload snapshot is missing slug/issue id,
- * in which case the email omits the CTA rather than linking to a broken
- * path.
+ * Build the deep link to the source issue. Returns `undefined` when the
+ * project context wasn't passed (e.g. the project was deleted between
+ * notification create and email send), in which case the email omits the
+ * CTA rather than linking to a broken path. `sourceId` is the issue id
+ * for V1 — when a non-issue source type lands, dispatch on
+ * `payload.sourceType` to pick the right URL shape.
  */
-const buildIssueUrl = (
+const buildSourceUrl = (
   ctx: NotificationEmailRenderContext,
   payload: Parameters<NotificationEmailRenderer<"incident.opened">>[0],
 ): string | undefined => {
-  if (!payload.projectSlug || !payload.issueId) return undefined
-  return `${ctx.webAppUrl}/projects/${payload.projectSlug}/issues?issueId=${encodeURIComponent(payload.issueId)}`
-}
-
-const buildIncidentOpenedHtml = async (
-  payload: Parameters<NotificationEmailRenderer<"incident.opened">>[0],
-  ctx: NotificationEmailRenderContext,
-) => {
-  const userName = ctx.recipient.name ?? "there"
-  const label = ALERT_KIND_TO_LABEL[payload.incidentKind]
-  const issueRef = payload.issueName ?? "an issue"
-  const issueUrl = buildIssueUrl(ctx, payload)
-  const html = await renderEmail(
-    <IncidentOpenedEmail
-      userName={userName}
-      incidentKind={payload.incidentKind}
-      issueName={payload.issueName}
-      issueUrl={issueUrl}
-    />,
-  )
-  return {
-    html,
-    subject: `[Latitude] ${label}: ${issueRef}`,
-    text: `Hi ${userName},\n\n${label}: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
-  }
+  if (!ctx.project) return undefined
+  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${encodeURIComponent(payload.sourceId)}`
 }
 
 export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"> = (payload, ctx) =>
-  Effect.tryPromise({
-    try: () => buildIncidentOpenedHtml(payload, ctx),
-    catch: (cause) => ({
-      _tag: "RenderNotificationEmailError" as const,
-      message: "Failed to render incident.opened email",
-      cause,
-    }),
+  Effect.gen(function* () {
+    const userName = ctx.recipient.name ?? "there"
+    const label = ALERT_KIND_TO_LABEL[payload.incidentKind]
+
+    // Live-resolve the issue's display name — the payload only carries
+    // `sourceId`, and a snapshot would go stale on rename. Falls back to
+    // a generic label if the issue can't be found (e.g. hard-deleted).
+    const issues = yield* IssueRepository
+    const issue = yield* issues.findById(IssueId(payload.sourceId)).pipe(
+      Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+      Effect.catchTag("RepositoryError", (cause) =>
+        Effect.fail({
+          _tag: "RenderNotificationEmailError" as const,
+          message: "Failed to load incident source issue",
+          cause,
+        }),
+      ),
+    )
+    const issueRef = issue?.name ?? "an issue"
+    const issueUrl = buildSourceUrl(ctx, payload)
+
+    const html = yield* Effect.tryPromise({
+      try: () =>
+        renderEmail(
+          <IncidentOpenedEmail
+            userName={userName}
+            incidentKind={payload.incidentKind}
+            issueName={issue?.name ?? undefined}
+            issueUrl={issueUrl}
+          />,
+        ),
+      catch: (cause) => ({
+        _tag: "RenderNotificationEmailError" as const,
+        message: "Failed to render incident.opened email",
+        cause,
+      }),
+    })
+
+    return {
+      html,
+      subject: `[Latitude] ${label}: ${issueRef}`,
+      text: `Hi ${userName},\n\n${label}: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
+    }
   })
 
 export default IncidentOpenedEmail

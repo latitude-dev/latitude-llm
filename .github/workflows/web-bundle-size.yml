@@ -6,6 +6,9 @@ on:
       - development
       - main
 
+permissions:
+  contents: read
+
 jobs:
   web-bundle-size:
     runs-on: ubuntu-latest

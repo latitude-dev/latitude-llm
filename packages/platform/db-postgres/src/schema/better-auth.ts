@@ -55,6 +55,7 @@ export const users = latitudeSchema.table("users", {
    * when set.
    */
   jobTitle: text("job_title"),
+  phoneNumber: text("phone_number"),
   /**
    * Per-channel notification preferences keyed by `NotificationGroup`.
    * `null` when the user has never visited the settings page — readers

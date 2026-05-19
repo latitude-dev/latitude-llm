@@ -44,13 +44,14 @@ const buildLayers = () => {
 }
 
 describe("updateContactOnboarding", () => {
-  it("maps coding-agent-machine to code-agents and includes job title", async () => {
+  it("maps coding-agent-machine to code-agents and includes job title and phone number", async () => {
     const { users, layers } = buildLayers()
     users.set(USER_ID, {
       id: USER_ID,
       email: "ada@example.com",
       name: "Ada Lovelace",
       jobTitle: "Founder",
+      phoneNumber: "+1 555 0100",
       emailVerified: true,
       image: null,
       role: "user",
@@ -72,6 +73,7 @@ describe("updateContactOnboarding", () => {
         email: "ada@example.com",
         firstName: "Ada Lovelace",
         jobTitle: "Founder",
+        phoneNumber: "+1 555 0100",
         userGroup: MARKETING_USER_GROUP_CODE_AGENTS,
       },
     ])
@@ -84,6 +86,7 @@ describe("updateContactOnboarding", () => {
       email: "ada@example.com",
       name: "Ada Lovelace",
       jobTitle: "Founder",
+      phoneNumber: null,
       emailVerified: true,
       image: null,
       role: "user",

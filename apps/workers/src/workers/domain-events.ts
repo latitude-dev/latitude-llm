@@ -195,9 +195,9 @@ export const createDomainEventsWorker = ({
         {
           organizationId: event.payload.organizationId,
           alertIncidentId: event.payload.alertIncidentId,
-          kind: "incident.opened",
+          transition: "created",
         },
-        { dedupeKey: `notifications:request-incident-opened:${event.payload.alertIncidentId}` },
+        { dedupeKey: `notifications:request-incident-created:${event.payload.alertIncidentId}` },
       ),
 
     IncidentClosed: (event) =>
@@ -207,7 +207,7 @@ export const createDomainEventsWorker = ({
         {
           organizationId: event.payload.organizationId,
           alertIncidentId: event.payload.alertIncidentId,
-          kind: "incident.closed",
+          transition: "closed",
         },
         { dedupeKey: `notifications:request-incident-closed:${event.payload.alertIncidentId}` },
       ),

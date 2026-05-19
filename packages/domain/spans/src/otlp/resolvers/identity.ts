@@ -1,6 +1,7 @@
 import { stringAttr } from "../attributes.ts"
+import type { OtlpKeyValue } from "../types.ts"
 import type { Candidate } from "./utils.ts"
-import { fromString } from "./utils.ts"
+import { first, fromString } from "./utils.ts"
 
 const VERCEL_PROVIDER_SUFFIX = /\.(chat|messages|responses|generative-ai|embed)$/
 
@@ -37,7 +38,7 @@ const PROVIDER_ALIASES: Record<string, string> = {
 
 const aliasProvider = (v: string) => PROVIDER_ALIASES[v] ?? v
 
-export const providerCandidates: Candidate<string>[] = [
+const providerCandidates: Candidate<string>[] = [
   fromString("gen_ai.provider.name", aliasProvider), // OTEL GenAI v1.37+
   fromString("gen_ai.system", aliasProvider), // OTEL GenAI v1.36 deprecated
   fromString("llm.system", aliasProvider), // OpenInference / Arize Phoenix
@@ -48,6 +49,19 @@ export const providerCandidates: Candidate<string>[] = [
   }),
   { resolve: (attrs) => (stringAttr(attrs, "span.type") === "llm_request" ? "anthropic" : undefined) }, // Claude Code
 ]
+
+function anthropicProviderFromClaudeCodeSpanName(spanName: string): string | undefined {
+  if (!spanName.startsWith("claude_code.llm_request")) return undefined
+  return "anthropic"
+}
+
+/**
+ * Resolves telemetry provider from span attributes, with a fallback for Agent SDK
+ * span names (`claude_code.llm_request`) when `span.type` is absent.
+ */
+export function resolveProvider(spanAttrs: readonly OtlpKeyValue[], spanName: string): string {
+  return first(providerCandidates, spanAttrs) ?? anthropicProviderFromClaudeCodeSpanName(spanName) ?? ""
+}
 
 export const modelCandidates: Candidate<string>[] = [
   fromString("gen_ai.request.model"), // OTEL GenAI semconv

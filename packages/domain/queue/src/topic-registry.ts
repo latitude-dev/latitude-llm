@@ -99,14 +99,17 @@ const _registry = {
   notifications: payloads<{
     /**
      * Producer step for incidents. Fired by the domain-events router on
-     * `IncidentCreated` / `IncidentClosed`. The consumer applies the
-     * project-level alert-kind gate, snapshots issue + project identity,
-     * resolves recipients, and emits N `create-notification` tasks.
+     * `IncidentCreated` / `IncidentClosed`. `transition` is the lifecycle
+     * hint from the originating outbox event; the consumer loads the
+     * incident, derives the notification kind from its `endedAt`
+     * (event / opened / closed), applies the project-level alert-kind
+     * gate, snapshots the trend window for sustained kinds, resolves
+     * recipients, and emits N `create-notification` tasks.
      */
     "request-incident-notifications": {
       readonly organizationId: string
       readonly alertIncidentId: string
-      readonly kind: "incident.opened" | "incident.closed"
+      readonly transition: "created" | "closed"
     }
     /**
      * Producer step for Wrapped reports. Fired by the wrapped worker

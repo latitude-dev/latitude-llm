@@ -3,14 +3,16 @@ import type { Effect } from "effect"
 import { Context } from "effect"
 import type { User } from "../entities/user.ts"
 
-// UserRepository Service with all methods needed by use cases
 export class UserRepository extends Context.Service<
   UserRepository,
   {
     findById: (userId: string) => Effect.Effect<User, NotFoundError | RepositoryError, SqlClient>
     findByEmail: (email: string) => Effect.Effect<User, NotFoundError | RepositoryError, SqlClient>
-    setNameIfMissing: (params: { userId: string; name: string }) => Effect.Effect<void, RepositoryError, SqlClient>
-    setJobTitle: (params: { userId: string; jobTitle: string }) => Effect.Effect<void, RepositoryError, SqlClient>
+    update: (params: {
+      userId: string
+      jobTitle?: string | undefined
+      phoneNumber?: string | undefined
+    }) => Effect.Effect<void, RepositoryError, SqlClient>
     updateNotificationPreferences: (params: {
       userId: string
       preferences: NotificationPreferences

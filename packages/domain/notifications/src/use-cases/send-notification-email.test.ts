@@ -30,6 +30,7 @@ function setup(opts: { readonly project?: Project | null | typeof DEFAULT_PROJEC
     email: "user@test.com",
     name: "Alice",
     jobTitle: null,
+    phoneNumber: null,
     emailVerified: true,
     image: null,
     role: "user",

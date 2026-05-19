@@ -86,7 +86,8 @@ const TextAtom = memo(
     const alignClass = font.align[align]
     const wordBreakClass = wordBreakOptions[wordBreak]
     const clampActive = lineClamp !== undefined && lineClamp > 0
-    const whiteSpaceClass = clampActive ? whiteSpaceOptions.normal : whiteSpaceOptions[whiteSpace]
+    const ellipsisActive = ellipsis && !clampActive
+    const whiteSpaceClass = clampActive || ellipsisActive ? undefined : whiteSpaceOptions[whiteSpace]
     const Comp = asChild ? Slot : "span"
     const isDisplay = DISPLAY_SIZES.has(size)
     return (
@@ -102,12 +103,13 @@ const TextAtom = memo(
           wordBreakClass,
           whiteSpaceClass,
           alignClass,
-          display,
           className,
           {
+            [display]: !ellipsisActive,
+            block: ellipsisActive,
             capitalize: capitalize,
             uppercase: uppercase,
-            truncate: ellipsis && !clampActive,
+            truncate: ellipsisActive,
             "select-none": !userSelect,
             "whitespace-nowrap": noWrap && !clampActive,
             underline: underline,

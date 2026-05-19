@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Removed advisory TypeScript 6 and OpenAI Agents peer dependencies from the runtime package so consumers no longer get peer warnings for tools they do not use.
+- Pointed the CommonJS export's declaration condition at `dist/index.d.cts` so TypeScript resolves CJS consumers against CJS declarations.
+
 ## [3.0.0-alpha.12] - 2026-05-16
 
 ### Changed

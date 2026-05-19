@@ -59,6 +59,7 @@ export interface AdminUserDetailsDto {
   email: string
   name: string | null
   image: string | null
+  phoneNumber: string | null
   role: "user" | "admin"
   memberships: AdminUserDetailsMembershipDto[]
   sessions: AdminUserSessionDto[]
@@ -95,6 +96,7 @@ const toDto = async (details: AdminUserDetails): Promise<AdminUserDetailsDto> =>
     email: details.email,
     name: details.name,
     image: details.image,
+    phoneNumber: details.phoneNumber,
     role: details.role,
     memberships: details.memberships.map(
       (m: AdminUserMembership): AdminUserDetailsMembershipDto => ({

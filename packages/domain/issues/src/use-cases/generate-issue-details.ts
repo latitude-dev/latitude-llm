@@ -30,7 +30,9 @@ const issueDetailsSchema = z.object({
     .string()
     .min(1)
     .max(ISSUE_NAME_MAX_LENGTH)
-    .describe("Short issue title that stays generic across similar failures"),
+    .describe(
+      "Short issue title: stable across the same failure mechanism, but specific enough to separate incompatible mechanisms (e.g. different tools or error classes should not share a vague umbrella title)",
+    ),
   description: z
     .string()
     .min(1)
@@ -86,7 +88,7 @@ const buildPrompt = (input: {
   parts.push(
     "Return JSON with `name` and `description`.",
     "Rules:",
-    "- Keep the issue generic enough to group similar failures together.",
+    "- If occurrences describe incompatible tools, transports, or error categories, use a title that preserves those distinctions; avoid vague umbrella labels that merge unrelated mechanisms.",
     "- Do not overfit to one conversation, one user, one date, or one exact example.",
     "- Prefer stable wording over churn when the current details already fit.",
     "- Keep `name` under 128 characters.",
@@ -103,7 +105,7 @@ You generate canonical issue names and descriptions for clustered reliability fa
 Your job is to summarize the shared underlying problem across several issue occurrences, not the incidental specifics of one occurrence.
 
 You must:
-- produce a stable, generic issue title and description
+- produce a stable issue title and description that still separates incompatible failure mechanisms (different tools, error classes, or subsystems should not be flattened into one vague umbrella label)
 - focus on the recurring failure pattern
 - avoid user-specific, trace-specific, or date-specific details
 - keep the title short and searchable

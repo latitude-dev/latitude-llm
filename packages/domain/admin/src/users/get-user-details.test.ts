@@ -29,6 +29,7 @@ const mkDetails = (overrides: Partial<AdminUserDetails> = {}): AdminUserDetails 
   email: "target@example.com",
   name: "Target User",
   image: null,
+  phoneNumber: null,
   role: "user",
   memberships: [],
   sessions: [],

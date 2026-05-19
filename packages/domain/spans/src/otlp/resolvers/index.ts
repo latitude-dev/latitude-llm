@@ -3,12 +3,12 @@ import type { OtlpKeyValue } from "../types.ts"
 import { resolveMetadata, tagsCandidates } from "./enrichment.ts"
 import {
   modelCandidates,
-  providerCandidates,
+  resolveProvider,
   responseModelCandidates,
   sessionIdCandidates,
   userIdCandidates,
 } from "./identity.ts"
-import { operationCandidates } from "./operation.ts"
+import { resolveOperation } from "./operation.ts"
 import { finishReasonsCandidates, responseIdCandidates } from "./response.ts"
 import type { ResolvedUsage } from "./usage.ts"
 import { resolveUsage } from "./usage.ts"
@@ -28,12 +28,23 @@ interface ResolvedAttributes extends ResolvedUsage {
   readonly errorType: string
 }
 
-export function resolveAttributes(spanAttrs: readonly OtlpKeyValue[], statusCode: string): ResolvedAttributes {
-  const provider = first(providerCandidates, spanAttrs) ?? ""
+interface ResolveAttributesInput {
+  readonly spanAttrs: readonly OtlpKeyValue[]
+  readonly statusCode: string
+  readonly spanName?: string
+}
+
+export function resolveAttributes({
+  spanAttrs,
+  statusCode,
+  spanName = "",
+}: ResolveAttributesInput): ResolvedAttributes {
+  const provider = resolveProvider(spanAttrs, spanName)
   const model = first(modelCandidates, spanAttrs) ?? ""
+  const operation = resolveOperation(spanAttrs, spanName)
 
   return {
-    operation: first(operationCandidates, spanAttrs) ?? "unspecified",
+    operation,
     provider,
     model,
     responseModel: first(responseModelCandidates, spanAttrs) ?? "",

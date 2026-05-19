@@ -15,11 +15,11 @@ Three orthogonal axes — keep them straight:
 
 | Axis | Type | Examples | Lives in |
 | --- | --- | --- | --- |
-| **Kind** | flat enum (event-type) | `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message` | `NOTIFICATION_KIND_META` in `@domain/notifications` |
+| **Kind** | flat enum (event-type) | `incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message` | `NOTIFICATION_KIND_META` in `@domain/notifications` |
 | **Group** | user-visible category | `incidents`, `wrapped_reports`, `custom_messages` | `NOTIFICATION_GROUPS` in `@domain/shared` |
 | **Channel** | delivery surface | `email`, (later: `slack`, ...) | per-channel worker + registry |
 
-`AlertIncidentKind` (`issue.new` / `issue.regressed` / `issue.escalating`) is a **fourth** axis — it lives inside the `incident.*` payload and gates the producer step at the project level. It is **not** a `NotificationKind`.
+`AlertIncidentKind` (`issue.new` / `issue.regressed` / `issue.escalating`) is a **fourth** axis — it lives inside the `incident.*` payload and gates the producer step at the project level. It is **not** a `NotificationKind`. The mapping today: `issue.new` and `issue.regressed` → `incident.event` (one-shot, `endedAt = startedAt`); `issue.escalating` → `incident.opened` + later `incident.closed` (sustained, `endedAt` transitions from null). The producer derives the notification kind from `incident.endedAt`, so adding a new sustained or eventful alert kind is purely a `@domain/alerts` change.
 
 ## Pipeline at a glance
 
@@ -96,7 +96,8 @@ If you change ordering (e.g. send-then-stamp): you'll get duplicate emails. Don'
 ## Anti-patterns
 
 - ❌ Filtering inside renderers ("don't send if X"). The producer/creator already decided — renderers just render.
-- ❌ Putting routing info in the kind name. `incident.opened` describes what happened, not who needs to know.
+- ❌ Putting routing info in the kind name. `incident.event` describes what happened, not who needs to know.
+- ❌ Snapshotting live entity attributes (project name, issue name, project slug) in payloads. Use the row-level `projectId` and `payload.sourceId` and resolve display info downstream (bell: live query / projects collection; email: `IssueRepository` yielded by the renderer + `ctx.project`). Snapshotting **derived** point-in-time facts (trend buckets, breach numbers) is fine and encouraged.
 - ❌ Reading user prefs in the producer step. Prefs are per-channel and belong in the creator's "should I publish this channel's send task" decision.
 - ❌ FK constraint on `project_id`. Use the application-layer cascade via `ProjectDeleted` → `delete-by-project`. Per the [database-postgres](../database-postgres/SKILL.md) skill.
 - ❌ Deduping by source entity id alone. Use `buildIdempotencyKey` — the key must be per-occurrence, not per-entity (multiple incidents on the same issue = multiple notifications).

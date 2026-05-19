@@ -2,6 +2,7 @@ import { generateId } from "@domain/shared"
 import type {
   CustomMessagePayload,
   IncidentClosedPayload,
+  IncidentEventPayload,
   IncidentOpenedPayload,
   WrappedReportPayload,
 } from "../entities/notification.ts"
@@ -14,6 +15,7 @@ import type {
  * (custom messages — every send is a distinct event).
  */
 export type BuildIdempotencyKeyInput =
+  | { readonly kind: "incident.event"; readonly payload: IncidentEventPayload }
   | { readonly kind: "incident.opened"; readonly payload: IncidentOpenedPayload }
   | { readonly kind: "incident.closed"; readonly payload: IncidentClosedPayload }
   | { readonly kind: "wrapped.report"; readonly payload: WrappedReportPayload }
@@ -21,6 +23,7 @@ export type BuildIdempotencyKeyInput =
 
 export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => {
   switch (input.kind) {
+    case "incident.event":
     case "incident.opened":
     case "incident.closed":
       return `${input.kind}:${input.payload.alertIncidentId}`

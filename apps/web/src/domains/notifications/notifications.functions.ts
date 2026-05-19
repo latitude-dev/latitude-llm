@@ -1,5 +1,3 @@
-import { AlertIncidentRepository } from "@domain/alerts"
-import { IssueRepository } from "@domain/issues"
 import {
   getUnreadNotificationCountUseCase,
   listNotificationsUseCase,
@@ -7,25 +5,15 @@ import {
   markNotificationSeenUseCase,
   type Notification,
 } from "@domain/notifications"
-import { ProjectRepository } from "@domain/projects"
-import { type IssueOccurrenceBucket, ScoreAnalyticsRepository } from "@domain/scores"
-import { AlertIncidentId, IssueId, type NotificationPreferences, notificationPreferencesSchema } from "@domain/shared"
+import { type NotificationPreferences, notificationPreferencesSchema } from "@domain/shared"
 import { UserRepository } from "@domain/users"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import {
-  AlertIncidentRepositoryLive,
-  IssueRepositoryLive,
-  NotificationRepositoryLive,
-  ProjectRepositoryLive,
-  UserRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { NotificationRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { getPostgresClient } from "../../server/clients.ts"
 
 const notificationCursorSchema = z.object({
   createdAt: z.iso.datetime(),
@@ -137,54 +125,6 @@ export const markNotificationSeen = createServerFn({ method: "POST" })
     )
   })
 
-const DAY_MS = 24 * 60 * 60 * 1000
-const NOTIFICATION_TREND_BUCKET_SECONDS = 12 * 60 * 60
-
-interface IncidentTrendResult {
-  readonly buckets: readonly IssueOccurrenceBucket[]
-}
-
-export const getIncidentTrend = createServerFn({ method: "GET" })
-  .inputValidator(
-    z.object({
-      alertIncidentId: z.string(),
-      event: z.enum(["opened", "closed"]),
-    }),
-  )
-  .handler(async ({ data }): Promise<IncidentTrendResult> => {
-    const { organizationId } = await requireSession()
-    const pgClient = getPostgresClient()
-    const chClient = getClickhouseClient()
-
-    const incident = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* AlertIncidentRepository
-        return yield* repo.findById(AlertIncidentId(data.alertIncidentId))
-      }).pipe(withPostgres(AlertIncidentRepositoryLive, pgClient, organizationId), withTracing),
-    )
-
-    const now = Date.now()
-    const center = (data.event === "closed" ? incident.endedAt?.getTime() : incident.startedAt.getTime()) ?? now
-    // Pre-incident history matters — the chart shows issue activity, not incident state.
-    const from = new Date(center - DAY_MS)
-    const to = new Date(Math.min(center + DAY_MS, now))
-
-    const buckets = await Effect.runPromise(
-      Effect.gen(function* () {
-        const analytics = yield* ScoreAnalyticsRepository
-        return yield* analytics.histogramByIssues({
-          organizationId: incident.organizationId,
-          projectId: incident.projectId,
-          issueIds: [IssueId(incident.sourceId)],
-          timeRange: { from, to },
-          bucketSeconds: NOTIFICATION_TREND_BUCKET_SECONDS,
-        })
-      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, organizationId), withTracing),
-    )
-
-    return { buckets }
-  })
-
 export const getNotificationPreferences = createServerFn({ method: "GET" }).handler(
   async (): Promise<{ readonly preferences: NotificationPreferences | null }> => {
     const { userId, organizationId } = await requireSession()
@@ -213,51 +153,5 @@ export const updateNotificationPreferences = createServerFn({ method: "POST" })
         const users = yield* UserRepository
         yield* users.updateNotificationPreferences({ userId, preferences: data.preferences })
       }).pipe(withPostgres(UserRepositoryLive, pgClient, organizationId), withTracing),
-    )
-  })
-
-export interface IncidentTargetResult {
-  readonly issueId: string | null
-  readonly issueName: string | null
-  readonly projectId: string | null
-  readonly projectSlug: string | null
-}
-
-// Fallback for incident notifications whose payload snapshot is missing fields:
-// the alert_incident row carries the issue + project ids authoritatively.
-export const getIncidentNotificationTarget = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ alertIncidentId: z.string() }))
-  .handler(async ({ data }): Promise<IncidentTargetResult> => {
-    const { organizationId } = await requireSession()
-    const pgClient = getPostgresClient()
-
-    return await Effect.runPromise(
-      Effect.gen(function* () {
-        const incidentRepo = yield* AlertIncidentRepository
-        const incident = yield* incidentRepo.findById(AlertIncidentId(data.alertIncidentId))
-
-        const issueRepo = yield* IssueRepository
-        const projectRepo = yield* ProjectRepository
-        const issue = yield* issueRepo
-          .findById(IssueId(incident.sourceId))
-          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-        const project = yield* projectRepo
-          .findById(incident.projectId)
-          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-
-        return {
-          issueId: issue?.id ?? null,
-          issueName: issue?.name ?? null,
-          projectId: project?.id ?? null,
-          projectSlug: project?.slug ?? null,
-        }
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(AlertIncidentRepositoryLive, IssueRepositoryLive, ProjectRepositoryLive),
-          pgClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
     )
   })

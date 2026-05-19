@@ -26,6 +26,7 @@ export const userSchema = z.object({
   email: z.string().min(1),
   name: z.string().nullable(),
   jobTitle: z.string().nullable(),
+  phoneNumber: z.string().nullable(),
   emailVerified: z.boolean(),
   image: z.string().nullable(),
   role: userRoleSchema,
