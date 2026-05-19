@@ -133,6 +133,39 @@ export const DatasetRepositoryLive = Layer.effect(
           return toDomainDataset(row, row.latestVersionId)
         }),
 
+      findBySlug: ({ projectId, slug }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const datasetCols = getColumns(datasets)
+          const [row] = yield* sqlClient.query((db) =>
+            db
+              .select({ ...datasetCols, latestVersionId: datasetVersions.id })
+              .from(datasets)
+              .leftJoin(
+                datasetVersions,
+                and(eq(datasetVersions.datasetId, datasets.id), eq(datasetVersions.version, datasets.currentVersion)),
+              )
+              .where(
+                and(
+                  eq(datasets.organizationId, sqlClient.organizationId),
+                  eq(datasets.projectId, projectId),
+                  eq(datasets.slug, slug),
+                  isNull(datasets.deletedAt),
+                ),
+              )
+              .limit(1),
+          )
+
+          if (!row) {
+            // The error's `datasetId` field stores whatever identifier the
+            // caller used (id or slug); the HTTP message reads naturally
+            // either way.
+            return yield* new DatasetNotFoundError({ datasetId: slug })
+          }
+
+          return toDomainDataset(row, row.latestVersionId)
+        }),
+
       listByProject: (args) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

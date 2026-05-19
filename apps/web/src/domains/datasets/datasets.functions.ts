@@ -85,6 +85,7 @@ export interface DatasetRecord {
   readonly id: string
   readonly organizationId: string
   readonly projectId: string
+  readonly slug: string
   readonly name: string
   readonly description: string | null
   readonly fileKey: string | null
@@ -110,6 +111,7 @@ const toDatasetRecord = (d: Dataset): DatasetRecord => ({
   id: d.id,
   organizationId: d.organizationId,
   projectId: d.projectId,
+  slug: d.slug,
   name: d.name,
   description: d.description,
   fileKey: d.fileKey,
