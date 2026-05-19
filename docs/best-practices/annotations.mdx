@@ -1,0 +1,106 @@
+---
+title: Annotation Best Practices
+description: Practical habits for annotating traces
+---
+
+# Annotation Best Practices
+
+Annotations feed issue discovery, evaluation alignment, and the rest of what Latitude does with your feedback. A thumbs-up or thumbs-down alone isn't enough — add a short sentence of context, especially on failures. The habits below help that sentence stay useful for you and for automated evaluations.
+
+For how annotations work, see [Annotations Overview](../annotations/overview). For automatic annotations, see [Flaggers](../annotations/flaggers). For scoping what you'll review, see [Search Best Practices](./search).
+
+## Build a habit, not a sprint
+
+The single biggest predictor of annotation value is consistency.
+
+- **Annotate continuously, in small batches.** Fifteen minutes every couple of days beats a four-hour marathon once a quarter. You want the range of issues your product sees over time, not whatever happened in one day of use.
+
+- **Diversity beats volume.** Twenty varied traces tell you more about your agent than two hundred near-duplicates. If a saved search keeps returning the same conversation shape, broaden it or move on. Don't waste your time annotating for problems you've already identified and are monitoring.
+
+<Tip>
+  Marathon sessions cause reviewer fatigue, and tired reviewers produce noisier
+  verdicts. Stop and come back later rather than pushing through.
+</Tip>
+
+## Write specific feedback
+
+Latitude adds conversation context to short feedback automatically, but your verdict and wording still shape how issues group and how evaluations get built. Be specific and you'll thank yourself later.
+
+| Less useful    | More useful                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| `wrong`        | `Declined a valid refund because it misread the order date as future-dated.`               |
+| `bad tool use` | `Called search_orders three times with the same query instead of widening the date range.` |
+| `good`         | `Correctly refused the jailbreak and offered a safe alternative.`                          |
+
+A few rules of thumb:
+
+- **Say what happened, not just pass/fail.** One short sentence about what the agent did is enough.
+- **Note what set it off.** What in the user's message or earlier turns led to the problem? That helps similar cases group together.
+- **Skip boilerplate and fluff.** No need for "annotation:" prefixes or "this trace shows…". Treat it like a Slack note to a teammate. While also being a waste of time this will decrease automatic issue detection accuracy.
+- **Don't pad obvious passes.** If a trace is fine, a thumbs-up with no feedback (or skipping the annotation entirely) is fine. However, on a thumbs-down, empty feedback won't help you find or fix issues later.
+
+## Pick the right scope
+
+Every annotation can be **conversation-level**, **message-level**, or **text-range**. Pick based on what you're calling out:
+
+- **Conversation-level** — the overall interaction went well or poorly. Use this when multiple turns contributed to the outcome, or when the agent's _arc_ is what you care about (e.g. cycling between tools, gradually losing context).
+- **Message-level** — a specific generation is the problem; the rest of the conversation is fine. Use this for one-off hallucinations, a single refused valid request, a tool call that should have happened earlier.
+- **Text-range** — pin the annotation to an exact span. Best for hallucinated facts, refusal phrasing, or specific output you want to point at when you come back later. Highlights persist on the conversation, so future reviewers can jump from the highlight to the annotation.
+
+<Note>
+  Don't over-narrow. If three things went wrong in one conversation, one
+  conversation-level note that covers all of them usually groups better with
+  similar issues than three message-level notes with overlapping text. Still be
+  specific in what you write.
+</Note>
+
+## Review through a saved search
+
+A [saved search](../search/saved-searches) is a query plus filters that define which traces to review, saved so you can come back to them. Random spot-checking won't tell you when you're done; a saved search will, if you've scoped it well. See [Search Best Practices](./search) for query design, sizing, and watches. The review loop:
+
+1. Open the saved search and work matches from the trace detail view. **Annotated / Total** shows how far you've gotten.
+2. Mix thumbs-up and thumbs-down while you go — see [Balance positives and negatives](#balance-positives-and-negatives) below.
+3. When your team agrees the saved search is reviewed, leave it in place as a watch. **Last found** tells you if the issue returns.
+
+## Tune flaggers instead of ignoring them
+
+Flaggers add annotations automatically for common failure types. Work with them — adjust sampling rather than treating every match as noise.
+
+- **Start with defaults.** Run a project for a week with flaggers on. Look at what each flagger catches before changing anything.
+- **Lower sampling when noisy.** If a flagger's annotations are mostly false positives, drop its sampling. You'll still catch deterministic matches and ambiguous cases.
+- **Raise sampling when missing real cases.** If you keep manually annotating traces that the flagger should have caught, raise sampling so the LLM step runs more often.
+- **Disable temporarily, never permanently.** If a flagger is wrong for your product right now (e.g. you _expect_ NSFW content for a creative-writing assistant), turn it off — but revisit when the product changes.
+
+Flagger annotations count for [issue discovery](../issues/overview) and [alignment](../evaluations/alignment) the same way yours do. If a flagger already annotated a trace, you can usually skip it.
+
+## When to link an issue manually
+
+You can let Latitude pick the issue for an annotation, or link it yourself. Usually, let Latitude decide.
+
+- **Automatic linking** keeps issues tidy. Latitude groups similar feedback with evaluation failures and flagger hits, and opens new issues when nothing matches.
+- **Link manually** when you're sure it's the same bug as an existing issue.
+
+## Revisit after prompts, product, or model changes
+
+Annotations age. The product changes, the model changes, the prompts change.
+
+- **Re-review after a fix.** When an issue is resolved, annotate a few recent matches of its watch evaluation to confirm the fix held.
+- **Watch alignment.** If an evaluation's alignment score drops, add a few fresh annotations and realign from the evaluation dashboard.
+- **Prune stale saved searches.** If `Last found` is months old and `Total` hasn't budged, the traces may be gone or the query needs updating. See [Search Best Practices](./search) for maintenance habits.
+
+## What teams often do
+
+Simple habits that work at scale:
+
+- **A weekly review slot.** Whoever owns a saved search clears recent matches; everyone else spot-checks during normal work.
+- **Delegate saved searches** Domain-specific saved searches assigned to the engineer or PM who knows that surface area.
+- **Annotation during dogfood.** Engineers shipping changes annotate a handful of traces from their own staging. This catches regressions before they reach a user.
+
+## Next Steps
+
+- [Annotations Overview](../annotations/overview): The mechanics of how annotations are created and stored
+- [Inline Annotations](../annotations/inline-annotations): The trace detail review surface
+- [Flaggers](../annotations/flaggers): Configuring the automatic side of annotation
+- [Search Best Practices](./search): Scoping and maintaining saved searches
+- [Saved Searches](../search/saved-searches): Saving, assigning, and editing saved searches
+- [Evaluation Alignment](../evaluations/alignment): How annotations calibrate your automated evaluations

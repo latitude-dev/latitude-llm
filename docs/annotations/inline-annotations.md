@@ -26,10 +26,10 @@ Annotations save as drafts immediately so a page refresh won't lose your work. T
 
 The most efficient way to work through a batch of traces is to start from a [search](../search/overview) or a [saved search](../search/saved-searches):
 
-1. Run a search (or open a saved one) that matches the cohort you want to review — for example, _"failed payments last week"_ or _"checkout flows over 5 steps"_.
+1. Open a [saved search](../search/saved-searches) (or run a search you'll save) for the traces you want to review — for example, _"failed payments last week"_ or _"checkout flows over 5 steps"_.
 2. Open the first matching trace.
 3. Read the conversation, annotate, and move to the next trace.
-4. Repeat until the cohort is covered. The saved search's **Annotated / Total** columns let your team see progress.
+4. Repeat until you're through the saved search. **Annotated / Total** shows progress for the whole team.
 
 For shared review work, assign the saved search to a teammate. Assignment is a lightweight ownership signal; everyone can still see and open the search.
 
@@ -37,7 +37,7 @@ For shared review work, assign the saved search to a teammate. Assignment is a l
 
 Inline annotations cover the full range of review work:
 
-- **Systematic review of a cohort**: Use a saved search to scope, then annotate each match.
+- **Systematic review**: Open a saved search, then annotate each match.
 - **Ad-hoc spot checks**: You're browsing traces and notice something worth flagging.
 - **Issue investigation**: You're drilling into a specific issue and want to annotate the linked traces.
 - **Demo and training**: Showing a new team member how annotation works.

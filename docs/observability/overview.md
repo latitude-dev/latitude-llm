@@ -35,7 +35,7 @@ Traces are the primary unit that most reliability features operate on:
 
 - Evaluations run against traces
 - Scores are attached to traces
-- Search and saved searches scope cohorts of traces
+- Search and [saved searches](../search/saved-searches) scope groups of traces for review and investigation
 - Flaggers automatically annotate matching traces
 - Issues group failures across traces
 
