@@ -5,9 +5,7 @@ import rehypeHighlight from "rehype-highlight"
 import remarkBreaks from "remark-breaks"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
-import { Button } from "../../button/button.tsx"
 import { CodeBlockControls } from "../../code-block/code-block-controls.tsx"
-import { Text } from "../../text/text.tsx"
 import { TextSelectionContext } from "../text-selection.tsx"
 import { CodeBlockShell } from "./code-block-shell.tsx"
 import { JsonContent } from "./json-content.tsx"
@@ -67,12 +65,53 @@ const markdownComponents: Components = {
     </div>
   ),
 }
-export const LARGE_MARKDOWN_PREVIEW_LENGTH = 12_000
+export const LARGE_MARKDOWN_HEAD_LENGTH = 6_000
+export const LARGE_MARKDOWN_TAIL_LENGTH = 2_000
 
-function getLargeContentPreview(content: string) {
-  if (content.length <= LARGE_MARKDOWN_PREVIEW_LENGTH) return content
+// Snap to the nearest newline within a small radius so we don't cut markdown
+// constructs (lists, fences, headings) mid-syntax on the first/last slice.
+function snapToNewline(content: string, target: number, radius = 400): number {
+  const start = Math.max(0, target - radius)
+  const end = Math.min(content.length, target + radius)
+  const window = content.slice(start, end)
+  const localTarget = target - start
+  let best = -1
+  let bestDist = Infinity
+  for (let i = 0; i < window.length; i++) {
+    if (window[i] !== "\n") continue
+    const dist = Math.abs(i - localTarget)
+    if (dist < bestDist) {
+      best = i
+      bestDist = dist
+    }
+  }
+  return best === -1 ? target : start + best
+}
 
-  return `${content.slice(0, LARGE_MARKDOWN_PREVIEW_LENGTH)}\n\n[truncated ${content.length - LARGE_MARKDOWN_PREVIEW_LENGTH} characters]`
+function splitLargeContent(content: string): { head: string; middle: string; tail: string } {
+  const headCut = snapToNewline(content, LARGE_MARKDOWN_HEAD_LENGTH)
+  const tailCut = snapToNewline(content, content.length - LARGE_MARKDOWN_TAIL_LENGTH)
+  // Guard against a degenerate split where the snapped cuts cross.
+  if (tailCut <= headCut) {
+    return { head: content.slice(0, headCut), middle: "", tail: content.slice(headCut) }
+  }
+  return {
+    head: content.slice(0, headCut),
+    middle: content.slice(headCut, tailCut),
+    tail: content.slice(tailCut),
+  }
+}
+
+function MarkdownBody({ content }: { readonly content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[...remarkPlugins]}
+      rehypePlugins={[rehypeHighlightPlugin]}
+      components={markdownComponents}
+    >
+      {content}
+    </ReactMarkdown>
+  )
 }
 
 export function MarkdownContent({
@@ -92,29 +131,34 @@ export function MarkdownContent({
         : [],
     [selectionCtx, messageIndex, partIndex],
   )
-  const [showFullText, setShowFullText] = useState(false)
+  const [showMiddle, setShowMiddle] = useState(false)
   // Gate the JSON.parse on size so oversized content doesn't pay the parse cost
   // only to be discarded by the large-content fallback below.
   const isJson = useMemo(() => content.length <= LARGE_MARKDOWN_CONTENT_THRESHOLD && isJsonBlock(content), [content])
 
   if (content.length > LARGE_MARKDOWN_CONTENT_THRESHOLD) {
-    const preview = showFullText ? content : getLargeContentPreview(content)
+    const { head, middle, tail } = splitLargeContent(content)
 
     return (
-      <div className="flex flex-col gap-3">
-        <Text.H6 color="foregroundMuted">
-          This content is too large to render as Markdown safely, so we&apos;re showing it as plain text instead.
-        </Text.H6>
-
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" type="button" onClick={() => setShowFullText((prev) => !prev)}>
-            {showFullText ? "Show preview" : "Show full text"}
-          </Button>
-        </div>
-
-        <pre className="overflow-auto whitespace-pre-wrap break-words rounded-lg bg-background p-3 text-xs">
-          {preview}
-        </pre>
+      <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word">
+        <MarkdownBody content={head} />
+        {middle.length > 0 &&
+          (showMiddle ? (
+            <MarkdownBody content={middle} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowMiddle(true)}
+              className="not-prose group my-4 flex w-full items-center gap-3 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <span className="h-px flex-1 bg-border" />
+              <span className="rounded-full border border-border bg-background px-3 py-1 group-hover:bg-muted">
+                Show {middle.length.toLocaleString()} more characters
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </button>
+          ))}
+        {tail.length > 0 && <MarkdownBody content={tail} />}
       </div>
     )
   }

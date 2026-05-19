@@ -317,7 +317,13 @@ function IssuesPage() {
   const showEmptyState = !showSkeletons && hasNoIssues
 
   if (isLoading && hasNoIssues) {
-    return null
+    return (
+      <Layout>
+        <Layout.Content>
+          <IssuesEmptyState isLoading />
+        </Layout.Content>
+      </Layout>
+    )
   }
 
   if (showEmptyState) {
