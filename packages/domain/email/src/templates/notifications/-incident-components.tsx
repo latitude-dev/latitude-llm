@@ -1,7 +1,7 @@
-import type { IncidentSampleExcerpt } from "@domain/notifications"
+import type { IncidentSampleAuthor, IncidentSampleExcerpt } from "@domain/notifications"
 import type { AlertSeverity } from "@domain/shared"
 import { Img, Section, Text } from "@react-email/components"
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
@@ -139,28 +139,187 @@ export function TagsChips({ tags }: { readonly tags: readonly string[] }) {
  * `feedback`. Helps the recipient triage the incident from inbox
  * without clicking through. Used by both event-kind and
  * sustained-opened emails.
+ *
+ * Renders as a small attribution label ("From an annotation:" /
+ * "From an evaluation:") followed by a soft card containing the author
+ * row + feedback text — mirrors the in-app annotation card layout.
  */
 export function SampleExcerptCard({ excerpt }: { readonly excerpt: IncidentSampleExcerpt }) {
-  const sourceLabel = excerpt.source === "annotation" ? "From an annotation" : "From automatic evaluation"
+  const label = excerpt.author.kind === "evaluation" ? "From an evaluation:" : "From an annotation:"
   return (
-    <Section
-      style={{
-        marginTop: 8,
-        padding: "12px 14px",
-        backgroundColor: "#F8FAFC",
-        borderLeft: "3px solid #CBD5E1",
-        borderRadius: 6,
-      }}
-    >
-      <Text style={{ margin: 0, color: "#64748B", fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>
-        {sourceLabel}
-      </Text>
-      <Text style={{ margin: "4px 0 0 0", color: "#0F172A", fontSize: 14, lineHeight: "20px" }}>
-        {excerpt.text}
-        {excerpt.truncated ? "…" : ""}
-      </Text>
+    <Section style={{ marginTop: 12 }}>
+      <Text style={{ margin: 0, color: "#64748B", fontSize: 12 }}>{label}</Text>
+      <Section
+        style={{
+          marginTop: 6,
+          padding: "10px 12px",
+          backgroundColor: "#F8FAFC",
+          border: "1px solid #E5E7EB",
+          borderRadius: 6,
+        }}
+      >
+        <SampleAuthorRow author={excerpt.author} />
+        <Text style={{ margin: "6px 0 0 0", color: "#0F172A", fontSize: 14, lineHeight: "20px" }}>
+          {excerpt.text}
+          {excerpt.truncated ? "…" : ""}
+        </Text>
+      </Section>
     </Section>
   )
+}
+
+/**
+ * Header row inside `SampleExcerptCard`. Three shapes:
+ * - `user`:        avatar `<Img>` (mail clients that block images fall
+ *                  back to the alt text — the surrounding initials box
+ *                  carries the same letters so the row still reads),
+ *                  followed by the author's name.
+ * - `system`:      small Latitude "L" monogram (no remote asset
+ *                  dependency, renders identically across clients),
+ *                  "Latitude", and an "Agent" badge — mirrors the
+ *                  in-app annotation card's system branding.
+ * - `evaluation`:  the evaluation name only (evaluations don't have
+ *                  faces and the eyebrow label already says "From an
+ *                  evaluation").
+ */
+function SampleAuthorRow({ author }: { readonly author: IncidentSampleAuthor }) {
+  if (author.kind === "evaluation") {
+    return <Text style={inlineNameStyle}>{author.name}</Text>
+  }
+  if (author.kind === "system") {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <LatitudeMonogram />
+        <Text style={inlineNameStyle}>Latitude</Text>
+        <AgentBadge />
+      </span>
+    )
+  }
+  // user
+  const initials = computeInitials(author.name)
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      {author.imageUrl ? (
+        <UserAvatarImage imageUrl={author.imageUrl} name={author.name} />
+      ) : (
+        <InitialsAvatar text={initials} />
+      )}
+      <Text style={inlineNameStyle}>{author.name}</Text>
+    </span>
+  )
+}
+
+const inlineNameStyle: CSSProperties = {
+  margin: 0,
+  display: "inline-block",
+  color: "#0F172A",
+  fontSize: 13,
+  fontWeight: 600,
+  lineHeight: "20px",
+  verticalAlign: "middle",
+}
+
+const AVATAR_SIZE = 20
+
+function UserAvatarImage({ imageUrl, name }: { readonly imageUrl: string; readonly name: string }) {
+  return (
+    <Img
+      src={imageUrl}
+      alt={name}
+      width={String(AVATAR_SIZE)}
+      height={String(AVATAR_SIZE)}
+      style={{
+        display: "inline-block",
+        width: AVATAR_SIZE,
+        height: AVATAR_SIZE,
+        borderRadius: AVATAR_SIZE / 2,
+        objectFit: "cover",
+        verticalAlign: "middle",
+      }}
+    />
+  )
+}
+
+function InitialsAvatar({ text }: { readonly text: string }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: AVATAR_SIZE,
+        height: AVATAR_SIZE,
+        borderRadius: AVATAR_SIZE / 2,
+        backgroundColor: "#E2E8F0",
+        color: "#0F172A",
+        fontSize: 10,
+        fontWeight: 700,
+        verticalAlign: "middle",
+      }}
+    >
+      {text}
+    </span>
+  )
+}
+
+function LatitudeMonogram() {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: AVATAR_SIZE,
+        height: AVATAR_SIZE,
+        borderRadius: AVATAR_SIZE / 2,
+        backgroundColor: "#0080FF",
+        color: "#FFFFFF",
+        fontSize: 11,
+        fontWeight: 700,
+        verticalAlign: "middle",
+      }}
+    >
+      L
+    </span>
+  )
+}
+
+function AgentBadge() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "1px 6px",
+        borderRadius: 4,
+        backgroundColor: "#F1F5F9",
+        color: "#475569",
+        fontSize: 10,
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.04em",
+        verticalAlign: "middle",
+      }}
+    >
+      Agent
+    </span>
+  )
+}
+
+/**
+ * Two-letter initials from a display name, e.g. "Anna Bosch" → "AB"
+ * and "carlos@latitude.so" → "CA". Falls back to "?" for empty
+ * strings (defensive — Zod requires `min(1)` on `name`).
+ */
+function computeInitials(name: string): string {
+  const trimmed = name.trim()
+  if (trimmed.length === 0) return "?"
+  const parts = trimmed.split(/\s+/).filter((p) => p.length > 0)
+  if (parts.length >= 2) {
+    const first = parts[0]
+    const second = parts[1]
+    if (first && second) return `${first.charAt(0)}${second.charAt(0)}`.toUpperCase()
+  }
+  return trimmed.slice(0, 2).toUpperCase()
 }
 
 /**
@@ -196,9 +355,7 @@ export function IncidentTrendChartImage({ src }: { readonly src: string }) {
  * id separately at the card footer so it doesn't get truncated.
  */
 export function IssueTimestamp({ timestamp }: { readonly timestamp: Date }) {
-  return (
-    <Text style={{ margin: "8px 0 0 0", color: "#64748B", fontSize: 12 }}>{formatEmailTimestamp(timestamp)}</Text>
-  )
+  return <Text style={{ margin: "8px 0 0 0", color: "#64748B", fontSize: 12 }}>{formatEmailTimestamp(timestamp)}</Text>
 }
 
 /**

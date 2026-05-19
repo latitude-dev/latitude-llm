@@ -4,6 +4,7 @@ import {
   type AlertIncidentRepositoryShape,
   alertIncidentSchema,
 } from "@domain/alerts"
+import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
 import type { AnnotationScore, EvaluationScore } from "@domain/scores"
 import {
@@ -27,6 +28,8 @@ import {
   UserId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import { type User, UserRepository } from "@domain/users"
+import { createFakeUserRepository } from "@domain/users/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { IncidentEventPayload, IncidentOpenedPayload } from "../entities/notification.ts"
@@ -43,6 +46,10 @@ interface SetupOpts {
   readonly tags?: readonly string[]
   readonly latestAnnotation?: AnnotationScore | null
   readonly latestEvaluation?: EvaluationScore | null
+  /** Pre-seeded users keyed by id; the producer fetches the annotator via UserRepository. */
+  readonly users?: Iterable<User>
+  /** Pre-seeded evaluations keyed by id; the producer fetches the evaluation via EvaluationRepository. */
+  readonly evaluations?: Iterable<Evaluation>
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -161,12 +168,35 @@ function setup(opts: SetupOpts = {}) {
     },
   })
 
+  const { repository: userRepository, users } = createFakeUserRepository()
+  for (const user of opts.users ?? []) users.set(user.id, user)
+
+  const evaluationsById = new Map<string, Evaluation>()
+  for (const e of opts.evaluations ?? []) evaluationsById.set(e.id, e)
+  const evaluationRepository = EvaluationRepository.of({
+    findById: (id) => {
+      const found = evaluationsById.get(id)
+      if (!found) return Effect.fail(new NotFoundError({ entity: "Evaluation", id }))
+      return Effect.succeed(found)
+    },
+    save: () => Effect.die("not used"),
+    listByProjectId: () => Effect.die("not used"),
+    listByIssueId: () => Effect.die("not used"),
+    listByIssueIds: () => Effect.die("not used"),
+    archive: () => Effect.die("not used"),
+    unarchive: () => Effect.die("not used"),
+    softDelete: () => Effect.die("not used"),
+    softDeleteByIssueId: () => Effect.die("not used"),
+  })
+
   const layer = Layer.mergeAll(
     Layer.succeed(AlertIncidentRepository, incidentRepo),
+    Layer.succeed(EvaluationRepository, evaluationRepository),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ScoreAnalyticsRepository, analytics),
     Layer.succeed(ScoreRepository, scoreRepository),
     Layer.succeed(SettingsReader, settings),
+    Layer.succeed(UserRepository, userRepository),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: orgId })),
   )
@@ -358,7 +388,74 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect((payload as { tags?: unknown }).tags).toBeUndefined()
   })
 
-  it("snapshots sampleExcerpt from the latest annotation when available", async () => {
+  it("snapshots sampleExcerpt with user attribution for human annotations", async () => {
+    const annotatorId = cuid("ann")
+    const annotation = {
+      id: cuid("score-a"),
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      sessionId: null,
+      traceId: null,
+      spanId: null,
+      simulationId: null,
+      issueId: cuid("i"),
+      value: 0,
+      passed: false,
+      feedback: "clusterable",
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId,
+      createdAt: new Date("2026-05-07T09:50:00Z"),
+      updatedAt: new Date("2026-05-07T09:50:00Z"),
+      source: "annotation" as const,
+      sourceId: "UI" as const,
+      metadata: { rawFeedback: "Reviewer flagged a tool-call loop." },
+    } as unknown as AnnotationScore
+
+    const annotator: User = {
+      id: UserId(annotatorId),
+      email: "anna@acme.com",
+      name: "Anna Bosch",
+      jobTitle: null,
+      phoneNumber: null,
+      emailVerified: true,
+      image: "https://cdn.acme.com/avatars/anna.png",
+      role: "user",
+      notificationPreferences: null,
+      createdAt: new Date(),
+    }
+
+    const { incidentId, layer } = setup({
+      latestAnnotation: annotation,
+      users: [annotator],
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.sampleExcerpt).toEqual({
+      text: "Reviewer flagged a tool-call loop.",
+      truncated: false,
+      author: {
+        kind: "user",
+        name: "Anna Bosch",
+        imageUrl: "https://cdn.acme.com/avatars/anna.png",
+      },
+    })
+  })
+
+  it("snapshots sampleExcerpt with system attribution for Latitude-authored annotations", async () => {
     const annotation = {
       id: cuid("score-a"),
       organizationId: cuid("o"),
@@ -381,8 +478,8 @@ describe("requestIncidentNotificationsUseCase", () => {
       createdAt: new Date("2026-05-07T09:50:00Z"),
       updatedAt: new Date("2026-05-07T09:50:00Z"),
       source: "annotation" as const,
-      sourceId: "UI" as const,
-      metadata: { rawFeedback: "Reviewer flagged a tool-call loop." },
+      sourceId: "SYSTEM" as const,
+      metadata: { rawFeedback: "Detected token leakage in three consecutive responses." },
     } as unknown as AnnotationScore
 
     const { incidentId, layer } = setup({
@@ -399,15 +496,12 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(result.status).toBe("ok")
     if (result.status !== "ok") throw new Error("unreachable")
     const payload = result.requests[0]?.payload as IncidentEventPayload
-    expect(payload.sampleExcerpt).toEqual({
-      source: "annotation",
-      text: "Reviewer flagged a tool-call loop.",
-      truncated: false,
-    })
+    expect(payload.sampleExcerpt?.author).toEqual({ kind: "system" })
   })
 
   it("falls back to the latest evaluation when no annotation exists", async () => {
-    const evaluation = {
+    const evaluationId = cuid("eval")
+    const evaluationScore = {
       id: cuid("score-e"),
       organizationId: cuid("o"),
       projectId: cuid("p"),
@@ -429,13 +523,32 @@ describe("requestIncidentNotificationsUseCase", () => {
       createdAt: new Date("2026-05-07T09:55:00Z"),
       updatedAt: new Date("2026-05-07T09:55:00Z"),
       source: "evaluation" as const,
-      sourceId: cuid("eval"),
+      sourceId: evaluationId,
       metadata: { evaluationHash: "abc" },
     } as unknown as EvaluationScore
 
+    // Producer only reads `name`; the rest is shape-only.
+    const evaluation = {
+      id: evaluationId,
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      issueId: cuid("i"),
+      name: "warranty-judge",
+      description: "",
+      script: "noop",
+      trigger: {},
+      alignment: {},
+      alignedAt: new Date(),
+      archivedAt: null,
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as Evaluation
+
     const { incidentId, layer } = setup({
       latestAnnotation: null,
-      latestEvaluation: evaluation,
+      latestEvaluation: evaluationScore,
+      evaluations: [evaluation],
       memberUserIds: [cuid("ua")],
     })
 
@@ -449,9 +562,9 @@ describe("requestIncidentNotificationsUseCase", () => {
     if (result.status !== "ok") throw new Error("unreachable")
     const payload = result.requests[0]?.payload as IncidentEventPayload
     expect(payload.sampleExcerpt).toEqual({
-      source: "evaluation",
       text: "Output mentioned the customer's competitor.",
       truncated: false,
+      author: { kind: "evaluation", name: "warranty-judge" },
     })
   })
 
@@ -583,9 +696,9 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(result.requests[0]?.kind).toBe("incident.opened")
     const payload = result.requests[0]?.payload as IncidentOpenedPayload
     expect(payload.sampleExcerpt).toEqual({
-      source: "annotation",
       text: "Annotator flagged the response for hallucinating a refund policy.",
       truncated: false,
+      author: { kind: "system" },
     })
   })
 

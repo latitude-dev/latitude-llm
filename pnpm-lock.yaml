@@ -1309,6 +1309,9 @@ importers:
       '@domain/alerts':
         specifier: workspace:*
         version: link:../alerts
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../evaluations
       '@domain/issues':
         specifier: workspace:*
         version: link:../issues

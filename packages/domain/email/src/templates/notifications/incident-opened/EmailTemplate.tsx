@@ -102,12 +102,7 @@ export function IncidentOpenedEmail({
       ) : null}
       <IncidentTrendChartImage src={chartUrl} />
 
-      {sampleExcerpt ? (
-        <>
-          <SectionHeader label="Latest occurrence" />
-          <SampleExcerptCard excerpt={sampleExcerpt} />
-        </>
-      ) : null}
+      {sampleExcerpt ? <SampleExcerptCard excerpt={sampleExcerpt} /> : null}
 
       <IssueIdFooter issueId={issueId} />
 
@@ -133,8 +128,8 @@ IncidentOpenedEmail.PreviewProps = {
   tags: ["env:prod", "service:agents", "model:claude-3.5-sonnet"],
   breach: { triggerRate: 12.5, baselineRate: 4.2, threshold: 7 },
   sampleExcerpt: {
-    source: "evaluation",
     text: "Response mentioned the customer's competitor when summarising the warranty terms.",
     truncated: false,
+    author: { kind: "evaluation", name: "warranty-judge" },
   },
 } satisfies IncidentOpenedEmailProps

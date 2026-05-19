@@ -60,15 +60,44 @@ const incidentBasePayloadShape = {
 export const incidentTagsSchema = z.array(z.string()).max(5)
 
 /**
+ * Attribution for an incident sample excerpt. Three flavors:
+ *
+ * - `user`: a human-authored annotation. Renders as an avatar (image
+ *   or initials fallback) + name.
+ * - `system`: a Latitude-authored annotation (`annotatorId IS NULL`
+ *   and `sourceId === "SYSTEM"`). Renders with the Latitude logo and
+ *   an "Agent" badge to match the in-app annotation card.
+ * - `evaluation`: an automatic-evaluation score. Renders the
+ *   evaluation's name (e.g. "warranty-judge").
+ *
+ * `imageUrl` is best-effort. Most mail clients block remote images by
+ * default — templates render the initials fallback when the image
+ * doesn't load.
+ */
+const incidentSampleAuthorSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("user"),
+    name: z.string().min(1),
+    imageUrl: z.string().nullable(),
+  }),
+  z.object({ kind: z.literal("system") }),
+  z.object({
+    kind: z.literal("evaluation"),
+    name: z.string().min(1),
+  }),
+])
+export type IncidentSampleAuthor = z.infer<typeof incidentSampleAuthorSchema>
+
+/**
  * One-line excerpt from a recent annotation (`rawFeedback`) or
  * automatic evaluation result. Lets the recipient triage from inbox
  * without clicking through. `truncated` is true when the source text
  * exceeded 200 chars and was cropped.
  */
 export const incidentSampleExcerptSchema = z.object({
-  source: z.enum(["annotation", "evaluation"]),
   text: z.string().max(200),
   truncated: z.boolean(),
+  author: incidentSampleAuthorSchema,
 })
 export type IncidentSampleExcerpt = z.infer<typeof incidentSampleExcerptSchema>
 

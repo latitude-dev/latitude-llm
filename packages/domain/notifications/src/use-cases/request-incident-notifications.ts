@@ -1,4 +1,5 @@
 import { type AlertIncident, AlertIncidentRepository } from "@domain/alerts"
+import { EvaluationRepository } from "@domain/evaluations"
 import { DEFAULT_ESCALATION_SENSITIVITY_K } from "@domain/issues"
 import type { MembershipRepository } from "@domain/organizations"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
@@ -15,8 +16,9 @@ import {
   type RepositoryError,
   SettingsReader,
   type SqlClient,
-  type UserId,
+  UserId,
 } from "@domain/shared"
+import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 import type {
   IncidentBreach,
@@ -24,6 +26,7 @@ import type {
   IncidentEventPayload,
   IncidentOpenedPayload,
   IncidentRecovery,
+  IncidentSampleAuthor,
   IncidentSampleExcerpt,
   IncidentTrend,
 } from "../entities/notification.ts"
@@ -176,11 +179,52 @@ const snapshotTags = (incident: AlertIncident) =>
   })
 
 /**
+ * Resolve the attribution for an annotation score. Falls back to a
+ * `system` author when the score is a Latitude-authored draft
+ * (`annotatorId IS NULL`); otherwise looks up the user once via
+ * `UserRepository` and snapshots `{ name, imageUrl }`.
+ *
+ * Missing user (rare — would mean the row was hard-deleted between
+ * the score landing and the alert firing) degrades to `system` so the
+ * template still has something sensible to render.
+ */
+const resolveAnnotationAuthor = (annotatorId: string | null) =>
+  Effect.gen(function* () {
+    if (annotatorId === null) return { kind: "system" } as const
+    const users = yield* UserRepository
+    const user = yield* users
+      .findById(UserId(annotatorId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    if (user === null) return { kind: "system" } as const
+    return {
+      kind: "user" as const,
+      name: user.name?.trim().length ? user.name : user.email,
+      imageUrl: user.image ?? null,
+    }
+  })
+
+/**
+ * Resolve the evaluation name for an evaluation score's attribution.
+ * Falls back to `null` when the evaluation row can't be fetched —
+ * caller skips the excerpt entirely in that case (the alternative,
+ * an "Unknown evaluation" label, would be more confusing than
+ * showing nothing).
+ */
+const resolveEvaluationAuthor = (input: { readonly projectId: ProjectId; readonly evaluationId: string }) =>
+  Effect.gen(function* () {
+    const evaluations = yield* EvaluationRepository
+    const evaluation = yield* evaluations
+      .findById(input.evaluationId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    if (evaluation === null) return null
+    return { kind: "evaluation" as const, name: evaluation.name }
+  })
+
+/**
  * Snapshot a short excerpt the recipient can triage from inbox.
- * Picks the latest annotation's `rawFeedback` (human or system) when
- * present; otherwise falls back to the latest evaluation score's
- * `feedback` text. Returns `undefined` when neither exists so the
- * template skips the excerpt card.
+ * Picks the latest annotation's `rawFeedback` when present; otherwise
+ * falls back to the latest evaluation score's `feedback` text.
+ * Returns `undefined` when neither exists.
  */
 const snapshotSampleExcerpt = (incident: AlertIncident) =>
   Effect.gen(function* () {
@@ -197,10 +241,11 @@ const snapshotSampleExcerpt = (incident: AlertIncident) =>
     if (latestAnnotation && latestAnnotation.source === "annotation") {
       const raw = latestAnnotation.metadata.rawFeedback
       if (raw.trim().length > 0) {
+        const author: IncidentSampleAuthor = yield* resolveAnnotationAuthor(latestAnnotation.annotatorId)
         return {
-          source: "annotation",
           text: truncate(raw),
           truncated: raw.length > SAMPLE_EXCERPT_MAX_CHARS,
+          author,
         } satisfies IncidentSampleExcerpt
       }
     }
@@ -212,12 +257,19 @@ const snapshotSampleExcerpt = (incident: AlertIncident) =>
       options: { limit: 1 },
     })
     const latestEvaluation = evaluations.items[0]
-    if (latestEvaluation && latestEvaluation.feedback.trim().length > 0) {
+    if (latestEvaluation && latestEvaluation.source === "evaluation" && latestEvaluation.feedback.trim().length > 0) {
       const raw = latestEvaluation.feedback
+      const author = yield* resolveEvaluationAuthor({
+        projectId: incident.projectId,
+        evaluationId: latestEvaluation.sourceId,
+      })
+      // No eval name resolvable → skip the excerpt entirely rather
+      // than show an unattributed evaluation reading.
+      if (author === null) return undefined
       return {
-        source: "evaluation",
         text: truncate(raw),
         truncated: raw.length > SAMPLE_EXCERPT_MAX_CHARS,
+        author,
       } satisfies IncidentSampleExcerpt
     }
 
@@ -396,8 +448,10 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     | SqlClient
     | ChSqlClient
     | AlertIncidentRepository
+    | EvaluationRepository
     | MembershipRepository
     | ScoreAnalyticsRepository
     | ScoreRepository
     | SettingsReader
+    | UserRepository
   >

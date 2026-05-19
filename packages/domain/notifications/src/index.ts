@@ -7,6 +7,7 @@ export type {
   IncidentEventPayload,
   IncidentOpenedPayload,
   IncidentRecovery,
+  IncidentSampleAuthor,
   IncidentSampleExcerpt,
   IncidentTrend,
   Notification,

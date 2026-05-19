@@ -90,12 +90,7 @@ export function IncidentEventEmail({
 
       <EmailMetadataTable rows={metadataRows} />
 
-      {sampleExcerpt ? (
-        <>
-          <SectionHeader label="Latest occurrence" />
-          <SampleExcerptCard excerpt={sampleExcerpt} />
-        </>
-      ) : null}
+      {sampleExcerpt ? <SampleExcerptCard excerpt={sampleExcerpt} /> : null}
 
       <IssueIdFooter issueId={issueId} />
 
@@ -120,8 +115,8 @@ IncidentEventEmail.PreviewProps = {
   projectName: "Support agent",
   tags: ["env:prod", "model:claude-3.5-sonnet", "service:agents"],
   sampleExcerpt: {
-    source: "annotation",
     text: "Reviewer flagged a tool-call loop after the third retry — model kept invoking `search` with the same query.",
     truncated: false,
+    author: { kind: "user", name: "Anna Bosch", imageUrl: null },
   },
 } satisfies IncidentEventEmailProps

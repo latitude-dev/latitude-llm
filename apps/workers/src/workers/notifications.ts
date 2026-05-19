@@ -10,6 +10,7 @@ import { OrganizationId, ProjectId } from "@domain/shared"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
+  EvaluationRepositoryLive,
   FeatureFlagRepositoryLive,
   MembershipRepositoryLive,
   NotificationRepositoryLive,
@@ -32,10 +33,12 @@ interface NotificationsDeps {
 
 const requestLayer = Layer.mergeAll(
   AlertIncidentRepositoryLive,
+  EvaluationRepositoryLive,
   MembershipRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  UserRepositoryLive,
 )
 
 const createLayer = Layer.mergeAll(FeatureFlagRepositoryLive, NotificationRepositoryLive, UserRepositoryLive)
