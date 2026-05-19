@@ -70,6 +70,7 @@
           "telemetry/project-scoping",
           "telemetry/otel-exporter",
           "telemetry/typescript",
+          "telemetry/typescript-changelog",
           "telemetry/python",
           "telemetry/claude-code",
           "telemetry/openclaw",
@@ -113,49 +114,27 @@
       },
       {
         "group": "Observability",
-        "pages": [
-          "observability/overview",
-          "observability/traces",
-          "observability/sessions",
-          "observability/filters"
-        ]
+        "pages": ["observability/overview", "observability/traces", "observability/sessions", "observability/filters"]
       },
       {
         "group": "Search",
-        "pages": [
-          "search/overview",
-          "search/saved-searches"
-        ]
+        "pages": ["search/overview", "search/saved-searches"]
       },
       {
         "group": "Evaluations",
-        "pages": [
-          "evaluations/overview",
-          "evaluations/triggers",
-          "evaluations/alignment"
-        ]
+        "pages": ["evaluations/overview", "evaluations/triggers", "evaluations/alignment"]
       },
       {
         "group": "Annotations",
-        "pages": [
-          "annotations/overview",
-          "annotations/inline-annotations",
-          "annotations/flaggers"
-        ]
+        "pages": ["annotations/overview", "annotations/inline-annotations", "annotations/flaggers"]
       },
       {
         "group": "Scores",
-        "pages": [
-          "scores/overview",
-          "scores/analytics"
-        ]
+        "pages": ["scores/overview", "scores/analytics"]
       },
       {
         "group": "Issues",
-        "pages": [
-          "issues/overview",
-          "issues/management"
-        ]
+        "pages": ["issues/overview", "issues/management"]
       },
       {
         "group": "Simulations",

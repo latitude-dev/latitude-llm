@@ -13,6 +13,8 @@ Instrument your AI application and send traces to Latitude. Built on OpenTelemet
 npm install @latitude-data/telemetry
 ```
 
+Release notes and breaking changes by version: [TypeScript SDK changelog](typescript-changelog).
+
 ## Bootstrap (Recommended)
 
 The fastest way to start. One class detects an existing OpenTelemetry pipeline (Sentry, Datadog, New Relic, Honeycomb, etc.) or creates one when none exists, then adds LLM auto-instrumentation and the Latitude exporter:
