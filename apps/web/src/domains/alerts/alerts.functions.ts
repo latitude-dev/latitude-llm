@@ -69,12 +69,12 @@ export const listProjectAlertIncidentsInRange = createServerFn({
         const incidentRepo = yield* AlertIncidentRepository
         const issueRepo = yield* IssueRepository
 
-        const incidents = yield* incidentRepo.listByProjectInRange({
+        const incidents = yield* incidentRepo.listByProjectId({
           organizationId: orgId,
           projectId,
           from: new Date(data.fromIso),
           to: new Date(data.toIso),
-          ...(data.sourceType ? { sourceType: data.sourceType } : {}),
+          ...(data.sourceType ? { sourceTypes: [data.sourceType] } : {}),
           ...(data.sourceId ? { sourceId: data.sourceId } : {}),
         })
 

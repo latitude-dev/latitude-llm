@@ -7,7 +7,12 @@ import type {
   SqlClient,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { AlertIncident, AlertIncidentKind, AlertIncidentSourceType } from "../entities/alert-incident.ts"
+import type {
+  AlertIncident,
+  AlertIncidentKind,
+  AlertIncidentSourceType,
+  AlertSeverity,
+} from "../entities/alert-incident.ts"
 
 export interface CloseOpenAlertIncidentInput {
   readonly sourceType: AlertIncidentSourceType
@@ -28,20 +33,30 @@ export interface UpdateAlertIncidentExitDwellInput {
   readonly exitEligibleSince: Date | null
 }
 
-export interface ListAlertIncidentsByProjectInRangeInput {
+export interface ListAlertIncidentsByProjectInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  /** Inclusive start of the window. Incidents whose lifetime overlaps `[from, to]` are returned. */
-  readonly from: Date
-  /** Inclusive end of the window. */
-  readonly to: Date
-  /** Restrict to a single source type (e.g., `"issue"`). When omitted, all source types are returned. */
-  readonly sourceType?: AlertIncidentSourceType
+  /**
+   * Inclusive start of the time window. Incidents whose lifetime overlaps `[from, to]` are
+   * returned. When omitted, the window has no lower bound.
+   */
+  readonly from?: Date
+  /** Inclusive end of the time window. When omitted, the window has no upper bound. */
+  readonly to?: Date
+  /**
+   * Restrict to one or more source types (e.g., `["issue"]`). When omitted or empty, all source
+   * types are returned.
+   */
+  readonly sourceTypes?: readonly AlertIncidentSourceType[]
   /**
    * Restrict to incidents tied to a single source entity (e.g., a specific issue id). Combine with
-   * `sourceType` so the same id namespace is unambiguous when future source types are added.
+   * `sourceTypes` so the same id namespace is unambiguous when future source types are added.
    */
   readonly sourceId?: string
+  /** Restrict to one or more incident kinds. Omit or pass an empty array to include all kinds. */
+  readonly kinds?: readonly AlertIncidentKind[]
+  /** Restrict to one or more severities. Omit or pass an empty array to include all severities. */
+  readonly severities?: readonly AlertSeverity[]
 }
 
 export interface AlertIncidentRepositoryShape {
@@ -68,14 +83,16 @@ export interface AlertIncidentRepositoryShape {
    */
   updateExitDwell(input: UpdateAlertIncidentExitDwellInput): Effect.Effect<void, RepositoryError, SqlClient>
   /**
-   * Returns every incident whose lifetime overlaps the `[from, to]` window for the given
-   * project, ordered ascending by `started_at`. Uses the
+   * Returns every incident in the project whose lifetime overlaps the optional `[from, to]`
+   * window, ordered ascending by `started_at`. Uses the
    * `(organization_id, project_id, started_at)` index. An incident overlaps the window when
    * `started_at <= to` AND (`ended_at IS NULL` OR `ended_at >= from`) — ongoing incidents
-   * (null `ended_at`) overlap as long as they began on or before `to`.
+   * (null `ended_at`) overlap as long as they began on or before `to`. Each bound is
+   * skipped when omitted, so passing no bounds returns every incident for the project.
+   * Additional optional filters narrow by `sourceType`, `sourceId`, `kind`, and `severity`.
    */
-  listByProjectInRange(
-    input: ListAlertIncidentsByProjectInRangeInput,
+  listByProjectId(
+    input: ListAlertIncidentsByProjectInput,
   ): Effect.Effect<readonly AlertIncident[], RepositoryError, SqlClient>
   /**
    * Returns every currently-open (`ended_at IS NULL`) incident matching `kind`,

@@ -100,6 +100,9 @@ Issues
     - Monitor (or realign) Issue                                [POST /projects/{projectSlug}/issues/{issueSlug}/monitor]
     - Unmonitor Issue                                           [POST /projects/{projectSlug}/issues/{issueSlug}/unmonitor]
     - Export Issue/s (bulk)                                     [POST /projects/{projectSlug}/issues/export]
+Incidents
+    - List Incidents (optional from/to + filters by              [GET /projects/{projectSlug}/incidents]
+                      sourceTypes, sourceId, kinds, severities)
 Datasets
     - List Datasets                                             [GET /projects/{projectSlug}/datasets]
     - Get Dataset details                                       [GET /projects/{projectSlug}/datasets/{datasetSlug}]
@@ -805,6 +808,12 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [x] OpenAPI entities: `TraceAnalyticsResponseSchema` (`apps/api/src/openapi/entities/trace-analytics.ts`) + `IssueAnalyticsResponseSchema` (`apps/api/src/openapi/entities/issue-analytics.ts`). Empty-window cases return zeroed totals + empty bucket arrays (no 404 / 204).
   - [x] Integration tests: empty-project happy path, range scoping, invalid date-range 400 (`toIso < fromIso`), auth gate — `apps/api/src/routes/{traces,issues}.test.ts`.
   - [x] Fix: `packages/platform/testkit/src/clickhouse/test-clickhouse.ts` parameter-substitution regex broadened to accept ClickHouse types containing spaces, commas, and single quotes (e.g. `DateTime64(9, 'UTC')`). The previous `[\w()]+?` body wouldn't match those, so any chdb-backed test that hit a filter with a `startTime` (or similar typed) placeholder failed with `UNKNOWN_QUERY_PARAMETER`.
+- **M-Incidents — List incidents endpoint** (1 endpoint)
+  - The entity is `AlertIncident` internally; on the public API surface (HTTP / SDK / MCP) it's just `Incident` — Latitude doesn't have any other "incident" concept, so the `Alert` prefix is internal-only.
+  - [x] **`GET /v1/projects/{projectSlug}/incidents`** — `low` tier. Query: `fromIso?`, `toIso?`, `sourceTypes?`, `sourceId?`, `kinds?`, `severities?`. All array filters accept repeated query keys (`?kinds=issue.new&kinds=issue.escalating`). The time window defaults to the trailing 7 days, matching the analytics endpoints. Returns `{ items: Incident[] }` ordered ascending by `startedAt`.
+    - Repository: `AlertIncidentRepository.listByProjectInRange` renamed to `listByProjectId`; both time bounds are now optional, and the single-value `sourceType`/`kind`/`severity` filters were each widened to multi-value `sourceTypes`/`kinds`/`severities`. Callers updated (web's `alerts.functions.ts`, four existing test mocks).
+    - OpenAPI entity: `IncidentSchema` (`apps/api/src/openapi/entities/incident.ts`) exposes the public fields — `id`, `organizationId`, `projectId`, `sourceType`, `sourceId`, `kind`, `severity`, `startedAt`, `endedAt`, `createdAt`. The internal-only `entrySignals` snapshot and `exitEligibleSince` dwell tracker are deliberately omitted; they're detector internals with no consumer use.
+    - Integration tests: auth gate, empty-project happy path, ordering, each filter (`kind`, `severity`, `sourceId`), `[fromIso, toIso]` overlap scoping, malformed `kind` → 400.
 
 - **M7 — Datasets** (10 endpoints, prefix `/projects/{projectSlug}/datasets`)
   - [ ] `DatasetRepository.findBySlug` + `existsBySlug`
