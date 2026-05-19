@@ -2000,6 +2000,268 @@
       }
     },
     {
+      "name": "getTraceAnalytics",
+      "title": "Get project trace analytics",
+      "description": "Returns trace analytics for the project: a total (or median) per metric over the requested range, plus a per-bucket series for each metric. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "traces": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Number of traces in the range."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Number of traces per bucket."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "cost": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Total trace cost in USD."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Trace cost per bucket in USD."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "duration": {
+            "type": "object",
+            "properties": {
+              "median": {
+                "type": "number",
+                "description": "Median trace duration in seconds."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Median trace duration per bucket in seconds."
+              }
+            },
+            "required": [
+              "median",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Total tokens across all LLM spans."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Tokens per bucket across all LLM spans."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "timeToFirstToken": {
+            "type": "object",
+            "properties": {
+              "median": {
+                "type": "number",
+                "description": "Median time-to-first-token across LLM spans, in seconds."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Median time-to-first-token per bucket, in seconds."
+              }
+            },
+            "required": [
+              "median",
+              "buckets"
+            ],
+            "additionalProperties": false
+          },
+          "spans": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Total number of spans."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Metric value for this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Number of spans per bucket."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "traces",
+          "cost",
+          "duration",
+          "tokens",
+          "timeToFirstToken",
+          "spans"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "getTrace",
       "title": "Get project trace",
       "description": "Returns a single trace by id, including the captured system instructions and the conversation messages from the trace's last LLM-completion span.",
@@ -5670,6 +5932,167 @@
           "items",
           "nextCursor",
           "hasMore"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "getIssueAnalytics",
+      "title": "Get project issue analytics",
+      "description": "Returns issue analytics for the project: counts of ongoing, new, escalating, regressed, and resolved issues, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "fromIso": {
+            "description": "Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "toIso": {
+            "description": "Upper bound (inclusive) of the time range. Defaults to now.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "projectSlug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "ongoing": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Number of ongoing issues."
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          },
+          "new": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Number of new issues."
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          },
+          "escalating": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Number of escalating issues."
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          },
+          "regressed": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Number of regressed issues."
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          },
+          "resolved": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Number of resolved issues."
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "additionalProperties": false
+          },
+          "occurrences": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Number of issue occurrences in the range."
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "description": "ISO-8601 UTC timestamp of the bucket's start."
+                    },
+                    "value": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of occurrences in this bucket."
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Number of issue occurrences per bucket."
+              }
+            },
+            "required": [
+              "total",
+              "buckets"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "ongoing",
+          "new",
+          "escalating",
+          "regressed",
+          "resolved",
+          "occurrences"
         ],
         "additionalProperties": false
       }

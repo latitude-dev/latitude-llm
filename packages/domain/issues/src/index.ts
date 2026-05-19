@@ -154,6 +154,15 @@ export {
   type IssueOccurrenceInput,
 } from "./use-cases/generate-issue-details.ts"
 export {
+  type GetIssueAnalyticsError,
+  type GetIssueAnalyticsInput,
+  type GetIssueAnalyticsResult,
+  getIssueAnalyticsUseCase,
+  type IssueAnalyticsBucket,
+  type IssueAnalyticsCountMetric,
+  type IssueAnalyticsOccurrencesMetric,
+} from "./use-cases/get-issue-analytics.ts"
+export {
   type GetIssueDetailsError,
   type GetIssueDetailsInput,
   getIssueDetailsUseCase,

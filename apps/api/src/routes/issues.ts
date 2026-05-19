@@ -2,6 +2,7 @@ import { monitorIssueUseCase, unmonitorIssueUseCase } from "@domain/evaluations"
 import {
   applyIssueLifecycleCommandUseCase,
   embedIssueSearchQueryUseCase,
+  getIssueAnalyticsUseCase,
   getIssueDetailsUseCase,
   getIssueTrendUseCase,
   type IssueLifecycleCommand,
@@ -39,6 +40,7 @@ import {
   toIssueHistogramResponse,
   toIssueResponse,
 } from "../openapi/entities/issue.ts"
+import { IssueAnalyticsResponseSchema, toIssueAnalyticsResponse } from "../openapi/entities/issue-analytics.ts"
 import { fetchTraceIndicators, PaginatedTracesSchema, toTraceResponse } from "../openapi/entities/trace.ts"
 import { PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import { jsonBody, openApiResponses, PROTECTED_SECURITY, ProjectParamsSchema } from "../openapi/schemas.ts"
@@ -365,6 +367,63 @@ const listIssues = issueEndpoint({
       },
       200,
     )
+  },
+})
+
+const IssueAnalyticsQuerySchema = z.object({
+  fromIso: z.iso
+    .datetime()
+    .optional()
+    .describe("Lower bound (inclusive) of the time range. Defaults to 7 days before `toIso`."),
+  toIso: z.iso.datetime().optional().describe("Upper bound (inclusive) of the time range. Defaults to now."),
+})
+
+const getIssueAnalytics = issueEndpoint({
+  route: createRoute({
+    method: "get",
+    path: "/analytics",
+    name: "getIssueAnalytics",
+    tags: ["Issues"],
+    ...issuesFernGroup("analytics"),
+    summary: "Get project issue analytics",
+    description:
+      "Returns issue analytics for the project: counts of ongoing, new, escalating, regressed, and resolved issues, plus total occurrences and a per-bucket occurrence series. Buckets are 12-hour UTC-aligned. The range defaults to the trailing 7 days.",
+    security: PROTECTED_SECURITY,
+    request: { params: ProjectParamsSchema, query: IssueAnalyticsQuerySchema },
+    responses: openApiResponses({
+      status: 200,
+      schema: IssueAnalyticsResponseSchema,
+      description: "Issue analytics",
+    }),
+  }),
+  handler: async (c) => {
+    const { projectSlug } = c.req.valid("param")
+    const { fromIso, toIso } = c.req.valid("query")
+    const organizationId = c.var.organization.id
+
+    if (fromIso && toIso && Date.parse(toIso) < Date.parse(fromIso)) {
+      return c.json({ error: "`toIso` must be greater than or equal to `fromIso`." }, 400)
+    }
+
+    const analytics = await Effect.runPromise(
+      Effect.gen(function* () {
+        const projectRepo = yield* ProjectRepository
+        const project = yield* projectRepo.findBySlug(projectSlug)
+
+        return yield* getIssueAnalyticsUseCase({
+          organizationId: OrganizationId(organizationId as string),
+          projectId: ProjectId(project.id as string),
+          ...(fromIso ? { from: new Date(fromIso) } : {}),
+          ...(toIso ? { to: new Date(toIso) } : {}),
+        })
+      }).pipe(
+        withPostgres(Layer.mergeAll(ProjectRepositoryLive, IssueRepositoryLive), c.var.postgresClient, organizationId),
+        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
+        withTracing,
+      ),
+    )
+
+    return c.json(toIssueAnalyticsResponse(analytics), 200)
   },
 })
 
@@ -709,6 +768,7 @@ const unmonitorIssue = issueEndpoint({
 export const createIssuesRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
   listIssues.mountHttp(app, createTierRateLimiter("low"))
+  getIssueAnalytics.mountHttp(app, createTierRateLimiter("medium"))
   getIssue.mountHttp(app, createTierRateLimiter("low"))
   getIssueTrend.mountHttp(app, createTierRateLimiter("medium"))
   listIssueTraces.mountHttp(app, createTierRateLimiter("medium"))

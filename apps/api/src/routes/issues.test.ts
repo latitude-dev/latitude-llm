@@ -284,4 +284,77 @@ describe("Issues Routes Integration", () => {
 
     expect(res.status).toBe(404)
   })
+
+  it<ApiTestContext>("GET /analytics rejects unauthenticated requests with 401", async ({ app }) => {
+    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/issues/analytics"))
+    expect(res.status).toBe(401)
+  })
+
+  it<ApiTestContext>("GET /analytics returns zeroed counters and empty buckets on an empty project", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "7777777777777777aaaaaaaa"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/issues/analytics`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      ongoing: { total: number }
+      new: { total: number }
+      escalating: { total: number }
+      regressed: { total: number }
+      resolved: { total: number }
+      occurrences: { total: number; buckets: ReadonlyArray<{ bucket: string; value: number }> }
+    }
+    expect(body.ongoing.total).toBe(0)
+    expect(body.new.total).toBe(0)
+    expect(body.escalating.total).toBe(0)
+    expect(body.regressed.total).toBe(0)
+    expect(body.resolved.total).toBe(0)
+    expect(body.occurrences.total).toBe(0)
+    expect(body.occurrences.buckets.every((b) => b.value === 0)).toBe(true)
+    expect(body.occurrences.buckets.length).toBeGreaterThanOrEqual(14)
+  })
+
+  it<ApiTestContext>("GET /analytics rejects an inverted date range with 400", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "8888888888888888aaaaaaaa"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(
+        `http://localhost/v1/projects/${slug}/issues/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-14T00:00:00.000Z`,
+        { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) },
+      ),
+    )
+
+    expect(res.status).toBe(400)
+  })
+
+  it<ApiTestContext>("GET /analytics scopes the bucket series to the requested range", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "9999999999999999aaaaaaaa"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(
+        `http://localhost/v1/projects/${slug}/issues/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-16T00:00:00.000Z`,
+        { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) },
+      ),
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { occurrences: { buckets: ReadonlyArray<{ bucket: string }> } }
+    // 24h range with 12h UTC-aligned buckets → 3 bucket slots (start-inclusive, end-aligned).
+    expect(body.occurrences.buckets.length).toBeGreaterThanOrEqual(2)
+    expect(body.occurrences.buckets.length).toBeLessThanOrEqual(4)
+    expect(body.occurrences.buckets[0]?.bucket.startsWith("2026-04-15")).toBe(true)
+  })
 })

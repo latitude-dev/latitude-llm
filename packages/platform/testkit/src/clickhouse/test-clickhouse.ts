@@ -19,7 +19,10 @@ export interface TestClickHouse {
  */
 function substituteParams(sql: string, params?: Record<string, unknown>): string {
   if (!params) return sql
-  return sql.replace(/\{(\w+):[\w()]+?\}/g, (_match, name: string) => {
+  // ClickHouse type expressions can include commas, single quotes, and spaces
+  // (e.g. `DateTime64(9, 'UTC')` or `Array(String)`), so the placeholder body
+  // accepts everything except a closing brace.
+  return sql.replace(/\{(\w+):[^}]+\}/g, (_match, name: string) => {
     const value = params[name]
     if (value === undefined || value === null) return "NULL"
     if (Array.isArray(value)) {

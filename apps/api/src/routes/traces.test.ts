@@ -312,4 +312,77 @@ describe("Traces Routes Integration", () => {
 
     expect(res.status).toBe(400)
   })
+
+  it<ApiTestContext>("GET /analytics rejects unauthenticated requests with 401", async ({ app }) => {
+    const res = await app.fetch(new Request("http://localhost/v1/projects/foo/traces/analytics"))
+    expect(res.status).toBe(401)
+  })
+
+  it<ApiTestContext>("GET /analytics returns zeroed top-line aggregates and empty buckets on an empty project", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "1111111111111111ffffffff"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/traces/analytics`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      traces: { total: number; buckets: ReadonlyArray<{ bucket: string; value: number }> }
+      cost: { total: number; buckets: ReadonlyArray<{ bucket: string; value: number }> }
+      duration: { median: number; buckets: ReadonlyArray<{ bucket: string; value: number }> }
+      tokens: { total: number; buckets: ReadonlyArray<{ bucket: string; value: number }> }
+      timeToFirstToken: { median: number; buckets: ReadonlyArray<{ bucket: string; value: number }> }
+      spans: { total: number; buckets: ReadonlyArray<{ bucket: string; value: number }> }
+    }
+    expect(body.traces.total).toBe(0)
+    expect(body.cost.total).toBe(0)
+    expect(body.duration.median).toBe(0)
+    expect(body.tokens.total).toBe(0)
+    expect(body.timeToFirstToken.median).toBe(0)
+    expect(body.spans.total).toBe(0)
+    expect(body.traces.buckets.every((b) => b.value === 0)).toBe(true)
+    // Default range = 7 days × 2 12h buckets/day = at least 13 bucket slots.
+    expect(body.traces.buckets.length).toBeGreaterThanOrEqual(13)
+  })
+
+  it<ApiTestContext>("GET /analytics rejects an inverted date range with 400", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "2222222222222222ffffffff"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(
+        `http://localhost/v1/projects/${slug}/traces/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-14T00:00:00.000Z`,
+        { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) },
+      ),
+    )
+
+    expect(res.status).toBe(400)
+  })
+
+  it<ApiTestContext>("GET /analytics scopes the bucket series to the requested range", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "3333333333333333ffffffff"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(
+        `http://localhost/v1/projects/${slug}/traces/analytics?fromIso=2026-04-15T00:00:00.000Z&toIso=2026-04-16T00:00:00.000Z`,
+        { headers: createApiKeyAuthHeaders(tenant.apiKeyToken) },
+      ),
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { traces: { buckets: ReadonlyArray<{ bucket: string }> } }
+    expect(body.traces.buckets.length).toBeGreaterThanOrEqual(2)
+    expect(body.traces.buckets.length).toBeLessThanOrEqual(4)
+    expect(body.traces.buckets[0]?.bucket.startsWith("2026-04-15")).toBe(true)
+  })
 })
