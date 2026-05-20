@@ -6,7 +6,13 @@ import { Effect } from "effect"
 import React from "react"
 import { renderEmail } from "../../../utils/render.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
-import { ALERT_KIND_TO_LABEL, IncidentEventEmail } from "./EmailTemplate.tsx"
+import { IncidentEventEmail } from "./EmailTemplate.tsx"
+
+const ALERT_KIND_TO_SUBJECT: Record<string, string> = {
+  "issue.new": "New issue",
+  "issue.regressed": "Regressed issue",
+  "issue.escalating": "Escalating issue",
+}
 
 const buildSourceUrl = (
   ctx: NotificationEmailRenderContext,
@@ -18,9 +24,6 @@ const buildSourceUrl = (
 
 export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> = (payload, ctx) =>
   Effect.gen(function* () {
-    const userName = ctx.recipient.name ?? "there"
-    const label = ALERT_KIND_TO_LABEL[payload.incidentKind]
-
     const issues = yield* IssueRepository
     const issue = yield* issues.findById(IssueId(payload.sourceId)).pipe(
       Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
@@ -34,15 +37,23 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
     )
     const issueRef = issue?.name ?? "an issue"
     const issueUrl = buildSourceUrl(ctx, payload)
+    const heading = ALERT_KIND_TO_SUBJECT[payload.incidentKind] ?? "Incident"
 
     const html = yield* Effect.tryPromise({
       try: () =>
         renderEmail(
           <IncidentEventEmail
-            userName={userName}
             incidentKind={payload.incidentKind}
+            severity={payload.severity}
+            issueId={payload.sourceId}
             issueName={issue?.name ?? undefined}
+            issueDescription={issue?.description ?? undefined}
             issueUrl={issueUrl}
+            notificationCreatedAt={ctx.notificationCreatedAt}
+            organizationName={ctx.organization.name}
+            projectName={ctx.project?.name}
+            tags={payload.tags}
+            sampleExcerpt={payload.sampleExcerpt}
           />,
         ),
       catch: (cause) => ({
@@ -54,8 +65,8 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
 
     return {
       html,
-      subject: `[Latitude] ${label}: ${issueRef}`,
-      text: `Hi ${userName},\n\n${label}: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
+      subject: `${heading}: ${issueRef}`,
+      text: `${heading}: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
     }
   })
 

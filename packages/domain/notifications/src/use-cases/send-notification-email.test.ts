@@ -1,3 +1,4 @@
+import { type Organization, OrganizationRepository } from "@domain/organizations"
 import { type Project, ProjectRepository } from "@domain/projects"
 import { generateId, NotFoundError, NotificationId, OrganizationId, ProjectId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
@@ -60,6 +61,25 @@ function setup(opts: { readonly project?: Project | null | typeof DEFAULT_PROJEC
           updatedAt: new Date("2026-05-01T00:00:00Z"),
         } satisfies Project)
       : opts.project
+  const organization: Organization = {
+    id: orgId,
+    name: "Acme Inc.",
+    slug: "acme",
+    logo: null,
+    metadata: null,
+    settings: null,
+    createdAt: new Date("2026-05-01T00:00:00Z"),
+    updatedAt: new Date("2026-05-01T00:00:00Z"),
+  }
+  const organizationRepo = OrganizationRepository.of({
+    findById: (id) =>
+      id === orgId ? Effect.succeed(organization) : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+    listByUserId: () => Effect.die("not used"),
+    save: () => Effect.die("not used"),
+    delete: () => Effect.die("not used"),
+    countBySlug: () => Effect.die("not used"),
+  })
+
   const projectRepo = ProjectRepository.of({
     findById: (id) =>
       project && project.id === id
@@ -93,6 +113,7 @@ function setup(opts: { readonly project?: Project | null | typeof DEFAULT_PROJEC
   const layer = Layer.mergeAll(
     Layer.succeed(UserRepository, userRepo),
     Layer.succeed(NotificationRepository, notificationRepo),
+    Layer.succeed(OrganizationRepository, organizationRepo),
     Layer.succeed(ProjectRepository, projectRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
   )

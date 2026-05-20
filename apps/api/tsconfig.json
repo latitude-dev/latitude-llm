@@ -5,5 +5,5 @@
     "rootDir": "src",
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

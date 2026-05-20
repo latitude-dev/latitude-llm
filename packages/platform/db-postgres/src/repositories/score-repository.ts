@@ -449,18 +449,23 @@ export const ScoreRepositoryLive = Layer.effect(
       listByIssueId: ({
         projectId,
         issueId,
+        source,
         options,
       }: {
         readonly projectId: ProjectId
         readonly issueId: IssueId
+        readonly source?: ScoreSource
         readonly options?: ScoreListOptions
-      }) =>
-        list({
-          baseWhere:
-            and(eq(scores.projectId, projectId), eq(scores.issueId, issueId as string)) ??
-            eq(scores.projectId, projectId),
-          options,
-        }),
+      }) => {
+        const filters: SQL[] = [eq(scores.projectId, projectId), eq(scores.issueId, issueId as string)]
+        if (source !== undefined) filters.push(eq(scores.source, source))
+        // `filters` always carries the project + issue conditions, so
+        // `and(...)` never returns undefined here — assert for the
+        // narrower drizzle signature on `baseWhere`.
+        const baseWhere = and(...filters)
+        if (baseWhere === undefined) throw new Error("unreachable: listByIssueId built no filters")
+        return list({ baseWhere, options })
+      },
 
       findPublishedSystemAnnotationByTraceAndFeedback: ({
         projectId,

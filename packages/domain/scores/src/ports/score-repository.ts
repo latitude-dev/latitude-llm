@@ -99,6 +99,8 @@ export interface ScoreRepositoryShape {
   listByIssueId(input: {
     readonly projectId: ProjectId
     readonly issueId: IssueId
+    /** Optional filter by score source (e.g. `annotation` or `evaluation`). */
+    readonly source?: ScoreSource
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   findPublishedSystemAnnotationByTraceAndFeedback(input: {

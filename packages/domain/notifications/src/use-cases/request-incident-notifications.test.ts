@@ -4,13 +4,17 @@ import {
   type AlertIncidentRepositoryShape,
   alertIncidentSchema,
 } from "@domain/alerts"
+import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
+import type { AnnotationScore, EvaluationScore } from "@domain/scores"
 import {
   type IssueEscalationThresholdSeries,
   type IssueOccurrenceBucket,
+  type IssueTagsAggregate,
   ScoreAnalyticsRepository,
+  ScoreRepository,
 } from "@domain/scores"
-import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
+import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   AlertIncidentId,
   ChSqlClient,
@@ -24,8 +28,11 @@ import {
   UserId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import { type User, UserRepository } from "@domain/users"
+import { createFakeUserRepository } from "@domain/users/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import type { IncidentEventPayload, IncidentOpenedPayload } from "../entities/notification.ts"
 import { requestIncidentNotificationsUseCase } from "./request-incident-notifications.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -36,6 +43,13 @@ interface SetupOpts {
   readonly projectSettings?: ProjectSettings | null
   readonly thresholdBuckets?: readonly { bucket: string; thresholdCount: number }[]
   readonly occurrenceBuckets?: readonly IssueOccurrenceBucket[]
+  readonly tags?: readonly string[]
+  readonly latestAnnotation?: AnnotationScore | null
+  readonly latestEvaluation?: EvaluationScore | null
+  /** Pre-seeded users keyed by id; the producer fetches the annotator via UserRepository. */
+  readonly users?: Iterable<User>
+  /** Pre-seeded evaluations keyed by id; the producer fetches the evaluation via EvaluationRepository. */
+  readonly evaluations?: Iterable<Evaluation>
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -131,13 +145,58 @@ function setup(opts: SetupOpts = {}) {
       Effect.succeed([
         { issueId: incident.sourceId as IssueEscalationThresholdSeries["issueId"], buckets: thresholdBuckets },
       ]),
+    aggregateTagsByIssues: () =>
+      Effect.succeed([
+        {
+          issueId: incident.sourceId as IssueTagsAggregate["issueId"],
+          tags: opts.tags ?? [],
+        },
+      ]),
+  })
+
+  const annotation = opts.latestAnnotation
+  const evaluation = opts.latestEvaluation
+  const { repository: scoreRepository } = createFakeScoreRepository({
+    listByIssueId: ({ source }) => {
+      const pick = source === "annotation" ? annotation : source === "evaluation" ? evaluation : null
+      return Effect.succeed({
+        items: pick ? [pick] : [],
+        hasMore: false,
+        limit: 1,
+        offset: 0,
+      })
+    },
+  })
+
+  const { repository: userRepository, users } = createFakeUserRepository()
+  for (const user of opts.users ?? []) users.set(user.id, user)
+
+  const evaluationsById = new Map<string, Evaluation>()
+  for (const e of opts.evaluations ?? []) evaluationsById.set(e.id, e)
+  const evaluationRepository = EvaluationRepository.of({
+    findById: (id) => {
+      const found = evaluationsById.get(id)
+      if (!found) return Effect.fail(new NotFoundError({ entity: "Evaluation", id }))
+      return Effect.succeed(found)
+    },
+    save: () => Effect.die("not used"),
+    listByProjectId: () => Effect.die("not used"),
+    listByIssueId: () => Effect.die("not used"),
+    listByIssueIds: () => Effect.die("not used"),
+    archive: () => Effect.die("not used"),
+    unarchive: () => Effect.die("not used"),
+    softDelete: () => Effect.die("not used"),
+    softDeleteByIssueId: () => Effect.die("not used"),
   })
 
   const layer = Layer.mergeAll(
     Layer.succeed(AlertIncidentRepository, incidentRepo),
+    Layer.succeed(EvaluationRepository, evaluationRepository),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ScoreAnalyticsRepository, analytics),
+    Layer.succeed(ScoreRepository, scoreRepository),
     Layer.succeed(SettingsReader, settings),
+    Layer.succeed(UserRepository, userRepository),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: orgId })),
   )
@@ -268,5 +327,452 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(result.status).toBe("skipped")
     if (result.status !== "skipped") throw new Error("unreachable")
     expect(result.reason).toBe("no-recipients")
+  })
+
+  it("snapshots top-5 tags alphabetically on incident.event", async () => {
+    const { incidentId, layer } = setup({
+      tags: ["zebra", "alpha", "Charlie", "bravo", "delta", "echo", "foxtrot"],
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.tags).toEqual(["alpha", "bravo", "Charlie", "delta", "echo"])
+  })
+
+  it("omits tags when the issue has none", async () => {
+    const { incidentId, layer } = setup({ tags: [], memberUserIds: [cuid("ua")] })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.tags).toBeUndefined()
+  })
+
+  it("skips tags on incident.closed (recovery emails don't show source context)", async () => {
+    const { incidentId, layer } = setup({
+      incident: {
+        kind: "issue.escalating",
+        severity: "high",
+        startedAt: new Date("2026-05-07T10:00:00Z"),
+        endedAt: new Date("2026-05-07T10:30:00Z"),
+      },
+      tags: ["env:prod", "service:agents"],
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "closed" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload
+    expect(payload).toBeDefined()
+    if (!payload) throw new Error("unreachable")
+    expect((payload as { tags?: unknown }).tags).toBeUndefined()
+  })
+
+  it("snapshots sampleExcerpt with user attribution for human annotations", async () => {
+    const annotatorId = cuid("ann")
+    const annotation = {
+      id: cuid("score-a"),
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      sessionId: null,
+      traceId: null,
+      spanId: null,
+      simulationId: null,
+      issueId: cuid("i"),
+      value: 0,
+      passed: false,
+      feedback: "clusterable",
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId,
+      createdAt: new Date("2026-05-07T09:50:00Z"),
+      updatedAt: new Date("2026-05-07T09:50:00Z"),
+      source: "annotation" as const,
+      sourceId: "UI" as const,
+      metadata: { rawFeedback: "Reviewer flagged a tool-call loop." },
+    } as unknown as AnnotationScore
+
+    const annotator: User = {
+      id: UserId(annotatorId),
+      email: "anna@acme.com",
+      name: "Anna Bosch",
+      jobTitle: null,
+      phoneNumber: null,
+      emailVerified: true,
+      image: "https://cdn.acme.com/avatars/anna.png",
+      role: "user",
+      notificationPreferences: null,
+      createdAt: new Date(),
+    }
+
+    const { incidentId, layer } = setup({
+      latestAnnotation: annotation,
+      users: [annotator],
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.sampleExcerpt).toEqual({
+      text: "Reviewer flagged a tool-call loop.",
+      truncated: false,
+      author: {
+        kind: "user",
+        name: "Anna Bosch",
+        imageUrl: "https://cdn.acme.com/avatars/anna.png",
+      },
+    })
+  })
+
+  it("snapshots sampleExcerpt with system attribution for Latitude-authored annotations", async () => {
+    const annotation = {
+      id: cuid("score-a"),
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      sessionId: null,
+      traceId: null,
+      spanId: null,
+      simulationId: null,
+      issueId: cuid("i"),
+      value: 0,
+      passed: false,
+      feedback: "clusterable",
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt: new Date("2026-05-07T09:50:00Z"),
+      updatedAt: new Date("2026-05-07T09:50:00Z"),
+      source: "annotation" as const,
+      sourceId: "SYSTEM" as const,
+      metadata: { rawFeedback: "Detected token leakage in three consecutive responses." },
+    } as unknown as AnnotationScore
+
+    const { incidentId, layer } = setup({
+      latestAnnotation: annotation,
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.sampleExcerpt?.author).toEqual({ kind: "system" })
+  })
+
+  it("falls back to the latest evaluation when no annotation exists", async () => {
+    const evaluationId = cuid("eval")
+    const evaluationScore = {
+      id: cuid("score-e"),
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      sessionId: null,
+      traceId: null,
+      spanId: null,
+      simulationId: null,
+      issueId: cuid("i"),
+      value: 0,
+      passed: false,
+      feedback: "Output mentioned the customer's competitor.",
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt: new Date("2026-05-07T09:55:00Z"),
+      updatedAt: new Date("2026-05-07T09:55:00Z"),
+      source: "evaluation" as const,
+      sourceId: evaluationId,
+      metadata: { evaluationHash: "abc" },
+    } as unknown as EvaluationScore
+
+    // Producer only reads `name`; the rest is shape-only.
+    const evaluation = {
+      id: evaluationId,
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      issueId: cuid("i"),
+      name: "warranty-judge",
+      description: "",
+      script: "noop",
+      trigger: {},
+      alignment: {},
+      alignedAt: new Date(),
+      archivedAt: null,
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as Evaluation
+
+    const { incidentId, layer } = setup({
+      latestAnnotation: null,
+      latestEvaluation: evaluationScore,
+      evaluations: [evaluation],
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload as IncidentEventPayload
+    expect(payload.sampleExcerpt).toEqual({
+      text: "Output mentioned the customer's competitor.",
+      truncated: false,
+      author: { kind: "evaluation", name: "warranty-judge" },
+    })
+  })
+
+  it("truncates a long annotation excerpt to 200 chars and flags truncated", async () => {
+    const longText = "x".repeat(500)
+    const annotation = {
+      id: cuid("score-a"),
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      sessionId: null,
+      traceId: null,
+      spanId: null,
+      simulationId: null,
+      issueId: cuid("i"),
+      value: 0,
+      passed: false,
+      feedback: "f",
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      source: "annotation" as const,
+      sourceId: "UI" as const,
+      metadata: { rawFeedback: longText },
+    } as unknown as AnnotationScore
+
+    const { incidentId, layer } = setup({
+      latestAnnotation: annotation,
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const truncatedPayload = result.requests[0]?.payload as IncidentEventPayload
+    expect(truncatedPayload.sampleExcerpt?.truncated).toBe(true)
+    expect(truncatedPayload.sampleExcerpt?.text.length).toBe(200)
+  })
+
+  it("snapshots breach scalars on incident.opened when entrySignals are present", async () => {
+    const { incidentId, layer } = setup({
+      incident: {
+        kind: "issue.escalating",
+        severity: "high",
+        startedAt: new Date("2026-05-07T10:00:00Z"),
+        endedAt: null,
+        entrySignals: {
+          expected1h: 4.2,
+          expected6hPerHour: 4,
+          stddev1h: 1.1,
+          stddev6hPerHour: 1,
+          kShort: 3,
+          kLong: 2,
+          entryThreshold1h: 7.5,
+          entryThreshold6hPerHour: 7,
+          entryCount24h: 50,
+        },
+      },
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload
+    if (!payload || !("breach" in payload)) throw new Error("expected breach on opened payload")
+    expect(payload.breach?.baselineRate).toBe(4.2)
+    expect(payload.breach?.threshold).toBe(7.5)
+    // triggerRate is derived from peak trend count × per-hour scale; verify it's a positive number.
+    expect(payload.breach?.triggerRate).toBeGreaterThan(0)
+  })
+
+  it("snapshots sampleExcerpt on incident.opened too (escalating gets the same triage excerpt)", async () => {
+    const annotation = {
+      id: cuid("score-a"),
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      sessionId: null,
+      traceId: null,
+      spanId: null,
+      simulationId: null,
+      issueId: cuid("i"),
+      value: 0,
+      passed: false,
+      feedback: "f",
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      source: "annotation" as const,
+      sourceId: "UI" as const,
+      metadata: { rawFeedback: "Annotator flagged the response for hallucinating a refund policy." },
+    } as unknown as AnnotationScore
+
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.escalating", severity: "high", endedAt: null },
+      latestAnnotation: annotation,
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.kind).toBe("incident.opened")
+    const payload = result.requests[0]?.payload as IncidentOpenedPayload
+    expect(payload.sampleExcerpt).toEqual({
+      text: "Annotator flagged the response for hallucinating a refund policy.",
+      truncated: false,
+      author: { kind: "system" },
+    })
+  })
+
+  it("skips sampleExcerpt on incident.closed (recovery emails focus on the descent)", async () => {
+    const annotation = {
+      id: cuid("score-a"),
+      organizationId: cuid("o"),
+      projectId: cuid("p"),
+      sessionId: null,
+      traceId: null,
+      spanId: null,
+      simulationId: null,
+      issueId: cuid("i"),
+      value: 0,
+      passed: false,
+      feedback: "f",
+      error: null,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      source: "annotation" as const,
+      sourceId: "UI" as const,
+      metadata: { rawFeedback: "Some feedback here." },
+    } as unknown as AnnotationScore
+
+    const { incidentId, layer } = setup({
+      incident: {
+        kind: "issue.escalating",
+        severity: "high",
+        startedAt: new Date("2026-05-07T10:00:00Z"),
+        endedAt: new Date("2026-05-07T10:30:00Z"),
+      },
+      latestAnnotation: annotation,
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "closed" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.kind).toBe("incident.closed")
+    expect((result.requests[0]?.payload as { sampleExcerpt?: unknown }).sampleExcerpt).toBeUndefined()
+  })
+
+  it("snapshots recovery durationMs on incident.closed", async () => {
+    const { incidentId, layer } = setup({
+      incident: {
+        kind: "issue.escalating",
+        severity: "high",
+        startedAt: new Date("2026-05-07T10:00:00Z"),
+        endedAt: new Date("2026-05-07T10:32:00Z"),
+      },
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "closed" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload
+    if (!payload || !("recovery" in payload)) throw new Error("expected recovery on closed payload")
+    expect(payload.recovery.durationMs).toBe(32 * 60 * 1000)
   })
 })

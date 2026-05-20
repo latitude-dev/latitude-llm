@@ -8,6 +8,7 @@ import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
 import { accountPath, createAccountRoutes } from "./account.ts"
 import { annotationsPath, createAnnotationsRoutes } from "./annotations.ts"
 import { apiKeysPath, createApiKeysRoutes } from "./api-keys.ts"
+import { registerIncidentTrendChartRoute } from "./charts/incident-trend.ts"
 import { createDatasetsRoutes, datasetsPath } from "./datasets.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createIncidentsRoutes, incidentsPath } from "./incidents.ts"
@@ -29,6 +30,10 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
 
   registerHealthRoute({ app })
   registerWellKnownRoutes({ app })
+  registerIncidentTrendChartRoute({
+    app,
+    ...(options.adminDatabase ? { adminDatabase: options.adminDatabase } : {}),
+  })
 
   v1.use("*", async (c, next) => {
     c.set("db", options.database.db)

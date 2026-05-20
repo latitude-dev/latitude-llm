@@ -4,6 +4,7 @@
 export type { EmailContent, TemplatedEmail } from "./entities/email.ts"
 export { emailContentSchema, templatedEmailSchema } from "./entities/email.ts"
 export { EmailSendError } from "./errors.ts"
+export { buildChartUrl } from "./helpers/chart-url.ts"
 export type { EmailMessage, EmailSender } from "./ports/email-sender.ts"
 export { type DatasetExportEmailData, datasetExportTemplate } from "./templates/dataset-export/index.tsx"
 export { type ExportFailedEmailData, exportFailedTemplate } from "./templates/export-failed/index.tsx"

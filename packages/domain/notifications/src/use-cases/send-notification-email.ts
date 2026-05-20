@@ -1,3 +1,4 @@
+import { OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import type { NotFoundError, NotificationId, RepositoryError, SqlClient } from "@domain/shared"
 import { UserRepository } from "@domain/users"
@@ -30,6 +31,17 @@ export interface NotificationEmailProject {
 }
 
 /**
+ * Minimal organization snapshot threaded to renderers so emails can
+ * surface the org name in the heading subtitle / metadata table.
+ * Looked up server-side at email-send time for the same staleness
+ * reason as the project snapshot.
+ */
+export interface NotificationEmailOrganization {
+  readonly id: string
+  readonly name: string
+}
+
+/**
  * Boundary contract that channel adapters (today: `@domain/email`'s
  * notification template registry) implement. Keeps `@domain/notifications`
  * unaware of React Email internals — the use case just calls back.
@@ -43,9 +55,13 @@ export interface NotificationEmailProject {
  * `SqlClient` requirement reaches this contract.
  */
 export type NotificationEmailRenderer = (input: {
+  readonly notificationId: NotificationId
+  /** When the notification row was created. Threaded through to anchor "X ago" timestamps in the rendered copy. */
+  readonly notificationCreatedAt: Date
   readonly kind: NotificationKind
   readonly payload: Record<string, unknown>
   readonly recipient: NotificationEmailRecipient
+  readonly organization: NotificationEmailOrganization
   /** `null` when the notification has no `projectId`, or when the project lookup missed. */
   readonly project: NotificationEmailProject | null
 }) => Effect.Effect<RenderedEmailBoundary, RenderNotificationEmailError, SqlClient>
@@ -113,6 +129,7 @@ export const sendNotificationEmailUseCase =
 
       const notifications = yield* NotificationRepository
       const users = yield* UserRepository
+      const organizations = yield* OrganizationRepository
       const projects = yield* ProjectRepository
 
       const notification: Notification = yield* notifications.findById(input.notificationId)
@@ -127,6 +144,14 @@ export const sendNotificationEmailUseCase =
 
       const user = yield* users.findById(notification.userId)
 
+      // Organization snapshot. Required (every notification has an org)
+      // — fail loud if the row disappears between create and send.
+      const organizationEntity = yield* organizations.findById(notification.organizationId)
+      const organization: NotificationEmailOrganization = {
+        id: organizationEntity.id,
+        name: organizationEntity.name,
+      }
+
       // Optional project snapshot. Catch NotFoundError so a project
       // deletion between request and send doesn't break the email.
       const project: NotificationEmailProject | null = notification.projectId
@@ -137,9 +162,12 @@ export const sendNotificationEmailUseCase =
         : null
 
       const rendered = yield* renderEmail({
+        notificationId: notification.id,
+        notificationCreatedAt: notification.createdAt,
         kind: notification.kind,
         payload: notification.payload,
         recipient: { userId: user.id, name: user.name, email: user.email },
+        organization,
         project,
       })
 
@@ -154,5 +182,5 @@ export const sendNotificationEmailUseCase =
     }).pipe(Effect.withSpan("notifications.sendNotificationEmail")) as Effect.Effect<
       { readonly sent: boolean },
       SendNotificationEmailError,
-      SqlClient | NotificationRepository | ProjectRepository | UserRepository
+      SqlClient | NotificationRepository | OrganizationRepository | ProjectRepository | UserRepository
     >

@@ -196,6 +196,9 @@ importers:
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
+      '@domain/notifications':
+        specifier: workspace:*
+        version: link:../../packages/domain/notifications
       '@domain/oauth-keys':
         specifier: workspace:*
         version: link:../../packages/domain/oauth-keys
@@ -274,12 +277,21 @@ importers:
       '@repo/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      '@resvg/resvg-js':
+        specifier: 2.6.2
+        version: 2.6.2
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
       hono:
         specifier: 4.12.16
         version: 4.12.16
+      react:
+        specifier: 'catalog:'
+        version: 19.2.5
+      satori:
+        specifier: 0.18.4
+        version: 0.18.4
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -293,6 +305,9 @@ importers:
       '@platform/testkit':
         specifier: workspace:*
         version: link:../../packages/platform/testkit
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
       tsdown:
         specifier: 'catalog:'
         version: 0.21.9(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.19.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@6.0.3)
@@ -1294,6 +1309,9 @@ importers:
       '@domain/alerts':
         specifier: workspace:*
         version: link:../alerts
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../evaluations
       '@domain/issues':
         specifier: workspace:*
         version: link:../issues

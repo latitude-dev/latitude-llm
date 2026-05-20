@@ -2,9 +2,13 @@
 
 export type {
   CustomMessagePayload,
+  IncidentBreach,
   IncidentClosedPayload,
   IncidentEventPayload,
   IncidentOpenedPayload,
+  IncidentRecovery,
+  IncidentSampleAuthor,
+  IncidentSampleExcerpt,
   IncidentTrend,
   Notification,
   NotificationKind,
@@ -13,9 +17,13 @@ export type {
 export {
   customMessagePayloadSchema,
   groupOf,
+  incidentBreachSchema,
   incidentClosedPayloadSchema,
   incidentEventPayloadSchema,
   incidentOpenedPayloadSchema,
+  incidentRecoverySchema,
+  incidentSampleExcerptSchema,
+  incidentTagsSchema,
   incidentTrendPointSchema,
   incidentTrendSchema,
   NOTIFICATION_KIND_META,

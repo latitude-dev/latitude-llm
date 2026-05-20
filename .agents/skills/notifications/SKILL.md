@@ -84,6 +84,17 @@ Group keys are persisted in `users.notification_preferences` jsonb — picking a
 
 Source events, the producer step, the in-app feed, and the kind registry are all unchanged.
 
+## Embedding server-rendered images in emails
+
+Pattern lives in `apps/api/src/routes/charts/incident-trend.ts` — useful when a new kind wants a richer email visual than HTML/CSS can produce.
+
+1. **URL**: build at render time from a stable id (notification id). The `buildChartUrl` helper in `@domain/email` embeds the id as a query param. No signing today — the CUID is unguessable and the chart payload is project-internal trend data. If you're embedding more sensitive data (PII, credentials, content the recipient shouldn't see), HMAC-sign the id first; the chart route's TODO points at the contained change.
+2. **Render**: top-level `app.get` route in `apps/api`. Use `satori` (JSX → SVG) + `@resvg/resvg-js` (SVG → PNG). Already in `apps/api`'s deps.
+3. **Auth**: unauthenticated. The route uses the admin Postgres client (RLS bypass — no org context until the row is loaded). Inject the client via the route factory's `adminDatabase` parameter so tests can hand it a PGlite-backed admin client.
+4. **Fallback**: missing id, row gone, wrong kind, or unparseable payload → 200 with a 1×1 transparent PNG so the `<Img>` keeps rendering an element.
+5. **Cache**: `Cache-Control: public, max-age=31536000, immutable`. Mail-client image proxies cache the response.
+6. **Email side**: build the URL inside the renderer Effect via `buildChartUrl` from `@domain/email`. `NotificationEmailRenderContext` carries `notificationId` + `apiBaseUrl`, both resolved once at email-worker boot.
+
 ## Idempotency rules
 
 - Producers publish with deterministic `dedupeKey`. The queue layer drops duplicate emits.

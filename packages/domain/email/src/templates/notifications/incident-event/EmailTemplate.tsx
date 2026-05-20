@@ -1,4 +1,5 @@
-import type { AlertIncidentKind } from "@domain/shared"
+import type { IncidentSampleExcerpt } from "@domain/notifications"
+import type { AlertIncidentKind, AlertSeverity } from "@domain/shared"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -7,45 +8,91 @@ import { ContainerLayout } from "../../../components/ContainerLayout.tsx"
 import { EmailButton } from "../../../components/EmailButton.tsx"
 import { EmailText } from "../../../components/EmailText.tsx"
 import { emailDesignTokens } from "../../../tokens/design-system.ts"
+import {
+  EmailMetadataTable,
+  formatScope,
+  IssueIdFooter,
+  IssueTimestamp,
+  SampleExcerptCard,
+  SectionHeader,
+  SeverityBadge,
+  TagsChips,
+} from "../-incident-components.tsx"
 
-/**
- * Per-alert-kind copy for one-shot incidents (`incident.event`). Only
- * `issue.new` and `issue.regressed` reach this template today since
- * `issue.escalating` is a sustained kind routed through
- * `incident.opened` / `incident.closed`.
- */
-export const ALERT_KIND_TO_LABEL: Record<AlertIncidentKind, string> = {
+const ALERT_KIND_TO_HEADING: Record<AlertIncidentKind, string> = {
   "issue.new": "New issue",
   "issue.regressed": "Regressed issue",
   "issue.escalating": "Escalating issue",
 }
 
-const ALERT_KIND_TO_DESCRIPTION: Record<AlertIncidentKind, string> = {
-  "issue.new": "An issue was just detected for the first time in this project.",
-  "issue.regressed": "A previously-resolved issue is producing occurrences again.",
-  "issue.escalating": "An issue's occurrence rate crossed the escalation threshold.",
+const ALERT_KIND_TO_SUBTITLE: Record<AlertIncidentKind, string> = {
+  "issue.new": "We notified everyone watching this project of the new issue.",
+  "issue.regressed": "We notified everyone watching this project — this issue had previously been resolved.",
+  "issue.escalating":
+    "We notified everyone watching this project — the issue's occurrence rate crossed the escalation threshold.",
 }
 
 interface IncidentEventEmailProps {
-  readonly userName: string
   readonly incidentKind: AlertIncidentKind
+  readonly severity: AlertSeverity
+  readonly issueId: string
   readonly issueName: string | undefined
+  readonly issueDescription: string | undefined
   readonly issueUrl: string | undefined
+  readonly notificationCreatedAt: Date
+  readonly organizationName: string
+  readonly projectName: string | undefined
+  readonly tags: readonly string[] | undefined
+  readonly sampleExcerpt: IncidentSampleExcerpt | undefined
 }
 
-export function IncidentEventEmail({ userName, incidentKind, issueName, issueUrl }: IncidentEventEmailProps) {
-  const label = ALERT_KIND_TO_LABEL[incidentKind]
-  const description = ALERT_KIND_TO_DESCRIPTION[incidentKind]
+export function IncidentEventEmail({
+  incidentKind,
+  severity,
+  issueId,
+  issueName,
+  issueDescription,
+  issueUrl,
+  notificationCreatedAt,
+  organizationName,
+  projectName,
+  tags,
+  sampleExcerpt,
+}: IncidentEventEmailProps) {
+  const heading = ALERT_KIND_TO_HEADING[incidentKind]
+  const subtitle = ALERT_KIND_TO_SUBTITLE[incidentKind]
   const issueRef = issueName ?? "an issue"
+  const scope = formatScope(organizationName, projectName)
+
+  const metadataRows = [
+    { label: "Project", value: scope },
+    { label: "Severity", value: <SeverityBadge severity={severity} /> },
+    ...(tags && tags.length > 0 ? [{ label: "Tags", value: <TagsChips tags={tags} /> }] : []),
+  ]
 
   return (
-    <ContainerLayout previewText={`${label}: ${issueRef}`}>
+    <ContainerLayout previewText={`${heading}: ${issueRef}`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        {`${label}: ${issueRef}`}
+        {heading}
       </EmailText>
-      <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`Hi ${userName}, ${description}`}
-      </EmailText>
+      <EmailText variant="body">{subtitle}</EmailText>
+
+      <SectionHeader label="Issue" />
+
+      <EmailText variant="heading">{issueRef}</EmailText>
+      {issueDescription ? (
+        <EmailText variant="bodySmall" className="text-muted-foreground">
+          {issueDescription}
+        </EmailText>
+      ) : null}
+
+      <IssueTimestamp timestamp={notificationCreatedAt} />
+
+      <EmailMetadataTable rows={metadataRows} />
+
+      {sampleExcerpt ? <SampleExcerptCard excerpt={sampleExcerpt} /> : null}
+
+      <IssueIdFooter issueId={issueId} />
 
       {issueUrl ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
@@ -57,8 +104,19 @@ export function IncidentEventEmail({ userName, incidentKind, issueName, issueUrl
 }
 
 IncidentEventEmail.PreviewProps = {
-  userName: "Alex",
   incidentKind: "issue.new",
+  severity: "medium",
+  issueId: "dds0rt8sqgpuku4u4wabze9r",
   issueName: "Token leakage in responses",
+  issueDescription: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
   issueUrl: "https://console.latitude.so/projects/sample-project/issues?issueId=preview-issue",
+  notificationCreatedAt: new Date("2026-03-18T10:05:00Z"),
+  organizationName: "Acme Inc.",
+  projectName: "Support agent",
+  tags: ["env:prod", "model:claude-3.5-sonnet", "service:agents"],
+  sampleExcerpt: {
+    text: "Reviewer flagged a tool-call loop after the third retry — model kept invoking `search` with the same query.",
+    truncated: false,
+    author: { kind: "user", name: "Anna Bosch", imageUrl: null },
+  },
 } satisfies IncidentEventEmailProps

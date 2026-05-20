@@ -59,6 +59,47 @@ notifications:delete-by-project
 
 Per-channel **claim-then-act** ordering (stamp `emailed_at` before sending) guarantees zero duplicate emails under at-least-once redelivery, at the cost of dropping the email if SMTP fails mid-claim. Documented trade-off (per design discussion).
 
+## Incident email payloads + chart
+
+Sustained-incident emails (`incident.opened` / `incident.closed`) embed a server-rendered trend chart sized so recipients can triage from inbox without clicking through. All incident payloads carry a generic source base (`sourceType`, `sourceId`, `incidentKind`, `severity`) plus per-kind extras:
+
+| Field | Where it lives | Snapshotted on |
+| --- | --- | --- |
+| `trend.points` | Sustained kinds | `incident.opened`, `incident.closed` — 3h × 10-min buckets (18 points) ending at the transition timestamp. Each point has `{ t, count, threshold \| null }`. |
+| `tags` | Top-5 alphabetical | `incident.event`, `incident.opened`. From `ScoreAnalyticsRepository.aggregateTagsByIssues` with a 30-day lookback. Closed skips — the email focuses on recovery. |
+| `sampleExcerpt` | One-shot triage card | `incident.event` and `incident.opened`. Prefers latest annotation `rawFeedback`; falls back to latest evaluation `feedback`. Capped at 200 chars; `truncated: true` when cropped. Carries an `author` discriminated union — `{ kind: "user", name, imageUrl }` (human annotation), `{ kind: "system" }` (Latitude-authored, i.e. `annotatorId IS NULL`), or `{ kind: "evaluation", name }` (eval fallback). The producer snapshots attribution at notification time via `UserRepository`/`EvaluationRepository`, so the email renders without further lookups. Closed kind skips — the recovery email focuses on the descent, not the source. |
+| `breach { triggerRate, baselineRate, threshold }` | Per-hour rates | `incident.opened` only, when the alert incident has `entrySignals`. `baselineRate` = `expected1h`, `threshold` = `entryThreshold1h`, `triggerRate` is derived from the peak trend bucket converted to per-hour. Omitted on legacy incidents missing `entrySignals`. |
+| `recovery.durationMs` | `endedAt - startedAt` | `incident.closed` only. Drives the "elevated for X" copy in the email. |
+
+### Email layout
+
+The three incident emails follow a Sentry-style sectioned shape so recipients can scan section labels and drill into the part that matters:
+
+1. **Heading + subtitle** — alert-type heading (`New issue` / `Regressed issue` / `Escalating issue` / `Resolved escalation`) and an audience subtitle that explains who got the email and why.
+2. **`ISSUE` section** — issue name, description (when set on the entity), `{absolute timestamp}   ID: …{shortId}` row, then a 2-column metadata table with Project (`{orgName} / {projectName}`), Severity badge, and Tags chips when present.
+3. **Per-kind section** — `BREACH` (opened, with breach copy + chart), `RECOVERY` (closed, with elapsed-time copy + chart), or the **sample-excerpt card** (event/opened, no eyebrow — a "From an annotation:" / "From an evaluation:" label outside the card, then an in-app-style author row (avatar + name, or Latitude monogram + "Agent" badge, or just the evaluation name) followed by the quoted feedback text).
+4. **View issue CTA** at the bottom.
+
+Shared building blocks live in `packages/domain/email/src/templates/notifications/-incident-components.tsx`: `SectionHeader`, `EmailMetadataTable`, `SeverityBadge`, `TagsChips`, `TimestampIdRow`, `IncidentTrendChartImage`, `SampleExcerptCard`, plus the `formatRatePerHour` / `humanizeDurationMs` / `formatScope` helpers. Renderers consume `ctx.notificationCreatedAt` and `ctx.organization` (threaded through the send-notification-email use case) for the timestamp + "Acme / project-name" scope line.
+
+Subject lines: no `[Latitude]` prefix. The alert-type prefix (`New issue:`, `Escalating:`, `Resolved: escalation on …`) is the actual inbox-skim signal.
+
+### Server-rendered trend chart
+
+The chart embedded in sustained-incident emails is rendered server-side:
+
+- **Route:** `GET /charts/incident-trend?nid=<notificationId>` in `apps/api`. Unauthenticated — the route reads the row by `notificationId` and renders. The CUID (~128 bits of entropy) is the lookup key; enumeration isn't feasible at that key size.
+- **Rendering:** `satori` builds a 600×200 SVG from the snapshotted `trend.points` (bars for `count`, dashed per-bucket curve for `threshold`, peak bucket emphasised, optional baseline reference line when the payload has `breach`). `@resvg/resvg-js` rasterises to PNG.
+- **DB access:** the route uses the admin Postgres client (RLS bypass) — there's no organization context to scope on, and the chart payload is project-internal trend data with no PII / credentials.
+- **Fallback:** missing `nid`, notification row not found, wrong kind, or unparseable payload → 1×1 transparent PNG returned with the same 200 status so the `<Img>` element in the email keeps rendering an image (not an alt-text fallback).
+- **Cache:** `Cache-Control: public, max-age=31536000, immutable`. Mail-client image proxies cache the PNG.
+
+If `notificationId` ever leaks to less-trusted surfaces, or chart payloads start carrying more sensitive data, the route handler has a `TODO` flagging the swap to an HMAC-signed token — contained change: sign in `buildChartUrl`, verify in the route.
+
+### Testing emails locally
+
+`pnpm --filter @app/workers test-emails:incidents` publishes a `notification-email:send` task for every seeded incident notification (event / opened / closed) in the Acme org. Prereqs: docker compose up, the `notification-emailer` worker running (`pnpm --filter @app/workers dev`), and the `email-notifications` flag on. Emails land in Mailpit at [localhost:8025](http://localhost:8025) within a second. Pass `--force` to clear `emailed_at` first so the same rows re-fire on a second run, or `--organization-id <id>` to target a non-Acme org.
+
 ## Files
 
 | File | Purpose |
@@ -79,7 +120,9 @@ Per-channel **claim-then-act** ordering (stamp `emailed_at` before sending) guar
 | `packages/platform/db-postgres/src/schema/better-auth.ts` | `users.notificationPreferences` jsonb column. |
 | `apps/workers/src/workers/domain-events.ts` | Routes source events to `request-*` / `delete-by-project` tasks. |
 | `apps/workers/src/workers/notifications.ts` | Consumes `request-*` + `create-notification` + `delete-by-project`. |
-| `apps/workers/src/workers/notification-emailer.ts` | Consumes `notification-email:send`. |
+| `apps/workers/src/workers/notification-emailer.ts` | Consumes `notification-email:send`. Resolves `LAT_WEB_URL` and `LAT_API_URL` at boot and threads them through `NotificationEmailRenderContext` so per-kind renderers can build chart URLs. |
+| `apps/api/src/routes/charts/incident-trend.ts` | Public `GET /charts/incident-trend?nid=<notificationId>` endpoint that renders the per-notification trend PNG via `satori` + `@resvg/resvg-js`. Row loaded via the admin client (RLS bypass). |
+| `packages/domain/email/src/helpers/chart-url.ts` | `buildChartUrl` — builds the `apps/api` chart endpoint URL used by the sustained-incident templates. |
 | `apps/web/src/routes/_authenticated/-components/notifications/` | Bell + feed + per-kind renderers. |
 | `apps/web/src/routes/_authenticated/settings/account.tsx` | "Email notifications" section with per-group toggles. |
 | `apps/web/src/routes/_authenticated/projects/$projectSlug/settings.tsx` | Project-level incident-kind toggles + escalation sensitivity. |

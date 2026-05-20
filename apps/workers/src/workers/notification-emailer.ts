@@ -14,6 +14,7 @@ import type { WrappedReportRepository } from "@domain/spans"
 import {
   IssueRepositoryLive,
   NotificationRepositoryLive,
+  OrganizationRepositoryLive,
   ProjectRepositoryLive,
   UserRepositoryLive,
   WrappedReportRepositoryLive,
@@ -33,9 +34,15 @@ interface NotificationEmailerDeps {
 
 /**
  * Layers the email-send use case itself needs (Notification / User /
- * Project repos for the row + recipient + project lookups).
+ * Organization / Project repos for the row + recipient + org + project
+ * lookups threaded into the renderer context).
  */
-const repoLayer = Layer.mergeAll(NotificationRepositoryLive, ProjectRepositoryLive, UserRepositoryLive)
+const repoLayer = Layer.mergeAll(
+  NotificationRepositoryLive,
+  OrganizationRepositoryLive,
+  ProjectRepositoryLive,
+  UserRepositoryLive,
+)
 
 /**
  * Layers the per-kind renderers need on top of `repoLayer`. Each kind's
@@ -49,6 +56,11 @@ const rendererLayer = Layer.mergeAll(IssueRepositoryLive, WrappedReportRepositor
 const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
   return webUrl.replace(/\/$/, "")
+}
+
+const resolveApiBaseUrl = (): string => {
+  const apiUrl = Effect.runSync(parseEnv("LAT_API_URL", "string", "http://localhost:3001"))
+  return apiUrl.replace(/\/$/, "")
 }
 
 /**
@@ -65,6 +77,7 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   const emailTransport = createEmailTransportSender()
   const transportSendEmail = sendEmail({ emailSender: emailTransport })
   const webAppUrl = resolveWebAppUrl()
+  const apiBaseUrl = resolveApiBaseUrl()
 
   // Adapter: bridges the use case's renderer-callback boundary to the
   // per-kind renderer Effects in `@domain/email`. The renderers are
@@ -78,10 +91,26 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   // dispatch result to the layer's superset and let `Effect.provide`
   // strip everything except `SqlClient` (the boundary contract).
   type RendererSupersetR = IssueRepository | WrappedReportRepository | SqlClient
-  const renderEmailAdapter: NotificationEmailRenderer = ({ kind, payload, recipient, project }) =>
+  const renderEmailAdapter: NotificationEmailRenderer = ({
+    notificationId,
+    notificationCreatedAt,
+    kind,
+    payload,
+    recipient,
+    organization,
+    project,
+  }) =>
     Effect.suspend((): Effect.Effect<RenderedEmail, RenderNotificationEmailError, RendererSupersetR> => {
       const parsedPayload = payloadSchemaFor(kind).parse(payload)
-      const ctx: NotificationEmailRenderContext = { webAppUrl, recipient, project }
+      const ctx: NotificationEmailRenderContext = {
+        webAppUrl,
+        apiBaseUrl,
+        notificationId,
+        notificationCreatedAt,
+        recipient,
+        organization,
+        project,
+      }
       const renderer = NOTIFICATION_EMAIL_RENDERERS[kind]
       // Each renderer in the registry accepts its kind's narrowed payload;
       // payloadSchemaFor already returns the same schema used at the call
