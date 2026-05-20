@@ -42,7 +42,6 @@ import { Route as Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport } 
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport } from './routes/[.well-known]/oauth-authorization-server/$'
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
 import { Route as WrappedIdOgPngRouteImport } from './routes/wrapped/$id.og.png'
-import { Route as ChartsIncidentTrendNidPngRouteImport } from './routes/charts/incident-trend.$nid.png'
 import { Route as CcWrappedIdOgPngRouteImport } from './routes/cc-wrapped/$id.og.png'
 import { Route as ApiAuthMcpAuthorizeRouteImport } from './routes/api/auth/mcp/authorize'
 import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$provider/start'
@@ -52,6 +51,7 @@ import { Route as AuthenticatedProjectsProjectSlugSettingsIndexRouteImport } fro
 import { Route as AuthenticatedProjectsProjectSlugSearchIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/search/index'
 import { Route as AuthenticatedProjectsProjectSlugIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/index'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/index'
+import { Route as ApiNotificationsNidIncidentTrendPngRouteImport } from './routes/api/notifications/$nid/incident-trend.png'
 import { Route as AuthenticatedProjectsProjectSlugSettingsOrganizationRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/organization'
 import { Route as AuthenticatedProjectsProjectSlugSettingsMembersRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/members'
 import { Route as AuthenticatedProjectsProjectSlugSettingsKeysRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/keys'
@@ -238,12 +238,6 @@ const WrappedIdOgPngRoute = WrappedIdOgPngRouteImport.update({
   path: '/og/png',
   getParentRoute: () => WrappedIdRoute,
 } as any)
-const ChartsIncidentTrendNidPngRoute =
-  ChartsIncidentTrendNidPngRouteImport.update({
-    id: '/charts/incident-trend/$nid/png',
-    path: '/charts/incident-trend/$nid/png',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const CcWrappedIdOgPngRoute = CcWrappedIdOgPngRouteImport.update({
   id: '/og/png',
   path: '/og/png',
@@ -294,6 +288,12 @@ const AuthenticatedProjectsProjectSlugDatasetsIndexRoute =
     id: '/datasets/',
     path: '/datasets/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const ApiNotificationsNidIncidentTrendPngRoute =
+  ApiNotificationsNidIncidentTrendPngRouteImport.update({
+    id: '/api/notifications/$nid/incident-trend/png',
+    path: '/api/notifications/$nid/incident-trend/png',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const AuthenticatedProjectsProjectSlugSettingsOrganizationRoute =
   AuthenticatedProjectsProjectSlugSettingsOrganizationRouteImport.update({
@@ -386,7 +386,6 @@ export interface FileRoutesByFullPath {
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/cc-wrapped/$id/og/png': typeof CcWrappedIdOgPngRoute
-  '/charts/incident-trend/$nid/png': typeof ChartsIncidentTrendNidPngRoute
   '/wrapped/$id/og/png': typeof WrappedIdOgPngRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
@@ -398,6 +397,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
   '/projects/$projectSlug/settings/members': typeof AuthenticatedProjectsProjectSlugSettingsMembersRoute
   '/projects/$projectSlug/settings/organization': typeof AuthenticatedProjectsProjectSlugSettingsOrganizationRoute
+  '/api/notifications/$nid/incident-trend/png': typeof ApiNotificationsNidIncidentTrendPngRoute
   '/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
   '/projects/$projectSlug/search/': typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
@@ -435,7 +435,6 @@ export interface FileRoutesByTo {
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/cc-wrapped/$id/og/png': typeof CcWrappedIdOgPngRoute
-  '/charts/incident-trend/$nid/png': typeof ChartsIncidentTrendNidPngRoute
   '/wrapped/$id/og/png': typeof WrappedIdOgPngRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
@@ -447,6 +446,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
   '/projects/$projectSlug/settings/members': typeof AuthenticatedProjectsProjectSlugSettingsMembersRoute
   '/projects/$projectSlug/settings/organization': typeof AuthenticatedProjectsProjectSlugSettingsOrganizationRoute
+  '/api/notifications/$nid/incident-trend/png': typeof ApiNotificationsNidIncidentTrendPngRoute
   '/projects/$projectSlug/datasets': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
   '/projects/$projectSlug/search': typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
@@ -490,7 +490,6 @@ export interface FileRoutesById {
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
   '/cc-wrapped/$id/og/png': typeof CcWrappedIdOgPngRoute
-  '/charts/incident-trend/$nid/png': typeof ChartsIncidentTrendNidPngRoute
   '/wrapped/$id/og/png': typeof WrappedIdOgPngRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/_authenticated/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
@@ -502,6 +501,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
   '/_authenticated/projects/$projectSlug/settings/members': typeof AuthenticatedProjectsProjectSlugSettingsMembersRoute
   '/_authenticated/projects/$projectSlug/settings/organization': typeof AuthenticatedProjectsProjectSlugSettingsOrganizationRoute
+  '/api/notifications/$nid/incident-trend/png': typeof ApiNotificationsNidIncidentTrendPngRoute
   '/_authenticated/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/_authenticated/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
   '/_authenticated/projects/$projectSlug/search/': typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
@@ -545,7 +545,6 @@ export interface FileRouteTypes {
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
     | '/cc-wrapped/$id/og/png'
-    | '/charts/incident-trend/$nid/png'
     | '/wrapped/$id/og/png'
     | '/projects/$projectSlug/'
     | '/projects/$projectSlug/datasets/$datasetId'
@@ -557,6 +556,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/keys'
     | '/projects/$projectSlug/settings/members'
     | '/projects/$projectSlug/settings/organization'
+    | '/api/notifications/$nid/incident-trend/png'
     | '/projects/$projectSlug/datasets/'
     | '/projects/$projectSlug/issues/'
     | '/projects/$projectSlug/search/'
@@ -594,7 +594,6 @@ export interface FileRouteTypes {
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
     | '/cc-wrapped/$id/og/png'
-    | '/charts/incident-trend/$nid/png'
     | '/wrapped/$id/og/png'
     | '/projects/$projectSlug'
     | '/projects/$projectSlug/datasets/$datasetId'
@@ -606,6 +605,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/keys'
     | '/projects/$projectSlug/settings/members'
     | '/projects/$projectSlug/settings/organization'
+    | '/api/notifications/$nid/incident-trend/png'
     | '/projects/$projectSlug/datasets'
     | '/projects/$projectSlug/issues'
     | '/projects/$projectSlug/search'
@@ -648,7 +648,6 @@ export interface FileRouteTypes {
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
     | '/cc-wrapped/$id/og/png'
-    | '/charts/incident-trend/$nid/png'
     | '/wrapped/$id/og/png'
     | '/_authenticated/projects/$projectSlug/'
     | '/_authenticated/projects/$projectSlug/datasets/$datasetId'
@@ -660,6 +659,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/settings/keys'
     | '/_authenticated/projects/$projectSlug/settings/members'
     | '/_authenticated/projects/$projectSlug/settings/organization'
+    | '/api/notifications/$nid/incident-trend/png'
     | '/_authenticated/projects/$projectSlug/datasets/'
     | '/_authenticated/projects/$projectSlug/issues/'
     | '/_authenticated/projects/$projectSlug/search/'
@@ -685,7 +685,7 @@ export interface RootRouteChildren {
   ApiObservabilityTestIndexRoute: typeof ApiObservabilityTestIndexRoute
   ApiAuthProviderStartRoute: typeof ApiAuthProviderStartRoute
   ApiAuthMcpAuthorizeRoute: typeof ApiAuthMcpAuthorizeRoute
-  ChartsIncidentTrendNidPngRoute: typeof ChartsIncidentTrendNidPngRoute
+  ApiNotificationsNidIncidentTrendPngRoute: typeof ApiNotificationsNidIncidentTrendPngRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -921,13 +921,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WrappedIdOgPngRouteImport
       parentRoute: typeof WrappedIdRoute
     }
-    '/charts/incident-trend/$nid/png': {
-      id: '/charts/incident-trend/$nid/png'
-      path: '/charts/incident-trend/$nid/png'
-      fullPath: '/charts/incident-trend/$nid/png'
-      preLoaderRoute: typeof ChartsIncidentTrendNidPngRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/cc-wrapped/$id/og/png': {
       id: '/cc-wrapped/$id/og/png'
       path: '/og/png'
@@ -990,6 +983,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectSlug/datasets/'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/api/notifications/$nid/incident-trend/png': {
+      id: '/api/notifications/$nid/incident-trend/png'
+      path: '/api/notifications/$nid/incident-trend/png'
+      fullPath: '/api/notifications/$nid/incident-trend/png'
+      preLoaderRoute: typeof ApiNotificationsNidIncidentTrendPngRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/projects/$projectSlug/settings/organization': {
       id: '/_authenticated/projects/$projectSlug/settings/organization'
@@ -1261,7 +1261,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiObservabilityTestIndexRoute: ApiObservabilityTestIndexRoute,
   ApiAuthProviderStartRoute: ApiAuthProviderStartRoute,
   ApiAuthMcpAuthorizeRoute: ApiAuthMcpAuthorizeRoute,
-  ChartsIncidentTrendNidPngRoute: ChartsIncidentTrendNidPngRoute,
+  ApiNotificationsNidIncidentTrendPngRoute:
+    ApiNotificationsNidIncidentTrendPngRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

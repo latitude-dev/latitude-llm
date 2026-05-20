@@ -7,8 +7,8 @@ import { Effect } from "effect"
 import {
   renderIncidentTrendPng,
   TRANSPARENT_1x1_PNG,
-} from "../../domains/notifications/email-chart/render-incident-trend.tsx"
-import { getAdminPostgresClient } from "../../server/clients.ts"
+} from "../../../../domains/notifications/email-chart/render-incident-trend.tsx"
+import { getAdminPostgresClient } from "../../../../server/clients.ts"
 
 const logger = createLogger("charts.incident-trend")
 
@@ -40,9 +40,11 @@ const respondTransparent = (): Response => respondPng(TRANSPARENT_1x1_PNG)
  * of a leaked id is bounded.
  *
  * Mounted in `apps/web` (not `apps/api`) so the public + MCP surface stays
- * limited to authenticated endpoints; this endpoint sits next to the
- * wrapped OG PNG renderer (`/wrapped/$id/og/png`) which uses the same
- * satori + resvg pipeline.
+ * limited to authenticated endpoints. The `/api/` prefix matches the
+ * project's convention for machine-facing routes that sit next to
+ * user-facing pages (`apps/web/src/routes/api/health.ts`, `…/api/auth/…`),
+ * and reuses the satori + resvg pipeline already running for the wrapped
+ * OG card.
  *
  * Failure modes degrade gracefully:
  * - Missing or unparseable `nid` path param → 1×1 transparent PNG so the
@@ -56,7 +58,7 @@ const respondTransparent = (): Response => respondPng(TRANSPARENT_1x1_PNG)
  * The row is loaded via the admin Postgres client (RLS bypass) since
  * there's no organization context until the row is read.
  */
-export const Route = createFileRoute("/charts/incident-trend/$nid/png")({
+export const Route = createFileRoute("/api/notifications/$nid/incident-trend/png")({
   server: {
     handlers: {
       GET: async ({ params }: { params: { nid: string } }) => {

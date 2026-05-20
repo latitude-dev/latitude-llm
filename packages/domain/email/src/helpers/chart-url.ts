@@ -20,5 +20,5 @@
  */
 export const buildChartUrl = (input: { readonly notificationId: string; readonly webAppUrl: string }): string => {
   const base = input.webAppUrl.replace(/\/$/, "")
-  return `${base}/charts/incident-trend/${encodeURIComponent(input.notificationId)}/png`
+  return `${base}/api/notifications/${encodeURIComponent(input.notificationId)}/incident-trend/png`
 }
