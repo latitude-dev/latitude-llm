@@ -130,7 +130,15 @@ AS SELECT
     max(s.retention_days)                                            AS retention_days
 
 FROM spans AS s
-GROUP BY s.organization_id, s.project_id, session_id;
+-- Repeat the coalesce expression in GROUP BY (rather than referencing the
+-- `session_id` SELECT alias). `spans` also has a `session_id` column, and
+-- with `prefer_column_name_to_alias = 1` CH would group by the raw column
+-- instead of the coalesced key — silently collapsing every orphan into a
+-- single empty-string session row.
+GROUP BY
+    s.organization_id,
+    s.project_id,
+    coalesce(nullIf(s.session_id, ''), toString(s.trace_id));
 
 -- +goose Down
 

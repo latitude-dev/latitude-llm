@@ -176,7 +176,7 @@ FROM spans AS s
 GROUP BY
     s.organization_id,
     s.project_id,
-    session_id;
+    coalesce(nullIf(s.session_id, ''), toString(s.trace_id));
 
 CREATE TABLE spans
 (

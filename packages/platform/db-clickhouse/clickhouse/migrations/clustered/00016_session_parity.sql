@@ -97,7 +97,12 @@ AS SELECT
     max(s.retention_days)                                            AS retention_days
 
 FROM spans AS s
-GROUP BY s.organization_id, s.project_id, session_id;
+-- See unclustered/00016 for why GROUP BY repeats the coalesce expression
+-- instead of referencing the `session_id` SELECT alias.
+GROUP BY
+    s.organization_id,
+    s.project_id,
+    coalesce(nullIf(s.session_id, ''), toString(s.trace_id));
 
 -- +goose Down
 
