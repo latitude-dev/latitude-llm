@@ -15,21 +15,16 @@ import type * as LatitudeApi from "../../../../index.js";
  *     }
  */
 export interface CreateAnnotationBody {
+    /** Simulation this annotation is tied to, if any. `null` (default) when not part of a simulation. */
     simulationId?: string;
+    /** Pre-selected issue this annotation belongs to. Leave `null` (default) to let the automatic issue-discovery pipeline route the annotation. */
     issueId?: string;
+    /** Normalized score value in [0, 1]. Higher = better. */
     value: number;
+    /** Whether the annotated output passes the reviewer's bar. */
     passed: boolean;
+    /** Free-text feedback explaining the score. Surfaced alongside the trace. */
     feedback: string;
-    anchor?: CreateAnnotationBody.Anchor;
+    anchor?: LatitudeApi.AnnotationAnchor;
     trace: LatitudeApi.TraceRef;
-}
-
-export namespace CreateAnnotationBody {
-    export interface Anchor {
-        messageIndex?: number | undefined;
-        partIndex?: number | undefined;
-        startOffset?: number | undefined;
-        endOffset?: number | undefined;
-        textFormat?: "pretty-json" | undefined;
-    }
 }

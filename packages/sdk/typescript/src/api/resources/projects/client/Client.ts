@@ -18,27 +18,31 @@ export declare namespace ProjectsClient {
 export class ProjectsClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<ProjectsClient.Options>;
 
-    constructor(options: ProjectsClient.Options = {}) {
+    constructor(options: ProjectsClient.Options) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
     /**
-     * Returns all projects in the organization.
+     * Returns every project in the organization. The response uses the standard paginated shape; the project list currently fits in a single page (`nextCursor` is always `null`).
      *
      * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
+     * @throws {@link LatitudeApi.BadRequestError}
      * @throws {@link LatitudeApi.UnauthorizedError}
+     * @throws {@link LatitudeApi.NotFoundError}
      *
      * @example
      *     await client.projects.list()
      */
-    public list(requestOptions?: ProjectsClient.RequestOptions): core.HttpResponsePromise<LatitudeApi.ProjectList> {
+    public list(
+        requestOptions?: ProjectsClient.RequestOptions,
+    ): core.HttpResponsePromise<LatitudeApi.PaginatedProjects> {
         return core.HttpResponsePromise.fromPromise(this.__list(requestOptions));
     }
 
     private async __list(
         requestOptions?: ProjectsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ProjectList>> {
+    ): Promise<core.WithRawResponse<LatitudeApi.PaginatedProjects>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -62,13 +66,23 @@ export class ProjectsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.ProjectList, rawResponse: _response.rawResponse };
+            return { data: _response.body as LatitudeApi.PaginatedProjects, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
+                case 400:
+                    throw new LatitudeApi.BadRequestError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
                 case 401:
                     throw new LatitudeApi.UnauthorizedError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new LatitudeApi.NotFoundError(
                         _response.error.body as LatitudeApi.Error_,
                         _response.rawResponse,
                     );
@@ -85,7 +99,7 @@ export class ProjectsClient {
     }
 
     /**
-     * Creates a new project within the organization.
+     * Creates a new project within the organization. The name must be unique within the org.
      *
      * @param {LatitudeApi.CreateProjectBody} request
      * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -174,6 +188,7 @@ export class ProjectsClient {
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
+     * @throws {@link LatitudeApi.BadRequestError}
      * @throws {@link LatitudeApi.UnauthorizedError}
      * @throws {@link LatitudeApi.NotFoundError}
      *
@@ -219,6 +234,11 @@ export class ProjectsClient {
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
+                case 400:
+                    throw new LatitudeApi.BadRequestError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
                 case 401:
                     throw new LatitudeApi.UnauthorizedError(
                         _response.error.body as LatitudeApi.Error_,
@@ -242,7 +262,7 @@ export class ProjectsClient {
     }
 
     /**
-     * Soft-deletes a project by slug.
+     * Deletes a project by slug.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {ProjectsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -312,7 +332,7 @@ export class ProjectsClient {
     }
 
     /**
-     * Updates a project's name and/or description.
+     * Updates a project's name and/or settings. Renaming may regenerate the slug — clients should re-read the response or rely on the `id` for stable references.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.UpdateProjectBody} request

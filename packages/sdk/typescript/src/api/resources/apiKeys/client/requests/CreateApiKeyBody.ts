@@ -7,6 +7,6 @@
  *     }
  */
 export interface CreateApiKeyBody {
-    /** Human-readable name for the API key */
+    /** Human-readable name for the API key. Used to distinguish keys in the UI. */
     name: string;
 }

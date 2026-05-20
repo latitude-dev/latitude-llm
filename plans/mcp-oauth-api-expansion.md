@@ -829,5 +829,5 @@ Source of truth for what's shipped vs. outstanding. Update inline as PRs land.
   - [x] `apps/api/src/openapi/entities/dataset-row.ts` — `DatasetRowSchema` with field-by-field descriptions. Row cell values typed as `string | Record<string, unknown>` (reads) — inserts widen to also accept `number | boolean | null`.
   - [x] Integration tests in `apps/api/src/routes/datasets.test.ts` (9 additional cases on top of the CRUD set, 20 total): empty-rows page, insert + version bump, empty-insert 400, `mode: all` delete with `deletedCount`, non-existent row id → 404, export rejects non-member, export 202 happy path, export `recipient` shape 400, import-from-traces empty filter set → 201 + zero rows.
 - **Wrap-up**
-  - [ ] `pnpm generate:sdk` — batched at the end of the plan, single PR (per the standing memo)
+  - [x] `pnpm generate:sdk` — batched at the end of the plan, single PR. Regenerated the TypeScript SDK against the final `openapi.json`. SDK bumped to `6.0.0-alpha.2`; `CHANGELOG.md` documents every resource added since `6.0.0-alpha.1` (account, members, oauth-keys, traces, saved-searches, issues, incidents, datasets, analytics) plus the project-list pagination shape change and the `AnnotationScoreResponse` → `Annotation` / `ProjectList` → `PaginatedProjects` renames.
   - [ ] CI drift jobs for `apps/api/openapi.json` and `apps/api/mcp.json` (verification §)

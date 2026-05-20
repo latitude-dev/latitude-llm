@@ -3,16 +3,27 @@
 import type * as LatitudeApi from "../index.js";
 
 export interface CreateCustomScoreBody {
+    /** Simulation this score is tied to, if any. `null` (default) when not part of a simulation. */
     simulationId?: string | undefined;
+    /** Normalized score value in [0, 1]. Higher = better. */
     value: number;
+    /** Whether the scored output passes the evaluator's bar. */
     passed: boolean;
+    /** Free-text feedback explaining the score. */
     feedback: string;
+    /** Generation error text, when score generation itself failed. `null` (default) for successful scores. */
     error?: string | undefined;
+    /** Score generation duration in nanoseconds. `0` for externally-computed scores. */
     duration?: number | undefined;
+    /** LLM tokens consumed generating the score, if any. `0` for externally-computed scores. */
     tokens?: number | undefined;
+    /** Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores. */
     cost?: number | undefined;
     trace: LatitudeApi.TraceRef;
+    /** User-supplied tag identifying the score's origin (e.g. `"prod-pipeline"`, `"qa-script-v2"`). */
     sourceId: string;
+    /** Arbitrary user-supplied metadata persisted alongside the score. */
     metadata?: Record<string, unknown> | undefined;
+    /** Discriminator: omit (or `false`) for custom scores. Required `true` for evaluation scores. */
     _evaluation?: boolean | undefined;
 }

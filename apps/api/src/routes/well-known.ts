@@ -35,6 +35,9 @@ const oauthProtectedResourceRoute = createRoute({
   summary: "OAuth protected resource metadata",
   description:
     "RFC 9728 metadata document advertising the authorization server(s) trusted to issue access tokens for this API.",
+  // Discovery endpoint consumed by MCP clients during the OAuth handshake —
+  // not part of the product surface. Fern skips it during SDK generation.
+  "x-fern-ignore": true,
   responses: {
     200: {
       content: { "application/json": { schema: ProtectedResourceMetadataSchema } },
