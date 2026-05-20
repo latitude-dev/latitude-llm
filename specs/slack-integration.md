@@ -231,7 +231,7 @@ Goal: an org admin sees a "Connect Slack" button under settings (gated by the `s
 - [ ] **P2-3**: OAuth callback route at `apps/web/src/routes/integrations/slack/oauth/callback.ts`: validates state, calls `exchangeOAuthCode` from `@platform/slack`, calls `installSlackIntegrationUseCase`, redirects to settings with a flash result.
 - [ ] **P2-4**: Conflict handling: if the workspace's `team_id` already has a live integration under a different org → surface a clear error ("This Slack workspace is already connected to another Latitude organization"). No silent override.
 - [ ] **P2-5**: Disconnect: settings "Disconnect" button calls `revokeSlackIntegrationUseCase` which sets `revoked_at`. Decision needed at implementation time: do we attempt `auth.revoke` on Slack to invalidate the token server-side, or only soft-revoke locally? Default to both (best-effort `auth.revoke`, always soft-revoke).
-- [ ] **P2-6**: Staging Slack app set up; production app set up at Phase 3 release time.
+- [ ] **P2-6**: Staging Slack app set up (Public distribution flipped on, HTTPS endpoints registered); production app set up at Phase 3 release time. Wire `LAT_SLACK_CLIENT_ID` / `LAT_SLACK_CLIENT_SECRET` / `LAT_SLACK_SIGNING_SECRET` through `infra/lib/secrets.ts` for each environment (same `process.env.LAT_FOO ?? placeholder` pattern as `LAT_BETTER_AUTH_SECRET` / `LAT_STRIPE_*`) and into the ECS task definition in `infra/lib/ecs.ts`.
 - [ ] **P2-7**: Tests — OAuth state validation, callback happy path, conflict path, disconnect.
 
 **Exit gate**:
