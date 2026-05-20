@@ -115,6 +115,12 @@ type LifecycleConfirmationAction = "ignore" | "unignore" | "unresolve"
 
 const ISSUE_TRACE_COLUMN_IDS = ["startTime", "name", "tags", "duration"] as const satisfies readonly TraceColumnId[]
 
+// Must match the trace overlay panel's `duration-300` slide animation. We tear the overlay down
+// with a timer after this delay rather than listening for `transitionend`, because that event
+// never fires when motion is reduced or the transition is interrupted, which would leave the
+// overlay logically open and the trace row stuck in its active state.
+const TRACE_PANEL_TRANSITION_MS = 300
+
 function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
   switch (action) {
     case "ignore":
@@ -180,8 +186,7 @@ export function IssueDetailDrawer({
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
   const [traceOverlayTraceId, setTraceOverlayTraceId] = useState<string | null>(null)
   const [tracePanelEntered, setTracePanelEntered] = useState(false)
-  const traceOverlayClosingRef = useRef(false)
-  const tracePanelRef = useRef<HTMLDivElement>(null)
+  const traceOverlayCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const previousTraceOverlayIdRef = useRef<string | null>(null)
 
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
@@ -222,16 +227,34 @@ export function IssueDetailDrawer({
     issue?.evaluations.some((evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null) ?? false
   const lifecycleConfirmation = lifecycleConfirmAction ? getLifecycleConfirmation(lifecycleConfirmAction) : null
 
-  const finishCloseTraceOverlay = useCallback(() => {
-    traceOverlayClosingRef.current = false
-    setTraceOverlayTraceId(null)
+  const clearTraceOverlayCloseTimer = useCallback(() => {
+    if (traceOverlayCloseTimerRef.current !== null) {
+      clearTimeout(traceOverlayCloseTimerRef.current)
+      traceOverlayCloseTimerRef.current = null
+    }
   }, [])
+
+  const finishCloseTraceOverlay = useCallback(() => {
+    clearTraceOverlayCloseTimer()
+    setTraceOverlayTraceId(null)
+  }, [clearTraceOverlayCloseTimer])
+
+  const openTraceOverlay = useCallback(
+    (traceId: string) => {
+      clearTraceOverlayCloseTimer()
+      setTraceOverlayTraceId(traceId)
+    },
+    [clearTraceOverlayCloseTimer],
+  )
 
   const requestCloseTraceOverlay = useCallback(() => {
     if (traceOverlayTraceId === null) return
-    traceOverlayClosingRef.current = true
     setTracePanelEntered(false)
-  }, [traceOverlayTraceId])
+    clearTraceOverlayCloseTimer()
+    traceOverlayCloseTimerRef.current = setTimeout(finishCloseTraceOverlay, TRACE_PANEL_TRANSITION_MS)
+  }, [traceOverlayTraceId, clearTraceOverlayCloseTimer, finishCloseTraceOverlay])
+
+  useEffect(() => clearTraceOverlayCloseTimer, [clearTraceOverlayCloseTimer])
 
   useEffect(() => {
     if (traceOverlayTraceId === null) {
@@ -251,19 +274,6 @@ export function IssueDetailDrawer({
     })
     return () => cancelAnimationFrame(id)
   }, [traceOverlayTraceId])
-
-  useEffect(() => {
-    const el = tracePanelRef.current
-    if (!el || traceOverlayTraceId === null) return
-    const onTransitionEnd = (e: TransitionEvent) => {
-      if (e.propertyName !== "transform") return
-      if (traceOverlayClosingRef.current) {
-        finishCloseTraceOverlay()
-      }
-    }
-    el.addEventListener("transitionend", onTransitionEnd)
-    return () => el.removeEventListener("transitionend", onTransitionEnd)
-  }, [traceOverlayTraceId, finishCloseTraceOverlay])
 
   const traceOverlayIndex = traceOverlayTraceId ? traceIds.indexOf(traceOverlayTraceId) : -1
   const canNavigateNextTraceInOverlay =
@@ -551,10 +561,7 @@ export function IssueDetailDrawer({
               isLoading={tracesLoading}
               visibleColumnIds={ISSUE_TRACE_COLUMN_IDS}
               defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
-              onTraceClick={(trace) => {
-                traceOverlayClosingRef.current = false
-                setTraceOverlayTraceId(trace.traceId)
-              }}
+              onTraceClick={(trace) => openTraceOverlay(trace.traceId)}
               getTraceRowAriaLabel={getTraceRowAriaLabel}
               rowInteractionRole="button"
               activeTraceId={traceOverlayTraceId ?? undefined}
@@ -654,7 +661,6 @@ export function IssueDetailDrawer({
             onClick={requestCloseTraceOverlay}
           />
           <div
-            ref={tracePanelRef}
             className={cn(
               "fixed inset-y-0 right-0 z-[50] flex max-h-dvh shadow-2xl will-change-transform transition-transform duration-300 ease-out",
               tracePanelEntered ? "translate-x-0" : "translate-x-full",
