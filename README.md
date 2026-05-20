@@ -100,9 +100,7 @@ Contributions are welcome. If you want to help, join the [Slack community](https
 
 ## 📄 License
 
-Latitude is licensed under the [LGPL-3.0](LICENSE).
-
-We also offer a more permissive commercial license for those who need it. Contact [licensing@latitude.so](mailto:licensing@latitude.so) for details.
+Latitude is licensed under the [MIT License](LICENSE).
 
 ## 🔗 Links
 

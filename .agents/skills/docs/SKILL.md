@@ -1,7 +1,7 @@
 ---
 name: docs
 description: Review the current conversation context and git changes, then persist durable repository knowledge into `dev-docs/*.md` by domain and into `AGENTS.md` for cross-cutting repo rules. Use after features, fixes, refactors, architecture changes, schema changes, or when the user mentions docs, documentation, design, architecture, business logic, conventions, or `AGENTS.md`.
-license: LGPL-3.0
+license: MIT
 compatibility: opencode
 ---
 
