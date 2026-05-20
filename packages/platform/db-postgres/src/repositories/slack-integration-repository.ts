@@ -1,4 +1,10 @@
 import {
+  type SlackIntegration,
+  SlackIntegrationConflictError,
+  SlackIntegrationRepository,
+  slackIntegrationSchema,
+} from "@domain/integrations"
+import {
   causesIncludePostgresUniqueViolation,
   OrganizationId,
   type RepositoryError,
@@ -9,18 +15,15 @@ import {
   toRepositoryError,
   UserId,
 } from "@domain/shared"
-import {
-  type SlackIntegration,
-  SlackIntegrationConflictError,
-  SlackIntegrationRepository,
-  slackIntegrationSchema,
-} from "@domain/integrations"
 import { parseEnv } from "@platform/env"
 import { type CryptoError, decrypt, encrypt, hash } from "@repo/utils"
 import { and, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator, PostgresDb } from "../client.ts"
-import { slackIntegrations } from "../schema/slack-integrations.ts"
+import { integrations } from "../schema/integrations.ts"
+import { slackIntegrationDetails } from "../schema/slack-integration-details.ts"
+
+const SLACK_KIND = "slack" as const
 
 let encryptionKeyCache: Buffer | undefined
 
@@ -51,13 +54,13 @@ const getEncryptionKey = () =>
   })
 
 /**
- * Mirrors the {@link admin-feature-flag-repository.mapIdentifierViolation}
- * helper. `Effect.catchTag` only narrows the typed return when the handler's
- * return type is annotated explicitly — inline ternaries inferred as a
- * union of two `Effect.fail` branches refuse to unify under
- * `exactOptionalPropertyTypes`.
+ * Conflict translation lives in a dedicated helper because `Effect.catchTag`
+ * only narrows the typed return when the handler's return type is annotated
+ * explicitly — inline ternaries inferred as a union of two `Effect.fail`
+ * branches refuse to unify under `exactOptionalPropertyTypes`. Mirrors
+ * `mapIdentifierViolation` in admin-feature-flag-repository.
  */
-const mapTeamIdConflict = (
+const mapVendorAccountConflict = (
   error: RepositoryError,
   teamId: string,
 ): Effect.Effect<never, RepositoryError | SlackIntegrationConflictError> =>
@@ -65,41 +68,42 @@ const mapTeamIdConflict = (
     ? Effect.fail(new SlackIntegrationConflictError({ teamId }))
     : Effect.fail(error)
 
-type SlackIntegrationRow = typeof slackIntegrations.$inferSelect
+type IntegrationRow = typeof integrations.$inferSelect
+type SlackDetailsRow = typeof slackIntegrationDetails.$inferSelect
 
-const toDomainSlackIntegration = (row: SlackIntegrationRow, encryptionKey: Buffer) =>
+const toDomainSlackIntegration = (parent: IntegrationRow, details: SlackDetailsRow, encryptionKey: Buffer) =>
   Effect.gen(function* () {
-    const botAccessToken = yield* decrypt(row.botAccessToken, encryptionKey).pipe(
+    const botAccessToken = yield* decrypt(details.botAccessToken, encryptionKey).pipe(
       Effect.mapError((e) => toRepositoryError(e, "decryptSlackIntegrationToken")),
     )
     const refreshToken =
-      row.refreshToken === null
+      details.refreshToken === null
         ? null
-        : yield* decrypt(row.refreshToken, encryptionKey).pipe(
+        : yield* decrypt(details.refreshToken, encryptionKey).pipe(
             Effect.mapError((e) => toRepositoryError(e, "decryptSlackIntegrationRefreshToken")),
           )
 
     const integration: SlackIntegration = slackIntegrationSchema.parse({
-      id: SlackIntegrationId(row.id),
-      organizationId: OrganizationId(row.organizationId),
-      teamId: row.teamId,
-      teamName: row.teamName,
-      appId: row.appId,
-      botUserId: row.botUserId,
+      id: SlackIntegrationId(parent.id),
+      organizationId: OrganizationId(parent.organizationId),
+      teamId: parent.vendorAccountId,
+      teamName: details.teamName,
+      appId: details.appId,
+      botUserId: details.botUserId,
       botAccessToken,
-      botTokenScopes: row.botTokenScopes,
+      botTokenScopes: details.botTokenScopes,
       refreshToken,
-      tokenExpiresAt: row.tokenExpiresAt,
-      installedByUserId: UserId(row.installedByUserId),
-      installedAt: row.installedAt,
-      revokedAt: row.revokedAt,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      tokenExpiresAt: details.tokenExpiresAt,
+      installedByUserId: UserId(parent.installedByUserId),
+      installedAt: parent.installedAt,
+      revokedAt: parent.revokedAt,
+      createdAt: parent.createdAt,
+      updatedAt: parent.updatedAt,
     })
     return integration
   })
 
-const toInsertRow = (integration: SlackIntegration, organizationId: string, encryptionKey: Buffer) =>
+const buildInsertRows = (integration: SlackIntegration, organizationId: string, encryptionKey: Buffer) =>
   Effect.gen(function* () {
     const botAccessToken = yield* encrypt(integration.botAccessToken, encryptionKey).pipe(
       Effect.mapError((e) => toRepositoryError(e, "encryptSlackIntegrationToken")),
@@ -111,10 +115,19 @@ const toInsertRow = (integration: SlackIntegration, organizationId: string, encr
             Effect.mapError((e) => toRepositoryError(e, "encryptSlackIntegrationRefreshToken")),
           )
 
-    return {
+    const parentRow = {
       id: integration.id,
       organizationId,
-      teamId: integration.teamId,
+      kind: SLACK_KIND,
+      vendorAccountId: integration.teamId,
+      installedByUserId: integration.installedByUserId,
+      installedAt: integration.installedAt,
+      revokedAt: integration.revokedAt,
+    }
+
+    const detailsRow = {
+      integrationId: integration.id,
+      organizationId,
       teamName: integration.teamName,
       appId: integration.appId,
       botUserId: integration.botUserId,
@@ -122,10 +135,9 @@ const toInsertRow = (integration: SlackIntegration, organizationId: string, encr
       botTokenScopes: integration.botTokenScopes,
       refreshToken,
       tokenExpiresAt: integration.tokenExpiresAt,
-      installedByUserId: integration.installedByUserId,
-      installedAt: integration.installedAt,
-      revokedAt: integration.revokedAt,
     }
+
+    return { parentRow, detailsRow } as const
   })
 
 export const SlackIntegrationRepositoryLive = Layer.effect(
@@ -140,25 +152,41 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
           const [row] = yield* sqlClient
             .query((db, organizationId) =>
               db
-                .select()
-                .from(slackIntegrations)
-                .where(and(eq(slackIntegrations.organizationId, organizationId), isNull(slackIntegrations.revokedAt)))
+                .select({ parent: integrations, details: slackIntegrationDetails })
+                .from(integrations)
+                .innerJoin(slackIntegrationDetails, eq(slackIntegrationDetails.integrationId, integrations.id))
+                .where(
+                  and(
+                    eq(integrations.organizationId, organizationId),
+                    eq(integrations.kind, SLACK_KIND),
+                    isNull(integrations.revokedAt),
+                  ),
+                )
                 .limit(1),
             )
             .pipe(Effect.mapError((e) => toRepositoryError(e, "findActiveSlackIntegrationByOrganizationId")))
 
           if (!row) return null
-          return yield* toDomainSlackIntegration(row, encryptionKey)
+          return yield* toDomainSlackIntegration(row.parent, row.details, encryptionKey)
         }),
 
       save: (integration) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const orgFromRls = sqlClient.organizationId
-          const row = yield* toInsertRow(integration, orgFromRls, encryptionKey)
+          const { parentRow, detailsRow } = yield* buildInsertRows(integration, orgFromRls, encryptionKey)
+
+          // Two-row insert. Atomicity comes from the caller wrapping the
+          // call in `sqlClient.transaction(...)` (see `installSlackIntegrationUseCase`).
+          // The repo intentionally does not open its own transaction here:
+          // that would leak `ConcurrentSqlTransactionError` into the port,
+          // and the codebase convention is for use cases to own transaction
+          // boundaries (mirrors `revokeApiKeyUseCase` etc.).
           yield* sqlClient
-            .query((db) => db.insert(slackIntegrations).values(row))
-            .pipe(Effect.catchTag("RepositoryError", (error) => mapTeamIdConflict(error, integration.teamId)))
+            .query((db) => db.insert(integrations).values(parentRow))
+            .pipe(Effect.catchTag("RepositoryError", (error) => mapVendorAccountConflict(error, integration.teamId)))
+          yield* sqlClient.query((db) => db.insert(slackIntegrationDetails).values(detailsRow))
+
           return integration
         }),
 
@@ -168,16 +196,17 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
           const rows = yield* sqlClient
             .query((db, organizationId) =>
               db
-                .update(slackIntegrations)
+                .update(integrations)
                 .set({ revokedAt, updatedAt: new Date() })
                 .where(
                   and(
-                    eq(slackIntegrations.id, id),
-                    eq(slackIntegrations.organizationId, organizationId),
-                    isNull(slackIntegrations.revokedAt),
+                    eq(integrations.id, id),
+                    eq(integrations.organizationId, organizationId),
+                    eq(integrations.kind, SLACK_KIND),
+                    isNull(integrations.revokedAt),
                   ),
                 )
-                .returning({ id: slackIntegrations.id }),
+                .returning({ id: integrations.id }),
             )
             .pipe(Effect.mapError((e) => toRepositoryError(e, "softRevokeSlackIntegration")))
 
@@ -188,10 +217,12 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
 )
 
 /**
- * Cross-organization lookup for the dev CLI's `--force` flow. Bypasses
- * the per-org RLS predicate by not filtering on `organization_id`; the
- * connecting role must therefore be one that is not subject to forced
- * RLS (mirrors the api-key `findByTokenHash` pattern).
+ * Cross-organization lookup for the dev CLI's `--force` flow. With
+ * `vendor_account_id` lifted onto the parent `integrations` table, this
+ * is now a single-table query — no join with `slack_integration_details`
+ * is needed for the conflict-resolution path. Bypasses the per-org RLS
+ * predicate by not filtering on `organization_id`; the connecting role
+ * must therefore be one that is not subject to forced RLS.
  */
 export const findActiveSlackIntegrationByTeamIdAcrossOrgs = (
   db: PostgresDb,
@@ -203,9 +234,15 @@ export const findActiveSlackIntegrationByTeamIdAcrossOrgs = (
   Effect.tryPromise({
     try: async () => {
       const rows = await db
-        .select({ id: slackIntegrations.id, organizationId: slackIntegrations.organizationId })
-        .from(slackIntegrations)
-        .where(and(eq(slackIntegrations.teamId, teamId), isNull(slackIntegrations.revokedAt)))
+        .select({ id: integrations.id, organizationId: integrations.organizationId })
+        .from(integrations)
+        .where(
+          and(
+            eq(integrations.kind, SLACK_KIND),
+            eq(integrations.vendorAccountId, teamId),
+            isNull(integrations.revokedAt),
+          ),
+        )
         .limit(1)
       const row = rows[0]
       if (!row) return null
@@ -216,7 +253,8 @@ export const findActiveSlackIntegrationByTeamIdAcrossOrgs = (
 
 /**
  * Cross-organization soft-revoke for the dev CLI's `--force` flow.
- * Stamps `revoked_at` without any `organization_id` predicate.
+ * Stamps `revoked_at` on the parent row only — the details row is
+ * retained for audit (one-to-one, never orphaned by design).
  */
 export const softRevokeSlackIntegrationAcrossOrgs = (
   db: PostgresDb,
@@ -226,10 +264,10 @@ export const softRevokeSlackIntegrationAcrossOrgs = (
   Effect.tryPromise({
     try: async () => {
       const rows = await db
-        .update(slackIntegrations)
+        .update(integrations)
         .set({ revokedAt, updatedAt: new Date() })
-        .where(and(eq(slackIntegrations.id, id), isNull(slackIntegrations.revokedAt)))
-        .returning({ id: slackIntegrations.id })
+        .where(and(eq(integrations.id, id), eq(integrations.kind, SLACK_KIND), isNull(integrations.revokedAt)))
+        .returning({ id: integrations.id })
       return rows.length > 0
     },
     catch: (cause) => toRepositoryError(cause, "softRevokeSlackIntegrationAcrossOrgs"),

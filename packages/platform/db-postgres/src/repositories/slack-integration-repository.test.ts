@@ -1,8 +1,9 @@
-import { generateId, OrganizationId, SlackIntegrationId, type SqlClient, UserId } from "@domain/shared"
 import { type SlackIntegration, SlackIntegrationConflictError, SlackIntegrationRepository } from "@domain/integrations"
+import { generateId, OrganizationId, SlackIntegrationId, type SqlClient, UserId } from "@domain/shared"
 import { Cause, Effect, Exit } from "effect"
 import { afterEach, beforeAll, describe, expect, it } from "vitest"
-import { slackIntegrations } from "../schema/slack-integrations.ts"
+import { integrations } from "../schema/integrations.ts"
+import { slackIntegrationDetails } from "../schema/slack-integration-details.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import {
@@ -52,7 +53,10 @@ const makeIntegration = (overrides: Partial<SlackIntegration> = {}): SlackIntegr
 }
 
 afterEach(async () => {
-  await pg.db.delete(slackIntegrations)
+  // Details first to keep the 1:1 invariant in test logs, even though
+  // there's no FK; order is not strictly required.
+  await pg.db.delete(slackIntegrationDetails)
+  await pg.db.delete(integrations)
 })
 
 describe("SlackIntegrationRepositoryLive", () => {
@@ -68,10 +72,16 @@ describe("SlackIntegrationRepositoryLive", () => {
 
     expect(saved.botAccessToken).toBe("xoxb-plaintext-secret")
 
-    // Verify the column on disk is NOT the plaintext.
-    const [rawRow] = await pg.db.select().from(slackIntegrations)
+    // Verify the column on disk (in the details table) is NOT the plaintext.
+    const [rawRow] = await pg.db.select().from(slackIntegrationDetails)
     expect(rawRow?.botAccessToken).not.toBe("xoxb-plaintext-secret")
     expect(rawRow?.botAccessToken).toContain(":") // iv:authTag:ciphertext format
+
+    // And the parent row carries the lifecycle + vendor account claim.
+    const [parentRow] = await pg.db.select().from(integrations)
+    expect(parentRow?.kind).toBe("slack")
+    expect(parentRow?.vendorAccountId).toBe(integration.teamId)
+    expect(parentRow?.revokedAt).toBeNull()
 
     const fetched = await runWithLive(
       Effect.gen(function* () {

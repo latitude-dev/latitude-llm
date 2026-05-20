@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "7facfd49-4ca9-4e15-8503-3c0fd5e8db5d",
+  "id": "1d88c8dc-40a2-45fe-909b-8462c64b9944",
   "prevIds": [
     "385b971b-0718-4a9a-8920-ca409d664c57"
   ],
@@ -152,6 +152,12 @@
     },
     {
       "isRlsEnabled": true,
+      "name": "integrations",
+      "entityType": "tables",
+      "schema": "latitude"
+    },
+    {
+      "isRlsEnabled": true,
       "name": "issues",
       "entityType": "tables",
       "schema": "latitude"
@@ -194,7 +200,7 @@
     },
     {
       "isRlsEnabled": true,
-      "name": "slack_integrations",
+      "name": "slack_integration_details",
       "entityType": "tables",
       "schema": "latitude"
     },
@@ -3452,6 +3458,123 @@
       "name": "id",
       "entityType": "columns",
       "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "vendor_account_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "installed_by_user_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "installed_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "revoked_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "latitude",
       "table": "issues"
     },
     {
@@ -4700,10 +4823,10 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "id",
+      "name": "integration_id",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "varchar(24)",
@@ -4716,20 +4839,7 @@
       "name": "organization_id",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "team_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "text",
@@ -4742,7 +4852,7 @@
       "name": "team_name",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "text",
@@ -4755,7 +4865,7 @@
       "name": "app_id",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "text",
@@ -4768,7 +4878,7 @@
       "name": "bot_user_id",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "text",
@@ -4781,7 +4891,7 @@
       "name": "bot_access_token",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "text",
@@ -4794,7 +4904,7 @@
       "name": "bot_token_scopes",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "text",
@@ -4807,7 +4917,7 @@
       "name": "refresh_token",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "timestamp with time zone",
@@ -4820,46 +4930,7 @@
       "name": "token_expires_at",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "installed_by_user_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "slack_integrations"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "installed_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "slack_integrations"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "revoked_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "timestamp with time zone",
@@ -4872,7 +4943,7 @@
       "name": "created_at",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "timestamp with time zone",
@@ -4885,7 +4956,7 @@
       "name": "updated_at",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "type": "varchar(24)",
@@ -5998,6 +6069,111 @@
           "asc": true,
           "nullsFirst": false,
           "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "integrations_organization_id_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "kind",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"revoked_at\" IS NULL",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "integrations_active_organization_kind_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "kind",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "vendor_account_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"revoked_at\" IS NULL",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "integrations_active_kind_vendor_account_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "kind",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "vendor_account_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "integrations_kind_vendor_account_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
         },
         {
           "value": "project_id",
@@ -6824,73 +7000,10 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "slack_integrations_organization_id_idx",
+      "name": "slack_integration_details_organization_id_idx",
       "entityType": "indexes",
       "schema": "latitude",
-      "table": "slack_integrations"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": "\"revoked_at\" IS NULL",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "slack_integrations_active_organization_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "slack_integrations"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "team_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": "\"revoked_at\" IS NULL",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "slack_integrations_active_team_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "slack_integrations"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "team_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "slack_integrations_team_id_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "nameExplicit": true,
@@ -7398,6 +7511,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "integrations_pkey",
+      "schema": "latitude",
+      "table": "integrations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "issues_pkey",
       "schema": "latitude",
       "table": "issues",
@@ -7465,12 +7588,12 @@
     },
     {
       "columns": [
-        "id"
+        "integration_id"
       ],
       "nameExplicit": false,
-      "name": "slack_integrations_pkey",
+      "name": "slack_integration_details_pkey",
       "schema": "latitude",
-      "table": "slack_integrations",
+      "table": "slack_integration_details",
       "entityType": "pks"
     },
     {
@@ -7958,6 +8081,19 @@
       ],
       "using": "organization_id = get_current_organization_id()",
       "withCheck": "organization_id = get_current_organization_id()",
+      "name": "integrations_organization_policy",
+      "entityType": "policies",
+      "schema": "latitude",
+      "table": "integrations"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "organization_id = get_current_organization_id()",
+      "withCheck": "organization_id = get_current_organization_id()",
       "name": "issues_organization_policy",
       "entityType": "policies",
       "schema": "latitude",
@@ -8036,10 +8172,10 @@
       ],
       "using": "organization_id = get_current_organization_id()",
       "withCheck": "organization_id = get_current_organization_id()",
-      "name": "slack_integrations_organization_policy",
+      "name": "slack_integration_details_organization_policy",
       "entityType": "policies",
       "schema": "latitude",
-      "table": "slack_integrations"
+      "table": "slack_integration_details"
     },
     {
       "as": "PERMISSIVE",

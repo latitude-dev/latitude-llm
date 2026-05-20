@@ -1,8 +1,8 @@
 import { createInterface } from "node:readline/promises"
 import { parseArgs } from "node:util"
+import { installSlackIntegrationUseCase } from "@domain/integrations"
 import { OrganizationId, UserId } from "@domain/shared"
 import { SEED_ORG_ID, SEED_OWNER_USER_ID } from "@domain/shared/seeding"
-import { installSlackIntegrationUseCase } from "@domain/integrations"
 import {
   closePostgres,
   createPostgresClient,

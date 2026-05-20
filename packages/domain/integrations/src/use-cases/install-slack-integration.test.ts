@@ -11,15 +11,15 @@ const ORG_A = OrganizationId("a".repeat(24))
 const ORG_B = OrganizationId("b".repeat(24))
 const INSTALLER = UserId("u".repeat(24))
 
-// The in-memory fake does not depend on SqlClient at runtime — its
-// methods never `yield* SqlClient`. We still need to satisfy the
-// requirement channel because the port leaks SqlClient by design.
-// A stub shape with thrown stubs makes accidental use loud.
+// The in-memory fake doesn't touch a real DB, but the install use case
+// wraps its body in `sqlClient.transaction(...)` so the parent +
+// details rows would be atomic at the live adapter. Here `transaction`
+// is a pass-through that runs its effect inline — the fake's
+// invariants are enforced in-memory, not via SQL — and `query` stays
+// an unreachable stub so accidental use is loud.
 const NoopSqlClient = Layer.succeed(SqlClient, {
   organizationId: ORG_A,
-  transaction: () => {
-    throw new Error("NoopSqlClient.transaction was called — the in-memory fake should not need it")
-  },
+  transaction: (effect: Effect.Effect<unknown, unknown, unknown>) => effect,
   query: () => {
     throw new Error("NoopSqlClient.query was called — the in-memory fake should not need it")
   },

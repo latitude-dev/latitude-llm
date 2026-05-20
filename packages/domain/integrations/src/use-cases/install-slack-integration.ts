@@ -1,4 +1,11 @@
-import { generateId, type OrganizationId, type RepositoryError, type SqlClient, type UserId } from "@domain/shared"
+import {
+  type ConcurrentSqlTransactionError,
+  generateId,
+  type OrganizationId,
+  type RepositoryError,
+  SqlClient,
+  type UserId,
+} from "@domain/shared"
 import { Effect } from "effect"
 import type { SlackIntegration } from "../entities/slack-integration.ts"
 import type { SlackIntegrationConflictError } from "../errors.ts"
@@ -17,47 +24,60 @@ export interface InstallSlackIntegrationInput {
   readonly installedByUserId: UserId
 }
 
-export type InstallSlackIntegrationError = RepositoryError | SlackIntegrationConflictError
+export type InstallSlackIntegrationError =
+  | RepositoryError
+  | SlackIntegrationConflictError
+  | ConcurrentSqlTransactionError
 
 /**
  * Installs (or re-installs) a Slack workspace for the current
- * organization. If an active integration already exists in this org, it
- * is soft-revoked before the new row is inserted so the partial unique
- * `(team_id) WHERE revoked_at IS NULL` index keeps holding even when the
- * workspace is the same (which is the expected re-install path).
+ * organization. Same-org reinstall is supported: the existing active
+ * integration is soft-revoked first so the partial unique
+ * `(organization_id, kind) WHERE revoked_at IS NULL` index keeps
+ * holding. Cross-organization conflicts (another org already owns the
+ * workspace) surface as {@link SlackIntegrationConflictError} from the
+ * repository's `save` via the `(kind, vendor_account_id)` partial
+ * unique index.
  *
- * Cross-organization conflicts surface as
- * {@link SlackIntegrationConflictError} from the repository's `save`.
+ * The use case opens a single `SqlClient.transaction` so the revoke +
+ * the two-row insert (`integrations` parent + `slack_integration_details`)
+ * are atomic.
  */
 export const installSlackIntegrationUseCase = (
   input: InstallSlackIntegrationInput,
 ): Effect.Effect<SlackIntegration, InstallSlackIntegrationError, SqlClient | SlackIntegrationRepository> =>
   Effect.gen(function* () {
-    const repo = yield* SlackIntegrationRepository
+    const sqlClient = yield* SqlClient
 
-    const existing = yield* repo.findActiveByOrganizationId()
-    if (existing) {
-      yield* repo.softRevokeById(existing.id, new Date())
-    }
+    return yield* sqlClient.transaction(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
 
-    const now = new Date()
-    const integration: SlackIntegration = {
-      id: generateId<"SlackIntegrationId">(),
-      organizationId: input.organizationId,
-      teamId: input.teamId,
-      teamName: input.teamName,
-      appId: input.appId,
-      botUserId: input.botUserId,
-      botAccessToken: input.botAccessToken,
-      botTokenScopes: input.botTokenScopes,
-      refreshToken: input.refreshToken,
-      tokenExpiresAt: input.tokenExpiresAt,
-      installedByUserId: input.installedByUserId,
-      installedAt: now,
-      revokedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    }
+        const existing = yield* repo.findActiveByOrganizationId()
+        if (existing) {
+          yield* repo.softRevokeById(existing.id, new Date())
+        }
 
-    return yield* repo.save(integration)
+        const now = new Date()
+        const integration: SlackIntegration = {
+          id: generateId<"SlackIntegrationId">(),
+          organizationId: input.organizationId,
+          teamId: input.teamId,
+          teamName: input.teamName,
+          appId: input.appId,
+          botUserId: input.botUserId,
+          botAccessToken: input.botAccessToken,
+          botTokenScopes: input.botTokenScopes,
+          refreshToken: input.refreshToken,
+          tokenExpiresAt: input.tokenExpiresAt,
+          installedByUserId: input.installedByUserId,
+          installedAt: now,
+          revokedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        }
+
+        return yield* repo.save(integration)
+      }),
+    )
   })

@@ -25,7 +25,8 @@ The notification system already anticipates Slack as a new channel (see `dev-doc
 - **Project-level overrides**: not in v1. Org-only routing.
 - **Token rotation**: **off** for v1. Slack tokens (`xoxb-…`) don't expire until uninstall, which is acceptable given tokens are AES-encrypted at rest in an RLS-scoped table. The schema includes nullable `refresh_token` + `token_expires_at` columns so enabling rotation later is a Slack-app toggle + refresh logic, no migration.
 - **Channel-name display**: cache `channelName` alongside `channelId` in the routes jsonb, but treat it as best-effort. Re-resolve via `conversations.info` on a TTL or on demand. The id is the source of truth.
-- **One workspace ↔ one org**: enforce via partial unique index `UNIQUE (team_id) WHERE revoked_at IS NULL`. Installing into a workspace already connected to a different Latitude org returns an explicit error to the installer.
+- **One workspace ↔ one org**: enforce via partial unique index `UNIQUE (kind, vendor_account_id) WHERE revoked_at IS NULL` on the parent `integrations` table. Installing into a workspace already connected to a different Latitude org returns an explicit error to the installer.
+- **Persistence layout**: parent `integrations` table holds the cross-vendor lifecycle (`kind`, `vendor_account_id`, `installed_at`, `revoked_at`); per-vendor `<vendor>_integration_details` tables hold the vendor-specific shape (Slack: encrypted bot token, scopes, app id, …). 1:1 relationship by `integration_id`, application-layer integrity (no FKs per repo rule). The split lets the cross-org workspace claim live as a clean partial unique index on real columns (`vendor_account_id` is in the parent), while keeping vendor-specific schemas evolvable without parent-table churn. Telegram, Discord, GitHub Apps, … all add their own `*_integration_details` tables without touching the parent.
 - **Feature flag**: single `slack` flag in `feature-flags`. Gates the connect button, the settings UI, the producer's Slack-route lookup, and (when added) the events webhook.
 - **Encryption key**: reuse `LAT_MASTER_ENCRYPTION_KEY` (the same key used by `api_keys`). One key per environment. The repository accepts either a 32-byte hex string directly or any other secret hashed to 32 bytes via SHA-256, matching the api-keys derivation rule.
 - **OAuth scopes at install time**: include `app_mentions:read` even though it's unused in Phases 2 and 3, so Phase 4 (mentions) does not require a customer re-install. Full v1 scope set: `chat:write`, `chat:write.public`, `channels:read`, `groups:read`, `team:read`, `app_mentions:read`.
@@ -53,30 +54,44 @@ LAT_MASTER_ENCRYPTION_KEY      # reused; already documented for api_keys
 
 ### Tables
 
+Two tables: a generic parent that owns the lifecycle and the cross-vendor invariants, and a Slack-specific 1:1 details table that owns the vendor shape.
+
 ```text
-slack_integrations
+integrations
   id                      cuid PK
   organization_id         cuid NOT NULL
-  team_id                 text NOT NULL          -- Slack workspace id (T01...)
-  team_name               text NOT NULL          -- cached for display
-  app_id                  text NOT NULL          -- constant per environment
-  bot_user_id             text NOT NULL          -- U01...; for self-mention filtering later
-  bot_access_token        text NOT NULL          -- AES-256-GCM encrypted
-  bot_token_scopes        text NOT NULL          -- comma-joined granted scopes
-  refresh_token           text                   -- nullable; null when rotation off
-  token_expires_at        tzTimestamp            -- nullable; null when rotation off
+  kind                    varchar(64) NOT NULL   -- 'slack' | (future) 'telegram' | ...
+  vendor_account_id       text NOT NULL          -- Slack team_id; Telegram bot username; etc.
   installed_by_user_id    cuid NOT NULL          -- Latitude user that drove the OAuth flow
   installed_at            tzTimestamp NOT NULL
   revoked_at              tzTimestamp            -- soft-revoke for audit
   ...timestamps()
 
-  UNIQUE (organization_id) WHERE revoked_at IS NULL    -- one live install per Latitude org
-  UNIQUE (team_id)         WHERE revoked_at IS NULL    -- one Latitude org per Slack workspace
+  UNIQUE (organization_id, kind)         WHERE revoked_at IS NULL  -- one active integration per kind per org
+  UNIQUE (kind, vendor_account_id)       WHERE revoked_at IS NULL  -- one active claim per vendor account
+  index on (organization_id)
+  index on (kind, vendor_account_id)
+  RLS by organization_id
+```
+
+```text
+slack_integration_details
+  integration_id          cuid PK                -- 1:1 with integrations.id; no FK (app-layer integrity)
+  organization_id         cuid NOT NULL          -- denormalized for RLS scoping
+  team_name               text NOT NULL          -- display cache; authoritative id is integrations.vendor_account_id
+  app_id                  text NOT NULL
+  bot_user_id             text NOT NULL          -- U01...; for self-mention filtering later
+  bot_access_token        text NOT NULL          -- AES-256-GCM encrypted
+  bot_token_scopes        text NOT NULL          -- comma-joined granted scopes
+  refresh_token           text                   -- nullable; encrypted when present
+  token_expires_at        tzTimestamp            -- nullable; null when rotation off
+  ...timestamps()
+
   index on (organization_id)
   RLS by organization_id
 ```
 
-No FK constraints, per the platform rule.
+No FK constraints, per the platform rule. The 1:1 invariant is application-layer: install writes both rows in a single `SqlClient.transaction`; revoke updates only the parent's `revoked_at` (details rows are retained for audit). Adding a future vendor is one new `<vendor>_integration_details` table — no parent migration.
 
 ### Routing config (jsonb on `organizations.settings`)
 
@@ -114,8 +129,11 @@ CSRF state for the OAuth handshake lives in Redis under `org:${organizationId}:s
    → POST https://slack.com/api/oauth.v2.access (code + client_id + client_secret)
    → extract { access_token, team.id, team.name, bot_user_id, scope, app_id, authed_user.id }
    → if another live install exists for team.id under a different organization_id → error
-   → encrypt access_token, upsert slack_integrations row for (organization_id)
-     - on conflict (organization_id) where revoked_at IS NULL → replace
+   → in a single transaction: insert into integrations
+     (kind='slack', vendor_account_id=team.id) and slack_integration_details
+     (encrypted bot token, scopes, team_name, …)
+     - on (organization_id, kind) conflict where revoked_at IS NULL → soft-revoke
+       the prior parent row first, then re-insert
    → 302 to settings page
 ```
 
@@ -149,7 +167,7 @@ The `notification-slack:send` worker (`apps/workers/src/workers/notification-sla
 
 - Maintain a per-kind renderer registry in `@domain/integrations/templates/notifications/` keyed on `NotificationKind` (exhaustive `Record<NotificationKind, SlackRenderer>` — TS forces a renderer for every kind).
 - Claim-then-act idempotency surface: TBD in Phase 3. Options: (a) a thin `slack_deliveries(idempotency_key, channel_id)` table mirroring `notifications.emailed_at`; (b) reuse the BullMQ `dedupeKey` and accept Slack's lack of native idempotency. Decide when implementing Phase 3.
-- On 401 / `token_revoked` from Slack → soft-revoke the `slack_integrations` row (set `revoked_at`), surface in settings, stop attempting delivery.
+- On 401 / `token_revoked` from Slack → soft-revoke the parent `integrations` row (set `revoked_at`), surface in settings, stop attempting delivery. The Slack details row is retained for audit.
 
 ### Mentions (Phase 4, future)
 
@@ -183,13 +201,13 @@ Customers do **not** need to re-install — the scopes are already there.
 
 ### Phase 1 — Compatibility layer
 
-Goal: a Latitude developer can drive the OAuth flow end-to-end via a script (or curl) and verify a `slack_integrations` row lands with an encrypted token. Nothing user-visible.
+Goal: a Latitude developer can drive the OAuth flow end-to-end via a script (or curl) and verify a parent `integrations` row + a `slack_integration_details` row land with the bot token encrypted. Nothing user-visible.
 
 - [x] **P1-1**: Slack app created in development env. Manifest covers OAuth redirect URL, bot scopes (`chat:write`, `chat:write.public`, `channels:read`, `groups:read`, `team:read`, `app_mentions:read`). Distribution stays Internal for Phase 1 (Public requires HTTPS endpoints — deferred to Phase 2 + staging). Credentials captured into `.env`.
 - [x] **P1-2**: Env vars (`LAT_SLACK_CLIENT_ID`, `LAT_SLACK_CLIENT_SECRET`, `LAT_SLACK_SIGNING_SECRET`) added to `.env.example` as commented placeholders. Loaded together via `loadSlackConfig` in `@platform/slack/src/config.ts` using `parseEnvOptional` — missing-but-required-together returns `undefined` so callers cleanly disable Slack-dependent surfaces. `LAT_MASTER_ENCRYPTION_KEY` is reused as-is.
 - [x] **P1-3**: `packages/platform/slack` created — `createSlackClient` (sync `WebClient` wrap), `exchangeOAuthCode` (raw `fetch` to `oauth.v2.access`), `buildSlackAuthorizeUrl`, `verifySlackSignature` (Phase 4 readiness, unit-tested against Slack's published HMAC vector). Token encrypt/decrypt is in the repository mappers, not in `@platform/slack`.
 - [x] **P1-4**: `packages/domain/integrations` created — `SlackIntegration` entity (Zod), `SlackIntegrationRepository` port, `installSlackIntegrationUseCase` (handles same-org reinstall + cross-org conflict), `revokeSlackIntegrationUseCase` (soft-revoke only in Phase 1), in-memory test double exposed via `./testing` subpath export. `SlackIntegrationId` brand + schema added to `@domain/shared/id.ts`.
-- [x] **P1-5**: Schema `packages/platform/db-postgres/src/schema/slack-integrations.ts` + Drizzle migration `20260520130344_add-slack-integrations` generated (not applied — gated separately). `SlackIntegrationRepositoryLive` encrypts `bot_access_token` (and `refresh_token` when present) at the mapper boundary; partial unique violation on `team_id` translates to `SlackIntegrationConflictError` via a `mapTeamIdConflict` helper. Two CLI-only admin helpers (`findActiveSlackIntegrationByTeamIdAcrossOrgs`, `softRevokeSlackIntegrationAcrossOrgs`) cover the `--force` flow.
+- [x] **P1-5**: Schemas `packages/platform/db-postgres/src/schema/integrations.ts` (parent) + `slack-integration-details.ts` (vendor-specific 1:1) + a single Drizzle migration that creates both. `SlackIntegrationRepositoryLive` joins them on read and writes both in one `SqlClient.transaction`; partial unique violation on `(kind, vendor_account_id)` translates to `SlackIntegrationConflictError` via `mapVendorAccountConflict`. Two CLI-only admin helpers (`findActiveSlackIntegrationByTeamIdAcrossOrgs`, `softRevokeSlackIntegrationAcrossOrgs`) query the parent table only.
 - [x] **P1-6**: `SLACK_FLAG = "slack"` registered in `@domain/feature-flags/src/constants.ts`, exported from the package index. No callers wired yet — Phase 2 gates the UI, Phase 3 gates the producer.
 - [x] **P1-7**: Tests across all three packages — OAuth fetch-mocked happy path + error mapping + incomplete-response detection; HMAC verification against Slack's published vector + tamper/replay/format negatives; in-memory use-case tests for fresh install, same-org reinstall (replaces), cross-org conflict; PGlite repository tests for encrypt/decrypt round-trip (verifies on-disk ciphertext ≠ plaintext), cross-org unique violation translation, soft-revoke idempotency, and the admin helpers. Total: 11 `@platform/slack` + 3 `@domain/integrations` + 6 `@platform/db-postgres` slack-integration tests. All green.
 - [x] **P1-8**: Phase 1 is intentionally undocumented in `dev-docs/`. The spec captures the design; durable docs land in `dev-docs/slack-integration.md` once Phase 3 stabilizes (per the docs skill's "promote stable knowledge" guidance). `.agents/skills/slack-integration/SKILL.md` will follow if Phase 2/3 surface justifies it.
@@ -197,7 +215,7 @@ Goal: a Latitude developer can drive the OAuth flow end-to-end via a script (or 
 
 **Exit gate**:
 
-- A developer can run `pnpm --filter @platform/slack slack:install --print-url`, open the URL, approve in Slack, copy the code, and re-run with `--code <code>` to land a `slack_integrations` row with an encrypted bot token. The token round-trips cleanly through the repository (covered by the PGlite test).
+- A developer can run `pnpm --filter @platform/slack slack:install`, open the printed URL, approve in Slack, paste the redirect URL back, and watch a parent `integrations` row (kind=`slack`) + `slack_integration_details` row land with the bot token encrypted. The token round-trips cleanly through the repository (covered by the PGlite test).
 - The `slack` flag is registered and off.
 - No user-visible surface; no production code path enabled.
 
@@ -234,7 +252,7 @@ Goal: org admin configures channels per notification group; firing a notificatio
 - [ ] **P3-6**: Producer-step change in `apps/workers/src/workers/notifications.ts`: after the existing per-recipient fan-out, look up the org's active integration + routes for the group, publish one `notification-slack:send` per route. Skip if `slack` flag off or no live integration.
 - [ ] **P3-7**: New worker `apps/workers/src/workers/notification-slack.ts`. Resolves the integration, decrypts the token, dispatches the per-kind renderer, calls `chat.postMessage` via `@platform/slack`. Handles `token_revoked` / `invalid_auth` by soft-revoking the integration. Handles 429 with `Retry-After` honoured by BullMQ backoff. Register in `apps/workers/src/server.ts`.
 - [ ] **P3-8**: Idempotency decision: pick (a) `slack_deliveries(idempotency_key, channel_id)` claim-then-act table mirroring `notifications.emailed_at`, or (b) rely on BullMQ `dedupeKey` only. Document the decision in this spec when made.
-- [ ] **P3-9**: Cascades: when a `slack_integrations` row is revoked, **leave routes in place** so re-connecting the same workspace restores delivery without re-picking channels. On `ProjectDeleted`: nothing to do (routes are org-only in v1).
+- [ ] **P3-9**: Cascades: when an `integrations` row is soft-revoked, **leave routes in place** so re-connecting the same workspace restores delivery without re-picking channels. On `ProjectDeleted`: nothing to do (routes are org-only in v1).
 - [ ] **P3-10**: Production rollout: enable the `slack` flag for opted-in orgs first; broader rollout after.
 - [ ] **P3-11**: Promote durable knowledge: write `dev-docs/slack-integration.md`, extend `dev-docs/notifications.md` (Slack channel section already anticipates this), create `.agents/skills/slack-integration/SKILL.md` if surface justifies it.
 - [ ] **P3-12**: Tests — producer fan-out with N routes, worker dispatch, renderer registry exhaustiveness, token-revoked → soft-revoke path, 429 backoff.
