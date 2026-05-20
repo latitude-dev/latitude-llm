@@ -100,7 +100,12 @@ export const TreeRow = memo(function TreeRow({
 
         <SpanIcon span={node.span} />
 
-        <Text.H6 noWrap ellipsis className="flex-1 min-w-0">
+        <Text.H6
+          noWrap
+          ellipsis
+          color={node.span.statusCode === "error" ? "destructive" : "foreground"}
+          className="flex-1 min-w-0"
+        >
           {node.span.name}
         </Text.H6>
 
