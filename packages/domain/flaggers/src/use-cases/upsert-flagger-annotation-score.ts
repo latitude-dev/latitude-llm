@@ -10,6 +10,7 @@ interface UpsertFlaggerAnnotationScoreInput {
   readonly sessionId: string | null
   readonly simulationId: string | null
   readonly feedback: string
+  readonly flaggerSlug: string
   readonly messageIndex?: number | undefined
 }
 
@@ -20,9 +21,10 @@ type UpsertFlaggerAnnotationScoreResult =
 /**
  * Dedups + writes the canonical flagger-authored annotation score
  * (`source: "annotation"`, `sourceId: "SYSTEM"`, `draftedAt: null`,
- * `metadata: { rawFeedback }`). Shared by the deterministic
+ * `metadata: { rawFeedback, flaggerSlug }`). Shared by the deterministic
  * `process-flaggers` matched path and the LLM `save-flagger-annotation`
- * path so they can't drift.
+ * path so they can't drift. `flaggerSlug` lets the UI name the flagger and
+ * link to its project settings.
  */
 export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScoreInput) =>
   Effect.gen(function* () {
@@ -53,6 +55,7 @@ export const upsertFlaggerAnnotationScore = (input: UpsertFlaggerAnnotationScore
       feedback: input.feedback,
       metadata: {
         rawFeedback: input.feedback,
+        flaggerSlug: input.flaggerSlug,
         ...(input.messageIndex !== undefined ? { messageIndex: input.messageIndex } : {}),
       },
       error: null,

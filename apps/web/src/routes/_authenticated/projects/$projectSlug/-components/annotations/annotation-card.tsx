@@ -2,10 +2,11 @@ import { canUpdateAnnotation, getAnnotationProvenance } from "@domain/annotation
 import { Avatar, Badge, Button, DropdownMenu, Icon, LatitudeLogo, type MenuOption, Text, Tooltip } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useNavigate, useParams } from "@tanstack/react-router"
-import { EllipsisIcon, GlobeIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
+import { ArrowUpRightIcon, EllipsisIcon, GlobeIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useDeleteAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
+import { useProjectFlaggers } from "../../../../../../domains/flaggers/flaggers.collection.ts"
 import { useIssue } from "../../../../../../domains/issues/issues.collection.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
@@ -45,6 +46,7 @@ export function AnnotationCard({
   const linkedIssueName = linkedIssue?.name ?? null
   const linkedIssueDescription = linkedIssue?.description?.trim()
   const provenance = getAnnotationProvenance(annotation)
+  const flaggerSlug = (annotation.metadata as { flaggerSlug?: string })?.flaggerSlug?.trim() || undefined
   const isEditable = canUpdateAnnotation(annotation)
   const isDraft = annotation.draftedAt !== null
   const isAgentDraft = provenance === "agent" && isDraft
@@ -130,9 +132,13 @@ export function AnnotationCard({
           <div className="flex items-center gap-1.5">
             <LatitudeLogo className="h-4 w-4" />
             <Text.H6 weight="bold">Latitude</Text.H6>
-            <Badge variant="secondary" size="small">
-              Agent
-            </Badge>
+            {flaggerSlug ? (
+              <FlaggerBadge projectId={projectId} projectSlug={projectSlug} slug={flaggerSlug} />
+            ) : (
+              <Badge variant="secondary" size="small">
+                Agent
+              </Badge>
+            )}
           </div>
         )}
         {provenance === "api" && (
@@ -225,5 +231,74 @@ export function AnnotationCard({
         </div>
       )}
     </div>
+  )
+}
+
+const humanizeFlaggerSlug = (slug: string) =>
+  slug.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
+
+interface FlaggerBadgeProps {
+  readonly projectId: string
+  readonly projectSlug: string | undefined
+  readonly slug: string
+}
+
+/**
+ * Names the automatic flagger that authored an annotation and, when we know the
+ * current project slug, links to its row in project settings. Falls back to a
+ * humanized slug when the flagger isn't in the project's provisioned list
+ * (e.g. it was de-provisioned after the annotation was created).
+ */
+function FlaggerBadge({ projectId, projectSlug, slug }: FlaggerBadgeProps) {
+  const navigate = useNavigate()
+  const { data: flaggers = [] } = useProjectFlaggers(projectId)
+  const flagger = flaggers.find((candidate) => candidate.slug === slug)
+  const name = flagger?.name ?? humanizeFlaggerSlug(slug)
+
+  function openFlaggerSettings(event: { stopPropagation: () => void; preventDefault?: () => void }) {
+    if (!projectSlug) return
+    event.stopPropagation()
+    event.preventDefault?.()
+    void navigate({
+      to: "/projects/$projectSlug/settings/flaggers",
+      params: { projectSlug },
+      search: { flagger: slug },
+    })
+  }
+
+  if (!projectSlug) {
+    return (
+      <Badge variant="secondary" size="small">
+        {name}
+      </Badge>
+    )
+  }
+
+  return (
+    <Tooltip
+      asChild
+      trigger={
+        <Badge
+          data-no-navigate
+          variant="secondary"
+          size="small"
+          role="button"
+          tabIndex={0}
+          aria-label={`Open the ${name} flagger settings`}
+          className="cursor-pointer hover:bg-muted"
+          iconProps={{ icon: ArrowUpRightIcon, color: "foregroundMuted", placement: "end" }}
+          onClick={openFlaggerSettings}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              openFlaggerSettings(event)
+            }
+          }}
+        >
+          {name}
+        </Badge>
+      }
+    >
+      Flagged automatically by the {name} flagger — open its settings
+    </Tooltip>
   )
 }

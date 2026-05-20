@@ -90,6 +90,7 @@ export type EvaluationScoreMetadata = z.infer<typeof evaluationScoreMetadataSche
 export const annotationScoreMetadataSchema = baseScoreMetadataSchema
   .extend({
     rawFeedback: z.string(), // original feedback text before enrichment; human-authored for human drafts/published annotations, model-authored for system-created drafts
+    flaggerSlug: z.string().optional(), // slug of the automatic flagger that authored this annotation (only set for flagger-created `sourceId: "SYSTEM"` rows); lets the UI name the flagger and link to its project settings
     ...annotationAnchorFields,
   })
   .superRefine(validateAnnotationAnchor)

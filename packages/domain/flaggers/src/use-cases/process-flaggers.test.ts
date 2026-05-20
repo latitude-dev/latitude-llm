@@ -172,6 +172,7 @@ describe("processFlaggersUseCase", () => {
     expect(jailbreakScores[0]?.source).toBe("annotation")
     expect(jailbreakScores[0]?.sourceId).toBe("SYSTEM")
     expect(jailbreakScores[0]?.draftedAt).toBeNull()
+    expect(jailbreakScores[0]?.metadata).toMatchObject({ flaggerSlug: "jailbreaking" })
     expect(deps.enqueued).toEqual([])
   })
 

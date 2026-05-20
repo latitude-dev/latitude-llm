@@ -1,10 +1,12 @@
-import { Label, Switch, Text, useToast } from "@repo/ui"
+import { cn, Label, Switch, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
+import { useRef } from "react"
 import { updateFlaggerMutation, useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
 import type { FlaggerRecord } from "../../../../../domains/flaggers/flaggers.functions.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
@@ -24,6 +26,17 @@ function ProjectFlaggersSettingsPage() {
 
   const currentProject = project ?? routeProject
   const { data: flaggers = [], isLoading: isLoadingFlaggers } = useProjectFlaggers(currentProject.id)
+
+  // Flagger annotations deep-link here with `?flagger=<slug>` to point at the
+  // flagger that authored them; scroll it into view once and keep it highlighted.
+  const [targetFlaggerSlug] = useParamState("flagger", "")
+  const hasScrolledToTargetRef = useRef(false)
+  const scrollTargetRef = (node: HTMLDivElement | null) => {
+    if (node && !hasScrolledToTargetRef.current) {
+      hasScrolledToTargetRef.current = true
+      node.scrollIntoView({ block: "center", behavior: "smooth" })
+    }
+  }
 
   const handleFlaggerEnabledChange = async (flagger: FlaggerRecord, checked: boolean) => {
     try {
@@ -51,10 +64,14 @@ function ProjectFlaggersSettingsPage() {
         ) : (
           flaggers.map((flagger) => {
             const inputId = `flagger-${flagger.id}`
+            const isTarget = targetFlaggerSlug !== "" && flagger.slug === targetFlaggerSlug
             return (
               <div
                 key={flagger.id}
-                className="flex w-full flex-row items-center justify-between gap-4 rounded-lg bg-muted/30 p-4"
+                ref={isTarget ? scrollTargetRef : undefined}
+                className={cn("flex w-full flex-row items-center justify-between gap-4 rounded-lg bg-muted/30 p-4", {
+                  "ring-2 ring-primary ring-offset-2 ring-offset-background": isTarget,
+                })}
               >
                 <div className="flex flex-col gap-1">
                   <Label htmlFor={inputId}>{flagger.name}</Label>

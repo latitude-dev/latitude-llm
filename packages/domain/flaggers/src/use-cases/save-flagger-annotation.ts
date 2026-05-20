@@ -52,6 +52,7 @@ export const saveFlaggerAnnotationUseCase = Effect.fn("flaggers.saveFlaggerAnnot
     sessionId: parsedInput.sessionId ?? null,
     simulationId: parsedInput.simulationId ?? null,
     feedback: input.feedback,
+    flaggerSlug: parsedInput.flaggerSlug,
     messageIndex: input.messageIndex,
   })
 

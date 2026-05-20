@@ -225,6 +225,7 @@ const handleMatched = (input: ProcessOneStrategyInput, feedback: string, message
       sessionId: input.trace.sessionId,
       simulationId,
       feedback,
+      flaggerSlug: input.slug,
       messageIndex,
     })
 
