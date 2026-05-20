@@ -133,6 +133,12 @@
               "observability/traces",
               "observability/features/user-tracking"
             ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "observability/guides/group-traces-by-project"
+            ]
           }
         ]
       },
@@ -172,7 +178,8 @@
         "group": "More",
         "pages": [
           "getting-started/concepts",
-          "getting-started/mcp"
+          "getting-started/mcp",
+          "more/api-reference"
         ]
       }
     ]

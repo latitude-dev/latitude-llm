@@ -1,0 +1,159 @@
+---
+title: Group traces by project
+description: Keep issue detection scoped to the right agent by routing traces into separate Latitude projects.
+---
+
+# Group traces by project
+
+Latitude runs issue detection across all traces inside a project. That is the right default when one project represents one agent, application, or product surface.
+
+If the same workspace receives traces from multiple unrelated agents, their failure modes can mix together. For example, a customer-support agent and a code-review agent should usually not share issue discovery, because frustration, tool failures, refusals, or hallucinations mean different things in each context.
+
+The best way to keep issue discovery clean is to **create one Latitude project per agent or product surface** and route each trace to the right project.
+
+## When to split traces into different projects
+
+Use separate projects when agents have different:
+
+- prompts, tools, retrieval systems, or model configurations
+- users, workflows, or product surfaces
+- quality standards or failure definitions
+- owners or triage workflows
+- issue detection and evaluation needs
+
+Keep traces in the same project when they belong to the same agent experience and should share issue discovery, search, scores, evaluations, and issue trends.
+
+## How Latitude resolves the project
+
+Each ingested span resolves to a Latitude project from the first available source:
+
+1. **Span attribute**: `latitude.project`
+2. **OTEL resource attribute**: `latitude.project`
+3. **Export header**: `X-Latitude-Project`
+
+Use the export header or SDK constructor when a process sends all traces to one project. Use the span attribute when one process emits traces for multiple agents.
+
+## SDK examples
+
+### TypeScript: one project per process
+
+If the service only runs one agent, set the project when initializing Latitude.
+
+```ts
+import { Latitude } from "@latitude-data/telemetry"
+import OpenAI from "openai"
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  project: "support-agent",
+  instrumentations: { openai: OpenAI },
+})
+```
+
+### TypeScript: multiple agents in one process
+
+If one process runs multiple agents, set `project` on `capture()` so each trace is routed by agent.
+
+```ts
+import { Latitude, capture } from "@latitude-data/telemetry"
+import OpenAI from "openai"
+
+const latitude = new Latitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  instrumentations: { openai: OpenAI },
+})
+
+await capture(
+  "support-agent-turn",
+  async () => runSupportAgent(userMessage),
+  { project: "support-agent", sessionId: supportConversationId },
+)
+
+await capture(
+  "billing-agent-turn",
+  async () => runBillingAgent(userMessage),
+  { project: "billing-agent", sessionId: billingConversationId },
+)
+```
+
+### Python: one project per process
+
+```python
+import openai
+from latitude_telemetry import Latitude
+
+latitude = Latitude(
+    api_key="your-api-key",
+    project="support-agent",
+    instrumentations={"openai": openai},
+)
+```
+
+### Python: multiple agents in one process
+
+```python
+from latitude_telemetry import Latitude, capture
+
+latitude = Latitude(api_key="your-api-key")
+
+capture(
+    "support-agent-turn",
+    lambda: run_support_agent(user_message),
+    {"project": "support-agent", "session_id": support_conversation_id},
+)
+
+capture(
+    "billing-agent-turn",
+    lambda: run_billing_agent(user_message),
+    {"project": "billing-agent", "session_id": billing_conversation_id},
+)
+```
+
+## OpenTelemetry examples
+
+### One project per exporter with `X-Latitude-Project`
+
+Use the export header when every span exported by the process belongs to the same Latitude project.
+
+```bash
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="https://ingest.latitude.so/v1/traces"
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer $LATITUDE_API_KEY,X-Latitude-Project=support-agent"
+```
+
+### One project per process with a resource attribute
+
+Use the resource attribute when your OpenTelemetry setup prefers routing metadata on the resource instead of headers.
+
+```go
+import (
+    "go.opentelemetry.io/otel/attribute"
+    "go.opentelemetry.io/otel/sdk/resource"
+)
+
+res, err := resource.New(ctx,
+    resource.WithAttributes(
+        attribute.String("service.name", "agent-service"),
+        attribute.String("latitude.project", "support-agent"),
+    ),
+)
+```
+
+### Multiple agents in one process with a span attribute
+
+Use the span attribute when a single process emits traces for multiple agents. The span-level value wins over the resource attribute and export header.
+
+```go
+ctx, span := tracer.Start(ctx, "support-agent-turn")
+defer span.End()
+
+span.SetAttributes(
+    attribute.String("latitude.project", "support-agent"),
+    attribute.String("session.id", supportConversationID),
+)
+```
+
+## Recommended pattern
+
+Start with one Latitude project per production agent. If one runtime hosts several agents, keep one exporter but set `latitude.project` per agent run through the SDK `capture()` option or an OTEL span attribute.
+
+That keeps search, scores, evaluations, and issue discovery focused on the traces that belong together.
