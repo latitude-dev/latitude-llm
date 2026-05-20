@@ -30,13 +30,15 @@
 --   4. Aligns session TTL with traces (retention_days + 30 grace).
 -- ═══════════════════════════════════════════════════════════
 
--- duration_ns was an Int64 ALIAS (wall-clock). CH doesn't support
--- MODIFY COLUMN from ALIAS to a real aggregate, so drop first, then
--- re-add with the new active-execution semantics in the next ALTER.
+-- All sessions schema changes folded into ONE ALTER, mirroring the
+-- clustered variant. ClickHouse processes sub-actions in declared
+-- order against a rolling working schema:
+--   - DROP COLUMN duration_ns removes the original Int64 ALIAS first
+--     (CH doesn't allow MODIFY COLUMN to change a column's kind),
+--   - ADD COLUMN duration_ns re-adds it as a SimpleAggregateFunction,
+--   - MODIFY TTL references retention_days from the same ALTER.
 ALTER TABLE sessions
-    DROP COLUMN IF EXISTS duration_ns;
-
-ALTER TABLE sessions
+    DROP COLUMN IF EXISTS duration_ns,
     ADD COLUMN IF NOT EXISTS max_start_time
         SimpleAggregateFunction(max, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER max_end_time,
     ADD COLUMN IF NOT EXISTS duration_ns
@@ -61,9 +63,7 @@ ALTER TABLE sessions
     ADD COLUMN IF NOT EXISTS system_instructions
         AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)) AFTER output_messages,
     ADD COLUMN IF NOT EXISTS retention_days
-        SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1));
-
-ALTER TABLE sessions
+        SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1)),
     MODIFY TTL toDateTime(min_start_time) + toIntervalDay(retention_days + 30) DELETE;
 
 DROP VIEW IF EXISTS sessions_mv;
@@ -153,10 +153,13 @@ GROUP BY
 
 DROP VIEW IF EXISTS sessions_mv;
 
+-- All sessions schema changes folded into ONE ALTER, mirroring the
+-- Up. Sub-actions run in declared order: REMOVE TTL clears the
+-- retention_days dependency, the multi-DROP COLUMN removes the new
+-- aggregate columns, then ADD COLUMN re-adds duration_ns as the
+-- original Int64 ALIAS.
 ALTER TABLE sessions
-    REMOVE TTL;
-
-ALTER TABLE sessions
+    REMOVE TTL,
     DROP COLUMN IF EXISTS retention_days,
     DROP COLUMN IF EXISTS system_instructions,
     DROP COLUMN IF EXISTS output_messages,
@@ -167,9 +170,7 @@ ALTER TABLE sessions
     DROP COLUMN IF EXISTS time_to_first_token_ns,
     DROP COLUMN IF EXISTS time_of_first_token,
     DROP COLUMN IF EXISTS duration_ns,
-    DROP COLUMN IF EXISTS max_start_time;
-
-ALTER TABLE sessions
+    DROP COLUMN IF EXISTS max_start_time,
     ADD COLUMN IF NOT EXISTS duration_ns Int64 ALIAS
         reinterpretAsInt64(max_end_time) - reinterpretAsInt64(min_start_time) AFTER max_end_time;
 

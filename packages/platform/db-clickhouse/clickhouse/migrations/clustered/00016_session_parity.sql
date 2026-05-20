@@ -5,42 +5,34 @@
 -- Sessions parity with traces (LAT-604) — clustered variant.
 -- See unclustered/00016_session_parity.sql for full notes.
 --
--- On replicated tables, back-to-back dependent ALTERs race the
--- local replica's metadata-version catchup: ALTER #2's
--- precondition check fires before #1's bump has propagated,
--- throwing code 517 ("doesn't catchup with latest ALTER query
--- updates") at submission time — too early for alter_sync=2's
--- wait to help. SYSTEM SYNC REPLICA between ALTERs blocks
--- until every node's local metadata is at Keeper's "common"
--- version, breaking the race. The opening SYNC also drains
--- pending bumps from prior failed attempts, so this file is
--- safe to re-run after a partial application.
+-- All schema changes on `sessions` are folded into ONE ALTER.
+-- ClickHouse processes ALTER sub-actions in declared order
+-- against a rolling working schema, so within this single
+-- statement:
+--   - DROP COLUMN duration_ns removes the old Int64 ALIAS first,
+--   - ADD COLUMN duration_ns re-adds it as a SimpleAggregateFunction
+--     (canonical CH idiom for changing a column's kind — MODIFY
+--     COLUMN can change a column's type but not its kind, so
+--     ALIAS ↔ regular requires drop + re-add),
+--   - MODIFY TTL references retention_days from the same ALTER.
 --
--- The mode matters: plain SYSTEM SYNC REPLICA waits for every
--- fetched log entry — including ALTER_METADATA — to finish
--- executing on the local replica. LIGHTWEIGHT mode waits only
--- for part-movement entries (GET_PART, ATTACH_PART, DROP_RANGE,
--- REPLACE_RANGE, DROP_PART) and explicitly skips ALTER_METADATA,
--- so it does NOT close the 517 race. We use the default mode
--- here and accept the wait on pending merges; SYNC does not
--- block readers or writers, only this migration connection.
+-- Why one ALTER: prior versions of this migration split the
+-- work across multiple ALTERs and hit ClickHouse error 517
+-- ("doesn't catchup with latest ALTER query updates") — a known
+-- race where a replica's local metadata_version znode hasn't
+-- flushed the previous ALTER's bump before the next ALTER's
+-- precondition check fires. alter_sync=2 doesn't close it, and
+-- SYSTEM SYNC REPLICA between ALTERs didn't reliably close it
+-- under staging load either. A single ALTER has no inter-ALTER
+-- race, so no SYSTEM SYNC REPLICA is needed.
 --
--- Docs: https://clickhouse.com/docs/en/sql-reference/statements/system#sync-replica
---
--- Scope reminder: SYSTEM SYNC REPLICA is a per-connection wait,
--- not a cluster configuration change. ON CLUSTER default just
--- dispatches the wait to every node so each one drains its own
--- queue locally. Nothing persists after the SYNC returns.
+-- Retry safety: every sub-action uses IF EXISTS / IF NOT EXISTS,
+-- so re-running after a partial application is a no-op on
+-- already-applied changes.
 -- ═══════════════════════════════════════════════════════════
 
-SYSTEM SYNC REPLICA sessions ON CLUSTER default;
-
 ALTER TABLE sessions ON CLUSTER default
-    DROP COLUMN IF EXISTS duration_ns;
-
-SYSTEM SYNC REPLICA sessions ON CLUSTER default;
-
-ALTER TABLE sessions ON CLUSTER default
+    DROP COLUMN IF EXISTS duration_ns,
     ADD COLUMN IF NOT EXISTS max_start_time
         SimpleAggregateFunction(max, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER max_end_time,
     ADD COLUMN IF NOT EXISTS duration_ns
@@ -65,14 +57,8 @@ ALTER TABLE sessions ON CLUSTER default
     ADD COLUMN IF NOT EXISTS system_instructions
         AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)) AFTER output_messages,
     ADD COLUMN IF NOT EXISTS retention_days
-        SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1));
-
-SYSTEM SYNC REPLICA sessions ON CLUSTER default;
-
-ALTER TABLE sessions ON CLUSTER default
+        SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1)),
     MODIFY TTL toDateTime(min_start_time) + toIntervalDay(retention_days + 30) DELETE;
-
-SYSTEM SYNC REPLICA sessions ON CLUSTER default;
 
 DROP VIEW IF EXISTS sessions_mv ON CLUSTER default;
 
@@ -147,20 +133,17 @@ GROUP BY
 
 -- +goose Down
 
--- SYSTEM SYNC REPLICA between dependent ALTERs — see header.
-
-SYSTEM SYNC REPLICA sessions ON CLUSTER default;
+-- Down mirrors the Up: all `sessions` schema changes are folded
+-- into ONE ALTER. Sub-actions run in declared order against the
+-- rolling working schema:
+--   - REMOVE TTL clears the dependency on retention_days first,
+--   - the multi DROP COLUMN removes the new aggregate columns,
+--   - ADD COLUMN re-adds duration_ns as the original Int64 ALIAS.
 
 DROP VIEW IF EXISTS sessions_mv ON CLUSTER default;
 
-SYSTEM SYNC REPLICA sessions ON CLUSTER default;
-
 ALTER TABLE sessions ON CLUSTER default
-    REMOVE TTL;
-
-SYSTEM SYNC REPLICA sessions ON CLUSTER default;
-
-ALTER TABLE sessions ON CLUSTER default
+    REMOVE TTL,
     DROP COLUMN IF EXISTS retention_days,
     DROP COLUMN IF EXISTS system_instructions,
     DROP COLUMN IF EXISTS output_messages,
@@ -171,11 +154,7 @@ ALTER TABLE sessions ON CLUSTER default
     DROP COLUMN IF EXISTS time_to_first_token_ns,
     DROP COLUMN IF EXISTS time_of_first_token,
     DROP COLUMN IF EXISTS duration_ns,
-    DROP COLUMN IF EXISTS max_start_time;
-
-SYSTEM SYNC REPLICA sessions ON CLUSTER default;
-
-ALTER TABLE sessions ON CLUSTER default
+    DROP COLUMN IF EXISTS max_start_time,
     ADD COLUMN IF NOT EXISTS duration_ns Int64 ALIAS
         reinterpretAsInt64(max_end_time) - reinterpretAsInt64(min_start_time) AFTER max_end_time;
 
