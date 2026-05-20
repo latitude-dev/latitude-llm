@@ -1,5 +1,61 @@
 # Session materialization parity with traces
 
+## Implementation tasks
+
+Tracking checklist for the work this spec describes. Grouped by PR boundary;
+within each group, order is execution order. Boxes use `- [ ]` (unchecked)
+and flip to `- [x]` as the work lands.
+
+### PR 1 — ClickHouse schema layer (LAT-604)
+
+- [x] Scaffold migration 00016 via `pnpm --filter @platform/db-clickhouse ch:create session_parity` (creates both clustered + unclustered files).
+- [x] Fill `clickhouse/migrations/unclustered/00016_session_parity.sql`:
+  - [x] `ALTER TABLE sessions DROP COLUMN IF EXISTS duration_ns;` (drops the wall-clock ALIAS so it can be re-added as a real aggregate).
+  - [x] Single `ALTER TABLE sessions ADD COLUMN …` adding `duration_ns`, `time_of_first_token`, `time_to_first_token_ns` (ALIAS), `root_span_id`, `root_span_name`, `input_messages`, `last_input_messages`, `output_messages`, `system_instructions`, `retention_days` — all with explicit `AFTER` clauses to mirror trace column order.
+  - [x] `ALTER TABLE sessions MODIFY TTL toDateTime(min_start_time) + toIntervalDay(retention_days + 30) DELETE;`.
+  - [x] `DROP VIEW IF EXISTS sessions_mv;`.
+  - [x] `CREATE MATERIALIZED VIEW sessions_mv TO sessions AS SELECT …` with the new shape: `coalesce(nullIf(session_id, ''), toString(trace_id))` grouping key (no `WHERE session_id != ''`), root-span-sum `duration_ns`, sentinel `time_of_first_token`, `argMinIf` root_span_* projections, message payloads, `max(retention_days)`.
+- [x] Fill `clickhouse/migrations/clustered/00016_session_parity.sql` mirroring the unclustered file with `ON CLUSTER default` on every DDL statement.
+- [x] Apply locally: `pnpm --filter @platform/db-clickhouse db:up`.
+- [x] Regenerate `packages/platform/testkit/src/clickhouse/schema.sql` via `pnpm --filter @platform/db-clickhouse ch:schema:dump` and commit. (Surgical patch instead of full regen — chdb chokes on the CH-26.2 `text` index from migration 00012 that was hand-stripped from the prior dump.)
+- [x] Verify orphan-trace produces a 1-trace session (`session_id = toString(trace_id)`).
+- [x] Verify a multi-trace conversational session aggregates with `trace_count = N` and non-empty `models` after merge.
+- [x] Verify `sum(duration_ns)` diverges from `max_end_time - min_start_time` (active execution vs wall-clock) for a session with idle gaps.
+- [x] Verify TTFT sentinel: a session with no first-token reads `time_to_first_token_ns = 0`; a session with one reads positive.
+- [x] Confirm trace path untouched: `pnpm --filter @platform/db-clickhouse test` passes (133/133).
+
+### PR 2 — Domain entity
+
+- [ ] `packages/domain/spans/src/entities/session.ts`: add `timeToFirstTokenNs`, `rootSpanId`, `rootSpanName` to `sessionSchema`.
+- [ ] Same file: add `sessionDetailSchema` and `SessionDetail` paralleling `traceDetailSchema` (extends `sessionSchema` with `inputMessages`, `lastInputMessages`, `outputMessages`, `systemInstructions`).
+
+### PR 2 — Repository port
+
+- [ ] `packages/domain/spans/src/ports/session-repository.ts`: extend `SessionMetrics` with `timeToFirstTokenNs: NumericRollup`; update `emptySessionMetrics`.
+
+### PR 2 — Repository implementation
+
+- [ ] `packages/platform/db-clickhouse/src/repositories/session-repository.ts`: extend `LIST_SELECT` with `time_to_first_token_ns` (sentinel-aware finalization), `argMinIfMerge(root_span_id)`, `argMinIfMerge(root_span_name)`.
+- [ ] Same file: add `DETAIL_SELECT` projecting `argMinIfMerge(input_messages)`, `argMaxIfMerge(last_input_messages)`, `argMaxIfMerge(output_messages)`, `argMinIfMerge(system_instructions)`.
+- [ ] Widen `SessionListRow` (and add a `SessionDetailRow`) to match.
+- [ ] Update `toDomainSession` to populate the three new fields; add a `toDomainSessionDetail`.
+- [ ] Add `findBySessionId(projectId, sessionId)` returning `SessionDetail`, mirroring `findByTraceId`.
+- [ ] Add `time_to_first_token_ns` rollup to `aggregateMetricsByProjectId` so session metrics match trace metrics.
+
+### PR 2 — Filter registry & sort columns
+
+- [ ] `packages/platform/db-clickhouse/src/registries/session-fields.ts`: add `ttft: { column: "time_to_first_token_ns", chType: "Int64" }` and `name: { column: "root_span_name", chType: "String" }`.
+- [ ] `session-repository.ts` `SORT_COLUMNS`: add `ttft: { expr: "time_to_first_token_ns", chType: "Int64", rowKey: "time_to_first_token_ns" }`.
+
+### PR 2 — Tests
+
+- [ ] New file `packages/platform/db-clickhouse/src/repositories/session-repository.test.ts` (no existing file) modeled on `trace-repository.test.ts`.
+- [ ] Cover orphan-trace-as-session: spans without `gen_ai.conversation.id` produce a row keyed on `toString(trace_id)` with `trace_count = 1`.
+- [ ] Cover active-execution `duration_ns`: multi-root and concurrent-trace scenarios sum independently of wall-clock.
+- [ ] Cover TTFT sentinel: no-first-token → 0; with first-token → positive.
+- [ ] Cover `root_span_name` population: comes from the earliest root span across the session's first trace.
+- [ ] Cover the mixed-binding case: a real session + an orphan-fragment session emitted by the same trace ID, verifying `tokens_total = 0` on the orphan fragment.
+
 ## Goal
 
 The `sessions` ClickHouse table is fed by the same `spans` source as `traces`,
