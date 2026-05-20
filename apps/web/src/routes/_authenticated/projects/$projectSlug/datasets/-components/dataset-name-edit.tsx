@@ -1,11 +1,128 @@
-import { Button, CopyableText, DropdownMenu, Input, Label, Modal, Text, toast } from "@repo/ui"
+import { Button, CopyableText, DropdownMenu, Input, Modal, Text, Textarea, useToast } from "@repo/ui"
+import { useForm } from "@tanstack/react-form"
 import { useNavigate } from "@tanstack/react-router"
 import { Loader2, Trash2 } from "lucide-react"
 import { useCallback, useState } from "react"
 import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 import { deleteDatasetFunction, updateDataset } from "../../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
-import { parseServerError } from "../../../../../../lib/errors.ts"
+import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../../lib/form-server-action.ts"
+
+function DatasetEditModal({
+  dataset,
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  dataset: DatasetRecord
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
+}) {
+  const projectId = dataset.projectId
+  const { toast: showToast } = useToast()
+
+  const form = useForm({
+    defaultValues: {
+      name: dataset.name,
+      description: dataset.description ?? "",
+    },
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
+        return await updateDataset({
+          data: {
+            datasetId: dataset.id,
+            name: value.name,
+            description: value.description.trim() === "" ? null : value.description,
+          },
+        })
+      },
+      {
+        onSuccess: () => {
+          const qc = getQueryClient()
+          qc.invalidateQueries({ queryKey: ["datasets", projectId] })
+          qc.invalidateQueries({ queryKey: ["dataset", dataset.id] })
+          onOpenChange(false)
+          onSuccess?.()
+          showToast({ description: "Dataset updated" })
+        },
+        onError: (error) => {
+          showToast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
+  })
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next)
+        if (next) {
+          form.reset({ name: dataset.name, description: dataset.description ?? "" })
+        }
+      }}
+      title="Edit dataset"
+      description="Update the dataset name and description."
+      dismissible
+      footer={
+        <div className="flex flex-row items-center gap-2 justify-end">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={form.state.isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              void form.handleSubmit()
+            }}
+            disabled={form.state.isSubmitting}
+            isLoading={form.state.isSubmitting}
+          >
+            Save
+          </Button>
+        </div>
+      }
+    >
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
+        <form.Field name="name">
+          {(field) => (
+            <Input
+              id="dataset-edit-name"
+              label="Name"
+              value={field.state.value}
+              onChange={(event) => field.handleChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void form.handleSubmit()
+              }}
+              disabled={form.state.isSubmitting}
+              errors={fieldErrorsAsStrings(field.state.meta.errors)}
+            />
+          )}
+        </form.Field>
+        <form.Field name="description">
+          {(field) => (
+            <Textarea
+              id="dataset-edit-description"
+              label="Description"
+              value={field.state.value}
+              onChange={(event) => field.handleChange(event.target.value)}
+              disabled={form.state.isSubmitting}
+              minRows={4}
+              maxRows={8}
+              errors={fieldErrorsAsStrings(field.state.meta.errors)}
+            />
+          )}
+        </form.Field>
+      </form>
+    </Modal>
+  )
+}
 
 export function DatasetNameEdit({
   dataset,
@@ -18,49 +135,14 @@ export function DatasetNameEdit({
 }) {
   const projectId = dataset.projectId
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [editName, setEditName] = useState(dataset.name)
-  const [editDescription, setEditDescription] = useState(dataset.description ?? "")
-  const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const openEdit = useCallback(() => {
-    setEditName(dataset.name)
-    setEditDescription(dataset.description ?? "")
-    setError(null)
     setEditOpen(true)
-  }, [dataset.description, dataset.name])
-
-  const saveEdit = useCallback(async () => {
-    setSaving(true)
-    setError(null)
-    try {
-      await updateDataset({
-        data: {
-          datasetId: dataset.id,
-          name: editName,
-          description: editDescription.trim() === "" ? null : editDescription,
-        },
-      })
-      const qc = getQueryClient()
-      qc.invalidateQueries({ queryKey: ["datasets", projectId] })
-      qc.invalidateQueries({ queryKey: ["dataset", dataset.id] })
-      setEditOpen(false)
-      onSuccess?.()
-      toast({ description: "Dataset updated" })
-    } catch (e) {
-      const { _tag, message } = parseServerError(e)
-      if (_tag === "DuplicateDatasetNameError" || _tag === "ValidationError") {
-        setError(message)
-      } else {
-        setError(message)
-      }
-    } finally {
-      setSaving(false)
-    }
-  }, [dataset.id, editDescription, editName, onSuccess, projectId])
+  }, [])
 
   const confirmDelete = useCallback(async () => {
     setDeleting(true)
@@ -77,7 +159,7 @@ export function DatasetNameEdit({
     } catch (e) {
       toast({
         variant: "destructive",
-        description: parseServerError(e).message,
+        description: toUserMessage(e),
       })
     } finally {
       setDeleting(false)
@@ -127,56 +209,12 @@ export function DatasetNameEdit({
         ) : null}
       </div>
 
-      <Modal
+      <DatasetEditModal
+        dataset={dataset}
         open={editOpen}
         onOpenChange={setEditOpen}
-        title="Edit dataset"
-        description="Update the dataset name and description."
-        dismissible
-        footer={
-          <div className="flex flex-row items-center gap-2 justify-end">
-            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button onClick={() => void saveEdit()} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Save
-            </Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="dataset-edit-name">Name</Label>
-            <Input
-              id="dataset-edit-name"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void saveEdit()
-              }}
-              disabled={saving}
-              aria-invalid={Boolean(error)}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="dataset-edit-description">Description</Label>
-            <textarea
-              id="dataset-edit-description"
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              disabled={saving}
-              rows={4}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
-          {error ? (
-            <div role="alert">
-              <Text.H6 color="destructive">{error}</Text.H6>
-            </div>
-          ) : null}
-        </div>
-      </Modal>
+        {...(onSuccess ? { onSuccess } : {})}
+      />
 
       <Modal
         open={deleteOpen}

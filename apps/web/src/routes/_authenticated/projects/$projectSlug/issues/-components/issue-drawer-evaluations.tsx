@@ -25,6 +25,7 @@ import {
 } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
 import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { createFormSubmitHandler } from "../../../../../../lib/form-server-action.ts"
 import { AlignmentStatsModal } from "./alignment-stats-modal.tsx"
 import { EvaluationFilterModal } from "./evaluation-filter-modal.tsx"
 import { formatPercent, getAlignmentVariant } from "./issue-formatters.ts"
@@ -130,8 +131,8 @@ function SamplingModalForm({
     defaultValues: {
       sampling: evaluation.trigger.sampling,
     },
-    onSubmit: async ({ value }) => {
-      try {
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
         await updateIssueEvaluationSampling({
           data: {
             projectId,
@@ -140,13 +141,18 @@ function SamplingModalForm({
             sampling: value.sampling,
           },
         })
-        onClose()
-        await invalidateIssueQueries(projectId, issueId)
-        toast({ description: "Sampling updated." })
-      } catch (error) {
-        toast({ variant: "destructive", description: toUserMessage(error) })
-      }
-    },
+      },
+      {
+        onSuccess: async () => {
+          onClose()
+          await invalidateIssueQueries(projectId, issueId)
+          toast({ description: "Sampling updated." })
+        },
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
   })
 
   return (

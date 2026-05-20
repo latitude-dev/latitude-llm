@@ -22,7 +22,7 @@ interface ServerError {
  * Returns `{ _tag, message, status }` when the error was produced by
  * `errorHandler`, otherwise falls back to the raw error message with no tag.
  */
-export function parseServerError(err: unknown): ServerError {
+function parseServerError(err: unknown): ServerError {
   const raw = err instanceof Error ? err.message : String(err)
   try {
     const parsed = JSON.parse(raw)
