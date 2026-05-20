@@ -29,7 +29,12 @@ const submitOnboardingSchema = z.object({
   phoneNumber: z
     .string()
     .transform((v) => v.trim())
-    .pipe(z.string().max(64).transform((v) => (v.length > 0 ? v : undefined)))
+    .pipe(
+      z
+        .string()
+        .max(64)
+        .transform((v) => (v.length > 0 ? v : undefined)),
+    )
     .optional(),
   stackChoice: z.enum(["coding-agent-machine", "production-agent"]),
 })
