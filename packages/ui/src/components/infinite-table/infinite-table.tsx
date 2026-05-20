@@ -5,16 +5,46 @@ import { cn } from "../../utils/cn.ts"
 import type { SortDirection } from "../../utils/filtersHelpers.ts"
 import { Checkbox } from "../checkbox/checkbox.tsx"
 import { Icon } from "../icons/icons.tsx"
+import { Skeleton } from "../skeleton/skeleton.tsx"
 import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { DataRow } from "./data-row.tsx"
 import { HeaderCell } from "./headers/header-cell.tsx"
-import type { InfiniteTableProps } from "./types.ts"
+import type { InfiniteTableColumn, InfiniteTableProps } from "./types.ts"
 import { useHeaderLayoutLock } from "./use-header-layout-lock.ts"
 
 const ROW_HEIGHT = 40
 const SKELETON_ROW_COUNT = 8
+const EXPANDED_SKELETON_COUNT = 3
 const SELECTION_COLUMN_WIDTH = 48
+
+const EXPANDED_SKELETON_CELL_CLASS =
+  "px-4 py-2 first:rounded-l-lg last:rounded-r-lg overflow-hidden align-middle text-sm leading-5"
+
+function renderExpandedSkeletonRows<T>(
+  columns: readonly InfiniteTableColumn<T>[],
+  hasExpansion: boolean,
+  hasSelection: boolean,
+) {
+  return Array.from({ length: EXPANDED_SKELETON_COUNT }, (_, i) => (
+    <tr key={`exp-skel-${i}`} className="bg-secondary" style={{ opacity: 1 - i / EXPANDED_SKELETON_COUNT }}>
+      {hasExpansion && <td className="w-8 px-2 py-2" />}
+      {hasSelection && (
+        <td
+          style={{ width: SELECTION_COLUMN_WIDTH, minWidth: SELECTION_COLUMN_WIDTH, maxWidth: SELECTION_COLUMN_WIDTH }}
+          className={EXPANDED_SKELETON_CELL_CLASS}
+        >
+          <Skeleton className="h-4 w-4" />
+        </td>
+      )}
+      {columns.map((col) => (
+        <td key={col.key} className={EXPANDED_SKELETON_CELL_CLASS}>
+          <Skeleton className="h-4 w-full" />
+        </td>
+      ))}
+    </tr>
+  ))
+}
 
 function renderBlankSlateMessage(message: string, compact = false) {
   return (
@@ -294,13 +324,7 @@ export function InfiniteTable<T>({
                       : {})}
                     dataIndex={virtualRow.index}
                   />
-                  {expanded?.isLoading && (
-                    <tr>
-                      <td colSpan={colCount} className="p-0 border-none">
-                        {renderBlankSlateMessage("Loading...", true)}
-                      </td>
-                    </tr>
-                  )}
+                  {expanded?.isLoading && renderExpandedSkeletonRows(columns, hasExpansion, !!selection)}
                   {expanded &&
                     !expanded.isLoading &&
                     expanded.data.length === 0 &&
