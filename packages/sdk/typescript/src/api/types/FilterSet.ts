@@ -2,4 +2,7 @@
 
 import type * as LatitudeApi from "../index.js";
 
+/**
+ * Filter set keyed by field name. Each entry holds an array of conditions ANDed together for that field; field-level groups are also ANDed across the set.
+ */
 export type FilterSet = Record<string, LatitudeApi.FilterCondition[]>;

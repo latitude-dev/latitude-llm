@@ -4977,6 +4977,7 @@
           "Health"
         ],
         "summary": "Health check",
+        "x-fern-ignore": true,
         "responses": {
           "200": {
             "description": "Service is healthy",
@@ -4999,6 +5000,7 @@
         ],
         "summary": "OAuth protected resource metadata",
         "description": "RFC 9728 metadata document advertising the authorization server(s) trusted to issue access tokens for this API.",
+        "x-fern-ignore": true,
         "responses": {
           "200": {
             "description": "Protected resource metadata",

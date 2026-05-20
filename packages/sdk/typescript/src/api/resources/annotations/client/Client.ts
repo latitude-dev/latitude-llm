@@ -18,12 +18,12 @@ export declare namespace AnnotationsClient {
 export class AnnotationsClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<AnnotationsClient.Options>;
 
-    constructor(options: AnnotationsClient.Options = {}) {
+    constructor(options: AnnotationsClient.Options) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
     /**
-     * Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required).
+     * Creates a published annotation score against a target trace. The trace is resolved by explicit id (`trace.by = "id"`) or by a filter set (`trace.by = "filters"`, exactly one match required). When called with an OAuth token, the annotation is attributed to the authenticated user.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateAnnotationBody} request
@@ -48,7 +48,7 @@ export class AnnotationsClient {
         projectSlug: string,
         request: LatitudeApi.CreateAnnotationBody,
         requestOptions?: AnnotationsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.AnnotationScoreResponse> {
+    ): core.HttpResponsePromise<LatitudeApi.Annotation> {
         return core.HttpResponsePromise.fromPromise(this.__create(projectSlug, request, requestOptions));
     }
 
@@ -56,7 +56,7 @@ export class AnnotationsClient {
         projectSlug: string,
         request: LatitudeApi.CreateAnnotationBody,
         requestOptions?: AnnotationsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.AnnotationScoreResponse>> {
+    ): Promise<core.WithRawResponse<LatitudeApi.Annotation>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -83,7 +83,7 @@ export class AnnotationsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as LatitudeApi.AnnotationScoreResponse, rawResponse: _response.rawResponse };
+            return { data: _response.body as LatitudeApi.Annotation, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-alpha.2] - 2026-05-20
+
+### Added
+
+- **`client.account`** — `get()` returns the caller's account snapshot (organization + role + user; user/role are `null` for API-key callers).
+- **`client.members`** — `list`, `get`, `invite`, `update`, `remove`. Mutations require an OAuth-authenticated caller; API-key callers receive 403.
+- **`client.apiKeys`** — `get` and `update` added (alpha.1 already shipped `list`, `create`, `revoke`). `get` returns the unmasked token; `list` continues to return masked tokens.
+- **`client.oauthKeys`** — `list`, `get`, `revoke`. Read-only metadata about OAuth clients connected to the organization; tokens are never exposed by any of these endpoints.
+- **`client.traces`** — `list`, `get`, `listSpans`, `getSpan`, `listAnnotations`, `getAnnotation`, `export`, `analytics`. The export endpoint takes a `TracesRef` and emails a CSV to a verified org member.
+- **`client.savedSearches`** — `list`, `create`, `get`, `update`, `delete`, `assign`, `listTraces`. `create` and `assign` require OAuth.
+- **`client.issues`** — `list`, `get`, `trend`, `listTraces`, `resolve`, `unresolve`, `ignore`, `unignore`, `monitor`, `unmonitor`, `export`, `analytics`. Bulk lifecycle methods are idempotent. `monitor` is rate-limited (`critical`).
+- **`client.incidents`** — `list` with optional `[fromIso, toIso]` window (default trailing 7 days) and array filters `sourceTypes` / `sourceId` / `kinds` / `severities`.
+- **`client.datasets`** — `list`, `get`, `create`, `update`, `delete`, plus row methods `listRows`, `insertRows`, `deleteRows`, `importRowsFromTraces`, `exportRows`. Row selection uses the shared `ExportSelection` shape (`selected` / `all` / `allExcept`).
+- **Analytics endpoints** on `client.traces.analytics` and `client.issues.analytics` — top-line totals/medians plus 12-hour UTC-aligned bucket series. Cost is in USD, durations in seconds (no microcents / nanoseconds on the wire).
+- **Pagination shape** — every paginated list now returns `{ items, nextCursor, hasMore }`. Cursors are opaque base64url strings.
+- New shared types: `TracesRef` (plural-form sibling of `TraceRef`), `ExportSelection`, `Incident`, `Dataset`, `DatasetRow`, `Annotation` (replaces `AnnotationScoreResponse`), `PaginatedTraces`, `PaginatedIssues`, `PaginatedDatasets`, `PaginatedDatasetRows`, `PaginatedSavedSearches`, and a number of supporting evaluation/score/score-source types.
+
+### Changed
+
+- **`client.projects.list`** now returns a paginated page (`{ items, nextCursor, hasMore }`) instead of a flat `{ projects: [...] }`. Callers should switch from `result.projects` to `result.items`.
+- **`Project`** gained `settings` (issue / escalation / notification overrides) and `flaggers` fields. Existing field access keeps working; new fields are additive.
+- **`ApiKey`** and **`ApiKeyListItem`** shapes were refined: list rows now carry `maskedToken` instead of `token`; detail responses return the full unmasked `token`.
+- **`FilterSet` / `FilterCondition`** types tightened to match the API's discriminated-union shape (richer operator surface, percentile filters).
+- Path parameters on detail endpoints were renamed for clarity (`/api-keys/{id}` → `/api-keys/{apiKeyId}`, `/members/{id}` → `/members/{memberId}`). SDK call sites are unaffected because the parameters are positional; only the on-wire path changed.
+
+### Removed
+
+- **`AnnotationScoreResponse`** type — superseded by `Annotation`. Imports must be updated.
+- **`ProjectList`** type — superseded by `PaginatedProjects`. Imports must be updated.
+
 ## [6.0.0-alpha.1] - 2026-05-06
 
 ### Breaking Changes

@@ -6,22 +6,26 @@ import type * as LatitudeApi from "../index.js";
  * Internal, don't use
  */
 export interface CreateEvaluationScoreBody {
+    /** Simulation this score is tied to, if any. `null` (default) when not part of a simulation. */
     simulationId?: string | undefined;
+    /** Normalized score value in [0, 1]. Higher = better. */
     value: number;
+    /** Whether the scored output passes the evaluator's bar. */
     passed: boolean;
+    /** Free-text feedback explaining the score. */
     feedback: string;
+    /** Generation error text, when score generation itself failed. `null` (default) for successful scores. */
     error?: string | undefined;
+    /** Score generation duration in nanoseconds. `0` for externally-computed scores. */
     duration?: number | undefined;
+    /** LLM tokens consumed generating the score, if any. `0` for externally-computed scores. */
     tokens?: number | undefined;
+    /** Score cost in microcents (1/1,000,000 of a USD). `0` for externally-computed scores. */
     cost?: number | undefined;
     trace: LatitudeApi.TraceRef;
+    /** Discriminator: `true` flags the body as an evaluation score (internal); `false`/omit for custom. */
     _evaluation: boolean;
+    /** CUID of the evaluation that produced this score. */
     sourceId: string;
-    metadata: CreateEvaluationScoreBody.Metadata;
-}
-
-export namespace CreateEvaluationScoreBody {
-    export interface Metadata {
-        evaluationHash: string;
-    }
+    metadata: LatitudeApi.EvaluationScoreMetadata;
 }

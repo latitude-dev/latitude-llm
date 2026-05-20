@@ -15,6 +15,9 @@ const healthRoute = createRoute({
   operationId: "health.get",
   tags: ["Health"],
   summary: "Health check",
+  // Operational endpoint — not part of the product surface. Fern skips it
+  // when generating the SDK so it stays out of `client.health`.
+  "x-fern-ignore": true,
   responses: {
     200: {
       content: { "application/json": { schema: HealthResponseSchema } },

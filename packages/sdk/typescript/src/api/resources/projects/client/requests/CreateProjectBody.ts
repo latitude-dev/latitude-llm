@@ -7,6 +7,6 @@
  *     }
  */
 export interface CreateProjectBody {
-    /** Project name */
+    /** Human-readable name for the project. Must be unique within the organization. */
     name: string;
 }

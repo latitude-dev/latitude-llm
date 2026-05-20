@@ -2,11 +2,15 @@
 
 import type * as LatitudeApi from "../index.js";
 
+/**
+ * Target trace. Either an explicit id or a filter set matching exactly one trace.
+ */
 export type TraceRef = LatitudeApi.TraceRef.Id | LatitudeApi.TraceRef.Filters;
 
 export namespace TraceRef {
     export interface Id {
         by: "id";
+        /** 32-character trace identifier. */
         id: string;
     }
 
