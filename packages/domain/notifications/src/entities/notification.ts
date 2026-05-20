@@ -43,6 +43,10 @@ export type IncidentTrend = z.infer<typeof incidentTrendSchema>
  * future alert kind has a non-issue source. Project and issue display
  * data are resolved live downstream from `notification.projectId` +
  * `payload.sourceId` — no snapshot duplication here.
+ *
+ * `projectSlug` is snapshotted at notification request time so bell rows and
+ * email deep links still resolve when the client projects collection has
+ * not synced yet or the server-side project row is missing at email send.
  */
 const incidentBasePayloadShape = {
   alertIncidentId: cuidSchema,
@@ -50,6 +54,7 @@ const incidentBasePayloadShape = {
   sourceId: cuidSchema,
   incidentKind: alertIncidentKindSchema,
   severity: alertSeveritySchema,
+  projectSlug: z.string().min(1).optional(),
 }
 
 /**

@@ -7,7 +7,7 @@ import { IssueSummaryCard } from "./issue-summary-card.tsx"
 export function IssueNewNotification({ notification, payload }: IncidentRendererProps<"event">) {
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
   const createdAt = new Date(notification.createdAt)
-  const target = { projectId: notification.projectId, sourceId: payload.sourceId }
+  const target = { projectId: notification.projectId, sourceId: payload.sourceId, projectSlug: payload.projectSlug }
   const live = useLiveIssueSummary(target)
   // Snapshot status for issue.new is always "new"; the live lookup may
   // upgrade this if the issue has moved on (resolved, escalated, etc.).

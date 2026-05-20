@@ -5,16 +5,9 @@ import { Effect } from "effect"
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
 import { renderEmail } from "../../../utils/render.ts"
-import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
+import { resolveIncidentIssueAppHref } from "../incident-issue-link.ts"
+import type { NotificationEmailRenderer } from "../types.ts"
 import { ALERT_KIND_TO_LABEL, IncidentEventEmail } from "./EmailTemplate.tsx"
-
-const buildSourceUrl = (
-  ctx: NotificationEmailRenderContext,
-  payload: Parameters<NotificationEmailRenderer<"incident.event">>[0],
-): string | undefined => {
-  if (!ctx.project) return undefined
-  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${encodeURIComponent(payload.sourceId)}`
-}
 
 export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> = (payload, ctx) =>
   Effect.gen(function* () {
@@ -33,7 +26,7 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
       ),
     )
     const issueRef = issue?.name ?? "an issue"
-    const issueUrl = buildSourceUrl(ctx, payload)
+    const issueUrl = resolveIncidentIssueAppHref(ctx, payload)
 
     const html = yield* Effect.tryPromise({
       try: () =>

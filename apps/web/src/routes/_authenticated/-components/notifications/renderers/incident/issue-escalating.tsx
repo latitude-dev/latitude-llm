@@ -15,7 +15,7 @@ export function IssueEscalatingNotification({
 }: IncidentRendererProps<"opened" | "closed">) {
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
   const createdAt = new Date(notification.createdAt)
-  const target = { projectId: notification.projectId, sourceId: payload.sourceId }
+  const target = { projectId: notification.projectId, sourceId: payload.sourceId, projectSlug: payload.projectSlug }
   const live = useLiveIssueSummary(target)
   const opened = event === "opened"
   // Snapshot status for opened is "escalating"; for closed we genuinely

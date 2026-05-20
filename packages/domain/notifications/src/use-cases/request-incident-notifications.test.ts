@@ -5,6 +5,7 @@ import {
   alertIncidentSchema,
 } from "@domain/alerts"
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
+import { type Project, ProjectRepository } from "@domain/projects"
 import {
   type IssueEscalationThresholdSeries,
   type IssueOccurrenceBucket,
@@ -112,6 +113,32 @@ function setup(opts: SetupOpts = {}) {
     getProjectSettings: (_pid: ProjectId) => Effect.succeed(opts.projectSettings ?? null),
   })
 
+  const seedProject: Project = {
+    id: projectId,
+    organizationId: orgId,
+    name: "Seed project",
+    slug: "seed-project",
+    settings: null,
+    firstTraceAt: null,
+    deletedAt: null,
+    lastEditedAt: new Date("2026-05-01T00:00:00Z"),
+    createdAt: new Date("2026-05-01T00:00:00Z"),
+    updatedAt: new Date("2026-05-01T00:00:00Z"),
+  }
+
+  const projectRepo = ProjectRepository.of({
+    findById: (id) =>
+      id === projectId ? Effect.succeed(seedProject) : Effect.fail(new NotFoundError({ entity: "Project", id })),
+    findBySlug: () => Effect.die("not used"),
+    list: () => Effect.die("not used"),
+    listIncludingDeleted: () => Effect.die("not used"),
+    save: () => Effect.die("not used"),
+    softDelete: () => Effect.die("not used"),
+    hardDelete: () => Effect.die("not used"),
+    existsByName: () => Effect.die("not used"),
+    countBySlug: () => Effect.die("not used"),
+  })
+
   const occurrenceBuckets = opts.occurrenceBuckets ?? [
     { bucket: "2026-05-07T07:10:00.000Z", count: 1 },
     { bucket: "2026-05-07T08:10:00.000Z", count: 4 },
@@ -138,6 +165,7 @@ function setup(opts: SetupOpts = {}) {
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ScoreAnalyticsRepository, analytics),
     Layer.succeed(SettingsReader, settings),
+    Layer.succeed(ProjectRepository, projectRepo),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: orgId })),
     Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: orgId })),
   )
@@ -167,6 +195,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(result.requests[0]?.payload).not.toHaveProperty("trend")
     expect(result.requests[0]?.payload.sourceType).toBe("issue")
     expect(result.requests[0]?.payload.sourceId).toBe(cuid("i"))
+    expect(result.requests[0]?.payload.projectSlug).toBe("seed-project")
   })
 
   it("derives incident.opened when the incident has endedAt = null (issue.escalating, sustained)", async () => {
@@ -192,6 +221,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     // NaN thresholds round-trip through the producer as null.
     expect(payload.trend.points.some((p) => p.threshold === null)).toBe(true)
     expect(payload.trend.points.some((p) => typeof p.threshold === "number")).toBe(true)
+    expect(payload.projectSlug).toBe("seed-project")
   })
 
   it("derives incident.closed regardless of endedAt shape when transition='closed'", async () => {
@@ -218,6 +248,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     const payload = result.requests[0]?.payload
     if (!payload || !("trend" in payload)) throw new Error("expected trend on closed payload")
     expect(payload.trend.points.length).toBeGreaterThan(0)
+    expect(payload.projectSlug).toBe("seed-project")
   })
 
   it("emits one request per org member with a stable idempotency key", async () => {

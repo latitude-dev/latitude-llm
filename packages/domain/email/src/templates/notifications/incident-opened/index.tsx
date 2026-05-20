@@ -5,24 +5,9 @@ import { Effect } from "effect"
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
 import { renderEmail } from "../../../utils/render.ts"
-import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
+import { resolveIncidentIssueAppHref } from "../incident-issue-link.ts"
+import type { NotificationEmailRenderer } from "../types.ts"
 import { ALERT_KIND_TO_LABEL, IncidentOpenedEmail } from "./EmailTemplate.tsx"
-
-/**
- * Build the deep link to the source issue. Returns `undefined` when the
- * project context wasn't passed (e.g. the project was deleted between
- * notification create and email send), in which case the email omits the
- * CTA rather than linking to a broken path. `sourceId` is the issue id
- * for V1 — when a non-issue source type lands, dispatch on
- * `payload.sourceType` to pick the right URL shape.
- */
-const buildSourceUrl = (
-  ctx: NotificationEmailRenderContext,
-  payload: Parameters<NotificationEmailRenderer<"incident.opened">>[0],
-): string | undefined => {
-  if (!ctx.project) return undefined
-  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${encodeURIComponent(payload.sourceId)}`
-}
 
 export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"> = (payload, ctx) =>
   Effect.gen(function* () {
@@ -44,7 +29,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
       ),
     )
     const issueRef = issue?.name ?? "an issue"
-    const issueUrl = buildSourceUrl(ctx, payload)
+    const issueUrl = resolveIncidentIssueAppHref(ctx, payload)
 
     const html = yield* Effect.tryPromise({
       try: () =>

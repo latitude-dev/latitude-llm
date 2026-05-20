@@ -9,6 +9,8 @@ import { useProjectsCollection } from "../../../../../../domains/projects/projec
 interface IncidentTarget {
   readonly projectId: string | null | undefined
   readonly sourceId: string
+  /** Snapshotted at notification creation; used when the projects collection has not synced yet. */
+  readonly projectSlug?: string | null | undefined
 }
 
 /**
@@ -40,6 +42,7 @@ export function useIssueUrl(target: IncidentTarget): string | undefined {
     (projects) => projects.where(({ project: p }) => eq(p.id, target.projectId ?? " ")).findOne(),
     [target.projectId ?? null],
   )
-  if (!project) return undefined
-  return `/projects/${project.slug}/issues?issueId=${encodeURIComponent(target.sourceId)}`
+  const slug = project?.slug ?? target.projectSlug ?? undefined
+  if (!slug) return undefined
+  return `/projects/${slug}/issues?issueId=${encodeURIComponent(target.sourceId)}`
 }

@@ -1,6 +1,7 @@
 import { type AlertIncident, AlertIncidentRepository } from "@domain/alerts"
 import { DEFAULT_ESCALATION_SENSITIVITY_K } from "@domain/issues"
 import type { MembershipRepository } from "@domain/organizations"
+import { ProjectRepository } from "@domain/projects"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   AlertIncidentId,
@@ -148,14 +149,16 @@ const buildPayload = (input: {
   readonly incident: AlertIncident
   readonly kind: IncidentNotificationKind
   readonly trend: IncidentTrend | null
+  readonly projectSlug: string | undefined
 }): IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload => {
-  const { incident, kind, trend } = input
+  const { incident, kind, trend, projectSlug } = input
   const base = {
     alertIncidentId: incident.id,
     sourceType: incident.sourceType,
     sourceId: incident.sourceId,
     incidentKind: incident.kind,
     severity: incident.severity,
+    ...(projectSlug ? { projectSlug } : {}),
   } as const
 
   if (kind === "incident.event") return base
@@ -182,6 +185,12 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     const incidentRepo = yield* AlertIncidentRepository
     const incident = yield* incidentRepo.findById(AlertIncidentId(input.alertIncidentId))
 
+    const projects = yield* ProjectRepository
+    const projectSlug = yield* projects.findById(incident.projectId).pipe(
+      Effect.map((p) => p.slug),
+      Effect.catchTag("NotFoundError", () => Effect.succeed(undefined as string | undefined)),
+    )
+
     const notificationKind = resolveKind(incident, input.transition)
     yield* Effect.annotateCurrentSpan("kind", notificationKind)
 
@@ -205,7 +214,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       return { status: "skipped", reason: "no-recipients" } as const
     }
 
-    const payload = buildPayload({ incident, kind: notificationKind, trend })
+    const payload = buildPayload({ incident, kind: notificationKind, trend, projectSlug })
     // Per-kind switch preserves the discriminated-union narrowing
     // `buildIdempotencyKey`'s input requires. A widening cast would
     // silently lose exhaustiveness if a future kind keys off a
@@ -235,5 +244,11 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
   }).pipe(Effect.withSpan("notifications.requestIncidentNotifications")) as Effect.Effect<
     RequestIncidentNotificationsResult,
     RequestIncidentNotificationsError,
-    SqlClient | ChSqlClient | AlertIncidentRepository | MembershipRepository | ScoreAnalyticsRepository | SettingsReader
+    | SqlClient
+    | ChSqlClient
+    | AlertIncidentRepository
+    | MembershipRepository
+    | ScoreAnalyticsRepository
+    | SettingsReader
+    | ProjectRepository
   >
