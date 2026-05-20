@@ -24,6 +24,13 @@
 -- so it does NOT close the 517 race. We use the default mode
 -- here and accept the wait on pending merges; SYNC does not
 -- block readers or writers, only this migration connection.
+--
+-- Docs: https://clickhouse.com/docs/en/sql-reference/statements/system#sync-replica
+--
+-- Scope reminder: SYSTEM SYNC REPLICA is a per-connection wait,
+-- not a cluster configuration change. ON CLUSTER default just
+-- dispatches the wait to every node so each one drains its own
+-- queue locally. Nothing persists after the SYNC returns.
 -- ═══════════════════════════════════════════════════════════
 
 SYSTEM SYNC REPLICA sessions ON CLUSTER default;
