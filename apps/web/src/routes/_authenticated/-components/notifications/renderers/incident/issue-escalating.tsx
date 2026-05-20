@@ -22,7 +22,7 @@ export function IssueEscalatingNotification({
   // don't know (the escalation just ended — the issue could be ongoing,
   // resolved, or regressed). Wait for the live lookup in that case.
   const states = live?.states ?? (opened ? ["escalating"] : [])
-  const url = useIssueUrl(target)
+  const url = useIssueUrl(target, { alertIncidentId: payload.alertIncidentId })
   const icon = opened ? TrendingUpIcon : TrendingDownIcon
 
   return (

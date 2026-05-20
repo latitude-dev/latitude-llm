@@ -4,11 +4,19 @@ import {
   getIssueLifecycleSummary,
   type IssueLifecycleSummaryRecord,
 } from "../../../../../../domains/issues/issues.functions.ts"
+import {
+  getIncidentNotificationDeepLink,
+  getIssueNotificationDeepLink,
+} from "../../../../../../domains/notifications/notifications.functions.ts"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 
 interface IncidentTarget {
   readonly projectId: string | null | undefined
   readonly sourceId: string
+}
+
+interface UseIssueUrlOptions {
+  readonly alertIncidentId?: string | null
 }
 
 /**
@@ -28,18 +36,45 @@ export function useLiveIssueSummary(target: IncidentTarget): IssueLifecycleSumma
   return data ?? null
 }
 
+function buildIssueUrlFromSlug(projectSlug: string, sourceId: string): string {
+  return `/projects/${projectSlug}/issues?issueId=${encodeURIComponent(sourceId)}`
+}
+
 /**
- * Build the `/projects/<slug>/issues?issueId=<id>` deep link by looking
- * up the project slug from the live projects collection (same source the
- * `BaseNotification` footer uses for the project name). Returns
- * `undefined` while the collection is loading or when the project has
- * been deleted between notification create and view.
+ * Build the `/projects/<slug>/issues?issueId=<id>` deep link. Prefers the
+ * live projects collection (no round-trip when it's warm), then falls back to
+ * a server lookup by `(projectId, sourceId)`, and finally by
+ * `alertIncidentId` when the notification row has no project anchor.
  */
-export function useIssueUrl(target: IncidentTarget): string | undefined {
+export function useIssueUrl(target: IncidentTarget, options?: UseIssueUrlOptions): string | undefined {
   const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project: p }) => eq(p.id, target.projectId ?? " ")).findOne(),
+    (projects) => projects.where(({ project: p }) => eq(p.id, target.projectId ?? "")).findOne(),
     [target.projectId ?? null],
   )
-  if (!project) return undefined
-  return `/projects/${project.slug}/issues?issueId=${encodeURIComponent(target.sourceId)}`
+  const collectionUrl =
+    target.projectId && project?.slug ? buildIssueUrlFromSlug(project.slug, target.sourceId) : undefined
+
+  const { data: issueDeepLink, isFetched: issueLinkFetched } = useQuery({
+    queryKey: ["notifications", "issue-deep-link", target.projectId, target.sourceId],
+    queryFn: () =>
+      getIssueNotificationDeepLink({
+        data: { projectId: target.projectId ?? "", issueId: target.sourceId },
+      }),
+    enabled: Boolean(target.projectId) && collectionUrl === undefined,
+    staleTime: 60_000,
+  })
+
+  const alertIncidentId = options?.alertIncidentId ?? null
+  const needsIncidentFallback =
+    collectionUrl === undefined &&
+    alertIncidentId !== null &&
+    (!target.projectId || (issueLinkFetched && issueDeepLink == null))
+  const { data: incidentDeepLink } = useQuery({
+    queryKey: ["notifications", "incident-deep-link", alertIncidentId],
+    queryFn: () => getIncidentNotificationDeepLink({ data: { alertIncidentId: alertIncidentId ?? "" } }),
+    enabled: needsIncidentFallback,
+    staleTime: 60_000,
+  })
+
+  return collectionUrl ?? issueDeepLink ?? incidentDeepLink ?? undefined
 }

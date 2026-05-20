@@ -12,7 +12,7 @@ export function IssueNewNotification({ notification, payload }: IncidentRenderer
   // Snapshot status for issue.new is always "new"; the live lookup may
   // upgrade this if the issue has moved on (resolved, escalated, etc.).
   const states = live?.states ?? ["new"]
-  const url = useIssueUrl(target)
+  const url = useIssueUrl(target, { alertIncidentId: payload.alertIncidentId })
 
   return (
     <BaseNotification

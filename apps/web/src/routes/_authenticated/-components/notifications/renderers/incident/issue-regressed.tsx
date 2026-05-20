@@ -13,7 +13,7 @@ export function IssueRegressedNotification({ notification, payload }: IncidentRe
   // already re-resolved the issue by the time they read the notification,
   // the live lookup will upgrade the badge to "resolved".
   const states = live?.states ?? ["regressed"]
-  const url = useIssueUrl(target)
+  const url = useIssueUrl(target, { alertIncidentId: payload.alertIncidentId })
 
   return (
     <BaseNotification

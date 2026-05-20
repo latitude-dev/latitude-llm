@@ -1,3 +1,4 @@
+import { AlertIncidentRepository } from "@domain/alerts"
 import {
   getUnreadNotificationCountUseCase,
   listNotificationsUseCase,
@@ -5,12 +6,25 @@ import {
   markNotificationSeenUseCase,
   type Notification,
 } from "@domain/notifications"
-import { type NotificationPreferences, notificationPreferencesSchema } from "@domain/shared"
+import { ProjectRepository } from "@domain/projects"
+import {
+  AlertIncidentId,
+  type NotificationPreferences,
+  notificationPreferencesSchema,
+  OrganizationId,
+  ProjectId,
+} from "@domain/shared"
 import { UserRepository } from "@domain/users"
-import { NotificationRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  AlertIncidentRepositoryLive,
+  NotificationRepositoryLive,
+  ProjectRepositoryLive,
+  UserRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
@@ -153,5 +167,65 @@ export const updateNotificationPreferences = createServerFn({ method: "POST" })
         const users = yield* UserRepository
         yield* users.updateNotificationPreferences({ userId, preferences: data.preferences })
       }).pipe(withPostgres(UserRepositoryLive, pgClient, organizationId), withTracing),
+    )
+  })
+
+const buildIssueDeepLinkPath = (projectSlug: string, issueId: string): string =>
+  `/projects/${projectSlug}/issues?issueId=${encodeURIComponent(issueId)}`
+
+/**
+ * Resolve the in-app deep link for an incident notification from the row's
+ * project anchor + issue source id. Used by the bell when the live projects
+ * collection hasn't loaded yet or is missing a row (e.g. right after a
+ * project rename, or legacy rows with a valid issue but a stale client cache).
+ */
+export const getIssueNotificationDeepLink = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), issueId: z.string() }))
+  .handler(async ({ data }): Promise<string | null> => {
+    const { organizationId } = await requireSession()
+    const pgClient = getPostgresClient()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const projects = yield* ProjectRepository
+        const project = yield* projects
+          .findById(ProjectId(data.projectId))
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+        if (!project?.slug) return null
+        return buildIssueDeepLinkPath(project.slug, data.issueId)
+      }).pipe(withPostgres(ProjectRepositoryLive, pgClient, orgId), withTracing),
+    )
+  })
+
+/**
+ * Fallback deep-link resolver keyed on `payload.alertIncidentId` for rows
+ * missing `notification.projectId` (shouldn't happen for new traffic, but
+ * protects older data and any partial queue payloads).
+ */
+export const getIncidentNotificationDeepLink = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ alertIncidentId: z.string() }))
+  .handler(async ({ data }): Promise<string | null> => {
+    const { organizationId } = await requireSession()
+    const pgClient = getPostgresClient()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const incidents = yield* AlertIncidentRepository
+        const projects = yield* ProjectRepository
+        const incident = yield* incidents
+          .findById(AlertIncidentId(data.alertIncidentId))
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+        if (!incident) return null
+        const project = yield* projects
+          .findById(incident.projectId)
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+        if (!project?.slug) return null
+        return buildIssueDeepLinkPath(project.slug, incident.sourceId)
+      }).pipe(
+        withPostgres(Layer.mergeAll(AlertIncidentRepositoryLive, ProjectRepositoryLive), pgClient, orgId),
+        withTracing,
+      ),
     )
   })
