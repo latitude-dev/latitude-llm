@@ -34,13 +34,16 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 25
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Create .env.test from example
         run: cp .env.example .env.test
+
+      - name: Build workspace
+        run: pnpm build
 
       - name: Regenerate OpenAPI manifest
         run: pnpm --filter @app/api openapi:emit
