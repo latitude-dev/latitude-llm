@@ -41,7 +41,7 @@ One Slack app per environment, configured at api.slack.com/apps. Per-environment
 - OAuth redirect URL: `https://<host>/integrations/slack/oauth/callback`
 - Bot scopes (locked at install time): `chat:write`, `chat:write.public`, `channels:read`, `groups:read`, `team:read`, `app_mentions:read`
 - Event subscription URL: `https://<host>/api/slack/events` — configured in the Slack app but **not subscribed to any events** until Phase 4. Slack only POSTs to this URL once we subscribe to events.
-- Distribution: **Public** (so customer workspaces can install).
+- Distribution: **Public** for staging/production (so customer workspaces can install). The development Slack app stays on **Internal** distribution in Phase 1 because Slack requires HTTPS endpoints for Public distribution and dev runs on `http://localhost`. The flip happens when staging stands up in Phase 2.
 
 Env vars (`LAT_` prefix, parsed via `parseEnv` from `@platform/env`):
 
