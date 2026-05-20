@@ -23,6 +23,10 @@ export {
   listAllProjectsUseCase,
 } from "./use-cases/list-projects.ts"
 export {
+  type PurgeOrganizationProjectsInput,
+  purgeOrganizationProjectsUseCase,
+} from "./use-cases/purge-organization-projects.ts"
+export {
   type UpdateProjectError,
   type UpdateProjectInput,
   updateProjectUseCase,

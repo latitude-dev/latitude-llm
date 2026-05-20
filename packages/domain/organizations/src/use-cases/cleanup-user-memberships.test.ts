@@ -63,9 +63,12 @@ describe("cleanupUserMembershipsUseCase", () => {
     seedOrganization(organizations, ORG_1)
     seedMembership(memberships, ORG_1, USER_ID)
 
-    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
+    const deleted = await Effect.runPromise(
+      cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
+    )
 
     expect(organizations.size).toBe(0)
+    expect(deleted).toEqual([ORG_1])
   })
 
   it("removes only the membership when other members exist", async () => {
@@ -74,9 +77,12 @@ describe("cleanupUserMembershipsUseCase", () => {
     seedMembership(memberships, ORG_1, USER_ID)
     seedMembership(memberships, ORG_1, OTHER_USER_ID)
 
-    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
+    const deleted = await Effect.runPromise(
+      cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
+    )
 
     expect(organizations.size).toBe(1)
+    expect(deleted).toEqual([])
     const remainingMembers = [...memberships.values()]
     expect(remainingMembers).toHaveLength(1)
     expect(remainingMembers[0]?.userId).toBe(OTHER_USER_ID)
@@ -94,10 +100,13 @@ describe("cleanupUserMembershipsUseCase", () => {
     seedMembership(memberships, ORG_2, USER_ID)
     seedMembership(memberships, ORG_2, OTHER_USER_ID)
 
-    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
+    const deleted = await Effect.runPromise(
+      cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
+    )
 
     expect(organizations.has(ORG_1)).toBe(false)
     expect(organizations.has(ORG_2)).toBe(true)
+    expect(deleted).toEqual([ORG_1])
 
     const org2Members = [...memberships.values()].filter((m) => m.organizationId === ORG_2)
     expect(org2Members).toHaveLength(1)
@@ -107,9 +116,12 @@ describe("cleanupUserMembershipsUseCase", () => {
   it("is a no-op when user has no memberships", async () => {
     const { organizations, memberships, testLayers } = createTestLayers()
 
-    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
+    const deleted = await Effect.runPromise(
+      cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
+    )
 
     expect(organizations.size).toBe(0)
     expect(memberships.size).toBe(0)
+    expect(deleted).toEqual([])
   })
 })

@@ -1,10 +1,12 @@
 import {
   generateUniqueOrganizationSlugUseCase,
+  MembershipRepository,
   OrganizationRepository,
   provisionOrganizationWorkspaceUseCase,
   updateOrganizationUseCase,
 } from "@domain/organizations"
-import { OrganizationId, UserId } from "@domain/shared"
+import { purgeOrganizationProjectsUseCase } from "@domain/projects"
+import { BadRequestError, ForbiddenError, OrganizationId, UserId } from "@domain/shared"
 import {
   ApiKeyRepositoryLive,
   MembershipRepositoryLive,
@@ -94,6 +96,70 @@ export const updateOrganization = createServerFn({ method: "POST" })
     return await Effect.runPromise(
       updateOrganizationUseCase({ name: data.name, settings: data.settings }).pipe(
         withPostgres(OrganizationRepositoryLive, client, organizationId),
+        withTracing,
+      ),
+    )
+  })
+
+/**
+ * Permanently delete an organization. Guarded so the only org that can be
+ * destroyed is the one you are currently in, you are its `owner`, and there
+ * are no other members — i.e. an org only you can see.
+ *
+ * Deletion is irreversible: each project is soft-deleted and emits a
+ * `ProjectDeleted` event (so the per-project cleanup cascade runs, matching a
+ * manual project deletion), then the org row is removed — its FK cascade drops
+ * memberships, invitations, and OAuth apps. The client then bounces to
+ * `/welcome`, which re-resolves the user's remaining orgs.
+ */
+export const deleteOrganization = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ id: z.string() }))
+  .handler(async ({ data }): Promise<void> => {
+    const { userId, organizationId } = await requireSession()
+
+    // You may only delete the organization you are currently active in. This
+    // keeps the RLS context (active org) aligned with the org being deleted.
+    if (data.id !== organizationId) {
+      throw new ForbiddenError({ message: "You can only delete the organization you are currently in." })
+    }
+
+    const targetId = OrganizationId(data.id)
+
+    // Authorize against the full member list. Read with the admin client so the
+    // count is never narrowed by RLS — an under-count would be a security hole.
+    const adminClient = getAdminPostgresClient()
+    const members = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* MembershipRepository
+        return yield* repo.listByOrganizationId(targetId)
+      }).pipe(withPostgres(MembershipRepositoryLive, adminClient), withTracing),
+    )
+
+    const caller = members.find((member) => member.userId === userId)
+    if (!caller || caller.role !== "owner") {
+      throw new ForbiddenError({ message: "Only the organization owner can delete it." })
+    }
+    if (members.length > 1) {
+      throw new BadRequestError({
+        message: "Remove all other members before deleting the organization.",
+      })
+    }
+
+    const client = getPostgresClient()
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        // Tear down the org's projects (soft-delete + ProjectDeleted cascade)
+        // before removing the org row. The org delete then cascades members,
+        // invitations, and OAuth apps via FK.
+        yield* purgeOrganizationProjectsUseCase({ actorUserId: userId })
+        const orgRepo = yield* OrganizationRepository
+        yield* orgRepo.delete(targetId)
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, OrganizationRepositoryLive, OutboxEventWriterLive),
+          client,
+          targetId,
+        ),
         withTracing,
       ),
     )
