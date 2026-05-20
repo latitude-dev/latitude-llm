@@ -116,6 +116,35 @@ describe("SlackIntegrationRepositoryLive", () => {
     }
   })
 
+  it("does NOT translate the org-level unique violation into SlackIntegrationConflictError", async () => {
+    // Bypassing the install use case (which would soft-revoke first), this
+    // call directly tries to save a second active row for ORG_A. The DB's
+    // `integrations_active_organization_kind_idx` partial unique index
+    // fires. The repository must surface this as RepositoryError, not as
+    // a misleading SlackIntegrationConflictError (which is reserved for
+    // cross-org workspace ownership).
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        yield* repo.save(makeIntegration({ teamId: "T-FIRST" }))
+      }),
+    )
+
+    const exit = await Effect.runPromiseExit(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        yield* repo.save(makeIntegration({ teamId: "T-SECOND" }))
+      }).pipe(withPostgres(SlackIntegrationRepositoryLive, pg.adminPostgresClient, ORG_A)),
+    )
+
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      const failReason = exit.cause.reasons.find(Cause.isFailReason)
+      expect(failReason?.error).not.toBeInstanceOf(SlackIntegrationConflictError)
+      expect((failReason?.error as { _tag?: string })?._tag).toBe("RepositoryError")
+    }
+  })
+
   it("softRevokeById returns true on first call, false thereafter", async () => {
     const saved = await runWithLive(
       Effect.gen(function* () {

@@ -5,7 +5,7 @@ import {
   slackIntegrationSchema,
 } from "@domain/integrations"
 import {
-  causesIncludePostgresUniqueViolation,
+  findPostgresUniqueViolationConstraint,
   OrganizationId,
   type RepositoryError,
   SlackIntegrationId,
@@ -54,19 +54,38 @@ const getEncryptionKey = () =>
   })
 
 /**
+ * Name of the partial unique index that enforces "one active Slack
+ * workspace claim across all Latitude orgs". Must stay in sync with
+ * the index name declared in `schema/integrations.ts`. Hardcoded as a
+ * string because Drizzle exposes the index identifier as a runtime
+ * value, not a type-level constant.
+ */
+const VENDOR_ACCOUNT_UNIQUE_INDEX = "integrations_active_kind_vendor_account_idx"
+
+/**
  * Conflict translation lives in a dedicated helper because `Effect.catchTag`
  * only narrows the typed return when the handler's return type is annotated
  * explicitly — inline ternaries inferred as a union of two `Effect.fail`
  * branches refuse to unify under `exactOptionalPropertyTypes`. Mirrors
  * `mapIdentifierViolation` in admin-feature-flag-repository.
+ *
+ * Only the cross-vendor `(kind, vendor_account_id)` partial unique index
+ * is translated to {@link SlackIntegrationConflictError}. Other unique
+ * violations on this table — the per-org `(organization_id, kind)`
+ * partial unique, or a (cryptographically impossible) primary-key
+ * collision — are rethrown as `RepositoryError` so they aren't
+ * misreported as cross-org workspace conflicts.
  */
 const mapVendorAccountConflict = (
   error: RepositoryError,
   teamId: string,
-): Effect.Effect<never, RepositoryError | SlackIntegrationConflictError> =>
-  causesIncludePostgresUniqueViolation(error.cause)
-    ? Effect.fail(new SlackIntegrationConflictError({ teamId }))
-    : Effect.fail(error)
+): Effect.Effect<never, RepositoryError | SlackIntegrationConflictError> => {
+  const constraint = findPostgresUniqueViolationConstraint(error.cause)
+  if (constraint === VENDOR_ACCOUNT_UNIQUE_INDEX) {
+    return Effect.fail(new SlackIntegrationConflictError({ teamId }))
+  }
+  return Effect.fail(error)
+}
 
 type IntegrationRow = typeof integrations.$inferSelect
 type SlackDetailsRow = typeof slackIntegrationDetails.$inferSelect

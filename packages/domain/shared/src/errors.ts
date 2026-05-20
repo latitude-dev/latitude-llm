@@ -231,6 +231,40 @@ export const causesIncludePostgresUniqueViolation = (error: unknown): boolean =>
   return false
 }
 
+/**
+ * Walks `error` and nested `cause` chains for a Postgres unique-violation
+ * (SQLSTATE `23505`) and returns the name of the violated constraint /
+ * index, or `null` if none is found. Lets repository adapters
+ * discriminate between multiple unique constraints on the same table
+ * (e.g. an org-level vs cross-vendor uniqueness) so each can be mapped
+ * to a more specific domain error without misreporting unrelated
+ * violations.
+ *
+ * `pg`'s `DatabaseError` exposes `constraint` directly. Other clients
+ * may expose it under `constraint_name` (snake-case); both shapes are
+ * checked.
+ */
+export const findPostgresUniqueViolationConstraint = (error: unknown): string | null => {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  while (current !== null && current !== undefined && !seen.has(current)) {
+    seen.add(current)
+    if (isRecord(current) && current.code === "23505") {
+      const constraint =
+        typeof current.constraint === "string"
+          ? current.constraint
+          : typeof current.constraint_name === "string"
+            ? current.constraint_name
+            : null
+      if (constraint) return constraint
+    }
+    current = isRecord(current) ? current.cause : undefined
+  }
+
+  return null
+}
+
 export const isNotFoundError = (error: unknown): error is NotFoundError => error instanceof NotFoundError
 
 export const isConflictError = (error: unknown): error is ConflictError => error instanceof ConflictError
