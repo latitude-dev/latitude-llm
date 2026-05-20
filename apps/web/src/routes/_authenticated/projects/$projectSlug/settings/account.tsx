@@ -469,9 +469,13 @@ function AccountSettingsPage() {
           )}
         </form.Field>
         <div className="self-start">
-          <Button type="submit" isLoading={form.state.isSubmitting}>
-            Save
-          </Button>
+          <form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button type="submit" isLoading={isSubmitting}>
+                Save
+              </Button>
+            )}
+          </form.Subscribe>
         </div>
       </form>
       <NotificationsSection />
