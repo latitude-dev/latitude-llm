@@ -1,5 +1,4 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
-import type { JobTitle } from "@domain/users"
 import {
   Button,
   CodeBlock,
@@ -58,7 +57,6 @@ import {
   type TsPackageManager,
 } from "./onboarding-integration-snippets.ts"
 
-type OnboardingRole = JobTitle
 type OnboardingStep = "role" | "stack" | "telemetry"
 type StackChoice = "coding-agent-machine" | "production-agent"
 type TelemetrySetupMode = "coding-agent" | "manual"
@@ -127,46 +125,6 @@ interface ProviderEntry {
   readonly icon: string
 }
 
-const ROLE_OPTIONS: ReadonlyArray<{
-  readonly id: OnboardingRole
-  readonly title: string
-  readonly description: string
-}> = [
-  { id: "engineer", title: "Engineer", description: "I'll set up the SDK and own the integration" },
-  {
-    id: "data-ai-ml",
-    title: "Data / AI / ML",
-    description: "I evaluate model quality — I review traces, annotate outputs, and track scores over time",
-  },
-  {
-    id: "product-manager",
-    title: "Product manager",
-    description: "I track how our AI features are performing and spot regressions",
-  },
-  {
-    id: "founder",
-    title: "Founder",
-    description: "I need visibility into what our AI is doing and whether it's working as intended",
-  },
-  { id: "other", title: "Other", description: "I'm something else" },
-]
-
-const ROLE_MOCKUPS: Record<OnboardingRole, string> = {
-  engineer: "/onboarding/role-engineer.png",
-  "data-ai-ml": "/onboarding/issues.png",
-  "product-manager": "/onboarding/home.png",
-  founder: "/onboarding/home.png",
-  other: "/onboarding/traces.png",
-}
-
-/** Right-panel headline for each role (step 1). */
-const ROLE_PANEL_TITLES: Record<OnboardingRole, string> = {
-  engineer: "Instrument once and start seeing live traces in Latitude right away",
-  "data-ai-ml": "Label traces, watch trends, detect outliers & monitor issues within one platform",
-  "product-manager": "Keep track of latency, cost, and errors in collaborative environment",
-  founder: "Review the entire pipeline: cost, failures, behaviour and team contributions",
-  other: "Discover the most advanced issue detection system on the market",
-}
 
 const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> =
   [
@@ -427,7 +385,6 @@ export function OnboardingFlow({
 }) {
   const { toast } = useToast()
   const [step, setStep] = useState<OnboardingStep>("role")
-  const [role, setRole] = useState<OnboardingRole>("engineer")
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
   const [codingMachineAgent, setCodingMachineAgent] = useState<CodingMachineAgentId>("claude-code")
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
@@ -439,17 +396,13 @@ export function OnboardingFlow({
 
   const form = useForm({
     defaultValues: {
-      customJobTitle: "",
+      jobTitle: "",
       phoneNumber: "",
     },
     onSubmit: createFormSubmitHandler(
-      async ({ customJobTitle, phoneNumber }) => {
+      async ({ jobTitle, phoneNumber }) => {
         const stack = stackChoice as StackChoice
-        const onboardingData =
-          role === "other"
-            ? { customJobTitle, phoneNumber, stackChoice: stack }
-            : { jobTitle: role, phoneNumber, stackChoice: stack }
-        await submitOnboarding({ data: onboardingData })
+        await submitOnboarding({ data: { jobTitle, phoneNumber, stackChoice: stack } })
       },
       {
         onSuccess: () => setStep("telemetry"),
@@ -461,11 +414,9 @@ export function OnboardingFlow({
   })
 
   const handleAdvanceFromRole = async () => {
-    if (role === "other") {
-      await form.validateField("customJobTitle", "change")
-      const meta = form.getFieldMeta("customJobTitle")
-      if (meta && meta.errors.length > 0) return
-    }
+    await form.validateField("jobTitle", "change")
+    const meta = form.getFieldMeta("jobTitle")
+    if (meta && meta.errors.length > 0) return
     setStep("stack")
   }
 
@@ -577,8 +528,6 @@ export function OnboardingFlow({
     description: "",
     image: "",
   }
-  const roleImageSrc = ROLE_MOCKUPS[role]
-  const roleImageDimensions = ONBOARDING_IMAGE_DIMENSIONS[roleImageSrc] ?? { width: 1024, height: 579 }
   const galleryImageDimensions = ONBOARDING_IMAGE_DIMENSIONS[activeGalleryItem.image] ?? { width: 1024, height: 579 }
 
   return (
@@ -596,6 +545,25 @@ export function OnboardingFlow({
                   <Text.H4 color="foregroundMuted">Help Latitude personalize your experience.</Text.H4>
                 </div>
               </div>
+              <form.Field
+                name="jobTitle"
+                validators={{
+                  onChange: ({ value }) => (value.trim() === "" ? "Please enter your job title" : undefined),
+                }}
+              >
+                {(field) => (
+                  <Input
+                    type="text"
+                    label="Job title"
+                    placeholder="e.g. Software Architect, Fractional CMO, ML Engineer"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                    maxLength={256}
+                    autoComplete="organization-title"
+                  />
+                )}
+              </form.Field>
               <form.Field name="phoneNumber">
                 {(field) => (
                   <Input
@@ -611,66 +579,6 @@ export function OnboardingFlow({
                   />
                 )}
               </form.Field>
-              <div className="flex flex-col gap-3">
-                {ROLE_OPTIONS.map((option) => {
-                  const selected = role === option.id
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      className={cn(
-                        "flex w-full flex-row items-start justify-between rounded-lg border p-4 text-left cursor-pointer hover:bg-accent/10",
-                        "border-border",
-                        {
-                          "border-primary bg-accent/20": selected,
-                        },
-                      )}
-                      onClick={() => {
-                        setRole(option.id)
-                        if (option.id !== "other") {
-                          form.setFieldMeta("customJobTitle", (prev) => ({
-                            ...prev,
-                            errorMap: {},
-                          }))
-                        }
-                      }}
-                    >
-                      <div className="flex flex-col gap-1">
-                        <Text.H4 weight="medium">{option.title}</Text.H4>
-                        <Text.H5 color="foregroundMuted">{option.description}</Text.H5>
-                      </div>
-                      <div className="pt-1">
-                        <span
-                          aria-hidden
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}
-                        >
-                          {selected ? <Icon icon={Check} size="xs" /> : null}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-              {role === "other" && (
-                <form.Field
-                  name="customJobTitle"
-                  validators={{
-                    onChange: ({ value }) => (value.trim() === "" ? "Please tell us your role" : undefined),
-                  }}
-                >
-                  {(field) => (
-                    <Input
-                      type="text"
-                      aria-label="Custom job title"
-                      placeholder="What's your role?"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                      maxLength={256}
-                    />
-                  )}
-                </form.Field>
-              )}
               <div>
                 <Button onClick={() => void handleAdvanceFromRole()}>Next</Button>
               </div>
@@ -1010,13 +918,13 @@ export function OnboardingFlow({
           {step === "role" ? (
             <div className="flex h-fit w-full flex-col items-center gap-4">
               <OnboardingPreviewImage
-                src={roleImageSrc}
-                alt={`${role} preview`}
-                width={roleImageDimensions.width}
-                height={roleImageDimensions.height}
+                src="/onboarding/traces.png"
+                alt="Latitude traces preview"
+                width={1024}
+                height={579}
               />
               <Text.H5 className="w-full max-w-[591px]" color="foregroundMuted" align="center">
-                {ROLE_PANEL_TITLES[role]}
+                Latitude gives your whole team visibility into what your AI is doing
               </Text.H5>
             </div>
           ) : (

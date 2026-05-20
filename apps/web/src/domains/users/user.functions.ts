@@ -1,6 +1,6 @@
 import { OutboxEventWriter } from "@domain/events"
 import { SqlClient } from "@domain/shared"
-import { jobTitleSchema, UserRepository } from "@domain/users"
+import { UserRepository } from "@domain/users"
 import { OutboxEventWriterLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
@@ -21,31 +21,16 @@ export const updateUser = createServerFn({ method: "POST" })
     })
   })
 
-const submitOnboardingSchema = z
-  .object({
-    jobTitle: jobTitleSchema.exclude(["other"]).optional(),
-    customJobTitle: z
-      .string()
-      .max(256)
-      .transform((v) => v.trim())
-      .pipe(z.string().min(1))
-      .optional(),
-    phoneNumber: z
-      .string()
-      .max(64)
-      .transform((v) => v.trim())
-      .transform((v) => (v.length > 0 ? v : undefined))
-      .optional(),
-    stackChoice: z.enum(["coding-agent-machine", "production-agent"]),
-  })
-  .refine((d) => d.jobTitle !== undefined || d.customJobTitle !== undefined, {
-    message: "Either a known job title or a custom title is required",
-  })
-  .transform((d) => ({
-    resolvedJobTitle: d.jobTitle ?? d.customJobTitle!,
-    phoneNumber: d.phoneNumber,
-    stackChoice: d.stackChoice,
-  }))
+const submitOnboardingSchema = z.object({
+  jobTitle: z.string().max(256).transform((v) => v.trim()).pipe(z.string().min(1)),
+  phoneNumber: z
+    .string()
+    .max(64)
+    .transform((v) => v.trim())
+    .transform((v) => (v.length > 0 ? v : undefined))
+    .optional(),
+  stackChoice: z.enum(["coding-agent-machine", "production-agent"]),
+})
 
 export const submitOnboarding = createServerFn({ method: "POST" })
   .inputValidator(submitOnboardingSchema)
@@ -63,7 +48,7 @@ export const submitOnboarding = createServerFn({ method: "POST" })
           Effect.gen(function* () {
             yield* userRepo.update({
               userId,
-              jobTitle: data.resolvedJobTitle,
+              jobTitle: data.jobTitle,
               phoneNumber: data.phoneNumber,
             })
             yield* outbox.write({
