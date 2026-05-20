@@ -18,3 +18,18 @@ export const CLAUDE_CODE_WRAPPED_FLAG = "claude-code-wrapped" as const
  * `"notifications"` flag and are unaffected by this one.
  */
 export const EMAIL_NOTIFICATIONS_FLAG = "email-notifications" as const
+
+/**
+ * Gates the Slack integration end-to-end. When off:
+ *   - the "Connect Slack" surface in settings is hidden;
+ *   - OAuth install + callback routes refuse new installs;
+ *   - the notifications producer skips fanning out
+ *     `notification-slack:send` tasks for the org (Phase 3);
+ *   - the inbound `app_mention` webhook ignores events for the org
+ *     (Phase 4).
+ *
+ * Connection rows already in `slack_integrations` are unaffected by
+ * flipping the flag — turning the flag back on resumes delivery
+ * without forcing a re-install.
+ */
+export const SLACK_FLAG = "slack" as const

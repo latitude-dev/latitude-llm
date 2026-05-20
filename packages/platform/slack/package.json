@@ -1,0 +1,29 @@
+{
+  "name": "@platform/slack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "check": "biome check src scripts",
+    "format": "biome format --write src scripts && biome check --fix src scripts",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests --dir src",
+    "slack:install": "tsx ./scripts/slack-install.ts"
+  },
+  "dependencies": {
+    "@platform/env": "workspace:*",
+    "@slack/web-api": "7.10.0",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@domain/shared": "workspace:*",
+    "@domain/slack": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "tsx": "catalog:",
+    "vitest": "catalog:"
+  }
+}

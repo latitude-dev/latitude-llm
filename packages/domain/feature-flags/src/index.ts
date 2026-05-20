@@ -3,6 +3,7 @@ export {
   EMAIL_NOTIFICATIONS_FLAG,
   FEATURE_FLAG_IDENTIFIER_MAX_LENGTH,
   FEATURE_FLAG_NAME_MAX_LENGTH,
+  SLACK_FLAG,
 } from "./constants.ts"
 export {
   createFeatureFlag,

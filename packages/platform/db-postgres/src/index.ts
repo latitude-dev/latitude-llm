@@ -51,6 +51,11 @@ export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
 export { SavedSearchRepositoryLive } from "./repositories/saved-search-repository.ts"
 export { ScoreRepositoryLive } from "./repositories/score-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
+export {
+  findActiveSlackIntegrationByTeamIdAcrossOrgs,
+  SlackIntegrationRepositoryLive,
+  softRevokeSlackIntegrationAcrossOrgs,
+} from "./repositories/slack-integration-repository.ts"
 export { StripeBillingProviderLive } from "./repositories/stripe-billing-provider.ts"
 export { StripeSubscriptionLookupLive } from "./repositories/stripe-subscription-lookup.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
