@@ -58,7 +58,7 @@ const respondTransparent = (): Response => respondPng(TRANSPARENT_1x1_PNG)
  * The row is loaded via the admin Postgres client (RLS bypass) since
  * there's no organization context until the row is read.
  */
-export const Route = createFileRoute("/api/notifications/$nid/incident-trend/png")({
+export const Route = createFileRoute("/api/notifications/$nid/incident-trend.png")({
   server: {
     handlers: {
       GET: async ({ params }: { params: { nid: string } }) => {
