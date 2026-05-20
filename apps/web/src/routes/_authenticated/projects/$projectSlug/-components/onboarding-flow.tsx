@@ -125,7 +125,6 @@ interface ProviderEntry {
   readonly icon: string
 }
 
-
 const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> =
   [
     {

@@ -22,7 +22,11 @@ export const updateUser = createServerFn({ method: "POST" })
   })
 
 const submitOnboardingSchema = z.object({
-  jobTitle: z.string().max(256).transform((v) => v.trim()).pipe(z.string().min(1)),
+  jobTitle: z
+    .string()
+    .max(256)
+    .transform((v) => v.trim())
+    .pipe(z.string().min(1)),
   phoneNumber: z
     .string()
     .max(64)
