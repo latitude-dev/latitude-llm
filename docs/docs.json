@@ -146,7 +146,13 @@
         "group": "Search",
         "pages": [
           "search/overview",
-          "search/saved-searches"
+          "search/saved-searches",
+          {
+            "group": "Guides",
+            "pages": [
+              "search/guides/search-and-review-effectively"
+            ]
+          }
         ]
       },
       {
@@ -170,6 +176,12 @@
               "evaluations/overview",
               "evaluations/triggers",
               "evaluations/alignment"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "annotations/guides/annotate-effectively"
             ]
           }
         ]
