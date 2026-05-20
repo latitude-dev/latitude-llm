@@ -13,9 +13,12 @@
 --      max_end_time - min_start_time. See specs/session-problems/
 --      1-parity-traces-sessions.md §"On duration_ns semantics".
 --
---   2. Adds time_of_first_token (+ time_to_first_token_ns ALIAS),
---      root_span_id, root_span_name, input/last_input/output_messages,
---      system_instructions, and retention_days.
+--   2. Adds max_start_time (latest span start in the session, for
+--      "most recently active" sorting — mirrors traces' use of
+--      start_time as the activity-recency signal), time_of_first_token
+--      (+ time_to_first_token_ns ALIAS), root_span_id, root_span_name,
+--      input/last_input/output_messages, system_instructions, and
+--      retention_days.
 --
 --   3. Removes the `WHERE s.session_id != ''` filter on sessions_mv
 --      and replaces it with a `coalesce(nullIf(session_id, ''),
@@ -34,8 +37,10 @@ ALTER TABLE sessions
     DROP COLUMN IF EXISTS duration_ns;
 
 ALTER TABLE sessions
+    ADD COLUMN IF NOT EXISTS max_start_time
+        SimpleAggregateFunction(max, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER max_end_time,
     ADD COLUMN IF NOT EXISTS duration_ns
-        SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_end_time,
+        SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS time_of_first_token
         SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER duration_ns,
     ADD COLUMN IF NOT EXISTS time_to_first_token_ns Int64 ALIAS if(
@@ -79,6 +84,10 @@ AS SELECT
 
     min(s.start_time)                                                AS min_start_time,
     max(s.end_time)                                                  AS max_end_time,
+    -- Latest span start in the session. Sort by this DESC for
+    -- "most recently active" sessions — mirrors how traces use
+    -- start_time as the activity-recency signal.
+    max(s.start_time)                                                AS max_start_time,
 
     -- Active execution time: sum of root-span durations across the session's
     -- traces. Wall-clock is recoverable from min/max_*_time directly. See
@@ -157,7 +166,8 @@ ALTER TABLE sessions
     DROP COLUMN IF EXISTS root_span_id,
     DROP COLUMN IF EXISTS time_to_first_token_ns,
     DROP COLUMN IF EXISTS time_of_first_token,
-    DROP COLUMN IF EXISTS duration_ns;
+    DROP COLUMN IF EXISTS duration_ns,
+    DROP COLUMN IF EXISTS max_start_time;
 
 ALTER TABLE sessions
     ADD COLUMN IF NOT EXISTS duration_ns Int64 ALIAS

@@ -4,14 +4,36 @@
 -- ═══════════════════════════════════════════════════════════
 -- Sessions parity with traces (LAT-604) — clustered variant.
 -- See unclustered/00016_session_parity.sql for full notes.
+--
+-- On replicated tables, back-to-back dependent ALTERs race the
+-- local replica's metadata-version catchup: ALTER #2's
+-- precondition check fires before #1's bump has propagated,
+-- throwing code 517 ("doesn't catchup with latest ALTER query
+-- updates") at submission time — too early for alter_sync=2's
+-- wait to help. SYSTEM SYNC REPLICA between ALTERs blocks
+-- until every node's local metadata is at Keeper's "common"
+-- version, breaking the race. The opening SYNC also drains
+-- pending bumps from prior failed attempts, so this file is
+-- safe to re-run after a partial application.
+--
+-- LIGHTWEIGHT skips waiting on pending merges — only metadata
+-- and part-movement entries — so this stays fast even when
+-- the table is large and busy. SYNC does not block readers
+-- or writers; it only stalls this migration connection.
 -- ═══════════════════════════════════════════════════════════
+
+SYSTEM SYNC REPLICA sessions ON CLUSTER default LIGHTWEIGHT;
 
 ALTER TABLE sessions ON CLUSTER default
     DROP COLUMN IF EXISTS duration_ns;
 
+SYSTEM SYNC REPLICA sessions ON CLUSTER default LIGHTWEIGHT;
+
 ALTER TABLE sessions ON CLUSTER default
+    ADD COLUMN IF NOT EXISTS max_start_time
+        SimpleAggregateFunction(max, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER max_end_time,
     ADD COLUMN IF NOT EXISTS duration_ns
-        SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_end_time,
+        SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS time_of_first_token
         SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER duration_ns,
     ADD COLUMN IF NOT EXISTS time_to_first_token_ns Int64 ALIAS if(
@@ -34,8 +56,12 @@ ALTER TABLE sessions ON CLUSTER default
     ADD COLUMN IF NOT EXISTS retention_days
         SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1));
 
+SYSTEM SYNC REPLICA sessions ON CLUSTER default LIGHTWEIGHT;
+
 ALTER TABLE sessions ON CLUSTER default
     MODIFY TTL toDateTime(min_start_time) + toIntervalDay(retention_days + 30) DELETE;
+
+SYSTEM SYNC REPLICA sessions ON CLUSTER default LIGHTWEIGHT;
 
 DROP VIEW IF EXISTS sessions_mv ON CLUSTER default;
 
@@ -52,6 +78,10 @@ AS SELECT
 
     min(s.start_time)                                                AS min_start_time,
     max(s.end_time)                                                  AS max_end_time,
+    -- Latest span start in the session. Sort by this DESC for
+    -- "most recently active" sessions — mirrors how traces use
+    -- start_time as the activity-recency signal.
+    max(s.start_time)                                                AS max_start_time,
 
     sum(if(
         (s.parent_span_id = '' OR s.parent_span_id = '0000000000000000')
@@ -106,10 +136,18 @@ GROUP BY
 
 -- +goose Down
 
+-- SYSTEM SYNC REPLICA between dependent ALTERs — see header.
+
+SYSTEM SYNC REPLICA sessions ON CLUSTER default LIGHTWEIGHT;
+
 DROP VIEW IF EXISTS sessions_mv ON CLUSTER default;
+
+SYSTEM SYNC REPLICA sessions ON CLUSTER default LIGHTWEIGHT;
 
 ALTER TABLE sessions ON CLUSTER default
     REMOVE TTL;
+
+SYSTEM SYNC REPLICA sessions ON CLUSTER default LIGHTWEIGHT;
 
 ALTER TABLE sessions ON CLUSTER default
     DROP COLUMN IF EXISTS retention_days,
@@ -121,7 +159,10 @@ ALTER TABLE sessions ON CLUSTER default
     DROP COLUMN IF EXISTS root_span_id,
     DROP COLUMN IF EXISTS time_to_first_token_ns,
     DROP COLUMN IF EXISTS time_of_first_token,
-    DROP COLUMN IF EXISTS duration_ns;
+    DROP COLUMN IF EXISTS duration_ns,
+    DROP COLUMN IF EXISTS max_start_time;
+
+SYSTEM SYNC REPLICA sessions ON CLUSTER default LIGHTWEIGHT;
 
 ALTER TABLE sessions ON CLUSTER default
     ADD COLUMN IF NOT EXISTS duration_ns Int64 ALIAS
