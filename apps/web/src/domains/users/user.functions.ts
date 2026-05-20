@@ -24,14 +24,12 @@ export const updateUser = createServerFn({ method: "POST" })
 const submitOnboardingSchema = z.object({
   jobTitle: z
     .string()
-    .max(256)
     .transform((v) => v.trim())
-    .pipe(z.string().min(1)),
+    .pipe(z.string().min(1).max(256)),
   phoneNumber: z
     .string()
-    .max(64)
     .transform((v) => v.trim())
-    .transform((v) => (v.length > 0 ? v : undefined))
+    .pipe(z.string().max(64).transform((v) => (v.length > 0 ? v : undefined)))
     .optional(),
   stackChoice: z.enum(["coding-agent-machine", "production-agent"]),
 })
