@@ -1,5 +1,5 @@
 export { createSlackClient } from "./client.ts"
-export { type SlackConfig, loadSlackConfig } from "./config.ts"
+export { loadSlackConfig, type SlackConfig } from "./config.ts"
 export { InvalidSlackSignatureError, SlackOAuthError } from "./errors.ts"
 export { buildSlackAuthorizeUrl, exchangeOAuthCode, type SlackOAuthResult } from "./oauth.ts"
 export { SLACK_BOT_SCOPES, type SlackBotScope } from "./scopes.ts"

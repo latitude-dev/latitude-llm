@@ -1,11 +1,4 @@
-import {
-  generateId,
-  OrganizationId,
-  SlackIntegrationId,
-  SqlClient,
-  type SqlClientShape,
-  UserId,
-} from "@domain/shared"
+import { generateId, OrganizationId, SlackIntegrationId, SqlClient, type SqlClientShape, UserId } from "@domain/shared"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { SlackIntegration } from "../entities/slack-integration.ts"

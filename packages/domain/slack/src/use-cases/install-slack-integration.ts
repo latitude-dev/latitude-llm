@@ -1,10 +1,4 @@
-import {
-  generateId,
-  type OrganizationId,
-  type RepositoryError,
-  type SqlClient,
-  type UserId,
-} from "@domain/shared"
+import { generateId, type OrganizationId, type RepositoryError, type SqlClient, type UserId } from "@domain/shared"
 import { Effect } from "effect"
 import type { SlackIntegration } from "../entities/slack-integration.ts"
 import type { SlackIntegrationConflictError } from "../errors.ts"

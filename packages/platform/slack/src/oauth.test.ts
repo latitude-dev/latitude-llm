@@ -1,6 +1,6 @@
 import { Cause, Effect, Exit } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { SlackOAuthError } from "./errors.ts"
+import type { SlackOAuthError } from "./errors.ts"
 import { buildSlackAuthorizeUrl, exchangeOAuthCode } from "./oauth.ts"
 
 const failure = async (effect: Effect.Effect<unknown, SlackOAuthError>): Promise<SlackOAuthError> => {
@@ -93,9 +93,7 @@ describe("exchangeOAuthCode", () => {
   })
 
   it("maps Slack's `ok: false` body to SlackOAuthError with the Slack error code", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      mockOk({ ok: false, error: "invalid_code" }) as unknown as Response,
-    )
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(mockOk({ ok: false, error: "invalid_code" }) as unknown as Response)
 
     const err = await failure(exchangeOAuthCode(baseInput))
     expect(err.slackError).toBe("invalid_code")

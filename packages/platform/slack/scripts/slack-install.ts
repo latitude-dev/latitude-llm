@@ -1,15 +1,15 @@
 import { createInterface } from "node:readline/promises"
 import { parseArgs } from "node:util"
-import { installSlackIntegrationUseCase } from "@domain/slack"
 import { OrganizationId, UserId } from "@domain/shared"
 import { SEED_ORG_ID, SEED_OWNER_USER_ID } from "@domain/shared/seeding"
+import { installSlackIntegrationUseCase } from "@domain/slack"
 import {
   closePostgres,
   createPostgresClient,
   findActiveSlackIntegrationByTeamIdAcrossOrgs,
   SlackIntegrationRepositoryLive,
-  softRevokeSlackIntegrationAcrossOrgs,
   SqlClientLive,
+  softRevokeSlackIntegrationAcrossOrgs,
 } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
@@ -124,7 +124,9 @@ async function main(): Promise<void> {
 
   const config = await Effect.runPromise(loadSlackConfig)
   if (!config) {
-    console.error("Slack is not configured: set LAT_SLACK_CLIENT_ID, LAT_SLACK_CLIENT_SECRET, LAT_SLACK_SIGNING_SECRET.")
+    console.error(
+      "Slack is not configured: set LAT_SLACK_CLIENT_ID, LAT_SLACK_CLIENT_SECRET, LAT_SLACK_SIGNING_SECRET.",
+    )
     process.exit(1)
   }
 
@@ -144,9 +146,7 @@ async function main(): Promise<void> {
     })
     console.log("\nOpen this URL in your browser to approve the install:\n")
     console.log(url)
-    console.log(
-      "\nSlack will redirect to your callback URL — that page will 404 (no route exists yet),",
-    )
+    console.log("\nSlack will redirect to your callback URL — that page will 404 (no route exists yet),")
     console.log("but the `code` is in the URL bar. Paste the whole URL below.")
     code = await promptForCode()
   }
@@ -207,10 +207,7 @@ async function main(): Promise<void> {
         refreshToken: oauth.refreshToken ?? null,
         tokenExpiresAt: oauth.expiresIn ? new Date(Date.now() + oauth.expiresIn * 1000) : null,
         installedByUserId,
-      }).pipe(
-        Effect.provide(SlackIntegrationRepositoryLive),
-        Effect.provide(SqlClientLive(pgClient, orgId)),
-      ),
+      }).pipe(Effect.provide(SlackIntegrationRepositoryLive), Effect.provide(SqlClientLive(pgClient, orgId))),
     )
 
     console.log(`\n✓ Installed Latitude in workspace ${integration.teamName} (${integration.teamId})`)

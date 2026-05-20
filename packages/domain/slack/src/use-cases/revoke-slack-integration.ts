@@ -1,4 +1,4 @@
-import { type RepositoryError, type SlackIntegrationId, type SqlClient } from "@domain/shared"
+import type { RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { SlackIntegrationRepository } from "../ports/slack-integration-repository.ts"
 

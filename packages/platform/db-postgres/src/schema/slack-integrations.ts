@@ -39,9 +39,7 @@ export const slackIntegrations = latitudeSchema.table(
   (t) => [
     organizationRLSPolicy("slack_integrations"),
     index("slack_integrations_organization_id_idx").on(t.organizationId),
-    uniqueIndex("slack_integrations_active_organization_idx")
-      .on(t.organizationId)
-      .where(sql`${t.revokedAt} IS NULL`),
+    uniqueIndex("slack_integrations_active_organization_idx").on(t.organizationId).where(sql`${t.revokedAt} IS NULL`),
     uniqueIndex("slack_integrations_active_team_idx").on(t.teamId).where(sql`${t.revokedAt} IS NULL`),
     index("slack_integrations_team_id_idx").on(t.teamId),
   ],

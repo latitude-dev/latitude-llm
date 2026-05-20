@@ -1,10 +1,4 @@
 import {
-  type SlackIntegration,
-  SlackIntegrationConflictError,
-  SlackIntegrationRepository,
-  slackIntegrationSchema,
-} from "@domain/slack"
-import {
   causesIncludePostgresUniqueViolation,
   OrganizationId,
   type RepositoryError,
@@ -15,6 +9,12 @@ import {
   toRepositoryError,
   UserId,
 } from "@domain/shared"
+import {
+  type SlackIntegration,
+  SlackIntegrationConflictError,
+  SlackIntegrationRepository,
+  slackIntegrationSchema,
+} from "@domain/slack"
 import { parseEnv } from "@platform/env"
 import { type CryptoError, decrypt, encrypt, hash } from "@repo/utils"
 import { and, eq, isNull } from "drizzle-orm"
@@ -142,9 +142,7 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
               db
                 .select()
                 .from(slackIntegrations)
-                .where(
-                  and(eq(slackIntegrations.organizationId, organizationId), isNull(slackIntegrations.revokedAt)),
-                )
+                .where(and(eq(slackIntegrations.organizationId, organizationId), isNull(slackIntegrations.revokedAt)))
                 .limit(1),
             )
             .pipe(Effect.mapError((e) => toRepositoryError(e, "findActiveSlackIntegrationByOrganizationId")))
@@ -198,7 +196,10 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
 export const findActiveSlackIntegrationByTeamIdAcrossOrgs = (
   db: PostgresDb,
   teamId: string,
-): Effect.Effect<{ readonly id: SlackIntegrationIdType; readonly organizationId: OrganizationId } | null, RepositoryError> =>
+): Effect.Effect<
+  { readonly id: SlackIntegrationIdType; readonly organizationId: OrganizationId } | null,
+  RepositoryError
+> =>
   Effect.tryPromise({
     try: async () => {
       const rows = await db

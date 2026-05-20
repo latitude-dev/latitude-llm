@@ -36,10 +36,7 @@ export const verifySlackSignature = (input: {
     }
     const provided = input.signature.slice(prefix.length)
 
-    const expected = yield* computeHmacHex(
-      input.signingSecret,
-      `${SIGNATURE_VERSION}:${input.timestamp}:${input.body}`,
-    )
+    const expected = yield* computeHmacHex(input.signingSecret, `${SIGNATURE_VERSION}:${input.timestamp}:${input.body}`)
 
     if (!constantTimeEqual(expected, provided)) {
       return yield* Effect.fail(new InvalidSlackSignatureError({ reason: "mismatch" }))
@@ -49,13 +46,9 @@ export const verifySlackSignature = (input: {
 const computeHmacHex = (secret: string, message: string): Effect.Effect<string, never> =>
   Effect.promise(async () => {
     const encoder = new TextEncoder()
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    )
+    const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+      "sign",
+    ])
     const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(message))
     return Array.from(new Uint8Array(signature))
       .map((byte) => byte.toString(16).padStart(2, "0"))

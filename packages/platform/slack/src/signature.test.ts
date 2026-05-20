@@ -1,6 +1,6 @@
 import { Cause, Effect, Exit } from "effect"
 import { describe, expect, it } from "vitest"
-import { InvalidSlackSignatureError } from "./errors.ts"
+import type { InvalidSlackSignatureError } from "./errors.ts"
 import { verifySlackSignature } from "./signature.ts"
 
 /**

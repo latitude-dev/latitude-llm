@@ -12,9 +12,7 @@ export class SlackOAuthError extends Data.TaggedError("SlackOAuthError")<{
   readonly cause?: unknown
 }> {
   override get message() {
-    return this.slackError
-      ? `Slack OAuth exchange failed: ${this.slackError}`
-      : "Slack OAuth exchange failed"
+    return this.slackError ? `Slack OAuth exchange failed: ${this.slackError}` : "Slack OAuth exchange failed"
   }
 }
 

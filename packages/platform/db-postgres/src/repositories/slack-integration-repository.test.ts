@@ -1,11 +1,5 @@
+import { generateId, OrganizationId, SlackIntegrationId, type SqlClient, UserId } from "@domain/shared"
 import { type SlackIntegration, SlackIntegrationConflictError, SlackIntegrationRepository } from "@domain/slack"
-import {
-  generateId,
-  OrganizationId,
-  SlackIntegrationId,
-  type SqlClient,
-  UserId,
-} from "@domain/shared"
 import { Cause, Effect, Exit } from "effect"
 import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import { slackIntegrations } from "../schema/slack-integrations.ts"
