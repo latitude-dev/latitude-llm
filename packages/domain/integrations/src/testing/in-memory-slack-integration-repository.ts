@@ -40,10 +40,28 @@ export const InMemorySlackIntegrationRepositoryLive = (init: {
 
     save: (integration) =>
       Effect.gen(function* () {
-        const conflict = activeRowForTeamId(integration.teamId)
-        if (conflict && conflict.organizationId !== init.organizationId) {
+        const crossOrgConflict = activeRowForTeamId(integration.teamId)
+        if (crossOrgConflict && crossOrgConflict.organizationId !== init.organizationId) {
           return yield* Effect.fail(new SlackIntegrationConflictError({ teamId: integration.teamId }))
         }
+
+        // Mirror the DB's `integrations_active_organization_kind_idx`
+        // partial unique invariant: at most one active row per org.
+        // Callers must soft-revoke the existing active row before
+        // re-saving (which `installSlackIntegrationUseCase` does). A
+        // second active row in the same org indicates a use-case bug,
+        // so panic via `Effect.die` to surface it loudly — the DB
+        // would reject the insert with a unique violation in
+        // production.
+        const sameOrgActive = activeRowsInOrg()
+        if (sameOrgActive.length > 0) {
+          return yield* Effect.die(
+            new Error(
+              `InMemorySlackIntegrationRepository invariant violated: tried to save a second active row in org ${init.organizationId} without soft-revoking ${sameOrgActive[0]!.id} first`,
+            ),
+          )
+        }
+
         const stored: SlackIntegration = {
           ...integration,
           organizationId: init.organizationId as SlackIntegration["organizationId"],
