@@ -1,7 +1,20 @@
 import { Cause, Effect, Exit } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { SlackOAuthError } from "./errors.ts"
-import { buildSlackAuthorizeUrl, exchangeOAuthCode } from "./oauth.ts"
+
+const { accessMock } = vi.hoisted(() => ({ accessMock: vi.fn() }))
+
+vi.mock("@slack/web-api", async (importActual) => {
+  const actual = await importActual<typeof import("@slack/web-api")>()
+  return {
+    ...actual,
+    WebClient: class MockWebClient {
+      oauth = { v2: { access: accessMock } }
+    },
+  }
+})
+
+const { buildSlackAuthorizeUrl, exchangeOAuthCode } = await import("./oauth.ts")
 
 const failure = async (effect: Effect.Effect<unknown, SlackOAuthError>): Promise<SlackOAuthError> => {
   const exit = await Effect.runPromiseExit(effect)
@@ -11,31 +24,27 @@ const failure = async (effect: Effect.Effect<unknown, SlackOAuthError>): Promise
   return failReason.error as SlackOAuthError
 }
 
-const mockOk = (body: Record<string, unknown>) => ({
+const successResponse = (overrides: Record<string, unknown> = {}) => ({
   ok: true,
-  status: 200,
-  json: async () => body,
+  access_token: "xoxb-test",
+  bot_user_id: "U01TESTBOT",
+  app_id: "A01TESTAPP",
+  scope: "chat:write,chat:write.public,channels:read,groups:read,team:read,app_mentions:read",
+  team: { id: "T01TEST", name: "Test Workspace" },
+  authed_user: { id: "U01INSTALLER" },
+  ...overrides,
 })
 
-const mockSlackOk = (body: Record<string, unknown>) =>
-  mockOk({
-    ok: true,
-    access_token: "xoxb-test",
-    bot_user_id: "U01TESTBOT",
-    app_id: "A01TESTAPP",
-    scope: "chat:write,chat:write.public,channels:read,groups:read,team:read,app_mentions:read",
-    team: { id: "T01TEST", name: "Test Workspace" },
-    authed_user: { id: "U01INSTALLER" },
-    ...body,
-  })
-
 describe("buildSlackAuthorizeUrl", () => {
-  it("encodes the v1 bot scope set into the URL query string", () => {
-    const url = buildSlackAuthorizeUrl({
-      clientId: "cid-123",
-      redirectUri: "http://localhost:3000/integrations/slack/oauth/callback",
-      state: "state-abc",
-    })
+  it("delegates to @slack/oauth and returns an authorize URL with the v1 bot scope set + state", async () => {
+    const url = await Effect.runPromise(
+      buildSlackAuthorizeUrl({
+        clientId: "cid-123",
+        clientSecret: "csec-123",
+        redirectUri: "http://localhost:3000/integrations/slack/oauth/callback",
+        state: "state-abc",
+      }),
+    )
 
     const parsed = new URL(url)
     expect(parsed.origin + parsed.pathname).toBe("https://slack.com/oauth/v2/authorize")
@@ -50,11 +59,11 @@ describe("buildSlackAuthorizeUrl", () => {
 
 describe("exchangeOAuthCode", () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
+    accessMock.mockReset()
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    accessMock.mockReset()
   })
 
   const baseInput = {
@@ -65,7 +74,7 @@ describe("exchangeOAuthCode", () => {
   } as const
 
   it("parses a complete successful response", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(mockSlackOk({}) as unknown as Response)
+    accessMock.mockResolvedValue(successResponse())
 
     const result = await Effect.runPromise(exchangeOAuthCode(baseInput))
 
@@ -80,36 +89,43 @@ describe("exchangeOAuthCode", () => {
       refreshToken: undefined,
       expiresIn: undefined,
     })
+    expect(accessMock).toHaveBeenCalledWith({
+      client_id: "cid",
+      client_secret: "csec",
+      code: "code-abc",
+      redirect_uri: "http://localhost:3000/integrations/slack/oauth/callback",
+    })
   })
 
   it("captures refresh_token + expires_in when token rotation is enabled", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      mockSlackOk({ refresh_token: "xoxe-1-refresh", expires_in: 43200 }) as unknown as Response,
-    )
+    accessMock.mockResolvedValue(successResponse({ refresh_token: "xoxe-1-refresh", expires_in: 43200 }))
 
     const result = await Effect.runPromise(exchangeOAuthCode(baseInput))
     expect(result.refreshToken).toBe("xoxe-1-refresh")
     expect(result.expiresIn).toBe(43200)
   })
 
-  it("maps Slack's `ok: false` body to SlackOAuthError with the Slack error code", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(mockOk({ ok: false, error: "invalid_code" }) as unknown as Response)
+  it("maps Slack's `ok: false` error to SlackOAuthError with the Slack error code", async () => {
+    // WebClient's behaviour: on `ok: false` from Slack, it throws an
+    // error with `data: { error: "..." }` attached.
+    const slackError = Object.assign(new Error("slack api failed"), {
+      data: { ok: false, error: "invalid_code" },
+    })
+    accessMock.mockRejectedValue(slackError)
 
     const err = await failure(exchangeOAuthCode(baseInput))
     expect(err.slackError).toBe("invalid_code")
   })
 
   it("treats a partial response (no team) as incomplete", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      mockOk({ ok: true, access_token: "xoxb-only" }) as unknown as Response,
-    )
+    accessMock.mockResolvedValue({ ok: true, access_token: "xoxb-only" })
 
     const err = await failure(exchangeOAuthCode(baseInput))
     expect(err.slackError).toBe("incomplete_response")
   })
 
   it("wraps transport-level failures (network)", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("ECONNREFUSED"))
+    accessMock.mockRejectedValue(new Error("ECONNREFUSED"))
 
     const err = await failure(exchangeOAuthCode(baseInput))
     expect(err.slackError).toBeUndefined()

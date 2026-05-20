@@ -139,11 +139,14 @@ async function main(): Promise<void> {
     // state into Redis with the org + user; here we just include enough
     // context for a developer to recognise the redirect.
     const state = `cli:${args.organizationId}:${Date.now()}`
-    const url = buildSlackAuthorizeUrl({
-      clientId: config.clientId,
-      redirectUri: args.redirectUri,
-      state,
-    })
+    const url = await Effect.runPromise(
+      buildSlackAuthorizeUrl({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        redirectUri: args.redirectUri,
+        state,
+      }),
+    )
     console.log("\nOpen this URL in your browser to approve the install:\n")
     console.log(url)
     console.log("\nSlack will redirect to your callback URL — that page will 404 (no route exists yet),")

@@ -1,15 +1,14 @@
+import { InstallProvider } from "@slack/oauth"
+import { WebClient } from "@slack/web-api"
 import { Effect } from "effect"
 import { SlackOAuthError } from "./errors.ts"
 import { SLACK_BOT_SCOPES } from "./scopes.ts"
 
-const OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
-const OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
-
 /**
  * Successful response from `oauth.v2.access` projected onto only the
  * fields the install use case needs. `refreshToken` and `expiresIn` are
- * present only when token rotation is enabled on the Slack app (off in
- * v1; the schema reserves nullable columns for the future toggle).
+ * present when token rotation is enabled on the Slack app (the v1
+ * setup); the schema's nullable columns accept both cases.
  */
 export interface SlackOAuthResult {
   readonly teamId: string
@@ -24,29 +23,61 @@ export interface SlackOAuthResult {
 }
 
 /**
+ * `@slack/oauth`'s `InstallProvider` requires `clientId` and
+ * `clientSecret` at construction. We only use it for URL generation
+ * here (Phase 2 will plug in the real `installationStore` and use
+ * `authorize()`); `stateVerification: false` skips the SDK's own state
+ * encoding so callers can pass an externally-managed state token (the
+ * CLI uses a self-describing dev token; Phase 2 will use a Redis-backed
+ * CSRF state). The provider is cheap to construct — no caching needed.
+ */
+const createInstaller = (clientId: string, clientSecret: string): InstallProvider =>
+  new InstallProvider({
+    clientId,
+    clientSecret,
+    stateSecret: "unused-when-stateVerification-is-false",
+    stateVerification: false,
+  })
+
+/**
  * Builds the Slack authorize URL a user is redirected to at the start of
- * the OAuth flow. `state` must be CSRF-bound (in v1 we put it in Redis
- * with TTL 10min, keyed on the org and user id).
+ * the OAuth flow. `state` must be CSRF-bound by the caller (CLI uses a
+ * self-describing dev token; the Phase 2 web flow puts state in Redis
+ * with TTL 10min, keyed on org + user).
+ *
+ * We pass `stateVerification = true` to `generateInstallUrl` so the SDK
+ * appends our state to the URL, but provide the state value externally
+ * — the SDK only consults its own `stateStore` when state is not
+ * provided. Verification is the caller's responsibility (Redis lookup
+ * in the callback).
  */
 export const buildSlackAuthorizeUrl = (input: {
   readonly clientId: string
+  readonly clientSecret: string
   readonly redirectUri: string
   readonly state: string
-}): string => {
-  const params = new URLSearchParams({
-    client_id: input.clientId,
-    scope: SLACK_BOT_SCOPES.join(","),
-    redirect_uri: input.redirectUri,
-    state: input.state,
+}): Effect.Effect<string, SlackOAuthError> =>
+  Effect.tryPromise({
+    try: () => {
+      const installer = createInstaller(input.clientId, input.clientSecret)
+      return installer.generateInstallUrl(
+        {
+          scopes: [...SLACK_BOT_SCOPES],
+          redirectUri: input.redirectUri,
+        },
+        true,
+        input.state,
+      )
+    },
+    catch: (cause) => new SlackOAuthError({ cause }),
   })
-  return `${OAUTH_AUTHORIZE_URL}?${params.toString()}`
-}
 
 /**
  * Exchanges an OAuth authorization code for the workspace's bot token.
- * Uses raw `fetch` rather than the SDK to keep the call surface small
- * and the error path explicit — `oauth.v2.access` is unauthenticated, so
- * a token-less SDK client adds no value here.
+ * Uses `@slack/web-api`'s `WebClient.oauth.v2.access` so we get typed
+ * responses and Slack's own retry / error semantics; the underlying
+ * call is the same `POST oauth.v2.access` we would otherwise issue by
+ * hand.
  */
 export const exchangeOAuthCode = (input: {
   readonly code: string
@@ -55,50 +86,51 @@ export const exchangeOAuthCode = (input: {
   readonly clientSecret: string
 }): Effect.Effect<SlackOAuthResult, SlackOAuthError> =>
   Effect.gen(function* () {
-    const body = new URLSearchParams({
-      code: input.code,
-      client_id: input.clientId,
-      client_secret: input.clientSecret,
-      redirect_uri: input.redirectUri,
-    })
-
-    const json = yield* Effect.tryPromise({
-      try: async () => {
-        const response = await fetch(OAUTH_ACCESS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body,
-        })
-        return (await response.json()) as Record<string, unknown>
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        new WebClient().oauth.v2.access({
+          client_id: input.clientId,
+          client_secret: input.clientSecret,
+          code: input.code,
+          redirect_uri: input.redirectUri,
+        }),
+      catch: (cause) => {
+        // WebClient throws SlackApiError when `ok: false`; the Slack
+        // error string sits at `cause.data.error`. Transport-level
+        // failures bubble up as plain Error subclasses with no `data`.
+        if (cause instanceof Error && "data" in cause) {
+          const data = (cause as { data?: { error?: string } }).data
+          if (data?.error && typeof data.error === "string") {
+            return new SlackOAuthError({ slackError: data.error, cause })
+          }
+        }
+        return new SlackOAuthError({ cause })
       },
-      catch: (cause) => new SlackOAuthError({ cause }),
     })
 
-    if (json.ok !== true) {
-      const slackError = typeof json.error === "string" ? json.error : "unknown_error"
-      return yield* Effect.fail(new SlackOAuthError({ slackError }))
-    }
-
-    const team = json.team as { id?: string; name?: string } | undefined
-    const authedUser = json.authed_user as { id?: string } | undefined
-    const accessToken = typeof json.access_token === "string" ? json.access_token : undefined
-    const botUserId = typeof json.bot_user_id === "string" ? json.bot_user_id : undefined
-    const appId = typeof json.app_id === "string" ? json.app_id : undefined
-    const scope = typeof json.scope === "string" ? json.scope : undefined
-
-    if (!team?.id || !team.name || !accessToken || !botUserId || !appId || !scope || !authedUser?.id) {
+    const team = response.team
+    const authedUser = response.authed_user
+    if (
+      !team?.id ||
+      !team.name ||
+      !response.access_token ||
+      !response.bot_user_id ||
+      !response.app_id ||
+      !response.scope ||
+      !authedUser?.id
+    ) {
       return yield* Effect.fail(new SlackOAuthError({ slackError: "incomplete_response" }))
     }
 
     return {
       teamId: team.id,
       teamName: team.name,
-      appId,
-      botUserId,
-      botAccessToken: accessToken,
-      botTokenScopes: scope,
+      appId: response.app_id,
+      botUserId: response.bot_user_id,
+      botAccessToken: response.access_token,
+      botTokenScopes: response.scope,
       authedUserId: authedUser.id,
-      refreshToken: typeof json.refresh_token === "string" ? json.refresh_token : undefined,
-      expiresIn: typeof json.expires_in === "number" ? json.expires_in : undefined,
+      refreshToken: response.refresh_token,
+      expiresIn: response.expires_in,
     }
   })

@@ -2103,6 +2103,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../env
+      '@slack/oauth':
+        specifier: 3.0.5
+        version: 3.0.5
       '@slack/web-api':
         specifier: 7.10.0
         version: 7.10.0
@@ -6700,12 +6703,20 @@ packages:
     resolution: {integrity: sha512-6cmdPrV/RYfd2U0mDGiMK8S7OJqpCTm7enMLRR3edccsPX8j7zXTLnaEF4fhxxJJTAIOil6+qZrnUPTuaLvwrQ==}
     engines: {node: '>= 18', npm: '>= 8.6.0'}
 
+  '@slack/oauth@3.0.5':
+    resolution: {integrity: sha512-exqFQySKhNDptWYSWhvRUJ4/+ndu2gayIy7vg/JfmJq3wGtGdHk531P96fAZyBm5c1Le3yaPYqv92rL4COlU3A==}
+    engines: {node: '>=18', npm: '>=8.6.0'}
+
   '@slack/types@2.21.1':
     resolution: {integrity: sha512-I8vmSjNYWsaxuWPx6dz4yeh0h7vRBWbgAMK14LEmblbZ404BtrPbXs6jDPx4cYgGf8msDGF4A9opLZBu21FViQ==}
     engines: {node: '>= 12.13.0', npm: '>= 6.12.0'}
 
   '@slack/web-api@7.10.0':
     resolution: {integrity: sha512-kT+07JvOqpYH3b/ttVo3iqKIFiHV2NKmD6QUc/F7HrjCgSdSA10zxqi0euXEF2prB49OU7SfjadzQ0WhNc7tiw==}
+    engines: {node: '>= 18', npm: '>= 8.6.0'}
+
+  '@slack/web-api@7.15.2':
+    resolution: {integrity: sha512-/m9qVFkiq85Oa/FSQwYIRDa/AO4qNYkDh4sRBK1WqEc2+RyG7w4tbU6rBIwUOcc/TmWOIr24Nraquxg7um5mYw==}
     engines: {node: '>= 18', npm: '>= 8.6.0'}
 
   '@smithy/chunked-blob-reader-native@4.2.3':
@@ -7606,6 +7617,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/jsonwebtoken@9.0.10':
+    resolution: {integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==}
 
   '@types/lodash@4.17.24':
     resolution: {integrity: sha512-gIW7lQLZbue7lRSWEFql49QJJWThrTFFeIMJdp3eH4tKoxm1OvEPg02rm4wCCSHS0cL3/Fizimb35b7k8atwsQ==}
@@ -17465,9 +17479,36 @@ snapshots:
     dependencies:
       '@types/node': 22.19.17
 
+  '@slack/oauth@3.0.5':
+    dependencies:
+      '@slack/logger': 4.0.1
+      '@slack/web-api': 7.15.2
+      '@types/jsonwebtoken': 9.0.10
+      '@types/node': 22.19.17
+      jsonwebtoken: 9.0.3
+    transitivePeerDependencies:
+      - debug
+
   '@slack/types@2.21.1': {}
 
   '@slack/web-api@7.10.0':
+    dependencies:
+      '@slack/logger': 4.0.1
+      '@slack/types': 2.21.1
+      '@types/node': 22.19.17
+      '@types/retry': 0.12.0
+      axios: 1.16.0
+      eventemitter3: 5.0.4
+      form-data: 4.0.5
+      is-electron: 2.2.2
+      is-stream: 2.0.1
+      p-queue: 6.6.2
+      p-retry: 4.6.2
+      retry: 0.13.1
+    transitivePeerDependencies:
+      - debug
+
+  '@slack/web-api@7.15.2':
     dependencies:
       '@slack/logger': 4.0.1
       '@slack/types': 2.21.1
@@ -18670,6 +18711,11 @@ snapshots:
   '@types/jsesc@2.5.1': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/jsonwebtoken@9.0.10':
+    dependencies:
+      '@types/ms': 2.1.0
+      '@types/node': 22.19.17
 
   '@types/lodash@4.17.24': {}
 
