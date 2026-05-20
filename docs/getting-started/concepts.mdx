@@ -1,67 +1,153 @@
 ---
 title: Core Concepts
-description: Understand how organizations, projects, and key entities relate to each other in Latitude
+description: "Understand Latitude's core concepts: projects, spans, traces, sessions, search, scores, evaluations, and issues."
 ---
 
 # Core Concepts
 
-Latitude organizes your work into a hierarchy of organizations and projects, with all reliability features scoped to the right level.
+Latitude is organized around a small set of concepts that connect production telemetry to issue discovery. A project receives agent activity as spans, traces, and sessions; search helps you find relevant traces; scores record judgments about trace quality; evaluations monitor known behaviours; and issues group repeated failures into trackable problems.
 
-## Organizations
-
-An organization is the top-level ownership boundary. It represents your team or company.
-
-Organizations own:
-
-- **Members**: Team members who can access the organization's projects
-- **API keys**: Used for programmatic access from your applications
-- **Settings**: Organization-wide defaults, including monitoring behavior
-
-All data in Latitude is organization-scoped. Members of one organization cannot see another organization's data.
+```text
+Project
+├─ Sessions
+│  └─ Traces
+│     └─ Spans
+├─ Search over traces
+├─ Scores attached to traces
+├─ Evaluations monitoring traces
+└─ Issues grouped from failed scores
+```
 
 ## Projects
 
-A project is the main product boundary for reliability workflows. Each project typically corresponds to one agent, application, or feature you want to monitor.
+A **project** is the main workspace for one agent, application, or AI feature. Projects keep production data and reliability workflows scoped to the right product boundary.
+
+Project-scoped data includes:
+
+- spans, traces, and sessions
+- search and saved searches
+- scores from annotations, evaluations, flaggers, and custom checks
+- issues discovered from failed scores
+- evaluations and simulations
+- project settings such as monitoring behaviour
 
 <Frame>
   <img src="/images/getting-started/projects.png" alt="Projects page showing a list of projects with issues, datasets, and trace counts" />
 </Frame>
 
-Everything you work with day-to-day is project-scoped:
+Projects belong to organizations. Organization membership, API keys, and settings control who can access a project and how defaults cascade.
 
-- **Traces and sessions**: Your agent's captured interactions
-- **Search and saved searches**: Find traces by meaning and bookmark useful cohorts
-- **Flaggers**: Automatic annotators that surface common failure categories
-- **Evaluations**: Automated monitors that track behaviour across traces
-- **Issues**: Discovered failure patterns
-- **Simulations**: Pre-ship test runs
-- **Scores**: All verdicts from evaluations, annotations, and custom sources
+## Spans
 
-When you create a project, Latitude provisions a full set of [flaggers](../annotations/flaggers) — automatic annotators for common failure categories like jailbreaking, frustration, and tool call errors. They start running on every completed trace right away, so you get useful signal before configuring anything else.
+A **span** is the smallest unit of captured work. It represents one operation inside an agent run, such as an LLM call, tool invocation, retrieval step, HTTP request, or custom instrumented operation.
 
-### Project Settings
+Spans can capture:
 
-Projects can override organization-level defaults:
+- input and output content when available
+- start time, end time, and duration
+- success or error status
+- tags and metadata
+- provider, model, token usage, and cost for LLM calls
 
-- **Keep monitoring**: Controls whether issue-linked evaluations stay active after an issue is resolved. When set at the project level, it overrides the organization default. When a user resolves an issue, this setting determines the default state of the "keep monitoring" toggle in the confirmation dialog.
+Use spans when you need to understand exactly what happened inside a trace.
 
-## How Settings Cascade
+## Traces
 
-Settings resolve from the most specific scope to the broadest:
+A **trace** is one complete interaction from start to finish, composed of one or more spans. For a chat agent, a trace commonly represents a single user turn and the agent work needed to respond.
 
-1. **Project settings**: Checked first
-2. **Organization settings**: Used as fallback when the project doesn't override
+Traces are the main unit used across Latitude:
 
-For example, if a project has `keepMonitoring` set to `true`, that applies regardless of the organization setting. If the project doesn't set it, the organization default is used.
+- the trace detail view shows the full execution path
+- search returns matching traces
+- annotations, scores, and evaluations attach to traces
+- flaggers run on completed traces
+- issues group related failed trace signals
 
-## Access Model
+Latitude waits for a trace to stop receiving new spans before treating it as complete. Downstream workflows such as search indexing, flaggers, evaluations, scores, and issue discovery run on completed traces so they do not act on partial executions.
 
-- **Web users** authenticate through browser sessions with an active organization context
-- **API clients** authenticate with API keys scoped to an organization
-- Users without an active organization are routed to onboarding
+## Sessions
 
-## Next Steps
+A **session** groups related traces into a multi-turn conversation or workflow. Traces always exist; sessions exist when your application sends a stable session id with telemetry.
 
-- [Developer Quick Start](./quick-start-dev): Connect your first agent
-- [No-Code Quick Start](./quick-start-pm): Explore the Latitude UI
-- [Observability](../observability/overview): How telemetry flows into projects
+Use sessions when multiple traces belong to the same user conversation, support ticket, workflow, or agent task. For example, each chat turn can be one trace while the whole conversation shares one session.
+
+Sessions help teams:
+
+- review full conversation context across turns
+- group traces by a stable conversation id
+- investigate user-level or workflow-level behaviour
+- understand whether a failure was isolated or part of a longer interaction
+
+## Search
+
+**Search** finds traces by meaning, exact text, metadata filters, or a combination of all three. It is the discovery layer for behaviours your team wants to inspect, review, and track.
+
+Use search to find traces such as:
+
+- users showing frustration
+- failed payments or onboarding problems
+- tool loops and tool call errors
+- hallucinated or incomplete answers
+- traces from a specific user, model, release, environment, tag, or metadata value
+
+Saved searches let teams bookmark useful behavioural cohorts and review them repeatedly.
+
+## Scores
+
+A **score** is Latitude's common verdict model for trace quality. Scores can come from human annotations, built-in flaggers, automated evaluations, or custom checks submitted through the API.
+
+Scores answer questions such as:
+
+- Did this trace pass or fail a quality check?
+- What feedback explains the verdict?
+- Which signal source produced the verdict?
+- Should this failure contribute to issue discovery?
+
+Failed, eligible scores are the primary input for issue discovery. Scores also power analytics and help teams compare automated judgments with human feedback.
+
+## Issues
+
+An **issue** is a recurring failure pattern discovered from failed scores. Instead of leaving failures as isolated examples, Latitude groups similar failures into named issues with examples, trends, affected users, lifecycle states, and linked evaluations.
+
+Issues help teams:
+
+- triage new and escalating production problems
+- inspect representative traces for the failure pattern
+- decide whether a cluster is real, noise, resolved, or ignored
+- generate evaluations that monitor the same failure mode on future traces
+- catch regressions after a fix ships
+
+Issue states include **new**, **escalating**, **resolved**, **regressed**, and **ignored**. An issue can have multiple states at once, such as new and escalating.
+
+## Evaluations
+
+An **evaluation** is an automated monitor that checks traces for a specific behaviour or quality criterion. Evaluations run on completed traces and produce scores, so their results feed the same analytics and issue discovery workflows as annotations, flaggers, and custom checks.
+
+Evaluations help teams:
+
+- monitor known failure modes on live traffic
+- measure whether a fix reduced or eliminated a behaviour
+- catch regressions after an issue is resolved
+- turn important issues into ongoing monitors
+- compare automated judgments with human annotations through alignment metrics
+
+Latitude can generate evaluations from issues, then use human feedback to keep those evaluations aligned with the team's judgment.
+
+## How the concepts fit together
+
+1. A **project** receives telemetry from your agent.
+2. Agent operations arrive as **spans**.
+3. Related spans form completed **traces**.
+4. Related traces can be grouped into **sessions**.
+5. **Search** finds traces that match behaviours your team cares about.
+6. Annotations, flaggers, **evaluations**, and custom checks create **scores** on traces.
+7. **Evaluations** monitor known behaviours and can be generated from important issues.
+8. Failed scores cluster into **issues** that your team can triage, monitor, and fix.
+
+## Next steps
+
+- [Start tracing](../telemetry/start-tracing): send your first spans and traces to Latitude.
+- [Observability](../observability/overview): inspect traces, sessions, and telemetry metadata.
+- [Search](../search/overview): find traces by meaning, exact text, and filters.
+- [Evaluations](../evaluations/overview): monitor known behaviours and issue patterns.
+- [Issue Discovery](../issues/overview): understand how failed scores become issues.

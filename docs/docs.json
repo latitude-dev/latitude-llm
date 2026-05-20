@@ -55,10 +55,18 @@
     },
     "groups": [
       {
+        "group": "Overview",
+        "pages": [
+          "getting-started/introduction",
+          "getting-started/how-to-use-latitude",
+          "getting-started/concepts"
+        ]
+      },
+      {
         "group": "Getting Started",
         "pages": [
           "telemetry/start-tracing",
-          "getting-started/how-to-use-latitude"
+          "getting-started/mcp"
         ]
       },
       {
@@ -121,12 +129,6 @@
               "observability/features/trace-urls",
               "observability/traces",
               "observability/features/user-tracking"
-            ]
-          },
-          {
-            "group": "Core concepts",
-            "pages": [
-              "observability/overview"
             ]
           }
         ]
