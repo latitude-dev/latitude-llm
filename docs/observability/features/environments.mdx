@@ -1,0 +1,94 @@
+---
+title: Environments
+description: Separate production, staging, preview, and local traces with tags or metadata.
+---
+
+# Environments
+
+Latitude does not require a separate environment object. Add environment context to telemetry so you can filter, search, and review traces by source.
+
+Use either pattern:
+
+- **Tags** for a small, fixed set of environments you filter by often, such as `production`, `staging`, or `preview`.
+- **Metadata** when environment is part of a richer deployment context, such as environment, region, service, and deployment id.
+
+## Send environment as a tag
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    import { capture } from "@latitude-data/telemetry"
+
+    await capture(
+      "support-agent-turn",
+      async () => agent.run(userMessage),
+      {
+        tags: ["production"],
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from latitude_telemetry import capture
+
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "tags": ["production"],
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Send environment as metadata
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    await capture(
+      "support-agent-turn",
+      async () => agent.run(userMessage),
+      {
+        metadata: {
+          environment: "production",
+          region: "us-east-1",
+        },
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "metadata": {
+                "environment": "production",
+                "region": "us-east-1",
+            },
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Use environments in Latitude
+
+With environment context, you can:
+
+- filter traces to production traffic
+- search only staging or preview traces
+- save searches for production failure modes
+- scope issue monitoring to a specific environment
+- compare whether a behaviour appears in one environment or across all environments
+
+## Related
+
+- [Tags](./tags): Add lightweight environment labels
+- [Metadata](./metadata): Attach structured deployment context
+- [Filters](../filters): Filter traces by tags or metadata
+- [Search](../../search/overview): Search within an environment

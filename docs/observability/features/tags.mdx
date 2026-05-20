@@ -1,0 +1,74 @@
+---
+title: Tags
+description: Add lightweight labels to traces so you can filter and search cohorts.
+---
+
+# Tags
+
+Tags are lightweight trace labels for broad, repeated categories such as environment, agent name, feature area, rollout, or customer segment.
+
+## Send tags
+
+Pass tags through `capture()`.
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    import { capture } from "@latitude-data/telemetry"
+
+    await capture(
+      "support-agent-turn",
+      async () => {
+        return agent.run(userMessage)
+      },
+      {
+        tags: ["production", "support-agent", "checkout"],
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from latitude_telemetry import capture
+
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "tags": ["production", "support-agent", "checkout"],
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+Nested captures inherit parent tags. Additional tags are appended and deduplicated.
+
+## Use tags in Latitude
+
+Tags appear in trace metadata.
+
+<Frame>
+  <img
+    src="/images/observability/tags.png"
+    alt="Traces table showing colored tags such as production, support, development, and internal-kb"
+  />
+</Frame>
+
+Use tags to:
+
+- filter the Traces page
+- narrow semantic or exact-text searches
+- save reusable search cohorts
+- scope evaluation monitoring
+- compare issue patterns across environments, agents, or features
+
+## Tags vs metadata
+
+Use tags for labels you commonly filter by, such as environments or rollout cohorts. Use [metadata](./metadata) for structured key-value context such as request ids, plan names, regions, experiment ids, or account properties.
+
+## Related
+
+- [Metadata](./metadata): Attach structured context
+- [Filters](../filters): Filter traces by tags
+- [Search](../../search/overview): Combine tags with semantic search

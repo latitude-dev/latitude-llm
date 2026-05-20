@@ -20,7 +20,7 @@ Give your project a descriptive name that matches the agent or feature you're mo
 
 ## Step 2: Connect Telemetry
 
-Latitude captures your agent's interactions through OpenTelemetry-compatible telemetry. See the [Telemetry](../telemetry/overview) section for detailed setup instructions for your specific provider or framework.
+Latitude captures your agent's interactions through OpenTelemetry-compatible telemetry. See [Start tracing](../telemetry/start-tracing) for the recommended setup path, or use the Observability sidebar for provider- and framework-specific instructions.
 
 Once telemetry is connected, every LLM call, tool invocation, and agent step your application makes will appear as **spans** in Latitude. Related spans are grouped into **traces** (single interactions) and **sessions** (multi-turn conversations).
 
@@ -41,7 +41,7 @@ Scores are the fundamental measurement unit. Every score is a normalized value b
 
 Scores come from three sources:
 
-1. **Evaluations**: automated scripts that run on your traces
+1. **Evaluations**: automated monitors that run on matching traces
 2. **Annotations**: human review verdicts from your team
 3. **Custom**: scores you submit from your own code via the API
 

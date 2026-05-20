@@ -33,21 +33,16 @@ Traces are defined by your telemetry client and sent to Latitude with their span
 - **Models and providers**: Which LLMs and providers were used
 - **Tags and metadata**: Custom labels and structured metadata
 
-## Trace Completion
+## Trace completion
 
-Latitude uses a **debounce window** to determine when a trace is finished. After the last span for a trace arrives, Latitude waits for a quiet period (default: 5 minutes). If no new spans arrive during that window, the trace is considered complete.
+Latitude waits until a trace has finished before using it in downstream workflows. This keeps search, evaluations, flaggers, and issue discovery focused on complete interactions rather than partial agent runs.
 
-Each new span arrival resets the debounce timer. This handles common scenarios:
+Once a trace is complete, Latitude can:
 
-- Multi-step agent loops where tool calls and LLM responses alternate over time
-- Parallel operations that complete at different times
-- Retries and fallback logic
-
-Once a trace is complete, Latitude triggers downstream processes:
-
-- **Evaluation triggers** check if any active evaluations should run against this trace
-- **[Flaggers](../annotations/flaggers)** classify the trace against built-in failure categories and write annotations on matches
-- The trace is indexed for **[search](../search/overview)** so it becomes discoverable in the Search page
+- make it available in [Search](../search/overview)
+- run matching [Evaluations](../evaluations/overview)
+- apply enabled [Flaggers](../annotations/flaggers)
+- connect resulting [Scores](../scores/overview) to [Issues](../issues/overview)
 
 ## Viewing Traces
 
@@ -125,7 +120,7 @@ Click the **Filters** button in the toolbar to open the filter panel. You can co
   </Accordion>
 
   <Accordion title="Duration">
-    Set a min/max range to filter traces by total duration (in nanoseconds).
+    Set a min/max range to filter traces by total duration.
   </Accordion>
 
   <Accordion title="TTFT (Time to First Token)">
@@ -133,7 +128,7 @@ Click the **Filters** button in the toolbar to open the filter panel. You can co
   </Accordion>
 
   <Accordion title="Cost">
-    Set a min/max range to filter by total cost (in microcents). Useful for finding expensive traces.
+    Set a min/max range to filter by estimated total cost. Useful for finding expensive traces.
   </Accordion>
 
   <Accordion title="Span Count">
@@ -161,7 +156,7 @@ Click the **Filters** button in the toolbar to open the filter panel. You can co
 
 All active filters are combined with **AND** logic. Traces must match every active filter to appear. For example:
 
-- **Status** = ERROR **AND** **Cost** > 100 microcents: find expensive failures
+- **Status** = ERROR **AND** **Cost** > $1: find expensive failures
 - **Models** = gpt-4o **AND** **Duration** > 5s: find slow GPT-4o traces
 - **Metadata** `environment` = `production` **AND** **Error Count** > 0: find production errors
 

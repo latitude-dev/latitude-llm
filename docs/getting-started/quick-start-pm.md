@@ -49,7 +49,7 @@ When a search is one you'll come back to, click **Save search** in the toolbar. 
 - **Annotated**: How many matching traces have been reviewed
 - **Total**: How many traces currently match
 
-This is the workflow that used to live in the old **Annotation Queues** page. Instead of a managed queue with start/finish semantics, you scope your own cohort with a saved search and the Annotated/Total ratio tells you how far through it your team is. See [Saved Searches](../search/saved-searches) for details.
+Use saved searches to define review cohorts for your team. The Annotated and Total counts help you track how much of a cohort has been reviewed. See [Saved Searches](../search/saved-searches) for details.
 
 ## Automatic Detection with Flaggers
 
@@ -66,7 +66,7 @@ Some failure categories are common enough that Latitude detects them for you. Ev
 - **Output Schema Validation**: Structured output didn't conform to the declared schema
 - **Empty Response**: The assistant returned an empty or degenerate response
 
-When a flagger matches, it writes an annotation directly on the trace — no queue, no human approval step. That annotation feeds into [issue discovery](../issues/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list and detection logic.
+When a flagger matches, it writes an annotation directly on the trace. That annotation feeds into [issue discovery](../issues/overview), [scores analytics](../scores/analytics), and [evaluation alignment](../evaluations/alignment) the same way a human annotation would. You can adjust which flaggers are enabled and how aggressively they sample under **Project Settings**. See [Flaggers](../annotations/flaggers) for the full list.
 
 ## Reviewing Traces
 
@@ -98,9 +98,9 @@ You can:
 
 ## Understanding Evaluations
 
-The **Evaluations** page shows automated scripts that score your agent's interactions in real time.
+The **Evaluations** page shows automated monitors that score your agent's interactions in real time.
 
-Evaluations are typically generated from issues. When you click "Generate Evaluation" on an issue, Latitude creates a monitoring script that watches for that failure pattern on live traffic.
+Evaluations are typically generated from issues. When you click "Generate Evaluation" on an issue, Latitude creates a monitor that watches for that failure pattern on live traffic.
 
 Each evaluation shows:
 

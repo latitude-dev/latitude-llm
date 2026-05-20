@@ -7,7 +7,7 @@ description: Connect your Vercel AI SDK-powered application to Latitude for obse
 
 This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **Vercel AI SDK**.
 
-The Vercel AI SDK has built-in OpenTelemetry support via its `experimental_telemetry` flag. Latitude's smart filter automatically picks up these `ai.*` spans. No instrumentation string needed.
+The Vercel AI SDK can emit OpenTelemetry spans through its `experimental_telemetry` flag. Latitude can ingest those spans without a provider-specific instrumentation entry.
 
 <Check>
   You'll keep calling the Vercel AI SDK exactly as you do today. Telemetry simply
@@ -65,8 +65,6 @@ The Vercel AI SDK has built-in OpenTelemetry support via its `experimental_telem
       project: process.env.LATITUDE_PROJECT_SLUG!,
     })
 
-    await latitude.ready
-
     await capture("generate-support-reply", async () => {
       const { text } = await generateText({
         model: openai("gpt-4o"),
@@ -97,9 +95,3 @@ Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
 2. Each execution shows input/output messages, model, token usage, latency, and errors
-
----
-
-## That's It
-
-No changes to your Vercel AI SDK calls: just initialize Latitude and enable `experimental_telemetry`.

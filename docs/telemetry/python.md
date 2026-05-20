@@ -1,11 +1,11 @@
 ---
 title: Python SDK
-description: Full API reference for latitude-telemetry, the Python SDK for Latitude Telemetry.
+description: Instrument Python apps with Latitude Telemetry.
 ---
 
 # Python SDK
 
-Instrument your AI application and send traces to Latitude. Built on OpenTelemetry.
+Use `latitude-telemetry` to send LLM traces from Python applications to Latitude. The SDK is built on OpenTelemetry and can attach to an existing tracing setup when your app already uses one.
 
 ## Installation
 
@@ -15,9 +15,9 @@ pip install latitude-telemetry
 
 Requires Python 3.11+.
 
-## Bootstrap (Recommended)
+## Bootstrap
 
-The fastest way to start. One class sets up a complete OpenTelemetry pipeline with LLM auto-instrumentation and the Latitude exporter:
+Initialize Latitude once, before your LLM calls run. Pass the LLM SDK modules your app uses through `instrumentations` so Latitude can auto-instrument them.
 
 ```python
 import openai
@@ -32,6 +32,7 @@ latitude = Latitude(
 )
 
 client = OpenAI()
+
 response = client.chat.completions.create(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Hello"}],
@@ -40,19 +41,23 @@ response = client.chat.completions.create(
 latitude.shutdown()
 ```
 
-`instrumentations` takes a dict mapping integration name (`openai`, `anthropic`, …) to the LLM SDK module the consumer imports. Passing the user's own module reference sidesteps a class of import-cache bugs where the SDK could patch a different module instance than the app loads.
+`instrumentations` should use the same package module your application imports for the actual LLM call.
 
-## Using `capture()` for Context
+## Add context with `capture()`
 
-Auto-instrumentation traces LLM calls without `capture()`. Use `capture()` when you want to:
+Auto-instrumentation creates spans for supported LLM calls. Use `capture()` to attach Latitude context to the spans created inside a request, conversation turn, or agent run.
 
-- **Group traces by user or session**: Track all LLM calls from a specific user
-- **Add business context**: Tag traces with environment, feature flags, or request IDs
-- **Mark agent boundaries**: Wrap an agent run or conversation turn with a name and metadata
-- **Filter and analyze**: Use tags and metadata to filter traces in Latitude
+You can use `capture()` to:
+
+- group traces by **user**
+- group traces into a **session**
+- route traces to a specific **project**
+- add tags and metadata for filtering
+- mark the boundary of an agent run
 
 ```python
 import openai
+from openai import OpenAI
 
 from latitude_telemetry import Latitude, capture
 
@@ -61,6 +66,8 @@ latitude = Latitude(
     project="your-project-slug",
     instrumentations={"openai": openai},
 )
+
+client = OpenAI()
 
 capture(
     "handle-user-request",
@@ -71,28 +78,22 @@ capture(
     {
         "user_id": "user_123",
         "session_id": "session_abc",
+        "project": "support-agent",
         "tags": ["production", "v2-agent"],
-        "metadata": {"request_id": "req-xyz", "feature_flag": "new-prompt"},
+        "metadata": {"request_id": "req-xyz"},
     },
 )
 
 latitude.shutdown()
 ```
 
-`capture()` does **not** create spans. It only attaches context to spans created by auto-instrumentation. Use one `capture()` call at the request or agent boundary. Nested calls inherit from the parent context with local overrides.
+`capture()` does not create spans by itself. It only adds context to spans created by auto-instrumentation inside the callback. In most apps, wrap the outer request handler, conversation turn, or agent entrypoint once.
 
-**Nesting behavior:**
+Nested `capture()` calls inherit parent context and can override local values. Metadata is shallow-merged, and tags are appended and deduplicated.
 
-| Field | Behavior |
-|---|---|
-| `user_id` | Last-write-wins |
-| `session_id` | Last-write-wins |
-| `metadata` | Shallow merge |
-| `tags` | Append and dedupe, preserving order |
+## Existing OpenTelemetry setup
 
-## Existing OpenTelemetry Setup (Advanced)
-
-If your app already uses OpenTelemetry, add Latitude alongside your existing processors:
+If your app already has an OpenTelemetry provider, add Latitude to the existing setup and register the LLM instrumentations against that provider.
 
 ```python
 import openai
@@ -112,280 +113,169 @@ register_latitude_instrumentations(
 )
 ```
 
-`LatitudeSpanProcessor` only exports spans to Latitude. You still need LLM instrumentations to create those spans. Use `register_latitude_instrumentations()` or bring your own OTel-compatible LLM instrumentation.
+`LatitudeSpanProcessor` exports spans to Latitude. You still need LLM instrumentations to create those spans.
 
-For examples of integrating with **Datadog**, **Sentry**, or other observability platforms, see the [OpenTelemetry Exporter](otel-exporter) guide. That guide also covers connecting from **any language** beyond TypeScript and Python.
+If you need lower-level OpenTelemetry wiring or a non-Python runtime, see the [OpenTelemetry Exporter](/telemetry/otel-exporter) guide.
 
-## Public API Reference
+## Supported integrations
 
-```python
-from latitude_telemetry import (
-    Latitude,
-    LatitudeOptions,
-    LatitudeSpanProcessor,
-    capture,
-    register_latitude_instrumentations,
-)
-```
+Set the integration key on `instrumentations` to the SDK module your app imports.
 
-### `Latitude(**options)`
+| Integration | Package | Example |
+| --- | --- | --- |
+| OpenAI | `openai` | `{"openai": openai}` |
+| OpenAI Agents SDK | `openai-agents` | `{"openai-agents": agents}` |
+| Anthropic | `anthropic` | `{"anthropic": anthropic}` |
+| Amazon Bedrock | `boto3` | `{"bedrock": boto3}` |
+| Cohere | `cohere` | `{"cohere": cohere}` |
+| LangChain | `langchain-core` | `{"langchain": langchain_core}` |
+| LlamaIndex | `llama-index` | `{"llamaindex": llama_index}` |
+| Together AI | `together` | `{"togetherai": together}` |
+| Vertex AI | `google-cloud-aiplatform` | `{"vertexai": vertexai}` |
+| Google AI Platform | `google-cloud-aiplatform` | `{"aiplatform": aiplatform}` |
+| Google Generative AI | `google-generativeai` | `{"google_generativeai": genai}` |
+| Groq | `groq` | `{"groq": groq}` |
+| LiteLLM | `litellm` | `{"litellm": litellm}` |
+| Mistral AI | `mistralai` | `{"mistralai": mistralai}` |
+| Ollama | `ollama` | `{"ollama": ollama}` |
+| Replicate | `replicate` | `{"replicate": replicate}` |
+| Transformers | `transformers` | `{"transformers": transformers}` |
 
-Bootstraps a complete OpenTelemetry setup with LLM instrumentations and Latitude export. If an OpenTelemetry provider is already registered, Latitude attaches its span processor to that provider instead of replacing it.
-
-```python
-class Latitude:
-    def __init__(
-        self,
-        *,
-        api_key: str,
-        # Default project for spans. Optional — every `capture()` can override.
-        # Sent as the `X-Latitude-Project` header on every export.
-        project: str | None = None,
-        # DEPRECATED alias for `project`. Still accepted; logs a one-time warning.
-        project_slug: str | None = None,
-        # Dict mapping integration name → the LLM SDK module the consumer imports.
-        # Anything else (list, primitive, unknown key, non-dict) raises TypeError.
-        instrumentations: InstrumentationsInput | None = None,
-        service_name: str | None = None,
-        disable_batch: bool = False,
-        disable_smart_filter: bool = False,
-        should_export_span: Callable[[ReadableSpan], bool] | None = None,
-        blocked_instrumentation_scopes: list[str] | None = None,
-        disable_redact: bool = False,
-        redact: RedactSpanProcessorOptions | None = None,
-        exporter: SpanExporter | None = None,
-        tracer_provider: TracerProvider | None = None,
-    ):
-        ...
-
-    provider: TracerProvider
-    def flush(self) -> None: ...
-    def shutdown(self) -> None: ...
-```
-
-`init_latitude()` remains available as a backwards-compatible wrapper that returns `{"provider", "flush", "shutdown"}`.
-
-### `capture(name, fn, options=None)`
-
-Wraps a function to attach Latitude context to all spans created inside. Uses OpenTelemetry's native context API for scoping.
-
-```python
-def capture(
-    name: str,
-    fn: Callable[[], T],
-    options: dict | None = None,
-) -> T:
-    ...
-
-# options keys:
-# {
-#     "name": str | None,
-#     "user_id": str | None,
-#     "session_id": str | None,
-#     "tags": list[str] | None,
-#     "metadata": dict | None,
-#     "project": str | None,        # Route this capture (and child spans) to a
-#                                   # specific Latitude project, overriding the default.
-#     "project_slug": str | None,   # DEPRECATED alias for `project`. Still accepted.
-# }
-```
-
-| Option | Type | OTel Attribute | Description |
-|---|---|---|---|
-| `name` | `str` | `latitude.capture.name` | Name for the capture context |
-| `tags` | `list[str]` | `latitude.tags` | Tags for filtering traces |
-| `metadata` | `dict[str, Any]` | `latitude.metadata` | Arbitrary key-value metadata |
-| `session_id` | `str` | `session.id` | Group traces by session |
-| `user_id` | `str` | `user.id` | Associate traces with a user |
-| `project` | `str` | `latitude.project` | Route this capture to a specific Latitude project (overrides the constructor default) |
-
-### `LatitudeSpanProcessor`
-
-Span processor for shared-provider setups. Reads Latitude context from OTel context and stamps attributes onto spans.
-
-```python
-class LatitudeSpanProcessor:
-    def __init__(
-        self,
-        api_key: str,
-        project: str | None,
-        options: LatitudeSpanProcessorOptions | None = None,
-    ):
-        ...
-
-@dataclass
-class LatitudeSpanProcessorOptions:
-    disable_redact: bool = False
-    redact: RedactSpanProcessorOptions | None = None
-    disable_batch: bool = False
-    disable_smart_filter: bool = False
-    should_export_span: Callable[[ReadableSpan], bool] | None = None
-    blocked_instrumentation_scopes: tuple[str, ...] = ()
-    exporter: SpanExporter | None = None
-    service_name: str | None = None
-```
-
-### `register_latitude_instrumentations(instrumentations, tracer_provider)`
-
-Registers LLM auto-instrumentations against a specific tracer provider.
-
-```python
-# InstrumentationName = Literal[
-#   "openai", "openai-agents", "anthropic", "bedrock", "cohere",
-#   "langchain", "llamaindex", "togetherai", "vertexai", "aiplatform",
-#   "aleph_alpha", "crewai", "dspy", "google_generativeai", "groq",
-#   "haystack", "litellm", "mistralai", "ollama", "replicate",
-#   "sagemaker", "transformers", "watsonx",
-# ]
-# InstrumentationsInput = dict[InstrumentationName, object]
-
-def register_latitude_instrumentations(
-    # Dict mapping integration name → the LLM SDK module the consumer imports.
-    # Anything else throws at register time.
-    instrumentations: InstrumentationsInput,
-    tracer_provider: TracerProvider,
-) -> None:
-    ...
-```
-
-## Migrating from `instrumentations=["openai"]` (3.0.0a6 and earlier)
-
-The list-of-strings form is removed with no fallback in `3.0.0a7`. Anything other than a plain dict raises `TypeError` at register time. Migration:
-
-```diff
-- from latitude_telemetry import Latitude
-+ import openai
-+ import anthropic
-+ from latitude_telemetry import Latitude
-
-  latitude = Latitude(
-      api_key="your-api-key",
-      project="your-project-slug",
--     instrumentations=["openai", "anthropic"],
-+     instrumentations={"openai": openai, "anthropic": anthropic},
-  )
-```
-
-## Supported Providers
-
-Set the integration's key on the `instrumentations` dict to the LLM SDK module the consumer imports.
-
-| Key                   | PyPI package                  | What to pass                                |
-| --------------------- | ----------------------------- | ------------------------------------------- |
-| `openai`              | `openai`                      | `import openai` → `openai`                  |
-| `openai-agents`       | `openai-agents`               | `import agents` → `agents`                  |
-| `anthropic`           | `anthropic`                   | `import anthropic` → `anthropic`            |
-| `bedrock`             | `boto3`                       | `import boto3` → `boto3`                    |
-| `cohere`              | `cohere`                      | `import cohere` → `cohere`                  |
-| `langchain`           | `langchain-core`              | `import langchain_core` → that module       |
-| `llamaindex`          | `llama-index`                 | `import llama_index` → that module          |
-| `togetherai`          | `together`                    | `import together` → `together`              |
-| `vertexai`            | `google-cloud-aiplatform`     | `import vertexai` → `vertexai`              |
-| `aiplatform`          | `google-cloud-aiplatform`     | `import google.cloud.aiplatform` → that module |
-| `aleph_alpha`         | `aleph-alpha-client`          | `import aleph_alpha_client`                 |
-| `crewai`              | `crewai`                      | `import crewai`                             |
-| `dspy`                | `dspy-ai`                     | `import dspy`                               |
-| `google_generativeai` | `google-generativeai`         | `from google import genai` → `genai`        |
-| `groq`                | `groq`                        | `import groq`                               |
-| `haystack`            | `haystack-ai`                 | `import haystack`                           |
-| `litellm`             | `litellm`                     | `import litellm`                            |
-| `mistralai`           | `mistralai`                   | `import mistralai`                          |
-| `ollama`              | `ollama`                      | `import ollama`                             |
-| `replicate`           | `replicate`                   | `import replicate`                          |
-| `sagemaker`           | `boto3`                       | `import boto3` → `boto3`                    |
-| `transformers`        | `transformers`                | `import transformers`                       |
-| `watsonx`             | `ibm-watson-machine-learning` | `import ibm_watsonx_ai`                     |
-
-## Configuration
-
-### Smart Filtering
-
-By default, only LLM-relevant spans are exported (spans with `gen_ai.*`, `llm.*`, `openinference.*`, or `ai.*` attributes, plus known LLM instrumentation scopes):
-
-```python
-processor = LatitudeSpanProcessor(
-    "api-key",
-    "project-slug",
-    LatitudeSpanProcessorOptions(
-        disable_smart_filter=True,  # Export all spans
-    ),
-)
-```
-
-### Redaction
-
-PII redaction is enabled by default for security-sensitive attributes:
-
-- HTTP authorization headers
-- HTTP cookies
-- HTTP API key headers (`x-api-key`)
-- Database statements
-
-```python
-from latitude_telemetry import LatitudeSpanProcessor, RedactSpanProcessorOptions
-
-processor = LatitudeSpanProcessor(
-    "api-key",
-    "project-slug",
-    LatitudeSpanProcessorOptions(
-        disable_redact=True,  # Disable all redaction
-        redact=RedactSpanProcessorOptions(
-            attributes=[r"^password$", r"secret"],
-            mask=lambda attr, value: "[REDACTED]",
-        ),
-    ),
-)
-```
-
-### Custom Filtering
-
-```python
-processor = LatitudeSpanProcessor(
-    "api-key",
-    "project-slug",
-    LatitudeSpanProcessorOptions(
-        should_export_span=lambda span: span.attributes.get("custom") is True,
-        blocked_instrumentation_scopes=["opentelemetry.instrumentation.fs"],
-    ),
-)
-```
-
-## Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `LATITUDE_TELEMETRY_URL` | `http://localhost:3002` | OTLP exporter endpoint |
+For provider-specific setup notes, use the provider and framework pages in the Observability sidebar.
 
 ## Troubleshooting
 
-### Spans not appearing in Latitude
+### Spans are not appearing in Latitude
 
-1. **Check API key and project slug**: Must be non-empty strings.
-2. **Verify instrumentations are registered**: Create `Latitude(...)` before importing or constructing clients when possible, or use `register_latitude_instrumentations()` for manual setups.
-3. **Flush before exit**: Call `latitude.flush()` or `provider.force_flush()`.
-4. **Check smart filter**: Only LLM spans are exported by default. Use `disable_smart_filter=True` to export all spans.
-5. **Ensure `capture()` wraps the code that creates spans**: `capture()` itself doesn't create spans; it only attaches context.
+Start with the most common setup issues.
 
-### No spans created inside `capture()`
+#### Check the API key and project slug
 
-`capture()` only attaches context. You need:
-
-1. An active instrumentation (e.g., `opentelemetry-instrumentation-openai`).
-2. That instrumentation to create spans for the operations inside your callback.
-
-### Context not propagating
-
-Ensure you have a functioning OpenTelemetry context propagator registered:
+Make sure both values are present in the runtime where your app is executing:
 
 ```python
-from opentelemetry.context import set_global_textmap
-from opentelemetry.propagators.composite import CompositePropagator
-from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-from opentelemetry.baggage.propagation import W3CBaggagePropagator
-
-set_global_textmap(
-    CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()])
+latitude = Latitude(
+    api_key="your-api-key",
+    project="your-project-slug",
+    instrumentations={"openai": openai},
 )
 ```
 
-`Latitude(...)` does this automatically when it owns the provider. For shared-provider setups, your existing OTel setup should already have this.
+If either value is missing or points to the wrong organization/project, Latitude cannot route the spans to your project.
+
+#### Pass the same SDK module your app uses
+
+The module passed to `instrumentations` should be the same package import used for the actual LLM call.
+
+```python
+import openai
+from openai import OpenAI
+
+from latitude_telemetry import Latitude
+
+latitude = Latitude(
+    api_key="your-api-key",
+    project="your-project-slug",
+    instrumentations={"openai": openai},
+)
+
+client = OpenAI()
+
+client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+Avoid importing one SDK module for instrumentation and using a different wrapper or separately loaded copy for the LLM call.
+
+#### Flush before short-lived processes exit
+
+Servers can usually export spans in the background. Scripts, CLIs, tests, and jobs that exit immediately should flush before shutdown:
+
+```python
+try:
+    client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+
+    latitude.flush()
+finally:
+    latitude.shutdown()
+```
+
+#### Wrap the actual LLM call with `capture()`
+
+If you use `capture()`, the instrumented operation must happen inside the callback:
+
+```python
+capture(
+    "support-agent-turn",
+    lambda: client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": user_message}],
+    ),
+    {
+        "user_id": user.id,
+        "session_id": conversation.id,
+        "project": "support-agent",
+    },
+)
+```
+
+This will not attach context to the LLM call, because the call happens before `capture()` starts:
+
+```python
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": user_message}],
+)
+
+capture(
+    "support-agent-turn",
+    lambda: response,
+    {
+        "user_id": user.id,
+        "session_id": conversation.id,
+    },
+)
+```
+
+#### Consume streaming responses inside `capture()`
+
+For streaming responses, create and consume the stream inside the `capture()` callback. This keeps the full streamed operation inside the active OpenTelemetry context.
+
+```python
+def stream_support_agent_turn():
+    stream = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": user_message}],
+        stream=True,
+    )
+
+    for chunk in stream:
+        content = chunk.choices[0].delta.content
+        if content:
+            print(content, end="")
+
+capture(
+    "stream-support-agent-turn",
+    stream_support_agent_turn,
+    {
+        "user_id": user.id,
+        "session_id": conversation.id,
+        "project": "support-agent",
+    },
+)
+```
+
+Avoid returning the stream from `capture()` and consuming it later. Once the callback has finished, the Latitude context is no longer active for the remaining stream consumption.
+
+### No spans are created inside `capture()`
+
+`capture()` only attaches context. You still need a supported instrumentation, and the code inside the callback must make an instrumented LLM call.
+
+### Context is not propagating
+
+`Latitude(...)` registers OpenTelemetry context propagation when it owns the provider. If you provide your own OpenTelemetry setup, make sure it has working context propagation before Latitude attaches to it.

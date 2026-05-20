@@ -1,0 +1,47 @@
+---
+title: Start tracing
+description: Connect your agent to Latitude and send your first traces.
+---
+
+Use your coding agent to add Latitude tracing to your app. The Latitude skill inspects your codebase, detects your LLM providers and existing OpenTelemetry setup, installs the right SDK, and verifies that traces arrive in your project.
+
+<Steps>
+  <Step title="Connect Latitude to your coding agent">
+    Install the [Latitude MCP server](../getting-started/mcp) so your agent can access your Latitude workspace, find the right project, and verify the setup.
+  </Step>
+  <Step title="Ask your agent to install tracing">
+    Paste this prompt into Claude Code, Cursor, Windsurf, Codex, OpenCode, or another coding agent:
+
+    ```text
+    Install the Latitude AI skill from github.com/latitude-dev/skills and use
+    it to add tracing to this application with Latitude following best practices.
+    ```
+  </Step>
+  <Step title="Run your app">
+    Trigger one agent request or LLM call after the install finishes.
+  </Step>
+  <Step title="Check Latitude">
+    Open your Latitude project and go to **Traces**. The new trace should appear within a few seconds.
+  </Step>
+</Steps>
+
+## Manual setup
+
+If you are not using a coding agent, start with the SDK for your runtime:
+
+<CardGroup cols={2}>
+  <Card title="TypeScript SDK" icon="code" href="../telemetry/typescript">
+    Install `@latitude-data/telemetry` and instrument TypeScript or JavaScript apps.
+  </Card>
+  <Card title="Python SDK" icon="code" href="../telemetry/python">
+    Install `latitude-telemetry` and instrument Python apps.
+  </Card>
+</CardGroup>
+
+For other languages, use the [OpenTelemetry exporter](../telemetry/otel-exporter).
+
+## Next steps
+
+- Explore traces in [Observability](../observability/overview)
+- Add provider-specific instrumentation from the Observability sidebar
+- Learn how traces become [scores](../scores/overview), [issues](../issues/overview), and [evaluations](../evaluations/overview)

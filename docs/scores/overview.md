@@ -5,77 +5,56 @@ description: Understand how scores work as the universal measurement unit in Lat
 
 # Scores
 
-Scores are the universal measurement unit in Latitude. Every verdict on your agent's interactions, whether from an automated evaluation, a human annotation, or your own code, is a score. Everything in Latitude's reliability system is built on top of scores: issues, evaluation dashboards, annotation workflows, simulations, and analytics.
+Scores are Latitude's common measurement unit. Every verdict on an agent interaction—from an evaluation, annotation, flagger, or your own code—is stored as a score. Issues, evaluation dashboards, annotation workflows, and analytics all build on this model.
 
 ## What Is a Score
 
 A score is a verdict attached to a trace. Every score has:
 
-| Field           | Description                                                  |
-| --------------- | ------------------------------------------------------------ |
-| **Value**       | A number between 0 and 1                                     |
-| **Pass / Fail** | Whether the interaction met expectations                     |
-| **Feedback**    | Text explaining the verdict                                  |
-| **Source**      | Where the score came from: evaluation, annotation, or custom |
+| Field | Description |
+| --- | --- |
+| **Value** | A number between 0 and 1 |
+| **Pass / Fail** | Whether the interaction met expectations |
+| **Feedback** | Text explaining the verdict |
+| **Source** | Where the score came from: evaluation, annotation, or custom |
 
-Scores can also carry resource usage fields like duration, token count, and cost.
+Scores can also carry resource fields such as duration, token count, and cost.
 
-Scores are always associated with a **trace**. They can optionally be associated with a specific **span**, a **session**, a **simulation**, or an **issue**.
+A score is always associated with a **trace**. It can also be associated with a **span**, **session**, **simulation**, or **issue**.
 
 ## Score Sources
 
-Every score has a source that identifies how it was produced:
-
 ### Evaluation Scores
 
-Produced by automated scripts that Latitude runs on your traces. When a trace matches an evaluation's trigger configuration, the evaluation executes and writes a score.
-
-Evaluation scores are the backbone of continuous monitoring: they run on every matching trace automatically, giving you real-time quality visibility.
+Automated monitors create evaluation scores when a trace matches an evaluation's trigger configuration. These scores power continuous monitoring and show how quality changes over time.
 
 ### Annotation Scores
 
-Produced by human reviewers or by built-in [flaggers](../annotations/flaggers). When someone annotates a trace [inline from the trace view](../annotations/inline-annotations) — or when a flagger matches a trace automatically — the resulting verdict becomes a score.
-
-Annotation scores serve as **ground truth**. They represent what a human (or a Latitude-defined classifier) thinks about the agent's behavior and anchor [evaluation alignment](../evaluations/alignment) metrics.
+Human reviewers and built-in [flaggers](../annotations/flaggers) create annotation scores. They serve as ground truth for [evaluation alignment](../evaluations/alignment) and provide feedback for issue discovery.
 
 ### Custom Scores
 
-Submitted by your own code through the [Latitude API](./api). Use custom scores for domain-specific quality signals:
+Your own code can submit custom scores through the [Latitude API](./api). Use them for domain-specific signals such as satisfaction ratings, task completion, conversion, resolution rate, or downstream validation.
 
-- User satisfaction ratings
-- Task completion metrics
-- Business KPIs (conversion rates, resolution rates)
-- Downstream validation (was the agent's output actually correct?)
+## Drafts and Finalized Scores
 
-## How Scores Work
+Human annotations can start as drafts while you edit them. Drafts are visible in the trace's annotation panel but do not feed analytics, issue discovery, or alignment until they are finalized.
 
-Scores from human annotations start as **drafts**. A draft score:
+Once finalized, a score becomes part of Latitude's reliability workflows.
 
-- Persists immediately so it survives page refreshes
-- Is visible in the trace's annotation panel while you're still editing
-- Does not appear in analytics, issue discovery, or alignment metrics
-- Can be edited and revised while still in draft state
+## How Scores Flow Through Latitude
 
-Drafts are finalized automatically after a quiet period (default: 5 minutes after the last edit). Flagger-created annotations are written as published scores directly and skip the draft state.
+Finalized scores feed into:
 
-Once a score is finalized, it becomes permanent and cannot be edited.
-
-## How Scores Flow Through the System
-
-Scores feed forward into every part of Latitude:
-
-1. **Issue Discovery**: When scores fail, Latitude groups similar failures into [issues](../issues/overview): named, trackable failure patterns your team can investigate and resolve.
-
-2. **Evaluation Generation**: Issues can generate monitoring evaluations that watch for that failure pattern on live traffic, producing more scores.
-
-3. **Alignment**: Annotation scores are compared against evaluation scores for the same traces, producing [alignment metrics](../evaluations/alignment) that tell you how well automated evaluations match human judgment.
-
-4. **Analytics**: Finalized scores feed into time-series dashboards showing quality trends across your project.
+1. **Issue discovery**: Failed scores can become named, trackable [issues](../issues/overview).
+2. **Evaluation generation**: Issues can generate monitors that produce more scores on live traffic.
+3. **Alignment**: Annotation scores are compared with evaluation scores on the same traces.
+4. **Analytics**: Score dashboards show quality trends across your project.
 
 ## Next Steps
 
 - [Annotations](../annotations/overview): How human reviewers create scores
-- [Evaluations](../evaluations/overview): How automated scripts create scores
+- [Evaluations](../evaluations/overview): How automated monitors create scores
 - [Issues](../issues/overview): How failed scores become trackable failure patterns
-- [Analytics](./analytics): Visualizing score trends
+- [Analytics](./analytics): Visualize score trends
 - [Scores API](./api): Submit custom scores programmatically

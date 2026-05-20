@@ -79,7 +79,6 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
           instrumentations: { vertexai: VertexAISDK },
         })
 
-        await latitude.ready
 
         const vertexAI = new VertexAI({
           project: process.env.GCP_PROJECT_ID!,
@@ -133,9 +132,3 @@ Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
 2. Each execution shows input/output messages, model, token usage, latency, and errors
-
----
-
-## That's It
-
-No changes to your Vertex AI calls: just initialize Latitude and your LLM calls are traced.

@@ -61,7 +61,7 @@ new Latitude({
 
 Every LLM call now shows up as a trace in Latitude.
 
-Python, Go, and other languages are also supported. Full setup, OTel passthrough, and self-hosting in the [getting started guide](https://docs.latitude.so/telemetry/overview).
+Python, Go, and other languages are also supported. Full setup, OTel passthrough, and self-hosting in the [getting started guide](https://docs.latitude.so/telemetry/start-tracing).
 
 ## 🔌 Integrations
 

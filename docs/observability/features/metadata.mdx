@@ -1,0 +1,86 @@
+---
+title: Metadata
+description: Attach structured key-value context to traces for filtering and investigation.
+---
+
+# Metadata
+
+Metadata adds structured key-value context to traces for investigation, filtering, and grouping.
+
+Common metadata includes:
+
+- request id
+- account id
+- plan or tier
+- region
+- environment
+- feature flag or experiment id
+- product surface
+
+## Send metadata
+
+Pass metadata through `capture()`.
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    import { capture } from "@latitude-data/telemetry"
+
+    await capture(
+      "support-agent-turn",
+      async () => {
+        return agent.run(userMessage)
+      },
+      {
+        metadata: {
+          requestId: request.id,
+          accountId: account.id,
+          plan: account.plan,
+          environment: "production",
+        },
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from latitude_telemetry import capture
+
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "metadata": {
+                "request_id": request.id,
+                "account_id": account.id,
+                "plan": account.plan,
+                "environment": "production",
+            },
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+Nested captures inherit parent metadata. Child metadata is shallow-merged with parent metadata.
+
+## Use metadata in Latitude
+
+Metadata appears on traces and in filters, so you can review cohorts such as:
+
+- production traces for one account
+- failed traces for a specific feature flag
+- expensive traces from one region
+- issue examples from a specific plan tier
+
+Metadata filters use dot notation, such as `metadata.environment = production`.
+
+## Metadata vs tags
+
+Use metadata for structured fields with values, such as environment, release, commit SHA, deployment id, or log level. Use [tags](./tags) for simple labels that do not need key-value structure.
+
+## Related
+
+- [Tags](./tags): Add lightweight labels
+- [Filters](../filters): Filter by metadata fields
+- [Search](../../search/overview): Combine metadata filters with semantic search

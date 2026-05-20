@@ -1,0 +1,37 @@
+---
+title: Trace IDs
+description: Use OpenTelemetry trace ids to connect Latitude traces with the rest of your observability stack.
+---
+
+# Trace IDs
+
+Latitude is built on OpenTelemetry and preserves OpenTelemetry trace ids. A trace id identifies one complete interaction across your application's spans.
+
+## How trace ids work
+
+When your application emits spans with the same OpenTelemetry trace id, Latitude groups them into one trace. The trace detail view can then show the full waterfall of LLM calls, tool calls, retrieval steps, and other instrumented operations.
+
+Trace ids are useful when another observability tool also uses OpenTelemetry trace context. The same id can connect a Latitude trace with logs, metrics, or traces elsewhere in your stack.
+
+## Find traces by id
+
+Filter traces by trace id when:
+
+- a log line includes an OpenTelemetry trace id
+- another observability system links to the same trace id
+- you need to share an exact trace with a teammate
+
+## Distributed tracing
+
+Latitude can receive spans from OpenTelemetry-compatible instrumentation. If your services propagate OpenTelemetry trace context, spans from the same interaction can share one trace id before they reach Latitude.
+
+For setup details, see:
+
+- [TypeScript SDK](../../telemetry/typescript)
+- [Python SDK](../../telemetry/python)
+- [OpenTelemetry Exporter](../../telemetry/otel-exporter)
+
+## Related
+
+- [Traces](../traces): Understand trace structure and lifecycle
+- [Filters](../filters): Filter by trace id

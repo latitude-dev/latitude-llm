@@ -9,9 +9,16 @@ Latitude uses a universal filter system across the platform. The same filters yo
 
 ## How Filters Work
 
-A filter is a set of field conditions. All conditions within a field are AND'd together, and all fields are AND'd across each other. For example, "Status is ERROR **and** Cost is greater than 100 microcents" returns only traces matching both criteria.
+A filter is a set of field conditions. Active conditions combine with **AND** logic. For example, "Status is error" and "Cost is greater than $1" returns only traces that match both conditions.
 
 Filters appear on the Traces page, in the Search page (alongside the search query), and in the configuration UI for evaluation triggers.
+
+<Frame>
+  <img
+    src="/images/observability/filters.png"
+    alt="Filters panel showing model filtering on the Traces page"
+  />
+</Frame>
 
 ## Available Filter Fields
 
@@ -25,9 +32,9 @@ Filters appear on the Traces page, in the Search page (alongside the search quer
 | **Models** | LLM models used in the trace | `models in ["gpt-4o"]` |
 | **Providers** | LLM providers called | `providers in ["openai"]` |
 | **Services** | OpenTelemetry service names | `serviceNames in ["api-server"]` |
-| **Cost** | Total cost in microcents | `cost gte 100` |
-| **Duration** | End-to-end duration in nanoseconds | `duration gte 5000000000` |
-| **TTFT** | Time to first token | `startTime gte ...` |
+| **Cost** | Estimated total trace cost | Cost greater than `$1` |
+| **Duration** | End-to-end trace duration | Duration greater than `5s` |
+| **TTFT** | Time to first token | TTFT greater than `1s` |
 | **Span Count** | Number of spans in the trace | `spanCount gte 10` |
 | **Error Count** | Number of errored spans | `errorCount gte 1` |
 | **Tokens Input** | Total input tokens across LLM calls | `tokensInput gte 1000` |
@@ -56,15 +63,15 @@ Filters support 10 operators:
 Your application can send structured metadata with its telemetry. Filter on any metadata field using dot-notation:
 
 - `metadata.env`: top-level key
-- `metadata.runtime.region`: nested keys (up to 12 levels deep)
+- `metadata.runtime.region`: nested key
 
-Metadata filters support all operators, so you can filter for exact matches, ranges, set membership, and substring searches on your custom fields.
+Metadata filters support exact matches, ranges, set membership, and substring searches on your custom fields.
 
 ## Combining Filters
 
 All active filters combine with **AND** logic. Common combinations:
 
-- **Status** = ERROR **and** **Cost** > 100: find expensive failures
+- **Status** = ERROR **and** **Cost** > $1: find expensive failures
 - **Models** = gpt-4o **and** **Duration** > 5s: find slow GPT-4o traces
 - **Metadata** `environment` = `production` **and** **Error Count** > 0: find production errors
 - **Tags** in `["canary"]` **and** **Tokens Output** > 2000: find verbose canary responses

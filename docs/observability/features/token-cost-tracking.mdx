@@ -1,0 +1,52 @@
+---
+title: Token and cost tracking
+description: Track token usage and estimated LLM cost across traces and sessions.
+---
+
+# Token and cost tracking
+
+Latitude aggregates token usage and estimated cost from each trace's LLM spans. Use these fields to understand expensive interactions, compare models, and investigate behaviour that drives high usage.
+
+## What Latitude tracks
+
+When the provider or framework instrumentation reports usage, Latitude shows:
+
+- input tokens
+- output tokens
+- total tokens
+- estimated cost
+- models used
+- providers used
+
+Trace rows show aggregate token and cost values across their spans. Session rows aggregate usage across their traces.
+
+## Find expensive traces
+
+Filter by token usage or cost to find:
+
+- high total cost
+- high input or output tokens
+- expensive traces for one model or provider
+- expensive traces within a tag, user, session, or metadata cohort
+
+You can combine these filters with [Search](../../search/overview). For example, search for _agent loops between tools_ and filter to traces above a cost threshold.
+
+## Where usage appears
+
+Token and cost data appears in:
+
+- the Traces table
+- trace detail views
+- session aggregates
+- filters
+- search result rows
+
+Cost values are estimates based on the usage and model/provider information available in telemetry.
+
+## Related
+
+- [Percentile cohorts](./percentile-cohorts): Compare cost and token usage against similar tagged traces
+- [Traces](../traces): Trace-level usage and cost
+- [Sessions](../sessions): Session-level aggregation
+- [Filters](../filters): Filter by cost and token usage
+- [Search](../../search/overview): Discover costly behaviours

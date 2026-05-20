@@ -5,98 +5,74 @@ description: Workflows for triaging, investigating, and resolving issues
 
 # Issue Management
 
-Once Latitude discovers issues, your team needs workflows to triage, investigate, and resolve them. This page covers practical approaches to issue management.
+After Latitude discovers an issue, use the issue detail view to decide whether to investigate, monitor, resolve, or ignore it.
 
 ## Triage Workflow
 
-When new issues appear, your team should:
+When a new issue appears:
 
-1. **Review the issue description**: Understand what failure pattern was discovered
-2. **Examine example traces**: Click into specific traces to see the actual conversations where the issue occurred
-3. **Assess severity**: Is this a critical safety issue, a quality degradation, or a minor edge case?
-4. **Decide on action**:
-   - **Generate an evaluation** to start automated monitoring
-   - **Save a search** scoped to the issue's traces and assign it to a reviewer to gather more human feedback
-   - **Ignore** if the issue is irrelevant or too rare to track
+1. **Review the description** to understand the discovered failure pattern.
+2. **Open example traces** to see the conversations where it occurred.
+3. **Assess severity**: safety risk, quality degradation, or minor edge case.
+4. **Choose an action**:
+   - Generate an evaluation for ongoing monitoring.
+   - Resolve it if the problem is already fixed.
+   - Ignore it if it is noise or too rare to track.
 
 ## Investigating an Issue
 
-For issues that need deeper investigation:
+For issues that need deeper investigation, review several example traces and ask:
 
-### Review Example Traces
-
-Each issue links to the traces where it was detected. Read through several examples to understand:
-
-- What kinds of user inputs trigger the issue?
-- Is the agent consistently wrong, or is it intermittent?
-- Are there common patterns in the conversation context?
-
-### Check Related Evaluations
-
-If the issue has linked evaluations, review their configuration:
-
-- Is the evaluation too strict? (Flagging acceptable behavior)
-- Is it too lenient? (Missing obvious failures)
-- Does the trigger configuration need adjustment?
-- What does the alignment (MCC) look like?
-
-### Gather Human Feedback
-
-Run a search filtered to traces where the issue was detected and save it. Assign the saved search to a reviewer, who can work through the matches one by one in the trace detail view. Annotations on these traces:
-
-- Confirm whether the automated detection is correct
-- Provide richer feedback about what went wrong
-- Build alignment data for the linked evaluation
+- What user inputs trigger the issue?
+- Is the agent consistently wrong, or is the failure intermittent?
+- Are there shared patterns in context, tools, retrieval, model, or prompt behavior?
+- If evaluations are linked, are they too strict, too lenient, or drifting from human review?
 
 ## Resolving Issues
 
-When your team has fixed the underlying problem:
+When the underlying problem is fixed:
 
-1. Navigate to the issue detail page
-2. Click **Resolve**
-3. A confirmation modal appears with a **keep monitoring** toggle
+1. Open the issue detail page.
+2. Click **Resolve**.
+3. Choose whether to keep monitoring.
 
-The keep monitoring toggle determines what happens to linked evaluations after resolution:
+The **keep monitoring** toggle controls linked evaluations:
 
-- **Enabled**: Linked evaluations stay active so they can detect regressions. If the issue reappears, it moves to **Regressed** state.
+- **Enabled**: Linked evaluations stay active and can move the issue to **Regressed** if the failure returns.
 - **Disabled**: Linked evaluations are archived when the issue resolves.
 
-The toggle defaults from your project settings, falling back to the organization-level setting when the project doesn't have one set. You can override the default for each specific resolve action.
+The default comes from project settings, or from the organization setting if the project has no override. You can change it for each resolve action.
 
 ## Working with Regressed Issues
 
-A regressed issue means a previously resolved problem has returned. This is a high-priority signal:
+A regressed issue is a previously resolved problem that has returned. Treat it as high priority:
 
-- The fix may have been incomplete
-- A new code change may have reintroduced the problem
-- The agent's behavior may have drifted due to model updates
+1. Review the new occurrence traces and confirm they match the original failure pattern.
+2. Compare them with the original fix and resolution notes.
+3. Fix the cause and resolve the issue again.
 
-When an issue regresses:
-
-1. Review the new occurrence traces. Are they the same failure pattern or something subtly different?
-2. Compare with the original resolution. What changed?
-3. Fix and re-resolve
+Regression can mean the first fix was incomplete, a later change reintroduced the problem, or the agent drifted after model or prompt updates.
 
 ## Ignoring Issues
 
-Ignoring an issue is separate from resolving it:
+Ignoring is different from resolving:
 
-- Ignoring **immediately archives** all linked evaluations, regardless of the keep monitoring setting
-- Ignored issues are hidden from default views but can be un-ignored later
-- Use ignore for issues that aren't worth tracking, not for issues that have been fixed
+- Ignoring immediately archives all linked evaluations, regardless of the keep-monitoring setting.
+- Ignored issues are hidden from default views but can be restored later.
+- Use ignore for noise, not for problems that have been fixed.
 
-## Organizing Issues
+## Keeping Issues Manageable
 
-As your project matures, you'll accumulate many issues. Keep them manageable:
+As your project matures:
 
-- **Resolve fixed issues** rather than leaving them open. Keep monitoring enabled catches regressions
-- **Ignore irrelevant issues**: Don't let noise drown out real problems
-- **Use issue descriptions** to communicate context: future team members will read them
-- **Link related evaluations**: Every meaningful issue should have an evaluation monitoring for it
+- Resolve fixed issues instead of leaving them open.
+- Keep monitoring enabled when regressions matter.
+- Ignore irrelevant issues so real problems stay visible.
+- Keep issue descriptions clear enough for future teammates.
+- Link meaningful issues to evaluations when you need ongoing coverage.
 
 ## Next Steps
 
 - [Issues Overview](./overview): How issues are discovered
-- [Evaluations](../evaluations/overview): Generating evaluations from issues
-- [Saved Searches](../search/saved-searches): Build a review workflow around an issue's traces
-- [Annotations](../annotations/overview): Leave human feedback on traces tied to an issue
+- [Evaluations](../evaluations/overview): Generate monitors from issues
+- [Annotations](../annotations/overview): Leave human feedback on issue traces

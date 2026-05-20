@@ -5,62 +5,51 @@ description: Visualize score trends and quality metrics across your project
 
 # Score Analytics
 
-Latitude provides time-series dashboards that help you understand quality trends across your project. Score analytics answer questions like: Is quality improving? Which evaluations catch the most failures? Are there patterns in when issues occur?
+Score analytics show quality trends across your project: whether quality is improving, which evaluations catch the most failures, and when issues occur.
 
 ## Project-Level Dashboard
 
-The project overview shows aggregate score metrics:
+The project overview shows:
 
-- **Pass/fail distribution**: How many scores passed vs. failed over time
-- **Failure rate trend**: The percentage of failing scores, trended over days or weeks
-- **Score volume**: Total number of scores produced, broken down by source (evaluation, annotation, custom)
+- **Pass/fail distribution**: How many scores passed or failed over time
+- **Failure rate trend**: The percentage of failing scores over days or weeks
+- **Score volume**: Total scores, broken down by source
 
-These give you a high-level picture of your agent's quality trajectory.
+Use these metrics for a high-level view of your agent's quality trajectory.
 
 ## Evaluation-Level Analytics
 
-Each evaluation has its own analytics page showing:
+Each evaluation has its own analytics page with:
 
-- **Pass/fail trend**: How the evaluation's results have changed over time
-- **Value distribution**: Histogram of score values
+- **Pass/fail trend**: How results change over time
+- **Value distribution**: A histogram of score values
 - **Volume**: How many traces the evaluation has scored
-- **Alignment**: If human annotations exist for the same traces, alignment metrics (MCC, agreement rate) are shown
+- **Alignment**: Whether the evaluation agrees with human review when annotations exist for the same traces
 
-Use evaluation-level analytics to detect:
-
-- Regressions: sudden increase in failure rate
-- Improvements: failure rate dropping after a fix
-- Drift: alignment with human judgment changing over time
+Use evaluation analytics to spot regressions, improvements after a fix, or drift from human judgment.
 
 ## Issue-Level Analytics
 
-Each issue tracks its own trends:
+Each issue tracks:
 
 - **Occurrence count**: How many times the issue has been detected
-- **Lifecycle state**: Whether the issue is New, Escalating, Resolved, or Regressed
-- **Resolution history**: When it was resolved and whether it has regressed
+- **Lifecycle state**: Whether the issue is new, escalating, resolved, or regressed
+- **Resolution history**: When it was resolved and whether it has returned
 
 ## Score-Aware Trace Filtering
 
-Traces and sessions can be filtered by score-derived properties, letting you find interactions based on their quality signals:
+Traces and sessions can be filtered by score-derived properties:
 
-- **Score state**: Find traces with failing scores, passing scores, or draft annotations
-- **Value thresholds**: Find traces where scores fall below a quality threshold
-- **Issue linkage**: Find traces associated with a specific issue
-- **Score source**: Find traces scored by a specific evaluation, annotation source, or custom source
+- **Score state**: Failing scores, passing scores, or draft annotations
+- **Value thresholds**: Scores below a quality threshold
+- **Issue linkage**: Traces associated with a specific issue
+- **Score source**: A specific evaluation, annotation source, or custom source
 
-This bridges observability and reliability. You can go from "show me traces where the jailbreak evaluation failed" directly to investigating the conversations.
+This bridges observability and reliability: you can move from a failed evaluation or issue directly to the underlying conversations.
 
 ## Filtering Analytics
 
-Analytics dashboards use the same [filter system](../observability/filters) as the trace view. You can narrow analytics to:
-
-- Specific time ranges
-- Specific models or providers
-- Specific score sources (only evaluations, only annotations, etc.)
-- Custom metadata values
-
-This lets you answer targeted questions like "What's the failure rate for GPT-4 traces in production this week?"
+Analytics dashboards use the same [filter system](../observability/filters) as trace views. Narrow analytics by time range, model, provider, score source, or custom metadata to answer targeted questions such as: "What is the failure rate for GPT-4 traces in production this week?"
 
 ## Next Steps
 

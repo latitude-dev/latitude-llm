@@ -10,7 +10,7 @@ Latitude's ingestion endpoint speaks standard **OTLP over HTTP**.
 If your language has an OpenTelemetry SDK (Go, Java, Ruby, Rust, .NET, Elixir, PHP, etc.), you can send traces to Latitude without a Latitude-specific library.
 
 <Info>
-  Using **TypeScript** or **Python**? The dedicated SDKs handle all of this for you with a single function call. See the [TypeScript SDK](typescript) or [Python SDK](python) instead.
+  Using **TypeScript** or **Python**? The dedicated SDKs handle all of this for you with a single function call. See the [TypeScript SDK](/telemetry/typescript) or [Python SDK](/telemetry/python) instead.
 </Info>
 
 ## Prerequisites
@@ -184,7 +184,7 @@ span.SetAttributes(
   Without these attributes, traces will appear in the dashboard but show no model, token usage, or message content.
 </Warning>
 
-Latitude follows the **[OpenTelemetry Semantic Conventions for Generative AI](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/)** (v1.37+). When your spans include `gen_ai.*` attributes, the Latitude UI displays full LLM call details: the provider, model, input/output messages, token usage, cost, and latency.
+Latitude follows the **[OpenTelemetry Semantic Conventions for Generative AI](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/)**. When your spans include `gen_ai.*` attributes, the Latitude UI displays full LLM call details: the provider, model, input/output messages, token usage, cost, and latency.
 
 Refer to the [GenAI span semconv spec](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/) for the full attribute list. The message content attributes use the standard OpenTelemetry GenAI **parts-based** message format, shown below.
 
@@ -223,8 +223,6 @@ Latitude expects the standard **parts-based** GenAI message format. Each message
 ## Existing Observability Stack
 
 Latitude works alongside your existing observability tools. In TypeScript, `new Latitude()` detects common OpenTelemetry-compatible providers (Sentry, Datadog, New Relic, Honeycomb, and custom OTel SDKs) and attaches Latitude when possible. In Python, `Latitude(...)` attaches to the registered OpenTelemetry provider when one already exists or creates one when none exists. Custom setups in either SDK can also add `LatitudeSpanProcessor` as an additional span processor so traces go to both Latitude and your current backend.
-
-`await latitude.ready` is optional in these examples. Use it during startup only when you need to guarantee Latitude's instrumentations are registered before the first LLM call.
 
 ### With Datadog (TypeScript)
 
@@ -324,7 +322,7 @@ This is the most common issue when integrating via the generic OTLP exporter. Yo
 
 **Fix:** See [GenAI Span Attributes (LLM Metadata)](#genai-span-attributes-llm-metadata) above for the full list of attributes and message format. At a minimum, set:
 
-1. `gen_ai.provider.name` — provider name (e.g. `"openai"`, `"anthropic"`). Latitude also accepts the deprecated `gen_ai.system` as a fallback for older emitters.
+1. `gen_ai.provider.name` — provider name (e.g. `"openai"`, `"anthropic"`)
 2. `gen_ai.request.model` — model name
 3. `gen_ai.operation.name` — set to `"chat"`
 4. `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens` — token counts

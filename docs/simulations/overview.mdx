@@ -17,12 +17,12 @@ A simulation is a **local-first test run** of your agent that:
 
 1. Executes your agent against a set of predefined **scenarios** (user inputs)
 2. Captures the agent's responses as traces
-3. Runs **evaluation scripts** against those traces
+3. Runs **evaluations** against those traces
 4. Produces a **report** with pass/fail results, scores, and feedback
 
 Simulations are designed to be **local-first**: the Latitude CLI works as a standalone simulation runner, even without a hosted Latitude workspace. You can run simulations, execute evaluations, and get results entirely on your local machine or in CI. Uploading results to Latitude for historical tracking and team visibility is optional.
 
-Simulations reuse the same evaluation scripts that monitor production traffic. This means the quality bar in testing matches the quality bar in production.
+Simulations reuse the same evaluations that monitor production traffic. This means the quality bar in testing matches the quality bar in production.
 
 ## Why Simulations Matter
 
@@ -39,7 +39,7 @@ Without simulations, the only way to know if a change breaks your agent is to de
 2. You run the simulation using the **Latitude CLI**
 3. The CLI executes your agent locally against each scenario
 4. Each execution produces a **trace**
-5. The CLI runs configured **evaluation scripts** against each trace
+5. The CLI runs configured **evaluations** against each trace
 6. Results are compiled into a **report**
 7. Optionally, traces and scores are uploaded to Latitude for historical tracking
 
@@ -58,7 +58,7 @@ Scenarios can be:
 
 ## Evaluation Reuse
 
-The key insight behind simulations: **they reuse your production evaluation scripts**. The same script that monitors for jailbreak attempts in production also checks for jailbreak attempts in your simulation.
+The key insight behind simulations: **they reuse your production evaluations**. The same monitor that tracks an issue in production also checks for that issue in your simulation.
 
 This ensures:
 
@@ -68,4 +68,4 @@ This ensures:
 
 ## Related
 
-- [Evaluations](../evaluations/overview): The evaluation scripts that power simulations
+- [Evaluations](../evaluations/overview): The evaluations that power simulations

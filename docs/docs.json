@@ -57,43 +57,33 @@
       {
         "group": "Getting Started",
         "pages": [
-          "getting-started/introduction",
-          "getting-started/quick-start-dev",
-          "getting-started/quick-start-pm",
-          "getting-started/mcp"
+          "telemetry/start-tracing",
+          "getting-started/how-to-use-latitude"
         ]
       },
       {
-        "group": "Telemetry",
+        "group": "Observability",
         "pages": [
-          "telemetry/overview",
-          "telemetry/project-scoping",
-          "telemetry/otel-exporter",
-          "telemetry/typescript",
-          "telemetry/python",
-          "telemetry/claude-code",
-          "telemetry/openclaw",
+          "telemetry/start-tracing",
+          {
+            "group": "SDKs",
+            "pages": [
+              "telemetry/typescript",
+              "telemetry/python",
+              "telemetry/otel-exporter"
+            ]
+          },
           {
             "group": "Providers",
             "pages": [
               "telemetry/providers/openai",
               "telemetry/providers/anthropic",
-              "telemetry/providers/gemini",
               "telemetry/providers/azure",
               "telemetry/providers/amazon-bedrock",
               "telemetry/providers/google-ai-platform",
               "telemetry/providers/vertex-ai",
-              "telemetry/providers/groq",
-              "telemetry/providers/mistral",
-              "telemetry/providers/ollama",
               "telemetry/providers/cohere",
-              "telemetry/providers/together-ai",
-              "telemetry/providers/litellm",
-              "telemetry/providers/replicate",
-              "telemetry/providers/sagemaker",
-              "telemetry/providers/watsonx",
-              "telemetry/providers/aleph-alpha",
-              "telemetry/providers/transformers"
+              "telemetry/providers/together-ai"
             ]
           },
           {
@@ -103,21 +93,42 @@
               "telemetry/frameworks/openai-agents",
               "telemetry/frameworks/langchain",
               "telemetry/frameworks/llamaindex",
-              "telemetry/frameworks/mastra",
-              "telemetry/frameworks/crewai",
-              "telemetry/frameworks/dspy",
-              "telemetry/frameworks/haystack"
+              "telemetry/frameworks/mastra"
+            ]
+          },
+          {
+            "group": "Agent harnesses",
+            "pages": [
+              "telemetry/claude-code",
+              "telemetry/openclaw"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "observability/features/duration",
+              "observability/features/environments",
+              "observability/filters",
+              "observability/features/log-levels",
+              "observability/features/metadata",
+              "observability/features/percentile-cohorts",
+              "observability/features/releases-versioning",
+              "observability/features/sampling",
+              "observability/sessions",
+              "observability/features/tags",
+              "observability/features/token-cost-tracking",
+              "observability/features/trace-ids",
+              "observability/features/trace-urls",
+              "observability/traces",
+              "observability/features/user-tracking"
+            ]
+          },
+          {
+            "group": "Core concepts",
+            "pages": [
+              "observability/overview"
             ]
           }
-        ]
-      },
-      {
-        "group": "Observability",
-        "pages": [
-          "observability/overview",
-          "observability/traces",
-          "observability/sessions",
-          "observability/filters"
         ]
       },
       {
@@ -128,38 +139,29 @@
         ]
       },
       {
-        "group": "Evaluations",
-        "pages": [
-          "evaluations/overview",
-          "evaluations/triggers",
-          "evaluations/alignment"
-        ]
-      },
-      {
-        "group": "Annotations",
-        "pages": [
-          "annotations/overview",
-          "annotations/inline-annotations",
-          "annotations/flaggers"
-        ]
-      },
-      {
-        "group": "Scores",
-        "pages": [
-          "scores/overview",
-          "scores/analytics"
-        ]
-      },
-      {
         "group": "Issues",
         "pages": [
           "issues/overview",
-          "issues/management"
+          "issues/management",
+          {
+            "group": "Signals",
+            "pages": [
+              "annotations/overview",
+              "annotations/inline-annotations",
+              "annotations/flaggers",
+              "scores/overview",
+              "scores/analytics"
+            ]
+          },
+          {
+            "group": "Evaluations",
+            "pages": [
+              "evaluations/overview",
+              "evaluations/triggers",
+              "evaluations/alignment"
+            ]
+          }
         ]
-      },
-      {
-        "group": "Simulations",
-        "pages": ["simulations/overview"]
       }
     ]
   },

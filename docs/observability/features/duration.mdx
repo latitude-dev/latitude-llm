@@ -1,0 +1,55 @@
+---
+title: Duration
+description: Track trace and session duration to investigate latency and long-running conversations.
+---
+
+# Duration
+
+Latitude tracks trace and session duration so you can spot slow interactions, long-running agent workflows, and conversations that take longer than expected.
+
+## Trace duration
+
+A trace is one complete interaction or agent turn. Its duration runs from the first span to the last span.
+
+Use trace duration to find:
+
+- slow LLM responses
+- long tool-call chains
+- retries or fallback paths
+- agent loops
+- high-latency production requests
+
+Trace duration appears in the Traces table, trace detail view, search results, and filters.
+
+## Session duration
+
+A session groups related traces into a multi-turn conversation. Its duration is the time covered by those traces.
+
+Use session duration to understand:
+
+- long-running conversations
+- support interactions that take many turns
+- workflows that span multiple user messages
+- sessions where latency accumulates across turns
+
+The Sessions view shows duration alongside session-level cost, time to first token, models, span count, session id, and user id when available.
+
+## Filter by duration
+
+Use duration filters to find slow traces or sessions. Combine them with search and other filters, such as:
+
+- traces with high duration and errors
+- expensive traces that also took a long time
+- slow traces for a specific model or provider
+- long sessions for one user or customer segment
+- production traces where users expressed frustration
+
+Duration pairs well with semantic search. For example, search for _agent loops between tools_ and filter to high-duration traces to find slow looping behaviours.
+
+## Related
+
+- [Percentile cohorts](./percentile-cohorts): Compare duration against similar tagged traces
+- [Traces](../traces): Trace-level duration and span waterfalls
+- [Sessions](../sessions): Session-level duration and multi-turn conversations
+- [Filters](../filters): Filter by duration
+- [Search](../../search/overview): Combine duration filters with behavioural search

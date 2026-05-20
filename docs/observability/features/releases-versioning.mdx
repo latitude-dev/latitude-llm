@@ -1,0 +1,94 @@
+---
+title: Releases and versioning
+description: Track agent versions, deployment ids, and rollout cohorts with tags or metadata.
+---
+
+# Releases and versioning
+
+Add release and version context through tags or metadata to investigate whether a behaviour started after a deploy, compare canary and stable traffic, or filter issue examples to one agent version.
+
+Use:
+
+- **Metadata** for exact values such as commit SHA, release version, deployment id, or prompt version.
+- **Tags** for broad rollout labels such as `canary`, `stable`, `release-candidate`, or `v2-agent`.
+
+## Send version metadata
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    await capture(
+      "support-agent-turn",
+      async () => agent.run(userMessage),
+      {
+        metadata: {
+          release: "checkout-release",
+          commitSha: process.env.GIT_COMMIT_SHA,
+          deploymentId: process.env.DEPLOYMENT_ID,
+          promptVersion: "support-prompt",
+        },
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "metadata": {
+                "release": "checkout-release",
+                "commit_sha": os.environ.get("GIT_COMMIT_SHA"),
+                "deployment_id": os.environ.get("DEPLOYMENT_ID"),
+                "prompt_version": "support-prompt",
+            },
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Send rollout tags
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    await capture(
+      "support-agent-turn",
+      async () => agent.run(userMessage),
+      {
+        tags: ["canary", "v2-agent"],
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "tags": ["canary", "v2-agent"],
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Use versions in Latitude
+
+With version context, you can:
+
+- search for behaviours introduced by a release
+- filter traces by prompt version or deployment id
+- compare issue examples before and after a rollout
+- scope saved searches to canary traffic
+- monitor whether a resolved issue regressed in a new version
+
+## Related
+
+- [Tags](./tags): Track rollout labels
+- [Metadata](./metadata): Track exact release fields
+- [Search](../../search/overview): Discover version-specific behaviours
+- [Issues](../../issues/overview): Track failure modes across releases

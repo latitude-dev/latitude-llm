@@ -82,7 +82,6 @@ This guide shows you how to integrate **Latitude Telemetry** into an application
           instrumentations: { bedrock: BedrockSDK },
         })
 
-        await latitude.ready
 
         const client = new BedrockRuntimeClient({ region: "us-east-1" })
 
@@ -206,9 +205,3 @@ Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
 2. Each execution shows input/output messages, model, token usage, latency, and errors
-
----
-
-## That's It
-
-No changes to your Bedrock calls: just initialize Latitude and your LLM calls are traced.

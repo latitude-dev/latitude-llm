@@ -1,11 +1,13 @@
 ---
 title: Search Overview
-description: Find traces by meaning, not just keywords, and save the searches you keep coming back to
+description: Find traces by meaning or exact text, combine search with filters, and save the searches your team uses repeatedly
 ---
 
 # Search
 
-Search is how you find traces in Latitude. You describe what you're looking for in plain language, and Latitude returns the most relevant traces in your project. When a search becomes a regular part of your workflow, you can save it so the whole team can come back to it.
+Use Search to find behaviours across production traces by meaning, exact text, or both, then narrow results with filters.
+
+Every trace is searchable: 100% of ingested traces are available for semantic and text search within your project's retention window.
 
 <Frame>
   <img
@@ -14,40 +16,40 @@ Search is how you find traces in Latitude. You describe what you're looking for 
   />
 </Frame>
 
-## How Search Works
+## Types of search
 
-When you type into the search bar, Latitude compares your query against the conversations in every recent trace and returns the best matches. There are two ways to ask:
+Latitude supports two complementary search modes.
 
-- **Search by meaning** (default): Type a description in plain language and Latitude ranks traces by how close their conversation is to what you described. Paraphrases like _"user complaining"_, _"failed payments"_, or _"long latency on signup"_ work even when the trace doesn't contain those exact words.
-- **Require specific words**: Wrap a word or phrase in `"quotes"` to require it to appear in the trace. Multiple quoted phrases must all appear, but their order isn't enforced.
+### Semantic search
 
-You can mix the two — for example, `"checkout" users abandoning cart` requires the word _checkout_ to appear and ranks the matches by how close they are to _"users abandoning cart"_.
+Semantic search is the default. Type a plain-language description, and Latitude returns traces whose conversations are closest in meaning.
 
-### What Search Looks At
+Examples:
 
-Search indexes the **user and assistant messages** of every trace your project produces, plus the names of any tool calls that appear in the conversation. It deliberately ignores:
+- _users complaining about billing_
+- _agent gets stuck calling tools_
+- _refund requests that were not resolved_
+- _assistant gave a vague answer_
 
-- System prompts and instructions
-- Tool call results and payloads
-- Internal reasoning chunks
+Semantic search works even when a trace does not contain those exact words. For example, _user is frustrated_ can find traces where the user says _"this is the third time I've explained this"_ or _"you're not helping"_.
 
-The goal is to keep search anchored to the conversation a human reviewer would read.
+### Exact text search
 
-### Index Freshness
+Use quotes around words or phrases that must appear exactly in the trace.
 
-Search covers your recent traces:
+```text
+"checkout" users abandoning cart
+```
 
-- **Word-based search** keeps the most recent **90 days** of traces searchable, regardless of plan.
-- **Search by meaning** follows your plan's telemetry retention window:
-  - **Free**: last 30 days
-  - **Pro**: last 90 days
-  - **Enterprise**: last 1 year
+This requires _checkout_ to appear, then ranks matches by semantic relevance to _users abandoning cart_. Use exact text search when a product name, tool name, error message, or policy phrase matters.
 
-Once a trace falls out of the search index it stays visible in the Traces page and everywhere else in the product — only search stops surfacing it.
+## Combine search with filters
 
-## Running a Search
+Search finds relevant conversation content; filters narrow it by trace metadata such as status, model, provider, service, tags, user, session, cost, latency, token usage, or custom fields.
 
-The Search page lives in the left navigation of every project.
+For example, search for _agent loops between tools_ and filter to production traces from a specific model, service, or customer segment. A trace must match both the query and filters to appear.
+
+## Running a search
 
 <Frame>
   <img
@@ -56,62 +58,48 @@ The Search page lives in the left navigation of every project.
   />
 </Frame>
 
-1. **Type your query** in the search bar and press Enter. Use `"quotes"` to require specific words.
-2. **Add filters** to narrow further. The same [shared filter system](../observability/filters) used everywhere else in Latitude applies here. Filter by status, model, cost, duration, tags, custom metadata, and more.
-3. **Pick a time range** with the time filter dropdown if you only care about a recent window.
-4. **Sort, scroll, and open** matching traces. When you search by meaning, results are ordered by relevance. When your query is only quoted words, results fall back to the usual chronological order and the column headers control the sort.
+1. Type a query in the search bar and press Enter.
+2. Add filters to narrow the cohort.
+3. Pick a time range if you only care about a recent window.
+4. Open any matching trace to inspect the conversation, spans, scores, and annotations.
 
-Each trace row shows the same metadata you'd see on the Traces page. Clicking a row opens the full trace detail, including conversation, spans, scores, and the annotation panel.
+When you search by meaning, results are ordered by relevance. When you only use exact quoted text, results use the normal trace ordering and table controls.
 
-### Combining Search and Filters
+## Saving a search
 
-Search and filters are complementary:
+When a query, filters, or both become useful enough to revisit, click **Save search** and give it a clear name, such as _Failed payments_ or _Tool loops in production_.
 
-- The **search query** finds traces whose conversation content is relevant.
-- The **filters** scope to traces whose metadata matches.
+Saved searches appear on the Search landing page with assignment and review progress. See [Saved Searches](./saved-searches) for the full lifecycle.
 
-You can do either, neither, or both. With both active, a trace must satisfy the filters _and_ rank against the query to appear.
+## Empty results
 
-## Bulk Actions on Results
+If a search returns nothing:
 
-When you select one or more traces from a result set, two actions become available:
+- Reword the query. Semantic search works best with natural descriptions.
+- Remove quotes unless an exact phrase is required.
+- Widen the time range.
+- Loosen filters that may be excluding relevant traces.
 
-- **Export traces**: Download the matching traces as a file. You'll get an email when the export is ready.
-- **Add to dataset**: Push the matching traces into a dataset for offline analysis, regression suites, or [simulations](../simulations/overview).
+## Search and the rest of Latitude
 
-These actions respect the active query and filters, so you can build up a precise cohort with search and then operate on it as a group.
+Search is the discovery layer for behaviours Latitude should track. A typical workflow is:
 
-## Saving a Search
+1. Search for a user or agent behaviour you care about.
+2. Open representative traces.
+3. Annotate traces that show a real failure mode.
+4. Latitude turns failed annotations and related scores into [issues](../issues/overview).
+5. Generate evaluations from important issues to monitor them automatically on incoming traces.
 
-When a query plus filters becomes something you want to come back to, save it.
+| Feature | Relationship |
+| --- | --- |
+| **[Saved searches](./saved-searches)** | Revisit useful behavioural cohorts |
+| **[Inline annotations](../annotations/inline-annotations)** | Label traces from search as good or bad behaviour |
+| **[Issues](../issues/overview)** | Turn failed annotations and scores into trackable production issues |
+| **[Flaggers](../annotations/flaggers)** | Automatically detect common categories; use search for product-specific patterns |
 
-1. Run the search.
-2. Click **Save search** in the toolbar.
-3. Give it a name like _"Failed payments last week"_ or _"Long latency on signup"_.
+## Next steps
 
-The saved search appears in the table on the Search landing page along with everyone else's. See [Saved Searches](./saved-searches) for the full lifecycle, including assignment, renaming, and detecting drift between a saved search and its current state.
-
-## Empty Results
-
-If a search returns nothing, the most useful adjustments are usually:
-
-- **Reword the query**: Close paraphrases often work — try a different framing of the same intent.
-- **Drop the quotes**: A quoted phrase has to appear word-for-word. Removing the quotes lets Latitude rank by meaning instead.
-- **Use fewer or more specific keywords**: A vague single word can return too many noisy matches; an over-specific phrase can return none.
-- **Widen filters**: A status filter or tight time range can hide otherwise good matches.
-- **Check the time window**: Word-based search only covers the last 90 days. Search by meaning is bounded by your plan's telemetry retention (30 days on Free, 90 days on Pro, 1 year on Enterprise).
-
-## Search and the Rest of Latitude
-
-| Feature                                                     | Relationship                                                                                                             |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **[Saved searches](./saved-searches)**                      | Bookmark a query plus filters so the whole team can revisit it later                                                     |
-| **[Flaggers](../annotations/flaggers)**                     | Automatic annotators that surface common failure categories; search lets you build your own cohorts around anything else |
-| **[Inline annotations](../annotations/inline-annotations)** | Once you open a trace from a search result, you can annotate it directly                                                 |
-
-## Next Steps
-
-- [Saved Searches](./saved-searches): Keep useful searches around and assign ownership
-- [Flaggers](../annotations/flaggers): Automatic detection of common failure categories
-- [Inline Annotations](../annotations/inline-annotations): Leave human feedback on traces you find through search
-- [Filters](../observability/filters): The shared filter system that powers search and beyond
+- [Saved Searches](./saved-searches): Save behavioural cohorts for repeated review
+- [Inline Annotations](../annotations/inline-annotations): Label traces you find through search
+- [Issues](../issues/overview): Track recurring failure modes
+- [Filters](../observability/filters): Narrow searches with trace metadata

@@ -1,111 +1,79 @@
 ---
-title: Observability Overview
-description: Understand how Latitude captures and organizes your agent's interactions
+title: Core concepts
+description: "Understand Latitude's telemetry taxonomy: spans, traces, and sessions."
 ---
 
-# Observability Overview
+# Core concepts
 
-Latitude captures every interaction your AI agent has, from individual LLM calls to multi-turn conversations, and makes them searchable, scoreable, and actionable.
+Latitude organizes agent activity into three telemetry levels: **spans**, **traces**, and **sessions**. Understanding this taxonomy helps you decide where to attach context, how to debug runs, and how product features like search, scores, issues, and evaluations relate to your data.
 
-## Three Levels of Telemetry
+## Spans
 
-Latitude organizes your agent's activity into three levels:
+A **span** is the smallest unit of captured work. It can represent an LLM call, a tool invocation, a retrieval step, an HTTP request, or any other instrumented operation in your agent pipeline.
 
-### Spans
+Every span captures operational context such as:
 
-A **span** is the smallest unit of work: a single LLM call, a tool invocation, an HTTP request, a retrieval step, or any instrumented operation in your agent's pipeline. Not every span represents an AI generation. A span might be a database query, an API call, or a custom function, none of which involve tokens or models.
+- input and output content when available
+- start time, end time, and duration
+- success or error status
+- tags and metadata
 
-Every span captures:
+LLM spans also capture model-specific information such as provider, model, token usage, and cost.
 
-- Input and output content
-- Latency (start, end, duration)
-- Status (success or error)
-- Custom metadata and tags
+## Traces
 
-Spans that represent LLM calls additionally capture:
+A **trace** is one complete interaction from start to finish, composed of one or more spans. When a user sends a message and your agent responds, the LLM calls, tool calls, retrieval steps, and other work that happened during that turn are grouped into a trace.
 
-- Token usage and cost
-- Model and provider information
+Traces are the main unit used across Latitude:
 
-### Traces
+- the trace detail view shows the full waterfall of spans
+- search returns matching trace conversations
+- evaluations run against completed traces
+- scores are attached to traces
+- flaggers annotate traces automatically
+- issues group related trace failures
 
-A **trace** is a complete interaction from start to finish, composed of one or more spans. When a user sends a message and your agent responds (including any intermediate LLM calls, tool uses, and retrieval steps), that entire sequence is one trace.
+## Sessions
 
-Traces are the primary unit that most reliability features operate on:
+A **session** is an optional grouping of related traces into a multi-turn conversation. Traces always exist; sessions only exist when your application sends a `sessionId` / `session_id` with telemetry.
 
-- Evaluations run against traces
-- Scores are attached to traces
-- Search and saved searches scope cohorts of traces
-- Flaggers automatically annotate matching traces
-- Issues group failures across traces
-
-### Sessions
-
-A **session** is an **optional** grouping of related traces into a multi-turn conversation. Unlike spans and traces, which are always present, sessions only exist when your application provides a `session_id` with its telemetry. When the same user has an ongoing conversation with your agent, each turn is a separate trace, but they all belong to the same session.
+Use sessions when multiple traces belong to the same user conversation or workflow. For example, each user turn in a chat agent can be its own trace, while the whole conversation shares one session.
 
 Sessions let you:
 
-- View the full conversation context across turns
-- Evaluate behavior at the session level (not just individual turns)
-- Aggregate scores and analytics across a conversation
+- review full conversation context across turns
+- group traces by a stable conversation id
+- analyze user-level or conversation-level behavior
 
-## How Data Flows In
+## How they fit together
 
-Your application sends telemetry to Latitude using OpenTelemetry-compatible instrumentation. See the [Telemetry](../telemetry/overview) docs for setup instructions with your specific provider or framework.
+```text
+Session
+└─ Trace: user turn 1
+   ├─ Span: retrieve context
+   ├─ Span: LLM call
+   └─ Span: tool call
+└─ Trace: user turn 2
+   ├─ Span: LLM call
+   └─ Span: tool call
+```
 
-Once connected:
+If your app does not send a session id, Latitude still captures spans and traces. You can add session grouping later with `capture()` in the TypeScript or Python SDK.
 
-1. Your agent processes a request
-2. Instrumented operations emit **spans** to Latitude, grouped into **traces** and optionally **sessions** as defined by your telemetry client
-3. If a `session_id` is provided, the trace is associated with a **session**
-4. Once a trace is considered complete (see below), Latitude triggers downstream reliability features
+## Trace completion
 
-## Trace Completion
+Latitude waits for a trace to stop receiving new spans before treating it as complete. This prevents downstream features from running on partial agent executions.
 
-Latitude does not consider a trace complete the instant a span arrives. Instead, it uses a debounce window. If no new spans arrive for a trace within 5 minutes, the trace is considered done.
+Once a trace is complete, Latitude can:
 
-This matters because:
+- make the conversation available in [Search](../search/overview)
+- run matching [Evaluations](../evaluations/overview)
+- apply enabled [Flaggers](../annotations/flaggers)
+- update related [Scores](../scores/overview) and [Issues](../issues/overview)
 
-- Complex agent pipelines may emit spans over an extended period
-- Multi-step tool use can have significant delays between operations
-- You don't want evaluations running on half-complete interactions
+## Next steps
 
-Once a trace is considered complete, Latitude automatically:
-
-- Runs matching evaluations against it
-- Indexes the trace conversation for [search](../search/overview)
-- Classifies the trace against the enabled [flaggers](../annotations/flaggers), writing annotations on matches
-
-## Filtering and Search
-
-The trace dashboard provides rich filtering through a shared filter system. You can filter by:
-
-| Filter | Description |
-| --- | --- |
-| Status | Error, OK, or unset |
-| Name | Root span name |
-| Session ID | Filter to a specific session |
-| User ID | Filter to a specific user |
-| Tags | Custom tags attached to spans |
-| Models | Which LLM models were used |
-| Providers | Which providers were called |
-| Cost | Total cost of the trace |
-| Duration | End-to-end duration |
-| Span count | Number of spans in the trace |
-| Error count | Number of errored spans |
-| Token usage | Input and output tokens |
-| Custom metadata | Any `metadata.*` fields you send |
-
-These same filters power [search](../search/overview), [saved searches](../search/saved-searches), and evaluation triggers. When you configure "which traces" an evaluation should monitor, you're building a filter using this same system.
-
-## Search and Saved Searches
-
-The dedicated [Search](../search/overview) page goes further than dashboard filtering: you can type a plain-English query and Latitude returns the most relevant trace conversations, ranked by a blend of keyword and semantic match. Bookmark a useful query plus filters as a [saved search](../search/saved-searches) so the whole team can come back to it.
-
-## Next Steps
-
-- [Traces](./traces): Understand the trace model and lifecycle in detail
-- [Sessions](./sessions): Learn about session-level aggregation
-- [Filters](./filters): Learn how the shared filter system works
-- [Search](../search/overview): Hybrid keyword + semantic search across trace conversations
-- [Scores](../scores/overview): See how scores attach to your telemetry
+- [Start tracing](../telemetry/start-tracing)
+- [Traces](./traces)
+- [Sessions](./sessions)
+- [Filters](./filters)

@@ -14,9 +14,9 @@ Latitude gives you a closed-loop system for monitoring, evaluating, and improvin
 - **Observe**: Capture every interaction your agents have with users through automatic telemetry. See spans, traces, and sessions in real time.
 - **Score**: Attach quantitative verdicts to every interaction. Scores come from automated evaluations, human annotations, or your own custom logic.
 - **Discover**: When scores indicate failures, Latitude automatically groups similar problems into **issues**: named, trackable failure patterns.
-- **Evaluate**: Generate monitoring scripts from discovered issues. These evaluations run continuously on live traffic, catching regressions before users notice.
+- **Evaluate**: Generate monitors from discovered issues. Evaluations run continuously on live traffic, catching regressions before users notice.
 - **Align**: Keep your automated evaluations honest by measuring how well they agree with human reviewers. Latitude tracks alignment metrics so you know when machine judgment drifts from human judgment.
-- **Simulate**: Before shipping changes, run your agent against test scenarios locally or in CI. Reuse the same evaluation scripts that monitor production.
+- **Simulate**: Before shipping changes, run your agent against test scenarios locally or in CI. Reuse the same evaluations that monitor production.
 - **Improve**: Use everything you've learned to make your agents better, then repeat.
 
 ## How It All Connects
@@ -33,7 +33,7 @@ The result is a continuous improvement cycle where your agents get better with e
 | **Trace**         | A complete interaction from start to finish, composed of one or more spans                 |
 | **Session**       | A multi-turn conversation between a user and your agent, composed of related traces        |
 | **Score**         | A quantitative verdict on a trace: normalized between 0 and 1, with pass/fail and feedback |
-| **Evaluation**    | A script that automatically produces scores from your agent's interactions                 |
+| **Evaluation**    | An automated monitor that tracks behaviour across traces and produces scores               |
 | **Issue**         | A named failure pattern discovered by grouping similar failed scores                       |
 | **Annotation**    | A verdict on a trace from a human, a flagger, or the API, attached as a score              |
 | **Flagger**       | A built-in automatic annotator for a known failure category like _jailbreaking_ or _frustration_ |

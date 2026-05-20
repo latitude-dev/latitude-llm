@@ -1,0 +1,34 @@
+---
+title: Sampling
+description: Understand where Latitude does and does not sample trace processing.
+---
+
+# Sampling
+
+Latitude does not sample traces before making them observable. If a trace is ingested and retained, it can appear in the Traces view, filters, search results, and manual review workflows.
+
+<Note>
+  Latitude does not sample semantic search, exact-text search, or the trace stream used by automatic flaggers. Full coverage matters for rare failures, edge-case user behavior, and low-volume regressions.
+</Note>
+
+## Where sampling exists
+
+Sampling only applies to selected downstream processing. It does not affect trace visibility or search coverage.
+
+### Evaluation sampling
+
+Evaluations can run on a percentage of matching incoming traces. This controls monitoring cost and volume while keeping traces available for search and review.
+
+A sampling rate of `0%` pauses the evaluation.
+
+### Flagger sampling
+
+Flaggers can sample how aggressively Latitude runs additional automated checks for a category. This balances detection coverage with processing volume.
+
+Flagger sampling does not remove traces from search, filtering, or manual issue investigation.
+
+## Related
+
+- [Search](../../search/overview): Search across all searchable traces
+- [Evaluations](../../evaluations/overview): Monitor issue patterns on incoming traces
+- [Flaggers](../../annotations/flaggers): Automatic detection for common failure categories

@@ -1,0 +1,78 @@
+---
+title: Log levels
+description: Track application-defined severity with metadata and combine it with trace status filters.
+---
+
+# Log levels
+
+Latitude does not require a first-class log-level field. If your application uses severity levels such as `debug`, `info`, `warn`, or `error`, send them as metadata and filter on those fields.
+
+Use log-level metadata for application-defined severity; use trace status and error-count filters for OpenTelemetry span errors.
+
+## Send a log level
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    import { capture } from "@latitude-data/telemetry"
+
+    await capture(
+      "support-agent-turn",
+      async () => agent.run(userMessage),
+      {
+        metadata: {
+          logLevel: "warn",
+          reason: "tool_retry",
+        },
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from latitude_telemetry import capture
+
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "metadata": {
+                "log_level": "warn",
+                "reason": "tool_retry",
+            },
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+Choose one naming convention and keep it consistent across your application, such as `metadata.logLevel` or `metadata.log_level`.
+
+## Filter by log level
+
+After sending log-level metadata, filter by fields such as:
+
+- `metadata.logLevel = error`
+- `metadata.logLevel = warn`
+- `metadata.log_level = error`
+
+Combine log-level filters with other filters and search queries. For example:
+
+- search for _agent got stuck_ with `metadata.logLevel = warn`
+- filter production traces where `metadata.logLevel = error`
+- find expensive traces where `metadata.reason = tool_retry`
+
+## Log levels vs trace status
+
+Log levels are application-defined metadata. Trace status is derived from OpenTelemetry span status.
+
+Use:
+
+- **Trace status / error count** when an operation errored
+- **Metadata log levels** when your application marks severity even if the trace succeeded
+
+## Related
+
+- [Metadata](./metadata): Attach structured context to traces
+- [Filters](../filters): Filter by metadata, status, and error count
+- [Search](../../search/overview): Combine severity metadata with semantic search

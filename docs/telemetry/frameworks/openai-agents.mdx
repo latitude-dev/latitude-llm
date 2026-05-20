@@ -7,7 +7,7 @@ description: Connect your OpenAI Agents SDK application to Latitude for observab
 
 This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **OpenAI Agents SDK** (`@openai/agents` for TypeScript, `openai-agents` for Python).
 
-The Agents SDK uses the OpenAI **Responses API**, which is not covered by the standard `openai` instrumentation. Latitude hooks into the Agents SDK's native tracing system instead, so you get spans for every agent run, generation, response, function call, handoff, and guardrail — automatically.
+Latitude includes dedicated instrumentation for the OpenAI Agents SDK, so agent runs, generations, function calls, handoffs, and guardrails appear as traces.
 
 <Check>
   You'll keep calling the Agents SDK exactly as you do today. Telemetry observes
@@ -82,7 +82,6 @@ The Agents SDK uses the OpenAI **Responses API**, which is not covered by the st
           instrumentations: { "openai-agents": OpenAIAgentsSDK },
         })
 
-        await latitude.ready
 
         const getWeather = tool({
           name: "get_weather",
@@ -151,12 +150,6 @@ Each agent run shows up as a trace with nested spans:
 - **MCP spans** — listed tools per server
 
 Wrap a request or job with `capture()` to attach a `userId`, `sessionId`, `tags`, or `metadata` to every span produced inside.
-
----
-
-## How it works
-
-Latitude registers a `TracingProcessor` with the Agents SDK (via `addTraceProcessor` in TypeScript, the OpenInference instrumentor in Python) and translates the SDK's spans into OpenTelemetry spans on Latitude's tracer. No monkey-patching of the OpenAI client is required, so this works regardless of whether your agents use the Responses API (default) or the Chat Completions API.
 
 ---
 

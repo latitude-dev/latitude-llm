@@ -1,0 +1,60 @@
+---
+title: User tracking
+description: Group and filter traces by the end user that triggered them.
+---
+
+# User tracking
+
+Latitude can associate traces with an end-user identifier so you can investigate one user's experience, find users affected by an issue, or filter search results to a specific customer or account.
+
+## Send a user id
+
+Pass a user id through `capture()` at the request, conversation turn, or agent entry point.
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    import { capture } from "@latitude-data/telemetry"
+
+    await capture(
+      "support-agent-turn",
+      async () => {
+        return agent.run(userMessage)
+      },
+      {
+        userId: user.id,
+      },
+    )
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from latitude_telemetry import capture
+
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "user_id": user.id,
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Use user ids in Latitude
+
+With user ids, you can:
+
+- filter traces by user
+- search within one user's traces
+- inspect sessions and traces associated with that user
+- understand which users are affected by a recurring issue
+
+User ids are most useful when they are stable identifiers from your application, such as an internal user, account, or customer id.
+
+## Related
+
+- [Sessions](../sessions): Group multiple traces into a conversation
+- [Filters](../filters): Filter traces by user id
+- [Search](../../search/overview): Search within filtered trace cohorts

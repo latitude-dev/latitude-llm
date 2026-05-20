@@ -19,7 +19,7 @@ The CLI is **language-agnostic** and **local-first**:
 2. You configure the command that runs those entrypoints through your chosen runtime/toolchain
 3. The CLI discovers `*.sim.*` files, invokes your configured command, and collects results
 4. A local HTTP bridge connects the CLI to a lightweight SDK in your test code
-5. Evaluation scripts run locally against the captured traces
+5. Evaluations run locally against the captured traces
 6. Results can optionally be uploaded to Latitude
 
 The CLI should be useful as a standalone simulation runner even without a Latitude account.
@@ -57,7 +57,7 @@ Simulation({
 Key details:
 
 - `Passed(score?, feedback)` and `Failed(score?, feedback)` always require feedback. Score defaults to 1 (passed) or 0 (failed) when omitted.
-- The `issues` selector downloads all issue-linked evaluation scripts and runs them locally.
+- The `issues` selector downloads all issue-linked evaluations and runs them locally.
 - Custom evaluations receive `output`, `scenario`, `conversation`, and `metadata`.
 - Custom evaluations can return one score or an array of scores.
 
@@ -95,4 +95,4 @@ The CLI is JavaScript/TypeScript-native, but lightweight SDKs for other language
 
 - [Simulation Reports](./reporting): Understanding simulation results
 - [Simulations Overview](./overview): Why simulations matter
-- [Evaluations](../evaluations/overview): The evaluation scripts simulations use
+- [Evaluations](../evaluations/overview): The evaluations simulations use

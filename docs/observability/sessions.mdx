@@ -1,103 +1,100 @@
 ---
 title: Sessions
-description: Understand multi-turn conversations and session-level aggregation
+description: Group related traces into multi-turn conversations.
 ---
 
 # Sessions
 
-A session is an **optional** grouping of related traces into a multi-turn conversation. While spans and traces are always present (they're part of the OpenTelemetry standard), sessions only exist when your application provides a `session_id` with its telemetry. They let you view the full conversation arc across multiple interactions.
+A session is an optional grouping of related traces into a multi-turn conversation. Traces always exist; sessions only exist when your application sends a session id with telemetry.
 
 <Frame>
-  <img src="/images/observability/sessions.png" alt="Sessions view showing grouped traces within a session" />
+  <img src="/images/observability/sessions-overview.png" alt="Sessions view showing grouped traces within a session" />
 </Frame>
 
-## How Sessions Work
+## How sessions work
 
-Sessions are formed when your application provides a `session_id` with its telemetry. All traces sharing the same session ID are grouped together chronologically.
+All traces with the same session id are grouped together chronologically.
 
 A session might look like:
 
-1. **Trace 1**: User asks "What's the weather?". The agent responds with current weather
-2. **Trace 2**: User asks "What about tomorrow?". The agent responds with the forecast
-3. **Trace 3**: User asks "Should I bring an umbrella?". The agent gives a recommendation
+1. **Trace 1**: User asks about an order status
+2. **Trace 2**: User asks a follow-up question
+3. **Trace 3**: User asks to change the order
 
-Each turn is its own trace with its own spans, scores, and evaluations. The session ties them together.
+Each turn is still its own trace with its own spans, scores, annotations, and metadata. The session ties those traces together so you can review the full conversation arc.
 
-## Viewing Sessions
+## Send a session id
 
-Toggle between **Traces** and **Sessions** using the switcher in the top right of the observability page.
-
-The sessions view shows:
-
-- **Expandable session rows**: Click a session to reveal all traces within it
-- **Start time**: When the session began
-- **Name**: The trace name (from `path` in your `capture()` call)
-- **Duration**: Total duration across all traces in the session
-- **Time to First Token**: Median TTFT across the session's traces
-- **Cost**: Aggregated cost across all traces
-- **Session ID**: The identifier your application provided
-- **User ID**: The end user, if provided via telemetry metadata
-- **Models**: Which LLM models were used across the session
-- **Span count**: Total spans across all traces
-
-Each trace within a session is listed with its own metrics, so you can spot which specific turn had high latency or cost.
-
-## Why Sessions Matter
-
-Sessions enable:
-
-- **Conversation-level evaluation**: Evaluations can target session-level interactions, not just individual turns. This catches problems like context loss, contradiction, and conversational drift.
-- **Session-level score aggregation**: Roll up scores across an entire conversation to see overall quality, not just per-turn results.
-- **Richer issue context**: When drilling into issues, seeing the full session context helps understand failure patterns that only emerge across multiple turns.
-
-## Sending Session IDs
-
-To group traces into sessions, pass a `session_id` when capturing telemetry:
+Pass a session id through `capture()` at the request, conversation turn, or agent entrypoint.
 
 <Tabs>
   <Tab title="TypeScript">
-    ```typescript
-    await telemetry.capture(
-      {
-        projectId: 123,
-        path: 'invoke_agent',
-        sessionId: 'session-abc-123', // Group traces into a session
-      },
+    ```ts
+    import { capture } from "@latitude-data/telemetry"
+
+    await capture(
+      "support-agent-turn",
       async () => {
-        // Your agent code
-      }
+        return agent.run(userMessage)
+      },
+      {
+        sessionId: conversation.id,
+        userId: user.id,
+      },
     )
     ```
   </Tab>
   <Tab title="Python">
     ```python
-    @telemetry.capture(
-        project_id=123,
-        path="invoke_agent",
-        session_id="session-abc-123",  # Group traces into a session
+    from latitude_telemetry import capture
+
+    capture(
+        "support-agent-turn",
+        lambda: agent.run(user_message),
+        {
+            "session_id": conversation.id,
+            "user_id": user.id,
+        },
     )
-    def invoke_agent(input: str):
-        # Your agent code
-        pass
     ```
   </Tab>
 </Tabs>
 
-Every `capture()` call with the same `session_id` will be grouped into the same session.
+Every trace captured with the same session id appears in the same session.
 
-## Sessions in Search and Annotations
+## Viewing sessions
 
-Search, annotations, and most reliability features operate at the trace level. Sessions are an aggregation _on top of_ traces, not a separate primitive.
+Toggle between **Traces** and **Sessions** from the observability view.
 
-When you encounter a session in the product (for example, by clicking a session in the sessions view), Latitude opens the session's most recent trace and shows the full conversation derived from every trace sharing the session ID. You can:
+The sessions view shows:
 
-- **Run a [saved search](../search/saved-searches)** scoped to `sessionId` to track every trace in a specific conversation.
-- **Annotate** any individual trace within the session from its detail view — the conversation context spans the full session, so annotators see the whole arc, not just one turn.
-- **Filter analytics** by session-derived properties when you want session-level rollups instead of per-turn metrics.
+- expandable session rows
+- traces within each session
+- start time
+- duration
+- time to first token
+- cost
+- session id
+- user id, when provided
+- models used
+- span count
 
-## Next Steps
+Each trace within a session keeps its own metrics, so you can identify which turn had high latency, high cost, errors, or unusual behaviour.
+
+## Sessions in search and review
+
+Sessions are an aggregation on top of traces. Search, annotations, scores, and issues still operate primarily on traces.
+
+You can:
+
+- filter traces by session id
+- search within a specific session
+- open traces from a session and annotate them
+- use session context to understand failures that unfold across turns
+
+## Related
 
 - [Traces](./traces): The individual interactions that make up a session
-- [Search](../search/overview): Find traces (including session-scoped ones)
-- [Scores](../scores/overview): How scores attach to traces and sessions
-- [Evaluations](../evaluations/triggers): Configuring evaluations to target sessions
+- [User tracking](./features/user-tracking): Associate traces and sessions with users
+- [Search](../search/overview): Find traces within session-scoped cohorts
+- [Scores](../scores/overview): How scores attach to traces
