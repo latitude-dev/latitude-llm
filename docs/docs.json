@@ -50,6 +50,11 @@
           "anchor": "YouTube",
           "icon": "youtube",
           "href": "https://www.youtube.com/@trylatitude"
+        },
+        {
+          "anchor": "Slack Community",
+          "icon": "slack",
+          "href": "https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
         }
       ]
     },

@@ -32,18 +32,11 @@ const traceIngestionBillingLayers = Layer.mergeAll(
   StripeSubscriptionLookupLive,
 )
 
-/**
- * Docs URL surfaced in OTLP `partial_success.errorMessage` so a customer's exporter logs point
- * them at the right page. **Hard-coded by contract** — if the docs path moves, the docs page's
- * link-integrity test (in `docs/`) will fail, prompting a coordinated update of this string.
- */
-const PROJECT_SCOPING_DOCS_URL = "https://docs.latitude.so/telemetry/project-scoping"
-
 const buildRejectionMessage = (rejected: number): string =>
-  `${rejected} span(s) rejected: no project could be resolved ` +
-  "(missing `latitude.project` attribute, missing OTEL resource attribute, and no " +
-  "`X-Latitude-Project` header), or the resolved slug doesn't belong to this organization. " +
-  `See ${PROJECT_SCOPING_DOCS_URL} for project-scoping options.`
+  `${rejected} span(s) rejected: no project could be resolved. ` +
+  "Set a valid project slug with the `latitude.project` span attribute, the `latitude.project` " +
+  "OTEL resource attribute, or the `X-Latitude-Project` export header. If you already set one, " +
+  "check that the slug exists in this Latitude organization."
 
 export const registerTracesRoute = ({ app }: TracesRouteContext) => {
   app.post("/v1/traces", authMiddleware, projectMiddleware, async (c) => {
