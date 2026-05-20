@@ -1,5 +1,5 @@
 {
-  "name": "@domain/slack",
+  "name": "@domain/integrations",
   "version": "0.1.0",
   "private": true,
   "type": "module",

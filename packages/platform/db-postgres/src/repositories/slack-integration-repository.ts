@@ -14,7 +14,7 @@ import {
   SlackIntegrationConflictError,
   SlackIntegrationRepository,
   slackIntegrationSchema,
-} from "@domain/slack"
+} from "@domain/integrations"
 import { parseEnv } from "@platform/env"
 import { type CryptoError, decrypt, encrypt, hash } from "@repo/utils"
 import { and, eq, isNull } from "drizzle-orm"

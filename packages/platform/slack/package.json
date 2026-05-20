@@ -18,8 +18,8 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@domain/integrations": "workspace:*",
     "@domain/shared": "workspace:*",
-    "@domain/slack": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@repo/utils": "workspace:*",
     "@repo/vitest-config": "workspace:*",

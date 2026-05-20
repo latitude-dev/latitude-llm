@@ -36,4 +36,4 @@ export interface SlackIntegrationRepositoryShape {
 export class SlackIntegrationRepository extends Context.Service<
   SlackIntegrationRepository,
   SlackIntegrationRepositoryShape
->()("@domain/slack/SlackIntegrationRepository") {}
+>()("@domain/integrations/SlackIntegrationRepository") {}
