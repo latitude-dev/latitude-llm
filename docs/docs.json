@@ -58,15 +58,13 @@
         "group": "Overview",
         "pages": [
           "getting-started/introduction",
-          "getting-started/how-to-use-latitude",
-          "getting-started/concepts"
+          "getting-started/how-to-use-latitude"
         ]
       },
       {
         "group": "Getting Started",
         "pages": [
-          "telemetry/start-tracing",
-          "getting-started/mcp"
+          "telemetry/start-tracing"
         ]
       },
       {
@@ -163,6 +161,13 @@
               "evaluations/alignment"
             ]
           }
+        ]
+      },
+      {
+        "group": "More",
+        "pages": [
+          "getting-started/concepts",
+          "getting-started/mcp"
         ]
       }
     ]
