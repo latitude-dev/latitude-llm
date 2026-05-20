@@ -66,7 +66,9 @@ CREATE TABLE sessions
     `error_count` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
     `min_start_time` SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)),
     `max_end_time` SimpleAggregateFunction(max, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)),
-    `duration_ns` Int64 ALIAS reinterpretAsInt64(max_end_time) - reinterpretAsInt64(min_start_time),
+    `duration_ns` SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)),
+    `time_of_first_token` SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)),
+    `time_to_first_token_ns` Int64 ALIAS if(time_of_first_token < toDateTime64('2261-01-01', 9, 'UTC'), reinterpretAsInt64(time_of_first_token) - reinterpretAsInt64(min_start_time), 0),
     `tokens_input` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
     `tokens_output` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
     `tokens_cache_read` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
@@ -83,6 +85,13 @@ CREATE TABLE sessions
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `simulation_id` AggregateFunction(argMaxIf, FixedString(24), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
+    `root_span_id` AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
+    `root_span_name` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
+    `input_messages` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
+    `last_input_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
+    `output_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
+    `system_instructions` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
+    `retention_days` SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1)),
     INDEX idx_start_time min_start_time TYPE minmax GRANULARITY 1
 )
 ENGINE = AggregatingMergeTree
@@ -102,6 +111,8 @@ CREATE MATERIALIZED VIEW sessions_mv TO sessions
     `error_count` UInt64,
     `min_start_time` DateTime64(9, 'UTC'),
     `max_end_time` DateTime64(9, 'UTC'),
+    `duration_ns` Int64,
+    `time_of_first_token` DateTime64(9, 'UTC'),
     `tokens_input` UInt64,
     `tokens_output` UInt64,
     `tokens_cache_read` UInt64,
@@ -117,18 +128,27 @@ CREATE MATERIALIZED VIEW sessions_mv TO sessions
     `models` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8),
-    `simulation_id` AggregateFunction(argMaxIf, FixedString(24), DateTime64(9, 'UTC'), UInt8)
+    `simulation_id` AggregateFunction(argMaxIf, FixedString(24), DateTime64(9, 'UTC'), UInt8),
+    `root_span_id` AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8),
+    `root_span_name` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
+    `input_messages` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
+    `last_input_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
+    `output_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
+    `system_instructions` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
+    `retention_days` UInt16
 )
 AS SELECT
     s.organization_id,
     s.project_id,
-    s.session_id,
+    coalesce(nullIf(s.session_id, ''), toString(s.trace_id)) AS session_id,
     uniqExactState(s.trace_id) AS trace_count,
     groupUniqArrayState(s.trace_id) AS trace_ids,
     count() AS span_count,
     countIf(s.status_code = 2) AS error_count,
     min(s.start_time) AS min_start_time,
     max(s.end_time) AS max_end_time,
+    sum(if(((s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AND (s.end_time > s.start_time), reinterpretAsInt64(s.end_time) - reinterpretAsInt64(s.start_time), toInt64(0))) AS duration_ns,
+    min(if(s.time_to_first_token_ns > 0, addNanoseconds(s.start_time, toInt64(s.time_to_first_token_ns)), toDateTime64('2261-01-01 00:00:00.000000000', 9, 'UTC'))) AS time_of_first_token,
     sum(s.tokens_input) AS tokens_input,
     sum(s.tokens_output) AS tokens_output,
     sum(s.tokens_cache_read) AS tokens_cache_read,
@@ -144,13 +164,19 @@ AS SELECT
     groupUniqArrayIfState(s.model, s.model != '') AS models,
     groupUniqArrayIfState(s.provider, s.provider != '') AS providers,
     groupUniqArrayIfState(s.service_name, s.service_name != '') AS service_names,
-    argMaxIfState(s.simulation_id, s.start_time, s.simulation_id != '') AS simulation_id
+    argMaxIfState(s.simulation_id, s.start_time, s.simulation_id != '') AS simulation_id,
+    argMinIfState(s.span_id, s.start_time, (s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AS root_span_id,
+    argMinIfState(s.name, s.start_time, (s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AS root_span_name,
+    argMinIfState(s.input_messages, s.start_time, s.input_messages != '') AS input_messages,
+    argMaxIfState(s.input_messages, s.end_time, s.output_messages != '') AS last_input_messages,
+    argMaxIfState(s.output_messages, s.end_time, s.output_messages != '') AS output_messages,
+    argMinIfState(s.system_instructions, s.start_time, s.system_instructions != '') AS system_instructions,
+    max(s.retention_days) AS retention_days
 FROM spans AS s
-WHERE s.session_id != ''
 GROUP BY
     s.organization_id,
     s.project_id,
-    s.session_id;
+    session_id;
 
 CREATE TABLE spans
 (
@@ -214,6 +240,7 @@ CREATE TABLE spans
     `tool_input` String DEFAULT '' CODEC(ZSTD(3)),
     `tool_output` String DEFAULT '' CODEC(ZSTD(3)),
     `ingested_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
     INDEX idx_trace_id trace_id TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_model model TYPE bloom_filter(0.01) GRANULARITY 4,
