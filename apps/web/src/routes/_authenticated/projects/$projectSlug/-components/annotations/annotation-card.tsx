@@ -254,6 +254,7 @@ function FlaggerBadge({ projectId, projectSlug, slug }: FlaggerBadgeProps) {
   const { data: flaggers = [] } = useProjectFlaggers(projectId)
   const flagger = flaggers.find((candidate) => candidate.slug === slug)
   const name = flagger?.name ?? humanizeFlaggerSlug(slug)
+  const label = `${name} flagger`
 
   function openFlaggerSettings(event: { stopPropagation: () => void; preventDefault?: () => void }) {
     if (!projectSlug) return
@@ -269,7 +270,7 @@ function FlaggerBadge({ projectId, projectSlug, slug }: FlaggerBadgeProps) {
   if (!projectSlug) {
     return (
       <Badge variant="secondary" size="small">
-        {name}
+        {label}
       </Badge>
     )
   }
@@ -294,7 +295,7 @@ function FlaggerBadge({ projectId, projectSlug, slug }: FlaggerBadgeProps) {
             }
           }}
         >
-          {name}
+          {label}
         </Badge>
       }
     >
