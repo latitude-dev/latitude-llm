@@ -1,0 +1,55 @@
+name: API Manifests
+
+on:
+  pull_request:
+    branches:
+      - development
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to check
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  manifests:
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 25
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create .env.test from example
+        run: cp .env.example .env.test
+
+      - name: Regenerate OpenAPI manifest
+        run: pnpm --filter @app/api openapi:emit
+
+      - name: Fail if apps/api/openapi.json drifted
+        run: git diff --exit-code apps/api/openapi.json
+
+      - name: Regenerate MCP manifest
+        run: pnpm --filter @app/api mcp:emit
+
+      - name: Fail if apps/api/mcp.json drifted
+        run: git diff --exit-code apps/api/mcp.json
