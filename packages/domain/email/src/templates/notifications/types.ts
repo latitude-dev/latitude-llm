@@ -17,12 +17,10 @@ import type { RenderedEmail } from "../types.ts"
  */
 export interface NotificationEmailRenderContext {
   readonly webAppUrl: string
-  /** Base URL for `apps/api` — used to build chart URLs in the sustained-incident templates. */
-  readonly apiBaseUrl: string
   /**
    * Stable id of the notification row being rendered. Sustained-incident
    * renderers feed this through `buildChartUrl` so the embedded chart
-   * `<Img>` points at the `apps/api` chart endpoint scoped to this row.
+   * `<Img>` points at the `apps/web` chart endpoint scoped to this row.
    */
   readonly notificationId: string
   /** When the row was created. Anchors "X ago" copy in the rendered email. */

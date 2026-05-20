@@ -58,11 +58,6 @@ const resolveWebAppUrl = (): string => {
   return webUrl.replace(/\/$/, "")
 }
 
-const resolveApiBaseUrl = (): string => {
-  const apiUrl = Effect.runSync(parseEnv("LAT_API_URL", "string", "http://localhost:3001"))
-  return apiUrl.replace(/\/$/, "")
-}
-
 /**
  * Channel worker: consumes `notification-email:send` tasks, looks up the
  * stored notification + recipient, dispatches to the per-kind email
@@ -77,7 +72,6 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   const emailTransport = createEmailTransportSender()
   const transportSendEmail = sendEmail({ emailSender: emailTransport })
   const webAppUrl = resolveWebAppUrl()
-  const apiBaseUrl = resolveApiBaseUrl()
 
   // Adapter: bridges the use case's renderer-callback boundary to the
   // per-kind renderer Effects in `@domain/email`. The renderers are
@@ -104,7 +98,6 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
       const parsedPayload = payloadSchemaFor(kind).parse(payload)
       const ctx: NotificationEmailRenderContext = {
         webAppUrl,
-        apiBaseUrl,
         notificationId,
         notificationCreatedAt,
         recipient,

@@ -35,7 +35,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
 
     const chartUrl = buildChartUrl({
       notificationId: ctx.notificationId,
-      apiBaseUrl: ctx.apiBaseUrl,
+      webAppUrl: ctx.webAppUrl,
     })
 
     const html = yield* Effect.tryPromise({

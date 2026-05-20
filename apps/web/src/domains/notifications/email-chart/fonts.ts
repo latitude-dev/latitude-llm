@@ -1,10 +1,10 @@
 /**
- * Lazy-loaded TTF buffer for the incident-trend chart renderer. Satori
+ * Lazy-loaded TTF buffer for the incident-trend email chart. Satori
  * needs real TTF/OTF (not WOFF2), and the chart only carries a handful
  * of small labels so a single regular weight is enough. Fetched from
  * jsDelivr's npm mirror of the Adobe Source Serif Pro release — same
- * source the OG card renderer uses, so caches warm together when both
- * surfaces render on the same node.
+ * source the wrapped OG renderer uses, so caches warm together when
+ * both surfaces render on the same node.
  *
  * Cached in module scope; concurrent callers share an in-flight
  * promise. The fetch carries an `AbortSignal.timeout` so a slow CDN

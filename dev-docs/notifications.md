@@ -88,13 +88,13 @@ Subject lines: no `[Latitude]` prefix. The alert-type prefix (`New issue:`, `Esc
 
 The chart embedded in sustained-incident emails is rendered server-side:
 
-- **Route:** `GET /charts/incident-trend?nid=<notificationId>` in `apps/api`. Unauthenticated — the route reads the row by `notificationId` and renders. The CUID (~128 bits of entropy) is the lookup key; enumeration isn't feasible at that key size.
+- **Route:** `GET /charts/incident-trend/<notificationId>/png` in `apps/web` — TanStack Start file route at `apps/web/src/routes/charts/incident-trend.$nid.png.ts`. Sits next to the wrapped OG PNG renderer (`/wrapped/$id/og/png`) so both PNG surfaces share the same satori + resvg pipeline; keeping these in `apps/web` keeps `apps/api` strictly to the authenticated public + MCP surface. Unauthenticated — the route reads the row by `notificationId` and renders. The CUID (~128 bits of entropy) is the lookup key; enumeration isn't feasible at that key size.
 - **Rendering:** `satori` builds a 600×200 SVG from the snapshotted `trend.points` (bars for `count`, dashed per-bucket curve for `threshold`, peak bucket emphasised, optional baseline reference line when the payload has `breach`). `@resvg/resvg-js` rasterises to PNG.
-- **DB access:** the route uses the admin Postgres client (RLS bypass) — there's no organization context to scope on, and the chart payload is project-internal trend data with no PII / credentials.
-- **Fallback:** missing `nid`, notification row not found, wrong kind, or unparseable payload → 1×1 transparent PNG returned with the same 200 status so the `<Img>` element in the email keeps rendering an image (not an alt-text fallback).
+- **DB access:** the route uses the admin Postgres client (`getAdminPostgresClient()`, RLS bypass) — there's no organization context to scope on, and the chart payload is project-internal trend data with no PII / credentials.
+- **Fallback:** missing `nid`, notification row not found, wrong kind, unparseable payload, or render failure (font CDN timeout, satori throw, resvg panic) → 1×1 transparent PNG returned with the same 200 status so the `<Img>` element in the email keeps rendering an image (not an alt-text fallback). A broken inbox image is worse than a missing one.
 - **Cache:** `Cache-Control: public, max-age=31536000, immutable`. Mail-client image proxies cache the PNG.
 
-If `notificationId` ever leaks to less-trusted surfaces, or chart payloads start carrying more sensitive data, the route handler has a `TODO` flagging the swap to an HMAC-signed token — contained change: sign in `buildChartUrl`, verify in the route.
+If `notificationId` ever leaks to less-trusted surfaces, or chart payloads start carrying more sensitive data, swap the raw id for an HMAC-signed token — contained change: sign in `buildChartUrl`, verify in the route.
 
 ### Testing emails locally
 
@@ -120,9 +120,10 @@ If `notificationId` ever leaks to less-trusted surfaces, or chart payloads start
 | `packages/platform/db-postgres/src/schema/better-auth.ts` | `users.notificationPreferences` jsonb column. |
 | `apps/workers/src/workers/domain-events.ts` | Routes source events to `request-*` / `delete-by-project` tasks. |
 | `apps/workers/src/workers/notifications.ts` | Consumes `request-*` + `create-notification` + `delete-by-project`. |
-| `apps/workers/src/workers/notification-emailer.ts` | Consumes `notification-email:send`. Resolves `LAT_WEB_URL` and `LAT_API_URL` at boot and threads them through `NotificationEmailRenderContext` so per-kind renderers can build chart URLs. |
-| `apps/api/src/routes/charts/incident-trend.ts` | Public `GET /charts/incident-trend?nid=<notificationId>` endpoint that renders the per-notification trend PNG via `satori` + `@resvg/resvg-js`. Row loaded via the admin client (RLS bypass). |
-| `packages/domain/email/src/helpers/chart-url.ts` | `buildChartUrl` — builds the `apps/api` chart endpoint URL used by the sustained-incident templates. |
+| `apps/workers/src/workers/notification-emailer.ts` | Consumes `notification-email:send`. Resolves `LAT_WEB_URL` at boot and threads it through `NotificationEmailRenderContext` so per-kind renderers can build chart URLs. |
+| `apps/web/src/routes/charts/incident-trend.$nid.png.ts` | Public `GET /charts/incident-trend/<notificationId>/png` route that renders the per-notification trend PNG via `satori` + `@resvg/resvg-js`. Row loaded via the admin client (RLS bypass). |
+| `apps/web/src/domains/notifications/email-chart/` | The chart's satori renderer + lazy-loaded TTF font, used only by the route above. |
+| `packages/domain/email/src/helpers/chart-url.ts` | `buildChartUrl` — builds the `apps/web` chart endpoint URL used by the sustained-incident templates. |
 | `apps/web/src/routes/_authenticated/-components/notifications/` | Bell + feed + per-kind renderers. |
 | `apps/web/src/routes/_authenticated/settings/account.tsx` | "Email notifications" section with per-group toggles. |
 | `apps/web/src/routes/_authenticated/projects/$projectSlug/settings.tsx` | Project-level incident-kind toggles + escalation sensitivity. |
