@@ -1,6 +1,14 @@
-import type { ChSqlClient, FilterSet, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type {
+  ChSqlClient,
+  FilterSet,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  SessionId,
+} from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Session } from "../entities/session.ts"
+import type { Session, SessionDetail } from "../entities/session.ts"
 import type { NumericRollup } from "./trace-repository.ts"
 
 /**
@@ -27,6 +35,12 @@ export interface SessionRepositoryShape {
     readonly projectId: ProjectId
     readonly filters?: FilterSet
   }): Effect.Effect<SessionMetrics, RepositoryError, ChSqlClient>
+
+  findBySessionId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+  }): Effect.Effect<SessionDetail, NotFoundError | RepositoryError, ChSqlClient>
 
   distinctFilterValues(input: {
     readonly organizationId: OrganizationId
@@ -62,6 +76,7 @@ export interface SessionMetrics {
   readonly durationNs: NumericRollup
   readonly costTotalMicrocents: NumericRollup
   readonly spanCount: NumericRollup
+  readonly timeToFirstTokenNs: NumericRollup
 }
 
 const zeroRollup = (): NumericRollup => ({ min: 0, max: 0, avg: 0, median: 0, sum: 0 })
@@ -71,6 +86,7 @@ export const emptySessionMetrics = (): SessionMetrics => ({
   durationNs: zeroRollup(),
   costTotalMicrocents: zeroRollup(),
   spanCount: zeroRollup(),
+  timeToFirstTokenNs: zeroRollup(),
 })
 
 export class SessionRepository extends Context.Service<SessionRepository, SessionRepositoryShape>()(

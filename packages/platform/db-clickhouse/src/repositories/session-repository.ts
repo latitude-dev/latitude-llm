@@ -4,16 +4,20 @@ import {
   type ChSqlClientShape,
   ExternalUserId,
   type FilterSet,
+  isNotFoundError,
+  NotFoundError,
   SessionId,
   SimulationId,
+  SpanId,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
 } from "@domain/shared"
-import type { Session, SessionListPage, SessionMetrics } from "@domain/spans"
+import type { Session, SessionDetail, SessionListPage, SessionMetrics } from "@domain/spans"
 import { emptySessionMetrics, SessionRepository, type SessionRepositoryShape } from "@domain/spans"
-import { normalizeCHString } from "@repo/utils"
+import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
+import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
@@ -28,8 +32,22 @@ const LIST_SELECT = `
   sum(error_count)             AS error_count,
   min(min_start_time)          AS start_time,
   max(max_end_time)            AS end_time,
-  reinterpretAsInt64(max(max_end_time))
-    - reinterpretAsInt64(min(min_start_time)) AS duration_ns,
+  -- max_start_time was added by migration 00016 without a DEFAULT, so
+  -- session parts ingested before the migration read back as the DateTime64
+  -- zero (1970-01-01). Detect that sentinel by comparing against the
+  -- session's own min_start_time and fall back to max_end_time so legacy
+  -- rows still sort/display by their last known activity.
+  if(max(max_start_time) >= min(min_start_time),
+     max(max_start_time),
+     max(max_end_time))         AS last_activity_time,
+  sum(duration_ns)             AS duration_ns,
+  if(
+    min(time_of_first_token) < toDateTime64('2261-01-01', 9, 'UTC')
+      AND min(time_of_first_token) > min(min_start_time),
+    reinterpretAsInt64(min(time_of_first_token))
+      - reinterpretAsInt64(min(min_start_time)),
+    0
+  )                              AS time_to_first_token_ns,
   sum(tokens_input)            AS tokens_input,
   sum(tokens_output)           AS tokens_output,
   sum(tokens_cache_read)       AS tokens_cache_read,
@@ -45,7 +63,16 @@ const LIST_SELECT = `
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
   groupUniqArrayIfMerge(service_names) AS service_names,
-  argMaxIfMerge(simulation_id)         AS simulation_id
+  argMaxIfMerge(simulation_id)         AS simulation_id,
+  argMinIfMerge(root_span_id)          AS root_span_id,
+  argMinIfMerge(root_span_name)        AS root_span_name
+`
+
+const DETAIL_SELECT = `${LIST_SELECT},
+  argMinIfMerge(input_messages)        AS input_messages,
+  argMaxIfMerge(last_input_messages)   AS last_input_messages,
+  argMaxIfMerge(output_messages)       AS output_messages,
+  argMinIfMerge(system_instructions)   AS system_instructions
 `
 
 type SessionListRow = {
@@ -58,7 +85,9 @@ type SessionListRow = {
   error_count: string
   start_time: string
   end_time: string
+  last_activity_time: string
   duration_ns: string
+  time_to_first_token_ns: string
   tokens_input: string
   tokens_output: string
   tokens_cache_read: string
@@ -75,6 +104,15 @@ type SessionListRow = {
   providers: string[]
   service_names: string[]
   simulation_id: string
+  root_span_id: string
+  root_span_name: string
+}
+
+type SessionDetailRow = SessionListRow & {
+  input_messages: string
+  last_input_messages: string
+  output_messages: string
+  system_instructions: string
 }
 
 type SessionMetricsRow = {
@@ -94,6 +132,11 @@ type SessionMetricsRow = {
   span_avg: string
   span_median: string
   span_sum: string
+  ttft_min: string
+  ttft_max: string
+  ttft_avg: string
+  ttft_median: string
+  ttft_sum: string
 }
 
 const toSessionNumericRollup = (min: string, max: string, avg: string, median: string, sum: string) => ({
@@ -102,6 +145,20 @@ const toSessionNumericRollup = (min: string, max: string, avg: string, median: s
   avg: Number(avg),
   median: Number(median),
   sum: Number(sum),
+})
+
+/** TTFT uses 0 as sentinel for "no first token"; aggregates only consider rows with TTFT > 0. */
+const finiteOrZero = (raw: string): number => {
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : 0
+}
+
+const toTtftRollup = (row: SessionMetricsRow) => ({
+  min: finiteOrZero(row.ttft_min),
+  max: finiteOrZero(row.ttft_max),
+  avg: finiteOrZero(row.ttft_avg),
+  median: finiteOrZero(row.ttft_median),
+  sum: finiteOrZero(row.ttft_sum),
 })
 
 const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics => {
@@ -122,6 +179,26 @@ const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics =>
       row.cost_sum,
     ),
     spanCount: toSessionNumericRollup(row.span_min, row.span_max, row.span_avg, row.span_median, row.span_sum),
+    timeToFirstTokenNs: toTtftRollup(row),
+  }
+}
+
+const parseMessages = (json: string): GenAIMessage[] => {
+  if (!json) return []
+  try {
+    return JSON.parse(json) as GenAIMessage[]
+  } catch {
+    return []
+  }
+}
+
+const parseSystem = (json: string): GenAISystem => {
+  if (!json) return []
+  try {
+    const parsed = JSON.parse(json)
+    return Array.isArray(parsed) ? (parsed as GenAISystem) : []
+  } catch {
+    return []
   }
 }
 
@@ -133,9 +210,11 @@ const toDomainSession = (row: SessionListRow): Session => ({
   traceIds: row.trace_ids.map(normalizeCHString),
   spanCount: Number(row.span_count),
   errorCount: Number(row.error_count),
-  startTime: new Date(row.start_time),
-  endTime: new Date(row.end_time),
+  startTime: parseCHDate(row.start_time),
+  endTime: parseCHDate(row.end_time),
+  lastActivityTime: parseCHDate(row.last_activity_time),
   durationNs: Number(row.duration_ns),
+  timeToFirstTokenNs: Number(row.time_to_first_token_ns),
   tokensInput: Number(row.tokens_input),
   tokensOutput: Number(row.tokens_output),
   tokensCacheRead: Number(row.tokens_cache_read),
@@ -152,6 +231,16 @@ const toDomainSession = (row: SessionListRow): Session => ({
   models: row.models.map(normalizeCHString),
   providers: row.providers.map(normalizeCHString),
   serviceNames: row.service_names.map(normalizeCHString),
+  rootSpanId: SpanId(normalizeCHString(row.root_span_id)),
+  rootSpanName: normalizeCHString(row.root_span_name),
+})
+
+const toDomainSessionDetail = (row: SessionDetailRow): SessionDetail => ({
+  ...toDomainSession(row),
+  systemInstructions: parseSystem(row.system_instructions),
+  inputMessages: parseMessages(row.input_messages),
+  lastInputMessages: parseMessages(row.last_input_messages),
+  outputMessages: parseMessages(row.output_messages),
 })
 
 interface SortColumn {
@@ -161,9 +250,12 @@ interface SortColumn {
 }
 
 const SORT_COLUMNS: Record<string, SortColumn> = {
+  lastActivity: { expr: "last_activity_time", chType: "DateTime64(9, 'UTC')", rowKey: "last_activity_time" },
   startTime: { expr: "start_time", chType: "DateTime64(9, 'UTC')", rowKey: "start_time" },
   duration: { expr: "duration_ns", chType: "Int64", rowKey: "duration_ns" },
+  ttft: { expr: "time_to_first_token_ns", chType: "Int64", rowKey: "time_to_first_token_ns" },
   cost: { expr: "cost_total_microcents", chType: "UInt64", rowKey: "cost_total_microcents" },
+  spans: { expr: "span_count", chType: "UInt64", rowKey: "span_count" },
   traceCount: { expr: "trace_count", chType: "UInt64", rowKey: "trace_count" },
 }
 
@@ -198,7 +290,7 @@ function buildSessionFilterClauses(filters: FilterSet | undefined): {
   }
 }
 
-const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
+const DEFAULT_SORT: SortColumn = SORT_COLUMNS.lastActivity as SortColumn
 
 export const SessionRepositoryLive = Layer.effect(
   SessionRepository,
@@ -333,7 +425,12 @@ export const SessionRepositoryLive = Layer.effect(
                         max(span_count) AS span_max,
                         avg(span_count) AS span_avg,
                         quantileTDigest(0.5)(span_count) AS span_median,
-                        sum(span_count) AS span_sum
+                        sum(span_count) AS span_sum,
+                        minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
+                        maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
+                        avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,
+                        quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median,
+                        sumIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_sum
                       FROM (
                         SELECT session_id, ${LIST_SELECT}
                         FROM sessions
@@ -355,6 +452,42 @@ export const SessionRepositoryLive = Layer.effect(
             .pipe(
               Effect.map((rows) => toSessionMetrics(rows[0])),
               Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
+            )
+        }),
+
+      findBySessionId: ({ organizationId, projectId, sessionId }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${DETAIL_SELECT}
+                      FROM sessions
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND session_id = {sessionId:String}
+                      GROUP BY organization_id, project_id, session_id
+                      LIMIT 1`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  sessionId: sessionId as string,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionDetailRow>()
+            })
+            .pipe(
+              Effect.flatMap((rows) => {
+                const first = rows[0]
+                if (!first) {
+                  return Effect.fail(new NotFoundError({ entity: "Session", id: sessionId as string }))
+                }
+                return Effect.succeed(toDomainSessionDetail(first))
+              }),
+              Effect.mapError((error) =>
+                isNotFoundError(error) ? error : toRepositoryError(error, "findBySessionId"),
+              ),
             )
         }),
 

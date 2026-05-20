@@ -14,12 +14,14 @@ import {
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { useQueries } from "@tanstack/react-query"
 import { type RefObject, useCallback, useMemo, useState } from "react"
+import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
 import { useSessionMetrics, useSessionsInfiniteScroll } from "../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
 import { listTracesByProject, type TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
+import { IndicatorsCell } from "./table/indicators-cell.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 
 type SessionTableRow =
@@ -32,12 +34,13 @@ function field<K extends keyof SessionRecord & keyof TraceRecord>(row: SessionTa
 
 const EMPTY_CELL = <Text.H5 color="foregroundMuted">-</Text.H5>
 
-const DEFAULT_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
+export const DEFAULT_SESSION_SORTING: InfiniteTableSorting = { column: "lastActivity", direction: "desc" }
 
 const SESSION_TRACES_LIMIT = 25
 
 export const SESSION_COLUMN_OPTIONS = [
-  { id: "startTime", label: "Start Time", required: true },
+  { id: "indicators", label: "Indicators" },
+  { id: "lastActivity", label: "Last Activity", required: true },
   { id: "name", label: "Name" },
   { id: "tags", label: "Tags" },
   { id: "duration", label: "Duration" },
@@ -55,7 +58,6 @@ function useExpandedSessionTraces(
   projectId: string,
   expandedIds: ReadonlySet<string>,
   sessions: readonly SessionRecord[],
-  sorting: InfiniteTableSorting,
 ) {
   const expandedSessionIds = useMemo(
     () => sessions.filter((s) => expandedIds.has(s.sessionId)).map((s) => s.sessionId),
@@ -64,14 +66,17 @@ function useExpandedSessionTraces(
 
   const results = useQueries({
     queries: expandedSessionIds.map((sessionId) => ({
-      queryKey: ["session-traces", projectId, sessionId, sorting.column, sorting.direction],
+      queryKey: ["session-traces", projectId, sessionId],
       queryFn: async () => {
+        // Child traces are always shown in chronological order — they form a
+        // conversation, and reading order is what users want regardless of
+        // how the parent sessions list is sorted.
         const result = await listTracesByProject({
           data: {
             projectId,
             limit: SESSION_TRACES_LIMIT,
-            sortBy: sorting.column,
-            sortDirection: sorting.direction,
+            sortBy: "startTime",
+            sortDirection: "asc",
             filters: { sessionId: [{ op: "eq", value: sessionId }] },
           },
         })
@@ -181,6 +186,8 @@ interface SessionsViewProps {
   readonly filtersOpen: boolean
   readonly activeTraceId: string | undefined
   readonly activeDrawerTab: string
+  readonly sorting: InfiniteTableSorting
+  readonly onSortingChange: (sorting: InfiniteTableSorting) => void
   readonly selectionState: SelectionState<string>
   readonly onSelectionChange: (state: SelectionState<string>) => void
   readonly totalTraceCount: number
@@ -197,6 +204,8 @@ export function SessionsView({
   filtersOpen,
   activeTraceId,
   activeDrawerTab: _activeDrawerTab,
+  sorting,
+  onSortingChange,
   selectionState,
   onSelectionChange,
   totalTraceCount,
@@ -206,7 +215,6 @@ export function SessionsView({
   traceIdsRef,
   visibleColumnIds,
 }: SessionsViewProps) {
-  const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set())
 
   const hasActiveFilters = Object.keys(filters).length > 0
@@ -226,15 +234,81 @@ export function SessionsView({
     ...(hasActiveFilters ? { filters } : {}),
   })
 
+  // Fetch annotation counts for every trace that could show in the visible
+  // session rows (trace_ids on each session) so the Indicators column can
+  // surface positive / negative annotation badges. For multi-trace sessions
+  // the badge totals are the sum across the session's traces.
+  const sessionRelevantTraceIds = useMemo(() => {
+    const set = new Set<string>()
+    for (const s of sessions) {
+      for (const id of s.traceIds) set.add(id)
+    }
+    return Array.from(set)
+  }, [sessions])
+
+  const { data: annotationCounts, pendingTraceIds: annotationCountsPendingTraceIds } = useAnnotationCountsByTraceIds({
+    projectId,
+    traceIds: sessionRelevantTraceIds,
+    enabled: sessionRelevantTraceIds.length > 0,
+  })
+
+  const getRowAnnotationCounts = useCallback(
+    (row: SessionTableRow) => {
+      if (row.kind === "trace") {
+        return annotationCounts.get(row.trace.traceId)
+      }
+      let positiveCount = 0
+      let negativeCount = 0
+      let found = false
+      for (const id of row.session.traceIds) {
+        const counts = annotationCounts.get(id)
+        if (!counts) continue
+        positiveCount += counts.positiveCount
+        negativeCount += counts.negativeCount
+        found = true
+      }
+      return found ? { positiveCount, negativeCount } : undefined
+    },
+    [annotationCounts],
+  )
+
+  const isRowAnnotationCountsPending = useCallback(
+    (row: SessionTableRow) => {
+      if (row.kind === "trace") return annotationCountsPendingTraceIds.has(row.trace.traceId)
+      return row.session.traceIds.some((id) => annotationCountsPendingTraceIds.has(id))
+    },
+    [annotationCountsPendingTraceIds],
+  )
+
   const allColumns = useMemo((): InfiniteTableColumn<SessionTableRow>[] => {
     return [
       {
-        key: "startTime",
-        header: "Start Time",
-        sortKey: "startTime",
-        width: 180,
+        key: "indicators",
+        header: "Indicators",
+        width: 88,
+        minWidth: 88,
+        maxWidth: 88,
+        resizable: false,
+        ellipsis: false,
+        cellClassName: "px-0",
+        render: (row) => (
+          <IndicatorsCell
+            errorCount={field(row, "errorCount")}
+            annotationCounts={getRowAnnotationCounts(row)}
+            annotationCountsPending={isRowAnnotationCountsPending(row)}
+          />
+        ),
+      },
+      {
+        key: "lastActivity",
+        header: "Last Activity",
+        sortKey: "lastActivity",
+        width: 210,
+        // For session rows, surface the most recent span start; expanded trace
+        // children show their own start time since traces don't carry a
+        // separate "last activity" signal.
         render: (row) => {
-          const time = field(row, "startTime")
+          const time = row.kind === "session" ? row.session.lastActivityTime : row.trace.startTime
           return (
             <Tooltip asChild trigger={<span>{relativeTime(new Date(time))}</span>}>
               {new Date(time).toLocaleString()}
@@ -245,11 +319,12 @@ export function SessionsView({
       {
         key: "name",
         header: "Name",
-        headerTooltip: "Each trace within a session can have different names",
         width: 180,
         render: (row) => {
-          if (row.kind === "session") return EMPTY_CELL
-          return row.trace.rootSpanName || row.trace.traceId.slice(0, 8)
+          const name = field(row, "rootSpanName")
+          if (name) return name
+          if (row.kind === "trace") return row.trace.traceId.slice(0, 8)
+          return EMPTY_CELL
         },
       },
       {
@@ -261,34 +336,54 @@ export function SessionsView({
       {
         key: "duration",
         header: "Duration",
-        headerTooltip: "End time of a session is undefined",
         align: "end",
-        width: 120,
+        sortKey: "duration",
+        width: 140,
+        // JSX wrap (vs returning a plain string) avoids DataRow's auto-`Text.H5`
+        // wrap, which would apply `text-left` and override the td's `text-right`.
         render: (row) => {
-          if (row.kind === "session") return EMPTY_CELL
-          return row.trace.durationNs > 0 ? formatDuration(row.trace.durationNs) : "-"
+          const duration = field(row, "durationNs")
+          return <span>{duration > 0 ? formatDuration(duration) : "-"}</span>
         },
+        renderSubheader: () => (
+          <TableMetricSubheader
+            rollup={sessionMetrics && sessionMetrics.durationNs.max > 0 ? sessionMetrics.durationNs : undefined}
+            format="duration"
+            isLoading={sessionMetricsLoading}
+          />
+        ),
       },
       {
         key: "ttft",
         header: "Time To First Token",
-        headerTooltip: "Each trace within a session can have different TTFTs",
         align: "end",
-        width: 162,
+        sortKey: "ttft",
+        width: 176,
         render: (row) => {
-          if (row.kind === "session") return EMPTY_CELL
-          return row.trace.timeToFirstTokenNs > 0 ? formatDuration(row.trace.timeToFirstTokenNs) : "-"
+          const ttft = field(row, "timeToFirstTokenNs")
+          return <span>{ttft > 0 ? formatDuration(ttft) : "-"}</span>
         },
+        renderSubheader: () => (
+          <TableMetricSubheader
+            rollup={
+              sessionMetrics && sessionMetrics.timeToFirstTokenNs.max > 0
+                ? sessionMetrics.timeToFirstTokenNs
+                : undefined
+            }
+            format="duration"
+            isLoading={sessionMetricsLoading}
+          />
+        ),
       },
       {
         key: "cost",
         header: "Cost",
         align: "end",
         sortKey: "cost",
-        width: 130,
+        width: 146,
         render: (row) => {
           const costTotalMicrocents = field(row, "costTotalMicrocents")
-          return costTotalMicrocents > 0 ? formatPrice(costTotalMicrocents / 100_000_000) : "-"
+          return <span>{costTotalMicrocents > 0 ? formatPrice(costTotalMicrocents / 100_000_000) : "-"}</span>
         },
         renderSubheader: () => (
           <TableMetricSubheader
@@ -352,22 +447,14 @@ export function SessionsView({
         align: "end",
         sortKey: "spans",
         width: 110,
-        render: (row) => {
-          const spanCount = field(row, "spanCount")
-          const errorCount = field(row, "errorCount")
-          return (
-            <>
-              {formatCount(spanCount)}
-              {errorCount > 0 && <span className="text-destructive"> ({errorCount} err)</span>}
-            </>
-          )
-        },
+        // Errors moved to the dedicated `indicators` column.
+        render: (row) => <span>{formatCount(field(row, "spanCount"))}</span>,
         renderSubheader: () => (
           <TableMetricSubheader rollup={sessionMetrics?.spanCount} format="count" isLoading={sessionMetricsLoading} />
         ),
       },
     ]
-  }, [sessionMetrics, sessionMetricsLoading])
+  }, [sessionMetrics, sessionMetricsLoading, getRowAnnotationCounts, isRowAnnotationCountsPending])
 
   const columns = useMemo(() => {
     const columnsById = new Map(allColumns.map((column) => [column.key, column]))
@@ -377,7 +464,7 @@ export function SessionsView({
     })
   }, [allColumns, visibleColumnIds])
 
-  const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions, sorting)
+  const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions)
 
   const selection = useSessionSelectionAdapter({
     selectionState,
@@ -393,8 +480,19 @@ export function SessionsView({
 
   const getRowKey = (row: SessionTableRow) => (row.kind === "session" ? row.session.sessionId : row.trace.traceId)
 
+  const isSessionExpandable = useCallback(
+    (row: SessionTableRow) => row.kind === "session" && row.session.traceCount > 1,
+    [],
+  )
+
   const onRowClick = (row: SessionTableRow) => {
     if (row.kind === "session") {
+      if (row.session.traceCount <= 1) {
+        const traceId = row.session.traceIds[0]
+        if (!traceId) return
+        onActiveTraceChange(traceId === activeTraceId ? undefined : traceId)
+        return
+      }
       setExpandedIds((prev) => {
         const next = new Set(prev)
         if (next.has(row.session.sessionId)) {
@@ -415,6 +513,11 @@ export function SessionsView({
     (row: SessionTableRow) => {
       if (row.kind === "session") {
         const id = row.session.sessionId
+        if (row.session.traceCount <= 1) {
+          const traceId = row.session.traceIds[0] ?? id
+          const short = row.session.rootSpanName || traceId.slice(0, 8)
+          return traceId === activeTraceId ? `Deselect trace ${short}` : `View trace ${short}`
+        }
         return expandedIds.has(id) ? `Collapse session ${id}` : `Expand session ${id}`
       }
       const short = row.trace.rootSpanName || row.trace.traceId.slice(0, 8)
@@ -457,11 +560,12 @@ export function SessionsView({
           selection={selection}
           infiniteScroll={infiniteScroll}
           sorting={sorting}
-          defaultSorting={DEFAULT_SORTING}
-          onSortChange={setSorting}
+          defaultSorting={DEFAULT_SESSION_SORTING}
+          onSortChange={onSortingChange}
           blankSlate={hasActiveFilters ? "No sessions match the current filters" : "No sessions found"}
           expandedRowKeys={expandedIds}
           getExpandedRows={getExpandedRows}
+          isRowExpandable={isSessionExpandable}
         />
       </Layout.List>
     </Layout.Body>

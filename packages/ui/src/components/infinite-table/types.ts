@@ -79,6 +79,13 @@ export interface InfiniteTableSharedProps<T> {
   className?: string
   expandedRowKeys?: ReadonlySet<string>
   getExpandedRows?: (row: T) => ExpandedRows<T>
+  /**
+   * Per-row guard for the expand affordance. When provided and returning `false`,
+   * the row renders without a chevron and without `aria-expanded`. The table-level
+   * expand column still reserves its slot so columns stay aligned across rows.
+   * Defaults to "every top-level row is expandable" when expansion is enabled.
+   */
+  isRowExpandable?: (row: T) => boolean
 }
 
 export type InfiniteTableProps<T> =

@@ -20,6 +20,7 @@ import {
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
+import { isSentinelPresent } from "../idempotency.ts"
 import type { Seeder } from "../types.ts"
 
 function annotationSeedSourceId(sourceId: string): "UI" | "API" {
@@ -611,23 +612,27 @@ function buildAllAnalyticsRows(scope: SeedScope) {
 
 const seedScores: Seeder = {
   name: "scores/acme-support-analytics",
-  run: (ctx) => {
-    const built = buildAllAnalyticsRows(ctx.scope)
-    return insertJsonEachRow(ctx.client, "scores", built.all).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          if (ctx.quiet) return
-          console.log(
-            `  -> scores: ${built.all.length} analytics rows (${built.lifecycleAnalyticsRows.length} lifecycle, ${
-              built.issue1AnnotationAnalyticsRows.length +
-              built.issue2AnnotationAnalyticsRows.length +
-              built.issue3AnnotationAnalyticsRows.length
-            } annotations, ${built.issueOccurrenceAnalyticsRows.length} issue occurrences, ${built.alignmentAnalyticsRows.length} alignment, ${built.simulationAnalyticsRows.length} simulation, ${built.uiPolishAnalyticsRows.length} UI polish demo)`,
-          )
-        }),
-      ),
-    )
-  },
+  run: (ctx) =>
+    Effect.gen(function* () {
+      // Sentinel: the first deterministic score id this seeder inserts.
+      const sentinel = ScoreId(ctx.scope.cuid("score:passed"))
+      const present = yield* isSentinelPresent(ctx.client, "scores", "id = {sentinel:String}", { sentinel })
+      if (present) {
+        if (!ctx.quiet) console.log("  -> scores/acme-support-analytics: already seeded, skipping")
+        return
+      }
+      const built = buildAllAnalyticsRows(ctx.scope)
+      yield* insertJsonEachRow(ctx.client, "scores", built.all)
+      if (!ctx.quiet) {
+        console.log(
+          `  -> scores: ${built.all.length} analytics rows (${built.lifecycleAnalyticsRows.length} lifecycle, ${
+            built.issue1AnnotationAnalyticsRows.length +
+            built.issue2AnnotationAnalyticsRows.length +
+            built.issue3AnnotationAnalyticsRows.length
+          } annotations, ${built.issueOccurrenceAnalyticsRows.length} issue occurrences, ${built.alignmentAnalyticsRows.length} alignment, ${built.simulationAnalyticsRows.length} simulation, ${built.uiPolishAnalyticsRows.length} UI polish demo)`,
+        )
+      }
+    }),
 }
 
 export const scoreSeeders: readonly Seeder[] = [seedScores]

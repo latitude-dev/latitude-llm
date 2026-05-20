@@ -105,6 +105,8 @@ function generateAgentMetadata(agent: AgentProfile, environment: string): Record
   const meta: Record<string, string> = {
     environment,
     sdk_version: pick(["1.2.0", "1.3.1", "2.0.0-beta"]),
+    // Tag for idempotent re-seed detection — see generator.ts.
+    seed: "ambient-generated",
   }
 
   if (Math.random() > 0.4) {

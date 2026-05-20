@@ -21,6 +21,7 @@ import {
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
+import { isSentinelPresent } from "../idempotency.ts"
 import type { Seeder } from "../types.ts"
 import type { SpanRow } from "./span-builders.ts"
 
@@ -853,16 +854,20 @@ function buildAllFixedSpans(scope: SeedScope): SpanRow[] {
 
 const seedFixedTraces: Seeder = {
   name: "spans/fixed-traces",
-  run: (ctx) => {
-    const allFixedSpans = buildAllFixedSpans(ctx.scope)
-    return insertJsonEachRow(ctx.client, "spans", allFixedSpans).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          if (!ctx.quiet) console.log(`  -> spans/fixed-traces: ${allFixedSpans.length} deterministic traces`)
-        }),
-      ),
-    )
-  },
+  run: (ctx) =>
+    Effect.gen(function* () {
+      // Sentinel: the first deterministic annotation trace_id. Present iff
+      // this seeder has run before against the current scope.
+      const sentinel = ctx.scope.traceHex("annotation", 0)
+      const present = yield* isSentinelPresent(ctx.client, "spans", "trace_id = {sentinel:String}", { sentinel })
+      if (present) {
+        if (!ctx.quiet) console.log("  -> spans/fixed-traces: already seeded, skipping")
+        return
+      }
+      const allFixedSpans = buildAllFixedSpans(ctx.scope)
+      yield* insertJsonEachRow(ctx.client, "spans", allFixedSpans)
+      if (!ctx.quiet) console.log(`  -> spans/fixed-traces: ${allFixedSpans.length} deterministic traces`)
+    }),
 }
 
 export const fixedTraceSeeders: readonly Seeder[] = [seedFixedTraces]

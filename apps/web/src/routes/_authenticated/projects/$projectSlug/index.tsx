@@ -23,7 +23,12 @@ import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-
 import { ColumnsSelector } from "./-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "./-components/export-confirmation-modal.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./-components/project-traces-table.tsx"
-import { SESSION_COLUMN_OPTIONS, type SessionColumnId, SessionsView } from "./-components/sessions-view.tsx"
+import {
+  DEFAULT_SESSION_SORTING,
+  SESSION_COLUMN_OPTIONS,
+  type SessionColumnId,
+  SessionsView,
+} from "./-components/sessions-view.tsx"
 import { useTableColumnSettings } from "./-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
@@ -59,8 +64,9 @@ function ProjectPage() {
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
-  const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_TRACE_SORTING.column)
-  const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_TRACE_SORTING.direction, {
+  const tabDefaultSorting = activeTab === "sessions" ? DEFAULT_SESSION_SORTING : DEFAULT_TRACE_SORTING
+  const [sortBy, setSortBy] = useParamState("sortBy", tabDefaultSorting.column)
+  const [sortDirection, setSortDirection] = useParamState("sortDirection", tabDefaultSorting.direction, {
     validate: (v): v is SortDirection => v === "asc" || v === "desc",
   })
   const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", "trace", {
@@ -77,7 +83,11 @@ function ProjectPage() {
     columns: TRACE_COLUMN_OPTIONS,
   })
   const sessionColumnSettings = useTableColumnSettings<SessionColumnId>({
-    storageKey: "projects.sessions.columns.v1",
+    // v3: renamed the `startTime` column to `lastActivity` (now backed by
+    // `max_start_time` for "most recently active" ordering). Bumped so v2
+    // layouts don't drop the unknown `startTime` id and stick `lastActivity`
+    // at the end — they pick up the new default order instead.
+    storageKey: "projects.sessions.columns.v3",
     columns: SESSION_COLUMN_OPTIONS,
   })
   const hasActiveFilters = Object.keys(filters).length > 0

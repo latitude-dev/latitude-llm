@@ -5,8 +5,8 @@ export {
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
 } from "./constants.ts"
-export type { Session } from "./entities/session.ts"
-export { sessionSchema } from "./entities/session.ts"
+export type { Session, SessionDetail } from "./entities/session.ts"
+export { sessionDetailSchema, sessionSchema } from "./entities/session.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
 export {
   operationSchema,

@@ -44,6 +44,7 @@ export function InfiniteTable<T>({
   className,
   expandedRowKeys,
   getExpandedRows,
+  isRowExpandable,
 }: InfiniteTableProps<T>) {
   const hasExpansion = !!expandedRowKeys && !!getExpandedRows
   const colCount = columns.length + (selection ? 1 : 0) + (hasExpansion ? 1 : 0)
@@ -253,7 +254,8 @@ export function InfiniteTable<T>({
               const rowKey = rowKeys[index]
               if (!row || rowKey === undefined) return null
 
-              const isExpanded = expandedRowKeys?.has(rowKey) ?? false
+              const canExpand = hasExpansion && (isRowExpandable ? isRowExpandable(row) : true)
+              const isExpanded = canExpand && (expandedRowKeys?.has(rowKey) ?? false)
               const expanded = isExpanded && getExpandedRows ? getExpandedRows(row) : undefined
               const isActive = activeRowKey === rowKey
 
@@ -269,7 +271,7 @@ export function InfiniteTable<T>({
                     })()}
                     hasSelection={!!selection}
                     hasExpansion={hasExpansion}
-                    isExpandable={hasExpansion}
+                    isExpandable={canExpand}
                     isExpanded={isExpanded}
                     isActive={isActive}
                     {...(selection

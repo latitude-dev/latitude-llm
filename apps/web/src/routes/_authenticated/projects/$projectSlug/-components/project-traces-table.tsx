@@ -1,22 +1,19 @@
 import type { TraceMetrics } from "@domain/spans"
 import {
-  Icon,
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableInfiniteScroll,
   type InfiniteTableSelection,
   type InfiniteTableSorting,
   ProviderIcon,
-  Skeleton,
-  Status,
   TagList,
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import { ThumbsDownIcon, ThumbsUpIcon, TriangleAlertIcon } from "lucide-react"
 import { type MouseEvent, type ReactNode, useCallback, useMemo } from "react"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
+import { IndicatorsCell } from "./table/indicators-cell.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 import { TraceOutlierBadge } from "./trace-outlier-badge.tsx"
 
@@ -114,7 +111,7 @@ export function ProjectTracesTable({
         ellipsis: false,
         cellClassName: "px-0",
         render: (trace) => (
-          <TraceIndicatorsCell
+          <IndicatorsCell
             errorCount={trace.errorCount}
             annotationCounts={annotationCounts?.get(trace.traceId)}
             annotationCountsPending={annotationCountsPendingTraceIds?.has(trace.traceId) === true}
@@ -306,7 +303,9 @@ export function ProjectTracesTable({
         align: "end",
         sortKey: "spans",
         width: 110,
-        render: (trace) => formatCount(trace.spanCount),
+        // JSX wrap (vs plain string) avoids DataRow's `Text.H5` auto-wrap,
+        // which would force `text-left` and override the td's `text-right`.
+        render: (trace) => <span>{formatCount(trace.spanCount)}</span>,
         ...(showMetricSubheaders
           ? {
               renderSubheader: () => (
@@ -382,81 +381,5 @@ export function ProjectTracesTable({
       {...(onSortChange ? { onSortChange } : {})}
       {...(blankSlate !== undefined ? { blankSlate } : {})}
     />
-  )
-}
-
-function TraceIndicatorsCell({
-  errorCount,
-  annotationCounts,
-  annotationCountsPending,
-  onErrorClick,
-  onAnnotationClick,
-}: {
-  readonly errorCount: number
-  readonly annotationCounts: TraceAnnotationCounts | undefined
-  readonly annotationCountsPending: boolean
-  readonly onErrorClick?: (e: MouseEvent) => void
-  readonly onAnnotationClick?: (e: MouseEvent) => void
-}) {
-  const positiveCount = annotationCounts?.positiveCount ?? 0
-  const negativeCount = annotationCounts?.negativeCount ?? 0
-  const hasBadges = positiveCount > 0 || negativeCount > 0 || errorCount > 0
-  const showIconOnly = positiveCount > 0 && negativeCount > 0 && errorCount > 0
-
-  return (
-    <span className="flex items-center justify-start gap-1">
-      {positiveCount > 0 ? (
-        <Tooltip
-          asChild
-          trigger={
-            <Status
-              variant="success"
-              indicator={<Icon icon={ThumbsUpIcon} size="xs" weight="L" />}
-              label={showIconOnly ? "" : formatCount(positiveCount)}
-              className={showIconOnly ? "gap-0 px-1.5" : onAnnotationClick ? "cursor-pointer" : undefined}
-              aria-label={`${positiveCount} positive ${positiveCount === 1 ? "annotation" : "annotations"}`}
-              onClick={onAnnotationClick}
-            />
-          }
-        >
-          {positiveCount} positive {positiveCount === 1 ? "annotation" : "annotations"}
-        </Tooltip>
-      ) : null}
-      {negativeCount > 0 ? (
-        <Tooltip
-          asChild
-          trigger={
-            <Status
-              variant="destructive"
-              indicator={<Icon icon={ThumbsDownIcon} size="xs" weight="L" />}
-              label={showIconOnly ? "" : formatCount(negativeCount)}
-              className={showIconOnly ? "gap-0 px-1.5" : onAnnotationClick ? "cursor-pointer" : undefined}
-              aria-label={`${negativeCount} negative ${negativeCount === 1 ? "annotation" : "annotations"}`}
-              onClick={onAnnotationClick}
-            />
-          }
-        >
-          {negativeCount} negative {negativeCount === 1 ? "annotation" : "annotations"}
-        </Tooltip>
-      ) : null}
-      {errorCount > 0 ? (
-        <Tooltip
-          asChild
-          trigger={
-            <Status
-              variant="warning"
-              indicator={<Icon icon={TriangleAlertIcon} size="xs" weight="L" />}
-              label={showIconOnly ? "" : formatCount(errorCount)}
-              className={showIconOnly ? "gap-0 px-1.5" : onErrorClick ? "cursor-pointer" : undefined}
-              aria-label={`${errorCount} ${errorCount === 1 ? "error" : "errors"} in this trace`}
-              onClick={onErrorClick}
-            />
-          }
-        >
-          {errorCount} {errorCount === 1 ? "error" : "errors"} in this trace
-        </Tooltip>
-      ) : null}
-      {!hasBadges && annotationCountsPending ? <Skeleton className="h-5 w-20" /> : null}
-    </span>
   )
 }

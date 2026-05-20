@@ -19,7 +19,9 @@ const serializeSession = (session: Session) => ({
   errorCount: session.errorCount,
   startTime: session.startTime.toISOString(),
   endTime: session.endTime.toISOString(),
+  lastActivityTime: session.lastActivityTime.toISOString(),
   durationNs: session.durationNs,
+  timeToFirstTokenNs: session.timeToFirstTokenNs,
   tokensInput: session.tokensInput,
   tokensOutput: session.tokensOutput,
   tokensCacheRead: session.tokensCacheRead,
@@ -36,6 +38,8 @@ const serializeSession = (session: Session) => ({
   models: session.models,
   providers: session.providers,
   serviceNames: session.serviceNames,
+  rootSpanId: session.rootSpanId,
+  rootSpanName: session.rootSpanName,
 })
 
 export type SessionRecord = ReturnType<typeof serializeSession>

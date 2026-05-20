@@ -80,6 +80,9 @@ function generateIndependentTrace(config: TraceConfig, agent: AgentProfile): Spa
   const metadata: Record<string, string> = {
     environment,
     sdk_version: pick(["1.2.0", "1.3.1", "2.0.0-beta"]),
+    // Tag for idempotent re-seed detection — `seedSpans` checks for any span
+    // with this marker before generating a fresh batch.
+    seed: "ambient-generated",
   }
   if (Math.random() > 0.4) {
     metadata.region = pick(["us-desert-southwest", "us-mountain-west", "mars-colony-1", "eu-west-1"])

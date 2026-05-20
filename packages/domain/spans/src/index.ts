@@ -27,8 +27,8 @@ export {
   TRACE_SEARCH_EMBEDDING_MODEL,
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
 } from "./constants.ts"
-export type { Session } from "./entities/session.ts"
-export { sessionSchema } from "./entities/session.ts"
+export type { Session, SessionDetail } from "./entities/session.ts"
+export { sessionDetailSchema, sessionSchema } from "./entities/session.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
 export {
   operationSchema,

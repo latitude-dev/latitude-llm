@@ -67,7 +67,7 @@ export function TableMetricSubheader({
     <div className="flex min-w-0 w-full items-center justify-end gap-0.5">
       <Button
         variant="ghost"
-        className="min-h-0 h-auto w-auto px-0 py-0"
+        className="min-h-0 h-auto w-auto px-2 py-0 -right-2 relative"
         onClick={(e) => {
           e.stopPropagation()
           bump(1)

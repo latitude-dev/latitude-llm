@@ -46,7 +46,7 @@ export function ToolCallBlock({
 
   return (
     <div
-      className={cn("flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border sm:max-w-[600px]", {
+      className={cn("flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border sm:max-w-150", {
         "border-border": !isError,
         "border-destructive": isError,
       })}
@@ -65,6 +65,7 @@ export function ToolCallBlock({
         {call.id && <CopyButton value={call.id} tooltip={call.id} />}
         {onNavigateToSpan && (
           <Tooltip
+            asChild
             trigger={
               <button
                 type="button"
