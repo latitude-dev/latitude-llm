@@ -177,9 +177,13 @@ async function main(): Promise<void> {
     const conflict = await Effect.runPromise(findActiveSlackIntegrationByTeamIdAcrossOrgs(pgClient.db, oauth.teamId))
     if (conflict && conflict.organizationId !== args.organizationId) {
       if (!args.force) {
-        console.error(`\nWorkspace ${oauth.teamId} is already linked to organization ${conflict.organizationId}.`)
-        console.error(`Re-run with --force to soft-revoke that install before continuing.`)
-        process.exit(1)
+        // Throw rather than `process.exit(1)` so the outer `finally`
+        // closes the Postgres pool. `main().catch` maps the throw to
+        // exit code 1.
+        throw new Error(
+          `Workspace ${oauth.teamId} is already linked to organization ${conflict.organizationId}. ` +
+            `Re-run with --force to soft-revoke that install before continuing.`,
+        )
       }
       console.log(
         `Force flag set — soft-revoking conflicting install ${conflict.id} in org ${conflict.organizationId}…`,
