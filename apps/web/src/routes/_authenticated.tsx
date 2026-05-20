@@ -209,6 +209,7 @@ function NavHeader() {
     return {
       label: rest || o.name,
       leading: emoji ? <span className="text-base leading-none">{emoji}</span> : null,
+      selected: o.id === organizationId,
       onClick: () => void handleOrgSwitch(o.id),
     }
   })

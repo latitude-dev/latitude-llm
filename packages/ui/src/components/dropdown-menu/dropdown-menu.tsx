@@ -43,6 +43,8 @@ type ItemOption = {
   iconProps?: IconProps
   /** Custom element rendered before the label, replacing `iconProps` (used for emojis / avatars). */
   leading?: ReactNode
+  /** Marks the item as the currently active selection (highlighted with the primary color). */
+  selected?: boolean
   disabled?: boolean
   hidden?: boolean
 }
@@ -57,6 +59,7 @@ function DropdownItem({
   onElementClick,
   type = "normal",
   label,
+  selected,
   disabled,
 }: ItemOption) {
   const onSelect = useCallback(() => {
@@ -72,11 +75,12 @@ function DropdownItem({
       {...(disabled !== undefined ? { disabled } : {})}
       className={cn("gap-2 items-center cursor-pointer", {
         "cursor-auto pointer-events-none": !onClick,
+        "bg-primary-muted focus:bg-primary-muted-hover": selected,
       })}
     >
       {leading ?? (iconProps ? <Icon {...iconProps} /> : null)}
       <div className="w-full">
-        <Text.H5 color={type === "destructive" ? "destructive" : "foreground"}>{label}</Text.H5>
+        <Text.H5 color={type === "destructive" ? "destructive" : selected ? "primary" : "foreground"}>{label}</Text.H5>
       </div>
     </DropdownMenuItem>
   )

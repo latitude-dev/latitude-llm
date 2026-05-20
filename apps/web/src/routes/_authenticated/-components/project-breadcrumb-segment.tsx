@@ -36,7 +36,9 @@ export function ProjectBreadcrumbSegment() {
         options={[
           ...(allProjects?.map((p) => ({
             label: p.name,
+            selected: p.id === project.id,
             onClick: () => {
+              if (p.id === project.id) return
               window.location.href = `/projects/${p.slug}`
             },
           })) ?? []),
