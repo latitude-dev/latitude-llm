@@ -31,6 +31,58 @@ type ValidationResult = {
   headDocuments: DocumentVersion[]
 }
 
+/**
+ * Projects the post-merge active state of the project's documents and rejects
+ * the merge when two distinct documentUuids would share the same path.
+ *
+ * Without this check, two drafts that each add a new document at the same path
+ * can both merge independently (the `(path, commit_id, deleted_at)` unique
+ * constraint only enforces uniqueness within a single commit), leaving LIVE
+ * with two active rows at the same path. Path-based lookups then become
+ * non-deterministic.
+ */
+function detectDuplicatePathConflicts({
+  headDocuments,
+  changedDocuments,
+  commitId,
+}: {
+  headDocuments: DocumentVersion[]
+  changedDocuments: DocumentVersion[]
+  commitId: number
+}) {
+  const changedUuids = new Set(changedDocuments.map((d) => d.documentUuid))
+  const projectedDocuments = [
+    ...headDocuments.filter((d) => !changedUuids.has(d.documentUuid)),
+    ...changedDocuments,
+  ]
+
+  const pathToUuids = new Map<string, Set<string>>()
+  for (const doc of projectedDocuments) {
+    if (doc.deletedAt) continue
+    const existing = pathToUuids.get(doc.path) ?? new Set<string>()
+    existing.add(doc.documentUuid)
+    pathToUuids.set(doc.path, existing)
+  }
+
+  const conflictingPaths = [...pathToUuids.entries()]
+    .filter(([, uuids]) => uuids.size > 1)
+    .map(([path]) => path)
+
+  if (conflictingPaths.length === 0) return Result.nil()
+
+  const message = `Cannot publish: the following paths would have more than one active document after merging: ${conflictingPaths
+    .map((p) => `'${p}'`)
+    .join(
+      ', ',
+    )}. Please rename or delete the conflicting documents before publishing.`
+
+  return Result.error(
+    new UnprocessableEntityError(message, {
+      [commitId]: [message],
+    }),
+  )
+}
+
 export async function mergeCommit(
   commit: Commit,
   transaction = new Transaction(),
@@ -83,6 +135,13 @@ export async function mergeCommit(
           ),
         )
       }
+
+      const pathConflictResult = detectDuplicatePathConflicts({
+        headDocuments,
+        changedDocuments,
+        commitId: commit.id,
+      })
+      if (!Result.isOk(pathConflictResult)) return pathConflictResult
 
       const evaluationsScope = new EvaluationsV2Repository(workspace.id, tx)
       const evaluationChangesResult =

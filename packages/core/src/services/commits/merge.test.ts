@@ -404,6 +404,81 @@ describe('mergeCommit', () => {
       })
     })
 
+    it('rejects merge when two drafts add a document at the same path', async (ctx) => {
+      const { project, workspace, user, providers } =
+        await ctx.factories.createProject()
+
+      const { commit: draftA } = await ctx.factories.createDraft({
+        project,
+        user,
+      })
+      await createNewDocument({
+        user,
+        workspace,
+        commit: draftA,
+        path: 'shared/path',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'from-A',
+        }),
+      })
+      await mergeCommit(draftA).then((r) => r.unwrap())
+
+      const { commit: draftB } = await ctx.factories.createDraft({
+        project,
+        user,
+      })
+      await createNewDocument({
+        user,
+        workspace,
+        commit: draftB,
+        path: 'shared/path',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'from-B',
+        }),
+      })
+
+      const result = await mergeCommit(draftB)
+      expect(result.ok).toBe(false)
+      expect((result.error as Error).message).toContain('shared/path')
+      expect((result.error as Error).message).toContain(
+        'more than one active document',
+      )
+    })
+
+    it('allows merge when a draft deletes the existing document and adds a new one at the same path', async (ctx) => {
+      const { project, user, workspace, documents, providers } =
+        await ctx.factories.createProject({
+          providers: [{ type: Providers.OpenAI, name: 'openai' }],
+          documents: {
+            recycle: ctx.factories.helpers.createPrompt({ provider: 'openai' }),
+          },
+        })
+
+      const { commit } = await ctx.factories.createDraft({ project, user })
+
+      await destroyDocument({
+        document: documents.find((d) => d.path === 'recycle')!,
+        commit,
+        workspace,
+      })
+
+      await createNewDocument({
+        user,
+        workspace,
+        commit,
+        path: 'recycle',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'replacement',
+        }),
+      })
+
+      const result = await mergeCommit(commit)
+      expect(result.ok).toBe(true)
+    })
+
     it('publishes commitMerged event alongside commitPublished', async (ctx) => {
       const { project, workspace, user, providers } =
         await ctx.factories.createProject()
