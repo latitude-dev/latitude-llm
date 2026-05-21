@@ -26,6 +26,21 @@
 -- under staging load either. A single ALTER has no inter-ALTER
 -- race, so no SYSTEM SYNC REPLICA is needed.
 --
+-- Why we never write `AFTER duration_ns`: the original
+-- duration_ns (from 00007) is an ALIAS column. ALIAS columns
+-- have no storage position, so CH refuses to resolve them as
+-- AFTER targets — even when the same ALTER drops the alias and
+-- re-adds duration_ns as a stored column (some CH versions
+-- validate AFTER against the table's pre-ALTER metadata for
+-- columns that existed before the statement). Instead, we add
+-- duration_ns LAST among the four new columns that cluster
+-- after max_start_time, with `AFTER max_start_time`. That
+-- slots it into the slot right after max_start_time and shifts
+-- time_of_first_token / time_to_first_token_ns down by one, so
+-- the final column order matches the intended layout:
+--   max_end_time, max_start_time, duration_ns,
+--   time_of_first_token, time_to_first_token_ns, ...
+--
 -- Retry safety: every sub-action uses IF EXISTS / IF NOT EXISTS,
 -- so re-running after a partial application is a no-op on
 -- already-applied changes.
@@ -35,15 +50,15 @@ ALTER TABLE sessions ON CLUSTER default
     DROP COLUMN IF EXISTS duration_ns,
     ADD COLUMN IF NOT EXISTS max_start_time
         SimpleAggregateFunction(max, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER max_end_time,
-    ADD COLUMN IF NOT EXISTS duration_ns
-        SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS time_of_first_token
-        SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER duration_ns,
+        SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS time_to_first_token_ns Int64 ALIAS if(
         time_of_first_token < toDateTime64('2261-01-01', 9, 'UTC'),
         reinterpretAsInt64(time_of_first_token) - reinterpretAsInt64(min_start_time),
         0
     ) AFTER time_of_first_token,
+    ADD COLUMN IF NOT EXISTS duration_ns
+        SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS root_span_id
         AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)) AFTER simulation_id,
     ADD COLUMN IF NOT EXISTS root_span_name

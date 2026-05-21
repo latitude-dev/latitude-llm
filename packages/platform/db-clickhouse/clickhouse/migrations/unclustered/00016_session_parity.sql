@@ -37,19 +37,31 @@
 --     (CH doesn't allow MODIFY COLUMN to change a column's kind),
 --   - ADD COLUMN duration_ns re-adds it as a SimpleAggregateFunction,
 --   - MODIFY TTL references retention_days from the same ALTER.
+--
+-- Why we never write `AFTER duration_ns`: the original duration_ns
+-- (from 00007) is an ALIAS column, and ALIAS columns have no
+-- storage position, so CH refuses to resolve them as AFTER targets
+-- — even when this same ALTER drops the alias and re-adds it as a
+-- stored column (some CH versions validate AFTER against pre-ALTER
+-- metadata). Instead, we add duration_ns LAST among the four new
+-- columns that cluster after max_start_time, with `AFTER
+-- max_start_time`. That inserts it right after max_start_time and
+-- shifts time_of_first_token / time_to_first_token_ns down, giving
+-- the intended final order: max_end_time, max_start_time,
+-- duration_ns, time_of_first_token, time_to_first_token_ns, ...
 ALTER TABLE sessions
     DROP COLUMN IF EXISTS duration_ns,
     ADD COLUMN IF NOT EXISTS max_start_time
         SimpleAggregateFunction(max, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER max_end_time,
-    ADD COLUMN IF NOT EXISTS duration_ns
-        SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS time_of_first_token
-        SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER duration_ns,
+        SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS time_to_first_token_ns Int64 ALIAS if(
         time_of_first_token < toDateTime64('2261-01-01', 9, 'UTC'),
         reinterpretAsInt64(time_of_first_token) - reinterpretAsInt64(min_start_time),
         0
     ) AFTER time_of_first_token,
+    ADD COLUMN IF NOT EXISTS duration_ns
+        SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS root_span_id
         AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)) AFTER simulation_id,
     ADD COLUMN IF NOT EXISTS root_span_name
