@@ -351,6 +351,9 @@ function createTaskDefinition(
       secrets["stripe-pro-price-id"].arn,
       secrets["stripe-pro-overage-price-id"].arn,
       secrets["stripe-pro-overage-meter-event-name"].arn,
+      secrets["slack-client-id"].arn,
+      secrets["slack-client-secret"].arn,
+      secrets["slack-signing-secret"].arn,
       secrets["temporal-api-key"].arn,
       secrets["datadog-api-key"].arn,
       secrets["datadog-site"].arn,
@@ -393,6 +396,9 @@ function createTaskDefinition(
         stripeProPriceIdArn,
         stripeProOveragePriceIdArn,
         stripeProOverageMeterEventNameArn,
+        slackClientIdArn,
+        slackClientSecretArn,
+        slackSigningSecretArn,
         temporalApiKeyArn,
         datadogApiKeyArn,
         datadogSiteArn,
@@ -471,6 +477,9 @@ function createTaskDefinition(
           { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           { name: "LAT_TURNSTILE_SECRET_KEY", valueFrom: turnstileSecretKeyArn },
           { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn },
+          { name: "LAT_SLACK_CLIENT_ID", valueFrom: slackClientIdArn },
+          { name: "LAT_SLACK_CLIENT_SECRET", valueFrom: slackClientSecretArn },
+          { name: "LAT_SLACK_SIGNING_SECRET", valueFrom: slackSigningSecretArn },
           // Loops sync is production-only. Injecting the placeholder secret in
           // staging would defeat `loadLoopsConfig`'s "unset → no-op" gate and
           // every marketing-contacts task would 401 against the Loops API.
