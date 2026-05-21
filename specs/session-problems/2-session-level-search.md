@@ -210,19 +210,22 @@ Final: `pnpm --filter @platform/db-clickhouse test` reports 154/154
 
 ### PR 3 — Server functions (TanStack Start)
 
-- [ ] `apps/web/src/domains/sessions/sessions.functions.ts`:
+- [x] `apps/web/src/domains/sessions/sessions.functions.ts`:
       widen `listSessionsByProject` input with
       `searchQuery: z.string().max(500).optional()`; widen
       `SessionListResult` to include
       `searchMatches?: Readonly<Record<string, SessionSearchMatch>>`.
       Serialize `SessionSearchMatch` next to the existing
-      `serializeSession` helper.
-- [ ] Add `countSessionsByProject` server function with input
+      `serializeSession` helper. The wire shape is exported as
+      `SessionSearchMatchRecord` so PR 4's hooks can type the React
+      Query result without re-deriving `ReturnType<typeof ...>` at
+      every call site.
+- [x] Add `countSessionsByProject` server function with input
       `{ projectId, filters?, searchQuery? }` returning
       `{ totalCount: number; matchingTraceCount?: number }` (the second
       number is only populated under search; the UI uses it for the
       "5 sessions · 12 matching turns" string from spec §4.6).
-- [ ] Force ordering to `bestScore DESC` server-side when `searchQuery`
+- [x] Force ordering to `bestScore DESC` server-side when `searchQuery`
       is non-empty (independent of `sortBy`) — already enforced at the
       repo, but document the contract in the handler comment.
 
