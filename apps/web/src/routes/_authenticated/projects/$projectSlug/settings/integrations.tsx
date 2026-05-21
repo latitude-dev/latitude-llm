@@ -3,7 +3,7 @@ import { Button, Modal, SlackIcon, Text, useMountEffect, useToast } from "@repo/
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { Loader2, Trash2 } from "lucide-react"
+import { Trash2 } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
@@ -173,11 +173,16 @@ function DisconnectSlackModal({ open, onClose }: { open: boolean; onClose: () =>
       footer={
         <div className="flex flex-row items-center gap-2">
           <Button variant="outline" onClick={onClose} disabled={disconnecting}>
-            <Text.H5>Cancel</Text.H5>
+            Cancel
           </Button>
-          <Button variant="destructive" onClick={() => void handleConfirm()} disabled={disconnecting}>
-            {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            <Text.H5 color="white">{disconnecting ? "Disconnecting…" : "Disconnect Slack"}</Text.H5>
+          <Button
+            variant="destructive"
+            onClick={() => void handleConfirm()}
+            disabled={disconnecting}
+            isLoading={disconnecting}
+          >
+            <Trash2 className="h-4 w-4" />
+            {disconnecting ? "Disconnecting…" : "Disconnect Slack"}
           </Button>
         </div>
       }
