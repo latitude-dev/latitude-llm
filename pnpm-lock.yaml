@@ -589,6 +589,9 @@ importers:
       '@bull-board/hono':
         specifier: 'catalog:'
         version: 6.12.1(hono@4.12.16)
+      '@cfworker/json-schema':
+        specifier: 4.1.1
+        version: 4.1.1
       '@domain/admin':
         specifier: workspace:*
         version: link:../../packages/domain/admin
@@ -740,6 +743,9 @@ importers:
 
   apps/workflows:
     dependencies:
+      '@cfworker/json-schema':
+        specifier: 4.1.1
+        version: 4.1.1
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
@@ -1972,6 +1978,9 @@ importers:
 
   packages/platform/evaluation-runtime:
     dependencies:
+      '@cfworker/json-schema':
+        specifier: 4.1.1
+        version: 4.1.1
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai

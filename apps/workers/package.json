@@ -17,6 +17,7 @@
   "dependencies": {
     "@bull-board/api": "catalog:",
     "@bull-board/hono": "catalog:",
+    "@cfworker/json-schema": "4.1.1",
     "@hono/node-server": "catalog:",
     "hono": "catalog:",
     "@domain/admin": "workspace:*",

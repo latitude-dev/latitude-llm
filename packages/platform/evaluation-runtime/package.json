@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@cfworker/json-schema": "4.1.1",
     "@domain/ai": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "effect": "catalog:"

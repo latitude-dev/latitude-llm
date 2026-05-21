@@ -18,16 +18,15 @@ export interface EvaluationRuntimeMetadata {
   }
   readonly cost: number
   readonly turns: number
-  readonly traceId?: string | null
-  readonly sessionId?: string | null
-  readonly spanId?: string | null
-  readonly simulationId?: string | null
+  readonly traceId?: string | null | undefined
+  readonly sessionId?: string | null | undefined
+  readonly spanId?: string | null | undefined
+  readonly simulationId?: string | null | undefined
 }
 
 export interface ExecuteEvaluationScriptRuntimeInput {
   readonly script: string
   readonly conversation: readonly EvaluationConversationMessage[]
-  readonly conversationText: string
   readonly metadata: EvaluationRuntimeMetadata
   readonly issue: EvaluationIssueContext
   readonly telemetry?: GenerateTelemetryCapture

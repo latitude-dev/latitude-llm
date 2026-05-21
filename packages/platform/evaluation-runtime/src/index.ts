@@ -1,3 +1,4 @@
+import { createRequire } from "node:module"
 import { Worker } from "node:worker_threads"
 import { AI, type AICredentialError, type AIError, type GenerateResult } from "@domain/ai"
 import {
@@ -14,7 +15,10 @@ import {
   jsonSchemaToZod,
 } from "@domain/evaluations"
 import { Effect, Layer } from "effect"
-import { workerSource } from "./worker-source.ts"
+import { sandboxWorkerSource } from "./sandbox-worker.ts"
+
+const requireFromModule = createRequire(import.meta.url)
+const JSON_SCHEMA_VALIDATOR_PATH = requireFromModule.resolve("@cfworker/json-schema")
 
 const DEFAULT_WALL_TIMEOUT_MS = 15_000
 const DEFAULT_SYNC_TIMEOUT_MS = 1_000
@@ -81,6 +85,8 @@ type RuntimeMessage = RuntimeRequestMessage | RuntimeResultMessage | RuntimeErro
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
+const toPlainJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
 const isRuntimeMessage = (message: unknown): message is RuntimeMessage =>
   isRecord(message) && typeof message.type === "string"
 
@@ -107,19 +113,19 @@ const runSandbox = (input: {
   }) => Promise<GenerateResult<T>>
 }): Promise<EvaluationScriptExecution> =>
   new Promise((resolve, reject) => {
-    const worker = new Worker(workerSource, {
+    const worker = new Worker(sandboxWorkerSource, {
       eval: true,
       resourceLimits: {
         maxOldGenerationSizeMb: DEFAULT_MAX_OLD_GENERATION_SIZE_MB,
       },
-      workerData: {
+      workerData: toPlainJson({
         script: input.execution.script,
         conversation: input.execution.conversation,
-        conversationText: input.execution.conversationText,
         metadata: input.execution.metadata,
         issue: input.execution.issue,
+        jsonSchemaValidatorPath: JSON_SCHEMA_VALIDATOR_PATH,
         syncTimeoutMs: DEFAULT_SYNC_TIMEOUT_MS,
-      },
+      }),
     })
 
     let settled = false
@@ -171,12 +177,14 @@ const runSandbox = (input: {
         if (rawMessage.method !== "llm") return
         llmCalls += 1
         if (llmCalls > DEFAULT_MAX_LLM_CALLS) {
-          worker.postMessage({
-            type: "response",
-            id: rawMessage.id,
-            ok: false,
-            error: `Evaluation script exceeded ${DEFAULT_MAX_LLM_CALLS} llm() calls`,
-          })
+          worker.postMessage(
+            toPlainJson({
+              type: "response",
+              id: rawMessage.id,
+              ok: false,
+              error: `Evaluation script exceeded ${DEFAULT_MAX_LLM_CALLS} llm() calls`,
+            }),
+          )
           return
         }
 
@@ -192,15 +200,17 @@ const runSandbox = (input: {
             totalTokens += result.tokens
             totalDurationNs += result.duration
             totalCostMicrocents += estimateEvaluationScriptCostMicrocents(result)
-            worker.postMessage({ type: "response", id: rawMessage.id, ok: true, value: result.object })
+            worker.postMessage(toPlainJson({ type: "response", id: rawMessage.id, ok: true, value: result.object }))
           })
           .catch((error: unknown) => {
-            worker.postMessage({
-              type: "response",
-              id: rawMessage.id,
-              ok: false,
-              error: error instanceof Error ? error.message : String(error),
-            })
+            worker.postMessage(
+              toPlainJson({
+                type: "response",
+                id: rawMessage.id,
+                ok: false,
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            )
           })
       }
     })

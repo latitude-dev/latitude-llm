@@ -4,7 +4,7 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { evaluationSchema } from "../../entities/evaluation.ts"
 import { type EvaluationExecutionError, LiveEvaluationExecutionError } from "../../errors.ts"
-import type { EvaluationScriptRuntime } from "../../ports/evaluation-script-runtime.ts"
+import type { EvaluationRuntimeMetadata, EvaluationScriptRuntime } from "../../ports/evaluation-script-runtime.ts"
 import {
   type EvaluationExecutionResult,
   type EvaluationExecutionResultPayload,
@@ -34,11 +34,29 @@ const liveEvaluationExecutionTelemetrySchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 })
 
+const liveEvaluationRuntimeMetadataSchema = z.object({
+  duration: z.number().int().nonnegative(),
+  usage: z.object({
+    input: z.number().int().nonnegative(),
+    output: z.number().int().nonnegative(),
+    reasoning: z.number().int().nonnegative(),
+    cacheRead: z.number().int().nonnegative(),
+    cacheWrite: z.number().int().nonnegative(),
+  }),
+  cost: z.number().int().nonnegative(),
+  turns: z.number().int().nonnegative(),
+  traceId: z.string().min(1).nullable().optional(),
+  sessionId: z.string().min(1).nullable().optional(),
+  spanId: z.string().min(1).nullable().optional(),
+  simulationId: z.string().min(1).nullable().optional(),
+}) satisfies z.ZodType<EvaluationRuntimeMetadata>
+
 export const liveEvaluationExecutionInputSchema = z.object({
   evaluationId: evaluationSchema.shape.id,
   script: evaluationSchema.shape.script,
   issue: liveEvaluationIssueContextSchema,
   conversation: liveEvaluationConversationInputSchema,
+  metadata: liveEvaluationRuntimeMetadataSchema.optional(),
   telemetry: liveEvaluationExecutionTelemetrySchema.optional(),
 })
 export type LiveEvaluationExecutionInput = z.infer<typeof liveEvaluationExecutionInputSchema>
@@ -69,6 +87,7 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
       script: input.script,
       conversation,
       issue: input.issue,
+      ...(input.metadata ? { metadata: input.metadata } : {}),
       ...(telemetry ? { telemetry } : {}),
     }).pipe(
       Effect.catchTag("EvaluationExecutionError", (error) =>

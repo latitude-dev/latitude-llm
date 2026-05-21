@@ -1,7 +1,11 @@
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { EvaluationExecutionError, type LiveEvaluationExecutionError } from "./errors.ts"
-import { type EvaluationScriptExecution, EvaluationScriptRuntime } from "./index.ts"
+import {
+  type EvaluationScriptExecution,
+  EvaluationScriptRuntime,
+  type ExecuteEvaluationScriptRuntimeInput,
+} from "./index.ts"
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
   EVALUATION_CONVERSATION_TEXT_PLACEHOLDER,
@@ -149,6 +153,49 @@ describe("executeLiveEvaluationUseCase", () => {
       }),
     )
     expect(calls).toEqual([validScript])
+  })
+
+  it("passes trace metadata into runtime execution", async () => {
+    const execution = {
+      result: {
+        passed: true,
+        value: 1,
+        feedback: "The conversation does not exhibit the issue.",
+      },
+      totalTokens: 0,
+      totalDurationNs: 0,
+      totalCostMicrocents: 0,
+    } as const
+    const metadata = {
+      duration: 1_234_000_000,
+      usage: {
+        input: 120,
+        output: 80,
+        reasoning: 10,
+        cacheRead: 5,
+        cacheWrite: 3,
+      },
+      cost: 75,
+      turns: 2,
+      traceId: "trace-123",
+      sessionId: "session-123",
+      spanId: "span-123",
+      simulationId: null,
+    } as const
+    const calls: ExecuteEvaluationScriptRuntimeInput[] = []
+    const layer = Layer.succeed(EvaluationScriptRuntime, {
+      compile: () => Effect.void,
+      execute: (input) =>
+        Effect.sync(() => {
+          calls.push(input)
+          return execution
+        }),
+    })
+
+    await Effect.runPromise(executeLiveEvaluationUseCase({ ...validInput, metadata }).pipe(Effect.provide(layer)))
+
+    expect(calls[0]?.metadata).toEqual(metadata)
+    expect(calls[0]).not.toHaveProperty("conversationText")
   })
 
   it("normalizes legacy MVP scripts before runtime execution", async () => {

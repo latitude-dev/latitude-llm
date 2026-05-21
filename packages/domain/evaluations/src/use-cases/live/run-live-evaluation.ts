@@ -33,6 +33,7 @@ import type { Evaluation } from "../../entities/evaluation.ts"
 import { getLiveEvaluationEligibility } from "../../helpers.ts"
 import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
+import type { EvaluationRuntimeMetadata } from "../../ports/evaluation-script-runtime.ts"
 import { buildEvaluationJudgeLiveTelemetryCapture } from "../../runtime/ai-telemetry.ts"
 import {
   executeLiveEvaluationUseCase,
@@ -118,6 +119,28 @@ const isUniqueViolationCause = (cause: unknown): boolean => {
 
 const toElapsedNanoseconds = (startedAtMs: number) =>
   Math.max(0, Math.round((performance.now() - startedAtMs) * 1_000_000))
+
+const toNonNegativeInteger = (value: number): number => Math.max(0, Math.round(value))
+
+const emptyStringToNull = (value: string | null | undefined): string | null => (value ? value : null)
+
+const buildTraceRuntimeMetadata = (traceDetail: TraceDetail): EvaluationRuntimeMetadata => ({
+  duration: toNonNegativeInteger(traceDetail.durationNs),
+  usage: {
+    input: toNonNegativeInteger(traceDetail.tokensInput),
+    output: toNonNegativeInteger(traceDetail.tokensOutput),
+    reasoning: toNonNegativeInteger(traceDetail.tokensReasoning),
+    cacheRead: toNonNegativeInteger(traceDetail.tokensCacheRead),
+    cacheWrite: toNonNegativeInteger(traceDetail.tokensCacheCreate),
+  },
+  cost: toNonNegativeInteger(traceDetail.costTotalMicrocents),
+  turns: traceDetail.allMessages.length,
+  traceId: String(traceDetail.traceId),
+  sessionId: emptyStringToNull(String(traceDetail.sessionId ?? "")),
+  spanId: emptyStringToNull(String(traceDetail.rootSpanId || "")),
+  simulationId: emptyStringToNull(String(traceDetail.simulationId || "")),
+})
+
 const toErroredExecution = (message: string, startedAtMs: number): RunLiveEvaluationErroredExecution => ({
   kind: "errored",
   error: message,
@@ -243,6 +266,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       script: evaluation.script,
       issue: issueContext,
       conversation: traceDetail.allMessages,
+      metadata: buildTraceRuntimeMetadata(traceDetail),
       telemetry: buildEvaluationJudgeLiveTelemetryCapture({
         organizationId: input.organizationId,
         projectId: input.projectId,

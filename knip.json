@@ -11,12 +11,12 @@
     },
     "apps/workers": {
       "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["@temporalio/worker"]
+      "ignoreDependencies": ["@cfworker/json-schema", "@temporalio/worker"]
     },
     "apps/workflows": {
       "project": ["src/**/*.ts"],
       "ignore": ["src/workflows/**/*.ts"],
-      "ignoreDependencies": ["@temporalio/worker", "voyageai"]
+      "ignoreDependencies": ["@cfworker/json-schema", "@temporalio/worker", "voyageai"]
     },
     "apps/web": {
       "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],

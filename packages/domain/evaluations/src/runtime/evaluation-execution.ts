@@ -2,7 +2,7 @@ import { type formatGenAIConversation, formatGenAIMessage, type GenerateTelemetr
 import { estimateCost } from "@domain/models"
 import { Effect } from "effect"
 import { z } from "zod"
-import { EvaluationScriptRuntime } from "../ports/evaluation-script-runtime.ts"
+import { type EvaluationRuntimeMetadata, EvaluationScriptRuntime } from "../ports/evaluation-script-runtime.ts"
 import { evaluationVerdictJsonSchema } from "./json-schema.ts"
 
 export const EVALUATION_SCRIPT_RUNTIME_MODEL = {
@@ -158,34 +158,39 @@ export const toEvaluationExecutionResult = (result: EvaluationScriptExecution): 
     cost: result.totalCostMicrocents,
   })
 
+// Alignment and optimization examples hydrate conversations without trace accounting fields.
+// Live evaluation execution passes trace-derived metadata explicitly.
+const buildDefaultEvaluationRuntimeMetadata = (
+  conversation: readonly EvaluationConversationMessage[],
+): EvaluationRuntimeMetadata => ({
+  duration: 0,
+  usage: {
+    input: 0,
+    output: 0,
+    reasoning: 0,
+    cacheRead: 0,
+    cacheWrite: 0,
+  },
+  cost: 0,
+  turns: conversation.length,
+})
+
 export const executeEvaluationScriptWithAI = Effect.fn("evaluations.executeEvaluationScriptWithRuntime")(
   function* (input: {
     readonly script: string
     readonly conversation: readonly EvaluationConversationMessage[]
     readonly issue: EvaluationIssueContext
+    readonly metadata?: EvaluationRuntimeMetadata
     readonly telemetry?: GenerateTelemetryCapture
   }) {
     yield* Effect.annotateCurrentSpan("evaluation.conversationMessageCount", input.conversation.length)
 
     const runtime = yield* EvaluationScriptRuntime
-    const conversationText = formatEvaluationConversationForPrompt(input.conversation)
 
     return yield* runtime.execute({
       script: normalizeLegacyEvaluationScript(input.script),
       conversation: input.conversation,
-      conversationText,
-      metadata: {
-        duration: 0,
-        usage: {
-          input: 0,
-          output: 0,
-          reasoning: 0,
-          cacheRead: 0,
-          cacheWrite: 0,
-        },
-        cost: 0,
-        turns: input.conversation.length,
-      },
+      metadata: input.metadata ?? buildDefaultEvaluationRuntimeMetadata(input.conversation),
       issue: input.issue,
       ...(input.telemetry ? { telemetry: input.telemetry } : {}),
     })

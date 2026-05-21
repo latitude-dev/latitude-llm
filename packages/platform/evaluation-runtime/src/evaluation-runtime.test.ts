@@ -12,7 +12,6 @@ import { EvaluationScriptRuntimeLive } from "./index.ts"
 const baseInput = {
   script: "return Passed('Looks good')",
   conversation: [{ role: "user", content: "Hello" }],
-  conversationText: "[user] Hello",
   metadata: {
     duration: 0,
     usage: { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
