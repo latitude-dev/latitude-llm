@@ -1,0 +1,65 @@
+{
+  "name": "@latitude-data/pi-telemetry",
+  "version": "0.0.1",
+  "description": "Pi coding agent extension that streams sessions to Latitude as OTLP traces",
+  "author": "Latitude Data SL <hello@latitude.so>",
+  "license": "MIT",
+  "keywords": [
+    "pi",
+    "pi-coding-agent",
+    "telemetry",
+    "otlp",
+    "opentelemetry",
+    "latitude",
+    "pi-package"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/pi"
+  },
+  "homepage": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/pi#readme",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "latitude-pi": "./dist/cli.js"
+  },
+  "main": "./dist/extension.js",
+  "types": "./dist/extension.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/extension.d.ts",
+      "default": "./dist/extension.js"
+    },
+    "./extension": {
+      "types": "./dist/extension.d.ts",
+      "default": "./dist/extension.js"
+    }
+  },
+  "pi": {
+    "extensions": ["./dist/extension.js"]
+  },
+  "scripts": {
+    "build": "tsdown",
+    "check": "biome check src",
+    "format": "biome format --write src && biome check --fix src",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "test": "vitest run --pool=forks --passWithNoTests --dir src"
+  },
+  "dependencies": {
+    "@clack/prompts": "1.2.0",
+    "picocolors": "1.1.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
