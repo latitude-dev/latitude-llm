@@ -13,7 +13,6 @@
 import { revokeSlackIntegrationUseCase, type SlackIntegration, SlackIntegrationRepository } from "@domain/integrations"
 import type { RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
 import { SlackIntegrationRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { createSlackClient } from "@platform/slack"
 import { createLogger, withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -120,8 +119,16 @@ export const disconnectSlackIntegrationEffect: Effect.Effect<
   // promise body so any failure (network blip, 401, rate limit, etc.)
   // is logged and swallowed — the local soft-revoke stands as the
   // source of truth.
+  //
+  // `@platform/slack` is loaded via a dynamic import so this module
+  // can be imported by the integrations page on the client without
+  // pulling `@slack/web-api` (which has a top-level `require("node:path")`)
+  // into the client bundle. The TanStack Start bundler can't statically
+  // prove that `createSlackClient` is reachable only from server-side
+  // handler bodies — keeping the import dynamic guarantees it.
   yield* Effect.promise(async () => {
     try {
+      const { createSlackClient } = await import("@platform/slack")
       const slack = createSlackClient(active.botAccessToken, { timeoutMs: SLACK_REVOKE_TIMEOUT_MS })
       await slack.auth.revoke({ test: false })
     } catch (cause) {
