@@ -2,6 +2,7 @@ import * as aws from "@pulumi/aws"
 import type { Output } from "@pulumi/pulumi"
 import * as pulumi from "@pulumi/pulumi"
 import type { EnvironmentConfig, ServiceConfig } from "../config.ts"
+import type { SecretRef } from "./secrets.ts"
 import type {
   CloudwatchLogGroup,
   Ec2SecurityGroup,
@@ -35,7 +36,7 @@ export function createEcs(
   config: EnvironmentConfig,
   privateSubnets: Ec2Subnet[],
   securityGroup: Ec2SecurityGroup,
-  secrets: Record<string, SecretsmanagerSecret>,
+  secrets: Record<string, SecretRef>,
   rdsSecret: SecretsmanagerSecret,
   rdsAdminSecret: SecretsmanagerSecret,
   cacheRedisHost: Output<string>,
@@ -302,7 +303,7 @@ function createTaskDefinition(
   executionRole: IamRole,
   taskRole: IamRole,
   logGroup: CloudwatchLogGroup,
-  secrets: Record<string, SecretsmanagerSecret>,
+  secrets: Record<string, SecretRef>,
   rdsSecret: SecretsmanagerSecret,
   rdsAdminSecret: SecretsmanagerSecret,
   cacheRedisHost: Output<string>,
@@ -703,7 +704,7 @@ function createMigrationTaskDefinition(
   taskRole: IamRole,
   logGroup: CloudwatchLogGroup,
   rdsAdminSecret: SecretsmanagerSecret,
-  secrets: Record<string, SecretsmanagerSecret>,
+  secrets: Record<string, SecretRef>,
   imageTag: pulumi.Input<string>,
 ): EcsTaskDefinition {
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"

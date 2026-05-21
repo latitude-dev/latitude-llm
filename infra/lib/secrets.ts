@@ -3,8 +3,17 @@ import type * as pulumi from "@pulumi/pulumi"
 import * as random from "@pulumi/random"
 import type { SecretsmanagerSecret, SecretsmanagerSecretVersion } from "./types.ts"
 
+/**
+ * Minimal shape ecs.ts needs from a secret: the ARN string. Both
+ * Pulumi-owned `aws.secretsmanager.Secret` resources and data-source
+ * lookups via `aws.secretsmanager.getSecretOutput` satisfy this.
+ */
+export interface SecretRef {
+  readonly arn: pulumi.Output<string>
+}
+
 export interface SecretsOutput {
-  secrets: Record<string, SecretsmanagerSecret>
+  secrets: Record<string, SecretRef>
   secretVersions: Record<string, SecretsmanagerSecretVersion>
 }
 
@@ -63,7 +72,7 @@ const immutableSecretResourceOptions: {
 }
 
 export function createApplicationSecrets(baseName: string, environment: string): SecretsOutput {
-  const secrets: Record<string, SecretsmanagerSecret> = {}
+  const secrets: Record<string, SecretRef> = {}
   const secretVersions: Record<string, SecretsmanagerSecretVersion> = {}
 
   const betterAuthSecret = new random.RandomPassword(`${baseName}-better-auth-secret-value`, {
@@ -306,38 +315,22 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["stripe-pro-overage-meter-event-name"] = stripeProOverageMeterEventName.secret
   secretVersions["stripe-pro-overage-meter-event-name"] = stripeProOverageMeterEventName.secretVersion
 
-  const slackClientId = createSingleSecret(
-    baseName,
-    "slack-client-id",
-    "Slack app client ID — replace placeholder-change-me in Secrets Manager",
-    process.env.LAT_SLACK_CLIENT_ID ?? "placeholder-change-me",
-    environment,
-    immutableSecretResourceOptions,
-  )
-  secrets["slack-client-id"] = slackClientId.secret
-  secretVersions["slack-client-id"] = slackClientId.secretVersion
-
-  const slackClientSecret = createSingleSecret(
-    baseName,
-    "slack-client-secret",
-    "Slack app client secret — replace placeholder-change-me in Secrets Manager",
-    process.env.LAT_SLACK_CLIENT_SECRET ?? "placeholder-change-me",
-    environment,
-    immutableSecretResourceOptions,
-  )
-  secrets["slack-client-secret"] = slackClientSecret.secret
-  secretVersions["slack-client-secret"] = slackClientSecret.secretVersion
-
-  const slackSigningSecret = createSingleSecret(
-    baseName,
-    "slack-signing-secret",
-    "Slack app signing secret for webhook verification — replace placeholder-change-me in Secrets Manager",
-    process.env.LAT_SLACK_SIGNING_SECRET ?? "placeholder-change-me",
-    environment,
-    immutableSecretResourceOptions,
-  )
-  secrets["slack-signing-secret"] = slackSigningSecret.secret
-  secretVersions["slack-signing-secret"] = slackSigningSecret.secretVersion
+  // Slack secrets are managed manually in the AWS console (created
+  // out-of-band by an operator with Secrets Manager write access).
+  // Pulumi only looks them up by name so the ECS task definition can
+  // wire the ARNs in. Names must match the convention used elsewhere
+  // in this file: `${baseName}-${secretName}`. If a name is missing,
+  // `pulumi up` will fail at preview with a "secret not found" error —
+  // create the three entries in Secrets Manager first.
+  secrets["slack-client-id"] = aws.secretsmanager.getSecretOutput({
+    name: `${baseName}-slack-client-id`,
+  })
+  secrets["slack-client-secret"] = aws.secretsmanager.getSecretOutput({
+    name: `${baseName}-slack-client-secret`,
+  })
+  secrets["slack-signing-secret"] = aws.secretsmanager.getSecretOutput({
+    name: `${baseName}-slack-signing-secret`,
+  })
 
   const temporalApiKey = createSingleSecret(
     baseName,
