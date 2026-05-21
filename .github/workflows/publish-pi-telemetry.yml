@@ -1,0 +1,37 @@
+name: Publish Pi Telemetry
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to publish from
+        required: false
+        type: string
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - name: Publish
+        uses: ./.github/actions/publish-npm-package
+        with:
+          package_path: packages/telemetry/pi
+          npm_package: "@latitude-data/pi-telemetry"
+          pnpm_filter: "@latitude-data/pi-telemetry"
+          tag_prefix: pi-telemetry
+          release_name: Pi Telemetry
+          target_commitish: ${{ inputs.ref || github.sha }}

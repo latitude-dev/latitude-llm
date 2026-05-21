@@ -15,7 +15,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/pi"
+    "url": "git+https://github.com/latitude-dev/latitude-llm.git#main"
   },
   "homepage": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/pi#readme",
   "type": "module",
@@ -23,7 +23,7 @@
     "dist"
   ],
   "bin": {
-    "latitude-pi": "./dist/cli.js"
+    "latitude-pi": "dist/cli.js"
   },
   "main": "./dist/extension.js",
   "types": "./dist/extension.d.ts",
@@ -38,7 +38,9 @@
     }
   },
   "pi": {
-    "extensions": ["./dist/extension.js"]
+    "extensions": [
+      "./dist/extension.js"
+    ]
   },
   "scripts": {
     "build": "tsdown",

@@ -58,6 +58,15 @@ jobs:
       ref: ${{ github.sha }}
     secrets: inherit
 
+  publish-pi-telemetry:
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish-pi-telemetry.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
   publish-python-telemetry:
     permissions:
       contents: write
