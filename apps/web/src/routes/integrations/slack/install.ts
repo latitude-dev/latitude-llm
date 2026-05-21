@@ -29,7 +29,10 @@ export const Route = createFileRoute("/integrations/slack/install")({
           return new Response("Slack is not configured for this environment.", { status: 503 })
         }
 
-        const webUrl = await Effect.runPromise(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
+        const rawWebUrl = await Effect.runPromise(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
+        // Strip trailing slash so we never build `https://app//integrations/...`,
+        // which Slack would reject as a redirect-URI mismatch.
+        const webUrl = rawWebUrl.replace(/\/$/, "")
         const redirectUri = `${webUrl}/integrations/slack/oauth/callback`
 
         const state = await generateSlackOAuthState({

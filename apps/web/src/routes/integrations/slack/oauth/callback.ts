@@ -50,7 +50,12 @@ export const Route = createFileRoute("/integrations/slack/oauth/callback")({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const webUrl = await Effect.runPromise(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
+        const rawWebUrl = await Effect.runPromise(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
+        // Match the normalization in `/integrations/slack/install` so the
+        // redirect URI we send to Slack here is byte-for-byte identical
+        // to the one Slack matches against, and so the post-install
+        // Location header never has a double slash.
+        const webUrl = rawWebUrl.replace(/\/$/, "")
 
         const url = new URL(request.url)
         const code = url.searchParams.get("code")
