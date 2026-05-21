@@ -42,6 +42,11 @@
       "entry": ["src/seeds/index.ts"],
       "project": ["src/**/*.ts"]
     },
+    "packages/platform/slack": {
+      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "ignoreBinaries": ["tsx"],
+      "ignoreDependencies": ["tsx"]
+    },
     "packages/platform/*": {
       "project": ["src/**/*.ts"]
     },
@@ -71,6 +76,10 @@
       "project": ["src/**/*.ts", "examples/**/*.ts"],
       "ignore": ["src/constants/**/*.ts"],
       "ignoreDependencies": ["@sentry/node", "dd-trace", "langchain", "together-ai"]
+    },
+    "packages/telemetry/pi": {
+      "project": ["src/**/*.ts"],
+      "ignoreBinaries": ["tsdown"]
     },
     "tools/ai-benchmarks": {
       "entry": ["src/scripts/**/*.ts"],

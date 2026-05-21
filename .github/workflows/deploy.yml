@@ -75,6 +75,8 @@ jobs:
             exit 1
           }
 
+          skip_staging_check=false
+
           if [ "${EVENT_NAME}" = "push" ]; then
             if [ "${REF_TYPE}" = "tag" ]; then
               target_sha=$(git rev-parse "${REF_NAME}^{commit}")
@@ -83,6 +85,15 @@ jobs:
               if ! echo "${REF_NAME}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
                 echo "Production tags must look like v1.2.3. Got: ${REF_NAME}"
                 exit 1
+              fi
+
+              tag_object_type=$(git cat-file -t "refs/tags/${REF_NAME}" || echo "")
+              if [ "${tag_object_type}" = "tag" ]; then
+                tag_message=$(git for-each-ref "refs/tags/${REF_NAME}" --format='%(contents)' || true)
+                if echo "${tag_message}" | grep -q '^skip-staging-check'; then
+                  skip_staging_check=true
+                  echo "Tag ${REF_NAME} carries skip-staging-check marker; bypassing staging deployment check."
+                fi
               fi
             else
               if [ "${REF_NAME}" != "development" ]; then
@@ -126,7 +137,7 @@ jobs:
             exit 1
           fi
 
-          if [ "${production_should_deploy}" = "true" ]; then
+          if [ "${production_should_deploy}" = "true" ] && [ "${skip_staging_check}" != "true" ]; then
             require_staging_deployment "${target_sha}"
           fi
 

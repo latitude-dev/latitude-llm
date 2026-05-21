@@ -54,10 +54,11 @@ export const InMemorySlackIntegrationRepositoryLive = (init: {
         // would reject the insert with a unique violation in
         // production.
         const sameOrgActive = activeRowsInOrg()
-        if (sameOrgActive.length > 0) {
+        const [firstActive] = sameOrgActive
+        if (firstActive) {
           return yield* Effect.die(
             new Error(
-              `InMemorySlackIntegrationRepository invariant violated: tried to save a second active row in org ${init.organizationId} without soft-revoking ${sameOrgActive[0]!.id} first`,
+              `InMemorySlackIntegrationRepository invariant violated: tried to save a second active row in org ${init.organizationId} without soft-revoking ${firstActive.id} first`,
             ),
           )
         }

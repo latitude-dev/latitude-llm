@@ -6,7 +6,7 @@ export GIT_PAGER=cat
 
 usage() {
   cat <<EOF
-Usage: $0 [--patch|--minor|--major] [--dry] [version]
+Usage: $0 [--patch|--minor|--major] [--dry] [--skip-staging-check] [version]
 
 Tags the current commit for production and pushes the tag. Production deploys are
 triggered by pushed vX.Y.Z tags.
@@ -19,18 +19,25 @@ Before tagging, prints a summary of the changes that will be deployed and asks
 for confirmation. Use --dry to print the summary only without creating or
 pushing the tag.
 
+Use --skip-staging-check to release a commit that has not been deployed to
+staging. The tag is created as annotated with a "skip-staging-check" marker,
+which the CI deploy workflow reads to bypass the staging-deployment
+prerequisite. Use sparingly — staging exists for a reason.
+
 Examples:
   $0
   $0 --minor
   $0 --major
   $0 v1.2.3
   $0 --dry
+  $0 --skip-staging-check
 EOF
 }
 
 bump_kind="patch"
 version=""
 dry_run=0
+skip_staging_check=0
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -52,6 +59,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --dry | --dry-run)
       dry_run=1
+      shift
+      ;;
+    --skip-staging-check)
+      skip_staging_check=1
       shift
       ;;
     v*)
@@ -152,12 +163,21 @@ fi
 echo ""
 
 if [ "${dry_run}" -eq 1 ]; then
-  echo "Dry run: not creating or pushing tag ${version}."
+  if [ "${skip_staging_check}" -eq 1 ]; then
+    echo "Dry run: not creating or pushing tag ${version} (would skip staging deployment check)."
+  else
+    echo "Dry run: not creating or pushing tag ${version}."
+  fi
   exit 0
 fi
 
-echo "Confirm that ${short_sha} has already been deployed to staging and verified there."
-echo "Production tags should only point at commits that are live on staging."
+if [ "${skip_staging_check}" -eq 1 ]; then
+  echo "WARNING: --skip-staging-check is set. The CI deploy workflow will NOT require"
+  echo "that ${short_sha} has a successful staging deployment before going to production."
+else
+  echo "Confirm that ${short_sha} has already been deployed to staging and verified there."
+  echo "Production tags should only point at commits that are live on staging."
+fi
 echo ""
 read -r -p "Tag ${target_sha} as ${version} and push to origin? [y/N] " response
 case "${response}" in
@@ -169,7 +189,13 @@ case "${response}" in
 esac
 
 echo "Tagging ${target_sha} as ${version}..."
-git tag "${version}" "${target_sha}"
+if [ "${skip_staging_check}" -eq 1 ]; then
+  git tag -a "${version}" "${target_sha}" -m "${version}
+
+skip-staging-check: production deploy was authorized without a prior staging deployment."
+else
+  git tag "${version}" "${target_sha}"
+fi
 git push origin "refs/tags/${version}"
 
 echo "Pushed ${version}. The production deploy workflow will deploy the tagged commit after validation."

@@ -75,7 +75,8 @@ describe("getTraceAnalyticsUseCase", () => {
     )
 
     expect(calls).toHaveLength(2)
-    const histogramCall = calls.find((c) => c.kind === "histogram")!
+    const histogramCall = calls.find((c) => c.kind === "histogram")
+    if (!histogramCall) throw new Error("Expected a histogram call")
     expect(histogramCall.bucketSeconds).toBe(12 * 60 * 60)
     expect(histogramCall.fromIso).toBe("2026-04-08T12:34:56.000Z")
     expect(histogramCall.toIso).toBe("2026-04-15T12:34:56.000Z")

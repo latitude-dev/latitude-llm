@@ -182,9 +182,10 @@ describe("getIssueAnalyticsUseCase", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(capturedWindow).not.toBeNull()
-    expect(capturedWindow!.from?.toISOString()).toBe("2026-04-01T00:00:00.000Z")
-    expect(capturedWindow!.to?.toISOString()).toBe("2026-04-03T23:59:59.999Z")
+    const window = capturedWindow as { from: Date | undefined; to: Date | undefined } | null
+    if (window === null) throw new Error("Expected capturedWindow to be set")
+    expect(window.from?.toISOString()).toBe("2026-04-01T00:00:00.000Z")
+    expect(window.to?.toISOString()).toBe("2026-04-03T23:59:59.999Z")
   })
 })
 
