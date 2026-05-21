@@ -1,6 +1,6 @@
 import { Icon, Text } from "@repo/ui"
-import type { LucideIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import type { LucideProps } from "lucide-react"
+import type { ComponentType, ReactNode } from "react"
 
 /**
  * Compact row for a single third-party integration on the
@@ -20,7 +20,7 @@ export function IntegrationCard({
   subtitle,
   actions,
 }: {
-  readonly icon: LucideIcon
+  readonly icon: ComponentType<LucideProps>
   readonly title: string
   readonly subtitle?: string
   readonly actions?: ReactNode
