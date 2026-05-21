@@ -1,5 +1,5 @@
-export * from "./brands/icons/index.tsx"
 export { BrandIcon, type BrandIconProps } from "./brands/brand-icon.tsx"
+export * from "./brands/icons/index.tsx"
 export { DatabaseAddIcon } from "./database-add.tsx"
 export * from "./providers/icons/index.tsx"
 export { ProviderIcon, type ProviderIconProps } from "./providers/provider-icon.tsx"
