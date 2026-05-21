@@ -1,4 +1,6 @@
+import { SLACK_FLAG } from "@domain/feature-flags"
 import { cn, Icon, Text } from "@repo/ui"
+import { useQuery } from "@tanstack/react-query"
 import { Link, useRouterState } from "@tanstack/react-router"
 import {
   Building2,
@@ -6,11 +8,13 @@ import {
   Key,
   type LucideIcon,
   Package,
+  Plug,
   ScanSearch,
   ShieldAlert,
   UserRound,
   Users,
 } from "lucide-react"
+import { hasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.functions.ts"
 
 interface SubNavItem {
   readonly to: string
@@ -26,6 +30,13 @@ interface SubNavSection {
 export function SettingsSubNav({ projectSlug }: { projectSlug: string }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const base = `/projects/${projectSlug}/settings`
+
+  // The same query is also used by the integrations page; React Query
+  // caches by key so this second consumer is effectively free.
+  const { data: slackEnabled = false } = useQuery({
+    queryKey: ["feature-flag", SLACK_FLAG],
+    queryFn: () => hasFeatureFlag({ data: { identifier: SLACK_FLAG } }),
+  })
 
   const sections: SubNavSection[] = [
     {
@@ -43,6 +54,7 @@ export function SettingsSubNav({ projectSlug }: { projectSlug: string }) {
         { to: `${base}/members`, label: "Members", icon: Users },
         { to: `${base}/keys`, label: "Keys", icon: Key },
         { to: `${base}/billing`, label: "Billing", icon: CreditCard },
+        ...(slackEnabled ? [{ to: `${base}/integrations`, label: "Integrations", icon: Plug }] : []),
       ],
     },
     {

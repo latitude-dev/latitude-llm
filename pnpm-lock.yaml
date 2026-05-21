@@ -393,6 +393,9 @@ importers:
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
+      '@domain/integrations':
+        specifier: workspace:*
+        version: link:../../packages/domain/integrations
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
@@ -459,6 +462,9 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
+      '@platform/slack':
+        specifier: workspace:*
+        version: link:../../packages/platform/slack
       '@platform/storage-object':
         specifier: workspace:*
         version: link:../../packages/platform/storage-object
