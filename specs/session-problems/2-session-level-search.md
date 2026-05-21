@@ -11,6 +11,264 @@ level. It is _not_ a redesign of the search pipeline — the indexing pipeline,
 the lexical/semantic split, the phrase parser, the embedding model choice,
 and the chunk-level embedding rows are all reused as-is.
 
+## Implementation tasks
+
+Tracking checklist for the work this spec describes. Grouped by PR boundary;
+within each group, order is execution order. Boxes use `- [ ]` (unchecked)
+and flip to `- [x]` as the work lands.
+
+Sequencing rationale: PR 1 is a mechanical refactor with zero behavior change
+— pulling it out keeps PR 2's diff focused on the actual session-rollup logic.
+PR 2 lands the SQL + domain port + repo. PR 3 plumbs server functions. PR 4
+swaps the UI. Each PR is independently mergeable and reviewable; PRs 2–4 can
+ship one after another without a flag (the user-visible swap only happens in
+PR 4, so PRs 1–3 are silent on the client).
+
+### PR 1 — Extract shared search-plan module (refactor, LAT-599)
+
+No behavior change. Moves the search-plan builder out of `TraceRepository`'s
+closure into a shared module so `SessionRepository` can import the same
+functions in PR 2 (see §9 Open questions → "`buildSearchPlan` location").
+
+- [x] New file `packages/platform/db-clickhouse/src/repositories/search-plan.ts`:
+  - [x] Move the `SearchPlan` type (`trace-repository.ts:195-199`) — kept
+        internal; PR 2 promotes it to an export when SessionRepository
+        imports it.
+  - [x] Move `tokenizePhrase` (`trace-repository.ts:72-77`).
+  - [x] Move `buildLexicalSearchSubquery` (`trace-repository.ts:103-150`).
+  - [x] Move `buildSemanticSearchSubquery` (`trace-repository.ts:162-186`).
+  - [x] Move `buildSearchPlan` (`trace-repository.ts:218-277`) — pure
+        function, kept internal; consumed by `planSearch`. PR 2 keeps it
+        internal too (SessionRepository only needs `planSearch`).
+  - [x] Move `isActiveSearch` (`trace-repository.ts:283-285`) — exported.
+  - [x] Export `planSearch` as a top-level Effect (no factory needed). The
+        `AI` service is accessed via `Effect.serviceOption(AI)` inside
+        `generateQueryEmbedding`, which doesn't add `AI` to the requirements
+        channel — so the helper module stays dependency-free at the type
+        level without a `createSearchPlanner({ ai })` factory. Original
+        framing was over-engineered.
+- [x] Update `packages/platform/db-clickhouse/src/repositories/trace-repository.ts` to
+      import from the new module; delete the now-duplicated code from the
+      `TraceRepositoryLive` closure.
+- [x] Keep `TRACE_SEARCH_*` constants in `packages/domain/spans/src/constants.ts`
+      where they live today (`:114-138`); the helper module reads them via
+      import — no change to the constants file.
+- [x] Verify `pnpm --filter @platform/db-clickhouse test` passes unchanged
+      (this is a refactor; trace-search behavior is identical). 146/146
+      green.
+- [x] Verify `pnpm typecheck` is clean. 68/68 workspace tasks green.
+
+### PR 2 — Domain port & types
+
+- [ ] `packages/domain/spans/src/constants.ts`: add
+      `SESSION_SEARCH_SCORE_AGGREGATION = "max"` next to the trace-search
+      constants. Documents the §4.2 decision; switching it later is a
+      one-constant change.
+- [ ] `packages/domain/spans/src/entities/session.ts` (or a new
+      `session-search-match.ts`): add `SessionSearchMatch` shape per spec
+      §5.1 (`bestScore`, `bestTraceId`, `matchingTraceCount`,
+      `matchingTraceIds`, `matchingTraceScores`).
+- [ ] Widen `SessionListPage` (`packages/domain/spans/src/ports/session-repository.ts`)
+      with optional `searchMatches?: Readonly<Record<string, SessionSearchMatch>>`
+      keyed by `sessionId`. **Parallel field**, not a property of
+      `SessionRecord` itself — the match is per result, not per session
+      (spec §5.1).
+- [ ] Widen `SessionRepositoryShape.listByProjectId` options with optional
+      `searchQuery: string`.
+- [ ] Widen `countByProjectId` options with optional `searchQuery: string`.
+
+> **Scope trim (vs. spec §4.6 / §5.1):** the search page consumes only the
+> list and the count today — `useTraceMetrics` and `useTraceTimeHistogram`
+> are exclusive to the `TraceAggregationsPanel` on the non-search project
+> route and don't take a `searchQuery`. Plumbing search through metrics
+> and histogram is dead weight for V1. The spec body still documents the
+> shapes in case product asks for them later; the checklist intentionally
+> skips them.
+
+### PR 2 — Repository implementation (ClickHouse)
+
+- [ ] `packages/platform/db-clickhouse/src/repositories/session-repository.ts`:
+      import `planSearch` / `isActiveSearch` from the PR 1 module.
+- [ ] `listByProjectId`: when `parsed = parseSearchQuery(searchQuery)` is
+      active, branch into the search path; otherwise keep the existing
+      `FROM sessions` query unchanged.
+- [ ] Implement the search path with the CTE structure from §4.3:
+  - [ ] `search_results` CTE wrapping `plan.subquery`.
+  - [ ] `trace_rollup` CTE joining `traces` ⨝ `search_results`, projecting
+        the per-trace numerics needed by the outer rollup
+        (`cost_total_microcents`, `span_count`, `error_count`,
+        `tokens_total`, `trace_start_time = min(min_start_time)`,
+        `trace_end_time = max(max_end_time)`) plus the canonical
+        `coalesce(nullIf(argMaxIfMerge(t.session_id), ''),
+        toString(t.trace_id))` session_id expression from
+        `./1-parity-traces-sessions.md` (so orphan traces surface as
+        1-trace sessions, spec §6.7).
+  - [ ] Outer `SELECT … GROUP BY session_id` with:
+        `max(relevance_score) AS best_score`,
+        `argMax(trace_id, relevance_score) AS best_trace_id`,
+        `count() AS matching_trace_count`,
+        `arrayMap(p -> p.1, arrayReverseSort(p -> p.2,
+         groupArray((trace_id, relevance_score)))) AS matching_trace_ids`,
+        `arrayMap(p -> p.2, arrayReverseSort(p -> p.2,
+         groupArray((trace_id, relevance_score)))) AS matching_trace_scores`,
+        plus rolled-up session numerics
+        (`sum(cost_total_microcents)`, `sum(span_count)`, etc. — mirror
+        `SessionRecord`).
+  - [ ] Apply `extraWhere` (score-filter subquery) and `finalHaving`
+        (FilterSet HAVING) **inside `trace_rollup`** — per-trace, not
+        post-rollup (spec §4.5).
+  - [ ] Apply the cursor predicate as a session-level HAVING:
+        `HAVING (max(relevance_score), session_id) <
+        ({cursorSortValue:Float64}, {cursorSessionId:String})`
+        (spec §4.4); cursor shape becomes
+        `{ sortValue: string; sessionId: string }`.
+  - [ ] `ORDER BY best_score DESC, session_id DESC LIMIT :limit`.
+  - [ ] Return `SessionListPage` with the existing session items plus
+        `searchMatches` keyed by `sessionId`. Build `searchMatches` from
+        the same row payload (`best_score`, `best_trace_id`,
+        `matching_trace_count`, `matching_trace_ids`,
+        `matching_trace_scores`).
+- [ ] `countByProjectId`: when search is active, return both
+      `count(DISTINCT session_id)` and `sum(matching_trace_count) AS
+      matching_trace_count_total` from the same CTE shape (spec §4.6).
+      Widen the return type to carry both numbers.
+- [ ] When `searchQuery` is present, force the ordering to `best_score
+      DESC, session_id DESC` regardless of the client `sortBy`
+      (spec §4.7).
+
+### PR 2 — Tests
+
+- [ ] New cases in `packages/platform/db-clickhouse/src/repositories/session-repository.test.ts`
+      (file added in PR 1 of `./1-parity-traces-sessions.md`):
+  - [ ] Lexical-only search: a session whose traces all score `0.0` still
+        surfaces and counts (spec §6.4).
+  - [ ] Hybrid (lexical + semantic): `best_score` equals the max of the
+        session's per-trace semantic scores; matching traces with no
+        embedding contribute `0.0` rows that still count toward
+        `matching_trace_count`.
+  - [ ] Score-filter HAVING applied per-trace, not post-rollup: a session
+        with one cost-passing trace and four cost-failing traces surfaces
+        with `matching_trace_count = 1` (spec §6.6).
+  - [ ] Cursor: paginating with `(best_score, session_id)` yields a
+        stable monotonic order with no duplicates across pages.
+  - [ ] Orphan-trace-as-session: a matching trace with no SDK
+        `session_id` produces a row keyed on `toString(trace_id)`,
+        `matching_trace_ids = [trace_id]`, `best_trace_id = trace_id`
+        (spec §6.7).
+  - [ ] Multi-trace session: `matching_trace_ids` is sorted by score
+        descending; `matching_trace_scores` is the parallel-aligned
+        score array.
+  - [ ] List + count: both query paths share the same candidate set (a
+        listed session always counts; a counted session is always
+        reachable via pagination) — no drift between them.
+  - [ ] Ordering override: setting `sortBy = "cost"` while `searchQuery`
+        is non-empty still orders by `best_score` (spec §4.7).
+
+### PR 3 — Server functions (TanStack Start)
+
+- [ ] `apps/web/src/domains/sessions/sessions.functions.ts`:
+      widen `listSessionsByProject` input with
+      `searchQuery: z.string().max(500).optional()`; widen
+      `SessionListResult` to include
+      `searchMatches?: Readonly<Record<string, SessionSearchMatch>>`.
+      Serialize `SessionSearchMatch` next to the existing
+      `serializeSession` helper.
+- [ ] Add `countSessionsByProject` server function with input
+      `{ projectId, filters?, searchQuery? }` returning
+      `{ totalCount: number; matchingTraceCount?: number }` (the second
+      number is only populated under search; the UI uses it for the
+      "5 sessions · 12 matching turns" string from spec §4.6).
+- [ ] Force ordering to `bestScore DESC` server-side when `searchQuery`
+      is non-empty (independent of `sortBy`) — already enforced at the
+      repo, but document the contract in the handler comment.
+
+### PR 4 — Frontend (hooks + search page UI)
+
+The search page becomes session-centric **unconditionally** — the same
+`SessionsView` already used by the project page's Sessions tab. There's
+no `TracesView`/`SessionsView` swap. `searchMatches` is a data-driven
+prop: when a query is active it's populated and the matching-turns
+pill / best-trace drill-in light up; when it's empty the view degrades
+to a plain session listing (filters still work). One code path, one
+column-settings store, one set of React Query keys.
+
+- [ ] `apps/web/src/domains/sessions/sessions.collection.ts`:
+      widen `useSessionsInfiniteScroll` to accept optional
+      `searchQuery`; include it in the query key
+      (`["sessionsInfiniteScroll", projectId, sorting, filters,
+      searchQuery]`). Page-param shape:
+      `{ sortValue: string; sessionId: string }`.
+- [ ] Same file: add `useSessionsCount(projectId, filters, searchQuery?)`
+      with key `["sessionsCount", projectId, filters, searchQuery]`.
+- [ ] `apps/web/src/routes/_authenticated/projects/$projectSlug/search/index.tsx`:
+      replace `TracesView` with `SessionsView` permanently. Remove
+      `useTracesCount` / `TRACE_COLUMN_OPTIONS` / `traceColumnSettings`
+      imports; replace with `useSessionsCount`,
+      `SESSION_COLUMN_OPTIONS`, `useTableColumnSettings<SessionColumnId>`
+      (storage key bumps to `"projects.search.sessions.columns.v1"`).
+- [ ] Same file: pass `searchQuery={q}` to `SessionsView` always (empty
+      string when the user hasn't typed yet). Render the count string
+      as:
+      - no query, no filters → empty
+      - filters only → `"N sessions"`
+      - query active → `"N sessions · M matching turns"` (both numbers
+        come from `useSessionsCount`).
+- [ ] Same file: build `traceIdsRef` for drawer prev/next from the
+      page payload. When `searchMatches` is populated, flatten
+      `searchMatches[sessionId].matchingTraceIds` across the page in
+      display order (spec §5.5). When it's not populated, fall back to
+      the per-session `session.traceIds` order — same shape
+      `SessionsView` already produces on the project page (`sessions-view.tsx:392`).
+- [ ] `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/sessions-view.tsx`:
+      add `searchQuery?: string` and
+      `searchMatches?: Readonly<Record<string, SessionSearchMatch>>`
+      props. Both optional — the project-page Sessions tab keeps
+      calling without them and behaves identically to today.
+- [ ] Same file: a `"searchMatches"` column id exists in
+      `SESSION_COLUMN_OPTIONS` but renders the "**N** matching turns"
+      pill **only when `searchMatches[sessionId]` is present**. No
+      append/remove dance in the visible-column-ids logic — the column
+      is always declared, the cell is empty when there's no match
+      data.
+- [ ] Same file: in `useExpandedSessionTraces` (line ~54-98), when
+      `searchMatches[sessionId]` is provided, **skip the
+      `listTracesByProject` call** and use `matchingTraceIds` directly
+      as the expanded-rows list in score order (spec §5.3). Otherwise
+      keep today's per-session query.
+- [ ] Same file: top-level row click — when `searchMatches[sessionId]`
+      exists, open drawer on `bestTraceId`; otherwise behave like
+      today (expand only, no drawer). Expanded trace row click always
+      opens the drawer on that specific `traceId`.
+- [ ] Same file: `useSessionSelectionAdapter` already maps session
+      checkboxes → trace ids via `sessionTraceIndex`. When
+      `searchMatches[sessionId]` is provided, feed the index
+      `matchingTraceIds` instead of `session.traceIds` — so the
+      existing `enqueueTracesExport` path exports the matching turns
+      the user sees. No call-site changes anywhere.
+- [ ] Telemetry (spec §7 step 5): log per-search-query
+      `matching_session_count`, `sum(matching_trace_count)`, and
+      query latency. Wire into the existing PostHog client.
+- [ ] Manual verification:
+      - Empty search bar, no filters → empty state, no count.
+      - Add a filter, no query → session listing (same as the project
+        Sessions tab) with "N sessions" count.
+      - Type `payment` → one row per session, matching-turns pill,
+        drawer opens on best trace, prev/next cycles inside the
+        session then jumps to the next session's best, exporting a
+        selected session produces a CSV whose rows match the expanded
+        matching-turns view.
+
+### Follow-ups (out of scope for this spec; tracked here only as breadcrumbs)
+
+- [ ] Highlight metadata pass-through (`best_matched_chunk_index`, etc.)
+      — depends on `./5-search-highlights.md` Phase A landing (the
+      trace-level subquery doesn't produce those fields yet). When it
+      does, add the `argMax(..., relevance_score)` aggregates into
+      `trace_rollup` per spec §6.5; no other changes needed.
+- [ ] Freshness-weighted ordering — see `./0-problems.md:148-163` and
+      spec §8. Inputs are now available (`best_score` + session
+      `max(trace_end_time)`); ship after the rollup is in production.
+
 ## Scope
 
 - **In:** session-level result collapsing for `listTracesByProject` (the
@@ -739,24 +997,34 @@ whether the caller is the trace or session list.
 ### 5.3 Search page UI
 
 `apps/web/src/routes/_authenticated/projects/$projectSlug/search/index.tsx`
-swaps `TracesView` (line 332-351) for `SessionsView` when `q` is
-non-empty. `SessionsView` already renders expandable session rows
-(`apps/web/src/routes/_authenticated/projects/$projectSlug/-components/sessions-view.tsx:194-468`):
+renders `SessionsView` unconditionally — the same view used by the
+project page's Sessions tab
+(`apps/web/src/routes/_authenticated/projects/$projectSlug/-components/sessions-view.tsx:194-468`).
+There's no `TracesView`/`SessionsView` swap; the search page is
+session-centric whether or not a query is active.
 
-- Top-level row: session metadata + "**N** matching turns" pill (new
-  column when `searchMatches` is non-empty).
-- Expanded: the session's matching traces, sorted by score, with the
-  score visible per row. Existing expansion logic in
-  `useExpandedSessionTraces` (`sessions-view.tsx:54-98`) calls
-  `listTracesByProject` with a `sessionId` filter; for the search
-  page we substitute that with the `matchingTraceIds` from
-  `searchMatches[sessionId]` so we don't re-query and we preserve
-  rank order.
+- **No query, no filters:** empty state.
+- **Filters only:** plain session listing — same data path as the
+  project's Sessions tab, just hosted on the `/search` URL with the
+  saved-search affordances available.
+- **Query active:** session listing carrying the rollup payload —
+  matching-turns pill, score-ordered expanded rows, drawer drill-in
+  on `bestTraceId`.
 
-The "matching turns" pill is a new column. Suggested column id
-`"searchMatches"`, visible only when `q` is non-empty
-(append/remove in the visible-column-ids logic at
-`search/index.tsx:81-84`).
+`searchMatches` is a data-driven prop on `SessionsView` (per-result
+record, keyed by `sessionId`). When it's populated the view lights up
+the search-specific affordances; when it's empty (no query) the view
+degrades to today's project-page Sessions tab behavior. One code
+path, no conditional rendering.
+
+The `"searchMatches"` column lives in `SESSION_COLUMN_OPTIONS`
+unconditionally; the cell renderer reads
+`searchMatches[sessionId]?.matchingTraceCount` and renders nothing
+when absent. Expanded rows still come from `useExpandedSessionTraces`
+(`sessions-view.tsx:54-98`); when `searchMatches[sessionId]` is
+provided, the hook short-circuits the `listTracesByProject` call and
+uses `matchingTraceIds` directly so we don't re-query and we preserve
+score order.
 
 ### 5.4 Drawer drill-in
 
@@ -969,13 +1237,13 @@ No backfill is required because the trace-level indexes are reused.
   `0-problems.md:148-163`. The session row's `best_score` is the
   obvious input to a `f(best_score, recency)` blended sort. Slot
   this in after the rollup ships.
-- **Session-level export.** `enqueueTracesExport`
-  (`traces.functions.ts:389-429`) currently takes a trace selection.
-  After session rollup, the search-page selection is naturally
-  session-shaped — we need to either (a) expand it to traces
-  server-side via `matchingTraceIds`, or (b) introduce
-  `enqueueSessionsExport` with a session-shaped CSV layout. Probably
-  (b).
+- **Session-level export shape.** Already solved by the existing
+  `useSessionSelectionAdapter` (`sessions-view.tsx:105-180`): session
+  checkboxes drive a trace-keyed selection state, and
+  `enqueueTracesExport` consumes it directly. Search mode just swaps
+  the index source to `matchingTraceIds`. A dedicated session-CSV
+  layout (one row per session with rolled-up totals) is a separate
+  product question; pursue only if customers ask.
 - **Score normalization across plans.** Lexical-only returns
   `relevance_score = 0.0` while semantic returns cosines in roughly
   `[0.3, 0.9]`. The rollup carries that through, so a phrase-only
@@ -1004,12 +1272,15 @@ No backfill is required because the trace-level indexes are reused.
   Possibly yes for power-users debugging the search itself. Defer to
   product but the SQL path supports both with zero extra work — the
   trace-level list query already exists and is unchanged.
-- **Per-session export selection.** What does selecting a session row
-  on the search page mean for export? "All matching traces in the
-  session"? "All traces in the session"? Probably the first — match
-  the visual: the user sees the matching turns, they expect to
-  export those. Confirm with product before shipping the export
-  button on the search page in session mode.
+- **Per-session export selection.** Resolved: the existing
+  session-row → trace-id selection mapping in
+  `useSessionSelectionAdapter` already produces a trace-keyed
+  selection state that flows into `enqueueTracesExport` with no
+  transformation. In search mode the adapter's `sessionTraceIndex` is
+  fed `matchingTraceIds` instead of `traceIds` — so checking a session
+  in search exports its matching turns. If product later wants "all
+  traces in the session" (including non-matching turns), it's a flag
+  on the index source, not a new export path.
 - **Tie-breaker stability.** When `best_score` ties (especially the
   `0.0` lexical-only case), `ORDER BY best_score DESC, session_id
   DESC` is stable but arbitrary. Is there a recency or freshness
