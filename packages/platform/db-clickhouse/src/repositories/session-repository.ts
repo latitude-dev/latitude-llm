@@ -14,13 +14,15 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import type { Session, SessionDetail, SessionListPage, SessionMetrics } from "@domain/spans"
-import { emptySessionMetrics, SessionRepository, type SessionRepositoryShape } from "@domain/spans"
+import { emptySessionMetrics, parseSearchQuery, SessionRepository, type SessionRepositoryShape } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
+import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearchQuery } from "./search-by-project.ts"
+import { isActiveSearch } from "./search-plan.ts"
 
 const LIST_SELECT = `
   organization_id,
@@ -295,13 +297,62 @@ const DEFAULT_SORT: SortColumn = SORT_COLUMNS.lastActivity as SortColumn
 export const SessionRepositoryLive = Layer.effect(
   SessionRepository,
   Effect.gen(function* () {
+    /**
+     * Fetch full `Session` rows for the matched ids returned by the
+     * search rollup. Closure captures `LIST_SELECT` + `toDomainSession`,
+     * which is why the search module takes this as a callback instead of
+     * importing them directly (would otherwise be a circular import).
+     */
+    const fetchFullSessionsByIds =
+      (organizationId: string, projectId: string): FetchFullSessions =>
+      (sessionIds) =>
+        Effect.gen(function* () {
+          if (sessionIds.length === 0) return new Map<string, Session>()
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const rows = yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${LIST_SELECT}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND session_id IN ({sessionIds:Array(String)})
+                        GROUP BY organization_id, project_id, session_id`,
+                query_params: { organizationId, projectId, sessionIds: [...sessionIds] },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionListRow>()
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "listByProjectId")))
+          return new Map(rows.map((r) => [normalizeCHString(r.session_id), toDomainSession(r)] as const))
+        })
+
     const listByProjectId: SessionRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const limit = options.limit ?? 50
+
+        const parsed =
+          options.searchQuery && options.searchQuery.length > 0 ? parseSearchQuery(options.searchQuery) : undefined
+
+        if (parsed && isActiveSearch(parsed)) {
+          return yield* listSessionsBySearchQuery({
+            organizationId,
+            projectId,
+            parsed,
+            filters: options.filters,
+            cursor: options.cursor,
+            limit,
+            fetchFullSessions: fetchFullSessionsByIds(organizationId as string, projectId as string),
+          })
+        }
+
+        // Non-search path: unchanged from before. `searchMatches` is
+        // omitted (undefined) so consumers fall through to the plain
+        // session listing rendering.
         const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
         const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
         const cmp = orderDir === "DESC" ? "<" : ">"
-        const limit = options.limit ?? 50
 
         const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
 
@@ -364,9 +415,15 @@ export const SessionRepositoryLive = Layer.effect(
     return {
       listByProjectId,
 
-      countByProjectId: ({ organizationId, projectId, filters }) =>
+      countByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+
+          const parsed = searchQuery && searchQuery.length > 0 ? parseSearchQuery(searchQuery) : undefined
+          if (parsed && isActiveSearch(parsed)) {
+            return yield* countSessionsBySearchQuery({ organizationId, projectId, parsed, filters })
+          }
+
           const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
@@ -394,7 +451,9 @@ export const SessionRepositoryLive = Layer.effect(
               return result.json<{ total: string }>()
             })
             .pipe(
-              Effect.map((rows) => Number(rows[0]?.total ?? 0)),
+              Effect.map((rows) => ({
+                totalCount: Number(rows[0]?.total ?? 0),
+              })),
               Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
             )
         }),

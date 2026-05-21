@@ -136,3 +136,40 @@ export const TRACE_SEARCH_EMBEDDING_DIMENSIONS = 2048
  * Re-tune against production if the noise / signal distribution shifts.
  */
 export const TRACE_SEARCH_MIN_RELEVANCE_SCORE = 0.3
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Session Search Constants
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Score-aggregation policy when rolling per-trace `relevance_score` values
+ * up to the session level. `"max"` matches the trace-level rollup
+ * (`max(semantic_score) GROUP BY trace_id`), preserves single-best-match
+ * precision, and is stable as sessions grow longer (a low-relevance
+ * follow-up turn can't push a session down the list). Considered and
+ * rejected: `avg` (dilutes strong matches; pessimizes long sessions),
+ * `max * log(1 + matching_trace_count)` (no telemetry to justify),
+ * `avg(top_k)` (adds a tuning knob).
+ *
+ * The aggregation lives in a single ClickHouse expression in the session
+ * repository; switching it is a one-constant change here. See
+ * `specs/session-problems/2-session-level-search.md` §4.2.
+ */
+export const SESSION_SEARCH_SCORE_AGGREGATION = "max" as const
+
+/**
+ * Per-session cap on the `matching_trace_ids` / `matching_trace_scores`
+ * arrays returned by the session-search rollup. The CTE-side `groupArray`
+ * is bounded only by the upstream `SEMANTIC_SCAN_LIMIT = 30_000` candidate
+ * set — a pathological single-session project could otherwise materialize
+ * a 30k-element tuple array per row (≈ 1.2 MB × 2 arrays per row from the
+ * parallel id/score split). The UI only renders a handful of matching
+ * turns per session card, and `best_trace_id` + `matching_trace_count`
+ * carry the rest of the signal, so capping at 50 keeps the worst case
+ * bounded without changing user-visible behavior.
+ *
+ * Note: `matching_trace_count` continues to reflect the **true** count of
+ * matching traces per session — the cap only limits the materialized
+ * id/score arrays.
+ */
+export const SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW = 50

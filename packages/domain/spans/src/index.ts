@@ -6,6 +6,8 @@
 
 export {
   SESSION_ID_MAX_LENGTH,
+  SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW,
+  SESSION_SEARCH_SCORE_AGGREGATION,
   SPAN_ID_LENGTH,
   TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS,
   TRACE_END_DEBOUNCE_MS,
@@ -29,6 +31,7 @@ export {
 } from "./constants.ts"
 export type { Session, SessionDetail } from "./entities/session.ts"
 export { sessionDetailSchema, sessionSchema } from "./entities/session.ts"
+export type { SessionSearchMatch } from "./entities/session-search-match.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
 export {
   operationSchema,
@@ -65,6 +68,7 @@ export {
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
 export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"
 export type {
+  SessionCountResult,
   SessionDistinctColumn,
   SessionListCursor,
   SessionListOptions,

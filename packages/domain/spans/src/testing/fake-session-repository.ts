@@ -6,7 +6,7 @@ import { emptySessionMetrics } from "../ports/session-repository.ts"
 export const createFakeSessionRepository = (overrides?: Partial<SessionRepositoryShape>) => {
   const repository: SessionRepositoryShape = {
     listByProjectId: () => Effect.succeed({ items: [], hasMore: false }),
-    countByProjectId: () => Effect.succeed(0),
+    countByProjectId: () => Effect.succeed({ totalCount: 0 }),
     aggregateMetricsByProjectId: () => Effect.succeed(emptySessionMetrics()),
     findBySessionId: ({ sessionId }) => Effect.fail(new NotFoundError({ entity: "Session", id: sessionId as string })),
     distinctFilterValues: () => Effect.succeed([]),

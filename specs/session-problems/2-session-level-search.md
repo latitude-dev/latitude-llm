@@ -63,27 +63,33 @@ functions in PR 2 (see §9 Open questions → "`buildSearchPlan` location").
 
 ### PR 2 — Domain port & types
 
-- [ ] `packages/domain/spans/src/constants.ts`: add
+- [x] `packages/domain/spans/src/constants.ts`: add
       `SESSION_SEARCH_SCORE_AGGREGATION = "max"` next to the trace-search
       constants. Documents the §4.2 decision; switching it later is a
-      one-constant change.
-- [ ] New file
+      one-constant change. Also added
+      `SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW = 50` (H3 fix from
+      adversarial review — caps `matching_trace_ids`/`matching_trace_scores`
+      arrays at SQL level so pathological single-session-covers-everything
+      cases stay bounded).
+- [x] New file
       `packages/domain/spans/src/entities/session-search-match.ts`:
       define `SessionSearchMatch` (`bestScore`, `bestTraceId`,
       `matchingTraceCount`, `matchingTraceIds`, `matchingTraceScores`)
       per spec §5.1. Kept out of `session.ts` because the match is
-      *per result*, not a property of the session — same separation
-      `score-analytics` uses for derived-on-read shapes. Re-export from
-      `@domain/spans` so the web layer can import the type alongside
-      `SessionRecord`.
-- [ ] Widen `SessionListPage` (`packages/domain/spans/src/ports/session-repository.ts`)
+      *per result*, not a property of the session. Re-exported from
+      both `index.ts` and `browser.ts` so PR 4 can import client-side.
+- [x] Widen `SessionListPage` (`packages/domain/spans/src/ports/session-repository.ts`)
       with optional `searchMatches?: Readonly<Record<string, SessionSearchMatch>>`
       keyed by `sessionId`. **Parallel field**, not a property of
       `SessionRecord` itself — the match is per result, not per session
       (spec §5.1).
-- [ ] Widen `SessionRepositoryShape.listByProjectId` options with optional
+- [x] Widen `SessionRepositoryShape.listByProjectId` options with optional
       `searchQuery: string`.
-- [ ] Widen `countByProjectId` options with optional `searchQuery: string`.
+- [x] Widen `countByProjectId` options with optional `searchQuery: string`.
+      Return type widened from `number` to
+      `SessionCountResult { totalCount; matchingTraceCount? }` so the UI
+      can render "N sessions · M matching turns". Updated the one
+      internal caller (`createFakeSessionRepository`).
 
 > **Scope trim (vs. spec §4.6 / §5.1):** the search page consumes only the
 > list and the count today — `useTraceMetrics` and `useTraceTimeHistogram`
@@ -95,82 +101,112 @@ functions in PR 2 (see §9 Open questions → "`buildSearchPlan` location").
 
 ### PR 2 — Repository implementation (ClickHouse)
 
-- [ ] `packages/platform/db-clickhouse/src/repositories/session-repository.ts`:
+The search SQL was extracted into a new file
+`packages/platform/db-clickhouse/src/repositories/search-by-project.ts`
+so `session-repository.ts`'s `listByProjectId` / `countByProjectId`
+stay readable. The new module exports `listSessionsBySearchQuery` /
+`countSessionsBySearchQuery`; the calling repo passes a
+`FetchFullSessions` callback (closes over `LIST_SELECT` +
+`toDomainSession`) to avoid a circular import.
+
+- [x] `packages/platform/db-clickhouse/src/repositories/session-repository.ts`:
       import `planSearch` / `isActiveSearch` from the PR 1 module.
-- [ ] `listByProjectId`: when `parsed = parseSearchQuery(searchQuery)` is
-      active, branch into the search path; otherwise keep the existing
-      `FROM sessions` query unchanged.
-- [ ] Implement the search path with the CTE structure from §4.3:
-  - [ ] `search_results` CTE wrapping `plan.subquery`.
-  - [ ] `trace_rollup` CTE joining `traces` ⨝ `search_results`, projecting
-        the per-trace numerics needed by the outer rollup
-        (`cost_total_microcents`, `span_count`, `error_count`,
-        `tokens_total`, `trace_start_time = min(min_start_time)`,
-        `trace_end_time = max(max_end_time)`) plus the canonical
+- [x] `listByProjectId`: when `parsed = parseSearchQuery(searchQuery)` is
+      active, delegate to `listSessionsBySearchQuery` (which owns the
+      CTE); otherwise keep the existing `FROM sessions` query unchanged.
+- [x] Implement the search path with the CTE structure from §4.3
+      (in `search-by-project.ts`):
+  - [x] `search_results` CTE wrapping `plan.subquery`.
+  - [x] `trace_rollup` CTE joining `traces` ⨝ `search_results`. Per the
+        adversarial review (B1 fix), the projection finalizes **all**
+        aggregate columns `SESSION_FIELD_REGISTRY` references
+        (`argMaxIfMerge(user_id)`, `groupUniqArrayIfMerge(models)`,
+        `groupUniqArrayArray(tags)`, etc. — mirrors
+        `trace-repository.ts:LIST_SELECT`) so per-trace HAVING resolves
+        correctly. `start_time` / `end_time` aliases match the registry
+        column names instead of the spec's `trace_start_time` /
+        `trace_end_time`. Canonical
         `coalesce(nullIf(argMaxIfMerge(t.session_id), ''),
-        toString(t.trace_id))` session_id expression from
-        `./1-parity-traces-sessions.md` (so orphan traces surface as
-        1-trace sessions, spec §6.7).
-  - [ ] Outer `SELECT … GROUP BY session_id` with:
+        toString(t.trace_id))` session_id expression projected per
+        spec §6.7.
+  - [x] Outer `SELECT … GROUP BY session_id` with:
         `max(relevance_score) AS best_score`,
         `argMax(trace_id, relevance_score) AS best_trace_id`,
         `count() AS matching_trace_count`,
-        `arrayMap(p -> p.1, arrayReverseSort(p -> p.2,
-         groupArray((trace_id, relevance_score)))) AS matching_trace_ids`,
-        `arrayMap(p -> p.2, arrayReverseSort(p -> p.2,
-         groupArray((trace_id, relevance_score)))) AS matching_trace_scores`,
-        plus rolled-up session numerics
-        (`sum(cost_total_microcents)`, `sum(span_count)`, etc. — mirror
-        `SessionRecord`).
-  - [ ] Apply `extraWhere` (score-filter subquery) and `finalHaving`
-        (FilterSet HAVING) **inside `trace_rollup`** — per-trace, not
-        post-rollup (spec §4.5).
-  - [ ] Apply the cursor predicate as a session-level HAVING:
+        `matching_trace_ids` / `matching_trace_scores` via
+        `arrayMap` + `arrayReverseSort` + `groupArray((trace_id, relevance_score))`
+        **capped at 50** via `arraySlice` (H3 fix — bounds per-row
+        memory in pathological single-session cases;
+        `matching_trace_count` still reflects the true total). Plus
+        rolled-up session numerics (`sum(cost_total_microcents)`,
+        `sum(span_count)`, etc.).
+  - [x] Apply `extraWhere` (score-filter subquery, with
+        `buildScoreRollupSubquery("trace_id", ...)` since we're
+        filtering trace rows) and `finalHaving` (FilterSet HAVING)
+        **inside `trace_rollup`** — per-trace, not post-rollup
+        (spec §4.5).
+  - [x] Apply the cursor predicate as a session-level HAVING:
         `HAVING (max(relevance_score), session_id) <
         ({cursorSortValue:Float64}, {cursorSessionId:String})`
-        (spec §4.4); cursor shape becomes
-        `{ sortValue: string; sessionId: string }`.
-  - [ ] `ORDER BY best_score DESC, session_id DESC LIMIT :limit`.
-  - [ ] Return `SessionListPage` with the existing session items plus
-        `searchMatches` keyed by `sessionId`. Build `searchMatches` from
-        the same row payload (`best_score`, `best_trace_id`,
-        `matching_trace_count`, `matching_trace_ids`,
-        `matching_trace_scores`).
-- [ ] `countByProjectId`: when search is active, return both
-      `count(DISTINCT session_id)` and `sum(matching_trace_count) AS
-      matching_trace_count_total` from the same CTE shape (spec §4.6).
-      Widen the return type to carry both numbers.
-- [ ] When `searchQuery` is present, force the ordering to `best_score
+        (spec §4.4); cursor shape `{ sortValue: string; sessionId: string }`.
+  - [x] `ORDER BY best_score DESC, session_id DESC LIMIT :limit`.
+  - [x] Return `SessionListPage` with the existing session items plus
+        `searchMatches` keyed by `sessionId`. Two-query strategy: rollup
+        gives candidate `session_id`s, then `fetchFullSessions` resolves
+        the full `Session` shape via `SELECT ${LIST_SELECT} FROM
+        sessions WHERE session_id IN (...)`. Pre-migration orphans
+        (whose `sessions_mv` filtered them out before #3224) fall back
+        to `toOrphanSession` synthesized from the rollup data; this
+        fallback can be revisited once migration 00016 is +90 days old
+        (lexical search TTL) and the case provably empties out.
+- [x] `countByProjectId`: when search is active, delegate to
+      `countSessionsBySearchQuery`. Returns
+      `{ totalCount, matchingTraceCount }` from the same CTE shape so
+      the UI can render "N sessions · M matching turns" (spec §4.6).
+- [x] When `searchQuery` is present, force the ordering to `best_score
       DESC, session_id DESC` regardless of the client `sortBy`
       (spec §4.7).
 
 ### PR 2 — Tests
 
-- [ ] New cases in `packages/platform/db-clickhouse/src/repositories/session-repository.test.ts`
+- [x] New cases in `packages/platform/db-clickhouse/src/repositories/session-repository.test.ts`
       (file added in PR 1 of `./1-parity-traces-sessions.md`):
-  - [ ] Lexical-only search: a session whose traces all score `0.0` still
+  - [x] Lexical-only search: a session whose traces all score `0.0` still
         surfaces and counts (spec §6.4).
-  - [ ] Hybrid (lexical + semantic): `best_score` equals the max of the
+  - [x] Hybrid (lexical + semantic): `best_score` equals the max of the
         session's per-trace semantic scores; matching traces with no
         embedding contribute `0.0` rows that still count toward
         `matching_trace_count`.
-  - [ ] Score-filter HAVING applied per-trace, not post-rollup: a session
+  - [x] Score-filter HAVING applied per-trace, not post-rollup: a session
         with one cost-passing trace and four cost-failing traces surfaces
         with `matching_trace_count = 1` (spec §6.6).
-  - [ ] Cursor: paginating with `(best_score, session_id)` yields a
+  - [x] Cursor: paginating with `(best_score, session_id)` yields a
         stable monotonic order with no duplicates across pages.
-  - [ ] Orphan-trace-as-session: a matching trace with no SDK
+  - [x] Orphan-trace-as-session: a matching trace with no SDK
         `session_id` produces a row keyed on `toString(trace_id)`,
         `matching_trace_ids = [trace_id]`, `best_trace_id = trace_id`
         (spec §6.7).
-  - [ ] Multi-trace session: `matching_trace_ids` is sorted by score
+  - [x] Multi-trace session: `matching_trace_ids` is sorted by score
         descending; `matching_trace_scores` is the parallel-aligned
         score array.
-  - [ ] List + count: both query paths share the same candidate set (a
+  - [x] List + count: both query paths share the same candidate set (a
         listed session always counts; a counted session is always
         reachable via pagination) — no drift between them.
-  - [ ] Ordering override: setting `sortBy = "cost"` while `searchQuery`
+  - [x] Ordering override: setting `sortBy = "cost"` while `searchQuery`
         is non-empty still orders by `best_score` (spec §4.7).
+
+Final: `pnpm --filter @platform/db-clickhouse test` reports 154/154
+(was 146 in PR 1, +8 new search cases). Workspace `pnpm typecheck`
+68/68. `pnpm knip` clean. Biome lint on the touched files clean.
+
+**Adversarial review findings filed for follow-up:**
+
+- LAT-611 (Low) — profile `argMaxIfMerge(session_id)` cost in
+  `trace_rollup` at XL scale.
+- LAT-612 (Medium) — `EXPLAIN` the `traces ⨝ search_results` join
+  strategy at XL scale.
+- LAT-613 (Medium) — eliminate duplicate full-scan work between the
+  list and count search paths.
 
 ### PR 3 — Server functions (TanStack Start)
 

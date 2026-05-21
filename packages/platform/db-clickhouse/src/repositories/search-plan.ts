@@ -156,12 +156,6 @@ function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
  *     sort so phrase matches surface in chronological order rather than by
  *     trace_id hash.
  *
- * Exported because it's part of `planSearch`'s public return type — keeping
- * it private produces a `.d.ts` that references an unexported alias from an
- * exported declaration (was flagged on PR #3234). Knip is told the type is
- * intentionally exported even without a direct named import in the workspace
- * yet (consumers reach it structurally via `planSearch`'s inferred return).
- *
  * @public
  */
 export type SearchPlan = {

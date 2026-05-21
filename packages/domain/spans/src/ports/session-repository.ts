@@ -9,6 +9,7 @@ import type {
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Session, SessionDetail } from "../entities/session.ts"
+import type { SessionSearchMatch } from "../entities/session-search-match.ts"
 import type { NumericRollup } from "./trace-repository.ts"
 
 /**
@@ -28,7 +29,8 @@ export interface SessionRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
-  }): Effect.Effect<number, RepositoryError, ChSqlClient>
+    readonly searchQuery?: string
+  }): Effect.Effect<SessionCountResult, RepositoryError, ChSqlClient>
 
   aggregateMetricsByProjectId(input: {
     readonly organizationId: OrganizationId
@@ -64,12 +66,37 @@ export interface SessionListOptions {
   readonly sortBy?: string
   readonly sortDirection?: "asc" | "desc"
   readonly filters?: FilterSet
+  /**
+   * When present, the repository switches into the search code path: results
+   * are session-rollups of matching traces, ranking is forced to
+   * `bestScore DESC, sessionId DESC` regardless of `sortBy`, and the returned
+   * `SessionListPage` carries a parallel `searchMatches` map.
+   */
+  readonly searchQuery?: string
 }
 
 export interface SessionListPage {
   readonly items: readonly Session[]
   readonly hasMore: boolean
   readonly nextCursor?: SessionListCursor
+  /**
+   * Per-result search match metadata, keyed by `sessionId`. Present only when
+   * `SessionListOptions.searchQuery` was active for the request. Surfaced as
+   * a parallel map (rather than embedded into `Session`) because the match is
+   * per result, not a property of the session entity itself.
+   */
+  readonly searchMatches?: Readonly<Record<string, SessionSearchMatch>>
+}
+
+/**
+ * Return shape for `countByProjectId`. `totalCount` is always populated;
+ * `matchingTraceCount` is only present when `searchQuery` was active, where
+ * it counts matching traces (not sessions) across all matched sessions —
+ * useful for "N traces across M sessions" headers on the search page.
+ */
+export interface SessionCountResult {
+  readonly totalCount: number
+  readonly matchingTraceCount?: number
 }
 
 export interface SessionMetrics {
