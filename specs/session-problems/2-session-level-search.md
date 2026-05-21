@@ -64,10 +64,15 @@ functions in PR 2 (see §9 Open questions → "`buildSearchPlan` location").
       `SESSION_SEARCH_SCORE_AGGREGATION = "max"` next to the trace-search
       constants. Documents the §4.2 decision; switching it later is a
       one-constant change.
-- [ ] `packages/domain/spans/src/entities/session.ts` (or a new
-      `session-search-match.ts`): add `SessionSearchMatch` shape per spec
-      §5.1 (`bestScore`, `bestTraceId`, `matchingTraceCount`,
-      `matchingTraceIds`, `matchingTraceScores`).
+- [ ] New file
+      `packages/domain/spans/src/entities/session-search-match.ts`:
+      define `SessionSearchMatch` (`bestScore`, `bestTraceId`,
+      `matchingTraceCount`, `matchingTraceIds`, `matchingTraceScores`)
+      per spec §5.1. Kept out of `session.ts` because the match is
+      *per result*, not a property of the session — same separation
+      `score-analytics` uses for derived-on-read shapes. Re-export from
+      `@domain/spans` so the web layer can import the type alongside
+      `SessionRecord`.
 - [ ] Widen `SessionListPage` (`packages/domain/spans/src/ports/session-repository.ts`)
       with optional `searchMatches?: Readonly<Record<string, SessionSearchMatch>>`
       keyed by `sessionId`. **Parallel field**, not a property of
@@ -213,12 +218,12 @@ column-settings store, one set of React Query keys.
       - filters only → `"N sessions"`
       - query active → `"N sessions · M matching turns"` (both numbers
         come from `useSessionsCount`).
-- [ ] Same file: build `traceIdsRef` for drawer prev/next from the
-      page payload. When `searchMatches` is populated, flatten
-      `searchMatches[sessionId].matchingTraceIds` across the page in
-      display order (spec §5.5). When it's not populated, fall back to
-      the per-session `session.traceIds` order — same shape
-      `SessionsView` already produces on the project page (`sessions-view.tsx:392`).
+- [ ] Same file: `traceIdsRef` for drawer prev/next stays the same
+      shape as today's Sessions tab (`sessions-view.tsx:392`): each
+      expanded session contributes its `session.traceIds` in
+      ingestion order, concatenated in page order. No search-specific
+      branching — matching vs. non-matching is a visual cue in the
+      table, not a navigation distinction.
 - [ ] `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/sessions-view.tsx`:
       add `searchQuery?: string` and
       `searchMatches?: Readonly<Record<string, SessionSearchMatch>>`
@@ -230,21 +235,29 @@ column-settings store, one set of React Query keys.
       append/remove dance in the visible-column-ids logic — the column
       is always declared, the cell is empty when there's no match
       data.
-- [ ] Same file: in `useExpandedSessionTraces` (line ~54-98), when
-      `searchMatches[sessionId]` is provided, **skip the
-      `listTracesByProject` call** and use `matchingTraceIds` directly
-      as the expanded-rows list in score order (spec §5.3). Otherwise
-      keep today's per-session query.
+- [ ] Same file: `useExpandedSessionTraces` (line ~54-98) is unchanged —
+      keeps its existing `listTracesByProject` call. The expansion
+      shows **all** of the session's traces in ingestion order, same
+      as the Sessions tab today (spec §5.3). Matching turns are
+      flagged, not filtered.
+- [ ] Same file: when `searchMatches[sessionId]` is provided, render a
+      visual highlight on expanded trace rows whose `traceId` is in
+      `matchingTraceIds` — subtle background tint or focus ring, exact
+      treatment chosen during PR 4 design. The row stays clickable as
+      today; the highlight is a non-modal cue that "this turn
+      matched". An optional score pill (per-row, value from the
+      parallel `matchingTraceScores` array) can render alongside if
+      design wants it.
 - [ ] Same file: top-level row click — when `searchMatches[sessionId]`
       exists, open drawer on `bestTraceId`; otherwise behave like
       today (expand only, no drawer). Expanded trace row click always
       opens the drawer on that specific `traceId`.
-- [ ] Same file: `useSessionSelectionAdapter` already maps session
-      checkboxes → trace ids via `sessionTraceIndex`. When
-      `searchMatches[sessionId]` is provided, feed the index
-      `matchingTraceIds` instead of `session.traceIds` — so the
-      existing `enqueueTracesExport` path exports the matching turns
-      the user sees. No call-site changes anywhere.
+- [ ] Same file: `useSessionSelectionAdapter` is unchanged. The
+      existing `sessionTraceIndex` (`sessionId → session.traceIds`) is
+      fed regardless of whether `searchMatches` is present — checking
+      a session row selects all of its traces, same as the Sessions
+      tab today; `enqueueTracesExport` consumes that selection with
+      no transformation.
 - [ ] Telemetry (spec §7 step 5): log per-search-query
       `matching_session_count`, `sum(matching_trace_count)`, and
       query latency. Wire into the existing PostHog client.
@@ -252,11 +265,13 @@ column-settings store, one set of React Query keys.
       - Empty search bar, no filters → empty state, no count.
       - Add a filter, no query → session listing (same as the project
         Sessions tab) with "N sessions" count.
-      - Type `payment` → one row per session, matching-turns pill,
-        drawer opens on best trace, prev/next cycles inside the
-        session then jumps to the next session's best, exporting a
-        selected session produces a CSV whose rows match the expanded
-        matching-turns view.
+      - Type `payment` → one row per session with the "matching
+        turns" pill; expanding a session shows the **full
+        conversation** (all turns in ingestion order, same as the
+        Sessions tab) with the matching turns visually flagged;
+        top-level row click opens the drawer on `bestTraceId`;
+        checking a session and exporting produces a CSV of all the
+        session's traces (same as the Sessions tab today).
 
 ### Follow-ups (out of scope for this spec; tracked here only as breadcrumbs)
 
@@ -1020,11 +1035,16 @@ path, no conditional rendering.
 The `"searchMatches"` column lives in `SESSION_COLUMN_OPTIONS`
 unconditionally; the cell renderer reads
 `searchMatches[sessionId]?.matchingTraceCount` and renders nothing
-when absent. Expanded rows still come from `useExpandedSessionTraces`
-(`sessions-view.tsx:54-98`); when `searchMatches[sessionId]` is
-provided, the hook short-circuits the `listTracesByProject` call and
-uses `matchingTraceIds` directly so we don't re-query and we preserve
-score order.
+when absent. Expanded rows come from `useExpandedSessionTraces`
+(`sessions-view.tsx:54-98`) unchanged: **all** of the session's
+traces in ingestion order, same as the Sessions tab today. Matching
+turns are flagged visually (background tint or focus ring on the
+trace row, exact treatment finalized during PR 4 design) — a
+non-modal cue that the row produced the score, not a filter. Reading
+the session top-to-bottom remains the primary mental model; the
+highlight tells the user where in the conversation the matches sit.
+`matchingTraceIds` and `matchingTraceScores` are consumed only for
+the visual flagging and optional per-row score pill.
 
 ### 5.4 Drawer drill-in
 
@@ -1044,20 +1064,22 @@ why this session matched best".
 
 `search/index.tsx` already supports cycling through results with
 prev/next traces (`canNavigateNext`, `canNavigatePrev`,
-`navigateTrace`). With sessions as the result rows, the natural
-behavior is:
+`navigateTrace`). With sessions as the result rows:
 
-- Inside an expanded session: prev/next cycles _within_ the session's
-  matching traces (score-ordered).
-- Outside an expanded session: prev/next moves to the next session
-  and lands on its `bestTraceId`.
+- Inside an expanded session: prev/next walks every turn of the
+  session in ingestion order — same as today's Sessions tab.
+  Matching/non-matching is a visual cue inside the table, not a
+  navigation distinction.
+- Top-level session row click (no expansion needed): opens the
+  drawer directly on `bestTraceId` — the default "show me why this
+  session matched". The user can hit prev/next from there to walk
+  the conversation around that match.
 
-`traceIdsRef` (the flat trace-id list the drawer uses today —
-`search/index.tsx:78`, `sessions-view.tsx:392`) is replaced with a
-session-aware structure carrying the per-session ordered list. The
-drawer doesn't need to know about sessions — it still sees a flat
-list of `traceId`s — but the page assembles that list from the
-session-search payload.
+`traceIdsRef` (`search/index.tsx:78`, `sessions-view.tsx:392`) stays
+identical in shape to the Sessions tab today: expanded sessions
+contribute their full `session.traceIds` in ingestion order,
+concatenated in page order. No search-specific assembly. The drawer
+sees the same flat trace-id list it sees on the project page.
 
 ## 6. Edge cases
 
@@ -1240,10 +1262,13 @@ No backfill is required because the trace-level indexes are reused.
 - **Session-level export shape.** Already solved by the existing
   `useSessionSelectionAdapter` (`sessions-view.tsx:105-180`): session
   checkboxes drive a trace-keyed selection state, and
-  `enqueueTracesExport` consumes it directly. Search mode just swaps
-  the index source to `matchingTraceIds`. A dedicated session-CSV
-  layout (one row per session with rolled-up totals) is a separate
-  product question; pursue only if customers ask.
+  `enqueueTracesExport` consumes it directly — no changes for search
+  mode. Selection covers all of the session's traces, same as the
+  Sessions tab today. A dedicated session-CSV layout (one row per
+  session with rolled-up totals) is a separate product question;
+  pursue only if customers ask. "Select session in search → export
+  only the matching turns" is also possible as a future flag if
+  product wants the narrower default.
 - **Score normalization across plans.** Lexical-only returns
   `relevance_score = 0.0` while semantic returns cosines in roughly
   `[0.3, 0.9]`. The rollup carries that through, so a phrase-only
@@ -1272,15 +1297,15 @@ No backfill is required because the trace-level indexes are reused.
   Possibly yes for power-users debugging the search itself. Defer to
   product but the SQL path supports both with zero extra work — the
   trace-level list query already exists and is unchanged.
-- **Per-session export selection.** Resolved: the existing
-  session-row → trace-id selection mapping in
-  `useSessionSelectionAdapter` already produces a trace-keyed
-  selection state that flows into `enqueueTracesExport` with no
-  transformation. In search mode the adapter's `sessionTraceIndex` is
-  fed `matchingTraceIds` instead of `traceIds` — so checking a session
-  in search exports its matching turns. If product later wants "all
-  traces in the session" (including non-matching turns), it's a flag
-  on the index source, not a new export path.
+- **Per-session export selection.** Resolved: selection mirrors the
+  expansion — both show **all** of the session's traces, matching
+  what the Sessions tab does today. `useSessionSelectionAdapter` is
+  fed `session.traceIds` regardless of whether search is active, and
+  `enqueueTracesExport` consumes that selection unchanged. The
+  visual highlight on matching trace rows is a presentation cue, not
+  a selection scope. If product later wants "checking a session in
+  search selects only its matching turns", flip the index source to
+  `matchingTraceIds` — one line.
 - **Tie-breaker stability.** When `best_score` ties (especially the
   `0.0` lexical-only case), `ORDER BY best_score DESC, session_id
   DESC` is stable but arbitrary. Is there a recency or freshness
