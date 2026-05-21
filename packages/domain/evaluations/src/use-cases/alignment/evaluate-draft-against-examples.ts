@@ -11,8 +11,6 @@ import {
 } from "../../runtime/ai-telemetry.ts"
 import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-execution.ts"
 
-// TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS;
-// this function delegates to it and its structure won't change.
 export const evaluateDraftAgainstExamplesUseCase = Effect.fn("evaluations.evaluateDraftAgainstExamples")(
   function* (input: {
     readonly issueName: string

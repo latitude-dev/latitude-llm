@@ -7,8 +7,6 @@ import {
 } from "../../runtime/ai-telemetry.ts"
 import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-execution.ts"
 
-// TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS
-// and this function's structure will remain the same — it just calls executeEvaluationScript.
 export const evaluateOptimizationCandidate = Effect.fn("evaluations.evaluateOptimizationCandidate")(function* (input: {
   readonly candidate: OptimizationCandidate
   readonly example: HydratedEvaluationAlignmentExample

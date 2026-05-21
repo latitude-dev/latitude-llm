@@ -99,8 +99,7 @@ export const evaluationSchema = z.object({
   issueId: cuidSchema, // in MVP evaluations are issue-linked; multiple evaluations may link to the same issue
   name: z.string().min(1).max(EVALUATION_NAME_MAX_LENGTH), // unique name within the project among non-deleted rows
   description: z.string(), // generated from the resulting script after alignment
-  // TODO(eval-sandbox): when sandbox is available, this field will hold arbitrary JS; until then
-  // it must conform to the fixed LLM-as-judge template enforced by validateEvaluationScript().
+  // Arbitrary evaluation script source executed by the hosted EvaluationScriptRuntime sandbox.
   script: z.string().min(1),
   trigger: evaluationTriggerSchema, // controls when the evaluation runs on live traffic
   alignment: evaluationAlignmentSchema, // persisted confusion matrix and script hash
