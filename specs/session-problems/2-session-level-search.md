@@ -31,9 +31,12 @@ closure into a shared module so `SessionRepository` can import the same
 functions in PR 2 (see §9 Open questions → "`buildSearchPlan` location").
 
 - [x] New file `packages/platform/db-clickhouse/src/repositories/search-plan.ts`:
-  - [x] Move the `SearchPlan` type (`trace-repository.ts:195-199`) — kept
-        internal; PR 2 promotes it to an export when SessionRepository
-        imports it.
+  - [x] Move the `SearchPlan` type (`trace-repository.ts:195-199`) —
+        exported. (Originally planned as internal, but Copilot's review
+        on #3234 flagged that `planSearch`'s exported return type
+        references it, producing a `.d.ts` with a private alias on a
+        public signature. Made `@public` so knip recognizes the
+        export as intentional even without a direct named import yet.)
   - [x] Move `tokenizePhrase` (`trace-repository.ts:72-77`).
   - [x] Move `buildLexicalSearchSubquery` (`trace-repository.ts:103-150`).
   - [x] Move `buildSemanticSearchSubquery` (`trace-repository.ts:162-186`).
