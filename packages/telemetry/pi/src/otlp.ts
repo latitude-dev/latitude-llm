@@ -54,7 +54,7 @@ function toOtlpSpan(span: BuildResult["spans"][number], allowConversationAccess:
 }
 
 function encodeAttr(key: string, value: AttrValue): OtlpKeyValue | undefined {
-  if (value === undefined || value === null) return undefined
+  if (value === undefined) return undefined
   if (typeof value === "string") return str(key, value)
   if (typeof value === "boolean") return bool(key, value)
   if (typeof value === "number")
