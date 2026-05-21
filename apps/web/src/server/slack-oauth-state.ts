@@ -41,13 +41,7 @@ const buildKey = (state: string): string => `${KEY_PREFIX}${state}`
  */
 export interface SlackOAuthStateRedis {
   set(key: string, value: string, mode: "EX", ttlSeconds: number): Promise<unknown>
-  pipeline(): SlackOAuthStatePipeline
-}
-
-export interface SlackOAuthStatePipeline {
-  get(key: string): SlackOAuthStatePipeline
-  del(key: string): SlackOAuthStatePipeline
-  exec(): Promise<Array<[Error | null, unknown]> | null>
+  getdel(key: string): Promise<string | null>
 }
 
 const statePayloadSchema = z.object({
@@ -79,8 +73,11 @@ export const generateSlackOAuthState = async (input: {
 
 /**
  * Atomically read the state payload and delete the key so the token
- * cannot be replayed. Returns `null` for missing, expired, or
- * malformed entries.
+ * cannot be replayed. Uses Redis `GETDEL` (single command, atomic
+ * since Redis 6.2) — a pipelined `GET`+`DEL` would not prevent two
+ * concurrent callbacks from both reading the value before either
+ * delete lands. Returns `null` for missing, expired, or malformed
+ * entries.
  *
  * Errors from Redis are logged and surface as `null` (treat as "no
  * such state"). Failing closed is the right default for CSRF — if we
@@ -94,13 +91,9 @@ export const consumeSlackOAuthState = async (input: {
 
   let raw: string | null = null
   try {
-    const results = await input.redis.pipeline().get(key).del(key).exec()
-    const getResult = results?.[0]
-    if (getResult && getResult[0] === null && typeof getResult[1] === "string") {
-      raw = getResult[1]
-    }
+    raw = await input.redis.getdel(key)
   } catch (cause) {
-    logger.warn("slack oauth state redis pipeline failed", cause)
+    logger.warn("slack oauth state redis getdel failed", cause)
     return null
   }
 

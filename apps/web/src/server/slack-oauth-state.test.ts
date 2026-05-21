@@ -1,35 +1,6 @@
 import { OrganizationId, UserId } from "@domain/shared"
 import { beforeEach, describe, expect, it } from "vitest"
-import {
-  consumeSlackOAuthState,
-  generateSlackOAuthState,
-  type SlackOAuthStatePipeline,
-  type SlackOAuthStateRedis,
-} from "./slack-oauth-state.ts"
-
-class FakeRedisPipeline implements SlackOAuthStatePipeline {
-  private readonly ops: Array<{ readonly kind: "get" | "del"; readonly key: string }> = []
-
-  constructor(private readonly redis: FakeRedis) {}
-
-  get(key: string): SlackOAuthStatePipeline {
-    this.ops.push({ kind: "get", key })
-    return this
-  }
-
-  del(key: string): SlackOAuthStatePipeline {
-    this.ops.push({ kind: "del", key })
-    return this
-  }
-
-  async exec(): Promise<Array<[Error | null, unknown]>> {
-    return this.ops.map((op) => {
-      if (op.kind === "get") return [null, this.redis.getValue(op.key)] as [Error | null, unknown]
-      this.redis.deleteValue(op.key)
-      return [null, 1]
-    })
-  }
-}
+import { consumeSlackOAuthState, generateSlackOAuthState, type SlackOAuthStateRedis } from "./slack-oauth-state.ts"
 
 class FakeRedis implements SlackOAuthStateRedis {
   private readonly values = new Map<string, string>()
@@ -39,16 +10,11 @@ class FakeRedis implements SlackOAuthStateRedis {
     return "OK"
   }
 
-  pipeline(): SlackOAuthStatePipeline {
-    return new FakeRedisPipeline(this)
-  }
-
-  getValue(key: string): string | null {
-    return this.values.get(key) ?? null
-  }
-
-  deleteValue(key: string): void {
+  async getdel(key: string): Promise<string | null> {
+    const value = this.values.get(key)
+    if (value === undefined) return null
     this.values.delete(key)
+    return value
   }
 
   size(): number {
@@ -56,22 +22,12 @@ class FakeRedis implements SlackOAuthStateRedis {
   }
 }
 
-class ThrowingPipelineRedis implements SlackOAuthStateRedis {
+class ThrowingRedis implements SlackOAuthStateRedis {
   async set(): Promise<"OK"> {
     return "OK"
   }
-  pipeline(): SlackOAuthStatePipeline {
-    return {
-      get() {
-        return this
-      },
-      del() {
-        return this
-      },
-      async exec(): Promise<Array<[Error | null, unknown]>> {
-        throw new Error("redis unavailable")
-      },
-    }
+  async getdel(): Promise<string | null> {
+    throw new Error("redis unavailable")
   }
 }
 
@@ -128,9 +84,26 @@ describe("generateSlackOAuthState + consumeSlackOAuthState", () => {
     expect(payload).toBeNull()
   })
 
-  it("returns null when the Redis pipeline throws (fail-closed)", async () => {
-    const throwingRedis = new ThrowingPipelineRedis()
+  it("returns null when the Redis getdel throws (fail-closed)", async () => {
+    const throwingRedis = new ThrowingRedis()
     const payload = await consumeSlackOAuthState({ redis: throwingRedis, state: "anything" })
     expect(payload).toBeNull()
+  })
+
+  // The atomicity guarantee comes from Redis `GETDEL` itself. We can't
+  // race in-process against a Map, so the most we can verify here is
+  // that concurrent consumers contend on the same key and only one
+  // sees the payload.
+  it("only one of two concurrent consumers receives the payload", async () => {
+    const state = await generateSlackOAuthState({ redis, organizationId: ORG_A, userId: USER_A })
+
+    const [a, b] = await Promise.all([
+      consumeSlackOAuthState({ redis, state }),
+      consumeSlackOAuthState({ redis, state }),
+    ])
+
+    const winners = [a, b].filter((result) => result !== null)
+    expect(winners).toHaveLength(1)
+    expect(redis.size()).toBe(0)
   })
 })
