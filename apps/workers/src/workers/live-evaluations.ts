@@ -24,6 +24,7 @@ import {
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { EvaluationScriptRuntimeLive } from "@platform/evaluation-runtime"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 
@@ -149,6 +150,7 @@ export const createLiveEvaluationsWorker = ({
           BillingUsagePeriodRepositoryLive,
           SettingsReaderLive,
           StripeSubscriptionLookupLive,
+          EvaluationScriptRuntimeLive,
         ),
         pgClient,
         OrganizationId(payload.organizationId),

@@ -1,4 +1,4 @@
-import { EVALUATION_CONVERSATION_PLACEHOLDER } from "../runtime/evaluation-execution.ts"
+import { EVALUATION_CONVERSATION_TEXT_PLACEHOLDER } from "../runtime/evaluation-execution.ts"
 
 export const generateBaselinePromptText = (issueName: string, issueDescription: string): string =>
   [
@@ -8,7 +8,7 @@ export const generateBaselinePromptText = (issueName: string, issueDescription: 
     `Description: ${issueDescription}`,
     ``,
     `Conversation:`,
-    EVALUATION_CONVERSATION_PLACEHOLDER,
+    EVALUATION_CONVERSATION_TEXT_PLACEHOLDER,
     ``,
     `Determine whether the conversation exhibits the described issue.`,
     `If the issue is present, set passed to false. If the issue is absent, set passed to true.`,

@@ -21,9 +21,7 @@ const formatTrajectory = (trajectory: OptimizationTrajectory, index: number): st
   return lines.join("\n")
 }
 
-// TODO(eval-sandbox): when sandbox is available, relax the MVP template constraint and
-// allow arbitrary JS evaluation scripts instead of the fixed LLM-as-judge wrapper.
-export const GEPA_PROPOSER_SYSTEM_PROMPT = `You improve Latitude evaluation scripts used in an MVP LLM-as-judge runtime.
+export const GEPA_PROPOSER_SYSTEM_PROMPT = `You improve Latitude evaluation scripts used in a sandboxed JavaScript-like runtime.
 
 You receive:
 - an issue name and description
@@ -35,18 +33,19 @@ Each trajectory may include "Human annotation context" — this is ground truth 
 Return reasoning and a full improved evaluation script per the schema.
 
 Rules for the script:
-- The script field must contain the entire evaluation script, with no markdown fences
-- Preserve the current MVP script wrapper exactly: one llm() call that returns { passed: boolean, feedback: string }, followed by the existing Passed/Failed return logic
-- Only change the prompt text inside the llm() template literal
-- The only allowed interpolation placeholder inside the prompt text is \${conversation} — it will be replaced at runtime with the formatted conversation
-- Do not use backticks inside the prompt text
-- Keep the prompt text focused on detecting the target issue in the conversation
+- The script field must contain the entire evaluation script body, with no markdown fences
+- Use only the runtime globals: Passed, Failed, llm, parse, conversation, conversationText, metadata, issue, JSON, Math, Number, String, Boolean, Array, and Object
+- Do not import modules, access process, fetch network resources, read files, or use timers
+- Use plain JSON Schema for all llm({ schema }) and parse(value, schema) calls; do not use Zod, z, zod, TypeScript types, or non-JSON schema objects
+- Prefer conversationText for prompt-oriented judging and conversation for structured JSON inspection
+- Return only via Passed(...) or Failed(...), and always include non-empty feedback
+- Keep the script focused on detecting the target issue in the conversation
 - Learn from failures and false positives in the trajectories — especially use the human annotation context to understand why false positives are actually correct behavior
 - Prefer small, concrete improvements over complete rewrites`
 
 export const gepaProposalOutputSchema = z.object({
   reasoning: z.string().min(1),
-  script: z.string().min(1).describe("A complete evaluation script body matching the MVP LLM-as-judge template"),
+  script: z.string().min(1).describe("A complete sandboxed evaluation script body using JSON Schema for host calls"),
 })
 
 export const buildGepaProposalPrompt = (input: {

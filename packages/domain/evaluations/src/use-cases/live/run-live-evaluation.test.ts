@@ -1,4 +1,4 @@
-import { type AI, AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
+import { AI, AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import {
   BillingOverrideRepository,
@@ -37,17 +37,23 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { z } from "zod"
 import {
   defaultEvaluationTrigger,
   type Evaluation,
   emptyEvaluationAlignment,
   evaluationSchema,
 } from "../../entities/evaluation.ts"
+import { EvaluationExecutionError } from "../../errors.ts"
 import { type EvaluationIssue, EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../../ports/evaluation-repository.ts"
+import { EvaluationScriptRuntime } from "../../ports/evaluation-script-runtime.ts"
 import {
-  EVALUATION_CONVERSATION_PLACEHOLDER,
+  EVALUATION_CONVERSATION_TEXT_PLACEHOLDER,
+  EVALUATION_SCRIPT_RUNTIME_MODEL,
+  EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
   estimateEvaluationScriptCostMicrocents,
+  formatEvaluationConversationForPrompt,
   wrapPromptAsEvaluationScript,
 } from "../../runtime/evaluation-execution.ts"
 import { runLiveEvaluationUseCase } from "./run-live-evaluation.ts"
@@ -64,7 +70,7 @@ const VALID_SCRIPT = wrapPromptAsEvaluationScript(
     "Review the conversation for the linked issue.",
     "",
     "Conversation:",
-    EVALUATION_CONVERSATION_PLACEHOLDER,
+    EVALUATION_CONVERSATION_TEXT_PLACEHOLDER,
     "",
     "Set passed to true when the issue is absent.",
   ].join("\n"),
@@ -233,6 +239,48 @@ function createBillingLayer(input?: {
   )
 }
 
+const TestEvaluationScriptRuntimeLive = Layer.effect(
+  EvaluationScriptRuntime,
+  Effect.gen(function* () {
+    const ai = yield* AI
+    return {
+      compile: () => Effect.void,
+      execute: (input) =>
+        ai
+          .generate({
+            ...EVALUATION_SCRIPT_RUNTIME_MODEL,
+            system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
+            prompt: formatEvaluationConversationForPrompt(input.conversation),
+            schema: z.object({
+              passed: z.boolean(),
+              value: z.number().optional(),
+              feedback: z.string(),
+            }),
+            ...(input.telemetry ? { telemetry: input.telemetry } : {}),
+          })
+          .pipe(
+            Effect.mapError(
+              (cause) =>
+                new EvaluationExecutionError({
+                  message: cause.message,
+                  cause,
+                }),
+            ),
+            Effect.map((result) => ({
+              result: {
+                passed: Boolean((result.object as { passed: boolean }).passed),
+                value: (result.object as { passed: boolean }).passed ? 1 : 0,
+                feedback: String((result.object as { feedback: string }).feedback),
+              },
+              totalTokens: result.tokens,
+              totalDurationNs: result.duration,
+              totalCostMicrocents: estimateEvaluationScriptCostMicrocents(result),
+            })),
+          ),
+    }
+  }),
+)
+
 function createUseCaseLayer(input: {
   readonly traceRepository: ReturnType<typeof createFakeTraceRepository>["repository"]
   readonly evaluationRepository: EvaluationRepositoryShape
@@ -242,13 +290,13 @@ function createUseCaseLayer(input: {
   readonly aiLayer?: ReturnType<typeof createFakeAI>["layer"] | undefined
   readonly billingLayer?: ReturnType<typeof createBillingLayer> | undefined
 }): Layer.Layer<
-  | AI
   | BillingOverrideRepository
   | BillingSpendReservation
   | BillingUsageEventRepository
   | BillingUsagePeriodRepository
   | EvaluationIssueRepository
   | EvaluationRepository
+  | EvaluationScriptRuntime
   | ScoreAnalyticsRepository
   | OutboxEventWriter
   | ScoreRepository
@@ -259,15 +307,17 @@ function createUseCaseLayer(input: {
   never,
   never
 > {
+  const aiLayer = input.aiLayer ?? createFakeAI().layer
+
   return Layer.mergeAll(
     Layer.succeed(TraceRepository, input.traceRepository),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
+    TestEvaluationScriptRuntimeLive.pipe(Layer.provide(aiLayer)),
     input.scoreWriteLayer ?? createScoreWriteLayer({ scoreRepository: input.scoreRepository }),
     Layer.succeed(
       EvaluationIssueRepository,
       input.issueRepository ?? createIssueRepository(() => Effect.die("Issue should not be loaded in this scenario")),
     ),
-    input.aiLayer ?? createFakeAI().layer,
     input.billingLayer ?? createBillingLayer(),
   )
 }

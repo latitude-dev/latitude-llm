@@ -3,7 +3,7 @@ import type { Evaluation } from "@domain/evaluations"
 import {
   collectAlignmentExamplesUseCase,
   defaultEvaluationTrigger,
-  EVALUATION_CONVERSATION_PLACEHOLDER,
+  EVALUATION_CONVERSATION_TEXT_PLACEHOLDER,
   type EvaluationAlignmentExample,
   EvaluationAlignmentExamplesRepository,
   type EvaluationAlignmentExamplesRepositoryShape,
@@ -39,6 +39,7 @@ import {
 import { createFakeChSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
+import { EvaluationScriptRuntimeLive } from "@platform/evaluation-runtime"
 import { silenceLoggerInTests } from "@repo/vitest-config/silence-logger"
 import { Effect, Layer } from "effect"
 import { describe, expect, it, vi } from "vitest"
@@ -320,7 +321,7 @@ describe("evaluation-alignment activities", () => {
         issueName: ISSUE_NAME,
         issueDescription: ISSUE_DESCRIPTION,
         script: wrapPromptAsEvaluationScript(
-          `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+          `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_TEXT_PLACEHOLDER}`,
         ),
         positiveExamples: [
           {
@@ -361,7 +362,7 @@ describe("evaluation-alignment activities", () => {
           evaluationId: String(evaluationId),
           jobId: "job-baseline",
         },
-      }).pipe(Effect.provide(aiLayer)),
+      }).pipe(Effect.provide(EvaluationScriptRuntimeLive), Effect.provide(aiLayer)),
     )
 
     expect(result.confusionMatrix).toEqual({
@@ -440,7 +441,7 @@ describe("evaluation-alignment activities", () => {
           evaluationId: String(evaluationId),
           jobId: "job-incremental",
         },
-      }).pipe(Effect.provide(aiLayer)),
+      }).pipe(Effect.provide(EvaluationScriptRuntimeLive), Effect.provide(aiLayer)),
     )
 
     expect(result.strategy).toBe("no-op")
@@ -481,7 +482,7 @@ describe("evaluation-alignment activities", () => {
         issueDescription: ISSUE_DESCRIPTION,
         draft: {
           script: wrapPromptAsEvaluationScript(
-            `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+            `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_TEXT_PLACEHOLDER}`,
           ),
           evaluationHash: "hash-existing",
           trigger: defaultEvaluationTrigger(),
@@ -511,7 +512,7 @@ describe("evaluation-alignment activities", () => {
           evaluationId: String(evaluationId),
           jobId: "job-incremental",
         },
-      }).pipe(Effect.provide(aiLayer)),
+      }).pipe(Effect.provide(EvaluationScriptRuntimeLive), Effect.provide(aiLayer)),
     )
 
     expect(result.strategy).toBe("metric-only")
@@ -573,7 +574,7 @@ describe("evaluation-alignment activities", () => {
           evaluationId: String(evaluationId),
           jobId: "job-incremental",
         },
-      }).pipe(Effect.provide(aiLayer)),
+      }).pipe(Effect.provide(EvaluationScriptRuntimeLive), Effect.provide(aiLayer)),
     )
 
     expect(result.strategy).toBe("full-reoptimization")
@@ -581,10 +582,10 @@ describe("evaluation-alignment activities", () => {
   })
 
   it("runs the workflow optimization seam through the optimizer port", async () => {
-    const optimizedPrompt = `Improved: detect leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`
+    const optimizedPrompt = `Improved: detect leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_TEXT_PLACEHOLDER}`
     const expectedOptimizedScript = wrapPromptAsEvaluationScript(optimizedPrompt)
     const baselineScript = wrapPromptAsEvaluationScript(
-      `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+      `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_TEXT_PLACEHOLDER}`,
     )
 
     mockAi.generate.mockReset()
@@ -706,7 +707,7 @@ describe("evaluation-alignment activities", () => {
         issueId: String(issueId),
         evaluationId: null,
         script: wrapPromptAsEvaluationScript(
-          `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+          `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_TEXT_PLACEHOLDER}`,
         ),
         evaluationHash: "hash-activity-test",
         confusionMatrix: { truePositives: 3, falsePositives: 1, falseNegatives: 0, trueNegatives: 4 },
@@ -734,7 +735,7 @@ describe("evaluation-alignment activities", () => {
         issueId: String(issueId),
         evaluationId: String(evaluationId),
         script: wrapPromptAsEvaluationScript(
-          `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+          `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_TEXT_PLACEHOLDER}`,
         ),
         evaluationHash: "hash-overwrite-test",
         confusionMatrix: { truePositives: 5, falsePositives: 0, falseNegatives: 0, trueNegatives: 5 },

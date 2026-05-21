@@ -22,6 +22,7 @@ import {
 } from "@domain/optimizations"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
+import { EvaluationScriptRuntimeLive } from "@platform/evaluation-runtime"
 import {
   buildGepaProposalPrompt,
   GEPA_DEFAULT_REFLECTION_SIZE,
@@ -205,6 +206,7 @@ export const optimizeEvaluationDraft = (input: {
                 jobId: input.jobId,
               },
             }).pipe(
+              Effect.provide(EvaluationScriptRuntimeLive),
               withAi(AIGenerateLive, getRedisClient()),
               withTracing,
               Effect.mapError(

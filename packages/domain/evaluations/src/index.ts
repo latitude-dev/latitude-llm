@@ -111,6 +111,12 @@ export {
   evaluationListLifecycleSchema,
 } from "./ports/evaluation-repository.ts"
 export {
+  type EvaluationRuntimeMetadata,
+  EvaluationScriptRuntime,
+  type EvaluationScriptRuntimeShape,
+  type ExecuteEvaluationScriptRuntimeInput,
+} from "./ports/evaluation-script-runtime.ts"
+export {
   LiveEvaluationQueuePublisher,
   type LiveEvaluationQueuePublisherShape,
   type PublishLiveEvaluationExecuteInput,
@@ -124,7 +130,9 @@ export {
   type EvaluationOptimizationJudgeTelemetryScope,
 } from "./runtime/ai-telemetry.ts"
 export {
+  buildJsonSchemaJudgeScript,
   EVALUATION_CONVERSATION_PLACEHOLDER,
+  EVALUATION_CONVERSATION_TEXT_PLACEHOLDER,
   EVALUATION_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
   type EvaluationConversationMessage,
@@ -132,22 +140,28 @@ export {
   type EvaluationExecutionResultPayload,
   type EvaluationIssueContext,
   type EvaluationScriptExecution,
-  type EvaluationScriptSchema,
-  type ExecuteEvaluationScriptWithAIError,
   estimateEvaluationScriptCostMicrocents,
   evaluationExecutionResultPayloadSchema,
   evaluationExecutionResultSchema,
   evaluationIssueContextSchema,
-  evaluationRuntimeZod,
-  executeEvaluationScript,
   executeEvaluationScriptWithAI,
   extractPromptFromEvaluationScript,
   formatEvaluationConversationForPrompt,
+  normalizeLegacyEvaluationScript,
   toEvaluationConversationMessages,
   toEvaluationExecutionResult,
   validateEvaluationScript,
   wrapPromptAsEvaluationScript,
+  wrapPromptAsLegacyMvpEvaluationScript,
 } from "./runtime/evaluation-execution.ts"
+export {
+  type EvaluationJsonSchema,
+  evaluationJsonSchemaSchema,
+  evaluationVerdictJsonSchema,
+  type JsonSchemaType,
+  jsonSchemaToZod,
+  jsonSchemaTypeSchema,
+} from "./runtime/json-schema.ts"
 export { collectAlignmentExamplesUseCase } from "./use-cases/alignment/collect-alignment-examples.ts"
 export { evaluateBaselineDraftUseCase } from "./use-cases/alignment/evaluate-baseline-draft.ts"
 export { evaluateDraftAgainstExamplesUseCase } from "./use-cases/alignment/evaluate-draft-against-examples.ts"

@@ -1,10 +1,13 @@
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
+  EVALUATION_CONVERSATION_TEXT_PLACEHOLDER,
   extractPromptFromEvaluationScript,
   formatEvaluationConversationForPrompt,
   generateBaselinePromptText,
+  normalizeLegacyEvaluationScript,
   validateEvaluationScript,
   wrapPromptAsEvaluationScript,
+  wrapPromptAsLegacyMvpEvaluationScript,
 } from "@domain/evaluations"
 import { describe, expect, it } from "vitest"
 
@@ -13,67 +16,37 @@ const DUMMY_CONVERSATION = [
   { role: "assistant", content: "Your API key is sk-live-123." },
 ]
 
-describe("MVP script template helpers", () => {
-  describe("wrapPromptAsEvaluationScript / extractPromptFromEvaluationScript", () => {
-    it("round-trips a simple prompt", () => {
-      const prompt = "Evaluate the conversation for issues."
-      const script = wrapPromptAsEvaluationScript(prompt)
-      const extracted = extractPromptFromEvaluationScript(script)
-      expect(extracted).toBe(prompt)
-    })
-
-    it("round-trips a prompt with conversation placeholder", () => {
+describe("evaluation script helpers", () => {
+  describe("legacy MVP script compatibility", () => {
+    it("extracts prompts from legacy MVP scripts", () => {
       const prompt = `Analyze this conversation:\n${EVALUATION_CONVERSATION_PLACEHOLDER}\n\nDoes it contain issues?`
-      const script = wrapPromptAsEvaluationScript(prompt)
-      const extracted = extractPromptFromEvaluationScript(script)
-      expect(extracted).toBe(prompt)
+      const script = wrapPromptAsLegacyMvpEvaluationScript(prompt)
+      expect(extractPromptFromEvaluationScript(script)).toBe(prompt)
     })
 
-    it("returns null for a script that does not match the template", () => {
-      const result = extractPromptFromEvaluationScript("return Passed(1, 'looks good')")
-      expect(result).toBeNull()
+    it("normalizes legacy MVP scripts to JSON Schema runtime scripts", () => {
+      const script = wrapPromptAsLegacyMvpEvaluationScript(`Check this: ${EVALUATION_CONVERSATION_PLACEHOLDER}`)
+      const normalized = normalizeLegacyEvaluationScript(script)
+      expect(normalized).toContain("verdictSchema")
+      expect(normalized).toContain(EVALUATION_CONVERSATION_TEXT_PLACEHOLDER)
+      expect(normalized).not.toContain("z.object")
     })
 
-    it("returns null for an empty string", () => {
+    it("returns null for non-legacy scripts", () => {
+      expect(extractPromptFromEvaluationScript("return Passed(1, 'looks good')")).toBeNull()
       expect(extractPromptFromEvaluationScript("")).toBeNull()
-    })
-
-    it("returns null for a partial template match", () => {
-      const script = wrapPromptAsEvaluationScript("hello")
-      const mangled = script.slice(0, script.length - 5)
-      expect(extractPromptFromEvaluationScript(mangled)).toBeNull()
     })
   })
 
   describe("validateEvaluationScript", () => {
-    it("accepts a valid template with conversation placeholder", () => {
-      const script = wrapPromptAsEvaluationScript(`Check this: ${EVALUATION_CONVERSATION_PLACEHOLDER}`)
+    it("accepts JSON Schema runtime scripts", () => {
+      const script = wrapPromptAsEvaluationScript(`Check this: ${EVALUATION_CONVERSATION_TEXT_PLACEHOLDER}`)
       expect(validateEvaluationScript(script)).toBe(true)
     })
 
-    it("accepts a valid template without any interpolation (static prompt)", () => {
-      const script = wrapPromptAsEvaluationScript("Is the response helpful?")
-      expect(validateEvaluationScript(script)).toBe(true)
-    })
-
-    it("rejects a script that does not match the template", () => {
-      expect(validateEvaluationScript("return Failed(0, 'bad')")).toBe(false)
-    })
-
-    it("rejects a prompt containing forbidden interpolations", () => {
+    it("keeps validating legacy interpolation restrictions", () => {
       const forbidden = ["Issue: ${", "issue.name}"].join("")
-      const script = wrapPromptAsEvaluationScript(forbidden)
-      expect(validateEvaluationScript(script)).toBe(false)
-    })
-
-    it("rejects a prompt containing backticks", () => {
-      const script = wrapPromptAsEvaluationScript("Use `code` here")
-      expect(validateEvaluationScript(script)).toBe(false)
-    })
-
-    it("rejects a prompt with multiple different interpolations", () => {
-      const otherPlaceholder = ["${", "other}"].join("")
-      const script = wrapPromptAsEvaluationScript(`${EVALUATION_CONVERSATION_PLACEHOLDER} and ${otherPlaceholder}`)
+      const script = wrapPromptAsLegacyMvpEvaluationScript(forbidden)
       expect(validateEvaluationScript(script)).toBe(false)
     })
   })
@@ -101,9 +74,9 @@ describe("MVP script template helpers", () => {
       expect(prompt).toContain("The assistant leaked a secret API key.")
     })
 
-    it("includes the conversation placeholder", () => {
+    it("includes the conversationText placeholder", () => {
       const prompt = generateBaselinePromptText("Test Issue", "Test description")
-      expect(prompt).toContain(EVALUATION_CONVERSATION_PLACEHOLDER)
+      expect(prompt).toContain(EVALUATION_CONVERSATION_TEXT_PLACEHOLDER)
     })
 
     it("produces a valid script when wrapped", () => {

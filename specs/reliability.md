@@ -452,14 +452,11 @@ async function llm(
   options?: {
     temperature?: number
     maxTokens?: number
-    schema: z.ZodSchema
+    schema?: JsonSchema
   },
 ): Promise<unknown>
 
-async function parse(
-  value: unknown,
-  schema: z.ZodSchema,
-): Promise<{ valid: boolean; error?: string }>
+function parse(value: unknown, schema: JsonSchema): unknown
 
 type Metadata = {
   duration: number // duration in nanoseconds
@@ -487,7 +484,7 @@ Rules:
 - all external capabilities are exposed as host-controlled functions such as `llm()` or `parse()`
 - the eventual runtime must be portable between backend execution and the simulation CLI
 - the eventual runtime must enforce resource limits for CPU, memory, loops, sleep, and other abuse patterns
-- the script should have access to `zod` and other host-approved globals or dependencies only
+- host/sandbox data transfer must use plain JSON plus the Latitude-supported JSON Schema subset; Zod remains a repository/domain validation tool but is not exposed inside evaluation scripts and Zod objects must never cross the sandbox boundary
 - for MVP and early hosted execution, `llm()` runs through `@platform/ai-vercel` and the Vercel AI SDK with a Latitude-managed provider, model, and environment-managed API key rather than user-configured provider/model settings
 - if post-MVP provider/model settings return, they should extend `llm()` without changing the stored script artifact model, using evaluation -> project -> organization resolution
 
@@ -2830,11 +2827,11 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: after this phase lands, phases 19 and 21 can proceed in parallel.
 
-- [ ] Implement the portable JavaScript-like sandbox runtime with resource limits and host-controlled syscalls.
-- [ ] Expose the full runtime helpers such as `Passed`, `Failed`, `llm`, `parse`, and `zod`, including feedback-required score helpers, the MVP `llm()` options shape, `parse(value, schema)`, and the hosted `llm()` bridge through `@platform/ai-vercel` and the Vercel AI SDK with Latitude-managed provider/model configuration.
-- [ ] Keep the runtime packaged and reusable so backend execution and the later simulation CLI can share the same portable implementation.
-- [ ] Keep the stored script artifact unchanged while swapping executors.
-- [ ] Add portability and resource-limit regression tests for the portable runtime and the later CLI-reuse contract.
+- [x] Implement the portable JavaScript-like sandbox runtime with resource limits and host-controlled syscalls.
+- [x] Expose the full runtime helpers such as `Passed`, `Failed`, `llm`, and `parse`, including feedback-required score helpers, the JSON-Schema-based `llm()` options shape, synchronous `parse(value, schema)`, and the hosted `llm()` bridge through `@platform/ai-vercel` and the Vercel AI SDK with Latitude-managed provider/model configuration. Do not expose Zod in the sandbox.
+- [x] Keep the runtime packaged and reusable so backend execution and the later simulation CLI can share the same portable implementation.
+- [x] Keep the stored script artifact unchanged while swapping executors.
+- [x] Add portability and resource-limit regression tests for the portable runtime and the later CLI-reuse contract.
 
 **Exit gate**: evaluation scripts are portable across executors and ready for later simulation CLI reuse; the MVP script subset expands without storage migration.
 

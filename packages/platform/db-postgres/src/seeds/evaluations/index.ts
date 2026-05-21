@@ -15,7 +15,17 @@ import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 function buildJudgeScript(instructions: string): string {
   return `
 const rubric = ${JSON.stringify(instructions)}
-const completion = await llm(\`\${rubric}
+const verdictSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["passed", "feedback"],
+  properties: {
+    passed: { type: "boolean" },
+    feedback: { type: "string", minLength: 1 },
+  },
+}
+
+const result = await llm(\`\${rubric}
 
 Issue: \${issue.name}
 Description: \${issue.description}
@@ -24,15 +34,7 @@ Conversation JSON:
 \${JSON.stringify(conversation, null, 2)}
 
 Return only JSON with the shape:
-{"passed": boolean, "feedback": string}\`)
-
-const result = parse(
-  typeof completion === "string" ? JSON.parse(completion) : completion,
-  zod.object({
-    passed: zod.boolean(),
-    feedback: zod.string(),
-  }),
-)
+{"passed": boolean, "feedback": string}\`, { schema: verdictSchema })
 
 if (result.passed) {
   return Passed(1, result.feedback)

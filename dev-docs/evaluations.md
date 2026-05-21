@@ -22,27 +22,28 @@ The contract should stay aligned with the proposal:
 
 - `Passed(score?, feedback)` and `Failed(score?, feedback)` always require feedback
 - if present, the score value is passed before the feedback
-- `llm(prompt, options?)` accepts an optional host-approved configuration object
-- `parse(value, schema)` validates an unknown value against a schema
+- `llm(prompt, options?)` accepts an optional host-approved configuration object with JSON Schema for structured output
+- `parse(value, schema)` validates an unknown value against the Latitude-supported JSON Schema subset
 - the stored script body evaluates a conversation and returns a `Score`
-- `zod` is available inside the host-controlled runtime
+- Zod is not available inside the sandbox and Zod objects never cross the host/sandbox boundary
 
 The runtime is portable between backend execution and the simulation CLI.
 
 Runtime rules:
 
-- the script should have access to `zod` and other host-approved globals or dependencies only
+- scripts should have access only to host-approved globals such as `Passed`, `Failed`, `llm`, `parse`, `conversation`, `conversationText`, `metadata`, `issue`, and JSON/primitive built-ins
+- all host/sandbox data transfer uses plain JSON plus the Latitude-supported JSON Schema subset
 - for MVP and early hosted execution, `llm()` runs through `@platform/ai-vercel` and the Vercel AI SDK with Latitude-managed provider/model/API-key configuration rather than stored provider/model settings
 - user-configurable provider/model selection is a post-MVP extension and must not force a storage migration for the script artifact
 
 ## Runtime Architecture
 
-The final runtime is a portable JavaScript-like sandbox shared by backend monitoring and the simulation CLI.
+The final runtime is a portable JavaScript-like sandbox shared by backend monitoring and the simulation CLI. The concrete hosted backend implementation lives in `@platform/evaluation-runtime`; domain use-cases depend only on the `EvaluationScriptRuntime` port from `@domain/evaluations`.
 
 The important invariants are:
 
 - the persisted artifact is always script source text
-- the runtime exposes only host-controlled helpers such as `Passed`, `Failed`, `llm`, `parse`, and `zod`
+- the runtime exposes only host-controlled helpers such as `Passed`, `Failed`, `llm`, `parse`, `conversation`, `conversationText`, `metadata`, and `issue`
 - the MVP hosted bridge keeps provider/model selection Latitude-managed
 - if post-MVP runtime-configured execution lands, provider/model resolution should flow from evaluation settings to project settings to organization settings
 - the runtime must enforce resource limits and stay portable across executors

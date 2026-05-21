@@ -1,9 +1,10 @@
-import type { AI, AICredentialError, AIError, GenerateTelemetryCapture } from "@domain/ai"
+import type { GenerateTelemetryCapture } from "@domain/ai"
 import { type TraceDetail, traceDetailSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { evaluationSchema } from "../../entities/evaluation.ts"
-import { LiveEvaluationExecutionError } from "../../errors.ts"
+import { type EvaluationExecutionError, LiveEvaluationExecutionError } from "../../errors.ts"
+import type { EvaluationScriptRuntime } from "../../ports/evaluation-script-runtime.ts"
 import {
   type EvaluationExecutionResult,
   type EvaluationExecutionResultPayload,
@@ -14,13 +15,9 @@ import {
   executeEvaluationScriptWithAI,
   toEvaluationConversationMessages,
   toEvaluationExecutionResult,
-  validateEvaluationScript,
 } from "../../runtime/evaluation-execution.ts"
 
-export type ExecuteLiveEvaluationError = AIError | AICredentialError | LiveEvaluationExecutionError
-
-const INVALID_LIVE_EVALUATION_SCRIPT_MESSAGE =
-  "Stored evaluation script is not executable by the MVP live evaluation runtime"
+export type ExecuteLiveEvaluationError = EvaluationExecutionError | LiveEvaluationExecutionError
 
 export const liveEvaluationIssueContextSchema = evaluationIssueContextSchema
 export type LiveEvaluationIssueContext = EvaluationIssueContext
@@ -65,13 +62,6 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("evaluation.id", input.evaluationId)
 
-    if (!validateEvaluationScript(input.script)) {
-      return yield* new LiveEvaluationExecutionError({
-        evaluationId: input.evaluationId,
-        message: INVALID_LIVE_EVALUATION_SCRIPT_MESSAGE,
-      })
-    }
-
     const conversation = toEvaluationConversationMessages(input.conversation)
     const telemetry = toGenerateTelemetryCapture(input.telemetry)
 
@@ -104,5 +94,5 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
   }).pipe(Effect.withSpan("evaluations.executeLiveEvaluation")) as Effect.Effect<
     LiveEvaluationExecutionResult,
     ExecuteLiveEvaluationError,
-    AI
+    EvaluationScriptRuntime
   >

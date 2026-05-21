@@ -1,15 +1,14 @@
-import { AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
-import { createFakeAI } from "@domain/ai/testing"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { LiveEvaluationExecutionError } from "./errors.ts"
+import { EvaluationExecutionError, type LiveEvaluationExecutionError } from "./errors.ts"
+import { type EvaluationScriptExecution, EvaluationScriptRuntime } from "./index.ts"
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
-  EVALUATION_SCRIPT_RUNTIME_MODEL,
-  EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
-  type EvaluationScriptExecution,
+  EVALUATION_CONVERSATION_TEXT_PLACEHOLDER,
   estimateEvaluationScriptCostMicrocents,
+  normalizeLegacyEvaluationScript,
   wrapPromptAsEvaluationScript,
+  wrapPromptAsLegacyMvpEvaluationScript,
 } from "./runtime/evaluation-execution.ts"
 import {
   executeLiveEvaluationUseCase,
@@ -35,7 +34,7 @@ const validScript = wrapPromptAsEvaluationScript(
     "Review the following conversation for the target issue.",
     "",
     "Conversation:",
-    EVALUATION_CONVERSATION_PLACEHOLDER,
+    EVALUATION_CONVERSATION_TEXT_PLACEHOLDER,
     "",
     "Set passed to true when the issue is absent.",
   ].join("\n"),
@@ -51,20 +50,15 @@ const validInput = liveEvaluationExecutionInputSchema.parse({
   conversation: allMessages,
 })
 
-type AIGenerate = <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>, AIError>
-
-const createSuccessfulGenerate =
-  (result: Omit<EvaluationScriptExecution, "totalCostMicrocents">): AIGenerate =>
-  <T>(input: GenerateInput<T>) =>
-    Effect.succeed({
-      object: input.schema.parse(result.result),
-      tokens: result.totalTokens,
-      duration: result.totalDurationNs,
-      tokenUsage: {
-        input: 40,
-        output: result.totalTokens - 40,
-      },
-    })
+const createRuntimeLayer = (execution: EvaluationScriptExecution, calls: string[] = []) =>
+  Layer.succeed(EvaluationScriptRuntime, {
+    compile: () => Effect.void,
+    execute: (input) =>
+      Effect.sync(() => {
+        calls.push(input.script)
+        return execution
+      }),
+  })
 
 describe("executeLiveEvaluationUseCase", () => {
   it("validates the canonical live execution input shape", () => {
@@ -129,20 +123,7 @@ describe("executeLiveEvaluationUseCase", () => {
     ).toBe(false)
   })
 
-  it("executes the MVP script bridge through the shared AI service", async () => {
-    const telemetry = liveEvaluationExecutionInputSchema.pick({ telemetry: true }).parse({
-      telemetry: {
-        spanName: "evaluation.judge.live",
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationJudgeLive],
-        metadata: {
-          organizationId: "o".repeat(24),
-          projectId: "p".repeat(24),
-          evaluationId,
-          issueId: "i".repeat(24),
-          traceId: "t".repeat(32),
-        },
-      },
-    }).telemetry
+  it("executes through the runtime port", async () => {
     const execution = {
       result: {
         passed: true,
@@ -151,16 +132,12 @@ describe("executeLiveEvaluationUseCase", () => {
       },
       totalTokens: 120,
       totalDurationNs: 456_000_000,
+      totalCostMicrocents: estimateEvaluationScriptCostMicrocents({ tokens: 120 }),
     } as const
-    const { layer, calls } = createFakeAI({
-      generate: createSuccessfulGenerate(execution),
-    })
+    const calls: string[] = []
 
     const result = await Effect.runPromise(
-      executeLiveEvaluationUseCase({
-        ...validInput,
-        telemetry,
-      }).pipe(Effect.provide(layer)),
+      executeLiveEvaluationUseCase(validInput).pipe(Effect.provide(createRuntimeLayer(execution, calls))),
     )
 
     expect(result).toEqual(
@@ -168,29 +145,29 @@ describe("executeLiveEvaluationUseCase", () => {
         result: execution.result,
         duration: execution.totalDurationNs,
         tokens: execution.totalTokens,
-        cost: estimateEvaluationScriptCostMicrocents({
-          tokens: execution.totalTokens,
-          tokenUsage: {
-            input: 40,
-            output: execution.totalTokens - 40,
-          },
-        }),
+        cost: execution.totalCostMicrocents,
       }),
     )
-    expect(calls.generate).toHaveLength(1)
-    expect(calls.generate[0]?.provider).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.provider)
-    expect(calls.generate[0]?.model).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.model)
-    expect(calls.generate[0]?.reasoning).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.reasoning)
-    expect(calls.generate[0]?.system).toBe(EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT)
-    expect(calls.generate[0]?.telemetry).toEqual(telemetry)
-    expect(calls.generate[0]?.prompt).toContain("[user] Please summarize the deployment checklist.")
-    expect(calls.generate[0]?.prompt).toContain(
-      "[assistant] Verify migrations, rollback steps, and dashboards after deploy.",
-    )
+    expect(calls).toEqual([validScript])
   })
 
-  it("fails before AI execution when the stored script is not executable by the MVP runtime", async () => {
-    const { layer, calls } = createFakeAI()
+  it("normalizes legacy MVP scripts before runtime execution", async () => {
+    const legacyScript = wrapPromptAsLegacyMvpEvaluationScript(`Check this: ${EVALUATION_CONVERSATION_PLACEHOLDER}`)
+    const normalized = normalizeLegacyEvaluationScript(legacyScript)
+    expect(normalized).toContain(EVALUATION_CONVERSATION_TEXT_PLACEHOLDER)
+    expect(normalized).not.toContain("z.object")
+  })
+
+  it("wraps runtime failures as live evaluation execution errors", async () => {
+    const layer = Layer.succeed(EvaluationScriptRuntime, {
+      compile: () => Effect.void,
+      execute: () =>
+        Effect.fail(
+          new EvaluationExecutionError({
+            message: "sandbox exploded",
+          }),
+        ),
+    })
 
     await expect(
       Effect.runPromise(
@@ -202,30 +179,7 @@ describe("executeLiveEvaluationUseCase", () => {
     ).rejects.toMatchObject({
       _tag: "LiveEvaluationExecutionError",
       evaluationId,
-      message: "Stored evaluation script is not executable by the MVP live evaluation runtime",
+      message: "sandbox exploded",
     } satisfies Partial<LiveEvaluationExecutionError>)
-
-    expect(calls.generate).toHaveLength(0)
-  })
-
-  it("preserves AI failures from the shared AI service", async () => {
-    const { layer, calls } = createFakeAI({
-      generate: () =>
-        Effect.fail(
-          new AIError({
-            message: "AI generation failed (openai/gpt-5.4): upstream timeout",
-          }),
-        ),
-    })
-
-    await expect(
-      Effect.runPromise(
-        executeLiveEvaluationUseCase({
-          ...validInput,
-        }).pipe(Effect.provide(layer)),
-      ),
-    ).rejects.toBeInstanceOf(AIError)
-
-    expect(calls.generate).toHaveLength(1)
   })
 })

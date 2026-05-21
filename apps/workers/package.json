@@ -52,6 +52,7 @@
     "@platform/db-postgres": "workspace:*",
     "@platform/email-transport": "workspace:*",
     "@platform/env": "workspace:*",
+    "@platform/evaluation-runtime": "workspace:*",
     "@platform/latitude-api": "workspace:*",
     "@platform/loops": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",

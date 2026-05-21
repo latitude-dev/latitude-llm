@@ -1,4 +1,3 @@
-import type { AI } from "@domain/ai"
 import {
   authorizeBillableAction,
   type BillingOverrideRepository,
@@ -259,11 +258,9 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
             ...result,
           }) satisfies RunLiveEvaluationCompletedExecution,
       ),
-      Effect.catchTags({
-        AIError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
-        AICredentialError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
-        LiveEvaluationExecutionError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
-      }),
+      Effect.catchTag("LiveEvaluationExecutionError", (error) =>
+        Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
+      ),
     )
 
     // Record billing AFTER the AI work has been attempted so a crash between
@@ -364,7 +361,6 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   }).pipe(Effect.withSpan("evaluations.runLiveEvaluation")) as Effect.Effect<
     RunLiveEvaluationResult,
     RunLiveEvaluationError,
-    | AI
     | BillingUsagePeriodRepository
     | BillingUsageEventRepository
     | EvaluationIssueRepository

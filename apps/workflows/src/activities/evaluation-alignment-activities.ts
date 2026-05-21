@@ -34,6 +34,7 @@ import {
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { EvaluationScriptRuntimeLive } from "@platform/evaluation-runtime"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
@@ -285,6 +286,7 @@ export const evaluateBaselineEvaluationDraft = (input: {
         jobId: input.jobId,
       },
     }).pipe(
+      Effect.provide(EvaluationScriptRuntimeLive),
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
       Effect.mapError(
@@ -326,6 +328,7 @@ export const evaluateIncrementalEvaluationDraft = (input: {
         ...(input.jobId !== undefined ? { jobId: input.jobId } : {}),
       },
     }).pipe(
+      Effect.provide(EvaluationScriptRuntimeLive),
       withAi(AIGenerateLive, getRedisClient()),
       withTracing,
       Effect.mapError(
