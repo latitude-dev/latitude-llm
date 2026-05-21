@@ -1,25 +1,40 @@
 # Session detail panel
 
-A right-side drawer that opens on session-row click. Mirrors the trace
-drawer's shape — sticky header, lazy-mounted tabs, the existing
-`<Conversation>` primitive — but uses a session-level header (metadata
-header, status pill, copyable id) and a Conversation tab that renders
-**one trace at a time**. The "which trace" decision is fully owned by
-this spec (§3); navigation between traces of the same session lives in
-the sessions-list row expansion, not in the panel.
+A right-side drawer that opens on session-row click. The panel is **the
+traces view for a session** — its primary content is the list of traces
+that make up the session, with session-level metadata (status, duration,
+TTFT, cost, models, span counts) in a sticky header. Clicking a trace
+row slides the session panel out to the left and slides the **trace
+panel** (the existing trace detail surface) in from the right. A back
+arrow on the trace panel slides the session panel back into view.
+
+The IA tracks the data hierarchy and gives the user a consistent mental
+model at every level:
+
+- **Trace panel** — shows the **spans** of one trace (plus the
+  conversation rendering, annotations, the existing tab set).
+- **Session panel** — shows the **traces** of one session (plus
+  session-level rollups: issues, metadata).
+
+The slide transition replaces the earlier draft's "overlay the trace
+drawer on top of the session panel" pattern. Only one surface is on
+screen at a time. This change is what lets users discover every trace
+in a session regardless of whether the originating session row is still
+visible in the table behind the drawer — once the panel is open, the
+trace list lives inside it.
 
 ## Scope
 
 - **In:** the panel UI; a new server fn for session-level header metadata;
   the wiring from the sessions list, the search results, the row
-  expansion, and deep links into the panel; the four-case trace-selection
-  contract (browse / search × 1-trace / multi-trace).
+  expansion, and deep links into the panel; the slide transition into
+  the trace panel and the back-arrow return; per-row trace summaries in
+  the Traces tab.
 - **Out:** column additions on `sessions` (`./1-parity-traces-sessions.md`);
-  issue dedup query (`./3-session-issue-dedup.md`); the trace conversation
-  rendering primitive itself — the panel reuses the existing
-  `<Conversation>` from `packages/ui/src/components/genai-conversation`
-  exactly as the trace drawer does. There is no merged-stream renderer
-  in this spec.
+  issue dedup query (`./3-session-issue-dedup.md`); the trace detail
+  surface itself — the slide-in trace panel reuses the existing trace
+  drawer (`<Conversation>`, span tree, annotations) exactly as it
+  renders today. There is no merged-stream renderer in this spec.
 
 ## Position in the dependency chain
 
@@ -33,10 +48,12 @@ Two foundations exist by the time the panel is built:
 Lifecycle status (`live` / `idle`) is derived inline at read time from
 `now() - max_end_time` (see `0-problems.md`). No PG state table, no cron.
 
-The Conversation tab inherits everything the trace drawer already does —
-`<Conversation>` primitive, `getTraceDetail`, `getTraceSearchHighlights`,
-annotation rendering, scroll-to-first, `N`/`P` navigation, oversized-part
-collapsing. We do not duplicate any of that here.
+The trace panel that slides in inherits everything the trace drawer
+already does — `<Conversation>` primitive, `getTraceDetail`,
+`getTraceSearchHighlights`, annotation rendering, scroll-to-first,
+`N`/`P` navigation, oversized-part collapsing. We do not duplicate any
+of that here; we render the existing component into one of two slots in
+the session-drawer surface.
 
 ---
 
@@ -61,96 +78,126 @@ Missing:
 After this spec:
 
 - Clicking a session row **always** opens the session panel.
-- The panel shows session metadata in its header and **one trace's
-  conversation** in its Conversation tab.
-- For multi-trace sessions, the row also expands inline (current
-  behavior). The expansion is the trace navigator — clicking a different
-  trace row swaps which trace the panel is rendering.
+- The panel's session slot shows session metadata in its header and the
+  list of constituent traces in its Traces tab (default), plus Issues
+  and Metadata tabs.
+- Clicking a trace anywhere in the panel slides the trace slot in;
+  the back arrow slides the session slot back. The sessions-list row
+  expansion still works for table-level browsing but is no longer the
+  primary trace navigator.
 
 ---
 
-## 2. Trace drawer as the template
+## 2. Slide navigation between session and trace panels
 
-The session panel mirrors the trace drawer (`trace-detail-drawer.tsx`)
-in structure:
+The session panel and the trace panel are two slots of the **same**
+right-side drawer surface, not two stacked overlays. The drawer mounts
+once; switching slots animates as a horizontal slide (~200ms) tied to
+the presence of `traceId` in the URL.
 
-- **Right-side `DetailDrawer`** with persistable width
-  (`drawerStoreKey: "session-detail-drawer-width"`, sibling of the
-  trace-drawer key).
-- **Sticky header** with title, status pill, key chips, copyable id,
-  then the tab bar.
-- **Lazy-mounted tabs** via `visitedTabs`, identical pattern to
-  `trace-detail-drawer.tsx:229,:241-247,:378-427`.
-- **URL-synced active tab** via `useParamState`
-  (`urlSyncedTabs={true}`), so deep links restore which tab the user
-  was on. The trace drawer that opens on top of the panel (e.g. when
-  the user clicks a turn inside the Conversation tab to drill into the
-  trace's full detail view) is mounted with `urlSyncedTabs={false}` to
-  keep the parent route's URL clean — same pattern as the issue-detail
-  drawer's nested trace overlay (`issues/-components/issue-detail-drawer.tsx:655-675`).
+- **One `DetailDrawer`, two slots.** A single `DetailDrawer` mounts
+  with persistable width (`drawerStoreKey: "session-detail-drawer-width"`).
+  Inside it, a transition container renders either:
+  - the **session slot** (`<SessionDetail>`) — header + Traces / Issues /
+    Metadata tabs;
+  - the **trace slot** (the existing `<TraceDetailDrawer>` body) — the
+    full trace surface with its own tabs (Conversation, Spans,
+    Annotations, etc.).
+- **The URL drives the slot.** `?sessionId=…` (no `traceId`) → session
+  slot. `?sessionId=…&traceId=…` → trace slot. The trace's row in the
+  Traces tab stays highlighted while the trace slot is on screen so
+  the user has a visual anchor when they come back.
+- **Back arrow on the trace slot** clears `traceId` and slides the
+  session slot back in. `Esc` from the trace slot also goes back one
+  level (it does **not** close the drawer). Closing the drawer
+  entirely requires being on the session slot — `Esc` again, backdrop
+  click, or the close button.
+- **Sticky header on the session slot** carries title, status pill,
+  key chips, copyable id, then the tab bar. Lazy-mounted tabs via
+  `visitedTabs` and URL-synced active tab via `useParamState`
+  (`urlSyncedTabs={true}`) — same patterns the trace drawer uses today
+  at `trace-detail-drawer.tsx:229,:241-247,:378-427`.
+- **Discoverable while scrolled.** Because every trace in the session
+  is reachable from inside the panel, the user can pick any trace
+  regardless of whether the original session row is still visible in
+  the table behind the drawer.
 
-What it does **not** mirror:
+What this **replaces** from earlier drafts:
 
-- **No `Spans` tab.** Sessions aren't a single span tree. Span-tree
-  drill-in is per-trace and reached by opening the trace drawer on top
-  of the panel.
-- **No `Trace` tab.** Its session-level analog is the **Metadata** tab.
-- **No standalone `Traces` tab.** This functionality lives in the
-  sessions-list **row expansion**, which is already on screen behind
-  the panel. Putting a "Traces" tab in the panel would duplicate the
-  expansion's UI.
+- **No overlay model.** Clicking a trace (or a turn inside a trace)
+  does not mount a second drawer over the first. The previous draft
+  proposed an overlay pattern mirroring the issue-detail drawer's
+  nested trace overlay (`issue-detail-drawer.tsx:655-675`); that
+  pattern is replaced by the slide. Only one surface is on screen at
+  a time.
+- **The sessions-list row expansion is no longer the trace navigator.**
+  The Traces tab inside the panel is. The row expansion stays as a
+  table-level affordance for users who don't want to open the panel,
+  but it's no longer load-bearing for trace-to-trace navigation.
+
+What the session slot does **not** include:
+
+- **No `Spans` tab.** Sessions aren't a single span tree; span-tree
+  drill-in lives in the trace slot.
+- **No `Conversation` tab.** Conversation rendering belongs to the
+  trace slot — the session slot's job is to list traces, not to render
+  one of them.
 
 ---
 
-## 3. Which trace does the Conversation tab show?
+## 3. Initial state when the panel opens
 
-The panel always renders session metadata + one trace's conversation.
-The selection of which trace depends on how the panel was opened:
+The panel always opens. Whether it lands on the **session slot** or
+slides immediately into the **trace slot** is decided by the URL on
+open:
 
-| Case | Initial `currentTraceId` |
-|---|---|
-| Browse, 1-trace session (real or orphan) | `trace_ids[0]` — the one trace |
-| Browse, multi-trace session | The **last** trace by `start_time` — most recent activity |
-| Search, 1-trace session | `trace_ids[0]`, scrolled to first highlight |
-| Search, multi-trace session | The **first matching** trace in score order from `matchingTraceIds[0]`, scrolled to first highlight |
-| Deep link with `?sessionId=…&traceId=…` | The supplied `traceId` (must be in the session's `trace_ids`) |
-| Deep link with `?sessionId=…` only | Last trace by `start_time` |
-| Any case where the resolved trace is somehow not in `trace_ids` | Fall back to last trace, log a non-fatal error |
+| Source | URL on open | Initial slot |
+|---|---|---|
+| Sessions list row click (browse) | `?sessionId=…` | Session slot |
+| Sessions-list row expansion → trace click | `?sessionId=…&traceId=<clicked>` | Trace slot (slide animates in once) |
+| Search result row click — 1-trace session | `?sessionId=…&traceId=<only>&q=…` | Trace slot |
+| Search result row click — multi-trace session | `?sessionId=…&traceId=<first-match>&q=…` | Trace slot |
+| Issue row → "View session" link | `?sessionId=…` | Session slot |
+| Deep link `?sessionId=…&traceId=…` | (as supplied) | Trace slot |
+| Deep link `?sessionId=…` only | (as supplied) | Session slot |
+| Deep link where `traceId` is not in `session.traceIds` | (as supplied) | Session slot; URL is rewritten to drop `traceId`; non-fatal warning logged |
 
-### Multi-trace navigation
+When the panel opens directly on the trace slot (search and
+expansion-row cases), the slide animation **runs once on open** — the
+session slot renders for one frame, then slides out to the left while
+the trace slot arrives from the right. This is the same visual cue
+the user sees later when they hit back, so the spatial model registers
+from the first interaction. We do not skip the animation on
+deep-links: the cost is small, and the orientation it gives users
+("there's a session behind this trace") is the whole point of the
+pattern.
 
-For multi-trace sessions, the sessions-list **row expansion** shows
-every trace in the session, ordered by `start_time` ascending. When a
-search is active, the matching traces from `matchingTraceIds` get a
-visual hit-count badge / highlight (per `./5-search-highlights.md`'s
-session-result behavior). Clicking a different trace row in that
-expansion sets the panel's `currentTraceId` to that trace, which:
+### Highlighting the active trace
 
-1. Re-fires `getTraceDetail(newTraceId)`.
-2. Re-fires `getTraceSearchHighlights(newTraceId, q)` if `q` is non-empty.
-3. The Conversation tab re-renders with the new content. Scroll position
-   resets to the first highlight (if search) or the top (if not).
+While the trace slot is on screen, the corresponding row in the
+session slot's Traces tab is marked as **active** (background tint +
+left border). When the user slides back, the active row is already
+highlighted so they can pick the next trace without reorienting. The
+Traces tab also reflects `q` (search highlights / matching-trace
+badges) regardless of which slot is on screen, so the moment the user
+slides back, they see all the matches without a refetch.
 
-The expansion **is** the trace navigator. The panel has no internal
-trace switcher; if the user wants to read a different trace, they pick
-it from the expansion behind/beside the drawer.
+### Search-mode multi-trace navigation
 
-### Why "last trace" as the default
+When `q` is non-empty:
 
-For browse-mode multi-trace, the default trace shown when the panel
-opens has to be one specific trace. We pick the **last** because:
+- Every matching trace (`matchingTraceIds`) gets a hit-count badge in
+  the Traces tab.
+- The first matching trace is auto-opened in the trace slot via the
+  initial-URL contract above.
+- The user advances to the next match by sliding back (session slot)
+  and clicking the next badged row. There is no "next match" hotkey
+  *across* traces in V1 — within-trace `N`/`P` stepping is the trace
+  panel's existing affordance; cross-trace is by clicking.
 
-- Users opening a session for the first time are usually checking
-  current state ("what's this conversation up to now?"), not session
-  history.
-- The last trace is also what `output_messages` / `last_input_messages`
-  on the session row preview (per `./1-parity-traces-sessions.md`). Panel
-  default matching row preview reduces "wait, why am I seeing this?"
-  surprise.
-- For 1-trace sessions, "last" and "only" coincide — same code path.
-
-If we later add UX that wants the first trace as default (e.g. "review
-this session from the start"), it overrides via deep-link `?traceId=…`.
+If telemetry later shows users want a global `N`/`P` that crosses
+trace boundaries inside a session, we add it as a session-slot-level
+hotkey that slides through matches in order. Park until measured.
 
 ---
 
@@ -188,7 +235,7 @@ The header degrades naturally for the two adjacent edge cases (see
 | Case | Header rendering |
 |---|---|
 | **Pure orphan** (`trace_count = 1`, no SDK `session_id`) | Title falls back to the root span name of the only trace; "1 trace" badge instead of "N traces". TTFT / cost may or may not be set depending on whether the trace had LLM activity. |
-| **Orphan fragment** (`tokens_total = 0`, `cost_total_microcents = 0`, `models = []`, `trace_count = 1`) | Title reads as the framework-overhead slice of the request. TTFT and cost render "—" / "$0". Conversation tab is empty (no LLM spans). Metadata tab is still populated. |
+| **Orphan fragment** (`tokens_total = 0`, `cost_total_microcents = 0`, `models = []`, `trace_count = 1`) | Title reads as the framework-overhead slice of the request. TTFT and cost render "—" / "$0". Sliding into the one trace lands on an empty Conversation (no LLM spans). Metadata tab on the session slot is still populated. |
 
 These rows are filtered out of the default sessions list view by the
 "has LLM activity" filter chip (`./4-filter-parity.md`). Users who turn
@@ -196,99 +243,88 @@ that filter off can open them; the panel is honest about what's inside.
 
 ### Tabs
 
-Three tabs. `Conversation` is the default visit.
+Three tabs on the session slot. `Traces` is the default visit.
 
 | Tab id | Label | Hotkey | Behavior |
 |---|---|---|---|
-| `conversation` | Conversation | `Shift+1` | Default open. Renders `currentTraceId`'s conversation via `<Conversation>`. |
+| `traces` | Traces `<N>` | `Shift+1` | Default open. Lists every trace in the session ordered by `start_time` asc. Click a row → slide into the trace slot. |
 | `issues` | Issues `<N>` | `Shift+2` | Lazy-mounted. Pill count from `listSessionIssuesBySessionId().length`. |
 | `metadata` | Metadata | `Shift+3` | Lazy-mounted. Header-style detail sections. |
 
-The **Traces tab** that an earlier draft of this spec proposed is
-removed — its job is done by the sessions-list row expansion.
+The **Conversation tab** that an earlier draft proposed is removed.
+Conversation rendering belongs to the trace slot — the session slot's
+job is to list traces and let users pick one. Single-trace sessions
+land on the same Traces tab; the row is one-of-one and clicking it
+slides into the conversation. No special case for "1 trace" vs
+"N traces" at the panel level.
+
+The **Traces tab** that an even earlier draft removed in favor of the
+row expansion is back. Putting it in the panel is what makes trace
+navigation work without the row expansion being on screen behind the
+drawer — see §2 "Discoverable while scrolled".
 
 ---
 
-## 5. Conversation tab
+## 5. Traces tab
 
-Renders one trace's conversation. Uses the **exact same primitive** the
-trace drawer's Conversation tab uses
-(`trace-detail-drawer/tabs/conversation-tab.tsx`). Concretely:
+The default tab on the session slot. Lists every trace in the session,
+with enough information per row that users can choose which one to
+slide into without guessing.
 
-```ts
-<ConversationTab
-  trace={traceDetail}                         // from getTraceDetail(currentTraceId)
-  searchQuery={q}                             // from URL ?q=…
-  highlightRanges={searchHighlights}          // from getTraceSearchHighlights(currentTraceId, q)
-  onAnnotationClick={…}
-  // mounted with the same props the trace drawer uses today
-/>
+### Row layout
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ ▌ Refund flow · turn 1            ●ok · 12s · $0.004   3 spans     │
+│ ▌ Refund flow · turn 2            ●ok ·  9s · $0.003   3 spans     │
+│ ▌ Refund flow · turn 3            ⚠ err · 14s · $0.005  4 spans (1 err) │
+│ ▌ Refund flow · turn 4 (active)   ●ok ·  7s · $0.002   3 spans     │  ← currently in trace slot
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-The component is reused **as a child** of both the trace drawer and the
-session panel; the panel doesn't reimplement any of conversation
-rendering. That gets us, for free:
+Fields per row come from the existing trace listing select — name,
+status, duration, cost, span counts, error count — scoped to
+`trace_id IN (session.traceIds)`. The repo already returns `traceIds`
+ordered by `start_time` asc (parity spec, `./1-parity-traces-sessions.md`);
+the panel issues one bulk fetch on tab mount.
 
-- Annotation rendering and the per-message `messageAnnotationSlot`.
-- `<ScrollNavigator>` with `N`/`P` stepping through messages (or
-  through highlights when search is active — see `./5-search-highlights.md`).
-- The `LARGE_MARKDOWN_CONTENT_THRESHOLD` cap and "Show N more
-  characters" affordance.
-- The oversized-part offset fix from `./5-search-highlights.md` Phase A.
+### Click behavior
 
-### What happens when `currentTraceId` changes
+Clicking a row:
 
-`currentTraceId` is the panel's local state. It changes when:
+1. Sets the URL to `?sessionId=…&traceId=<row.id>` (and preserves `q`
+   if present).
+2. Fires `getTraceDetail(row.id)` and `getTraceSearchHighlights(row.id, q)`
+   (if `q` is non-empty). Cache keys are per-trace, so previous traces
+   stay cached.
+3. The drawer transitions: session slot slides left, trace slot slides
+   in from the right. The Traces-tab row that was clicked is the
+   "active" row when the user later slides back (per §3).
 
-1. The panel first opens (initial value from §3).
-2. The user clicks a different trace row in the sessions-list row
-   expansion behind the panel.
-3. A deep link is loaded with a new `?traceId=…`.
+### Search-mode highlights
 
-On change:
+When `q` is non-empty:
 
-1. The panel updates `currentTraceId` in URL params
-   (`useParamState("traceId", …)`).
-2. React Query fires `getTraceDetail(newTraceId)` and
-   `getTraceSearchHighlights(newTraceId, q)` if `q` is non-empty. Cache
-   keys `["traceDetail", newTraceId]` and
-   `["traceSearchHighlights", newTraceId, q]` are independent — the old
-   trace's data stays cached.
-3. The Conversation tab re-renders. Scroll resets to the first highlight
-   (if search) or top (if not).
+- Matching traces (`matchingTraceIds`) get a hit-count badge.
+- The first matching trace is auto-opened in the trace slot via §3.
+- Remaining matching traces stay highlighted in the list — the user
+  slides back to pick the next one. Hit counts come from the same
+  payload the search results already produce; the panel doesn't
+  recompute them.
 
-The Issues tab and Metadata tab do **not** refetch on a trace switch —
-they read session-level data which doesn't depend on which trace is
-being viewed.
+This is the session-result behavior `./5-search-highlights.md`
+defines, rendered inside the panel instead of in the row expansion.
 
-### Click behavior on a turn
+### Annotations on traces
 
-Clicking a turn in the Conversation tab opens the **trace detail
-drawer overlaid on the session panel**, same as the issue drawer's
-nested trace overlay (`issue-detail-drawer.tsx:655-675`). Overlay
-mounting:
+Annotations belong to the trace they live in, not to the session. The
+session slot does **not** offer annotation creation — that lives in
+the trace slot (after the slide). The Traces tab can surface a
+per-row **annotation-count badge** so users can spot annotated turns
+without sliding in.
 
-```ts
-<TraceDetailDrawer
-  open={!!overlayTraceId}
-  traceId={overlayTraceId}
-  urlSyncedTabs={false}                       // parent URL stays clean
-  onClose={() => setOverlayTraceId(null)}
-/>
-```
-
-The overlay carries the full trace detail surface — Spans tab,
-Annotations tab, full Trace tab. The panel underneath stays mounted.
-Closing the overlay returns to the panel's current trace + tab.
-
-### Annotating from the panel
-
-Users can add annotations directly from the Conversation tab on the
-**currently-shown trace**. The flow and underlying primitives are
-identical to the trace drawer — the existing `messageAnnotationSlot`
-expander, the inline annotation form, the score-write call all carry
-over unchanged. What changes is the user-facing language around
-ownership:
+The earlier draft's guidance carries over unchanged, just renamed for
+the slide model:
 
 - **Annotations attach to the current trace's span, not to the session.**
   An annotation is a statement about a specific moment (a particular
@@ -296,28 +332,21 @@ ownership:
   trace it lives in. The session view rolls these up; it doesn't own
   them.
 - **Success-toast wording is explicit about anchoring.** When an
-  annotation is saved from the panel, the confirmation toast reads
-  "Annotation added to turn N of this session" (rather than the trace
-  drawer's "Annotation added"), so the user's mental model is right
-  from the first interaction. `N` is the trace's position by
-  `start_time` within `session.traceIds`.
-- **New traces arriving later do not migrate older annotations.** If a
-  user annotates turn 5, and turn 6 later lands in the same session,
-  the annotation stays on turn 5. The Conversation tab's default
-  `currentTraceId` advances to the latest trace per §3, so a later
-  visitor opens on turn 6 by default — but the annotation on turn 5 is
-  still discoverable via (a) the Issues tab if the annotation became a
-  score with an `issue_id`, (b) navigating back to turn 5 through the
-  row expansion. This is the correct behavior, not a bug — annotations
-  describe moments, not sessions.
+  annotation is saved from the trace slot, the toast reads
+  "Annotation added to turn N of this session" (rather than the
+  standalone trace drawer's "Annotation added"). `N` is the trace's
+  position by `start_time` within `session.traceIds`.
+- **New traces arriving later do not migrate older annotations.** If
+  a user annotates turn 5 and turn 6 later lands in the same session,
+  the annotation stays on turn 5. It's discoverable via (a) the
+  Issues tab when the annotation became a score with an `issue_id`,
+  (b) the annotation-count badge on turn 5's row in the Traces tab.
 - **Session-level annotations are explicitly out of scope.** "This
   whole conversation was bad" doesn't have a useful anchor; if a
-  specific turn was bad, annotate that turn. If no specific turn was
-  bad, the annotation tends to collapse into "this session was a 7/10"
-  feedback, which is a different ontology. We don't add session-grain
-  scores to `scores` (no `target_kind = 'session'`); we don't build a
-  session-grain annotation surface in this spec. If product demand
-  surfaces it later, that's a separate feature.
+  specific turn was bad, annotate that turn. We don't add
+  `target_kind = 'session'` to `scores`, and we don't build a
+  session-grain annotation surface here. If product demand surfaces
+  it later, that's a separate feature.
 
 ---
 
@@ -348,56 +377,53 @@ Fields from `SessionIssueRow`:
 ### Click behavior on an affected trace
 
 Clicking an affected trace id (or the issue row itself) is **one user
-gesture** that does three things behind the scenes:
+gesture** that does three things:
 
-1. Sets the panel's `currentTraceId` to that trace.
-2. Switches the active tab from `Issues` to `Conversation`.
-3. Scrolls to the message the annotation is anchored to, then
-   briefly flashes a highlight on that message (reusing the
-   `ScrollNavigator`'s existing target-flash affordance) so the user's
-   eye lands on it immediately rather than just "near it."
+1. Sets the URL to `?sessionId=…&traceId=<affected>` (and
+   `messageId=<anchor>` if available — the annotated message's id).
+2. Slides the trace slot in from the right.
+3. Inside the trace slot, the Conversation tab scrolls to the
+   anchored message and briefly flashes a highlight on it (reusing
+   the `ScrollNavigator`'s target-flash affordance) so the user's eye
+   lands on it immediately rather than just "near it."
 
-Even though the implementation involves three internal transitions,
-the user perceives a single response: "I clicked the issue and the
+The user perceives a single response: "I clicked the issue and the
 annotated turn is right there." Two design polishes keep that
 perception honest:
 
 - **Prefetch on Issues-tab visit.** When the Issues tab is mounted,
-  the panel issues
-  `queryClient.prefetchQuery(["traceDetail", traceId])` for every
-  unique `traceId` in the loaded `SessionIssueRow.matchingTraceIds`
-  arrays. `matchingTraceCount` per row × number of rows is bounded by
+  the panel issues `queryClient.prefetchQuery(["traceDetail", traceId])`
+  for every unique `traceId` in the loaded
+  `SessionIssueRow.matchingTraceIds` arrays. Trace count is bounded by
   the session's `traceCount` (typically <20); each prefetch is one
-  trace's `getTraceDetail` call. Cross-trace clicks then feel
-  instant. Same shape as the search-mode prefetch in
+  `getTraceDetail` call. The slide then runs while the data is already
+  hot. Same shape as the search-mode prefetch in
   `./5-search-highlights.md`'s "Per-trace re-highlighting".
-- **Targeted post-scroll flash.** After the tab switch and scroll, the
-  annotated message gets a short visual emphasis (background pulse or
-  ring) tied to `data-annotation-id`. Same primitive the trace drawer
-  already uses when an annotation hash-link is opened. This is the
-  difference between "we landed on the right turn" feeling correct
-  vs. feeling sloppy.
+- **Targeted post-scroll flash.** After the slide settles and the
+  conversation paints, the annotated message gets a short visual
+  emphasis (background pulse or ring) tied to `data-annotation-id`.
+  Same primitive the trace drawer uses when an annotation hash-link is
+  opened. This is the difference between "we landed on the right turn"
+  feeling correct vs. feeling sloppy.
 
-Same mechanic as the row-expansion path; the issue row is just a
-secondary entry point into "switch trace + go to a specific message."
+Sliding back (back arrow or `Esc`) returns to the Issues tab on the
+session slot with the row still selected.
 
-### Why this isn't a "weird UX of session → trace → conversation"
+### Why this drilldown doesn't feel heavy
 
 A natural worry with the rollup model is that drilling into an
-annotation requires the user to traverse three surfaces (session
-panel → trace panel → conversation → scroll). In this design, the
-session panel **is** the conversation surface — the Conversation tab
-inside it is the same `<Conversation>` primitive the trace drawer
-renders. Switching `currentTraceId` doesn't navigate between distinct
-surfaces; it changes which trace the panel's tab is rendering. The
-two polishes above make that change feel like "the annotation is
-right there" rather than "I just navigated three layers deep."
+annotation makes the user traverse "session → trace → conversation →
+scroll." The slide model collapses that into one click and one
+animation: the user clicks an issue row, the trace slot slides in,
+and the annotated message is centered and flashed. There is no
+overlay stack to mentally manage; there is one back arrow that
+unambiguously returns to where they came from.
 
 If telemetry later shows the transition still feels heavy, the
 fallback affordance is a popover-on-issue-row mode: click an issue
-row → popover with the annotation text + a secondary "View in
-conversation" button. We don't ship that by default; it's a parking
-spot if the polished version fails real-use feedback.
+row → popover with the annotation text + a secondary "Open in trace"
+button. We don't ship that by default; it's a parking spot if the
+polished version fails real-use feedback.
 
 ### Empty / loading / error states
 
@@ -409,8 +435,8 @@ spot if the polished version fails real-use feedback.
 
 ## 7. Metadata tab
 
-Session-level fields, none of which depend on `currentTraceId`. Read
-once on tab visit.
+Session-level fields, none of which depend on which trace the user
+slides into. Read once on tab visit.
 
 ### Sections (top to bottom)
 
@@ -469,9 +495,8 @@ export interface SessionDetailRecord extends SessionRecord {
   // Derived inline from now() - max_end_time
   readonly status: "live" | "idle"
 
-  // Carried for the Conversation tab's initial-trace decision
+  // Drives the Traces tab list
   readonly traceIds: readonly string[]      // ordered by start_time asc
-  readonly lastTraceId: string              // = traceIds[traceIds.length - 1]
 }
 ```
 
@@ -484,12 +509,22 @@ paralleling `TraceRepository.findByTraceId` at `trace-repository.ts:1613-1643`.
 
 ### `getTraceDetail({ projectId, traceId })` (reused)
 
-Existing. Called whenever the panel's `currentTraceId` changes.
+Existing. Called when the user clicks a trace row in the Traces tab
+(slide-in) or on a deep link that lands directly on the trace slot.
 
 ### `getTraceSearchHighlights({ projectId, traceId, searchQuery })` (reused)
 
 Existing, introduced by `./5-search-highlights.md`. Called alongside
 `getTraceDetail` when `q` is non-empty.
+
+### `listTracesByIds({ projectId, traceIds })` (reused / extended)
+
+The Traces tab needs per-row summaries (name, status, duration, cost,
+span counts, error count, annotation count) for every trace in
+`session.traceIds`. Reuse the existing trace listing query with an
+`IN (?)` filter scoped to the session's traces. If the listing query
+doesn't expose an `IN` predicate today, extend it; we don't introduce
+a parallel single-purpose query.
 
 ### `listSessionIssuesBySessionId({ projectId, sessionId })` (reused)
 
@@ -501,52 +536,73 @@ From `./3-session-issue-dedup.md`. Drives the Issues tab.
 
 ### Opening the panel
 
-| Source | Initial trace per §3 | URL |
+| Source | URL on open | Initial slot |
 |---|---|---|
-| Sessions list row click | Last trace (browse) / first matching (search) | `?sessionId=…&traceId=<resolved>` |
-| Row expansion's trace row click | The clicked trace | `?sessionId=…&traceId=<clicked>` |
-| Search result row click | First matching trace | `?sessionId=…&traceId=<first-match>&q=…` |
-| Issue row → "View session" link | Last trace | `?sessionId=…&traceId=<last>` |
-| Deep link | Per §3 | (as supplied) |
+| Sessions list row click | `?sessionId=…` | Session slot |
+| Row expansion's trace row click | `?sessionId=…&traceId=<clicked>` | Trace slot (slide animates in once) |
+| Search result row click | `?sessionId=…&traceId=<first-match>&q=…` | Trace slot |
+| Issue row → "View session" link | `?sessionId=…` | Session slot |
+| Issue row → "View affected trace" click | `?sessionId=…&traceId=<affected>&messageId=<anchor>` | Trace slot |
+| Deep link | (as supplied) | Decided by presence of `traceId` per §3 |
 
-In every case the URL carries the session id and the resolved initial
-trace id. Reload restores state.
+The URL is the source of truth. Reload restores both the slot and any
+within-slot state (active tab, message anchor).
 
-### Closing
+### Between slots
 
-Standard drawer close: `Esc`, click the backdrop, or the close button.
-URL params are cleared on close. The sessions-list row expansion stays
-expanded if it was open (it's an independent piece of state).
+- **Session → Trace**: clicking any trace anywhere in the panel
+  (Traces tab row, Issues tab affected trace) sets `traceId` in the
+  URL and slides left.
+- **Trace → Session**: back arrow on the trace slot or `Esc` clears
+  `traceId` and slides right. The Traces tab's active row stays
+  highlighted on the way back.
 
-### Inter-panel navigation
+### Closing the drawer
 
-The panel can be open simultaneously with:
+Only from the session slot. `Esc` from the trace slot goes back one
+level (to the session slot); a second `Esc` closes the drawer. Backdrop
+click and close button always close the drawer regardless of which
+slot is on screen. On close, both `sessionId` and `traceId` are cleared.
+The sessions-list row expansion stays expanded if it was open (it's an
+independent piece of state).
 
-- The sessions-list row expansion (it's the trace navigator)
-- The trace detail drawer overlay (when the user drills into a turn)
-- The issue detail drawer overlay (when the user clicks an issue row's
-  "open issue" link — out of scope here, but the pattern works)
+### Co-existence with other surfaces
 
-Closing each surface peels one layer at a time.
+The drawer can be open simultaneously with:
+
+- The sessions-list row expansion behind the drawer (it's no longer
+  the trace navigator, but it persists for users who don't open the
+  panel).
+- The issue detail drawer (when the user clicks an issue row's "open
+  issue" link — out of scope here, but the pattern works because the
+  issue drawer is on a different stack).
+
+There is **no** trace-drawer overlay on top of the session drawer.
+Trace detail lives in the session drawer's trace slot, not in a
+second drawer.
 
 ---
 
 ## 10. Live updates
 
 - **Status pill** polls `getSessionDetail` every **30 seconds** when
-  `status === "live"`. Polling stops when the panel becomes `idle` or
-  is closed. Re-uses the existing React Query refetch interval pattern.
-- **Conversation tab** does **not** auto-poll. The user reloads
-  manually to pick up new turns on the currently-shown trace. Rationale:
-  cross-trace polling (a new trace appears that the panel isn't
-  showing) is out of scope — the row expansion would surface a new
-  trace row, and the user picks whether to switch into it.
-- **Issues tab** does not auto-poll. Same reasoning — the panel is for
-  reading, not for live-monitoring.
+  `status === "live"`. Polling stops when the session becomes `idle`
+  or the drawer is closed. Re-uses the existing React Query refetch
+  interval pattern.
+- **Traces tab** does **not** auto-poll the per-trace summaries. New
+  traces in a `live` session are picked up on the next manual reload
+  or when the user re-opens the panel. Rationale: rows in a `live`
+  session shift in cost / span counts continuously; polling them adds
+  flicker without adding clarity. Users who want live-tail are looking
+  at the trace, not the session.
+- **Trace slot** does not auto-poll. The user reloads manually to
+  pick up new turns on the currently-open trace.
+- **Issues tab** does not auto-poll. Same reasoning — the panel is
+  for reading, not for live-monitoring.
 
-If down the line we want a live-tail experience for the active trace,
-that's a Conversation-tab feature that lives in `<Conversation>`
-itself, behind a separate spec.
+If down the line we want a live-tail experience for the open trace,
+that's a feature of the trace panel itself (lives in `<Conversation>`),
+behind a separate spec.
 
 ---
 
@@ -575,23 +631,34 @@ itself, behind a separate spec.
 - `apps/web/src/domains/sessions/sessions.functions.ts` — add
   `getSessionDetail` server fn.
 - `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/session-detail-drawer.tsx`
-  (new) — the panel component. Mirrors
-  `trace-detail-drawer.tsx`'s structure (header, tabs, lazy mount).
+  (new) — the outer drawer surface. Owns the single `DetailDrawer`,
+  the slot-switching transition, and the URL-driven slot selection
+  (`sessionId` only → session slot, `sessionId + traceId` → trace
+  slot). Mirrors the trace drawer's chrome (header pattern, lazy
+  mount, `urlSyncedTabs={true}` for the session slot's tabs).
 - `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/session-detail-drawer/`
-  — sub-folder for the three tab components:
-  - `conversation-tab.tsx` — thin wrapper around the existing
-    `ConversationTab` from the trace drawer, parameterized on
-    `currentTraceId`.
-  - `issues-tab.tsx` — list of `SessionIssueRow`.
+  — sub-folder for the two slots and the session-slot tabs:
+  - `session-slot.tsx` — sticky header + tab bar; renders one of the
+    three session-slot tabs.
+  - `trace-slot.tsx` — thin wrapper that mounts the existing
+    `<TraceDetailDrawer>` body inline (no nested `DetailDrawer`),
+    with a back-arrow header that clears `traceId`.
+  - `traces-tab.tsx` — list of per-trace summary rows; click → set
+    `traceId` and slide.
+  - `issues-tab.tsx` — list of `SessionIssueRow`; affected-trace
+    click → set `traceId + messageId` and slide.
   - `metadata-tab.tsx` — detail sections.
+- `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/session-detail-drawer/slot-transition.tsx`
+  (new) — the slide animation between session and trace slots. Single
+  responsibility; keep it small enough to swap out if the animation
+  library changes.
 - `apps/web/src/routes/_authenticated/projects/$projectSlug/sessions/-components/sessions-view.tsx`
-  — wire row click to open the panel; thread the row expansion's
-  selected trace into the panel's `currentTraceId`.
+  — wire row click to open the panel with `?sessionId=…`.
 - `apps/web/src/routes/_authenticated/projects/$projectSlug/search/index.tsx`
-  — wire search-result row click to open the panel on the first matching
-  trace (this is the entry point this epic ships first; the lift into
-  unified `sessions` happens later per `0-problems.md`'s future-state UX
-  context).
+  — wire search-result row click to open the panel with
+  `?sessionId=…&traceId=<first-match>&q=…` (this is the entry point
+  this epic ships first; the lift into unified `sessions` happens
+  later per `0-problems.md`'s future-state UX context).
 - `apps/web/src/domains/sessions/sessions.collection.ts` — add
   `useSessionDetail` hook (React Query wrapper).
 
@@ -601,24 +668,53 @@ itself, behind a separate spec.
 
 - **"Open in full session conversation view" as a power-user feature.**
   Some users may want to read the whole multi-trace conversation as a
-  continuous stream (the original session-panel design). That's a
-  separate surface — likely a dedicated route or full-page mode rather
-  than a tab in the drawer. Park until we see whether the trace-by-trace
-  navigation via row expansion meets the need.
-- **Pre-fetch the last trace's detail when the user hovers a session
-  row?** Cheap and would make the panel feel instant. Probably worth
-  doing for the initial cut. Confirm with telemetry once shipped.
+  continuous stream. That's a separate surface — likely a dedicated
+  route or full-page mode rather than a slot in the drawer. Park
+  until we see whether per-trace navigation via the Traces tab + slide
+  meets the need.
+- **Pre-fetch traces' details on session-row hover?** Cheap and would
+  make the first slide feel instant. Probably worth doing for the
+  initial cut. Confirm with telemetry once shipped.
 - **Pre-fetch all matching traces' highlights when opening a search
   result?** `matchingTraceIds` is bounded by the session's trace count
   (typically <20). Firing N parallel `getTraceSearchHighlights` calls
-  on panel open is bounded work, and it makes cross-trace clicks in the
-  expansion instant. Probably worth doing in V1 — flagged so we can
-  measure cost before turning it on by default.
-- **What happens if `currentTraceId` deep-links to a trace that's not
-  in the session's `trace_ids`?** Fallback per §3 (last trace + warn).
-  Worth deciding whether the URL gets rewritten to the fallback or
-  just gets ignored.
-- **Annotation badge on the row expansion's trace rows.** Should the
-  expansion show a count of annotations per trace, mirroring the
-  hit-count badge for search results? Probably yes, but it's a
+  on panel open is bounded work and makes cross-match slides instant.
+  Probably worth doing in V1 — flagged so we can measure cost before
+  turning it on by default.
+- **What animation library for the slide?** Framer Motion is already
+  in the bundle for other transitions; using it keeps the dependency
+  surface stable. Plain CSS transforms also work and avoid the runtime
+  cost. Pick during implementation; the `slot-transition.tsx` boundary
+  in §11 keeps this swappable.
+- **Cross-trace `N`/`P` hotkey inside a session?** §3 parks it. Decide
+  after measuring how often users walk multiple matches in one
+  session.
+- **Annotation badge on the sessions-list row expansion's trace
+  rows.** With the panel now owning trace navigation, the row
+  expansion's role shrinks. Whether the expansion still shows
+  annotation counts (and per-trace search hit badges) is a
   sessions-list spec concern, not a panel concern.
+
+---
+
+## 13. Tracking
+
+Linear project: [Session first-class support](https://linear.app/latitude/project/session-first-class-support-b15a26fbddb6/overview).
+
+At the time of this revision, the project does **not** have a
+dedicated task for the work this spec defines (the session panel + the
+slide-navigation pattern between the session and trace slots). New
+issue to file: "Session panel with slide-navigation to trace slot
+(spec: `specs/session-problems/6-session-panel.md`)". Linked
+dependencies: parity (`./1-parity-traces-sessions.md`), issue dedup
+(`./3-session-issue-dedup.md`), search highlights
+(`./5-search-highlights.md`).
+
+A second open task to file in the same project, unrelated to the
+panel: **"Add p99 to the sessions table's Duration column"**. Today
+the column shows AVG and p90; we want p99 alongside them so latency
+tails are visible in the listing. Scope: investigate the cheapest way
+to compute p99 on the sessions materialization (likely via the same
+quantile mechanism that produces p90), wire it into the column header
+chip ("p90 / p99" toggle or stacked badges), and confirm it doesn't
+blow up the existing per-row query budget.
