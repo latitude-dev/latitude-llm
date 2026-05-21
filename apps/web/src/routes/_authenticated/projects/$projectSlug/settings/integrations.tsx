@@ -1,10 +1,10 @@
 import { SLACK_FLAG } from "@domain/feature-flags"
-import { Button, Modal, SlackIcon, Text, useToast } from "@repo/ui"
+import { Button, Modal, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { Loader2, Trash2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { z } from "zod"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import {
@@ -36,9 +36,11 @@ function IntegrationsSettingsPage() {
   // The sub-nav entry is also flag-gated; this guards deep links.
   const slackEnabled = useHasFeatureFlag(SLACK_FLAG)
 
-  // Flash effect: surface the install / error status from the callback
-  // redirect, then strip the params so a refresh doesn't re-toast.
-  useEffect(() => {
+  // Surface the install/error status from the callback redirect, then
+  // strip the params. Reads `search` once on mount (the callback lands
+  // here via a full-page nav so subsequent search changes are our own
+  // clean-up navigate, not new flashes to handle).
+  useMountEffect(() => {
     if (search.installed === "ok") {
       toast({ description: "Slack connected" })
     } else if (search.error === "workspace_taken") {
@@ -55,7 +57,7 @@ function IntegrationsSettingsPage() {
     if (search.installed || search.error) {
       void router.navigate({ to: Route.fullPath, search: {}, replace: true })
     }
-  }, [search.installed, search.error, toast, router])
+  })
 
   if (!slackEnabled) {
     return (
