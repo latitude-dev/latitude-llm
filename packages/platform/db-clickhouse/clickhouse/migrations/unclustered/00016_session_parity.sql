@@ -49,6 +49,17 @@
 -- shifts time_of_first_token / time_to_first_token_ns down, giving
 -- the intended final order: max_end_time, max_start_time,
 -- duration_ns, time_of_first_token, time_to_first_token_ns, ...
+--
+-- Why duration_ns is the one sub-action without `IF NOT EXISTS`:
+-- on multi-replica CH Cloud the distributed DDL validator
+-- evaluates IF NOT EXISTS against the pre-ALTER metadata snapshot,
+-- not the rolling schema. Since duration_ns existed pre-ALTER (as
+-- the alias), `ADD COLUMN IF NOT EXISTS duration_ns` was silently
+-- skipped next to the same-ALTER `DROP COLUMN duration_ns` —
+-- alias dropped, SAF never added. Plain `ADD COLUMN duration_ns`
+-- (no IF qualifier) is kept and applied against the rolling
+-- schema after the DROP. Retry-safe because the leading DROP IF
+-- EXISTS guarantees the column is absent before the ADD runs.
 ALTER TABLE sessions
     DROP COLUMN IF EXISTS duration_ns,
     ADD COLUMN IF NOT EXISTS max_start_time
@@ -60,7 +71,7 @@ ALTER TABLE sessions
         reinterpretAsInt64(time_of_first_token) - reinterpretAsInt64(min_start_time),
         0
     ) AFTER time_of_first_token,
-    ADD COLUMN IF NOT EXISTS duration_ns
+    ADD COLUMN duration_ns
         SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS root_span_id
         AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)) AFTER simulation_id,

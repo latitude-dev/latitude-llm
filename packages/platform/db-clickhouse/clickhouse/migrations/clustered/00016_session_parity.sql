@@ -41,9 +41,24 @@
 --   max_end_time, max_start_time, duration_ns,
 --   time_of_first_token, time_to_first_token_ns, ...
 --
--- Retry safety: every sub-action uses IF EXISTS / IF NOT EXISTS,
--- so re-running after a partial application is a no-op on
--- already-applied changes.
+-- Why duration_ns is the one sub-action without `IF NOT EXISTS`:
+-- on multi-replica CH Cloud the distributed DDL validator
+-- evaluates IF NOT EXISTS qualifiers against the *pre-ALTER*
+-- metadata snapshot, not the rolling working schema. Since
+-- duration_ns existed pre-ALTER (as the 00007 alias), an
+-- `ADD COLUMN IF NOT EXISTS duration_ns` next to a same-ALTER
+-- `DROP COLUMN duration_ns` was silently skipped — the alias
+-- got dropped and the SAF was never added, leaving sessions
+-- without a duration_ns column and breaking the sessions_mv
+-- CREATE that follows. The plain `ADD COLUMN duration_ns`
+-- (no IF qualifier) is kept by the validator and applied
+-- against the rolling schema, where the DROP has already
+-- removed the alias. Retry-safe because the leading DROP IF
+-- EXISTS guarantees the column is absent before the ADD runs.
+--
+-- Retry safety: every other sub-action uses IF EXISTS / IF NOT
+-- EXISTS, so re-running after a partial application is a no-op
+-- on already-applied changes.
 -- ═══════════════════════════════════════════════════════════
 
 ALTER TABLE sessions ON CLUSTER default
@@ -57,7 +72,7 @@ ALTER TABLE sessions ON CLUSTER default
         reinterpretAsInt64(time_of_first_token) - reinterpretAsInt64(min_start_time),
         0
     ) AFTER time_of_first_token,
-    ADD COLUMN IF NOT EXISTS duration_ns
+    ADD COLUMN duration_ns
         SimpleAggregateFunction(sum, Int64) DEFAULT 0 CODEC(T64, ZSTD(1)) AFTER max_start_time,
     ADD COLUMN IF NOT EXISTS root_span_id
         AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)) AFTER simulation_id,
