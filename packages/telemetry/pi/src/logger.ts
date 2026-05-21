@@ -9,7 +9,7 @@ export function createLogger(debugEnabled: boolean): Logger {
       if (debugEnabled) process.stderr.write(`[latitude-pi] ${message}\n`)
     },
     warn(message) {
-      process.stderr.write(`[latitude-pi] ${message}\n`)
+      if (debugEnabled) process.stderr.write(`[latitude-pi] ${message}\n`)
     },
   }
 }

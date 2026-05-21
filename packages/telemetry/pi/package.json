@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/pi-telemetry",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Pi coding agent extension that streams sessions to Latitude as OTLP traces",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
