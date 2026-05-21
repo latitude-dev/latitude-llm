@@ -1,9 +1,9 @@
 import { SLACK_FLAG } from "@domain/feature-flags"
-import { Badge, Button, Icon, Modal, Text, useToast } from "@repo/ui"
+import { Button, Modal, SlackIcon, Text, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { Hash, Loader2, Trash2, Unplug } from "lucide-react"
+import { Loader2, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { z } from "zod"
 import { hasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.functions.ts"
@@ -13,6 +13,7 @@ import {
   type SlackIntegrationRecord,
 } from "../../../../../domains/integrations/integrations.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { IntegrationCard } from "./-components/integration-card.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 const searchSchema = z.object({
@@ -64,7 +65,7 @@ function IntegrationsSettingsPage() {
   if (flagLoading) return null
   if (!slackEnabled) {
     return (
-      <SettingsPage title="Integrations" description="Connect external tools to your Latitude organization.">
+      <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
         <div className="rounded-lg border border-border bg-muted/30 p-6">
           <Text.H5 color="foregroundMuted">
             Integrations aren't enabled for your organization yet. Reach out to support to turn them on.
@@ -75,7 +76,7 @@ function IntegrationsSettingsPage() {
   }
 
   return (
-    <SettingsPage title="Integrations" description="Connect external tools to your Latitude organization.">
+    <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
       <SlackIntegrationSection />
     </SettingsPage>
   )
@@ -88,45 +89,36 @@ function SlackIntegrationSection() {
   })
   const [disconnectOpen, setDisconnectOpen] = useState(false)
 
+  if (isLoading) return null
+
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <Text.H5 weight="semibold">Slack</Text.H5>
-        <Text.H5 color="foregroundMuted">
-          Send Latitude notifications to your Slack workspace. Configure which channels receive each kind of alert from
-          the notifications settings.
-        </Text.H5>
-      </div>
-      <div className="rounded-lg border border-border bg-muted/30 p-6">
-        {isLoading ? (
-          <Text.H5 color="foregroundMuted">Loading…</Text.H5>
-        ) : data ? (
-          <ConnectedSlackCard integration={data} onDisconnect={() => setDisconnectOpen(true)} />
-        ) : (
-          <DisconnectedSlackCard />
-        )}
-      </div>
+    <>
+      {data ? (
+        <ConnectedSlackCard integration={data} onDisconnect={() => setDisconnectOpen(true)} />
+      ) : (
+        <DisconnectedSlackCard />
+      )}
       {data ? <DisconnectSlackModal open={disconnectOpen} onClose={() => setDisconnectOpen(false)} /> : null}
-    </section>
+    </>
   )
 }
 
 function DisconnectedSlackCard() {
+  // The route returns a 302 to Slack's authorize URL; a full-page nav
+  // is the right interaction (TanStack `<Link>` only navigates within
+  // the router's known routes, and `<a href>` inside `<Button asChild>`
+  // ends up stretching to fill the flex parent on a single-row card).
+  const handleConnect = () => {
+    window.location.href = "/integrations/slack/install"
+  }
+
   return (
-    <div className="flex flex-row items-center justify-between gap-4">
-      <div className="flex flex-row items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-background">
-          <Icon icon={Hash} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Text.H5 weight="semibold">Slack</Text.H5>
-          <Text.H6 color="foregroundMuted">Not connected</Text.H6>
-        </div>
-      </div>
-      <Button asChild>
-        <a href="/integrations/slack/install">Connect Slack</a>
-      </Button>
-    </div>
+    <IntegrationCard
+      icon={SlackIcon}
+      title="Slack"
+      subtitle="Send Latitude notifications to your Slack workspace."
+      actions={<Button onClick={handleConnect}>Connect Slack</Button>}
+    />
   )
 }
 
@@ -138,34 +130,16 @@ function ConnectedSlackCard({
   onDisconnect: () => void
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-row items-start justify-between gap-4">
-        <div className="flex flex-row items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-background">
-            <Icon icon={Hash} />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Text.H5 weight="semibold">{integration.teamName}</Text.H5>
-            <Text.H6 color="foregroundMuted">
-              Connected {relativeTime(new Date(integration.installedAt))} · {integration.teamId}
-            </Text.H6>
-          </div>
-        </div>
+    <IntegrationCard
+      icon={SlackIcon}
+      title={integration.teamName}
+      subtitle={`Connected ${relativeTime(new Date(integration.installedAt))}`}
+      actions={
         <Button variant="outline" onClick={onDisconnect}>
-          <Icon icon={Unplug} />
           Disconnect
         </Button>
-      </div>
-      {integration.botTokenScopes.length > 0 ? (
-        <div className="flex flex-row flex-wrap gap-2">
-          {integration.botTokenScopes.map((scope) => (
-            <Badge key={scope} variant="muted">
-              {scope}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-    </div>
+      }
+    />
   )
 }
 
