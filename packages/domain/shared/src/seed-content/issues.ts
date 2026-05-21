@@ -53,12 +53,11 @@ const baseIssueFixtures: SeedIssueFixture[] = [
   {
     id: SEED_ISSUE_ID,
     uuid: SEED_ISSUE_UUID,
-    name: "Agent promises warranty coverage for excluded incidents",
+    name: "Retail agent mishandles return eligibility",
     description:
-      "The support agent tells customers that misuse incidents are covered by warranty when Acme policy " +
-      "explicitly excludes cliffs, mesas, rooftop use, canyon anchoring, and other unsupported terrain or " +
-      "installation conditions. The model may invent loyalty waivers, promise reimbursement before review, " +
-      "or reframe misuse as a covered manufacturing defect.",
+      "The retail support agent processes, promises, or refuses returns without correctly grounding the decision " +
+      "in order status, item identity, customer confirmation, and allowed refund methods. The pattern includes " +
+      "returning the wrong item, skipping confirmation, or giving a refund path that does not match policy.",
     source: "annotation",
     createdDaysAgo: 82,
     clusteredDaysAgo: 0,
@@ -70,11 +69,11 @@ const baseIssueFixtures: SeedIssueFixture[] = [
   {
     id: SEED_COMBINATION_ISSUE_ID,
     uuid: SEED_COMBINATION_ISSUE_UUID,
-    name: "Agent recommends dangerous product combinations",
+    name: "Retail agent skips account authentication",
     description:
-      "The support agent suggests combining Acme products in ways that compound danger, such as pairing " +
-      "propulsion products, spatial distortion tools, weather controls, or seismic products. The model often " +
-      "ignores documented incident history, invents authorization exceptions, or treats uncertified bundles as safe.",
+      "The retail support agent performs account-specific actions or reveals order details before properly " +
+      "authenticating the customer by email or by name plus ZIP code. The pattern is risky because return, exchange, " +
+      "and cancellation tools all depend on verified customer identity.",
     source: "annotation",
     createdDaysAgo: 71,
     clusteredDaysAgo: 0,
@@ -86,12 +85,11 @@ const baseIssueFixtures: SeedIssueFixture[] = [
   {
     id: SEED_GENERATE_ISSUE_ID,
     uuid: SEED_GENERATE_ISSUE_UUID,
-    name: "Agent invents unsupported logistics guarantees",
+    name: "Telecom agent leaves connectivity troubleshooting incomplete",
     description:
-      "The support agent fabricates shipping promises, fee waivers, warehouse pickup options, or specialty " +
-      "delivery services that Acme does not actually provide. The behavior is especially risky around cliffside " +
-      "destinations, hazardous goods, and interplanetary shipping requests where the model turns review-only paths " +
-      "into guaranteed service commitments.",
+      "The telecom support agent stops before the customer's mobile connectivity issue is actually resolved, " +
+      "fails to verify device/network state after each remediation step, or treats a partial improvement as success " +
+      "when the customer's stated success criterion is restored service or excellent data speed.",
     source: "annotation",
     createdDaysAgo: 4,
     clusteredDaysAgo: 0,
@@ -103,11 +101,11 @@ const baseIssueFixtures: SeedIssueFixture[] = [
   {
     id: SEED_RETURNS_ISSUE_ID,
     uuid: SEED_RETURNS_ISSUE_UUID,
-    name: "Agent overstates instant returns eligibility",
+    name: "Retail agent mishandles cancelled order recovery",
     description:
-      "The support agent promises immediate refunds, free pickup, or no-questions-asked replacements for orders " +
-      "that still require inspection, are outside the return window, or carry restocking requirements. The pattern " +
-      "usually appears when customers insist on urgent refunds for partially used or damaged products.",
+      "The retail support agent promises to reverse, reinstate, or expedite a cancelled order even though policy " +
+      "requires the customer to place a new order or transfer to a human for out-of-scope exceptions. The pattern " +
+      "usually appears when customers insist that an accidentally cancelled order is urgent.",
     source: "annotation",
     createdDaysAgo: 58,
     clusteredDaysAgo: 2,
@@ -119,11 +117,11 @@ const baseIssueFixtures: SeedIssueFixture[] = [
   {
     id: SEED_BILLING_ISSUE_ID,
     uuid: SEED_BILLING_ISSUE_UUID,
-    name: "Agent invents courtesy credits and retroactive fee waivers",
+    name: "Telecom agent applies unsupported account credits",
     description:
-      "The support agent offers courtesy credits, loyalty refunds, or retroactive surcharge reversals that are not " +
-      "documented in Acme billing policy. The issue is noisy because some customers mention real discounts, but the " +
-      "failure pattern is the model confidently minting credits or waivers without approval or an existing case note.",
+      "The telecom support agent offers goodwill credits, plan changes, or billing adjustments before the customer " +
+      "qualifies under policy or before account state has been verified. The pattern is distinct from technical " +
+      "troubleshooting because the failure is an unsupported commercial commitment.",
     source: "custom",
     createdDaysAgo: 46,
     clusteredDaysAgo: 10,
@@ -135,11 +133,11 @@ const baseIssueFixtures: SeedIssueFixture[] = [
   {
     id: SEED_ACCESS_ISSUE_ID,
     uuid: SEED_ACCESS_ISSUE_UUID,
-    name: "Agent bypasses account recovery verification",
+    name: "Support agent transfers instead of resolving in-scope work",
     description:
-      "The support agent skips identity checks during account recovery by accepting weak proof, disabling MFA on " +
-      "request, exposing partial account data before verification, or issuing recovery guidance that should only be " +
-      "available after approved ownership checks.",
+      "The support agent escalates to a human or ends the interaction even though the request is covered by available " +
+      "tools and policy. The pattern is especially visible in retail returns and telecom troubleshooting, where a " +
+      "correct agent should continue collecting state and executing the next tool step.",
     source: "annotation",
     createdDaysAgo: 34,
     clusteredDaysAgo: 0,
@@ -151,11 +149,11 @@ const baseIssueFixtures: SeedIssueFixture[] = [
   {
     id: SEED_INSTALLATION_ISSUE_ID,
     uuid: SEED_INSTALLATION_ISSUE_UUID,
-    name: "Agent fabricates on-site installation certifications",
+    name: "Banking agent recommends products without grounding in policy",
     description:
-      "The support agent tells customers that Acme can provide certified on-site installation, field sign-off, or " +
-      "compliance inspection paperwork for products that are shipped self-service only. The hallucination often mixes " +
-      "real reseller setup programs with nonexistent Acme-operated installation teams.",
+      "The banking support agent recommends a financial product without checking the relevant customer constraints, " +
+      "subscription status, fee policy, or required knowledge documents. The pattern covers RAG-like support failures " +
+      "where the answer sounds plausible but is not grounded in the available policy corpus.",
     source: "custom",
     createdDaysAgo: 83,
     clusteredDaysAgo: 2,
@@ -401,140 +399,63 @@ const curatedExtraIssueBlueprints: Omit<SeedIssueFixture, "id" | "uuid">[] = [
   },
 ] as const
 
-const generatedIssueDomains = [
+const generatedSupportIssueFamilies = [
   {
-    titlePrefix: "billing",
-    label: "billing workflows",
-    reviewTeam: "finance operations",
-    workflow: "billing adjustment review",
-    failurePattern: "quotes account-specific credits or reversals as already approved",
+    name: "Retail return eligibility",
+    pattern:
+      "promises or refuses refunds without verifying the delivered item, return window, condition, and refund method",
+    risk: "customers receive inconsistent return outcomes for the same policy state",
   },
   {
-    titlePrefix: "export-control",
-    label: "export-control workflows",
-    reviewTeam: "trade compliance",
-    workflow: "export clearance review",
-    failurePattern: "treats restricted shipments as already cleared for release",
+    name: "Retail account authentication",
+    pattern: "reveals order details or performs account actions before verifying email or name plus ZIP code",
+    risk: "private order and payment details can be exposed to the wrong customer",
   },
   {
-    titlePrefix: "identity-recovery",
-    label: "identity-recovery workflows",
-    reviewTeam: "account security",
-    workflow: "ownership verification",
-    failurePattern: "treats weak customer proof as enough to unlock recovery steps",
+    name: "Retail cancelled-order recovery",
+    pattern: "claims cancelled orders can be reinstated or expedited without a supported policy path",
+    risk: "customers are promised fulfillment that the backend cannot execute",
   },
   {
-    titlePrefix: "procurement",
-    label: "procurement workflows",
-    reviewTeam: "vendor operations",
-    workflow: "supplier onboarding review",
-    failurePattern: "claims buyers or vendors already passed procurement review",
+    name: "Telecom connectivity troubleshooting",
+    pattern: "ends troubleshooting before checking device state, SIM state, APN settings, or speed-test results",
+    risk: "customers leave the interaction with unresolved mobile service problems",
   },
   {
-    titlePrefix: "warehouse",
-    label: "warehouse workflows",
-    reviewTeam: "fulfillment operations",
-    workflow: "inventory hold confirmation",
-    failurePattern: "presents stock reservations as already locked in the warehouse",
+    name: "Telecom credits and billing relief",
+    pattern: "offers credits, fee waivers, or plan adjustments before verifying account and eligibility",
+    risk: "commercial concessions are promised without the required support policy basis",
   },
   {
-    titlePrefix: "legal-review",
-    label: "legal-review workflows",
-    reviewTeam: "commercial legal",
-    workflow: "terms and language review",
-    failurePattern: "states custom clauses or translated policies are already approved",
+    name: "Airline reservation changes",
+    pattern:
+      "changes flights, bags, passenger data, or cancellations without grounding the action in reservation and fare rules",
+    risk: "travelers receive invalid itinerary commitments or unsupported refund promises",
   },
   {
-    titlePrefix: "contract-renewal",
-    label: "contract-renewal workflows",
-    reviewTeam: "account management",
-    workflow: "commercial renewal review",
-    failurePattern: "guarantees commercial protections that still require account approval",
+    name: "Premature human transfer",
+    pattern: "hands off to a person while the current support workflow still has actionable tool-backed steps",
+    risk: "automation abandons resolvable cases and creates unnecessary escalation load",
   },
   {
-    titlePrefix: "hazmat-shipping",
-    label: "hazardous-goods workflows",
-    reviewTeam: "hazardous-goods operations",
-    workflow: "special handling review",
-    failurePattern: "waves away packaging, route, or storage restrictions",
-  },
-  {
-    titlePrefix: "privacy",
-    label: "privacy workflows",
-    reviewTeam: "privacy operations",
-    workflow: "retention request processing",
-    failurePattern: "says deletion or redaction tasks already finished",
-  },
-  {
-    titlePrefix: "platform-capacity",
-    label: "platform-capacity workflows",
-    reviewTeam: "platform operations",
-    workflow: "quota and capacity review",
-    failurePattern: "declares limits or burst allowances already lifted",
-  },
-  {
-    titlePrefix: "field-service",
-    label: "field-service workflows",
-    reviewTeam: "field operations",
-    workflow: "onsite dispatch approval",
-    failurePattern: "implies technicians or crews are already scheduled",
+    name: "Tool-result grounding",
+    pattern: "treats missing, stale, or failed tool output as if it confirmed the customer's requested outcome",
+    risk: "the assistant presents unobserved backend state as fact",
   },
 ] as const
 
-const generatedIssueCommitments = [
-  {
-    title: "approval waivers",
-    descriptionObject: "approval waivers",
-    consequence: "skipping the documented approval gate",
-  },
-  {
-    title: "priority escalations",
-    descriptionObject: "priority escalations",
-    consequence: "promoting ordinary requests into emergency handling",
-  },
-  {
-    title: "retroactive credits",
-    descriptionObject: "retroactive credits",
-    consequence: "minting compensation without a case note",
-  },
-  {
-    title: "reservation holds",
-    descriptionObject: "reservation holds",
-    consequence: "claiming stock, time, or capacity is already reserved",
-  },
-  {
-    title: "sign-off confirmations",
-    descriptionObject: "sign-off confirmations",
-    consequence: "treating draft review notes as final approval",
-  },
-  {
-    title: "exception overrides",
-    descriptionObject: "exception overrides",
-    consequence: "inventing a special-case exemption that does not exist",
-  },
-  {
-    title: "quota boosts",
-    descriptionObject: "quota boosts",
-    consequence: "declaring higher limits before capacity review",
-  },
-  {
-    title: "compliance clearances",
-    descriptionObject: "compliance clearances",
-    consequence: "stating restricted actions are already approved",
-  },
-  {
-    title: "renewal protections",
-    descriptionObject: "renewal protections",
-    consequence: "freezing commercial terms without contract review",
-  },
-  {
-    title: "closure confirmations",
-    descriptionObject: "closure confirmations",
-    consequence: "closing workflows that are still in review",
-  },
+const generatedSupportIssueVariants = [
+  "skips required verification",
+  "overstates policy exceptions",
+  "stops before the success criterion",
+  "uses stale tool state",
+  "promises unsupported recovery",
+  "misroutes an in-scope request",
+  "fails to confirm customer intent",
+  "summarizes backend state incorrectly",
+  "treats partial progress as resolution",
+  "ignores required follow-up action",
 ] as const
-
-const generatedIssueVerbs = ["invents", "fabricates", "promises", "overstates"] as const
 
 const TARGET_SEEDED_ISSUE_COUNT = 128
 const GENERATED_EXTRA_ISSUE_COUNT =
@@ -545,21 +466,23 @@ if (GENERATED_EXTRA_ISSUE_COUNT <= 0) {
 }
 
 function buildGeneratedExtraIssueBlueprint(index: number): Omit<SeedIssueFixture, "id" | "uuid"> {
-  const domain = generatedIssueDomains[index % generatedIssueDomains.length]
-  const commitment =
-    generatedIssueCommitments[Math.floor(index / generatedIssueDomains.length) % generatedIssueCommitments.length]
-  const verb = generatedIssueVerbs[index % generatedIssueVerbs.length]
+  const family = generatedSupportIssueFamilies[index % generatedSupportIssueFamilies.length]
+  const variant =
+    generatedSupportIssueVariants[
+      Math.floor(index / generatedSupportIssueFamilies.length) % generatedSupportIssueVariants.length
+    ]
+  const cohort = Math.floor(index / (generatedSupportIssueFamilies.length * generatedSupportIssueVariants.length)) + 1
   const createdDaysAgo = 88 - (index % 84)
   const clusteredDaysAgo = Math.max(0, createdDaysAgo - (2 + (index % 18)))
   const updatedDaysAgo = Math.max(0, clusteredDaysAgo - (index % 6))
   const escalatedDaysAgo = index % 3 === 0 ? Math.max(0, updatedDaysAgo - (index % 2)) : null
 
   return {
-    name: `Agent ${verb} ${domain.titlePrefix} ${commitment.title}`,
+    name: `${family.name}: agent ${variant}${cohort > 1 ? ` (${cohort})` : ""}`,
     source: "annotation",
     description:
-      `The support agent ${verb} ${commitment.descriptionObject} in ${domain.label} before ${domain.reviewTeam} completes the documented ${domain.workflow}. ` +
-      `The failure pattern usually involves ${commitment.consequence}, and the model ${domain.failurePattern}.`,
+      `The support agent ${family.pattern}. This issue family is linked to tau2-bench ${family.name.toLowerCase()} trajectories. ` +
+      `The repeated risk is that ${family.risk}.`,
     createdDaysAgo,
     clusteredDaysAgo,
     updatedDaysAgo,

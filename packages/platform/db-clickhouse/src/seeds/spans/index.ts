@@ -1,7 +1,6 @@
 import { type SeedScope, TraceId } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
-import { isSentinelPresent } from "../idempotency.ts"
 import type { SeedContext, Seeder } from "../types.ts"
 import { fixedTraceSeeders } from "./fixed-traces.ts"
 import { generateAllSpans, type SpanRow, type TraceConfig } from "./generator.ts"
@@ -50,20 +49,4 @@ export const runSpansSeed = (
     return traceIds
   })
 
-const seedSpans: Seeder = {
-  name: "spans/generated-ambient-telemetry",
-  run: (ctx) =>
-    Effect.gen(function* () {
-      // Sentinel: any span carrying the ambient-seed marker. The generator
-      // produces random trace_ids per run, so we identify its footprint by
-      // `metadata['seed']` (set in generator.ts + session-generator.ts).
-      const present = yield* isSentinelPresent(ctx.client, "spans", "metadata['seed'] = 'ambient-generated'", {})
-      if (present) {
-        if (!ctx.quiet) console.log("  -> spans/generated-ambient-telemetry: already seeded, skipping")
-        return
-      }
-      yield* runSpansSeed(ctx)
-    }),
-}
-
-export const spanSeeders: Seeder[] = [...fixedTraceSeeders, seedSpans]
+export const spanSeeders: Seeder[] = [...fixedTraceSeeders]
