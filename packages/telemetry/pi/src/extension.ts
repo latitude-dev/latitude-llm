@@ -88,12 +88,19 @@ export default function latitudePiTelemetry(pi: PiExtensionAPI): void {
       allowConversationAccess: config.allowConversationAccess,
       identity,
     })
-    await postTraces({
+
+    const exportPromise = postTraces({
       baseUrl: config.baseUrl,
       apiKey: config.apiKey,
       project: config.project,
       payload,
       logger,
     })
+
+    if (ctx.hasUI) {
+      void exportPromise
+    } else {
+      await exportPromise
+    }
   })
 }
