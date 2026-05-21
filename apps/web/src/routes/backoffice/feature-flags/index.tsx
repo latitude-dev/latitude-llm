@@ -117,77 +117,76 @@ function CreateFeatureFlagButton() {
         <Icon icon={Plus} size="sm" />
         Create feature flag
       </Button>
-      <Modal.Root
+      <Modal
+        dismissible
+        size="large"
         open={isOpen}
         onOpenChange={(next) => {
           if (!next) form.reset()
           setIsOpen(next)
         }}
+        title="Create feature flag"
+        description="Create the stable identifier that code will reference."
+        footer={
+          <>
+            <CloseTrigger size="sm" />
+            <Button form="create-feature-flag-form" type="submit" size="sm" disabled={form.state.isSubmitting}>
+              {form.state.isSubmitting ? "Creating…" : "Create feature flag"}
+            </Button>
+          </>
+        }
       >
-        <Modal.Content dismissible size="large">
-          <form
-            onSubmit={(event) => {
-              event.preventDefault()
-              void form.handleSubmit()
-            }}
-          >
-            <Modal.Header
-              title="Create feature flag"
-              description="Create the stable identifier that code will reference."
-            />
-            <Modal.Body>
-              <FormWrapper>
-                <form.Field name="identifier">
-                  {(field) => (
-                    <Input
-                      required
-                      label="Identifier"
-                      description="Use a stable code-facing id, for example billing.v2 or new-dashboard. Letters, numbers, and the characters - _ / . only. Avoid renaming after code references it."
-                      value={field.state.value}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                      placeholder="new-dashboard"
-                      autoComplete="off"
-                    />
-                  )}
-                </form.Field>
-                <form.Field name="name">
-                  {(field) => (
-                    <Input
-                      label="Name"
-                      description="Optional human-facing label for Backoffice."
-                      value={field.state.value}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                      placeholder="New dashboard"
-                      autoComplete="off"
-                    />
-                  )}
-                </form.Field>
-                <form.Field name="description">
-                  {(field) => (
-                    <Textarea
-                      label="Description"
-                      description="Optional context for when staff should enable this flag."
-                      value={field.state.value}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                      placeholder="What this flag enables and when staff should use it."
-                      minRows={4}
-                    />
-                  )}
-                </form.Field>
-              </FormWrapper>
-            </Modal.Body>
-            <Modal.Footer>
-              <CloseTrigger />
-              <Button type="submit" size="sm" disabled={form.state.isSubmitting}>
-                {form.state.isSubmitting ? "Creating…" : "Create feature flag"}
-              </Button>
-            </Modal.Footer>
-          </form>
-        </Modal.Content>
-      </Modal.Root>
+        <form
+          id="create-feature-flag-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void form.handleSubmit()
+          }}
+        >
+          <FormWrapper>
+            <form.Field name="identifier">
+              {(field) => (
+                <Input
+                  required
+                  label="Identifier"
+                  description="Use a stable code-facing id, for example billing.v2 or new-dashboard. Letters, numbers, and the characters - _ / . only. Avoid renaming after code references it."
+                  value={field.state.value}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                  placeholder="new-dashboard"
+                  autoComplete="off"
+                />
+              )}
+            </form.Field>
+            <form.Field name="name">
+              {(field) => (
+                <Input
+                  label="Name"
+                  description="Optional human-facing label for Backoffice."
+                  value={field.state.value}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                  placeholder="New dashboard"
+                  autoComplete="off"
+                />
+              )}
+            </form.Field>
+            <form.Field name="description">
+              {(field) => (
+                <Textarea
+                  label="Description"
+                  description="Optional context for when staff should enable this flag."
+                  value={field.state.value}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                  placeholder="What this flag enables and when staff should use it."
+                  minRows={4}
+                />
+              )}
+            </form.Field>
+          </FormWrapper>
+        </form>
+      </Modal>
     </>
   )
 }

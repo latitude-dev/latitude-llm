@@ -51,60 +51,62 @@ export function EditFeatureFlagModal({ featureFlag, open, onOpenChange }: EditFe
   }, [open, featureFlag.identifier, featureFlag.name, featureFlag.description, form])
 
   return (
-    <Modal.Root open={open} onOpenChange={onOpenChange}>
-      <Modal.Content dismissible size="large">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault()
-            void form.handleSubmit()
-          }}
-        >
-          <Modal.Header
-            title="Edit feature flag"
-            description="Update the human-facing name and description. The identifier is fixed because code references it."
-          />
-          <Modal.Body>
-            <FormWrapper>
-              <div className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 px-3 py-2">
-                <Text.H6 color="foregroundMuted">Identifier (cannot be changed)</Text.H6>
-                <code className="font-mono text-sm">{featureFlag.identifier}</code>
-              </div>
-              <form.Field name="name">
-                {(field) => (
-                  <Input
-                    label="Name"
-                    description="Optional human-facing label for Backoffice."
-                    value={field.state.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                    placeholder="New dashboard"
-                    autoComplete="off"
-                  />
-                )}
-              </form.Field>
-              <form.Field name="description">
-                {(field) => (
-                  <Textarea
-                    label="Description"
-                    description="Optional context for when staff should enable this flag."
-                    value={field.state.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                    placeholder="What this flag enables and when staff should use it."
-                    minRows={4}
-                  />
-                )}
-              </form.Field>
-            </FormWrapper>
-          </Modal.Body>
-          <Modal.Footer>
-            <CloseTrigger />
-            <Button type="submit" size="sm" disabled={form.state.isSubmitting}>
-              {form.state.isSubmitting ? "Saving…" : "Save changes"}
-            </Button>
-          </Modal.Footer>
-        </form>
-      </Modal.Content>
-    </Modal.Root>
+    <Modal
+      dismissible
+      size="large"
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Edit feature flag"
+      description="Update the human-facing name and description. The identifier is fixed because code references it."
+      footer={
+        <>
+          <CloseTrigger size="sm" />
+          <Button form="edit-feature-flag-form" type="submit" size="sm" disabled={form.state.isSubmitting}>
+            {form.state.isSubmitting ? "Saving…" : "Save changes"}
+          </Button>
+        </>
+      }
+    >
+      <form
+        id="edit-feature-flag-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
+        <FormWrapper>
+          <div className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 px-3 py-2">
+            <Text.H6 color="foregroundMuted">Identifier (cannot be changed)</Text.H6>
+            <code className="font-mono text-sm">{featureFlag.identifier}</code>
+          </div>
+          <form.Field name="name">
+            {(field) => (
+              <Input
+                label="Name"
+                description="Optional human-facing label for Backoffice."
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+                errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                placeholder="New dashboard"
+                autoComplete="off"
+              />
+            )}
+          </form.Field>
+          <form.Field name="description">
+            {(field) => (
+              <Textarea
+                label="Description"
+                description="Optional context for when staff should enable this flag."
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+                errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                placeholder="What this flag enables and when staff should use it."
+                minRows={4}
+              />
+            )}
+          </form.Field>
+        </FormWrapper>
+      </form>
+    </Modal>
   )
 }

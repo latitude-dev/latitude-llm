@@ -229,60 +229,107 @@ Final: `pnpm --filter @platform/db-clickhouse test` reports 154/154
       is non-empty (independent of `sortBy`) — already enforced at the
       repo, but document the contract in the handler comment.
 
-### PR 4 — Frontend (hooks + search page UI)
+Verification: `pnpm --filter @app/web typecheck` clean,
+`pnpm typecheck` 68/68 green, `pnpm knip` clean (both new exports
+carry `@public` so knip recognizes them as intentional until PR 4
+lands the consumer), `pnpm --filter @app/web exec biome lint
+src/domains/sessions/sessions.functions.ts` clean.
 
-The search page becomes session-centric **unconditionally** — the same
-`SessionsView` already used by the project page's Sessions tab. There's
-no `TracesView`/`SessionsView` swap. `searchMatches` is a data-driven
-prop: when a query is active it's populated and the matching-turns
-pill / best-trace drill-in light up; when it's empty the view degrades
-to a plain session listing (filters still work). One code path, one
-column-settings store, one set of React Query keys.
+### PR 4 — Frontend (new /session-search route behind feature flag)
 
-- [ ] `apps/web/src/domains/sessions/sessions.collection.ts`:
+**Rollout strategy revision.** Earlier drafts of this section
+proposed swapping `TracesView → SessionsView` on the existing
+`/search` route. We're shipping a **temporary parallel section
+instead**: a new sidebar entry "Session search" behind a feature
+flag, routed to a new `/projects/$projectSlug/session-search/` page,
+while `/search` stays untouched. This lets us A/B compare the new
+session-rollup search against today's trace-flat search with zero
+risk to existing users and a clean rollback story (flip the flag).
+
+The session-search page itself follows the always-`SessionsView`
+design we settled on: `searchMatches` is a data-driven prop, the
+expansion still shows the full conversation, matching turns get a
+visual highlight. None of that decision changes — only the rollout
+shape.
+
+Cleanup is tracked as **[LAT-614](https://linear.app/latitude/issue/LAT-614/cutover-search-to-session-rollup-remove-session-search-v2-flag)**
+(separate, small PR): once telemetry says the new page is solid, swap
+`/search` to use the session-search code and delete the temporary
+route + sidebar entry + flag.
+
+**Defaults (override if you have preferences):**
+
+- **Route**: `/projects/$projectSlug/session-search/` (literal parallel
+  to `/search/`)
+- **Flag scope**: per-organization (matches every other flag in this
+  repo: `email-notifications`, `timeline-incidents`, etc.)
+- **Cleanup trigger**: manual product call once we have positive
+  telemetry from design partners
+
+#### Feature flag declaration
+
+- [x] `packages/domain/feature-flags/src/constants.ts`: add
+      `SESSION_SEARCH_V2_FLAG = "session-search-v2" as const`. Include
+      a JSDoc explaining: "Gates the temporary `/session-search` route
+      and sidebar entry while we A/B against the existing trace-flat
+      `/search`. Remove after LAT-614 cuts over."
+- [x] `packages/domain/feature-flags/src/index.ts`: re-export the
+      constant.
+- [x] No migration. The backoffice catalog picks it up automatically;
+      an operator creates the row by visiting `/backoffice/feature-flags/`
+      and enabling it for a target org (or globally).
+
+#### React Query hooks
+
+- [x] `apps/web/src/domains/sessions/sessions.collection.ts`:
       widen `useSessionsInfiniteScroll` to accept optional
       `searchQuery`; include it in the query key
       (`["sessionsInfiniteScroll", projectId, sorting, filters,
       searchQuery]`). Page-param shape:
       `{ sortValue: string; sessionId: string }`.
-- [ ] Same file: add `useSessionsCount(projectId, filters, searchQuery?)`
+- [x] Same file: add `useSessionsCount(projectId, filters, searchQuery?)`
       with key `["sessionsCount", projectId, filters, searchQuery]`.
-- [ ] `apps/web/src/routes/_authenticated/projects/$projectSlug/search/index.tsx`:
-      replace `TracesView` with `SessionsView` permanently. Remove
-      `useTracesCount` / `TRACE_COLUMN_OPTIONS` / `traceColumnSettings`
-      imports; replace with `useSessionsCount`,
-      `SESSION_COLUMN_OPTIONS`, `useTableColumnSettings<SessionColumnId>`
-      (storage key bumps to `"projects.search.sessions.columns.v1"`).
-- [ ] Same file: pass `searchQuery={q}` to `SessionsView` always (empty
-      string when the user hasn't typed yet). Render the count string
-      as:
-      - no query, no filters → empty
-      - filters only → `"N sessions"`
-      - query active → `"N sessions · M matching turns"` (both numbers
-        come from `useSessionsCount`).
-- [ ] Same file: `traceIdsRef` for drawer prev/next stays the same
-      shape as today's Sessions tab (`sessions-view.tsx:392`): each
-      expanded session contributes its `session.traceIds` in
-      ingestion order, concatenated in page order. No search-specific
-      branching — matching vs. non-matching is a visual cue in the
-      table, not a navigation distinction.
-- [ ] `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/sessions-view.tsx`:
+      Calls `countSessionsByProject` from PR 3.
+
+#### New route + sidebar entry
+
+- [x] New file
+      `apps/web/src/routes/_authenticated/projects/$projectSlug/session-search/index.tsx`.
+      Renders `SessionsView` always. Mirrors the existing `/search/`
+      shell (search bar, time filter, filters dropdown, save-search,
+      columns toggle) but driven by `useSessionsInfiniteScroll` and
+      `useSessionsCount`. Column settings storage key:
+      `"projects.session-search.columns.v1"` (distinct from the
+      eventual `/search` key after LAT-614).
+- [x] Server-side route guard: in the route's `loader`, call the
+      `hasFeatureFlag({ identifier: SESSION_SEARCH_V2_FLAG })` server
+      function. Return a 404 / redirect to `/search` when the flag is
+      off. Belt-and-braces with the sidebar visibility check.
+- [x] Sidebar wiring (wherever the project nav lives): add a "Session
+      search" entry under or next to "Search". Gate visibility via
+      `useHasFeatureFlag(SESSION_SEARCH_V2_FLAG)` — invisible when
+      off. Same icon as the existing Search entry is fine; the label
+      is what differentiates them.
+
+#### SessionsView search-mode additions
+
+- [x] `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/sessions-view.tsx`:
       add `searchQuery?: string` and
       `searchMatches?: Readonly<Record<string, SessionSearchMatch>>`
       props. Both optional — the project-page Sessions tab keeps
       calling without them and behaves identically to today.
-- [ ] Same file: a `"searchMatches"` column id exists in
+- [x] Same file: a `"searchMatches"` column id exists in
       `SESSION_COLUMN_OPTIONS` but renders the "**N** matching turns"
       pill **only when `searchMatches[sessionId]` is present**. No
       append/remove dance in the visible-column-ids logic — the column
       is always declared, the cell is empty when there's no match
       data.
-- [ ] Same file: `useExpandedSessionTraces` (line ~54-98) is unchanged —
+- [x] Same file: `useExpandedSessionTraces` (line ~54-98) is unchanged —
       keeps its existing `listTracesByProject` call. The expansion
       shows **all** of the session's traces in ingestion order, same
       as the Sessions tab today (spec §5.3). Matching turns are
       flagged, not filtered.
-- [ ] Same file: when `searchMatches[sessionId]` is provided, render a
+- [x] Same file: when `searchMatches[sessionId]` is provided, render a
       visual highlight on expanded trace rows whose `traceId` is in
       `matchingTraceIds` — subtle background tint or focus ring, exact
       treatment chosen during PR 4 design. The row stays clickable as
@@ -290,30 +337,74 @@ column-settings store, one set of React Query keys.
       matched". An optional score pill (per-row, value from the
       parallel `matchingTraceScores` array) can render alongside if
       design wants it.
-- [ ] Same file: top-level row click — when `searchMatches[sessionId]`
+- [x] Same file: top-level row click — when `searchMatches[sessionId]`
       exists, open drawer on `bestTraceId`; otherwise behave like
       today (expand only, no drawer). Expanded trace row click always
       opens the drawer on that specific `traceId`.
-- [ ] Same file: `useSessionSelectionAdapter` is unchanged. The
-      existing `sessionTraceIndex` (`sessionId → session.traceIds`) is
-      fed regardless of whether `searchMatches` is present — checking
-      a session row selects all of its traces, same as the Sessions
-      tab today; `enqueueTracesExport` consumes that selection with
-      no transformation.
+- [x] Same file: `useSessionSelectionAdapter` is unchanged. Selection
+      still maps session checkbox → all of the session's traceIds via
+      `sessionTraceIndex`; `enqueueTracesExport` consumes that with no
+      transformation. Visual highlight on matching rows is purely
+      presentation, not selection scope.
+
+#### Count string + drawer prev/next
+
+- [x] In the new route file: render the count string as
+      `"N sessions"` (filters only) or
+      `"N sessions · M matching turns"` (query active), with both
+      numbers from `useSessionsCount`.
+- [x] `traceIdsRef` for drawer prev/next: each expanded session
+      contributes its `session.traceIds` in ingestion order,
+      concatenated in page order. Identical shape to the project-page
+      Sessions tab — matching vs. non-matching is a visual cue, not a
+      navigation distinction.
+
+#### Documentation
+
+- [x] New file `dev-docs/feature-flags.md` documenting the lifecycle
+      with `session-search-v2` as the worked example:
+      1. Declare constant in `@domain/feature-flags/src/constants.ts`.
+      2. Re-export from `index.ts`.
+      3. Gate server behavior: `yield* FeatureFlagRepository.isEnabledForOrganization(FLAG)`.
+      4. Gate client behavior: `useHasFeatureFlag(FLAG)`.
+      5. Enable for an org via `/backoffice/feature-flags/`.
+      6. Cleanup checklist (referenced from LAT-614).
+
+#### Telemetry
+
 - [ ] Telemetry (spec §7 step 5): log per-search-query
       `matching_session_count`, `sum(matching_trace_count)`, and
-      query latency. Wire into the existing PostHog client.
-- [ ] Manual verification:
-      - Empty search bar, no filters → empty state, no count.
+      query latency. Wire into the existing PostHog client. Tag events
+      with the route (`/session-search`) so we can compare against
+      `/search` traffic during the A/B window.
+
+#### Manual verification
+
+- [ ] With the flag off (default): no sidebar entry, navigating to
+      `/session-search` directly redirects to `/search`.
+- [ ] With the flag on for the test org:
+      - Sidebar entry visible.
+      - Empty search bar + no filters → empty state, no count.
       - Add a filter, no query → session listing (same as the project
         Sessions tab) with "N sessions" count.
       - Type `payment` → one row per session with the "matching
-        turns" pill; expanding a session shows the **full
-        conversation** (all turns in ingestion order, same as the
-        Sessions tab) with the matching turns visually flagged;
-        top-level row click opens the drawer on `bestTraceId`;
-        checking a session and exporting produces a CSV of all the
-        session's traces (same as the Sessions tab today).
+        turns" pill; expanding a session shows the full conversation
+        (all turns in ingestion order) with matching turns visually
+        flagged; top-level row click opens the drawer on
+        `bestTraceId`; checking a session and exporting produces a
+        CSV of all the session's traces.
+- [ ] Existing `/search` route behavior is byte-for-byte unchanged.
+
+### Cutover follow-up (tracked separately)
+
+The cutover/cleanup work that swaps `/search` to use the new code,
+deletes the temporary `/session-search` route, and removes the
+`session-search-v2` flag is tracked as a separate Linear ticket:
+
+- **[LAT-614](https://linear.app/latitude/issue/LAT-614/cutover-search-to-session-rollup-remove-session-search-v2-flag)** —
+  Cutover `/search` to session-rollup + remove `session-search-v2`
+  flag. Opens only after positive A/B telemetry from the
+  design-partner orgs that have the flag enabled.
 
 ### Follow-ups (out of scope for this spec; tracked here only as breadcrumbs)
 

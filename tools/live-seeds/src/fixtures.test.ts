@@ -15,6 +15,12 @@ function totalTraceCostUsd(trace: {
   return trace.spans.reduce((sum, span) => sum + (span.type === "chat" ? (span.usage?.totalCostUsd ?? 0) : 0), 0)
 }
 
+// Fixtures whose session id and content are intentionally identical across
+// runSeeds (e.g. the session-search QA fixture, which uses literal copy and a
+// deterministic `qa-*-${instanceIndex+1}` session id so the QA checklist can
+// reference sessions by name). These skip the "varies across seeds" invariant.
+const FIXED_CONTENT_FIXTURE_KEYS = new Set<string>(["session-search-qa"])
+
 describe("liveSeedFixtures", () => {
   for (const fixture of liveSeedFixtures) {
     it(`generates deterministic but varied cases for ${fixture.key}`, () => {
@@ -40,8 +46,10 @@ describe("liveSeedFixtures", () => {
       expect(caseA).toEqual(caseARepeat)
       expect(caseA.traces.length).toBeGreaterThan(0)
       expect(caseA.traces.filter((trace) => trace.role === "target")).toHaveLength(1)
-      expect(caseA.sessionId).not.toBe(caseB.sessionId)
-      expect(JSON.stringify(caseA)).not.toBe(JSON.stringify(caseB))
+      if (!FIXED_CONTENT_FIXTURE_KEYS.has(fixture.key)) {
+        expect(caseA.sessionId).not.toBe(caseB.sessionId)
+        expect(JSON.stringify(caseA)).not.toBe(JSON.stringify(caseB))
+      }
     })
 
     it(`preserves core traffic traits on the target trace for ${fixture.key}`, () => {

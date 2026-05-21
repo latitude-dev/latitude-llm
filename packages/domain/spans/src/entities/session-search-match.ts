@@ -10,9 +10,10 @@
  * base entities.
  *
  * Fields:
- *  - `bestScore` — `max(relevance_score)` over the session's matching traces
- *    (the score-aggregation policy lives behind
- *    `SESSION_SEARCH_SCORE_AGGREGATION` so it can be swapped centrally).
+ *  - `bestScore` — `max(relevance_score)` over the session's matching
+ *    traces. The aggregation choice (max vs avg vs top-k) is documented in
+ *    `specs/session-problems/2-session-level-search.md` §4.2; the SQL in
+ *    `search-by-project.ts` hardcodes `max(...)`.
  *  - `bestTraceId` — trace id at `argMax(trace_id, relevance_score)`; the
  *    deep-link target for "open the most-relevant trace in this session".
  *  - `matchingTraceCount` — number of traces in the session that matched

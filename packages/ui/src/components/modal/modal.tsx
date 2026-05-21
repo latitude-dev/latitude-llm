@@ -2,7 +2,7 @@ import type { ComponentProps, ReactNode } from "react"
 
 import { zIndex as globalZIndex, type ZIndex } from "../../tokens/zIndex.ts"
 import { cn } from "../../utils/cn.ts"
-import { Button } from "../button/button.tsx"
+import { Button, type ButtonProps } from "../button/button.tsx"
 import {
   Dialog,
   DialogClose,
@@ -192,8 +192,16 @@ export const Modal = Object.assign(ModalBase, {
   Footer: ModalFooter,
 })
 
-const CloseTrigger = ({ children = <Button variant="outline">Close</Button> }: { children?: ReactNode }) => {
-  return <DialogClose asChild>{children}</DialogClose>
+const CloseTrigger = ({ children, size }: { children?: ReactNode; size?: ButtonProps["size"] }) => {
+  return (
+    <DialogClose asChild>
+      {children ?? (
+        <Button variant="outline" size={size}>
+          Close
+        </Button>
+      )}
+    </DialogClose>
+  )
 }
 
 export { CloseTrigger }

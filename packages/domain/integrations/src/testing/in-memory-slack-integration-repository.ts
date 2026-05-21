@@ -42,7 +42,7 @@ export const InMemorySlackIntegrationRepositoryLive = (init: {
       Effect.gen(function* () {
         const crossOrgConflict = activeRowForTeamId(integration.teamId)
         if (crossOrgConflict && crossOrgConflict.organizationId !== init.organizationId) {
-          return yield* Effect.fail(new SlackIntegrationConflictError({ teamId: integration.teamId }))
+          return yield* new SlackIntegrationConflictError({ teamId: integration.teamId })
         }
 
         // Mirror the DB's `integrations_active_organization_kind_idx`

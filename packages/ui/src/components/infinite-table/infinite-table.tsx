@@ -339,6 +339,17 @@ export function InfiniteTable<T>({
                         </td>
                       </tr>
                     )}
+                  {isExpanded && expanded && !expanded.isLoading && expanded.header !== undefined && (
+                    <tr>
+                      {hasExpansion && <td className="px-2 py-2 w-8 border-none" />}
+                      {selection && (
+                        <td style={{ width: 48, minWidth: 48, maxWidth: 48 }} className="px-4 py-2 border-none" />
+                      )}
+                      <td colSpan={colCount - (hasExpansion ? 1 : 0) - (selection ? 1 : 0)} className="p-0 border-none">
+                        {expanded.header}
+                      </td>
+                    </tr>
+                  )}
                   {expanded &&
                     !expanded.isLoading &&
                     expanded.data.map((subRow) => {

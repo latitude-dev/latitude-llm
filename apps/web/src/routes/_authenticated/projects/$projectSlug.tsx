@@ -1,3 +1,4 @@
+import { SESSION_SEARCH_V2_FLAG } from "@domain/feature-flags"
 import { ProjectRepository } from "@domain/projects"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -9,6 +10,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { DatabaseIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { z } from "zod"
+import { useHasFeatureFlag } from "../../../domains/feature-flags/feature-flags.collection.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
 import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
@@ -72,9 +74,16 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     pathname === `/projects/${projectSlug}/` ||
     pathname.startsWith(`/projects/${projectSlug}/traces`)
   const isSearchActive = pathname.startsWith(`/projects/${projectSlug}/search`)
+  const isSessionSearchActive = pathname.startsWith(`/projects/${projectSlug}/session-search`)
   const isIssuesActive = pathname.startsWith(`/projects/${projectSlug}/issues`)
   const isDatasetsActive = pathname.startsWith(`/projects/${projectSlug}/datasets`)
   const isSettingsActive = pathname.startsWith(`/projects/${projectSlug}/settings`)
+
+  // Temporary parallel sidebar entry while we A/B the session-rollup search
+  // against the existing trace-flat one. The Linear-scoped guard
+  // (`SESSION_SEARCH_V2_FLAG`) keeps the entry invisible for orgs that
+  // haven't been opted in; PR 5 removes both the entry and the flag.
+  const sessionSearchEnabled = useHasFeatureFlag(SESSION_SEARCH_V2_FLAG)
 
   // Fire-and-forget client-side fetch: surfaces a sidebar shortcut to this
   // week's Wrapped report when one exists. Returns null for the typical
@@ -120,6 +129,15 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
             active={isSearchActive}
             collapsed={collapsed}
           />
+          {sessionSearchEnabled ? (
+            <NavItem
+              icon={SearchIcon}
+              label="Session search"
+              to={`/projects/${projectSlug}/session-search`}
+              active={isSessionSearchActive}
+              collapsed={collapsed}
+            />
+          ) : null}
           <NavItem
             icon={TextAlignStartIcon}
             label="Traces"

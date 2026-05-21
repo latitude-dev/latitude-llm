@@ -28,6 +28,40 @@ const ENTRIES: readonly Entry[] = [
   },
 ]
 
+export function SearchSyntaxLegendContent({
+  align = "end",
+  sideOffset = 6,
+  onCloseAutoFocus,
+}: {
+  readonly align?: "start" | "center" | "end"
+  readonly sideOffset?: number
+  readonly onCloseAutoFocus?: (event: Event) => void
+} = {}) {
+  return (
+    <PopoverContent align={align} sideOffset={sideOffset} className="w-80" onCloseAutoFocus={onCloseAutoFocus}>
+      <Text.H5M>Search syntax</Text.H5M>
+      <ul className="mt-3 flex flex-col gap-3">
+        {ENTRIES.map((entry) => (
+          <li key={entry.label} className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Text.H6B>{entry.label}</Text.H6B>
+              <span
+                className={cn(
+                  "inline-flex h-5 items-center rounded-full px-2 font-mono text-[11px]",
+                  entry.pillClassName ?? "text-muted-foreground",
+                )}
+              >
+                {entry.example}
+              </span>
+            </div>
+            <Text.H6 color="foregroundMuted">{entry.description}</Text.H6>
+          </li>
+        ))}
+      </ul>
+    </PopoverContent>
+  )
+}
+
 export function SearchSyntaxLegend() {
   return (
     <Popover>
@@ -36,27 +70,7 @@ export function SearchSyntaxLegend() {
           <Icon icon={CircleHelpIcon} size="sm" color="foregroundMuted" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={6} className="w-80">
-        <Text.H5M>Search syntax</Text.H5M>
-        <ul className="mt-3 flex flex-col gap-3">
-          {ENTRIES.map((entry) => (
-            <li key={entry.label} className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <Text.H6B>{entry.label}</Text.H6B>
-                <span
-                  className={cn(
-                    "inline-flex h-5 items-center rounded-full px-2 font-mono text-[11px]",
-                    entry.pillClassName ?? "text-muted-foreground",
-                  )}
-                >
-                  {entry.example}
-                </span>
-              </div>
-              <Text.H6 color="foregroundMuted">{entry.description}</Text.H6>
-            </li>
-          ))}
-        </ul>
-      </PopoverContent>
+      <SearchSyntaxLegendContent />
     </Popover>
   )
 }

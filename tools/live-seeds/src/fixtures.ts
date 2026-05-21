@@ -4,6 +4,7 @@ import { frustrationInFixture } from "./fixtures/frustration-in.ts"
 import { offServiceLiveQueueInFixture } from "./fixtures/off-service-live-queue-in.ts"
 import { offServiceLiveQueueOutFixture } from "./fixtures/off-service-live-queue-out.ts"
 import { outputSchemaFixture } from "./fixtures/output-schema.ts"
+import { sessionSearchQaFixture } from "./fixtures/session-search-qa.ts"
 import { supportEvalsOutFixture } from "./fixtures/support-evals-out.ts"
 import { systemSignalsIssueProbeFixture } from "./fixtures/system-signals-issue-probe.ts"
 import { toolCallErrorFixture } from "./fixtures/tool-call-error.ts"
@@ -20,6 +21,7 @@ export const liveSeedFixtures = [
   emptyResponseFixture,
   outputSchemaFixture,
   systemSignalsIssueProbeFixture,
+  sessionSearchQaFixture,
 ] as const
 
 export const liveSeedFixtureKeys = liveSeedFixtures.map((fixture) => fixture.key)

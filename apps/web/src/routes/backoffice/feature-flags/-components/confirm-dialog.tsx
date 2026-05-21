@@ -25,15 +25,14 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   return (
-    <Modal.Root open={open} onOpenChange={onOpenChange}>
-      <Modal.Content dismissible size="small">
-        <Modal.Header title={title} />
-        {description ? (
-          <Modal.Body>
-            {typeof description === "string" ? <Text.H6 color="foregroundMuted">{description}</Text.H6> : description}
-          </Modal.Body>
-        ) : null}
-        <Modal.Footer>
+    <Modal
+      dismissible
+      size="small"
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      footer={
+        <>
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onOpenChange(false)}>
             {cancelLabel}
           </Button>
@@ -45,8 +44,16 @@ export function ConfirmDialog({
           >
             {busy ? "Working…" : confirmLabel}
           </Button>
-        </Modal.Footer>
-      </Modal.Content>
-    </Modal.Root>
+        </>
+      }
+    >
+      {description ? (
+        typeof description === "string" ? (
+          <Text.H6 color="foregroundMuted">{description}</Text.H6>
+        ) : (
+          description
+        )
+      ) : null}
+    </Modal>
   )
 }
