@@ -2,11 +2,10 @@ import type { LucideProps } from "lucide-react"
 import { forwardRef } from "react"
 
 /**
- * Slack brand mark — placeholder using the Anthropic path. Replace
- * the `<path d="…">` with the official Slack Iris SVG before
- * shipping. The component shape (forwardRef + LucideProps) matches
- * the provider-icons convention so it's compatible with the shared
- * `<Icon icon={SlackIcon} />` wrapper.
+ * Slack brand mark (official Slack "Iris" SVG). The component shape
+ * (`forwardRef` + `LucideProps`) matches the provider-icons convention
+ * so it's compatible with the shared `<Icon icon={SlackIcon} />`
+ * wrapper.
  */
 export const SlackIcon = forwardRef<SVGSVGElement, LucideProps>((props, ref) => (
   <svg
