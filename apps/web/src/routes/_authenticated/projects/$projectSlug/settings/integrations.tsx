@@ -6,7 +6,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { Loader2, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { z } from "zod"
-import { hasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.functions.ts"
+import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import {
   disconnectSlackIntegration,
   getActiveSlackIntegration,
@@ -33,13 +33,8 @@ function IntegrationsSettingsPage() {
   const router = useRouter()
   const search = Route.useSearch()
 
-  // Mirrors `NotificationsSection` in account.tsx — hide the entire
-  // page when the org doesn't have the integration enabled. The
-  // sub-nav entry is also flag-gated; this guards deep links.
-  const { data: slackEnabled = false, isLoading: flagLoading } = useQuery({
-    queryKey: ["feature-flag", SLACK_FLAG],
-    queryFn: () => hasFeatureFlag({ data: { identifier: SLACK_FLAG } }),
-  })
+  // The sub-nav entry is also flag-gated; this guards deep links.
+  const slackEnabled = useHasFeatureFlag(SLACK_FLAG)
 
   // Flash effect: surface the install / error status from the callback
   // redirect, then strip the params so a refresh doesn't re-toast.
@@ -62,7 +57,6 @@ function IntegrationsSettingsPage() {
     }
   }, [search.installed, search.error, toast, router])
 
-  if (flagLoading) return null
   if (!slackEnabled) {
     return (
       <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
