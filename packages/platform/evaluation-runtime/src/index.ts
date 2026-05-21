@@ -20,6 +20,40 @@ const DEFAULT_WALL_TIMEOUT_MS = 15_000
 const DEFAULT_SYNC_TIMEOUT_MS = 1_000
 const DEFAULT_MAX_OLD_GENERATION_SIZE_MB = 64
 const DEFAULT_MAX_LLM_CALLS = 8
+// Short-term production bulkhead for the shared workers allocation: workers get
+// 1 vCPU and 2GB app memory, so only a small number of sandbox workers should
+// execute at once. Queue-level concurrency can be higher because many scripts
+// spend most wall time waiting on the host-controlled llm() bridge.
+const DEFAULT_MAX_CONCURRENT_SANDBOXES = 2
+
+class SandboxSemaphore {
+  private active = 0
+  private readonly waiters: Array<() => void> = []
+
+  constructor(private readonly limit: number) {}
+
+  acquire(): Promise<() => void> {
+    if (this.active < this.limit) {
+      this.active += 1
+      return Promise.resolve(() => this.release())
+    }
+
+    return new Promise((resolve) => {
+      this.waiters.push(() => {
+        this.active += 1
+        resolve(() => this.release())
+      })
+    })
+  }
+
+  private release() {
+    this.active -= 1
+    const next = this.waiters.shift()
+    if (next) next()
+  }
+}
+
+const sandboxSemaphore = new SandboxSemaphore(DEFAULT_MAX_CONCURRENT_SANDBOXES)
 
 interface RuntimeRequestMessage {
   readonly type: "request"
@@ -200,29 +234,35 @@ export const EvaluationScriptRuntimeLive = Layer.effect(
         }),
       execute: (input) =>
         Effect.tryPromise({
-          try: () =>
-            runSandbox({
-              execution: input,
-              generate: <T>(params: {
-                readonly prompt: string
-                readonly schema: EvaluationJsonSchema | undefined
-                readonly temperature?: number
-                readonly maxTokens?: number
-              }) => {
-                const schema = params.schema ? jsonSchemaToZod(params.schema) : jsonSchemaToZod({ type: "string" })
-                return Effect.runPromiseWith(services)(
-                  ai.generate({
-                    ...EVALUATION_SCRIPT_RUNTIME_MODEL,
-                    system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
-                    prompt: params.prompt,
-                    schema,
-                    ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
-                    ...(params.maxTokens !== undefined ? { maxTokens: params.maxTokens } : {}),
-                    ...(input.telemetry ? { telemetry: input.telemetry } : {}),
-                  }) as Effect.Effect<GenerateResult<T>, AIError | AICredentialError>,
-                )
-              },
-            }),
+          try: async () => {
+            const releaseSandbox = await sandboxSemaphore.acquire()
+            try {
+              return await runSandbox({
+                execution: input,
+                generate: <T>(params: {
+                  readonly prompt: string
+                  readonly schema: EvaluationJsonSchema | undefined
+                  readonly temperature?: number
+                  readonly maxTokens?: number
+                }) => {
+                  const schema = params.schema ? jsonSchemaToZod(params.schema) : jsonSchemaToZod({ type: "string" })
+                  return Effect.runPromiseWith(services)(
+                    ai.generate({
+                      ...EVALUATION_SCRIPT_RUNTIME_MODEL,
+                      system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
+                      prompt: params.prompt,
+                      schema,
+                      ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
+                      ...(params.maxTokens !== undefined ? { maxTokens: params.maxTokens } : {}),
+                      ...(input.telemetry ? { telemetry: input.telemetry } : {}),
+                    }) as Effect.Effect<GenerateResult<T>, AIError | AICredentialError>,
+                  )
+                },
+              })
+            } finally {
+              releaseSandbox()
+            }
+          },
           catch: toRuntimeError,
         }),
     }

@@ -31,6 +31,10 @@ import { Effect, Layer } from "effect"
 const logger = createLogger("live-evaluations")
 const LIVE_EVALUATIONS_QUEUE = "live-evaluations" as const
 const LIVE_EVALUATIONS_EXECUTE_TASK = "execute" as const
+// The shared workers service currently has 1 vCPU and 2GB for the app container.
+// Keep sandboxed evaluation work below the BullMQ default of 10 so live-eval spikes
+// back up in Redis instead of exhausting CPU/memory in the shared worker process.
+const LIVE_EVALUATIONS_CONCURRENCY = 4
 
 interface ExecutePayload {
   readonly organizationId: string
@@ -121,8 +125,6 @@ const logExecuteFailure = (liveEvaluationsLogger: LiveEvaluationsLogger, payload
     }),
   )
 
-// TODO(eval-sandbox): when implementing live evaluation execution, use the same extract-and-call
-// approach from executeEvaluationScript for MVP, then migrate to sandboxed JS runtime.
 export const createLiveEvaluationsWorker = ({
   consumer,
   postgresClient,
@@ -171,7 +173,11 @@ export const createLiveEvaluationsWorker = ({
     return baseEffect
   }
 
-  consumer.subscribe(LIVE_EVALUATIONS_QUEUE, {
-    execute: executeEffect,
-  })
+  consumer.subscribe(
+    LIVE_EVALUATIONS_QUEUE,
+    {
+      execute: executeEffect,
+    },
+    { concurrency: LIVE_EVALUATIONS_CONCURRENCY },
+  )
 }

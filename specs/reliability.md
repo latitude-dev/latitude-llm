@@ -2835,6 +2835,8 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Exit gate**: evaluation scripts are portable across executors and ready for later simulation CLI reuse; the MVP script subset expands without storage migration.
 
+**Operational note**: the first hosted runtime is bulkheaded for the current shared ECS workers allocation. `live-evaluations:execute` is capped at BullMQ concurrency `4` per workers task, and the platform runtime allows at most `2` active sandbox workers per process. With production's current 1-vCPU/2GB workers app container and max 3 ECS tasks, this means up to 12 live-evaluation jobs admitted and 6 active sandboxes before extra work waits. Medium-term follow-up should split live evaluations into a dedicated worker service with queue-depth/oldest-job autoscaling and add a vendor-neutral remote runtime adapter; AWS Lambda plus an inner QuickJS runner is the leading hosted burst/overflow candidate, while E2B/Daytona/Modal-style sandboxes fit heavier simulation or user-command workloads better than hot per-trace live evaluation.
+
 ### (LAT-476) Phase 19 - Simulation Runtime And CLI
 
 **Depends on**: Phase 7, Phase 8, Phase 9, Phase 18

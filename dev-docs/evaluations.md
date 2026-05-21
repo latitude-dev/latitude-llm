@@ -47,7 +47,22 @@ The important invariants are:
 - the MVP hosted bridge keeps provider/model selection Latitude-managed
 - if post-MVP runtime-configured execution lands, provider/model resolution should flow from evaluation settings to project settings to organization settings
 - the runtime must enforce resource limits and stay portable across executors
+- hosted live evaluation execution is additionally bulkheaded at the worker layer: `live-evaluations:execute` uses explicit BullMQ concurrency `4` per workers task, and `@platform/evaluation-runtime` limits active sandbox workers to `2` per process so spikes queue instead of exhausting the current 1-vCPU/2GB shared workers allocation
 - issue-generated evaluations may often be simple `llm()`-as-judge scripts, but the runtime is not limited to that subset
+
+Short-term resource math for the current ECS workers allocation:
+
+- staging has one workers task; production starts with one workers task and can autoscale to three tasks
+- each workers app container has 1 vCPU and 2048 MB memory; the Datadog sidecar has its own 256 CPU / 512 MB reservation, but the app container memory limit remains 2048 MB
+- live-evaluation queue capacity is therefore 4 jobs per task, or 12 jobs at the current production max scale
+- only 2 sandbox workers actively execute per process, or 6 active sandboxes at current production max scale; extra live-evaluation jobs wait behind the runtime bulkhead or in BullMQ
+
+Medium-term runtime isolation work:
+
+- split live evaluation execution into a dedicated ECS workers service/process group with its own CPU, memory, deployment scaling policy, and queue subscriptions, instead of sharing the general `workers` service with billing, ingestion follow-ups, notifications, and other background jobs
+- scale that dedicated service on BullMQ queue depth / oldest job age in addition to CPU, because many evaluation scripts wait on hosted `llm()` calls and can create backlog without sustained CPU pressure
+- keep the `EvaluationScriptRuntime` port vendor-neutral and add a remote runtime adapter, with AWS Lambda plus an inner QuickJS runner as the leading hosted live-evaluation candidate for burst/overflow isolation
+- treat E2B, Daytona, Modal, or similar container sandboxes as better candidates for heavier simulation/user-command workloads than hot per-trace live evaluation unless batching and latency measurements prove otherwise
 
 ## Evaluation Model
 
