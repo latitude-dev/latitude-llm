@@ -1,6 +1,7 @@
 import type { GenAIMessage } from "rosetta-ai"
 import { normalizeLiteralPhrase } from "../helpers/normalize-literal-phrase.ts"
 import { tokenizePhrase } from "../helpers/tokenize-phrase.ts"
+import type { TraceSemanticHighlightMatch } from "../ports/trace-search-repository.ts"
 import type { ParsedSearchQuery } from "./parse-search-query.ts"
 
 export interface TraceHighlight {
@@ -130,27 +131,60 @@ const EMPTY_RESULT: TraceSearchHighlightsResult = { highlights: [], firstMatchIn
 export function computeTraceSearchHighlights(args: {
   readonly messages: readonly GenAIMessage[]
   readonly parsedQuery: ParsedSearchQuery
+  readonly semanticMatch?: TraceSemanticHighlightMatch | null
 }): TraceSearchHighlightsResult {
-  const { messages, parsedQuery } = args
+  const { messages, parsedQuery, semanticMatch } = args
   const { literalPhrases, tokenPhrases } = parsedQuery
 
-  if (literalPhrases.length === 0 && tokenPhrases.length === 0) {
+  const hasPhrases = literalPhrases.length > 0 || tokenPhrases.length > 0
+  const semanticRegion =
+    semanticMatch && semanticMatch.firstMessageIndex !== null && semanticMatch.lastMessageIndex !== null
+      ? {
+          chunkIndex: semanticMatch.chunkIndex,
+          firstMessageIndex: semanticMatch.firstMessageIndex,
+          lastMessageIndex: semanticMatch.lastMessageIndex,
+          score: semanticMatch.relevanceScore,
+        }
+      : null
+
+  if (!hasPhrases && semanticRegion === null) {
     return EMPTY_RESULT
   }
 
   const normalizedLiterals = literalPhrases.map((phrase) => ({ phrase, normalized: normalizeLiteralPhrase(phrase) }))
   const tokenizedPhrases = tokenPhrases.map((phrase) => ({ phrase, tokens: tokenizePhrase(phrase) }))
 
-  const matchesNothing =
-    normalizedLiterals.some(({ normalized }) => normalized.length === 0) ||
-    tokenizedPhrases.some(({ tokens }) => tokens.length === 0)
-  if (matchesNothing) return EMPTY_RESULT
+  if (hasPhrases) {
+    const matchesNothing =
+      normalizedLiterals.some(({ normalized }) => normalized.length === 0) ||
+      tokenizedPhrases.some(({ tokens }) => tokens.length === 0)
+    if (matchesNothing) return EMPTY_RESULT
+  }
 
   const highlights: TraceHighlight[] = []
 
   messages.forEach((message, messageIndex) => {
     if (!message || message.role === "system") return
     if (!message.parts) return
+
+    if (
+      semanticRegion !== null &&
+      messageIndex >= semanticRegion.firstMessageIndex &&
+      messageIndex <= semanticRegion.lastMessageIndex
+    ) {
+      highlights.push({
+        messageIndex,
+        partIndex: 0,
+        startOffset: 0,
+        endOffset: 0,
+        type: "search-semantic-region",
+        source: {
+          kind: "semantic-region",
+          chunkIndex: semanticRegion.chunkIndex,
+          score: semanticRegion.score,
+        },
+      })
+    }
 
     message.parts.forEach((part, partIndex) => {
       if (part.type !== "text") return

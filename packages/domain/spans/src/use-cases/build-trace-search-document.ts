@@ -21,6 +21,8 @@ export interface TraceSearchChunk {
   readonly chunkIndex: number
   readonly text: string
   readonly contentHash: string
+  readonly firstMessageIndex: number
+  readonly lastMessageIndex: number
 }
 
 export interface TraceSearchDocument {
@@ -67,33 +69,49 @@ function formatGenAIMessage(message: GenAIMessage): string {
     .trim()
 }
 
+interface ExtractedTurn {
+  readonly text: string
+  readonly firstMessageIndex: number
+  readonly lastMessageIndex: number
+}
+
 /**
  * Group messages into "turns": each turn starts with a user message (or the
  * first non-system message if the conversation opens with the assistant), and
  * extends through the model's response and any tool-call/tool-response pairs
  * up to the next user message.
  *
- * System messages are filtered out entirely — they're prompts, not content.
+ * System messages are filtered out of the turn text but their positions are
+ * preserved in `allMessages`, so `firstMessageIndex` / `lastMessageIndex` may
+ * span over a system row (e.g. a `system,user,assistant` prefix yields one
+ * turn with `firstMessageIndex: 1` and `lastMessageIndex: 2`).
  */
-function extractTurns(messages: readonly GenAIMessage[]): string[] {
-  const turns: string[][] = []
-  let current: string[] | undefined
+function extractTurns(messages: readonly GenAIMessage[]): ExtractedTurn[] {
+  const turns: { texts: string[]; firstMessageIndex: number; lastMessageIndex: number }[] = []
+  let current: { texts: string[]; firstMessageIndex: number; lastMessageIndex: number } | undefined
 
-  for (const message of messages) {
-    if (!message) continue
-    if (message.role === "system") continue
+  messages.forEach((message, messageIndex) => {
+    if (!message) return
+    if (message.role === "system") return
     const text = formatGenAIMessage(message)
-    if (!text) continue
+    if (!text) return
 
     if (message.role === "user" || current === undefined) {
-      current = [text]
+      current = { texts: [text], firstMessageIndex: messageIndex, lastMessageIndex: messageIndex }
       turns.push(current)
     } else {
-      current.push(text)
+      current.texts.push(text)
+      current.lastMessageIndex = messageIndex
     }
-  }
+  })
 
-  return turns.map((turn) => turn.join("\n").trim()).filter((t) => t.length > 0)
+  return turns
+    .map((turn) => ({
+      text: turn.texts.join("\n").trim(),
+      firstMessageIndex: turn.firstMessageIndex,
+      lastMessageIndex: turn.lastMessageIndex,
+    }))
+    .filter((t) => t.text.length > 0)
 }
 
 /**
@@ -104,13 +122,13 @@ function extractTurns(messages: readonly GenAIMessage[]): string[] {
  * Both walks soft-cap on their boundary: the turn that crosses is still
  * included fully (atomic-turn rule), then the walk stops.
  */
-function selectHeadTailTurns(turns: readonly string[]): string[] {
+function selectHeadTailTurns(turns: readonly ExtractedTurn[]): ExtractedTurn[] {
   const tailIndices = new Set<number>()
   let tailAccum = 0
   for (let i = turns.length - 1; i >= 0; i--) {
     if (tailAccum >= TRACE_SEARCH_CHUNK_TAIL_BUDGET_CHARS) break
     tailIndices.add(i)
-    tailAccum += turns[i]!.length
+    tailAccum += turns[i]!.text.length
   }
 
   const headIndices: number[] = []
@@ -119,7 +137,7 @@ function selectHeadTailTurns(turns: readonly string[]): string[] {
     if (tailIndices.has(i)) break
     if (headAccum >= TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS) break
     headIndices.push(i)
-    headAccum += turns[i]!.length
+    headAccum += turns[i]!.text.length
   }
 
   const sortedTail = [...tailIndices].sort((a, b) => a - b)
@@ -128,42 +146,65 @@ function selectHeadTailTurns(turns: readonly string[]): string[] {
 
 interface ChunkPayload {
   readonly text: string
+  readonly firstMessageIndex: number
+  readonly lastMessageIndex: number
 }
 
 /**
  * Greedy-pack turns into chunks. A turn larger than the per-chunk cap splits
  * into overlapping pieces; smaller turns accumulate into one chunk until the
  * next turn would push it over the cap.
+ *
+ * Each emitted chunk carries the **union** of the message ranges of every
+ * turn that contributed to it. Sub-chunks of one oversized turn inherit that
+ * turn's full range (turns are atomic for the mapping) so every sub-chunk
+ * maps to the same conversational region.
  */
-function packChunks(turns: readonly string[]): ChunkPayload[] {
+function packChunks(turns: readonly ExtractedTurn[]): ChunkPayload[] {
   const chunks: ChunkPayload[] = []
   const separator = "\n\n"
   let buffer = ""
+  let bufferFirst = -1
+  let bufferLast = -1
 
   const flush = () => {
     const trimmed = buffer.trim()
-    if (trimmed.length > 0) chunks.push({ text: trimmed })
+    if (trimmed.length > 0 && bufferFirst >= 0) {
+      chunks.push({ text: trimmed, firstMessageIndex: bufferFirst, lastMessageIndex: bufferLast })
+    }
     buffer = ""
+    bufferFirst = -1
+    bufferLast = -1
   }
 
   for (const turn of turns) {
-    if (turn.length > TRACE_SEARCH_CHUNK_MAX_CHARS) {
+    if (turn.text.length > TRACE_SEARCH_CHUNK_MAX_CHARS) {
       flush()
       const stride = Math.max(1, TRACE_SEARCH_CHUNK_MAX_CHARS - TRACE_SEARCH_CHUNK_OVERLAP_CHARS)
-      for (let i = 0; i < turn.length; i += stride) {
-        const piece = turn.slice(i, i + TRACE_SEARCH_CHUNK_MAX_CHARS).trim()
-        if (piece.length > 0) chunks.push({ text: piece })
-        if (i + TRACE_SEARCH_CHUNK_MAX_CHARS >= turn.length) break
+      for (let i = 0; i < turn.text.length; i += stride) {
+        const piece = turn.text.slice(i, i + TRACE_SEARCH_CHUNK_MAX_CHARS).trim()
+        if (piece.length > 0) {
+          chunks.push({
+            text: piece,
+            firstMessageIndex: turn.firstMessageIndex,
+            lastMessageIndex: turn.lastMessageIndex,
+          })
+        }
+        if (i + TRACE_SEARCH_CHUNK_MAX_CHARS >= turn.text.length) break
       }
       continue
     }
 
-    const candidate = buffer ? `${buffer}${separator}${turn}` : turn
+    const candidate = buffer ? `${buffer}${separator}${turn.text}` : turn.text
     if (candidate.length > TRACE_SEARCH_CHUNK_MAX_CHARS) {
       flush()
-      buffer = turn
+      buffer = turn.text
+      bufferFirst = turn.firstMessageIndex
+      bufferLast = turn.lastMessageIndex
     } else {
       buffer = candidate
+      bufferFirst = bufferFirst < 0 ? turn.firstMessageIndex : Math.min(bufferFirst, turn.firstMessageIndex)
+      bufferLast = Math.max(bufferLast, turn.lastMessageIndex)
     }
   }
   flush()
@@ -228,21 +269,28 @@ export const buildTraceSearchDocument = (
 ): Effect.Effect<TraceSearchDocument, CryptoError> =>
   Effect.gen(function* () {
     const turns = extractTurns(input.messages)
-    const totalLength = turns.reduce((sum, t) => sum + t.length, 0)
+    const totalLength = turns.reduce((sum, t) => sum + t.text.length, 0)
 
     const selectedTurns = totalLength <= TRACE_SEARCH_DOCUMENT_MAX_LENGTH ? [...turns] : selectHeadTailTurns(turns)
 
-    const wholeTraceText = turns.join("\n\n")
+    const wholeTraceText = turns.map((t) => t.text).join("\n\n")
     const searchText = normalizeSearchText(wholeTraceText)
     const contentHash = yield* hash(`${input.traceId}\0${searchText}`)
 
     const packed = packChunks(selectedTurns)
     const chunks: TraceSearchChunk[] = []
     for (let i = 0; i < packed.length; i++) {
-      const text = normalizeChunkText(packed[i]!.text)
+      const payload = packed[i]!
+      const text = normalizeChunkText(payload.text)
       if (text.length === 0) continue
       const chunkHash = yield* hash(`${input.traceId}\0${i}\0${text}`)
-      chunks.push({ chunkIndex: i, text, contentHash: chunkHash })
+      chunks.push({
+        chunkIndex: i,
+        text,
+        contentHash: chunkHash,
+        firstMessageIndex: payload.firstMessageIndex,
+        lastMessageIndex: payload.lastMessageIndex,
+      })
     }
 
     return {

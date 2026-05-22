@@ -106,6 +106,7 @@ export type {
   TraceSearchDocumentRow,
   TraceSearchEmbeddingRow,
   TraceSearchRepositoryShape,
+  TraceSemanticHighlightMatch,
 } from "./ports/trace-search-repository.ts"
 export { TraceSearchRepository } from "./ports/trace-search-repository.ts"
 export {
@@ -167,6 +168,7 @@ export type {
 export { getTraceAnalyticsUseCase } from "./use-cases/get-trace-analytics.ts"
 export type { GetTraceCohortSummaryByTagsInput } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
 export { getTraceCohortSummaryByTagsUseCase } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
+export { getTraceSearchHighlightsUseCase } from "./use-cases/get-trace-search-highlights.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
 export { ingestSpansWithBillingUseCase } from "./use-cases/ingest-spans-with-billing.ts"

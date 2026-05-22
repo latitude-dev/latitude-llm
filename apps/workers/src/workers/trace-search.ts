@@ -214,6 +214,8 @@ const processRefreshTrace = (payload: RefreshTracePayload) =>
         embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
         embedding,
         retentionDays,
+        firstMessageIndex: chunk.firstMessageIndex,
+        lastMessageIndex: chunk.lastMessageIndex,
       })
       embeddedCount++
     }

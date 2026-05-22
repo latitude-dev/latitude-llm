@@ -404,7 +404,9 @@ CREATE TABLE trace_search_embeddings
     `content_hash` FixedString(64) CODEC(ZSTD(1)),
     `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
     `embedding` Array(Float32) CODEC(ZSTD(1)),
-    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    `first_message_index` Nullable(UInt32) CODEC(T64, ZSTD(1)),
+    `last_message_index` Nullable(UInt32) CODEC(T64, ZSTD(1))
 )
 ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)

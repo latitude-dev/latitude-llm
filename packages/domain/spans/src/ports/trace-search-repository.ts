@@ -1,6 +1,13 @@
 import type { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 
+export interface TraceSemanticHighlightMatch {
+  readonly chunkIndex: number
+  readonly firstMessageIndex: number | null
+  readonly lastMessageIndex: number | null
+  readonly relevanceScore: number
+}
+
 export interface TraceSearchDocumentRow {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
@@ -23,6 +30,8 @@ export interface TraceSearchEmbeddingRow {
   readonly embeddingModel: string
   readonly embedding: readonly number[]
   readonly retentionDays?: number
+  readonly firstMessageIndex?: number
+  readonly lastMessageIndex?: number
 }
 
 /**
@@ -60,6 +69,23 @@ export interface TraceSearchRepositoryShape {
     chunkIndex: number,
     contentHash: string,
   ): Effect.Effect<boolean, RepositoryError>
+
+  /**
+   * Cosine-scan the chunks of a single trace against `queryEmbedding` and
+   * return the winning chunk's metadata. Used by `getTraceSearchHighlights`
+   * to paint the semantic-region highlight (LAT-601).
+   *
+   * Returns `null` when the trace has no chunk rows (TTL'd, never indexed,
+   * or pre-PR-2 in flight). When the winning chunk predates migration 00017,
+   * `firstMessageIndex` / `lastMessageIndex` come back NULL — caller falls
+   * back to literal/token highlights only.
+   */
+  findSemanticHighlightForTrace(args: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+    readonly queryEmbedding: readonly number[]
+  }): Effect.Effect<TraceSemanticHighlightMatch | null, RepositoryError>
 }
 
 export class TraceSearchRepository extends Context.Service<TraceSearchRepository, TraceSearchRepositoryShape>()(

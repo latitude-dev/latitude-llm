@@ -457,34 +457,41 @@ Hard sequence points: PR 1 → everything else; PR 3 → PR 4 (both touch `conve
 ### PR 1 — Backend: literal + token highlights endpoint *(LAT-601 part 1/5)*
 
 **Branch:** `LAT-601/highlights-backend-endpoint`
+**Status:** open as [#3255](https://github.com/latitude-dev/latitude-llm/pull/3255) — Copilot + Claude bot review comments addressed; awaiting human review.
 **Depends on:** —
 **User-visible change:** none. Endpoint has no caller until PR 3.
 
-- [ ] Expose `tokenizePhrase` from a shared module so the endpoint tokenizes part text identically to the indexer.
-- [ ] Add `getTraceSearchHighlights` server fn in `apps/web/src/domains/traces/traces.functions.ts` — input `{ projectId, traceId, searchQuery (≤500) }`, output `TraceSearchHighlightsResult` with `search-literal` + `search-token` ranges only.
-- [ ] Parse `q` with `parseSearchQuery`; fast-path empty `q` to `{ highlights: [], firstMatchIndex: -1 }`.
-- [ ] Walk `traceDetail.allMessages` skipping `role === "system"`; emit literal hits (case-sensitive `indexOf` per phrase) and token hits (ordered-adjacent windows per phrase), sorted in document order; set `firstMatchIndex`.
-- [ ] Vitest: literal-only, token-only, hybrid, empty query, system-message filtering, multi-part messages.
-- [ ] Verify: `curl`/fixture call against a known trace returns expected shape and `firstMatchIndex`.
+- [x] Relocated `tokenizePhrase` to `@domain/spans/helpers/tokenize-phrase.ts`; lexical indexer + highlights endpoint share one tokenizer.
+- [x] Added `getTraceSearchHighlights` server fn in `apps/web/src/domains/traces/traces.functions.ts` — input `{ projectId, traceId, searchQuery (≤500) }`, output `TraceSearchHighlightsResult` with `search-literal` + `search-token` ranges only. Auth (`requireSession()`) fires before the parsed-query early-exit so unauthenticated callers can't even see the empty fast-path.
+- [x] Parsed `q` with `parseSearchQuery`; fast-path empty `q` to `{ highlights: [], firstMatchIndex: -1 }`.
+- [x] Walked `traceDetail.allMessages` skipping `role === "system"` and guarding against `message.parts` being undefined; emitted literal hits (normalised phrase + flexible-whitespace regex) and token hits (ordered-adjacent windows), sorted in document order; set `firstMatchIndex`. Overlapping literal + token ranges are intentionally preserved (each carries distinct `source` info).
+- [x] Match-nothing parity with `buildLexicalSearchSubquery`: any literal that normalises to empty OR any token that tokenises to empty makes the whole result empty.
+- [x] Relocated `normalizeLiteralPhrase` + `stripLoneSurrogates` to `@domain/spans/helpers/normalize-literal-phrase.ts` so indexer and highlights share one canonical normaliser.
+- [x] Vitest: literal-only, token-only, hybrid, empty query, semantic-only, system-message filtering, multi-part messages, malformed `parts`, overlapping ranges, match-nothing combinations, whitespace-flexible literal matching (12+ cases).
+- [x] Verified: 602 / 602 vitest, 3 typechecks clean, `pnpm knip` exit 0 (export shielded by `@knipignore` JSDoc + `tags: ["-knipignore"]` in `knip.json`).
 
 ### PR 2 — Backend: semantic-region schema + ingest + read path *(LAT-601 part 2/5)*
 
 **Branch:** `LAT-601/highlights-backend-semantic-region`
+**Status:** all code on local branch; pending the staging-baseline diff verification.
 **Depends on:** PR 1 merged.
 **User-visible change:** none. Existing search-listing callers don't pass `semanticMetadata: true`, so listing queries are byte-identical to today's. No backfill — see "Storage" section for why pre-migration rows stay NULL forever.
 
-- [ ] Migration via `pnpm --filter @platform/db-clickhouse ch:create add_chunk_message_range_to_trace_search_embeddings`: add `first_message_index Nullable(UInt32)` and `last_message_index Nullable(UInt32)` to `trace_search_embeddings`.
-- [ ] `extractTurns` returns `{ text, firstMessageIndex, lastMessageIndex }[]`, indexing into the original `allMessages` array (including system rows).
-- [ ] `selectHeadTailTurns` preserves per-turn metadata when picking turns.
-- [ ] `packChunks` emits union ranges: `min(firstMessageIndex)` / `max(lastMessageIndex)` across packed turns; sub-chunks of one oversized turn inherit that turn's full range.
-- [ ] Extend `TraceSearchChunk` with `firstMessageIndex` and `lastMessageIndex`.
-- [ ] Extend `upsertEmbedding` in `trace-search-repository.ts` to write the two new columns.
-- [ ] Widen `SearchPlan` to `{ ranked, subquery, params, semanticMetadata: boolean }`; default `false`.
-- [ ] When `semanticMetadata: true`, `buildSemanticSearchSubquery` adds `argMax(chunk_index, semantic_score)` + matched-range columns; default `false` keeps the existing query plan byte-identical.
-- [ ] Project matched-chunk columns through the outer `LIST_SELECT` only when `semanticMetadata` is true.
-- [ ] Hybrid `LEFT JOIN`: same `argMax` pattern on the joined semantic side; lexical side returns NULL for matched-chunk columns.
-- [ ] Extend `getTraceSearchHighlights` to emit `search-semantic-region` highlights via its own per-trace semantic subquery with `semanticMetadata: true`. When matched-range columns are NULL (pre-migration row or pure-phrase plan), skip semantic-region emission — literal/token still flow.
-- [ ] Vitest: index threading through the chunk pipeline (including sub-chunks-of-oversized-turn), `argMax` projection, `semanticMetadata` plumbing.
+- [x] Migration `00017_add_chunk_message_range_to_trace_search_embeddings` (unclustered + clustered): `first_message_index Nullable(UInt32)` and `last_message_index Nullable(UInt32)` on `trace_search_embeddings` with `CODEC(T64, ZSTD(1))`.
+- [x] `extractTurns` returns `{ text, firstMessageIndex, lastMessageIndex }[]`, indexing into the original `allMessages` array (system rows included).
+- [x] `selectHeadTailTurns` preserves per-turn metadata when picking turns; type widening only.
+- [x] `packChunks` emits union ranges: `min(firstMessageIndex)` / `max(lastMessageIndex)` across packed turns; sub-chunks of one oversized turn inherit that turn's full range.
+- [x] Extended `TraceSearchChunk` with `firstMessageIndex` and `lastMessageIndex`.
+- [x] Extended `TraceSearchEmbeddingRow` (port) + `upsertEmbedding` (live) to write the two new columns; nullable in CH → `undefined` serialises to `null` in `JSONEachRow`. Worker (`apps/workers/src/workers/trace-search.ts`) passes them through from chunk to row.
+- [x] Widened `SearchPlan` to `{ ranked, subquery, params, semanticMetadata: boolean }`. `planSearch(parsed, opts?)` accepts an `opts.semanticMetadata?: boolean`; default `false`.
+- [x] `buildSemanticSearchSubquery(queryEmbedding, semanticMetadata)` conditionally adds `argMax(chunk_index, semantic_score)` + matched-range columns; default `false` keeps the existing query plan byte-identical.
+- [x] Outer subquery wrapping in `buildSearchPlan` projects `matched_chunk_index` / `matched_first_message_index` / `matched_last_message_index` through every branch when `semanticMetadata: true` (phrase-only / no-embedding plans cast NULL of the right type for shape parity).
+- [x] Hybrid `LEFT JOIN`: `max(sem.matched_*)` pass-through over the joined side; lexical-only matches return NULL (no semantic chunk).
+- [x] New `TraceSearchRepository.findSemanticHighlightForTrace(orgId, projectId, traceId, queryEmbedding)` runs the focused per-trace `argMax` query and returns `{ chunkIndex, firstMessageIndex, lastMessageIndex, relevanceScore } | null` (nullable on the message-range columns for pre-migration chunks).
+- [x] Extended `computeTraceSearchHighlights` use-case to accept an optional `semanticMatch`. When the matched-range columns are non-null, emits one `search-semantic-region` highlight per non-system message in `[first, last]`. NULL range columns → skip semantic-region emission; literal/token still flow.
+- [x] Extended `getTraceSearchHighlights` handler: when `parsedQuery.semanticPrompt` is non-empty, runs the Voyage embed + `findSemanticHighlightForTrace` in parallel with `findByTraceId` (both Effect-resolved via `withAi` + `withClickHouse`). AI unavailable → semantic-region skipped, literal/token continue to flow.
+- [x] Added `@domain/ai` to `apps/web/package.json` so the handler can take the `AI` service from context for embedding.
+- [x] Vitest: index threading through the chunk pipeline (single turn, system-row interleave, multi-turn packing, sub-chunks-of-oversized-turn, head/tail dropping the middle); semantic-region emission (block-per-message, system skipping, NULL-range skipping, composes with literal hits, suppressed by match-nothing phrase, semantic-only with no match). Total: 613 / 613 vitest in `@domain/spans`, 154 / 154 in `@platform/db-clickhouse`. All 4 typechecks clean. `pnpm knip` exit 0.
 - [ ] Verify: diff existing search-listing result IDs and `relevance_score` against a staging baseline — must be identical. New endpoint returns semantic-region highlights on freshly-ingested traces, literal/token-only on older ones.
 
 ### PR 3 — Frontend: Phase A wiring + literal/token highlights *(LAT-601 part 3/5)*

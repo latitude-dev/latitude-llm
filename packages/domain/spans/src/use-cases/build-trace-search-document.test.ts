@@ -272,6 +272,65 @@ describe("buildTraceSearchDocument", () => {
       const uniqueHashes = new Set(a.chunks.map((c) => c.contentHash))
       expect(uniqueHashes.size).toBe(a.chunks.length)
     })
+
+    describe("message-range threading (LAT-601)", () => {
+      it("emits firstMessageIndex/lastMessageIndex covering the turn's message range", async () => {
+        const document = await build([
+          textMessage("user", "first user message"),
+          textMessage("assistant", "first assistant response"),
+        ])
+
+        expect(document.chunks).toHaveLength(1)
+        expect(document.chunks[0]).toMatchObject({ firstMessageIndex: 0, lastMessageIndex: 1 })
+      })
+
+      it("indexes against the original allMessages array (system rows included)", async () => {
+        const document = await build([
+          textMessage("system", "system prompt"),
+          textMessage("user", "user q"),
+          textMessage("assistant", "assistant a"),
+        ])
+
+        expect(document.chunks).toHaveLength(1)
+        expect(document.chunks[0]).toMatchObject({ firstMessageIndex: 1, lastMessageIndex: 2 })
+      })
+
+      it("packs multiple turns into one chunk with a union message range", async () => {
+        const document = await build([
+          textMessage("user", "u0"),
+          textMessage("assistant", "a0"),
+          textMessage("user", "u1"),
+          textMessage("assistant", "a1"),
+        ])
+
+        expect(document.chunks).toHaveLength(1)
+        expect(document.chunks[0]).toMatchObject({ firstMessageIndex: 0, lastMessageIndex: 3 })
+      })
+
+      it("inherits the full turn range for every sub-chunk of an oversized turn", async () => {
+        const huge = "y".repeat(TRACE_SEARCH_CHUNK_MAX_CHARS * 3)
+        const document = await build([textMessage("user", "u"), textMessage("assistant", huge)])
+
+        expect(document.chunks.length).toBeGreaterThanOrEqual(2)
+        for (const chunk of document.chunks) {
+          expect(chunk.firstMessageIndex).toBe(0)
+          expect(chunk.lastMessageIndex).toBe(1)
+        }
+      })
+
+      it("preserves original allMessages indices on chunks that survived head/tail selection", async () => {
+        const messages: GenAIMessage[] = []
+        for (let i = 0; i < 22; i++) {
+          messages.push(textMessage("user", `marker-${i.toString().padStart(2, "0")} ${"x".repeat(900)}`))
+          messages.push(textMessage("assistant", `reply-${i.toString().padStart(2, "0")}`))
+        }
+
+        const document = await build(messages)
+
+        const lastChunk = document.chunks.at(-1)!
+        expect(lastChunk.lastMessageIndex).toBeGreaterThanOrEqual(40)
+      })
+    })
   })
 })
 

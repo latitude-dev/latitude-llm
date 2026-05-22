@@ -42,9 +42,21 @@ import { prioritizeChunksForEmbedding, resolveTraceSearchRetentionDays } from ".
 describe("prioritizeChunksForEmbedding", () => {
   it("prioritizes tail chunks first and skips chunks below the embedding floor", () => {
     const chunks: TraceSearchChunk[] = [
-      { chunkIndex: 0, text: "a".repeat(TRACE_SEARCH_EMBEDDING_MIN_LENGTH), contentHash: "0" },
-      { chunkIndex: 2, text: "c".repeat(TRACE_SEARCH_EMBEDDING_MIN_LENGTH), contentHash: "2" },
-      { chunkIndex: 1, text: "short", contentHash: "1" },
+      {
+        chunkIndex: 0,
+        text: "a".repeat(TRACE_SEARCH_EMBEDDING_MIN_LENGTH),
+        contentHash: "0",
+        firstMessageIndex: 0,
+        lastMessageIndex: 0,
+      },
+      {
+        chunkIndex: 2,
+        text: "c".repeat(TRACE_SEARCH_EMBEDDING_MIN_LENGTH),
+        contentHash: "2",
+        firstMessageIndex: 4,
+        lastMessageIndex: 5,
+      },
+      { chunkIndex: 1, text: "short", contentHash: "1", firstMessageIndex: 2, lastMessageIndex: 3 },
     ]
 
     expect(prioritizeChunksForEmbedding(chunks).map((chunk) => chunk.chunkIndex)).toEqual([2, 0])

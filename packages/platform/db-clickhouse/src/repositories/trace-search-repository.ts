@@ -50,6 +50,8 @@ export const TraceSearchRepositoryLive = Layer.effect(
                 embedding_model: row.embeddingModel,
                 embedding: [...row.embedding],
                 retention_days: row.retentionDays ?? 30,
+                first_message_index: row.firstMessageIndex ?? null,
+                last_message_index: row.lastMessageIndex ?? null,
                 indexed_at: toClickhouseDateTime(new Date()),
               },
             ],
@@ -89,10 +91,63 @@ export const TraceSearchRepositoryLive = Layer.effect(
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "hasEmbeddingWithHash")))
 
+    const findSemanticHighlightForTrace: TraceSearchRepositoryShape["findSemanticHighlightForTrace"] = (args) =>
+      chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT
+                      argMax(chunk_index, semantic_score)         AS chunk_index,
+                      argMax(first_message_index, semantic_score) AS first_message_index,
+                      argMax(last_message_index, semantic_score)  AS last_message_index,
+                      max(semantic_score)                         AS relevance_score,
+                      count() AS row_count
+                    FROM (
+                      SELECT
+                        chunk_index,
+                        first_message_index,
+                        last_message_index,
+                        (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+                      FROM trace_search_embeddings
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                    )`,
+            query_params: {
+              organizationId: args.organizationId as string,
+              projectId: args.projectId as string,
+              traceId: args.traceId,
+              queryEmbedding: [...args.queryEmbedding],
+            },
+            format: "JSONEachRow",
+          })
+
+          const [row] = await result.json<{
+            chunk_index: number
+            first_message_index: number | null
+            last_message_index: number | null
+            relevance_score: number
+            row_count: string | number
+          }>()
+
+          // `count()` is UInt64 — comes back as a String over JSONEachRow
+          // today, but Number() is defensive against driver/output-format
+          // changes (Copilot review on #3257).
+          if (!row || Number(row.row_count) === 0) return null
+
+          return {
+            chunkIndex: row.chunk_index,
+            firstMessageIndex: row.first_message_index,
+            lastMessageIndex: row.last_message_index,
+            relevanceScore: row.relevance_score,
+          }
+        })
+        .pipe(Effect.mapError((error) => toRepositoryError(error, "findSemanticHighlightForTrace")))
+
     return {
       upsertDocument,
       upsertEmbedding,
       hasEmbeddingWithHash,
+      findSemanticHighlightForTrace,
     } satisfies TraceSearchRepositoryShape
   }),
 )

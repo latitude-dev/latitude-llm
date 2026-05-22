@@ -18,19 +18,18 @@ import type {
   TraceTimeHistogramBucket,
 } from "@domain/spans"
 import {
-  computeTraceSearchHighlights,
   getTraceCohortSummaryByTagsUseCase,
+  getTraceSearchHighlightsUseCase,
   mergeTraceHistogramTimeFilters,
-  parseSearchQuery,
   TraceRepository,
 } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
-import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { TraceRepositoryLive, TraceSearchRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
 import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
@@ -355,8 +354,6 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
     )
   })
 
-const EMPTY_HIGHLIGHTS_RESULT: TraceSearchHighlightsResult = { highlights: [], firstMatchIndex: -1 }
-
 /**
  * @knipignore
  */
@@ -372,34 +369,19 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
-    const parsed = parseSearchQuery(data.searchQuery)
-    if (parsed.literalPhrases.length === 0 && parsed.tokenPhrases.length === 0) {
-      return EMPTY_HIGHLIGHTS_RESULT
-    }
-
-    const detail = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* TraceRepository
-        return yield* repo
-          .findByTraceId({
-            organizationId: orgId,
-            projectId: ProjectId(data.projectId),
-            traceId: TraceId(data.traceId),
-          })
-          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    return Effect.runPromise(
+      getTraceSearchHighlightsUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        traceId: TraceId(data.traceId),
+        searchQuery: data.searchQuery,
       }).pipe(
-        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withClickHouse(Layer.merge(TraceRepositoryLive, TraceSearchRepositoryLive), getClickhouseClient(), orgId),
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
+        Effect.orElseSucceed((): TraceSearchHighlightsResult => ({ highlights: [], firstMatchIndex: -1 })),
       ),
     )
-
-    if (!detail) return EMPTY_HIGHLIGHTS_RESULT
-
-    return computeTraceSearchHighlights({
-      messages: detail.allMessages,
-      parsedQuery: parsed,
-    })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })

@@ -104,19 +104,42 @@ function buildLexicalSearchSubquery(parsed: ParsedSearchQuery): {
  * the per-project cosine scan cost by keeping the nearest chunks first; the
  * outer rollup collapses surviving chunks back into one row per trace for the
  * downstream join.
+ *
+ * When `semanticMetadata` is `true`, the rollup also surfaces `argMax(...)`
+ * of `chunk_index`, `first_message_index`, `last_message_index` aligned to the
+ * winning `semantic_score` — used by `getTraceSearchHighlights` (LAT-601) to
+ * paint the matched conversational region as a semantic-region highlight.
+ * `false` keeps the SQL byte-identical to the pre-PR-2 listing query so
+ * existing callers see no change.
  */
-function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
+function buildSemanticSearchSubquery(
+  queryEmbedding: readonly number[],
+  semanticMetadata: boolean,
+): {
   subquery: string
   params: Record<string, unknown>
 } {
+  const innerExtraCols = semanticMetadata
+    ? `,
+                  chunk_index,
+                  first_message_index,
+                  last_message_index`
+    : ""
+  const outerExtraCols = semanticMetadata
+    ? `,
+                argMax(chunk_index, semantic_score)         AS matched_chunk_index,
+                argMax(first_message_index, semantic_score) AS matched_first_message_index,
+                argMax(last_message_index, semantic_score)  AS matched_last_message_index`
+    : ""
+
   return {
     subquery: `SELECT
                 trace_id,
-                max(semantic_score) AS semantic_score
+                max(semantic_score) AS semantic_score${outerExtraCols}
               FROM (
                 SELECT
                   CAST(trace_id AS String) AS trace_id,
-                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score${innerExtraCols}
                 FROM trace_search_embeddings
                 WHERE organization_id = {organizationId:String}
                   AND project_id = {projectId:String}
@@ -138,12 +161,20 @@ function buildSemanticSearchSubquery(queryEmbedding: readonly number[]): {
  *     sort so phrase matches surface in chronological order rather than by
  *     trace_id hash.
  *
+ * `semanticMetadata` (LAT-601): when true the subquery exposes the winning
+ * chunk's metadata alongside `relevance_score` —
+ * `matched_chunk_index`, `matched_first_message_index`,
+ * `matched_last_message_index`. NULL on traces that matched purely lexically
+ * or were indexed before migration 00017. Default `false` keeps the SQL
+ * byte-identical to before; the listing query plan is unchanged.
+ *
  * @public
  */
 export type SearchPlan = {
   readonly ranked: boolean
   readonly subquery: string
   readonly params: Record<string, unknown>
+  readonly semanticMetadata: boolean
 }
 
 /**
@@ -163,17 +194,33 @@ export type SearchPlan = {
  * or to a deliberate empty result when there are no phrases — same fallback
  * shape the previous design relied on.
  */
-function buildSearchPlan(parsed: ParsedSearchQuery, queryEmbedding: readonly number[] | undefined): SearchPlan {
+function buildSearchPlan(
+  parsed: ParsedSearchQuery,
+  queryEmbedding: readonly number[] | undefined,
+  semanticMetadata: boolean,
+): SearchPlan {
   const hasPhrases = parsed.literalPhrases.length > 0 || parsed.tokenPhrases.length > 0
   const hasSemantic = parsed.semanticPrompt.length > 0
   const hasEmbedding = !!queryEmbedding && queryEmbedding.length > 0
+
+  // Outer projection for plans that don't actually carry semantic metadata
+  // (phrase-only, semantic-without-embedding). The columns are present so
+  // every plan has the same shape when `semanticMetadata: true`; values are
+  // NULL because there's no winning chunk to point at.
+  const nullMetadataCols = semanticMetadata
+    ? `,
+                      CAST(NULL AS Nullable(UInt16))  AS matched_chunk_index,
+                      CAST(NULL AS Nullable(UInt32))  AS matched_first_message_index,
+                      CAST(NULL AS Nullable(UInt32))  AS matched_last_message_index`
+    : ""
 
   if (hasPhrases && !hasSemantic) {
     const lex = buildLexicalSearchSubquery(parsed)
     return {
       ranked: false,
-      subquery: `SELECT trace_id, 0.0 AS relevance_score FROM (${lex.subquery})`,
+      subquery: `SELECT trace_id, 0.0 AS relevance_score${nullMetadataCols} FROM (${lex.subquery})`,
       params: lex.params,
+      semanticMetadata,
     }
   }
 
@@ -181,21 +228,32 @@ function buildSearchPlan(parsed: ParsedSearchQuery, queryEmbedding: readonly num
     if (!hasEmbedding) {
       return {
         ranked: true,
-        subquery: `SELECT CAST(trace_id AS String) AS trace_id, 0.0 AS relevance_score
+        subquery: `SELECT CAST(trace_id AS String) AS trace_id, 0.0 AS relevance_score${nullMetadataCols}
                    FROM trace_search_documents
                    WHERE organization_id = {organizationId:String}
                      AND project_id = {projectId:String}
                      AND 0`,
         params: {},
+        semanticMetadata,
       }
     }
-    const sem = buildSemanticSearchSubquery(queryEmbedding)
+    const sem = buildSemanticSearchSubquery(queryEmbedding, semanticMetadata)
+    const semanticPassthrough = semanticMetadata
+      ? `,
+                 matched_chunk_index,
+                 matched_first_message_index,
+                 matched_last_message_index`
+      : ""
     return {
       ranked: true,
-      subquery: `SELECT trace_id, semantic_score AS relevance_score
+      subquery: `SELECT trace_id, semantic_score AS relevance_score${semanticPassthrough}
                  FROM (${sem.subquery})
                  WHERE semantic_score >= {minRelevanceScore:Float64}`,
-      params: { ...sem.params, minRelevanceScore: TRACE_SEARCH_MIN_RELEVANCE_SCORE },
+      params: {
+        ...sem.params,
+        minRelevanceScore: TRACE_SEARCH_MIN_RELEVANCE_SCORE,
+      },
+      semanticMetadata,
     }
   }
 
@@ -204,23 +262,37 @@ function buildSearchPlan(parsed: ParsedSearchQuery, queryEmbedding: readonly num
   if (!hasEmbedding) {
     return {
       ranked: false,
-      subquery: `SELECT trace_id, 0.0 AS relevance_score FROM (${lex.subquery})`,
+      subquery: `SELECT trace_id, 0.0 AS relevance_score${nullMetadataCols} FROM (${lex.subquery})`,
       params: lex.params,
+      semanticMetadata,
     }
   }
-  const sem = buildSemanticSearchSubquery(queryEmbedding)
+  const sem = buildSemanticSearchSubquery(queryEmbedding, semanticMetadata)
   // LEFT JOIN keeps phrase-matching traces without an embedding (semantic_score
   // defaults to 0.0 in CH for the missing side of an outer join). The lexical
   // filter is the precision gate, so no semantic floor here.
+  //
+  // Semantic-metadata pass-through: `sem.matched_*` columns are already
+  // 1-per-trace (the inner subquery rolls them up via argMax), so MAX over
+  // them in the outer GROUP BY is a no-op that just lets us forward them.
+  // On lexical-only matches the LEFT JOIN gives NULLs, which propagate
+  // through MAX — the read side treats NULL as "no semantic-region data".
+  const hybridMetadataCols = semanticMetadata
+    ? `,
+                      max(sem.matched_chunk_index)         AS matched_chunk_index,
+                      max(sem.matched_first_message_index) AS matched_first_message_index,
+                      max(sem.matched_last_message_index)  AS matched_last_message_index`
+    : ""
   return {
     ranked: true,
     subquery: `SELECT lex.trace_id AS trace_id,
-                      max(sem.semantic_score) AS relevance_score
+                      max(sem.semantic_score) AS relevance_score${hybridMetadataCols}
                FROM (${lex.subquery}) AS lex
                LEFT JOIN (${sem.subquery}) AS sem
                  ON lex.trace_id = sem.trace_id
                GROUP BY lex.trace_id`,
     params: { ...lex.params, ...sem.params },
+    semanticMetadata,
   }
 }
 
@@ -262,14 +334,21 @@ const generateQueryEmbedding = (semanticPrompt: string): Effect.Effect<readonly 
     return result?.embedding
   })
 
+interface PlanSearchOptions {
+  readonly semanticMetadata?: boolean
+}
+
 /**
  * Resolve a parsed search query into a `SearchPlan`. Skips the embedder
  * when the parsed query has no semantic prompt — phrase-only queries are
  * pure filters and don't need a Voyage round-trip.
  */
-export const planSearch = (parsed: ParsedSearchQuery): Effect.Effect<SearchPlan, never> =>
+export const planSearch = (
+  parsed: ParsedSearchQuery,
+  options: PlanSearchOptions = {},
+): Effect.Effect<SearchPlan, never> =>
   Effect.gen(function* () {
     const queryEmbedding =
       parsed.semanticPrompt.length > 0 ? yield* generateQueryEmbedding(parsed.semanticPrompt) : undefined
-    return buildSearchPlan(parsed, queryEmbedding)
+    return buildSearchPlan(parsed, queryEmbedding, options.semanticMetadata ?? false)
   })
