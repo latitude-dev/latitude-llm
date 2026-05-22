@@ -2,6 +2,7 @@ import {
   Badge,
   BarChart,
   type BarChartDataPoint,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -19,7 +20,7 @@ import {
 import { formatCount, relativeTime } from "@repo/utils"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { adminListWrappedAnalytics } from "../../domains/admin/wrapped-analytics.functions.ts"
 import type {
   ExcessHistogramDto,
@@ -42,13 +43,27 @@ function BackofficeWrappedAnalyticsPage() {
     queryFn: () => adminListWrappedAnalytics(),
   })
 
+  const [copied, setCopied] = useState(false)
+  const handleCopy = useCallback(() => {
+    if (!data) return
+    void navigator.clipboard.writeText(JSON.stringify(data, null, 2)).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }, [data])
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-border px-6 py-4">
-        <Text.H4 weight="semibold">Wrapped analytics</Text.H4>
-        <Text.H6 color="foregroundMuted">
-          Latest Wrapped report per project (≥ 7 days old). Click a row to open the report in a new tab.
-        </Text.H6>
+      <div className="flex items-center gap-4 border-b border-border px-6 py-4">
+        <div className="flex-1">
+          <Text.H4 weight="semibold">Wrapped analytics</Text.H4>
+          <Text.H6 color="foregroundMuted">
+            Latest Wrapped report per project from the last 7 days. Click a row to open the report in a new tab.
+          </Text.H6>
+        </div>
+        <Button variant="outline" size="sm" disabled={!data || isLoading} onClick={handleCopy}>
+          {copied ? "Copied!" : "Copy JSON"}
+        </Button>
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <ListColumn list={data?.list ?? []} isLoading={isLoading} />
