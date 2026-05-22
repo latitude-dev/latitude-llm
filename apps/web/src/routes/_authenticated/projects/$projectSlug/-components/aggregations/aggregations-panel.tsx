@@ -12,12 +12,18 @@ const DEFAULT_HISTOGRAM_METRIC: TraceHistogramMetric = "traces"
 
 interface TraceAggregationsPanelProps {
   readonly projectId: string
+  readonly projectSlug: string
   readonly filters: FilterSet
   /** Called when user selects a time range via brush on the histogram. */
   readonly onTimeRangeSelect?: (range: { from: string; to: string } | null) => void
 }
 
-export function TraceAggregationsPanel({ projectId, filters, onTimeRangeSelect }: TraceAggregationsPanelProps) {
+export function TraceAggregationsPanel({
+  projectId,
+  projectSlug,
+  filters,
+  onTimeRangeSelect,
+}: TraceAggregationsPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
 
   // The default metric ("traces") is intentionally omitted from the URL by `useParamState` so the
@@ -78,6 +84,7 @@ export function TraceAggregationsPanel({ projectId, filters, onTimeRangeSelect }
         ) : null}
         <Histogram
           projectId={projectId}
+          projectSlug={projectSlug}
           filters={filters}
           metric={selectedMetric}
           showIncidents={incidentsFlagEnabled && showIncidents}

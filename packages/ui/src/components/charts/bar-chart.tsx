@@ -47,6 +47,19 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "o
    * Receives the selected data range [startIndex, endIndex] or null if cleared.
    */
   readonly onSelect?: ((range: { startIndex: number; endIndex: number } | null) => void) | undefined
+  /**
+   * Called when the chart's axis pointer enters/leaves a bucket. `dataIndex` is the bucket's
+   * position (or null when the cursor leaves the chart). `anchor` is a viewport-space point at
+   * the bottom-center of the bucket, suitable for anchoring a popover under the bar — stable
+   * within the bucket so cursor jitter doesn't move the popover around.
+   *
+   * Use this for bucket-wide hover UI (e.g., a per-bucket popover) instead of trying to hit
+   * thin overlay markers directly. Fires once per category transition, including the initial
+   * entry and the `currTrigger: 'leave'` event when the cursor leaves the chart.
+   */
+  readonly onBucketAxisPointerChange?:
+    | ((dataIndex: number | null, anchor: { clientX: number; clientY: number } | null) => void)
+    | undefined
 }
 
 type EChartsEventHandler = (params: unknown) => void
@@ -66,6 +79,29 @@ type EChartsReactBridgeProps = {
 const EChartsView = ((EChartsReact as unknown as { default?: unknown }).default ??
   EChartsReact) as unknown as ComponentType<EChartsReactBridgeProps>
 
+/**
+ * Returns the viewport-relative anchor point at the **bottom center** of the chart grid at the
+ * given `dataIndex`. Used by `onBucketAxisPointerChange` consumers to position a popover stably
+ * under the hovered bucket, instead of having it jitter with the cursor.
+ *
+ * Returns null if the chart isn't ready (no DOM, no coordinate system yet).
+ */
+function computeBucketBottomAnchor(
+  chart: ECharts | null,
+  dataIndex: number,
+): { clientX: number; clientY: number } | null {
+  if (!chart) return null
+  const dom = chart.getDom()
+  if (!dom) return null
+  // `convertToPixel({ seriesIndex: 0 }, [dataIndex, 0])` maps a value-space coordinate (category
+  // position, value=0) into pixel space relative to the chart container — i.e. the bottom of
+  // the bar at this category, which is also the bottom of the grid.
+  const pixel = chart.convertToPixel({ seriesIndex: 0 }, [dataIndex, 0]) as [number, number] | null
+  if (!pixel) return null
+  const rect = (dom as HTMLElement).getBoundingClientRect()
+  return { clientX: rect.left + pixel[0], clientY: rect.top + pixel[1] }
+}
+
 function BarChart({
   data,
   height = 200,
@@ -76,6 +112,7 @@ function BarChart({
   xAxisLabelFontSize,
   overlay,
   onSelect,
+  onBucketAxisPointerChange,
   className,
   ...rest
 }: BarChartProps) {
@@ -83,7 +120,10 @@ function BarChart({
   const chartRef = useRef<ECharts | null>(null)
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+  const onBucketAxisPointerChangeRef = useRef(onBucketAxisPointerChange)
+  onBucketAxisPointerChangeRef.current = onBucketAxisPointerChange
   const hasBrush = !!onSelect
+  const hasBucketAxisPointer = !!onBucketAxisPointerChange
 
   useMountEffect(() => {
     setMounted(true)
@@ -126,40 +166,70 @@ function BarChart({
   }, [])
 
   const onEvents = useMemo(() => {
-    if (!hasBrush) return undefined
+    if (!hasBrush && !hasBucketAxisPointer) return undefined
     return {
-      brushEnd: (params: unknown) => {
-        const p = params as { areas?: Array<{ coordRange?: [number, number] }> } | undefined
-        const areas = p?.areas
-        if (!areas || areas.length === 0) return
-        const coordRange = areas[0]?.coordRange
-        if (!coordRange) return
-        const [startIndex, endIndex] = coordRange
-        onSelectRef.current?.({ startIndex, endIndex })
-      },
-      click: () => {
-        if (chartRef.current) {
-          chartRef.current.dispatchAction({ type: "brush", areas: [] })
-        }
-        onSelectRef.current?.(null)
-      },
+      ...(hasBrush
+        ? {
+            brushEnd: (params: unknown) => {
+              const p = params as { areas?: Array<{ coordRange?: [number, number] }> } | undefined
+              const areas = p?.areas
+              if (!areas || areas.length === 0) return
+              const coordRange = areas[0]?.coordRange
+              if (!coordRange) return
+              const [startIndex, endIndex] = coordRange
+              onSelectRef.current?.({ startIndex, endIndex })
+            },
+            click: () => {
+              chartRef.current?.dispatchAction({ type: "brush", areas: [] })
+              onSelectRef.current?.(null)
+            },
+          }
+        : {}),
+      ...(hasBucketAxisPointer
+        ? {
+            // Fires once per category transition (including `currTrigger: 'leave'` when the
+            // cursor leaves the chart). Bucket-level — no need to hit a thin marker line.
+            updateAxisPointer: (params: unknown) => {
+              const p = params as
+                | { currTrigger?: string; axesInfo?: ReadonlyArray<{ value?: number | string }> }
+                | undefined
+              if (!p) return
+              if (p.currTrigger === "leave") {
+                onBucketAxisPointerChangeRef.current?.(null, null)
+                return
+              }
+              const rawValue = p.axesInfo?.[0]?.value
+              const dataIndex = typeof rawValue === "number" ? rawValue : Number(rawValue)
+              if (!Number.isFinite(dataIndex)) {
+                onBucketAxisPointerChangeRef.current?.(null, null)
+                return
+              }
+              const anchor = computeBucketBottomAnchor(chartRef.current, dataIndex)
+              onBucketAxisPointerChangeRef.current?.(dataIndex, anchor)
+            },
+          }
+        : {}),
       /**
        * `notMerge` replaces the full option; brush interaction mode is reset and must be
        * re-established. `onChartReady` only runs once, so we reapply after each render cycle.
        */
-      finished: () => {
-        reapplyBrushCursor()
-      },
+      ...(hasBrush
+        ? {
+            finished: () => {
+              reapplyBrushCursor()
+            },
+          }
+        : {}),
     }
-  }, [hasBrush, reapplyBrushCursor])
+  }, [hasBrush, hasBucketAxisPointer, reapplyBrushCursor])
 
   const onChartReady = useMemo(() => {
-    if (!hasBrush) return undefined
+    if (!hasBrush && !hasBucketAxisPointer) return undefined
     return (instance: ECharts) => {
       chartRef.current = instance
-      reapplyBrushCursor()
+      if (hasBrush) reapplyBrushCursor()
     }
-  }, [hasBrush, reapplyBrushCursor])
+  }, [hasBrush, hasBucketAxisPointer, reapplyBrushCursor])
 
   if (!mounted) {
     return (

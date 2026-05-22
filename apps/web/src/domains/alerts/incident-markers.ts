@@ -17,21 +17,25 @@ export const INCIDENT_SEVERITY_COLOR: Record<AlertSeverity, string> = {
 
 type TopSymbol = NonNullable<BarChartOverlayLine["topSymbol"]>
 
+// Sizes are sized for the marker to read as an interactive click target — see incident-marker
+// popover wiring. The visible 2px line itself is hard to land on; the top symbol is the practical
+// hit target, and a wider invisible hit-target line is added at the chart layer when clicks are
+// enabled.
 const KIND_TOP_SYMBOL: Record<AlertIncidentKind, TopSymbol> = {
-  "issue.new": { shape: "circle", size: 7 },
-  "issue.regressed": { shape: "diamond", size: 8 },
+  "issue.new": { shape: "circle", size: 9 },
+  "issue.regressed": { shape: "diamond", size: 10 },
   // Escalating typically renders as an area, but we still render a tiny tick at the start so a
   // 1-bucket escalation that snaps to a single cell stays visible.
-  "issue.escalating": { shape: "rect", size: 6 },
+  "issue.escalating": { shape: "rect", size: 7 },
 }
 
-const KIND_LABELS: Record<AlertIncidentKind, string> = {
+export const KIND_LABELS: Record<AlertIncidentKind, string> = {
   "issue.new": "New issue",
   "issue.regressed": "Issue regressed",
   "issue.escalating": "Issue escalating",
 }
 
-const SEVERITY_LABELS: Record<AlertSeverity, string> = {
+export const SEVERITY_LABELS: Record<AlertSeverity, string> = {
   medium: "Medium",
   high: "High",
 }
@@ -227,67 +231,6 @@ export function buildIncidentMarkers({
     incidentsByBucketIndex: grouping.incidentsByBucketIndex,
     incidentsTouchingBucketIndex: grouping.incidentsTouchingBucketIndex,
   }
-}
-
-const escapeHtml = (s: string): string =>
-  s.replace(/[&<>"']/g, (c) => {
-    switch (c) {
-      case "&":
-        return "&amp;"
-      case "<":
-        return "&lt;"
-      case ">":
-        return "&gt;"
-      case '"':
-        return "&quot;"
-      default:
-        return "&#39;"
-    }
-  })
-
-const formatTimeShort = (iso: string): string => {
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime())
-    ? iso
-    : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-}
-
-/** Scroll incident rows when many overlap one bucket; bounds tooltip height for ECharts confine. */
-const INCIDENT_TOOLTIP_SCROLL_STYLE =
-  "max-height:min(45vh,360px);overflow-y:auto;overscroll-behavior:contain;margin-top:4px;padding-right:6px"
-
-/**
- * Renders the per-bucket incident block appended below the bar tooltip body. Returns an empty
- * string when no incidents fall in the bucket — callers can concatenate unconditionally.
- *
- * `omitIssueName` skips the issue name line; useful when the chart is already scoped to a single
- * issue so repeating its name on every incident row is just noise.
- */
-export function renderIncidentsTooltipBlock(
-  incidents: readonly AlertIncidentRecord[],
-  options?: { readonly omitIssueName?: boolean },
-): string {
-  if (incidents.length === 0) return ""
-  const header = `<div style="margin-top:6px;font-weight:600;">${incidents.length === 1 ? "Incident" : `${incidents.length} incidents`}</div>`
-  const items = incidents
-    .map((incident) => {
-      const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:${INCIDENT_SEVERITY_COLOR[incident.severity]};margin-right:6px;vertical-align:middle"></span>`
-      const kindLabel = KIND_LABELS[incident.kind]
-      const sevLabel = SEVERITY_LABELS[incident.severity]
-      const issueLine =
-        incident.issueName && !options?.omitIssueName
-          ? `<div style="opacity:0.85;margin-left:14px;">${escapeHtml(incident.issueName)}</div>`
-          : ""
-      const timing =
-        incident.endedAt === null
-          ? `${formatTimeShort(incident.startedAt)} → ongoing`
-          : isRangedIncident(incident)
-            ? `${formatTimeShort(incident.startedAt)} → ${formatTimeShort(incident.endedAt)}`
-            : formatTimeShort(incident.startedAt)
-      return `<div style="margin-top:4px">${dot}<b>${kindLabel}</b> · <span style="opacity:0.75">${sevLabel}</span><div style="margin-left:14px;opacity:0.65;font-size:11px">${escapeHtml(timing)}</div>${issueLine}</div>`
-    })
-    .join("")
-  return `${header}<div style="${INCIDENT_TOOLTIP_SCROLL_STYLE}">${items}</div>`
 }
 
 export function formatIncidentKindLabel(kind: AlertIncidentKind): string {

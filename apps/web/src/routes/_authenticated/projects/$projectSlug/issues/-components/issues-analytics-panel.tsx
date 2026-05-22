@@ -1,12 +1,15 @@
 import { BarChart, Button, HistogramSkeleton, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { BarChart2, ChevronDown, ChevronUp, ShieldAlertIcon, ShieldOffIcon } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
-import { buildIncidentMarkers, renderIncidentsTooltipBlock } from "../../../../../../domains/alerts/incident-markers.ts"
+import { IncidentMarkerPopover } from "../../../../../../domains/alerts/incident-marker-popover.tsx"
+import { buildIncidentMarkers } from "../../../../../../domains/alerts/incident-markers.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
 import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import { formatHistogramBucketLabel, formatHistogramBucketTooltipLabel } from "./issue-formatters.ts"
+
+const POPOVER_HOVER_CLOSE_GRACE_MS = 200
 
 const COUNT_CARDS = [
   { key: "ongoingIssues", label: "Ongoing" },
@@ -44,11 +47,13 @@ function AggregationItem({
 
 export function IssuesAnalyticsPanel({
   projectId,
+  projectSlug,
   analytics,
   isLoading,
   onRangeSelect,
 }: {
   readonly projectId: string
+  readonly projectSlug: string
   readonly analytics: IssuesListResultRecord["analytics"]
   readonly isLoading: boolean
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
@@ -113,14 +118,61 @@ export function IssuesAnalyticsPanel({
     }
   }, [incidentsActive, incidents, analytics.histogram, incidentRange, bucketWidthMs])
 
+  // Tooltip is always shown — it carries bucket data (category + occurrence count) and is
+  // independent of the incident popover, which carries per-incident details. Both can coexist:
+  // the tooltip floats near the cursor at the top of the chart, the popover anchors at the
+  // bottom of the bar.
   const formatHistogramTooltip = useCallback(
-    (category: string, value: number, dataIndex: number) => {
-      const base = `${category}<br/><b>${formatCount(value)}</b> occurrences`
-      const touching = incidentsTouchingBucketIndex.get(dataIndex) ?? []
-      return base + renderIncidentsTooltipBlock(touching)
-    },
-    [incidentsTouchingBucketIndex],
+    (category: string, value: number) => `${category}<br/><b>${formatCount(value)}</b> occurrences`,
+    [],
   )
+
+  // Popover state lives in the consumer (not in BarChart) so it survives canvas re-renders. The
+  // chart surfaces bucket-level hover via the axis pointer + a stable bottom-of-bucket anchor;
+  // we only open the popover for buckets that actually have incidents.
+  //
+  // Hover semantics: opens on entering an incident bucket, closes after a short grace period
+  // on leaving (so the cursor can transit into the popover, where `onMouseEnter` cancels the
+  // pending close).
+  const [popover, setPopover] = useState<{
+    bucketIndex: number
+    anchor: { clientX: number; clientY: number }
+  } | null>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cancelPendingClose = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }, [])
+  const scheduleClose = useCallback(() => {
+    cancelPendingClose()
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null
+      setPopover(null)
+    }, POPOVER_HOVER_CLOSE_GRACE_MS)
+  }, [cancelPendingClose])
+  useEffect(() => () => cancelPendingClose(), [cancelPendingClose])
+
+  const handleBucketAxisPointerChange = useCallback(
+    (dataIndex: number | null, anchor: { clientX: number; clientY: number } | null) => {
+      if (dataIndex === null || anchor === null || !incidentsTouchingBucketIndex.has(dataIndex)) {
+        scheduleClose()
+        return
+      }
+      cancelPendingClose()
+      setPopover({ bucketIndex: dataIndex, anchor })
+    },
+    [cancelPendingClose, scheduleClose, incidentsTouchingBucketIndex],
+  )
+
+  // Dismiss the popover when the underlying histogram identity changes (refetch / param change),
+  // since the bucket index it captured may no longer line up with current buckets.
+  useEffect(() => {
+    cancelPendingClose()
+    setPopover(null)
+  }, [analytics.histogram, cancelPendingClose])
+  const popoverIncidents = popover ? (incidentsTouchingBucketIndex.get(popover.bucketIndex) ?? []) : []
 
   const handleSelect = useCallback(
     (range: { startIndex: number; endIndex: number } | null) => {
@@ -234,11 +286,27 @@ export function IssuesAnalyticsPanel({
                 formatTooltip={formatHistogramTooltip}
                 onSelect={onRangeSelect ? handleSelect : undefined}
                 {...(overlay ? { overlay } : {})}
+                {...(incidentsActive ? { onBucketAxisPointerChange: handleBucketAxisPointerChange } : {})}
               />
             </div>
           </>
         )}
       </div>
+      <IncidentMarkerPopover
+        sameRoute
+        open={popover !== null}
+        anchor={popover?.anchor ?? null}
+        incidents={popoverIncidents}
+        projectSlug={projectSlug}
+        onOpenChange={(next) => {
+          if (!next) {
+            cancelPendingClose()
+            setPopover(null)
+          }
+        }}
+        onContentMouseEnter={cancelPendingClose}
+        onContentMouseLeave={scheduleClose}
+      />
     </div>
   )
 }

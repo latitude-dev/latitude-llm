@@ -122,7 +122,12 @@ export function buildBarChartOption(
       ...(showYAxis ? {} : { axisTick: { show: false } }),
       axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },
     },
-    series: buildSeries({ values, capBarWidth, primary: colors.primary, ...(overlay ? { overlay } : {}) }),
+    series: buildSeries({
+      values,
+      capBarWidth,
+      primary: colors.primary,
+      ...(overlay ? { overlay } : {}),
+    }),
   }
 
   if (enableBrush) {
@@ -193,11 +198,36 @@ function buildSeries({
   const areas = overlay?.areas ?? []
   if (lines.length === 0 && areas.length === 0) return [barSeries]
 
+  // Each data item carries a non-eCharts `categoryIndex` field; the chart's click handler reads
+  // it back to map the click to a bucket without parsing display labels. The top symbol
+  // (already sized 7–10px by the consumer) is the practical hit target — wider than the 2px
+  // line and bumped specifically so it reads as clickable.
+  // The line is a passive visual marker — `silent: true` (inherited from the overlay series),
+  // no cursor, no events. Hover/click affordance lives at the bucket level instead, via the
+  // chart's `updateAxisPointer` event surfaced by `BarChart` as `onBucketAxisPointerChange`.
+  const lineData = lines.map((line) => ({
+    xAxis: line.categoryIndex,
+    lineStyle: {
+      color: line.color,
+      type: line.dashed ? "dashed" : "solid",
+      width: 2,
+      opacity: 0.9,
+    },
+    ...(line.topSymbol
+      ? {
+          symbol: ["none", line.topSymbol.shape],
+          symbolSize: line.topSymbol.size,
+        }
+      : {}),
+  }))
+
   const overlaySeries: SeriesEntry = {
     type: "line",
     // No actual line — the series exists solely to host markLine/markArea so they
     // sit on a layer that doesn't disturb axis-tooltip detection of the bar series.
     data: [],
+    // Fully passive — bucket-level hover/click is owned by the BarChart via the axis pointer
+    // event, not by per-shape mouse events on the markers.
     silent: true,
     z: 5,
     ...(lines.length > 0
@@ -210,26 +240,14 @@ function buildSeries({
             // `xAxis` value as the category position. That avoids the label-collision class of
             // bug where two buckets format to the same display string and an overlay snaps to
             // the wrong one.
-            data: lines.map((line) => ({
-              xAxis: line.categoryIndex,
-              lineStyle: {
-                color: line.color,
-                type: line.dashed ? "dashed" : "solid",
-                width: 2,
-                opacity: 0.9,
-              },
-              ...(line.topSymbol
-                ? {
-                    symbol: ["none", line.topSymbol.shape],
-                    symbolSize: line.topSymbol.size,
-                  }
-                : {}),
-            })),
+            data: lineData,
           },
         }
       : {}),
     ...(areas.length > 0
       ? {
+          // Areas remain non-interactive: clicking a translucent range spanning many buckets is
+          // ambiguous, and a click-eating area would swallow the bar tooltip.
           markArea: {
             silent: true,
             data: areas.map((area) => [

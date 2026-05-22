@@ -355,7 +355,12 @@ function ProjectPage() {
       )}
 
       <div className="px-6">
-        <TraceAggregationsPanel projectId={currentProject.id} filters={filters} onTimeRangeSelect={onTimeRangeSelect} />
+        <TraceAggregationsPanel
+          projectId={currentProject.id}
+          projectSlug={currentProject.slug}
+          filters={filters}
+          onTimeRangeSelect={onTimeRangeSelect}
+        />
       </div>
 
       {activeTab === "traces" ? (

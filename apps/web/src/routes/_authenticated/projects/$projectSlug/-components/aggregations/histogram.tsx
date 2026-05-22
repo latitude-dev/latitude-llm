@@ -1,12 +1,15 @@
 import type { FilterSet } from "@domain/shared"
 import { denseTraceTimeHistogramBuckets, type TraceHistogramMetric } from "@domain/spans"
 import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
-import { useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
-import { buildIncidentMarkers, renderIncidentsTooltipBlock } from "../../../../../../domains/alerts/incident-markers.ts"
+import { IncidentMarkerPopover } from "../../../../../../domains/alerts/incident-marker-popover.tsx"
+import { buildIncidentMarkers } from "../../../../../../domains/alerts/incident-markers.ts"
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
 import { HISTOGRAM_METRIC_DEFINITIONS } from "./histogram-metrics.ts"
+
+const POPOVER_HOVER_CLOSE_GRACE_MS = 200
 
 function formatBucketAxisLabel(iso: string): string {
   const d = new Date(iso)
@@ -20,6 +23,7 @@ function formatBucketAxisLabel(iso: string): string {
 
 interface HistogramProps {
   readonly projectId: string
+  readonly projectSlug: string
   readonly filters: FilterSet
   readonly metric: TraceHistogramMetric
   /** When true, fetch and overlay incidents on the histogram. */
@@ -28,7 +32,7 @@ interface HistogramProps {
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }
 
-export function Histogram({ projectId, filters, metric, showIncidents, onRangeSelect }: HistogramProps) {
+export function Histogram({ projectId, projectSlug, filters, metric, showIncidents, onRangeSelect }: HistogramProps) {
   const {
     data: sparseBuckets,
     isLoading,
@@ -97,14 +101,52 @@ export function Histogram({ projectId, filters, metric, showIncidents, onRangeSe
     [denseBuckets, bucketSeconds, onRangeSelect],
   )
 
+  // Tooltip stays on every bucket — it carries the metric value and is independent of the
+  // incident popover. Both coexist when the bucket has incidents.
   const formatTooltip = useCallback(
-    (category: string, value: number, dataIndex: number) => {
-      const base = `${category}<br/><b>${definition.formatBucket(value)}</b> ${definition.tooltipNoun}`
-      const touching = incidentsTouchingBucketIndex.get(dataIndex) ?? []
-      return base + renderIncidentsTooltipBlock(touching)
-    },
-    [definition, incidentsTouchingBucketIndex],
+    (category: string, value: number) =>
+      `${category}<br/><b>${definition.formatBucket(value)}</b> ${definition.tooltipNoun}`,
+    [definition],
   )
+
+  // Popover state with hover-card semantics — see issues-analytics-panel.tsx for the rationale.
+  const [popover, setPopover] = useState<{
+    bucketIndex: number
+    anchor: { clientX: number; clientY: number }
+  } | null>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cancelPendingClose = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }, [])
+  const scheduleClose = useCallback(() => {
+    cancelPendingClose()
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null
+      setPopover(null)
+    }, POPOVER_HOVER_CLOSE_GRACE_MS)
+  }, [cancelPendingClose])
+  useEffect(() => () => cancelPendingClose(), [cancelPendingClose])
+
+  const handleBucketAxisPointerChange = useCallback(
+    (dataIndex: number | null, anchor: { clientX: number; clientY: number } | null) => {
+      if (dataIndex === null || anchor === null || !incidentsTouchingBucketIndex.has(dataIndex)) {
+        scheduleClose()
+        return
+      }
+      cancelPendingClose()
+      setPopover({ bucketIndex: dataIndex, anchor })
+    },
+    [cancelPendingClose, scheduleClose, incidentsTouchingBucketIndex],
+  )
+
+  useEffect(() => {
+    cancelPendingClose()
+    setPopover(null)
+  }, [denseBuckets, cancelPendingClose])
+  const popoverIncidents = popover ? (incidentsTouchingBucketIndex.get(popover.bucketIndex) ?? []) : []
 
   if (isLoading) {
     return (
@@ -140,6 +182,22 @@ export function Histogram({ projectId, filters, metric, showIncidents, onRangeSe
         formatTooltip={formatTooltip}
         onSelect={onRangeSelect ? handleSelect : undefined}
         {...(overlay ? { overlay } : {})}
+        {...(showIncidents ? { onBucketAxisPointerChange: handleBucketAxisPointerChange } : {})}
+      />
+      <IncidentMarkerPopover
+        sameRoute={false}
+        open={popover !== null}
+        anchor={popover?.anchor ?? null}
+        incidents={popoverIncidents}
+        projectSlug={projectSlug}
+        onOpenChange={(next) => {
+          if (!next) {
+            cancelPendingClose()
+            setPopover(null)
+          }
+        }}
+        onContentMouseEnter={cancelPendingClose}
+        onContentMouseLeave={scheduleClose}
       />
     </div>
   )
