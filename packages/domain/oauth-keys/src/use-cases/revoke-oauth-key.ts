@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { OAuthApplicationNotFoundError } from "../errors.ts"
 import { OAuthKeyRepository, OAuthTokenCacheInvalidator } from "../ports/oauth-key-repository.ts"
 
-export type RevokeOAuthKeyActor = { readonly kind: "api-key" } | { readonly kind: "user"; readonly userId: string }
+export type RevokeOAuthKeyActor = { readonly kind: "organization" } | { readonly kind: "user"; readonly userId: string }
 
 export interface RevokeOAuthKeyInput {
   readonly clientId: string

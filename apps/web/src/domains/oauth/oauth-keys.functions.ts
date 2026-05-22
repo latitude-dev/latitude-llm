@@ -74,7 +74,7 @@ export const revokeOAuthKey = createServerFn({ method: "POST" })
     const redis = getRedisClient()
 
     await Effect.runPromise(
-      revokeOAuthKeyUseCase({ clientId: data.clientId, userId: data.userId }).pipe(
+      revokeOAuthKeyUseCase({ clientId: data.clientId, userId: data.userId, actor: { kind: "organization" } }).pipe(
         Effect.provide(OAuthTokenCacheInvalidatorLive(redis)),
         withPostgres(OAuthKeyRepositoryLive, client, organizationId),
         withTracing,

@@ -165,7 +165,7 @@ const revokeOAuthKey = oauthKeyEndpoint({
     await Effect.runPromise(
       revokeOAuthKeyUseCase({
         ...parsed,
-        actor: c.var.auth.method === "oauth" ? { kind: "user", userId: c.var.auth.userId } : { kind: "api-key" },
+        actor: c.var.auth.method === "oauth" ? { kind: "user", userId: c.var.auth.userId } : { kind: "organization" },
       }).pipe(
         Effect.provide(OAuthTokenCacheInvalidatorLive(c.var.redis)),
         withPostgres(OAuthKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
