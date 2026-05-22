@@ -35,6 +35,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
 import { z } from "zod"
+import { isSafeOAuthIconUrl, isSafeOAuthRedirectUrl } from "../../lib/oauth-url-validation.ts"
 import { requireUserSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
 import { listOrganizations } from "../organizations/organizations.functions.ts"
@@ -133,7 +134,11 @@ export const getOAuthConsentRequest = createServerFn({ method: "GET" })
 
     const orgs = await listOrganizations()
     return {
-      client: { clientId: client.clientId, name: client.name, icon: client.icon },
+      client: {
+        clientId: client.clientId,
+        name: client.name,
+        icon: isSafeOAuthIconUrl(client.icon) ? client.icon : null,
+      },
       organizations: orgs.map((o) => ({ id: o.id, name: o.name })),
     }
   })
@@ -205,6 +210,10 @@ export const decideOAuthConsent = createServerFn({ method: "POST" })
     }
 
     if (typeof result?.redirectURI === "string" && result.redirectURI.length > 0) {
+      if (!isSafeOAuthRedirectUrl(result.redirectURI)) {
+        throw new UnauthorizedError({ message: "OAuth consent returned an invalid redirect URL" })
+      }
+
       // Fire the `OAuthKeyCreated` domain event once BA has accepted the
       // consent — nothing consumes it yet, but it's the durable hook future
       // MCP-usage analytics will lean on. Deny / failure branches never get

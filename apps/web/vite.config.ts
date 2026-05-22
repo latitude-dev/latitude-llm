@@ -19,6 +19,17 @@ if (existsSync(envFilePath)) {
 
 const webPortNumber = Effect.runSync(parseEnv("LAT_WEB_PORT", "number", 3000))
 const bundleAnalyze = Effect.runSync(parseEnv("LAT_WEB_BUNDLE_ANALYZE", "boolean", false))
+const oauthConsentContentSecurityPolicy = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' https: http:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+  "navigate-to https: http://localhost:* http://127.0.0.1:* http://[::1]:*",
+].join("; ")
 
 // @temporalio/client ships protobufjs runtime codegen and @grpc/grpc-js. The two
 // packages hold references to each other's module instances, so partial bundling
@@ -54,6 +65,13 @@ export default defineConfig({
     tanstackStart(),
     nitro({
       sourcemap: true,
+      routeRules: {
+        "/auth/consent": {
+          headers: {
+            "Content-Security-Policy": oauthConsentContentSecurityPolicy,
+          },
+        },
+      },
       rollupConfig: { external: ssrExternal },
       rolldownConfig: { external: ssrExternal },
     }),

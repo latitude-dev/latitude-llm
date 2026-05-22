@@ -25,6 +25,7 @@ import { z } from "zod"
 import { decideOAuthConsent, getOAuthConsentRequest } from "../../domains/oauth/oauth-consent.functions.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
+import { isSafeOAuthIconUrl, isSafeOAuthRedirectUrl } from "../../lib/oauth-url-validation.ts"
 
 type ResultPhase = { kind: "authorized"; organizationName: string } | { kind: "denied" }
 
@@ -80,7 +81,7 @@ function OAuthConsentPage() {
   const { toast } = useToast()
 
   const clientName = consent.client.name ?? "An OAuth client"
-  const clientIcon = consent.client.icon
+  const clientIcon = isSafeOAuthIconUrl(consent.client.icon) ? consent.client.icon : null
   const noOrgs = consent.organizations.length === 0
 
   /**
@@ -96,6 +97,7 @@ function OAuthConsentPage() {
         alt=""
         aria-hidden="true"
         className="mr-1 inline-block h-[1em] w-[1em] rounded-sm align-[-0.15em]"
+        referrerPolicy="no-referrer"
       />
       {clientName}
     </>
@@ -118,6 +120,9 @@ function OAuthConsentPage() {
       const organizationName =
         consent.organizations.find((org: { id: string; name: string }) => org.id === organizationId)?.name ??
         "your organization"
+      if (!isSafeOAuthRedirectUrl(redirectUrl)) {
+        throw new Error("OAuth consent returned an invalid redirect URL")
+      }
       setResult({ kind: "authorized", organizationName })
       window.location.replace(redirectUrl)
     } catch (err) {
@@ -133,6 +138,9 @@ function OAuthConsentPage() {
       const { redirectUrl } = await decideOAuthConsent({
         data: { accept: false, consentCode: consent_code },
       })
+      if (!isSafeOAuthRedirectUrl(redirectUrl)) {
+        throw new Error("OAuth consent returned an invalid redirect URL")
+      }
       setResult({ kind: "denied" })
       window.location.replace(redirectUrl)
     } catch (err) {
