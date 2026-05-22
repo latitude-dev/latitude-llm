@@ -1,5 +1,10 @@
 import { SLACK_FLAG } from "@domain/feature-flags"
-import { Button, Modal, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
+import {
+  NOTIFICATION_GROUP_META,
+  NOTIFICATION_GROUPS,
+  type NotificationGroup,
+} from "@domain/shared"
+import { Button, Icon, Modal, Select, type SelectOption, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
@@ -8,14 +13,16 @@ import { useState } from "react"
 import { z } from "zod"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import {
+  configureSlackRoute,
   disconnectSlackIntegration,
   getActiveSlackIntegration,
+  listSlackChannels,
+  removeSlackRoute,
   type SlackIntegrationRecord,
 } from "../../../../../domains/integrations/integrations.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { IntegrationCard } from "./-components/integration-card.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
-import { SlackRoutesSection } from "./-components/slack-routes-section.tsx"
 
 const searchSchema = z.object({
   installed: z.literal("ok").optional(),
@@ -23,6 +30,9 @@ const searchSchema = z.object({
 })
 
 const SLACK_QUERY_KEY = ["slack-integration"] as const
+const CHANNELS_QUERY_KEY = ["slack-channels"] as const
+
+const DON_T_SEND = "" as const
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/integrations")({
   validateSearch: searchSchema,
@@ -34,13 +44,8 @@ function IntegrationsSettingsPage() {
   const router = useRouter()
   const search = Route.useSearch()
 
-  // The sub-nav entry is also flag-gated; this guards deep links.
   const slackEnabled = useHasFeatureFlag(SLACK_FLAG)
 
-  // Surface the install/error status from the callback redirect, then
-  // strip the params. Reads `search` once on mount (the callback lands
-  // here via a full-page nav so subsequent search changes are our own
-  // clean-up navigate, not new flashes to handle).
   useMountEffect(() => {
     if (search.installed === "ok") {
       toast({ description: "Slack connected" })
@@ -89,33 +94,28 @@ function SlackIntegrationSection() {
   if (isLoading) return null
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
       {data ? (
         <ConnectedSlackCard integration={data} onDisconnect={() => setDisconnectOpen(true)} />
       ) : (
         <DisconnectedSlackCard />
       )}
-      {data ? <SlackRoutesSection integration={data} /> : null}
       {data ? <DisconnectSlackModal open={disconnectOpen} onClose={() => setDisconnectOpen(false)} /> : null}
-    </div>
+    </>
   )
 }
 
 function DisconnectedSlackCard() {
-  // The route returns a 302 to Slack's authorize URL; a full-page nav
-  // is the right interaction (TanStack `<Link>` only navigates within
-  // the router's known routes, and `<a href>` inside `<Button asChild>`
-  // ends up stretching to fill the flex parent on a single-row card).
-  const handleConnect = () => {
-    window.location.href = "/integrations/slack/install"
-  }
-
   return (
     <IntegrationCard
       icon={SlackIcon}
       title="Slack"
       subtitle="Send Latitude notifications to your Slack workspace."
-      actions={<Button onClick={handleConnect}>Connect Slack</Button>}
+      actions={
+        <Button onClick={() => { window.location.href = "/integrations/slack/install" }}>
+          Connect Slack
+        </Button>
+      }
     />
   )
 }
@@ -128,16 +128,113 @@ function ConnectedSlackCard({
   onDisconnect: () => void
 }) {
   return (
-    <IntegrationCard
-      icon={SlackIcon}
-      title={integration.teamName}
-      subtitle={`Connected ${relativeTime(new Date(integration.installedAt))}`}
-      actions={
-        <Button variant="outline" onClick={onDisconnect}>
-          Disconnect
-        </Button>
+    <div className="rounded-lg border border-border">
+      {/* Identity row */}
+      <div className="flex flex-row items-center justify-between gap-4 p-4">
+        <div className="flex min-w-0 flex-row items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
+            <Icon icon={SlackIcon} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Text.H5 weight="semibold">{integration.teamName}</Text.H5>
+            <Text.H6 color="foregroundMuted">
+              Connected {relativeTime(new Date(integration.installedAt))}
+            </Text.H6>
+          </div>
+        </div>
+        <div className="shrink-0">
+          <Button variant="outline" onClick={onDisconnect}>
+            Disconnect
+          </Button>
+        </div>
+      </div>
+
+      {/* Notifications routing */}
+      <div className="flex flex-col gap-3 border-t border-border p-4">
+        <Text.H5 weight="semibold">Notifications</Text.H5>
+        {NOTIFICATION_GROUPS.map((group) => (
+          <SlackRouteRow key={group} group={group} integration={integration} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SlackRouteRow({
+  group,
+  integration,
+}: {
+  group: NotificationGroup
+  integration: SlackIntegrationRecord
+}) {
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const meta = NOTIFICATION_GROUP_META[group]
+
+  // Channels are fetched lazily — on first Select open — and refreshed
+  // each time the dropdown opens so the list stays current without a
+  // manual refresh button.
+  const {
+    data: channels = [],
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey: CHANNELS_QUERY_KEY,
+    queryFn: () => listSlackChannels(),
+    enabled: false,
+    staleTime: 30_000,
+  })
+
+  const currentChannelId = integration.routes[group]?.[0]?.channelId ?? DON_T_SEND
+
+  const options: SelectOption<string>[] = [
+    { label: "Don't send", value: DON_T_SEND },
+    ...channels.map((c) => ({
+      label: `#${c.name}`,
+      value: c.id,
+    })),
+  ]
+
+  const mutation = useMutation({
+    mutationFn: (channelId: string) => {
+      if (channelId === DON_T_SEND) {
+        return removeSlackRoute({ data: { group } })
       }
-    />
+      const channel = channels.find((c) => c.id === channelId)
+      return configureSlackRoute({
+        data: {
+          group,
+          routes: [{ channelId, channelName: channel?.name ?? channelId }],
+        },
+      })
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: SLACK_QUERY_KEY })
+    },
+    onError: (error) => {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    },
+  })
+
+  return (
+    <div className="flex flex-row items-center justify-between gap-4">
+      <Text.H5 color="foregroundMuted">{meta.label}</Text.H5>
+      <Select<string>
+        name={`slack-route-${group}`}
+        options={options}
+        value={currentChannelId}
+        loading={isFetching}
+        disabled={mutation.isPending}
+        width="auto"
+        contentWidth="auto"
+        searchable
+        searchPlaceholder="Filter channels…"
+        onChange={(value) => void mutation.mutateAsync(value)}
+        onOpenChange={(open) => {
+          if (open) void refetch()
+        }}
+      />
+    </div>
   )
 }
 
@@ -170,7 +267,7 @@ function DisconnectSlackModal({ open, onClose }: { open: boolean; onClose: () =>
         if (!value && !disconnecting) onClose()
       }}
       title="Disconnect Slack"
-      description="Disconnecting will stop all Latitude notifications to this Slack workspace and revoke the bot token. Channel routing you configure later will be restored if you reconnect the same workspace."
+      description="Disconnecting will stop all Latitude notifications to this Slack workspace and revoke the bot token. Channel routing will be reset if you reconnect."
       dismissible
       footer={
         <div className="flex flex-row items-center gap-2">
