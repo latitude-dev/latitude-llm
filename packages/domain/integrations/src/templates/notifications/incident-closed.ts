@@ -8,7 +8,6 @@ import {
   header,
   projectOrOrgContext,
   sectionMarkdown,
-  severityEmoji,
   trendChartBlock,
 } from "./blocks.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
@@ -16,20 +15,17 @@ import type { SlackNotificationRenderer } from "./types.ts"
 export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"> = (payload, ctx) =>
   Effect.gen(function* () {
     const projectName = ctx.project?.name ?? ctx.organization.name
-    const sev = severityEmoji(payload.severity)
     const issueUrl = ctx.project
       ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
       : ctx.webAppUrl
     const duration = humanizeDurationMs(payload.recovery.durationMs)
 
     const issues = yield* IssueRepository
-    const issueName = yield* issues
-      .findById(IssueId(payload.sourceId))
-      .pipe(
-        Effect.map((i) => i.name),
-        Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
-        Effect.catchTag("RepositoryError", () => Effect.succeed(null)),
-      )
+    const issueName = yield* issues.findById(IssueId(payload.sourceId)).pipe(
+      Effect.map((i) => i.name),
+      Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+      Effect.catchTag("RepositoryError", () => Effect.succeed(null)),
+    )
 
     const chart = trendChartBlock(ctx.notificationId, ctx.webAppUrl)
 
@@ -42,7 +38,7 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
         sectionMarkdown(`Elevated for *${duration}*.`),
         ...(chart ? [chart] : []),
         contextLine(
-          `${sev} ${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
+          `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
         ),
         actionsLink("View issue", issueUrl),
       ],

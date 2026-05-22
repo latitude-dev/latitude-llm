@@ -32,17 +32,6 @@ export const projectOrOrgContext = (
   project: { readonly name: string } | null,
 ): string => (project ? `Project *${project.name}* · ${organization.name}` : `Org *${organization.name}*`)
 
-const SEVERITY_EMOJI: Record<string, string> = {
-  high: "🔴",
-  medium: "🟡",
-}
-
-/**
- * Returns a colored circle emoji for the given severity string.
- * Falls back to ⚪ for unknown values.
- */
-export const severityEmoji = (severity: string): string => SEVERITY_EMOJI[severity] ?? "⚪"
-
 /**
  * Returns a Slack `image` block that renders the incident trend chart.
  * Slack fetches the URL async after posting, so the notification row
@@ -52,10 +41,7 @@ export const severityEmoji = (severity: string): string => SEVERITY_EMOJI[severi
  * Returns `null` when `notificationId` is absent (kinds that don't
  * write a bell-feed row, or a missing context value).
  */
-export const trendChartBlock = (
-  notificationId: string | null,
-  webAppUrl: string,
-): KnownBlock | null => {
+export const trendChartBlock = (notificationId: string | null, webAppUrl: string): KnownBlock | null => {
   if (!notificationId) return null
   const base = webAppUrl.replace(/\/$/, "")
   const url = `${base}/api/notifications/${encodeURIComponent(notificationId)}/incident-trend.png`
@@ -66,12 +52,29 @@ export const trendChartBlock = (
   } as KnownBlock
 }
 
-/** Color constants for attachment bars. */
+/**
+ * Color constants for attachment bars.
+ *
+ * Severity colors map to a four-tier priority scale (low → critical) so
+ * the bar communicates urgency — no emoji prefix needed. `resolved` is
+ * always green (incident is over regardless of severity). `wrapped` is
+ * Claude Code orange.
+ */
 export const COLORS = {
-  newIssue: "#E8534B",
-  regressed: "#F2994A",
-  escalating: "#F2C94C",
-  resolved: "#27AE60",
-  wrapped: "#9B51E0",
+  // Severity tiers — used by incident renderers
+  low: "#F2C94C",       // yellow
+  medium: "#F2994A",    // orange
+  high: "#E8534B",      // red
+  critical: "#C0392B",  // dark red (reserved for future severity tier)
+  // Lifecycle overrides
+  resolved: "#27AE60",  // green — incident recovered regardless of severity
+  wrapped: "#E8700A",   // orange — Claude Code brand
   announcement: "#2F80ED",
 } as const
+
+/**
+ * Returns the severity bar color. Falls back to red for unknown values
+ * so there's always a visible bar.
+ */
+export const severityColor = (severity: string): string =>
+  (COLORS as Record<string, string>)[severity] ?? COLORS.high
