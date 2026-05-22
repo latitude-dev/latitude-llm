@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useMountEffect } from "@repo/ui"
+import { useCallback, useRef, useState } from "react"
 import type { AlertIncidentRecord } from "./alerts.functions.ts"
 
 const DEFAULT_CLOSE_GRACE_MS = 200
@@ -63,7 +64,8 @@ export function useIncidentBucketHoverPopover({
     }, closeGraceMs)
   }, [cancelPendingClose, closeGraceMs])
 
-  useEffect(() => () => cancelPendingClose(), [cancelPendingClose])
+  // Clear the pending close timer on unmount. Mount-only effect — there's nothing to react to.
+  useMountEffect(() => () => cancelPendingClose())
 
   const handleBucketAxisPointerChange = useCallback(
     (dataIndex: number | null, anchor: { clientX: number; clientY: number } | null) => {
@@ -77,13 +79,6 @@ export function useIncidentBucketHoverPopover({
     [cancelPendingClose, scheduleClose, incidentsTouchingBucketIndex],
   )
 
-  // Reset on a data refetch / filter change. The bucket index captured by the popover may not
-  // line up with the new buckets, and the cached incidents could be stale.
-  useEffect(() => {
-    cancelPendingClose()
-    setPopover(null)
-  }, [incidentsTouchingBucketIndex, cancelPendingClose])
-
   const onOpenChange = useCallback(
     (next: boolean) => {
       if (!next) {
@@ -94,10 +89,15 @@ export function useIncidentBucketHoverPopover({
     [cancelPendingClose],
   )
 
+  // Derive the visible popover during render: when the bucket the popover state captured no
+  // longer touches any incidents (data refetch / filter change), `popoverIncidents` collapses
+  // to `[]` and we expose the popover as null so the consumer treats it as closed. No effect
+  // needed — the next hover transition or close-timer fire will clear the internal state.
   const popoverIncidents = popover ? (incidentsTouchingBucketIndex.get(popover.bucketIndex) ?? []) : []
+  const visiblePopover = popoverIncidents.length === 0 ? null : popover
 
   return {
-    popover,
+    popover: visiblePopover,
     popoverIncidents,
     handleBucketAxisPointerChange,
     onOpenChange,
