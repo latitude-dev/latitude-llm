@@ -1,4 +1,4 @@
-import { Popover, PopoverAnchor, PopoverContent } from "@repo/ui"
+import { Popover, PopoverAnchor, PopoverContent, Text } from "@repo/ui"
 import { Link } from "@tanstack/react-router"
 import { ChevronRightIcon } from "lucide-react"
 import { useRef } from "react"
@@ -92,8 +92,10 @@ export function IncidentMarkerPopover({
         onOpenAutoFocus={(event) => event.preventDefault()}
         onCloseAutoFocus={(event) => event.preventDefault()}
       >
-        <div className="px-2 py-1.5 text-xs font-semibold text-foreground">
-          {incidents.length === 1 ? "Incident" : `${incidents.length} incidents`}
+        <div className="px-2 py-1.5">
+          <Text.H6B color="foreground">
+            {incidents.length === 1 ? "Incident" : `${incidents.length} incidents`}
+          </Text.H6B>
         </div>
         <ul className="flex flex-col">
           {incidents.map((incident) => (
@@ -115,14 +117,18 @@ export function IncidentMarkerPopover({
                   style={{ background: INCIDENT_SEVERITY_COLOR[incident.severity] }}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <span className="font-medium text-foreground">{KIND_LABELS[incident.kind]}</span>
-                    <span className="text-muted-foreground">·</span>
-                    <span className="text-muted-foreground">{SEVERITY_LABELS[incident.severity]}</span>
+                  <div className="flex items-center gap-1.5">
+                    <Text.H6M color="foreground">{KIND_LABELS[incident.kind]}</Text.H6M>
+                    <Text.H6 color="foregroundMuted">·</Text.H6>
+                    <Text.H6 color="foregroundMuted">{SEVERITY_LABELS[incident.severity]}</Text.H6>
                   </div>
-                  <div className="text-[11px] text-muted-foreground">{formatTiming(incident)}</div>
+                  <Text.H6 color="foregroundMuted" display="block">
+                    {formatTiming(incident)}
+                  </Text.H6>
                   {incident.issueName ? (
-                    <div className="mt-0.5 truncate text-xs text-foreground/85">{incident.issueName}</div>
+                    <Text.H6 color="foreground" display="block" className="truncate">
+                      {incident.issueName}
+                    </Text.H6>
                   ) : null}
                 </div>
                 <ChevronRightIcon className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
