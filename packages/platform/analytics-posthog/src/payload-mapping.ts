@@ -66,6 +66,7 @@ export const orgDistinctId = (organizationId: string): string => `org_${organiza
  */
 const getPersonEmailSet = (input: TrackedEventInput): Record<string, unknown> => {
   if (typeof input.payload.actorUserId === "string" && input.payload.actorUserId.length > 0) return {}
+  if (typeof input.payload.userId !== "string" || input.payload.userId.length === 0) return {}
   const email = input.payload.email
   if (typeof email !== "string" || email.length === 0) return {}
   return { $set: { email } }

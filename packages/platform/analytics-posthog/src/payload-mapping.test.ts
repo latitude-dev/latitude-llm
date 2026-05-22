@@ -71,6 +71,18 @@ describe("mapEventToPostHog", () => {
     expect(mapped?.properties?.$set).toEqual({ email: "foo@bar.com" })
   })
 
+  it("does NOT set $set.email for org pseudo-id events even if email appears in payload", () => {
+    const mapped = mapEventToPostHog({
+      eventName: "FirstTraceReceived",
+      organizationId: "org-1",
+      payload: { organizationId: "org-1", projectId: "p-1", traceId: "t-1", email: "leaked@bar.com" },
+      occurredAt,
+    })
+
+    expect(mapped?.distinctId).toBe("org_org-1")
+    expect(mapped?.properties?.$set).toBeUndefined()
+  })
+
   it("does NOT set $set.email for MemberInvited (email belongs to invitee, not actor)", () => {
     const mapped = mapEventToPostHog({
       eventName: "MemberInvited",
