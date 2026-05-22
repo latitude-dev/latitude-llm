@@ -1,14 +1,7 @@
 import { IssueRepository } from "@domain/issues"
 import { IssueId } from "@domain/shared"
 import { Effect } from "effect"
-import {
-  actionsLink,
-  contextLine,
-  header,
-  projectOrOrgContext,
-  sectionMarkdown,
-  severityColor,
-} from "./blocks.ts"
+import { actionsLink, contextLine, projectOrOrgContext, sectionMarkdown, severityColor } from "./blocks.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
 const KIND_NAME: Record<string, string> = {
@@ -38,7 +31,6 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
       text: `${name} in ${ctx.project?.name ?? ctx.organization.name}${issueName ? `: ${issueName}` : ""}`,
       color,
       blocks: [
-        header(`${name} · ${ctx.project?.name ?? ctx.organization.name}`),
         ...(issueName ? [sectionMarkdown(`*<${issueUrl}|${issueName}>*`)] : []),
         sectionMarkdown(issueName ? `A new <${issueUrl}|issue> has been detected.` : `A new issue has been detected.`),
         ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`\`\`\`\n${payload.sampleExcerpt.text}\n\`\`\``)] : []),

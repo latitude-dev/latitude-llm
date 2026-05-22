@@ -5,7 +5,6 @@ import {
   actionsLink,
   COLORS,
   contextLine,
-  header,
   projectOrOrgContext,
   sectionMarkdown,
   trendChartBlock,
@@ -33,7 +32,6 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
       text: `Issue recovered in ${projectName} — elevated for ${duration}`,
       color: COLORS.resolved,
       blocks: [
-        header(`Issue recovered · ${projectName}`),
         ...(issueName ? [sectionMarkdown(`*<${issueUrl}|${issueName}>*`)] : []),
         sectionMarkdown(`Elevated for *${duration}*.`),
         ...(chart ? [chart] : []),

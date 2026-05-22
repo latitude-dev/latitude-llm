@@ -62,13 +62,13 @@ export const trendChartBlock = (notificationId: string | null, webAppUrl: string
  */
 export const COLORS = {
   // Severity tiers — used by incident renderers
-  low: "#F2C94C",       // yellow
-  medium: "#F2994A",    // orange
-  high: "#E8534B",      // red
-  critical: "#C0392B",  // dark red (reserved for future severity tier)
+  low: "#F2C94C", // yellow
+  medium: "#F2994A", // orange
+  high: "#E8534B", // red
+  critical: "#C0392B", // dark red (reserved for future severity tier)
   // Lifecycle overrides
-  resolved: "#27AE60",  // green — incident recovered regardless of severity
-  wrapped: "#E8700A",   // orange — Claude Code brand
+  resolved: "#27AE60", // green — incident recovered regardless of severity
+  wrapped: "#E8700A", // orange — Claude Code brand
   announcement: "#2F80ED",
 } as const
 
@@ -76,5 +76,4 @@ export const COLORS = {
  * Returns the severity bar color. Falls back to red for unknown values
  * so there's always a visible bar.
  */
-export const severityColor = (severity: string): string =>
-  (COLORS as Record<string, string>)[severity] ?? COLORS.high
+export const severityColor = (severity: string): string => (COLORS as Record<string, string>)[severity] ?? COLORS.high

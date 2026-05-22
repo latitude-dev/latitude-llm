@@ -4,7 +4,6 @@ import { Effect } from "effect"
 import {
   actionsLink,
   contextLine,
-  header,
   projectOrOrgContext,
   sectionMarkdown,
   severityColor,
@@ -37,7 +36,6 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
       text: `Issue escalating in ${projectName}${issueName ? `: ${issueName}` : ""}`,
       color: severityColor(payload.severity),
       blocks: [
-        header(`Issue escalating · ${projectName}`),
         ...(issueName ? [sectionMarkdown(`*<${issueUrl}|${issueName}>*`)] : []),
         ...(breachLine ? [sectionMarkdown(breachLine)] : []),
         ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`\`\`\`\n${payload.sampleExcerpt.text}\n\`\`\``)] : []),
