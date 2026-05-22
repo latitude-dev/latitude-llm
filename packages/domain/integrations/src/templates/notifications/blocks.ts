@@ -33,10 +33,8 @@ export const projectOrOrgContext = (
 ): string => (project ? `Project *${project.name}* · ${organization.name}` : `Org *${organization.name}*`)
 
 const SEVERITY_EMOJI: Record<string, string> = {
-  critical: "🔴",
-  high: "🟠",
+  high: "🔴",
   medium: "🟡",
-  low: "🔵",
 }
 
 /**

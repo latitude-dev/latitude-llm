@@ -52,7 +52,7 @@ const buildSyntheticPayloads = (): Record<string, unknown> => {
     "incident.event": {
       ...makeIncidentBase(generateId()),
       incidentKind: "issue.new",
-      severity: "critical",
+      severity: "high",
       sampleExcerpt: {
         text: "The model returned 'cancel' but the workflow expected 'proceed'",
         truncated: false,
