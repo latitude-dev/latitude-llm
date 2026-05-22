@@ -1,9 +1,11 @@
 import { AI } from "@domain/ai"
 import {
+  normalizeLiteralPhrase,
   type ParsedSearchQuery,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
   TRACE_SEARCH_EMBEDDING_MODEL,
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
+  tokenizePhrase,
 } from "@domain/spans"
 import { Effect, Option } from "effect"
 
@@ -27,26 +29,6 @@ import { Effect, Option } from "effect"
  * window.
  */
 const SEMANTIC_SCAN_LIMIT = 30_000
-
-/**
- * Tokenize a backtick phrase the same way the `search_text` text index does:
- * lower-case first, then split on every non-alphanumeric ASCII byte (matching
- * CH's `splitByNonAlpha`). Empty fragments are dropped.
- */
-function tokenizePhrase(phrase: string): readonly string[] {
-  return phrase
-    .toLowerCase()
-    .split(/[^A-Za-z0-9]+/)
-    .filter((t) => t.length > 0)
-}
-
-function stripLoneSurrogates(text: string): string {
-  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "�")
-}
-
-function normalizeLiteralPhrase(text: string): string {
-  return stripLoneSurrogates(text.trim().replace(/\s+/g, " "))
-}
 
 function escapeLikePattern(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")

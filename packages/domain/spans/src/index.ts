@@ -43,11 +43,13 @@ export {
 export type { Trace, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
+export { normalizeLiteralPhrase, stripLoneSurrogates } from "./helpers/normalize-literal-phrase.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export { resolveScoreTraceContext } from "./helpers/resolve-score-trace-context.ts"
+export { tokenizePhrase } from "./helpers/tokenize-phrase.ts"
 export {
   resolveTraceIdFromRef,
   resolveTraceIdsFromRef,
@@ -149,6 +151,11 @@ export type {
   BuildTracesExportResult,
 } from "./use-cases/build-traces-export.ts"
 export { buildTracesExportUseCase } from "./use-cases/build-traces-export.ts"
+export type {
+  TraceHighlight,
+  TraceSearchHighlightsResult,
+} from "./use-cases/compute-trace-search-highlights.ts"
+export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
 export type {
   GetTraceAnalyticsError,
   GetTraceAnalyticsInput,

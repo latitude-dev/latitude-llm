@@ -43,9 +43,7 @@
       "project": ["src/**/*.ts"]
     },
     "packages/platform/slack": {
-      "project": ["src/**/*.ts", "scripts/**/*.ts"],
-      "ignoreBinaries": ["tsx"],
-      "ignoreDependencies": ["tsx"]
+      "project": ["src/**/*.ts", "scripts/**/*.ts"]
     },
     "packages/platform/*": {
       "project": ["src/**/*.ts"]
@@ -78,8 +76,7 @@
       "ignoreDependencies": ["@sentry/node", "dd-trace", "langchain", "together-ai"]
     },
     "packages/telemetry/pi": {
-      "project": ["src/**/*.ts"],
-      "ignoreBinaries": ["tsdown"]
+      "project": ["src/**/*.ts"]
     },
     "tools/ai-benchmarks": {
       "entry": ["src/scripts/**/*.ts"],
@@ -87,5 +84,6 @@
     }
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],
-  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/datadog", "@pulumi/random", "fern-api", "chdb"]
+  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/datadog", "@pulumi/random", "fern-api", "chdb"],
+  "tags": ["-knipignore"]
 }

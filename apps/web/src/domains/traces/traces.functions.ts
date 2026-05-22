@@ -14,9 +14,16 @@ import type {
   TraceDistinctColumn,
   TraceDistribution,
   TraceMetrics,
+  TraceSearchHighlightsResult,
   TraceTimeHistogramBucket,
 } from "@domain/spans"
-import { getTraceCohortSummaryByTagsUseCase, mergeTraceHistogramTimeFilters, TraceRepository } from "@domain/spans"
+import {
+  computeTraceSearchHighlights,
+  getTraceCohortSummaryByTagsUseCase,
+  mergeTraceHistogramTimeFilters,
+  parseSearchQuery,
+  TraceRepository,
+} from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
@@ -346,6 +353,53 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
         withTracing,
       ),
     )
+  })
+
+const EMPTY_HIGHLIGHTS_RESULT: TraceSearchHighlightsResult = { highlights: [], firstMatchIndex: -1 }
+
+/**
+ * @knipignore
+ */
+export const getTraceSearchHighlights = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceId: z.string(),
+      searchQuery: z.string().max(500),
+    }),
+  )
+  .handler(async ({ data }): Promise<TraceSearchHighlightsResult> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const parsed = parseSearchQuery(data.searchQuery)
+    if (parsed.literalPhrases.length === 0 && parsed.tokenPhrases.length === 0) {
+      return EMPTY_HIGHLIGHTS_RESULT
+    }
+
+    const detail = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo
+          .findByTraceId({
+            organizationId: orgId,
+            projectId: ProjectId(data.projectId),
+            traceId: TraceId(data.traceId),
+          })
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+      }).pipe(
+        withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
+    )
+
+    if (!detail) return EMPTY_HIGHLIGHTS_RESULT
+
+    return computeTraceSearchHighlights({
+      messages: detail.allMessages,
+      parsedQuery: parsed,
+    })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })

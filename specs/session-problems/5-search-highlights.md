@@ -186,11 +186,13 @@ Users already learned the pill palette in `SearchInput` (`apps/web/src/routes/_a
 
 | Match | Pill color in search bar | Drawer highlight |
 |---|---|---|
-| Literal `"…"` | `border-primary/25 bg-primary/10 text-primary` (blue) | Blue background + bottom border |
-| Token `` `…` `` | `border-phrase/30 bg-phrase/10 text-phrase-foreground` (phrase color) | Phrase-color background + bottom border |
+| Literal `"…"` | `border-primary/25 bg-primary/10 text-primary` (blue) | **Solid underline**, primary color (e.g. `underline decoration-primary decoration-2 underline-offset-4`) |
+| Token `` `…` `` | `border-phrase/30 bg-phrase/10 text-phrase-foreground` (phrase color) | **Wavy underline**, phrase color (e.g. `underline decoration-wavy decoration-phrase decoration-2 underline-offset-4`) |
 | Semantic | unstyled | Soft amber **block background** on the chunk's message range (region-level, not per-character) |
 
-Keep yellow/red/green/blue reserved for selection + annotations. Search is a new visual layer, not an overload of an existing one.
+Visual rationale: underlines point *at* the matched words without obscuring them — closer to spell-check / grammar markers than a yellow-highlighter swipe. Solid vs wavy gives a fast literal-vs-fuzzy signal at a glance, mirroring the same trichotomy as the pills. Semantic stays as a block tint because there are no character offsets at that layer (see "Why character offsets don't apply at this layer" below).
+
+Keep yellow/red/green/blue background fills reserved for selection + annotations. Search is a new visual layer (underline, not fill), not an overload of an existing one.
 
 Implementation: one new switch arm in `highlightAttributes` (`packages/ui/src/components/genai-conversation/parts/highlight-segments.ts:78`) and one widening of `HighlightRange["type"]` in `text-selection.tsx:13`.
 
@@ -263,11 +265,15 @@ Carry the structure through, don't try to reconstruct it later:
 Two new columns on `trace_search_embeddings`:
 
 ```sql
-first_message_index UInt32 NOT NULL,
-last_message_index  UInt32 NOT NULL,
+first_message_index Nullable(UInt32),
+last_message_index  Nullable(UInt32),
 ```
 
-Both populated at ingest. Neither is indexed — they ride along with the embedding as payload.
+Both populated at ingest for new rows. Pre-existing rows read NULL until (and unless) a backfill runs. Neither column is indexed — they ride along with the embedding as payload.
+
+**Why nullable instead of `NOT NULL DEFAULT 0`.** `(0, 0)` is a valid range — a single-message turn at index 0 would legitimately match there — so zero can't double as a "no data" sentinel. NULL is unambiguous and propagates cleanly through `argMax`: when the highest-scoring chunk for a trace has NULL range columns (i.e. it was indexed before this migration), the rollup returns NULL and the endpoint skips semantic-region emission for that trace. Literal and token highlights are computed from `traceDetail.allMessages` directly and are unaffected.
+
+**Backwards-compatible by design — no backfill.** The feature ships without a backfill, full stop. Old rows return NULL → no semantic-region highlight for those traces; new ingests populate the columns; over time, coverage improves as traces are re-embedded organically (TTL, re-ingestion, edits). This is the permanent steady state. The "Resolved decisions" stance that silent partial coverage beats misleading still applies — a user who opens a trace whose semantic match predates the migration sees literal/token highlights only, never a misplaced or fabricated region tint.
 
 #### Read path: surviving the per-trace rollup
 
@@ -285,6 +291,8 @@ GROUP BY trace_id
 ```
 
 In the hybrid plan with `LEFT JOIN`, the same `argMax` pattern applies to the joined semantic side; the lexical side has no chunk metadata to carry. Pure phrase-only plans return `NULL` for the matched-chunk columns and the endpoint emits zero semantic-region highlights — the same trace can still surface literal / token highlights.
+
+`argMax` over nullable columns returns NULL when the winning row's value is NULL. That means traces whose top-scoring chunk was indexed before this migration land in the endpoint with `matched_first_message_index IS NULL` / `matched_last_message_index IS NULL`, and the endpoint treats that identically to a pure-phrase plan: zero semantic-region highlights, literal/token highlights unaffected.
 
 The `SearchPlan` type widens to `{ ranked, subquery, params, semanticMetadata: boolean }`. When `semanticMetadata` is true, the outer `LIST_SELECT` projects the matched-chunk columns out of the join; otherwise, it doesn't.
 
@@ -327,7 +335,7 @@ Render-side, the new `"search-semantic-region"` arm of `highlightAttributes` app
 | **Reasoning-only or tool-response-only messages inside the region** | Chunk text didn't include those parts, but the message range still does. The block tint covers them. Trying to subtract them at render time would imply a precision we don't have. |
 | **Empty chunk after normalization** | `buildTraceSearchDocument` already skips these (`build-trace-search-document.ts:243`); they never reach the embedding table. No special handling needed. |
 | **Chunk index non-monotonic in message order** | True under tail-first selection. The `chunkIndex` shown in the popover reflects pack order, not document order. The popover labels it as "best-matching block" without implying chronology. The on-screen position is still correct because the renderer uses `firstMessageIndex` / `lastMessageIndex`, not `chunkIndex`. |
-| **Partial-backfill state (Phase D in flight)** | Older `trace_search_embeddings` rows lack the new columns. Phase D backfills by re-running `buildTraceSearchDocument` against the source trace and matching by `(trace_id, chunk_index, content_hash)`. Until backfill completes, traces with `NULL` in the new columns return zero semantic-region highlights from the endpoint; literal / token highlights still return normally. Silent partial coverage is better than misleading. |
+| **Pre-migration rows (permanent steady state, no backfill)** | Older `trace_search_embeddings` rows have NULL in the new columns and stay that way. `argMax` propagates NULL through the rollup, the endpoint emits zero semantic-region highlights for those traces, and literal / token highlights still return normally. Coverage on old traces stays at "lexical only" until they organically re-embed (TTL, re-ingestion, edits). That's honest about what the index can localize and avoids the cost of a one-shot worker. |
 
 #### Where this lands in the contract
 
@@ -348,7 +356,6 @@ That stays as-is. The endpoint emits one `TraceHighlight` per non-system message
 | Read | `packages/platform/db-clickhouse/src/repositories/trace-repository.ts:162` | `argMax(chunk_index, semantic_score)` + matched-range columns in `buildSemanticSearchSubquery`. Widen `SearchPlan` and project columns through `LIST_SELECT`. |
 | API | `apps/web/src/domains/traces/traces.functions.ts` | Plumb matched-chunk metadata onto trace rows (parallel `searchMatch` field, not stuffed into `TraceRecord`). Extend `getTraceSearchHighlights` to emit `semantic-region` highlights from it. |
 | Render | `packages/ui/src/components/genai-conversation/parts/highlight-segments.ts` + `<Conversation>` | New `"search-semantic-region"` branch (the same `"search-"`-prefixed namespace as the literal/token types added in Phase A); apply class to the message-container element instead of inline span wrapping. |
-| Backfill | `apps/workers/src/scripts/backfill-trace-search.ts` | Re-derive provenance from existing traces; match by `(trace_id, chunk_index, content_hash)`; idempotent. |
 
 ## Resolved decisions
 
@@ -407,19 +414,124 @@ Each phase is independently shippable.
 - N/P override when `searchQuery` is non-empty.
 - Per-phrase prev/next buttons inside the popover.
 
-**Phase C — Semantic region highlight (schema migration)**
+**Phase C — Semantic region highlight (schema migration, no backfill)**
 
-- Schema: add `first_message_index`, `last_message_index` to `trace_search_embeddings`.
+- Schema: add nullable `first_message_index`, `last_message_index` to `trace_search_embeddings`. Old rows stay NULL forever; coverage improves organically as traces re-embed.
 - Ingest: thread message indices through `buildTraceSearchDocument`.
-- Read: `argMax(chunk_index, semantic_score)` + range columns in `buildSemanticSearchSubquery`.
+- Read: `argMax(chunk_index, semantic_score)` + range columns in `buildSemanticSearchSubquery`. `argMax` propagates NULL from pre-migration winners — the endpoint treats that the same as a phrase-only plan and skips semantic-region emission for that trace.
 - Plumb the winning chunk's range onto each trace row (parallel `searchMatch` field, not stuffed into `TraceRecord` itself).
 - Extend `getTraceSearchHighlights` to emit one `semantic-region` highlight covering the message-range.
 - New `"search-semantic-region"` `HighlightRange["type"]` with soft amber block background.
 
-**Phase D — Backfill**
+## Rollout (PR sequence)
 
-- Update `apps/workers/src/scripts/backfill-trace-search.ts` to populate the new chunk-range columns on existing rows.
-- Rolling backfill, idempotent on `(content_hash, chunk_index)`.
+Five PRs under Linear task **LAT-601**. The backend PRs ship first and are safe to land independently of the frontend: the new endpoint is dead code until the frontend wires it (PR 3), the schema migration is additive + nullable, and the search-listing read path is gated behind `SearchPlan.semanticMetadata` (default `false`) so existing query plans are byte-identical until a caller opts in. Frontend PRs light up one phase at a time on top.
+
+All branches fork from `development` per the repo's PR-base policy. PR titles end with `(LAT-601 part N/5)` mirroring the LAT-599 convention.
+
+### Dependency graph
+
+```
+                PR 1 — backend literal+token endpoint
+                       (must land first; no deps)
+                ┌──────────────┴──────────────┐
+                ▼                             ▼
+         PR 2 — backend                 PR 3 — frontend
+         semantic-region                wiring + literal/token
+                │                             │
+                │                       ┌─────┴─────┐
+                │                       ▼           ▼
+                │                    PR 4         PR 5
+                │                    popover      semantic-region
+                │                    + N/P        render
+                └────────────────────────────────►(needs PR 2 + PR 3)
+```
+
+Two parallel windows:
+
+- **PR 2 ‖ PR 3** (after PR 1) — biggest win. Zero file overlap: PR 2 is purely backend (semantic-region pipeline), PR 3 is purely frontend (drawer wiring + literal/token render). Different reviewers, different deploy surfaces. Hand to different devs.
+- **PR 4 ‖ PR 5** (after PR 3, and PR 5 also after PR 2) — smaller win. Both touch `conversation.tsx` but in mechanically separate places (PR 4 adds `onSearchMatchClick`, PR 5 adds a per-message wrapper). Either can merge first; trivial rebase for the second.
+
+Hard sequence points: PR 1 → everything else; PR 3 → PR 4 (both touch `conversation-tab.tsx`); PR 2 → PR 5 (no semantic-region data without it).
+
+### PR 1 — Backend: literal + token highlights endpoint *(LAT-601 part 1/5)*
+
+**Branch:** `LAT-601/highlights-backend-endpoint`
+**Depends on:** —
+**User-visible change:** none. Endpoint has no caller until PR 3.
+
+- [ ] Expose `tokenizePhrase` from a shared module so the endpoint tokenizes part text identically to the indexer.
+- [ ] Add `getTraceSearchHighlights` server fn in `apps/web/src/domains/traces/traces.functions.ts` — input `{ projectId, traceId, searchQuery (≤500) }`, output `TraceSearchHighlightsResult` with `search-literal` + `search-token` ranges only.
+- [ ] Parse `q` with `parseSearchQuery`; fast-path empty `q` to `{ highlights: [], firstMatchIndex: -1 }`.
+- [ ] Walk `traceDetail.allMessages` skipping `role === "system"`; emit literal hits (case-sensitive `indexOf` per phrase) and token hits (ordered-adjacent windows per phrase), sorted in document order; set `firstMatchIndex`.
+- [ ] Vitest: literal-only, token-only, hybrid, empty query, system-message filtering, multi-part messages.
+- [ ] Verify: `curl`/fixture call against a known trace returns expected shape and `firstMatchIndex`.
+
+### PR 2 — Backend: semantic-region schema + ingest + read path *(LAT-601 part 2/5)*
+
+**Branch:** `LAT-601/highlights-backend-semantic-region`
+**Depends on:** PR 1 merged.
+**User-visible change:** none. Existing search-listing callers don't pass `semanticMetadata: true`, so listing queries are byte-identical to today's. No backfill — see "Storage" section for why pre-migration rows stay NULL forever.
+
+- [ ] Migration via `pnpm --filter @platform/db-clickhouse ch:create add_chunk_message_range_to_trace_search_embeddings`: add `first_message_index Nullable(UInt32)` and `last_message_index Nullable(UInt32)` to `trace_search_embeddings`.
+- [ ] `extractTurns` returns `{ text, firstMessageIndex, lastMessageIndex }[]`, indexing into the original `allMessages` array (including system rows).
+- [ ] `selectHeadTailTurns` preserves per-turn metadata when picking turns.
+- [ ] `packChunks` emits union ranges: `min(firstMessageIndex)` / `max(lastMessageIndex)` across packed turns; sub-chunks of one oversized turn inherit that turn's full range.
+- [ ] Extend `TraceSearchChunk` with `firstMessageIndex` and `lastMessageIndex`.
+- [ ] Extend `upsertEmbedding` in `trace-search-repository.ts` to write the two new columns.
+- [ ] Widen `SearchPlan` to `{ ranked, subquery, params, semanticMetadata: boolean }`; default `false`.
+- [ ] When `semanticMetadata: true`, `buildSemanticSearchSubquery` adds `argMax(chunk_index, semantic_score)` + matched-range columns; default `false` keeps the existing query plan byte-identical.
+- [ ] Project matched-chunk columns through the outer `LIST_SELECT` only when `semanticMetadata` is true.
+- [ ] Hybrid `LEFT JOIN`: same `argMax` pattern on the joined semantic side; lexical side returns NULL for matched-chunk columns.
+- [ ] Extend `getTraceSearchHighlights` to emit `search-semantic-region` highlights via its own per-trace semantic subquery with `semanticMetadata: true`. When matched-range columns are NULL (pre-migration row or pure-phrase plan), skip semantic-region emission — literal/token still flow.
+- [ ] Vitest: index threading through the chunk pipeline (including sub-chunks-of-oversized-turn), `argMax` projection, `semanticMetadata` plumbing.
+- [ ] Verify: diff existing search-listing result IDs and `relevance_score` against a staging baseline — must be identical. New endpoint returns semantic-region highlights on freshly-ingested traces, literal/token-only on older ones.
+
+### PR 3 — Frontend: Phase A wiring + literal/token highlights *(LAT-601 part 3/5)*
+
+**Branch:** `LAT-601/highlights-frontend-wiring`
+**Depends on:** PR 1 merged. (PR 2 not required — endpoint returns literal/token even before PR 2 lands; semantic-region just isn't in the response yet.)
+**User-visible change:** literal and token highlights appear when opening a trace from the search page; scroll-to-first works; collapsed-middle affordance surfaces hidden-match count. Side-effect win: annotations and selections inside oversized parts now render correctly (pre-existing bug fixed).
+
+- [ ] Widen `HighlightRange["type"]` in `packages/ui/src/components/genai-conversation/text-selection.tsx` to include `"search-literal" | "search-token" | "search-semantic-region"`.
+- [ ] In `highlightAttributes` (`packages/ui/src/components/genai-conversation/parts/highlight-segments.ts`), add branches for `"search-literal"` (solid underline, primary color: `underline decoration-primary decoration-2 underline-offset-4`) and `"search-token"` (wavy underline, phrase color: `underline decoration-wavy decoration-phrase decoration-2 underline-offset-4`). No background fills.
+- [ ] **Oversized-part offset fix:**
+  - [ ] `sourceMappedTextPlugin` accepts `sliceSourceStart: number`; emit `data-source-start = position.offset + sliceSourceStart` and same shift for `data-source-end`.
+  - [ ] `markdown-content.tsx`: thread `highlights` + `sliceSourceStart` into `MarkdownBody` for the normal path (`0`) and the oversized branch (`head → 0`, `middle → headCut`, `tail → content.length - tail.length`).
+  - [ ] Regression test in `source-mapped-text-plugin.test.ts` for non-zero `sliceSourceStart`.
+- [ ] Add `useTraceSearchHighlights` React Query hook in `apps/web/src/domains/traces/traces.collection.ts`, keyed on `["traceSearchHighlights", projectId, traceId, searchQuery]`; `enabled: searchQuery.length > 0`.
+- [ ] `TraceDetailDrawer` accepts optional `searchQuery` prop; thread through to `ConversationTab`.
+- [ ] `ConversationTab`:
+  - [ ] Call `useTraceSearchHighlights` in parallel with `useTraceDetail`.
+  - [ ] Merge with annotation `highlightRanges` from `useAnnotationPopover` before passing to `<Conversation>`.
+  - [ ] On result resolve with `firstMatchIndex >= 0`, scroll to the matching DOM node.
+  - [ ] If the first match sits in a collapsed middle, auto-expand that `MarkdownContent`'s middle before scrolling.
+- [ ] `MarkdownContent`: replace the "Show N more characters" label with "Show N more characters · M matches hidden" when merged highlights have offsets in the collapsed middle.
+- [ ] Pass `searchQuery={q}` to `<TraceDetailDrawer>` from `/search` and `/session-search` route components.
+- [ ] Manual verification: `"foo"`, `` `foo bar` ``, hybrid, empty-`q`, and a trace with a very long tool-call response that pushes hits into the collapsed middle.
+
+### PR 4 — Frontend: Phase B popover + N/P navigation *(LAT-601 part 4/5)*
+
+**Branch:** `LAT-601/highlights-frontend-popover`
+**Depends on:** PR 3 merged.
+**User-visible change:** clicking a highlight opens a popover; N/P walks visible matches in document order; per-phrase prev/next inside the popover.
+
+- [ ] `sourceMappedTextPlugin` emits `data-search-match-id` (deterministic id from `(messageIndex, partIndex, startOffset, type)`) for `search-literal` / `search-token` segments.
+- [ ] New `SearchMatchPopover` in `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/`, mirroring `AnnotationPopover` virtual-ref positioning; per-`source.kind` content (literal phrase, token stream, semantic chunk/score).
+- [ ] Per-phrase prev/next buttons inside the popover: filter `highlights[]` by `source.phrase`, step within the filtered list; disable for `semantic-region`.
+- [ ] `<Conversation>` adds `onSearchMatchClick` prop; route container clicks on `[data-search-match-id]` to it (mirrors the existing `data-annotation-id` wiring).
+- [ ] N/P override in `ConversationTab`: when `searchQuery` is non-empty, collect refs to the first highlight per message (or to the message container for `semantic-region`); pass as `itemRefs` to `ScrollNavigator`. Empty `searchQuery` falls back to message-block behavior.
+- [ ] Manual verification: click each highlight type, confirm popover content; N/P walks visible highlights; per-phrase nav inside the popover steps within the filtered set.
+
+### PR 5 — Frontend: Phase C semantic-region rendering *(LAT-601 part 5/5)*
+
+**Branch:** `LAT-601/highlights-frontend-semantic-region`
+**Depends on:** PR 2 + PR 4 merged.
+**User-visible change:** semantic queries (e.g. `customer complaint`) show an amber tint over the matched message range; popover on the tint shows "best-matching block · score X · chunk N of M". Pre-migration traces continue to show literal/token highlights only (no tint), as designed.
+
+- [ ] Add `"search-semantic-region"` arm in `highlightAttributes` returning message-container classes (`bg-amber-50/40 dark:bg-amber-400/10 ring-1 ring-amber-200/50`), not inline span classes.
+- [ ] Per-message wrapper in `<Conversation>` checks for a `semantic-region` highlight matching its `messageIndex` and applies the container class. Inline literal/token highlights still render on top.
+- [ ] Manual verification: semantic query produces amber tint over the matched range; popover on tinted messages shows score/chunk info; pre-migration traces stay literal/token-only.
 
 ## Files this will touch
 
@@ -446,9 +558,6 @@ Each phase is independently shippable.
 - `packages/platform/db-clickhouse/src/repositories/trace-search-repository.ts` — write new columns.
 - `packages/platform/db-clickhouse/src/repositories/trace-repository.ts:162` — `argMax`, plumb through `SearchPlan` + `LIST_SELECT`.
 - `apps/web/src/domains/traces/traces.functions.ts` — extend trace row with `searchMatch` field.
-
-### Phase D
-- `apps/workers/src/scripts/backfill-trace-search.ts`.
 
 ## Session-level result behavior
 
