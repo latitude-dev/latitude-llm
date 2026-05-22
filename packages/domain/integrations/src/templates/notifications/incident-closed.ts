@@ -1,27 +1,33 @@
 import { Effect } from "effect"
-import { actionsLink, contextLine, header, projectOrOrgContext, sectionFields, sectionMarkdown } from "./blocks.ts"
+import {
+  actionsLink,
+  COLORS,
+  contextLine,
+  header,
+  projectOrOrgContext,
+  sectionMarkdown,
+  severityEmoji,
+} from "./blocks.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
-/**
- * Sustained-incident close notification — partner to `incident.opened`.
- * `recovery.durationMs` drives the "elevated for X" copy.
- */
-export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"> = (payload, ctx) =>
-  Effect.succeed({
-    text: `Incident closed in ${ctx.project?.name ?? ctx.organization.name}`,
+export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"> = (payload, ctx) => {
+  const projectName = ctx.project?.name ?? ctx.organization.name
+  const sev = severityEmoji(payload.severity)
+  const issueUrl = ctx.project
+    ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
+    : ctx.webAppUrl
+
+  return Effect.succeed({
+    text: `Issue resolved in ${projectName} — elevated for ${humanizeDurationMs(payload.recovery.durationMs)}`,
+    color: COLORS.resolved,
     blocks: [
-      header(":white_check_mark: Incident closed"),
+      header(`Issue resolved · ${projectName}`),
       sectionMarkdown(`Elevated for *${humanizeDurationMs(payload.recovery.durationMs)}*.`),
-      sectionFields([
-        { label: "Severity", value: payload.severity },
-        { label: "Source", value: payload.sourceType },
-      ]),
-      contextLine(projectOrOrgContext(ctx.organization, ctx.project)),
-      ...(ctx.project
-        ? [actionsLink("View incident", `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`)]
-        : []),
+      contextLine(`${sev} ${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`),
+      actionsLink("View issue", issueUrl),
     ],
   })
+}
 
 const humanizeDurationMs = (ms: number): string => {
   const minutes = Math.round(ms / 60_000)

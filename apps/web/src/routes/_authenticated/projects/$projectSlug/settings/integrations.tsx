@@ -182,7 +182,11 @@ function SlackRouteRow({ group, integration }: { group: NotificationGroup; integ
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [inputValue, setInputValue] = useState("")
 
-  const { data: rawChannels = [], isFetching, refetch } = useQuery({
+  const {
+    data: rawChannels = [],
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: CHANNELS_QUERY_KEY,
     queryFn: () => listSlackChannels(),
     staleTime: 30_000,
@@ -211,54 +215,56 @@ function SlackRouteRow({ group, integration }: { group: NotificationGroup; integ
     <div className="flex flex-row items-center justify-between gap-4">
       <Text.H5 color="foregroundMuted">{meta.label}</Text.H5>
       <div className="w-52 shrink-0">
-      <Combobox
-        modal
-        value={selected}
-        onValueChange={(picked) => {
-          setInputValue("")
-          void mutation.mutateAsync(picked ?? DON_T_SEND)
-        }}
-        items={allOptions}
-        itemToStringValue={(item: ChannelOption) => (item.id === "" ? "Don't send" : `#${item.name}`)}
-        isItemEqualToValue={(a: ChannelOption, b: ChannelOption) => a.id === b.id}
-        onOpenChange={(open) => { if (open) void refetch() }}
-        disabled={mutation.isPending}
-      >
-        <Button asChild variant="outline" size="sm" disabled={mutation.isPending} className="w-full justify-between">
-          <ComboboxTrigger ref={triggerRef}>
-            {selected.id === "" ? (
-              <Text.H5 color="foregroundMuted">Don't send</Text.H5>
-            ) : (
-              <Text.H5>#{selected.name}</Text.H5>
-            )}
-          </ComboboxTrigger>
-        </Button>
-        <ComboboxContent anchor={triggerRef} className="w-64">
-          <div className="flex items-center gap-2 px-3 py-2">
-            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <ComboboxChipsInput
-              placeholder="Search channels…"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground"
-            />
-            {isFetching ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" /> : null}
-          </div>
-          <ComboboxSeparator />
-          <ComboboxList>
-            {(item: ChannelOption) => (
-              <ComboboxItem value={item}>
-                {item.id === "" ? (
-                  <Text.H5 color="foregroundMuted">Don't send</Text.H5>
-                ) : (
-                  <Text.H5>#{item.name}</Text.H5>
-                )}
-              </ComboboxItem>
-            )}
-          </ComboboxList>
-          <ComboboxEmpty>No channels found.</ComboboxEmpty>
-        </ComboboxContent>
-      </Combobox>
+        <Combobox
+          modal
+          value={selected}
+          onValueChange={(picked) => {
+            setInputValue("")
+            void mutation.mutateAsync(picked ?? DON_T_SEND)
+          }}
+          items={allOptions}
+          itemToStringValue={(item: ChannelOption) => (item.id === "" ? "Don't send" : `#${item.name}`)}
+          isItemEqualToValue={(a: ChannelOption, b: ChannelOption) => a.id === b.id}
+          onOpenChange={(open) => {
+            if (open) void refetch()
+          }}
+          disabled={mutation.isPending}
+        >
+          <Button asChild variant="outline" size="sm" disabled={mutation.isPending} className="w-full justify-between">
+            <ComboboxTrigger ref={triggerRef}>
+              {selected.id === "" ? (
+                <Text.H5 color="foregroundMuted">Don't send</Text.H5>
+              ) : (
+                <Text.H5>#{selected.name}</Text.H5>
+              )}
+            </ComboboxTrigger>
+          </Button>
+          <ComboboxContent anchor={triggerRef} className="w-64">
+            <div className="flex items-center gap-2 px-3 py-2">
+              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <ComboboxChipsInput
+                placeholder="Search channels…"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground"
+              />
+              {isFetching ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" /> : null}
+            </div>
+            <ComboboxSeparator />
+            <ComboboxList>
+              {(item: ChannelOption) => (
+                <ComboboxItem value={item}>
+                  {item.id === "" ? (
+                    <Text.H5 color="foregroundMuted">Don't send</Text.H5>
+                  ) : (
+                    <Text.H5>#{item.name}</Text.H5>
+                  )}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+            <ComboboxEmpty>No channels found.</ComboboxEmpty>
+          </ComboboxContent>
+        </Combobox>
       </div>
     </div>
   )

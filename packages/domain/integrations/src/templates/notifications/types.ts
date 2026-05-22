@@ -41,10 +41,16 @@ export interface SlackRenderContext {
  * shown in mobile push, screen readers, and as the message preview in
  * thread/inbox views. `blocks` is the rich content; layout uses
  * `KnownBlock` directly from `@slack/web-api`.
+ *
+ * `color` is an optional hex color string that wraps `blocks` in a
+ * Slack `attachment` to produce a left-side colored bar — the fastest
+ * visual signal for severity / kind. When absent, `blocks` are posted
+ * at the top level (no bar).
  */
 export interface RenderedSlackMessage {
   readonly text: string
   readonly blocks: readonly KnownBlock[]
+  readonly color?: string
 }
 
 /**

@@ -37,6 +37,18 @@ export interface SlackDeliveryRepositoryShape {
    * given the caller just claimed it).
    */
   markPosted(deliveryId: SlackDeliveryId, messageTs: string): Effect.Effect<boolean, RepositoryError, SqlClient>
+
+  /**
+   * Returns the `message_ts` of a prior delivery for the given
+   * `(idempotencyKey, channelId)` pair, or `null` if no posted delivery
+   * exists. Used by `dispatchSlackNotificationUseCase` to look up the
+   * original `incident.opened` message when threading
+   * `incident.closed` as a reply.
+   */
+  findMessageTs(
+    idempotencyKey: string,
+    channelId: string,
+  ): Effect.Effect<string | null, RepositoryError, SqlClient>
 }
 
 export class SlackDeliveryRepository extends Context.Service<SlackDeliveryRepository, SlackDeliveryRepositoryShape>()(

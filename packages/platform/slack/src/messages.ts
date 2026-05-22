@@ -10,17 +10,31 @@ import type {
 } from "./errors.ts"
 
 /**
- * Posts a message to a Slack channel as the bot. `text` is required —
- * it powers the mobile-push preview, screen reader output, and the
- * fallback display when blocks fail to render. `blocks` carries the
- * rich layout. Returns the Slack message `ts` (used as the durable id
- * for later thread replies, edits, etc.).
+ * Posts a message to a Slack channel as the bot.
+ *
+ * `text` is required — powers mobile push, screen readers, and the
+ * fallback display when blocks fail to render.
+ *
+ * `color`: when present, `blocks` are wrapped in a Slack `attachment`
+ * to produce a left-side color bar (hex string, e.g. `#E8534B`). The
+ * colored-attachment path is the modern way to add the bar since Slack
+ * deprecated `color` on top-level messages but retains it on
+ * attachments that contain Block Kit blocks.
+ *
+ * `threadTs`: when present, the message is posted as a reply in that
+ * thread. Combined with `replyBroadcast: true` ("also send to channel")
+ * so it appears in the channel feed as well.
+ *
+ * Returns the message `ts` for later thread replies or edits.
  */
 export const postMessage = (input: {
   readonly botToken: string
   readonly channelId: string
   readonly text: string
   readonly blocks: readonly KnownBlock[]
+  readonly color?: string
+  readonly threadTs?: string
+  readonly replyBroadcast?: boolean
 }): Effect.Effect<
   { readonly messageTs: string },
   SlackAuthError | SlackChannelGoneError | SlackRateLimitError | SlackTransportError,
@@ -28,19 +42,30 @@ export const postMessage = (input: {
 > =>
   Effect.gen(function* () {
     const client = createSlackClient(input.botToken)
+
+    const bodyBlocks = input.color
+      ? { attachments: [{ color: input.color, blocks: [...input.blocks] }] }
+      : { blocks: [...input.blocks] }
+
     const response = yield* Effect.tryPromise({
       try: () =>
-        client.chat.postMessage({
-          channel: input.channelId,
-          text: input.text,
-          blocks: [...input.blocks],
-        }),
+        input.threadTs
+          ? client.chat.postMessage({
+              channel: input.channelId,
+              text: input.text,
+              thread_ts: input.threadTs,
+              reply_broadcast: input.replyBroadcast === true,
+              ...bodyBlocks,
+            })
+          : client.chat.postMessage({
+              channel: input.channelId,
+              text: input.text,
+              ...bodyBlocks,
+            }),
       catch: (cause) => mapSlackError(cause, "chat.postMessage"),
     })
 
     if (typeof response.ts !== "string" || response.ts.length === 0) {
-      // Successful response shapes always carry `ts`; if Slack drops
-      // it, treat as transport (we can't make idempotent edits later).
       return yield* Effect.fail({
         _tag: "SlackTransportError" as const,
         operation: "chat.postMessage",

@@ -38,5 +38,11 @@ export const InMemorySlackDeliveryRepositoryLive = (init?: { readonly seedClaime
         }
         return false
       }),
+
+    findMessageTs: (idempotencyKey, channelId) =>
+      Effect.sync(() => {
+        const row = rows.get(claimKey(idempotencyKey, channelId))
+        return row?.messageTs ?? null
+      }),
   })
 }

@@ -16,6 +16,9 @@ export interface SlackMessenger {
     readonly channelId: string
     readonly text: string
     readonly blocks: readonly unknown[]
+    readonly color?: string
+    readonly threadTs?: string
+    readonly replyBroadcast?: boolean
   }) => Effect.Effect<{ readonly messageTs: string }, SlackMessengerError, never>
 }
 
@@ -52,8 +55,12 @@ export type DispatchSlackNotificationError = SlackMessengerError | RenderSlackEr
  * a second worker reading the same job loses the claim and exits with
  * `skipped-already-delivered`. If the post fails mid-flight, the row
  * stays in `posted_at IS NULL` state — intentional, because retrying
- * would risk a duplicate post in the channel. Phase 4 (token refresh)
- * is where the post-failure recovery story gets sharper.
+ * would risk a duplicate post in the channel.
+ *
+ * Threading: `incident.closed` is posted as a thread reply to the
+ * paired `incident.opened` message (looked up via `slack_deliveries`),
+ * with `reply_broadcast: true` so it also appears in the channel feed.
+ * If no prior delivery is found, it falls back to a top-level message.
  */
 export const dispatchSlackNotificationUseCase = (
   input: DispatchSlackNotificationInput,
@@ -83,11 +90,24 @@ export const dispatchSlackNotificationUseCase = (
       input.context,
     )
 
+    // For incident.closed, thread the reply under the original
+    // incident.opened message so the channel shows a tidy lifecycle
+    // rather than two unrelated top-level messages.
+    let threadTs: string | undefined
+    if (input.kind === "incident.closed") {
+      const closedPayload = parsed.data as { alertIncidentId: string }
+      const openedKey = `incident.opened:${closedPayload.alertIncidentId}`
+      const found = yield* deliveryRepo.findMessageTs(openedKey, input.channelId)
+      threadTs = found ?? undefined
+    }
+
     const posted = yield* input.messenger.post({
       botToken: input.botToken,
       channelId: input.channelId,
       text: rendered.text,
       blocks: rendered.blocks,
+      ...(rendered.color !== undefined ? { color: rendered.color } : {}),
+      ...(threadTs !== undefined ? { threadTs, replyBroadcast: true as const } : {}),
     })
 
     yield* deliveryRepo.markPosted(claim.deliveryId, posted.messageTs)

@@ -7,7 +7,7 @@ import {
   type SqlClientShape,
   toRepositoryError,
 } from "@domain/shared"
-import { and, eq, isNull } from "drizzle-orm"
+import { and, eq, isNotNull, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { slackDeliveries } from "../schema/slack-deliveries.ts"
@@ -70,5 +70,28 @@ export const SlackDeliveryRepositoryLive = Layer.succeed(SlackDeliveryRepository
         .pipe(Effect.mapError((e) => toRepositoryError(e, "markSlackDeliveryPosted")))
 
       return rows.length > 0
+    }),
+
+  findMessageTs: (idempotencyKey, channelId) =>
+    Effect.gen(function* () {
+      const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+      const rows = yield* sqlClient
+        .query((db, organizationId) =>
+          db
+            .select({ messageTs: slackDeliveries.messageTs })
+            .from(slackDeliveries)
+            .where(
+              and(
+                eq(slackDeliveries.idempotencyKey, idempotencyKey),
+                eq(slackDeliveries.channelId, channelId),
+                eq(slackDeliveries.organizationId, organizationId),
+                isNotNull(slackDeliveries.messageTs),
+              ),
+            )
+            .limit(1),
+        )
+        .pipe(Effect.mapError((e) => toRepositoryError(e, "findSlackDeliveryMessageTs")))
+
+      return rows[0]?.messageTs ?? null
     }),
 })

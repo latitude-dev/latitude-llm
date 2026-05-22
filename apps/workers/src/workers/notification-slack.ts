@@ -48,8 +48,15 @@ const resolveWebAppUrl = (): string => {
  * shape (so the use case stays free of platform deps).
  */
 const messenger: SlackMessenger = {
-  post: ({ botToken, channelId, text, blocks }) =>
-    postMessage({ botToken, channelId, text, blocks: blocks as never }).pipe(
+  post: ({ botToken, channelId, text, blocks, color, threadTs, replyBroadcast }) =>
+    postMessage({
+      botToken,
+      channelId,
+      text,
+      blocks: blocks as never,
+      ...(color !== undefined ? { color } : {}),
+      ...(threadTs !== undefined ? { threadTs, replyBroadcast: replyBroadcast === true } : {}),
+    }).pipe(
       Effect.mapError((cause) => {
         if (cause instanceof SlackAuthError) {
           return new SlackMessengerError({ reason: "auth", cause })
