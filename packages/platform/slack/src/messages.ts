@@ -2,12 +2,7 @@ import type { KnownBlock } from "@slack/web-api"
 import { Effect } from "effect"
 import { createSlackClient } from "./client.ts"
 import { mapSlackError } from "./conversations.ts"
-import type {
-  SlackAuthError,
-  SlackChannelGoneError,
-  SlackRateLimitError,
-  SlackTransportError,
-} from "./errors.ts"
+import type { SlackAuthError, SlackChannelGoneError, SlackRateLimitError, SlackTransportError } from "./errors.ts"
 
 /**
  * Posts a message to a Slack channel as the bot.

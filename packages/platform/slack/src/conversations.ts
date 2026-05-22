@@ -1,11 +1,6 @@
 import { Effect } from "effect"
 import { createSlackClient } from "./client.ts"
-import {
-  SlackAuthError,
-  SlackChannelGoneError,
-  SlackRateLimitError,
-  SlackTransportError,
-} from "./errors.ts"
+import { SlackAuthError, SlackChannelGoneError, SlackRateLimitError, SlackTransportError } from "./errors.ts"
 
 export interface SlackChannelSummary {
   readonly id: string
