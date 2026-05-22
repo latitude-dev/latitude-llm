@@ -27,9 +27,8 @@ export class OAuthTokenCacheInvalidator extends Context.Service<
  * accepts `organizationId`. The use-cases compose these primitives.
  *
  * `oauth_access_tokens` and `oauth_consents` have no RLS by design — the
- * tenant scope is enforced by the JOIN through `oauth_applications`. The
- * write methods on tokens reflect that: they take a `clientId` and assume
- * the caller has already verified ownership via `findApplicationInOrganization`.
+ * tenant scope is enforced by the JOIN through `oauth_applications`, including
+ * in write methods that mutate token rows.
  */
 export class OAuthKeyRepository extends Context.Service<
   OAuthKeyRepository,
@@ -63,9 +62,8 @@ export class OAuthKeyRepository extends Context.Service<
      * returns the plaintext `access_token` values that were removed.
      * Callers feed those back through `OAuthTokenCacheInvalidator` so
      * the Redis-cached positive validations don't keep a revoked token
-     * usable until its TTL expires. The tokens table has no RLS, so
-     * callers MUST verify org ownership via
-     * `applicationBelongsToOrganization` first.
+     * usable until its TTL expires. The implementation must scope the
+     * delete through `oauth_applications` because the tokens table has no RLS.
      */
     deleteTokensForPair: (input: {
       readonly clientId: string

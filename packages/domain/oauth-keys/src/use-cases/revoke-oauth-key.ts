@@ -1,11 +1,14 @@
-import { SqlClient } from "@domain/shared"
+import { ForbiddenError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { OAuthApplicationNotFoundError } from "../errors.ts"
 import { OAuthKeyRepository, OAuthTokenCacheInvalidator } from "../ports/oauth-key-repository.ts"
 
+export type RevokeOAuthKeyActor = { readonly kind: "api-key" } | { readonly kind: "user"; readonly userId: string }
+
 export interface RevokeOAuthKeyInput {
   readonly clientId: string
   readonly userId: string
+  readonly actor: RevokeOAuthKeyActor
 }
 
 /**
@@ -38,6 +41,11 @@ export interface RevokeOAuthKeyInput {
 export const revokeOAuthKeyUseCase = Effect.fn("oauthKeys.revokeOAuthKey")(function* (input: RevokeOAuthKeyInput) {
   yield* Effect.annotateCurrentSpan("oauthKey.clientId", input.clientId)
   yield* Effect.annotateCurrentSpan("oauthKey.userId", input.userId)
+  yield* Effect.annotateCurrentSpan("oauthKey.actorKind", input.actor.kind)
+
+  if (input.actor.kind === "user" && input.actor.userId !== input.userId) {
+    return yield* new ForbiddenError({ message: "You can only revoke your own OAuth keys" })
+  }
 
   const sqlClient = yield* SqlClient
 

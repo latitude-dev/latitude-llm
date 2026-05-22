@@ -1,11 +1,8 @@
-import { magicLinkTemplate, type RenderedEmail, sendEmail, signupMagicLinkTemplate } from "@domain/email"
+import { magicLinkTemplate, sendEmail } from "@domain/email"
 import type { QueueConsumer } from "@domain/queue"
-import { UserRepository } from "@domain/users"
-import { SqlClientLive, UserRepositoryLive } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { createLogger, withTracing } from "@repo/observability"
-import { Effect, Layer } from "effect"
-import { getPostgresClient } from "../../clients.ts"
+import { Effect } from "effect"
 
 const logger = createLogger("magic-link-email")
 const normalizeEmail = (email: string) => email.trim().toLowerCase()
@@ -17,31 +14,14 @@ interface MagicLinkEmailDeps {
 export const createMagicLinkEmailWorker = ({ consumer }: MagicLinkEmailDeps) => {
   consumer.subscribe("magic-link-email", {
     send: (payload) => {
-      const pgClient = getPostgresClient()
       const emailSender = createEmailTransportSender()
       const sendEmailUseCase = sendEmail({ emailSender })
 
-      const repoLayer = UserRepositoryLive.pipe(Layer.provideMerge(SqlClientLive(pgClient)))
-
       return Effect.gen(function* () {
         const normalizedEmail = normalizeEmail(payload.email)
-
-        const userRepo = yield* UserRepository
-        const user = yield* userRepo
-          .findByEmail(normalizedEmail)
-          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-
-        const userName = user?.name ?? "there"
-
-        let rendered: RenderedEmail
-
-        if (user === null) {
-          rendered = yield* Effect.tryPromise(() =>
-            signupMagicLinkTemplate({ userName, magicLinkUrl: payload.magicLinkUrl }),
-          )
-        } else {
-          rendered = yield* Effect.tryPromise(() => magicLinkTemplate({ userName, magicLinkUrl: payload.magicLinkUrl }))
-        }
+        const rendered = yield* Effect.tryPromise(() =>
+          magicLinkTemplate({ userName: "there", magicLinkUrl: payload.magicLinkUrl }),
+        )
 
         yield* sendEmailUseCase({
           to: normalizedEmail,
@@ -54,7 +34,6 @@ export const createMagicLinkEmailWorker = ({ consumer }: MagicLinkEmailDeps) => 
         Effect.tapError((error) =>
           Effect.sync(() => logger.error(`Magic link email failed for ${payload.email}`, error)),
         ),
-        Effect.provide(repoLayer),
         withTracing,
       )
     },

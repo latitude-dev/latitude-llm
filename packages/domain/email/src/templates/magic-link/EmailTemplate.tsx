@@ -14,17 +14,14 @@ interface MagicLinkEmailProps {
 
 export function MagicLinkEmail({ userName, magicLinkUrl }: MagicLinkEmailProps) {
   return (
-    <ContainerLayout previewText={`Hi ${userName}, sign in to Latitude`}>
-      <EmailText
-        variant="heading"
-        className={emailDesignTokens.spacing.headingGap}
-      >{`Welcome back, ${userName}`}</EmailText>
+    <ContainerLayout previewText={`Hi ${userName}, continue to Latitude`}>
+      <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Continue to Latitude`}</EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        We received a sign-in request for your account. Tap the button below to continue to your Latitude dashboard.
+        We received a request to access Latitude with this email address. Tap the button below to continue.
       </EmailText>
 
       <Section className={emailDesignTokens.spacing.buttonTop}>
-        <EmailButton href={magicLinkUrl} label="Sign In to Latitude" />
+        <EmailButton href={magicLinkUrl} label="Continue to Latitude" />
       </Section>
 
       <EmailText variant="bodySmall" className={`text-muted-foreground ${emailDesignTokens.spacing.footnoteTop}`}>

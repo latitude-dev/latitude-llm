@@ -1,5 +1,6 @@
+import { generateId } from "@domain/shared"
 import { eq } from "@platform/db-postgres"
-import { oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
+import { members, oauthAccessTokens, oauthApplications, users } from "@platform/db-postgres/schema/better-auth"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
 import {
@@ -29,6 +30,51 @@ const listOAuthKeysJson = async (
   const res = await app.fetch(new Request("http://localhost/v1/oauth-keys", { headers }))
   expect(res.status).toBe(200)
   return (await res.json()) as ListResponse
+}
+
+const seedOAuthKeyInOrganization = async (
+  database: ApiTestContext["database"],
+  input: { readonly organizationId: string },
+) => {
+  const userId = generateId()
+  const clientId = `lct_${generateId()}`
+  const oauthAccessToken = `loa_${crypto.randomUUID()}`
+  const oneHour = 60 * 60 * 1000
+
+  await database.db.insert(users).values({
+    id: userId,
+    email: `${userId}@example.com`,
+    name: "Second User",
+    emailVerified: true,
+    role: "user",
+  })
+
+  await database.db.insert(members).values({
+    id: generateId(),
+    organizationId: input.organizationId,
+    userId,
+    role: "member",
+  })
+
+  await database.db.insert(oauthApplications).values({
+    id: generateId(),
+    name: "Second MCP Client",
+    clientId,
+    userId,
+    organizationId: input.organizationId,
+    disabled: false,
+  })
+
+  await database.db.insert(oauthAccessTokens).values({
+    id: generateId(),
+    accessToken: oauthAccessToken,
+    clientId,
+    userId,
+    accessTokenExpiresAt: new Date(Date.now() + oneHour),
+    scopes: "openid profile email",
+  })
+
+  return { userId, clientId, oauthAccessToken }
 }
 
 describe("OAuth keys routes — list", () => {
@@ -65,10 +111,26 @@ describe("OAuth keys routes — list", () => {
     expect(bodyB.oauthKeys.map((k) => k.clientId)).toEqual([tenantB.oauthClientId])
   })
 
+  it<ApiTestContext>("GET /v1/oauth-keys returns only the caller's keys for OAuth callers", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const other = await seedOAuthKeyInOrganization(database, { organizationId: tenant.organizationId })
+
+    const body = await listOAuthKeysJson(app, createOAuthAuthHeaders(tenant.oauthAccessToken))
+
+    expect(body.oauthKeys.map((k) => k.clientId)).toEqual([tenant.oauthClientId])
+    expect(body.oauthKeys.map((k) => k.clientId)).not.toContain(other.clientId)
+  })
+
   it<ApiTestContext>("GET /v1/oauth-keys works for API-key callers too (read-only)", async ({ app, database }) => {
     const tenant = await createOAuthTenantSetup(database)
+    const other = await seedOAuthKeyInOrganization(database, { organizationId: tenant.organizationId })
+
     const body = await listOAuthKeysJson(app, createApiKeyAuthHeaders(tenant.apiKeyToken))
-    expect(body.oauthKeys.map((k) => k.clientId)).toContain(tenant.oauthClientId)
+
+    expect(body.oauthKeys.map((k) => k.clientId).sort()).toEqual([tenant.oauthClientId, other.clientId].sort())
   })
 })
 
@@ -97,6 +159,23 @@ describe("OAuth keys routes — get", () => {
 
     const res = await app.fetch(
       new Request("http://localhost/v1/oauth-keys/not-a-composite", {
+        headers: createOAuthAuthHeaders(tenant.oauthAccessToken),
+      }),
+    )
+
+    expect(res.status).toBe(404)
+  })
+
+  it<ApiTestContext>("GET /v1/oauth-keys/{id} returns 404 for another user's key in the same org", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const other = await seedOAuthKeyInOrganization(database, { organizationId: tenant.organizationId })
+    const otherCompositeId = `${other.clientId}:${other.userId}`
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/oauth-keys/${otherCompositeId}`, {
         headers: createOAuthAuthHeaders(tenant.oauthAccessToken),
       }),
     )
@@ -152,6 +231,48 @@ describe("OAuth keys routes — revoke", () => {
       .from(oauthApplications)
       .where(eq(oauthApplications.clientId, tenant.oauthClientId))
     expect(apps[0]?.disabled).toBe(true)
+  })
+
+  it<ApiTestContext>("DELETE /v1/oauth-keys/{id} lets OAuth callers revoke their own key", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/oauth-keys/${tenant.oauthClientId}:${tenant.userId}`, {
+        method: "DELETE",
+        headers: createOAuthAuthHeaders(tenant.oauthAccessToken),
+      }),
+    )
+    expect(res.status).toBe(204)
+
+    const after = await database.db
+      .select({ id: oauthAccessTokens.id })
+      .from(oauthAccessTokens)
+      .where(eq(oauthAccessTokens.clientId, tenant.oauthClientId))
+    expect(after).toHaveLength(0)
+  })
+
+  it<ApiTestContext>("DELETE /v1/oauth-keys/{id} rejects same-org cross-user revocation by OAuth callers", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createOAuthTenantSetup(database)
+    const other = await seedOAuthKeyInOrganization(database, { organizationId: tenant.organizationId })
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/oauth-keys/${other.clientId}:${other.userId}`, {
+        method: "DELETE",
+        headers: createOAuthAuthHeaders(tenant.oauthAccessToken),
+      }),
+    )
+    expect(res.status).toBe(403)
+
+    const tokens = await database.db
+      .select({ id: oauthAccessTokens.id })
+      .from(oauthAccessTokens)
+      .where(eq(oauthAccessTokens.clientId, other.clientId))
+    expect(tokens).toHaveLength(1)
   })
 
   it<ApiTestContext>("DELETE /v1/oauth-keys/{id} is idempotent — second call still returns 204", async ({

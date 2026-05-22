@@ -1,6 +1,6 @@
 import { type OAuthKey, OAuthKeyRepository } from "@domain/oauth-keys"
 import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, desc, eq, max } from "drizzle-orm"
+import { and, desc, eq, inArray, max } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { oauthAccessTokens, oauthApplications, users } from "../schema/better-auth.ts"
@@ -134,11 +134,38 @@ export const OAuthKeyRepositoryLive = Layer.effect(
     deleteTokensForPair: (input) =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        const tokenRows = yield* sqlClient
+          .query((db, organizationId) =>
+            db
+              .select({ id: oauthAccessTokens.id, accessToken: oauthAccessTokens.accessToken })
+              .from(oauthAccessTokens)
+              .innerJoin(oauthApplications, eq(oauthApplications.clientId, oauthAccessTokens.clientId))
+              .where(
+                and(
+                  eq(oauthApplications.organizationId, organizationId),
+                  eq(oauthAccessTokens.clientId, input.clientId),
+                  eq(oauthAccessTokens.userId, input.userId),
+                ),
+              ),
+          )
+          .pipe(
+            Effect.mapError(
+              (cause): RepositoryError => new RepositoryError({ operation: "deleteTokensForPair", cause }),
+            ),
+          )
+
+        if (tokenRows.length === 0) return []
+
         const rows = yield* sqlClient
           .query((db) =>
             db
               .delete(oauthAccessTokens)
-              .where(and(eq(oauthAccessTokens.clientId, input.clientId), eq(oauthAccessTokens.userId, input.userId)))
+              .where(
+                inArray(
+                  oauthAccessTokens.id,
+                  tokenRows.map((row) => row.id),
+                ),
+              )
               .returning({ accessToken: oauthAccessTokens.accessToken }),
           )
           .pipe(

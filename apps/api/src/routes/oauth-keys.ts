@@ -103,7 +103,8 @@ const listOAuthKeys = oauthKeyEndpoint({
         withTracing,
       ),
     )
-    return c.json({ oauthKeys: keys.map(toResponse) }, 200)
+    const visibleKeys = c.var.auth.method === "oauth" ? keys.filter((key) => key.userId === c.var.auth.userId) : keys
+    return c.json({ oauthKeys: visibleKeys.map(toResponse) }, 200)
   },
 })
 
@@ -125,6 +126,10 @@ const getOAuthKey = oauthKeyEndpoint({
     const parsed = parseCompositeId(oauthKeyId)
     if (!parsed) {
       throw new OAuthKeyNotFoundError({ clientId: oauthKeyId, userId: "" })
+    }
+
+    if (c.var.auth.method === "oauth" && parsed.userId !== c.var.auth.userId) {
+      throw new OAuthKeyNotFoundError(parsed)
     }
 
     const key = await Effect.runPromise(
@@ -158,7 +163,10 @@ const revokeOAuthKey = oauthKeyEndpoint({
     }
 
     await Effect.runPromise(
-      revokeOAuthKeyUseCase(parsed).pipe(
+      revokeOAuthKeyUseCase({
+        ...parsed,
+        actor: c.var.auth.method === "oauth" ? { kind: "user", userId: c.var.auth.userId } : { kind: "api-key" },
+      }).pipe(
         Effect.provide(OAuthTokenCacheInvalidatorLive(c.var.redis)),
         withPostgres(OAuthKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
         withTracing,

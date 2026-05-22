@@ -3,4 +3,8 @@ export { OAuthApplicationNotFoundError, OAuthKeyNotFoundError } from "./errors.t
 export { OAuthKeyRepository, OAuthTokenCacheInvalidator } from "./ports/oauth-key-repository.ts"
 export { type GetOAuthKeyInput, getOAuthKeyUseCase } from "./use-cases/get-oauth-key.ts"
 export { listOAuthKeysUseCase } from "./use-cases/list-oauth-keys.ts"
-export { type RevokeOAuthKeyInput, revokeOAuthKeyUseCase } from "./use-cases/revoke-oauth-key.ts"
+export {
+  type RevokeOAuthKeyActor,
+  type RevokeOAuthKeyInput,
+  revokeOAuthKeyUseCase,
+} from "./use-cases/revoke-oauth-key.ts"
