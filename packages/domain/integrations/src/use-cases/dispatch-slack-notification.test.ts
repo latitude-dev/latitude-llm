@@ -1,8 +1,24 @@
+import { IssueRepository } from "@domain/issues"
 import { OrganizationId, ProjectId, SlackIntegrationId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { InMemorySlackDeliveryRepositoryLive } from "../testing/in-memory-slack-delivery-repository.ts"
 import { dispatchSlackNotificationUseCase, type SlackMessenger } from "./dispatch-slack-notification.ts"
+
+// custom.message doesn't call IssueRepository, but the use case's R
+// channel includes it. Provide a no-op stub so Effect.provide is happy.
+const NoopIssueRepository = Layer.succeed(IssueRepository, {
+  findById: () => Effect.die(new Error("IssueRepository.findById not expected in this test")),
+  findByIdForUpdate: () => Effect.die(new Error("not expected")),
+  findByIds: () => Effect.die(new Error("not expected")),
+  findBySlug: () => Effect.die(new Error("not expected")),
+  list: () => Effect.die(new Error("not expected")),
+  save: () => Effect.die(new Error("not expected")),
+  softDelete: () => Effect.die(new Error("not expected")),
+  hardDelete: () => Effect.die(new Error("not expected")),
+  existsByName: () => Effect.die(new Error("not expected")),
+  countBySlug: () => Effect.die(new Error("not expected")),
+} as never)
 
 const ORG = OrganizationId("o".repeat(24))
 const PROJECT = ProjectId("p".repeat(24))
@@ -57,7 +73,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         idempotencyKey: "custom.message:abc",
         context: ctx,
         messenger,
-      }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
+      }).pipe(Effect.provide(layer), Effect.provide(NoopIssueRepository), Effect.provide(NoopSqlClient)),
     )
 
     expect(outcome.status).toBe("delivered")
@@ -78,7 +94,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         idempotencyKey: "custom.message:abc",
         context: ctx,
         messenger,
-      }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
+      }).pipe(Effect.provide(layer), Effect.provide(NoopIssueRepository), Effect.provide(NoopSqlClient)),
     )
 
     expect(outcome.status).toBe("skipped-already-delivered")
@@ -99,7 +115,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         idempotencyKey: "custom.message:xyz",
         context: ctx,
         messenger,
-      }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
+      }).pipe(Effect.provide(layer), Effect.provide(NoopIssueRepository), Effect.provide(NoopSqlClient)),
     )
 
     expect(result._tag).toBe("Failure")

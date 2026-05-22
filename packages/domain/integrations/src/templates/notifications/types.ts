@@ -1,5 +1,6 @@
+import type { IssueRepository } from "@domain/issues"
 import type { NOTIFICATION_KIND_META, NotificationKind } from "@domain/notifications"
-import type { NotificationId, OrganizationId, ProjectId } from "@domain/shared"
+import type { NotificationId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import type { KnownBlock } from "@slack/web-api"
 import { Data, type Effect } from "effect"
 import type { z } from "zod"
@@ -69,16 +70,28 @@ export class RenderSlackError extends Data.TaggedError("RenderSlackError")<{
 }
 
 /**
- * Per-kind renderer signature. `R = never` for every kind today —
- * payloads from the producer carry enough to render without extra repo
- * lookups, and Slack's "compact" message format favors short summary
- * cards over the richer email layout that does lookup issue display
- * names etc.
+ * Per-kind Effect service requirements for rendering. Incident kinds
+ * look up the issue name from `IssueRepository`; other kinds need
+ * nothing beyond the payload + context.
+ */
+export type SlackRenderDepsByKind = {
+  readonly "incident.event": IssueRepository | SqlClient
+  readonly "incident.opened": IssueRepository | SqlClient
+  readonly "incident.closed": IssueRepository | SqlClient
+  readonly "wrapped.report": never
+  readonly "custom.message": never
+}
+
+export type SlackRenderDepsFor<K extends NotificationKind> = SlackRenderDepsByKind[K]
+
+/**
+ * Per-kind renderer signature. Incident kinds have `R = IssueRepository | SqlClient`
+ * so they can look up the issue display name. Other kinds use `R = never`.
  */
 export type SlackNotificationRenderer<K extends NotificationKind> = (
   payload: z.infer<(typeof NOTIFICATION_KIND_META)[K]["payload"]>,
   ctx: SlackRenderContext,
-) => Effect.Effect<RenderedSlackMessage, RenderSlackError, never>
+) => Effect.Effect<RenderedSlackMessage, RenderSlackError, SlackRenderDepsFor<K>>
 
 export type SlackNotificationRendererRegistry = {
   readonly [K in NotificationKind]: SlackNotificationRenderer<K>

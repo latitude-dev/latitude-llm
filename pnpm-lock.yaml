@@ -1230,6 +1230,9 @@ importers:
 
   packages/domain/integrations:
     dependencies:
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../issues
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications

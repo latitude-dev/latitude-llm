@@ -68,6 +68,9 @@ interface ProducerRequest {
   readonly idempotencyKey: string
   readonly projectId: string | null
   readonly payload: Record<string, unknown>
+  /** One per-recipient notification ID (all share the same idempotencyKey).
+   *  The first one is passed to Slack jobs for chart URL generation. */
+  readonly notificationId: string
 }
 
 const fanOutSlackRoutes = (
@@ -105,7 +108,11 @@ const fanOutSlackRoutes = (
             payload: first.payload,
             idempotencyKey: first.idempotencyKey,
             projectId: first.projectId,
-            notificationId: null,
+            // Use the first recipient's notificationId so the chart
+            // endpoint can load the trend payload from that row.
+            // All rows for the same occurrence share the same payload;
+            // the row will be committed before Slack fetches the image.
+            notificationId: first.notificationId,
           },
           {
             dedupeKey: `notification-slack:${first.organizationId}:${first.idempotencyKey}:${route.channelId}`,

@@ -12,6 +12,7 @@ import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { NotificationId, OrganizationId, ProjectId, SlackIntegrationId } from "@domain/shared"
 import {
+  IssueRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   SlackDeliveryRepositoryLive,
@@ -31,6 +32,7 @@ interface NotificationSlackDeps {
 }
 
 const repoLayer = Layer.mergeAll(
+  IssueRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   SlackIntegrationRepositoryLive,

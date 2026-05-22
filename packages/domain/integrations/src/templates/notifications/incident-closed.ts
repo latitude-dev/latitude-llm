@@ -1,3 +1,5 @@
+import { IssueRepository } from "@domain/issues"
+import { IssueId } from "@domain/shared"
 import { Effect } from "effect"
 import {
   actionsLink,
@@ -7,29 +9,45 @@ import {
   projectOrOrgContext,
   sectionMarkdown,
   severityEmoji,
+  trendChartBlock,
 } from "./blocks.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
-export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"> = (payload, ctx) => {
-  const projectName = ctx.project?.name ?? ctx.organization.name
-  const sev = severityEmoji(payload.severity)
-  const issueUrl = ctx.project
-    ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
-    : ctx.webAppUrl
+export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"> = (payload, ctx) =>
+  Effect.gen(function* () {
+    const projectName = ctx.project?.name ?? ctx.organization.name
+    const sev = severityEmoji(payload.severity)
+    const issueUrl = ctx.project
+      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
+      : ctx.webAppUrl
+    const duration = humanizeDurationMs(payload.recovery.durationMs)
 
-  return Effect.succeed({
-    text: `Issue recovered in ${projectName} — elevated for ${humanizeDurationMs(payload.recovery.durationMs)}`,
-    color: COLORS.resolved,
-    blocks: [
-      header(`Issue recovered · ${projectName}`),
-      sectionMarkdown(`Elevated for *${humanizeDurationMs(payload.recovery.durationMs)}*.`),
-      contextLine(
-        `${sev} ${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
-      ),
-      actionsLink("View issue", issueUrl),
-    ],
+    const issues = yield* IssueRepository
+    const issueName = yield* issues
+      .findById(IssueId(payload.sourceId))
+      .pipe(
+        Effect.map((i) => i.name),
+        Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+        Effect.catchTag("RepositoryError", () => Effect.succeed(null)),
+      )
+
+    const chart = trendChartBlock(ctx.notificationId, ctx.webAppUrl)
+
+    return {
+      text: `Issue recovered in ${projectName} — elevated for ${duration}`,
+      color: COLORS.resolved,
+      blocks: [
+        header(`Issue recovered · ${projectName}`),
+        ...(issueName ? [sectionMarkdown(`*<${issueUrl}|${issueName}>*`)] : []),
+        sectionMarkdown(`Elevated for *${duration}*.`),
+        ...(chart ? [chart] : []),
+        contextLine(
+          `${sev} ${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
+        ),
+        actionsLink("View issue", issueUrl),
+      ],
+    }
   })
-}
 
 const humanizeDurationMs = (ms: number): string => {
   const minutes = Math.round(ms / 60_000)

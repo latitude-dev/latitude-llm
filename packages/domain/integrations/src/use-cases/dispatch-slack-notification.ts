@@ -1,3 +1,4 @@
+import type { IssueRepository } from "@domain/issues"
 import { NOTIFICATION_KIND_META, type NotificationKind } from "@domain/notifications"
 import type { RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
 import { Data, Effect } from "effect"
@@ -64,7 +65,11 @@ export type DispatchSlackNotificationError = SlackMessengerError | RenderSlackEr
  */
 export const dispatchSlackNotificationUseCase = (
   input: DispatchSlackNotificationInput,
-): Effect.Effect<DispatchSlackOutcome, DispatchSlackNotificationError, SqlClient | SlackDeliveryRepository> =>
+): Effect.Effect<
+  DispatchSlackOutcome,
+  DispatchSlackNotificationError,
+  SqlClient | SlackDeliveryRepository | IssueRepository
+> =>
   Effect.gen(function* () {
     const deliveryRepo = yield* SlackDeliveryRepository
     const claim = yield* deliveryRepo.claim({

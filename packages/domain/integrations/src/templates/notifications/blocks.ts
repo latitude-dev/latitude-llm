@@ -43,6 +43,29 @@ const SEVERITY_EMOJI: Record<string, string> = {
  */
 export const severityEmoji = (severity: string): string => SEVERITY_EMOJI[severity] ?? "⚪"
 
+/**
+ * Returns a Slack `image` block that renders the incident trend chart.
+ * Slack fetches the URL async after posting, so the notification row
+ * only needs to exist by the time Slack processes the image — which is
+ * well after the create-notification workers have committed.
+ *
+ * Returns `null` when `notificationId` is absent (kinds that don't
+ * write a bell-feed row, or a missing context value).
+ */
+export const trendChartBlock = (
+  notificationId: string | null,
+  webAppUrl: string,
+): KnownBlock | null => {
+  if (!notificationId) return null
+  const base = webAppUrl.replace(/\/$/, "")
+  const url = `${base}/api/notifications/${encodeURIComponent(notificationId)}/incident-trend.png`
+  return {
+    type: "image",
+    image_url: url,
+    alt_text: "Incident trend chart",
+  } as KnownBlock
+}
+
 /** Color constants for attachment bars. */
 export const COLORS = {
   newIssue: "#E8534B",
