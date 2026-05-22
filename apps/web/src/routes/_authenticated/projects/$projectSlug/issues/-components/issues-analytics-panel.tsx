@@ -293,7 +293,7 @@ export function IssuesAnalyticsPanel({
         )}
       </div>
       <IncidentMarkerPopover
-        sameRoute
+        preserveSearchParams
         open={popover !== null}
         anchor={popover?.anchor ?? null}
         incidents={popoverIncidents}

@@ -185,7 +185,6 @@ export function Histogram({ projectId, projectSlug, filters, metric, showInciden
         {...(showIncidents ? { onBucketAxisPointerChange: handleBucketAxisPointerChange } : {})}
       />
       <IncidentMarkerPopover
-        sameRoute={false}
         open={popover !== null}
         anchor={popover?.anchor ?? null}
         incidents={popoverIncidents}

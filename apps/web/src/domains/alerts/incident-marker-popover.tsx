@@ -6,22 +6,23 @@ import type { AlertIncidentRecord } from "./alerts.functions.ts"
 import { INCIDENT_SEVERITY_COLOR, KIND_LABELS, SEVERITY_LABELS } from "./incident-markers.ts"
 
 /**
- * Popover anchored at a cursor location, listing every incident touching a histogram bucket.
- * Each row links to the issue detail drawer via `?issueId=…`. The popover is consumer-owned —
- * the chart only surfaces the click + cursor coords; this component renders the list and the
- * navigation links.
+ * Popover anchored at a chart-bucket point, listing every incident touching that bucket. Each
+ * row links to the issue detail drawer via `?issueId=…` on `/projects/$projectSlug/issues`.
+ * The popover is consumer-owned — the chart surfaces the bucket anchor; this component
+ * renders the list and the navigation links.
  *
- * `sameRoute=true` is for the issues analytics panel: we navigate to the same route so unrelated
- * search params (lifecycle, time filters, sort) are preserved via the function form. `false` is
- * for the traces overview histogram: we navigate cross-route to the issues page with a fresh
- * search containing only `issueId`.
+ * `preserveSearchParams=true` is for the issues analytics panel (popover is on the issues page
+ * itself), where lifecycle, time filter and sort search params should survive the row-click
+ * navigation. `false` (default) ships a fresh `{ issueId }` search — used by the traces
+ * overview popover, which navigates cross-route. The `to` is always the absolute issues path
+ * either way; only the search-params merge behavior differs.
  */
 interface IncidentMarkerPopoverProps {
   readonly open: boolean
   readonly anchor: { readonly clientX: number; readonly clientY: number } | null
   readonly incidents: readonly AlertIncidentRecord[]
   readonly projectSlug: string
-  readonly sameRoute: boolean
+  readonly preserveSearchParams?: boolean
   readonly onOpenChange: (open: boolean) => void
   /**
    * Optional hover-card grace handlers — wired to the popover content so a consumer can
@@ -53,7 +54,7 @@ export function IncidentMarkerPopover({
   anchor,
   incidents,
   projectSlug,
-  sameRoute,
+  preserveSearchParams = false,
   onOpenChange,
   onContentMouseEnter,
   onContentMouseLeave,
@@ -101,7 +102,7 @@ export function IncidentMarkerPopover({
                 to="/projects/$projectSlug/issues"
                 params={{ projectSlug }}
                 search={
-                  sameRoute
+                  preserveSearchParams
                     ? (prev: Record<string, unknown>) => ({ ...prev, issueId: incident.sourceId })
                     : { issueId: incident.sourceId }
                 }
