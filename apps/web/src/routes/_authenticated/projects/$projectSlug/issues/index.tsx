@@ -50,7 +50,6 @@ function IssuesBreadcrumb() {
 
 import { ActivityIcon, ArchiveIcon, CheckIcon, DownloadIcon, PauseIcon, SearchIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
-import { useDebounce } from "react-use"
 import { invalidateIssueQueries, useIssues } from "../../../../../domains/issues/issues.collection.ts"
 import {
   applyBulkIssueLifecycleAction,
@@ -59,6 +58,7 @@ import {
 } from "../../../../../domains/issues/issues.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"

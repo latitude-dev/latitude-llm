@@ -1,9 +1,9 @@
 import { Button, cn, Icon, Select, type SelectOption, Text, Textarea, ThumbButton, Tooltip } from "@repo/ui"
 import { InfoIcon, SparklesIcon } from "lucide-react"
 import { memo, useRef, useState } from "react"
-import { useDebounce } from "react-use"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useIssue, useIssues } from "../../../../../../domains/issues/issues.collection.ts"
+import { useDebounce } from "../../../../../../lib/hooks/useDebounce.ts"
 
 const SAVE_HOTKEY = "Mod+Enter"
 

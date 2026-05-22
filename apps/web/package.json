@@ -71,7 +71,6 @@
     "posthog-js": "1.371.3",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-use": "17.6.0",
     "rosetta-ai": "catalog:",
     "satori": "0.18.4",
     "ua-parser-js": "2.0.9",

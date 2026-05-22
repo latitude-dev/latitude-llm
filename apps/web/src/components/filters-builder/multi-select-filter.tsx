@@ -12,9 +12,9 @@ import {
 } from "@repo/ui"
 import { Loader2 } from "lucide-react"
 import { type RefObject, useMemo, useRef, useState } from "react"
-import { useDebounce } from "react-use"
 import { useSessionDistinctValues } from "../../domains/sessions/sessions.collection.ts"
 import { useTraceDistinctValues } from "../../domains/traces/traces.collection.ts"
+import { useDebounce } from "../../lib/hooks/useDebounce.ts"
 import type { DistinctColumn } from "./types.ts"
 
 export type FilterMode = "traces" | "sessions"

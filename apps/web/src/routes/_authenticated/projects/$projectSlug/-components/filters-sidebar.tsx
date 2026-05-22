@@ -2,7 +2,6 @@ import type { FilterCondition, FilterSet, PercentileTraceFilterField } from "@do
 import { Button, Icon, Input, Tabs, Text, Tooltip } from "@repo/ui"
 import { ChevronDown, ChevronUp, InfoIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
-import { useDebounce } from "react-use"
 import {
   getTextFieldsForMode,
   MULTI_SELECT_FIELDS,
@@ -12,6 +11,7 @@ import { MetadataFilter } from "../../../../../components/filters-builder/metada
 import { type FilterMode, MultiSelectFilter } from "../../../../../components/filters-builder/multi-select-filter.tsx"
 import { PercentileFilter } from "../../../../../components/filters-builder/percentile-filter.tsx"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 
 export type { FilterMode }
 
