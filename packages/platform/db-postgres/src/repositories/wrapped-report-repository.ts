@@ -19,7 +19,7 @@ import {
   type WrappedReportSummary,
   type WrappedReportType,
 } from "@domain/spans"
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm"
+import { and, asc, desc, eq, gte } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { wrappedReports } from "../schema/wrapped-reports.ts"
@@ -142,10 +142,10 @@ export const WrappedReportRepositoryLive = Layer.effect(
 
     listLatestPerProjectAdmin: ({
       type,
-      olderThan,
+      since,
     }: {
       type: WrappedReportType
-      olderThan: Date
+      since: Date
     }): Effect.Effect<readonly WrappedReportRecord[], ReturnType<typeof toRepositoryError>, SqlClient> =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -163,7 +163,7 @@ export const WrappedReportRepositoryLive = Layer.effect(
           db
             .select()
             .from(wrappedReports)
-            .where(and(eq(wrappedReports.type, type), lte(wrappedReports.createdAt, olderThan)))
+            .where(and(eq(wrappedReports.type, type), gte(wrappedReports.createdAt, since)))
             .orderBy(asc(wrappedReports.projectId), desc(wrappedReports.createdAt)),
         )
         const seen = new Set<string>()

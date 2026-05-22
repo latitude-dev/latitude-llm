@@ -25,9 +25,9 @@ export interface WrappedReportSummary {
  *    the caller only needs the id for navigation.
  *  - `listLatestPerProjectAdmin` — used by the backoffice analytics page
  *    to build a cross-org cohort. Returns one record per project (the
- *    most recent of `type` whose `created_at <= olderThan`) with the
- *    JSONB blob parsed. Cross-org read: caller MUST provide the admin
- *    Postgres client (BYPASSRLS), same constraint as `findById`.
+ *    most recent of `type` whose `created_at >= since`) with the JSONB
+ *    blob parsed. Cross-org read: caller MUST provide the admin Postgres
+ *    client (BYPASSRLS), same constraint as `findById`.
  */
 export interface WrappedReportRepositoryShape {
   save: (record: WrappedReportRecord) => Effect.Effect<void, RepositoryError, SqlClient>
@@ -42,7 +42,7 @@ export interface WrappedReportRepositoryShape {
 
   listLatestPerProjectAdmin: (params: {
     readonly type: WrappedReportType
-    readonly olderThan: Date
+    readonly since: Date
   }) => Effect.Effect<readonly WrappedReportRecord[], RepositoryError, SqlClient>
 }
 
