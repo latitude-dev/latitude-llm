@@ -45,10 +45,7 @@ export interface SlackDeliveryRepositoryShape {
    * original `incident.opened` message when threading
    * `incident.closed` as a reply.
    */
-  findMessageTs(
-    idempotencyKey: string,
-    channelId: string,
-  ): Effect.Effect<string | null, RepositoryError, SqlClient>
+  findMessageTs(idempotencyKey: string, channelId: string): Effect.Effect<string | null, RepositoryError, SqlClient>
 }
 
 export class SlackDeliveryRepository extends Context.Service<SlackDeliveryRepository, SlackDeliveryRepositoryShape>()(

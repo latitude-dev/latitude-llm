@@ -28,7 +28,9 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
       header(`Issue escalating · ${projectName}`),
       ...(breachLine ? [sectionMarkdown(breachLine)] : []),
       ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`> ${payload.sampleExcerpt.text}`)] : []),
-      contextLine(`${sev} ${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`),
+      contextLine(
+        `${sev} ${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
+      ),
       actionsLink("View issue", issueUrl),
     ],
   })

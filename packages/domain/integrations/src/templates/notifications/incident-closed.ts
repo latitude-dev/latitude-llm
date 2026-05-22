@@ -23,7 +23,9 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
     blocks: [
       header(`Issue resolved · ${projectName}`),
       sectionMarkdown(`Elevated for *${humanizeDurationMs(payload.recovery.durationMs)}*.`),
-      contextLine(`${sev} ${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`),
+      contextLine(
+        `${sev} ${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
+      ),
       actionsLink("View issue", issueUrl),
     ],
   })
