@@ -84,6 +84,12 @@ export function IncidentMarkerPopover({
         className="w-80 max-h-80 overflow-y-auto p-1"
         onMouseEnter={onContentMouseEnter}
         onMouseLeave={onContentMouseLeave}
+        // Radix moves focus into the content on open and back to the trigger on close by
+        // default — fine for click-opened popovers, disruptive for a hover-opened one (it can
+        // pull focus out of an input the user is typing into). Preventing both keeps the
+        // keyboard focus where the user left it.
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
       >
         <div className="px-2 py-1.5 text-xs font-semibold text-foreground">
           {incidents.length === 1 ? "Incident" : `${incidents.length} incidents`}
