@@ -15,7 +15,7 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
     const name = KIND_NAME[payload.incidentKind] ?? "Incident"
     const color = severityColor(payload.severity)
     const issueUrl = ctx.project
-      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
+      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${payload.sourceId}`
       : ctx.webAppUrl
 
     const issues = yield* IssueRepository

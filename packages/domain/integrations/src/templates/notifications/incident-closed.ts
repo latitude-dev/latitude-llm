@@ -1,21 +1,14 @@
 import { IssueRepository } from "@domain/issues"
 import { IssueId } from "@domain/shared"
 import { Effect } from "effect"
-import {
-  actionsLink,
-  COLORS,
-  contextLine,
-  projectOrOrgContext,
-  sectionMarkdown,
-  trendChartBlock,
-} from "./blocks.ts"
+import { actionsLink, COLORS, contextLine, projectOrOrgContext, sectionMarkdown, trendChartBlock } from "./blocks.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
 export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"> = (payload, ctx) =>
   Effect.gen(function* () {
     const projectName = ctx.project?.name ?? ctx.organization.name
     const issueUrl = ctx.project
-      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
+      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${payload.sourceId}`
       : ctx.webAppUrl
     const duration = humanizeDurationMs(payload.recovery.durationMs)
 

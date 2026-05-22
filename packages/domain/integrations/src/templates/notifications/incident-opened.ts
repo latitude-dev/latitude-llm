@@ -15,7 +15,7 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
   Effect.gen(function* () {
     const projectName = ctx.project?.name ?? ctx.organization.name
     const issueUrl = ctx.project
-      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${payload.sourceId}`
+      ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${payload.sourceId}`
       : ctx.webAppUrl
 
     const issues = yield* IssueRepository
