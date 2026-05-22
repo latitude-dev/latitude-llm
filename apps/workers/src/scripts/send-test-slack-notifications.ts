@@ -31,67 +31,73 @@ Options:
 
 loadDevelopmentEnvironments(new URL("../server.ts", import.meta.url).href)
 
-const FAKE_ALERT_INCIDENT_ID = generateId()
-const FAKE_SOURCE_ID = generateId()
-
-const makeIncidentBase = () => ({
-  alertIncidentId: FAKE_ALERT_INCIDENT_ID,
-  sourceType: "score" as const,
-  sourceId: FAKE_SOURCE_ID,
+// Generate per-run IDs inside main() so every invocation gets fresh
+// idempotency keys and the delivery repo doesn't skip them as duplicates.
+const makeIncidentBase = (alertIncidentId: string) => ({
+  alertIncidentId,
+  sourceType: "issue" as const,
+  sourceId: generateId(),
   incidentKind: "issue.escalating" as const,
   severity: "high" as const,
 })
 
-const SYNTHETIC_PAYLOADS: Record<string, unknown> = {
-  "incident.event": {
-    ...makeIncidentBase(),
-    incidentKind: "issue.new",
-    severity: "critical",
-    sampleExcerpt: {
-      text: "The model returned 'cancel' but the workflow expected 'proceed'",
-      truncated: false,
-      author: { kind: "user", name: "Carlos", imageUrl: null },
+// Built inside main() so IDs are fresh on every invocation.
+const buildSyntheticPayloads = (): Record<string, unknown> => {
+  // incident.opened and incident.closed share an alertIncidentId so
+  // the threading lookup finds the opened message when posting closed.
+  const sharedAlertIncidentId = generateId()
+  const baseSustained = makeIncidentBase(sharedAlertIncidentId)
+
+  return {
+    "incident.event": {
+      ...makeIncidentBase(generateId()),
+      incidentKind: "issue.new",
+      severity: "critical",
+      sampleExcerpt: {
+        text: "The model returned 'cancel' but the workflow expected 'proceed'",
+        truncated: false,
+        author: { kind: "user", name: "Carlos", imageUrl: null },
+      },
     },
-  },
-  "incident.opened": {
-    ...makeIncidentBase(),
-    trend: {
-      bucketDurationMs: 600_000,
-      points: Array.from({ length: 18 }, (_, i) => ({
-        t: new Date(Date.now() - (17 - i) * 600_000).toISOString(),
-        count: Math.max(0, Math.round(8 + i * 2.1 + Math.random() * 3)),
-        threshold: 14,
-      })),
+    "incident.opened": {
+      ...baseSustained,
+      trend: {
+        bucketDurationMs: 600_000,
+        points: Array.from({ length: 18 }, (_, i) => ({
+          t: new Date(Date.now() - (17 - i) * 600_000).toISOString(),
+          count: Math.max(0, Math.round(8 + i * 2.1 + Math.random() * 3)),
+          threshold: 14,
+        })),
+      },
+      breach: { triggerRate: 47.2, baselineRate: 14.0, threshold: 14.0 },
+      sampleExcerpt: {
+        text: "Responses consistently missing required JSON fields in 'address' key",
+        truncated: false,
+        author: { kind: "system" },
+      },
     },
-    breach: { triggerRate: 47.2, baselineRate: 14.0, threshold: 14.0 },
-    sampleExcerpt: {
-      text: "Responses consistently missing required JSON fields in 'address' key",
-      truncated: false,
-      author: { kind: "system" },
+    "incident.closed": {
+      ...baseSustained,
+      trend: {
+        bucketDurationMs: 600_000,
+        points: Array.from({ length: 18 }, (_, i) => ({
+          t: new Date(Date.now() - (17 - i) * 600_000).toISOString(),
+          count: Math.max(0, Math.round(47 - i * 2.5 + Math.random() * 3)),
+          threshold: 14,
+        })),
+      },
+      recovery: { durationMs: 38 * 60_000 },
     },
-  },
-  "incident.closed": {
-    ...makeIncidentBase(),
-    incidentKind: "issue.escalating",
-    trend: {
-      bucketDurationMs: 600_000,
-      points: Array.from({ length: 18 }, (_, i) => ({
-        t: new Date(Date.now() - (17 - i) * 600_000).toISOString(),
-        count: Math.max(0, Math.round(47 - i * 2.5 + Math.random() * 3)),
-        threshold: 14,
-      })),
+    "wrapped.report": {
+      wrappedReportId: generateId(),
+      link: "https://localhost:3000/wrapped/demo",
     },
-    recovery: { durationMs: 38 * 60_000 },
-  },
-  "wrapped.report": {
-    wrappedReportId: generateId(),
-    link: "https://localhost:3000/wrapped/demo",
-  },
-  "custom.message": {
-    title: "Planned maintenance tonight",
-    content: "The platform will be offline 23:00–01:00 UTC for a database upgrade.",
-    link: "https://status.latitude.so",
-  },
+    "custom.message": {
+      title: "Planned maintenance tonight",
+      content: "The platform will be offline 23:00–01:00 UTC for a database upgrade.",
+      link: "https://status.latitude.so",
+    },
+  }
 }
 
 async function main(): Promise<void> {
@@ -117,6 +123,7 @@ async function main(): Promise<void> {
   const kindFilter = parsed.values.kind
   const projectSlug = parsed.values["project-slug"] ?? "demo-project"
 
+  const SYNTHETIC_PAYLOADS = buildSyntheticPayloads()
   const allKinds = Object.keys(SYNTHETIC_PAYLOADS)
   const kinds = kindFilter ? [kindFilter] : allKinds
 
@@ -159,7 +166,11 @@ async function main(): Promise<void> {
 
   for (const kind of kinds) {
     // Resolve which channels to post to for this kind.
-    const group = kind.startsWith("incident") ? "incidents" : kind === "wrapped.report" ? "wrapped_reports" : "custom_messages"
+    const group = kind.startsWith("incident")
+      ? "incidents"
+      : kind === "wrapped.report"
+        ? "wrapped_reports"
+        : "custom_messages"
     const routeChannels = routes[group] ?? []
 
     const channels: Array<{ channelId: string; channelName: string }> = overrideChannelId

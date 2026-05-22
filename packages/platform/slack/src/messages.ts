@@ -43,23 +43,26 @@ export const postMessage = (input: {
   Effect.gen(function* () {
     const client = createSlackClient(input.botToken)
 
+    // When a color bar is requested, wrap blocks in an `attachment`.
+    // The attachment's `fallback` carries the summary text for push
+    // notifications / screen readers; the top-level `text` is left
+    // empty so Slack doesn't render a duplicate plain-text line above
+    // the colored card.
     const bodyBlocks = input.color
-      ? { attachments: [{ color: input.color, blocks: [...input.blocks] }] }
-      : { blocks: [...input.blocks] }
+      ? { text: "", attachments: [{ color: input.color, fallback: input.text, blocks: [...input.blocks] }] }
+      : { text: input.text, blocks: [...input.blocks] }
 
     const response = yield* Effect.tryPromise({
       try: () =>
         input.threadTs
           ? client.chat.postMessage({
               channel: input.channelId,
-              text: input.text,
               thread_ts: input.threadTs,
               reply_broadcast: input.replyBroadcast === true,
               ...bodyBlocks,
             })
           : client.chat.postMessage({
               channel: input.channelId,
-              text: input.text,
               ...bodyBlocks,
             }),
       catch: (cause) => mapSlackError(cause, "chat.postMessage"),
