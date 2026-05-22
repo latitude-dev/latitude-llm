@@ -55,6 +55,7 @@ const seedExisting = (overrides: Partial<SlackIntegration> = {}): SlackIntegrati
     installedByUserId: INSTALLER,
     installedAt: now,
     revokedAt: null,
+    routes: {},
     createdAt: now,
     updatedAt: now,
     ...overrides,

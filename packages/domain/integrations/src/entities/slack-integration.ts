@@ -1,5 +1,6 @@
 import { organizationIdSchema, slackIntegrationIdSchema, userIdSchema } from "@domain/shared"
 import { z } from "zod"
+import { slackRoutesSchema } from "./slack-route.ts"
 
 /**
  * SlackIntegration entity — one row represents a Slack workspace
@@ -33,6 +34,15 @@ export const slackIntegrationSchema = z.object({
   installedByUserId: userIdSchema,
   installedAt: z.date(),
   revokedAt: z.date().nullable(),
+  /**
+   * Per-notification-group channel routing for this workspace. Persisted
+   * as jsonb on `slack_integration_details.routes`. New installs start
+   * with `{}`; reinstall does not preserve routes — the previous row's
+   * routes stay on the now-soft-revoked details row for audit, but the
+   * new active row begins clean. Operator-configured via the settings
+   * UI; consumed by the notifications producer fan-out.
+   */
+  routes: slackRoutesSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
 })

@@ -1,12 +1,15 @@
-import { EMAIL_NOTIFICATIONS_FLAG, FeatureFlagRepository } from "@domain/feature-flags"
+import { EMAIL_NOTIFICATIONS_FLAG, FeatureFlagRepository, SLACK_FLAG } from "@domain/feature-flags"
+import { SlackIntegrationRepository } from "@domain/integrations"
 import {
   createNotificationUseCase,
   deleteNotificationsByProjectUseCase,
+  NOTIFICATION_KIND_META,
+  type NotificationKind,
   requestIncidentNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId, ProjectId, type SqlClient } from "@domain/shared"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
@@ -17,6 +20,7 @@ import {
   ProjectRepositoryLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  SlackIntegrationRepositoryLive,
   UserRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -34,14 +38,86 @@ interface NotificationsDeps {
 const requestLayer = Layer.mergeAll(
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
+  FeatureFlagRepositoryLive,
   MembershipRepositoryLive,
   ProjectRepositoryLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
+  SlackIntegrationRepositoryLive,
   UserRepositoryLive,
 )
 
 const createLayer = Layer.mergeAll(FeatureFlagRepositoryLive, NotificationRepositoryLive, UserRepositoryLive)
+
+/**
+ * Org-level Slack fan-out runs at the producer step (not per recipient).
+ * Slack channel notifications are independent of the per-user create-
+ * notification loop above: one Slack message per `(occurrence, route)`
+ * regardless of recipient count. Skipped entirely when the `slack` flag
+ * is off, the org has no active integration, or no routes are
+ * configured for the kind's group.
+ *
+ * Idempotency comes from the worker (claim-then-act against
+ * `slack_deliveries`), but the dedupeKey here lets BullMQ coalesce
+ * duplicate publishes from outbox redelivery before the worker even
+ * sees them.
+ */
+interface ProducerRequest {
+  readonly organizationId: string
+  readonly kind: string
+  readonly idempotencyKey: string
+  readonly projectId: string | null
+  readonly payload: Record<string, unknown>
+}
+
+const fanOutSlackRoutes = (
+  requests: readonly ProducerRequest[],
+  publisher: QueuePublisherShape,
+): Effect.Effect<void, never, FeatureFlagRepository | SlackIntegrationRepository | SqlClient> =>
+  Effect.gen(function* () {
+    if (requests.length === 0) return
+    const first = requests[0]!
+
+    const flags = yield* FeatureFlagRepository
+    const slackEnabled = yield* flags.isEnabledForOrganization(SLACK_FLAG)
+    if (!slackEnabled) return
+
+    const repo = yield* SlackIntegrationRepository
+    const integration = yield* repo.findActiveByOrganizationId().pipe(Effect.orElseSucceed(() => null))
+    if (!integration) return
+
+    const kind = first.kind as NotificationKind
+    const group = NOTIFICATION_KIND_META[kind]?.group
+    if (!group) return
+    const routes = integration.routes[group] ?? []
+    if (routes.length === 0) return
+
+    yield* Effect.all(
+      routes.map((route) =>
+        publisher.publish(
+          "notification-slack",
+          "send",
+          {
+            organizationId: first.organizationId,
+            integrationId: integration.id,
+            channelId: route.channelId,
+            kind: first.kind,
+            payload: first.payload,
+            idempotencyKey: first.idempotencyKey,
+            projectId: first.projectId,
+            notificationId: null,
+          },
+          {
+            dedupeKey: `notification-slack:${first.organizationId}:${first.idempotencyKey}:${route.channelId}`,
+          },
+        ),
+      ),
+      { concurrency: "unbounded" },
+    )
+  }).pipe(
+    Effect.tapError((error) => Effect.sync(() => logger.warn("notifications.slack fan-out failed", error))),
+    Effect.orElseSucceed(() => undefined),
+  )
 
 /**
  * Multi-step notification pipeline:
@@ -75,22 +151,28 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
             return Effect.void
           }
           return Effect.all(
-            result.requests.map((req) =>
-              publisher.publish(
-                "notifications",
-                "create-notification",
-                {
-                  organizationId: req.organizationId,
-                  userId: req.userId,
-                  notificationId: req.notificationId,
-                  kind: req.kind,
-                  idempotencyKey: req.idempotencyKey,
-                  projectId: req.projectId,
-                  payload: req.payload,
-                },
-                { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
               ),
-            ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
             { concurrency: "unbounded" },
           ).pipe(Effect.asVoid)
         }),
@@ -120,22 +202,28 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
             return Effect.void
           }
           return Effect.all(
-            result.requests.map((req) =>
-              publisher.publish(
-                "notifications",
-                "create-notification",
-                {
-                  organizationId: req.organizationId,
-                  userId: req.userId,
-                  notificationId: req.notificationId,
-                  kind: req.kind,
-                  idempotencyKey: req.idempotencyKey,
-                  projectId: req.projectId,
-                  payload: req.payload,
-                },
-                { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+            [
+              Effect.all(
+                result.requests.map((req) =>
+                  publisher.publish(
+                    "notifications",
+                    "create-notification",
+                    {
+                      organizationId: req.organizationId,
+                      userId: req.userId,
+                      notificationId: req.notificationId,
+                      kind: req.kind,
+                      idempotencyKey: req.idempotencyKey,
+                      projectId: req.projectId,
+                      payload: req.payload,
+                    },
+                    { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+                  ),
+                ),
+                { concurrency: "unbounded" },
               ),
-            ),
+              fanOutSlackRoutes(result.requests, publisher),
+            ],
             { concurrency: "unbounded" },
           ).pipe(Effect.asVoid)
         }),

@@ -78,5 +78,14 @@ export const InMemorySlackIntegrationRepositoryLive = (init: {
         rows.set(id, { ...row, revokedAt, updatedAt: new Date() })
         return true
       }),
+
+    updateRoutes: (integrationId, group, routes) =>
+      Effect.sync(() => {
+        const row = rows.get(integrationId)
+        if (!row || row.organizationId !== init.organizationId || row.revokedAt !== null) return false
+        const nextRoutes = { ...row.routes, [group]: [...routes] }
+        rows.set(integrationId, { ...row, routes: nextRoutes, updatedAt: new Date() })
+        return true
+      }),
   })
 }

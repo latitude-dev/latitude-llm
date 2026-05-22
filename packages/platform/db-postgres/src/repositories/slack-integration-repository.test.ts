@@ -46,6 +46,7 @@ const makeIntegration = (overrides: Partial<SlackIntegration> = {}): SlackIntegr
     installedByUserId: INSTALLER,
     installedAt: now,
     revokedAt: null,
+    routes: {},
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -202,6 +203,37 @@ describe("SlackIntegrationRepositoryLive", () => {
 
     const found = await Effect.runPromise(findActiveSlackIntegrationByTeamIdAcrossOrgs(pg.postgresDb, "T-X"))
     expect(found?.organizationId).toBe(ORG_B)
+  })
+
+  it("updateRoutes writes a group's routes and read-back round-trips", async () => {
+    const saved = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        return yield* repo.save(makeIntegration({ teamId: "T-ROUTES" }))
+      }),
+    )
+
+    const updated = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        return yield* repo.updateRoutes(saved.id, "incidents", [
+          { channelId: "C1", channelName: "ops" },
+          { channelId: "C2", channelName: "alerts" },
+        ])
+      }),
+    )
+    expect(updated).toBe(true)
+
+    const reread = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        return yield* repo.findActiveByOrganizationId()
+      }),
+    )
+    expect(reread?.routes.incidents).toEqual([
+      { channelId: "C1", channelName: "ops" },
+      { channelId: "C2", channelName: "alerts" },
+    ])
   })
 
   it("admin softRevokeAcrossOrgs claims revocation idempotently", async () => {

@@ -73,6 +73,10 @@ export const installSlackIntegrationUseCase = (
           installedByUserId: input.installedByUserId,
           installedAt: now,
           revokedAt: null,
+          // Reinstall is a fresh-config reset. The previous details row
+          // keeps its routes for audit but the new active row begins
+          // empty — operators reconfigure channels after reconnecting.
+          routes: {},
           createdAt: now,
           updatedAt: now,
         }

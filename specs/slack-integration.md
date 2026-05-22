@@ -245,26 +245,40 @@ Goal: an org admin sees a "Connect Slack" button under settings (gated by the `s
 
 Goal: org admin configures channels per notification group; firing a notification posts to the configured Slack channels.
 
-- [ ] **P3-1**: Extend `OrganizationSettings` (`@domain/shared/src/settings.ts`) with the `slack.routes` sub-shape keyed by `NotificationGroup`. No migration (settings is already jsonb).
-- [ ] **P3-2**: Use cases in `@domain/integrations`: `listSlackChannelsUseCase` (calls `conversations.list` via the bot token; paginated; filters archived), `configureSlackRouteUseCase`, `removeSlackRouteUseCase`. Channels for private/IM/MPIM channels are listed based on scopes (private requires the bot to be invited).
-- [ ] **P3-3**: Settings UI: per `NotificationGroup` block, show a channel multi-select. Picker hits `listSlackChannelsUseCase` (cache via a TanStack collection with manual invalidation). Save persists to `organizations.settings.slack.routes[group]`.
-- [ ] **P3-4**: New queue topic `notification-slack` with `send` task in `@domain/queue/src/topic-registry.ts`.
-- [ ] **P3-5**: Per-kind Slack renderer registry at `packages/domain/integrations/src/templates/notifications/registry.ts`: exhaustive `Record<NotificationKind, SlackRenderer>`. Renderers return a Slack message (`text` + optional `blocks`).
-- [ ] **P3-6**: Producer-step change in `apps/workers/src/workers/notifications.ts`: after the existing per-recipient fan-out, look up the org's active integration + routes for the group, publish one `notification-slack:send` per route. Skip if `slack` flag off or no live integration.
-- [ ] **P3-7**: New worker `apps/workers/src/workers/notification-slack.ts`. Resolves the integration, decrypts the token, dispatches the per-kind renderer, calls `chat.postMessage` via `@platform/slack`. Handles `token_revoked` / `invalid_auth` by soft-revoking the integration. Handles 429 with `Retry-After` honoured by BullMQ backoff. Register in `apps/workers/src/server.ts`.
-- [ ] **P3-8**: Idempotency decision: pick (a) `slack_deliveries(idempotency_key, channel_id)` claim-then-act table mirroring `notifications.emailed_at`, or (b) rely on BullMQ `dedupeKey` only. Document the decision in this spec when made.
-- [ ] **P3-9**: Cascades: when an `integrations` row is soft-revoked, **leave routes in place** so re-connecting the same workspace restores delivery without re-picking channels. On `ProjectDeleted`: nothing to do (routes are org-only in v1).
-- [ ] **P3-10**: Production rollout: enable the `slack` flag for opted-in orgs first; broader rollout after.
-- [ ] **P3-11**: Promote durable knowledge: write `dev-docs/slack-integration.md`, extend `dev-docs/notifications.md` (Slack channel section already anticipates this), create `.agents/skills/slack-integration/SKILL.md` if surface justifies it.
-- [ ] **P3-12**: Tests — producer fan-out with N routes, worker dispatch, renderer registry exhaustiveness, token-revoked → soft-revoke path, 429 backoff.
+- [x] **P3-1**: Routes live on the integration, not on `OrganizationSettings`. Added `routes` jsonb column to `slack_integration_details` (`Partial<Record<NotificationGroup, SlackRoute[]>>`). Extended the `SlackIntegration` entity + repository port (`updateRoutes`) + live adapter (jsonb_set per group). Reasoning: routing is integration-scoped (future Telegram / Discord integrations carry their own routing). No `OrganizationSettings` slot is added.
+- [x] **P3-2**: Use cases in `@domain/integrations`: `listSlackChannelsUseCase` (paginated `conversations.list` via injected `SlackChannelLister` port; filters archived; sorts by name), `configureSlackRouteUseCase`, `removeSlackRouteUseCase`. Private channels only appear when the bot is already a member — the UI surfaces a "invite the bot" hint.
+- [x] **P3-3**: Settings UI: per `NotificationGroup` block with filterable channel checklist + manual refresh button (`apps/web/src/routes/_authenticated/projects/$projectSlug/settings/-components/slack-routes-section.tsx`). Channels query (`["slack-channels"]`) has a 5-min stale window and a Refresh button that calls `refetch`. Each toggle issues a `configureSlackRoute({ group, routes })` mutation.
+- [x] **P3-4**: New queue topic `notification-slack` with `send` task in `@domain/queue/src/topic-registry.ts`. Payload carries `kind`, `payload`, `idempotencyKey`, `channelId`, `integrationId`, `projectId`, `notificationId`. One job per (occurrence, route).
+- [x] **P3-5**: Per-kind Slack renderer registry at `packages/domain/integrations/src/templates/notifications/registry.ts`: exhaustive `{ readonly [K in NotificationKind]: SlackNotificationRenderer<K> }`. Each renderer returns `{ text, blocks }` — `text` is the mobile-push / a11y fallback, `blocks` is the rich layout.
+- [x] **P3-6**: Producer-step change in `apps/workers/src/workers/notifications.ts`: after the per-recipient `create-notification` fan-out, `fanOutSlackRoutes` looks up the active integration + per-kind group routes and publishes one `notification-slack:send` per route. Skipped when `slack` flag is off, no integration, or no routes for the group. dedupeKey `notification-slack:${orgId}:${idempotencyKey}:${channelId}`.
+- [x] **P3-7**: New worker `apps/workers/src/workers/notification-slack.ts`. Resolves the active integration (verifies its id matches the producer's `integrationId`), renders via the registry, posts via `@platform/slack`'s `postMessage`. Error policy: `auth` / `channel-gone` / `RenderSlackError` → ack (no retry); `rate-limited` / `transport` / `RepositoryError` → propagate so BullMQ retries. **Does not soft-revoke** on auth errors — Phase 4 plugs in token refresh and may recover. Registered in `apps/workers/src/server.ts`.
+- [x] **P3-8**: Idempotency: dedicated `slack_deliveries` table (`integration_id, idempotency_key, channel_id, posted_at, message_ts`) with unique `(idempotency_key, channel_id)`. Claim-then-act mirrors `notifications.emailed_at`: the worker INSERTs ON CONFLICT DO NOTHING RETURNING; a non-claim short-circuits. Posted rows hold `message_ts` for future edits/thread replies.
+- [x] **P3-9**: Cascades — **clean reinstall** is the chosen behaviour. The previous details row retains its routes for audit; the new active details row starts with `routes = {}`. Operators reconfigure on reconnect. `ProjectDeleted`: no Slack-specific cleanup (routes are integration-scoped, not project-scoped).
+- [ ] **P3-10**: Production rollout: hold until **Phase 4** (token refresh). Without refresh, bot tokens expire ~12h after install and `chat.postMessage` returns `token_expired`; the worker logs + skips. Local dev + short-lived staging tests work end-to-end.
+- [ ] **P3-11**: Promote durable knowledge: write `dev-docs/slack-integration.md`, extend `dev-docs/notifications.md` (Slack channel section).
+- [x] **P3-12**: Tests — repository PGlite tests for `updateRoutes` round-trip and `slack_deliveries` claim concurrency (two parallel claims, one wins). Use-case tests for configure / remove (validation + write-through) and dispatch (claim → render → post → mark; skipped on second claim; rejects malformed payloads).
 
 **Exit gate**:
 
 - An incident in a project fires and lands in every channel routed for the org's `incidents` group, with content matching the email/in-app version.
-- Disconnecting + reconnecting Slack restores delivery with the same routes.
+- Disconnect → reconnect leaves an empty routes map on the new active integration (clean install).
 - `dev-docs/slack-integration.md` exists and the spec is ready to be removed.
 
-### Phase 4 — Mentions (deferred; not in initial scope)
+**Status**: code complete on `slack-phase-3`. Feature-flag gated. Production rollout deferred until Phase 4 ships token refresh.
+
+### Phase 4 — Token refresh
+
+Goal: bot tokens stay valid indefinitely without operator intervention. Today Slack rotates bot tokens (`xoxe.xoxb-…`) ~12h after issuance. Phase 3 ships with no refresh path; this phase closes that gap before any production rollout.
+
+- [ ] **P4-1**: `getOrRefreshBotToken({ integration, encryptionKey })` helper in `@platform/slack`. Reads the integration's `tokenExpiresAt`; if absent or > 60s away returns the current token unchanged. Otherwise POSTs `oauth.v2.access` with `grant_type=refresh_token&refresh_token=<refresh>` and returns the rotated token + new `expiresAt` + new refresh token (Slack rotates the refresh token too). Errors: `invalid_grant` → `SlackRefreshFailedError("invalid_grant")` (caller soft-revokes), network/5xx → `SlackTransportError` (caller retries).
+- [ ] **P4-2**: `updateTokens(integrationId, { botAccessToken, refreshToken, tokenExpiresAt })` method on `SlackIntegrationRepository` + live adapter. Encrypts the new tokens on write. Returns the updated entity.
+- [ ] **P4-3**: Wire into the notification worker (and the disconnect server fn): before `chat.postMessage`, call `getOrRefreshBotToken`. On rotated tokens, persist via `updateTokens` before the post. On `SlackRefreshFailedError("invalid_grant")` → soft-revoke the integration (genuinely needs a user-driven reconnect now).
+- [ ] **P4-4**: Tests — refresh happy path, refresh idempotent on parallel workers (use existing claim primitive), failure modes.
+- [ ] **P4-5**: Enable production rollout per Phase 3 plan.
+
+**Exit gate**: tokens refresh transparently; the worker stays healthy across rotation boundaries; production rollout proceeds.
+
+### Phase 5 — Mentions (deferred; not in initial scope)
 
 Goal: org members `@latitude` in a channel and the bot does work and replies.
 
@@ -272,11 +286,11 @@ Not specified here in detail. The Phase 1–3 design is intentionally compatible
 
 Tasks at that point:
 
-- [ ] **P4-1**: Subscribe to `app_mention` on the Slack app.
-- [ ] **P4-2**: Add `slack-events` topic with `mention` task in `@domain/queue/src/topic-registry.ts`.
-- [ ] **P4-3**: `apps/web/src/routes/api/slack/events.ts`: signature verification, replay rejection, `url_verification` handling, enqueue + 200 ack within 3s.
-- [ ] **P4-4**: `apps/workers/src/workers/slack-events.ts`: chat logic + reply via bot token.
-- [ ] **P4-5**: Update spec / docs.
+- [ ] **P5-1**: Subscribe to `app_mention` on the Slack app.
+- [ ] **P5-2**: Add `slack-events` topic with `mention` task in `@domain/queue/src/topic-registry.ts`.
+- [ ] **P5-3**: `apps/web/src/routes/api/slack/events.ts`: signature verification, replay rejection, `url_verification` handling, enqueue + 200 ack within 3s.
+- [ ] **P5-4**: `apps/workers/src/workers/slack-events.ts`: chat logic + reply via bot token.
+- [ ] **P5-5**: Update spec / docs.
 
 **Exit gate**: deferred.
 

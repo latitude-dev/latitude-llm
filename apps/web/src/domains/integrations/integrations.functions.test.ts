@@ -55,6 +55,7 @@ const makeIntegration = (overrides: Partial<SlackIntegration> = {}): SlackIntegr
     installedByUserId: INSTALLER,
     installedAt: now,
     revokedAt: null,
+    routes: {},
     createdAt: now,
     updatedAt: now,
     ...overrides,

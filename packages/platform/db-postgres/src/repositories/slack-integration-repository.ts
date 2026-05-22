@@ -4,6 +4,7 @@ import {
   SlackIntegrationRepository,
   slackIntegrationSchema,
 } from "@domain/integrations"
+import type { NotificationGroup } from "@domain/shared"
 import {
   findPostgresUniqueViolationConstraint,
   OrganizationId,
@@ -17,7 +18,7 @@ import {
 } from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { type CryptoError, decrypt, encrypt, hash } from "@repo/utils"
-import { and, eq, isNull } from "drizzle-orm"
+import { and, eq, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator, PostgresDb } from "../client.ts"
 import { integrations } from "../schema/integrations.ts"
@@ -116,6 +117,7 @@ const toDomainSlackIntegration = (parent: IntegrationRow, details: SlackDetailsR
       installedByUserId: UserId(parent.installedByUserId),
       installedAt: parent.installedAt,
       revokedAt: parent.revokedAt,
+      routes: details.routes ?? {},
       createdAt: parent.createdAt,
       updatedAt: parent.updatedAt,
     })
@@ -154,6 +156,7 @@ const buildInsertRows = (integration: SlackIntegration, organizationId: string, 
       botTokenScopes: integration.botTokenScopes,
       refreshToken,
       tokenExpiresAt: integration.tokenExpiresAt,
+      routes: integration.routes,
     }
 
     return { parentRow, detailsRow } as const
@@ -228,6 +231,36 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
                 .returning({ id: integrations.id }),
             )
             .pipe(Effect.mapError((e) => toRepositoryError(e, "softRevokeSlackIntegration")))
+
+          return rows.length > 0
+        }),
+
+      updateRoutes: (integrationId, group: NotificationGroup, routes) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // Use `jsonb_set` so we only mutate the one group key —
+          // concurrent writes to different groups stay independent.
+          // Bind the path through a parameter so the group name can't
+          // be SQL-injected (NotificationGroup is a typed enum, but
+          // belt-and-suspenders).
+          const jsonValue = JSON.stringify(routes)
+          const rows = yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(slackIntegrationDetails)
+                .set({
+                  routes: sql`jsonb_set(coalesce(${slackIntegrationDetails.routes}, '{}'::jsonb), ARRAY[${group}::text], ${jsonValue}::jsonb, true)`,
+                  updatedAt: new Date(),
+                })
+                .where(
+                  and(
+                    eq(slackIntegrationDetails.integrationId, integrationId),
+                    eq(slackIntegrationDetails.organizationId, organizationId),
+                  ),
+                )
+                .returning({ id: slackIntegrationDetails.integrationId }),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "updateSlackIntegrationRoutes")))
 
           return rows.length > 0
         }),

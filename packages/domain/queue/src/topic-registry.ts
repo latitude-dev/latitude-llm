@@ -172,6 +172,33 @@ const _registry = {
     }
   }>(),
 
+  "notification-slack": payloads<{
+    /**
+     * Slack channel delivery step. One job per (notification occurrence,
+     * configured route). Unlike `notification-email`, this is **not**
+     * per-recipient — Slack is org-level routing, so the producer fans
+     * out one job per channel in `slack_integration_details.routes[group]`
+     * regardless of per-user preferences. Idempotency is enforced by
+     * the worker via `slack_deliveries (idempotency_key, channel_id)`.
+     *
+     * `payload` is the per-kind payload (matches `NOTIFICATION_KIND_META[kind].payload`).
+     * `notificationId` is included when the occurrence wrote an in-app
+     * row (incidents, wrapped) so deep links can target it; `null` for
+     * kinds that bypass the bell feed (none today, but optional for
+     * future kinds).
+     */
+    send: {
+      readonly organizationId: string
+      readonly integrationId: string
+      readonly channelId: string
+      readonly kind: string
+      readonly payload: Record<string, unknown>
+      readonly idempotencyKey: string
+      readonly projectId: string | null
+      readonly notificationId: string | null
+    }
+  }>(),
+
   "alert-incidents": payloads<{
     "issue-created": {
       readonly organizationId: string

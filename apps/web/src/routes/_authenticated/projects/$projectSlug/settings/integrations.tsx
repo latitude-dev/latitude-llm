@@ -15,6 +15,7 @@ import {
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { IntegrationCard } from "./-components/integration-card.tsx"
 import { SettingsPage } from "./-components/settings-page.tsx"
+import { SlackRoutesSection } from "./-components/slack-routes-section.tsx"
 
 const searchSchema = z.object({
   installed: z.literal("ok").optional(),
@@ -88,14 +89,15 @@ function SlackIntegrationSection() {
   if (isLoading) return null
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       {data ? (
         <ConnectedSlackCard integration={data} onDisconnect={() => setDisconnectOpen(true)} />
       ) : (
         <DisconnectedSlackCard />
       )}
+      {data ? <SlackRoutesSection integration={data} /> : null}
       {data ? <DisconnectSlackModal open={disconnectOpen} onClose={() => setDisconnectOpen(false)} /> : null}
-    </>
+    </div>
   )
 }
 

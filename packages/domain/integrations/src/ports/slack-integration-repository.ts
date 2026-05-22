@@ -1,6 +1,7 @@
-import type { RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
+import type { NotificationGroup, RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { SlackIntegration } from "../entities/slack-integration.ts"
+import type { SlackRoute } from "../entities/slack-route.ts"
 import type { SlackIntegrationConflictError } from "../errors.ts"
 
 export interface SlackIntegrationRepositoryShape {
@@ -31,6 +32,19 @@ export interface SlackIntegrationRepositoryShape {
    * does not exist in the current RLS-scoped organization.
    */
   softRevokeById(id: SlackIntegrationId, revokedAt: Date): Effect.Effect<boolean, RepositoryError, SqlClient>
+
+  /**
+   * Replaces the route list for one notification group on the active
+   * details row. Passing `[]` clears the group. Inactive (soft-revoked)
+   * rows are unaffected — only the row whose `(organization_id, kind)`
+   * partial unique slot is currently held gets its `routes.<group>`
+   * overwritten. Returns `true` when a row was actually updated.
+   */
+  updateRoutes(
+    integrationId: SlackIntegrationId,
+    group: NotificationGroup,
+    routes: readonly SlackRoute[],
+  ): Effect.Effect<boolean, RepositoryError, SqlClient>
 }
 
 export class SlackIntegrationRepository extends Context.Service<

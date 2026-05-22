@@ -16,7 +16,9 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/notifications": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@slack/web-api": "7.10.0",
     "effect": "catalog:",
     "zod": "catalog:"
   },

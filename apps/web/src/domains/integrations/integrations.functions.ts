@@ -10,9 +10,21 @@
  * source of truth, so a Slack-side network or auth blip does not
  * block the user.
  */
-import { revokeSlackIntegrationUseCase, type SlackIntegration, SlackIntegrationRepository } from "@domain/integrations"
-import type { RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
+import {
+  configureSlackRouteUseCase,
+  removeSlackRouteUseCase,
+  revokeSlackIntegrationUseCase,
+  type SlackChannel,
+  type SlackChannelLister,
+  SlackChannelListerError,
+  type SlackIntegration,
+  SlackIntegrationRepository,
+  type SlackRoute,
+  type SlackRoutes,
+} from "@domain/integrations"
+import { NOTIFICATION_GROUPS, type NotificationGroup, type RepositoryError, type SlackIntegrationId, SlackIntegrationId as SlackIntegrationIdBrand, type SqlClient } from "@domain/shared"
 import { SlackIntegrationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { z } from "zod"
 import { createLogger, withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -44,6 +56,8 @@ export interface SlackIntegrationRecord {
   readonly botTokenScopes: readonly string[]
   readonly installedAt: string
   readonly installedByUserId: string
+  /** Per-notification-group channel routing (Phase 3). */
+  readonly routes: SlackRoutes
 }
 
 const toRecord = (row: SlackIntegration): SlackIntegrationRecord => ({
@@ -58,6 +72,7 @@ const toRecord = (row: SlackIntegration): SlackIntegrationRecord => ({
     .filter((scope) => scope.length > 0),
   installedAt: row.installedAt.toISOString(),
   installedByUserId: row.installedByUserId,
+  routes: row.routes ?? {},
 })
 
 export const getActiveSlackIntegration = createServerFn({ method: "GET" }).handler(
@@ -138,3 +153,138 @@ export const disconnectSlackIntegrationEffect: Effect.Effect<
 
   return { revoked: true } as const
 })
+
+const notificationGroupValues = NOTIFICATION_GROUPS as readonly NotificationGroup[]
+
+const configureSlackRouteSchema = z.object({
+  group: z.enum(notificationGroupValues as [NotificationGroup, ...NotificationGroup[]]),
+  routes: z
+    .array(
+      z.object({
+        channelId: z.string().min(1),
+        channelName: z.string().min(1),
+      }),
+    )
+    .max(50),
+})
+
+const removeSlackRouteSchema = z.object({
+  group: z.enum(notificationGroupValues as [NotificationGroup, ...NotificationGroup[]]),
+})
+
+/**
+ * Lists the channels the bot can see in the connected workspace. Calls
+ * Slack's `conversations.list` paginated; archived channels are filtered
+ * out by `@platform/slack`. Private channels only appear if the bot is
+ * already a member — the UI surfaces a hint to invite the bot.
+ */
+export const listSlackChannels = createServerFn({ method: "GET" }).handler(
+  async (): Promise<readonly SlackChannel[]> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    const integration = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        return yield* repo.findActiveByOrganizationId()
+      }).pipe(withPostgres(SlackIntegrationRepositoryLive, client, organizationId), withTracing),
+    )
+    if (!integration) return []
+
+    // Dynamic import keeps `@slack/web-api` off the client bundle (see
+    // the disconnect path for the same dance).
+    const { listAllConversations } = await import("@platform/slack")
+    const channels = await Effect.runPromise(
+      listAllConversations({ botToken: integration.botAccessToken }).pipe(
+        Effect.map((all): readonly SlackChannel[] =>
+          all
+            .filter((c) => !c.isArchived)
+            .map((c) => ({ id: c.id, name: c.name, isPrivate: c.isPrivate, isMember: c.isMember, isArchived: c.isArchived }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        ),
+        Effect.catchTag("SlackAuthError", () =>
+          Effect.fail(new SlackChannelListerError({ reason: "auth" })),
+        ),
+        Effect.catchTag("SlackChannelGoneError", () => Effect.succeed([] as readonly SlackChannel[])),
+        Effect.catchTag("SlackRateLimitError", () =>
+          Effect.fail(new SlackChannelListerError({ reason: "rate-limited" })),
+        ),
+        Effect.catchTag("SlackTransportError", (cause) =>
+          Effect.fail(new SlackChannelListerError({ reason: "transport", cause })),
+        ),
+      ),
+    )
+
+    return channels
+  },
+)
+
+/**
+ * Replaces the route list for one notification group on the active
+ * integration. Empty list clears the group. Returns the updated record
+ * so callers can update query caches without a roundtrip.
+ */
+export const configureSlackRoute = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => configureSlackRouteSchema.parse(data))
+  .handler(
+    async ({ data }): Promise<SlackIntegrationRecord> => {
+      const { organizationId } = await requireSession()
+      const client = getPostgresClient()
+
+      return Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* SlackIntegrationRepository
+          const integration = yield* repo.findActiveByOrganizationId()
+          if (!integration) {
+            return yield* Effect.die(new Error("Slack integration is not connected for this organization"))
+          }
+          yield* configureSlackRouteUseCase({
+            integrationId: SlackIntegrationIdBrand(integration.id),
+            group: data.group,
+            routes: data.routes as readonly SlackRoute[],
+          })
+          const updated = yield* repo.findActiveByOrganizationId()
+          if (!updated) {
+            return yield* Effect.die(new Error("Slack integration disappeared mid-configure"))
+          }
+          return toRecord(updated)
+        }).pipe(withPostgres(SlackIntegrationRepositoryLive, client, organizationId), withTracing),
+      )
+    },
+  )
+
+/**
+ * Clears every route configured for one group. Equivalent to
+ * `configureSlackRoute({ group, routes: [] })`; exists as a separate
+ * call so the UI can be explicit about "I'm turning this off" vs
+ * "I'm replacing the list with nothing right now".
+ */
+export const removeSlackRoute = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => removeSlackRouteSchema.parse(data))
+  .handler(
+    async ({ data }): Promise<SlackIntegrationRecord> => {
+      const { organizationId } = await requireSession()
+      const client = getPostgresClient()
+
+      return Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* SlackIntegrationRepository
+          const integration = yield* repo.findActiveByOrganizationId()
+          if (!integration) {
+            return yield* Effect.die(new Error("Slack integration is not connected for this organization"))
+          }
+          yield* removeSlackRouteUseCase({
+            integrationId: SlackIntegrationIdBrand(integration.id),
+            group: data.group,
+          })
+          const updated = yield* repo.findActiveByOrganizationId()
+          if (!updated) {
+            return yield* Effect.die(new Error("Slack integration disappeared mid-remove"))
+          }
+          return toRecord(updated)
+        }).pipe(withPostgres(SlackIntegrationRepositoryLive, client, organizationId), withTracing),
+      )
+    },
+  )
+
+void ({} as SlackChannelLister) // Keep the SlackChannelLister type import alive for renderer-level code paths.

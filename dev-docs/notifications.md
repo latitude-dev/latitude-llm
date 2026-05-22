@@ -214,6 +214,18 @@ Defaults follow the opt-out model: missing entries → `true` (email on). If a g
 
 Source events, the producer step, the in-app feed, and the kind registry are all unchanged.
 
+### Slack is the documented exception
+
+The recipe above assumes the new channel is per-user (each user opts in via `channelPreferencesSchema`). **Slack does not follow that model.** A Slack channel is shared by definition, so Slack delivery is an **org-level** fan-out, not a per-user one:
+
+- **No `slack: boolean` in `channelPreferencesSchema`.** Slack opt-in is the integration itself + the route picker; per-user toggles would be meaningless when the message goes to a public channel.
+- **Routes live on the integration**, not on user prefs. Specifically: `slack_integration_details.routes` jsonb, keyed by `NotificationGroup`. See [slack-integration.md](./slack-integration.md).
+- **Fan-out happens at the producer (request) step**, not the per-recipient creator step. `apps/workers/src/workers/notifications.ts`'s `fanOutSlackRoutes` runs once per occurrence and publishes one `notification-slack:send` per configured channel, in parallel with the existing per-recipient `create-notification` fan-out.
+- **Project-level gating still applies.** The existing `isIncidentNotificationEnabled` gate is universal — if a project disables `incidents.<kind>`, neither email nor Slack fires.
+- **Idempotency** is enforced by a dedicated `slack_deliveries(idempotency_key, channel_id)` table rather than reusing the per-recipient `notifications.emailed_at` flag (no per-user row exists for Slack deliveries).
+
+If you're adding a third channel that *is* per-user (SMS, Discord DMs, etc.), follow the original recipe. If it's another shared-room channel (Discord channels, Microsoft Teams), follow the Slack pattern instead.
+
 ## Project anchor
 
 Set `projectId` on the `CreateNotificationRequest` for any kind tied to a project. This populates the `notifications.project_id` column, which serves three jobs:

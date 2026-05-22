@@ -1,4 +1,6 @@
-import { index, text } from "drizzle-orm/pg-core"
+import type { SlackRoutes } from "@domain/integrations"
+import { sql } from "drizzle-orm"
+import { index, jsonb, text } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 /**
@@ -36,6 +38,14 @@ export const slackIntegrationDetails = latitudeSchema.table(
     botTokenScopes: text("bot_token_scopes").notNull(),
     refreshToken: text("refresh_token"),
     tokenExpiresAt: tzTimestamp("token_expires_at"),
+    /**
+     * Per-notification-group channel routing. Empty object `{}` means
+     * "no Slack delivery anywhere"; keys are `NotificationGroup` values
+     * and values are arrays of `{ channelId, channelName }`. Operator-
+     * configured via the settings UI; consumed by the notifications
+     * worker's producer fan-out at notification-firing time.
+     */
+    routes: jsonb("routes").$type<SlackRoutes>().notNull().default(sql`'{}'::jsonb`),
     ...timestamps(),
   },
   (t) => [

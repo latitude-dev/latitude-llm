@@ -61,6 +61,7 @@ export type WrappedReportId = Id<"WrappedReportId">
 
 // Integration-related IDs
 export type SlackIntegrationId = Id<"SlackIntegrationId">
+export type SlackDeliveryId = Id<"SlackDeliveryId">
 
 // Telemetry-related IDs
 export type TraceId = Id<"TraceId">
@@ -92,6 +93,7 @@ export const AlertIncidentId = (value: string): AlertIncidentId => value as Aler
 export const NotificationId = (value: string): NotificationId => value as NotificationId
 export const WrappedReportId = (value: string): WrappedReportId => value as WrappedReportId
 export const SlackIntegrationId = (value: string): SlackIntegrationId => value as SlackIntegrationId
+export const SlackDeliveryId = (value: string): SlackDeliveryId => value as SlackDeliveryId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
 export const DatasetId = (value: string): DatasetId => value as DatasetId
@@ -123,6 +125,7 @@ export const alertIncidentIdSchema = cuidSchema.transform(AlertIncidentId)
 export const notificationIdSchema = cuidSchema.transform(NotificationId)
 export const wrappedReportIdSchema = cuidSchema.transform(WrappedReportId)
 export const slackIntegrationIdSchema = cuidSchema.transform(SlackIntegrationId)
+export const slackDeliveryIdSchema = cuidSchema.transform(SlackDeliveryId)
 
 // The telemetry-related IDs have custom length constraints
 export const SESSION_ID_LENGTH = 128

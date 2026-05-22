@@ -634,6 +634,9 @@ importers:
       '@domain/flaggers':
         specifier: workspace:*
         version: link:../../packages/domain/flaggers
+      '@domain/integrations':
+        specifier: workspace:*
+        version: link:../../packages/domain/integrations
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
@@ -643,6 +646,9 @@ importers:
       '@domain/notifications':
         specifier: workspace:*
         version: link:../../packages/domain/notifications
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../../packages/domain/organizations
       '@domain/product-feedback':
         specifier: workspace:*
         version: link:../../packages/domain/product-feedback
@@ -703,6 +709,9 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
+      '@platform/slack':
+        specifier: workspace:*
+        version: link:../../packages/platform/slack
       '@platform/storage-object':
         specifier: workspace:*
         version: link:../../packages/platform/storage-object
@@ -1221,9 +1230,15 @@ importers:
 
   packages/domain/integrations:
     dependencies:
+      '@domain/notifications':
+        specifier: workspace:*
+        version: link:../notifications
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@slack/web-api':
+        specifier: 7.10.0
+        version: 7.10.0
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57

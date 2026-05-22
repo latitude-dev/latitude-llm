@@ -1,0 +1,108 @@
+import { OrganizationId, ProjectId, SlackIntegrationId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { Effect, Layer } from "effect"
+import { describe, expect, it } from "vitest"
+import { InMemorySlackDeliveryRepositoryLive } from "../testing/in-memory-slack-delivery-repository.ts"
+import { dispatchSlackNotificationUseCase, type SlackMessenger } from "./dispatch-slack-notification.ts"
+
+const ORG = OrganizationId("o".repeat(24))
+const PROJECT = ProjectId("p".repeat(24))
+const INTEGRATION = SlackIntegrationId("i".repeat(24))
+
+const ctx = {
+  webAppUrl: "https://app.example.com",
+  organization: { id: ORG, name: "Acme" },
+  project: { id: PROJECT, name: "Frontend", slug: "frontend" },
+  notificationId: null,
+}
+
+const customMessagePayload = {
+  title: "Heads up",
+  content: "Please reboot",
+  link: "https://docs.example.com",
+}
+
+const fakeMessenger = (): SlackMessenger & { calls: Array<unknown> } => {
+  const calls: Array<unknown> = []
+  return {
+    calls,
+    post: (input) =>
+      Effect.sync(() => {
+        calls.push(input)
+        return { messageTs: "1700000000.000100" }
+      }),
+  }
+}
+
+// SqlClient is required by the use-case but not exercised by the in-memory delivery repo.
+const NoopSqlClient = Layer.succeed(SqlClient, {
+  organizationId: ORG,
+  transaction: (effect: Effect.Effect<unknown, unknown, unknown>) => effect,
+  query: () => {
+    throw new Error("NoopSqlClient.query was called — the in-memory fake should not need it")
+  },
+} as unknown as SqlClientShape)
+
+describe("dispatchSlackNotificationUseCase", () => {
+  it("renders, posts, and marks the delivery on a fresh claim", async () => {
+    const messenger = fakeMessenger()
+    const layer = InMemorySlackDeliveryRepositoryLive()
+
+    const outcome = await Effect.runPromise(
+      dispatchSlackNotificationUseCase({
+        integrationId: INTEGRATION,
+        botToken: "xoxb-test",
+        channelId: "C123",
+        kind: "custom.message",
+        payload: customMessagePayload,
+        idempotencyKey: "custom.message:abc",
+        context: ctx,
+        messenger,
+      }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
+    )
+
+    expect(outcome.status).toBe("delivered")
+    expect(messenger.calls).toHaveLength(1)
+  })
+
+  it("short-circuits on second dispatch with the same idempotency + channel", async () => {
+    const messenger = fakeMessenger()
+    const layer = InMemorySlackDeliveryRepositoryLive({ seedClaimedKeys: ["custom.message:abc::C123"] })
+
+    const outcome = await Effect.runPromise(
+      dispatchSlackNotificationUseCase({
+        integrationId: INTEGRATION,
+        botToken: "xoxb-test",
+        channelId: "C123",
+        kind: "custom.message",
+        payload: customMessagePayload,
+        idempotencyKey: "custom.message:abc",
+        context: ctx,
+        messenger,
+      }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
+    )
+
+    expect(outcome.status).toBe("skipped-already-delivered")
+    expect(messenger.calls).toHaveLength(0)
+  })
+
+  it("fails with RenderSlackError when the payload doesn't match the kind schema", async () => {
+    const messenger = fakeMessenger()
+    const layer = InMemorySlackDeliveryRepositoryLive()
+
+    const result = await Effect.runPromiseExit(
+      dispatchSlackNotificationUseCase({
+        integrationId: INTEGRATION,
+        botToken: "xoxb-test",
+        channelId: "C123",
+        kind: "custom.message",
+        payload: { wrong: "shape" },
+        idempotencyKey: "custom.message:xyz",
+        context: ctx,
+        messenger,
+      }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
+    )
+
+    expect(result._tag).toBe("Failure")
+    expect(messenger.calls).toHaveLength(0)
+  })
+})
