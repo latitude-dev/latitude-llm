@@ -1,9 +1,5 @@
 import { SLACK_FLAG } from "@domain/feature-flags"
-import {
-  NOTIFICATION_GROUP_META,
-  NOTIFICATION_GROUPS,
-  type NotificationGroup,
-} from "@domain/shared"
+import { NOTIFICATION_GROUP_META, NOTIFICATION_GROUPS, type NotificationGroup } from "@domain/shared"
 import { Button, Icon, Modal, Select, type SelectOption, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -112,7 +108,11 @@ function DisconnectedSlackCard() {
       title="Slack"
       subtitle="Send Latitude notifications to your Slack workspace."
       actions={
-        <Button onClick={() => { window.location.href = "/integrations/slack/install" }}>
+        <Button
+          onClick={() => {
+            window.location.href = "/integrations/slack/install"
+          }}
+        >
           Connect Slack
         </Button>
       }
@@ -137,9 +137,7 @@ function ConnectedSlackCard({
           </div>
           <div className="flex min-w-0 flex-col gap-0.5">
             <Text.H5 weight="semibold">{integration.teamName}</Text.H5>
-            <Text.H6 color="foregroundMuted">
-              Connected {relativeTime(new Date(integration.installedAt))}
-            </Text.H6>
+            <Text.H6 color="foregroundMuted">Connected {relativeTime(new Date(integration.installedAt))}</Text.H6>
           </div>
         </div>
         <div className="shrink-0">
@@ -160,13 +158,7 @@ function ConnectedSlackCard({
   )
 }
 
-function SlackRouteRow({
-  group,
-  integration,
-}: {
-  group: NotificationGroup
-  integration: SlackIntegrationRecord
-}) {
+function SlackRouteRow({ group, integration }: { group: NotificationGroup; integration: SlackIntegrationRecord }) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const meta = NOTIFICATION_GROUP_META[group]
@@ -223,7 +215,7 @@ function SlackRouteRow({
         name={`slack-route-${group}`}
         options={options}
         value={currentChannelId}
-        loading={isFetching}
+        searchLoading={isFetching}
         disabled={mutation.isPending}
         width="auto"
         contentWidth="auto"
