@@ -17,10 +17,9 @@ export const INCIDENT_SEVERITY_COLOR: Record<AlertSeverity, string> = {
 
 type TopSymbol = NonNullable<BarChartOverlayLine["topSymbol"]>
 
-// Sizes are sized for the marker to read as an interactive click target — see incident-marker
-// popover wiring. The visible 2px line itself is hard to land on; the top symbol is the practical
-// hit target, and a wider invisible hit-target line is added at the chart layer when clicks are
-// enabled.
+// Markers are paint-only — interactivity lives at the bucket level via the histogram's hover
+// popover, not on the marker itself. Sizes are picked so each kind reads distinctly at a
+// glance against a busy bar chart background.
 const KIND_TOP_SYMBOL: Record<AlertIncidentKind, TopSymbol> = {
   "issue.new": { shape: "circle", size: 9 },
   "issue.regressed": { shape: "diamond", size: 10 },

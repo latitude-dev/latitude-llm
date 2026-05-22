@@ -198,13 +198,10 @@ function buildSeries({
   const areas = overlay?.areas ?? []
   if (lines.length === 0 && areas.length === 0) return [barSeries]
 
-  // Each data item carries a non-eCharts `categoryIndex` field; the chart's click handler reads
-  // it back to map the click to a bucket without parsing display labels. The top symbol
-  // (already sized 7–10px by the consumer) is the practical hit target — wider than the 2px
-  // line and bumped specifically so it reads as clickable.
-  // The line is a passive visual marker — `silent: true` (inherited from the overlay series),
-  // no cursor, no events. Hover/click affordance lives at the bucket level instead, via the
-  // chart's `updateAxisPointer` event surfaced by `BarChart` as `onBucketAxisPointerChange`.
+  // Markers are paint-only — `silent: true` on both the overlay series and the markLine below,
+  // no cursor, no per-shape mouse events. Hover affordance lives at the bucket level instead,
+  // via the chart's `updateAxisPointer` event surfaced by `BarChart` as
+  // `onBucketAxisPointerChange`.
   const lineData = lines.map((line) => ({
     xAxis: line.categoryIndex,
     lineStyle: {
