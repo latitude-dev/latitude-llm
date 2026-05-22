@@ -18,10 +18,10 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
     : ctx.webAppUrl
 
   return Effect.succeed({
-    text: `Issue resolved in ${projectName} — elevated for ${humanizeDurationMs(payload.recovery.durationMs)}`,
+    text: `Issue recovered in ${projectName} — elevated for ${humanizeDurationMs(payload.recovery.durationMs)}`,
     color: COLORS.resolved,
     blocks: [
-      header(`Issue resolved · ${projectName}`),
+      header(`Issue recovered · ${projectName}`),
       sectionMarkdown(`Elevated for *${humanizeDurationMs(payload.recovery.durationMs)}*.`),
       contextLine(
         `${sev} ${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
