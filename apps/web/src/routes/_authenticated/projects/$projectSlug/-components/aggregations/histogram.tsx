@@ -1,15 +1,14 @@
 import type { FilterSet } from "@domain/shared"
 import { denseTraceTimeHistogramBuckets, type TraceHistogramMetric } from "@domain/spans"
 import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo } from "react"
 
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { IncidentMarkerPopover } from "../../../../../../domains/alerts/incident-marker-popover.tsx"
 import { buildIncidentMarkers } from "../../../../../../domains/alerts/incident-markers.ts"
+import { useIncidentBucketHoverPopover } from "../../../../../../domains/alerts/use-incident-bucket-hover-popover.ts"
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
 import { HISTOGRAM_METRIC_DEFINITIONS } from "./histogram-metrics.ts"
-
-const POPOVER_HOVER_CLOSE_GRACE_MS = 200
 
 function formatBucketAxisLabel(iso: string): string {
   const d = new Date(iso)
@@ -109,44 +108,16 @@ export function Histogram({ projectId, projectSlug, filters, metric, showInciden
     [definition],
   )
 
-  // Popover state with hover-card semantics — see issues-analytics-panel.tsx for the rationale.
-  const [popover, setPopover] = useState<{
-    bucketIndex: number
-    anchor: { clientX: number; clientY: number }
-  } | null>(null)
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const cancelPendingClose = useCallback(() => {
-    if (closeTimerRef.current !== null) {
-      clearTimeout(closeTimerRef.current)
-      closeTimerRef.current = null
-    }
-  }, [])
-  const scheduleClose = useCallback(() => {
-    cancelPendingClose()
-    closeTimerRef.current = setTimeout(() => {
-      closeTimerRef.current = null
-      setPopover(null)
-    }, POPOVER_HOVER_CLOSE_GRACE_MS)
-  }, [cancelPendingClose])
-  useEffect(() => () => cancelPendingClose(), [cancelPendingClose])
-
-  const handleBucketAxisPointerChange = useCallback(
-    (dataIndex: number | null, anchor: { clientX: number; clientY: number } | null) => {
-      if (dataIndex === null || anchor === null || !incidentsTouchingBucketIndex.has(dataIndex)) {
-        scheduleClose()
-        return
-      }
-      cancelPendingClose()
-      setPopover({ bucketIndex: dataIndex, anchor })
-    },
-    [cancelPendingClose, scheduleClose, incidentsTouchingBucketIndex],
-  )
-
-  useEffect(() => {
-    cancelPendingClose()
-    setPopover(null)
-  }, [denseBuckets, cancelPendingClose])
-  const popoverIncidents = popover ? (incidentsTouchingBucketIndex.get(popover.bucketIndex) ?? []) : []
+  // Popover state machine — see use-incident-bucket-hover-popover.ts. Shared with the issues
+  // analytics panel.
+  const {
+    popover,
+    popoverIncidents,
+    handleBucketAxisPointerChange,
+    onOpenChange: onPopoverOpenChange,
+    onContentMouseEnter,
+    onContentMouseLeave,
+  } = useIncidentBucketHoverPopover({ incidentsTouchingBucketIndex })
 
   if (isLoading) {
     return (
@@ -189,14 +160,9 @@ export function Histogram({ projectId, projectSlug, filters, metric, showInciden
         anchor={popover?.anchor ?? null}
         incidents={popoverIncidents}
         projectSlug={projectSlug}
-        onOpenChange={(next) => {
-          if (!next) {
-            cancelPendingClose()
-            setPopover(null)
-          }
-        }}
-        onContentMouseEnter={cancelPendingClose}
-        onContentMouseLeave={scheduleClose}
+        onOpenChange={onPopoverOpenChange}
+        onContentMouseEnter={onContentMouseEnter}
+        onContentMouseLeave={onContentMouseLeave}
       />
     </div>
   )
