@@ -1,12 +1,11 @@
 import { IssueId, ScoreId } from "@domain/shared"
 import {
   classifyTau2SeedTrajectory,
-  SEED_ISSUE_FIXTURES,
-  type SeedScope,
   TAU2_SEED_ISSUE_FAMILIES,
   TAU2_SEED_TRAJECTORIES,
   type Tau2SeedTrajectory,
-} from "@domain/shared/seeding"
+} from "@domain/shared/seed-content/tau2-trajectories"
+import { SEED_ISSUE_FIXTURES, type SeedScope } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { scores } from "../../schema/scores.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"

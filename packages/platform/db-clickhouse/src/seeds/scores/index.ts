@@ -1,11 +1,10 @@
 import { EvaluationId, IssueId, ScoreId } from "@domain/shared"
 import {
   classifyTau2SeedTrajectory,
-  SEED_ISSUE_FIXTURES,
-  type SeedScope,
   TAU2_SEED_ISSUE_FAMILIES,
   TAU2_SEED_TRAJECTORIES,
-} from "@domain/shared/seeding"
+} from "@domain/shared/seed-content/tau2-trajectories"
+import { SEED_ISSUE_FIXTURES, type SeedScope } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import { isSentinelPresent } from "../idempotency.ts"

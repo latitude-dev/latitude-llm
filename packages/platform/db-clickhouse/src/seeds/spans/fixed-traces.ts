@@ -1,4 +1,5 @@
-import { type SeedScope, TAU2_SEED_TRAJECTORIES, type Tau2SeedTrajectoryMessage } from "@domain/shared/seeding"
+import { TAU2_SEED_TRAJECTORIES, type Tau2SeedTrajectoryMessage } from "@domain/shared/seed-content/tau2-trajectories"
+import type { SeedScope } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import { isSentinelPresent } from "../idempotency.ts"
