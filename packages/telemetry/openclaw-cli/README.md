@@ -7,7 +7,7 @@ For details on the plugin runtime itself — what it sends, the span tree, and t
 ## Requirements
 
 - **OpenClaw 2026.4.25 or newer** on PATH.
-- A **Latitude API key** and **project slug** — both from [console.latitude.so/settings/api-keys](https://console.latitude.so/settings/api-keys).
+- A **Latitude API key** from `https://console.latitude.so/projects/<your-slug>/settings/keys` and the matching **project slug**.
 
 ## Install
 

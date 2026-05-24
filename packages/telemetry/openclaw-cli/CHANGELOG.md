@@ -5,6 +5,12 @@ All notable changes to the `@latitude-data/openclaw-telemetry-cli` installer wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Installer links now point to the current Latitude docs and API key settings URLs.
+
 ## [0.0.7] - 2026-04-29
 
 Initial release of the standalone installer CLI. The runtime split that landed in `@latitude-data/openclaw-telemetry` 0.0.6 ([PR #2920](https://github.com/latitude-dev/latitude-llm/pull/2920)) deleted the bundled CLI from the runtime package so that runtime would pass OpenClaw 2026.4.25+'s install-time `dangerous-exec` security scan. The 0.0.6 manual install flow asked operators to run six `openclaw config set` commands plus a hand-edited `plugins.allow` array; this package brings the one-shot `npx -y` UX back. By living in a separate npm package, this CLI is installed via `npx`/`npm install -g` rather than `openclaw plugins install`, so it never goes through OpenClaw's install-time scanner.

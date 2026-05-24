@@ -35,7 +35,7 @@ import { readCliVersion } from "./version.ts"
 const RUNTIME_PACKAGE_NAME = "@latitude-data/openclaw-telemetry"
 const RUNTIME_VERSION = "0.0.7"
 
-const DOCS_URL = "https://docs.latitude.so/openclaw-telemetry"
+const DOCS_URL = "https://docs.latitude.so/telemetry/openclaw"
 
 interface EnvironmentConfig {
   name: "production" | "staging" | "dev"
@@ -64,12 +64,12 @@ const DEV_ENV: EnvironmentConfig = {
 }
 
 function urlsFor(env: EnvironmentConfig): {
-  apiKeys: string
+  apiKeys: (slug: string) => string
   projects: string
   projectView: (slug: string) => string
 } {
   return {
-    apiKeys: `${env.app}/settings/api-keys`,
+    apiKeys: (slug: string) => `${env.app}/projects/${slug}/settings/keys`,
     projects: env.app,
     projectView: (slug: string) => `${env.app}/projects/${slug}`,
   }
@@ -242,11 +242,11 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
   }
   note(aboutLines.join("\n"), "About")
 
-  log.info(`Get an API key at ${pc.cyan(urls.apiKeys)}`)
   log.info(`Create a project at ${pc.cyan(urls.projects)}`)
 
-  const apiKey = await promptApiKey(existingConfig?.apiKey, flags.apiKey)
   const project = await promptProject(existingConfig?.project, flags.project)
+  log.info(`Get an API key at ${pc.cyan(urls.apiKeys(project))}`)
+  const apiKey = await promptApiKey(existingConfig?.apiKey, flags.apiKey)
 
   await applyChanges({
     apiKey,

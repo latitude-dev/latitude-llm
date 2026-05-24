@@ -26,7 +26,7 @@ const STATE_FILE = join(STATE_DIR, "state.json")
 const PLIST_PATH = join(homedir(), "Library", "LaunchAgents", "so.latitude.claude-code-telemetry.plist")
 const PLIST_LABEL = "so.latitude.claude-code-telemetry"
 const DEFAULT_HOOK_COMMAND = "npx -y @latitude-data/claude-code-telemetry"
-const DOCS_URL = "https://docs.latitude.so/claude-code-telemetry"
+const DOCS_URL = "https://docs.latitude.so/telemetry/claude-code"
 
 // Environments pick the app + ingest domain pair. Every URL shown or written
 // during install is derived from these two — there's no other source of truth.
@@ -56,12 +56,12 @@ const DEV_ENV: EnvironmentConfig = {
   ingest: "http://localhost:3002",
 }
 function urlsFor(env: EnvironmentConfig): {
-  apiKeys: string
+  apiKeys: (slug: string) => string
   projects: string
   projectView: (slug: string) => string
 } {
   return {
-    apiKeys: `${env.app}/settings/api-keys`,
+    apiKeys: (slug: string) => `${env.app}/projects/${slug}/settings/keys`,
     projects: env.app,
     projectView: (slug: string) => `${env.app}/projects/${slug}`,
   }
@@ -116,8 +116,8 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
   }
   note(aboutLines.join("\n"), "About")
 
-  const apiKey = await promptApiKey(existingEnv.LATITUDE_API_KEY, flags.apiKey, urls.apiKeys)
   const project = await promptProject(existingEnv.LATITUDE_PROJECT, flags.project, urls.projects)
+  const apiKey = await promptApiKey(existingEnv.LATITUDE_API_KEY, flags.apiKey, urls.apiKeys(project))
 
   let useLaunchctl = false
   if (process.platform === "darwin" && !flags.noLaunchctl) {

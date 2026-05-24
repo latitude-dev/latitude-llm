@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Installer links now point to the current Latitude docs and API key settings URLs.
+
 ## [0.0.7] - 2026-04-24
 
 ### Changed
@@ -31,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`--staging` and `--dev` environment flags** replace `--base-url`. They target:
   - `--staging` → `https://staging.latitude.so` / `https://staging-ingest.latitude.so`
   - `--dev` → `http://localhost:3000` / `http://localhost:3002`
-  - no flag → `https://app.latitude.so` / `https://ingest.latitude.so` (production default)
+  - no flag → `https://console.latitude.so` / `https://ingest.latitude.so` (production default)
   Every URL shown or written during install (API-keys link, project-creation link, ingest endpoint, trace-view link, About banner) is derived from the selected environment. The two environments are mutually exclusive; passing both errors out.
 - **Per-prompt inline help** — the API key prompt's description line tells you where to generate one (with the env-correct URL); the project slug prompt tells you where to create a project. Both include the current value as "(Enter to keep …)" hints when re-running.
 - **`picocolors` dependency** for minimal ANSI styling (cyan links, dim hints, yellow warnings for non-production envs).
