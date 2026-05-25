@@ -40,7 +40,7 @@
     "test": "vitest run --pool=forks --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@clack/prompts": "1.2.0",
+    "@clack/prompts": "1.4.0",
     "picocolors": "1.1.1"
   },
   "devDependencies": {
