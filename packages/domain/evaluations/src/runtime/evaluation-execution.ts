@@ -5,6 +5,7 @@ import { z } from "zod"
 import { type EvaluationRuntimeMetadata, EvaluationScriptRuntime } from "../ports/evaluation-script-runtime.ts"
 import { evaluationVerdictJsonSchema } from "./json-schema.ts"
 
+// Pin the script-runtime judge to a low-reasoning, low-cost hosted model until evaluation settings support model choice.
 export const EVALUATION_SCRIPT_RUNTIME_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",

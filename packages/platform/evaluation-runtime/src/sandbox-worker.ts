@@ -59,6 +59,7 @@ function sandboxWorkerMain() {
   }
 
   function formatConversationForPrompt(conversation: unknown): string {
+    // Keep this in sync with domain-side formatEvaluationConversationForPrompt; sandbox source must stay standalone.
     if (!Array.isArray(conversation)) return ""
 
     return conversation
@@ -89,6 +90,7 @@ function sandboxWorkerMain() {
   }
 
   function toScore(passed: boolean, scoreOrFeedback: unknown, maybeFeedback: unknown) {
+    // `passed` is the verdict; an explicit score allows partial credit/confidence such as Passed(0.5, "...").
     const hasExplicitScore = typeof scoreOrFeedback === "number"
     const value = hasExplicitScore ? scoreOrFeedback : passed ? 1 : 0
     const feedback = hasExplicitScore ? maybeFeedback : scoreOrFeedback

@@ -31,6 +31,32 @@ const successfulGenerate: AIGenerate = <T>(input: GenerateInput<T>) =>
   })
 
 describe("EvaluationScriptRuntimeLive", () => {
+  it("rejects empty scripts at compile time", async () => {
+    const { layer } = createFakeAI()
+
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const runtime = yield* EvaluationScriptRuntime
+          return yield* runtime.compile("   ")
+        }).pipe(Effect.provide(EvaluationScriptRuntimeLive), Effect.provide(layer)),
+      ),
+    ).rejects.toMatchObject({ _tag: "EvaluationExecutionError" })
+  })
+
+  it("rejects syntax errors at compile time", async () => {
+    const { layer } = createFakeAI()
+
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const runtime = yield* EvaluationScriptRuntime
+          return yield* runtime.compile("return Passed('unterminated')}")
+        }).pipe(Effect.provide(EvaluationScriptRuntimeLive), Effect.provide(layer)),
+      ),
+    ).rejects.toMatchObject({ _tag: "EvaluationExecutionError" })
+  })
+
   it("executes simple Passed/Failed scripts", async () => {
     const { layer } = createFakeAI()
     const result = await Effect.runPromise(
@@ -74,6 +100,32 @@ return result.passed ? Passed(result.feedback) : Failed(result.feedback)
     expect(calls.generate[0]?.model).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.model)
     expect(calls.generate[0]?.system).toBe(EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT)
     expect(calls.generate[0]?.prompt).toBe("[user] Hello")
+  })
+
+  it("rejects scripts that exceed the llm() call limit", async () => {
+    const { layer } = createFakeAI({
+      generate: <T>() =>
+        Effect.succeed({
+          object: "pong" as T,
+          tokens: 1,
+          duration: 1,
+        }),
+    })
+    const script = `
+for (let i = 0; i < 10; i++) {
+  await llm("ping", { schema: { type: "string" } })
+}
+return Passed("done")
+`
+
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const runtime = yield* EvaluationScriptRuntime
+          return yield* runtime.execute({ ...baseInput, script })
+        }).pipe(Effect.provide(EvaluationScriptRuntimeLive), Effect.provide(layer)),
+      ),
+    ).rejects.toMatchObject({ _tag: "EvaluationExecutionError" })
   })
 
   it("validates parse(value, schema) inside the sandbox", async () => {

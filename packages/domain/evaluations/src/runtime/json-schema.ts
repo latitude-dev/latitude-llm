@@ -134,6 +134,17 @@ const numericEnumToZod = (values: readonly number[]): z.ZodType => {
   return schema
 }
 
+const booleanEnumToZod = (values: readonly boolean[]): z.ZodType => {
+  if (values.length === 0) return z.never()
+  const uniqueValues = [...new Set(values)]
+  const [first, ...rest] = uniqueValues
+  let schema: z.ZodType = z.literal(first)
+  for (const value of rest) {
+    schema = z.union([schema, z.literal(value)])
+  }
+  return schema
+}
+
 export const jsonSchemaToZod = (schema: EvaluationJsonSchema): z.ZodType => {
   switch (schema.type) {
     case "object": {
@@ -191,7 +202,8 @@ export const jsonSchemaToZod = (schema: EvaluationJsonSchema): z.ZodType => {
       return withDescription(base, schema.description)
     }
     case "boolean": {
-      const base = schema.const !== undefined ? z.literal(schema.const) : z.boolean()
+      const base =
+        schema.const !== undefined ? z.literal(schema.const) : schema.enum ? booleanEnumToZod(schema.enum) : z.boolean()
       return withDescription(base, schema.description)
     }
     case "null":

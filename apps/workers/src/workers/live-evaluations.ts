@@ -152,11 +152,11 @@ export const createLiveEvaluationsWorker = ({
           BillingUsagePeriodRepositoryLive,
           SettingsReaderLive,
           StripeSubscriptionLookupLive,
-          EvaluationScriptRuntimeLive,
         ),
         pgClient,
         OrganizationId(payload.organizationId),
       ),
+      Effect.provide(EvaluationScriptRuntimeLive),
       Effect.provide(RedisBillingSpendReservationLive(rdClient)),
       withClickHouse(
         Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),

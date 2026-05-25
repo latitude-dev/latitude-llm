@@ -33,6 +33,7 @@ Runtime rules:
 
 - scripts should have access only to host-approved globals such as `Passed`, `Failed`, `llm`, `parse`, `conversation`, `conversationText`, `metadata`, `issue`, and JSON/primitive built-ins
 - all host/sandbox data transfer uses plain JSON plus the Latitude-supported JSON Schema subset
+- the current hosted MVP uses Node `vm` inside worker threads as an operational sandbox, not a hard tenant-isolation boundary: exposed host built-ins can retain prototype/constructor chains, so worker resource limits and the planned remote/dedicated runtime are part of the security model
 - for MVP and early hosted execution, `llm()` runs through `@platform/ai-vercel` and the Vercel AI SDK with Latitude-managed provider/model/API-key configuration rather than stored provider/model settings
 - user-configurable provider/model selection is a post-MVP extension and must not force a storage migration for the script artifact
 

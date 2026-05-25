@@ -1,4 +1,5 @@
 import { createRequire } from "node:module"
+import vm from "node:vm"
 import { Worker } from "node:worker_threads"
 import { AI, type AICredentialError, type AIError, type GenerateResult } from "@domain/ai"
 import {
@@ -87,6 +88,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 
 const toPlainJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
+// Message guards intentionally dispatch only by `type`; each branch validates its own payload before use.
 const isRuntimeMessage = (message: unknown): message is RuntimeMessage =>
   isRecord(message) && typeof message.type === "string"
 
@@ -97,6 +99,9 @@ const toRuntimeError = (cause: unknown) =>
         message: cause instanceof Error ? cause.message : "Evaluation script execution failed",
         cause,
       })
+
+const createEvaluationScriptSource = (script: string) =>
+  `"use strict"; (async () => { const __result = await (async function evaluate() {\n${script}\n})(); return __result; })()`
 
 const parseOptionalSchema = (schema: unknown): EvaluationJsonSchema | undefined => {
   if (schema === null || schema === undefined) return undefined
@@ -239,6 +244,7 @@ export const EvaluationScriptRuntimeLive = Layer.effect(
         Effect.try({
           try: () => {
             if (script.trim().length === 0) throw new Error("Evaluation script cannot be empty")
+            new vm.Script(createEvaluationScriptSource(script), { filename: "evaluation-script.js" })
           },
           catch: toRuntimeError,
         }),
