@@ -42,5 +42,14 @@ jobs:
       - name: Create .env.test from example
         run: cp .env.example .env.test
 
+      # Build chdb's native binding once, before turbo fans out the test
+      # graph. Otherwise the ~2-3 GB native compile races against the heavy
+      # test tasks (api/workers/db-clickhouse/web/db-postgres/workflows) and
+      # the runner OOM-kills around the 3 minute mark. ensure-chdb-built.mjs
+      # is idempotent, so the package-level `chdb:build &&` prefixes become
+      # no-ops once the binding exists.
+      - name: Build chdb native bindings
+        run: pnpm --filter @platform/testkit chdb:build
+
       - name: Test
         run: pnpm test
