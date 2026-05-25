@@ -494,7 +494,7 @@ jobs:
           ref: ${{ needs.staging-build.outputs.git_commit_sha }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -869,7 +869,7 @@ jobs:
           ref: ${{ needs.production-build.outputs.git_commit_sha }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
