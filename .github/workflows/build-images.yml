@@ -94,7 +94,7 @@ jobs:
 
       - name: Login to GHCR
         if: ${{ inputs.push }}
-        uses: docker/login-action@v4
+        uses: docker/login-action@v4.1.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
