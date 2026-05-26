@@ -144,7 +144,7 @@ const makeSessionRepository = (session: SessionDetail | null) =>
     findBySessionId: () =>
       session ? Effect.succeed(session) : Effect.fail(new NotFoundError({ entity: "Session", id: sessionId })),
     listByProjectId: () => Effect.succeed({ items: [], hasMore: false }),
-    countByProjectId: () => Effect.succeed(0),
+    countByProjectId: () => Effect.succeed({ totalCount: 0 }),
     aggregateMetricsByProjectId: () =>
       Effect.succeed({
         durationNs: { min: 0, max: 0, avg: 0, median: 0, sum: 0 },
