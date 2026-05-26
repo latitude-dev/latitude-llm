@@ -46,7 +46,7 @@ export const listAllConversations = (input: {
 
       for (const c of page.channels ?? []) {
         if (typeof c.id !== "string" || typeof c.name !== "string") continue
-        if (c.is_archived === true) continue   // double-check: API param is best-effort
+        if (c.is_archived === true) continue // double-check: API param is best-effort
         out.push({
           id: c.id,
           name: c.name,

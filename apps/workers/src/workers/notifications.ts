@@ -121,7 +121,7 @@ const fanOutSlackRoutes = (
             // acked immediately by the worker; only genuinely retryable
             // failures (429, network) propagate for BullMQ to retry here.
             attempts: 4,
-            backoff: { delayMs: 30_000 },
+            backoff: { type: "exponential" as const, delayMs: 30_000 },
           },
         ),
       ),
