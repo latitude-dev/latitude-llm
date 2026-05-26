@@ -8,9 +8,11 @@ import {
   userIdSchema,
 } from "@domain/shared"
 import { z } from "zod"
-import { FEATURE_FLAG_IDS, type FeatureFlagId } from "../registry.ts"
+import { FEATURE_FLAGS, type FeatureFlagId } from "../registry.ts"
 
-export const featureFlagIdentifierSchema = z.enum(FEATURE_FLAG_IDS as readonly [FeatureFlagId, ...FeatureFlagId[]])
+export const featureFlagIdentifierSchema = z
+  .string()
+  .refine((value): value is FeatureFlagId => value in FEATURE_FLAGS, { message: "Unknown feature flag identifier" })
 
 export const featureFlagSchema = z.object({
   identifier: featureFlagIdentifierSchema,
