@@ -46,7 +46,9 @@ export const AdminFeatureFlagRepositoryLive = Layer.effect(
       list: () =>
         Effect.gen(function* () {
           const flagRows = yield* sqlClient.query((db) =>
-            db.select({ identifier: featureFlags.identifier, enabledForAll: featureFlags.enabledForAll }).from(featureFlags),
+            db
+              .select({ identifier: featureFlags.identifier, enabledForAll: featureFlags.enabledForAll })
+              .from(featureFlags),
           )
           const enabledForAllByIdentifier = new Map(flagRows.map((row) => [row.identifier, row.enabledForAll]))
 
@@ -75,7 +77,11 @@ export const AdminFeatureFlagRepositoryLive = Layer.effect(
           }
 
           return FEATURE_FLAG_IDS.map((identifier) =>
-            toSummary(identifier, enabledForAllByIdentifier.get(identifier) ?? false, enabledByIdentifier.get(identifier) ?? []),
+            toSummary(
+              identifier,
+              enabledForAllByIdentifier.get(identifier) ?? false,
+              enabledByIdentifier.get(identifier) ?? [],
+            ),
           )
         }),
 
@@ -135,7 +141,9 @@ export const AdminFeatureFlagRepositoryLive = Layer.effect(
           yield* ensureOrganizationExists(organizationId)
 
           const flagRows = yield* sqlClient.query((db) =>
-            db.select({ identifier: featureFlags.identifier, enabledForAll: featureFlags.enabledForAll }).from(featureFlags),
+            db
+              .select({ identifier: featureFlags.identifier, enabledForAll: featureFlags.enabledForAll })
+              .from(featureFlags),
           )
           const enabledForAllByIdentifier = new Map(flagRows.map((row) => [row.identifier, row.enabledForAll]))
 
