@@ -20,7 +20,7 @@ export interface RebuildCategoryHierarchyResult {
 }
 
 const chooseCategoryCount = (activeClusterCount: number): number =>
-  Math.round(clamp(Math.round(Math.sqrt(activeClusterCount)), 3, TAXONOMY_HIERARCHY_MAX_CATEGORIES))
+  clamp(Math.round(Math.sqrt(activeClusterCount)), 3, TAXONOMY_HIERARCHY_MAX_CATEGORIES)
 
 const findBestPriorCategory = (input: {
   readonly priorCategories: readonly TaxonomyCategory[]

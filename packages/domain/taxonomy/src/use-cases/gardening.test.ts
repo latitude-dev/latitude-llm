@@ -133,7 +133,7 @@ const createDeterministicAi = (): AIShape => {
   }
 }
 
-describe("sweepNoiseAndBirthClustersUseCase", () => {
+describe("gardening use-cases", () => {
   it("computes the proportional birth member floor", () => {
     expect(computeBirthMinMembers(250)).toBe(4)
     expect(computeBirthMinMembers(10_000)).toBe(30)

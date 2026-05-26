@@ -119,18 +119,14 @@ export const updateTaxonomyCentroid = ({
   timestamp,
   operation,
   previousClusteredAt,
-}: UpdateTaxonomyCentroidInput): TaxonomyCentroid & { readonly clusteredAt: Date } => {
-  if (centroid.base.length !== embedding.length) {
-    throw new Error(`Dimension mismatch: centroid has ${centroid.base.length}, observation has ${embedding.length}`)
-  }
-  return updateCentroid<TaxonomyObservationWeightScheme>({
+}: UpdateTaxonomyCentroidInput): TaxonomyCentroid & { readonly clusteredAt: Date } =>
+  updateCentroid<TaxonomyObservationWeightScheme>({
     centroid: { ...centroid, clusteredAt: previousClusteredAt },
     contribution: { embedding, createdAt: timestamp },
     contributionWeight: weight,
     operation,
     timestamp,
   }) as TaxonomyCentroid & { readonly clusteredAt: Date }
-}
 
 interface MergeTaxonomyCentroidsInput {
   readonly survivor: TaxonomyCentroid & { readonly clusteredAt: Date }

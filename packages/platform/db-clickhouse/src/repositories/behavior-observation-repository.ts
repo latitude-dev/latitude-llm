@@ -15,8 +15,9 @@ import { Effect, Layer } from "effect"
 // ClickHouse DateTime64 rejects trailing 'Z'; strip it.
 const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
 
-const parseClickhouseDate = (value: string): Date =>
-  new Date(value.includes("T") ? `${value}Z` : `${value.replace(" ", "T")}Z`)
+// CH's JSONEachRow date format is `YYYY-MM-DD HH:MM:SS.fff` — swap space for
+// `T` and tag UTC so `new Date(...)` parses reliably across runtimes.
+const parseClickhouseDate = (value: string): Date => new Date(`${value.replace(" ", "T")}Z`)
 
 type BehaviorObservationRow = {
   readonly organization_id: string

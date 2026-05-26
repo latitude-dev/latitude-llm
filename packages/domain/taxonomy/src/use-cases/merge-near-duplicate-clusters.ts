@@ -7,7 +7,7 @@ import {
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
-import { cosineSimilarity, mergeTaxonomyCentroids, normalizeTaxonomyCentroid } from "../helpers.ts"
+import { cosineSimilarityNormalized, mergeTaxonomyCentroids, normalizeTaxonomyCentroid } from "../helpers.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
@@ -45,7 +45,7 @@ const connectedComponents = (clusters: readonly TaxonomyCluster[]): readonly (re
     for (let j = i + 1; j < n; j++) {
       const left = vectors[i]
       const right = vectors[j]
-      if (left && right && cosineSimilarity(left, right) >= TAXONOMY_MERGE_THRESHOLD) union(i, j)
+      if (left && right && cosineSimilarityNormalized(left, right) >= TAXONOMY_MERGE_THRESHOLD) union(i, j)
     }
   }
 
@@ -73,7 +73,7 @@ const minPairwiseSimilarity = (component: readonly TaxonomyCluster[]): number =>
       if (!left || !right) continue
       min = Math.min(
         min,
-        cosineSimilarity(normalizeTaxonomyCentroid(left.centroid), normalizeTaxonomyCentroid(right.centroid)),
+        cosineSimilarityNormalized(normalizeTaxonomyCentroid(left.centroid), normalizeTaxonomyCentroid(right.centroid)),
       )
     }
   }
@@ -108,7 +108,7 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
           let reassigned = 0
 
           for (const loser of losers) {
-            const similarity = cosineSimilarity(
+            const similarity = cosineSimilarityNormalized(
               normalizeTaxonomyCentroid(survivor.centroid),
               normalizeTaxonomyCentroid(loser.centroid),
             )

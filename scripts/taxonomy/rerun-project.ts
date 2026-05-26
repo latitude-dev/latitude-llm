@@ -82,7 +82,12 @@ const enqueueProjectSessions = (args: Args) =>
       for (const session of page.items) {
         scanned++
         if (args.limit !== undefined && scanned > args.limit) break
-        const triggeringTraceId = session.traceIds[0] ?? ""
+        const triggeringTraceId = session.traceIds[0]
+        if (!triggeringTraceId) {
+          // recordSessionObservationUseCase requires a real trace anchor — an
+          // empty string flows through and corrupts the resulting CH row.
+          continue
+        }
         if (!args.dryRun) {
           yield* publisher.publish(
             "taxonomy",
