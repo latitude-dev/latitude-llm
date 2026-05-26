@@ -55,24 +55,6 @@ const resolveDistinctId = (input: TrackedEventInput): string => {
 export const orgDistinctId = (organizationId: string): string => `org_${organizationId}`
 
 /**
- * When the distinctId is a real user (userId, not actorUserId) and the payload
- * carries that user's email, set it as a PostHog person property so the person
- * is immediately identifiable by email — without waiting for the frontend
- * posthog.identify() call that only fires when the user loads the web app.
- *
- * We only do this when `actorUserId` is absent, because events that carry
- * `actorUserId` (e.g. MemberInvited) may also have an `email` field that
- * belongs to a *different* person (the invitee), not the actor.
- */
-const getPersonEmailSet = (input: TrackedEventInput): Record<string, unknown> => {
-  if (typeof input.payload.actorUserId === "string" && input.payload.actorUserId.length > 0) return {}
-  if (typeof input.payload.userId !== "string" || input.payload.userId.length === 0) return {}
-  const email = input.payload.email
-  if (typeof email !== "string" || email.length === 0) return {}
-  return { $set: { email } }
-}
-
-/**
  * Maps a tracked domain event to the PostHog capture shape.
  * Returns `null` when the event is not in the whitelist so the worker can skip
  * safely even if the upstream filter regresses.
@@ -92,7 +74,6 @@ export const mapEventToPostHog = (input: TrackedEventInput): PostHogCaptureInput
       // so PostHog doesn't create phantom person records for org pseudo-ids.
       // Also up to 4x cheaper per PostHog's pricing model.
       ...(!hasUserContext(input) ? { $process_person_profile: false } : {}),
-      ...getPersonEmailSet(input),
     },
     groups: { [POSTHOG_ORGANIZATION_GROUP]: input.organizationId },
     // CRITICAL: pass occurredAt through as `timestamp` so queue delays or
