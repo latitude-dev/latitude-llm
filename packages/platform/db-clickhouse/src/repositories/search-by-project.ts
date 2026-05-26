@@ -325,29 +325,13 @@ export const listSessionsBySearchQuery = ({
                     session_id,
                     max(relevance_score)                                            AS best_score,
                     argMax(trace_id, relevance_score)                               AS best_trace_id,
-                    -- Bucket math: floor(score / width) * width snaps
-                    -- best_score into fixed-width tiers. Within a tier,
-                    -- recently-active sessions float to the top via
-                    -- last_activity_at; across tiers, relevance still wins.
                     floor(max(relevance_score) / {bucketWidth:Float64})
                       * {bucketWidth:Float64}                                       AS relevance_bucket,
-                    -- coalesce(any(sf.sess_max_end_time), max(end_time))
-                    -- falls back to the matching traces' end_time for orphan
-                    -- rows (synthesized session_id = toString(trace_id) has no
-                    -- row in sessions). The outer least(…, now + skew) clamps
-                    -- client-clock-skewed futures so junk can't pin itself to
-                    -- the top forever.
                     least(
                       coalesce(any(sf.sess_max_end_time), max(end_time)),
                       addMilliseconds(now64(9, 'UTC'), {clockSkewMs:UInt32})
                     )                                                               AS last_activity_at,
                     count()                                                         AS matching_trace_count,
-                    -- Sort the (trace_id, score) tuples once, then slice the
-                    -- top-K and split into parallel arrays. The cap bounds
-                    -- per-row memory: an unbounded groupArray could otherwise
-                    -- materialize up to SEMANTIC_SCAN_LIMIT (30k) tuples per
-                    -- session in the pathological single-session case.
-                    -- matching_trace_count above keeps the true total.
                     arrayMap(
                       pair -> pair.1,
                       arraySlice(
