@@ -1,6 +1,11 @@
 import { AI, AIError, type AIShape } from "@domain/ai"
 import { type ChSqlClient, isNotFoundError, OrganizationId, ProjectId, SessionId } from "@domain/shared"
-import { SessionRepository, type SessionRepositoryShape, TRACE_SEARCH_EMBEDDING_DIMENSIONS } from "@domain/spans"
+import {
+  type SessionListPage,
+  SessionRepository,
+  type SessionRepositoryShape,
+  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+} from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect, Layer } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -1077,7 +1082,7 @@ describe("SessionRepository", () => {
 
       // Page through all matching sessions with a small limit.
       const collected: { sessionId: string; matchingTraceCount: number }[] = []
-      let cursor: { sortValue: string; sessionId: string } | undefined
+      let cursor: SessionListPage["nextCursor"]
       for (let i = 0; i < 10; i++) {
         const page = await runCh(
           repo.listByProjectId({
@@ -1162,10 +1167,530 @@ describe("SessionRepository", () => {
     })
 
     // Reference: spec §4.7 — when searchQuery is active the server forces
-    // ORDER BY best_score DESC, session_id DESC regardless of client sortBy.
+    // its own ordering (now the freshness-weighted tuple from
+    // 7-freshness-weighted-sort.md) regardless of client sortBy.
     // The use of buildAlignedAt is currently unused but kept for fixtures
     // that may want to inject specific cosine magnitudes; tagging via void
     // keeps the import noise minimal without producing an unused-warning.
     void buildAlignedAt
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Freshness-weighted ordering (spec 7-freshness-weighted-sort.md).
+    // Inside a relevance bucket, sessions sort by `last_activity_at DESC`,
+    // then `session_id DESC`. Across buckets relevance still dominates.
+    // ════════════════════════════════════════════════════════════════════════
+    describe("freshness-weighted ordering", () => {
+      // Build a vector whose cosine with the all-0.1 mock query embedding is
+      // exactly `(DIMS - 2N) / DIMS` — see test 6 above for the derivation.
+      // Picking the right N gives us a predictable bucket without touching
+      // floating-point boundaries.
+      const flippedVec = (flipped: number): readonly number[] => {
+        const v = new Array(DIMS).fill(0.1) as number[]
+        for (let i = 0; i < flipped; i++) v[i] = -0.1
+        return v as readonly number[]
+      }
+      // Cosine targets chosen to sit comfortably inside their buckets
+      // (avoids ambiguity from `floor(score / 0.1)` near boundaries).
+      const COSINE_087 = flippedVec(133) // ≈ 0.8701 → bucket 0.8
+      const COSINE_085 = flippedVec(154) // ≈ 0.8496 → bucket 0.8
+      const COSINE_081 = flippedVec(195) // ≈ 0.8096 → bucket 0.8
+      const COSINE_055 = flippedVec(461) // ≈ 0.5498 → bucket 0.5
+      const COSINE_065 = flippedVec(359) // ≈ 0.6494 → bucket 0.6
+
+      // §2 worked example: an 18-month-old 0.87 must not beat a fresh 0.85
+      // because they share bucket 0.8. Without the freshness sort, the old
+      // session wins on raw cosine; with it, freshness wins inside the tier.
+      it("within the same bucket, the more recently active session sorts first", async () => {
+        const oldStart = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+        const freshStart = new Date(Date.UTC(2026, 3, 1, 10, 0, 0))
+        const sessionStale = "frb-stale-087"
+        const sessionFresh = "frb-fresh-085"
+        const traceStale = padTrace("frb1")
+        const traceFresh = padTrace("frb2")
+
+        await insertSpans([
+          makeSpanRow({ traceId: traceStale, spanId: padSpan("frb1"), sessionId: sessionStale, startTime: oldStart }),
+          makeSpanRow({
+            traceId: traceFresh,
+            spanId: padSpan("frb2"),
+            sessionId: sessionFresh,
+            startTime: freshStart,
+          }),
+        ])
+        await insertSearchDocs([
+          { traceId: traceStale, text: "freshmark stale conversation", startTime: oldStart, contentHashSuffix: "f1" },
+          {
+            traceId: traceFresh,
+            text: "freshmark recent conversation",
+            startTime: freshStart,
+            contentHashSuffix: "f2",
+          },
+        ])
+        await insertSearchEmbeddings([
+          { traceId: traceStale, chunkIndex: 0, embedding: COSINE_087, startTime: oldStart, contentHashSuffix: "f1" },
+          {
+            traceId: traceFresh,
+            chunkIndex: 0,
+            embedding: COSINE_085,
+            startTime: freshStart,
+            contentHashSuffix: "f2",
+          },
+        ])
+
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: '"freshmark" conversation', limit: 10 },
+          }),
+        )
+
+        const ids = page.items.map((s) => s.sessionId)
+        expect(ids).toEqual([sessionFresh, sessionStale])
+        // Raw cosine is unchanged — the stale session still has the higher
+        // best_score, the freshness sort just reorders within the bucket.
+        expect(nonNull(page.searchMatches?.[sessionStale]).bestScore).toBeGreaterThan(
+          nonNull(page.searchMatches?.[sessionFresh]).bestScore,
+        )
+      })
+
+      // The other half of the calibration: a 0.42 from five minutes ago does
+      // NOT beat a 0.85 from this morning, because they sit in different
+      // buckets and relevance dominates across bucket boundaries.
+      it("across bucket boundaries, the higher-relevance bucket wins even if the lower bucket is fresher", async () => {
+        const oldStart = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+        const freshStart = new Date(Date.UTC(2026, 3, 1, 10, 0, 0))
+        const sessionStaleHi = "frx-stale-085"
+        const sessionFreshLo = "frx-fresh-055"
+        const traceStale = padTrace("frx1")
+        const traceFresh = padTrace("frx2")
+
+        await insertSpans([
+          makeSpanRow({
+            traceId: traceStale,
+            spanId: padSpan("frx1"),
+            sessionId: sessionStaleHi,
+            startTime: oldStart,
+          }),
+          makeSpanRow({
+            traceId: traceFresh,
+            spanId: padSpan("frx2"),
+            sessionId: sessionFreshLo,
+            startTime: freshStart,
+          }),
+        ])
+        await insertSearchDocs([
+          { traceId: traceStale, text: "freshmark stale strong-match", startTime: oldStart, contentHashSuffix: "x1" },
+          { traceId: traceFresh, text: "freshmark recent weak-match", startTime: freshStart, contentHashSuffix: "x2" },
+        ])
+        await insertSearchEmbeddings([
+          { traceId: traceStale, chunkIndex: 0, embedding: COSINE_085, startTime: oldStart, contentHashSuffix: "x1" },
+          {
+            traceId: traceFresh,
+            chunkIndex: 0,
+            embedding: COSINE_055,
+            startTime: freshStart,
+            contentHashSuffix: "x2",
+          },
+        ])
+
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: '"freshmark" match', limit: 10 },
+          }),
+        )
+
+        const ids = page.items.map((s) => s.sessionId)
+        expect(ids).toEqual([sessionStaleHi, sessionFreshLo])
+      })
+
+      // Lexical-only matches all collapse to bucket 0.0 (best_score = 0); the
+      // freshness sort is the only signal left, so they form a coherent
+      // "latest matches first" page (§6.5).
+      it("lexical-only sessions all share bucket 0.0 and sort by recency among themselves", async () => {
+        const base = new Date(Date.UTC(2026, 0, 10, 10, 0, 0))
+        const sessions = [
+          { id: "lex-newest", offsetSec: 200 },
+          { id: "lex-middle", offsetSec: 100 },
+          { id: "lex-oldest", offsetSec: 0 },
+        ] as const
+        const spans = sessions.map((s, i) =>
+          makeSpanRow({
+            traceId: padTrace(`lex${i}`),
+            spanId: padSpan(`lx${i}`),
+            sessionId: s.id,
+            startTime: new Date(base.getTime() + s.offsetSec * 1_000),
+          }),
+        )
+        await insertSpans(spans)
+        await insertSearchDocs(
+          sessions.map((s, i) => ({
+            traceId: padTrace(`lex${i}`),
+            text: `freshmark lexical-only ${s.id}`,
+            startTime: new Date(base.getTime() + s.offsetSec * 1_000),
+            contentHashSuffix: `lx${i}`,
+          })),
+        )
+
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: '"freshmark"', limit: 10 },
+          }),
+        )
+
+        // All three lexical-only → best_score = 0.0 → bucket 0.0 → sort by
+        // last_activity_at DESC. Newest fixture first, oldest last.
+        const ids = page.items.map((s) => s.sessionId)
+        expect(ids).toEqual(["lex-newest", "lex-middle", "lex-oldest"])
+        for (const id of ids) {
+          expect(nonNull(page.searchMatches?.[id]).bestScore).toBe(0)
+        }
+      })
+
+      // §6.3: freshness is the SESSION's last activity, not the matching
+      // traces' last activity. A live conversation whose only matching turn
+      // is old must still rank as fresh; a dead conversation whose matching
+      // turns are equally old must rank stale.
+      it("freshness is session-level — a live session with an old matching trace still beats a fully-stale session", async () => {
+        const ancientMatch = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+        // The "live" session has a recent NON-matching span (so its
+        // sessions.max_end_time advances) but the only span that matches the
+        // search phrase is from January.
+        const liveActivity = new Date(Date.UTC(2026, 4, 1, 10, 0, 0))
+        const sessionLive = "frlive"
+        const sessionDead = "frdead"
+        const traceLiveMatch = padTrace("flm")
+        const traceLiveRecent = padTrace("flr")
+        const traceDead = padTrace("fld")
+
+        await insertSpans([
+          // Live session: one old matching trace + one recent non-matching
+          // trace. sessions.max_end_time = liveActivity + 1s.
+          makeSpanRow({
+            traceId: traceLiveMatch,
+            spanId: padSpan("flm"),
+            sessionId: sessionLive,
+            startTime: ancientMatch,
+          }),
+          makeSpanRow({
+            traceId: traceLiveRecent,
+            spanId: padSpan("flr"),
+            sessionId: sessionLive,
+            startTime: liveActivity,
+          }),
+          // Dead session: one old matching trace, nothing else.
+          // sessions.max_end_time = ancientMatch + 1s.
+          makeSpanRow({
+            traceId: traceDead,
+            spanId: padSpan("fld"),
+            sessionId: sessionDead,
+            startTime: ancientMatch,
+          }),
+        ])
+        // Only the two "match" traces carry the search phrase; the recent
+        // span on the live session is in the same session but invisible to
+        // the search candidate set.
+        await insertSearchDocs([
+          {
+            traceId: traceLiveMatch,
+            text: "freshmark old-matching-turn",
+            startTime: ancientMatch,
+            contentHashSuffix: "fl1",
+          },
+          {
+            traceId: traceDead,
+            text: "freshmark dead-session-match",
+            startTime: ancientMatch,
+            contentHashSuffix: "fl2",
+          },
+        ])
+
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: '"freshmark"', limit: 10 },
+          }),
+        )
+
+        // Both lexical-only → same bucket. The live session's
+        // last_activity_at is `liveActivity` (from the non-matching span),
+        // not `ancientMatch` — so it sorts ahead of the dead session.
+        // If the implementation used `max(trace_rollup.end_time)` instead
+        // (the matching-trace-only option in §5.1), both would tie at
+        // `ancientMatch` and this assertion would fail.
+        const ids = page.items.map((s) => s.sessionId)
+        expect(ids).toEqual([sessionLive, sessionDead])
+      })
+
+      // The clock-skew clamp prevents future-dated spans from pinning
+      // themselves to the top forever. Two far-future sessions (with
+      // different future offsets) must NOT be distinguishable by their
+      // relative future-ness — both clamp to `now() +
+      // SESSION_SEARCH_MAX_CLOCK_SKEW_MS` and tie on last_activity_at,
+      // breaking on session_id DESC.
+      it("future-dated spans clamp to now+1h, so two skewed sessions tie on last_activity_at", async () => {
+        const sessionLater = "skew-z" // later session_id (alphabetically) — wins DESC tiebreak
+        const sessionEarlier = "skew-a"
+        const traceLater = padTrace("skl")
+        const traceEarlier = padTrace("ske")
+        // Both well past the 1h clamp window. DateTime64(9) tops out
+        // around 2262-04-11, so we stay below that with room to spare.
+        const farFuture = new Date(Date.UTC(2200, 0, 1, 10, 0, 0))
+        const nearerFuture = new Date(Date.UTC(2100, 0, 1, 10, 0, 0))
+
+        await insertSpans([
+          // The EARLIER session_id carries the FURTHER-future timestamp.
+          // Without the clamp, the far-future session would beat the
+          // nearer-future one on raw end_time, so the earlier session_id
+          // would win — the opposite of what we expect.
+          makeSpanRow({
+            traceId: traceEarlier,
+            spanId: padSpan("ske"),
+            sessionId: sessionEarlier,
+            startTime: farFuture,
+          }),
+          makeSpanRow({
+            traceId: traceLater,
+            spanId: padSpan("skl"),
+            sessionId: sessionLater,
+            startTime: nearerFuture,
+          }),
+        ])
+        await insertSearchDocs([
+          { traceId: traceEarlier, text: "freshmark future-clamp a", startTime: farFuture, contentHashSuffix: "sk1" },
+          { traceId: traceLater, text: "freshmark future-clamp b", startTime: nearerFuture, contentHashSuffix: "sk2" },
+        ])
+
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: '"freshmark"', limit: 10 },
+          }),
+        )
+
+        // Both clamp to now()+1h, tied on last_activity_at.
+        // session_id DESC means "skew-z" beats "skew-a" — proves the clamp
+        // collapsed the two future timestamps into a tie.
+        const ids = page.items.map((s) => s.sessionId)
+        expect(ids).toEqual([sessionLater, sessionEarlier])
+      })
+
+      // Future-dated bottom-bucket sessions must NOT leapfrog a present-day
+      // top-bucket session: bucket ordering takes precedence over freshness
+      // even when the freshness column has been pinned to its clamp.
+      it("a future-clamped lexical session does not promote across bucket boundaries", async () => {
+        const future = new Date(Date.UTC(2200, 0, 1, 10, 0, 0))
+        const past = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+        const sessionHighBucketStale = "clamp-hi"
+        const sessionLexFuture = "clamp-lo-future"
+        const traceHigh = padTrace("clh")
+        const traceFuture = padTrace("clf")
+
+        await insertSpans([
+          makeSpanRow({
+            traceId: traceHigh,
+            spanId: padSpan("clh"),
+            sessionId: sessionHighBucketStale,
+            startTime: past,
+          }),
+          makeSpanRow({
+            traceId: traceFuture,
+            spanId: padSpan("clf"),
+            sessionId: sessionLexFuture,
+            startTime: future,
+          }),
+        ])
+        await insertSearchDocs([
+          { traceId: traceHigh, text: "freshmark strong-match relevance", startTime: past, contentHashSuffix: "cl1" },
+          { traceId: traceFuture, text: "freshmark future-clamp weak", startTime: future, contentHashSuffix: "cl2" },
+        ])
+        // Only the stale session is semantically strong (bucket 0.8). The
+        // future-dated one is lexical-only (bucket 0.0).
+        await insertSearchEmbeddings([
+          { traceId: traceHigh, chunkIndex: 0, embedding: COSINE_081, startTime: past, contentHashSuffix: "cl1" },
+        ])
+
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: '"freshmark" match', limit: 10 },
+          }),
+        )
+
+        const ids = page.items.map((s) => s.sessionId)
+        expect(ids).toEqual([sessionHighBucketStale, sessionLexFuture])
+      })
+
+      // The wire cursor is the three-field freshness tuple, not the legacy
+      // (sortValue, sessionId) shape — and the values must round-trip into
+      // the HAVING predicate on the next page without losing rows.
+      it("nextCursor exposes the freshness-weighted (relevanceBucket, lastActivityAt, sessionId) tuple", async () => {
+        const start = new Date(Date.UTC(2026, 1, 1, 10, 0, 0))
+        const sessions = ["cur-a", "cur-b", "cur-c"] as const
+        await insertSpans(
+          sessions.map((s, i) =>
+            makeSpanRow({
+              traceId: padTrace(`cur${i}`),
+              spanId: padSpan(`cu${i}`),
+              sessionId: s,
+              startTime: new Date(start.getTime() + i * 1_000),
+            }),
+          ),
+        )
+        await insertSearchDocs(
+          sessions.map((s, i) => ({
+            traceId: padTrace(`cur${i}`),
+            text: `freshmark cursor-shape ${s}`,
+            startTime: new Date(start.getTime() + i * 1_000),
+            contentHashSuffix: `cu${i}`,
+          })),
+        )
+
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: '"freshmark"', limit: 2 },
+          }),
+        )
+
+        const cursor = nonNull(page.nextCursor)
+        expect("relevanceBucket" in cursor).toBe(true)
+        expect("lastActivityAt" in cursor).toBe(true)
+        expect("sessionId" in cursor).toBe(true)
+        expect("sortValue" in cursor).toBe(false)
+        if (!("relevanceBucket" in cursor)) throw new Error("unreachable")
+        // All lexical-only → bucket 0.0. Cursor encodes the snapped bucket
+        // exactly so the HAVING predicate round-trips deterministically.
+        expect(cursor.relevanceBucket).toBe(0)
+        // ISO-8601 — CH `DateTime64(9, 'UTC')` JSON-serializes that way.
+        expect(typeof cursor.lastActivityAt).toBe("string")
+        expect(cursor.lastActivityAt.length).toBeGreaterThan(0)
+      })
+
+      // The full pagination contract under the new sort tuple: a mixed-bucket
+      // set walks (bucket DESC, last_activity_at DESC, session_id DESC) with
+      // no duplicates, no skips, and the final page reports hasMore = false.
+      it("pagination across mixed buckets walks the full sort tuple without duplicates", async () => {
+        const t = new Date(Date.UTC(2026, 1, 5, 10, 0, 0))
+        // Six sessions: 2 in bucket 0.8, 2 in bucket 0.6, 2 in bucket 0.0
+        // (lexical-only). Within each bucket the *-fresh suffix is newer.
+        const fixtures = [
+          { id: "pg-08-fresh", offset: 6_000, embed: COSINE_085 },
+          { id: "pg-08-stale", offset: 0, embed: COSINE_087 },
+          { id: "pg-06-fresh", offset: 7_000, embed: COSINE_065 },
+          { id: "pg-06-stale", offset: 1_000, embed: COSINE_065 },
+          { id: "pg-00-fresh", offset: 8_000, embed: undefined },
+          { id: "pg-00-stale", offset: 2_000, embed: undefined },
+        ] as const
+        await insertSpans(
+          fixtures.map((f, i) =>
+            makeSpanRow({
+              traceId: padTrace(`pg${i}`),
+              spanId: padSpan(`pg${i}`),
+              sessionId: f.id,
+              startTime: new Date(t.getTime() + f.offset),
+            }),
+          ),
+        )
+        await insertSearchDocs(
+          fixtures.map((f, i) => ({
+            traceId: padTrace(`pg${i}`),
+            text: `freshmark pagination ${f.id}`,
+            startTime: new Date(t.getTime() + f.offset),
+            contentHashSuffix: `pg${i}`,
+          })),
+        )
+        await insertSearchEmbeddings(
+          fixtures
+            .map((f, i) =>
+              f.embed
+                ? {
+                    traceId: padTrace(`pg${i}`),
+                    chunkIndex: 0,
+                    embedding: f.embed,
+                    startTime: new Date(t.getTime() + f.offset),
+                    contentHashSuffix: `pg${i}`,
+                  }
+                : null,
+            )
+            .filter((e): e is NonNullable<typeof e> => e !== null),
+        )
+
+        const expected = ["pg-08-fresh", "pg-08-stale", "pg-06-fresh", "pg-06-stale", "pg-00-fresh", "pg-00-stale"]
+
+        // The semantic-prompt half of the query (`relevance`) is what lifts
+        // `relevance_score` above 0 for the embedded fixtures — phrase-only
+        // mode collapses every match to `relevance_score = 0` (see
+        // `search-plan.ts`'s phrase-only branch), so the buckets only
+        // separate when a semantic prompt is present.
+        const collected: string[] = []
+        let cursor: SessionListPage["nextCursor"]
+        for (let i = 0; i < 5; i++) {
+          const page = await runCh(
+            repo.listByProjectId({
+              organizationId: ORG_ID,
+              projectId: PROJECT_ID,
+              options: { searchQuery: '"freshmark" relevance', limit: 2, ...(cursor ? { cursor } : {}) },
+            }),
+          )
+          for (const item of page.items) collected.push(item.sessionId)
+          if (!page.hasMore || !page.nextCursor) break
+          cursor = page.nextCursor
+        }
+
+        expect(collected).toEqual(expected)
+        expect(new Set(collected).size).toBe(collected.length)
+      })
+
+      // Orphan traces (no row in `sessions`) take the LEFT JOIN's NULL
+      // branch and fall back to `max(trace_rollup.end_time)`; multiple
+      // orphans must still order by recency among themselves.
+      it("orphan traces fall back to trace-level end_time for freshness ordering", async () => {
+        const base = new Date(Date.UTC(2026, 2, 1, 10, 0, 0))
+        const orphanOld = padTrace("oro")
+        const orphanNew = padTrace("orn")
+        // No sessionId on either span → both become orphan sessions keyed
+        // by `toString(trace_id)`. The sessions table has nothing for them.
+        await insertSpans([
+          makeSpanRow({ traceId: orphanOld, spanId: padSpan("oro"), startTime: base }),
+          makeSpanRow({
+            traceId: orphanNew,
+            spanId: padSpan("orn"),
+            startTime: new Date(base.getTime() + 60_000),
+          }),
+        ])
+        await insertSearchDocs([
+          { traceId: orphanOld, text: "freshmark orphan stale", startTime: base, contentHashSuffix: "or1" },
+          {
+            traceId: orphanNew,
+            text: "freshmark orphan recent",
+            startTime: new Date(base.getTime() + 60_000),
+            contentHashSuffix: "or2",
+          },
+        ])
+
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: '"freshmark"', limit: 10 },
+          }),
+        )
+
+        const ids = page.items.map((s) => s.sessionId)
+        // Both lexical-only → bucket 0.0. Without the coalesce fallback,
+        // both would tie at NULL last_activity_at and the ordering would
+        // collapse to session_id DESC — the newer orphan must come first.
+        expect(ids).toEqual([orphanNew, orphanOld])
+      })
+    })
   })
 })

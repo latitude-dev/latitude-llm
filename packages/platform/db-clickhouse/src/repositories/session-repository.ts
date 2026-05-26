@@ -356,8 +356,15 @@ export const SessionRepositoryLive = Layer.effect(
 
         const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
 
+        // Search-mode cursors (carrying `relevanceBucket` / `lastActivityAt`)
+        // don't match this query's ORDER BY tuple; drop them and restart
+        // pagination from the top. Same posture as the search path's reverse
+        // case in `listSessionsBySearchQuery`.
+        const listCursor =
+          options.cursor && "sortValue" in options.cursor && "sessionId" in options.cursor ? options.cursor : undefined
+
         const havingParts: string[] = [...havingClauses]
-        if (options.cursor) {
+        if (listCursor) {
           havingParts.push(
             `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
                 OR (${sort.expr} = {cursorSortValue:${sort.chType}}
@@ -384,10 +391,10 @@ export const SessionRepositoryLive = Layer.effect(
                 projectId: projectId as string,
                 limit: limit + 1,
                 ...filterParams,
-                ...(options.cursor
+                ...(listCursor
                   ? {
-                      cursorSortValue: options.cursor.sortValue,
-                      cursorSessionId: options.cursor.sessionId,
+                      cursorSortValue: listCursor.sortValue,
+                      cursorSessionId: listCursor.sessionId,
                     }
                   : {}),
               },

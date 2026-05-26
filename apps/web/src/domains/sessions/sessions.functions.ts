@@ -56,18 +56,31 @@ const serializeSearchMatch = (match: SessionSearchMatch) => ({
 
 export type SessionSearchMatchRecord = ReturnType<typeof serializeSearchMatch>
 
-const sessionListCursorSchema = z.object({
-  sortValue: z.string(),
-  sessionId: z.string(),
-})
+// Two cursor shapes coexist on the wire: the original
+// `(sortValue, sessionId)` for the non-search list path and the
+// freshness-weighted `(relevanceBucket, lastActivityAt, sessionId)` for the
+// search list path. The repository discriminates by shape — a stale cursor
+// of the wrong kind is silently dropped (pagination restarts).
+const sessionListCursorSchema = z.union([
+  z.object({
+    sortValue: z.string(),
+    sessionId: z.string(),
+  }),
+  z.object({
+    relevanceBucket: z.number(),
+    lastActivityAt: z.string(),
+    sessionId: z.string(),
+  }),
+])
+
+type SessionListNextCursor =
+  | { readonly sortValue: string; readonly sessionId: string }
+  | { readonly relevanceBucket: number; readonly lastActivityAt: string; readonly sessionId: string }
 
 interface SessionListResult {
   readonly sessions: readonly SessionRecord[]
   readonly hasMore: boolean
-  readonly nextCursor?: {
-    readonly sortValue: string
-    readonly sessionId: string
-  }
+  readonly nextCursor?: SessionListNextCursor
   readonly searchMatches?: Readonly<Record<string, SessionSearchMatchRecord>>
 }
 

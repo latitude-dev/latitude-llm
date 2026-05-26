@@ -157,3 +157,25 @@ export const TRACE_SEARCH_MIN_RELEVANCE_SCORE = 0.3
  * id/score arrays.
  */
 export const SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW = 50
+
+/**
+ * Width of the relevance bucket used when sorting session search results.
+ *
+ * Sessions are sorted by `(relevance_bucket, last_activity_at, session_id)`
+ * where `relevance_bucket = floor(best_score / RELEVANCE_BUCKET_WIDTH) *
+ * RELEVANCE_BUCKET_WIDTH`. A wider bucket favors freshness (more sessions
+ * share a tier, recency dominates); a narrower bucket favors relevance.
+ *
+ * 0.1 is the default: with TRACE_SEARCH_MIN_RELEVANCE_SCORE = 0.3 the
+ * non-empty buckets are {0.3-0.4, 0.4-0.5, ..., 0.9-1.0}, giving seven
+ * recency-sorted tiers above the lexical-only floor.
+ */
+export const SESSION_SEARCH_RELEVANCE_BUCKET_WIDTH = 0.1
+
+/**
+ * Maximum future skew (milliseconds) tolerated when reading max_end_time
+ * for the freshness sort. A span with end_time more than this far in the
+ * future is clamped to now() + this interval, preventing client-clock-skew
+ * junk from floating to the top of search results forever.
+ */
+export const SESSION_SEARCH_MAX_CLOCK_SKEW_MS = 60 * 60 * 1000

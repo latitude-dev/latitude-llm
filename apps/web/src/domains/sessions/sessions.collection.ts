@@ -46,7 +46,10 @@ export function useSessionsInfiniteScroll({
       })
       return result ?? { sessions: [], hasMore: false }
     },
-    initialPageParam: undefined as { sortValue: string; sessionId: string } | undefined,
+    initialPageParam: undefined as
+      | { sortValue: string; sessionId: string }
+      | { relevanceBucket: number; lastActivityAt: string; sessionId: string }
+      | undefined,
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
   })
 
