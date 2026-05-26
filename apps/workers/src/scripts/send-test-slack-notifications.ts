@@ -25,7 +25,6 @@ Options:
   --kind <k>              Only send one kind: incident.event | incident.opened |
                           incident.closed | wrapped.report | custom.message
                           (default: all five in sequence)
-  --project-slug <slug>   Slug for deep-link URLs (default: "demo-project")
   --help                  Show this help
 `.trim()
 
@@ -106,7 +105,6 @@ async function main(): Promise<void> {
       "organization-id": { type: "string" },
       "channel-id": { type: "string" },
       kind: { type: "string" },
-      "project-slug": { type: "string" },
       help: { type: "boolean", default: false },
     },
     strict: true,
@@ -121,7 +119,6 @@ async function main(): Promise<void> {
   const orgId = OrganizationId(parsed.values["organization-id"] ?? SEED_ORG_ID)
   const overrideChannelId = parsed.values["channel-id"]
   const kindFilter = parsed.values.kind
-  const projectSlug = parsed.values["project-slug"] ?? "demo-project"
 
   const SYNTHETIC_PAYLOADS = buildSyntheticPayloads()
   const allKinds = Object.keys(SYNTHETIC_PAYLOADS)
@@ -216,7 +213,6 @@ async function main(): Promise<void> {
     console.log(`\nPublished ${published} job(s). The notification-slack worker should post to Slack within a second.`)
   }
 
-  void projectSlug
 }
 
 main().catch((err) => {

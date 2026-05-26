@@ -116,6 +116,12 @@ const fanOutSlackRoutes = (
           },
           {
             dedupeKey: `notification-slack:${first.organizationId}:${first.idempotencyKey}:${route.channelId}`,
+            // Retry on transient failures (rate-limit, transport). The
+            // claim-then-post design means auth/channel-gone errors are
+            // acked immediately by the worker; only genuinely retryable
+            // failures (429, network) propagate for BullMQ to retry here.
+            attempts: 4,
+            backoff: { delayMs: 30_000 },
           },
         ),
       ),
