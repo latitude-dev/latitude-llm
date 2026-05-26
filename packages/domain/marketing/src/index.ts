@@ -4,6 +4,11 @@ export {
   MARKETING_USER_GROUP_CODE_AGENTS,
   MARKETING_USER_GROUP_PROD_TRACES,
   type MarketingUserGroup,
+  type OnboardingType,
+  type StackChoice,
+  onboardingTypeSchema,
+  stackChoiceSchema,
+  stackChoiceToOnboardingType,
 } from "./constants.ts"
 export { MarketingContactsError } from "./errors.ts"
 export {

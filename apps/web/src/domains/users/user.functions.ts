@@ -1,6 +1,7 @@
 import { OutboxEventWriter } from "@domain/events"
 import { ProjectRepository } from "@domain/projects"
-import { ProjectId, SqlClient, stackChoiceSchema } from "@domain/shared"
+import { stackChoiceSchema, stackChoiceToOnboardingType } from "@domain/marketing"
+import { ProjectId, SqlClient } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { OutboxEventWriterLive, ProjectRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -47,7 +48,7 @@ export const submitOnboarding = createServerFn({ method: "POST" })
     const { userId, organizationId } = await requireSession()
     const adminClient = getAdminPostgresClient()
 
-    const onboardingType = data.stackChoice === "coding-agent-machine" ? "code-agents" : "prod-traces"
+    const onboardingType = stackChoiceToOnboardingType(data.stackChoice)
 
     await Effect.runPromise(
       Effect.gen(function* () {
@@ -76,7 +77,7 @@ export const submitOnboarding = createServerFn({ method: "POST" })
             const project = yield* projectRepo.findById(ProjectId(data.projectId))
             yield* projectRepo.save({
               ...project,
-              settings: { ...project.settings, onboardingType },
+              settings: { ...(project.settings ?? {}), onboardingType },
             })
           }),
         )

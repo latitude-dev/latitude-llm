@@ -28,6 +28,7 @@
     "@domain/flaggers": "workspace:*",
     "@domain/integrations": "workspace:*",
     "@domain/issues": "workspace:*",
+    "@domain/marketing": "workspace:*",
     "@domain/notifications": "workspace:*",
     "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",

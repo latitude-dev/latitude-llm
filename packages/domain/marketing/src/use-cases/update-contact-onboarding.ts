@@ -1,20 +1,12 @@
-import type { StackChoice } from "@domain/shared"
+import { type StackChoice, stackChoiceToOnboardingType } from "../constants.ts"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
-import {
-  MARKETING_USER_GROUP_CODE_AGENTS,
-  MARKETING_USER_GROUP_PROD_TRACES,
-  type MarketingUserGroup,
-} from "../constants.ts"
 import type { MarketingContactsPort } from "../ports/marketing-contacts.ts"
 
 export interface UpdateContactOnboardingInput {
   readonly userId: string
   readonly stackChoice: StackChoice
 }
-
-const stackChoiceToUserGroup = (stackChoice: UpdateContactOnboardingInput["stackChoice"]): MarketingUserGroup =>
-  stackChoice === "coding-agent-machine" ? MARKETING_USER_GROUP_CODE_AGENTS : MARKETING_USER_GROUP_PROD_TRACES
 
 /**
  * Updates the marketing contact with onboarding-form fields (jobTitle,
@@ -38,6 +30,6 @@ export const updateContactOnboarding = ({ marketingContacts }: { readonly market
       firstName: user.name,
       jobTitle: user.jobTitle,
       phoneNumber: user.phoneNumber,
-      userGroup: stackChoiceToUserGroup(input.stackChoice),
+      userGroup: stackChoiceToOnboardingType(input.stackChoice),
     })
   })

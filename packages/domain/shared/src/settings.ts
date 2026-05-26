@@ -60,17 +60,11 @@ export const escalationSettingSchema = z.object({
 })
 export type EscalationSetting = z.infer<typeof escalationSettingSchema>
 
-export const stackChoiceSchema = z.enum(["coding-agent-machine", "production-agent"])
-export type StackChoice = z.infer<typeof stackChoiceSchema>
-
-export const onboardingTypeSchema = z.enum(["prod-traces", "code-agents"])
-export type OnboardingType = z.infer<typeof onboardingTypeSchema>
-
 export const projectSettingsSchema = z.object({
   keepMonitoring: z.boolean().optional(),
   notifications: notificationsSettingSchema.optional(),
   escalation: escalationSettingSchema.optional(),
-  onboardingType: onboardingTypeSchema.optional(),
+  onboardingType: z.enum(["prod-traces", "code-agents"]).optional(),
 })
 
 export const isIncidentNotificationEnabled = (

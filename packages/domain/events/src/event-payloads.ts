@@ -1,4 +1,4 @@
-import type { StackChoice } from "@domain/shared"
+import type { OnboardingType, StackChoice } from "@domain/marketing"
 
 /**
  * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
@@ -296,7 +296,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly traceId: string
-    readonly onboardingType?: "prod-traces" | "code-agents"
+    readonly onboardingType?: OnboardingType
   }
   BillingUsagePeriodUpdated: {
     readonly organizationId: string

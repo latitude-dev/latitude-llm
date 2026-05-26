@@ -1,4 +1,4 @@
-import type { OnboardingType } from "@domain/shared"
+import { z } from "zod"
 
 /**
  * Source value attributing new marketing contacts to the v2 signup flow. v1
@@ -7,6 +7,15 @@ import type { OnboardingType } from "@domain/shared"
  * base.
  */
 export const MARKETING_SOURCE_V2_SIGNUP = "LatitudeV2Signup"
+
+export const stackChoiceSchema = z.enum(["coding-agent-machine", "production-agent"])
+export type StackChoice = z.infer<typeof stackChoiceSchema>
+
+export const onboardingTypeSchema = z.enum(["prod-traces", "code-agents"])
+export type OnboardingType = z.infer<typeof onboardingTypeSchema>
+
+export const stackChoiceToOnboardingType = (stackChoice: StackChoice): OnboardingType =>
+  stackChoice === "coding-agent-machine" ? "code-agents" : "prod-traces"
 
 export const MARKETING_USER_GROUP_CODE_AGENTS = "code-agents" satisfies OnboardingType
 export const MARKETING_USER_GROUP_PROD_TRACES = "prod-traces" satisfies OnboardingType
