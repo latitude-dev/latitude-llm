@@ -27,6 +27,7 @@ export interface AdminFeatureFlagEnabledOrganizationDto {
 
 export interface AdminFeatureFlagDto {
   readonly identifier: FeatureFlagId
+  readonly emoji: string
   readonly name: string
   readonly description: string
   readonly enabledForAll: boolean
@@ -35,6 +36,7 @@ export interface AdminFeatureFlagDto {
 
 export interface AdminOrganizationFeatureFlagDto {
   readonly identifier: FeatureFlagId
+  readonly emoji: string
   readonly name: string
   readonly description: string
   readonly enabledForAll: boolean
@@ -60,6 +62,7 @@ export const adminOrganizationFeatureFlagMutationInputSchema = z.object({
 
 const toFeatureFlagDto = (featureFlag: AdminFeatureFlagSummary): AdminFeatureFlagDto => ({
   identifier: featureFlag.identifier,
+  emoji: featureFlag.emoji,
   name: featureFlag.name,
   description: featureFlag.description,
   enabledForAll: featureFlag.enabledForAll,
@@ -72,6 +75,7 @@ const toFeatureFlagDto = (featureFlag: AdminFeatureFlagSummary): AdminFeatureFla
 
 const toOrganizationFeatureFlagDto = (featureFlag: AdminOrganizationFeatureFlag): AdminOrganizationFeatureFlagDto => ({
   identifier: featureFlag.identifier,
+  emoji: featureFlag.emoji,
   name: featureFlag.name,
   description: featureFlag.description,
   enabledForAll: featureFlag.enabledForAll,

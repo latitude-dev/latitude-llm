@@ -13,6 +13,7 @@ const toSummary = (
   enabledOrganizations: AdminFeatureFlagSummary["enabledOrganizations"],
 ): AdminFeatureFlagSummary => ({
   identifier,
+  emoji: FEATURE_FLAGS[identifier].emoji,
   name: FEATURE_FLAGS[identifier].name,
   description: FEATURE_FLAGS[identifier].description,
   enabledForAll,

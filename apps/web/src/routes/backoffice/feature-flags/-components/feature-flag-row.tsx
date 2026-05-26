@@ -68,6 +68,9 @@ export function FeatureFlagRow({ featureFlag }: FeatureFlagRowProps) {
   return (
     <>
       <div className="flex items-start gap-4 rounded-lg border border-border bg-background px-4 py-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background">
+          <span className="text-base leading-none">{featureFlag.emoji}</span>
+        </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <Text.H5 weight="semibold" ellipsis>

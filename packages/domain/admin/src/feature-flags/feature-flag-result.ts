@@ -17,6 +17,7 @@ export type AdminFeatureFlagEnabledOrganization = z.infer<typeof adminFeatureFla
  */
 export const adminFeatureFlagSummarySchema = z.object({
   identifier: featureFlagIdentifierSchema,
+  emoji: z.string(),
   name: z.string(),
   description: z.string(),
   enabledForAll: z.boolean(),

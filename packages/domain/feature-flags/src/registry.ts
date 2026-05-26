@@ -12,30 +12,36 @@
  */
 export const FEATURE_FLAGS = {
   "claude-code-wrapped": {
+    emoji: "🎁",
     name: "Claude Code Wrapped",
     description: "Gates the annual Claude Code Wrapped summary fan-out and rendering.",
   },
   "email-notifications": {
+    emoji: "📧",
     name: "Email notifications",
     description: "Enables email delivery for incident notifications and the related user preferences UI.",
   },
   notifications: {
+    emoji: "🔔",
     name: "In-app notifications",
     description: "Enables the in-app notifications bell and the per-project notification settings page.",
   },
   slack: {
+    emoji: "💬",
     name: "Slack integration",
     description: "Enables the Slack integration settings and incident delivery to Slack.",
   },
   "session-search-v2": {
+    emoji: "🔍",
     name: "Session search v2",
     description: "Routes users to the new session-rollup search at /session-search instead of the legacy /search.",
   },
   "timeline-incidents": {
+    emoji: "🚨",
     name: "Timeline incidents overlay",
     description: "Renders the incident overlay on trace and issue timeline histograms.",
   },
-} as const satisfies Record<string, { readonly name: string; readonly description: string }>
+} as const satisfies Record<string, { readonly emoji: string; readonly name: string; readonly description: string }>
 
 export type FeatureFlagId = keyof typeof FEATURE_FLAGS
 
