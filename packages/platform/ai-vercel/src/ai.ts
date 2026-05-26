@@ -23,6 +23,11 @@ type BedrockGeographyPrefix = "eu" | "us" | "apac"
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
 const MAX_ERROR_TEXT_LENGTH = 4_000
+const BEDROCK_MINIMAX_M25_MODEL_ID = "minimax.minimax-m2.5"
+const BEDROCK_MINIMAX_M25_FALLBACK_MODEL = {
+  provider: "amazon-bedrock",
+  model: "anthropic.claude-haiku-4-5-20251001-v1:0",
+} as const
 const bedrockScopedModelIdPattern = /^(?:(?:eu|us|apac)\.)?([a-z0-9-]+\..+)$/
 
 /**
@@ -82,6 +87,28 @@ const resolveBedrockModelId = (model: string, region: string): string => {
   }
 
   return `${bedrockGeographyPrefixForAwsRegion(region)}.${match[1]}`
+}
+
+const stripBedrockGeographyPrefix = (model: string): string => {
+  if (model.startsWith("global.")) {
+    return model
+  }
+
+  return model.match(bedrockScopedModelIdPattern)?.[1] ?? model
+}
+
+const resolveGenerateFallback = (
+  input: GenerateInput<unknown>,
+): { readonly provider: string; readonly model: string } | undefined => {
+  if (input.provider !== "amazon-bedrock") {
+    return undefined
+  }
+
+  if (stripBedrockGeographyPrefix(input.model) !== BEDROCK_MINIMAX_M25_MODEL_ID) {
+    return undefined
+  }
+
+  return BEDROCK_MINIMAX_M25_FALLBACK_MODEL
 }
 
 const normalizeProviderOptions = (
@@ -249,15 +276,17 @@ export const AIGenerateLive = Layer.effect(
       }
 
       const providerModel = yield* createProviderModel(input.provider, input.model)
+      const fallback = resolveGenerateFallback(input)
+      const fallbackProviderModel = fallback ? yield* createProviderModel(fallback.provider, fallback.model) : undefined
 
       return yield* Effect.tryPromise({
         try: async () => {
-          const execute = async () => {
+          const generateWithModel = async (model: ProviderModel) => {
             const startTime = performance.now()
             const providerOptions = normalizeProviderOptions(input.providerOptions)
 
             const call: GenerateTextCall = {
-              model: providerModel,
+              model,
               system: input.system,
               prompt: input.prompt,
               output: Output.object({ schema: input.schema }),
@@ -291,6 +320,25 @@ export const AIGenerateLive = Layer.effect(
               },
               duration: Math.round((performance.now() - startTime) * 1_000_000),
             } satisfies GenerateResult<T>
+          }
+
+          const execute = async () => {
+            try {
+              return await generateWithModel(providerModel)
+            } catch (primaryError) {
+              if (!fallback || fallbackProviderModel === undefined) {
+                throw primaryError
+              }
+
+              try {
+                return await generateWithModel(fallbackProviderModel)
+              } catch (fallbackError) {
+                throw new Error(
+                  `Primary model ${input.provider}/${input.model} failed: ${formatGenerateError(primaryError)}; ` +
+                    `fallback model ${fallback.provider}/${fallback.model} failed: ${formatGenerateError(fallbackError)}`,
+                )
+              }
+            }
           }
 
           return await runWithAiTelemetry(input.telemetry, execute)

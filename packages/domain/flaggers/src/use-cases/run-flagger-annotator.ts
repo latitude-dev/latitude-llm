@@ -76,6 +76,8 @@ Respond with structured data containing a "feedback" field with your annotation 
 
 const SYSTEM_PROMPT_PREVIEW_MAX_LINES = 4
 const SYSTEM_PROMPT_PREVIEW_MAX_CHARS = 600
+const ANNOTATOR_TEXT_PART_MAX_CHARS = 8_000
+const ANNOTATOR_TRANSCRIPT_MAX_CHARS = 120_000
 const TOOL_RESULT_ERROR_TEXT = /(^error\b|error:\s*|\bfailed\b|\bfailure\b|\bexception\b|\btimeout\b|\bunavailable\b)/i
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 
@@ -100,6 +102,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function toNonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null
+}
+
+function truncateMiddle(text: string, maxChars: number, label: string): string {
+  if (text.length <= maxChars) return text
+
+  const omitted = text.length - maxChars
+  const marker = `\n[... ${omitted} ${label} omitted ...]\n`
+  const available = Math.max(0, maxChars - marker.length)
+  const headLength = Math.ceil(available / 2)
+  const tailLength = available - headLength
+
+  return `${text.slice(0, headLength).trimEnd()}${marker}${text.slice(text.length - tailLength).trimStart()}`
 }
 
 function cropSystemPromptPreview(text: string): string {
@@ -197,7 +211,7 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
       if (part.type === "text") {
         const content = toNonEmptyString(part.content)
         if (content && (message.role === "user" || message.role === "assistant")) {
-          textParts.push(content)
+          textParts.push(truncateMiddle(content, ANNOTATOR_TEXT_PART_MAX_CHARS, "chars from this message"))
         }
         continue
       }
@@ -222,7 +236,9 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
     flushText()
   }
 
-  return lines.length > 0 ? lines.join("\n") : "<no conversation messages available>"
+  if (lines.length === 0) return "<no conversation messages available>"
+
+  return truncateMiddle(lines.join("\n"), ANNOTATOR_TRANSCRIPT_MAX_CHARS, "chars from the middle of the transcript")
 }
 
 const loadTraceDetail = (input: RunFlaggerAnnotatorInput) =>

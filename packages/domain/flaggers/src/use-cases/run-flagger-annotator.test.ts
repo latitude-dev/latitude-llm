@@ -226,6 +226,63 @@ describe("runFlaggerAnnotatorUseCase", () => {
     expect(generateCall.prompt).not.toContain("redacted")
   })
 
+  it("bounds oversized transcript text while preserving message edges and compact tool signals", async () => {
+    const longUserText = `${"start ".repeat(200)}${"middle ".repeat(60_000)}${"end ".repeat(200)}`
+
+    const { repository: traceRepo } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "user",
+              parts: [{ type: "text", content: longUserText }],
+            },
+            {
+              role: "assistant",
+              parts: [{ type: "text", content: longUserText }],
+            },
+            {
+              role: "assistant",
+              parts: [{ type: "tool_call", id: "call-search", name: "search_docs", arguments: { q: "needle" } }],
+            },
+            {
+              role: "tool",
+              parts: [{ type: "tool_call_response", id: "call-search", response: { ok: false } }],
+            },
+          ]),
+        ),
+    })
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>() =>
+        Effect.succeed({
+          object: { feedback: "oversized prompt was bounded" } as T,
+          tokens: 80,
+          duration: 150_000_000,
+        }),
+    })
+
+    await Effect.runPromise(
+      runFlaggerAnnotatorUseCase(INPUT).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            aiLayer,
+          ),
+        ),
+      ),
+    )
+
+    const generateCall = calls.generate[0]
+    expect(generateCall.prompt.length).toBeLessThan(25_000)
+    expect(generateCall.prompt).toContain("[m0 user]: start start")
+    expect(generateCall.prompt).toContain("end end")
+    expect(generateCall.prompt).toContain("chars from this message omitted")
+    expect(generateCall.prompt).toContain("[m2 toolcall]: search_docs")
+    expect(generateCall.prompt).toContain("[m3 toolresult]: error")
+  })
+
   it("handles empty conversation gracefully", async () => {
     const expectedFeedback = "No conversation content to analyze."
 

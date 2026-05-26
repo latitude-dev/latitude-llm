@@ -1,8 +1,14 @@
-import { AICredentialError } from "@domain/ai"
+import { AICredentialError, AIGenerate } from "@domain/ai"
 import { Effect, Result } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { bedrockModelFactoryMock, createAmazonBedrockMock, fromNodeProviderChainMock } = vi.hoisted(() => {
+const {
+  bedrockModelFactoryMock,
+  createAmazonBedrockMock,
+  fromNodeProviderChainMock,
+  generateTextMock,
+  outputObjectMock,
+} = vi.hoisted(() => {
   const bedrockModelFactoryMock = vi.fn((modelId: string) => ({ modelId }))
 
   return {
@@ -14,6 +20,8 @@ const { bedrockModelFactoryMock, createAmazonBedrockMock, fromNodeProviderChainM
         secretAccessKey: "provider-chain-secret-key",
       }),
     ),
+    generateTextMock: vi.fn(),
+    outputObjectMock: vi.fn((value: unknown) => value),
   }
 })
 
@@ -25,7 +33,14 @@ vi.mock("@aws-sdk/credential-providers", () => ({
   fromNodeProviderChain: fromNodeProviderChainMock,
 }))
 
-import { createProviderModel } from "./ai.ts"
+vi.mock("ai", () => ({
+  generateText: generateTextMock,
+  Output: {
+    object: outputObjectMock,
+  },
+}))
+
+import { AIGenerateLive, createProviderModel } from "./ai.ts"
 
 const originalAwsRegion = process.env.LAT_AWS_REGION
 const originalAwsAccessKeyId = process.env.LAT_AWS_ACCESS_KEY_ID
@@ -42,6 +57,8 @@ beforeEach(() => {
   bedrockModelFactoryMock.mockClear()
   createAmazonBedrockMock.mockClear()
   fromNodeProviderChainMock.mockClear()
+  generateTextMock.mockReset()
+  outputObjectMock.mockClear()
 })
 
 afterEach(() => {
@@ -119,5 +136,41 @@ describe("createProviderModel", () => {
     await Effect.runPromise(createProviderModel("amazon-bedrock", "us.minimax.minimax-m2.5"))
 
     expect(bedrockModelFactoryMock).toHaveBeenCalledWith("minimax.minimax-m2.5")
+  })
+})
+
+describe("AIGenerateLive", () => {
+  it("falls back from MiniMax M2.5 to Claude Haiku 4.5", async () => {
+    generateTextMock
+      .mockRejectedValueOnce(new Error("Bedrock is unable to process your request."))
+      .mockResolvedValueOnce({
+        output: { ok: true },
+        usage: {
+          totalTokens: 3,
+          inputTokens: 2,
+          outputTokens: 1,
+        },
+      })
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const ai = yield* AIGenerate
+
+        return yield* ai.generate({
+          provider: "amazon-bedrock",
+          model: "minimax.minimax-m2.5",
+          system: "Return JSON.",
+          prompt: "Say ok.",
+          schema: { parse: (value: unknown) => value } as never,
+        })
+      }).pipe(Effect.provide(AIGenerateLive)),
+    )
+
+    expect(result.object).toEqual({ ok: true })
+    expect(generateTextMock).toHaveBeenCalledTimes(2)
+    expect(generateTextMock.mock.calls[0]?.[0].model).toEqual({ modelId: "minimax.minimax-m2.5" })
+    expect(generateTextMock.mock.calls[1]?.[0].model).toEqual({
+      modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    })
   })
 })
