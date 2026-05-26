@@ -212,7 +212,7 @@ function SampleAuthorCells({ author }: { readonly author: IncidentSampleAuthor }
     return (
       <>
         <td style={authorCellStyle}>
-          <LatitudeMonogram />
+          <LatitudeIcon />
         </td>
         <td style={{ ...authorCellStyle, paddingLeft: 6 }}>
           <span style={authorNameStyle}>Latitude</span>
@@ -295,7 +295,7 @@ function InitialsAvatar({ text }: { readonly text: string }) {
   )
 }
 
-function LatitudeMonogram() {
+function LatitudeIcon() {
   return (
     <Img
       src="https://console.latitude.so/latitude-icon.png"
