@@ -305,21 +305,26 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
 
       bulkUpdateParentCategory: ({ projectId, assignments }) =>
         Effect.gen(function* () {
+          if (assignments.length === 0) return
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          for (const assignment of assignments) {
-            yield* sqlClient.query((db, organizationId) =>
-              db
-                .update(taxonomyClusters)
-                .set({ parentCategoryId: assignment.parentCategoryId, updatedAt: new Date() })
-                .where(
-                  and(
-                    eq(taxonomyClusters.organizationId, organizationId),
-                    eq(taxonomyClusters.projectId, projectId),
-                    eq(taxonomyClusters.id, assignment.clusterId),
-                  ),
-                ),
-            )
-          }
+          const updatedAt = new Date()
+          const valuesSql = sql.join(
+            assignments.map(
+              (assignment) =>
+                sql`(${assignment.clusterId}::varchar, ${assignment.parentCategoryId ?? null}::varchar)`,
+            ),
+            sql.raw(", "),
+          )
+          yield* sqlClient.query((db, organizationId) =>
+            db.execute(sql`
+              UPDATE ${taxonomyClusters}
+              SET parent_category_id = v.parent_category_id, updated_at = ${updatedAt}
+              FROM (VALUES ${valuesSql}) AS v(cluster_id, parent_category_id)
+              WHERE ${taxonomyClusters.organizationId} = ${organizationId}
+                AND ${taxonomyClusters.projectId} = ${projectId}
+                AND ${taxonomyClusters.id} = v.cluster_id
+            `),
+          )
         }),
 
       markMerged: ({ clusterId, mergedIntoClusterId, timestamp }) =>

@@ -47,7 +47,12 @@ const withRedisLock = <A, E, R, EUnavailable>(input: {
         Effect.tryPromise({
           try: () => input.redis.eval(releaseLockScript, 1, input.key, lockToken),
           catch: (cause) => new CacheError({ message: `${input.releaseErrorMessage}: ${String(cause)}`, cause }),
-        }).pipe(Effect.ignore),
+        }).pipe(
+          // Release failure is non-fatal — the TTL will reclaim the lock — but
+          // silently swallowing it hides Redis health issues. Log + ignore.
+          Effect.tapError((error) => Effect.logWarning(input.releaseErrorMessage, { key: input.key, error })),
+          Effect.ignore,
+        ),
       ),
     )
   })

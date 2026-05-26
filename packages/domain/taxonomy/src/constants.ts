@@ -117,6 +117,14 @@ export const TAXONOMY_GARDENING_MAX_RUNTIME_MS = 5 * 60_000
 export const TAXONOMY_GARDENING_STALE_GRACE_MS = 60_000
 export const TAXONOMY_GARDENING_SWEEP_BATCH = 25
 
+/**
+ * Hard cap on `listAllByCluster` results. Merge needs every row to reassign;
+ * naming/trends only need a sample. Pick generously for merge (50k clusters
+ * × ~1k obs each is well past typical) and rely on callers to pass a smaller
+ * value where a sample is enough.
+ */
+export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 50_000
+
 // ---------------------------------------------------------------------------
 // Births (noise sweep) + merge / death
 // ---------------------------------------------------------------------------

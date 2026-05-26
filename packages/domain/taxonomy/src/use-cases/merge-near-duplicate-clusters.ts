@@ -1,6 +1,10 @@
 import { generateId, type OrganizationId, type ProjectId, TaxonomyLineageId, type TaxonomyRunId } from "@domain/shared"
 import { Effect } from "effect"
-import { TAXONOMY_CLUSTER_LOCK_TTL_SECONDS, TAXONOMY_MERGE_THRESHOLD } from "../constants.ts"
+import {
+  TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+  TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
+  TAXONOMY_MERGE_THRESHOLD,
+} from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
 import { cosineSimilarity, mergeTaxonomyCentroids, normalizeTaxonomyCentroid } from "../helpers.ts"
@@ -112,6 +116,7 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
               organizationId: input.organizationId,
               projectId: input.projectId,
               clusterId: loser.id,
+              limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
             })
 
             const mergedCentroid = mergeTaxonomyCentroids({

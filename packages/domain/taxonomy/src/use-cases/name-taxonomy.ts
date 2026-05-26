@@ -2,7 +2,12 @@ import { AI } from "@domain/ai"
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
-import { TAXONOMY_FPS_SAMPLE_BUDGET_MAX, TAXONOMY_FPS_SAMPLE_BUDGET_MIN, TAXONOMY_NAMING_MODEL } from "../constants.ts"
+import {
+  TAXONOMY_FPS_SAMPLE_BUDGET_MAX,
+  TAXONOMY_FPS_SAMPLE_BUDGET_MIN,
+  TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
+  TAXONOMY_NAMING_MODEL,
+} from "../constants.ts"
 import type { TaxonomyCategory } from "../entities/category.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { clamp, farthestPointSample, normalizeTaxonomyCentroid } from "../helpers.ts"
@@ -79,6 +84,7 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
       organizationId: input.organizationId,
       projectId: input.projectId,
       clusterId: input.clusterId,
+      limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
     })
     const ranked = [...rows].sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
     const selected = farthestPointSample(

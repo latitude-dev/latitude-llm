@@ -251,15 +251,11 @@ export const runTraceEndJob =
           },
         )
         .pipe(
-          Effect.map(() => true),
           Effect.catch((error) =>
-            Effect.gen(function* () {
-              yield* Effect.logError("Failed to enqueue taxonomy observeSession", {
-                ...buildRunLogContext(payload),
-                sessionId: canonicalSessionId,
-                error,
-              })
-              return false
+            Effect.logError("Failed to enqueue taxonomy observeSession", {
+              ...buildRunLogContext(payload),
+              sessionId: canonicalSessionId,
+              error,
             }),
           ),
         )

@@ -197,7 +197,7 @@ export const BehaviorObservationRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((error) => toRepositoryError(error, "BehaviorObservationRepository.listByCluster")))
         }),
 
-      listAllByCluster: ({ organizationId, projectId, clusterId }) =>
+      listAllByCluster: ({ organizationId, projectId, clusterId, limit }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -208,11 +208,13 @@ export const BehaviorObservationRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND assigned_cluster_id = {clusterId:String}
-                        ORDER BY start_time DESC, session_id ASC`,
+                        ORDER BY start_time DESC, session_id ASC
+                        LIMIT {limit:UInt32}`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   clusterId: clusterId as string,
+                  limit,
                 },
                 format: "JSONEachRow",
               })

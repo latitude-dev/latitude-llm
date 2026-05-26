@@ -166,6 +166,12 @@ const main = async () => {
 
   try {
     if (args.reset) {
+      const nodeEnv = process.env.NODE_ENV ?? "development"
+      if (nodeEnv !== "development" && nodeEnv !== "test") {
+        throw new Error(
+          `--reset refuses to run with NODE_ENV=${nodeEnv}. Set NODE_ENV=development if this is intentional.`,
+        )
+      }
       await adminPostgres.pool.query(
         `DELETE FROM latitude.taxonomy_cluster_lineage WHERE organization_id = $1 AND project_id = $2`,
         [organizationId, projectId],

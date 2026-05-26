@@ -29,6 +29,11 @@ export interface ListObservationsInClusterInput {
   readonly beforeSessionId?: SessionId
 }
 
+/**
+ * Counts over the `[since, now]` window passed to `getCounts` — not lifetime
+ * totals. Aggregated after the `FINAL` collapse so each session contributes
+ * at most once even if multiple unmerged rows still exist.
+ */
 export interface BehaviorObservationCounts {
   readonly total: number
   readonly assigned: number
@@ -58,11 +63,17 @@ export interface BehaviorObservationRepositoryShape {
   listByCluster(
     input: ListObservationsInClusterInput,
   ): Effect.Effect<readonly TaxonomyObservation[], RepositoryError, ChSqlClient>
-  /** Internal gardening path that needs every observation attached to a cluster, without a timestamp-only cursor. */
+  /**
+   * Internal gardening path that needs every observation attached to a
+   * cluster, without a timestamp-only cursor. Pass a hard `limit` (typically
+   * `TAXONOMY_LIST_ALL_BY_CLUSTER_MAX` for merge, smaller for sampling
+   * paths) so a runaway cluster doesn't return tens of thousands of rows.
+   */
   listAllByCluster(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly clusterId: TaxonomyClusterId
+    readonly limit: number
   }): Effect.Effect<readonly TaxonomyObservation[], RepositoryError, ChSqlClient>
   /**
    * Lookup an existing row by `(orgId, projectId, sessionId, summaryHash)`

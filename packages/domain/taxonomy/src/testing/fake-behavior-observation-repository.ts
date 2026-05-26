@@ -81,7 +81,7 @@ export const createFakeBehaviorObservationRepository = (
           .slice(0, limit),
       ),
 
-    listAllByCluster: ({ organizationId, projectId, clusterId }) =>
+    listAllByCluster: ({ organizationId, projectId, clusterId, limit }) =>
       Effect.sync(() =>
         [...rows.values()]
           .filter(
@@ -90,7 +90,8 @@ export const createFakeBehaviorObservationRepository = (
               observation.projectId === projectId &&
               observation.assignedClusterId === clusterId,
           )
-          .sort((a, b) => b.startTime.getTime() - a.startTime.getTime() || a.sessionId.localeCompare(b.sessionId)),
+          .sort((a, b) => b.startTime.getTime() - a.startTime.getTime() || a.sessionId.localeCompare(b.sessionId))
+          .slice(0, limit),
       ),
 
     findBySummaryHash: ({ organizationId, projectId, sessionId, summaryHash }) =>

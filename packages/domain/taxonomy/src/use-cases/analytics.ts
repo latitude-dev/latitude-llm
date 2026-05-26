@@ -1,5 +1,6 @@
 import type { OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
+import { TAXONOMY_LIST_ALL_BY_CLUSTER_MAX } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyClusterLineage, TaxonomyRun } from "../entities/lineage.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
@@ -40,6 +41,7 @@ export interface TopTaxonomyCluster {
 export interface GetTaxonomyAnalyticsResult {
   readonly totalActiveCategories: number
   readonly totalActiveClusters: number
+  /** Total observation count over the analytics window (default 14 days). */
   readonly totalObservations: number
   readonly topClusters: readonly TopTaxonomyCluster[]
 }
@@ -78,6 +80,7 @@ export const getClusterTrendUseCase = (input: GetClusterTrendInput) =>
       organizationId: input.organizationId,
       projectId: input.projectId,
       clusterId: input.clusterId,
+      limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
     })
     for (const row of rows) {
       if (row.startTime < since || row.startTime > now) continue

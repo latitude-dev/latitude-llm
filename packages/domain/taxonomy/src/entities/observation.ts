@@ -33,7 +33,7 @@ export const taxonomyObservationSchema = z.object({
   traceIds: z.array(traceIdSchema),
   summary: z.string(),
   /** SHA-256 hex of the canonical session document; used for summary/embedding caching. */
-  summaryHash: z.string(),
+  summaryHash: z.string().length(64),
   embedding: z.array(z.number()), // may be empty for sessions below TAXONOMY_SESSION_MIN_LENGTH
   embeddingModel: z.string(),
   /** Empty string when the row is in the noise bucket. */
