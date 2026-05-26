@@ -54,6 +54,16 @@ const _registry = {
     readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }>(),
+  taxonomyNameClusterWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly clusterId: string
+  }>(),
+  taxonomyNameCategoryWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly categoryId: string
+  }>(),
 }
 
 export type WorkflowRegistry = typeof _registry

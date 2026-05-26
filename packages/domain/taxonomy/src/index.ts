@@ -169,6 +169,8 @@ export {
   getClusterTrendUseCase,
   getLastRunUseCase,
   getTaxonomyAnalyticsUseCase,
+  type TaxonomyClusterTrendStatus,
+  type TaxonomyClusterTrendSummary,
   type TopTaxonomyCluster,
 } from "./use-cases/analytics.ts"
 export {

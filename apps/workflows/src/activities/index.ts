@@ -34,3 +34,9 @@ export {
   seedDemoProjectClickHouseActivity,
   seedDemoProjectPostgresActivity,
 } from "./seed-demo-project-activities.ts"
+export {
+  type NameTaxonomyCategoryActivityInput,
+  type NameTaxonomyClusterActivityInput,
+  nameTaxonomyCategoryActivity,
+  nameTaxonomyClusterActivity,
+} from "./taxonomy-naming-activities.ts"

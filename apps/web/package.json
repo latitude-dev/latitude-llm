@@ -37,6 +37,7 @@
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@domain/taxonomy": "workspace:*",
     "@domain/users": "workspace:*",
     "@intercom/messenger-js-sdk": "0.0.14",
     "@lottiefiles/dotlottie-wc": "0.9.12",

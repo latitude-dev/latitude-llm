@@ -24,6 +24,7 @@
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@domain/taxonomy": "workspace:*",
     "@platform/ai": "workspace:*",
     "@platform/ai-vercel": "workspace:*",
     "@platform/ai-voyage": "workspace:*",

@@ -1,4 +1,4 @@
-import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import {
   BehaviorObservationRepository,
@@ -7,6 +7,7 @@ import {
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
   TAXONOMY_GARDENING_THROTTLE_MS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
+  TaxonomyCategoryRepository,
   TaxonomyClusterRepository,
   TaxonomyRunRepository,
   taxonomyGardenProjectDedupeKey,
@@ -38,6 +39,7 @@ const logger = createLogger("taxonomy")
 interface TaxonomyDeps {
   readonly consumer: QueueConsumer
   readonly publisher: QueuePublisherShape
+  readonly workflowStarter: WorkflowStarterShape
   readonly clickhouseClient: ClickHouseClient
   readonly postgresClient: PostgresClient
   readonly adminPostgresClient: PostgresClient
@@ -60,6 +62,14 @@ interface ObserveSessionPayload {
   readonly sessionId: string
   readonly triggeringTraceId: string
   readonly triggeringStartTime: string
+}
+
+interface TaxonomyRuntimeDeps {
+  readonly clickhouseClient: ClickHouseClient
+  readonly postgresClient: PostgresClient
+  readonly redisClient: RedisClient
+  readonly publisher?: QueuePublisherShape
+  readonly workflowStarter?: WorkflowStarterShape
 }
 
 export const runObserveSessionJob = (payload: ObserveSessionPayload, deps: TaxonomyRuntimeDeps) => {
@@ -123,12 +133,6 @@ export const runObserveSessionJob = (payload: ObserveSessionPayload, deps: Taxon
     Effect.withSpan("taxonomy.observeSession"),
     Effect.asVoid,
   )
-}
-
-interface TaxonomyRuntimeDeps {
-  readonly clickhouseClient: ClickHouseClient
-  readonly postgresClient: PostgresClient
-  readonly redisClient: RedisClient
 }
 
 interface TaxonomySweepDeps {
@@ -210,6 +214,7 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
       Effect.gen(function* () {
         const runs = yield* TaxonomyRunRepository
         const clusters = yield* TaxonomyClusterRepository
+        const categories = yield* TaxonomyCategoryRepository
         const recent = yield* runs.listRecentCompleted({
           projectId: ProjectId(payload.projectId),
           limit: 3,
@@ -227,6 +232,74 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
         const activeClusters = yield* clusters.listActiveByProject({
           projectId: ProjectId(payload.projectId),
         })
+        const activeCategories = yield* categories.listByProject({
+          projectId: ProjectId(payload.projectId),
+          state: "active",
+        })
+        if (deps.workflowStarter) {
+          for (const cluster of activeClusters) {
+            if (cluster.name !== "Pending") continue
+            const workflowId = `org:${payload.organizationId}:taxonomy:nameCluster:${payload.projectId}:${cluster.id}`
+            yield* deps.workflowStarter
+              .start(
+                "taxonomyNameClusterWorkflow",
+                { organizationId: payload.organizationId, projectId: payload.projectId, clusterId: cluster.id },
+                { workflowId },
+              )
+              .pipe(
+                Effect.tap(() =>
+                  Effect.sync(() =>
+                    logger.info("Started taxonomy cluster naming workflow", {
+                      organizationId: payload.organizationId,
+                      projectId: payload.projectId,
+                      clusterId: cluster.id,
+                      workflowId,
+                    }),
+                  ),
+                ),
+                Effect.catch((error) =>
+                  Effect.sync(() =>
+                    logger.info("Taxonomy cluster naming workflow already active", { workflowId, error }),
+                  ),
+                ),
+                Effect.catchDefect((defect) => {
+                  logger.warn("Taxonomy cluster naming workflow start failed", { workflowId, defect })
+                  return Effect.void
+                }),
+              )
+          }
+          for (const category of activeCategories) {
+            if (category.name !== "Pending") continue
+            const workflowId = `org:${payload.organizationId}:taxonomy:nameCategory:${payload.projectId}:${category.id}`
+            yield* deps.workflowStarter
+              .start(
+                "taxonomyNameCategoryWorkflow",
+                { organizationId: payload.organizationId, projectId: payload.projectId, categoryId: category.id },
+                { workflowId },
+              )
+              .pipe(
+                Effect.tap(() =>
+                  Effect.sync(() =>
+                    logger.info("Started taxonomy category naming workflow", {
+                      organizationId: payload.organizationId,
+                      projectId: payload.projectId,
+                      categoryId: category.id,
+                      workflowId,
+                    }),
+                  ),
+                ),
+                Effect.catch((error) =>
+                  Effect.sync(() =>
+                    logger.info("Taxonomy category naming workflow already active", { workflowId, error }),
+                  ),
+                ),
+                Effect.catchDefect((defect) => {
+                  logger.warn("Taxonomy category naming workflow start failed", { workflowId, defect })
+                  return Effect.void
+                }),
+              )
+          }
+        }
         const deprecatedClusters = yield* clusters.list({
           projectId: ProjectId(payload.projectId),
           state: "deprecated",
@@ -253,6 +326,8 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
           projectId: payload.projectId,
           countActive: activeClusters.length,
           countDeprecated: deprecatedClusters.items.length,
+          pendingClusterNames: activeClusters.filter((cluster) => cluster.name === "Pending").length,
+          pendingCategoryNames: activeCategories.filter((category) => category.name === "Pending").length,
         })
         if (zeroBirthsStreak) {
           logger.warn("Taxonomy zero births streak", {
@@ -317,6 +392,7 @@ export const createTaxonomyWorker = ({
   postgresClient,
   adminPostgresClient,
   redisClient,
+  workflowStarter,
 }: TaxonomyDeps) => {
   consumer.subscribe("taxonomy", {
     gardenProject: (payload) =>
@@ -324,6 +400,8 @@ export const createTaxonomyWorker = ({
         clickhouseClient,
         postgresClient,
         redisClient,
+        publisher,
+        workflowStarter,
       }),
     gardenSweep: (payload) =>
       runGardenSweepJob(payload as GardenSweepPayload, {
