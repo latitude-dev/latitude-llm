@@ -68,10 +68,10 @@ export interface TaxonomyClusterRepositoryShape {
   }): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
   /**
    * Exact pgvector cosine over `(organization_id, project_id)` for state =
-   * 'active' clusters with a non-null `centroid_embedding`. Results are
-   * sorted by cosine descending; `[0]` is the closest match. Sub-ms at the
+   * 'active' clusters with a non-null `centroid_embedding`. Sub-ms at the
    * cluster counts this product runs at (hundreds to low-thousands per
-   * project).
+   * project). Order is unspecified — callers that need ranked results must
+   * sort by `cosine`.
    */
   listNearestActive(input: {
     readonly projectId: ProjectId
