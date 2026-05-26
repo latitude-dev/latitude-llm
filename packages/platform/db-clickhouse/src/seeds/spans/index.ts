@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { SeedContext, Seeder } from "../types.ts"
 import { fixedTraceSeeders } from "./fixed-traces.ts"
+import { freshnessSortDemoSeeder } from "./freshness-sort-demo.ts"
 import { generateAllSpans, type SpanRow, type TraceConfig } from "./generator.ts"
 
 const TRACE_COUNT = 2000
@@ -49,4 +50,4 @@ export const runSpansSeed = (
     return traceIds
   })
 
-export const spanSeeders: Seeder[] = [...fixedTraceSeeders]
+export const spanSeeders: Seeder[] = [...fixedTraceSeeders, freshnessSortDemoSeeder]
