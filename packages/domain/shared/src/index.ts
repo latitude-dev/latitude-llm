@@ -1,5 +1,6 @@
 export * from "./alert-incident-kinds.ts"
 export * from "./cache.ts"
+export * from "./centroid.ts"
 export * from "./ch-sql-client.ts"
 export * from "./deterministic-sampling.ts"
 export * from "./errors.ts"

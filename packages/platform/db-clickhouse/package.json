@@ -34,6 +34,7 @@
     "@domain/events": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/taxonomy": "workspace:*",
     "@domain/spans": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/utils": "workspace:*",

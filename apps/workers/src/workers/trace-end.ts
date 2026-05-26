@@ -16,6 +16,7 @@ import {
   summarizeTraceEndItemDecisions,
   type TraceEndItemDecisionCounts,
 } from "@domain/spans"
+import { TAXONOMY_OBSERVATION_DEBOUNCE_MS } from "@domain/taxonomy"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
@@ -230,6 +231,38 @@ export const runTraceEndJob =
         startTime: traceDetail.startTime.toISOString(),
         rootSpanName: traceDetail.rootSpanName,
       })
+
+      const canonicalSessionId =
+        traceDetail.sessionId && traceDetail.sessionId.length > 0 ? traceDetail.sessionId : traceDetail.traceId
+      yield* publisher
+        .publish(
+          "taxonomy",
+          "observeSession",
+          {
+            organizationId: payload.organizationId,
+            projectId: payload.projectId,
+            sessionId: canonicalSessionId,
+            triggeringTraceId: payload.traceId,
+            triggeringStartTime: traceDetail.startTime.toISOString(),
+          },
+          {
+            dedupeKey: `org:${payload.organizationId}:taxonomy:observeSession:${payload.projectId}:${canonicalSessionId}`,
+            debounceMs: TAXONOMY_OBSERVATION_DEBOUNCE_MS,
+          },
+        )
+        .pipe(
+          Effect.map(() => true),
+          Effect.catch((error) =>
+            Effect.gen(function* () {
+              yield* Effect.logError("Failed to enqueue taxonomy observeSession", {
+                ...buildRunLogContext(payload),
+                sessionId: canonicalSessionId,
+                error,
+              })
+              return false
+            }),
+          ),
+        )
 
       return {
         action: "completed",

@@ -23,6 +23,10 @@ The `packages/domain/issues` package is the **reference implementation** for how
 - **Union types per flow**: export a union (for example `CheckEligibilityError`) that lists exactly the errors a use-case or small group of use-cases can return, so callers and tests stay typed end-to-end.
 - **Shared infrastructure errors** stay in `@domain/shared` (`RepositoryError`, `ValidationError`, generic `NotFoundError`, etc.); **domain semantics** live in the domain package’s `errors.ts`.
 
+## Shared centroid model
+
+Issues and live taxonomy both use `@domain/shared/centroid` for decayed weighted centroid math. Each domain owns its business-specific contribution weights and lifecycle, but the core invariant is shared: persisted centroids are running decayed sums, and normalized vectors are derived for pgvector search rather than treated as the canonical state. See [`./taxonomy.md`](./taxonomy.md) for the session-behavior clustering use of the same primitive.
+
 ## Storage Split
 
 - Postgres stores the issue row, lifecycle state, the derived `centroid_embedding` pgvector, and the generated `search_document` tsvector used for hybrid search.

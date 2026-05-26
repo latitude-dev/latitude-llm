@@ -427,6 +427,24 @@ const _registry = {
     }
   }>(),
 
+  taxonomy: payloads<{
+    gardenProject: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly reason: "cron" | "manual" | "threshold"
+    }
+    gardenSweep: {
+      readonly triggeredAt: string
+    }
+    observeSession: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly sessionId: string
+      readonly triggeringTraceId: string
+      readonly triggeringStartTime: string
+    }
+  }>(),
+
   billing: payloads<{
     recordBillableAction: {
       readonly organizationId: string

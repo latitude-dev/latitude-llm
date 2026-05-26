@@ -2,6 +2,7 @@ import { createBullBoard } from "@bull-board/api"
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { HonoAdapter } from "@bull-board/hono"
 import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/issues"
+import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
@@ -60,6 +61,7 @@ import { createProjectsWorker } from "./workers/projects.ts"
 import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
+import { createTaxonomyWorker } from "./workers/taxonomy.ts"
 import { createTraceEndWorker } from "./workers/trace-end.ts"
 import { createTraceSearchWorker } from "./workers/trace-search.ts"
 import { createWrappedWorker } from "./workers/wrapped.ts"
@@ -209,6 +211,14 @@ const bootstrap = async () => {
       postgresClient: ctx.postgresClient,
       redisClient: ctx.redisClient,
     })
+    createTaxonomyWorker({
+      consumer: ctx.consumer,
+      publisher: ctx.publisher,
+      clickhouseClient: ctx.clickhouseClient,
+      postgresClient: ctx.postgresClient,
+      adminPostgresClient: getAdminPostgresClient(),
+      redisClient: ctx.redisClient,
+    })
     createWrappedWorker({
       consumer: ctx.consumer,
       publisher: ctx.publisher,
@@ -244,6 +254,17 @@ const bootstrap = async () => {
           "sweepEscalating",
           {},
           { key: ESCALATION_SWEEPER_KEY, pattern: ESCALATION_SWEEPER_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "taxonomy",
+          "gardenSweep",
+          { triggeredAt: new Date().toISOString() },
+          { key: TAXONOMY_GARDENING_CRON_KEY, pattern: TAXONOMY_GARDENING_CRON_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

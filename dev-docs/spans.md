@@ -36,7 +36,7 @@ Instead:
 - downstream side effects stay split by responsibility: `live-evaluations:execute` remains the execution rail for evaluation runs, live queue membership is inserted directly, and sampled system queues start `systemQueueFlaggerWorkflow`
 - the `domain-events` dispatcher never executes downstream reliability side effects inline; it only dispatches tasks
 
-This keeps the trace-completion boundary explicit while still using the existing BullMQ transport, direct high-volume domain-event publication into `domain-events`, dispatcher-only domain-event handling, and a single debounced trace-end runtime rather than several parallel selection tasks.
+This keeps the trace-completion boundary explicit while still using the existing BullMQ transport, direct high-volume domain-event publication into `domain-events`, dispatcher-only domain-event handling, and a single debounced trace-end runtime rather than several parallel selection tasks. The same trace-end boundary also publishes debounced live-taxonomy observation work after trace-search refresh; see [`./taxonomy.md`](./taxonomy.md).
 
 ### Trace-end code map
 

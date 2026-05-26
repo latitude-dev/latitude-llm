@@ -58,6 +58,10 @@ export type SavedSearchId = Id<"SavedSearchId">
 export type AlertIncidentId = Id<"AlertIncidentId">
 export type NotificationId = Id<"NotificationId">
 export type WrappedReportId = Id<"WrappedReportId">
+export type TaxonomyClusterId = Id<"TaxonomyClusterId">
+export type TaxonomyCategoryId = Id<"TaxonomyCategoryId">
+export type TaxonomyRunId = Id<"TaxonomyRunId">
+export type TaxonomyLineageId = Id<"TaxonomyLineageId">
 
 // Integration-related IDs
 export type SlackIntegrationId = Id<"SlackIntegrationId">
@@ -91,6 +95,10 @@ export const SavedSearchId = (value: string): SavedSearchId => value as SavedSea
 export const AlertIncidentId = (value: string): AlertIncidentId => value as AlertIncidentId
 export const NotificationId = (value: string): NotificationId => value as NotificationId
 export const WrappedReportId = (value: string): WrappedReportId => value as WrappedReportId
+export const TaxonomyClusterId = (value: string): TaxonomyClusterId => value as TaxonomyClusterId
+export const TaxonomyCategoryId = (value: string): TaxonomyCategoryId => value as TaxonomyCategoryId
+export const TaxonomyRunId = (value: string): TaxonomyRunId => value as TaxonomyRunId
+export const TaxonomyLineageId = (value: string): TaxonomyLineageId => value as TaxonomyLineageId
 export const SlackIntegrationId = (value: string): SlackIntegrationId => value as SlackIntegrationId
 export const SlackDeliveryId = (value: string): SlackDeliveryId => value as SlackDeliveryId
 export const TraceId = (value: string): TraceId => value as TraceId
@@ -122,6 +130,10 @@ export const savedSearchIdSchema = cuidSchema.transform(SavedSearchId)
 export const alertIncidentIdSchema = cuidSchema.transform(AlertIncidentId)
 export const notificationIdSchema = cuidSchema.transform(NotificationId)
 export const wrappedReportIdSchema = cuidSchema.transform(WrappedReportId)
+export const taxonomyClusterIdSchema = cuidSchema.transform(TaxonomyClusterId)
+export const taxonomyCategoryIdSchema = cuidSchema.transform(TaxonomyCategoryId)
+export const taxonomyRunIdSchema = cuidSchema.transform(TaxonomyRunId)
+export const taxonomyLineageIdSchema = cuidSchema.transform(TaxonomyLineageId)
 export const slackIntegrationIdSchema = cuidSchema.transform(SlackIntegrationId)
 export const slackDeliveryIdSchema = cuidSchema.transform(SlackDeliveryId)
 

@@ -1,7 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
-    ".": {},
+    ".": {
+      "ignore": ["scripts/taxonomy/*.ts"]
+    },
     "apps/api": {
       "entry": ["src/openapi/pagination.ts"],
       "project": ["src/**/*.ts"]
