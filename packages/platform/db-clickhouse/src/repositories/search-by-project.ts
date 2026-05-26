@@ -278,32 +278,12 @@ export const listSessionsBySearchQuery = ({
     const plan = yield* planSearch(parsed)
     const { telemetryParams, traceScoreWhere, scoreParams, finalHaving } = buildSearchFilters(filters)
 
-    // Bucket math: floor(score / width) * width snaps best_score into
-    // fixed-width tiers. Within a tier, recently-active sessions float to
-    // the top — the §2 pathology (an 18-month-old 0.87 beating a fresh
-    // 0.85) is gone for any pair inside the same bucket, while relevance
-    // still dominates across bucket boundaries.
-    const bucketExpr = `floor(max(relevance_score) / {bucketWidth:Float64}) * {bucketWidth:Float64}`
-
-    // `coalesce(any(sf.sess_max_end_time), max(end_time))` falls back to
-    // the matching traces' end_time for orphan rows (synthesized
-    // `session_id = toString(trace_id)` has no row in `sessions`). The
-    // outer `least(…, now + skew)` clamps client-clock-skewed futures so
-    // junk can't pin itself to the top forever.
-    const lastActivityExpr = `
-      least(
-        coalesce(any(sf.sess_max_end_time), max(end_time)),
-        addMilliseconds(now64(9, 'UTC'), {clockSkewMs:UInt32})
-      )
-    `.trim()
-
     const searchCursor = isSearchCursor(cursor) ? cursor : undefined
+    // HAVING references the SELECT aliases (CH lets it see them) so the
+    // bucket and last_activity expressions stay defined in exactly one
+    // place — the outer projection below.
     const sessionCursorClause = searchCursor
-      ? `HAVING (
-           ${bucketExpr},
-           ${lastActivityExpr},
-           session_id
-         ) < (
+      ? `HAVING (relevance_bucket, last_activity_at, session_id) < (
            {cursorBucket:Float64},
            {cursorLastActivityAt:DateTime64(9, 'UTC')},
            {cursorSessionId:String}
@@ -327,8 +307,8 @@ export const listSessionsBySearchQuery = ({
                   -- candidate set only. sessions.max_end_time is a
                   -- SimpleAggregateFunction(max, ...) so plain reads can
                   -- see a single unmerged part; max() finalizes across
-                  -- parts. Restricting the IN clause to trace_rollup's
-                  -- session_ids keeps the scan bounded to matched sessions.
+                  -- parts. The IN clause keeps the scan bounded to the
+                  -- session_ids that actually matched.
                   session_freshness AS (
                     SELECT
                       session_id,
@@ -336,9 +316,7 @@ export const listSessionsBySearchQuery = ({
                     FROM sessions
                     WHERE organization_id = {organizationId:String}
                       AND project_id = {projectId:String}
-                      AND session_id IN (
-                        SELECT session_id FROM trace_rollup WHERE session_id != ''
-                      )
+                      AND session_id IN (SELECT session_id FROM trace_rollup)
                     GROUP BY session_id
                   )
                   SELECT
@@ -347,8 +325,22 @@ export const listSessionsBySearchQuery = ({
                     session_id,
                     max(relevance_score)                                            AS best_score,
                     argMax(trace_id, relevance_score)                               AS best_trace_id,
-                    ${bucketExpr}                                                   AS relevance_bucket,
-                    ${lastActivityExpr}                                             AS last_activity_at,
+                    -- Bucket math: floor(score / width) * width snaps
+                    -- best_score into fixed-width tiers. Within a tier,
+                    -- recently-active sessions float to the top via
+                    -- last_activity_at; across tiers, relevance still wins.
+                    floor(max(relevance_score) / {bucketWidth:Float64})
+                      * {bucketWidth:Float64}                                       AS relevance_bucket,
+                    -- coalesce(any(sf.sess_max_end_time), max(end_time))
+                    -- falls back to the matching traces' end_time for orphan
+                    -- rows (synthesized session_id = toString(trace_id) has no
+                    -- row in sessions). The outer least(…, now + skew) clamps
+                    -- client-clock-skewed futures so junk can't pin itself to
+                    -- the top forever.
+                    least(
+                      coalesce(any(sf.sess_max_end_time), max(end_time)),
+                      addMilliseconds(now64(9, 'UTC'), {clockSkewMs:UInt32})
+                    )                                                               AS last_activity_at,
                     count()                                                         AS matching_trace_count,
                     -- Sort the (trace_id, score) tuples once, then slice the
                     -- top-K and split into parallel arrays. The cap bounds
