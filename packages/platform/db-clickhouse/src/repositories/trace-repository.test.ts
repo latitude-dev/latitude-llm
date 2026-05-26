@@ -15,8 +15,8 @@ import { setupTestClickHouse } from "@platform/testkit"
 import { Effect, Layer } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
-import { buildAllAnalyticsRows } from "../seeds/scores/index.ts"
-import { buildAllFixedSpans } from "../seeds/spans/fixed-traces.ts"
+import { buildLifecycleAnalyticsRows } from "../seeds/scores/index.ts"
+import { buildCompatibilitySupportSpans } from "../seeds/spans/fixed-traces.ts"
 import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { insertJsonEachRow } from "../sql.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
@@ -35,12 +35,13 @@ const TRACE_ID = SEED_LIFECYCLE_TRACE_IDS[0] as TraceId
 const SCORED_TRACE_ID = SEED_LIFECYCLE_TRACE_IDS[3] as TraceId
 const BASELINE_TEST_TAG = "baseline-missing-values"
 
-// Build the deterministic tau2 baseline rows ONCE at module load. The seeder's
-// run() path re-parses a 23 MB JSON every call; on a 23-test file that adds
-// ~150s of CI wall time. Tests still get a freshly populated table per case —
-// they just pay an insert (cheap) instead of a rebuild (expensive).
-const BASELINE_SPANS: readonly SpanRow[] = buildAllFixedSpans(bootstrapSeedScope)
-const BASELINE_SCORES = buildAllAnalyticsRows(bootstrapSeedScope).all
+// Tests in this file only reference SEED_LIFECYCLE_TRACE_IDS and
+// SEED_ANNOTATION_DEMO_TRACE_ID — all from the compatibility-support set
+// (~6 spans). They never query the ~hundreds of tau2 trajectory spans, so
+// inserting the full fixed-trace set per test was pure overhead. Same on
+// the score side: only lifecycle analytics are queried, not tau2 issues.
+const BASELINE_SPANS: readonly SpanRow[] = buildCompatibilitySupportSpans(bootstrapSeedScope)
+const BASELINE_SCORES = buildLifecycleAnalyticsRows(bootstrapSeedScope)
 
 function toClickHouseDateTime(value: Date): string {
   return value.toISOString().replace("T", " ").replace("Z", "")

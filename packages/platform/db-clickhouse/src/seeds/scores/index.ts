@@ -91,7 +91,7 @@ function buildTau2IssueAnalyticsRows(scope: SeedScope) {
 }
 
 /** Compatibility lifecycle scores on fixed trace ids (used by trace filter tests and demos). */
-function buildLifecycleAnalyticsRows(scope: SeedScope) {
+export function buildLifecycleAnalyticsRows(scope: SeedScope) {
   const orgId = scope.organizationId
   const projectId = scope.projectId
   const evaluationWarrantyActiveId = EvaluationId(scope.cuid("evaluation:warranty-active"))
@@ -177,14 +177,7 @@ function buildLifecycleAnalyticsRows(scope: SeedScope) {
   ]
 }
 
-/**
- * Build the lifecycle + tau2 score analytics rows without inserting them.
- *
- * Heavy: derives rows from the tau2 trajectory dataset. Tests that need this
- * baseline should build it once at module scope and re-insert (cheap) between
- * cases rather than re-running the seeder.
- */
-export function buildAllAnalyticsRows(scope: SeedScope) {
+function buildAllAnalyticsRows(scope: SeedScope) {
   const lifecycleAnalyticsRows = buildLifecycleAnalyticsRows(scope)
   const tau2IssueAnalyticsRows = buildTau2IssueAnalyticsRows(scope)
 
