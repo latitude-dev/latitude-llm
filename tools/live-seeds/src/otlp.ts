@@ -18,7 +18,12 @@ export type SeedToolResponsePart = {
   readonly response: unknown
 }
 
-export type SeedMessagePart = SeedTextPart | SeedToolCallPart | SeedToolResponsePart
+export type SeedReasoningPart = {
+  readonly type: "reasoning"
+  readonly content: string
+}
+
+export type SeedMessagePart = SeedTextPart | SeedToolCallPart | SeedToolResponsePart | SeedReasoningPart
 
 export type SeedMessage = {
   readonly role: "user" | "assistant" | "tool"

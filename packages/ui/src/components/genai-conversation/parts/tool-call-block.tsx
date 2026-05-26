@@ -30,12 +30,14 @@ export function ToolCallBlock({
   call,
   result,
   onNavigateToSpan,
+  defaultOpen = false,
 }: {
   readonly call: ToolCallPart
   readonly result?: ToolCallResult | undefined
   readonly onNavigateToSpan?: () => void
+  readonly defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const panelId = useId()
   const isError = result?.isError === true
 

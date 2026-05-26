@@ -24,14 +24,22 @@ describe("SlackDeliveryRepositoryLive", () => {
     const first = await run(
       Effect.gen(function* () {
         const repo = yield* SlackDeliveryRepository
-        return yield* repo.claim({ integrationId: INTEGRATION, idempotencyKey: "k1", channelId: "C111" })
+        return yield* repo.claim({
+          integrationId: INTEGRATION,
+          idempotencyKey: "k1",
+          channelId: "C111",
+        })
       }),
     )
 
     const second = await run(
       Effect.gen(function* () {
         const repo = yield* SlackDeliveryRepository
-        return yield* repo.claim({ integrationId: INTEGRATION, idempotencyKey: "k1", channelId: "C111" })
+        return yield* repo.claim({
+          integrationId: INTEGRATION,
+          idempotencyKey: "k1",
+          channelId: "C111",
+        })
       }),
     )
 
@@ -45,13 +53,21 @@ describe("SlackDeliveryRepositoryLive", () => {
     const a = await run(
       Effect.gen(function* () {
         const repo = yield* SlackDeliveryRepository
-        return yield* repo.claim({ integrationId: INTEGRATION, idempotencyKey: "k2", channelId: "C111" })
+        return yield* repo.claim({
+          integrationId: INTEGRATION,
+          idempotencyKey: "k2",
+          channelId: "C111",
+        })
       }),
     )
     const b = await run(
       Effect.gen(function* () {
         const repo = yield* SlackDeliveryRepository
-        return yield* repo.claim({ integrationId: INTEGRATION, idempotencyKey: "k2", channelId: "C222" })
+        return yield* repo.claim({
+          integrationId: INTEGRATION,
+          idempotencyKey: "k2",
+          channelId: "C222",
+        })
       }),
     )
 
@@ -64,7 +80,11 @@ describe("SlackDeliveryRepositoryLive", () => {
     const claim = await run(
       Effect.gen(function* () {
         const repo = yield* SlackDeliveryRepository
-        return yield* repo.claim({ integrationId: INTEGRATION, idempotencyKey: "k3", channelId: "C333" })
+        return yield* repo.claim({
+          integrationId: INTEGRATION,
+          idempotencyKey: "k3",
+          channelId: "C333",
+        })
       }),
     )
     expect(claim.claimed).toBe(true)
@@ -73,7 +93,8 @@ describe("SlackDeliveryRepositoryLive", () => {
     const marked = await run(
       Effect.gen(function* () {
         const repo = yield* SlackDeliveryRepository
-        return yield* repo.markPosted(claim.deliveryId!, "1700000000.000999")
+        if (claim.deliveryId === null) throw new Error("unreachable")
+        return yield* repo.markPosted(claim.deliveryId, "1700000000.000999")
       }),
     )
     expect(marked).toBe(true)

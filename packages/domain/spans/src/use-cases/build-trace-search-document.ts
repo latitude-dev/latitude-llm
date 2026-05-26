@@ -1,4 +1,4 @@
-import { type CryptoError, hash } from "@repo/utils"
+import { type CryptoError, hash, safeStringifyJson } from "@repo/utils"
 import { Effect } from "effect"
 import type { GenAIMessage, GenAIPart } from "rosetta-ai"
 import {
@@ -37,7 +37,7 @@ export interface TraceSearchDocument {
   readonly chunks: readonly TraceSearchChunk[]
 }
 
-function formatGenAIPart(part: GenAIPart): string {
+function formatCommonPart(part: GenAIPart): string {
   switch (part.type) {
     case "text":
       return typeof part.content === "string" ? part.content : ""
@@ -54,17 +54,31 @@ function formatGenAIPart(part: GenAIPart): string {
     case "tool_call":
       return `[TOOL CALL: ${part.name}]`
     default:
-      // Skip unsearchable part types (reasoning, tool_call_response) and any
-      // unknown variants, rather than emitting placeholder tokens that only
-      // add embedding noise. Reasoning content in particular can be large and
-      // has low search value — paying Voyage to embed it isn't worth it.
       return ""
   }
 }
 
-function formatGenAIMessage(message: GenAIMessage): string {
+// Embedding skips reasoning + tool_call_response (Voyage cost / signal dilution).
+function formatPartForEmbedding(part: GenAIPart): string {
+  return formatCommonPart(part)
+}
+
+// Lexical includes them — ClickHouse text storage is free, and a user
+// searching for content the model only emitted in reasoning or a tool
+// response should still find the trace.
+function formatPartForLexical(part: GenAIPart): string {
+  if (part.type === "reasoning") {
+    return typeof part.content === "string" ? part.content : ""
+  }
+  if (part.type === "tool_call_response") {
+    return safeStringifyJson(part.response)
+  }
+  return formatCommonPart(part)
+}
+
+function formatMessage(message: GenAIMessage, formatter: (p: GenAIPart) => string): string {
   return message.parts
-    .map((p) => formatGenAIPart(p))
+    .map((p) => formatter(p))
     .join("\n")
     .trim()
 }
@@ -86,14 +100,14 @@ interface ExtractedTurn {
  * span over a system row (e.g. a `system,user,assistant` prefix yields one
  * turn with `firstMessageIndex: 1` and `lastMessageIndex: 2`).
  */
-function extractTurns(messages: readonly GenAIMessage[]): ExtractedTurn[] {
+function extractTurns(messages: readonly GenAIMessage[], formatter: (p: GenAIPart) => string): ExtractedTurn[] {
   const turns: { texts: string[]; firstMessageIndex: number; lastMessageIndex: number }[] = []
   let current: { texts: string[]; firstMessageIndex: number; lastMessageIndex: number } | undefined
 
   messages.forEach((message, messageIndex) => {
     if (!message) return
     if (message.role === "system") return
-    const text = formatGenAIMessage(message)
+    const text = formatMessage(message, formatter)
     if (!text) return
 
     if (message.role === "user" || current === undefined) {
@@ -253,29 +267,25 @@ function normalizeChunkText(text: string): string {
 /**
  * Builds a canonical search document from trace data.
  *
- * The document includes:
- *   - `searchText`: whole-trace conversation text for the lexical index, with
- *     head+tail middle-truncation when over `TRACE_SEARCH_DOCUMENT_MAX_LENGTH`.
- *   - `chunks`: per-turn embedding-shaped slices. Tail-first head+tail walks
- *     when over the per-trace budget; greedy multi-turn packing when under.
- *
- * Excludes:
- *   - System prompt text and system instructions.
- *   - Reasoning parts.
- *   - Tool-call response payloads.
+ * `searchText` (lexical) and `chunks` (embedding) both exclude system
+ * messages. The lexical text also includes reasoning + stringified tool
+ * responses; the embedding text does not — see formatters above.
  */
 export const buildTraceSearchDocument = (
   input: TraceSearchDocumentInput,
 ): Effect.Effect<TraceSearchDocument, CryptoError> =>
   Effect.gen(function* () {
-    const turns = extractTurns(input.messages)
-    const totalLength = turns.reduce((sum, t) => sum + t.text.length, 0)
-
-    const selectedTurns = totalLength <= TRACE_SEARCH_DOCUMENT_MAX_LENGTH ? [...turns] : selectHeadTailTurns(turns)
-
-    const wholeTraceText = turns.map((t) => t.text).join("\n\n")
+    const lexicalTurns = extractTurns(input.messages, formatPartForLexical)
+    const wholeTraceText = lexicalTurns.map((t) => t.text).join("\n\n")
     const searchText = normalizeSearchText(wholeTraceText)
     const contentHash = yield* hash(`${input.traceId}\0${searchText}`)
+
+    const embeddingTurns = extractTurns(input.messages, formatPartForEmbedding)
+    const totalEmbeddingLength = embeddingTurns.reduce((sum, t) => sum + t.text.length, 0)
+    const selectedTurns =
+      totalEmbeddingLength <= TRACE_SEARCH_DOCUMENT_MAX_LENGTH
+        ? [...embeddingTurns]
+        : selectHeadTailTurns(embeddingTurns)
 
     const packed = packChunks(selectedTurns)
     const chunks: TraceSearchChunk[] = []

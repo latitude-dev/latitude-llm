@@ -15,9 +15,14 @@ export interface HighlightRange {
   partIndex: number
   startOffset: number
   endOffset: number
-  type: "annotation" | "selection"
+  type: "annotation" | "selection" | "search-literal" | "search-token" | "search-semantic-region" | "search-container"
   passed?: boolean
   id?: string
+}
+
+export interface FirstMatchHint {
+  readonly messageIndex: number
+  readonly partIndex: number
 }
 
 interface TextSelectionContextValue {
@@ -27,6 +32,8 @@ interface TextSelectionContextValue {
   resolveAndCopy: () => void
   clearSelection: () => void
   getHighlightsForBlock: (messageIndex: number, partIndex: number) => HighlightRange[]
+  /** Part containing the first search hit; MarkdownContent auto-expands its collapsed middle if so. */
+  firstMatchHint: FirstMatchHint | null
 }
 
 export const TextSelectionContext = createContext<TextSelectionContextValue | null>(null)
@@ -38,6 +45,7 @@ export function TextSelectionProvider({
   onDismiss,
   clearSelectionRef,
   highlightRanges = [],
+  firstMatchHint = null,
   children,
 }: {
   readonly messages: readonly (GenAIMessage | null)[]
@@ -48,6 +56,7 @@ export function TextSelectionProvider({
   readonly onDismiss?: (() => void) | undefined
   readonly clearSelectionRef?: RefObject<(() => void) | null> | undefined
   readonly highlightRanges?: ReadonlyArray<HighlightRange> | undefined
+  readonly firstMatchHint?: FirstMatchHint | null | undefined
   readonly children: ReactNode
 }) {
   const [anchor, setAnchor] = useState<TextSelectionAnchor | null>(null)
@@ -207,8 +216,9 @@ export function TextSelectionProvider({
       resolveAndCopy,
       clearSelection,
       getHighlightsForBlock,
+      firstMatchHint,
     }),
-    [detected, anchor, resolveAndAnnotate, resolveAndCopy, clearSelection, getHighlightsForBlock],
+    [detected, anchor, resolveAndAnnotate, resolveAndCopy, clearSelection, getHighlightsForBlock, firstMatchHint],
   )
 
   return <TextSelectionContext.Provider value={value}>{children}</TextSelectionContext.Provider>

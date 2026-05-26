@@ -8,22 +8,30 @@ import { sendLiveSeedData } from "../index.ts"
 const USAGE = `
 Usage: pnpm seed:session-search-qa [options]
 
-Seeds 5 engineered sessions for LAT-599 session-level search QA. See the
-companion checklist at dev-docs/qa/session-search.md for the query → expected
-result table.
+Seeds 7 engineered sessions for LAT-599 session-level search QA + LAT-601
+highlights QA. See the companion checklist at dev-docs/qa/session-search.md
+for the query → expected result table.
 
-Sessions produced (one each at the default count of 5):
-  - qa-refund-4-1:        4 turns, every turn mentions "refund"
-  - qa-code-3-1:          3 turns about TypeScript/React (negative control)
-  - qa-mixed-6-1:         6 turns, only 2 mention "refund"
-  - qa-cancellation-5-1:  5 turns, semantic-only "money back" target
-                          (never says the literal word "refund")
-  - qa-deep-20-1:         20 turns, "refund" appears at turns 5, 12, 18.
-                          The densest match is turn 12 — when the
-                          highlights/scroll feature from
-                          ./specs/session-problems/5-search-highlights.md
-                          ships, this is the QA target for "scroll to the
-                          best match".
+Sessions produced (one each at the default count of 1):
+  - qa-refund-4-1:                4 turns, every turn mentions "refund"
+  - qa-code-3-1:                   3 turns about TypeScript/React (negative control)
+  - qa-mixed-6-1:                  6 turns, only 2 mention "refund"
+  - qa-cancellation-5-1:           5 turns, semantic-only "money back" target
+                                   (never says the literal word "refund")
+  - qa-deep-20-1:                  20 turns, "refund" appears at turns 5, 12, 18.
+                                   The densest match is turn 12 — QA target for
+                                   "scroll to the best match" inside a trace.
+  - qa-oversized-collapsed-1:      1 trace with one ~28k-char assistant message,
+                                   "refund" planted in head, collapsed middle, and
+                                   tail. LAT-601 PR3 QA target for chip rendering
+                                   across split markdown parts and the
+                                   "M matches hidden" affordance.
+  - qa-tool-reasoning-indexing-1:  1 trace where "PAYMENT_DECLINED" only appears
+                                   inside a tool_call_response payload and
+                                   "backstage thought" only inside a reasoning
+                                   part — neither shows up in the final assistant
+                                   text. QA target for the lexical/embedding
+                                   formatter split that indexes both for search.
 
 Options:
   --project-slug <slug>          Target project slug (default: default-project,
@@ -32,8 +40,8 @@ Options:
   --ingest-url <url>             Base URL for the ingest service
                                  (default: http://127.0.0.1:\${LAT_INGEST_PORT}).
   --count <n>                    Number of full variant cycles to send (default: 1).
-                                 1 → one session per variant (5 sessions total).
-                                 2 → two of each variant (10 sessions total: qa-refund-4-1
+                                 1 → one session per variant (7 sessions total).
+                                 2 → two of each variant (14 sessions total: qa-refund-4-1
                                  and qa-refund-4-2, etc.).
   --time-scale <n>               Multiply fixture delays by this factor (default: 1).
   --parallel-cases <n>           Concurrency for case dispatch (default: 4).
@@ -71,7 +79,7 @@ function parsePositiveInteger(value: string, flagName: string): number {
   return parsed
 }
 
-const VARIANT_COUNT = 5 as const
+const VARIANT_COUNT = 7 as const
 
 loadToolSeedEnvironments(import.meta.url)
 

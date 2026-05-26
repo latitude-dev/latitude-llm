@@ -42,6 +42,8 @@ With the default `--count 1`, you get five sessions:
 | `qa-mixed-6-1` | 6 | Onboarding chatter + 2 incidental refund mentions | Validates that `matching_trace_count = 2`, not 6, when only 2 traces match. |
 | `qa-cancellation-5-1` | 5 | Cancellation / chargeback | **Lexically disjoint from the canonical semantic query** (`"customer wanted their money back"`) — none of "refund", "money", or "back" appear anywhere in the conversation. The session has to be found by cosine similarity alone, via the surrounding cluster (cancel, subscription, reimbursement, reversal, chargeback, credit, billing). |
 | `qa-deep-20-1` | 20 | Wide-ranging chatter | "refund" appears at traces 5, 12, 18. Trace 12 has the densest refund language (future highlights-scroll target — see "Highlights future work" below). |
+| `qa-oversized-collapsed-1` | 1 | Single oversized assistant message (~28k chars) | The assistant response exceeds `LARGE_MARKDOWN_CONTENT_THRESHOLD` (20k) so the renderer splits it into head + collapsed middle + tail. "refund" is planted at offsets ~3k (head), ~15k (collapsed middle), and ~27k (tail). LAT-601 PR3 QA target — see "Highlights PR3 (oversized + annotations) checklist" below. |
+| `qa-tool-reasoning-indexing-1` | 1 | Reasoning + tool-call roundtrip with searchable tokens in non-text parts | The assistant emits a `reasoning` part containing the literal `backstage thought` and token `private chain`, calls `get_payment_status`, the tool returns a payload containing `PAYMENT_DECLINED` + `ERR_INSUFFICIENT_FUNDS`, and the final assistant text only says "insufficient funds". Verifies the lexical/embedding formatter split — the lexical index now includes reasoning + tool-call response payloads, while the embedding chunks still skip them. See "Indexing reasoning + tool-call responses checklist" below. |
 
 ## How "matching trace count" works (read this before running queries)
 
@@ -126,6 +128,121 @@ Independent of any specific query — verify the UI plumbing:
       filtered to matching ones — selection mirrors the Sessions tab today).
 - [ ] Count string in the header: empty query → no count; filters only →
       `"N sessions"`; query active → `"N sessions · M matching traces"`.
+
+## Highlights PR3 (oversized + annotations) checklist
+
+LAT-601 PR3 wired literal/token highlights into the `/session-search` drawer
+and, as a side-effect of the offset-fix prerequisite, also fixed a
+pre-existing bug where annotations and selections silently dropped out of
+view inside oversized markdown parts. The `qa-oversized-collapsed-1`
+fixture exercises both code paths in one trace.
+
+### Setup
+
+1. Seed runs above — `qa-oversized-collapsed-1` ingests as part of the
+   `seed:session-search-qa` run.
+2. Wait the same ~10 seconds for indexing.
+
+### Test 1 — collapsed-search behavior
+
+Open `/projects/default-project/session-search/`, type `"refund"`, hit Enter.
+
+- [ ] `qa-oversized-collapsed-1` appears in the result list. Matching
+      traces count = **1**.
+- [ ] Click the session row → drawer opens **directly on the Conversation
+      tab** (PR3 default-tab fix for active searches).
+- [ ] The assistant message renders with **two visible blue chips** on the
+      word `refund` — one in the head, one in the tail. The middle chip is
+      not yet visible.
+- [ ] The collapsed-middle button reads **`Show ~20,000 more characters · 1
+      match hidden`** (exact char count depends on the snap-to-newline
+      computed cut). Clicking it expands the middle → a third blue chip
+      appears on the `refund` planted around offset 15,000.
+- [ ] Auto-scroll lands at the **head** hit on open (it's
+      `firstMatchIndex=0`). The page does **not** auto-expand the middle
+      because the first match isn't hidden.
+
+### Test 2 — auto-expand when first match is hidden
+
+This branch exercises the `MutationObserver` retry path. To trigger it
+locally without editing the fixture, search a phrase that only appears in
+the middle:
+
+- [ ] Search the literal phrase `"chargeback team"` (only present in the
+      middle slice). `qa-oversized-collapsed-1` still matches.
+- [ ] Click the session row → drawer opens on Conversation tab.
+- [ ] The collapsed middle **auto-expands** because `firstMatchHint`
+      points at a part whose first match sits inside the hidden range.
+- [ ] After expansion, the page **scrolls** to the matched chip in the
+      middle. Confirm the chip is centered in the viewport.
+- [ ] In DevTools, set `Performance > CPU throttling: 4x slowdown`,
+      reload, repeat. The scroll still lands — that's the
+      `MutationObserver` waiting for the post-expand DOM mutation rather
+      than racing a `requestAnimationFrame`.
+
+### Test 3 — annotations in oversized parts (pre-existing bug fix)
+
+In the same trace, with **no search query active** (clear the search bar):
+
+- [ ] Open the drawer on the trace, scroll into the head (around the
+      first `Note on refunds:` paragraph).
+- [ ] Select a sentence → use the Annotate action → save the annotation
+      (any text body).
+- [ ] **Reload** the page. Re-open the same trace.
+- [ ] The annotation now **renders as a pink chip in the head**. *Before
+      PR3 it would silently fail to render in this oversized branch.*
+- [ ] Scroll to the tail (around `Final note on this specific refund:`).
+      Select a sentence, annotate.
+- [ ] Reload → tail annotation **renders**.
+- [ ] Expand the collapsed middle, annotate text inside it, collapse the
+      middle (refresh), confirm the badge reads `1 match hidden` only for
+      search hits (the count is search-specific; annotations are not
+      counted in this badge, by design — they're a different render
+      layer).
+
+### Test 4 — search + annotation overlap on the same span
+
+PR3 added a deliberate priority: when a search highlight overlaps an
+annotation, the search chip wins on the overlapping segment so the user
+sees the matched text. Verify:
+
+- [ ] In `qa-oversized-collapsed-1`, annotate a sentence in the head that
+      contains the word `refund` (e.g. the whole first refund note).
+      Save.
+- [ ] Now search `"refund"`. The drawer reopens with the search active.
+- [ ] On the overlapping span, the **blue search chip is rendered, not
+      the pink annotation chip**. The annotation's pink chip is still
+      visible on the non-overlapping rest of its range.
+- [ ] No "rounded tab" overhang or color-mix artifacts where the blue
+      sits inside the pink.
+
+## Indexing reasoning + tool-call responses checklist
+
+Before this fix, `buildTraceSearchDocument` skipped both `reasoning` parts
+and `tool_call_response` payloads when building the lexical search index
+(`trace_search_documents.search_text`). The shared formatter justified the
+exclusion on Voyage cost grounds, which is correct for the embedding side
+but irrelevant for the lexical side — ClickHouse text storage is free.
+The formatter is now split: lexical includes reasoning text + stringified
+tool-response payloads; the embedding chunks still skip them.
+
+### Setup
+
+`qa-tool-reasoning-indexing-1` ingests as part of the normal
+`seed:session-search-qa` run. Same ~10s indexing wait.
+
+### Test queries
+
+Run these on `/projects/default-project/session-search/`:
+
+- [ ] `"PAYMENT_DECLINED"` → trace appears. Open drawer → ToolCallBlock
+      has a blue ring + "Search result inside" label and is auto-opened
+      with the matched JSON visible.
+- [ ] `"backstage thought"` → trace appears. Open drawer → inline blue
+      chip on the matched span inside the reasoning paragraph.
+- [ ] `` `private chain` `` → same as above via token-phrase match.
+- [ ] `"insufficient funds"` → trace appears (sanity check; this literal
+      is in the final assistant text and matched before this PR too).
 
 ## Highlights future work
 

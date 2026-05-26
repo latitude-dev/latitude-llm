@@ -13,12 +13,19 @@ export type HastNode = {
   properties?: Record<string, unknown>
 }
 
-export function sourceMappedTextPlugin(highlights: readonly HighlightRange[]) {
-  const sortedHighlights = [...highlights].sort((a, b) => a.startOffset - b.startOffset)
+// `sliceSourceStart` shifts emitted data-source-* attrs into full-part
+// coordinates so downstream lookups work the same regardless of whether
+// ReactMarkdown was handed the full string or a slice (head/middle/tail).
+export function sourceMappedTextPlugin(highlights: readonly HighlightRange[], sliceSourceStart = 0) {
+  const sortedHighlights = highlights
+    .map((h) => ({
+      ...h,
+      startOffset: h.startOffset - sliceSourceStart,
+      endOffset: h.endOffset - sliceSourceStart,
+    }))
+    .sort((a, b) => a.startOffset - b.startOffset)
 
-  // unified expects a plugin: attacher() → transformer(tree).
-  // A single function(tree) is treated as an attacher and invoked with no args,
-  // so the transformer receives undefined as `tree`.
+  // unified plugins are attacher() → transformer(tree); the extra wrap is required.
   return function rehypeSourceMappedText() {
     return function transformer(tree: HastNode) {
       if (!tree) return
@@ -54,8 +61,8 @@ export function sourceMappedTextPlugin(highlights: readonly HighlightRange[]) {
               type: "element",
               tagName: "span",
               properties: {
-                "data-source-start": String(segment.sourceStart),
-                "data-source-end": String(segment.sourceEnd),
+                "data-source-start": String(segment.sourceStart + sliceSourceStart),
+                "data-source-end": String(segment.sourceEnd + sliceSourceStart),
                 ...attrs,
               },
               children: [{ type: "text", value: segment.text }],

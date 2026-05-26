@@ -354,9 +354,6 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
     )
   })
 
-/**
- * @knipignore
- */
 export const getTraceSearchHighlights = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({

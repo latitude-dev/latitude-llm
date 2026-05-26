@@ -1,4 +1,5 @@
 import type { FilterSet, PercentileTraceFilterField } from "@domain/shared"
+import type { TraceSearchHighlightsResult } from "@domain/spans"
 import {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
@@ -16,6 +17,7 @@ import {
   getTraceDistinctValues,
   getTraceDistribution,
   getTraceMetricsByProject,
+  getTraceSearchHighlights,
   getTraceTimeHistogramByProject,
   listTracesByProject,
   type TraceDetailRecord,
@@ -271,5 +273,29 @@ export function useTraceDetail({
       return result as TraceDetailRecord | null
     },
     enabled: enabled && projectId.length > 0 && traceId.length > 0,
+  })
+}
+
+export function useTraceSearchHighlights({
+  projectId,
+  traceId,
+  searchQuery,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly searchQuery: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: ["traceSearchHighlights", projectId, traceId, searchQuery] as const,
+    queryFn: async (): Promise<TraceSearchHighlightsResult> => {
+      const result = await getTraceSearchHighlights({ data: { projectId, traceId, searchQuery } })
+      return result as TraceSearchHighlightsResult
+    },
+    enabled: enabled && projectId.length > 0 && traceId.length > 0 && searchQuery.length > 0,
+    // Deterministic for (traceId, searchQuery); avoid refetch storms on
+    // observer remount (drawer close+reopen, tab switch).
+    staleTime: 30_000,
   })
 }

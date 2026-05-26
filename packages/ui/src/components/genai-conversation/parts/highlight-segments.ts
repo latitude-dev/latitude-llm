@@ -8,11 +8,16 @@ interface HighlightSegment {
   activeHighlight: HighlightRange | null
 }
 
+function isSearchHighlight(h: HighlightRange): boolean {
+  return h.type === "search-literal" || h.type === "search-token" || h.type === "search-semantic-region"
+}
+
 interface HighlightAttributes {
   className?: string
   "data-selected-text"?: true
   "data-annotated-text"?: true
   "data-annotation-id"?: string
+  "data-search-match"?: "literal" | "token"
 }
 
 /**
@@ -57,7 +62,9 @@ export function segmentForHighlights(
     const segmentText = text.slice(sliceStart, sliceEnd)
     if (!segmentText) continue
 
-    const activeHighlight = overlaps.find((h) => h.startOffset < segEnd && h.endOffset > segStart) ?? null
+    // Search wins on overlap so the matched span isn't obscured by annotation tint.
+    const segmentMatches = overlaps.filter((h) => h.startOffset < segEnd && h.endOffset > segStart)
+    const activeHighlight = segmentMatches.find(isSearchHighlight) ?? segmentMatches[0] ?? null
 
     segments.push({
       sourceStart: segStart,
@@ -78,8 +85,9 @@ export function segmentForHighlights(
 export function highlightAttributes(activeHighlight: HighlightRange | null): HighlightAttributes {
   if (!activeHighlight) return {}
 
-  const isAnnotation = activeHighlight.type !== "selection"
+  const isAnnotation = activeHighlight.type === "annotation"
   const isClickable = isAnnotation && !!activeHighlight.id
+  const isSearchMatch = activeHighlight.type === "search-literal" || activeHighlight.type === "search-token"
   const className = cn({
     "cursor-pointer hit-area-inline-y-2": isClickable,
     "bg-yellow-100 border-b-2 border-yellow-300 dark:bg-yellow-400/20 dark:border-yellow-400/50":
@@ -87,15 +95,24 @@ export function highlightAttributes(activeHighlight: HighlightRange | null): Hig
     "bg-red-100 dark:bg-red-400/30": isAnnotation && activeHighlight.passed === false,
     "bg-emerald-100 dark:bg-emerald-400/30": isAnnotation && activeHighlight.passed === true,
     "bg-blue-100 dark:bg-blue-400/30": isAnnotation && activeHighlight.passed === undefined,
+    "bg-primary/30 dark:bg-primary/40": isSearchMatch,
+    // mx-0.5 creates a parent-bg-colored gap between adjacent chips;
+    // box-decoration-clone keeps the rounding per line on wrap.
+    "rounded-sm box-decoration-clone mx-0.5": isAnnotation || isSearchMatch,
   })
 
   const attrs: HighlightAttributes = {}
   if (className) attrs.className = className
   if (activeHighlight.type === "selection") {
     attrs["data-selected-text"] = true
-  } else {
+  } else if (isAnnotation) {
     attrs["data-annotated-text"] = true
     if (activeHighlight.id) attrs["data-annotation-id"] = activeHighlight.id
+  } else if (activeHighlight.type === "search-literal") {
+    attrs["data-search-match"] = "literal"
+  } else if (activeHighlight.type === "search-token") {
+    attrs["data-search-match"] = "token"
   }
+  // "search-semantic-region" produces no inline attributes — it renders at the message-container level (PR5).
   return attrs
 }

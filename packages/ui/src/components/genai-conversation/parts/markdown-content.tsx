@@ -1,12 +1,12 @@
 import { isJsonBlock, LARGE_MARKDOWN_CONTENT_THRESHOLD, prettifyCompactJson } from "@repo/utils"
-import { isValidElement, type ReactNode, use, useMemo, useState } from "react"
+import { isValidElement, type ReactNode, use, useEffect, useMemo, useState } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
 import rehypeHighlight from "rehype-highlight"
 import remarkBreaks from "remark-breaks"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { CodeBlockControls } from "../../code-block/code-block-controls.tsx"
-import { TextSelectionContext } from "../text-selection.tsx"
+import { type HighlightRange, TextSelectionContext } from "../text-selection.tsx"
 import { CodeBlockShell } from "./code-block-shell.tsx"
 import { JsonContent } from "./json-content.tsx"
 import { sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
@@ -88,30 +88,73 @@ function snapToNewline(content: string, target: number, radius = 400): number {
   return best === -1 ? target : start + best
 }
 
-function splitLargeContent(content: string): { head: string; middle: string; tail: string } {
+interface LargeContentSplit {
+  head: string
+  middle: string
+  tail: string
+  headCut: number
+  tailCut: number
+}
+
+function splitLargeContent(content: string): LargeContentSplit {
   const headCut = snapToNewline(content, LARGE_MARKDOWN_HEAD_LENGTH)
   const tailCut = snapToNewline(content, content.length - LARGE_MARKDOWN_TAIL_LENGTH)
   // Guard against a degenerate split where the snapped cuts cross.
   if (tailCut <= headCut) {
-    return { head: content.slice(0, headCut), middle: "", tail: content.slice(headCut) }
+    return {
+      head: content.slice(0, headCut),
+      middle: "",
+      tail: content.slice(headCut),
+      headCut,
+      tailCut: headCut,
+    }
   }
   return {
     head: content.slice(0, headCut),
     middle: content.slice(headCut, tailCut),
     tail: content.slice(tailCut),
+    headCut,
+    tailCut,
   }
 }
 
-function MarkdownBody({ content }: { readonly content: string }) {
+function MarkdownBody({
+  content,
+  highlights,
+  sliceSourceStart,
+}: {
+  readonly content: string
+  readonly highlights: readonly HighlightRange[]
+  readonly sliceSourceStart: number
+}) {
+  // Memoize so ReactMarkdown doesn't re-parse on every parent render.
+  const sourcePlugin = useMemo(
+    () => sourceMappedTextPlugin(highlights, sliceSourceStart),
+    [highlights, sliceSourceStart],
+  )
   return (
     <ReactMarkdown
       remarkPlugins={[...remarkPlugins]}
-      rehypePlugins={[rehypeHighlightPlugin]}
+      rehypePlugins={[rehypeHighlightPlugin, sourcePlugin]}
       components={markdownComponents}
     >
       {content}
     </ReactMarkdown>
   )
+}
+
+// The "M matches hidden" label and auto-expand both apply to search only —
+// annotations + selection are not counted.
+const SEARCH_INLINE_HIGHLIGHT_TYPES = new Set<HighlightRange["type"]>(["search-literal", "search-token"])
+
+function countSearchHitsInRange(highlights: readonly HighlightRange[], rangeStart: number, rangeEnd: number): number {
+  if (rangeEnd <= rangeStart) return 0
+  let count = 0
+  for (const h of highlights) {
+    if (!SEARCH_INLINE_HIGHLIGHT_TYPES.has(h.type)) continue
+    if (h.endOffset > rangeStart && h.startOffset < rangeEnd) count++
+  }
+  return count
 }
 
 export function MarkdownContent({
@@ -131,20 +174,47 @@ export function MarkdownContent({
         : [],
     [selectionCtx, messageIndex, partIndex],
   )
+  const isFirstMatchPart =
+    messageIndex != null &&
+    partIndex != null &&
+    selectionCtx?.firstMatchHint?.messageIndex === messageIndex &&
+    selectionCtx.firstMatchHint.partIndex === partIndex
   const [showMiddle, setShowMiddle] = useState(false)
   // Gate the JSON.parse on size so oversized content doesn't pay the parse cost
   // only to be discarded by the large-content fallback below.
   const isJson = useMemo(() => content.length <= LARGE_MARKDOWN_CONTENT_THRESHOLD && isJsonBlock(content), [content])
 
-  if (content.length > LARGE_MARKDOWN_CONTENT_THRESHOLD) {
-    const { head, middle, tail } = splitLargeContent(content)
+  const split = useMemo(
+    () => (content.length > LARGE_MARKDOWN_CONTENT_THRESHOLD ? splitLargeContent(content) : null),
+    [content],
+  )
+  const hiddenMatchCount = useMemo(
+    () => (split && !showMiddle ? countSearchHitsInRange(highlights, split.headCut, split.tailCut) : 0),
+    [split, showMiddle, highlights],
+  )
+
+  // Auto-expand if the first search match is hiding in this part's middle.
+  useEffect(() => {
+    if (!split || showMiddle || !isFirstMatchPart) return
+    if (hiddenMatchCount === 0) return
+    setShowMiddle(true)
+  }, [split, showMiddle, isFirstMatchPart, hiddenMatchCount])
+
+  if (split) {
+    const { head, middle, tail, headCut, tailCut } = split
+    const hiddenLabel =
+      hiddenMatchCount === 0
+        ? `Show ${middle.length.toLocaleString()} more characters`
+        : `Show ${middle.length.toLocaleString()} more characters · ${hiddenMatchCount} ${
+            hiddenMatchCount === 1 ? "match" : "matches"
+          } hidden`
 
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word">
-        <MarkdownBody content={head} />
+        <MarkdownBody content={head} highlights={highlights} sliceSourceStart={0} />
         {middle.length > 0 &&
           (showMiddle ? (
-            <MarkdownBody content={middle} />
+            <MarkdownBody content={middle} highlights={highlights} sliceSourceStart={headCut} />
           ) : (
             <button
               type="button"
@@ -153,12 +223,12 @@ export function MarkdownContent({
             >
               <span className="h-px flex-1 bg-border" />
               <span className="rounded-full border border-border bg-background px-3 py-1 group-hover:bg-muted">
-                Show {middle.length.toLocaleString()} more characters
+                {hiddenLabel}
               </span>
               <span className="h-px flex-1 bg-border" />
             </button>
           ))}
-        {tail.length > 0 && <MarkdownBody content={tail} />}
+        {tail.length > 0 && <MarkdownBody content={tail} highlights={highlights} sliceSourceStart={tailCut} />}
       </div>
     )
   }
@@ -169,13 +239,7 @@ export function MarkdownContent({
 
   return (
     <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word">
-      <ReactMarkdown
-        remarkPlugins={[...remarkPlugins]}
-        rehypePlugins={[rehypeHighlightPlugin, sourceMappedTextPlugin(highlights)]}
-        components={markdownComponents}
-      >
-        {content}
-      </ReactMarkdown>
+      <MarkdownBody content={content} highlights={highlights} sliceSourceStart={0} />
     </div>
   )
 }

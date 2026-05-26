@@ -109,6 +109,8 @@ function partCharCount(part: SeedMessage["parts"][number]): number {
       return `${part.name}:${JSON.stringify(part.arguments)}`.length
     case "tool_call_response":
       return JSON.stringify(part.response).length
+    case "reasoning":
+      return part.content.length
   }
 }
 

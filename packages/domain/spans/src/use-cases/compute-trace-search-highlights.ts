@@ -1,3 +1,4 @@
+import { safeStringifyJson } from "@repo/utils"
 import type { GenAIMessage } from "rosetta-ai"
 import { normalizeLiteralPhrase } from "../helpers/normalize-literal-phrase.ts"
 import { tokenizePhrase } from "../helpers/tokenize-phrase.ts"
@@ -9,11 +10,13 @@ export interface TraceHighlight {
   readonly partIndex: number
   readonly startOffset: number
   readonly endOffset: number
-  readonly type: "search-literal" | "search-token" | "search-semantic-region"
+  readonly type: "search-literal" | "search-token" | "search-semantic-region" | "search-container"
   readonly source:
     | { kind: "literal"; phrase: string }
     | { kind: "token"; phrase: string; matchedTokens: readonly string[] }
     | { kind: "semantic-region"; chunkIndex: number; score: number }
+    // Presence-only marker for parts the renderer can't anchor inline chips on.
+    | { kind: "container"; partType: "tool_call_response"; phrases: readonly string[] }
 }
 
 export interface TraceSearchHighlightsResult {
@@ -86,48 +89,50 @@ function findTokenPhraseHits(
 
 const EMPTY_RESULT: TraceSearchHighlightsResult = { highlights: [], firstMatchIndex: -1 }
 
-/**
- * Compute search-highlight ranges for a trace's conversation.
- *
- * Pure function over `(allMessages, parsedQuery)` so the use-case is fully
- * testable without ClickHouse or React. The server boundary
- * (`getTraceSearchHighlights`) loads the trace detail and delegates here.
- *
- * Behavior:
- *   - System messages (`role === "system"`) are skipped — matches what the
- *     server search index does at ingest (system messages are filtered from
- *     `search_text`), so the drawer cannot show hits the server search itself
- *     would never return.
- *   - Only `type === "text"` parts with `string` content are scanned. Non-text
- *     parts (blobs, tool calls, files, URIs, reasoning) render in the UI but
- *     aren't part of the search index's character coordinate system, so we
- *     don't emit highlights for them.
- *   - **Match-nothing parity with the lexical search plan.** If any literal
- *     phrase normalises to empty OR any token phrase tokenises to empty, the
- *     whole result is empty — matching how `buildLexicalSearchSubquery` treats
- *     an empty phrase as a zero-row filter for the entire query, not as a
- *     filter to silently drop.
- *   - **Literal phrases** are normalised the same way the lexical indexer
- *     normalises them (trim + collapse whitespace + replace lone surrogates),
- *     then matched against the raw part text with each single space in the
- *     normalised phrase allowed to span any whitespace run (`\s+`). This keeps
- *     "highlights reflect what the index matched" honest even when the only
- *     difference between the trace text and the query is whitespace.
- *   - **Token phrases** match the indexer's `hasSubstr(tokens(lower(search_text)),
- *     phraseTokens)`: lowercase, split on non-alphanumeric, ordered-adjacent
- *     subsequence.
- *   - Highlights are returned in document order (messageIndex, partIndex,
- *     startOffset, endOffset). `firstMatchIndex` is `0` when there's at least
- *     one hit, `-1` otherwise.
- *   - **Overlapping ranges are NOT deduplicated.** A query like
- *     `` "refund" `refund process` `` emits both the literal `[0, 6]` and the
- *     token `[0, 14]` ranges for the same source text. Each highlight carries
- *     its own `source` (literal/token/region), so the renderer (PR 3+) can
- *     decide stacking order and which click target wins. Dedup at this layer
- *     would erase information the popover needs.
- *   - Semantic-region highlights are NOT emitted here; PR 2 adds them
- *     server-side using winning-chunk metadata from `trace_search_embeddings`.
- */
+function emitTextHighlights(args: {
+  readonly content: string
+  readonly messageIndex: number
+  readonly partIndex: number
+  readonly normalizedLiterals: readonly { phrase: string; normalized: string }[]
+  readonly tokenizedPhrases: readonly { phrase: string; tokens: readonly string[] }[]
+  readonly highlights: TraceHighlight[]
+}): void {
+  const { content, messageIndex, partIndex, normalizedLiterals, tokenizedPhrases, highlights } = args
+  for (const { phrase, normalized } of normalizedLiterals) {
+    const literalHits = findLiteralPhraseHits(content, normalized)
+    for (const hit of literalHits) {
+      highlights.push({
+        messageIndex,
+        partIndex,
+        startOffset: hit.start,
+        endOffset: hit.end,
+        type: "search-literal",
+        source: { kind: "literal", phrase },
+      })
+    }
+  }
+
+  for (const { phrase, tokens } of tokenizedPhrases) {
+    const tokenHits = findTokenPhraseHits(content, tokens)
+    for (const hit of tokenHits) {
+      highlights.push({
+        messageIndex,
+        partIndex,
+        startOffset: hit.start,
+        endOffset: hit.end,
+        type: "search-token",
+        source: { kind: "token", phrase, matchedTokens: tokens },
+      })
+    }
+  }
+}
+
+// Pure: walks allMessages, emits inline chips for text + reasoning, container
+// markers for matching tool_call_response, and a semantic-region range for
+// the message span of the winning chunk (when `semanticMatch` is provided).
+// System messages are skipped (matches what the lexical index ingests).
+// Matches mirror the lexical search plan: any literal that normalizes to
+// empty OR any token phrase that tokenizes to empty yields zero highlights.
 export function computeTraceSearchHighlights(args: {
   readonly messages: readonly GenAIMessage[]
   readonly parsedQuery: ParsedSearchQuery
@@ -163,6 +168,20 @@ export function computeTraceSearchHighlights(args: {
 
   const highlights: TraceHighlight[] = []
 
+  // conversation.tsx absorbs tool_call_response into the calling assistant's
+  // ToolCallBlock, so the marker has to anchor at the tool_call part to land
+  // on visible DOM. Orphan responses fall back to their own location.
+  const toolCallLocations = new Map<string, { messageIndex: number; partIndex: number }>()
+  messages.forEach((message, messageIndex) => {
+    if (!message?.parts) return
+    message.parts.forEach((part, partIndex) => {
+      if (part.type !== "tool_call") return
+      const id = (part as { id?: unknown }).id
+      if (typeof id !== "string" || id.length === 0) return
+      toolCallLocations.set(id, { messageIndex, partIndex })
+    })
+  })
+
   messages.forEach((message, messageIndex) => {
     if (!message || message.role === "system") return
     if (!message.parts) return
@@ -187,36 +206,51 @@ export function computeTraceSearchHighlights(args: {
     }
 
     message.parts.forEach((part, partIndex) => {
-      if (part.type !== "text") return
-      const content = typeof part.content === "string" ? part.content : ""
-      if (content.length === 0) return
-
-      for (const { phrase, normalized } of normalizedLiterals) {
-        const literalHits = findLiteralPhraseHits(content, normalized)
-        for (const hit of literalHits) {
-          highlights.push({
-            messageIndex,
-            partIndex,
-            startOffset: hit.start,
-            endOffset: hit.end,
-            type: "search-literal",
-            source: { kind: "literal", phrase },
-          })
-        }
+      // text + reasoning both render via <MarkdownContent>, so character
+      // offsets work as inline-chip anchors.
+      if (part.type === "text" || part.type === "reasoning") {
+        const content = typeof part.content === "string" ? part.content : ""
+        if (content.length === 0) return
+        emitTextHighlights({
+          content,
+          messageIndex,
+          partIndex,
+          normalizedLiterals,
+          tokenizedPhrases,
+          highlights,
+        })
+        return
       }
 
-      for (const { phrase, tokens } of tokenizedPhrases) {
-        const tokenHits = findTokenPhraseHits(content, tokens)
-        for (const hit of tokenHits) {
-          highlights.push({
-            messageIndex,
-            partIndex,
-            startOffset: hit.start,
-            endOffset: hit.end,
-            type: "search-token",
-            source: { kind: "token", phrase, matchedTokens: tokens },
-          })
+      // Renderer's pretty-printed JSON doesn't align with the indexer's
+      // stringification → emit a presence-only marker, not character offsets.
+      if (part.type === "tool_call_response") {
+        const response = (part as { response?: unknown }).response
+        const responseText = safeStringifyJson(response)
+        if (responseText.length === 0) return
+
+        const matchedPhrases: string[] = []
+        for (const { phrase, normalized } of normalizedLiterals) {
+          if (findLiteralPhraseHits(responseText, normalized).length > 0) matchedPhrases.push(phrase)
         }
+        for (const { phrase, tokens } of tokenizedPhrases) {
+          if (findTokenPhraseHits(responseText, tokens).length > 0) matchedPhrases.push(phrase)
+        }
+        if (matchedPhrases.length === 0) return
+
+        const responseId = (part as { id?: unknown }).id
+        const anchor = typeof responseId === "string" ? (toolCallLocations.get(responseId) ?? null) : null
+        const anchorMessageIndex = anchor?.messageIndex ?? messageIndex
+        const anchorPartIndex = anchor?.partIndex ?? partIndex
+
+        highlights.push({
+          messageIndex: anchorMessageIndex,
+          partIndex: anchorPartIndex,
+          startOffset: 0,
+          endOffset: 0,
+          type: "search-container",
+          source: { kind: "container", partType: "tool_call_response", phrases: matchedPhrases },
+        })
       }
     })
   })

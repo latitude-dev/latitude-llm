@@ -59,11 +59,19 @@ describe("buildTraceSearchDocument", () => {
       } as GenAIMessage,
     ])
 
-    expect(document.searchText).toBe("look at this [IMAGE] [FILE:file-123] [TOOL CALL: lookup]")
-    expect(document.searchText).not.toContain("not searchable")
+    // Lexical index includes the stringified tool_call_response payload so
+    // searches can hit substrings the model emitted via a tool. The embedding
+    // chunks still skip it (cost-aware).
+    expect(document.searchText).toContain("look at this")
+    expect(document.searchText).toContain("[IMAGE]")
+    expect(document.searchText).toContain("[FILE:file-123]")
+    expect(document.searchText).toContain("[TOOL CALL: lookup]")
+    expect(document.searchText).toContain("not searchable")
+    const allChunkText = document.chunks.map((c) => c.text).join("\n")
+    expect(allChunkText).not.toContain("not searchable")
   })
 
-  it("excludes reasoning parts from the indexed text", async () => {
+  it("includes reasoning text in the lexical index but skips it from embedding chunks", async () => {
     const document = await build([
       textMessage("user", "user question"),
       {
@@ -75,8 +83,45 @@ describe("buildTraceSearchDocument", () => {
       } as GenAIMessage,
     ])
 
-    expect(document.searchText).toBe("user question final answer")
-    expect(document.searchText).not.toContain("secret chain of thought")
+    // Reasoning is now findable via lexical search (no embedding cost — text
+    // sits in trace_search_documents only).
+    expect(document.searchText).toContain("user question")
+    expect(document.searchText).toContain("final answer")
+    expect(document.searchText).toContain("secret chain of thought")
+    // But still excluded from chunks: Voyage cost + dilutes semantic signal.
+    const allChunkText = document.chunks.map((c) => c.text).join("\n")
+    expect(allChunkText).toContain("user question")
+    expect(allChunkText).toContain("final answer")
+    expect(allChunkText).not.toContain("secret chain of thought")
+  })
+
+  it("stringifies object-shaped tool_call_response payloads for the lexical index", async () => {
+    const document = await build([
+      textMessage("user", "trigger the lookup"),
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "tc-1", name: "lookup", arguments: {} }],
+      } as GenAIMessage,
+      {
+        role: "tool",
+        parts: [
+          {
+            type: "tool_call_response",
+            id: "tc-1",
+            response: { status: "ok", ticket: "RFD-2026-0512-0042", amountUsd: 42.3 },
+          },
+        ],
+      } as GenAIMessage,
+      textMessage("assistant", "ticket created"),
+    ])
+
+    // Object payload is JSON-serialized so substrings inside it become
+    // findable: ticket numbers, status strings, amounts, etc.
+    expect(document.searchText).toContain("RFD-2026-0512-0042")
+    expect(document.searchText).toContain("status")
+    expect(document.searchText).toContain("ok")
+    const allChunkText = document.chunks.map((c) => c.text).join("\n")
+    expect(allChunkText).not.toContain("RFD-2026-0512-0042")
   })
 
   it("keeps the beginning and end when the conversation exceeds the cap", async () => {

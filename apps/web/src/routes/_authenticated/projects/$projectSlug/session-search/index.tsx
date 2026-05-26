@@ -29,10 +29,10 @@ import {
 } from "../-components/sessions-view.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
-import { TraceDetailDrawer } from "../-components/trace-detail-drawer.tsx"
 import { getTimeFilterValue, parseFilters, serializeFilters } from "../-components/trace-page-state.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { SearchSyntaxLegendContent } from "../search/-components/search-syntax-legend.tsx"
+import { SessionTraceDetailDrawer } from "./-components/session-trace-detail-drawer.tsx"
 
 const SEARCH_QUERY_MAX_LENGTH = 500
 
@@ -79,7 +79,9 @@ function SessionSearchPage() {
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SESSION_SORTING.direction, {
     validate: (v): v is SortDirection => v === "asc" || v === "desc",
   })
-  const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", "trace", {
+  // Active query lands on Conversation so the lazy-mount fires highlights immediately.
+  const defaultTraceDetailTab: "trace" | "conversation" = q.length > 0 ? "conversation" : "trace"
+  const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", defaultTraceDetailTab, {
     validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
       v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
   })
@@ -138,7 +140,7 @@ function SessionSearchPage() {
   const closeTraceDrawer = () => {
     setActiveTraceId("")
     setSelectedSpanId("")
-    setTraceDetailTab("trace")
+    setTraceDetailTab(defaultTraceDetailTab)
   }
 
   const onActiveTraceChange = (traceId: string | undefined) => {
@@ -289,7 +291,7 @@ function SessionSearchPage() {
 
       {hasContent && activeTraceId ? (
         <Layout.Aside>
-          <TraceDetailDrawer
+          <SessionTraceDetailDrawer
             key={activeTraceId}
             traceId={activeTraceId}
             projectId={projectId}
@@ -300,6 +302,7 @@ function SessionSearchPage() {
             onPrevTrace={() => navigateTrace(-1)}
             canNavigateNext={canNavigateNext}
             canNavigatePrev={canNavigatePrev}
+            searchQuery={q}
           />
         </Layout.Aside>
       ) : null}

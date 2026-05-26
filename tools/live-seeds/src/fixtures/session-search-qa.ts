@@ -1,4 +1,4 @@
-import { assistantTextMessage, userTextMessage } from "../otlp.ts"
+import { assistantTextMessage, type SeedMessage, toolResponseMessage, userTextMessage } from "../otlp.ts"
 import type { SeededRng } from "../random.ts"
 import type { LiveSeedFixtureDefinition, LiveSeedGeneratedCase } from "../types.ts"
 import {
@@ -225,6 +225,113 @@ const buildCancellation5Case: VariantBuilder = ({ rng, fixtureKey, replicaIndex 
   })
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// qa-oversized-collapsed: one trace, one ~28k-char assistant message
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Engineered for the LAT-601 highlights PR3 manual QA. The assistant message
+// exceeds `LARGE_MARKDOWN_CONTENT_THRESHOLD` (20_000 chars in @repo/utils),
+// triggering `MarkdownContent`'s head + collapsed-middle + tail split path
+// (`packages/ui/src/components/genai-conversation/parts/markdown-content.tsx`).
+// "refund" is planted at three offsets — one each in the head, the collapsed
+// middle, and the tail — so a `"refund"` search exercises:
+//   - inline chip rendering in head + tail (visible by default)
+//   - the "Show N more characters · M matches hidden" affordance for the
+//     hidden middle hit
+//   - auto-expand of the middle when `firstMatchIndex` lands inside it (drop
+//     the head sentence locally to test this branch)
+// It also doubles as the trace for the pre-PR3 oversized-part annotation bug
+// fix: select text in the head or tail, create an annotation, reload — the
+// annotation should now render (it silently dropped before PR3).
+
+const FILLER_SENTENCES: readonly string[] = [
+  "Our customer success team handles every account inquiry with care and complete attention.",
+  "Billing concerns, subscription adjustments, and account access are all addressed within our service window.",
+  "We aim to respond to every ticket within one business day under standard plans.",
+  "For enterprise accounts, the response window is reduced to four hours during business days.",
+  "Our knowledge base contains over five hundred articles covering common workflow questions.",
+  "Self-service portals allow you to update payment methods, change billing cycles, or pause subscriptions without escalating to support.",
+  "Audit logs are available for the past ninety days under all plan tiers, with extended retention available as an add-on.",
+  "Security policies require multi-factor authentication for all administrative actions across the platform.",
+  "Data residency options are available for customers with regional compliance requirements such as GDPR or HIPAA.",
+  "Service-level agreements are negotiated separately and detailed in the master subscription agreement.",
+  "API rate limits scale with plan tier; contact your account manager for raised quotas during product launches.",
+  "Webhook deliveries retry up to five times with exponential backoff before being marked as permanently failed.",
+] as const
+
+const REFUND_HEAD_SENTENCE =
+  "\n\nNote on refunds: our refund policy applies to all charges initiated within the last thirty days. Duplicate refund requests filed during that window are processed automatically through our standard refund flow.\n\n"
+const REFUND_MIDDLE_SENTENCE =
+  "\n\nFor cases where the refund escalates to the chargeback team, please allow five to seven business days for the refund to clear. The refund team reviews each case manually before issuing the final refund authorization.\n\n"
+const REFUND_TAIL_SENTENCE =
+  "\n\nFinal note on this specific refund: a refund tracking number will be sent to your registered email address once the refund posts to your original payment card. Reply to this thread if the refund does not appear within the expected window.\n\n"
+
+const OVERSIZED_TARGET_LENGTH = 28_000
+const OVERSIZED_HEAD_OFFSET = 3_000
+const OVERSIZED_MIDDLE_OFFSET = 15_000
+const OVERSIZED_TAIL_OFFSET = 27_000
+
+function buildOversizedTicketBody(): string {
+  const parts: string[] = []
+  let len = 0
+  let sentenceIndex = 0
+  let insertedHead = false
+  let insertedMiddle = false
+  let insertedTail = false
+
+  while (len < OVERSIZED_TARGET_LENGTH) {
+    if (!insertedHead && len >= OVERSIZED_HEAD_OFFSET) {
+      parts.push(REFUND_HEAD_SENTENCE)
+      len += REFUND_HEAD_SENTENCE.length
+      insertedHead = true
+      continue
+    }
+    if (!insertedMiddle && len >= OVERSIZED_MIDDLE_OFFSET) {
+      parts.push(REFUND_MIDDLE_SENTENCE)
+      len += REFUND_MIDDLE_SENTENCE.length
+      insertedMiddle = true
+      continue
+    }
+    if (!insertedTail && len >= OVERSIZED_TAIL_OFFSET) {
+      parts.push(REFUND_TAIL_SENTENCE)
+      len += REFUND_TAIL_SENTENCE.length
+      insertedTail = true
+      continue
+    }
+    const sentence = `${FILLER_SENTENCES[sentenceIndex % FILLER_SENTENCES.length] ?? ""} `
+    parts.push(sentence)
+    len += sentence.length
+    sentenceIndex++
+  }
+
+  return parts.join("")
+}
+
+const OVERSIZED_TICKET_BODY = buildOversizedTicketBody()
+
+const buildOversizedCollapsed1Case: VariantBuilder = ({ rng, fixtureKey, replicaIndex }) => {
+  const turns: readonly GeneratedConversationTurnDefinition[] = [
+    {
+      key: "oversized-ticket",
+      inputAdditions: [
+        userTextMessage("Can you walk me through the full refund policy in detail? I want the complete picture."),
+      ],
+      outputMessages: [assistantTextMessage(OVERSIZED_TICKET_BODY)],
+      durationRangeMs: STANDARD_DURATION_RANGE_MS,
+      gapAfterRangeMs: TURN_GAP_RANGE_MS,
+      usageProfile: "tiny" as const,
+    },
+  ]
+
+  return buildSupportCase({
+    rng,
+    fixtureKey,
+    turns,
+    targetTurnIndex: 0,
+    sessionId: `qa-oversized-collapsed-${(replicaIndex + 1).toString()}`,
+  })
+}
+
 const buildDeep20Case: VariantBuilder = ({ rng, fixtureKey, replicaIndex }) => {
   // 20 turns. The literal word "refund" appears in exactly turns 5, 12, and 18
   // (1-indexed). Turn 12 is the *densest* refund mention so it should rank as
@@ -339,12 +446,101 @@ const buildDeep20Case: VariantBuilder = ({ rng, fixtureKey, replicaIndex }) => {
   })
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// qa-tool-reasoning-indexing: lexical-only paths through reasoning + tool response
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// QA target for the lexical/embedding formatter split in
+// `packages/domain/spans/src/use-cases/build-trace-search-document.ts`. Both
+// the reasoning content and the tool-call response payload contain searchable
+// tokens that DO NOT appear anywhere else in the conversation. The final
+// assistant reply paraphrases the result in normal prose, so substring
+// searches against the model's "backstage" content used to silently miss
+// before the formatter split landed.
+//
+// Search queries to exercise:
+//   - `"PAYMENT_DECLINED"` (literal, only in tool_call_response) → finds the trace
+//   - `"backstage thought"` (literal, only in reasoning)         → finds the trace
+//   - `` `private chain` `` (token, only in reasoning)            → finds the trace
+//   - `"insufficient funds"` (literal, in the final assistant text) →
+//                                                                  finds the trace
+//                                                                  (worked before
+//                                                                  the formatter
+//                                                                  split too)
+//
+// Known UX gap (out of scope for this fix): highlights for the reasoning
+// panel and tool-response panel don't render inline yet because those parts
+// render through non-instrumented components (no `data-source-start`
+// attributes). Search MATCHES the trace; the user sees no chip in the
+// conversation drawer for reasoning / tool-response hits — only for the
+// regular assistant text hit. Track as follow-up.
+
+const TOOL_REASONING_CALL_ID = "tc-payment-1" as const
+
+function buildAssistantPlanningMessage(): SeedMessage {
+  return {
+    role: "assistant",
+    parts: [
+      {
+        type: "reasoning",
+        content:
+          "Need to check the payment ledger. The user's account shows a private chain of failed retries against the card. Let me query the payment service to get the precise decline reason before answering — this kind of backstage thought helps me phrase the reply carefully without leaking internal codes to the user.",
+      },
+      { type: "text", content: "Let me check that for you." },
+      {
+        type: "tool_call",
+        id: TOOL_REASONING_CALL_ID,
+        name: "get_payment_status",
+        arguments: { accountId: "acc-789" },
+      },
+    ],
+  }
+}
+
+const buildToolReasoningIndexingCase: VariantBuilder = ({ rng, fixtureKey, replicaIndex }) => {
+  const planning = buildAssistantPlanningMessage()
+  const toolResult = toolResponseMessage(TOOL_REASONING_CALL_ID, {
+    status: "DECLINED",
+    reason: "PAYMENT_DECLINED",
+    errorCode: "ERR_INSUFFICIENT_FUNDS",
+    lastTryAt: "2026-05-21T14:32:00Z",
+    retryCount: 3,
+  })
+  const finalReply = assistantTextMessage(
+    "Your last payment was declined because of insufficient funds. Top up the card balance and retry from the billing tab.",
+  )
+
+  const turns: readonly GeneratedConversationTurnDefinition[] = [
+    {
+      key: "tool-reasoning-flow",
+      inputAdditions: [userTextMessage("Why was my last payment declined?")],
+      // One logical turn that emits an assistant planning message (with
+      // reasoning + text + tool_call), the tool response, then the
+      // assistant's final paraphrased reply.
+      outputMessages: [planning, toolResult, finalReply],
+      durationRangeMs: STANDARD_DURATION_RANGE_MS,
+      gapAfterRangeMs: TURN_GAP_RANGE_MS,
+      usageProfile: "tiny" as const,
+    },
+  ]
+
+  return buildSupportCase({
+    rng,
+    fixtureKey,
+    turns,
+    targetTurnIndex: 0,
+    sessionId: `qa-tool-reasoning-indexing-${(replicaIndex + 1).toString()}`,
+  })
+}
+
 const VARIANT_BUILDERS: readonly VariantBuilder[] = [
   buildRefund4Case,
   buildCode3Case,
   buildMixed6Case,
   buildCancellation5Case,
   buildDeep20Case,
+  buildOversizedCollapsed1Case,
+  buildToolReasoningIndexingCase,
 ]
 
 const SESSION_VARIANT_COUNT = VARIANT_BUILDERS.length
@@ -352,7 +548,7 @@ const SESSION_VARIANT_COUNT = VARIANT_BUILDERS.length
 export const sessionSearchQaFixture: LiveSeedFixtureDefinition = {
   key: "session-search-qa",
   description:
-    "QA-only fixture: 5 engineered sessions (refund-heavy, control, mixed, semantic-only, deep) for LAT-599 session-search verification. See dev-docs/qa/session-search.md.",
+    "QA-only fixture: 6 engineered sessions (refund-heavy, control, mixed, semantic-only, deep, oversized-collapsed) for LAT-599 session-search + LAT-601 highlights verification. See dev-docs/qa/session-search.md.",
   // No flagger samples → these sessions don't trip any system queue. Pure
   // conversation content for the search worker to index.
   sampling: {
@@ -362,10 +558,10 @@ export const sessionSearchQaFixture: LiveSeedFixtureDefinition = {
   },
   deterministicFlaggerMatches: [],
   llmSystemIntents: [],
-  // `instanceIndex` cycles through the 5 variants in order. `--count-per-fixture 5`
+  // `instanceIndex` cycles through the 6 variants in order. `--count-per-fixture 6`
   // produces exactly one of each (qa-refund-4-1, qa-code-3-1, qa-mixed-6-1,
-  // qa-cancellation-5-1, qa-deep-20-1). Higher counts wrap around with the
-  // suffix incrementing (qa-refund-4-2, etc.).
+  // qa-cancellation-5-1, qa-deep-20-1, qa-oversized-collapsed-1). Higher
+  // counts wrap around with the suffix incrementing (qa-refund-4-2, etc.).
   generateCase: ({ rng, fixtureKey, instanceIndex }) => {
     const variantIndex = instanceIndex % SESSION_VARIANT_COUNT
     const replicaIndex = Math.floor(instanceIndex / SESSION_VARIANT_COUNT)

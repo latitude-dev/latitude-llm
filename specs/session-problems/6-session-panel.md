@@ -156,7 +156,7 @@ open:
 | Sessions list row click (browse) | `?sessionId=…` | Session slot |
 | Sessions-list row expansion → trace click | `?sessionId=…&traceId=<clicked>` | Trace slot (slide animates in once) |
 | Search result row click — 1-trace session | `?sessionId=…&traceId=<only>&q=…` | Trace slot |
-| Search result row click — multi-trace session | `?sessionId=…&traceId=<first-match>&q=…` | Trace slot |
+| Search result row click — multi-trace session | `?sessionId=…&q=…` (no `traceId`) | **Session slot** (Traces tab; matching traces badged) |
 | Issue row → "View session" link | `?sessionId=…` | Session slot |
 | Deep link `?sessionId=…&traceId=…` | (as supplied) | Trace slot |
 | Deep link `?sessionId=…` only | (as supplied) | Session slot |
@@ -184,12 +184,28 @@ slides back, they see all the matches without a refetch.
 
 ### Search-mode multi-trace navigation
 
-When `q` is non-empty:
+When `q` is non-empty on a multi-trace session result, the panel
+opens on the **session slot** — not the trace slot. The reason is
+that a search hit typically appears in many traces of the same
+session because the agent accumulates prior messages into each new
+trace without compaction: `foo` first emitted in trace 3 is also
+present in traces 4–10 at the same offset, viewed through later
+trace windows. Auto-jumping to "the first matching trace" would
+imply we picked a canonical occurrence — but the occurrence is
+session-wide, not trace-specific. The honest landing surface is the
+session slot's Traces tab, where every matching trace is flagged and
+the user explicitly picks which one to read.
+
+What this means in practice:
 
 - Every matching trace (`matchingTraceIds`) gets a hit-count badge in
-  the Traces tab.
-- The first matching trace is auto-opened in the trace slot via the
-  initial-URL contract above.
+  the Traces tab. The session slot opens with that tab focused.
+- Clicking a badged trace row slides into the trace slot, which fires
+  `getTraceSearchHighlights(traceId, q)` and runs the scroll-to-first
+  resolution described in [`5-search-highlights.md`](./5-search-highlights.md)
+  (see "Scroll resolution + compaction fallback" below).
+- 1-trace sessions short-circuit straight to the trace slot — there's
+  no trace pick to make.
 - The user advances to the next match by sliding back (session slot)
   and clicking the next badged row. There is no "next match" hotkey
   *across* traces in V1 — within-trace `N`/`P` stepping is the trace
@@ -306,14 +322,59 @@ Clicking a row:
 When `q` is non-empty:
 
 - Matching traces (`matchingTraceIds`) get a hit-count badge.
-- The first matching trace is auto-opened in the trace slot via §3.
-- Remaining matching traces stay highlighted in the list — the user
-  slides back to pick the next one. Hit counts come from the same
-  payload the search results already produce; the panel doesn't
-  recompute them.
+- The panel opens on the session slot's Traces tab; the user picks
+  which matching trace to read (see §3 "Search-mode multi-trace
+  navigation"). 1-trace sessions short-circuit to the trace slot
+  with no pick to make.
+- Hit counts come from the same payload the search results already
+  produce; the panel doesn't recompute them.
 
 This is the session-result behavior `./5-search-highlights.md`
 defines, rendered inside the panel instead of in the row expansion.
+
+#### Scroll resolution + compaction fallback
+
+When the user clicks a matching trace and the trace slot loads, the
+existing `getTraceSearchHighlights(traceId, q)` returns the per-trace
+`highlights` array and a `firstMatchIndex` pointing at the canonical
+landing target. The trace slot then tries to scroll to that target.
+
+Three things make the lookup best-effort rather than guaranteed:
+
+1. **Code-fence text has no source positions.** `rehype-highlight`
+   rewrites the inside of fenced code into nested spans that don't
+   carry `data-source-start`, so a hit inside a code block can't be
+   resolved to a DOM node.
+2. **Some markdown transforms reshape offsets at element boundaries**
+   (autolinks, emoji rendering, GFM tables). The exact offset
+   occasionally lands on a transformed boundary with no nearby
+   `data-source-start` attribute.
+3. **Session compaction.** The backend computed the highlight against
+   the trace where the message originally existed. If the user opens
+   a later trace where the agent compacted the prior turn away, the
+   target message doesn't exist in this trace's DOM at all.
+
+The scroll resolver handles all three with one algorithm: walk the
+returned highlights from `firstMatchIndex` in document order, take
+the first one whose DOM node exists, and scroll to that. Exact
+`data-source-start` match first; if exact fails, a fuzzy ±10-char
+window scan finds the nearest source-positioned node in the same
+message. If every hit's node is missing — pathological for cases (1)
+and (2), realistic for (3) — the slot doesn't auto-scroll; the user
+still has the Traces tab with badged matches and can pick a
+different trace.
+
+Pre-paint races (auto-expand of a collapsed-middle hasn't completed
+when the scroll effect runs) are handled by a `MutationObserver` on
+the scroll container: if the synchronous scan finds nothing, the
+observer retries on each DOM mutation and disconnects on the first
+success or after a 2-second safety timeout. No fragile rAF chains.
+
+The behavior degrades honestly: the user always sees the badges that
+told them this trace matched, and they always see the highlights
+rendered inline once they scroll. The promise we make is "if the
+backend says a match is here and the renderer can find it, we'll
+land you on it"; we don't fake a landing when the renderer can't.
 
 ### Annotations on traces
 

@@ -112,7 +112,7 @@ describe("computeTraceSearchHighlights", () => {
     expect(result.firstMatchIndex).toBe(0)
   })
 
-  it("ignores non-text parts (tool calls, blobs, reasoning)", () => {
+  it("scans reasoning content for inline chips; ignores tool calls and blobs (no searchable text)", () => {
     const result = compute(
       [
         {
@@ -122,6 +122,102 @@ describe("computeTraceSearchHighlights", () => {
             { type: "blob", modality: "image", content: "refund.png" },
             { type: "reasoning", content: "should I refund" },
           ],
+        } as GenAIMessage,
+      ],
+      '"refund"',
+    )
+
+    // Reasoning hits emit a regular inline chip at the matched offsets in
+    // `part.content` — the renderer routes reasoning through MarkdownContent
+    // so the chip paints just like a text-part chip would.
+    expect(result.highlights).toHaveLength(1)
+    expect(result.highlights[0]).toMatchObject({
+      messageIndex: 0,
+      partIndex: 2,
+      startOffset: 9,
+      endOffset: 15,
+      type: "search-literal",
+      source: { kind: "literal", phrase: "refund" },
+    })
+  })
+
+  it("anchors a tool_call_response container marker at the originating tool_call's location", () => {
+    // conversation.tsx absorbs the tool message's tool_call_response into the
+    // calling assistant's ToolCallBlock via `resultMap`, so a marker anchored
+    // at the tool_call_response's own (messageIndex, partIndex) would point
+    // at DOM that doesn't render. The marker must anchor at the assistant's
+    // tool_call part — that's the visible surface.
+    const result = compute(
+      [
+        textMessage("user", "why was my payment declined?"),
+        {
+          role: "assistant",
+          parts: [
+            { type: "text", content: "let me check" },
+            { type: "tool_call", id: "tc-1", name: "lookup_payment", arguments: {} },
+          ],
+        } as GenAIMessage,
+        {
+          role: "tool",
+          parts: [
+            {
+              type: "tool_call_response",
+              id: "tc-1",
+              response: { status: "DECLINED", reason: "refund denied", code: "ERR_INSUFFICIENT_FUNDS" },
+            },
+          ],
+        } as GenAIMessage,
+      ],
+      '"refund"',
+    )
+
+    expect(result.highlights).toHaveLength(1)
+    expect(result.highlights[0]).toMatchObject({
+      messageIndex: 1, // the assistant message (not the tool message at index 2)
+      partIndex: 1, //   the tool_call part inside it (not the tool_call_response part)
+      startOffset: 0,
+      endOffset: 0,
+      type: "search-container",
+      source: { kind: "container", partType: "tool_call_response", phrases: ["refund"] },
+    })
+  })
+
+  it("falls back to the tool_call_response's own location when no matching tool_call exists (orphan)", () => {
+    // Orphan tool_call_response: no assistant tool_call with this id. The
+    // standalone `tool_call_response` branch in `<Part>` renders this
+    // response directly via `<CollapsibleBlock>`, so anchoring the marker
+    // at its own location is correct here.
+    const result = compute(
+      [
+        {
+          role: "tool",
+          parts: [
+            {
+              type: "tool_call_response",
+              id: "orphan-tc",
+              response: { status: "DECLINED", reason: "refund denied" },
+            },
+          ],
+        } as GenAIMessage,
+      ],
+      '"refund"',
+    )
+
+    expect(result.highlights).toHaveLength(1)
+    expect(result.highlights[0]).toMatchObject({
+      messageIndex: 0,
+      partIndex: 0,
+      type: "search-container",
+      source: { kind: "container", partType: "tool_call_response", phrases: ["refund"] },
+    })
+  })
+
+  it("does not emit a container marker for tool_call_response when no phrase matches", () => {
+    const result = compute(
+      [
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "t1", response: { status: "OK", code: "ALL_GOOD" } }],
         } as GenAIMessage,
       ],
       '"refund"',

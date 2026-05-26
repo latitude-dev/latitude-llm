@@ -154,6 +154,7 @@ export {
   type ToolCallResult,
 } from "./components/genai-conversation/part.tsx"
 export {
+  type FirstMatchHint,
   type HighlightRange,
   SELECTION_HIGHLIGHT_CLASSES,
   type TextSelectionAnchor,

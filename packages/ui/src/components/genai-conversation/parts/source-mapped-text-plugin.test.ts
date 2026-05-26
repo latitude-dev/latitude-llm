@@ -3,8 +3,8 @@ import type { HighlightRange } from "../text-selection.tsx"
 import { type HastNode, sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
 // Runs the plugin transformer on a tree and returns the mutated tree.
-function run(tree: HastNode, highlights: HighlightRange[] = []): HastNode {
-  sourceMappedTextPlugin(highlights)()(tree)
+function run(tree: HastNode, highlights: HighlightRange[] = [], sliceSourceStart = 0): HastNode {
+  sourceMappedTextPlugin(highlights, sliceSourceStart)()(tree)
   return tree
 }
 
@@ -369,6 +369,179 @@ describe("segment splitting", () => {
     expect(props(segs[0])["data-annotated-text"]).toBe(true)
     expect(segs[1]?.children?.[0]?.value).toBe("rld")
     expect(props(segs[1])["data-annotated-text"]).toBeUndefined()
+  })
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
+// sliceSourceStart — full-part-text coordinate emission
+// ──────────────────────────────────────────────────────────────────────────────
+//
+// When the plugin runs against a slice of an oversized markdown part (e.g. the
+// tail slice that begins at offset `content.length - tail.length`), the AST
+// positions are local to the slice (0..slice.length), but downstream consumers
+// (annotation lookup, scroll-to-offset, click routing) reason in full-part
+// coordinates. The shift must be applied at emit time, and highlights must be
+// matched in slice-local coordinates against the rehype tree.
+
+describe("sliceSourceStart — emits full-part-text coordinates", () => {
+  it("emits data-source-start/-end shifted by sliceSourceStart", () => {
+    // Tail slice "world" begins at full-part offset 1000.
+    const tree = rootWith(textNode("world", 0, 5))
+    run(tree, [], 1000)
+    const [span] = children(tree)
+    expect(props(span)["data-source-start"]).toBe("1000")
+    expect(props(span)["data-source-end"]).toBe("1005")
+  })
+
+  it("matches highlights in full-part coordinates and emits the same coordinates back", () => {
+    // Highlight "wo" (full-part offsets 1000-1002) inside a tail slice that starts at 1000.
+    const h: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 1000,
+      endOffset: 1002,
+      type: "annotation",
+      passed: true,
+    }
+    const tree = rootWith(textNode("world", 0, 5))
+    run(tree, [h], 1000)
+    const segs = children(tree)
+    expect(segs).toHaveLength(2)
+    expect(segs[0]?.children?.[0]?.value).toBe("wo")
+    expect(props(segs[0])["data-annotated-text"]).toBe(true)
+    expect(props(segs[0])["data-source-start"]).toBe("1000")
+    expect(props(segs[0])["data-source-end"]).toBe("1002")
+    expect(segs[1]?.children?.[0]?.value).toBe("rld")
+    expect(props(segs[1])["data-source-start"]).toBe("1002")
+    expect(props(segs[1])["data-source-end"]).toBe("1005")
+  })
+
+  it("defaults to no shift when sliceSourceStart is omitted", () => {
+    const tree = rootWith(textNode("hello", 0, 5))
+    run(tree)
+    const [span] = children(tree)
+    expect(props(span)["data-source-start"]).toBe("0")
+    expect(props(span)["data-source-end"]).toBe("5")
+  })
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Search highlight types (PR3 of LAT-601)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe("search highlight types", () => {
+  it("applies the unified phrase-color background for search-literal", () => {
+    const h: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 0,
+      endOffset: 5,
+      type: "search-literal",
+    }
+    const tree = rootWith(textNode("hello world", 0, 11))
+    run(tree, [h])
+    const highlighted = children(tree).find((n) => props(n)["data-search-match"] === "literal")
+    expect(props(highlighted).className).toContain("bg-primary/30")
+    expect(props(highlighted).className).toContain("rounded-sm")
+    expect(props(highlighted).className).toContain("box-decoration-clone")
+    expect(props(highlighted).className).not.toContain("underline")
+    expect(props(highlighted).className).not.toContain("-mx-1")
+  })
+
+  it("applies the same unified background for search-token (visually identical to literal)", () => {
+    const h: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 0,
+      endOffset: 5,
+      type: "search-token",
+    }
+    const tree = rootWith(textNode("hello world", 0, 11))
+    run(tree, [h])
+    const highlighted = children(tree).find((n) => props(n)["data-search-match"] === "token")
+    expect(props(highlighted).className).toContain("bg-primary/30")
+    expect(props(highlighted).className).toContain("rounded-sm")
+    expect(props(highlighted).className).toContain("box-decoration-clone")
+    expect(props(highlighted).className).not.toContain("decoration-wavy")
+    expect(props(highlighted).className).not.toContain("-mx-1")
+  })
+
+  it("renders search highlight on top of an overlapping annotation", () => {
+    // Annotation spans the whole text; search hits the middle. Where they
+    // overlap, the search class wins so the user can see why this trace
+    // matched. Annotation styling stays on the non-overlapping ends.
+    const annotation: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 0,
+      endOffset: 11,
+      type: "annotation",
+      passed: true,
+    }
+    const search: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 6,
+      endOffset: 11,
+      type: "search-literal",
+    }
+    const tree = rootWith(textNode("hello world", 0, 11))
+    run(tree, [annotation, search])
+    const segs = children(tree)
+    // "hello " — annotation only
+    expect(segs[0]?.children?.[0]?.value).toBe("hello ")
+    expect(props(segs[0])["data-annotated-text"]).toBe(true)
+    // "world" — overlapping segment: search wins
+    expect(segs[1]?.children?.[0]?.value).toBe("world")
+    expect(props(segs[1])["data-search-match"]).toBe("literal")
+    expect(props(segs[1])["data-annotated-text"]).toBeUndefined()
+  })
+
+  it("renders search highlight on top of an overlapping selection", () => {
+    const selection: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 0,
+      endOffset: 11,
+      type: "selection",
+    }
+    const search: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 0,
+      endOffset: 5,
+      type: "search-token",
+    }
+    const tree = rootWith(textNode("hello world", 0, 11))
+    run(tree, [selection, search])
+    const segs = children(tree)
+    // "hello" — search wins over selection
+    expect(props(segs[0])["data-search-match"]).toBe("token")
+    expect(props(segs[0])["data-selected-text"]).toBeUndefined()
+    // " world" — selection only
+    expect(props(segs[1])["data-selected-text"]).toBe(true)
+  })
+
+  it("preserves the data-search-match attribute so PR4 popovers can distinguish kinds", () => {
+    const literal: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 0,
+      endOffset: 5,
+      type: "search-literal",
+    }
+    const token: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 6,
+      endOffset: 11,
+      type: "search-token",
+    }
+    const tree = rootWith(textNode("hello world", 0, 11))
+    run(tree, [literal, token])
+    const segs = children(tree)
+    expect(segs.some((n) => props(n)["data-search-match"] === "literal")).toBe(true)
+    expect(segs.some((n) => props(n)["data-search-match"] === "token")).toBe(true)
   })
 })
 

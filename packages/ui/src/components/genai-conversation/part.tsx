@@ -1,4 +1,5 @@
 import { CheckIcon, FileIcon, LinkIcon, TerminalIcon, TriangleAlertIcon, XIcon } from "lucide-react"
+import { type ReactNode, use } from "react"
 import type { GenAIPart } from "rosetta-ai"
 import { cn } from "../../utils/cn.ts"
 import { CodeBlockControls } from "../code-block/code-block-controls.tsx"
@@ -18,9 +19,41 @@ import type {
   ToolCallResult,
   UriPart,
 } from "./parts/types.ts"
+import { type HighlightRange, TextSelectionContext } from "./text-selection.tsx"
 
 export { ReasoningGroup } from "./parts/reasoning-group.tsx"
 export type { ToolCallResult } from "./parts/types.ts"
+
+const SEARCH_HIGHLIGHT_TYPES = new Set<HighlightRange["type"]>([
+  "search-literal",
+  "search-token",
+  "search-semantic-region",
+  "search-container",
+])
+
+function hasAnySearchHit(highlights: readonly HighlightRange[]): boolean {
+  return highlights.some((h) => SEARCH_HIGHLIGHT_TYPES.has(h.type))
+}
+
+// Blue ring + ::before "Search result inside" label for parts whose
+// rendered shape can't carry inline chips (tool_call_response). w-fit so
+// the ring hugs the child instead of the full message column.
+function SearchHitDecoration({ hasHit, children }: { readonly hasHit: boolean; readonly children: ReactNode }) {
+  if (!hasHit) return <>{children}</>
+  return (
+    <div
+      className={cn(
+        "relative w-fit max-w-full rounded-lg ring-2 ring-primary",
+        "before:absolute before:-top-2 before:right-2 before:z-10",
+        "before:content-['Search_result_inside']",
+        "before:bg-primary before:text-primary-foreground",
+        "before:px-2 before:py-0.5 before:text-[10px] before:font-medium before:rounded",
+      )}
+    >
+      {children}
+    </div>
+  )
+}
 
 export function Part({
   part,
@@ -35,6 +68,13 @@ export function Part({
   readonly messageIndex?: number | undefined
   readonly partIndex?: number | undefined
 }) {
+  const selectionCtx = use(TextSelectionContext)
+  const partHighlights =
+    selectionCtx && messageIndex != null && partIndex != null
+      ? selectionCtx.getHighlightsForBlock(messageIndex, partIndex)
+      : []
+  const partHasSearchHit = hasAnySearchHit(partHighlights)
+
   switch (part.type) {
     case "text": {
       const p = part as TextPart
@@ -109,12 +149,20 @@ export function Part({
 
     case "tool_call": {
       const p = part as ToolCallPart
+      // tool_call_response is absorbed into this block (see conversation.tsx
+      // `resultMap`); the container marker is anchored here so the decoration
+      // lands on the part the user actually sees. `key` flip re-evaluates
+      // `defaultOpen` when hit state changes between searches.
       return (
-        <ToolCallBlock
-          call={p}
-          {...(toolResult ? { result: toolResult } : {})}
-          {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
-        />
+        <SearchHitDecoration hasHit={partHasSearchHit}>
+          <ToolCallBlock
+            key={partHasSearchHit ? "search-hit" : "no-hit"}
+            call={p}
+            defaultOpen={partHasSearchHit}
+            {...(toolResult ? { result: toolResult } : {})}
+            {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
+          />
+        </SearchHitDecoration>
       )
     }
 
@@ -131,19 +179,25 @@ export function Part({
       const responseContent = formatJson(response)
 
       return (
-        <CollapsibleBlock
-          icon={<TerminalIcon className="w-3.5 h-3.5" />}
-          label={<Text.Mono size="h6">{toolName ?? "Tool Result"}</Text.Mono>}
-          variant={isError ? "destructive" : "default"}
-          statusIcon={statusIcon}
-        >
-          <div className="relative">
-            <pre className={cn("overflow-auto rounded-lg p-3 text-xs", isError ? "bg-destructive-muted" : "bg-muted")}>
-              {responseContent}
-            </pre>
-            <CodeBlockControls content={responseContent} language="json" />
-          </div>
-        </CollapsibleBlock>
+        <SearchHitDecoration hasHit={partHasSearchHit}>
+          <CollapsibleBlock
+            key={partHasSearchHit ? "search-hit" : "no-hit"}
+            icon={<TerminalIcon className="w-3.5 h-3.5" />}
+            label={<Text.Mono size="h6">{toolName ?? "Tool Result"}</Text.Mono>}
+            variant={isError ? "destructive" : "default"}
+            statusIcon={statusIcon}
+            defaultOpen={partHasSearchHit}
+          >
+            <div className="relative">
+              <pre
+                className={cn("overflow-auto rounded-lg p-3 text-xs", isError ? "bg-destructive-muted" : "bg-muted")}
+              >
+                {responseContent}
+              </pre>
+              <CodeBlockControls content={responseContent} language="json" />
+            </div>
+          </CollapsibleBlock>
+        </SearchHitDecoration>
       )
     }
 

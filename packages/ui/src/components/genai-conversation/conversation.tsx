@@ -7,6 +7,7 @@ import type { ToolCallResult } from "./part.tsx"
 import { getKnownField } from "./parts/helpers.tsx"
 import { SelectionActionPopover } from "./selection-action-popover.tsx"
 import {
+  type FirstMatchHint,
   type HighlightRange,
   SELECTION_HIGHLIGHT_CLASSES,
   type TextSelectionAnchor,
@@ -86,6 +87,7 @@ export function Conversation({
   onSelectionDismiss,
   clearSelectionRef,
   highlightRanges,
+  firstMatchHint,
   onAnnotationClick,
   messageAnnotationSlot,
 }: {
@@ -118,6 +120,8 @@ export function Conversation({
   readonly clearSelectionRef?: RefObject<(() => void) | null> | undefined
   /** Highlight ranges to paint on text parts (e.g. from persisted annotations). */
   readonly highlightRanges?: ReadonlyArray<HighlightRange> | undefined
+  /** Part containing the first search hit; MarkdownContent auto-expands its collapsed middle if so. */
+  readonly firstMatchHint?: FirstMatchHint | null | undefined
   /** Called when a persisted annotation highlight is clicked. Receives the annotation id and click position. */
   readonly onAnnotationClick?: ((annotationId: string, position: { x: number; y: number }) => void) | undefined
   /** Renders a slot below each message. Receives the original messageIndex and role. */
@@ -263,6 +267,7 @@ export function Conversation({
         onDismiss={onSelectionDismiss}
         clearSelectionRef={clearSelectionRef}
         highlightRanges={highlightRanges}
+        firstMatchHint={firstMatchHint}
       >
         {content}
         <SelectionActionPopover />
