@@ -310,8 +310,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           const updatedAt = new Date()
           const valuesSql = sql.join(
             assignments.map(
-              (assignment) =>
-                sql`(${assignment.clusterId}::varchar, ${assignment.parentCategoryId ?? null}::varchar)`,
+              (assignment) => sql`(${assignment.clusterId}::varchar, ${assignment.parentCategoryId ?? null}::varchar)`,
             ),
             sql.raw(", "),
           )
