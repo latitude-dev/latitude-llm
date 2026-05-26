@@ -14,7 +14,7 @@ export const FEATURE_FLAGS = {
   "claude-code-wrapped": {
     emoji: "🎁",
     name: "Claude Code Wrapped",
-    description: "Gates the annual Claude Code Wrapped summary fan-out and rendering.",
+    description: "Creates the weekly Wrapped for projects with Claude Code telemetry within the organization.",
   },
   "email-notifications": {
     emoji: "✉️",
