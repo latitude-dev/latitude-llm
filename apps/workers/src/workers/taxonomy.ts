@@ -121,7 +121,6 @@ export const runObserveSessionJob = (payload: ObserveSessionPayload, deps: Taxon
     ),
     withTracing,
     Effect.withSpan("taxonomy.observeSession"),
-    Effect.orElseSucceed(() => undefined),
     Effect.asVoid,
   )
 }
@@ -147,7 +146,7 @@ const listActiveProjects = (adminPostgresClient: PostgresClient) =>
       const result = await adminPostgresClient.pool.query<{
         readonly organization_id: string
         readonly project_id: string
-      }>(`SELECT organization_id, id AS project_id FROM projects WHERE deleted_at IS NULL`)
+      }>(`SELECT organization_id, id AS project_id FROM latitude.projects WHERE deleted_at IS NULL`)
       return result.rows
     },
     catch: (cause) => cause,
@@ -198,7 +197,6 @@ export const runGardenSweepJob = (payload: GardenSweepPayload, deps: TaxonomySwe
     Effect.tapError((error) => Effect.sync(() => logger.error("Taxonomy gardening sweep failed", error))),
     withTracing,
     Effect.withSpan("taxonomy.gardenSweep"),
-    Effect.orElseSucceed(() => undefined),
     Effect.asVoid,
   )
 
@@ -213,7 +211,6 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
         const runs = yield* TaxonomyRunRepository
         const clusters = yield* TaxonomyClusterRepository
         const recent = yield* runs.listRecentCompleted({
-          organizationId: OrganizationId(payload.organizationId),
           projectId: ProjectId(payload.projectId),
           limit: 3,
         })
@@ -228,11 +225,9 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
           recent.length >= 3 &&
           recent.every((row) => row.clustersBorn === 0 && row.noiseScanned > 0)
         const activeClusters = yield* clusters.listActiveByProject({
-          organizationId: OrganizationId(payload.organizationId),
           projectId: ProjectId(payload.projectId),
         })
         const deprecatedClusters = yield* clusters.list({
-          organizationId: OrganizationId(payload.organizationId),
           projectId: ProjectId(payload.projectId),
           state: "deprecated",
           limit: 10_000,
@@ -312,7 +307,6 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
     ),
     withTracing,
     Effect.withSpan("taxonomy.gardenProject"),
-    Effect.orElseSucceed(() => undefined),
     Effect.asVoid,
   )
 

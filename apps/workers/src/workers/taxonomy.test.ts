@@ -259,7 +259,7 @@ const listLatestTaxonomyRun = () =>
   Effect.runPromise(
     Effect.gen(function* () {
       const repo = yield* TaxonomyRunRepository
-      return yield* repo.findLatestByProject({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID })
+      return yield* repo.findLatestByProject({ projectId: PROJECT_ID })
     }).pipe(withPostgres(TaxonomyRunRepositoryLive, pg.appPostgresClient, ORGANIZATION_ID)),
   )
 
@@ -394,13 +394,12 @@ describe("taxonomy observeSession worker", () => {
         const categories = yield* TaxonomyCategoryRepository
         const lineage = yield* TaxonomyLineageRepository
         return {
-          clusters: yield* clusters.listActiveByProject({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_E2E }),
+          clusters: yield* clusters.listActiveByProject({ projectId: PROJECT_ID_E2E }),
           categories: yield* categories.listByProject({
-            organizationId: ORGANIZATION_ID,
             projectId: PROJECT_ID_E2E,
             state: "active",
           }),
-          lineage: yield* lineage.listRecent({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_E2E, limit: 10 }),
+          lineage: yield* lineage.listRecent({ projectId: PROJECT_ID_E2E, limit: 10 }),
         }
       }).pipe(
         withPostgres(
@@ -458,7 +457,7 @@ describe("taxonomy observeSession worker", () => {
         const lineage = yield* TaxonomyLineageRepository
         const clusters = yield* TaxonomyClusterRepository
         return {
-          lineage: yield* lineage.listRecent({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_E2E, limit: 10 }),
+          lineage: yield* lineage.listRecent({ projectId: PROJECT_ID_E2E, limit: 10 }),
           mergeB: yield* clusters.findById(mergeB),
         }
       }).pipe(

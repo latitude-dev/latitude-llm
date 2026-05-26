@@ -1,11 +1,4 @@
-import type {
-  NotFoundError,
-  OrganizationId,
-  ProjectId,
-  RepositoryError,
-  SqlClient,
-  TaxonomyRunId,
-} from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, SqlClient, TaxonomyRunId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { TaxonomyRun } from "../entities/lineage.ts"
 
@@ -13,7 +6,6 @@ export interface TaxonomyRunRepositoryShape {
   findById(id: TaxonomyRunId): Effect.Effect<TaxonomyRun, NotFoundError | RepositoryError, SqlClient>
   /** Most recent run per project, regardless of status. */
   findLatestByProject(input: {
-    readonly organizationId: OrganizationId
     readonly projectId: ProjectId
   }): Effect.Effect<TaxonomyRun | null, RepositoryError, SqlClient>
   /**
@@ -21,11 +13,9 @@ export interface TaxonomyRunRepositoryShape {
    * inspects these to detect concurrent or stale runs.
    */
   listRunning(input: {
-    readonly organizationId: OrganizationId
     readonly projectId: ProjectId
   }): Effect.Effect<readonly TaxonomyRun[], RepositoryError, SqlClient>
   listRecentCompleted(input: {
-    readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly limit: number
   }): Effect.Effect<readonly TaxonomyRun[], RepositoryError, SqlClient>

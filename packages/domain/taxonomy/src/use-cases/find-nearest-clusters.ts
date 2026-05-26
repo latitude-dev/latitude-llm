@@ -15,7 +15,6 @@ export const findNearestClustersUseCase = (input: FindNearestClustersInput) =>
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     const repository = yield* TaxonomyClusterRepository
     return yield* repository.listNearestActive({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       queryVector: input.queryVector,
       k: input.k ?? TAXONOMY_ASSIGN_TOPK,

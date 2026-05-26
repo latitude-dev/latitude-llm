@@ -19,7 +19,6 @@ export const listCategoriesUseCase = (input: ListCategoriesInput) =>
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     const categories = yield* TaxonomyCategoryRepository
     const rows = yield* categories.listByProject({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       state: input.state ?? "active",
     })

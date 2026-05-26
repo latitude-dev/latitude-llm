@@ -17,27 +17,21 @@ export const createFakeTaxonomyRunRepository = (
         return run
       }),
 
-    findLatestByProject: ({ organizationId, projectId }) =>
+    findLatestByProject: ({ projectId }) =>
       Effect.sync(() => {
         const candidates = [...runs.values()]
-          .filter((run) => run.organizationId === organizationId && run.projectId === projectId)
+          .filter((run) => run.projectId === projectId)
           .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
         return candidates[0] ?? null
       }),
 
-    listRunning: ({ organizationId, projectId }) =>
-      Effect.sync(() =>
-        [...runs.values()].filter(
-          (run) => run.organizationId === organizationId && run.projectId === projectId && run.status === "running",
-        ),
-      ),
+    listRunning: ({ projectId }) =>
+      Effect.sync(() => [...runs.values()].filter((run) => run.projectId === projectId && run.status === "running")),
 
-    listRecentCompleted: ({ organizationId, projectId, limit }) =>
+    listRecentCompleted: ({ projectId, limit }) =>
       Effect.sync(() =>
         [...runs.values()]
-          .filter(
-            (run) => run.organizationId === organizationId && run.projectId === projectId && run.status === "completed",
-          )
+          .filter((run) => run.projectId === projectId && run.status === "completed")
           .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
           .slice(0, limit),
       ),

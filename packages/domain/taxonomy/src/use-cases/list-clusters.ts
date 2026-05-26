@@ -65,7 +65,6 @@ export const listClustersInCategoryUseCase = (input: ListClustersInCategoryInput
     const limit = pageSize(input.pageSize)
     const offset = cursorToOffset(input.cursor)
     const result = yield* clusters.list({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       state: input.state ?? "active",
       parentCategoryId: input.categoryId,
@@ -93,7 +92,6 @@ export const listClustersUseCase = (input: ListTaxonomyClustersInput) =>
         inputType: "query",
       })
       const candidates = yield* clusters.hybridSearch({
-        organizationId: input.organizationId,
         projectId: input.projectId,
         query: search,
         normalizedEmbedding: normalizeTaxonomyEmbedding(embedding.embedding),
@@ -118,7 +116,6 @@ export const listClustersUseCase = (input: ListTaxonomyClustersInput) =>
     }
 
     const result = yield* clusters.list({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       state: input.state ?? "active",
       ...(input.parentCategoryId === undefined ? {} : { parentCategoryId: input.parentCategoryId }),

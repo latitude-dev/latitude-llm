@@ -109,7 +109,6 @@ export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
             lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])),
           )
           const activeClusters = yield* clusters.listActiveByProject({
-            organizationId: input.organizationId,
             projectId: input.projectId,
           })
           for (const cluster of activeClusters) {
@@ -124,7 +123,6 @@ export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
           }
 
           const activeCategories = yield* categories.listByProject({
-            organizationId: input.organizationId,
             projectId: input.projectId,
             state: "active",
           })

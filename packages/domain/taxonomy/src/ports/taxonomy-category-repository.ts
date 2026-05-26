@@ -1,11 +1,4 @@
-import type {
-  NotFoundError,
-  OrganizationId,
-  ProjectId,
-  RepositoryError,
-  SqlClient,
-  TaxonomyCategoryId,
-} from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, SqlClient, TaxonomyCategoryId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { TaxonomyCategory } from "../entities/category.ts"
 
@@ -17,7 +10,6 @@ export interface BestCategoryMatch {
 export interface TaxonomyCategoryRepositoryShape {
   findById(id: TaxonomyCategoryId): Effect.Effect<TaxonomyCategory, NotFoundError | RepositoryError, SqlClient>
   listByProject(input: {
-    readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly state?: TaxonomyCategory["state"]
   }): Effect.Effect<readonly TaxonomyCategory[], RepositoryError, SqlClient>
@@ -27,7 +19,6 @@ export interface TaxonomyCategoryRepositoryShape {
    * category id when its rebuilt centroid is close enough to a prior one.
    */
   findBestMatchByVector(input: {
-    readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly queryVector: readonly number[]
   }): Effect.Effect<BestCategoryMatch | null, RepositoryError, SqlClient>

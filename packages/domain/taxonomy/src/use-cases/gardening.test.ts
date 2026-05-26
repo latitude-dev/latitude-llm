@@ -156,8 +156,8 @@ describe("sweepNoiseAndBirthClustersUseCase", () => {
   })
 
   it("merges near-duplicate clusters and reassigns loser observations", async () => {
-    const survivor = makeCluster({ id: "c".repeat(24) as TaxonomyCluster["id"], observationCount: 10 })
-    const loser = makeCluster({ id: "d".repeat(24) as TaxonomyCluster["id"], observationCount: 2 })
+    const survivor = makeCluster({ id: "c".repeat(24) as TaxonomyCluster["id"], observationCount: 2_000 })
+    const loser = makeCluster({ id: "d".repeat(24) as TaxonomyCluster["id"], observationCount: 1_001 })
     const loserObservations = Array.from({ length: 1_001 }, (_, index) => ({
       ...makeObservation(index),
       startTime: now,
@@ -179,7 +179,7 @@ describe("sweepNoiseAndBirthClustersUseCase", () => {
     expect(clusters.clusters.get(loser.id)?.state).toBe("merged")
     expect([...observations.rows.values()][0]?.assignedClusterId).toBe(survivor.id)
     expect([...observations.rows.values()].filter((row) => row.assignedClusterId === survivor.id)).toHaveLength(1_001)
-    expect(clusters.clusters.get(survivor.id)?.observationCount).toBe(1_011)
+    expect(clusters.clusters.get(survivor.id)?.observationCount).toBe(3_001)
   })
 
   it("deprecates inactive clusters whose decayed mass is below the floor", async () => {

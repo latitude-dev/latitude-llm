@@ -20,22 +20,18 @@ export const createFakeTaxonomyCategoryRepository = (
         return category
       }),
 
-    listByProject: ({ organizationId, projectId, state }) =>
+    listByProject: ({ projectId, state }) =>
       Effect.sync(() =>
         [...categories.values()].filter(
-          (category) =>
-            category.organizationId === organizationId &&
-            category.projectId === projectId &&
-            (state ? category.state === state : true),
+          (category) => category.projectId === projectId && (state ? category.state === state : true),
         ),
       ),
 
-    findBestMatchByVector: ({ organizationId, projectId, queryVector }) =>
+    findBestMatchByVector: ({ projectId, queryVector }) =>
       Effect.sync(() => {
         let best: BestCategoryMatch | null = null
         for (const category of categories.values()) {
           if (
-            category.organizationId !== organizationId ||
             category.projectId !== projectId ||
             category.state !== "active" ||
             category.centroidEmbedding.length === 0

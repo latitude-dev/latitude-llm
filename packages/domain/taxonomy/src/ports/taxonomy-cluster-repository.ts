@@ -1,6 +1,5 @@
 import type {
   NotFoundError,
-  OrganizationId,
   ProjectId,
   RepositoryError,
   SqlClient,
@@ -26,7 +25,6 @@ export interface TaxonomyClusterSearchCandidate {
 export type TaxonomyClusterSort = "observation_count_desc" | "last_observed_desc" | "name_asc"
 
 export interface ListClustersInput {
-  readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly state?: TaxonomyCluster["state"]
   readonly parentCategoryId?: TaxonomyCategoryId
@@ -43,7 +41,6 @@ export interface TaxonomyClusterListPage {
 }
 
 export interface BulkUpdateParentCategoryInput {
-  readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly assignments: ReadonlyArray<{
     readonly clusterId: TaxonomyClusterId
@@ -67,23 +64,21 @@ export interface TaxonomyClusterRepositoryShape {
   findById(id: TaxonomyClusterId): Effect.Effect<TaxonomyCluster, NotFoundError | RepositoryError, SqlClient>
   listByIds(ids: readonly TaxonomyClusterId[]): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
   listActiveByProject(input: {
-    readonly organizationId: OrganizationId
     readonly projectId: ProjectId
   }): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
   /**
    * Exact pgvector cosine over `(organization_id, project_id)` for state =
-   * 'active' clusters with a non-null `centroid_embedding`. Sub-ms at the
+   * 'active' clusters with a non-null `centroid_embedding`. Results are
+   * sorted by cosine descending; `[0]` is the closest match. Sub-ms at the
    * cluster counts this product runs at (hundreds to low-thousands per
    * project).
    */
   listNearestActive(input: {
-    readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly queryVector: readonly number[]
     readonly k: number
   }): Effect.Effect<readonly NearestClusterMatch[], RepositoryError, SqlClient>
   hybridSearch(input: {
-    readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly query: string
     readonly normalizedEmbedding: readonly number[]

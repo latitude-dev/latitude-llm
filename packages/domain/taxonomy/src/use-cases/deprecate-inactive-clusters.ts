@@ -44,7 +44,6 @@ export const deprecateInactiveClustersUseCase = (input: DeprecateInactiveCluster
     const cutoff = inactivityCutoff(now)
     const clusters = yield* TaxonomyClusterRepository
     const activeClusters = yield* clusters.listActiveByProject({
-      organizationId: input.organizationId,
       projectId: input.projectId,
     })
     const lineage: TaxonomyClusterLineage[] = []

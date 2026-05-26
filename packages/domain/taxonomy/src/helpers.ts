@@ -1,5 +1,5 @@
 import type { TraceId } from "@domain/shared"
-import { createCentroid, normalizeCentroid, normalizeEmbedding, updateCentroid } from "@domain/shared"
+import { createCentroid, mergeCentroids, normalizeCentroid, normalizeEmbedding, updateCentroid } from "@domain/shared"
 import {
   TAXONOMY_CENTROID_HALF_LIFE_SECONDS,
   TAXONOMY_EMBEDDING_DIMENSIONS,
@@ -131,6 +131,28 @@ export const updateTaxonomyCentroid = ({
     timestamp,
   }) as TaxonomyCentroid & { readonly clusteredAt: Date }
 }
+
+interface MergeTaxonomyCentroidsInput {
+  readonly survivor: TaxonomyCentroid & { readonly clusteredAt: Date }
+  readonly loser: TaxonomyCentroid & { readonly clusteredAt: Date }
+  readonly timestamp: Date
+}
+
+/**
+ * Decay survivor + loser running sums to `timestamp` and combine. Preserves
+ * the loser's accumulated decayed mass — re-aggregating from raw observations
+ * would zero out contributions older than ~one half-life.
+ */
+export const mergeTaxonomyCentroids = ({
+  survivor,
+  loser,
+  timestamp,
+}: MergeTaxonomyCentroidsInput): TaxonomyCentroid & { readonly clusteredAt: Date } =>
+  mergeCentroids<TaxonomyObservationWeightScheme>({
+    survivor,
+    loser,
+    timestamp,
+  }) as TaxonomyCentroid & { readonly clusteredAt: Date }
 
 export const normalizeTaxonomyCentroid = (centroid: TaxonomyCentroid): number[] => normalizeCentroid(centroid)
 

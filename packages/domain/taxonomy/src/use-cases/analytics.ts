@@ -97,7 +97,6 @@ export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
     const clusters = yield* TaxonomyClusterRepository
     const observations = yield* BehaviorObservationRepository
     const activeCategories = yield* categories.listByProject({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       state: "active",
     })
@@ -114,7 +113,6 @@ export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
       return cluster && cluster.state === "active" ? [{ cluster, occurrences: row.count }] : []
     })
     const allActiveClusters = yield* clusters.listActiveByProject({
-      organizationId: input.organizationId,
       projectId: input.projectId,
     })
     const counts = yield* observations.getCounts({
@@ -135,9 +133,8 @@ export const getLastRunUseCase = (input: GetLastRunInput) =>
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     const runs = yield* TaxonomyRunRepository
     const lineageRepository = yield* TaxonomyLineageRepository
-    const run = yield* runs.findLatestByProject({ organizationId: input.organizationId, projectId: input.projectId })
+    const run = yield* runs.findLatestByProject({ projectId: input.projectId })
     const lineage = yield* lineageRepository.listRecentByTransitionTypes({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       transitionTypes: ["birth", "merge"],
       limit: 10,

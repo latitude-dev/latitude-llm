@@ -24,24 +24,16 @@ export const createFakeTaxonomyClusterRepository = (
         ids.map((id) => clusters.get(id)).filter((cluster): cluster is TaxonomyCluster => cluster !== undefined),
       ),
 
-    listActiveByProject: ({ organizationId, projectId }) =>
+    listActiveByProject: ({ projectId }) =>
       Effect.sync(() =>
-        [...clusters.values()].filter(
-          (cluster) =>
-            cluster.organizationId === organizationId && cluster.projectId === projectId && cluster.state === "active",
-        ),
+        [...clusters.values()].filter((cluster) => cluster.projectId === projectId && cluster.state === "active"),
       ),
 
-    listNearestActive: ({ organizationId, projectId, queryVector, k }) =>
+    listNearestActive: ({ projectId, queryVector, k }) =>
       Effect.sync(() => {
         const matches: NearestClusterMatch[] = []
         for (const cluster of clusters.values()) {
-          if (
-            cluster.organizationId !== organizationId ||
-            cluster.projectId !== projectId ||
-            cluster.state !== "active"
-          )
-            continue
+          if (cluster.projectId !== projectId || cluster.state !== "active") continue
           const normalized = normalizeTaxonomyCentroid(cluster.centroid)
           if (normalized.length === 0) continue
           matches.push({ cluster, cosine: cosineSimilarity(queryVector, normalized) })
@@ -50,12 +42,11 @@ export const createFakeTaxonomyClusterRepository = (
         return matches.slice(0, k)
       }),
 
-    hybridSearch: ({ organizationId, projectId, query, normalizedEmbedding, state, parentCategoryId, limit, offset }) =>
+    hybridSearch: ({ projectId, query, normalizedEmbedding, state, parentCategoryId, limit, offset }) =>
       Effect.sync(() =>
         [...clusters.values()]
           .filter(
             (cluster) =>
-              cluster.organizationId === organizationId &&
               cluster.projectId === projectId &&
               cluster.state === (state ?? "active") &&
               (parentCategoryId ? cluster.parentCategoryId === parentCategoryId : true),
@@ -81,12 +72,11 @@ export const createFakeTaxonomyClusterRepository = (
           })),
       ),
 
-    list: ({ organizationId, projectId, state, parentCategoryId, sort, limit, offset }) =>
+    list: ({ projectId, state, parentCategoryId, sort, limit, offset }) =>
       Effect.sync(() => {
         const filtered = [...clusters.values()]
           .filter(
             (cluster) =>
-              cluster.organizationId === organizationId &&
               cluster.projectId === projectId &&
               (state ? cluster.state === state : true) &&
               (parentCategoryId ? cluster.parentCategoryId === parentCategoryId : true),

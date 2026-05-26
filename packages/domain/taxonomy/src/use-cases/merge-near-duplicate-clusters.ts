@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { TAXONOMY_CLUSTER_LOCK_TTL_SECONDS, TAXONOMY_MERGE_THRESHOLD } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
-import { cosineSimilarity, normalizeTaxonomyCentroid, updateTaxonomyCentroid } from "../helpers.ts"
+import { cosineSimilarity, mergeTaxonomyCentroids, normalizeTaxonomyCentroid } from "../helpers.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
@@ -85,7 +85,6 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
     const observations = yield* BehaviorObservationRepository
     const locks = yield* TaxonomyLockRepository
     const active = yield* clusters.listActiveByProject({
-      organizationId: input.organizationId,
       projectId: input.projectId,
     })
     const components = connectedComponents(active)
@@ -115,26 +114,21 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
               clusterId: loser.id,
             })
 
-            for (const observation of loserObservations) {
-              const centroid = updateTaxonomyCentroid({
-                centroid: { ...updatedSurvivor.centroid, clusteredAt: updatedSurvivor.clusteredAt },
-                embedding: observation.embedding,
-                weight: 1,
-                timestamp: observation.startTime,
-                operation: "add",
-                previousClusteredAt: updatedSurvivor.clusteredAt,
-              })
-              updatedSurvivor = {
-                ...updatedSurvivor,
-                centroid,
-                clusteredAt: centroid.clusteredAt,
-                observationCount: updatedSurvivor.observationCount + 1,
-                lastObservedAt:
-                  observation.startTime > updatedSurvivor.lastObservedAt
-                    ? observation.startTime
-                    : updatedSurvivor.lastObservedAt,
-                updatedAt: now,
-              }
+            const mergedCentroid = mergeTaxonomyCentroids({
+              survivor: { ...updatedSurvivor.centroid, clusteredAt: updatedSurvivor.clusteredAt },
+              loser: { ...loser.centroid, clusteredAt: loser.clusteredAt },
+              timestamp: now,
+            })
+            updatedSurvivor = {
+              ...updatedSurvivor,
+              centroid: mergedCentroid,
+              clusteredAt: mergedCentroid.clusteredAt,
+              observationCount: updatedSurvivor.observationCount + loser.observationCount,
+              lastObservedAt:
+                loser.lastObservedAt > updatedSurvivor.lastObservedAt
+                  ? loser.lastObservedAt
+                  : updatedSurvivor.lastObservedAt,
+              updatedAt: now,
             }
 
             yield* observations.reassignMany(

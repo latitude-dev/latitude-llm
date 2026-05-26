@@ -1,9 +1,10 @@
-import type { OrganizationId, ProjectId, TaxonomyRunId } from "@domain/shared"
+import { type OrganizationId, type ProjectId, TaxonomyClusterId, type TaxonomyRunId } from "@domain/shared"
 import { Effect } from "effect"
-import { TAXONOMY_NOISE_LOOKBACK_DAYS } from "../constants.ts"
+import { TAXONOMY_CLUSTER_LOCK_TTL_SECONDS, TAXONOMY_NOISE_LOOKBACK_DAYS } from "../constants.ts"
+import { updateTaxonomyCentroid } from "../helpers.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { assignObservationToClusterUseCase } from "./assign-observation-to-cluster.ts"
+import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
 import { decideClusterAssignment } from "./decide-cluster-assignment.ts"
 
 export interface ReassignNoiseToCurrentClustersInput {
@@ -27,6 +28,7 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
     const now = input.now ?? new Date()
     const observations = yield* BehaviorObservationRepository
     const clusters = yield* TaxonomyClusterRepository
+    const locks = yield* TaxonomyLockRepository
     const noise = yield* observations.listNoise({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -35,8 +37,11 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
 
     let observationsReassigned = 0
     for (const observation of noise) {
+      // listNoise's filter is the source of truth, but the snapshot can race
+      // with an online assignment — re-check before mutating cluster state.
+      if (observation.assignedClusterId !== "") continue
+
       const topK = yield* clusters.listNearestActive({
-        organizationId: input.organizationId,
         projectId: input.projectId,
         queryVector: observation.embedding,
         k: 10,
@@ -44,24 +49,40 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
       const decision = decideClusterAssignment(topK)
       if (decision.method !== "centroid_online") continue
 
-      yield* assignObservationToClusterUseCase({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        clusterId: decision.clusterId,
-        embedding: observation.embedding,
-        observedAt: observation.startTime,
-        assignedAt: now,
-      })
-      yield* observations.reassignMany([
-        {
-          observation,
-          assignedClusterId: topK[0]?.cluster.id ?? decision.clusterId,
-          assignmentMethod: "gardening_reassign",
-          assignmentConfidence: decision.confidence,
-          reassignmentRunId: input.runId,
-          indexedAt: now,
-        },
-      ])
+      const clusterId = TaxonomyClusterId(decision.clusterId)
+      yield* locks.withClusterLock(
+        { organizationId: input.organizationId, clusterId, ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS },
+        Effect.gen(function* () {
+          const cluster = yield* clusters.findById(clusterId)
+          const centroid = updateTaxonomyCentroid({
+            centroid: { ...cluster.centroid, clusteredAt: cluster.clusteredAt },
+            embedding: observation.embedding,
+            weight: 1,
+            timestamp: observation.startTime,
+            operation: "add",
+            previousClusteredAt: cluster.clusteredAt,
+          })
+          yield* clusters.save({
+            ...cluster,
+            centroid,
+            clusteredAt: centroid.clusteredAt,
+            observationCount: cluster.observationCount + 1,
+            lastObservedAt:
+              observation.startTime > cluster.lastObservedAt ? observation.startTime : cluster.lastObservedAt,
+            updatedAt: now,
+          })
+          yield* observations.reassignMany([
+            {
+              observation,
+              assignedClusterId: clusterId,
+              assignmentMethod: "gardening_reassign",
+              assignmentConfidence: decision.confidence,
+              reassignmentRunId: input.runId,
+              indexedAt: now,
+            },
+          ])
+        }),
+      )
       observationsReassigned++
     }
 

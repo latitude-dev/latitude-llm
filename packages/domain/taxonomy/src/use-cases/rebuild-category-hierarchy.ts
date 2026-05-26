@@ -66,13 +66,11 @@ export const rebuildCategoryHierarchyUseCase = (input: RebuildCategoryHierarchyI
     const clusters = yield* TaxonomyClusterRepository
     const categories = yield* TaxonomyCategoryRepository
     const activeClusters = (yield* clusters.listActiveByProject({
-      organizationId: input.organizationId,
       projectId: input.projectId,
     })).filter((cluster) => cluster.observationCount > 0 && normalizeTaxonomyCentroid(cluster.centroid).length > 0)
 
     if (activeClusters.length === 0) {
       const priorCategories = yield* categories.listByProject({
-        organizationId: input.organizationId,
         projectId: input.projectId,
         state: "active",
       })
@@ -90,7 +88,6 @@ export const rebuildCategoryHierarchyUseCase = (input: RebuildCategoryHierarchyI
     const targetK = chooseCategoryCount(activeClusters.length)
     const assignment = agglomerativeCluster({ vectors, k: targetK })
     const priorActiveCategories = yield* categories.listByProject({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       state: "active",
     })
@@ -134,7 +131,6 @@ export const rebuildCategoryHierarchyUseCase = (input: RebuildCategoryHierarchyI
     }
 
     yield* clusters.bulkUpdateParentCategory({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       assignments: clusterAssignments,
     })

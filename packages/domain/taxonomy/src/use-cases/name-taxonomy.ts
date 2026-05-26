@@ -106,7 +106,6 @@ export const nameCategoryUseCase = (input: NameCategoryInput) =>
     const clusters = yield* TaxonomyClusterRepository
     const category = yield* categories.findById(input.categoryId)
     const memberClusters = (yield* clusters.listActiveByProject({
-      organizationId: input.organizationId,
       projectId: input.projectId,
     })).filter(
       (cluster) =>

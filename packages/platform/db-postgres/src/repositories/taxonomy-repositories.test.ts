@@ -192,7 +192,6 @@ describe("taxonomy Postgres repositories", () => {
         yield* repository.save(second)
 
         const nearest = yield* repository.listNearestActive({
-          organizationId,
           projectId,
           queryVector: vector({ 0: 1 }),
           k: 2,
@@ -200,11 +199,10 @@ describe("taxonomy Postgres repositories", () => {
         expect(nearest.map((match) => match.cluster.id)).toEqual([first.id, second.id])
         expect(nearest[0]?.cosine).toBeGreaterThan(0.99)
 
-        const page = yield* repository.list({ organizationId, projectId, state: "active", limit: 10, offset: 0 })
+        const page = yield* repository.list({ projectId, state: "active", limit: 10, offset: 0 })
         expect(page.items.map((cluster) => cluster.id)).toEqual([first.id, second.id])
 
         const search = yield* repository.hybridSearch({
-          organizationId,
           projectId,
           query: "cancellation",
           normalizedEmbedding: vector({ 0: 1 }),
@@ -215,7 +213,6 @@ describe("taxonomy Postgres repositories", () => {
         expect(search[0]?.clusterId).toBe(first.id)
 
         yield* repository.bulkUpdateParentCategory({
-          organizationId,
           projectId,
           assignments: [{ clusterId: first.id, parentCategoryId: categoryId }],
         })
@@ -253,7 +250,6 @@ describe("taxonomy Postgres repositories", () => {
         yield* repository.save(product)
 
         const best = yield* repository.findBestMatchByVector({
-          organizationId,
           projectId,
           queryVector: vector({ 0: 1 }),
         })
@@ -261,9 +257,7 @@ describe("taxonomy Postgres repositories", () => {
         expect(best?.cosine).toBeGreaterThan(0.99)
 
         expect(
-          (yield* repository.listByProject({ organizationId, projectId, state: "active" })).map(
-            (category) => category.id,
-          ),
+          (yield* repository.listByProject({ projectId, state: "active" })).map((category) => category.id),
         ).toEqual([billing.id, product.id])
 
         yield* repository.markDeprecated({ categoryId: product.id, timestamp: now })
@@ -291,13 +285,13 @@ describe("taxonomy Postgres repositories", () => {
         yield* runs.insert(run)
         yield* runs.save(laterRun)
         expect((yield* runs.findById(run.id)).status).toBe("running")
-        expect((yield* runs.findLatestByProject({ organizationId, projectId }))?.id).toBe(laterRun.id)
-        expect((yield* runs.listRunning({ organizationId, projectId })).map((item) => item.id)).toEqual([run.id])
+        expect((yield* runs.findLatestByProject({ projectId }))?.id).toBe(laterRun.id)
+        expect((yield* runs.listRunning({ projectId })).map((item) => item.id)).toEqual([run.id])
 
         yield* lineageRepository.appendMany([lineage])
-        expect(
-          (yield* lineageRepository.listRecent({ organizationId, projectId, limit: 10 })).map((row) => row.id),
-        ).toEqual([lineage.id])
+        expect((yield* lineageRepository.listRecent({ projectId, limit: 10 })).map((row) => row.id)).toEqual([
+          lineage.id,
+        ])
       }).pipe(provideRepos(database)),
     )
   })

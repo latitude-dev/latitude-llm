@@ -141,7 +141,6 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
       if (candidateCentroid.length === 0) continue
 
       const nearest = yield* clusters.listNearestActive({
-        organizationId: input.organizationId,
         projectId: input.projectId,
         queryVector: candidateCentroid,
         k: 1,

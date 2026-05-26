@@ -183,6 +183,57 @@ export const normalizeCentroid = <Weights extends Record<string, number>>(centro
   return Array.from(normalized)
 }
 
+export interface MergeCentroidsInput<Weights extends Record<string, number>> {
+  readonly survivor: Centroid<Weights> & { readonly clusteredAt: Date }
+  readonly loser: Centroid<Weights> & { readonly clusteredAt: Date }
+  readonly timestamp: Date
+}
+
+/**
+ * Combine two persisted centroids into one. Decays each contributor's
+ * running sum/mass to `timestamp` first, then sums the bases and masses.
+ *
+ * Use when collapsing a "loser" cluster into a "survivor" during gardening
+ * — re-aggregating from raw observations would discard the decayed mass
+ * already accumulated on the loser, so prefer this primitive.
+ */
+export const mergeCentroids = <Weights extends Record<string, number>>({
+  survivor,
+  loser,
+  timestamp,
+}: MergeCentroidsInput<Weights>): Centroid<Weights> & { readonly clusteredAt: Date } => {
+  if (survivor.base.length !== loser.base.length) {
+    throw new Error(`Dimension mismatch: survivor has ${survivor.base.length}, loser has ${loser.base.length}`)
+  }
+
+  const outBase = new Float32Array(survivor.base)
+  const outMass = applyDecay(outBase, survivor.mass, survivor.clusteredAt, timestamp, survivor.decay)
+
+  const loserBase = new Float32Array(loser.base)
+  const loserMass = applyDecay(loserBase, loser.mass, loser.clusteredAt, timestamp, loser.decay)
+
+  for (let index = 0; index < outBase.length; index++) {
+    outBase[index] += loserBase[index] ?? 0
+  }
+
+  const totalMass = outMass + loserMass
+  if (totalMass <= 0) {
+    return {
+      ...survivor,
+      base: zeroVector(outBase.length),
+      mass: 0,
+      clusteredAt: timestamp,
+    }
+  }
+
+  return {
+    ...survivor,
+    base: Array.from(outBase),
+    mass: totalMass,
+    clusteredAt: timestamp,
+  }
+}
+
 /**
  * Normalize a raw embedding for query-time cosine search.
  * Retrieval code uses this for incoming query embeddings, while

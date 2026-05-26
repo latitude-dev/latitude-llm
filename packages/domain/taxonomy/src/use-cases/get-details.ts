@@ -70,7 +70,6 @@ export const getCategoryDetailsUseCase = (input: GetCategoryDetailsInput) =>
       return yield* new NotFoundError({ entity: "TaxonomyCategory", id: input.categoryId })
     }
     const clusterPage = yield* clusters.list({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       state: "active",
       parentCategoryId: input.categoryId,

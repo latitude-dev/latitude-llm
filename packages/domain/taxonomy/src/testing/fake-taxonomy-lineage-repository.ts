@@ -14,23 +14,18 @@ export const createFakeTaxonomyLineageRepository = (
         rows.push(...newRows)
       }),
 
-    listRecent: ({ organizationId, projectId, limit }) =>
+    listRecent: ({ projectId, limit }) =>
       Effect.sync(() =>
         rows
-          .filter((row) => row.organizationId === organizationId && row.projectId === projectId)
+          .filter((row) => row.projectId === projectId)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
           .slice(0, limit),
       ),
 
-    listRecentByTransitionTypes: ({ organizationId, projectId, transitionTypes, limit }) =>
+    listRecentByTransitionTypes: ({ projectId, transitionTypes, limit }) =>
       Effect.sync(() =>
         rows
-          .filter(
-            (row) =>
-              row.organizationId === organizationId &&
-              row.projectId === projectId &&
-              transitionTypes.includes(row.transitionType),
-          )
+          .filter((row) => row.projectId === projectId && transitionTypes.includes(row.transitionType))
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
           .slice(0, limit),
       ),
