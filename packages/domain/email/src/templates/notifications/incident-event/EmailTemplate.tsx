@@ -6,6 +6,7 @@ import { Section } from "@react-email/components"
 import React from "react"
 import { ContainerLayout } from "../../../components/ContainerLayout.tsx"
 import { EmailButton } from "../../../components/EmailButton.tsx"
+import { EmailFooter } from "../../../components/EmailFooter.tsx"
 import { EmailText } from "../../../components/EmailText.tsx"
 import { emailDesignTokens } from "../../../tokens/design-system.ts"
 import {
@@ -44,6 +45,7 @@ interface IncidentEventEmailProps {
   readonly projectName: string | undefined
   readonly tags: readonly string[] | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
+  readonly webAppUrl: string
 }
 
 export function IncidentEventEmail({
@@ -58,6 +60,7 @@ export function IncidentEventEmail({
   projectName,
   tags,
   sampleExcerpt,
+  webAppUrl,
 }: IncidentEventEmailProps) {
   const heading = ALERT_KIND_TO_HEADING[incidentKind]
   const subtitle = ALERT_KIND_TO_SUBTITLE[incidentKind]
@@ -71,7 +74,10 @@ export function IncidentEventEmail({
   ]
 
   return (
-    <ContainerLayout previewText={`${heading}: ${issueRef}`}>
+    <ContainerLayout
+      previewText={`${heading}: ${issueRef}`}
+      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
+    >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
         {heading}
       </EmailText>
@@ -119,4 +125,5 @@ IncidentEventEmail.PreviewProps = {
     truncated: false,
     author: { kind: "user", name: "Anna Bosch", imageUrl: null },
   },
+  webAppUrl: "http://localhost:3000",
 } satisfies IncidentEventEmailProps

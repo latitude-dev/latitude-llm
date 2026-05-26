@@ -34,7 +34,7 @@ import {
   Tv,
   Watch,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { hasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.functions.ts"
 import {
   getNotificationPreferences,
@@ -354,6 +354,19 @@ function NotificationsSection() {
     enabled: emailNotificationsEnabled,
   })
 
+  // Scroll the targeted toggle into view when the page is opened with a
+  // `#notifications-<group>` hash. Email unsubscribe links go through the
+  // `/settings/$section` redirect, which appends the hash so the user lands
+  // directly on the row they came to flip. Runs once `isLoading` flips false
+  // because the rows don't exist in the DOM until then.
+  useEffect(() => {
+    if (isLoading || !emailNotificationsEnabled) return
+    const hash = window.location.hash.slice(1)
+    if (!hash.startsWith("notifications-")) return
+    const el = document.getElementById(hash)
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+  }, [isLoading, emailNotificationsEnabled])
+
   // Local prefs mirror server prefs; saves run in the background per change.
   // Missing entries are treated as "email on" so a fresh user sees every
   // toggle in the on position (matches the opt-out default).
@@ -394,7 +407,8 @@ function NotificationsSection() {
           return (
             <div
               key={group}
-              className="flex w-full flex-row items-center justify-between gap-4 rounded-lg bg-muted/30 p-4"
+              id={`notifications-${group}`}
+              className="flex w-full flex-row items-center justify-between gap-4 rounded-lg bg-muted/30 p-4 scroll-mt-8"
             >
               <div className="flex flex-col gap-1">
                 <Label htmlFor={inputId}>{meta.label}</Label>

@@ -254,7 +254,7 @@ export function ClaudeCodeWrappedEmailV1({ userName, report, webAppUrl, reportId
   const base = webAppUrl.replace(/\/$/, "")
   const imageBaseUrl = `${base}/email-branding/claude-code-wrapped/personalities`
   const projectUrl = `${base}/projects/${report.project.slug}`
-  const settingsUrl = `${base}/settings/account`
+  const settingsUrl = `${base}/settings/account?group=wrapped_reports`
   const logoUrl = `${base}/latitude-logo.png`
   const fullReportUrl = `${base}/wrapped/${reportId}`
 

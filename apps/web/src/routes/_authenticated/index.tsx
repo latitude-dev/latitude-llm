@@ -1,13 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { createServerFn } from "@tanstack/react-start"
-import { getCookies } from "@tanstack/react-start/server"
 import { z } from "zod"
-import { LAST_PROJECT_COOKIE_NAME, listProjects } from "../../domains/projects/projects.functions.ts"
-
-const getLastProjectSlug = createServerFn({ method: "GET" }).handler(async (): Promise<string | null> => {
-  const slug = getCookies()[LAST_PROJECT_COOKIE_NAME]
-  return typeof slug === "string" && slug.length > 0 ? slug : null
-})
+import { resolveDefaultProjectSlug } from "../../domains/projects/projects.functions.ts"
 
 /**
  * Landing route. Picks the user's current project (last-viewed cookie,
@@ -29,14 +22,13 @@ export const Route = createFileRoute("/_authenticated/")({
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => ({ next: search.next, installed: search.installed, error: search.error }),
   loader: async ({ deps }) => {
-    const [lastSlug, projects] = await Promise.all([getLastProjectSlug(), listProjects()])
-    const target = (lastSlug && projects.find((p) => p.slug === lastSlug)) ?? projects[0]
-    if (!target) return null
+    const slug = await resolveDefaultProjectSlug()
+    if (!slug) return null
 
     if (deps.next === "integrations") {
       throw redirect({
         to: "/projects/$projectSlug/settings/integrations",
-        params: { projectSlug: target.slug },
+        params: { projectSlug: slug },
         search: {
           ...(deps.installed ? { installed: deps.installed } : {}),
           ...(deps.error ? { error: deps.error } : {}),
@@ -46,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/")({
 
     throw redirect({
       to: "/projects/$projectSlug",
-      params: { projectSlug: target.slug },
+      params: { projectSlug: slug },
     })
   },
 })

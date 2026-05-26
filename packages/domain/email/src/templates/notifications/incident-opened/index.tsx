@@ -54,6 +54,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
             tags={payload.tags}
             breach={payload.breach}
             sampleExcerpt={payload.sampleExcerpt}
+            webAppUrl={ctx.webAppUrl}
           />,
         ),
       catch: (cause) => ({

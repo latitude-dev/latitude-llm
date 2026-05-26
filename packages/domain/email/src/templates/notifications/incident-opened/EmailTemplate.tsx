@@ -6,6 +6,7 @@ import { Section } from "@react-email/components"
 import React from "react"
 import { ContainerLayout } from "../../../components/ContainerLayout.tsx"
 import { EmailButton } from "../../../components/EmailButton.tsx"
+import { EmailFooter } from "../../../components/EmailFooter.tsx"
 import { EmailText } from "../../../components/EmailText.tsx"
 import { emailDesignTokens } from "../../../tokens/design-system.ts"
 import {
@@ -34,6 +35,7 @@ interface IncidentOpenedEmailProps {
   readonly tags: readonly string[] | undefined
   readonly breach: IncidentBreach | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
+  readonly webAppUrl: string
 }
 
 const buildBreachLine = (breach: IncidentBreach | undefined): string | null => {
@@ -61,6 +63,7 @@ export function IncidentOpenedEmail({
   tags,
   breach,
   sampleExcerpt,
+  webAppUrl,
 }: IncidentOpenedEmailProps) {
   const issueRef = issueName ?? "an issue"
   const scope = formatScope(organizationName, projectName)
@@ -73,7 +76,10 @@ export function IncidentOpenedEmail({
   ]
 
   return (
-    <ContainerLayout previewText={`Escalating: ${issueRef}`}>
+    <ContainerLayout
+      previewText={`Escalating: ${issueRef}`}
+      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
+    >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
         Escalating issue
       </EmailText>
@@ -132,4 +138,5 @@ IncidentOpenedEmail.PreviewProps = {
     truncated: false,
     author: { kind: "evaluation", name: "warranty-judge" },
   },
+  webAppUrl: "http://localhost:3000",
 } satisfies IncidentOpenedEmailProps

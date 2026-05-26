@@ -54,6 +54,7 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
             projectName={ctx.project?.name}
             tags={payload.tags}
             sampleExcerpt={payload.sampleExcerpt}
+            webAppUrl={ctx.webAppUrl}
           />,
         ),
       catch: (cause) => ({

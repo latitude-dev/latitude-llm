@@ -23,7 +23,13 @@ const buildCustomMessageHtml = async (
   const userName = ctx.recipient.name ?? "there"
   const linkUrl = resolveLinkUrl(ctx, payload.link)
   const html = await renderEmail(
-    <CustomMessageEmail userName={userName} title={payload.title} content={payload.content} linkUrl={linkUrl} />,
+    <CustomMessageEmail
+      userName={userName}
+      title={payload.title}
+      content={payload.content}
+      linkUrl={linkUrl}
+      webAppUrl={ctx.webAppUrl}
+    />,
   )
   return {
     html,

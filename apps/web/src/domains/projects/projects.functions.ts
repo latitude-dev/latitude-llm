@@ -4,14 +4,40 @@ import { isValidId, ProjectId, projectSettingsSchema } from "@domain/shared"
 import { OutboxEventWriterLive, ProjectRepositoryLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { setCookie } from "@tanstack/react-start/server"
+import { getCookies, setCookie } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
 
-export const LAST_PROJECT_COOKIE_NAME = "latitude-last-project-slug"
+const LAST_PROJECT_COOKIE_NAME = "latitude-last-project-slug"
 const LAST_PROJECT_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
+
+/**
+ * Resolves the slug of the user's "current" project: the last-viewed slug
+ * from `LAST_PROJECT_COOKIE_NAME` if it still names a project the user has
+ * access to, else the first project in `listProjects()`, else `null` when
+ * the user has no projects at all.
+ *
+ * Used by `/_authenticated/` and by `/_authenticated/settings/$section` to
+ * land users on a project-scoped page without needing a slug in the URL.
+ */
+export const resolveDefaultProjectSlug = createServerFn({ method: "GET" }).handler(async (): Promise<string | null> => {
+  const cookieSlug = getCookies()[LAST_PROJECT_COOKIE_NAME]
+  const { organizationId } = await requireSession()
+  const client = getPostgresClient()
+
+  const projects = await Effect.runPromise(
+    Effect.gen(function* () {
+      const repo = yield* ProjectRepository
+      return yield* repo.list()
+    }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId), withTracing),
+  )
+
+  const cookieMatch = cookieSlug ? projects.find((p) => p.slug === cookieSlug) : undefined
+  const target = cookieMatch ?? projects[0]
+  return target?.slug ?? null
+})
 
 // Persist the currently visited slug so `/_authenticated/` can redirect back
 // to it. Called from the project layout's mount effect — using a server fn

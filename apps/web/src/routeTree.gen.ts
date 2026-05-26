@@ -38,6 +38,7 @@ import { Route as BackofficeProjectsProjectIdRouteImport } from './routes/backof
 import { Route as BackofficeOrganizationsOrganizationIdRouteImport } from './routes/backoffice/organizations/$organizationId'
 import { Route as ApiObservabilityTestErrorRouteImport } from './routes/api/observability-test/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthenticatedSettingsSectionRouteImport } from './routes/_authenticated/settings/$section'
 import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
 import { Route as Char91DotwellKnownChar93OpenidConfigurationSplatRouteImport } from './routes/[.well-known]/openid-configuration/$'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport } from './routes/[.well-known]/oauth-authorization-server/$'
@@ -219,6 +220,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSettingsSectionRoute =
+  AuthenticatedSettingsSectionRouteImport.update({
+    id: '/settings/$section',
+    path: '/settings/$section',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugRoute =
   AuthenticatedProjectsProjectSlugRouteImport.update({
     id: '/projects/$projectSlug',
@@ -401,6 +408,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
+  '/settings/$section': typeof AuthenticatedSettingsSectionRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
@@ -455,6 +463,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeIndexRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
+  '/settings/$section': typeof AuthenticatedSettingsSectionRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
@@ -513,6 +522,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/openid-configuration/$': typeof Char91DotwellKnownChar93OpenidConfigurationSplatRoute
   '/_authenticated/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
+  '/_authenticated/settings/$section': typeof AuthenticatedSettingsSectionRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/backoffice/organizations/$organizationId': typeof BackofficeOrganizationsOrganizationIdRoute
@@ -572,6 +582,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
     | '/projects/$projectSlug'
+    | '/settings/$section'
     | '/api/auth/$'
     | '/api/observability-test/error'
     | '/backoffice/organizations/$organizationId'
@@ -626,6 +637,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
+    | '/settings/$section'
     | '/api/auth/$'
     | '/api/observability-test/error'
     | '/backoffice/organizations/$organizationId'
@@ -683,6 +695,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/openid-configuration/$'
     | '/_authenticated/projects/$projectSlug'
+    | '/_authenticated/settings/$section'
     | '/api/auth/$'
     | '/api/observability-test/error'
     | '/backoffice/organizations/$organizationId'
@@ -946,6 +959,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/settings/$section': {
+      id: '/_authenticated/settings/$section'
+      path: '/settings/$section'
+      fullPath: '/settings/$section'
+      preLoaderRoute: typeof AuthenticatedSettingsSectionRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/projects/$projectSlug': {
       id: '/_authenticated/projects/$projectSlug'
@@ -1262,12 +1282,14 @@ const AuthenticatedProjectsProjectSlugRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedProjectsProjectSlugRoute: typeof AuthenticatedProjectsProjectSlugRouteWithChildren
+  AuthenticatedSettingsSectionRoute: typeof AuthenticatedSettingsSectionRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedProjectsProjectSlugRoute:
     AuthenticatedProjectsProjectSlugRouteWithChildren,
+  AuthenticatedSettingsSectionRoute: AuthenticatedSettingsSectionRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

@@ -6,6 +6,7 @@ import { Section } from "@react-email/components"
 import React from "react"
 import { ContainerLayout } from "../../../components/ContainerLayout.tsx"
 import { EmailButton } from "../../../components/EmailButton.tsx"
+import { EmailFooter } from "../../../components/EmailFooter.tsx"
 import { EmailText } from "../../../components/EmailText.tsx"
 import { emailDesignTokens } from "../../../tokens/design-system.ts"
 import {
@@ -30,6 +31,7 @@ interface IncidentClosedEmailProps {
   readonly organizationName: string
   readonly projectName: string | undefined
   readonly recovery: IncidentRecovery
+  readonly webAppUrl: string
 }
 
 export function IncidentClosedEmail({
@@ -43,6 +45,7 @@ export function IncidentClosedEmail({
   organizationName,
   projectName,
   recovery,
+  webAppUrl,
 }: IncidentClosedEmailProps) {
   const issueRef = issueName ?? "an issue"
   const scope = formatScope(organizationName, projectName)
@@ -54,7 +57,10 @@ export function IncidentClosedEmail({
   ]
 
   return (
-    <ContainerLayout previewText={`Resolved: escalation on ${issueRef}`}>
+    <ContainerLayout
+      previewText={`Resolved: escalation on ${issueRef}`}
+      footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
+    >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
         Resolved escalation
       </EmailText>
@@ -103,4 +109,5 @@ IncidentClosedEmail.PreviewProps = {
   organizationName: "Acme Inc.",
   projectName: "Support agent",
   recovery: { durationMs: 32 * 60 * 1000 },
+  webAppUrl: "http://localhost:3000",
 } satisfies IncidentClosedEmailProps

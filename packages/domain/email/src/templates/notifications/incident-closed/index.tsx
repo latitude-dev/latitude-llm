@@ -52,6 +52,7 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
             organizationName={ctx.organization.name}
             projectName={ctx.project?.name}
             recovery={payload.recovery}
+            webAppUrl={ctx.webAppUrl}
           />,
         ),
       catch: (cause) => ({
