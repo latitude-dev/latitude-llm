@@ -137,10 +137,26 @@ describe("createProviderModel", () => {
 
     expect(bedrockModelFactoryMock).toHaveBeenCalledWith("minimax.minimax-m2.5")
   })
+
+  it("passes GPT OSS 120B through as an on-demand foundation model", async () => {
+    process.env.LAT_AWS_REGION = "eu-central-1"
+
+    await Effect.runPromise(createProviderModel("amazon-bedrock", "openai.gpt-oss-120b-1:0"))
+
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("openai.gpt-oss-120b-1:0")
+  })
+
+  it("strips a bogus geography prefix from GPT OSS 120B", async () => {
+    process.env.LAT_AWS_REGION = "eu-central-1"
+
+    await Effect.runPromise(createProviderModel("amazon-bedrock", "eu.openai.gpt-oss-120b-1:0"))
+
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("openai.gpt-oss-120b-1:0")
+  })
 })
 
 describe("AIGenerateLive", () => {
-  it("falls back from MiniMax M2.5 to Claude Haiku 4.5", async () => {
+  it("falls back from MiniMax M2.5 to GPT OSS 120B", async () => {
     generateTextMock
       .mockRejectedValueOnce(new Error("Bedrock is unable to process your request."))
       .mockResolvedValueOnce({
@@ -169,8 +185,6 @@ describe("AIGenerateLive", () => {
     expect(result.object).toEqual({ ok: true })
     expect(generateTextMock).toHaveBeenCalledTimes(2)
     expect(generateTextMock.mock.calls[0]?.[0].model).toEqual({ modelId: "minimax.minimax-m2.5" })
-    expect(generateTextMock.mock.calls[1]?.[0].model).toEqual({
-      modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-    })
+    expect(generateTextMock.mock.calls[1]?.[0].model).toEqual({ modelId: "openai.gpt-oss-120b-1:0" })
   })
 })

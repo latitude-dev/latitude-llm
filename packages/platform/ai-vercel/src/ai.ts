@@ -26,7 +26,7 @@ const MAX_ERROR_TEXT_LENGTH = 4_000
 const BEDROCK_MINIMAX_M25_MODEL_ID = "minimax.minimax-m2.5"
 const BEDROCK_MINIMAX_M25_FALLBACK_MODEL = {
   provider: "amazon-bedrock",
-  model: "anthropic.claude-haiku-4-5-20251001-v1:0",
+  model: "openai.gpt-oss-120b-1:0",
 } as const
 const bedrockScopedModelIdPattern = /^(?:(?:eu|us|apac)\.)?([a-z0-9-]+\..+)$/
 
