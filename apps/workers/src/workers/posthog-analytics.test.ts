@@ -1,5 +1,10 @@
 import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
-import type { PostHogCaptureInput, PostHogClientShape, PostHogGroupIdentifyInput } from "@platform/analytics-posthog"
+import type {
+  PostHogCaptureInput,
+  PostHogClientShape,
+  PostHogGroupIdentifyInput,
+  PostHogPersonIdentifyInput,
+} from "@platform/analytics-posthog"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { createPostHogAnalyticsWorker } from "./posthog-analytics.ts"
@@ -31,20 +36,26 @@ class TestQueueConsumer implements QueueConsumer {
 interface FakePostHog extends PostHogClientShape {
   readonly captures: PostHogCaptureInput[]
   readonly groupIdentifies: PostHogGroupIdentifyInput[]
+  readonly personIdentifies: PostHogPersonIdentifyInput[]
 }
 
 const createFakePostHog = (overrides?: { captureFails?: boolean }): FakePostHog => {
   const captures: PostHogCaptureInput[] = []
   const groupIdentifies: PostHogGroupIdentifyInput[] = []
+  const personIdentifies: PostHogPersonIdentifyInput[] = []
   return {
     captures,
     groupIdentifies,
+    personIdentifies,
     capture: async (input) => {
       if (overrides?.captureFails) throw new Error("boom")
       captures.push(input)
     },
     groupIdentify: async (input) => {
       groupIdentifies.push(input)
+    },
+    personIdentify: async (input) => {
+      personIdentifies.push(input)
     },
     shutdown: () => Promise.resolve(),
   }
@@ -79,6 +90,25 @@ describe("posthog-analytics worker", () => {
       groupType: "organization",
       groupKey: "org-1",
       properties: { name: "Acme", slug: "acme" },
+    })
+  })
+
+  it("personIdentifies the user on UserSignedUp so email is set immediately", async () => {
+    const consumer = new TestQueueConsumer()
+    const posthog = createFakePostHog()
+    createPostHogAnalyticsWorker({ consumer, posthog })
+
+    await consumer.dispatch("track", {
+      eventName: "UserSignedUp",
+      organizationId: "system",
+      payload: { userId: "user-1", email: "new@example.com" },
+      occurredAt: "2026-04-13T12:00:00.000Z",
+    })
+
+    expect(posthog.personIdentifies).toHaveLength(1)
+    expect(posthog.personIdentifies[0]).toEqual({
+      distinctId: "user-1",
+      properties: { email: "new@example.com" },
     })
   })
 

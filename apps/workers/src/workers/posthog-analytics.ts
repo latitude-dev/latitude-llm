@@ -43,6 +43,14 @@ export const createPostHogAnalyticsWorker = ({ consumer, posthog }: PostHogAnaly
             )
             await client.groupIdentify(identify)
           }
+
+          // Explicitly identify the person on signup so their email is set on
+          // the PostHog person profile immediately — without waiting for the
+          // frontend posthog.identify() call that only fires on web app load.
+          if (payload.eventName === "UserSignedUp") {
+            const p = payload.payload as { readonly userId: string; readonly email: string }
+            await client.personIdentify({ distinctId: p.userId, properties: { email: p.email } })
+          }
         },
         catch: (cause) => new PostHogCaptureError({ cause }),
       }).pipe(

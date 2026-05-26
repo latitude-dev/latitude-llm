@@ -3,6 +3,7 @@ export {
   type PostHogCaptureInput,
   type PostHogClientShape,
   type PostHogGroupIdentifyInput,
+  type PostHogPersonIdentifyInput,
 } from "./client.ts"
 export { loadPostHogConfig, POSTHOG_DEFAULT_HOST, type PostHogConfig } from "./config.ts"
 export {

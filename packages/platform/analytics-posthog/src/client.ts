@@ -19,15 +19,22 @@ export interface PostHogGroupIdentifyInput {
   readonly properties?: Record<string, unknown>
 }
 
+export interface PostHogPersonIdentifyInput {
+  readonly distinctId: string
+  readonly properties?: Record<string, unknown>
+}
+
 export interface PostHogClientShape {
   readonly capture: (input: PostHogCaptureInput) => Promise<void>
   readonly groupIdentify: (input: PostHogGroupIdentifyInput) => Promise<void>
+  readonly personIdentify: (input: PostHogPersonIdentifyInput) => Promise<void>
   readonly shutdown: () => Promise<void>
 }
 
 const NOOP_CLIENT: PostHogClientShape = {
   capture: () => Promise.resolve(),
   groupIdentify: () => Promise.resolve(),
+  personIdentify: () => Promise.resolve(),
   shutdown: () => Promise.resolve(),
 }
 
@@ -65,6 +72,12 @@ export const createPostHogClient = (config: PostHogConfig | undefined): PostHogC
       client.groupIdentify({
         groupType: input.groupType,
         groupKey: input.groupKey,
+        ...(input.properties !== undefined ? { properties: input.properties } : {}),
+      })
+    },
+    personIdentify: async (input) => {
+      client.identify({
+        distinctId: input.distinctId,
         ...(input.properties !== undefined ? { properties: input.properties } : {}),
       })
     },
