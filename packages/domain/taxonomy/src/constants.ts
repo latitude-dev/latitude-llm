@@ -127,15 +127,16 @@ export const TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS = 3
 
 /**
  * Two noise embeddings are connected when their cosine ≥ this.
- * Seeded-Acme Voyage tuning kept this value: 250 sessions produced two
- * hand-recognizable behavior clusters plus a residual noise floor.
+ * Seeded-Acme Voyage tuning raised this from 0.78 to 0.82: the full 1,574
+ * session corpus produced clearer small behavior births without the broad
+ * chaining seen at looser thresholds.
  */
-export const TAXONOMY_BIRTH_LINK_THRESHOLD = 0.78
+export const TAXONOMY_BIRTH_LINK_THRESHOLD = 0.82
 
 /**
  * Reject candidates whose max pairwise cosine distance exceeds this — cuts
- * single-linkage chains. Seeded-Acme Voyage tuning kept this paired default;
- * the Python sidecar was not triggered for the MVP corpus.
+ * single-linkage chains. Full-corpus seeded-Acme Voyage tuning kept this at
+ * 0.45; looser diameters admitted broad single-linkage components.
  */
 export const TAXONOMY_BIRTH_MAX_DIAMETER = 0.45
 

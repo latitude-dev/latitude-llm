@@ -160,7 +160,7 @@ const main = async () => {
     effect.pipe(
       withClickHouse(clickhouseLayer, clickhouse, organizationId),
       withPostgres(postgresLayer, postgres, organizationId),
-      withAi(Layer.mergeAll(AIEmbedLive, fakeNamingLayer)),
+      withAi(Layer.mergeAll(AIEmbedLive, fakeNamingLayer), redis),
       Effect.provide(RedisTaxonomyLockRepositoryLive(redis)),
     )
 
