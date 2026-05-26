@@ -1,8 +1,8 @@
 import {
   createFeatureFlag,
   createOrganizationFeatureFlag,
-  type FeatureFlag,
   FEATURE_FLAGS,
+  type FeatureFlag,
   type FeatureFlagId,
   FeatureFlagRepository,
   type OrganizationFeatureFlag,
