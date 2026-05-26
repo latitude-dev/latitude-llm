@@ -28,6 +28,7 @@ export {
   FeatureFlagRepository,
   type FeatureFlagRepositoryShape,
 } from "./ports/feature-flag-repository.ts"
+export { FEATURE_FLAG_IDS, FEATURE_FLAGS, type FeatureFlagId } from "./registry.ts"
 export {
   type ArchiveFeatureFlagError,
   type ArchiveFeatureFlagInput,
