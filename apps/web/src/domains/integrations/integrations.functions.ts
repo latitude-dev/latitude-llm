@@ -22,12 +22,19 @@ import {
   type SlackRoute,
   type SlackRoutes,
 } from "@domain/integrations"
-import { NOTIFICATION_GROUPS, type NotificationGroup, type RepositoryError, type SlackIntegrationId, SlackIntegrationId as SlackIntegrationIdBrand, type SqlClient } from "@domain/shared"
+import {
+  NOTIFICATION_GROUPS,
+  type NotificationGroup,
+  type RepositoryError,
+  type SlackIntegrationId,
+  SlackIntegrationId as SlackIntegrationIdBrand,
+  type SqlClient,
+} from "@domain/shared"
 import { SlackIntegrationRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { z } from "zod"
 import { createLogger, withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
+import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
 
@@ -199,12 +206,16 @@ export const listSlackChannels = createServerFn({ method: "GET" }).handler(
         Effect.map((all): readonly SlackChannel[] =>
           all
             .filter((c) => !c.isArchived)
-            .map((c) => ({ id: c.id, name: c.name, isPrivate: c.isPrivate, isMember: c.isMember, isArchived: c.isArchived }))
+            .map((c) => ({
+              id: c.id,
+              name: c.name,
+              isPrivate: c.isPrivate,
+              isMember: c.isMember,
+              isArchived: c.isArchived,
+            }))
             .sort((a, b) => a.name.localeCompare(b.name)),
         ),
-        Effect.catchTag("SlackAuthError", () =>
-          Effect.fail(new SlackChannelListerError({ reason: "auth" })),
-        ),
+        Effect.catchTag("SlackAuthError", () => Effect.fail(new SlackChannelListerError({ reason: "auth" }))),
         Effect.catchTag("SlackChannelGoneError", () => Effect.succeed([] as readonly SlackChannel[])),
         Effect.catchTag("SlackRateLimitError", () =>
           Effect.fail(new SlackChannelListerError({ reason: "rate-limited" })),
@@ -226,32 +237,30 @@ export const listSlackChannels = createServerFn({ method: "GET" }).handler(
  */
 export const configureSlackRoute = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => configureSlackRouteSchema.parse(data))
-  .handler(
-    async ({ data }): Promise<SlackIntegrationRecord> => {
-      const { organizationId } = await requireSession()
-      const client = getPostgresClient()
+  .handler(async ({ data }): Promise<SlackIntegrationRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
 
-      return Effect.runPromise(
-        Effect.gen(function* () {
-          const repo = yield* SlackIntegrationRepository
-          const integration = yield* repo.findActiveByOrganizationId()
-          if (!integration) {
-            return yield* Effect.die(new Error("Slack integration is not connected for this organization"))
-          }
-          yield* configureSlackRouteUseCase({
-            integrationId: SlackIntegrationIdBrand(integration.id),
-            group: data.group,
-            routes: data.routes as readonly SlackRoute[],
-          })
-          const updated = yield* repo.findActiveByOrganizationId()
-          if (!updated) {
-            return yield* Effect.die(new Error("Slack integration disappeared mid-configure"))
-          }
-          return toRecord(updated)
-        }).pipe(withPostgres(SlackIntegrationRepositoryLive, client, organizationId), withTracing),
-      )
-    },
-  )
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        const integration = yield* repo.findActiveByOrganizationId()
+        if (!integration) {
+          return yield* Effect.die(new Error("Slack integration is not connected for this organization"))
+        }
+        yield* configureSlackRouteUseCase({
+          integrationId: SlackIntegrationIdBrand(integration.id),
+          group: data.group,
+          routes: data.routes as readonly SlackRoute[],
+        })
+        const updated = yield* repo.findActiveByOrganizationId()
+        if (!updated) {
+          return yield* Effect.die(new Error("Slack integration disappeared mid-configure"))
+        }
+        return toRecord(updated)
+      }).pipe(withPostgres(SlackIntegrationRepositoryLive, client, organizationId), withTracing),
+    )
+  })
 
 /**
  * Clears every route configured for one group. Equivalent to
@@ -261,30 +270,28 @@ export const configureSlackRoute = createServerFn({ method: "POST" })
  */
 export const removeSlackRoute = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => removeSlackRouteSchema.parse(data))
-  .handler(
-    async ({ data }): Promise<SlackIntegrationRecord> => {
-      const { organizationId } = await requireSession()
-      const client = getPostgresClient()
+  .handler(async ({ data }): Promise<SlackIntegrationRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
 
-      return Effect.runPromise(
-        Effect.gen(function* () {
-          const repo = yield* SlackIntegrationRepository
-          const integration = yield* repo.findActiveByOrganizationId()
-          if (!integration) {
-            return yield* Effect.die(new Error("Slack integration is not connected for this organization"))
-          }
-          yield* removeSlackRouteUseCase({
-            integrationId: SlackIntegrationIdBrand(integration.id),
-            group: data.group,
-          })
-          const updated = yield* repo.findActiveByOrganizationId()
-          if (!updated) {
-            return yield* Effect.die(new Error("Slack integration disappeared mid-remove"))
-          }
-          return toRecord(updated)
-        }).pipe(withPostgres(SlackIntegrationRepositoryLive, client, organizationId), withTracing),
-      )
-    },
-  )
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        const integration = yield* repo.findActiveByOrganizationId()
+        if (!integration) {
+          return yield* Effect.die(new Error("Slack integration is not connected for this organization"))
+        }
+        yield* removeSlackRouteUseCase({
+          integrationId: SlackIntegrationIdBrand(integration.id),
+          group: data.group,
+        })
+        const updated = yield* repo.findActiveByOrganizationId()
+        if (!updated) {
+          return yield* Effect.die(new Error("Slack integration disappeared mid-remove"))
+        }
+        return toRecord(updated)
+      }).pipe(withPostgres(SlackIntegrationRepositoryLive, client, organizationId), withTracing),
+    )
+  })
 
 void ({} as SlackChannelLister) // Keep the SlackChannelLister type import alive for renderer-level code paths.
