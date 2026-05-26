@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./admin-search": "./src/repositories/admin-search-repository.ts",
     "./schema/*": "./src/schema/*.ts",
+    "./seeding": "./src/seeds/seed-demo-project.ts",
     "./testing": "./src/test/in-memory-postgres.ts"
   },
   "scripts": {

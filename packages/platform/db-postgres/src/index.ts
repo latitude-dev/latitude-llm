@@ -61,7 +61,6 @@ export { StripeSubscriptionLookupLive } from "./repositories/stripe-subscription
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
 export { WrappedReportRepositoryLive } from "./repositories/wrapped-report-repository.ts"
 export { invalidateEffectivePlanCache, resolveEffectivePlanCached } from "./resolve-effective-plan-cached.ts"
-export { seedDemoProjectPostgres } from "./seeds/seed-demo-project.ts"
 // SqlClient implementation
 export { SqlClientLive } from "./sql-client.ts"
 export { withPostgres } from "./with-postgres.ts"

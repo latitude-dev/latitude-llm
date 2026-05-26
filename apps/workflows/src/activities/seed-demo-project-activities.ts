@@ -1,7 +1,7 @@
 import { ApiKeyId, OrganizationId, ProjectId } from "@domain/shared"
 import { createSeedScope, type SeedScope } from "@domain/shared/seeding"
-import { seedDemoProjectClickHouse } from "@platform/db-clickhouse"
-import { seedDemoProjectPostgres } from "@platform/db-postgres"
+import { seedDemoProjectClickHouse } from "@platform/db-clickhouse/seeding"
+import { seedDemoProjectPostgres } from "@platform/db-postgres/seeding"
 import { getAdminPostgresClient, getClickhouseClient } from "../clients.ts"
 
 /**
