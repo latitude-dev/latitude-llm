@@ -34,7 +34,8 @@ const findAndLoadEnvTest = () => {
 
 findAndLoadEnvTest()
 
-export const PGLITE_HOOK_TIMEOUT_MS = 90_000
+/** Headroom for PGlite migrations + chdb session bootstrap/teardown under CI turbo parallelism. */
+export const PGLITE_HOOK_TIMEOUT_MS = 180_000
 
 export default defineConfig({
   test: {
