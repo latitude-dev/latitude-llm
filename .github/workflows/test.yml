@@ -14,9 +14,19 @@ on:
 permissions:
   contents: read
 
+# Sharded across three runners. A single ubuntu-latest job can't host all
+# of api/workers/web/db-{postgres,clickhouse}/workflows/live-seeds tests
+# in parallel — the cumulative vitest pools + PGlite Postgres instances +
+# chdb sessions OOM-kill the runner around the 3 minute mark.
+#
+# - test-unit: light packages, turbo --concurrency=4
+# - test-unit-heavy: PGlite-heavy and web, turbo --concurrency=2
+# - test-integration: chdb consumers, turbo --concurrency=1 (chdb prebuilt
+#                     so the native compile doesn't race the fan-out)
 jobs:
-  test:
+  test-unit:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     env:
       NODE_ENV: test
@@ -42,14 +52,91 @@ jobs:
       - name: Create .env.test from example
         run: cp .env.example .env.test
 
-      # Build chdb's native binding once, before turbo fans out the test
-      # graph. Otherwise the ~2-3 GB native compile races against the heavy
-      # test tasks (api/workers/db-clickhouse/web/db-postgres/workflows) and
-      # the runner OOM-kills around the 3 minute mark. ensure-chdb-built.mjs
-      # is idempotent, so the package-level `chdb:build &&` prefixes become
+      - name: Test (unit)
+        run: >-
+          pnpm turbo test --concurrency=4
+          --filter='!@platform/db-clickhouse'
+          --filter='!@app/api'
+          --filter='!@app/workers'
+          --filter='!@app/web'
+          --filter='!@platform/db-postgres'
+          --filter='!@app/workflows'
+          --filter='!@tools/live-seeds'
+
+  test-unit-heavy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 25
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create .env.test from example
+        run: cp .env.example .env.test
+
+      - name: Test (unit heavy)
+        run: >-
+          pnpm turbo test --concurrency=2
+          --filter=@app/web
+          --filter=@platform/db-postgres
+          --filter=@app/workflows
+          --filter=@tools/live-seeds
+
+  test-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 25
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create .env.test from example
+        run: cp .env.example .env.test
+
+      # Prebuild chdb's native binding so the ~2-3 GB compile doesn't race
+      # the api/workers/db-clickhouse test tasks. ensure-chdb-built.mjs is
+      # idempotent, so the package-level `chdb:build &&` prefixes become
       # no-ops once the binding exists.
       - name: Build chdb native bindings
         run: pnpm --filter @platform/testkit chdb:build
 
-      - name: Test
-        run: pnpm test
+      - name: Test (ClickHouse integration)
+        run: >-
+          pnpm turbo test --concurrency=1
+          --filter=@platform/db-clickhouse
+          --filter=@app/api
+          --filter=@app/workers
