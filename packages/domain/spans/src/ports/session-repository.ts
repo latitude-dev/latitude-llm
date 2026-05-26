@@ -60,15 +60,6 @@ export interface SessionListCursor {
   readonly sessionId: string
 }
 
-/**
- * Cursor shape used by the search-active list path, which sorts by
- * `(relevance_bucket, last_activity_at, session_id) DESC`. The bucket
- * snaps `best_score` into fixed-width tiers (see
- * `SESSION_SEARCH_RELEVANCE_BUCKET_WIDTH`) so recently-active sessions
- * float above stale ones of equivalent relevance. `lastActivityAt` is the
- * session's `max_end_time` (clamped against client clock skew) serialized
- * as an ISO-8601 string.
- */
 export interface SessionSearchCursor {
   readonly relevanceBucket: number
   readonly lastActivityAt: string
@@ -82,11 +73,9 @@ export interface SessionListOptions {
   readonly sortDirection?: "asc" | "desc"
   readonly filters?: FilterSet
   /**
-   * When present, the repository switches into the search code path: results
-   * are session-rollups of matching traces, ranking is forced to the
-   * freshness-weighted `(relevance_bucket, last_activity_at, sessionId) DESC`
-   * tuple regardless of `sortBy`, and the returned `SessionListPage` carries
-   * a parallel `searchMatches` map.
+   * When set, switches the repository into the search code path. `sortBy` /
+   * `sortDirection` are ignored and the page carries a parallel
+   * `searchMatches` map.
    */
   readonly searchQuery?: string
 }
