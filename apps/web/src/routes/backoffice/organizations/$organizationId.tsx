@@ -254,7 +254,7 @@ function FeatureFlagsSection({
       ) : (
         <div className="flex flex-col gap-1.5">
           {rows.map((row) => (
-            <FeatureFlagToggleRow key={row.flag.id} row={row} organizationId={organizationId} />
+            <FeatureFlagToggleRow key={row.flag.identifier} row={row} organizationId={organizationId} />
           ))}
         </div>
       )}
@@ -396,19 +396,13 @@ function FeatureFlagToggleRow({
     <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-background px-3 py-2">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          {row.flag.name ? (
-            <Text.H5 weight="semibold" ellipsis>
-              {row.flag.name}
-            </Text.H5>
-          ) : null}
+          <Text.H5 weight="semibold" ellipsis>
+            {row.flag.name}
+          </Text.H5>
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">{row.flag.identifier}</code>
           <CopyButton value={row.flag.identifier} tooltip="Copy identifier" />
         </div>
-        {row.flag.description ? (
-          <Text.H6 color="foregroundMuted">{row.flag.description}</Text.H6>
-        ) : (
-          <Text.H6 color="foregroundMuted">No description.</Text.H6>
-        )}
+        <Text.H6 color="foregroundMuted">{row.flag.description}</Text.H6>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {row.globalOnly ? (

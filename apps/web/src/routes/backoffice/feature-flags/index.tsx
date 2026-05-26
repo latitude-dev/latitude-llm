@@ -1,34 +1,20 @@
-import { Button, CloseTrigger, FormWrapper, Icon, Input, Modal, Text, Textarea, useToast } from "@repo/ui"
-import { useForm } from "@tanstack/react-form"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { Flag, Plus } from "lucide-react"
-import { useState } from "react"
-import {
-  type AdminFeatureFlagDto,
-  adminCreateFeatureFlag,
-  adminListArchivedFeatureFlags,
-  adminListFeatureFlags,
-} from "../../../domains/admin/feature-flags.functions.ts"
-import { toUserMessage } from "../../../lib/errors.ts"
-import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../lib/form-server-action.ts"
-import { ArchivedFlagsSection } from "./-components/archived-flags-section.tsx"
+import { Icon, Text } from "@repo/ui"
+import { createFileRoute } from "@tanstack/react-router"
+import { Flag } from "lucide-react"
+import { type AdminFeatureFlagDto, adminListFeatureFlags } from "../../../domains/admin/feature-flags.functions.ts"
 import { FeatureFlagRow } from "./-components/feature-flag-row.tsx"
 
 export const Route = createFileRoute("/backoffice/feature-flags/")({
   loader: async () => {
-    const [featureFlags, archivedFeatureFlags] = await Promise.all([
-      adminListFeatureFlags(),
-      adminListArchivedFeatureFlags(),
-    ])
-    return { featureFlags, archivedFeatureFlags }
+    const featureFlags = await adminListFeatureFlags()
+    return { featureFlags }
   },
   component: BackofficeFeatureFlagsPage,
 })
 
 function BackofficeFeatureFlagsPage() {
-  const { featureFlags, archivedFeatureFlags } = Route.useLoaderData() as {
+  const { featureFlags } = Route.useLoaderData() as {
     readonly featureFlags: AdminFeatureFlagDto[]
-    readonly archivedFeatureFlags: AdminFeatureFlagDto[]
   }
 
   return (
@@ -40,10 +26,11 @@ function BackofficeFeatureFlagsPage() {
           </div>
           <div className="flex min-w-0 flex-col gap-0.5">
             <Text.H4 weight="semibold">Feature Flags</Text.H4>
-            <Text.H6 color="foregroundMuted">Manage stable code-facing flags and where they are enabled.</Text.H6>
+            <Text.H6 color="foregroundMuted">
+              Flags are declared in code. Toggle them globally or per organization here.
+            </Text.H6>
           </div>
         </div>
-        <CreateFeatureFlagButton />
       </div>
 
       {featureFlags.length === 0 ? (
@@ -51,12 +38,10 @@ function BackofficeFeatureFlagsPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {featureFlags.map((featureFlag) => (
-            <FeatureFlagRow key={featureFlag.id} featureFlag={featureFlag} />
+            <FeatureFlagRow key={featureFlag.identifier} featureFlag={featureFlag} />
           ))}
         </div>
       )}
-
-      <ArchivedFlagsSection featureFlags={archivedFeatureFlags} />
     </div>
   )
 }
@@ -68,125 +53,11 @@ function EmptyFeatureFlagsState() {
         <Icon icon={Flag} size="default" />
       </div>
       <div className="flex max-w-md flex-col gap-1">
-        <Text.H5 weight="medium">No feature flags yet</Text.H5>
+        <Text.H5 weight="medium">No feature flags declared</Text.H5>
         <Text.H6 color="foregroundMuted">
-          Create the first code-facing flag, then enable it for every organization or just a few.
+          Add an entry to the FEATURE_FLAGS registry in @domain/feature-flags to make a new flag appear here.
         </Text.H6>
       </div>
     </div>
-  )
-}
-
-function CreateFeatureFlagButton() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isOpen, setIsOpen] = useState(false)
-
-  const form = useForm({
-    defaultValues: { identifier: "", name: "", description: "" },
-    onSubmit: createFormSubmitHandler(
-      async (value) => {
-        return await adminCreateFeatureFlag({
-          data: {
-            identifier: value.identifier,
-            name: value.name.trim().length > 0 ? value.name : null,
-            description: value.description.trim().length > 0 ? value.description : null,
-          },
-        })
-      },
-      {
-        onSuccess: async (featureFlag) => {
-          toast({ description: `Created "${featureFlag.identifier}".` })
-          setIsOpen(false)
-          void router.invalidate()
-        },
-        onError: (error) => {
-          toast({
-            variant: "destructive",
-            title: "Could not create feature flag",
-            description: toUserMessage(error),
-          })
-        },
-      },
-    ),
-  })
-
-  return (
-    <>
-      <Button size="sm" onClick={() => setIsOpen(true)}>
-        <Icon icon={Plus} size="sm" />
-        Create feature flag
-      </Button>
-      <Modal
-        dismissible
-        size="large"
-        open={isOpen}
-        onOpenChange={(next) => {
-          if (!next) form.reset()
-          setIsOpen(next)
-        }}
-        title="Create feature flag"
-        description="Create the stable identifier that code will reference."
-        footer={
-          <>
-            <CloseTrigger size="sm" />
-            <Button form="create-feature-flag-form" type="submit" size="sm" disabled={form.state.isSubmitting}>
-              {form.state.isSubmitting ? "Creating…" : "Create feature flag"}
-            </Button>
-          </>
-        }
-      >
-        <form
-          id="create-feature-flag-form"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void form.handleSubmit()
-          }}
-        >
-          <FormWrapper>
-            <form.Field name="identifier">
-              {(field) => (
-                <Input
-                  required
-                  label="Identifier"
-                  description="Use a stable code-facing id, for example billing.v2 or new-dashboard. Letters, numbers, and the characters - _ / . only. Avoid renaming after code references it."
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                  placeholder="new-dashboard"
-                  autoComplete="off"
-                />
-              )}
-            </form.Field>
-            <form.Field name="name">
-              {(field) => (
-                <Input
-                  label="Name"
-                  description="Optional human-facing label for Backoffice."
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                  placeholder="New dashboard"
-                  autoComplete="off"
-                />
-              )}
-            </form.Field>
-            <form.Field name="description">
-              {(field) => (
-                <Textarea
-                  label="Description"
-                  description="Optional context for when staff should enable this flag."
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                  placeholder="What this flag enables and when staff should use it."
-                  minRows={4}
-                />
-              )}
-            </form.Field>
-          </FormWrapper>
-        </form>
-      </Modal>
-    </>
   )
 }

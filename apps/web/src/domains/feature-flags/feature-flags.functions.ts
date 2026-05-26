@@ -1,6 +1,6 @@
 import {
-  FeatureFlagRepository,
   type FeatureFlagId,
+  FeatureFlagRepository,
   featureFlagIdentifierSchema,
   hasFeatureFlagUseCase,
 } from "@domain/feature-flags"

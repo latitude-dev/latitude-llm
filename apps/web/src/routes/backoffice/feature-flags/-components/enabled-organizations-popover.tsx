@@ -1,3 +1,4 @@
+import type { FeatureFlagId } from "@domain/feature-flags"
 import { Badge, Button, Icon, Popover, PopoverContent, PopoverTrigger, Text, useToast } from "@repo/ui"
 import { Link, useRouter } from "@tanstack/react-router"
 import { Search } from "lucide-react"
@@ -9,7 +10,7 @@ import {
 import { toUserMessage } from "../../../../lib/errors.ts"
 
 interface EnabledOrganizationsPopoverProps {
-  readonly identifier: string
+  readonly identifier: FeatureFlagId
   readonly organizations: AdminFeatureFlagEnabledOrganizationDto[]
 }
 
