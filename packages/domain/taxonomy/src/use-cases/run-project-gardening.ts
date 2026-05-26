@@ -29,6 +29,14 @@ const errorMessage = (error: unknown): string => {
   return String(error)
 }
 
+// TODO(taxonomy): move gardening to a Temporal workflow. The orchestrator
+// below spans Postgres + ClickHouse writes (births, merges, reassignments,
+// hierarchy rebuild) under a single Redis lock with no resumability — a
+// worker kill or 30s cluster-lock TTL expiry mid-merge leaves half-applied
+// state. Each step (birth, merge, deprecate, reassign, hierarchy, naming)
+// becomes an idempotent activity; the workflow ID
+// `taxonomy:garden:${orgId}:${projectId}` replaces the garden lock. See
+// `.agents/skills/temporal-developer/SKILL.md`.
 export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
