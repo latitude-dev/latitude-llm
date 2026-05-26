@@ -59,12 +59,6 @@ const makeReader = (
 const makeAdminFlags = (eligibility: AdminFeatureFlagEligibility): (typeof AdminFeatureFlagRepository)["Service"] => ({
   findEligibilityForFlag: () => Effect.succeed(eligibility),
   list: () => Effect.die("not used"),
-  listArchived: () => Effect.die("not used"),
-  create: () => Effect.die("not used"),
-  update: () => Effect.die("not used"),
-  archive: () => Effect.die("not used"),
-  unarchive: () => Effect.die("not used"),
-  delete: () => Effect.die("not used"),
   enableForAll: () => Effect.die("not used"),
   disableForAll: () => Effect.die("not used"),
   listForOrganization: () => Effect.die("not used"),

@@ -1,10 +1,5 @@
-import {
-  DuplicateFeatureFlagIdentifierError,
-  FeatureFlagNotFoundError,
-  FeatureFlagRepository,
-} from "@domain/feature-flags"
+import { FeatureFlagRepository } from "@domain/feature-flags"
 import { OrganizationId, type SqlClient, UserId } from "@domain/shared"
-import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
 import { featureFlags, organizationFeatureFlags } from "../schema/feature-flags.ts"
@@ -30,53 +25,11 @@ describe("FeatureFlagRepositoryLive", () => {
     await pg.db.delete(featureFlags)
   })
 
-  it("creates and finds a feature flag by identifier", async () => {
-    const created = await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* FeatureFlagRepository
-        return yield* repo.createFeatureFlag({
-          identifier: "new-dashboard",
-          name: "New dashboard",
-          description: "Enables the new dashboard experience.",
-        })
-      }),
-    )
-
-    expect(created.identifier).toBe("new-dashboard")
-    expect(created.name).toBe("New dashboard")
-
-    const found = await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* FeatureFlagRepository
-        return yield* repo.findByIdentifier("new-dashboard")
-      }),
-    )
-    expect(found.id).toBe(created.id)
-  })
-
-  it("rejects duplicate feature flag identifiers", async () => {
-    await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* FeatureFlagRepository
-        yield* repo.createFeatureFlag({ identifier: "new-dashboard" })
-      }),
-    )
-
-    await expect(
-      runWithLive(
-        Effect.gen(function* () {
-          const repo = yield* FeatureFlagRepository
-          return yield* repo.createFeatureFlag({ identifier: "new-dashboard" })
-        }),
-      ),
-    ).rejects.toBeInstanceOf(DuplicateFeatureFlagIdentifierError)
-  })
-
-  it("returns false for an unknown feature flag identifier", async () => {
+  it("returns false for a flag with no DB row at all", async () => {
     const enabled = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        return yield* repo.isEnabledForOrganization("missing-flag")
+        return yield* repo.isEnabledForOrganization("slack")
       }),
     )
 
@@ -87,15 +40,14 @@ describe("FeatureFlagRepositoryLive", () => {
     const result = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        yield* repo.createFeatureFlag({ identifier: "new-dashboard" })
         const enabledRow = yield* repo.enableForOrganization({
-          identifier: "new-dashboard",
+          identifier: "slack",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
-        const enabled = yield* repo.isEnabledForOrganization("new-dashboard")
+        const enabled = yield* repo.isEnabledForOrganization("slack")
         const list = yield* repo.listEnabledForOrganization()
-        yield* repo.disableForOrganization("new-dashboard")
-        const disabled = yield* repo.isEnabledForOrganization("new-dashboard")
+        yield* repo.disableForOrganization("slack")
+        const disabled = yield* repo.isEnabledForOrganization("slack")
 
         return { enabledRow, enabled, list, disabled }
       }),
@@ -103,21 +55,20 @@ describe("FeatureFlagRepositoryLive", () => {
 
     expect(result.enabledRow.enabledByAdminUserId).toBe(ADMIN_USER_ID)
     expect(result.enabled).toBe(true)
-    expect(result.list.map((featureFlag) => featureFlag.identifier)).toEqual(["new-dashboard"])
+    expect(result.list.map((featureFlag) => featureFlag.identifier)).toEqual(["slack"])
     expect(result.disabled).toBe(false)
   })
 
-  it("keeps enablement idempotent", async () => {
+  it("keeps per-org enablement idempotent", async () => {
     const result = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        yield* repo.createFeatureFlag({ identifier: "new-dashboard" })
         const first = yield* repo.enableForOrganization({
-          identifier: "new-dashboard",
+          identifier: "slack",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
         const second = yield* repo.enableForOrganization({
-          identifier: "new-dashboard",
+          identifier: "slack",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
         return { first, second }
@@ -131,18 +82,14 @@ describe("FeatureFlagRepositoryLive", () => {
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        yield* repo.createFeatureFlag({ identifier: "new-dashboard" })
-        yield* repo.enableForOrganization({
-          identifier: "new-dashboard",
-          enabledByAdminUserId: ADMIN_USER_ID,
-        })
+        yield* repo.enableForOrganization({ identifier: "slack", enabledByAdminUserId: ADMIN_USER_ID })
       }),
     )
 
     const otherOrgEnabled = await runWithLiveOtherOrg(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        return yield* repo.isEnabledForOrganization("new-dashboard")
+        return yield* repo.isEnabledForOrganization("slack")
       }),
     )
     const otherOrgList = await runWithLiveOtherOrg(
@@ -156,63 +103,30 @@ describe("FeatureFlagRepositoryLive", () => {
     expect(otherOrgList).toHaveLength(0)
   })
 
-  it("fails when enabling an unknown feature flag", async () => {
-    await expect(
-      runWithLive(
-        Effect.gen(function* () {
-          const repo = yield* FeatureFlagRepository
-          return yield* repo.enableForOrganization({
-            identifier: "missing-flag",
-            enabledByAdminUserId: ADMIN_USER_ID,
-          })
-        }),
-      ),
-    ).rejects.toBeInstanceOf(FeatureFlagNotFoundError)
-  })
-
   it("treats globally enabled flags as enabled for any organization", async () => {
-    await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* FeatureFlagRepository
-        yield* repo.createFeatureFlag({ identifier: "global-flag" })
-      }),
-    )
-    await pg.db.update(featureFlags).set({ enabledForAll: true }).where(eq(featureFlags.identifier, "global-flag"))
+    await pg.db.insert(featureFlags).values({ identifier: "slack", enabledForAll: true })
 
     const result = await runWithLiveOtherOrg(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        const enabled = yield* repo.isEnabledForOrganization("global-flag")
+        const enabled = yield* repo.isEnabledForOrganization("slack")
         const list = yield* repo.listEnabledForOrganization()
         return { enabled, list }
       }),
     )
 
     expect(result.enabled).toBe(true)
-    expect(result.list.map((flag) => flag.identifier)).toEqual(["global-flag"])
+    expect(result.list.map((flag) => flag.identifier)).toEqual(["slack"])
   })
 
-  it("treats archived feature flags like missing flags", async () => {
-    const result = await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* FeatureFlagRepository
-        yield* repo.createFeatureFlag({ identifier: "new-dashboard" })
-        yield* repo.enableForOrganization({
-          identifier: "new-dashboard",
-          enabledByAdminUserId: ADMIN_USER_ID,
-        })
-        yield* repo.archiveFeatureFlag("new-dashboard")
-
-        const enabled = yield* repo.isEnabledForOrganization("new-dashboard")
-        const allFlags = yield* repo.list()
-        const enabledFlags = yield* repo.listEnabledForOrganization()
-
-        return { enabled, allFlags, enabledFlags }
-      }),
-    )
-
-    expect(result.enabled).toBe(false)
-    expect(result.allFlags).toHaveLength(0)
-    expect(result.enabledFlags).toHaveLength(0)
+  it("disabling a flag that has no row is a silent no-op", async () => {
+    await expect(
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* FeatureFlagRepository
+          yield* repo.disableForOrganization("slack")
+        }),
+      ),
+    ).resolves.toBeUndefined()
   })
 })

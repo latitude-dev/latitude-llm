@@ -7,7 +7,7 @@ import {
   type OrganizationFeatureFlag,
 } from "@domain/feature-flags"
 import { OrganizationFeatureFlagId, OrganizationId, SqlClient, type SqlClientShape, UserId } from "@domain/shared"
-import { and, asc, eq, or, sql } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { featureFlags, organizationFeatureFlags } from "../schema/feature-flags.ts"
@@ -37,22 +37,40 @@ export const FeatureFlagRepositoryLive = Layer.effect(
       listEnabledForOrganization: () =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const rows = yield* sqlClient.query((db, organizationId) =>
-            db
-              .select({ featureFlag: featureFlags })
-              .from(featureFlags)
-              .leftJoin(
-                organizationFeatureFlags,
-                and(
-                  eq(organizationFeatureFlags.identifier, featureFlags.identifier),
-                  eq(organizationFeatureFlags.organizationId, organizationId),
-                ),
-              )
-              .where(or(eq(featureFlags.enabledForAll, true), sql`${organizationFeatureFlags.id} IS NOT NULL`))
-              .orderBy(asc(featureFlags.identifier)),
-          )
+          // Either source may be present without the other — a per-org row
+          // can exist with no catalog row, and a global row can exist with
+          // no per-org row. Collect both sides and merge.
+          const [globalRows, orgRows] = yield* Effect.all([
+            sqlClient.query((db) => db.select().from(featureFlags).where(eq(featureFlags.enabledForAll, true))),
+            sqlClient.query((db, organizationId) =>
+              db
+                .select({
+                  featureFlag: featureFlags,
+                  organizationFeatureFlag: organizationFeatureFlags,
+                })
+                .from(organizationFeatureFlags)
+                .leftJoin(featureFlags, eq(featureFlags.identifier, organizationFeatureFlags.identifier))
+                .where(eq(organizationFeatureFlags.organizationId, organizationId)),
+            ),
+          ])
 
-          return rows.map((row) => toFeatureFlag(row.featureFlag))
+          const flagsByIdentifier = new Map<string, FeatureFlag>()
+          for (const row of globalRows) flagsByIdentifier.set(row.identifier, toFeatureFlag(row))
+          for (const row of orgRows) {
+            const identifier = row.organizationFeatureFlag.identifier
+            if (flagsByIdentifier.has(identifier)) continue
+            flagsByIdentifier.set(
+              identifier,
+              row.featureFlag
+                ? toFeatureFlag(row.featureFlag)
+                : createFeatureFlag({
+                    identifier: identifier as FeatureFlagId,
+                    createdAt: row.organizationFeatureFlag.createdAt,
+                    updatedAt: row.organizationFeatureFlag.updatedAt,
+                  }),
+            )
+          }
+          return [...flagsByIdentifier.values()].sort((a, b) => a.identifier.localeCompare(b.identifier))
         }),
 
       isEnabledForOrganization: (identifier) =>

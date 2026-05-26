@@ -1,5 +1,5 @@
 import { AdminFeatureFlagRepository } from "@domain/admin"
-import { DuplicateFeatureFlagIdentifierError, FeatureFlagNotFoundError } from "@domain/feature-flags"
+import { FEATURE_FLAG_IDS, FEATURE_FLAGS } from "@domain/feature-flags"
 import { NotFoundError, OrganizationId, UserId } from "@domain/shared"
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it } from "vitest"
@@ -43,103 +43,71 @@ describe("AdminFeatureFlagRepositoryLive", () => {
     ])
   })
 
-  it("creates and lists active feature flags with enabled organizations", async () => {
+  it("lists every registry flag, hydrating name/description from code", async () => {
     const result = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({
-          identifier: "new-dashboard",
-          name: "New dashboard",
-          description: "Rolls out the new dashboard.",
-        })
+        return yield* repo.list()
+      }),
+    )
+
+    expect(result.map((flag) => flag.identifier).sort()).toEqual([...FEATURE_FLAG_IDS].sort())
+    for (const flag of result) {
+      expect(flag.name).toBe(FEATURE_FLAGS[flag.identifier].name)
+      expect(flag.description).toBe(FEATURE_FLAGS[flag.identifier].description)
+      expect(flag.enabledForAll).toBe(false)
+      expect(flag.enabledOrganizations).toEqual([])
+    }
+  })
+
+  it("hydrates enabled organizations for each flag", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminFeatureFlagRepository
         yield* repo.enableForOrganization({
           organizationId: ORG_ID,
-          identifier: "new-dashboard",
+          identifier: "slack",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
         return yield* repo.list()
       }),
     )
 
-    expect(result).toHaveLength(1)
-    expect(result[0].identifier).toBe("new-dashboard")
-    expect(result[0].enabledOrganizations).toEqual([{ id: ORG_ID, name: "Acme", slug: "acme" }])
+    const slack = result.find((flag) => flag.identifier === "slack")
+    expect(slack?.enabledOrganizations).toEqual([{ id: ORG_ID, name: "Acme", slug: "acme" }])
   })
 
-  it("rejects duplicate identifiers", async () => {
-    await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({ identifier: "new-dashboard" })
-      }),
-    )
-
-    await expect(
-      runWithLive(
-        Effect.gen(function* () {
-          const repo = yield* AdminFeatureFlagRepository
-          return yield* repo.create({ identifier: "new-dashboard" })
-        }),
-      ),
-    ).rejects.toBeInstanceOf(DuplicateFeatureFlagIdentifierError)
-  })
-
-  it("lists enabled and available flags for an organization", async () => {
+  it("splits flags into enabled and available for an organization", async () => {
     const result = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({ identifier: "new-dashboard" })
-        yield* repo.create({ identifier: "beta-tools" })
         yield* repo.enableForOrganization({
           organizationId: ORG_ID,
-          identifier: "new-dashboard",
+          identifier: "slack",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
         return yield* repo.listForOrganization(ORG_ID)
       }),
     )
 
-    expect(result.enabled.map((flag) => flag.identifier)).toEqual(["new-dashboard"])
-    expect(result.available.map((flag) => flag.identifier)).toEqual(["beta-tools"])
+    expect(result.enabled.map((flag) => flag.identifier)).toEqual(["slack"])
+    expect(result.available.map((flag) => flag.identifier)).not.toContain("slack")
+    expect(result.enabled.length + result.available.length).toBe(FEATURE_FLAG_IDS.length)
   })
 
-  it("archives flags so they disappear from lists and organization enablements", async () => {
+  it("includes globally enabled flags in the enabled bucket for every org", async () => {
     const result = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({ identifier: "new-dashboard" })
-        yield* repo.enableForOrganization({
-          organizationId: ORG_ID,
-          identifier: "new-dashboard",
-          enabledByAdminUserId: ADMIN_USER_ID,
-        })
-        yield* repo.archive("new-dashboard")
-        const list = yield* repo.list()
-        const orgFlags = yield* repo.listForOrganization(ORG_ID)
-        return { list, orgFlags }
+        yield* repo.enableForAll("slack")
+        const owner = yield* repo.listForOrganization(ORG_ID)
+        const other = yield* repo.listForOrganization(OTHER_ORG_ID)
+        return { owner, other }
       }),
     )
 
-    expect(result.list).toHaveLength(0)
-    expect(result.orgFlags.enabled).toHaveLength(0)
-    expect(result.orgFlags.available).toHaveLength(0)
-  })
-
-  it("treats archived flags like missing when enabling", async () => {
-    await expect(
-      runWithLive(
-        Effect.gen(function* () {
-          const repo = yield* AdminFeatureFlagRepository
-          yield* repo.create({ identifier: "new-dashboard" })
-          yield* repo.archive("new-dashboard")
-          yield* repo.enableForOrganization({
-            organizationId: ORG_ID,
-            identifier: "new-dashboard",
-            enabledByAdminUserId: ADMIN_USER_ID,
-          })
-        }),
-      ),
-    ).rejects.toBeInstanceOf(FeatureFlagNotFoundError)
+    expect(result.owner.enabled.map((flag) => flag.identifier)).toContain("slack")
+    expect(result.other.enabled.map((flag) => flag.identifier)).toContain("slack")
   })
 
   it("returns NotFoundError for missing organizations", async () => {
@@ -153,31 +121,16 @@ describe("AdminFeatureFlagRepositoryLive", () => {
     ).rejects.toBeInstanceOf(NotFoundError)
   })
 
-  it("updates name and description without touching identifier", async () => {
-    const updated = await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({ identifier: "new-dashboard", name: "Old", description: "Old desc." })
-        return yield* repo.update({ identifier: "new-dashboard", name: "New", description: "New desc." })
-      }),
-    )
-
-    expect(updated.identifier).toBe("new-dashboard")
-    expect(updated.name).toBe("New")
-    expect(updated.description).toBe("New desc.")
-  })
-
   it("findEligibilityForFlag returns explicitly enabled organizations", async () => {
     const result = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({ identifier: "scoped-flag" })
         yield* repo.enableForOrganization({
           organizationId: ORG_ID,
-          identifier: "scoped-flag",
+          identifier: "slack",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
-        return yield* repo.findEligibilityForFlag("scoped-flag")
+        return yield* repo.findEligibilityForFlag("slack")
       }),
     )
 
@@ -185,13 +138,12 @@ describe("AdminFeatureFlagRepositoryLive", () => {
     expect(result.organizationIds).toEqual([ORG_ID])
   })
 
-  it("findEligibilityForFlag short-circuits with enabledForAll=true", async () => {
+  it("findEligibilityForFlag short-circuits when enabledForAll=true", async () => {
     const result = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({ identifier: "global-flag" })
-        yield* repo.enableForAll("global-flag")
-        return yield* repo.findEligibilityForFlag("global-flag")
+        yield* repo.enableForAll("slack")
+        return yield* repo.findEligibilityForFlag("slack")
       }),
     )
 
@@ -199,76 +151,63 @@ describe("AdminFeatureFlagRepositoryLive", () => {
     expect(result.organizationIds).toEqual([])
   })
 
-  it("findEligibilityForFlag fails with FeatureFlagNotFoundError for unknown identifiers", async () => {
-    await expect(
-      runWithLive(
-        Effect.gen(function* () {
-          const repo = yield* AdminFeatureFlagRepository
-          return yield* repo.findEligibilityForFlag("does-not-exist")
-        }),
-      ),
-    ).rejects.toBeInstanceOf(FeatureFlagNotFoundError)
-  })
-
-  it("toggles enable-for-all on the flag", async () => {
+  it("findEligibilityForFlag returns an empty disabled result when no DB row exists", async () => {
     const result = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({ identifier: "global-flag" })
-        yield* repo.enableForAll("global-flag")
+        return yield* repo.findEligibilityForFlag("slack")
+      }),
+    )
+
+    expect(result.enabledForAll).toBe(false)
+    expect(result.organizationIds).toEqual([])
+  })
+
+  it("enableForAll upserts the catalog row, disableForAll flips it back", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminFeatureFlagRepository
+        yield* repo.enableForAll("slack")
         const afterEnable = yield* repo.list()
-        yield* repo.disableForAll("global-flag")
+        yield* repo.disableForAll("slack")
         const afterDisable = yield* repo.list()
         return { afterEnable, afterDisable }
       }),
     )
 
-    expect(result.afterEnable[0].enabledForAll).toBe(true)
-    expect(result.afterDisable[0].enabledForAll).toBe(false)
+    const enabledSlack = result.afterEnable.find((flag) => flag.identifier === "slack")
+    const disabledSlack = result.afterDisable.find((flag) => flag.identifier === "slack")
+    expect(enabledSlack?.enabledForAll).toBe(true)
+    expect(disabledSlack?.enabledForAll).toBe(false)
   })
 
-  it("lists archived flags via listArchived and unarchives them back", async () => {
-    const result = await runWithLive(
+  it("per-org enable is idempotent; disable for a missing row is a silent no-op", async () => {
+    await runWithLive(
       Effect.gen(function* () {
         const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({ identifier: "archived-flag" })
-        yield* repo.archive("archived-flag")
-        const archived = yield* repo.listArchived()
-        const activeBefore = yield* repo.list()
-        yield* repo.unarchive("archived-flag")
-        const activeAfter = yield* repo.list()
-        const archivedAfter = yield* repo.listArchived()
-        return { archived, activeBefore, activeAfter, archivedAfter }
-      }),
-    )
-
-    expect(result.archived.map((flag) => flag.identifier)).toEqual(["archived-flag"])
-    expect(result.activeBefore).toHaveLength(0)
-    expect(result.activeAfter.map((flag) => flag.identifier)).toEqual(["archived-flag"])
-    expect(result.archivedAfter).toHaveLength(0)
-  })
-
-  it("delete drops the flag and its organization enablements", async () => {
-    const result = await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* AdminFeatureFlagRepository
-        yield* repo.create({ identifier: "doomed" })
         yield* repo.enableForOrganization({
           organizationId: ORG_ID,
-          identifier: "doomed",
+          identifier: "slack",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
-        yield* repo.archive("doomed")
-        yield* repo.delete("doomed")
-        const list = yield* repo.list()
-        const archived = yield* repo.listArchived()
-        return { list, archived }
+        yield* repo.enableForOrganization({
+          organizationId: ORG_ID,
+          identifier: "slack",
+          enabledByAdminUserId: ADMIN_USER_ID,
+        })
       }),
     )
 
-    expect(result.list).toHaveLength(0)
-    expect(result.archived).toHaveLength(0)
-    const remainingEnablements = await pg.db.select().from(organizationFeatureFlags)
-    expect(remainingEnablements).toHaveLength(0)
+    const rows = await pg.db.select().from(organizationFeatureFlags)
+    expect(rows).toHaveLength(1)
+
+    await expect(
+      runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AdminFeatureFlagRepository
+          yield* repo.disableForOrganization({ organizationId: OTHER_ORG_ID, identifier: "slack" })
+        }),
+      ),
+    ).resolves.toBeUndefined()
   })
 })

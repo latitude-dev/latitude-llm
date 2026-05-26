@@ -1,4 +1,4 @@
-import { CLAUDE_CODE_WRAPPED_FLAG, FeatureFlagRepository } from "@domain/feature-flags"
+import { FeatureFlagRepository } from "@domain/feature-flags"
 import { createFakeFeatureFlagRepository } from "@domain/feature-flags/testing"
 import {
   MembershipRepository,
@@ -207,9 +207,8 @@ const setupHarness = (options: {
       if (!options.enableFlag) return
       await Effect.runPromise(
         Effect.gen(function* () {
-          yield* fakeFlags.repository.createFeatureFlag({ identifier: CLAUDE_CODE_WRAPPED_FLAG })
           yield* fakeFlags.repository.enableForOrganization({
-            identifier: CLAUDE_CODE_WRAPPED_FLAG,
+            identifier: "claude-code-wrapped",
             enabledByAdminUserId: ADMIN_USER_ID,
           })
         }).pipe(Effect.provide(Layer.succeed(SqlClient, sqlClient))),
