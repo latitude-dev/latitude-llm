@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "8d4f9db5-a04f-4ea9-ab54-6bf7799aaed4",
+  "id": "497593bb-5588-4555-b8bd-3fbc90748ff8",
   "prevIds": [
-    "1d88c8dc-40a2-45fe-909b-8462c64b9944"
+    "493fd0ee-3576-44ce-9d8c-b6294b38305c"
   ],
   "ddl": [
     {
@@ -195,6 +195,12 @@
     {
       "isRlsEnabled": true,
       "name": "simulations",
+      "entityType": "tables",
+      "schema": "latitude"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "slack_deliveries",
       "entityType": "tables",
       "schema": "latitude"
     },
@@ -3186,19 +3192,6 @@
       "table": "evaluations"
     },
     {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "feature_flags"
-    },
-    {
       "type": "varchar(128)",
       "typeSchema": null,
       "notNull": true,
@@ -3212,32 +3205,6 @@
       "table": "feature_flags"
     },
     {
-      "type": "varchar(256)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "name",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "feature_flags"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "description",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "feature_flags"
-    },
-    {
       "type": "boolean",
       "typeSchema": null,
       "notNull": true,
@@ -3246,19 +3213,6 @@
       "generated": null,
       "identity": null,
       "name": "enabled_for_all",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "feature_flags"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "archived_at",
       "entityType": "columns",
       "schema": "latitude",
       "table": "feature_flags"
@@ -3316,14 +3270,14 @@
       "table": "organization_feature_flags"
     },
     {
-      "type": "varchar(24)",
+      "type": "varchar(128)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "feature_flag_id",
+      "name": "identifier",
       "entityType": "columns",
       "schema": "latitude",
       "table": "organization_feature_flags"
@@ -4847,6 +4801,110 @@
       "default": null,
       "generated": null,
       "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "integration_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "channel_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "claimed_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "posted_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "message_ts",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "type": "varchar(24)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
       "name": "integration_id",
       "entityType": "columns",
       "schema": "latitude",
@@ -4952,6 +5010,19 @@
       "generated": null,
       "identity": null,
       "name": "token_expires_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "slack_integration_details"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'{}'",
+      "generated": null,
+      "identity": null,
+      "name": "routes",
       "entityType": "columns",
       "schema": "latitude",
       "table": "slack_integration_details"
@@ -6692,27 +6763,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "identifier",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "feature_flags_identifier_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "feature_flags"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "organization_id",
           "isExpression": false,
           "asc": true,
@@ -6734,7 +6784,7 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "feature_flag_id",
+          "value": "identifier",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -6746,7 +6796,7 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "organization_feature_flags_feature_flag_id_idx",
+      "name": "organization_feature_flags_identifier_idx",
       "entityType": "indexes",
       "schema": "latitude",
       "table": "organization_feature_flags"
@@ -7707,6 +7757,55 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "idempotency_key",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "channel_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "slack_deliveries_claim_uq",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "integration_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "slack_deliveries_integration_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "slack_deliveries"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "organization_id",
           "isExpression": false,
           "asc": true,
@@ -8421,7 +8520,7 @@
     },
     {
       "columns": [
-        "id"
+        "identifier"
       ],
       "nameExplicit": false,
       "name": "feature_flags_pkey",
@@ -8527,6 +8626,16 @@
       "name": "simulations_pkey",
       "schema": "latitude",
       "table": "simulations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "slack_deliveries_pkey",
+      "schema": "latitude",
+      "table": "slack_deliveries",
       "entityType": "pks"
     },
     {
@@ -8677,10 +8786,10 @@
       "nameExplicit": true,
       "columns": [
         "organization_id",
-        "feature_flag_id"
+        "identifier"
       ],
       "nullsNotDistinct": false,
-      "name": "organization_feature_flags_unique_org_flag_idx",
+      "name": "organization_feature_flags_unique_org_identifier_idx",
       "entityType": "uniques",
       "schema": "latitude",
       "table": "organization_feature_flags"
@@ -8824,17 +8933,6 @@
       "name": "billing_overrides_organization_id_key",
       "schema": "latitude",
       "table": "billing_overrides",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "identifier"
-      ],
-      "nullsNotDistinct": false,
-      "name": "feature_flags_identifier_key",
-      "schema": "latitude",
-      "table": "feature_flags",
       "entityType": "uniques"
     },
     {
@@ -9146,6 +9244,19 @@
       "entityType": "policies",
       "schema": "latitude",
       "table": "simulations"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "organization_id = get_current_organization_id()",
+      "withCheck": "organization_id = get_current_organization_id()",
+      "name": "slack_deliveries_organization_policy",
+      "entityType": "policies",
+      "schema": "latitude",
+      "table": "slack_deliveries"
     },
     {
       "as": "PERMISSIVE",
