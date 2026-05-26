@@ -1,11 +1,11 @@
 import { SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { type createFeatureFlag, createOrganizationFeatureFlag } from "../entities/feature-flag.ts"
+import { createFeatureFlag, createOrganizationFeatureFlag, type FeatureFlag } from "../entities/feature-flag.ts"
 import type { FeatureFlagRepositoryShape } from "../ports/feature-flag-repository.ts"
 import type { FeatureFlagId } from "../registry.ts"
 
 export const createFakeFeatureFlagRepository = () => {
-  const featureFlags = new Map<FeatureFlagId, ReturnType<typeof createFeatureFlag>>()
+  const featureFlags = new Map<FeatureFlagId, FeatureFlag>()
   const organizationFeatureFlags = new Map<string, ReturnType<typeof createOrganizationFeatureFlag>>()
 
   const enabledKey = (organizationId: string, identifier: FeatureFlagId) => `${organizationId}:${identifier}`
@@ -19,9 +19,21 @@ export const createFakeFeatureFlagRepository = () => {
             .filter((row) => row.organizationId === organizationId)
             .map((row) => row.identifier),
         )
-        return [...featureFlags.values()].filter(
-          (flag) => flag.enabledForAll || enabledIdentifiers.has(flag.identifier),
-        )
+
+        // Match the live repo: collect flags that are either globally enabled
+        // or per-org enabled, synthesising a catalog row when only the
+        // per-org side exists.
+        const result = new Map<FeatureFlagId, FeatureFlag>()
+        for (const flag of featureFlags.values()) {
+          if (flag.enabledForAll || enabledIdentifiers.has(flag.identifier)) {
+            result.set(flag.identifier, flag)
+          }
+        }
+        for (const identifier of enabledIdentifiers) {
+          if (result.has(identifier)) continue
+          result.set(identifier, createFeatureFlag({ identifier }))
+        }
+        return [...result.values()].sort((a, b) => a.identifier.localeCompare(b.identifier))
       }),
 
     isEnabledForOrganization: (identifier) =>
