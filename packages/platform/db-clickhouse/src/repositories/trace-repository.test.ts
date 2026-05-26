@@ -15,8 +15,8 @@ import { setupTestClickHouse } from "@platform/testkit"
 import { Effect, Layer } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ChSqlClientLive } from "../ch-sql-client.ts"
-import { scoreSeeders } from "../seeds/scores/index.ts"
-import { fixedTraceSeeders } from "../seeds/spans/fixed-traces.ts"
+import { buildAllAnalyticsRows } from "../seeds/scores/index.ts"
+import { buildAllFixedSpans } from "../seeds/spans/fixed-traces.ts"
 import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { insertJsonEachRow } from "../sql.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
@@ -33,13 +33,14 @@ const ORG_ID = OrganizationId(SEED_ORG_ID)
 const PROJECT_ID = ProjectId(SEED_PROJECT_ID)
 const TRACE_ID = SEED_LIFECYCLE_TRACE_IDS[0] as TraceId
 const SCORED_TRACE_ID = SEED_LIFECYCLE_TRACE_IDS[3] as TraceId
-const firstFixedTraceSeeder = fixedTraceSeeders[0]
 const BASELINE_TEST_TAG = "baseline-missing-values"
-const firstScoreSeeder = scoreSeeders[0]
 
-if (firstFixedTraceSeeder === undefined) {
-  throw new Error("Expected at least one fixed trace seeder")
-}
+// Build the deterministic tau2 baseline rows ONCE at module load. The seeder's
+// run() path re-parses a 23 MB JSON every call; on a 23-test file that adds
+// ~150s of CI wall time. Tests still get a freshly populated table per case —
+// they just pay an insert (cheap) instead of a rebuild (expensive).
+const BASELINE_SPANS: readonly SpanRow[] = buildAllFixedSpans(bootstrapSeedScope)
+const BASELINE_SCORES = buildAllAnalyticsRows(bootstrapSeedScope).all
 
 function toClickHouseDateTime(value: Date): string {
   return value.toISOString().replace("T", " ").replace("Z", "")
@@ -115,10 +116,6 @@ function makeSpanRow({
   }
 }
 
-if (firstScoreSeeder === undefined) {
-  throw new Error("Expected at least one score seeder")
-}
-
 const ch = setupTestClickHouse()
 
 const runCh = <A, E>(effect: Effect.Effect<A, E, ChSqlClient | AI>) =>
@@ -137,8 +134,8 @@ describe("TraceRepository", () => {
   })
 
   beforeEach(async () => {
-    await Effect.runPromise(firstFixedTraceSeeder.run({ client: ch.client, scope: bootstrapSeedScope, quiet: true }))
-    await Effect.runPromise(firstScoreSeeder.run({ client: ch.client, scope: bootstrapSeedScope, quiet: true }))
+    await Effect.runPromise(insertJsonEachRow(ch.client, "spans", BASELINE_SPANS))
+    await Effect.runPromise(insertJsonEachRow(ch.client, "scores", BASELINE_SCORES))
   })
 
   describe("matchesFiltersByTraceId", () => {

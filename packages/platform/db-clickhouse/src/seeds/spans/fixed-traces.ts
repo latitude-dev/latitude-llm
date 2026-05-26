@@ -533,7 +533,14 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
   return spans
 }
 
-function buildAllFixedSpans(scope: SeedScope): SpanRow[] {
+/**
+ * Build the deterministic tau2 + compatibility spans without inserting them.
+ *
+ * Heavy: parses the 23 MB tau2 trajectories JSON and constructs the full row
+ * set. Tests that need this baseline should build it once at module scope and
+ * re-insert (cheap) between cases rather than re-running the seeder.
+ */
+export function buildAllFixedSpans(scope: SeedScope): SpanRow[] {
   return [...buildTau2TrajectorySpans(scope), ...buildCompatibilitySupportSpans(scope)]
 }
 
