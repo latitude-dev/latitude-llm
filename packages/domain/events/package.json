@@ -16,7 +16,6 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/marketing": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:"
   }

@@ -1,4 +1,3 @@
-import type { OnboardingType, StackChoice } from "@domain/marketing"
 
 /**
  * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
@@ -210,7 +209,7 @@ export interface EventPayloads {
    */
   UserOnboardingCompleted: {
     readonly userId: string
-    readonly stackChoice: StackChoice
+    readonly stackChoice: "coding-agent-machine" | "production-agent"
   }
   MemberJoined: {
     readonly organizationId: string
@@ -296,7 +295,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly traceId: string
-    readonly onboardingType?: OnboardingType
+    readonly onboardingType?: "prod-traces" | "code-agents"
   }
   BillingUsagePeriodUpdated: {
     readonly organizationId: string

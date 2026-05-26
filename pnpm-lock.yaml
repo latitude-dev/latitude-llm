@@ -1170,9 +1170,6 @@ importers:
 
   packages/domain/events:
     dependencies:
-      '@domain/marketing':
-        specifier: workspace:*
-        version: link:../marketing
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
