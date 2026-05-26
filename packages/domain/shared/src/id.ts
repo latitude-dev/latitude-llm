@@ -37,8 +37,8 @@ export type ProjectId = Id<"ProjectId">
 // API Key IDs
 export type ApiKeyId = Id<"ApiKeyId">
 
-// Feature flag IDs
-export type FeatureFlagId = Id<"FeatureFlagId">
+// Feature flag IDs — `FeatureFlagId` lives in `@domain/feature-flags`
+// as a literal union derived from the code-side registry.
 export type OrganizationFeatureFlagId = Id<"OrganizationFeatureFlagId">
 
 // Dataset-related IDs
@@ -78,7 +78,6 @@ export const MembershipId = (value: string): MembershipId => value as Membership
 export const InvitationId = (value: string): InvitationId => value as InvitationId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
-export const FeatureFlagId = (value: string): FeatureFlagId => value as FeatureFlagId
 export const OrganizationFeatureFlagId = (value: string): OrganizationFeatureFlagId =>
   value as OrganizationFeatureFlagId
 export const ScoreId = (value: string): ScoreId => value as ScoreId
@@ -108,7 +107,6 @@ export const membershipIdSchema = cuidSchema.transform(MembershipId)
 export const invitationIdSchema = cuidSchema.transform(InvitationId)
 export const projectIdSchema = cuidSchema.transform(ProjectId)
 export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
-export const featureFlagIdSchema = cuidSchema.transform(FeatureFlagId)
 export const organizationFeatureFlagIdSchema = cuidSchema.transform(OrganizationFeatureFlagId)
 export const datasetIdSchema = cuidSchema.transform(DatasetId)
 export const datasetRowIdSchema = cuidSchema.transform(DatasetRowId)

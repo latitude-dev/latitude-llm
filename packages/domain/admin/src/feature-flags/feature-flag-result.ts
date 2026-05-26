@@ -1,4 +1,5 @@
-import { featureFlagIdSchema, organizationIdSchema } from "@domain/shared"
+import { featureFlagIdentifierSchema } from "@domain/feature-flags"
+import { organizationIdSchema } from "@domain/shared"
 import { z } from "zod"
 
 export const adminFeatureFlagEnabledOrganizationSchema = z.object({
@@ -9,16 +10,17 @@ export const adminFeatureFlagEnabledOrganizationSchema = z.object({
 
 export type AdminFeatureFlagEnabledOrganization = z.infer<typeof adminFeatureFlagEnabledOrganizationSchema>
 
+/**
+ * Aggregated view of a flag for the backoffice. The catalog (identifier,
+ * name, description) is sourced from the code-side registry; enablement
+ * (enabledForAll, enabledOrganizations) is sourced from the DB.
+ */
 export const adminFeatureFlagSummarySchema = z.object({
-  id: featureFlagIdSchema,
-  identifier: z.string(),
-  name: z.string().nullable(),
-  description: z.string().nullable(),
+  identifier: featureFlagIdentifierSchema,
+  name: z.string(),
+  description: z.string(),
   enabledForAll: z.boolean(),
   enabledOrganizations: z.array(adminFeatureFlagEnabledOrganizationSchema),
-  archivedAt: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
 })
 
 export type AdminFeatureFlagSummary = z.infer<typeof adminFeatureFlagSummarySchema>
