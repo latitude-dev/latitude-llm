@@ -119,6 +119,25 @@ describe("FeatureFlagRepositoryLive", () => {
     expect(result.list.map((flag) => flag.identifier)).toEqual(["slack"])
   })
 
+  it("ignores DB rows for identifiers that are no longer in the code registry", async () => {
+    // Simulate an orphaned row left behind after a flag is deleted from
+    // FEATURE_FLAGS. listEnabledForOrganization must not crash trying to
+    // parse the unknown identifier.
+    await pg.db.insert(featureFlags).values({ identifier: "deleted-flag", enabledForAll: true })
+    await pg.db
+      .insert(organizationFeatureFlags)
+      .values({ organizationId: ORG_ID, identifier: "deleted-flag", enabledByAdminUserId: ADMIN_USER_ID })
+
+    const list = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* FeatureFlagRepository
+        return yield* repo.listEnabledForOrganization()
+      }),
+    )
+
+    expect(list.map((flag) => flag.identifier)).not.toContain("deleted-flag")
+  })
+
   it("disabling a flag that has no row is a silent no-op", async () => {
     await expect(
       runWithLive(

@@ -2,6 +2,7 @@ import {
   createFeatureFlag,
   createOrganizationFeatureFlag,
   type FeatureFlag,
+  FEATURE_FLAGS,
   type FeatureFlagId,
   FeatureFlagRepository,
   type OrganizationFeatureFlag,
@@ -11,6 +12,13 @@ import { and, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { featureFlags, organizationFeatureFlags } from "../schema/feature-flags.ts"
+
+/**
+ * Identifiers that exist in the DB but not in the code registry are inert.
+ * Orphans typically appear after a flag is deleted from `FEATURE_FLAGS`
+ * but stale rows linger in `feature_flags` / `organization_feature_flags`.
+ */
+const isRegisteredIdentifier = (value: string): value is FeatureFlagId => value in FEATURE_FLAGS
 
 const toFeatureFlag = (row: typeof featureFlags.$inferSelect): FeatureFlag =>
   createFeatureFlag({
@@ -54,17 +62,21 @@ export const FeatureFlagRepositoryLive = Layer.effect(
             ),
           ])
 
-          const flagsByIdentifier = new Map<string, FeatureFlag>()
-          for (const row of globalRows) flagsByIdentifier.set(row.identifier, toFeatureFlag(row))
+          const flagsByIdentifier = new Map<FeatureFlagId, FeatureFlag>()
+          for (const row of globalRows) {
+            if (!isRegisteredIdentifier(row.identifier)) continue
+            flagsByIdentifier.set(row.identifier, toFeatureFlag(row))
+          }
           for (const row of orgRows) {
             const identifier = row.organizationFeatureFlag.identifier
+            if (!isRegisteredIdentifier(identifier)) continue
             if (flagsByIdentifier.has(identifier)) continue
             flagsByIdentifier.set(
               identifier,
               row.featureFlag
                 ? toFeatureFlag(row.featureFlag)
                 : createFeatureFlag({
-                    identifier: identifier as FeatureFlagId,
+                    identifier,
                     createdAt: row.organizationFeatureFlag.createdAt,
                     updatedAt: row.organizationFeatureFlag.updatedAt,
                   }),
