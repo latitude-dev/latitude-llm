@@ -1,4 +1,3 @@
-
 /**
  * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
  * UserDeletionRequested) use imperative naming that borders on command-dispatch.
