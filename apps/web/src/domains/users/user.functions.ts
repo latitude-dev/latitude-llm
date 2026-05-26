@@ -1,13 +1,14 @@
 import { OutboxEventWriter } from "@domain/events"
-import { SqlClient } from "@domain/shared"
+import { ProjectRepository } from "@domain/projects"
+import { ProjectId, SqlClient, stackChoiceSchema } from "@domain/shared"
 import { UserRepository } from "@domain/users"
-import { OutboxEventWriterLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { OutboxEventWriterLive, ProjectRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { requireUserSession } from "../../server/auth.ts"
+import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getBetterAuth } from "../../server/clients.ts"
 
 export const updateUser = createServerFn({ method: "POST" })
@@ -36,19 +37,23 @@ const submitOnboardingSchema = z.object({
         .transform((v) => (v.length > 0 ? v : undefined)),
     )
     .optional(),
-  stackChoice: z.enum(["coding-agent-machine", "production-agent"]),
+  stackChoice: stackChoiceSchema,
+  projectId: z.string(),
 })
 
 export const submitOnboarding = createServerFn({ method: "POST" })
   .inputValidator(submitOnboardingSchema)
   .handler(async ({ data }) => {
-    const userId = await requireUserSession()
+    const { userId, organizationId } = await requireSession()
     const adminClient = getAdminPostgresClient()
+
+    const onboardingType = data.stackChoice === "coding-agent-machine" ? "code-agents" : "prod-traces"
 
     await Effect.runPromise(
       Effect.gen(function* () {
         const sqlClient = yield* SqlClient
         const userRepo = yield* UserRepository
+        const projectRepo = yield* ProjectRepository
         const outbox = yield* OutboxEventWriter
 
         yield* sqlClient.transaction(
@@ -68,8 +73,20 @@ export const submitOnboarding = createServerFn({ method: "POST" })
                 stackChoice: data.stackChoice,
               },
             })
+            const project = yield* projectRepo.findById(ProjectId(data.projectId))
+            yield* projectRepo.save({
+              ...project,
+              settings: { ...project.settings, onboardingType },
+            })
           }),
         )
-      }).pipe(withPostgres(Layer.mergeAll(UserRepositoryLive, OutboxEventWriterLive), adminClient), withTracing),
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(UserRepositoryLive, ProjectRepositoryLive, OutboxEventWriterLive),
+          adminClient,
+          organizationId,
+        ),
+        withTracing,
+      ),
     )
   })

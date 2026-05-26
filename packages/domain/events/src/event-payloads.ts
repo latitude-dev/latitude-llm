@@ -1,3 +1,5 @@
+import type { StackChoice } from "@domain/shared"
+
 /**
  * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
  * UserDeletionRequested) use imperative naming that borders on command-dispatch.
@@ -208,7 +210,7 @@ export interface EventPayloads {
    */
   UserOnboardingCompleted: {
     readonly userId: string
-    readonly stackChoice: "coding-agent-machine" | "production-agent"
+    readonly stackChoice: StackChoice
   }
   MemberJoined: {
     readonly organizationId: string
@@ -294,6 +296,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly traceId: string
+    readonly onboardingType?: "prod-traces" | "code-agents"
   }
   BillingUsagePeriodUpdated: {
     readonly organizationId: string

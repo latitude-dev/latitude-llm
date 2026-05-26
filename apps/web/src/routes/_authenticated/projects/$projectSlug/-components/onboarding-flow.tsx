@@ -401,7 +401,7 @@ export function OnboardingFlow({
     onSubmit: createFormSubmitHandler(
       async ({ jobTitle, phoneNumber }) => {
         const stack = stackChoice as StackChoice
-        await submitOnboarding({ data: { jobTitle, phoneNumber, stackChoice: stack } })
+        await submitOnboarding({ data: { jobTitle, phoneNumber, stackChoice: stack, projectId } })
       },
       {
         onSuccess: () => setStep("telemetry"),

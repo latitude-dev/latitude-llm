@@ -1,3 +1,5 @@
+import type { OnboardingType } from "@domain/shared"
+
 /**
  * Source value attributing new marketing contacts to the v2 signup flow. v1
  * used `latitudeLlmAppSignup`; v2 ships under `LatitudeV2Signup` so segments
@@ -6,15 +8,10 @@
  */
 export const MARKETING_SOURCE_V2_SIGNUP = "LatitudeV2Signup"
 
-/**
- * `userGroup` mapping for the onboarding `stackChoice` field.
- * - `coding-agent-machine` -> `code-agents`
- * - `production-agent`     -> `prod-traces`
- */
-export const MARKETING_USER_GROUP_CODE_AGENTS = "code-agents"
-export const MARKETING_USER_GROUP_PROD_TRACES = "prod-traces"
+export const MARKETING_USER_GROUP_CODE_AGENTS = "code-agents" satisfies OnboardingType
+export const MARKETING_USER_GROUP_PROD_TRACES = "prod-traces" satisfies OnboardingType
 
-export type MarketingUserGroup = typeof MARKETING_USER_GROUP_CODE_AGENTS | typeof MARKETING_USER_GROUP_PROD_TRACES
+export type MarketingUserGroup = OnboardingType
 
 /**
  * Maximum length we ever send for a string custom property on a marketing

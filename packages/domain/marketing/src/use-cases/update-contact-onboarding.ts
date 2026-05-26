@@ -1,3 +1,4 @@
+import type { StackChoice } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 import {
@@ -9,7 +10,7 @@ import type { MarketingContactsPort } from "../ports/marketing-contacts.ts"
 
 export interface UpdateContactOnboardingInput {
   readonly userId: string
-  readonly stackChoice: "coding-agent-machine" | "production-agent"
+  readonly stackChoice: StackChoice
 }
 
 const stackChoiceToUserGroup = (stackChoice: UpdateContactOnboardingInput["stackChoice"]): MarketingUserGroup =>

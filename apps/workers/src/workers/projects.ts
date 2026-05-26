@@ -63,6 +63,9 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
             organizationId: payload.organizationId,
             projectId: payload.projectId,
             traceId: payload.traceId,
+            ...(project.settings?.onboardingType
+              ? { onboardingType: project.settings.onboardingType }
+              : {}),
           },
         })
 
