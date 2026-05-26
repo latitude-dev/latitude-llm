@@ -53,10 +53,10 @@ const makeObservation = (index: number, embedding = vector({ 0: 1 })): TaxonomyO
   summaryHash: String(index).repeat(64).slice(0, 64),
   embedding,
   embeddingModel: "voyage-4-large",
-  assignedClusterId: "",
+  assignedClusterId: null,
   assignmentConfidence: 0,
   assignmentMethod: "noise",
-  reassignmentRunId: "",
+  reassignmentRunId: null,
   retentionDays: 90,
   indexedAt: now,
 })

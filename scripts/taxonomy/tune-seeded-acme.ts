@@ -57,7 +57,7 @@ Runs the seeded-corpus taxonomy tuning loop with the production Voyage embedding
 
 Use --rebase-observations-to-now for historical seed corpora whose session timestamps are outside the gardening lookback window.
 
-Requires LAT_VOYAGE_API_KEY. Naming uses a deterministic local generator because P6-5 tunes embedding-space thresholds, not naming quality.
+Requires LAT_VOYAGE_API_KEY. Naming uses a deterministic local generator because this script tunes embedding-space thresholds, not naming quality.
 Current threshold pair: link=${TAXONOMY_BIRTH_LINK_THRESHOLD}, maxDiameter=${TAXONOMY_BIRTH_MAX_DIAMETER}.
 `
 

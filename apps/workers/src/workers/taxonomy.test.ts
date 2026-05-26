@@ -187,10 +187,10 @@ const makeObservation = (index: number, projectId = PROJECT_ID, embedding = TEST
   summaryHash: String(index).repeat(64).slice(0, 64),
   embedding,
   embeddingModel: "voyage-4-large",
-  assignedClusterId: "",
+  assignedClusterId: null,
   assignmentConfidence: 0,
   assignmentMethod: "noise",
-  reassignmentRunId: "",
+  reassignmentRunId: null,
   retentionDays: 90,
   indexedAt: START_TIME,
 })

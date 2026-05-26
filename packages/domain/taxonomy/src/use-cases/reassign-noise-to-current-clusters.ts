@@ -39,7 +39,7 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
     for (const observation of noise) {
       // listNoise's filter is the source of truth, but the snapshot can race
       // with an online assignment — re-check before mutating cluster state.
-      if (observation.assignedClusterId !== "") continue
+      if (observation.assignedClusterId !== null) continue
 
       const topK = yield* clusters.listNearestActive({
         projectId: input.projectId,

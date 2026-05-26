@@ -133,10 +133,17 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
     const lineage: TaxonomyClusterLineage[] = []
 
     for (const candidate of candidates) {
-      const memberObservations = candidate.members.map((index) => noise[index]).filter((row) => row !== undefined)
-      const memberEmbeddings = memberObservations.map((observation) =>
-        normalizeTaxonomyEmbedding(observation.embedding),
-      )
+      // Pull from the pre-normalized pool instead of re-normalizing each member's
+      // raw embedding — `candidate.members` indexes the same arrays.
+      const memberObservations: (typeof noise)[number][] = []
+      const memberEmbeddings: (readonly number[])[] = []
+      for (const memberIndex of candidate.members) {
+        const observation = noise[memberIndex]
+        const embedding = normalizedEmbeddings[memberIndex]
+        if (!observation || !embedding) continue
+        memberObservations.push(observation)
+        memberEmbeddings.push(embedding)
+      }
       const candidateCentroid = meanNormalized(memberEmbeddings)
       if (candidateCentroid.length === 0) continue
 

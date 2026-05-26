@@ -53,7 +53,7 @@ export const createFakeBehaviorObservationRepository = (
             (observation) =>
               observation.organizationId === organizationId &&
               observation.projectId === projectId &&
-              observation.assignedClusterId === "" &&
+              observation.assignedClusterId === null &&
               observation.embedding.length > 0 &&
               observation.startTime >= since,
           )
@@ -114,7 +114,7 @@ export const createFakeBehaviorObservationRepository = (
           )
             continue
           total++
-          if (observation.assignedClusterId === "") noise++
+          if (observation.assignedClusterId === null) noise++
           else assigned++
         }
         return { total, assigned, noise }
@@ -128,10 +128,11 @@ export const createFakeBehaviorObservationRepository = (
             observation.organizationId !== organizationId ||
             observation.projectId !== projectId ||
             observation.startTime < since ||
-            observation.assignedClusterId === ""
+            observation.assignedClusterId === null
           )
             continue
-          counts.set(observation.assignedClusterId, (counts.get(observation.assignedClusterId) ?? 0) + 1)
+          const clusterId = observation.assignedClusterId
+          counts.set(clusterId, (counts.get(clusterId) ?? 0) + 1)
         }
         return [...counts.entries()]
           .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))

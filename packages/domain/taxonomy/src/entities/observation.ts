@@ -36,11 +36,12 @@ export const taxonomyObservationSchema = z.object({
   summaryHash: z.string().length(64),
   embedding: z.array(z.number()), // may be empty for sessions below TAXONOMY_SESSION_MIN_LENGTH
   embeddingModel: z.string(),
-  /** Empty string when the row is in the noise bucket. */
-  assignedClusterId: z.union([taxonomyClusterIdSchema, z.literal("")]),
+  /** Null when the row is in the noise bucket. CH storage maps this to `''`. */
+  assignedClusterId: taxonomyClusterIdSchema.nullable(),
   assignmentConfidence: z.number(),
   assignmentMethod: taxonomyObservationAssignmentMethodSchema,
-  reassignmentRunId: z.union([taxonomyRunIdSchema, z.literal("")]),
+  /** Null when the row has never been reassigned. CH storage maps this to `''`. */
+  reassignmentRunId: taxonomyRunIdSchema.nullable(),
   retentionDays: z.number().int().positive(),
   indexedAt: z.date(),
 })

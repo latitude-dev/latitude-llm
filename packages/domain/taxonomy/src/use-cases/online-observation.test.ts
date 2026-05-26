@@ -391,7 +391,7 @@ describe("online taxonomy observation use-cases", () => {
 
     expect(result).toEqual({ action: "recorded", assignmentMethod: "noise", clusterId: null, confidence: 0 })
     const row = [...observations.rows.values()][0]
-    expect(row?.assignedClusterId).toBe("")
+    expect(row?.assignedClusterId).toBeNull()
     expect(row?.embedding).toHaveLength(TAXONOMY_EMBEDDING_DIMENSIONS)
   })
 

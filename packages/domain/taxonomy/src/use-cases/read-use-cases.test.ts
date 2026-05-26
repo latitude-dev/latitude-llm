@@ -89,7 +89,7 @@ const makeObservation = (index: number, clusterId = TaxonomyClusterId("k".repeat
   assignedClusterId: clusterId,
   assignmentConfidence: 1,
   assignmentMethod: "centroid_online",
-  reassignmentRunId: "",
+  reassignmentRunId: null,
   retentionDays: 90,
   indexedAt: now,
 })
