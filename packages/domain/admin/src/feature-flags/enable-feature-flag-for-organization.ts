@@ -1,29 +1,23 @@
-import { type InvalidFeatureFlagIdentifierError, validateFeatureFlagIdentifier } from "@domain/feature-flags"
+import type { FeatureFlagId } from "@domain/feature-flags"
 import type { NotFoundError, OrganizationId, RepositoryError, UserId } from "@domain/shared"
 import { Effect } from "effect"
-import { type AdminFeatureFlagMutationError, AdminFeatureFlagRepository } from "./feature-flag-repository.ts"
+import { AdminFeatureFlagRepository } from "./feature-flag-repository.ts"
 
 export interface AdminEnableFeatureFlagForOrganizationUseCaseInput {
   readonly organizationId: OrganizationId
-  readonly identifier: string
+  readonly identifier: FeatureFlagId
   readonly enabledByAdminUserId: UserId
 }
 
-export type AdminEnableFeatureFlagForOrganizationError =
-  | InvalidFeatureFlagIdentifierError
-  | AdminFeatureFlagMutationError
-  | NotFoundError
-  | RepositoryError
+export type AdminEnableFeatureFlagForOrganizationError = NotFoundError | RepositoryError
 
 export const enableFeatureFlagForOrganizationUseCase = Effect.fn("admin.featureFlags.enableForOrganization")(function* (
   input: AdminEnableFeatureFlagForOrganizationUseCaseInput,
 ) {
-  const identifier = yield* validateFeatureFlagIdentifier(input.identifier)
   const repo = yield* AdminFeatureFlagRepository
-
   yield* repo.enableForOrganization({
     organizationId: input.organizationId,
-    identifier,
+    identifier: input.identifier,
     enabledByAdminUserId: input.enabledByAdminUserId,
   })
 }) satisfies (

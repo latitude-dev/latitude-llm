@@ -1,54 +1,21 @@
 import {
   createFeatureFlag,
   createOrganizationFeatureFlag,
-  DuplicateFeatureFlagIdentifierError,
   type FeatureFlag,
-  FeatureFlagNotFoundError,
+  type FeatureFlagId,
   FeatureFlagRepository,
   type OrganizationFeatureFlag,
 } from "@domain/feature-flags"
-import {
-  FeatureFlagId,
-  OrganizationFeatureFlagId,
-  OrganizationId,
-  type RepositoryError,
-  SqlClient,
-  type SqlClientShape,
-  UserId,
-} from "@domain/shared"
-import { and, asc, eq, isNull, or, sql } from "drizzle-orm"
+import { OrganizationFeatureFlagId, OrganizationId, SqlClient, type SqlClientShape, UserId } from "@domain/shared"
+import { and, asc, eq, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { featureFlags, organizationFeatureFlags } from "../schema/feature-flags.ts"
 
-const isUniqueViolation = (cause: unknown): boolean => {
-  let current: unknown = cause
-  const seen = new Set<unknown>()
-  while (current !== null && current !== undefined && typeof current === "object" && !seen.has(current)) {
-    seen.add(current)
-    const code = (current as { code?: unknown }).code
-    if (code === "23505") return true
-    current = (current as { cause?: unknown }).cause
-  }
-  return false
-}
-
-const mapIdentifierViolation = (
-  error: RepositoryError,
-  identifier: string,
-): Effect.Effect<never, DuplicateFeatureFlagIdentifierError | RepositoryError> =>
-  isUniqueViolation(error.cause)
-    ? Effect.fail(new DuplicateFeatureFlagIdentifierError({ identifier }))
-    : Effect.fail(error)
-
 const toFeatureFlag = (row: typeof featureFlags.$inferSelect): FeatureFlag =>
   createFeatureFlag({
-    id: FeatureFlagId(row.id),
-    identifier: row.identifier,
-    name: row.name,
-    description: row.description,
+    identifier: row.identifier as FeatureFlagId,
     enabledForAll: row.enabledForAll,
-    archivedAt: row.archivedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -57,7 +24,7 @@ const toOrganizationFeatureFlag = (row: typeof organizationFeatureFlags.$inferSe
   createOrganizationFeatureFlag({
     id: OrganizationFeatureFlagId(row.id),
     organizationId: OrganizationId(row.organizationId),
-    featureFlagId: FeatureFlagId(row.featureFlagId),
+    identifier: row.identifier as FeatureFlagId,
     enabledByAdminUserId: UserId(row.enabledByAdminUserId),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -67,30 +34,6 @@ export const FeatureFlagRepositoryLive = Layer.effect(
   FeatureFlagRepository,
   Effect.gen(function* () {
     return {
-      findByIdentifier: (identifier) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const [row] = yield* sqlClient.query((db) =>
-            db
-              .select()
-              .from(featureFlags)
-              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
-              .limit(1),
-          )
-
-          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
-          return toFeatureFlag(row)
-        }),
-
-      list: () =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const rows = yield* sqlClient.query((db) =>
-            db.select().from(featureFlags).where(isNull(featureFlags.archivedAt)).orderBy(asc(featureFlags.identifier)),
-          )
-          return rows.map(toFeatureFlag)
-        }),
-
       listEnabledForOrganization: () =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -101,16 +44,11 @@ export const FeatureFlagRepositoryLive = Layer.effect(
               .leftJoin(
                 organizationFeatureFlags,
                 and(
-                  eq(organizationFeatureFlags.featureFlagId, featureFlags.id),
+                  eq(organizationFeatureFlags.identifier, featureFlags.identifier),
                   eq(organizationFeatureFlags.organizationId, organizationId),
                 ),
               )
-              .where(
-                and(
-                  isNull(featureFlags.archivedAt),
-                  or(eq(featureFlags.enabledForAll, true), sql`${organizationFeatureFlags.id} IS NOT NULL`),
-                ),
-              )
+              .where(or(eq(featureFlags.enabledForAll, true), sql`${organizationFeatureFlags.id} IS NOT NULL`))
               .orderBy(asc(featureFlags.identifier)),
           )
 
@@ -120,75 +58,36 @@ export const FeatureFlagRepositoryLive = Layer.effect(
       isEnabledForOrganization: (identifier) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const [row] = yield* sqlClient.query((db, organizationId) =>
-            db
-              .select({
-                enabledForAll: featureFlags.enabledForAll,
-                organizationFeatureFlagId: organizationFeatureFlags.id,
-              })
-              .from(featureFlags)
-              .leftJoin(
-                organizationFeatureFlags,
-                and(
-                  eq(organizationFeatureFlags.featureFlagId, featureFlags.id),
-                  eq(organizationFeatureFlags.organizationId, organizationId),
-                ),
-              )
-              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
-              .limit(1),
-          )
-
-          if (!row) return false
-          return row.enabledForAll || row.organizationFeatureFlagId !== null
-        }),
-
-      createFeatureFlag: (input) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const featureFlag = createFeatureFlag(input)
-          const [row] = yield* sqlClient
-            .query((db) =>
+          // Two independent lookups: a global row may exist without a per-org
+          // row, and a per-org row may exist without a global row.
+          const [[globalRow], [orgRow]] = yield* Effect.all([
+            sqlClient.query((db) =>
               db
-                .insert(featureFlags)
-                .values({
-                  id: featureFlag.id,
-                  identifier: featureFlag.identifier,
-                  name: featureFlag.name,
-                  description: featureFlag.description,
-                })
-                .returning(),
-            )
-            .pipe(Effect.catchTag("RepositoryError", (error) => mapIdentifierViolation(error, input.identifier)))
+                .select({ enabledForAll: featureFlags.enabledForAll })
+                .from(featureFlags)
+                .where(eq(featureFlags.identifier, identifier))
+                .limit(1),
+            ),
+            sqlClient.query((db, organizationId) =>
+              db
+                .select({ id: organizationFeatureFlags.id })
+                .from(organizationFeatureFlags)
+                .where(
+                  and(
+                    eq(organizationFeatureFlags.organizationId, organizationId),
+                    eq(organizationFeatureFlags.identifier, identifier),
+                  ),
+                )
+                .limit(1),
+            ),
+          ])
 
-          return toFeatureFlag(row)
-        }),
-
-      archiveFeatureFlag: (identifier) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const [row] = yield* sqlClient.query((db) =>
-            db
-              .update(featureFlags)
-              .set({ archivedAt: new Date(), updatedAt: new Date() })
-              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
-              .returning({ id: featureFlags.id }),
-          )
-
-          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
+          return (globalRow?.enabledForAll ?? false) || orgRow !== undefined
         }),
 
       enableForOrganization: (input) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const [featureFlagRow] = yield* sqlClient.query((db) =>
-            db
-              .select()
-              .from(featureFlags)
-              .where(and(eq(featureFlags.identifier, input.identifier), isNull(featureFlags.archivedAt)))
-              .limit(1),
-          )
-          if (!featureFlagRow) return yield* new FeatureFlagNotFoundError({ identifier: input.identifier })
-
           const [existingRow] = yield* sqlClient.query((db, organizationId) =>
             db
               .select()
@@ -196,7 +95,7 @@ export const FeatureFlagRepositoryLive = Layer.effect(
               .where(
                 and(
                   eq(organizationFeatureFlags.organizationId, organizationId),
-                  eq(organizationFeatureFlags.featureFlagId, featureFlagRow.id),
+                  eq(organizationFeatureFlags.identifier, input.identifier),
                 ),
               )
               .limit(1),
@@ -208,7 +107,7 @@ export const FeatureFlagRepositoryLive = Layer.effect(
               .insert(organizationFeatureFlags)
               .values({
                 organizationId,
-                featureFlagId: featureFlagRow.id,
+                identifier: input.identifier,
                 enabledByAdminUserId: input.enabledByAdminUserId,
               })
               .returning(),
@@ -220,22 +119,13 @@ export const FeatureFlagRepositoryLive = Layer.effect(
       disableForOrganization: (identifier) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const [featureFlagRow] = yield* sqlClient.query((db) =>
-            db
-              .select({ id: featureFlags.id })
-              .from(featureFlags)
-              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
-              .limit(1),
-          )
-          if (!featureFlagRow) return
-
           yield* sqlClient.query((db, organizationId) =>
             db
               .delete(organizationFeatureFlags)
               .where(
                 and(
                   eq(organizationFeatureFlags.organizationId, organizationId),
-                  eq(organizationFeatureFlags.featureFlagId, featureFlagRow.id),
+                  eq(organizationFeatureFlags.identifier, identifier),
                 ),
               ),
           )

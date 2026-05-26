@@ -8,7 +8,7 @@ import {
   userIdSchema,
 } from "@domain/shared"
 import { z } from "zod"
-import { type FeatureFlagId, FEATURE_FLAG_IDS } from "../registry.ts"
+import { FEATURE_FLAG_IDS, type FeatureFlagId } from "../registry.ts"
 
 export const featureFlagIdentifierSchema = z.enum(FEATURE_FLAG_IDS as readonly [FeatureFlagId, ...FeatureFlagId[]])
 

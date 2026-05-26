@@ -1,65 +1,30 @@
-import {
-  AdminFeatureFlagRepository,
-  type AdminFeatureFlagSummary,
-  type AdminOrganizationFeatureFlag,
-  type AdminOrganizationFeatureFlags,
-} from "@domain/admin"
-import { createFeatureFlag, DuplicateFeatureFlagIdentifierError, FeatureFlagNotFoundError } from "@domain/feature-flags"
-import {
-  FeatureFlagId,
-  NotFoundError,
-  OrganizationId,
-  type RepositoryError,
-  SqlClient,
-  type SqlClientShape,
-} from "@domain/shared"
-import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm"
+import { AdminFeatureFlagRepository, type AdminFeatureFlagSummary } from "@domain/admin"
+import { FEATURE_FLAG_IDS, FEATURE_FLAGS, type FeatureFlagId } from "@domain/feature-flags"
+import { NotFoundError, OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { and, asc, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { organizations } from "../schema/better-auth.ts"
 import { featureFlags, organizationFeatureFlags } from "../schema/feature-flags.ts"
 
-const isUniqueViolation = (cause: unknown): boolean => {
-  let current: unknown = cause
-  const seen = new Set<unknown>()
-  while (current !== null && current !== undefined && typeof current === "object" && !seen.has(current)) {
-    seen.add(current)
-    const code = (current as { code?: unknown }).code
-    if (code === "23505") return true
-    current = (current as { cause?: unknown }).cause
-  }
-  return false
-}
-
-const mapIdentifierViolation = (
-  error: RepositoryError,
-  identifier: string,
-): Effect.Effect<never, DuplicateFeatureFlagIdentifierError | RepositoryError> =>
-  isUniqueViolation(error.cause)
-    ? Effect.fail(new DuplicateFeatureFlagIdentifierError({ identifier }))
-    : Effect.fail(error)
-
-const toOrganizationFeatureFlag = (row: typeof featureFlags.$inferSelect): AdminOrganizationFeatureFlag => ({
-  id: FeatureFlagId(row.id),
-  identifier: row.identifier,
-  name: row.name ?? null,
-  description: row.description ?? null,
-  enabledForAll: row.enabledForAll,
-  archivedAt: row.archivedAt,
-  createdAt: row.createdAt,
-  updatedAt: row.updatedAt,
-})
-
-const toFeatureFlagSummary = (
-  row: typeof featureFlags.$inferSelect,
+const toSummary = (
+  identifier: FeatureFlagId,
+  enabledForAll: boolean,
   enabledOrganizations: AdminFeatureFlagSummary["enabledOrganizations"],
 ): AdminFeatureFlagSummary => ({
-  ...toOrganizationFeatureFlag(row),
+  identifier,
+  name: FEATURE_FLAGS[identifier].name,
+  description: FEATURE_FLAGS[identifier].description,
+  enabledForAll,
   enabledOrganizations,
 })
 
 /**
  * Live layer for Backoffice feature flag management.
+ *
+ * The catalog comes from the code-side registry; the DB only stores
+ * enablement state. Identifiers present in the DB but missing from the
+ * registry are ignored (orphans from deleted code-side entries).
  *
  * SECURITY: queries intentionally cross organization boundaries and must only
  * be wired behind `adminMiddleware` with `getAdminPostgresClient()`.
@@ -77,111 +42,54 @@ export const AdminFeatureFlagRepositoryLive = Layer.effect(
         if (!row) return yield* new NotFoundError({ entity: "Organization", id: organizationId })
       })
 
-    const listActiveFlags = () =>
-      sqlClient.query((db) =>
-        db.select().from(featureFlags).where(isNull(featureFlags.archivedAt)).orderBy(asc(featureFlags.identifier)),
-      )
-
     return {
       list: () =>
         Effect.gen(function* () {
-          const flagRows = yield* listActiveFlags()
-          if (flagRows.length === 0) return []
+          const flagRows = yield* sqlClient.query((db) =>
+            db.select({ identifier: featureFlags.identifier, enabledForAll: featureFlags.enabledForAll }).from(featureFlags),
+          )
+          const enabledForAllByIdentifier = new Map(flagRows.map((row) => [row.identifier, row.enabledForAll]))
 
           const enabledRows = yield* sqlClient.query((db) =>
             db
               .select({
-                featureFlagId: organizationFeatureFlags.featureFlagId,
+                identifier: organizationFeatureFlags.identifier,
                 organizationId: organizations.id,
                 organizationName: organizations.name,
                 organizationSlug: organizations.slug,
               })
               .from(organizationFeatureFlags)
-              .innerJoin(featureFlags, eq(featureFlags.id, organizationFeatureFlags.featureFlagId))
               .innerJoin(organizations, eq(organizations.id, organizationFeatureFlags.organizationId))
-              .where(
-                and(
-                  inArray(
-                    organizationFeatureFlags.featureFlagId,
-                    flagRows.map((row) => row.id),
-                  ),
-                  isNull(featureFlags.archivedAt),
-                ),
-              )
               .orderBy(organizations.name),
           )
 
-          const enabledByFlagId = new Map<string, AdminFeatureFlagSummary["enabledOrganizations"]>()
+          const enabledByIdentifier = new Map<string, AdminFeatureFlagSummary["enabledOrganizations"]>()
           for (const row of enabledRows) {
-            const enabled = enabledByFlagId.get(row.featureFlagId) ?? []
+            const enabled = enabledByIdentifier.get(row.identifier) ?? []
             enabled.push({
               id: OrganizationId(row.organizationId),
               name: row.organizationName,
               slug: row.organizationSlug,
             })
-            enabledByFlagId.set(row.featureFlagId, enabled)
+            enabledByIdentifier.set(row.identifier, enabled)
           }
 
-          return flagRows.map((row) => toFeatureFlagSummary(row, enabledByFlagId.get(row.id) ?? []))
-        }),
-
-      create: (input) =>
-        Effect.gen(function* () {
-          const featureFlag = createFeatureFlag(input)
-          const [row] = yield* sqlClient
-            .query((db) =>
-              db
-                .insert(featureFlags)
-                .values({
-                  id: featureFlag.id,
-                  identifier: featureFlag.identifier,
-                  name: featureFlag.name,
-                  description: featureFlag.description,
-                  archivedAt: null,
-                })
-                .returning(),
-            )
-            .pipe(Effect.catchTag("RepositoryError", (error) => mapIdentifierViolation(error, input.identifier)))
-
-          return toFeatureFlagSummary(row, [])
-        }),
-
-      archive: (identifier) =>
-        Effect.gen(function* () {
-          const [row] = yield* sqlClient.query((db) =>
-            db
-              .update(featureFlags)
-              .set({ archivedAt: new Date(), updatedAt: new Date() })
-              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
-              .returning({ id: featureFlags.id }),
+          return FEATURE_FLAG_IDS.map((identifier) =>
+            toSummary(identifier, enabledForAllByIdentifier.get(identifier) ?? false, enabledByIdentifier.get(identifier) ?? []),
           )
-          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
-        }),
-
-      listArchived: () =>
-        Effect.gen(function* () {
-          const flagRows = yield* sqlClient.query((db) =>
-            db
-              .select()
-              .from(featureFlags)
-              .where(isNotNull(featureFlags.archivedAt))
-              .orderBy(desc(featureFlags.archivedAt)),
-          )
-          return flagRows.map((row) => toFeatureFlagSummary(row, []))
         }),
 
       findEligibilityForFlag: (identifier) =>
         Effect.gen(function* () {
           const [flagRow] = yield* sqlClient.query((db) =>
             db
-              .select({ id: featureFlags.id, enabledForAll: featureFlags.enabledForAll })
+              .select({ enabledForAll: featureFlags.enabledForAll })
               .from(featureFlags)
-              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
+              .where(eq(featureFlags.identifier, identifier))
               .limit(1),
           )
-          if (!flagRow) return yield* new FeatureFlagNotFoundError({ identifier })
 
-          if (flagRow.enabledForAll) {
+          if (flagRow?.enabledForAll) {
             // The flag is on for every org — no need to enumerate.
             return { enabledForAll: true, organizationIds: [] }
           }
@@ -190,7 +98,7 @@ export const AdminFeatureFlagRepositoryLive = Layer.effect(
             db
               .select({ organizationId: organizationFeatureFlags.organizationId })
               .from(organizationFeatureFlags)
-              .where(eq(organizationFeatureFlags.featureFlagId, flagRow.id)),
+              .where(eq(organizationFeatureFlags.identifier, identifier)),
           )
           return {
             enabledForAll: false,
@@ -198,140 +106,92 @@ export const AdminFeatureFlagRepositoryLive = Layer.effect(
           }
         }),
 
-      update: (input) =>
-        Effect.gen(function* () {
-          const update: Partial<typeof featureFlags.$inferInsert> = { updatedAt: new Date() }
-          if (input.name !== undefined) update.name = input.name
-          if (input.description !== undefined) update.description = input.description
-
-          const [row] = yield* sqlClient.query((db) =>
-            db.update(featureFlags).set(update).where(eq(featureFlags.identifier, input.identifier)).returning(),
-          )
-          if (!row) return yield* new FeatureFlagNotFoundError({ identifier: input.identifier })
-          return toFeatureFlagSummary(row, [])
-        }),
-
-      unarchive: (identifier) =>
-        Effect.gen(function* () {
-          const [row] = yield* sqlClient.query((db) =>
-            db
-              .update(featureFlags)
-              .set({ archivedAt: null, updatedAt: new Date() })
-              .where(and(eq(featureFlags.identifier, identifier), isNotNull(featureFlags.archivedAt)))
-              .returning({ id: featureFlags.id }),
-          )
-          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
-        }),
-
-      delete: (identifier) =>
-        Effect.gen(function* () {
-          const [flagRow] = yield* sqlClient.query((db) =>
-            db.select({ id: featureFlags.id }).from(featureFlags).where(eq(featureFlags.identifier, identifier)),
-          )
-          if (!flagRow) return
-
-          yield* sqlClient.query((db) =>
-            db.delete(organizationFeatureFlags).where(eq(organizationFeatureFlags.featureFlagId, flagRow.id)),
-          )
-          yield* sqlClient.query((db) => db.delete(featureFlags).where(eq(featureFlags.id, flagRow.id)))
-        }),
-
       enableForAll: (identifier) =>
         Effect.gen(function* () {
-          const [row] = yield* sqlClient.query((db) =>
+          // Upsert: the catalog row may not exist yet.
+          yield* sqlClient.query((db) =>
             db
-              .update(featureFlags)
-              .set({ enabledForAll: true, updatedAt: new Date() })
-              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
-              .returning({ id: featureFlags.id }),
+              .insert(featureFlags)
+              .values({ identifier, enabledForAll: true })
+              .onConflictDoUpdate({
+                target: featureFlags.identifier,
+                set: { enabledForAll: true, updatedAt: new Date() },
+              }),
           )
-          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
         }),
 
       disableForAll: (identifier) =>
         Effect.gen(function* () {
-          const [row] = yield* sqlClient.query((db) =>
+          yield* sqlClient.query((db) =>
             db
               .update(featureFlags)
               .set({ enabledForAll: false, updatedAt: new Date() })
-              .where(and(eq(featureFlags.identifier, identifier), isNull(featureFlags.archivedAt)))
-              .returning({ id: featureFlags.id }),
+              .where(eq(featureFlags.identifier, identifier)),
           )
-          if (!row) return yield* new FeatureFlagNotFoundError({ identifier })
         }),
 
       listForOrganization: (organizationId) =>
         Effect.gen(function* () {
           yield* ensureOrganizationExists(organizationId)
 
-          const flagRows = yield* listActiveFlags()
-          const enabledRows = yield* sqlClient.query((db) =>
-            db
-              .select({ featureFlag: featureFlags })
-              .from(organizationFeatureFlags)
-              .innerJoin(featureFlags, eq(featureFlags.id, organizationFeatureFlags.featureFlagId))
-              .where(and(eq(organizationFeatureFlags.organizationId, organizationId), isNull(featureFlags.archivedAt)))
-              .orderBy(asc(featureFlags.identifier)),
+          const flagRows = yield* sqlClient.query((db) =>
+            db.select({ identifier: featureFlags.identifier, enabledForAll: featureFlags.enabledForAll }).from(featureFlags),
           )
+          const enabledForAllByIdentifier = new Map(flagRows.map((row) => [row.identifier, row.enabledForAll]))
 
-          const enabledIds = new Set(enabledRows.map((row) => row.featureFlag.id))
-          const result: AdminOrganizationFeatureFlags = {
-            enabled: enabledRows.map((row) => toOrganizationFeatureFlag(row.featureFlag)),
-            available: flagRows.filter((row) => !enabledIds.has(row.id)).map((row) => toOrganizationFeatureFlag(row)),
+          const orgRows = yield* sqlClient.query((db) =>
+            db
+              .select({ identifier: organizationFeatureFlags.identifier })
+              .from(organizationFeatureFlags)
+              .where(eq(organizationFeatureFlags.organizationId, organizationId))
+              .orderBy(asc(organizationFeatureFlags.identifier)),
+          )
+          const enabledOrgIdentifiers = new Set(orgRows.map((row) => row.identifier))
+
+          const enabled: AdminFeatureFlagSummary[] = []
+          const available: AdminFeatureFlagSummary[] = []
+          for (const identifier of FEATURE_FLAG_IDS) {
+            const enabledForAll = enabledForAllByIdentifier.get(identifier) ?? false
+            const summary = toSummary(identifier, enabledForAll, [])
+            if (enabledForAll || enabledOrgIdentifiers.has(identifier)) {
+              enabled.push(summary)
+            } else {
+              available.push(summary)
+            }
           }
-          return result
+          return {
+            enabled: enabled.map(({ enabledOrganizations: _enabled, ...rest }) => rest),
+            available: available.map(({ enabledOrganizations: _enabled, ...rest }) => rest),
+          }
         }),
 
       enableForOrganization: (input) =>
         Effect.gen(function* () {
           yield* ensureOrganizationExists(input.organizationId)
 
-          const [featureFlagRow] = yield* sqlClient.query((db) =>
-            db
-              .select({ id: featureFlags.id })
-              .from(featureFlags)
-              .where(and(eq(featureFlags.identifier, input.identifier), isNull(featureFlags.archivedAt)))
-              .limit(1),
-          )
-          if (!featureFlagRow) return yield* new FeatureFlagNotFoundError({ identifier: input.identifier })
-
-          const [existingRow] = yield* sqlClient.query((db) =>
-            db
-              .select({ id: organizationFeatureFlags.id })
-              .from(organizationFeatureFlags)
-              .where(
-                and(
-                  eq(organizationFeatureFlags.organizationId, input.organizationId),
-                  eq(organizationFeatureFlags.featureFlagId, featureFlagRow.id),
-                ),
-              )
-              .limit(1),
-          )
-          if (existingRow) return
-
           yield* sqlClient.query((db) =>
-            db.insert(organizationFeatureFlags).values({
-              organizationId: input.organizationId,
-              featureFlagId: featureFlagRow.id,
-              enabledByAdminUserId: input.enabledByAdminUserId,
-            }),
+            db
+              .insert(organizationFeatureFlags)
+              .values({
+                organizationId: input.organizationId,
+                identifier: input.identifier,
+                enabledByAdminUserId: input.enabledByAdminUserId,
+              })
+              .onConflictDoNothing({
+                target: [organizationFeatureFlags.organizationId, organizationFeatureFlags.identifier],
+              }),
           )
         }),
 
       disableForOrganization: (input) =>
         Effect.gen(function* () {
-          const [featureFlagRow] = yield* sqlClient.query((db) =>
-            db.select({ id: featureFlags.id }).from(featureFlags).where(eq(featureFlags.identifier, input.identifier)),
-          )
-          if (!featureFlagRow) return
-
           yield* sqlClient.query((db) =>
             db
               .delete(organizationFeatureFlags)
               .where(
                 and(
                   eq(organizationFeatureFlags.organizationId, input.organizationId),
-                  eq(organizationFeatureFlags.featureFlagId, featureFlagRow.id),
+                  eq(organizationFeatureFlags.identifier, input.identifier),
                 ),
               ),
           )
