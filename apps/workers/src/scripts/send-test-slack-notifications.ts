@@ -212,7 +212,6 @@ async function main(): Promise<void> {
   } else {
     console.log(`\nPublished ${published} job(s). The notification-slack worker should post to Slack within a second.`)
   }
-
 }
 
 main().catch((err) => {
