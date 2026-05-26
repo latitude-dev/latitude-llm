@@ -6,7 +6,7 @@ Per-organization runtime switches that gate code paths. The **catalog** lives in
 
 | Piece | Where | Notes |
 | --- | --- | --- |
-| **Registry** | `packages/domain/feature-flags/src/registry.ts` | `FEATURE_FLAGS` map of `identifier → { name, description }`. `FeatureFlagId = keyof typeof FEATURE_FLAGS`. |
+| **Registry** | `packages/domain/feature-flags/src/registry.ts` | `FEATURE_FLAGS` map of `identifier → { emoji, name, description }`. `FeatureFlagId = keyof typeof FEATURE_FLAGS`. |
 | **Identifier** | `kebab-case` string, e.g. `"slack"` | Used at call sites and as the DB key. |
 | **DB rows** | `feature_flags` + `organization_feature_flags` | Both keyed by `identifier`. `feature_flags` stores `enabled_for_all`; `organization_feature_flags` records per-org opt-ins. Missing rows mean disabled. |
 
@@ -22,13 +22,14 @@ The DB never needs to know about a flag in advance — it only gains rows when s
 export const FEATURE_FLAGS = {
   // …existing flags…
   "new-dashboard": {
+    emoji: "📊",
     name: "New dashboard",
     description: "Enables the rebuilt dashboard with the v2 layout.",
   },
-} as const satisfies Record<string, { readonly name: string; readonly description: string }>
+} as const satisfies Record<string, { readonly emoji: string; readonly name: string; readonly description: string }>
 ```
 
-The `name` shows in the backoffice list, the `description` appears as the row subtitle. Both are required by the `satisfies` clause.
+`emoji` renders as the row's leading icon in the backoffice (both the flag list and the per-org section), `name` is the row title, and `description` is the subtitle. All three are required by the `satisfies` clause.
 
 ### 2. Gate server behaviour
 
