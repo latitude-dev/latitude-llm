@@ -1,6 +1,6 @@
-import { type StackChoice, stackChoiceToOnboardingType } from "../constants.ts"
 import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
+import { type StackChoice, stackChoiceToOnboardingType } from "../constants.ts"
 import type { MarketingContactsPort } from "../ports/marketing-contacts.ts"
 
 export interface UpdateContactOnboardingInput {

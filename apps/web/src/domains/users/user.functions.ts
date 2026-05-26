@@ -1,6 +1,6 @@
 import { OutboxEventWriter } from "@domain/events"
-import { ProjectRepository } from "@domain/projects"
 import { stackChoiceSchema, stackChoiceToOnboardingType } from "@domain/marketing"
+import { ProjectRepository } from "@domain/projects"
 import { ProjectId, SqlClient } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { OutboxEventWriterLive, ProjectRepositoryLive, UserRepositoryLive, withPostgres } from "@platform/db-postgres"

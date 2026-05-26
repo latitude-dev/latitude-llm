@@ -5,8 +5,8 @@ export {
   MARKETING_USER_GROUP_PROD_TRACES,
   type MarketingUserGroup,
   type OnboardingType,
-  type StackChoice,
   onboardingTypeSchema,
+  type StackChoice,
   stackChoiceSchema,
   stackChoiceToOnboardingType,
 } from "./constants.ts"
