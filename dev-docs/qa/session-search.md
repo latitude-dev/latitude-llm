@@ -69,12 +69,13 @@ expected behavior — tick the box once you've verified it.
 
 | # | Query (typed into the search bar) | Mode | Expected `matching_trace_count` per session (sorted) | Why |
 |---|---|---|---|---|
-| 1 | `"refund"` | literal | `qa-refund-4-1` = **4** (all traces), `qa-deep-20-1` = **16** (first mention at trace 5 → 5..20), `qa-mixed-6-1` = **4** (first mention at trace 3 → 3..6). Total **24**. | `bestScore = 0.0` for every match (no semantic component), so secondary ordering collapses to `session_id DESC`. `qa-code-3-1` and `qa-cancellation-5-1` are absent. |
+| 1 | `"refund"` | literal | `qa-refund-4-1` = **4** (all traces), `qa-deep-20-1` = **16** (first mention at trace 5 → 5..20), `qa-mixed-6-1` = **4** (first mention at trace 3 → 3..6). Total **24**. | `bestScore = 0.0` for every match (no semantic component), so every match shares the same relevance bucket. Secondary ordering is `last_activity_at DESC` (see Query 7 / spec [7-freshness-weighted-sort.md](../../specs/session-problems/7-freshness-weighted-sort.md)). `qa-code-3-1` and `qa-cancellation-5-1` are absent. |
 | 2 | `` `dispute team` `` | token phrase | `qa-refund-4-1` = **2** (first at trace 3 → 3..4), `qa-deep-20-1` = **9** (first at trace 12 → 12..20). Total **11**. | Adjacent tokens "dispute team" first appear in `qa-refund-4-1`'s trace 3 reply and `qa-deep-20-1`'s trace 12. Accumulated history carries the phrase forward into every later trace in each session. |
 | 3 | `customer wanted their money back` | semantic — **pure** | `qa-cancellation-5-1` first (engineered pure-semantic target — none of "refund", "money", "back" appear in any of its turns; cosine alone has to surface it). `qa-refund-4-1`, `qa-mixed-6-1`, and `qa-deep-20-1` also appear since they're refund-themed. Specific per-session counts depend on which chunks survive the semantic-scan cap; don't pin exact numbers. | Cosine ranks across all chunk embeddings; no literal filter narrows the candidate set. **This is the only query in the suite that is genuinely pure-semantic** — the others either are literal/hybrid or rely on accidental token overlap. |
 | 4 | `"refund" user complaint` | hybrid | Same per-session counts as query 1 (literal filter is the same), but ranked by the semantic prompt within each session: `qa-refund-4-1` likely first, then `qa-deep-20-1`, then `qa-mixed-6-1`. Total still **24**. | Literal `"refund"` filters the candidate set; the semantic prompt only reorders within. `qa-cancellation-5-1` drops out — no literal "refund" in any of its traces. |
 | 5 | `pizza dough` (literally appears in `qa-deep-20-1` trace 14) | semantic (parser-wise) — but with literal overlap, so behaves like a literal hit | `qa-deep-20-1` only — first occurrence at trace 14 → **7** matches via accumulated history (14..20). | Parser-wise this is a semantic query (no quotes/backticks), but a trace containing the exact words has cosine ≈ 1.0, so semantic search behaves indistinguishably from literal here. Useful sanity check that the embedding worker actually indexed the deep fixture. |
 | 6 | Empty search bar | n/a | Plain session listing, no "Matching traces" column, ordered by recency. | Non-search mode falls through to the regular sessions list — same as the project page's Sessions tab. |
+| 7 | `"refund"` (same as Query 1, but verifying sort order) | literal | The three matching sessions (`qa-refund-4-1`, `qa-deep-20-1`, `qa-mixed-6-1`) appear in **`last_activity_at DESC`** order — whichever session finished ingestion last appears first. Confirm by clicking each result; the "Last activity" timestamp in the panel header should be monotonically decreasing from top to bottom. | Spec [7-freshness-weighted-sort.md](../../specs/session-problems/7-freshness-weighted-sort.md): when every result shares the same relevance bucket (here, all `0.0` because the query is phrase-only), the sort tie-breaker is the session's most-recent activity — **not** `session_id DESC`. Pre-spec, the order would have been `qa-refund-4-1` → `qa-mixed-6-1` → `qa-deep-20-1` regardless of timing. |
 
 - [ ] Query 1 — literal (`"refund"`)
 - [ ] Query 2 — token phrase (`` `dispute team` ``)
@@ -82,6 +83,7 @@ expected behavior — tick the box once you've verified it.
 - [ ] Query 4 — hybrid (`"refund" user complaint`)
 - [ ] Query 5 — deep-only word (semantic with literal overlap)
 - [ ] Query 6 — empty bar
+- [ ] Query 7 — freshness-weighted ordering within a relevance bucket
 
 ## Behavioral checklist
 
