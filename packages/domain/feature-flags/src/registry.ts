@@ -17,7 +17,7 @@ export const FEATURE_FLAGS = {
     description: "Gates the annual Claude Code Wrapped summary fan-out and rendering.",
   },
   "email-notifications": {
-    emoji: "📧",
+    emoji: "✉️",
     name: "Email notifications",
     description: "Enables email delivery for incident notifications and the related user preferences UI.",
   },
@@ -37,7 +37,7 @@ export const FEATURE_FLAGS = {
     description: "Routes users to the new session-rollup search at /session-search instead of the legacy /search.",
   },
   "timeline-incidents": {
-    emoji: "🚨",
+    emoji: "📊",
     name: "Timeline incidents overlay",
     description: "Renders the incident overlay on trace and issue timeline histograms.",
   },
