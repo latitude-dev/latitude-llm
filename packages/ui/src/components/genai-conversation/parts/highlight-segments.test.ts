@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { HighlightRange } from "../text-selection.tsx"
-import { highlightAttributes, segmentForHighlights } from "./highlight-segments.ts"
+import { highlightAttributes, isLexicalSearchHighlight, segmentForHighlights } from "./highlight-segments.ts"
 
 // ──────────────────────────────────────────────────────────────────────────────
 // segmentForHighlights
@@ -150,5 +150,38 @@ describe("highlightAttributes", () => {
     const attrs = highlightAttributes(h)
     expect(attrs.className).not.toContain("cursor-pointer")
     expect(attrs["data-annotation-id"]).toBeUndefined()
+  })
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
+// isLexicalSearchHighlight — gates the "Search result inside" tool decoration
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe("isLexicalSearchHighlight", () => {
+  const range = (type: HighlightRange["type"]): HighlightRange => ({
+    messageIndex: 0,
+    partIndex: 0,
+    startOffset: 0,
+    endOffset: 0,
+    type,
+  })
+
+  it("is true for literal, token, and container hits", () => {
+    expect(isLexicalSearchHighlight(range("search-literal"))).toBe(true)
+    expect(isLexicalSearchHighlight(range("search-token"))).toBe(true)
+    expect(isLexicalSearchHighlight(range("search-container"))).toBe(true)
+  })
+
+  it("is FALSE for search-semantic-region", () => {
+    // Regression: a tool part that merely falls inside a semantic region picks
+    // up a search-semantic-region highlight (emitted per-message at partIndex 0).
+    // It must NOT light up the lexical "Search result inside" ring — otherwise a
+    // pure-semantic query wrongly implies a keyword match inside the tool block.
+    expect(isLexicalSearchHighlight(range("search-semantic-region"))).toBe(false)
+  })
+
+  it("is false for non-search highlight types", () => {
+    expect(isLexicalSearchHighlight(range("annotation"))).toBe(false)
+    expect(isLexicalSearchHighlight(range("selection"))).toBe(false)
   })
 })

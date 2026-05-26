@@ -214,9 +214,9 @@ function NavigatorButtons({
         asChild
         trigger={
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full shadow-sm"
+            className="h-8 w-8 rounded-full border border-input bg-background shadow-sm hover:bg-secondary"
             disabled={!canScrollUp}
             onClick={onPrevious}
           >
@@ -232,9 +232,9 @@ function NavigatorButtons({
         asChild
         trigger={
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full shadow-sm"
+            className="h-8 w-8 rounded-full border border-input bg-background shadow-sm hover:bg-secondary"
             disabled={!canScrollDown}
             onClick={onNext}
           >

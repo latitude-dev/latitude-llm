@@ -363,6 +363,41 @@ describe("computeTraceSearchHighlights", () => {
       expect(literalHighlights[0].messageIndex).toBe(2)
     })
 
+    it("never lexically highlights bare-text words, even when they appear verbatim in text and tool responses", () => {
+      // Pure-semantic query ("customer complaint" — no "…" / `…` syntax). Even
+      // though those exact words appear in the message text AND inside a
+      // tool_call_response, the drawer must surface ONLY the semantic-region
+      // frame: no inline literal/token chips, no tool-response container marker.
+      // Lexical highlighting is gated entirely on literalPhrases / tokenPhrases,
+      // which a bare-text query never populates.
+      const messages = [
+        textMessage("user", "I have a customer complaint about my refund"),
+        {
+          role: "assistant",
+          parts: [
+            { type: "text", content: "Looking into the customer complaint now" },
+            { type: "tool_call", id: "tc-1", name: "lookup", arguments: {} },
+          ],
+        } as GenAIMessage,
+        {
+          role: "tool",
+          parts: [{ type: "tool_call_response", id: "tc-1", response: { note: "customer complaint logged" } }],
+        } as GenAIMessage,
+      ]
+      const result = computeTraceSearchHighlights({
+        messages,
+        parsedQuery: parseSearchQuery("customer complaint"),
+        semanticMatch: { chunkIndex: 0, firstMessageIndex: 0, lastMessageIndex: 2, relevanceScore: 0.8 },
+      })
+
+      expect(result.highlights.filter((h) => h.type === "search-literal")).toHaveLength(0)
+      expect(result.highlights.filter((h) => h.type === "search-token")).toHaveLength(0)
+      expect(result.highlights.filter((h) => h.type === "search-container")).toHaveLength(0)
+      expect(result.highlights.every((h) => h.type === "search-semantic-region")).toBe(true)
+      // One block-level highlight per non-system message in range [0, 2].
+      expect(result.highlights).toHaveLength(3)
+    })
+
     it("ignores semanticMatch when a phrase match-nothing makes the whole query empty", () => {
       // `---` tokenizes to []  ⇒ whole query is zero rows ⇒ no semantic-region
       // either, because the trace itself wouldn't appear in search results.

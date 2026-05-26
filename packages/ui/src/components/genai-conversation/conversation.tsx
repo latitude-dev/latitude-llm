@@ -1,7 +1,9 @@
-import { cn, Text } from "@repo/ui"
+import { cn, Icon, Text } from "@repo/ui"
+import { InfoIcon } from "lucide-react"
 import { type ReactNode, type Ref, type RefObject, useCallback, useMemo, useRef } from "react"
 import type { GenAIMessage } from "rosetta-ai"
 import { ScrollNavigator, type ScrollNavigatorHandle } from "../scroll-navigator/scroll-navigator.tsx"
+import { Tooltip } from "../tooltip/tooltip.tsx"
 import { Message, type ToolCallActions } from "./message.tsx"
 import type { ToolCallResult } from "./part.tsx"
 import { getKnownField } from "./parts/helpers.tsx"
@@ -13,6 +15,20 @@ import {
   type TextSelectionAnchor,
   TextSelectionProvider,
 } from "./text-selection.tsx"
+
+function SemanticRegionFrame({ children }: { readonly children: ReactNode }) {
+  return (
+    <div className="relative flex min-w-0 flex-col gap-6 rounded-lg bg-primary/3 px-4 py-6 ring-1 ring-primary/30 dark:bg-primary/6">
+      <div className="absolute -top-3 right-3 z-10 inline-flex h-6 items-center gap-1.5 rounded bg-primary px-2 text-xs font-medium text-primary-foreground">
+        <span className="leading-none">Related to your search</span>
+        <Tooltip trigger={<Icon icon={InfoIcon} size="sm" aria-label="Explain related search match" />}>
+          AI flagged these messages as related to your search by meaning, not just exact words.
+        </Tooltip>
+      </div>
+      {children}
+    </div>
+  )
+}
 
 interface ToolResponsePart {
   readonly type: "tool_call_response"
@@ -179,6 +195,37 @@ export function Conversation({
     return { resultMap, visibleMessages }
   }, [messages])
 
+  const semanticRegionMessageIndices = useMemo(() => {
+    const set = new Set<number>()
+    if (!highlightRanges) return set
+    for (const h of highlightRanges) {
+      if (h.type === "search-semantic-region") set.add(h.messageIndex)
+    }
+    return set
+  }, [highlightRanges])
+
+  // Group adjacent messages by whether they sit inside a semantic region.
+  // Each "semantic" group renders inside a single SemanticRegionFrame; "plain"
+  // groups render their messages as direct flex children. `flatIndex` is the
+  // per-message position in `visibleMessages` and stays stable so navItemRefs
+  // and ScrollNavigator behavior are unchanged.
+  const messageGroups = useMemo(() => {
+    type Item = { message: GenAIMessage; index: number; flatIndex: number }
+    type Group = { kind: "plain" | "semantic"; items: Item[] }
+    const groups: Group[] = []
+    visibleMessages.forEach((m, flatIndex) => {
+      const kind: "plain" | "semantic" = semanticRegionMessageIndices.has(m.index) ? "semantic" : "plain"
+      const item = { ...m, flatIndex }
+      const last = groups[groups.length - 1]
+      if (last && last.kind === kind) {
+        last.items.push(item)
+      } else {
+        groups.push({ kind, items: [item] })
+      }
+    })
+    return groups
+  }, [visibleMessages, semanticRegionMessageIndices])
+
   navItemRefs.current.length = visibleMessages.length
 
   if (visibleMessages.length === 0) {
@@ -200,50 +247,58 @@ export function Conversation({
         [SELECTION_HIGHLIGHT_CLASSES]: enableTextSelection,
       })}
     >
-      {visibleMessages.map(({ message, index }, i) => {
-        const onNavigate = messageActions?.get(index)
-        const isAssistant = message.role === "assistant"
-        const isUser = message.role === "user"
-        const annotationSlot = messageAnnotationSlot?.(index, message.role)
+      {messageGroups.flatMap((group, groupIdx) => {
+        const rendered = group.items.map(({ message, index, flatIndex }) => {
+          const onNavigate = messageActions?.get(index)
+          const isAssistant = message.role === "assistant"
+          const isUser = message.role === "user"
+          const annotationSlot = messageAnnotationSlot?.(index, message.role)
 
-        return (
-          <div
-            key={index}
-            ref={(el) => {
-              navItemRefs.current[i] = el
-            }}
-            data-message-index={index}
-            className={cn("group group/message relative min-w-0 rounded-lg pl-4 pr-4", {
-              "pl-10 py-2 transition-colors hover:bg-muted/50": isAssistant && messageActions,
-            })}
-          >
-            {isUser ? (
-              <div className="flex min-w-0 flex-col items-end">
-                <div className="flex min-w-0 max-w-[85%] flex-col items-start">
+          return (
+            <div
+              key={index}
+              ref={(el) => {
+                navItemRefs.current[flatIndex] = el
+              }}
+              data-message-index={index}
+              className={cn("group group/message relative min-w-0 rounded-lg pl-4 pr-4", {
+                "pl-10 py-2 transition-colors hover:bg-muted/50": isAssistant && messageActions,
+              })}
+            >
+              {isUser ? (
+                <div className="flex min-w-0 flex-col items-end">
+                  <div className="flex min-w-0 max-w-[85%] flex-col items-start">
+                    <Message
+                      message={message}
+                      messageIndex={index}
+                      alignment="left"
+                      {...(toolCallActions ? { toolCallActions } : {})}
+                    />
+                    {annotationSlot && <div className="mt-3 flex w-full justify-end">{annotationSlot}</div>}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex min-w-0 w-full flex-col items-start">
                   <Message
                     message={message}
                     messageIndex={index}
                     alignment="left"
+                    toolResults={message.role === "assistant" ? resultMap : undefined}
+                    {...(onNavigate ? { onNavigate } : {})}
                     {...(toolCallActions ? { toolCallActions } : {})}
                   />
-                  {annotationSlot && <div className="mt-3 flex w-full justify-end">{annotationSlot}</div>}
+                  {annotationSlot && <div className="mt-3">{annotationSlot}</div>}
                 </div>
-              </div>
-            ) : (
-              <div className="flex min-w-0 w-full flex-col items-start">
-                <Message
-                  message={message}
-                  messageIndex={index}
-                  alignment="left"
-                  toolResults={message.role === "assistant" ? resultMap : undefined}
-                  {...(onNavigate ? { onNavigate } : {})}
-                  {...(toolCallActions ? { toolCallActions } : {})}
-                />
-                {annotationSlot && <div className="mt-3">{annotationSlot}</div>}
-              </div>
-            )}
-          </div>
-        )
+              )}
+            </div>
+          )
+        })
+
+        if (group.kind === "semantic") {
+          const firstIndex = group.items[0]?.index ?? groupIdx
+          return [<SemanticRegionFrame key={`semantic-${firstIndex}`}>{rendered}</SemanticRegionFrame>]
+        }
+        return rendered
       })}
 
       {enableNavigator && !navItemRefsRef && scrollContainerRef && (

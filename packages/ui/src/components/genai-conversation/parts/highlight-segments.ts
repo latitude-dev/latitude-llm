@@ -12,6 +12,20 @@ function isSearchHighlight(h: HighlightRange): boolean {
   return h.type === "search-literal" || h.type === "search-token" || h.type === "search-semantic-region"
 }
 
+/**
+ * A LEXICAL search hit — literal / token / container — i.e. a `"…"` or `` `…` ``
+ * phrase matched. Drives the "Search result inside" tool-block decoration.
+ *
+ * `"search-semantic-region"` is intentionally excluded: semantic coverage is
+ * shown by the SemanticRegionFrame around the whole matched range, so a part
+ * that merely falls inside that range must NOT be flagged as a keyword hit.
+ * Without this exclusion, a pure-semantic query lights up every tool block in
+ * the region with a misleading "Search result inside" ring.
+ */
+export function isLexicalSearchHighlight(h: HighlightRange): boolean {
+  return h.type === "search-literal" || h.type === "search-token" || h.type === "search-container"
+}
+
 interface HighlightAttributes {
   className?: string
   "data-selected-text"?: true

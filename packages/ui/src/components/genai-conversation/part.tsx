@@ -7,6 +7,7 @@ import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { CollapsibleBlock } from "./parts/collapsible-block.tsx"
 import { formatJson, getKnownField, MediaFallback, renderMediaByModality } from "./parts/helpers.tsx"
+import { isLexicalSearchHighlight } from "./parts/highlight-segments.ts"
 import { MarkdownContent } from "./parts/lazy-markdown-content.tsx"
 import { ToolCallBlock } from "./parts/tool-call-block.tsx"
 import type {
@@ -19,31 +20,20 @@ import type {
   ToolCallResult,
   UriPart,
 } from "./parts/types.ts"
-import { type HighlightRange, TextSelectionContext } from "./text-selection.tsx"
+import { TextSelectionContext } from "./text-selection.tsx"
 
 export { ReasoningGroup } from "./parts/reasoning-group.tsx"
 export type { ToolCallResult } from "./parts/types.ts"
 
-const SEARCH_HIGHLIGHT_TYPES = new Set<HighlightRange["type"]>([
-  "search-literal",
-  "search-token",
-  "search-semantic-region",
-  "search-container",
-])
-
-function hasAnySearchHit(highlights: readonly HighlightRange[]): boolean {
-  return highlights.some((h) => SEARCH_HIGHLIGHT_TYPES.has(h.type))
-}
-
 // Blue ring + ::before "Search result inside" label for parts whose
-// rendered shape can't carry inline chips (tool_call_response). w-fit so
-// the ring hugs the child instead of the full message column.
+// rendered shape can't carry inline chips (tool_call_response). Spans the
+// full message column so decorated and undecorated tool blocks line up.
 function SearchHitDecoration({ hasHit, children }: { readonly hasHit: boolean; readonly children: ReactNode }) {
   if (!hasHit) return <>{children}</>
   return (
     <div
       className={cn(
-        "relative w-fit max-w-full rounded-lg ring-2 ring-primary",
+        "relative w-full rounded-lg ring-2 ring-primary",
         "before:absolute before:-top-2 before:right-2 before:z-10",
         "before:content-['Search_result_inside']",
         "before:bg-primary before:text-primary-foreground",
@@ -73,7 +63,15 @@ export function Part({
     selectionCtx && messageIndex != null && partIndex != null
       ? selectionCtx.getHighlightsForBlock(messageIndex, partIndex)
       : []
-  const partHasSearchHit = hasAnySearchHit(partHighlights)
+  const partHasLexicalHit = partHighlights.some(isLexicalSearchHighlight)
+  // Only the part containing the first search match opens automatically.
+  // Other matched parts stay collapsed; their SearchHitDecoration still
+  // signals the hit so the user can choose which to expand.
+  const isFirstMatchPart =
+    messageIndex != null &&
+    partIndex != null &&
+    selectionCtx?.firstMatchHint?.messageIndex === messageIndex &&
+    selectionCtx.firstMatchHint.partIndex === partIndex
 
   switch (part.type) {
     case "text": {
@@ -152,13 +150,13 @@ export function Part({
       // tool_call_response is absorbed into this block (see conversation.tsx
       // `resultMap`); the container marker is anchored here so the decoration
       // lands on the part the user actually sees. `key` flip re-evaluates
-      // `defaultOpen` when hit state changes between searches.
+      // `defaultOpen` when first-match status changes between searches.
       return (
-        <SearchHitDecoration hasHit={partHasSearchHit}>
+        <SearchHitDecoration hasHit={partHasLexicalHit}>
           <ToolCallBlock
-            key={partHasSearchHit ? "search-hit" : "no-hit"}
+            key={isFirstMatchPart ? "first-match" : "default"}
             call={p}
-            defaultOpen={partHasSearchHit}
+            defaultOpen={isFirstMatchPart}
             {...(toolResult ? { result: toolResult } : {})}
             {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
           />
@@ -179,14 +177,14 @@ export function Part({
       const responseContent = formatJson(response)
 
       return (
-        <SearchHitDecoration hasHit={partHasSearchHit}>
+        <SearchHitDecoration hasHit={partHasLexicalHit}>
           <CollapsibleBlock
-            key={partHasSearchHit ? "search-hit" : "no-hit"}
+            key={isFirstMatchPart ? "first-match" : "default"}
             icon={<TerminalIcon className="w-3.5 h-3.5" />}
             label={<Text.Mono size="h6">{toolName ?? "Tool Result"}</Text.Mono>}
             variant={isError ? "destructive" : "default"}
             statusIcon={statusIcon}
-            defaultOpen={partHasSearchHit}
+            defaultOpen={isFirstMatchPart}
           >
             <div className="relative">
               <pre
