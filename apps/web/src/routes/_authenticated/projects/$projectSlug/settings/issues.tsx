@@ -13,8 +13,6 @@ import { createFormSubmitHandler } from "../../../../../lib/form-server-action.t
 import { useRouteProject } from "../-route-data.ts"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
-const NOTIFICATIONS_FEATURE_FLAG = "notifications"
-
 interface AlertNotificationToggleConfig {
   readonly kind: AlertIncidentKind
   readonly label: string
@@ -53,8 +51,8 @@ function ProjectIssuesSettingsPage() {
   const [savingAlertKind, setSavingAlertKind] = useState<AlertIncidentKind | null>(null)
 
   const { data: notificationsEnabled = false } = useQuery({
-    queryKey: ["feature-flag", NOTIFICATIONS_FEATURE_FLAG],
-    queryFn: () => hasFeatureFlag({ data: { identifier: NOTIFICATIONS_FEATURE_FLAG } }),
+    queryKey: ["feature-flag", "notifications"],
+    queryFn: () => hasFeatureFlag({ data: { identifier: "notifications" } }),
   })
 
   const { data: project } = useProjectsCollection(

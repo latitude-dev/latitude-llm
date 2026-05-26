@@ -19,6 +19,10 @@ export const FEATURE_FLAGS = {
     name: "Email notifications",
     description: "Enables email delivery for incident notifications and the related user preferences UI.",
   },
+  notifications: {
+    name: "In-app notifications",
+    description: "Enables the in-app notifications bell and the per-project notification settings page.",
+  },
   slack: {
     name: "Slack integration",
     description: "Enables the Slack integration settings and incident delivery to Slack.",

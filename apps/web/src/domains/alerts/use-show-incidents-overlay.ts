@@ -3,7 +3,6 @@ import { useCallback } from "react"
 import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
 const STORAGE_KEY = "alerts.show-incidents-overlay.v1"
-const FEATURE_FLAG_KEY = "timeline-incidents"
 
 interface UseShowIncidentsOverlayResult {
   /** True when the org has the `timeline-incidents` flag enabled. Gates both UI and queries. */
@@ -24,7 +23,7 @@ interface UseShowIncidentsOverlayResult {
  * always-on per-issue trend) should still gate on `flagEnabled`.
  */
 export function useShowIncidentsOverlay(): UseShowIncidentsOverlayResult {
-  const flagEnabled = useHasFeatureFlag(FEATURE_FLAG_KEY)
+  const flagEnabled = useHasFeatureFlag("timeline-incidents")
   const { value: stored, setValue: setStored } = useLocalStorage<boolean>({
     key: STORAGE_KEY,
     defaultValue: true,

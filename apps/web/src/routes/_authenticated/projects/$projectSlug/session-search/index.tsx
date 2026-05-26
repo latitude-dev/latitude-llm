@@ -1,4 +1,3 @@
-import { SESSION_SEARCH_V2_FLAG } from "@domain/feature-flags"
 import type { FilterSet } from "@domain/shared"
 import {
   Button,
@@ -40,8 +39,8 @@ const SEARCH_QUERY_MAX_LENGTH = 500
 /**
  * Temporary parallel `/session-search` route used to A/B the session-rollup
  * search (this page) against the trace-flat search on `/search`. The route is
- * gated by `SESSION_SEARCH_V2_FLAG`; PR 5 of LAT-599 will fold this code into
- * the canonical `/search` route and delete the flag.
+ * gated by the `session-search-v2` flag; PR 5 of LAT-599 will fold this code
+ * into the canonical `/search` route and delete the flag.
  */
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/session-search/")({
   staticData: {
@@ -52,7 +51,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sess
   // user back on the canonical `/search` route instead of a blank page.
   loader: async ({ params }) => {
     const enabled = await hasFeatureFlag({
-      data: { identifier: SESSION_SEARCH_V2_FLAG },
+      data: { identifier: "session-search-v2" },
     })
     if (!enabled) {
       throw redirect({

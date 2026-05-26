@@ -1,4 +1,4 @@
-import { EMAIL_NOTIFICATIONS_FLAG, FeatureFlagRepository, SLACK_FLAG } from "@domain/feature-flags"
+import { FeatureFlagRepository } from "@domain/feature-flags"
 import { SlackIntegrationRepository } from "@domain/integrations"
 import {
   createNotificationUseCase,
@@ -82,7 +82,7 @@ const fanOutSlackRoutes = (
     const first = requests[0]!
 
     const flags = yield* FeatureFlagRepository
-    const slackEnabled = yield* flags.isEnabledForOrganization(SLACK_FLAG)
+    const slackEnabled = yield* flags.isEnabledForOrganization("slack")
     if (!slackEnabled) return
 
     const repo = yield* SlackIntegrationRepository
@@ -273,7 +273,7 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         // here (creator step) rather than in the emailer because it's
         // cheaper to skip the publish than to enqueue + ack a no-op.
         const flags = yield* FeatureFlagRepository
-        const emailEnabled = yield* flags.isEnabledForOrganization(EMAIL_NOTIFICATIONS_FLAG)
+        const emailEnabled = yield* flags.isEnabledForOrganization("email-notifications")
         if (!emailEnabled) return
 
         yield* publisher.publish(

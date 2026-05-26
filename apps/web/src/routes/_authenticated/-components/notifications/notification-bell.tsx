@@ -11,7 +11,6 @@ import {
 import { NotificationItem } from "./notification-item.tsx"
 import { LIST_QUERY_KEY, PAGE_SIZE, UNREAD_QUERY_KEY } from "./notification-query-keys.ts"
 
-const NOTIFICATIONS_FEATURE_FLAG = "notifications"
 const UNREAD_COUNT_REFETCH_INTERVAL_MS = 60_000
 
 function formatBadgeCount(count: number): string {
@@ -21,8 +20,8 @@ function formatBadgeCount(count: number): string {
 
 export function NotificationBell() {
   const { data: enabled = false } = useQuery({
-    queryKey: ["feature-flag", NOTIFICATIONS_FEATURE_FLAG],
-    queryFn: () => hasFeatureFlag({ data: { identifier: NOTIFICATIONS_FEATURE_FLAG } }),
+    queryKey: ["feature-flag", "notifications"],
+    queryFn: () => hasFeatureFlag({ data: { identifier: "notifications" } }),
   })
 
   if (!enabled) return null

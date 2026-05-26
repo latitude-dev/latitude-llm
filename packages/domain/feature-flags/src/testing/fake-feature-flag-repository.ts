@@ -1,6 +1,6 @@
 import { SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { createFeatureFlag, createOrganizationFeatureFlag } from "../entities/feature-flag.ts"
+import { type createFeatureFlag, createOrganizationFeatureFlag } from "../entities/feature-flag.ts"
 import type { FeatureFlagRepositoryShape } from "../ports/feature-flag-repository.ts"
 import type { FeatureFlagId } from "../registry.ts"
 

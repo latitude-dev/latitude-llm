@@ -1,4 +1,3 @@
-import { EMAIL_NOTIFICATIONS_FLAG } from "@domain/feature-flags"
 import { NOTIFICATION_GROUP_META, NOTIFICATION_GROUPS, type NotificationPreferences } from "@domain/shared"
 import {
   Button,
@@ -345,8 +344,8 @@ function NotificationsSection() {
   // The notifications backend also gates the email send on this flag,
   // so the UI mirrors what the worker actually does.
   const { data: emailNotificationsEnabled = false } = useQuery({
-    queryKey: ["feature-flag", EMAIL_NOTIFICATIONS_FLAG],
-    queryFn: () => hasFeatureFlag({ data: { identifier: EMAIL_NOTIFICATIONS_FLAG } }),
+    queryKey: ["feature-flag", "email-notifications"],
+    queryFn: () => hasFeatureFlag({ data: { identifier: "email-notifications" } }),
   })
 
   const { data, isLoading } = useQuery({

@@ -1,4 +1,3 @@
-import { SESSION_SEARCH_V2_FLAG } from "@domain/feature-flags"
 import { ProjectRepository } from "@domain/projects"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -80,10 +79,10 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
   const isSettingsActive = pathname.startsWith(`/projects/${projectSlug}/settings`)
 
   // Temporary parallel sidebar entry while we A/B the session-rollup search
-  // against the existing trace-flat one. The Linear-scoped guard
-  // (`SESSION_SEARCH_V2_FLAG`) keeps the entry invisible for orgs that
-  // haven't been opted in; PR 5 removes both the entry and the flag.
-  const sessionSearchEnabled = useHasFeatureFlag(SESSION_SEARCH_V2_FLAG)
+  // against the existing trace-flat one. The flag keeps the entry invisible
+  // for orgs that haven't been opted in; PR 5 removes both the entry and
+  // the registry entry.
+  const sessionSearchEnabled = useHasFeatureFlag("session-search-v2")
 
   // Fire-and-forget client-side fetch: surfaces a sidebar shortcut to this
   // week's Wrapped report when one exists. Returns null for the typical

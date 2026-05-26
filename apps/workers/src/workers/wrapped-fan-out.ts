@@ -1,5 +1,4 @@
 import { AdminFeatureFlagRepository } from "@domain/admin"
-import { CLAUDE_CODE_WRAPPED_FLAG } from "@domain/feature-flags"
 import { listProjectsWithClaudeCodeSpansUseCase } from "@domain/spans"
 import { Effect } from "effect"
 
@@ -69,7 +68,7 @@ export const fanOutWeeklyRunUseCase = (deps: FanOutWeeklyRunDeps) =>
     }
 
     const adminFlags = yield* AdminFeatureFlagRepository
-    const eligibility = yield* adminFlags.findEligibilityForFlag(CLAUDE_CODE_WRAPPED_FLAG)
+    const eligibility = yield* adminFlags.findEligibilityForFlag("claude-code-wrapped")
 
     const enabledOrgIds = new Set(eligibility.organizationIds.map((id) => id as string))
     const eligible = eligibility.enabledForAll

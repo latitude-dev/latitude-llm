@@ -1,4 +1,3 @@
-import { SLACK_FLAG } from "@domain/feature-flags"
 import { NOTIFICATION_GROUP_META, NOTIFICATION_GROUPS, type NotificationGroup } from "@domain/shared"
 import {
   Button,
@@ -57,7 +56,7 @@ function IntegrationsSettingsPage() {
   const router = useRouter()
   const search = Route.useSearch()
 
-  const slackEnabled = useHasFeatureFlag(SLACK_FLAG)
+  const slackEnabled = useHasFeatureFlag("slack")
 
   useMountEffect(() => {
     if (search.installed === "ok") {

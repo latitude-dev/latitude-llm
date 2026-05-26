@@ -1,4 +1,4 @@
-import { CLAUDE_CODE_WRAPPED_FLAG, FeatureFlagRepository } from "@domain/feature-flags"
+import { FeatureFlagRepository } from "@domain/feature-flags"
 import { MembershipRepository, type MemberWithUser, OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import { generateId, type OrganizationId, type ProjectId, type WrappedReportId } from "@domain/shared"
@@ -57,7 +57,7 @@ const resolveOwnerName = (members: readonly MemberWithUser[], organizationName: 
  */
 export const runWrappedUseCase = Effect.fn("wrapped.runForProject")(function* (input: RunWrappedInput) {
   const flags = yield* FeatureFlagRepository
-  const flagOn = yield* flags.isEnabledForOrganization(CLAUDE_CODE_WRAPPED_FLAG)
+  const flagOn = yield* flags.isEnabledForOrganization("claude-code-wrapped")
   if (!flagOn) {
     return { status: "skipped", reason: "flag-off" } satisfies RunWrappedResult
   }

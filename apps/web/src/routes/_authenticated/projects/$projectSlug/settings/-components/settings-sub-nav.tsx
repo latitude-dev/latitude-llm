@@ -1,4 +1,3 @@
-import { SLACK_FLAG } from "@domain/feature-flags"
 import { cn, Icon, Text } from "@repo/ui"
 import { Link, useRouterState } from "@tanstack/react-router"
 import {
@@ -29,7 +28,7 @@ interface SubNavSection {
 export function SettingsSubNav({ projectSlug }: { projectSlug: string }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const base = `/projects/${projectSlug}/settings`
-  const slackEnabled = useHasFeatureFlag(SLACK_FLAG)
+  const slackEnabled = useHasFeatureFlag("slack")
 
   const sections: SubNavSection[] = [
     {
