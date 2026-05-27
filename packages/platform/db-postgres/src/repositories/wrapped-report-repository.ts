@@ -151,7 +151,11 @@ export const WrappedReportRepositoryLive = Layer.effect(
       reportId: WrappedReportIdType
       createdAt: Date
       type: WrappedReportType
-    }): Effect.Effect<{ readonly rank: number; readonly total: number } | null, ReturnType<typeof toRepositoryError>, SqlClient> =>
+    }): Effect.Effect<
+      { readonly rank: number; readonly total: number } | null,
+      ReturnType<typeof toRepositoryError>,
+      SqlClient
+    > =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
         // Cross-org read — BYPASSRLS admin client required.
@@ -161,9 +165,7 @@ export const WrappedReportRepositoryLive = Layer.effect(
         // (latest created_at wins). Sort metric: tokensTotal when present
         // (V2), toolCalls otherwise (V1). Computed in JS — same dedup
         // logic as listLatestPerProjectAdmin, avoids complex CTE.
-        const dayStart = new Date(
-          Date.UTC(createdAt.getUTCFullYear(), createdAt.getUTCMonth(), createdAt.getUTCDate()),
-        )
+        const dayStart = new Date(Date.UTC(createdAt.getUTCFullYear(), createdAt.getUTCMonth(), createdAt.getUTCDate()))
         const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
 
         const rows = yield* sqlClient.query((db) =>
@@ -190,8 +192,7 @@ export const WrappedReportRepositoryLive = Layer.effect(
         for (const row of rows) {
           if (seen.has(row.projectId)) continue
           seen.add(row.projectId)
-          const totals = (row.report as { totals?: { tokensTotal?: number; toolCalls?: number } })
-            ?.totals
+          const totals = (row.report as { totals?: { tokensTotal?: number; toolCalls?: number } })?.totals
           cohort.push({ id: row.id, metric: totals?.tokensTotal ?? totals?.toolCalls ?? 0 })
         }
 

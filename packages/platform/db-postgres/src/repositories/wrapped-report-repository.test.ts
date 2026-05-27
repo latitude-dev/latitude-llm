@@ -282,8 +282,8 @@ describe("WrappedReportRepositoryLive", () => {
       }),
     )
     expect(result).not.toBeNull()
-    expect(result!.rank).toBe(3)
-    expect(result!.total).toBe(3)
+    expect(result?.rank).toBe(3)
+    expect(result?.total).toBe(3)
   })
 
   it("findLeaderboardRankForReport returns rank 1 for the highest-token report", async () => {
@@ -303,8 +303,8 @@ describe("WrappedReportRepositoryLive", () => {
         })
       }),
     )
-    expect(result!.rank).toBe(1)
-    expect(result!.total).toBe(2)
+    expect(result?.rank).toBe(1)
+    expect(result?.total).toBe(2)
   })
 
   it("findLeaderboardRankForReport deduplicates by project — older report for same project is excluded", async () => {
@@ -312,8 +312,18 @@ describe("WrappedReportRepositoryLive", () => {
     const earlier = new Date(today.getTime() - 60 * 60 * 1000) // 1h earlier, still same day
     const dedupProj = ProjectId("dedup".padEnd(24, "a"))
     // Two reports for the same project — "new" and "old" on the same day.
-    await seedLeaderboardRow({ id: "dedup-new".padEnd(24, "a"), projectId: dedupProj, createdAt: today, tokensTotal: 500 })
-    await seedLeaderboardRow({ id: "dedup-old".padEnd(24, "a"), projectId: dedupProj, createdAt: earlier, tokensTotal: 500 })
+    await seedLeaderboardRow({
+      id: "dedup-new".padEnd(24, "a"),
+      projectId: dedupProj,
+      createdAt: today,
+      tokensTotal: 500,
+    })
+    await seedLeaderboardRow({
+      id: "dedup-old".padEnd(24, "a"),
+      projectId: dedupProj,
+      createdAt: earlier,
+      tokensTotal: 500,
+    })
 
     // The older report is deduped out; it is not in the ranked cohort.
     const result = await runWithLive(

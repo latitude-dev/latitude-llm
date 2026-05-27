@@ -1,5 +1,4 @@
 import { alertIncidentSeeders } from "./alert-incidents/index.ts"
-import { wrappedReportSeeders } from "./wrapped-reports/index.ts"
 import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
@@ -12,6 +11,7 @@ import { projectSeeders } from "./projects/index.ts"
 import { scoreSeeders } from "./scores/index.ts"
 import { simulationSeeders } from "./simulations/index.ts"
 import type { Seeder } from "./types.ts"
+import { wrappedReportSeeders } from "./wrapped-reports/index.ts"
 
 /**
  * Per-project ("content") seeders — datasets, evaluations, issues,

@@ -5,8 +5,8 @@ import {
   PERSONALITY_KINDS,
   type PersonalityKind,
   pickWrittenAnchor,
-  reportV2Schema,
   type ReportV2,
+  reportV2Schema,
 } from "@domain/spans"
 import { Effect } from "effect"
 import { wrappedReports } from "../../schema/wrapped-reports.ts"
@@ -112,11 +112,7 @@ function buildReport(i: number, projectId: string, orgId: string): ReportV2 {
   // Deterministic week window ending 1–4 days ago relative to "today"
   const windowEndDaysAgo = 0
   const windowEnd = new Date(
-    Date.UTC(
-      new Date().getUTCFullYear(),
-      new Date().getUTCMonth(),
-      new Date().getUTCDate() - windowEndDaysAgo,
-    ),
+    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - windowEndDaysAgo),
   )
   const windowStart = new Date(windowEnd.getTime() - 7 * 24 * 60 * 60 * 1000)
 
@@ -169,9 +165,7 @@ function buildReport(i: number, projectId: string, orgId: string): ReportV2 {
       readAnchor: { prefix: "", emphasis: "" },
     },
     topBashCommand:
-      rand() > 0.3
-        ? { pattern: BASH_COMMANDS[ri(BASH_COMMANDS.length)] ?? "pnpm", count: rr(5, 50) }
-        : null,
+      rand() > 0.3 ? { pattern: BASH_COMMANDS[ri(BASH_COMMANDS.length)] ?? "pnpm", count: rr(5, 50) } : null,
     workspaceDeepDives: [],
     otherWorkspaceCount: 0,
     heatmap,
@@ -242,8 +236,7 @@ const seedWrappedReports: Seeder = {
 
         console.log(`  -> wrapped reports: ${REPORT_COUNT} Claude Code V2 reports`)
       },
-      catch: (error) =>
-        new SeedError({ reason: "Failed to seed wrapped reports", cause: error }),
+      catch: (error) => new SeedError({ reason: "Failed to seed wrapped reports", cause: error }),
     }).pipe(Effect.asVoid),
 }
 
