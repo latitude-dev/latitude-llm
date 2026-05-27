@@ -83,6 +83,10 @@
     "tools/ai-benchmarks": {
       "entry": ["src/scripts/**/*.ts"],
       "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "tools/live-seeds": {
+      "entry": ["src/scripts/**/*.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],

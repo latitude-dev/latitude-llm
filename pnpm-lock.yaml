@@ -2762,6 +2762,9 @@ importers:
 
   tools/live-seeds:
     dependencies:
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../../packages/domain/ai
       '@domain/annotation-queues':
         specifier: workspace:*
         version: link:../../packages/domain/annotation-queues
@@ -2780,12 +2783,30 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
+      '@domain/taxonomy':
+        specifier: workspace:*
+        version: link:../../packages/domain/taxonomy
+      '@platform/ai':
+        specifier: workspace:*
+        version: link:../../packages/platform/ai
+      '@platform/ai-voyage':
+        specifier: workspace:*
+        version: link:../../packages/platform/ai-voyage
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../../packages/platform/cache-redis
+      '@platform/db-clickhouse':
+        specifier: workspace:*
+        version: link:../../packages/platform/db-clickhouse
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.57

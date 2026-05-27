@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import { AIGenerate } from "@domain/ai"
+import { AIGenerate, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { SessionRepository } from "@domain/spans"
 import {
@@ -47,7 +47,7 @@ interface Args {
 }
 
 const usage =
-  () => `Usage: pnpm --dir apps/workers exec tsx ../../scripts/taxonomy/tune-seeded-acme.ts --organization-id <orgId> --project-id <projectId> [--limit <n>] [--reset] [--garden-now <iso>] [--rebase-observations-to-now]
+  () => `Usage: pnpm --filter @tools/live-seeds taxonomy:tune-seeded-acme -- --organization-id <orgId> --project-id <projectId> [--limit <n>] [--reset] [--garden-now <iso>] [--rebase-observations-to-now]
 
 Runs the seeded-corpus taxonomy tuning loop with the production Voyage embedding adapter:
   1. optionally clears taxonomy rows for the project (--reset),
@@ -112,27 +112,22 @@ const parseArgs = (argv: readonly string[]): Args => {
 }
 
 const fakeNamingLayer = Layer.succeed(AIGenerate, {
-  generate: (input) => {
-    const system = String(input.system ?? "")
-    if (system.includes("proposeCandidateThemes")) {
-      return Effect.succeed({
-        object: { candidates: [{ theme: "Seeded Acme behavior", examples: [0, 1, 2] }] },
+  generate: <T>(input: GenerateInput<T>) =>
+    Effect.sync((): GenerateResult<T> => {
+      const raw = input.system.includes("proposeCandidateThemes")
+        ? { candidates: [{ theme: "Seeded Acme behavior", examples: [0, 1, 2] }] }
+        : {
+            name: "Seeded Acme Behavior",
+            description: "Seeded Acme sessions with similar customer support behavior.",
+          }
+
+      return {
+        object: input.schema.parse(raw),
         tokens: 0,
         tokenUsage: { input: 0, output: 0 },
         duration: 0,
-      })
-    }
-
-    return Effect.succeed({
-      object: {
-        name: "Seeded Acme Behavior",
-        description: "Seeded Acme sessions with similar customer support behavior.",
-      },
-      tokens: 0,
-      tokenUsage: { input: 0, output: 0 },
-      duration: 0,
-    })
-  },
+      }
+    }),
 })
 
 const main = async () => {
@@ -145,7 +140,9 @@ const main = async () => {
   const projectId = ProjectId(args.projectId)
   const clickhouse = createClickhouseClient()
   const postgres = createPostgresClient()
-  const adminPostgres = createPostgresClient({ databaseUrl: process.env.LAT_ADMIN_DATABASE_URL })
+  const adminPostgres = process.env.LAT_ADMIN_DATABASE_URL
+    ? createPostgresClient({ databaseUrl: process.env.LAT_ADMIN_DATABASE_URL })
+    : createPostgresClient()
   const redis = createRedisClient(createRedisConnection())
   await waitForRedisClientReady(redis)
 
@@ -192,7 +189,7 @@ const main = async () => {
         query:
           "ALTER TABLE behavior_observations DELETE WHERE organization_id = {organizationId:String} AND project_id = {projectId:String}",
         query_params: { organizationId, projectId },
-        clickhouse_settings: { mutations_sync: 2 },
+        clickhouse_settings: { mutations_sync: "2" },
       })
       await clickhouse.command({ query: "OPTIMIZE TABLE behavior_observations FINAL" })
     }
@@ -263,9 +260,10 @@ const main = async () => {
       await clickhouse.command({ query: "OPTIMIZE TABLE behavior_observations FINAL" })
     }
 
-    const run = await Effect.runPromise(
-      provideRuntime(runProjectGardeningUseCase({ organizationId, projectId, trigger: "manual", now: args.gardenNow })),
-    )
+    const gardeningInput = args.gardenNow
+      ? { organizationId, projectId, trigger: "manual" as const, now: args.gardenNow }
+      : { organizationId, projectId, trigger: "manual" as const }
+    const run = await Effect.runPromise(provideRuntime(runProjectGardeningUseCase(gardeningInput)))
     const clusters = await adminPostgres.pool.query(
       `SELECT id, name, observation_count, state
        FROM latitude.taxonomy_clusters
