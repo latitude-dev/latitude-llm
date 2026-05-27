@@ -238,19 +238,22 @@ describe("assignPersonality (gate-then-rank)", () => {
     expect(result.kind).toBe("shipper")
   })
 
-  it("regression: light explorer (User B) lands on Detective under calibrated baselines", () => {
+  it("regression: light explorer (User B) lands on Consultant under v2 baselines", () => {
     // Snapshot of User B: 6 sessions, only 90 lines touched, 48 commands.
     // After bash sub-classification, most of those 48 commands route
     // away from `bash`: 8 ls + 6 grep → search, 1 cat → read, 1 curl →
     // research, 2 excluded (open + claude). Remaining bash bucket is tiny.
     //
-    // With the calibrated baselines (read 0.22, search 0.01), the
-    // user's read+search share of 64% gives Detective an excess of
-    // ~+41pp — saturated score 1.0. That beats Consultant's gate-pass
-    // score (sessions = 6, normalised + rare-bonused to ~0.75). The
-    // earlier "lands on Consultant" expectation reflected the older
-    // pre-calibration baselines (read 0.40, search 0.10) which masked
-    // the read-heaviness of this snapshot.
+    // Calibration history:
+    //   v0 (read 0.40, search 0.10): Consultant won — read+search excess
+    //      was negative, Shipper/Detective didn't fire.
+    //   v1 (read 0.22, search 0.01): Detective won — search baseline
+    //      drop made read+search excess +0.41pp, saturating Detective and
+    //      beating Consultant's ~0.75 bonus score.
+    //   v2 (read 0.18, search 0.25): Consultant wins again — the correct
+    //      search baseline (p50 0.21) drops investigationExcess to +0.21pp
+    //      → Detective score 0.70, below Consultant's 0.75 rare-bonused
+    //      score. Light touch with low line-write count is Consultant.
     const result = run({
       toolMix: {
         ...baseMix,
@@ -273,7 +276,7 @@ describe("assignPersonality (gate-then-rank)", () => {
       writeLines: 10,
       linesRead: 800,
     })
-    expect(result.kind).toBe("detective")
+    expect(result.kind).toBe("consultant")
   })
 
   it("Shipper fires when shipping happens via `gh pr create` / `merge` even with zero git commits", () => {
@@ -293,8 +296,10 @@ describe("assignPersonality (gate-then-rank)", () => {
     // The reason we added `gitWriteOps`: a user who force-pushes / rebases
     // / tags but has few unique commit SHAs over the window. Old algorithm
     // missed them. With the new disjunctive gate, they still land here.
+    // Mix keeps edit below the Surgeon saturation threshold (edit 0.20 →
+    // editExcess 0.08 → score 0.27) so Shipper's 0.90 wins cleanly.
     const result = run({
-      toolMix: { ...baseMix, bash: 40, edit: 40, read: 20 },
+      toolMix: { ...baseMix, bash: 40, edit: 20, read: 40 },
       sessions: 8,
       commits: 2, // below SHIPPER_GATE_COMMITS
       gitWriteOps: 24, // 3 per session — clears SHIPPER_GATE_WRITE_OPS_PER_SESSION

@@ -4,24 +4,25 @@ import type { Personality, PersonalityKind, ToolBucket, ToolMix } from "../entit
  * Expected share of each bucket in a "typical" Claude Code week. The
  * personality algorithm subtracts these from the user's actual shares so
  * that "dominant" reflects deviation from the baseline rather than raw
- * volume. Bash is the largest share for the median project and Search the
- * smallest — the bucket that stands out is the one the user *chose* to
- * lean into.
+ * volume. The bucket that stands out is the one the user *chose* to lean
+ * into beyond the typical mix.
  *
- * Calibrated from a 32-project, 30-day ClickHouse sample (May 2026). The
- * per-project p50 share and the volume-weighted platform global agreed
- * on direction for each bucket; values rounded to two decimals so the
- * row sums to 1.00.
+ * Re-calibrated from 49 full weekly Wrapped reports (May 2026). The
+ * largest correction vs the previous pass: search (Grep/Glob/LS) is
+ * heavily used across the board — p50 is 0.21, not the prior 0.01 —
+ * which was causing Detective to fire for almost every project regardless
+ * of actual investigation behaviour. Values rounded to two decimals, sum
+ * to 1.00.
  */
 export const BASELINE_SHARE: Record<ToolBucket, number> = {
-  read: 0.22,
-  bash: 0.4,
-  edit: 0.15,
-  search: 0.01,
-  write: 0.05,
-  plan: 0.07,
-  research: 0.02,
+  bash: 0.3,
+  read: 0.18,
+  search: 0.25,
+  edit: 0.12,
   other: 0.08,
+  write: 0.02,
+  research: 0.02,
+  plan: 0.03,
 }
 
 // Each archetype has a `gate` (minimum signal floor — below it, the
