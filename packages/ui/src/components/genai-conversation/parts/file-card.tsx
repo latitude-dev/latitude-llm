@@ -47,7 +47,7 @@ const MIME_EXTENSIONS: Record<string, string> = {
 
 /** Picks a type-aware (monochrome) lucide icon from the mime type, falling back to modality then generic. */
 function fileIconForMime(mimeType?: string | null, modality?: string): LucideIcon {
-  const mime = (mimeType ?? "").toLowerCase()
+  const mime = (mimeType ?? "").toLowerCase().split(";")[0] ?? ""
   if (mime === "application/pdf") return FileTextIcon
   if (mime === "application/json") return FileJsonIcon
   if (mime.includes("csv") || mime.includes("spreadsheet") || mime.includes("excel")) return FileSpreadsheetIcon
