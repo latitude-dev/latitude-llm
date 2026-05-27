@@ -162,7 +162,7 @@ export const WrappedReportRepositoryLive = Layer.effect(
         // (V2), toolCalls otherwise (V1). This naturally places V1 reports
         // below V2 reports since token counts >> tool-call counts.
         type Row = { rank: number; total: number }
-        const result = yield* sqlClient.query((db) =>
+        const rows = yield* sqlClient.query((db) =>
           db.execute<Row>(sql`
             WITH day_reports AS (
               SELECT DISTINCT ON (project_id)
@@ -187,7 +187,7 @@ export const WrappedReportRepositoryLive = Layer.effect(
             SELECT rank, total FROM ranked WHERE id = ${reportId}
           `),
         )
-        const row = result.rows[0]
+        const row = (rows as unknown as Row[])[0]
         if (!row) return null
         return { rank: Number(row.rank), total: Number(row.total) }
       }).pipe(Effect.mapError((e) => toRepositoryError(e, "findLeaderboardRankForReport"))),
