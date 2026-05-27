@@ -71,7 +71,7 @@ function MediaErrorPlaceholder({
       <div
         className={cn(
           PLACEHOLDER_BAR,
-          "flex items-center gap-2 border border-dashed border-border bg-muted/30 px-3 py-2",
+          "flex items-center gap-2 border border-dashed border-border bg-card px-3 py-2",
         )}
       >
         <ErrorIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -85,7 +85,7 @@ function MediaErrorPlaceholder({
     <div
       className={cn(
         PLACEHOLDER_BOX,
-        "flex flex-col items-center justify-center gap-1.5 border border-dashed border-border bg-muted/30 p-4 text-center",
+        "flex flex-col items-center justify-center gap-1.5 border border-dashed border-border bg-card p-4 text-center",
       )}
     >
       <ErrorIcon className="h-6 w-6 text-muted-foreground" />
