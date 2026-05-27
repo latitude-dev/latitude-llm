@@ -72,12 +72,11 @@ function StatCard({
             fontFamily: "Georgia, serif",
             color:
               delta.kind === "up" ? DELTA_UP : delta.kind === "down" ? DELTA_DOWN : MUTED,
-            fontStyle: "italic",
           }}
         >
           {delta.kind === "same"
             ? "= same as last week"
-            : `${delta.kind === "up" ? "+" : "−"}${delta.percent}% vs last week`}
+            : `${delta.percent}% ${delta.kind === "up" ? "more" : "less"} than last week`}
         </p>
       ) : null}
     </div>
@@ -142,7 +141,7 @@ function TokenHeadline({
       </p>
       {delta.kind !== "none" ? (
         <p
-          className="mt-1 text-sm italic"
+          className="mt-1 text-sm"
           style={{
             fontFamily: "Georgia, serif",
             color: delta.kind === "up" ? DELTA_UP : delta.kind === "down" ? DELTA_DOWN : MUTED,
@@ -150,7 +149,7 @@ function TokenHeadline({
         >
           {delta.kind === "same"
             ? "= same as last week"
-            : `${delta.kind === "up" ? "+" : "−"}${delta.percent}% vs last week`}
+            : `${delta.percent}% ${delta.kind === "up" ? "more" : "less"} than last week`}
         </p>
       ) : null}
       {leaderboard !== null ? (
@@ -186,7 +185,7 @@ function LocHeadline({
       </p>
       {delta.kind !== "none" ? (
         <p
-          className="mt-1 text-sm italic"
+          className="mt-1 text-sm"
           style={{
             fontFamily: "Georgia, serif",
             color: delta.kind === "up" ? DELTA_UP : delta.kind === "down" ? DELTA_DOWN : MUTED,
@@ -194,7 +193,7 @@ function LocHeadline({
         >
           {delta.kind === "same"
             ? "= same as last week"
-            : `${delta.kind === "up" ? "+" : "−"}${delta.percent}% vs last week`}
+            : `${delta.percent}% ${delta.kind === "up" ? "more" : "less"} than last week`}
         </p>
       ) : null}
       {loc.writtenAnchor.emphasis ? (
