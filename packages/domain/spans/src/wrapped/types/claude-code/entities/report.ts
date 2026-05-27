@@ -230,12 +230,12 @@ export type ReportV1 = z.infer<typeof reportV1Schema>
  * badge is shown for that stat.
  */
 export const lastReportSchema = z.object({
-  sessions:     z.number().int().nonnegative().nullable(),
-  toolCalls:    z.number().int().nonnegative().nullable(),
-  durationMs:   z.number().int().nonnegative().nullable(),
+  sessions: z.number().int().nonnegative().nullable(),
+  toolCalls: z.number().int().nonnegative().nullable(),
+  durationMs: z.number().int().nonnegative().nullable(),
   filesTouched: z.number().int().nonnegative().nullable(),
-  locWritten:   z.number().int().nonnegative().nullable(),
-  tokensTotal:  z.number().int().nonnegative().nullable(),
+  locWritten: z.number().int().nonnegative().nullable(),
+  tokensTotal: z.number().int().nonnegative().nullable(),
 })
 export type LastReport = z.infer<typeof lastReportSchema>
 

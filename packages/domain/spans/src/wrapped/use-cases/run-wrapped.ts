@@ -99,9 +99,10 @@ export const runWrappedUseCase = Effect.fn("wrapped.runForProject")(function* (i
     beforeCreatedAt: new Date(Date.now() - SIX_DAYS_MS),
   })
   const previousReport: Report | undefined = previousSummary
-    ? yield* reportRepo
-        .findById(previousSummary.id)
-        .pipe(Effect.map((r) => r.report), Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
+    ? yield* reportRepo.findById(previousSummary.id).pipe(
+        Effect.map((r) => r.report),
+        Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)),
+      )
     : undefined
 
   const report: Report = yield* buildReportUseCase({
