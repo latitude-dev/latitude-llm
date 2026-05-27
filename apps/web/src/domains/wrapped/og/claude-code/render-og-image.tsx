@@ -74,9 +74,7 @@ export const renderClaudeCodeOgImage = async (record: WrappedReportRecord): Prom
   const sessions = record.report.totals.sessions.toLocaleString("en-US")
   // V2 reports carry tokensTotal — show that instead of the two-stat row.
   const totalsV2 = record.report.totals as { tokensTotal?: number }
-  const tokensTotal = typeof totalsV2.tokensTotal === "number"
-    ? totalsV2.tokensTotal.toLocaleString("en-US")
-    : null
+  const tokensTotal = typeof totalsV2.tokensTotal === "number" ? totalsV2.tokensTotal.toLocaleString("en-US") : null
 
   const svg = await satori(
     <div
@@ -173,9 +171,7 @@ export const renderClaudeCodeOgImage = async (record: WrappedReportRecord): Prom
               >
                 {linesWritten}
               </div>
-              <div style={{ fontSize: 22, color: BLACKISH_CREAM, marginTop: 8 }}>
-                Lines written
-              </div>
+              <div style={{ fontSize: 22, color: BLACKISH_CREAM, marginTop: 8 }}>Lines written</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div
@@ -188,9 +184,7 @@ export const renderClaudeCodeOgImage = async (record: WrappedReportRecord): Prom
               >
                 {sessions}
               </div>
-              <div style={{ fontSize: 22, color: BLACKISH_CREAM, marginTop: 8 }}>
-                Sessions
-              </div>
+              <div style={{ fontSize: 22, color: BLACKISH_CREAM, marginTop: 8 }}>Sessions</div>
             </div>
           </div>
         )}

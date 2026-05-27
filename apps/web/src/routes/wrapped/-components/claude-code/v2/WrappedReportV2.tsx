@@ -4,6 +4,8 @@ import { Route } from "../../../$id.tsx"
 import { GenerateYourOwnCTA } from "../v1/GenerateYourOwnCTA.tsx"
 import { MomentsRow } from "../v1/MomentsRow.tsx"
 import { PrivateSectionSeparator } from "../v1/PrivateSectionSeparator.tsx"
+import { TITLE_FOR_KIND, WRAPPED_COLORS } from "../v1/personality-copy.ts"
+import { ShareSection } from "../v1/ShareSection.tsx"
 import {
   BreadthStrip,
   formatCompact,
@@ -16,8 +18,6 @@ import {
   TopBashCommand,
   WorkspaceSections,
 } from "../v1/WrappedReportV1.tsx"
-import { TITLE_FOR_KIND, WRAPPED_COLORS } from "../v1/personality-copy.ts"
-import { ShareSection } from "../v1/ShareSection.tsx"
 
 interface WrappedReportV2Props {
   readonly record: WrappedReportRecord
@@ -43,7 +43,7 @@ const computeDelta = (current: number, previous: number | null): DeltaResult => 
 // ─── Colors ──────────────────────────────────────────────────────────────────
 
 const { cream: CREAM, accent: ACCENT, ink: INK, muted: MUTED } = WRAPPED_COLORS
-const DELTA_UP = "#16a34a"   // green-600
+const DELTA_UP = "#16a34a" // green-600
 const DELTA_DOWN = "#dc2626" // red-600
 
 // ─── Stat card with optional delta ───────────────────────────────────────────
@@ -70,8 +70,7 @@ function StatCard({
           className="text-xs"
           style={{
             fontFamily: "Georgia, serif",
-            color:
-              delta.kind === "up" ? DELTA_UP : delta.kind === "down" ? DELTA_DOWN : MUTED,
+            color: delta.kind === "up" ? DELTA_UP : delta.kind === "down" ? DELTA_DOWN : MUTED,
           }}
         >
           {delta.kind === "same" ? "= same" : `${delta.kind === "up" ? "▲" : "▼"} ${delta.percent}%`}
@@ -115,9 +114,7 @@ function HeadlineNumbers({
 // ─── Token headline — hero number + WoW delta + leaderboard ──────────────────
 
 const leaderboardText = (lb: LeaderboardData): string =>
-  lb.rank <= 10
-    ? `#${lb.rank} this week`
-    : `top ${Math.ceil((lb.rank / lb.total) * 100)}% this week`
+  lb.rank <= 10 ? `#${lb.rank} this week` : `top ${Math.ceil((lb.rank / lb.total) * 100)}% this week`
 
 function TokenHeadline({
   totals,

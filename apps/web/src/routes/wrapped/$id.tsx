@@ -23,7 +23,12 @@ export const Route = createFileRoute("/wrapped/$id")({
   loader: async ({ params }) => {
     const result = await getWrappedPageData({ data: { id: params.id } })
     if (!result.found) throw notFound()
-    return { record: result.record, isMember: result.isMember, loggedIn: result.loggedIn, leaderboard: result.leaderboard }
+    return {
+      record: result.record,
+      isMember: result.isMember,
+      loggedIn: result.loggedIn,
+      leaderboard: result.leaderboard,
+    }
   },
   head: ({ loaderData, params }) => {
     if (!loaderData) {
