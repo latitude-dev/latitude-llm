@@ -72,6 +72,11 @@ export const renderClaudeCodeOgImage = async (record: WrappedReportRecord): Prom
   const archetype = TITLE_FOR_KIND[record.report.personality.kind] ?? "The Wrapped"
   const linesWritten = record.report.loc.written.toLocaleString("en-US")
   const sessions = record.report.totals.sessions.toLocaleString("en-US")
+  // V2 reports carry tokensTotal — show that instead of the two-stat row.
+  const totalsV2 = record.report.totals as { tokensTotal?: number }
+  const tokensTotal = typeof totalsV2.tokensTotal === "number"
+    ? totalsV2.tokensTotal.toLocaleString("en-US")
+    : null
 
   const svg = await satori(
     <div
@@ -134,57 +139,61 @@ export const renderClaudeCodeOgImage = async (record: WrappedReportRecord): Prom
         >
           {`${record.ownerName}'s week`}
         </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            gap: 60,
-            marginTop: 44,
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div
-              style={{
-                fontSize: 64,
-                fontWeight: 600,
-                color: WRAPPED_COLORS.cream,
-                lineHeight: 1,
-              }}
-            >
-              {linesWritten}
+        {tokensTotal !== null ? (
+          // V2: single token count in the same cream/semibold voice as the archetype title
+          <div
+            style={{
+              fontSize: 72,
+              fontWeight: 600,
+              color: WRAPPED_COLORS.cream,
+              lineHeight: 1,
+              marginTop: 44,
+            }}
+          >
+            {`${tokensTotal} tokens`}
+          </div>
+        ) : (
+          // V1 fallback: Lines written + Sessions two-column row
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              gap: 60,
+              marginTop: 44,
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div
+                style={{
+                  fontSize: 64,
+                  fontWeight: 600,
+                  color: WRAPPED_COLORS.cream,
+                  lineHeight: 1,
+                }}
+              >
+                {linesWritten}
+              </div>
+              <div style={{ fontSize: 22, color: BLACKISH_CREAM, marginTop: 8 }}>
+                Lines written
+              </div>
             </div>
-            <div
-              style={{
-                fontSize: 22,
-                color: BLACKISH_CREAM,
-                marginTop: 8,
-              }}
-            >
-              Lines written
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div
+                style={{
+                  fontSize: 64,
+                  fontWeight: 600,
+                  color: WRAPPED_COLORS.cream,
+                  lineHeight: 1,
+                }}
+              >
+                {sessions}
+              </div>
+              <div style={{ fontSize: 22, color: BLACKISH_CREAM, marginTop: 8 }}>
+                Sessions
+              </div>
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div
-              style={{
-                fontSize: 64,
-                fontWeight: 600,
-                color: WRAPPED_COLORS.cream,
-                lineHeight: 1,
-              }}
-            >
-              {sessions}
-            </div>
-            <div
-              style={{
-                fontSize: 22,
-                color: BLACKISH_CREAM,
-                marginTop: 8,
-              }}
-            >
-              Sessions
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>,
     {
