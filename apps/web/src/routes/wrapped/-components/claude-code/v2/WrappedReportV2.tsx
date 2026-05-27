@@ -1,4 +1,6 @@
 import type { PersonalityKind, ReportV2, WrappedReportRecord } from "@domain/spans"
+import type { LeaderboardData } from "../../../../../domains/wrapped/wrapped.functions.ts"
+import { Route } from "../../../$id.tsx"
 import { GenerateYourOwnCTA } from "../v1/GenerateYourOwnCTA.tsx"
 import { MomentsRow } from "../v1/MomentsRow.tsx"
 import { PrivateSectionSeparator } from "../v1/PrivateSectionSeparator.tsx"
@@ -82,7 +84,7 @@ function StatCard({
   )
 }
 
-// ─── Headline numbers with token count ───────────────────────────────────────
+// ─── Headline numbers (4 cards, tokens live in their own hero section) ───────
 
 function HeadlineNumbers({
   totals,
@@ -92,7 +94,7 @@ function HeadlineNumbers({
   readonly lastReport: ReportV2["lastReport"]
 }) {
   return (
-    <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <StatCard
         label="Sessions"
         value={formatCompact(totals.sessions)}
@@ -108,16 +110,54 @@ function HeadlineNumbers({
         value={formatCompact(totals.filesTouched)}
         delta={computeDelta(totals.filesTouched, lastReport.filesTouched)}
       />
-      <StatCard
-        label="Commands"
-        value={formatCompact(totals.commandsRun)}
-        delta={computeDelta(totals.commandsRun, lastReport.toolCalls)}
-      />
-      <StatCard
-        label="Total tokens"
-        value={formatCompact(totals.tokensTotal)}
-        delta={computeDelta(totals.tokensTotal, lastReport.tokensTotal)}
-      />
+      <StatCard label="Commands" value={formatCompact(totals.commandsRun)} />
+    </section>
+  )
+}
+
+// ─── Token headline — hero number + WoW delta + leaderboard ──────────────────
+
+const leaderboardText = (lb: LeaderboardData): string =>
+  lb.rank <= 10
+    ? `#${lb.rank} this week`
+    : `top ${Math.ceil((lb.rank / lb.total) * 100)}% this week`
+
+function TokenHeadline({
+  totals,
+  lastReport,
+  leaderboard,
+}: {
+  readonly totals: ReportV2["totals"]
+  readonly lastReport: ReportV2["lastReport"]
+  readonly leaderboard: LeaderboardData | null
+}) {
+  const delta = computeDelta(totals.tokensTotal, lastReport.tokensTotal)
+  return (
+    <section className="text-center">
+      <p className="text-xs uppercase tracking-[0.14em]" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
+        Total tokens
+      </p>
+      <p className="mt-2 text-5xl sm:text-6xl" style={{ color: INK, fontFamily: "Georgia, serif", fontWeight: 500 }}>
+        {formatCompact(totals.tokensTotal)}
+      </p>
+      {delta.kind !== "none" ? (
+        <p
+          className="mt-1 text-sm italic"
+          style={{
+            fontFamily: "Georgia, serif",
+            color: delta.kind === "up" ? DELTA_UP : delta.kind === "down" ? DELTA_DOWN : MUTED,
+          }}
+        >
+          {delta.kind === "same"
+            ? "= same as last week"
+            : `${delta.kind === "up" ? "+" : "−"}${delta.percent}% vs last week`}
+        </p>
+      ) : null}
+      {leaderboard !== null ? (
+        <p className="mt-2 text-sm" style={{ color: ACCENT, fontFamily: "Georgia, serif" }}>
+          {leaderboardText(leaderboard)}
+        </p>
+      ) : null}
     </section>
   )
 }
@@ -185,6 +225,7 @@ export function WrappedReportV2({ record, isMember }: WrappedReportV2Props) {
   // The dispatcher only routes here when reportVersion === 2; cast is safe.
   const report = record.report as ReportV2
   const archetypeTitle = TITLE_FOR_KIND[report.personality.kind as PersonalityKind] ?? "The Wrapped"
+  const { leaderboard } = Route.useLoaderData()
   return (
     <main className="min-h-screen" style={{ backgroundColor: CREAM }}>
       <div className="mx-auto flex max-w-3xl flex-col gap-12 px-4 py-12 sm:py-20">
@@ -196,6 +237,7 @@ export function WrappedReportV2({ record, isMember }: WrappedReportV2Props) {
         />
         <HeadlineNumbers totals={report.totals} lastReport={report.lastReport} />
         <BreadthStrip totals={report.totals} />
+        <TokenHeadline totals={report.totals} lastReport={report.lastReport} leaderboard={leaderboard} />
         <LocHeadline loc={report.loc} lastReport={report.lastReport} />
         <ReadWriteRatio loc={report.loc} />
 

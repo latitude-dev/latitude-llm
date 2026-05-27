@@ -146,19 +146,45 @@ function HeadlineNumbersGrid({ report }: { report: ReportV2 }) {
               value={formatCompact(totals.filesTouched)}
               caption={deltaCaption(totals.filesTouched, lastReport.filesTouched)}
             />
-            <StatCard
-              label="Commands"
-              value={formatCompact(totals.commandsRun)}
-              caption={deltaCaption(totals.commandsRun, lastReport.toolCalls)}
-            />
-            <StatCard
-              label="Total tokens"
-              value={formatCompact(totals.tokensTotal)}
-              caption={deltaCaption(totals.tokensTotal, lastReport.tokensTotal)}
-            />
+            <StatCard label="Commands" value={formatCompact(totals.commandsRun)} />
           </tr>
         </tbody>
       </table>
+    </Section>
+  )
+}
+
+function TokenSection({ report }: { report: ReportV2 }) {
+  const { totals, lastReport } = report
+  const caption = deltaCaption(totals.tokensTotal, lastReport.tokensTotal)
+  return (
+    <Section style={{ ...sectionStyle, textAlign: "center" }}>
+      <p
+        style={{
+          fontFamily: emailDesignTokens.fonts.serif,
+          fontSize: "13px",
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: emailDesignTokens.colors.claude.mutedInk,
+          margin: 0,
+        }}
+      >
+        Total tokens
+      </p>
+      <p style={bigNumberStyle}>{formatCompact(totals.tokensTotal)}</p>
+      {caption ? (
+        <p
+          style={{
+            fontFamily: emailDesignTokens.fonts.serif,
+            fontSize: "12px",
+            fontStyle: "italic",
+            color: emailDesignTokens.colors.claude.mutedInk,
+            margin: "4px 0 0 0",
+          }}
+        >
+          {caption}
+        </p>
+      ) : null}
     </Section>
   )
 }
@@ -314,6 +340,7 @@ export function ClaudeCodeWrappedEmailV2({ userName, report: reportBase, webAppU
     <WrappedLayout previewText={`Your Claude Code week: ${report.project.name}`}>
       <HeroSection userName={userName} report={report} />
       <HeadlineNumbersGrid report={report} />
+      <TokenSection report={report} />
       <LocSection report={report} />
       <PersonalityRevealSection personality={report.personality} imageBaseUrl={imageBaseUrl} />
       <CtaBanner url={reportUrl} />

@@ -19,7 +19,7 @@ import {
   type WrappedReportSummary,
   type WrappedReportType,
 } from "@domain/spans"
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm"
+import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { wrappedReports } from "../schema/wrapped-reports.ts"
@@ -142,6 +142,55 @@ export const WrappedReportRepositoryLive = Layer.effect(
         if (!row) return null
         return { id: WrappedReportId(row.id), createdAt: row.createdAt }
       }),
+
+    findLeaderboardRankForReport: ({
+      reportId,
+      createdAt,
+      type,
+    }: {
+      reportId: WrappedReportIdType
+      createdAt: Date
+      type: WrappedReportType
+    }): Effect.Effect<{ readonly rank: number; readonly total: number } | null, ReturnType<typeof toRepositoryError>, SqlClient> =>
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        // Cross-org read — BYPASSRLS admin client required.
+        //
+        // Cohort: all reports of the same type generated on the same UTC
+        // calendar day as this report, deduplicated to one per project
+        // (latest created_at wins). Sort metric: tokensTotal when present
+        // (V2), toolCalls otherwise (V1). This naturally places V1 reports
+        // below V2 reports since token counts >> tool-call counts.
+        type Row = { rank: number; total: number }
+        const result = yield* sqlClient.query((db) =>
+          db.execute<Row>(sql`
+            WITH day_reports AS (
+              SELECT DISTINCT ON (project_id)
+                id,
+                COALESCE(
+                  (report->'totals'->>'tokensTotal')::bigint,
+                  (report->'totals'->>'toolCalls')::bigint
+                ) AS sort_metric
+              FROM wrapped_reports
+              WHERE type = ${type}
+                AND DATE_TRUNC('day', created_at AT TIME ZONE 'UTC')
+                    = DATE_TRUNC('day', ${createdAt}::timestamptz AT TIME ZONE 'UTC')
+              ORDER BY project_id, created_at DESC
+            ),
+            ranked AS (
+              SELECT
+                id,
+                ROW_NUMBER() OVER (ORDER BY sort_metric DESC NULLS LAST)::int AS rank,
+                COUNT(*)::int OVER ()                                         AS total
+              FROM day_reports
+            )
+            SELECT rank, total FROM ranked WHERE id = ${reportId}
+          `),
+        )
+        const row = result.rows[0]
+        if (!row) return null
+        return { rank: Number(row.rank), total: Number(row.total) }
+      }).pipe(Effect.mapError((e) => toRepositoryError(e, "findLeaderboardRankForReport"))),
 
     listLatestPerProjectAdmin: ({
       type,

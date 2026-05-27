@@ -64,6 +64,8 @@ const redactForPublic = (record: WrappedReportRecord): WrappedReportRecord => ({
   },
 })
 
+export type LeaderboardData = { readonly rank: number; readonly total: number }
+
 type WrappedPageData =
   | { readonly found: false }
   | {
@@ -73,6 +75,13 @@ type WrappedPageData =
       /** True iff the viewer is logged in AND belongs to the wrapped's org. */
       readonly isMember: boolean
       readonly loggedIn: boolean
+      /**
+       * Rank of this report among all reports generated on the same UTC day,
+       * one per project, sorted by tokensTotal ?? toolCalls. `null` when the
+       * report is not found in the cohort (shouldn't happen) or when there
+       * are fewer than 5 reports in the cohort (not meaningful to display).
+       */
+      readonly leaderboard: LeaderboardData | null
     }
 
 /**
@@ -114,11 +123,26 @@ export const getWrappedPageData = createServerFn({ method: "GET" })
       )
     }
 
+    const leaderboardRaw = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* WrappedReportRepository
+        return yield* repo.findLeaderboardRankForReport({
+          reportId: WrappedReportId(record.id),
+          createdAt: record.createdAt,
+          type: record.type,
+        })
+      }).pipe(withPostgres(WrappedReportRepositoryLive, adminClient), withTracing),
+    ).catch(() => null)
+    const LEADERBOARD_MIN_COHORT = 5
+    const leaderboard: LeaderboardData | null =
+      leaderboardRaw != null && leaderboardRaw.total >= LEADERBOARD_MIN_COHORT ? leaderboardRaw : null
+
     return {
       found: true,
       record: isMember ? record : redactForPublic(record),
       isMember,
       loggedIn: userId !== null,
+      leaderboard,
     }
   })
 
