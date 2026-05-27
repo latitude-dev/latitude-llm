@@ -58,8 +58,7 @@ The worker emits structured gardening counters, cluster counts, and a `taxonomy.
 - `getClusterDetailsUseCase`: project-scoped cluster row plus a small recent ClickHouse observation sample.
 - `getCategoryDetailsUseCase`: project-scoped category row plus active member clusters.
 - `listObservationsInClusterUseCase`: ClickHouse observations ordered by `(start_time DESC, session_id ASC)` and paged by a compound cursor so same-timestamp observations are not skipped.
-- `getClusterTrendUseCase`: daily observation counts for a cluster over a window, default 14 days.
-- `getTaxonomyAnalyticsUseCase`: active category/cluster counts, total observations in the window, and top clusters by windowed ClickHouse occurrence count.
+- `getTaxonomyAnalyticsUseCase`: active category/cluster counts, total observations in the window, top clusters by windowed ClickHouse occurrence count, and ClickHouse-side current-vs-baseline trend summaries for those top clusters.
 - `getLastRunUseCase`: latest taxonomy run plus the last 10 birth/merge lineage transitions for the activity panel.
 
 ## Operational controls

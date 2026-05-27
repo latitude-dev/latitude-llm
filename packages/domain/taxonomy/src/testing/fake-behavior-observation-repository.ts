@@ -140,6 +140,26 @@ export const createFakeBehaviorObservationRepository = (
           .map(([clusterId, count]) => ({ clusterId: clusterId as never, count }))
       }),
 
+    getClusterTrendCounts: ({ organizationId, projectId, clusterIds, currentSince, baselineSince, baselineDays }) =>
+      Effect.sync(() =>
+        clusterIds.map((clusterId) => {
+          let currentCount = 0
+          let baselineCount = 0
+          for (const observation of rows.values()) {
+            if (
+              observation.organizationId !== organizationId ||
+              observation.projectId !== projectId ||
+              observation.assignedClusterId !== clusterId ||
+              observation.startTime < baselineSince
+            )
+              continue
+            if (observation.startTime >= currentSince) currentCount++
+            else baselineCount++
+          }
+          return { clusterId, currentCount, baselineCount, baselineDays }
+        }),
+      ),
+
     ...overrides,
   }
 

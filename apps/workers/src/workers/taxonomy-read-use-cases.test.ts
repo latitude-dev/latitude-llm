@@ -14,7 +14,6 @@ import {
   createTaxonomyCentroid,
   getCategoryDetailsUseCase,
   getClusterDetailsUseCase,
-  getClusterTrendUseCase,
   getLastRunUseCase,
   getTaxonomyAnalyticsUseCase,
   listCategoriesUseCase,
@@ -201,7 +200,6 @@ describe("taxonomy read use-cases integration", () => {
           clusterDetails: yield* getClusterDetailsUseCase({ organizationId, projectId, clusterId }),
           categoryDetails: yield* getCategoryDetailsUseCase({ organizationId, projectId, categoryId }),
           observations: yield* listObservationsInClusterUseCase({ organizationId, projectId, clusterId, pageSize: 1 }),
-          trend: yield* getClusterTrendUseCase({ organizationId, projectId, clusterId, windowDays: 1, now }),
           analytics: yield* getTaxonomyAnalyticsUseCase({ organizationId, projectId, windowDays: 1, now }),
           lastRun: yield* getLastRunUseCase({ organizationId, projectId }),
         }
@@ -222,7 +220,6 @@ describe("taxonomy read use-cases integration", () => {
     expect(result.categoryDetails.clusters.map((row) => row.id)).toContain(clusterId)
     expect(result.observations.observations).toHaveLength(1)
     expect(result.observations.hasMore).toBe(true)
-    expect(result.trend.buckets.at(-1)?.count).toBe(2)
     expect(result.analytics.totalActiveCategories).toBeGreaterThanOrEqual(1)
     expect(result.analytics.topClusters[0]?.cluster.id).toBe(clusterId)
     expect(result.lastRun.run?.id).toBe(runId)

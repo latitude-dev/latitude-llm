@@ -214,6 +214,7 @@ const bootstrap = async () => {
     createTaxonomyWorker({
       consumer: ctx.consumer,
       publisher: ctx.publisher,
+      workflowStarter: ctx.workflowStarter,
       clickhouseClient: ctx.clickhouseClient,
       postgresClient: ctx.postgresClient,
       adminPostgresClient: getAdminPostgresClient(),

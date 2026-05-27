@@ -12,3 +12,11 @@ export {
   refreshEvaluationAlignmentWorkflow,
 } from "./refresh-evaluation-alignment-workflow.ts"
 export { type SeedDemoProjectWorkflowInput, seedDemoProjectWorkflow } from "./seed-demo-project-workflow.ts"
+export {
+  type TaxonomyNameCategoryWorkflowInput,
+  type TaxonomyNameCategoryWorkflowResult,
+  type TaxonomyNameClusterWorkflowInput,
+  type TaxonomyNameClusterWorkflowResult,
+  taxonomyNameCategoryWorkflow,
+  taxonomyNameClusterWorkflow,
+} from "./taxonomy-naming-workflow.ts"

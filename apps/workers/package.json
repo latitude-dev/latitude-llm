@@ -10,6 +10,8 @@
     "format": "biome format --write src && biome check --fix src",
     "trace-search:backfill": "tsx src/scripts/backfill-trace-search.ts",
     "trace-search:backfill:dist": "node --enable-source-maps dist/scripts/backfill-trace-search.cjs",
+    "taxonomy:backfill": "tsx src/scripts/backfill-taxonomy.ts",
+    "taxonomy:backfill:dist": "node --enable-source-maps dist/scripts/backfill-taxonomy.cjs",
     "test-emails:incidents": "tsx src/scripts/send-test-incident-emails.ts",
     "test-slack:notifications": "tsx src/scripts/send-test-slack-notifications.ts",
     "typecheck": "tsgo -p tsconfig.json --noEmit",

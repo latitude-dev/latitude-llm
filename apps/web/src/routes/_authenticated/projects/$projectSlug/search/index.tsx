@@ -4,10 +4,12 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon, XIcon } from "lucide-react"
 import { useRef, useState } from "react"
+import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import {
   useSavedSearchBySlug,
   useUpdateSavedSearch,
 } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
+import { useTaxonomyOverview } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -36,6 +38,7 @@ import {
 } from "../-components/trace-page-state.ts"
 import { TracesView } from "../-components/traces-view.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { LiveTaxonomyPanel } from "./-components/live-taxonomy-panel.tsx"
 import { SaveSearchModal } from "./-components/save-search-modal.tsx"
 import { SavedSearchesList } from "./-components/saved-searches-list.tsx"
 import { SearchSyntaxLegend } from "./-components/search-syntax-legend.tsx"
@@ -97,6 +100,11 @@ function SearchPage() {
 
   const { data: loadedSavedSearch } = useSavedSearchBySlug(projectId, savedSearchSlug || null)
   const updateSavedSearchMutation = useUpdateSavedSearch(projectId)
+  const liveTaxonomyRecommendationsEnabled = useHasFeatureFlag("live-taxonomy-search-recommendations")
+  const { data: taxonomyOverview } = useTaxonomyOverview(liveTaxonomyRecommendationsEnabled ? projectId : "")
+  const hasRecommendedSearches =
+    liveTaxonomyRecommendationsEnabled &&
+    (taxonomyOverview?.topClusters.some((cluster) => cluster.name !== "Pending") ?? false)
 
   // Compare canonical serializations of both filter sets. `rawFilters` is whatever TanStack Router
   // wrote to the URL (potentially JSON-stringified twice depending on encoding), so going through
@@ -223,7 +231,18 @@ function SearchPage() {
         </Layout.ActionsRow>
       </Layout.Actions>
 
-      {!hasContent ? <SavedSearchesList projectId={projectId} projectSlug={projectSlug} /> : null}
+      {!hasContent ? (
+        <div className="flex min-h-0 grow flex-col">
+          <SavedSearchesList
+            projectId={projectId}
+            projectSlug={projectSlug}
+            hasRecommendedSearches={hasRecommendedSearches}
+          />
+          {liveTaxonomyRecommendationsEnabled ? (
+            <LiveTaxonomyPanel projectId={projectId} projectSlug={projectSlug} />
+          ) : null}
+        </div>
+      ) : null}
 
       {hasContent ? (
         <Layout.Actions className="pt-0">

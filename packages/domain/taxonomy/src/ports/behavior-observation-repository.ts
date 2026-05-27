@@ -45,6 +45,13 @@ export interface BehaviorObservationClusterOccurrence {
   readonly count: number
 }
 
+export interface BehaviorObservationClusterTrendCounts {
+  readonly clusterId: TaxonomyClusterId
+  readonly currentCount: number
+  readonly baselineCount: number
+  readonly baselineDays: number
+}
+
 export interface ReassignObservationInput {
   readonly observation: TaxonomyObservation
   readonly assignedClusterId: TaxonomyClusterId
@@ -96,6 +103,14 @@ export interface BehaviorObservationRepositoryShape {
     readonly since: Date
     readonly limit: number
   }): Effect.Effect<readonly BehaviorObservationClusterOccurrence[], RepositoryError, ChSqlClient>
+  getClusterTrendCounts(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly clusterIds: readonly TaxonomyClusterId[]
+    readonly currentSince: Date
+    readonly baselineSince: Date
+    readonly baselineDays: number
+  }): Effect.Effect<readonly BehaviorObservationClusterTrendCounts[], RepositoryError, ChSqlClient>
 }
 
 export class BehaviorObservationRepository extends Context.Service<

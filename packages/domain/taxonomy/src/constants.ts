@@ -171,8 +171,12 @@ export const TAXONOMY_CATEGORY_CONTINUATION_THRESHOLD = 0.8
 export const TAXONOMY_SEARCH_MIN_SCORE = 0.2
 export const TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY = 0.5
 
-export const TAXONOMY_NAMING_MODEL = { provider: "anthropic", model: "claude-haiku-4-5" } as const
+export const TAXONOMY_NAMING_MODEL = {
+  provider: "amazon-bedrock",
+  model: "minimax.minimax-m2.5",
+} as const
 export const TAXONOMY_NAMING_REFRESH_OBSERVATIONS = 25
+export const TAXONOMY_NAMING_TIMEOUT_MS = 60_000
 
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MIN = 4
 export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
