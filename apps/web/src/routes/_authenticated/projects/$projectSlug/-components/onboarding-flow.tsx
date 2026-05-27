@@ -1,4 +1,5 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
+import type { FLAGGER_STRATEGY_SLUGS } from "@domain/flaggers"
 import {
   Button,
   CodeBlock,
@@ -14,6 +15,7 @@ import {
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
+import { useQuery } from "@tanstack/react-query"
 import type { LucideIcon } from "lucide-react"
 import {
   Bot,
@@ -28,6 +30,11 @@ import {
 } from "lucide-react"
 import { lazy, type ReactNode, Suspense, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useApiKeysCollection } from "../../../../../domains/api-keys/api-keys.collection.ts"
+import { invalidateProjectFlaggers, useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
+import {
+  configureProjectFlaggersForOnboarding,
+  listAvailableFlaggers,
+} from "../../../../../domains/flaggers/flaggers.functions.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
@@ -57,10 +64,11 @@ import {
   type TsPackageManager,
 } from "./onboarding-integration-snippets.ts"
 
-type OnboardingStep = "role" | "stack" | "telemetry"
+type OnboardingStep = "role" | "stack" | "flaggers" | "telemetry"
 type StackChoice = "coding-agent-machine" | "production-agent"
 type TelemetrySetupMode = "coding-agent" | "manual"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
+type FlaggerPresetSlug = (typeof FLAGGER_STRATEGY_SLUGS)[number]
 
 const SETUP_MODE_TAB_OPTIONS = [
   { id: "coding-agent" as const, label: "Coding agent", icon: <Bot className="h-4 w-4" /> },
@@ -96,6 +104,98 @@ const CODING_MACHINE_AGENT_TAB_OPTIONS = [
     icon: <OnboardingCodingAgentTabIcon src={ONBOARDING_OPENCLAW_LOGO_SRC} />,
   },
 ] as const satisfies ReadonlyArray<{ id: CodingMachineAgentId; label: string; icon: ReactNode }>
+
+const FLAGGER_USE_CASE_PRESETS = [
+  {
+    id: "support-agent",
+    label: "Support agent",
+    description: "Customer-facing assistants handling questions, escalations, and account workflows.",
+    enabledSlugs: [
+      "frustration",
+      "refusal",
+      "forgetting",
+      "tool-call-errors",
+      "empty-response",
+      "jailbreaking",
+      "nsfw",
+    ] satisfies ReadonlyArray<FlaggerPresetSlug>,
+  },
+  {
+    id: "coding-agent",
+    label: "Coding agent",
+    description: "Agents that edit files, call tools, and work through multi-step implementation tasks.",
+    enabledSlugs: [
+      "laziness",
+      "trashing",
+      "tool-call-errors",
+      "empty-response",
+      "refusal",
+      "forgetting",
+      "output-schema-validation",
+      "frustration",
+    ] satisfies ReadonlyArray<FlaggerPresetSlug>,
+  },
+  {
+    id: "sales-agent",
+    label: "Sales agent",
+    description: "Lead qualification and buyer-facing assistants where tone and follow-through matter.",
+    enabledSlugs: [
+      "frustration",
+      "refusal",
+      "forgetting",
+      "empty-response",
+      "jailbreaking",
+      "nsfw",
+    ] satisfies ReadonlyArray<FlaggerPresetSlug>,
+  },
+  {
+    id: "tool-workflow-agent",
+    label: "Tool workflow agent",
+    description: "Agents that coordinate tools, APIs, and structured workflows.",
+    enabledSlugs: [
+      "tool-call-errors",
+      "trashing",
+      "output-schema-validation",
+      "empty-response",
+      "laziness",
+    ] satisfies ReadonlyArray<FlaggerPresetSlug>,
+  },
+  {
+    id: "knowledge-base-agent",
+    label: "Knowledge-base agent",
+    description: "RAG and documentation assistants that need to preserve context and answer directly.",
+    enabledSlugs: [
+      "forgetting",
+      "refusal",
+      "empty-response",
+      "frustration",
+      "laziness",
+    ] satisfies ReadonlyArray<FlaggerPresetSlug>,
+  },
+  {
+    id: "structured-extraction-agent",
+    label: "Structured extraction",
+    description: "Extraction and classification agents that return machine-readable output.",
+    enabledSlugs: [
+      "output-schema-validation",
+      "empty-response",
+      "tool-call-errors",
+      "laziness",
+    ] satisfies ReadonlyArray<FlaggerPresetSlug>,
+  },
+  {
+    id: "safety-agent",
+    label: "Safety agent",
+    description: "Moderation and policy-sensitive assistants exposed to adversarial or unsafe inputs.",
+    enabledSlugs: [
+      "nsfw",
+      "jailbreaking",
+      "refusal",
+      "frustration",
+      "empty-response",
+    ] satisfies ReadonlyArray<FlaggerPresetSlug>,
+  },
+] as const
 
 const STACK_CHOICE_OPTIONS: ReadonlyArray<{
   readonly id: StackChoice
@@ -392,6 +492,8 @@ export function OnboardingFlow({
   const [telemetrySetupMode, setTelemetrySetupMode] = useState<TelemetrySetupMode>("coding-agent")
   const [integrationPanel, setIntegrationPanel] = useState<IntegrationPanel>("typescript")
   const [otelExporterLanguage, setOtelExporterLanguage] = useState<OtelExporterLanguageId>("go")
+  const [selectedFlaggerSlugs, setSelectedFlaggerSlugs] = useState<ReadonlySet<string> | null>(null)
+  const [isSavingFlaggers, setIsSavingFlaggers] = useState(false)
 
   const form = useForm({
     defaultValues: {
@@ -404,7 +506,7 @@ export function OnboardingFlow({
         await submitOnboarding({ data: { jobTitle, phoneNumber, stackChoice: stack } })
       },
       {
-        onSuccess: () => setStep("telemetry"),
+        onSuccess: () => setStep("flaggers"),
         onError: (error) => {
           toast({ variant: "destructive", description: toUserMessage(error) })
         },
@@ -424,6 +526,52 @@ export function OnboardingFlow({
     [projectId],
   )
   const { data: apiKeysList } = useApiKeysCollection()
+  const { data: projectFlaggers = [], isLoading: isLoadingProjectFlaggers } = useProjectFlaggers(projectId)
+  const { data: availableFlaggers = [], isLoading: isLoadingAvailableFlaggers } = useQuery({
+    queryKey: ["availableFlaggers"],
+    queryFn: () => listAvailableFlaggers(),
+  })
+
+  const availableFlaggerSlugs = availableFlaggers.map((flagger) => flagger.slug)
+  const currentEnabledFlaggerSlugs = new Set(
+    projectFlaggers.filter((flagger) => flagger.enabled).map((flagger) => flagger.slug),
+  )
+  const enabledFlaggerSlugs =
+    selectedFlaggerSlugs ?? (projectFlaggers.length > 0 ? currentEnabledFlaggerSlugs : new Set(availableFlaggerSlugs))
+
+  const toggleFlaggerSelection = (slug: string) => {
+    setSelectedFlaggerSlugs((current) => {
+      const next = new Set(current ?? enabledFlaggerSlugs)
+      if (next.has(slug)) {
+        next.delete(slug)
+      } else {
+        next.add(slug)
+      }
+      return next
+    })
+  }
+
+  const applyFlaggerPreset = (enabledSlugs: readonly string[]) => {
+    setSelectedFlaggerSlugs(new Set(enabledSlugs))
+  }
+
+  const handleConfigureFlaggers = async () => {
+    setIsSavingFlaggers(true)
+    try {
+      await configureProjectFlaggersForOnboarding({
+        data: {
+          projectId,
+          enabledSlugs: availableFlaggerSlugs.filter((slug) => enabledFlaggerSlugs.has(slug)),
+        },
+      })
+      await invalidateProjectFlaggers(projectId)
+      setStep("telemetry")
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setIsSavingFlaggers(false)
+    }
+  }
 
   const resolvedProjectSlug = project?.slug?.trim() || projectSlug.trim()
   const slugForSnippets = resolvedProjectSlug || "your-project-slug"
@@ -650,6 +798,96 @@ export function OnboardingFlow({
               </div>
             </div>
           </div>
+        ) : step === "flaggers" ? (
+          <div className="flex w-full max-w-[880px] self-center">
+            <div className="flex w-full flex-col gap-8">
+              <div className="flex flex-col gap-4">
+                <div className="h-8 w-8">
+                  <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Text.H2 weight="medium">Choose automatic flaggers</Text.H2>
+                  <Text.H4 color="foregroundMuted">
+                    Latitude inspects all incoming traces and creates issues when they detect common failure patterns.
+                    Choose the patterns you want to monitor.
+                  </Text.H4>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-row flex-wrap gap-2">
+                  {FLAGGER_USE_CASE_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyFlaggerPreset(preset.enabledSlugs)}
+                      className="inline-flex cursor-pointer rounded-full border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-accent/10"
+                      title={preset.description}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                {isLoadingAvailableFlaggers || isLoadingProjectFlaggers ? (
+                  <Text.H5 color="foregroundMuted">Loading flaggers…</Text.H5>
+                ) : (
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3">
+                    {availableFlaggers.map((flagger) => {
+                      const selected = enabledFlaggerSlugs.has(flagger.slug)
+                      return (
+                        <button
+                          key={flagger.slug}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => toggleFlaggerSelection(flagger.slug)}
+                          className={cn(
+                            "group flex min-h-[132px] w-full cursor-pointer flex-col justify-between gap-4 rounded-xl border p-4 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/10",
+                            {
+                              "border-primary bg-primary-muted/40 ring-1 ring-primary/20": selected,
+                              "border-border bg-card": !selected,
+                            },
+                          )}
+                        >
+                          <div className="flex min-w-0 flex-col gap-1.5">
+                            <Text.H5M>{flagger.name}</Text.H5M>
+                            <Text.H6 color="foregroundMuted">{flagger.description}</Text.H6>
+                          </div>
+                          <div className="flex flex-row justify-end">
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors",
+                                {
+                                  "border-primary bg-primary text-primary-foreground": selected,
+                                  "border-border bg-background text-transparent group-hover:border-primary/40":
+                                    !selected,
+                                },
+                              )}
+                            >
+                              <Icon icon={Check} size="sm" />
+                            </span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-row flex-wrap items-center gap-3">
+                <Button variant="outline" onClick={() => setStep("stack")}>
+                  Back
+                </Button>
+                <Button
+                  disabled={isLoadingAvailableFlaggers || availableFlaggers.length === 0 || isSavingFlaggers}
+                  onClick={() => void handleConfigureFlaggers()}
+                >
+                  {isSavingFlaggers ? "Saving…" : "Continue"}
+                </Button>
+              </div>
+            </div>
+          </div>
         ) : stackChoice === "production-agent" ? (
           <div className="mx-auto w-full max-w-[560px]">
             <div className="flex w-full flex-col gap-6">
@@ -814,7 +1052,7 @@ export function OnboardingFlow({
               )}
 
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => setStep("stack")}>
+                <Button variant="outline" onClick={() => setStep("flaggers")}>
                   Back
                 </Button>
                 <Button variant="ghost" onClick={() => void onOpenProjectTraces(projectId)}>
@@ -893,7 +1131,7 @@ export function OnboardingFlow({
               </div>
 
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => setStep("stack")}>
+                <Button variant="outline" onClick={() => setStep("flaggers")}>
                   Back
                 </Button>
                 <Button variant="ghost" onClick={() => void onOpenProjectTraces(projectId)}>

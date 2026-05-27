@@ -10,7 +10,8 @@ export interface UpdateFlaggerInput {
   readonly organizationId: string
   readonly projectId: ProjectId
   readonly slug: FlaggerSlug
-  readonly enabled: boolean
+  readonly enabled?: boolean
+  readonly sampling?: number
   readonly actorUserId?: string
 }
 
@@ -18,10 +19,11 @@ export type UpdateFlaggerError = RepositoryError
 
 /**
  * Updates a flagger row and evicts the project's flagger cache entry so
- * `processFlaggersUseCase` picks up the new `enabled` value on the next run
- * (otherwise the 5-minute cache TTL would gate the change). Eviction is
- * folded in here so callers can't forget — `evictProjectFlaggersUseCase` is
- * permissive (no-op when `CacheStore` isn't in the layer).
+ * `processFlaggersUseCase` picks up the new `enabled` or `sampling` value on
+ * the next run (otherwise the 5-minute cache TTL would gate the change).
+ * Eviction is folded in here so callers can't forget —
+ * `evictProjectFlaggersUseCase` is permissive (no-op when `CacheStore` isn't
+ * in the layer).
  */
 export const updateFlaggerUseCase = Effect.fn("flaggers.updateFlagger")(function* (input: UpdateFlaggerInput) {
   yield* Effect.annotateCurrentSpan("flagger.organizationId", input.organizationId)
@@ -35,7 +37,8 @@ export const updateFlaggerUseCase = Effect.fn("flaggers.updateFlagger")(function
       const row = yield* repository.update({
         projectId: input.projectId,
         slug: input.slug,
-        enabled: input.enabled,
+        ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+        ...(input.sampling !== undefined ? { sampling: input.sampling } : {}),
       })
 
       if (row) {
@@ -50,7 +53,8 @@ export const updateFlaggerUseCase = Effect.fn("flaggers.updateFlagger")(function
             actorUserId: input.actorUserId ?? "",
             projectId: input.projectId,
             flaggerSlug: input.slug,
-            enabled: input.enabled,
+            enabled: row.enabled,
+            sampling: row.sampling,
           },
         })
       }

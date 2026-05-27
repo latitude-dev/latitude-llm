@@ -1,4 +1,5 @@
 import {
+  configureProjectFlaggersForOnboardingUseCase,
   FLAGGER_STRATEGY_SLUGS,
   FlaggerRepository,
   type FlaggerSlug,
@@ -53,6 +54,27 @@ const toFlaggerRecord = (flagger: {
 
 export type FlaggerRecord = ReturnType<typeof toFlaggerRecord>
 
+const toAvailableFlaggerRecord = (slug: FlaggerSlug) => {
+  const strategy = getFlaggerStrategy(slug)
+  const details = strategy && isLlmCapableStrategy(strategy) ? strategy.annotator : strategy?.details
+
+  return {
+    slug,
+    name: details?.name ?? humanizeSlug(slug),
+    description: details?.description ?? "Flags matching trace behavior for review.",
+    mode: strategy && isLlmCapableStrategy(strategy) ? "llm" : "deterministic",
+  }
+}
+
+type AvailableFlaggerRecord = ReturnType<typeof toAvailableFlaggerRecord>
+
+export const listAvailableFlaggers = createServerFn({ method: "GET" }).handler(
+  async (): Promise<readonly AvailableFlaggerRecord[]> => {
+    await requireSession()
+    return FLAGGER_STRATEGY_SLUGS.map(toAvailableFlaggerRecord)
+  },
+)
+
 export const listFlaggersByProject = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<readonly FlaggerRecord[]> => {
@@ -71,12 +93,40 @@ export const listFlaggersByProject = createServerFn({ method: "GET" })
     return flaggers.map(toFlaggerRecord)
   })
 
+export const configureProjectFlaggersForOnboarding = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      enabledSlugs: z.array(z.enum(FLAGGER_STRATEGY_SLUGS)),
+    }),
+  )
+  .handler(async ({ data }): Promise<void> => {
+    const { organizationId, userId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const client = getPostgresClient()
+
+    await Effect.runPromise(
+      configureProjectFlaggersForOnboardingUseCase({
+        organizationId,
+        projectId,
+        enabledSlugs: data.enabledSlugs,
+        actorUserId: userId,
+      }).pipe(
+        withPostgres(Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive), client, orgId),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
+    )
+  })
+
 export const updateFlagger = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       projectId: z.string(),
       slug: z.enum(FLAGGER_STRATEGY_SLUGS),
       enabled: z.boolean(),
+      sampling: z.number().int().min(0).max(100),
     }),
   )
   .handler(async ({ data }): Promise<FlaggerRecord | null> => {
@@ -91,6 +141,7 @@ export const updateFlagger = createServerFn({ method: "POST" })
         projectId,
         slug: data.slug,
         enabled: data.enabled,
+        sampling: data.sampling,
         actorUserId: userId,
       }).pipe(
         withPostgres(Layer.mergeAll(FlaggerRepositoryLive, OutboxEventWriterLive), client, orgId),

@@ -20,7 +20,14 @@ export interface SaveFlaggersForProjectInput {
 export interface UpdateFlaggerInput {
   readonly projectId: ProjectId
   readonly slug: FlaggerSlug
-  readonly enabled: boolean
+  readonly enabled?: boolean
+  readonly sampling?: number
+}
+
+export interface UpdateFlaggerEnabledForProjectInput {
+  readonly projectId: ProjectId
+  readonly enabledSlugs: readonly FlaggerSlug[]
+  readonly slugs: readonly FlaggerSlug[]
 }
 
 export interface FlaggerRepositoryShape {
@@ -39,6 +46,14 @@ export interface FlaggerRepositoryShape {
    * second run).
    */
   saveManyForProject(input: SaveFlaggersForProjectInput): Effect.Effect<readonly Flagger[], RepositoryError, SqlClient>
+  /**
+   * Sets `enabled` for all `slugs` in one project in a single database update:
+   * slugs included in `enabledSlugs` become enabled, the rest become disabled.
+   * Returns only rows whose enabled state changed.
+   */
+  updateEnabledForProject(
+    input: UpdateFlaggerEnabledForProjectInput,
+  ): Effect.Effect<readonly Flagger[], RepositoryError, SqlClient>
   update(input: UpdateFlaggerInput): Effect.Effect<Flagger | null, RepositoryError, SqlClient>
 }
 

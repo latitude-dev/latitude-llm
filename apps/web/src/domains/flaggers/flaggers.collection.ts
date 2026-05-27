@@ -22,6 +22,7 @@ const makeProjectFlaggersCollection = (projectId: string) =>
                 projectId: mutation.modified.projectId,
                 slug: mutation.modified.slug,
                 enabled: mutation.modified.enabled,
+                sampling: mutation.modified.sampling,
               },
             }),
           ),
@@ -67,10 +68,16 @@ export function updateFlaggerMutation(input: {
   readonly projectId: string
   readonly id: string
   readonly slug: string
-  readonly enabled: boolean
+  readonly enabled?: boolean
+  readonly sampling?: number
 }) {
   const collection = getProjectFlaggersCollection(input.projectId)
   return collection.update(input.id, (draft) => {
-    draft.enabled = input.enabled
+    if (input.enabled !== undefined) draft.enabled = input.enabled
+    if (input.sampling !== undefined) draft.sampling = input.sampling
   })
+}
+
+export async function invalidateProjectFlaggers(projectId: string) {
+  await queryClient.invalidateQueries({ queryKey: flaggersQueryKey(projectId) })
 }

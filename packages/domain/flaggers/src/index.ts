@@ -55,8 +55,14 @@ export {
   type FlaggerRepositoryShape,
   type ListFlaggersByProjectInput,
   type SaveFlaggersForProjectInput,
+  type UpdateFlaggerEnabledForProjectInput,
   type UpdateFlaggerInput as RepositoryUpdateFlaggerInput,
 } from "./ports/flagger-repository.ts"
+export {
+  type ConfigureProjectFlaggersForOnboardingError,
+  type ConfigureProjectFlaggersForOnboardingInput,
+  configureProjectFlaggersForOnboardingUseCase,
+} from "./use-cases/configure-project-flaggers-for-onboarding.ts"
 export {
   type DraftFlaggerAnnotationError,
   type DraftFlaggerAnnotationOutput,

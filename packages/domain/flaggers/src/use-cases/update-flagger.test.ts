@@ -75,6 +75,31 @@ describe("updateFlaggerUseCase", () => {
     expect(updated?.id).toBe(seed.id)
   })
 
+  it("updates sampling and returns the updated flagger", async () => {
+    const seed = makeFlagger("jailbreaking", FLAGGER_DEFAULT_ENABLED)
+    const { repository } = createFakeFlaggerRepository([seed])
+    const { layer: cacheLayer } = createCacheLayer()
+
+    const layer = Layer.mergeAll(
+      Layer.succeed(FlaggerRepository, repository),
+      Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORG_ID })),
+      Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
+      cacheLayer,
+    )
+
+    const updated = await Effect.runPromise(
+      updateFlaggerUseCase({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        slug: "jailbreaking",
+        sampling: 42,
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(updated?.sampling).toBe(42)
+    expect(updated?.enabled).toBe(seed.enabled)
+  })
+
   it("evicts the project's flagger cache so the next read picks up the new value before TTL", async () => {
     // Cache eviction is the load-bearing behavior here: without it, callers
     // of `getProjectFlaggersUseCase` would see the stale `enabled` value for
@@ -164,6 +189,7 @@ describe("updateFlaggerUseCase", () => {
       projectId: PROJECT_ID,
       flaggerSlug: "jailbreaking",
       enabled: false,
+      sampling: FLAGGER_DEFAULT_SAMPLING,
     })
   })
 

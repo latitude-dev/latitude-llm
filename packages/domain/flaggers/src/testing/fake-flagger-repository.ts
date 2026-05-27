@@ -60,13 +60,40 @@ export const createFakeFlaggerRepository = (
         return inserted.sort((a, b) => a.slug.localeCompare(b.slug))
       }),
 
-    update: ({ projectId, slug, enabled }) =>
+    updateEnabledForProject: ({ projectId, enabledSlugs, slugs }) =>
+      Effect.sync(() => {
+        const enabledSet = new Set(enabledSlugs)
+        const updatedFlaggers: Flagger[] = []
+
+        for (const slug of slugs) {
+          const id = indexByProjectSlug.get(keyFor(projectId, slug))
+          if (!id) continue
+          const existing = flaggers.get(id)
+          if (!existing) continue
+
+          const enabled = enabledSet.has(slug)
+          if (existing.enabled === enabled) continue
+
+          const updated = { ...existing, enabled, updatedAt: new Date() }
+          flaggers.set(id, updated)
+          updatedFlaggers.push(updated)
+        }
+
+        return updatedFlaggers.sort((a, b) => a.slug.localeCompare(b.slug))
+      }),
+
+    update: ({ projectId, slug, enabled, sampling }) =>
       Effect.sync(() => {
         const id = indexByProjectSlug.get(keyFor(projectId, slug))
         if (!id) return null
         const existing = flaggers.get(id)
         if (!existing) return null
-        const updated = { ...existing, enabled, updatedAt: new Date() }
+        const updated = {
+          ...existing,
+          ...(enabled !== undefined ? { enabled } : {}),
+          ...(sampling !== undefined ? { sampling } : {}),
+          updatedAt: new Date(),
+        }
         flaggers.set(id, updated)
         return updated
       }),

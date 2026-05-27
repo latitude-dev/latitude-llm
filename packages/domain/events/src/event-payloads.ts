@@ -251,6 +251,7 @@ export interface EventPayloads {
     readonly projectId: string
     readonly flaggerSlug: string
     readonly enabled: boolean
+    readonly sampling: number
   }
   SavedSearchCreated: {
     readonly organizationId: string

@@ -7,7 +7,7 @@ import {
   flaggerSchema,
 } from "@domain/flaggers"
 import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, inArray, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { flaggers } from "../schema/flaggers.ts"
@@ -107,7 +107,52 @@ export const FlaggerRepositoryLive = Layer.effect(
             )
         }),
 
-      update: ({ projectId, slug, enabled }) =>
+      updateEnabledForProject: ({ projectId, enabledSlugs, slugs }) =>
+        Effect.gen(function* () {
+          if (slugs.length === 0) {
+            return [] as readonly Flagger[]
+          }
+
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const now = new Date()
+          const enabledExpression =
+            enabledSlugs.length === 0
+              ? sql<boolean>`false`
+              : sql<boolean>`case when ${flaggers.slug} in (${sql.join(
+                  enabledSlugs.map((slug) => sql`${slug}`),
+                  sql`, `,
+                )}) then true else false end`
+
+          return yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(flaggers)
+                .set({
+                  enabled: enabledExpression,
+                  updatedAt: now,
+                })
+                .where(
+                  and(
+                    eq(flaggers.organizationId, organizationId),
+                    eq(flaggers.projectId, projectId),
+                    inArray(flaggers.slug, slugs),
+                    sql`${flaggers.enabled} is distinct from ${enabledExpression}`,
+                  ),
+                )
+                .returning(),
+            )
+            .pipe(
+              Effect.map((rows) =>
+                rows
+                  .map(toDomainFlagger)
+                  .slice()
+                  .sort((a, b) => a.slug.localeCompare(b.slug)),
+              ),
+              Effect.mapError((cause) => new RepositoryError({ operation: "updateEnabledForProject", cause })),
+            )
+        }),
+
+      update: ({ projectId, slug, enabled, sampling }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const now = new Date()
@@ -116,7 +161,11 @@ export const FlaggerRepositoryLive = Layer.effect(
             .query((db, organizationId) =>
               db
                 .update(flaggers)
-                .set({ enabled, updatedAt: now })
+                .set({
+                  ...(enabled !== undefined ? { enabled } : {}),
+                  ...(sampling !== undefined ? { sampling } : {}),
+                  updatedAt: now,
+                })
                 .where(
                   and(
                     eq(flaggers.organizationId, organizationId),
