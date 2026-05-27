@@ -4,6 +4,7 @@ import {
   CURRENT_REPORT_VERSION,
   PERSONALITY_KINDS,
   type PersonalityKind,
+  pickWrittenAnchor,
   reportV2Schema,
   type ReportV2,
 } from "@domain/spans"
@@ -164,7 +165,7 @@ function buildReport(i: number, projectId: string, orgId: string): ReportV2 {
       read: locRead,
       added: Math.floor(locWritten * 0.7),
       removed: Math.floor(locWritten * 0.2),
-      writtenAnchor: { prefix: "", emphasis: "" },
+      writtenAnchor: pickWrittenAnchor(locWritten),
       readAnchor: { prefix: "", emphasis: "" },
     },
     topBashCommand:

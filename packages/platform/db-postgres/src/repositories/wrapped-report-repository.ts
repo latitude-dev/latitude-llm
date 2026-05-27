@@ -19,7 +19,7 @@ import {
   type WrappedReportSummary,
   type WrappedReportType,
 } from "@domain/spans"
-import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, lte } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { wrappedReports } from "../schema/wrapped-reports.ts"
@@ -159,37 +159,46 @@ export const WrappedReportRepositoryLive = Layer.effect(
         // Cohort: all reports of the same type generated on the same UTC
         // calendar day as this report, deduplicated to one per project
         // (latest created_at wins). Sort metric: tokensTotal when present
-        // (V2), toolCalls otherwise (V1). This naturally places V1 reports
-        // below V2 reports since token counts >> tool-call counts.
-        type Row = { rank: number; total: number }
-        const rows = yield* sqlClient.query((db) =>
-          db.execute<Row>(sql`
-            WITH day_reports AS (
-              SELECT DISTINCT ON (project_id)
-                id,
-                COALESCE(
-                  (report->'totals'->>'tokensTotal')::bigint,
-                  (report->'totals'->>'toolCalls')::bigint
-                ) AS sort_metric
-              FROM wrapped_reports
-              WHERE type = ${type}
-                AND DATE_TRUNC('day', created_at AT TIME ZONE 'UTC')
-                    = DATE_TRUNC('day', ${createdAt}::timestamptz AT TIME ZONE 'UTC')
-              ORDER BY project_id, created_at DESC
-            ),
-            ranked AS (
-              SELECT
-                id,
-                ROW_NUMBER() OVER (ORDER BY sort_metric DESC NULLS LAST)::int AS rank,
-                COUNT(*)::int OVER ()                                         AS total
-              FROM day_reports
-            )
-            SELECT rank, total FROM ranked WHERE id = ${reportId}
-          `),
+        // (V2), toolCalls otherwise (V1). Computed in JS — same dedup
+        // logic as listLatestPerProjectAdmin, avoids complex CTE.
+        const dayStart = new Date(
+          Date.UTC(createdAt.getUTCFullYear(), createdAt.getUTCMonth(), createdAt.getUTCDate()),
         )
-        const row = (rows as unknown as Row[])[0]
-        if (!row) return null
-        return { rank: Number(row.rank), total: Number(row.total) }
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
+
+        const rows = yield* sqlClient.query((db) =>
+          db
+            .select({
+              id: wrappedReports.id,
+              projectId: wrappedReports.projectId,
+              report: wrappedReports.report,
+            })
+            .from(wrappedReports)
+            .where(
+              and(
+                eq(wrappedReports.type, type),
+                gte(wrappedReports.createdAt, dayStart),
+                lte(wrappedReports.createdAt, dayEnd),
+              ),
+            )
+            .orderBy(asc(wrappedReports.projectId), desc(wrappedReports.createdAt)),
+        )
+
+        // Dedupe to latest-per-project and extract sort metric.
+        const seen = new Set<string>()
+        const cohort: Array<{ id: string; metric: number }> = []
+        for (const row of rows) {
+          if (seen.has(row.projectId)) continue
+          seen.add(row.projectId)
+          const totals = (row.report as { totals?: { tokensTotal?: number; toolCalls?: number } })
+            ?.totals
+          cohort.push({ id: row.id, metric: totals?.tokensTotal ?? totals?.toolCalls ?? 0 })
+        }
+
+        cohort.sort((a, b) => b.metric - a.metric)
+        const rank = cohort.findIndex((c) => c.id === reportId) + 1
+        if (rank === 0) return null // reportId not in this day's cohort
+        return { rank, total: cohort.length }
       }).pipe(Effect.mapError((e) => toRepositoryError(e, "findLeaderboardRankForReport"))),
 
     listLatestPerProjectAdmin: ({
