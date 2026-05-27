@@ -37,7 +37,10 @@ export interface WrappedReportRepositoryShape {
   findLatestForProject: (params: {
     readonly projectId: ProjectId
     readonly type: WrappedReportType
-    readonly sinceCreatedAt: Date
+    /** Lower bound (inclusive). When omitted no lower bound is applied. */
+    readonly sinceCreatedAt?: Date
+    /** Upper bound (inclusive). When omitted no upper bound is applied. */
+    readonly beforeCreatedAt?: Date
   }) => Effect.Effect<WrappedReportSummary | null, RepositoryError, SqlClient>
 
   listLatestPerProjectAdmin: (params: {
