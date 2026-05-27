@@ -1,4 +1,5 @@
 import { alertIncidentSeeders } from "./alert-incidents/index.ts"
+import { wrappedReportSeeders } from "./wrapped-reports/index.ts"
 import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
@@ -51,4 +52,8 @@ export const allSeeders: readonly Seeder[] = [
   // which lives on the canonical seed org. Excluded from `contentSeeders`
   // because the demo workflow's scope points at a different org/project.
   ...bootstrapTelemetryFlaggerSeeders,
+  // 100 Claude Code Wrapped V2 reports for the backoffice analytics page
+  // and the public Wrapped share URLs. All created "today" so they appear
+  // in the backoffice list and form a single leaderboard cohort.
+  ...wrappedReportSeeders,
 ]
