@@ -65,6 +65,7 @@ const baseInput: AssembleReportInput = {
     streakDays: 5,
     testsRun: 9,
     gitWriteOps: 0,
+    tokensTotal: 0,
   },
   durationStats: {
     totalDurationMs: 30 * 60 * 1000,

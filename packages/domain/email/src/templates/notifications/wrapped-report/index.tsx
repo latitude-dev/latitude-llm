@@ -14,6 +14,7 @@ import { renderEmail } from "../../../utils/render.ts"
 import type { RenderedEmail } from "../../types.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { ClaudeCodeWrappedEmailV1 } from "./claude-code/v1/EmailTemplateV1.tsx"
+import { ClaudeCodeWrappedEmailV2 } from "./claude-code/v2/EmailTemplateV2.tsx"
 
 const PLAIN_RANGE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
 
@@ -27,7 +28,7 @@ const formatPlainRange = (start: Date, end: Date): string =>
  * type ships, freeze the V1 component and add V2 alongside.
  */
 const TEMPLATE_BY_TYPE_VERSION = {
-  claude_code: { 1: ClaudeCodeWrappedEmailV1 },
+  claude_code: { 1: ClaudeCodeWrappedEmailV1, 2: ClaudeCodeWrappedEmailV2 },
 } as const satisfies Record<WrappedReportType, Record<ReportVersion, typeof ClaudeCodeWrappedEmailV1>>
 
 interface RenderInput {

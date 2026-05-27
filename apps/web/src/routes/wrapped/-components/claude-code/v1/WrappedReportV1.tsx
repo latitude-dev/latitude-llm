@@ -37,9 +37,9 @@ const RANGE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numer
 
 const formatRange = (start: Date, end: Date): string => `${RANGE_FMT.format(start)} – ${RANGE_FMT.format(end)}`
 
-const formatCompact = (n: number): string => n.toLocaleString("en-US")
+export const formatCompact = (n: number): string => n.toLocaleString("en-US")
 
-const formatDuration = (ms: number): string => {
+export const formatDuration = (ms: number): string => {
   if (ms <= 0) return "0m"
   const totalMinutes = Math.round(ms / 60000)
   if (totalMinutes < 60) return `${totalMinutes}m`
@@ -51,7 +51,7 @@ const formatDuration = (ms: number): string => {
 
 const { cream: CREAM, accent: ACCENT, ink: INK, muted: MUTED } = WRAPPED_COLORS
 
-function Hero({
+export function Hero({
   ownerName,
   projectName,
   start,
@@ -101,7 +101,7 @@ function HeadlineNumbers({ totals }: { totals: WrappedReportRecord["report"]["to
   )
 }
 
-function BreadthStrip({ totals }: { totals: WrappedReportRecord["report"]["totals"] }) {
+export function BreadthStrip({ totals }: { totals: WrappedReportRecord["report"]["totals"] }) {
   const parts: string[] = []
   if (totals.workspaces > 0) parts.push(`${formatCompact(totals.workspaces)} workspaces`)
   if (totals.branches > 0) parts.push(`${formatCompact(totals.branches)} branches`)
@@ -164,7 +164,7 @@ function LocHeadline({ loc }: { loc: WrappedReportRecord["report"]["loc"] }) {
   )
 }
 
-function ReadWriteRatio({ loc }: { loc: WrappedReportRecord["report"]["loc"] }) {
+export function ReadWriteRatio({ loc }: { loc: WrappedReportRecord["report"]["loc"] }) {
   if (loc.written <= 0 || loc.read <= 0) return null
   const ratio = loc.read / loc.written
   const ratioText = ratio >= 10 ? Math.round(ratio).toString() : ratio.toFixed(1)
@@ -183,7 +183,7 @@ function ReadWriteRatio({ loc }: { loc: WrappedReportRecord["report"]["loc"] }) 
   )
 }
 
-function TopBashCommand({ command }: { command: WrappedReportRecord["report"]["topBashCommand"] }) {
+export function TopBashCommand({ command }: { command: WrappedReportRecord["report"]["topBashCommand"] }) {
   if (!command) return null
   return (
     <section className="text-center">
@@ -203,7 +203,7 @@ function TopBashCommand({ command }: { command: WrappedReportRecord["report"]["t
   )
 }
 
-function HeatmapSection({ heatmap }: { heatmap: WrappedReportRecord["report"]["heatmap"] }) {
+export function HeatmapSection({ heatmap }: { heatmap: WrappedReportRecord["report"]["heatmap"] }) {
   const hasActivity = heatmap.some((row) => row.some((cell) => cell > 0))
   if (!hasActivity) return null
   return (
@@ -224,7 +224,7 @@ function HeatmapSection({ heatmap }: { heatmap: WrappedReportRecord["report"]["h
   )
 }
 
-function WorkspaceSections({
+export function WorkspaceSections({
   deepDives,
   otherCount,
 }: {
@@ -254,7 +254,7 @@ function WorkspaceSections({
   )
 }
 
-function PersonalityReveal({ personality }: { personality: WrappedReportRecord["report"]["personality"] }) {
+export function PersonalityReveal({ personality }: { personality: WrappedReportRecord["report"]["personality"] }) {
   const title = TITLE_FOR_KIND[personality.kind] ?? "The Wrapped"
   const descriptor = DESCRIPTOR_FOR_KIND[personality.kind] ?? ""
   return (
@@ -301,7 +301,7 @@ function PersonalityReveal({ personality }: { personality: WrappedReportRecord["
 // Short reminder shown beneath each share button (member view). Short on
 // purpose — the per-section "Private" pills carry the granular signal,
 // and the share button is the just-in-time confirmation.
-const SHARE_DISCLAIMER = "Workspaces and files won't be shared."
+export const SHARE_DISCLAIMER = "Workspaces and files won't be shared."
 
 export function WrappedReportV1({ record, isMember }: WrappedReportV1Props) {
   const { report, ownerName } = record

@@ -366,6 +366,7 @@ interface TotalsCHRow {
   readonly streak_days: number | string
   readonly tests_run: number | string
   readonly git_write_ops: number | string
+  readonly tokens_total: number | string
 }
 
 interface LocStatsCHRow {
@@ -584,7 +585,10 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
                   (SELECT countIf(
                     (prefix = 'git' AND second_token IN ${GIT_WRITE_SUBCOMMANDS_SQL})
                     OR (prefix = 'gh' AND ${GH_WRITE_OPS_PREDICATE})
-                  ) FROM bash_segments)                                                               AS git_write_ops
+                  ) FROM bash_segments)                                                               AS git_write_ops,
+                  -- Only LLM interaction spans carry non-zero token counts;
+                  -- tool-call spans contribute 0, so summing all spans is safe.
+                  sum(tokens_total)                                                                   AS tokens_total
                 FROM spans
                 WHERE ${PROJECT_WINDOW_FILTER}
               `,
@@ -604,6 +608,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               streakDays: 0,
               testsRun: 0,
               gitWriteOps: 0,
+              tokensTotal: 0,
             }
             if (!row) return empty
             return {
@@ -618,6 +623,7 @@ export const ClaudeCodeSpanReaderLive = Layer.effect(
               streakDays: num(row.streak_days),
               testsRun: num(row.tests_run),
               gitWriteOps: num(row.git_write_ops),
+              tokensTotal: num(row.tokens_total),
             }
           })
           .pipe(Effect.mapError((error) => toRepositoryError(error, "getTotalsForProject")))

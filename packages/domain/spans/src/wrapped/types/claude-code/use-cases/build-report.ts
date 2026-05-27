@@ -3,8 +3,9 @@ import type { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
 import {
   type FileLine,
+  type LastReport,
   type Report,
-  reportV1Schema,
+  reportV2Schema,
   type ToolBucket,
   type ToolMix,
   type WorkspaceDeepDive,
@@ -422,6 +423,8 @@ export interface AssembleReportInput {
     readonly workspace: WorkspaceRow
     readonly row: WorkspaceDeepDiveRow
   }>
+  /** Previous week's report, used to populate `lastReport` for WoW deltas. */
+  readonly previousReport?: Report
 }
 
 /**
@@ -481,11 +484,27 @@ export const assembleReport = (input: AssembleReportInput): Report => {
       ? { pattern: input.topBash[0].pattern, count: input.topBash[0].uses }
       : null
 
+  // Populate `lastReport` from the previous week's report. Every field is
+  // independently nullable — null when the previous report is absent or
+  // when that field didn't exist in the previous schema version (V1 has no
+  // `tokensTotal`).
+  const prev = input.previousReport
+  const lastReport: LastReport = {
+    sessions:     prev?.totals.sessions     ?? null,
+    toolCalls:    prev?.totals.toolCalls    ?? null,
+    durationMs:   prev?.totals.durationMs   ?? null,
+    filesTouched: prev?.totals.filesTouched ?? null,
+    locWritten:   prev ? prev.loc.written   : null,
+    tokensTotal: prev && "tokensTotal" in prev.totals
+      ? (prev.totals as unknown as { tokensTotal: number }).tokensTotal
+      : null,
+  }
+
   // Runtime-validate the assembled object so callers can rely on the
   // return being a `Report` even when something upstream (a query, an
   // adapter, a refactor) drifts away from the schema. Cheap — one Zod
   // parse per Wrapped run, fired ~once per project per week.
-  return reportV1Schema.parse({
+  return reportV2Schema.parse({
     project: { id: input.project.id, name: input.project.name, slug: input.project.slug },
     organization: input.organization,
     window: { start: input.windowStart, end: input.windowEnd },
@@ -502,6 +521,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
       streakDays: input.totals.streakDays,
       testsRun: input.totals.testsRun,
       gitWriteOps: input.totals.gitWriteOps,
+      tokensTotal: input.totals.tokensTotal,
     },
     toolMix,
     loc: {
@@ -518,6 +538,7 @@ export const assembleReport = (input: AssembleReportInput): Report => {
     heatmap,
     moments: { longestSession, busiestDay, biggestWrite },
     personality,
+    lastReport,
   })
 }
 
@@ -526,6 +547,8 @@ export interface BuildReportInput {
   readonly organization: { readonly id: OrganizationId; readonly name: string }
   readonly windowStart: Date
   readonly windowEnd: Date
+  /** Previous week's report for week-over-week delta computation. */
+  readonly previousReport?: Report
 }
 
 /**
@@ -584,5 +607,6 @@ export const buildReportUseCase = Effect.fn("claude-code-wrapped.buildReport")(f
     busiestDay,
     biggestWrite,
     deepDives,
+    ...(input.previousReport !== undefined ? { previousReport: input.previousReport } : {}),
   })
 })

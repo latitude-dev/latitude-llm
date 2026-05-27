@@ -49,6 +49,8 @@ export interface WrappedTotalsRow {
    * Shipper archetype's score and gate.
    */
   readonly gitWriteOps: number
+  /** Sum of `tokens_total` across all LLM interaction spans in the window. */
+  readonly tokensTotal: number
 }
 
 export interface LocStatsRow {

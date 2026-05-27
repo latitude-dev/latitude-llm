@@ -13,9 +13,9 @@ import { z } from "zod"
  * The blob in Postgres is the raw `Report` (no version field embedded);
  * the version metadata lives in the DB column and in this constant.
  */
-export const REPORT_VERSIONS = [1] as const
+export const REPORT_VERSIONS = [1, 2] as const
 export type ReportVersion = (typeof REPORT_VERSIONS)[number]
-export const CURRENT_REPORT_VERSION: ReportVersion = 1
+export const CURRENT_REPORT_VERSION: ReportVersion = 2
 
 /**
  * Tool-call buckets used by the personality algorithm and the
@@ -220,11 +220,44 @@ export const reportV1Schema = z.object({
 export type ReportV1 = z.infer<typeof reportV1Schema>
 
 /**
- * Single-version alias for now. Becomes a discriminated union (`ReportV1 |
- * ReportV2`) once V2 ships; consumers that care will switch on the
- * persisted `report_version` column to narrow.
+ * Snapshot of the previous week's headline stats, stored in every V2 blob
+ * at generation time so the renderer can display week-over-week deltas
+ * without an extra DB round-trip.
+ *
+ * Every field is nullable — `null` means "not available" for any reason:
+ * no previous report exists, or the previous report was V1 (which didn't
+ * carry `tokensTotal`). The renderer treats `null` uniformly: no delta
+ * badge is shown for that stat.
  */
-export type Report = ReportV1
+export const lastReportSchema = z.object({
+  sessions:     z.number().int().nonnegative().nullable(),
+  toolCalls:    z.number().int().nonnegative().nullable(),
+  durationMs:   z.number().int().nonnegative().nullable(),
+  filesTouched: z.number().int().nonnegative().nullable(),
+  locWritten:   z.number().int().nonnegative().nullable(),
+  tokensTotal:  z.number().int().nonnegative().nullable(),
+})
+export type LastReport = z.infer<typeof lastReportSchema>
+
+/**
+ * V2 adds:
+ *  - `totals.tokensTotal` — sum of `tokens_total` across all LLM spans
+ *  - `lastReport` — previous week's headline stats for week-over-week display
+ *
+ * Shown in both public and member views (no private data in either field).
+ * V1 blobs are still validated against `reportV1Schema`; only new runs
+ * produce V2 blobs. `reportV1Schema` is frozen.
+ */
+export const reportV2Schema = reportV1Schema.extend({
+  totals: reportV1Schema.shape.totals.extend({
+    tokensTotal: z.number().int().nonnegative(),
+  }),
+  lastReport: lastReportSchema,
+})
+export type ReportV2 = z.infer<typeof reportV2Schema>
+
+/** Discriminated union across all schema versions. */
+export type Report = ReportV1 | ReportV2
 
 /**
  * Maps a persisted `report_version` to the Zod schema that validates its
@@ -232,4 +265,5 @@ export type Report = ReportV1
  */
 export const SCHEMA_BY_VERSION = {
   1: reportV1Schema,
+  2: reportV2Schema,
 } as const satisfies Record<ReportVersion, z.ZodTypeAny>

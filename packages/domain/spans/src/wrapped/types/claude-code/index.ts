@@ -7,6 +7,8 @@
 export {
   CURRENT_REPORT_VERSION,
   type FileLine,
+  type LastReport,
+  lastReportSchema,
   type LocStats,
   PERSONALITY_KINDS,
   type Personality,
@@ -14,7 +16,9 @@ export {
   REPORT_VERSIONS,
   type Report,
   type ReportV1,
+  type ReportV2,
   type ReportVersion,
+  reportV2Schema,
   SCHEMA_BY_VERSION,
   TOOL_BUCKETS,
   type ToolBucket,
