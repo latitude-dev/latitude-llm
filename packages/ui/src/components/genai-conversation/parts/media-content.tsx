@@ -70,10 +70,7 @@ function MediaErrorPlaceholder({
   if (layout === "bar") {
     return (
       <div
-        className={cn(
-          PLACEHOLDER_BAR,
-          "flex items-center gap-2 border border-dashed border-border bg-card px-3 py-2",
-        )}
+        className={cn(PLACEHOLDER_BAR, "flex items-center gap-2 border border-dashed border-border bg-card px-3 py-2")}
       >
         <Icon icon={ErrorIcon} size="sm" color="foregroundMuted" className="shrink-0" />
         <Text.H6 color="foregroundMuted">{label}</Text.H6>
@@ -112,6 +109,12 @@ export function ImageContent({
   readonly href?: string | undefined
 }) {
   const [status, setStatus] = useState<MediaStatus>("loading")
+  // Reset on src change (e.g. a refreshed signed URL) so a prior error doesn't stick.
+  const [lastSrc, setLastSrc] = useState(src)
+  if (src !== lastSrc) {
+    setLastSrc(src)
+    setStatus("loading")
+  }
 
   if (status === "error") {
     return <MediaErrorPlaceholder icon={ImageOffIcon} label="Image unavailable" mimeType={mimeType} href={href} />
@@ -152,6 +155,12 @@ export function VideoContent({
   readonly href?: string | undefined
 }) {
   const [hasError, setHasError] = useState(false)
+  // Reset on src change (e.g. a refreshed signed URL) so a prior error doesn't stick.
+  const [lastSrc, setLastSrc] = useState(src)
+  if (src !== lastSrc) {
+    setLastSrc(src)
+    setHasError(false)
+  }
 
   if (hasError) {
     return <MediaErrorPlaceholder icon={VideoOffIcon} label="Video unavailable" mimeType={mimeType} href={href} />
@@ -181,6 +190,12 @@ export function AudioContent({
   readonly href?: string | undefined
 }) {
   const [hasError, setHasError] = useState(false)
+  // Reset on src change (e.g. a refreshed signed URL) so a prior error doesn't stick.
+  const [lastSrc, setLastSrc] = useState(src)
+  if (src !== lastSrc) {
+    setLastSrc(src)
+    setHasError(false)
+  }
 
   if (hasError) {
     return (
