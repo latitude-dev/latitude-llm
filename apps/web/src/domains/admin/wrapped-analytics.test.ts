@@ -114,7 +114,7 @@ describe("buildAnalyticsPayload", () => {
     expect(out.stats.gatePassRates.every((g) => g.passRate === 0 && g.medianSignal === null)).toBe(true)
   })
 
-  it("sorts the list by toolCalls descending", () => {
+  it("sorts the list by tokensTotal ?? toolCalls descending and assigns rank", () => {
     const records = [
       makeRecord({
         id: "small",
@@ -143,6 +143,7 @@ describe("buildAnalyticsPayload", () => {
     ]
     const out = buildAnalyticsPayload(records)
     expect(out.list.map((r) => r.id)).toEqual(["big", "mid", "small"])
+    expect(out.list.map((r) => r.rank)).toEqual([1, 2, 3])
   })
 
   it("counts personalities and computes summary correctly", () => {

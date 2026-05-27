@@ -88,15 +88,20 @@ function ListColumn({
         key: "project",
         header: "Project",
         minWidth: 180,
-        width: 220,
+        width: 230,
         render: (row) => (
-          <div className="flex min-w-0 flex-col leading-tight">
-            <Text.H5 weight="medium" ellipsis noWrap>
-              {row.projectName}
-            </Text.H5>
-            <Text.H6 color="foregroundMuted" ellipsis noWrap>
-              {row.organizationName} · {row.ownerName}
+          <div className="flex min-w-0 items-center gap-2">
+            <Text.H6 color="foregroundMuted" noWrap className="w-7 shrink-0 text-right tabular-nums">
+              {`#${row.rank}`}
             </Text.H6>
+            <div className="flex min-w-0 flex-col leading-tight">
+              <Text.H5 weight="medium" ellipsis noWrap>
+                {row.projectName}
+              </Text.H5>
+              <Text.H6 color="foregroundMuted" ellipsis noWrap>
+                {row.organizationName} · {row.ownerName}
+              </Text.H6>
+            </div>
           </div>
         ),
       },
