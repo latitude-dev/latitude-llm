@@ -120,6 +120,7 @@ export function Part({
         modality: p.modality,
         src: p.uri,
         mimeType: p.mime_type ?? undefined,
+        href: p.uri,
       })
       if (media) return media
 

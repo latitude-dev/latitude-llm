@@ -1,6 +1,7 @@
 import { isJsonBlock } from "@repo/utils"
 import { FileIcon } from "lucide-react"
 import { Text } from "../../text/text.tsx"
+import { ImageContent } from "./media-content.tsx"
 
 export function getKnownField<T>(metadata: Record<string, unknown> | undefined, field: string): T | undefined {
   const known = (metadata?._known_fields ?? metadata?._knownFields) as Record<string, unknown> | undefined
@@ -32,13 +33,16 @@ export function renderMediaByModality({
   modality,
   src,
   mimeType,
+  href,
 }: {
   modality: string
   src: string
   mimeType: string | undefined
+  /** Original openable URL (uri parts). When set, media renders an "open in new tab" affordance. */
+  href?: string | undefined
 }) {
   if (modality === "image") {
-    return <img src={src} alt="Attached content" className="max-w-md max-h-64 rounded-lg object-contain" />
+    return <ImageContent src={src} mimeType={mimeType} href={href} />
   }
 
   if (modality === "audio") {
