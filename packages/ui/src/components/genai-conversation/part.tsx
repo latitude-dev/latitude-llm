@@ -108,7 +108,9 @@ export function Part({
 
     case "blob": {
       const p = part as BlobPart
-      const mimeType = p.mime_type ?? (p.modality === "image" ? "image/png" : `${p.modality}/*`)
+      // Fall back to a valid concrete MIME — `${modality}/*` (e.g. "document/*") is not a real
+      // type and would produce an invalid data URI, breaking the FileCard download below.
+      const mimeType = p.mime_type ?? (p.modality === "image" ? "image/png" : "application/octet-stream")
       const dataUri = `data:${mimeType};base64,${p.content}`
       const media = renderMediaByModality({ modality: p.modality, src: dataUri, mimeType })
       if (media) return media
