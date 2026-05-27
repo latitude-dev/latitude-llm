@@ -26,7 +26,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests --dir src"
+    "test": "vitest run --passWithNoTests --dir src --no-file-parallelism"
   },
   "dependencies": {
     "@better-auth/core": "catalog:",

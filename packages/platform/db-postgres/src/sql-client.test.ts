@@ -1,4 +1,4 @@
-import { ConcurrentSqlTransactionError, OrganizationId, SqlClient } from "@domain/shared"
+import { OrganizationId, SqlClient } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -34,19 +34,19 @@ function createMockPostgresClient(
   state: MockClientState,
   options?: { simulateDistinctTransactionCompletionError?: boolean },
 ): PostgresClient {
-  const mockTx: MockTx = {
-    id: Symbol("tx"),
-    execute: async (stmt: unknown) => {
-      state.executedStatements.push(stmt)
-      return undefined
-    },
-  }
-
-  const txAsOperator = mockTx as unknown as Operator
   const client: PostgresClient = {
     pool: {} as PostgresClient["pool"],
     db: {} as PostgresClient["db"],
     transaction: async (fn) => {
+      const mockTx: MockTx = {
+        id: Symbol("tx"),
+        execute: async (stmt: unknown) => {
+          state.executedStatements.push(stmt)
+          return undefined
+        },
+      }
+      const txAsOperator = mockTx as unknown as Operator
+
       state.transactionCallCount += 1
       state.txInstances.push(txAsOperator)
       try {
@@ -284,13 +284,11 @@ describe("SqlClientLive", () => {
     })
   })
 
-  describe("concurrent transaction detection", () => {
-    it("fails with ConcurrentSqlTransactionError when two transaction() calls start concurrently on the same SqlClient", async () => {
+  describe("concurrent transactions", () => {
+    it("opens independent DB transactions for concurrent sibling fibers on the same SqlClient", async () => {
       const client = createMockPostgresClient(state)
       const orgId = OrganizationId("org-concurrent")
 
-      // Run two transaction() calls with concurrency: 2 on the same SqlClient.
-      // The second fiber sees txOpening === true and should fail on the error channel.
       const layer = SqlClientLive(client, orgId)
       const effect = Effect.gen(function* () {
         const sqlClient = yield* SqlClient
@@ -300,27 +298,44 @@ describe("SqlClientLive", () => {
         })
       }).pipe(Effect.provide(layer))
 
-      await expect(Effect.runPromise(effect)).rejects.toBeInstanceOf(ConcurrentSqlTransactionError)
+      await expect(Effect.runPromise(effect)).resolves.toEqual(["a", "b"])
+      expect(state.transactionCallCount).toBe(2)
+      expect(state.txInstances[0]).not.toBe(state.txInstances[1])
     })
 
-    it("allows catching ConcurrentSqlTransactionError for retry or graceful handling", async () => {
+    it("keeps query() calls inside each concurrent transaction on that fiber's own transaction", async () => {
       const client = createMockPostgresClient(state)
-      const orgId = OrganizationId("org-catch-concurrent")
+      const orgId = OrganizationId("org-concurrent-query")
       const layer = SqlClientLive(client, orgId)
+      const seenTx: Operator[] = []
 
       const effect = Effect.gen(function* () {
         const sqlClient = yield* SqlClient
         const shape = sqlClient as import("@domain/shared").SqlClientShape<Operator>
-        return yield* Effect.all([shape.transaction(Effect.succeed("a")), shape.transaction(Effect.succeed("b"))], {
-          concurrency: 2,
-        })
-      }).pipe(
-        Effect.catchTag("ConcurrentSqlTransactionError", () => Effect.succeed("handled" as const)),
-        Effect.provide(layer),
-      )
+        return yield* Effect.all(
+          [
+            shape.transaction(
+              shape.query(async (tx) => {
+                seenTx.push(tx)
+                return "a"
+              }),
+            ),
+            shape.transaction(
+              shape.query(async (tx) => {
+                seenTx.push(tx)
+                return "b"
+              }),
+            ),
+          ],
+          { concurrency: 2 },
+        )
+      }).pipe(Effect.provide(layer))
 
-      const result = await Effect.runPromise(effect)
-      expect(result).toBe("handled")
+      await expect(Effect.runPromise(effect)).resolves.toEqual(["a", "b"])
+      expect(state.transactionCallCount).toBe(2)
+      expect(seenTx).toHaveLength(2)
+      expect(seenTx[0]).not.toBe(seenTx[1])
+      expect(state.txInstances).toEqual(expect.arrayContaining(seenTx))
     })
 
     it("allows sequential transaction() calls on the same SqlClient after one completes", async () => {
