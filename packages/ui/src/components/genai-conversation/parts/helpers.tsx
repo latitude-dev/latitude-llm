@@ -1,7 +1,7 @@
 import { isJsonBlock } from "@repo/utils"
 import { FileIcon } from "lucide-react"
 import { Text } from "../../text/text.tsx"
-import { ImageContent } from "./media-content.tsx"
+import { ImageContent, VideoContent } from "./media-content.tsx"
 
 export function getKnownField<T>(metadata: Record<string, unknown> | undefined, field: string): T | undefined {
   const known = (metadata?._known_fields ?? metadata?._knownFields) as Record<string, unknown> | undefined
@@ -55,12 +55,7 @@ export function renderMediaByModality({
   }
 
   if (modality === "video") {
-    return (
-      <video controls className="max-w-md max-h-64 rounded-lg">
-        <source src={src} type={mimeType} />
-        <track kind="captions" />
-      </video>
-    )
+    return <VideoContent src={src} mimeType={mimeType} href={href} />
   }
 
   return null
