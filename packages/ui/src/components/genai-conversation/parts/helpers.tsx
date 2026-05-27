@@ -1,6 +1,4 @@
 import { isJsonBlock } from "@repo/utils"
-import { FileIcon } from "lucide-react"
-import { Text } from "../../text/text.tsx"
 import { AudioContent, ImageContent, VideoContent } from "./media-content.tsx"
 
 export function getKnownField<T>(metadata: Record<string, unknown> | undefined, field: string): T | undefined {
@@ -54,21 +52,4 @@ export function renderMediaByModality({
   }
 
   return null
-}
-
-export function MediaFallback({
-  modality,
-  mimeType,
-}: {
-  readonly modality: string
-  readonly mimeType?: string | null | undefined
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1">
-      <FileIcon className="w-3.5 h-3.5 text-muted-foreground" />
-      <Text.H6 color="foregroundMuted">
-        {modality} &middot; {mimeType ?? "binary data"}
-      </Text.H6>
-    </span>
-  )
 }

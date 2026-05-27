@@ -46,6 +46,28 @@ export function formatPrice(price: number): string {
   return `$${s}`
 }
 
+const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"]
+
+/**
+ * Format a byte count into a human-readable string (base 1024).
+ *
+ * Examples: `0` -> `"0 B"`, `1536` -> `"1.5 KB"`, `2_400_000` -> `"2.3 MB"`
+ * Whole bytes show no decimals; KB and above show one decimal place.
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes < 0) return `-${formatBytes(-bytes)}`
+  if (bytes < 1024) return `${Math.round(bytes)} B`
+
+  let unitIndex = 0
+  let value = bytes
+  while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
+    value /= 1024
+    unitIndex++
+  }
+
+  return `${value.toFixed(1).replace(/\.0$/, "")} ${BYTE_UNITS[unitIndex]}`
+}
+
 /**
  * Format a nanosecond duration into a human-readable string.
  *

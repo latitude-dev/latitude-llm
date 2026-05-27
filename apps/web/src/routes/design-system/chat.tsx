@@ -1,6 +1,7 @@
 import { Button, Conversation, Icon, Text, useMountEffect } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Moon, Sun } from "lucide-react"
+import type { ReactNode } from "react"
 import { useState } from "react"
 import type { GenAIMessage } from "rosetta-ai"
 
@@ -11,6 +12,8 @@ export const Route = createFileRoute("/design-system/chat")({
 // A tiny inline SVG (base64) so the "working image" case renders without any network access.
 const IMAGE_BLOB_B64 =
   "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNDAiIGhlaWdodD0iMTQwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNjM2NmYxIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZWM0ODk5Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjI0MCIgaGVpZ2h0PSIxNDAiIHJ4PSIxMiIgZmlsbD0idXJsKCNnKSIvPjx0ZXh0IHg9IjEyMCIgeT0iNzgiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+aW1hZ2UgYmxvYjwvdGV4dD48L3N2Zz4="
+// A small CSV (base64) used to demonstrate downloading an inline blob document.
+const CSV_BLOB_B64 = "bmFtZSxzY29yZQpBbGljZSw5CkJvYiw3CkNhcm9sLDgK"
 
 // Remote sample media (renders when online; the broken URLs below show the
 // fallback behavior when a source is missing / inaccessible).
@@ -39,11 +42,23 @@ function greet(name: string) {
 
 > And a blockquote for good measure.`
 
-// `as GenAIMessage[]` — the schema is permissive (z.core.$loose) and we want
-// to exercise edge cases (unknown part types, refusals) that aren't in the
-// strict TS unions. Fields use the wire-format snake_case shape the renderer expects.
-const DEMO_MESSAGES = [
-  // 1. System instructions
+const JSON_SAMPLE = JSON.stringify(
+  { status: "ok", model: "claude-opus-4-7", usage: { input_tokens: 1240, output_tokens: 318 }, items: [1, 2, 3] },
+  null,
+  2,
+)
+
+// Long enough (> ~3000 chars) to trigger the large-markdown "show more" split.
+const LONG_TEXT = Array.from(
+  { length: 14 },
+  (_, i) =>
+    `Paragraph ${i + 1}. This is a long assistant response used to demonstrate how the renderer collapses oversized content behind a "show more" affordance, snapping to paragraph boundaries so the head and tail stay readable while the middle is hidden until expanded.`,
+).join("\n\n")
+
+// `as GenAIMessage[]` — the schema is permissive (z.core.$loose) and we want to exercise
+// edge cases (unknown part types/roles, refusals) that aren't in the strict TS unions.
+// Fields use the wire-format snake_case shape the renderer expects.
+const TEXT_MESSAGES = [
   {
     role: "system",
     parts: [
@@ -53,73 +68,73 @@ const DEMO_MESSAGES = [
       },
     ],
   },
+  { role: "user", parts: [{ type: "text", content: "Can you summarize the provider latencies?" }] },
+  { role: "assistant", parts: [{ type: "text", content: MARKDOWN_SAMPLE }] },
+  // JSON-block text part — renders via JsonContent (syntax-highlighted).
+  { role: "assistant", parts: [{ type: "text", content: JSON_SAMPLE }] },
+  // Long content — renders with the "show more" middle collapse.
+  { role: "assistant", parts: [{ type: "text", content: LONG_TEXT }] },
+] as GenAIMessage[]
 
-  // 2. Plain user text
-  {
-    role: "user",
-    parts: [{ type: "text", content: "Hey! Can you analyze the attached media and document?" }],
-  },
-
-  // 3. User with text + inline image blob + working remote image + broken image
+const MEDIA_MESSAGES = [
   {
     role: "user",
     parts: [
-      { type: "text", content: "Here are a few images:" },
+      { type: "text", content: "Images — inline blob, working remote URL, and a broken URL:" },
       { type: "blob", modality: "image", mime_type: "image/svg+xml", content: IMAGE_BLOB_B64 },
       { type: "uri", modality: "image", mime_type: "image/jpeg", uri: SAMPLE_IMAGE_URI },
-      // Source missing / inaccessible — shows the browser's broken-image fallback today.
       { type: "uri", modality: "image", mime_type: "image/png", uri: BROKEN_IMAGE_URI },
     ],
   },
-
-  // 4. User with audio, video, a file reference, an unknown-modality blob, and a plain link
   {
     role: "user",
     parts: [
-      { type: "text", content: "And some other attachments:" },
+      { type: "text", content: "Audio — working and broken:" },
       { type: "uri", modality: "audio", mime_type: "audio/mpeg", uri: SAMPLE_AUDIO_URI },
-      // Audio source we can't reach — bar-shaped fallback.
       { type: "uri", modality: "audio", mime_type: "audio/mpeg", uri: BROKEN_AUDIO_URI },
-      { type: "uri", modality: "video", mime_type: "video/mp4", uri: SAMPLE_VIDEO_URI },
-      // Video source we can't reach — fallback behavior.
-      { type: "uri", modality: "video", mime_type: "video/mp4", uri: BROKEN_VIDEO_URI },
-      // File reference — rendered as an id chip (not resolved to media in the UI).
-      { type: "file", modality: "image", mime_type: "application/pdf", file_id: "file_abc123report" },
-      // Unknown modality blob — falls through to the MediaFallback badge.
-      { type: "blob", modality: "document", mime_type: "application/pdf", content: "JVBERi0xLjcK" },
-      // Non-media URI — rendered as a clickable link.
-      { type: "uri", modality: "document", mime_type: "text/html", uri: "https://docs.latitude.so/guides" },
     ],
   },
-
-  // 5. Assistant with reasoning (thinking) + rich markdown text
   {
-    role: "assistant",
+    role: "user",
     parts: [
-      {
-        type: "reasoning",
-        content:
-          "The user attached an image and a PDF. I should describe the image and offer to extract the document text.",
-      },
-      { type: "text", content: MARKDOWN_SAMPLE },
+      { type: "text", content: "Video — working and broken:" },
+      { type: "uri", modality: "video", mime_type: "video/mp4", uri: SAMPLE_VIDEO_URI },
+      { type: "uri", modality: "video", mime_type: "video/mp4", uri: BROKEN_VIDEO_URI },
     ],
   },
+] as GenAIMessage[]
 
-  // 6. Assistant emitting a tool call (response is absorbed from the tool message below)
+const FILE_MESSAGES = [
+  {
+    role: "user",
+    parts: [
+      { type: "text", content: "File references (file_id, no resolvable source → no action):" },
+      { type: "file", modality: "document", mime_type: "application/pdf", file_id: "file_q3_report_abc123" },
+      { type: "file", modality: "document", mime_type: "text/csv", file_id: "file_metrics_def456" },
+      { type: "file", modality: "document", mime_type: "application/zip", file_id: "file_export_ghi789" },
+      { type: "file", modality: "document", mime_type: "text/x-python", file_id: "file_script_jkl012" },
+      { type: "file", modality: "image", mime_type: "image/png", file_id: "file_diagram_mno345" },
+    ],
+  },
+  {
+    role: "user",
+    parts: [
+      { type: "text", content: "A linked document (uri → Open) and an inline one (blob → Download):" },
+      { type: "uri", modality: "document", mime_type: "application/pdf", uri: "https://docs.latitude.so/guide.pdf" },
+      { type: "blob", modality: "document", mime_type: "text/csv", content: CSV_BLOB_B64 },
+    ],
+  },
+] as GenAIMessage[]
+
+const TOOL_MESSAGES = [
   {
     role: "assistant",
     parts: [
       { type: "text", content: "Let me look up the latest metrics for you." },
-      {
-        type: "tool_call",
-        id: "call_metrics_1",
-        name: "get_metrics",
-        arguments: { range: "7d", metric: "p95_latency" },
-      },
+      { type: "tool_call", id: "call_metrics_1", name: "get_metrics", arguments: { range: "7d", metric: "p95" } },
     ],
   },
-
-  // 7. Tool result that gets absorbed into the tool_call above (matched by id)
+  // Success result — absorbed into the tool_call above (matched by id).
   {
     role: "tool",
     parts: [
@@ -131,21 +146,50 @@ const DEMO_MESSAGES = [
       },
     ],
   },
-
-  // 8. Standalone tool error result (no matching call id → renders on its own, error styling)
+  {
+    role: "assistant",
+    parts: [
+      { type: "text", content: "Now fetching invoices…" },
+      { type: "tool_call", id: "call_inv_1", name: "fetch_invoices", arguments: { customerId: "cus_123" } },
+    ],
+  },
+  // Error result — absorbed, destructive styling.
   {
     role: "tool",
     parts: [
       {
         type: "tool_call_response",
-        id: "call_orphan_err",
+        id: "call_inv_1",
         response: { error: "Upstream provider timed out after 30s" },
         _provider_metadata: { _known_fields: { toolName: "fetch_invoices", isError: true } },
       },
     ],
   },
+  // Multiple tool calls in a single assistant message.
+  {
+    role: "assistant",
+    parts: [
+      { type: "text", content: "Running a couple of lookups in parallel:" },
+      { type: "tool_call", id: "call_a", name: "search_docs", arguments: { q: "rate limits" } },
+      { type: "tool_call", id: "call_b", name: "get_user", arguments: { id: "u_42" } },
+    ],
+  },
+  // Standalone tool error (no matching call → renders on its own).
+  {
+    role: "tool",
+    parts: [
+      {
+        type: "tool_call_response",
+        id: "call_orphan",
+        response: { error: "Tool execution was cancelled" },
+        _provider_metadata: { _known_fields: { toolName: "run_export", isError: true } },
+      },
+    ],
+  },
+] as GenAIMessage[]
 
-  // 9. Assistant refusal (isRefusal known field → refusal badge)
+const EDGE_CASE_MESSAGES = [
+  // Refusal (isRefusal known field → refusal badge).
   {
     role: "assistant",
     parts: [
@@ -156,16 +200,76 @@ const DEMO_MESSAGES = [
       },
     ],
   },
-
-  // 10. Assistant with an unknown part type (default JSON fallback block)
+  // Multiple reasoning (thinking) parts.
   {
     role: "assistant",
     parts: [
-      { type: "text", content: "And here's a part type the renderer doesn't know about:" },
+      { type: "reasoning", content: "First, I should restate the problem to make sure I understand it." },
+      { type: "reasoning", content: "Then I'll outline the steps before answering." },
+      { type: "text", content: "Here's my answer after thinking it through." },
+    ],
+  },
+  // Unknown part type → default JSON fallback block.
+  {
+    role: "assistant",
+    parts: [
+      { type: "text", content: "And a part type the renderer doesn't know about:" },
       { type: "custom_widget", payload: { kind: "chart", series: [1, 2, 3] } } as never,
     ],
   },
+  // Unknown message role → default styling.
+  { role: "developer", parts: [{ type: "text", content: "A message with an unrecognized role." }] },
 ] as GenAIMessage[]
+
+const SECTIONS: { title: string; description: string; messages: GenAIMessage[] }[] = [
+  {
+    title: "Text & markdown",
+    description: "System, plain text, rich markdown, JSON blocks, long-content collapse.",
+    messages: TEXT_MESSAGES,
+  },
+  {
+    title: "Media",
+    description: "Image / audio / video, each with working and broken sources.",
+    messages: MEDIA_MESSAGES,
+  },
+  {
+    title: "Files & documents",
+    description: "file_id references, a linked document (Open), and an inline one (Download).",
+    messages: FILE_MESSAGES,
+  },
+  {
+    title: "Tool calls",
+    description: "Success and error results (absorbed), multiple calls, and a standalone error.",
+    messages: TOOL_MESSAGES,
+  },
+  {
+    title: "Roles & states",
+    description: "Refusal badge, multiple reasoning parts, unknown part type, unknown role.",
+    messages: EDGE_CASE_MESSAGES,
+  },
+]
+
+function Section({
+  title,
+  description,
+  surfaceClass,
+  children,
+}: {
+  title: string
+  description: string
+  surfaceClass: string
+  children: ReactNode
+}) {
+  return (
+    <section className={`flex flex-col gap-4 rounded-2xl border border-border/70 p-5 shadow-xl sm:p-6 ${surfaceClass}`}>
+      <div className="flex flex-col gap-1">
+        <Text.H4>{title}</Text.H4>
+        <Text.H6 color="foregroundMuted">{description}</Text.H6>
+      </div>
+      {children}
+    </section>
+  )
+}
 
 function ChatPage() {
   const [theme, setTheme] = useState<"light" | "dark">("light")
@@ -211,9 +315,8 @@ function ChatPage() {
             <Text.H2 className="text-balance">Chat / Conversation</Text.H2>
           </div>
           <Text.H6 color="foregroundMuted">
-            A full conversation exercising every message role and content part: system instructions, user and assistant
-            messages, text, reasoning, media (image / audio / video as blob and uri), file references, tool calls and
-            results, refusals, and unknown part types. Broken media sources are included to show fallback behavior.
+            Every message role and content part the renderer supports, grouped by theme: text & markdown, media (with
+            broken sources), files & documents, tool calls, and edge-case roles/states.
           </Text.H6>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button
@@ -236,9 +339,16 @@ function ChatPage() {
           </div>
         </header>
 
-        <div className={`rounded-2xl border border-border/70 p-5 shadow-xl sm:p-6 ${pageSurfaceClass}`}>
-          <Conversation messages={DEMO_MESSAGES} />
-        </div>
+        {SECTIONS.map((section) => (
+          <Section
+            key={section.title}
+            title={section.title}
+            description={section.description}
+            surfaceClass={pageSurfaceClass}
+          >
+            <Conversation messages={section.messages} />
+          </Section>
+        ))}
       </div>
     </main>
   )

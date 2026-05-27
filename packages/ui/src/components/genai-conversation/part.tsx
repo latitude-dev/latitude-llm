@@ -1,4 +1,5 @@
-import { CheckIcon, FileIcon, LinkIcon, TerminalIcon, TriangleAlertIcon, XIcon } from "lucide-react"
+import { base64ByteLength } from "@repo/utils"
+import { CheckIcon, FileIcon, TerminalIcon, TriangleAlertIcon, XIcon } from "lucide-react"
 import { type ReactNode, use } from "react"
 import type { GenAIPart } from "rosetta-ai"
 import { cn } from "../../utils/cn.ts"
@@ -6,7 +7,8 @@ import { CodeBlockControls } from "../code-block/code-block-controls.tsx"
 import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { CollapsibleBlock } from "./parts/collapsible-block.tsx"
-import { formatJson, getKnownField, MediaFallback, renderMediaByModality } from "./parts/helpers.tsx"
+import { FileCard } from "./parts/file-card.tsx"
+import { formatJson, getKnownField, renderMediaByModality } from "./parts/helpers.tsx"
 import { isLexicalSearchHighlight } from "./parts/highlight-segments.ts"
 import { MarkdownContent } from "./parts/lazy-markdown-content.tsx"
 import { ToolCallBlock } from "./parts/tool-call-block.tsx"
@@ -24,6 +26,18 @@ import { TextSelectionContext } from "./text-selection.tsx"
 
 export { ReasoningGroup } from "./parts/reasoning-group.tsx"
 export type { ToolCallResult } from "./parts/types.ts"
+
+/** Last non-empty path segment of a URI, used as a file card's display name (undefined if none). */
+function fileNameFromUri(uri: string): string | undefined {
+  try {
+    const path = new URL(uri).pathname
+    const segment = path.split("/").filter(Boolean).pop()
+    return segment ? decodeURIComponent(segment) : undefined
+  } catch {
+    const segment = uri.split(/[?#]/)[0]?.split("/").filter(Boolean).pop()
+    return segment || undefined
+  }
+}
 
 // Blue ring + ::before "Search result inside" label for parts whose
 // rendered shape can't carry inline chips (tool_call_response). Spans the
@@ -98,20 +112,20 @@ export function Part({
       const dataUri = `data:${mimeType};base64,${p.content}`
       const media = renderMediaByModality({ modality: p.modality, src: dataUri, mimeType })
       if (media) return media
-      return <MediaFallback modality={p.modality} mimeType={p.mime_type} />
+      // Non-media blob (e.g. a document): show a file card with a download from the inline data.
+      return (
+        <FileCard
+          mimeType={p.mime_type ?? undefined}
+          modality={p.modality}
+          sizeBytes={base64ByteLength(p.content)}
+          downloadDataUri={dataUri}
+        />
+      )
     }
 
     case "file": {
       const p = part as FilePart
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1">
-          <FileIcon className="w-3.5 h-3.5 text-muted-foreground" />
-          <Text.Mono size="h6" color="foregroundMuted" ellipsis>
-            {p.file_id}
-          </Text.Mono>
-          <Text.H6 color="foregroundMuted">&middot; {p.modality}</Text.H6>
-        </span>
-      )
+      return <FileCard mimeType={p.mime_type ?? undefined} modality={p.modality} fileId={p.file_id} />
     }
 
     case "uri": {
@@ -124,16 +138,14 @@ export function Part({
       })
       if (media) return media
 
+      // Non-media URI (e.g. a linked document): show a file card that opens the original.
       return (
-        <a
+        <FileCard
+          fileName={fileNameFromUri(p.uri)}
+          mimeType={p.mime_type ?? undefined}
+          modality={p.modality}
           href={p.uri}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-primary hover:underline"
-        >
-          <LinkIcon className="w-3.5 h-3.5" />
-          <Text.H6 color="primary">{p.uri}</Text.H6>
-        </a>
+        />
       )
     }
 

@@ -1,5 +1,24 @@
 import { describe, expect, it } from "vitest"
-import { formatCount, formatPrice, isBlankCHString, normalizeCHString, parseCHDate } from "./format.ts"
+import { formatBytes, formatCount, formatPrice, isBlankCHString, normalizeCHString, parseCHDate } from "./format.ts"
+
+describe("formatBytes", () => {
+  it("formats whole bytes without decimals", () => {
+    expect(formatBytes(0)).toBe("0 B")
+    expect(formatBytes(512)).toBe("512 B")
+    expect(formatBytes(1023)).toBe("1023 B")
+  })
+
+  it("formats KB/MB/GB with one decimal", () => {
+    expect(formatBytes(1024)).toBe("1 KB")
+    expect(formatBytes(1536)).toBe("1.5 KB")
+    expect(formatBytes(2_400_000)).toBe("2.3 MB")
+    expect(formatBytes(1024 ** 3)).toBe("1 GB")
+  })
+
+  it("handles negative values", () => {
+    expect(formatBytes(-1536)).toBe("-1.5 KB")
+  })
+})
 
 describe("formatCount", () => {
   it("returns small numbers as-is", () => {

@@ -15,6 +15,7 @@ export interface FilePart {
   readonly type: "file"
   readonly file_id: string
   readonly modality: string
+  readonly mime_type?: string | null | undefined
 }
 
 export interface UriPart {

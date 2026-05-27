@@ -1,5 +1,28 @@
 import { describe, expect, it } from "vitest"
-import { base64Decode, base64Encode, base64urlDecode, base64urlEncode, hexDecode, hexEncode } from "./base64.ts"
+import {
+  base64ByteLength,
+  base64Decode,
+  base64Encode,
+  base64urlDecode,
+  base64urlEncode,
+  hexDecode,
+  hexEncode,
+} from "./base64.ts"
+
+describe("base64ByteLength", () => {
+  it("returns the decoded byte length without decoding", () => {
+    for (const bytes of [new Uint8Array([]), new Uint8Array([1]), new Uint8Array([1, 2]), new Uint8Array([1, 2, 3])]) {
+      expect(base64ByteLength(base64Encode(bytes))).toBe(bytes.length)
+    }
+  })
+
+  it("accounts for padding", () => {
+    expect(base64ByteLength("")).toBe(0)
+    expect(base64ByteLength("QQ==")).toBe(1)
+    expect(base64ByteLength("QUI=")).toBe(2)
+    expect(base64ByteLength("QUJD")).toBe(3)
+  })
+})
 
 describe("base64Encode / base64Decode", () => {
   it("round-trips binary bytes", () => {
