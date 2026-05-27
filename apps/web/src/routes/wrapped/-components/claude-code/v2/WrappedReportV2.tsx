@@ -74,7 +74,7 @@ function StatCard({
               delta.kind === "up" ? DELTA_UP : delta.kind === "down" ? DELTA_DOWN : MUTED,
           }}
         >
-          {delta.kind === "same" ? "= same" : `${delta.kind === "up" ? "+" : "−"}${delta.percent}%`}
+          {delta.kind === "same" ? "= same" : `${delta.kind === "up" ? "▲" : "▼"} ${delta.percent}%`}
         </p>
       ) : null}
     </div>
