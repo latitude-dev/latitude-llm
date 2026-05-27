@@ -44,15 +44,17 @@ export async function destroyWorkspace(
   return transaction.call(async (tx) => {
     const workspaceId = workspace.id
 
-    await tx.delete(evaluationResults).where(
-      inArray(
-        evaluationResults.evaluationId,
-        tx
-          .select({ id: evaluations.id })
-          .from(evaluations)
-          .where(eq(evaluations.workspaceId, workspaceId)),
-      ),
-    )
+    await tx
+      .delete(evaluationResults)
+      .where(
+        inArray(
+          evaluationResults.evaluationId,
+          tx
+            .select({ id: evaluations.id })
+            .from(evaluations)
+            .where(eq(evaluations.workspaceId, workspaceId)),
+        ),
+      )
 
     await tx.delete(spans).where(eq(spans.workspaceId, workspaceId))
 
