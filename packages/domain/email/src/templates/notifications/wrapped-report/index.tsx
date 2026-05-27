@@ -28,7 +28,12 @@ const formatPlainRange = (start: Date, end: Date): string =>
  * type ships, freeze the V1 component and add V2 alongside.
  */
 const TEMPLATE_BY_TYPE_VERSION = {
-  claude_code: { 1: ClaudeCodeWrappedEmailV1, 2: ClaudeCodeWrappedEmailV2 },
+  claude_code: {
+    1: ClaudeCodeWrappedEmailV1,
+    // Cast so the dispatcher constraint is satisfied — V2 accepts the same
+    // runtime props as V1 (report: Report) but its PreviewProps differ.
+    2: ClaudeCodeWrappedEmailV2 as unknown as typeof ClaudeCodeWrappedEmailV1,
+  },
 } as const satisfies Record<WrappedReportType, Record<ReportVersion, typeof ClaudeCodeWrappedEmailV1>>
 
 interface RenderInput {

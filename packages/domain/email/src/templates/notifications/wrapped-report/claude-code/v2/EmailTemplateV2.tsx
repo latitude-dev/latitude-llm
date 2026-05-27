@@ -1,4 +1,4 @@
-import { type WrappedReportId } from "@domain/shared"
+import { OrganizationId, ProjectId, type WrappedReportId } from "@domain/shared"
 import type { Report, ReportV2 } from "@domain/spans"
 import { Img, Link, Section } from "@react-email/components"
 // biome-ignore lint/style/useImportType: React is required at runtime for JSX in workers (tsx/esbuild classic transform). Do not downgrade to `import type`.
@@ -81,6 +81,10 @@ const anchorEmphasisStyle: React.CSSProperties = {
 
 type DeltaCaption = string | undefined
 
+/** Safe spread for optional `caption` prop under exactOptionalPropertyTypes. */
+const withCaption = (cap: DeltaCaption): { caption: string } | Record<never, never> =>
+  cap !== undefined ? { caption: cap } : {}
+
 const deltaCaption = (current: number, previous: number | null): DeltaCaption => {
   if (previous === null || previous === 0) return undefined
   const ratio = (current - previous) / previous
@@ -134,17 +138,17 @@ function HeadlineNumbersGrid({ report }: { report: ReportV2 }) {
             <StatCard
               label="Sessions"
               value={formatCompact(totals.sessions)}
-              caption={deltaCaption(totals.sessions, lastReport.sessions)}
+              {...withCaption(deltaCaption(totals.sessions, lastReport.sessions))}
             />
             <StatCard
               label="Claude time"
               value={formatDuration(totals.durationMs)}
-              caption={deltaCaption(totals.durationMs, lastReport.durationMs)}
+              {...withCaption(deltaCaption(totals.durationMs, lastReport.durationMs))}
             />
             <StatCard
               label="Files touched"
               value={formatCompact(totals.filesTouched)}
-              caption={deltaCaption(totals.filesTouched, lastReport.filesTouched)}
+              {...withCaption(deltaCaption(totals.filesTouched, lastReport.filesTouched))}
             />
             <StatCard label="Commands" value={formatCompact(totals.commandsRun)} />
           </tr>
@@ -156,7 +160,7 @@ function HeadlineNumbersGrid({ report }: { report: ReportV2 }) {
 
 function TokenSection({ report }: { report: ReportV2 }) {
   const { totals, lastReport } = report
-  const caption = deltaCaption(totals.tokensTotal, lastReport.tokensTotal)
+  const tokenCaption = deltaCaption(totals.tokensTotal, lastReport.tokensTotal)
   return (
     <Section
       style={{
@@ -180,7 +184,7 @@ function TokenSection({ report }: { report: ReportV2 }) {
         Total tokens
       </p>
       <p style={bigNumberStyle}>{formatCompact(totals.tokensTotal)}</p>
-      {caption ? (
+      {tokenCaption ? (
         <p
           style={{
             fontFamily: emailDesignTokens.fonts.serif,
@@ -189,7 +193,7 @@ function TokenSection({ report }: { report: ReportV2 }) {
             margin: "4px 0 0 0",
           }}
         >
-          {caption}
+          {tokenCaption}
         </p>
       ) : null}
     </Section>
@@ -344,20 +348,73 @@ export function ClaudeCodeWrappedEmailV2({ userName, report: reportBase, webAppU
   const reportUrl = `${base}/wrapped/${reportId}`
 
   return (
-    <WrappedLayout previewText={`Your Claude Code week: ${report.project.name}`}>
+    <WrappedLayout
+      previewText={`Your Claude Code week: ${report.project.name}`}
+      footer={
+        <WrappedFooter
+          projectName={report.project.name}
+          projectUrl={projectUrl}
+          settingsUrl={settingsUrl}
+          logoUrl={logoUrl}
+          homeUrl={homeUrl}
+        />
+      }
+    >
       <HeroSection userName={userName} report={report} />
       <HeadlineNumbersGrid report={report} />
       <TokenSection report={report} />
       <LocSection report={report} />
       <PersonalityRevealSection personality={report.personality} imageBaseUrl={imageBaseUrl} />
       <CtaBanner url={reportUrl} />
-      <WrappedFooter
-        projectName={report.project.name}
-        projectUrl={projectUrl}
-        settingsUrl={settingsUrl}
-        logoUrl={logoUrl}
-        homeUrl={homeUrl}
-      />
     </WrappedLayout>
   )
+}
+
+ClaudeCodeWrappedEmailV2.PreviewProps = {
+  userName: "Alex",
+  webAppUrl: "http://localhost:3000",
+  reportId: "ccwv2p".padEnd(24, "x").slice(0, 24) as WrappedReportId,
+  report: {
+    project: { id: ProjectId("proj-preview"), name: "poncho-ios", slug: "poncho-ios" },
+    organization: { id: OrganizationId("org-preview"), name: "Acme" },
+    window: { start: new Date("2026-05-04T00:00:00.000Z"), end: new Date("2026-05-11T00:00:00.000Z") },
+    totals: {
+      sessions: 17,
+      toolCalls: 482,
+      durationMs: 5 * 60 * 60 * 1000,
+      filesTouched: 142,
+      commandsRun: 87,
+      workspaces: 1,
+      branches: 4,
+      commits: 23,
+      repos: 1,
+      streakDays: 5,
+      testsRun: 32,
+      gitWriteOps: 28,
+      tokensTotal: 14_200_000,
+    },
+    toolMix: { bash: 15, read: 25, edit: 50, write: 5, search: 5, research: 0, plan: 0, other: 0 },
+    loc: {
+      written: 3_200,
+      read: 48_000,
+      added: 2_400,
+      removed: 800,
+      writtenAnchor: { prefix: "≈", emphasis: "a short academic paper" },
+      readAnchor: { prefix: "≈", emphasis: "a short story" },
+    },
+    topBashCommand: { pattern: "pnpm", count: 31 },
+    workspaceDeepDives: [],
+    otherWorkspaceCount: 0,
+    heatmap: Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0)),
+    moments: { longestSession: null, busiestDay: null, biggestWrite: null },
+    personality: { kind: "shipper", score: 1, evidence: ["23 commits this week", "3.4 commits per session", "17 sessions of focused work"] },
+    lastReport: {
+      sessions: 12,
+      toolCalls: 350,
+      durationMs: 3.5 * 60 * 60 * 1000,
+      filesTouched: 110,
+      locWritten: 2_100,
+      tokensTotal: 9_800_000,
+    },
+  } as Report,
 }

@@ -490,14 +490,13 @@ export const assembleReport = (input: AssembleReportInput): Report => {
   // `tokensTotal`).
   const prev = input.previousReport
   const lastReport: LastReport = {
-    sessions:     prev?.totals.sessions     ?? null,
-    toolCalls:    prev?.totals.toolCalls    ?? null,
-    durationMs:   prev?.totals.durationMs   ?? null,
+    sessions: prev?.totals.sessions ?? null,
+    toolCalls: prev?.totals.toolCalls ?? null,
+    durationMs: prev?.totals.durationMs ?? null,
     filesTouched: prev?.totals.filesTouched ?? null,
-    locWritten:   prev ? prev.loc.written   : null,
-    tokensTotal: prev && "tokensTotal" in prev.totals
-      ? (prev.totals as unknown as { tokensTotal: number }).tokensTotal
-      : null,
+    locWritten: prev ? prev.loc.written : null,
+    tokensTotal:
+      prev && "tokensTotal" in prev.totals ? (prev.totals as unknown as { tokensTotal: number }).tokensTotal : null,
   }
 
   // Runtime-validate the assembled object so callers can rely on the
