@@ -97,19 +97,19 @@ export const TaxonomyCategoryRepositoryLive = Layer.effect(
       listByProject: ({ projectId, state }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const conditions = [
-            eq(taxonomyCategories.organizationId, sqlClient.organizationId),
-            eq(taxonomyCategories.projectId, projectId),
-          ]
-          if (state) conditions.push(eq(taxonomyCategories.state, state))
+          const rows = yield* sqlClient.query((db, organizationId) => {
+            const conditions = [
+              eq(taxonomyCategories.organizationId, organizationId),
+              eq(taxonomyCategories.projectId, projectId),
+            ]
+            if (state) conditions.push(eq(taxonomyCategories.state, state))
 
-          const rows = yield* sqlClient.query((db) =>
-            db
+            return db
               .select()
               .from(taxonomyCategories)
               .where(and(...conditions))
-              .orderBy(desc(taxonomyCategories.observationCount), asc(taxonomyCategories.id)),
-          )
+              .orderBy(desc(taxonomyCategories.observationCount), asc(taxonomyCategories.id))
+          })
           return rows.map(toDomainCategory)
         }),
 

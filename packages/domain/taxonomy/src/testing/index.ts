@@ -1,6 +1,0 @@
-export { createFakeBehaviorObservationRepository } from "./fake-behavior-observation-repository.ts"
-export { createFakeTaxonomyCategoryRepository } from "./fake-taxonomy-category-repository.ts"
-export { createFakeTaxonomyClusterRepository } from "./fake-taxonomy-cluster-repository.ts"
-export { createFakeTaxonomyLineageRepository } from "./fake-taxonomy-lineage-repository.ts"
-export { createFakeTaxonomyLockRepository } from "./fake-taxonomy-lock-repository.ts"
-export { createFakeTaxonomyRunRepository } from "./fake-taxonomy-run-repository.ts"
