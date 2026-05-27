@@ -13,6 +13,7 @@ import { z } from "zod"
 import { FLAGGER_MAX_TOKENS, FLAGGER_MODEL } from "../constants.ts"
 import { getFlaggerStrategy, hasFlaggerStrategy, isLlmCapableStrategy } from "../flagger-strategies/index.ts"
 import type { FlaggerStrategy } from "../flagger-strategies/types.ts"
+import { reflagSuppressionTags } from "../reflag.ts"
 
 export interface RunFlaggerInput {
   readonly organizationId: string
@@ -102,7 +103,9 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
       schema: flaggerOutputSchema,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
-        tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
+        // If the trace we are classifying is itself flagger-generated, mark this
+        // call's output as no-reflag so it is not flagged again (recursion break).
+        tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify, ...reflagSuppressionTags(input.trace.tags)],
         metadata: buildProjectScopedAiMetadata(
           { organizationId: input.organizationId, projectId: input.projectId },
           { traceId: input.traceId, flaggerSlug: input.flaggerSlug },
