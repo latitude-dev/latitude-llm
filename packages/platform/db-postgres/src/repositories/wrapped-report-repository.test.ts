@@ -1,5 +1,11 @@
 import { generateId, NotFoundError, OrganizationId, ProjectId, type SqlClient, WrappedReportId } from "@domain/shared"
-import { CURRENT_REPORT_VERSION, type Report, type WrappedReportRecord, WrappedReportRepository } from "@domain/spans"
+import {
+  CURRENT_REPORT_VERSION,
+  type Report,
+  type ReportV2,
+  type WrappedReportRecord,
+  WrappedReportRepository,
+} from "@domain/spans"
 import { Effect } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 import { wrappedReports } from "../schema/wrapped-reports.ts"
@@ -17,7 +23,8 @@ const runWithLive = <A, E>(
   org: OrganizationId = OrganizationId("system"),
 ) => Effect.runPromise(effect.pipe(withPostgres(WrappedReportRepositoryLive, pg.adminPostgresClient, org)))
 
-const sampleReport: Report = {
+// V2 report — includes tokensTotal and lastReport required by the current schema.
+const sampleReport: ReportV2 = {
   project: { id: PROJECT_A, name: "poncho-ios", slug: "poncho-ios" },
   organization: { id: ORG_A, name: "Acme" },
   window: { start: new Date("2026-05-04T00:00:00.000Z"), end: new Date("2026-05-11T00:00:00.000Z") },
@@ -34,6 +41,7 @@ const sampleReport: Report = {
     streakDays: 5,
     testsRun: 9,
     gitWriteOps: 4,
+    tokensTotal: 50_000,
   },
   toolMix: { bash: 15, read: 25, edit: 50, write: 5, search: 5, research: 0, plan: 0, other: 0 },
   loc: {
@@ -53,6 +61,14 @@ const sampleReport: Report = {
     kind: "surgeon",
     score: 0.5,
     evidence: ["50% of your tool calls were Edits", "Touched 12 files this week", "5 Write calls on top"],
+  },
+  lastReport: {
+    sessions: null,
+    toolCalls: null,
+    durationMs: null,
+    filesTouched: null,
+    locWritten: null,
+    tokensTotal: null,
   },
 }
 
@@ -214,6 +230,123 @@ describe("WrappedReportRepositoryLive", () => {
       }),
     )
     expect(found).toBeNull()
+  })
+
+  // ─── findLeaderboardRankForReport ───────────────────────────────────────────
+
+  const seedLeaderboardRow = async (opts: {
+    id: string
+    projectId?: ProjectId
+    createdAt: Date
+    tokensTotal?: number
+    toolCalls?: number
+  }) => {
+    const totals = {
+      ...sampleReport.totals,
+      toolCalls: opts.toolCalls ?? sampleReport.totals.toolCalls,
+      tokensTotal: opts.tokensTotal ?? sampleReport.totals.tokensTotal,
+    }
+    const report: ReportV2 = { ...sampleReport, totals }
+    await pg.db.insert(wrappedReports).values({
+      id: WrappedReportId(opts.id),
+      type: "claude_code",
+      organizationId: ORG_A,
+      projectId: opts.projectId ?? PROJECT_A,
+      windowStart: sampleReport.window.start,
+      windowEnd: sampleReport.window.end,
+      ownerName: "Alex",
+      reportVersion: CURRENT_REPORT_VERSION,
+      report: report as unknown as Report,
+      createdAt: opts.createdAt,
+      updatedAt: opts.createdAt,
+    })
+  }
+
+  it("findLeaderboardRankForReport ranks by tokensTotal in a multi-project cohort", async () => {
+    const today = new Date()
+    const proj1 = ProjectId("proj1".padEnd(24, "a"))
+    const proj2 = ProjectId("proj2".padEnd(24, "a"))
+    const proj3 = ProjectId("proj3".padEnd(24, "a"))
+    await seedLeaderboardRow({ id: "rank1".padEnd(24, "a"), projectId: proj1, createdAt: today, tokensTotal: 300 })
+    await seedLeaderboardRow({ id: "rank2".padEnd(24, "a"), projectId: proj2, createdAt: today, tokensTotal: 200 })
+    await seedLeaderboardRow({ id: "rank3".padEnd(24, "a"), projectId: proj3, createdAt: today, tokensTotal: 100 })
+
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* WrappedReportRepository
+        return yield* repo.findLeaderboardRankForReport({
+          reportId: WrappedReportId("rank3".padEnd(24, "a")),
+          createdAt: today,
+          type: "claude_code",
+        })
+      }),
+    )
+    expect(result).not.toBeNull()
+    expect(result!.rank).toBe(3)
+    expect(result!.total).toBe(3)
+  })
+
+  it("findLeaderboardRankForReport returns rank 1 for the highest-token report", async () => {
+    const today = new Date()
+    const proj1 = ProjectId("lbp1".padEnd(24, "a"))
+    const proj2 = ProjectId("lbp2".padEnd(24, "a"))
+    await seedLeaderboardRow({ id: "lbid1".padEnd(24, "a"), projectId: proj1, createdAt: today, tokensTotal: 9_000 })
+    await seedLeaderboardRow({ id: "lbid2".padEnd(24, "a"), projectId: proj2, createdAt: today, tokensTotal: 1_000 })
+
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* WrappedReportRepository
+        return yield* repo.findLeaderboardRankForReport({
+          reportId: WrappedReportId("lbid1".padEnd(24, "a")),
+          createdAt: today,
+          type: "claude_code",
+        })
+      }),
+    )
+    expect(result!.rank).toBe(1)
+    expect(result!.total).toBe(2)
+  })
+
+  it("findLeaderboardRankForReport deduplicates by project — older report for same project is excluded", async () => {
+    const today = new Date()
+    const earlier = new Date(today.getTime() - 60 * 60 * 1000) // 1h earlier, still same day
+    const dedupProj = ProjectId("dedup".padEnd(24, "a"))
+    // Two reports for the same project — "new" and "old" on the same day.
+    await seedLeaderboardRow({ id: "dedup-new".padEnd(24, "a"), projectId: dedupProj, createdAt: today, tokensTotal: 500 })
+    await seedLeaderboardRow({ id: "dedup-old".padEnd(24, "a"), projectId: dedupProj, createdAt: earlier, tokensTotal: 500 })
+
+    // The older report is deduped out; it is not in the ranked cohort.
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* WrappedReportRepository
+        return yield* repo.findLeaderboardRankForReport({
+          reportId: WrappedReportId("dedup-old".padEnd(24, "a")),
+          createdAt: earlier,
+          type: "claude_code",
+        })
+      }),
+    )
+    expect(result).toBeNull()
+  })
+
+  it("findLeaderboardRankForReport ignores reports from a different UTC day", async () => {
+    const today = new Date()
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
+    const proj = ProjectId("dday".padEnd(24, "a"))
+    await seedLeaderboardRow({ id: "today-r".padEnd(24, "a"), projectId: proj, createdAt: today, tokensTotal: 100 })
+
+    // Query uses yesterday as the reference day → no results for that day.
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* WrappedReportRepository
+        return yield* repo.findLeaderboardRankForReport({
+          reportId: WrappedReportId("today-r".padEnd(24, "a")),
+          createdAt: yesterday,
+          type: "claude_code",
+        })
+      }),
+    )
+    expect(result).toBeNull()
   })
 
   it("findById crosses org boundaries when used with the system SqlClient (no-auth public route flow)", async () => {

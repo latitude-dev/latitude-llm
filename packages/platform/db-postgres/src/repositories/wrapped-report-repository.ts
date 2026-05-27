@@ -19,7 +19,7 @@ import {
   type WrappedReportSummary,
   type WrappedReportType,
 } from "@domain/spans"
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm"
+import { and, asc, desc, eq, gte, lt, lte } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { wrappedReports } from "../schema/wrapped-reports.ts"
@@ -178,7 +178,7 @@ export const WrappedReportRepositoryLive = Layer.effect(
               and(
                 eq(wrappedReports.type, type),
                 gte(wrappedReports.createdAt, dayStart),
-                lte(wrappedReports.createdAt, dayEnd),
+                lt(wrappedReports.createdAt, dayEnd), // half-open [dayStart, dayEnd)
               ),
             )
             .orderBy(asc(wrappedReports.projectId), desc(wrappedReports.createdAt)),

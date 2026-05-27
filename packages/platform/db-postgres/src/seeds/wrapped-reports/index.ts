@@ -178,7 +178,7 @@ function buildReport(i: number, projectId: string, orgId: string): ReportV2 {
     moments: {
       longestSession: { durationMs: rr(600_000, 7_200_000), workspace: null },
       busiestDay: {
-        date: windowEnd.toISOString().slice(0, 10) ?? "2026-05-22",
+        date: windowEnd.toISOString().slice(0, 10),
         toolCalls: rr(20, Math.max(21, Math.floor(toolCalls / sessions))),
       },
       biggestWrite: rand() > 0.3 ? { displayName: "index.ts", lines: rr(50, 400) } : null,
@@ -200,7 +200,7 @@ function buildReport(i: number, projectId: string, orgId: string): ReportV2 {
       locWritten: rand() > 0.3 ? rr(80, 4500) : null,
       tokensTotal: rand() > 0.3 ? rr(400_000, 25_000_000) : null,
     },
-  }) as ReportV2
+  })
 
   return report
 }
