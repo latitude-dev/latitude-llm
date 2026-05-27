@@ -130,7 +130,7 @@ function TokenHeadline({
 }) {
   const delta = computeDelta(totals.tokensTotal, lastReport.tokensTotal)
   return (
-    <section className="text-center">
+    <section className="rounded-2xl px-6 py-10 text-center sm:px-10 sm:py-14" style={{ backgroundColor: "#E8E4D8" }}>
       <p className="text-xs uppercase tracking-[0.14em]" style={{ color: MUTED, fontFamily: "Georgia, serif" }}>
         Total tokens
       </p>

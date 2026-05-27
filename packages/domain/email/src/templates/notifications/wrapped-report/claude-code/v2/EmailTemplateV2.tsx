@@ -158,7 +158,15 @@ function TokenSection({ report }: { report: ReportV2 }) {
   const { totals, lastReport } = report
   const caption = deltaCaption(totals.tokensTotal, lastReport.tokensTotal)
   return (
-    <Section style={{ ...sectionStyle, textAlign: "center" }}>
+    <Section
+      style={{
+        ...sectionStyle,
+        textAlign: "center",
+        backgroundColor: emailDesignTokens.colors.claude.creamDeep,
+        borderRadius: "16px",
+        padding: "40px 48px",
+      }}
+    >
       <p
         style={{
           fontFamily: emailDesignTokens.fonts.serif,
@@ -177,7 +185,6 @@ function TokenSection({ report }: { report: ReportV2 }) {
           style={{
             fontFamily: emailDesignTokens.fonts.serif,
             fontSize: "12px",
-            fontStyle: "italic",
             color: emailDesignTokens.colors.claude.mutedInk,
             margin: "4px 0 0 0",
           }}
