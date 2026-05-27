@@ -137,6 +137,16 @@ export interface TraceFilterSetMatchCandidate {
 
 export interface TraceListCursor {
   readonly sortValue: string
+  /**
+   * Set only by the search-mode list path, which appends a timestamp axis
+   * as the secondary ORDER BY tiebreaker so within-tier results stay sorted
+   * by recency (matters most for phrase-only queries that score every match
+   * at `best_score = 0.0`). Carries the row's `start_time` as an ISO-8601
+   * `DateTime64(9, 'UTC')` string. Explicit `undefined` allowed so the
+   * wire-side Zod schema (which produces `string | undefined`) can forward
+   * the parsed cursor without per-field conditional spreads.
+   */
+  readonly secondaryValue?: string | undefined
   readonly traceId: string
 }
 

@@ -685,12 +685,43 @@ export const TraceRepositoryLive = Layer.effect(
         const plan = parsed && isActiveSearch(parsed) ? yield* planSearch(parsed) : undefined
 
         if (plan?.ranked) {
-          const cursorClause = options.cursor
-            ? `AND (search_results.relevance_score, t.trace_id) <
-                 ({cursorSortValue:Float64}, {cursorTraceId:FixedString(32)})`
-            : ""
-
-          const finalHaving = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+          // Sort axis follows `sortBy`: any recognized key in `SORT_COLUMNS`
+          // swaps the primary axis to that aggregate's expression; otherwise
+          // default to relevance (`relevance_score, t.trace_id`). The full
+          // ORDER BY tuple is `(<primary>, start_time, trace_id)`: the
+          // timestamp tiebreaker keeps within-tier rows in recency order —
+          // without it, phrase-only queries (which score every match at
+          // `relevance_score = 0.0`) and ties on any other axis would fall
+          // through to a meaningless `trace_id` order. When the primary IS
+          // `start_time` the duplicate is harmless and keeps the cursor
+          // shape uniform.
+          //
+          // All three axes flip together with `sortDirection` so an ASC
+          // click on a column header gives a fully-reversed walk. The
+          // relevance floor (≥ `TRACE_SEARCH_MIN_RELEVANCE_SCORE`) is
+          // enforced inside `search-plan.ts` and gates the candidate set
+          // regardless of axis or direction.
+          const rankedAxis = options.sortBy ? SORT_COLUMNS[options.sortBy] : undefined
+          const primaryExpr = rankedAxis ? rankedAxis.expr : "search_results.relevance_score"
+          const primaryChType = rankedAxis ? rankedAxis.chType : "Float64"
+          const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
+          const cmp = orderDir === "DESC" ? "<" : ">"
+          // The keyset comparison references aggregates (`start_time`) so it
+          // has to live in HAVING (post-aggregate). When the primary is a
+          // pre-aggregate column it also works in HAVING since CH lets the
+          // clause reference SELECT-list aliases including
+          // `search_results.relevance_score` (which is part of the GROUP BY
+          // tuple and so survives finalization).
+          const havingParts: string[] = [...havingClauses]
+          if (options.cursor) {
+            havingParts.push(
+              `(${primaryExpr}, start_time, t.trace_id) ${cmp}
+                ({cursorSortValue:${primaryChType}},
+                 {cursorSecondaryValue:DateTime64(9, 'UTC')},
+                 {cursorTraceId:FixedString(32)})`,
+            )
+          }
+          const finalHaving = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
 
           return yield* chSqlClient
             .query(async (client) => {
@@ -705,10 +736,9 @@ export const TraceRepositoryLive = Layer.effect(
                         WHERE t.organization_id = {organizationId:String}
                           AND t.project_id = {projectId:String}
                           ${extraWhere}
-                          ${cursorClause}
                         GROUP BY t.organization_id, t.project_id, t.trace_id, search_results.relevance_score
                         ${finalHaving}
-                        ORDER BY search_results.relevance_score DESC, t.trace_id DESC
+                        ORDER BY ${primaryExpr} ${orderDir}, start_time ${orderDir}, t.trace_id ${orderDir}
                         LIMIT {limit:UInt32}`,
                 query_params: {
                   organizationId: organizationId as string,
@@ -719,6 +749,7 @@ export const TraceRepositoryLive = Layer.effect(
                   ...(options.cursor
                     ? {
                         cursorSortValue: options.cursor.sortValue,
+                        cursorSecondaryValue: options.cursor.secondaryValue ?? "1970-01-01 00:00:00.000000000",
                         cursorTraceId: options.cursor.traceId,
                       }
                     : {}),
@@ -738,7 +769,8 @@ export const TraceRepositoryLive = Layer.effect(
                   items,
                   hasMore,
                   nextCursor: {
-                    sortValue: String(last.relevance_score ?? 0),
+                    sortValue: rankedAxis ? String(last[rankedAxis.rowKey]) : String(last.relevance_score ?? 0),
+                    secondaryValue: String(last.start_time),
                     traceId: last.trace_id,
                   },
                 }

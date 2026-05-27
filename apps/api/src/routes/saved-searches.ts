@@ -371,7 +371,12 @@ const assignSavedSearch = savedSearchEndpoint({
 })
 
 const ListSavedSearchTracesQuerySchema = PaginatedQueryParamsSchema.extend({
-  sortBy: z.enum(TRACE_SORT_FIELDS).default("startTime").describe("Field to sort by. Defaults to `startTime`."),
+  sortBy: z
+    .enum(TRACE_SORT_FIELDS)
+    .default("startTime")
+    .describe(
+      "Field to sort by. Defaults to `startTime`. Pass `relevance` to rank by semantic match against the saved search's query (best match first, then most recent).",
+    ),
   sortDirection: z
     .enum(["asc", "desc"])
     .default("desc")

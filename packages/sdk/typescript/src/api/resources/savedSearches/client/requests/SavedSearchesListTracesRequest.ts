@@ -7,7 +7,7 @@ import type * as LatitudeApi from "../../../../index.js";
  *     {
  *         cursor: "cursor",
  *         limit: 1,
- *         sortBy: "startTime",
+ *         sortBy: "relevance",
  *         sortDirection: "asc"
  *     }
  */
@@ -16,7 +16,7 @@ export interface SavedSearchesListTracesRequest {
     cursor?: string;
     /** Page size. Defaults to 50; max 200. */
     limit?: number;
-    /** Field to sort by. Defaults to `startTime`. */
+    /** Field to sort by. Defaults to `startTime`. Pass `relevance` to rank by semantic match against the saved search's query (best match first, then most recent). */
     sortBy?: LatitudeApi.SavedSearchesListTracesRequestSortBy;
     /** Sort direction. Defaults to `desc` (most recent first). */
     sortDirection?: LatitudeApi.SavedSearchesListTracesRequestSortDirection;

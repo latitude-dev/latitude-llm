@@ -120,6 +120,38 @@ describe("Traces Routes Integration", () => {
     expect(res.status).toBe(200)
   })
 
+  // `relevance` is the only sortBy value whose semantics depend on `query`
+  // being set — the repo falls through to the ranked-search default ordering.
+  // The API just needs to accept the value; the ordering itself is covered
+  // by the repo tests in `trace-repository.test.ts`.
+  it<ApiTestContext>('POST /list accepts sortBy: "relevance" together with a free-text query', async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "999999999999999999999998"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/traces/list`, {
+        method: "POST",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filters: {},
+          limit: 25,
+          sortBy: "relevance",
+          sortDirection: "desc",
+          query: "anything",
+        }),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+  })
+
   it<ApiTestContext>("GET /{traceId} rejects unauthenticated requests with 401", async ({ app }) => {
     const res = await app.fetch(new Request(`http://localhost/v1/projects/foo/traces/${"0".repeat(32)}`))
     expect(res.status).toBe(401)

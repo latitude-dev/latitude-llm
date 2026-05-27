@@ -568,7 +568,7 @@ export class SavedSearchesClient {
      *     await client.savedSearches.listTraces("projectSlug", "searchSlug", {
      *         cursor: "cursor",
      *         limit: 1,
-     *         sortBy: "startTime",
+     *         sortBy: "relevance",
      *         sortDirection: "asc"
      *     })
      */

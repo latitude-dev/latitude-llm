@@ -114,15 +114,24 @@ const serializeTraceDetail = (trace: TraceDetail): TraceDetailRecord => ({
   allMessages: trace.allMessages,
 })
 
+// `secondaryValue` is only set by the search-mode list path (carries
+// `start_time` for the timestamp tiebreaker); the non-search path omits
+// it and the repository accepts the absence by falling back to the
+// DateTime64 zero — see `trace-repository.ts`.
 const traceListCursorSchema = z.object({
   sortValue: z.string(),
+  secondaryValue: z.string().optional(),
   traceId: z.string(),
 })
 
 interface TraceListResult {
   readonly traces: readonly TraceRecord[]
   readonly hasMore: boolean
-  readonly nextCursor?: { readonly sortValue: string; readonly traceId: string }
+  readonly nextCursor?: {
+    readonly sortValue: string
+    readonly secondaryValue?: string | undefined
+    readonly traceId: string
+  }
 }
 
 export const listTracesByProject = createServerFn({ method: "GET" })

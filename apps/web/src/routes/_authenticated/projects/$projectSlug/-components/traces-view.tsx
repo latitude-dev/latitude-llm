@@ -10,6 +10,7 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { DEFAULT_TRACE_TABLE_SORTING, ProjectTracesTable, type TraceColumnId } from "./project-traces-table.tsx"
+import { DEFAULT_SEARCH_SORTING } from "./trace-page-state.ts"
 
 interface TracesViewProps {
   readonly projectId: string
@@ -166,7 +167,7 @@ export function TracesView({
           selection={selection}
           infiniteScroll={infiniteScroll}
           sorting={sorting}
-          defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
+          defaultSorting={hasSearchQuery ? DEFAULT_SEARCH_SORTING : DEFAULT_TRACE_TABLE_SORTING}
           onSortChange={onSortingChange}
           blankSlate={
             hasSearchQuery

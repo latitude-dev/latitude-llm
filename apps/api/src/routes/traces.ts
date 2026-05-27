@@ -57,7 +57,12 @@ const ListBodySchema = z
       .optional()
       .describe("Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."),
     limit: z.number().int().min(1).max(200).default(50).describe("Page size. Defaults to 50; max 200."),
-    sortBy: z.enum(TRACE_SORT_FIELDS).default("startTime").describe("Field to sort by. Defaults to `startTime`."),
+    sortBy: z
+      .enum(TRACE_SORT_FIELDS)
+      .default("startTime")
+      .describe(
+        "Field to sort by. Defaults to `startTime`. Pass `relevance` together with `query` to rank by semantic match (best match first, then most recent).",
+      ),
     sortDirection: z
       .enum(["asc", "desc"])
       .default("desc")

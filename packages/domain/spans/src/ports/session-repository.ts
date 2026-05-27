@@ -57,25 +57,32 @@ export type SessionDistinctColumn = "tags" | "models" | "providers" | "serviceNa
 
 export interface SessionListCursor {
   readonly sortValue: string
-  readonly sessionId: string
-}
-
-export interface SessionSearchCursor {
-  readonly relevanceBucket: number
-  readonly lastActivityAt: string
+  /**
+   * Set only by the search-mode list path, which appends a timestamp axis
+   * as the secondary ORDER BY tiebreaker so within-tier results stay sorted
+   * by recency (matters most for phrase-only queries that score every match
+   * at `best_score = 0.0`). Carries the row's `session_end_time` as an
+   * ISO-8601 `DateTime64(9, 'UTC')` string. Explicit `undefined` allowed
+   * so the wire-side Zod schema (which produces `string | undefined`) can
+   * forward the parsed cursor without per-field conditional spreads.
+   */
+  readonly secondaryValue?: string | undefined
   readonly sessionId: string
 }
 
 export interface SessionListOptions {
   readonly limit?: number
-  readonly cursor?: SessionListCursor | SessionSearchCursor
+  readonly cursor?: SessionListCursor
   readonly sortBy?: string
   readonly sortDirection?: "asc" | "desc"
   readonly filters?: FilterSet
   /**
-   * When set, switches the repository into the search code path. `sortBy` /
-   * `sortDirection` are ignored and the page carries a parallel
-   * `searchMatches` map.
+   * When set, switches the repository into the search code path. The page
+   * carries a parallel `searchMatches` map. Sort defaults to relevance
+   * (`best_score DESC`); `sortBy` can override to any of the standard
+   * session-listing axes (`lastActivity`, `startTime`, `cost`, ...) and the
+   * relevance score filter (≥ `TRACE_SEARCH_MIN_RELEVANCE_SCORE`) still
+   * gates the candidate set regardless of axis.
    */
   readonly searchQuery?: string
 }
@@ -83,7 +90,7 @@ export interface SessionListOptions {
 export interface SessionListPage {
   readonly items: readonly Session[]
   readonly hasMore: boolean
-  readonly nextCursor?: SessionListCursor | SessionSearchCursor
+  readonly nextCursor?: SessionListCursor
   /**
    * Per-result search match metadata, keyed by `sessionId`. Present only when
    * `SessionListOptions.searchQuery` was active for the request. Surfaced as

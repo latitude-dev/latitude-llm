@@ -12,8 +12,20 @@ const emptyToNull = (value: string): string | null => (value === "" ? null : val
  * Fields the trace repository accepts as `sortBy`. The API surface narrows the
  * domain's free-form string sort param to a stable allow-list so the SDK and
  * MCP tool inputs document exactly what's tunable.
+ *
+ * `relevance` is only meaningful when `query` is also set — it picks the
+ * ranked-search branch's default sort (best semantic match first, then most
+ * recent, then trace_id). Passing `relevance` without `query` falls back to
+ * the standard list path's default sort.
  */
-export const TRACE_SORT_FIELDS = ["startTime", "endTime", "durationNs", "tokensTotal", "costTotalMicrocents"] as const
+export const TRACE_SORT_FIELDS = [
+  "relevance",
+  "startTime",
+  "endTime",
+  "durationNs",
+  "tokensTotal",
+  "costTotalMicrocents",
+] as const
 
 /**
  * Opaque cursor over the wire — base64url JSON of `{ sortValue, traceId }`.

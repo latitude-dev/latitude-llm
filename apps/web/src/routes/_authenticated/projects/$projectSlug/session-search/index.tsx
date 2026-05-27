@@ -21,15 +21,15 @@ import { useSearchSegments } from "../../../../../lib/hooks/useSearchSegments.ts
 import { EMPTY_SELECTION, type SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
-import {
-  DEFAULT_SESSION_SORTING,
-  SESSION_COLUMN_OPTIONS,
-  type SessionColumnId,
-  SessionsView,
-} from "../-components/sessions-view.tsx"
+import { SESSION_COLUMN_OPTIONS, type SessionColumnId, SessionsView } from "../-components/sessions-view.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
-import { getTimeFilterValue, parseFilters, serializeFilters } from "../-components/trace-page-state.ts"
+import {
+  DEFAULT_SEARCH_SORTING,
+  getTimeFilterValue,
+  parseFilters,
+  serializeFilters,
+} from "../-components/trace-page-state.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { SearchSyntaxLegendContent } from "../search/-components/search-syntax-legend.tsx"
 import { SessionTraceDetailDrawer } from "./-components/session-trace-detail-drawer.tsx"
@@ -75,8 +75,8 @@ function SessionSearchPage() {
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
-  const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_SESSION_SORTING.column)
-  const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SESSION_SORTING.direction, {
+  const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_SEARCH_SORTING.column)
+  const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SEARCH_SORTING.direction, {
     validate: (v): v is SortDirection => v === "asc" || v === "desc",
   })
   // Active query lands on Conversation so the lazy-mount fires highlights immediately.

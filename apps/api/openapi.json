@@ -1495,6 +1495,7 @@
           "sortBy": {
             "type": "string",
             "enum": [
+              "relevance",
               "startTime",
               "endTime",
               "durationNs",
@@ -1502,7 +1503,7 @@
               "costTotalMicrocents"
             ],
             "default": "startTime",
-            "description": "Field to sort by. Defaults to `startTime`."
+            "description": "Field to sort by. Defaults to `startTime`. Pass `relevance` together with `query` to rank by semantic match (best match first, then most recent)."
           },
           "sortDirection": {
             "type": "string",
@@ -6758,6 +6759,7 @@
             "schema": {
               "type": "string",
               "enum": [
+                "relevance",
                 "startTime",
                 "endTime",
                 "durationNs",
@@ -6765,10 +6767,10 @@
                 "costTotalMicrocents"
               ],
               "default": "startTime",
-              "description": "Field to sort by. Defaults to `startTime`."
+              "description": "Field to sort by. Defaults to `startTime`. Pass `relevance` to rank by semantic match against the saved search's query (best match first, then most recent)."
             },
             "required": false,
-            "description": "Field to sort by. Defaults to `startTime`.",
+            "description": "Field to sort by. Defaults to `startTime`. Pass `relevance` to rank by semantic match against the saved search's query (best match first, then most recent).",
             "name": "sortBy",
             "in": "query"
           },

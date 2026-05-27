@@ -29,7 +29,7 @@ import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "../-components/trace-detail-drawer.tsx"
 import {
-  DEFAULT_TRACE_SORTING,
+  DEFAULT_SEARCH_SORTING,
   getTimeFilterValue,
   parseFilters,
   serializeFilters,
@@ -66,8 +66,8 @@ function SearchPage() {
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
-  const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_TRACE_SORTING.column)
-  const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_TRACE_SORTING.direction, {
+  const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_SEARCH_SORTING.column)
+  const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SEARCH_SORTING.direction, {
     validate: (v): v is SortDirection => v === "asc" || v === "desc",
   })
   const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", "trace", {

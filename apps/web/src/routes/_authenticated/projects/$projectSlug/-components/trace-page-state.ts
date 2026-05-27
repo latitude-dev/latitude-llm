@@ -3,6 +3,18 @@ import type { InfiniteTableSorting } from "@repo/ui"
 
 export const DEFAULT_TRACE_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
 
+/**
+ * Sort identifier sent to the API when search is active and the user
+ * hasn't picked an explicit sort column. The repository's `SORT_COLUMNS`
+ * has no entry for `"relevance"`, so it falls through to the default
+ * relevance-ranked path (best_score for sessions, relevance_score for
+ * traces). Picking any other axis from the column-header click keeps the
+ * relevance floor (>= 0.3) but swaps the primary sort.
+ */
+export const RELEVANCE_SORT_COLUMN = "relevance"
+
+export const DEFAULT_SEARCH_SORTING: InfiniteTableSorting = { column: RELEVANCE_SORT_COLUMN, direction: "desc" }
+
 export function parseFilters(raw?: string): FilterSet {
   if (!raw) return {}
   try {

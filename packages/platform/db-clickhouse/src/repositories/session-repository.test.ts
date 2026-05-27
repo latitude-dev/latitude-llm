@@ -1106,10 +1106,11 @@ describe("SessionRepository", () => {
       expect(count.matchingTraceCount).toBe(summed)
     })
 
-    // 8) Ordering override (spec §4.7): with searchQuery active, items are
-    //    ordered by bestScore DESC, sessionId DESC even when the caller asks
-    //    for sortBy: "cost" / sortDirection: "desc".
-    it("forces best_score / session_id DESC ordering when searchQuery is active, ignoring sortBy", async () => {
+    // 8) Default ordering: with searchQuery active and no explicit sortBy,
+    //    items are ordered by bestScore DESC, sessionId DESC. The "relevance"
+    //    sentinel sortBy value used by the UI as the default in search mode
+    //    falls through to the same path (no entry in `SEARCH_SORT_AXES`).
+    it("defaults to best_score / session_id DESC ordering when searchQuery is active", async () => {
       const start = new Date(Date.UTC(2026, 0, 8, 10, 0, 0))
       const sessionLow = "ord-low-score-high-cost"
       const sessionHigh = "ord-high-score-low-cost"
@@ -1149,15 +1150,15 @@ describe("SessionRepository", () => {
           projectId: PROJECT_ID,
           options: {
             searchQuery: '"ordering" semantic boost',
-            sortBy: "cost",
-            sortDirection: "desc",
+            // No `sortBy`: default to relevance. The web layer also sends
+            // `sortBy: "relevance"` in this case; both fall through to the
+            // same default branch since `relevance` isn't a real axis.
             limit: 10,
           },
         }),
       )
 
-      // Two sessions, but the high-score one must come first despite cost being
-      // an order of magnitude lower.
+      // The high-score session must come first under the relevance default.
       const ids = page.items.map((s) => s.sessionId)
       expect(ids[0]).toBe(sessionHigh)
       expect(ids[1]).toBe(sessionLow)
@@ -1166,390 +1167,312 @@ describe("SessionRepository", () => {
       )
     })
 
-    // Reference: spec §4.7 — when searchQuery is active the server forces
-    // its own ordering (now the freshness-weighted tuple from
-    // 7-freshness-weighted-sort.md) regardless of client sortBy.
-    // The use of buildAlignedAt is currently unused but kept for fixtures
-    // that may want to inject specific cosine magnitudes; tagging via void
-    // keeps the import noise minimal without producing an unused-warning.
-    void buildAlignedAt
+    // The web layer sends `sortBy: "relevance"` as its in-search default. The
+    // repository has no entry for that key in SEARCH_SORT_AXES, so it falls
+    // through to the same relevance-ordered branch as `sortBy: undefined`.
+    it('treats sortBy="relevance" the same as undefined (default relevance order)', async () => {
+      const start = new Date(Date.UTC(2026, 0, 9, 10, 0, 0))
+      const sessionHigh = "rel-high"
+      const sessionLow = "rel-low"
+      const traceHigh = padTrace("rh")
+      const traceLow = padTrace("rl")
 
-    // ════════════════════════════════════════════════════════════════════════
-    // Freshness-weighted ordering (spec 7-freshness-weighted-sort.md).
-    // Inside a relevance bucket, sessions sort by `last_activity_at DESC`,
-    // then `session_id DESC`. Across buckets relevance still dominates.
-    // ════════════════════════════════════════════════════════════════════════
-    describe("freshness-weighted ordering", () => {
-      // Build a vector whose cosine with the all-0.1 mock query embedding is
-      // exactly `(DIMS - 2N) / DIMS` — see test 6 above for the derivation.
-      // Picking the right N gives us a predictable bucket without touching
-      // floating-point boundaries.
-      const flippedVec = (flipped: number): readonly number[] => {
-        const v = new Array(DIMS).fill(0.1) as number[]
-        for (let i = 0; i < flipped; i++) v[i] = -0.1
-        return v as readonly number[]
-      }
-      // Cosine targets chosen to sit comfortably inside their buckets
-      // (avoids ambiguity from `floor(score / 0.1)` near boundaries).
-      const COSINE_087 = flippedVec(133) // ≈ 0.8701 → bucket 0.8
-      const COSINE_085 = flippedVec(154) // ≈ 0.8496 → bucket 0.8
-      const COSINE_081 = flippedVec(195) // ≈ 0.8096 → bucket 0.8
-      const COSINE_055 = flippedVec(461) // ≈ 0.5498 → bucket 0.5
-      const COSINE_065 = flippedVec(359) // ≈ 0.6494 → bucket 0.6
+      await insertSpans([
+        makeSpanRow({ traceId: traceHigh, spanId: padSpan("rh"), sessionId: sessionHigh, startTime: start }),
+        makeSpanRow({
+          traceId: traceLow,
+          spanId: padSpan("rl"),
+          sessionId: sessionLow,
+          startTime: new Date(start.getTime() + 1_000),
+        }),
+      ])
+      await insertSearchDocs([
+        { traceId: traceHigh, text: "relevance sentinel high", startTime: start, contentHashSuffix: "rh" },
+        { traceId: traceLow, text: "relevance sentinel low", startTime: start, contentHashSuffix: "rl" },
+      ])
+      await insertSearchEmbeddings([
+        { traceId: traceHigh, chunkIndex: 0, embedding: alignedEmbedding, startTime: start, contentHashSuffix: "rh" },
+      ])
 
-      // §2 worked example: an 18-month-old 0.87 must not beat a fresh 0.85
-      // because they share bucket 0.8. Without the freshness sort, the old
-      // session wins on raw cosine; with it, freshness wins inside the tier.
-      it("within the same bucket, the more recently active session sorts first", async () => {
-        const oldStart = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
-        const freshStart = new Date(Date.UTC(2026, 3, 1, 10, 0, 0))
-        const sessionStale = "frb-stale-087"
-        const sessionFresh = "frb-fresh-085"
-        const traceStale = padTrace("frb1")
-        const traceFresh = padTrace("frb2")
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: '"relevance" sentinel boost', sortBy: "relevance", limit: 10 },
+        }),
+      )
 
-        await insertSpans([
-          makeSpanRow({ traceId: traceStale, spanId: padSpan("frb1"), sessionId: sessionStale, startTime: oldStart }),
-          makeSpanRow({
-            traceId: traceFresh,
-            spanId: padSpan("frb2"),
-            sessionId: sessionFresh,
-            startTime: freshStart,
-          }),
-        ])
-        await insertSearchDocs([
-          { traceId: traceStale, text: "freshmark stale conversation", startTime: oldStart, contentHashSuffix: "f1" },
-          {
-            traceId: traceFresh,
-            text: "freshmark recent conversation",
-            startTime: freshStart,
-            contentHashSuffix: "f2",
-          },
-        ])
-        await insertSearchEmbeddings([
-          { traceId: traceStale, chunkIndex: 0, embedding: COSINE_087, startTime: oldStart, contentHashSuffix: "f1" },
-          {
-            traceId: traceFresh,
-            chunkIndex: 0,
-            embedding: COSINE_085,
-            startTime: freshStart,
-            contentHashSuffix: "f2",
-          },
-        ])
+      expect(page.items.map((s) => s.sessionId)).toEqual([sessionHigh, sessionLow])
+    })
 
-        const page = await runCh(
-          repo.listByProjectId({
-            organizationId: ORG_ID,
-            projectId: PROJECT_ID,
-            options: { searchQuery: '"freshmark" conversation', limit: 10 },
-          }),
-        )
-
-        const ids = page.items.map((s) => s.sessionId)
-        expect(ids).toEqual([sessionFresh, sessionStale])
-        // Raw cosine is unchanged — the stale session still has the higher
-        // best_score, the freshness sort just reorders within the bucket.
-        expect(nonNull(page.searchMatches?.[sessionStale]).bestScore).toBeGreaterThan(
-          nonNull(page.searchMatches?.[sessionFresh]).bestScore,
-        )
-      })
-
-      // The other half of the calibration: a 0.42 from five minutes ago does
-      // NOT beat a 0.85 from this morning, because they sit in different
-      // buckets and relevance dominates across bucket boundaries.
-      it("across bucket boundaries, the higher-relevance bucket wins even if the lower bucket is fresher", async () => {
-        const oldStart = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
-        const freshStart = new Date(Date.UTC(2026, 3, 1, 10, 0, 0))
-        const sessionStaleHi = "frx-stale-085"
-        const sessionFreshLo = "frx-fresh-055"
-        const traceStale = padTrace("frx1")
-        const traceFresh = padTrace("frx2")
-
-        await insertSpans([
-          makeSpanRow({
-            traceId: traceStale,
-            spanId: padSpan("frx1"),
-            sessionId: sessionStaleHi,
-            startTime: oldStart,
-          }),
-          makeSpanRow({
-            traceId: traceFresh,
-            spanId: padSpan("frx2"),
-            sessionId: sessionFreshLo,
-            startTime: freshStart,
-          }),
-        ])
-        await insertSearchDocs([
-          { traceId: traceStale, text: "freshmark stale strong-match", startTime: oldStart, contentHashSuffix: "x1" },
-          { traceId: traceFresh, text: "freshmark recent weak-match", startTime: freshStart, contentHashSuffix: "x2" },
-        ])
-        await insertSearchEmbeddings([
-          { traceId: traceStale, chunkIndex: 0, embedding: COSINE_085, startTime: oldStart, contentHashSuffix: "x1" },
-          {
-            traceId: traceFresh,
-            chunkIndex: 0,
-            embedding: COSINE_055,
-            startTime: freshStart,
-            contentHashSuffix: "x2",
-          },
-        ])
-
-        const page = await runCh(
-          repo.listByProjectId({
-            organizationId: ORG_ID,
-            projectId: PROJECT_ID,
-            options: { searchQuery: '"freshmark" match', limit: 10 },
-          }),
-        )
-
-        const ids = page.items.map((s) => s.sessionId)
-        expect(ids).toEqual([sessionStaleHi, sessionFreshLo])
-      })
-
-      // Lexical-only matches all collapse to bucket 0.0 (best_score = 0); the
-      // freshness sort is the only signal left, so they form a coherent
-      // "latest matches first" page (§6.5).
-      it("lexical-only sessions all share bucket 0.0 and sort by recency among themselves", async () => {
-        const base = new Date(Date.UTC(2026, 0, 10, 10, 0, 0))
-        const sessions = [
-          { id: "lex-newest", offsetSec: 200 },
-          { id: "lex-middle", offsetSec: 100 },
-          { id: "lex-oldest", offsetSec: 0 },
-        ] as const
-        const spans = sessions.map((s, i) =>
-          makeSpanRow({
-            traceId: padTrace(`lex${i}`),
-            spanId: padSpan(`lx${i}`),
-            sessionId: s.id,
-            startTime: new Date(base.getTime() + s.offsetSec * 1_000),
-          }),
-        )
-        await insertSpans(spans)
-        await insertSearchDocs(
-          sessions.map((s, i) => ({
-            traceId: padTrace(`lex${i}`),
-            text: `freshmark lexical-only ${s.id}`,
-            startTime: new Date(base.getTime() + s.offsetSec * 1_000),
-            contentHashSuffix: `lx${i}`,
-          })),
-        )
-
-        const page = await runCh(
-          repo.listByProjectId({
-            organizationId: ORG_ID,
-            projectId: PROJECT_ID,
-            options: { searchQuery: '"freshmark"', limit: 10 },
-          }),
-        )
-
-        // All three lexical-only → best_score = 0.0 → bucket 0.0 → sort by
-        // last_activity_at DESC. Newest fixture first, oldest last.
-        const ids = page.items.map((s) => s.sessionId)
-        expect(ids).toEqual(["lex-newest", "lex-middle", "lex-oldest"])
-        for (const id of ids) {
-          expect(nonNull(page.searchMatches?.[id]).bestScore).toBe(0)
-        }
-      })
-
-      // §6.3: freshness is the SESSION's last activity, not the matching
-      // traces' last activity. A live conversation whose only matching turn
-      // is old must still rank as fresh; a dead conversation whose matching
-      // turns are equally old must rank stale.
-      it("freshness is session-level — a live session with an old matching trace still beats a fully-stale session", async () => {
-        const ancientMatch = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
-        // The "live" session has a recent NON-matching span (so its
-        // sessions.max_end_time advances) but the only span that matches the
-        // search phrase is from January.
-        const liveActivity = new Date(Date.UTC(2026, 4, 1, 10, 0, 0))
-        const sessionLive = "frlive"
-        const sessionDead = "frdead"
-        const traceLiveMatch = padTrace("flm")
-        const traceLiveRecent = padTrace("flr")
-        const traceDead = padTrace("fld")
-
-        await insertSpans([
-          // Live session: one old matching trace + one recent non-matching
-          // trace. sessions.max_end_time = liveActivity + 1s.
-          makeSpanRow({
-            traceId: traceLiveMatch,
-            spanId: padSpan("flm"),
-            sessionId: sessionLive,
-            startTime: ancientMatch,
-          }),
-          makeSpanRow({
-            traceId: traceLiveRecent,
-            spanId: padSpan("flr"),
-            sessionId: sessionLive,
-            startTime: liveActivity,
-          }),
-          // Dead session: one old matching trace, nothing else.
-          // sessions.max_end_time = ancientMatch + 1s.
-          makeSpanRow({
-            traceId: traceDead,
-            spanId: padSpan("fld"),
-            sessionId: sessionDead,
-            startTime: ancientMatch,
-          }),
-        ])
-        // Only the two "match" traces carry the search phrase; the recent
-        // span on the live session is in the same session but invisible to
-        // the search candidate set.
-        await insertSearchDocs([
-          {
-            traceId: traceLiveMatch,
-            text: "freshmark old-matching-turn",
-            startTime: ancientMatch,
-            contentHashSuffix: "fl1",
-          },
-          {
-            traceId: traceDead,
-            text: "freshmark dead-session-match",
-            startTime: ancientMatch,
-            contentHashSuffix: "fl2",
-          },
-        ])
-
-        const page = await runCh(
-          repo.listByProjectId({
-            organizationId: ORG_ID,
-            projectId: PROJECT_ID,
-            options: { searchQuery: '"freshmark"', limit: 10 },
-          }),
-        )
-
-        // Both lexical-only → same bucket. The live session's
-        // last_activity_at is `liveActivity` (from the non-matching span),
-        // not `ancientMatch` — so it sorts ahead of the dead session.
-        // If the implementation used `max(trace_rollup.end_time)` instead
-        // (the matching-trace-only option in §5.1), both would tie at
-        // `ancientMatch` and this assertion would fail.
-        const ids = page.items.map((s) => s.sessionId)
-        expect(ids).toEqual([sessionLive, sessionDead])
-      })
-
-      // The clock-skew clamp prevents future-dated spans from pinning
-      // themselves to the top forever. Two far-future sessions (with
-      // different future offsets) must NOT be distinguishable by their
-      // relative future-ness — both clamp to `now() +
-      // SESSION_SEARCH_MAX_CLOCK_SKEW_MS` and tie on last_activity_at,
-      // breaking on session_id DESC.
-      it("future-dated spans clamp to now+1h, so two skewed sessions tie on last_activity_at", async () => {
-        const sessionLater = "skew-z" // later session_id (alphabetically) — wins DESC tiebreak
-        const sessionEarlier = "skew-a"
-        const traceLater = padTrace("skl")
-        const traceEarlier = padTrace("ske")
-        // Both well past the 1h clamp window. DateTime64(9) tops out
-        // around 2262-04-11, so we stay below that with room to spare.
-        const farFuture = new Date(Date.UTC(2200, 0, 1, 10, 0, 0))
-        const nearerFuture = new Date(Date.UTC(2100, 0, 1, 10, 0, 0))
-
-        await insertSpans([
-          // The EARLIER session_id carries the FURTHER-future timestamp.
-          // Without the clamp, the far-future session would beat the
-          // nearer-future one on raw end_time, so the earlier session_id
-          // would win — the opposite of what we expect.
-          makeSpanRow({
-            traceId: traceEarlier,
-            spanId: padSpan("ske"),
-            sessionId: sessionEarlier,
-            startTime: farFuture,
-          }),
-          makeSpanRow({
-            traceId: traceLater,
-            spanId: padSpan("skl"),
-            sessionId: sessionLater,
-            startTime: nearerFuture,
-          }),
-        ])
-        await insertSearchDocs([
-          { traceId: traceEarlier, text: "freshmark future-clamp a", startTime: farFuture, contentHashSuffix: "sk1" },
-          { traceId: traceLater, text: "freshmark future-clamp b", startTime: nearerFuture, contentHashSuffix: "sk2" },
-        ])
-
-        const page = await runCh(
-          repo.listByProjectId({
-            organizationId: ORG_ID,
-            projectId: PROJECT_ID,
-            options: { searchQuery: '"freshmark"', limit: 10 },
-          }),
-        )
-
-        // Both clamp to now()+1h, tied on last_activity_at.
-        // session_id DESC means "skew-z" beats "skew-a" — proves the clamp
-        // collapsed the two future timestamps into a tie.
-        const ids = page.items.map((s) => s.sessionId)
-        expect(ids).toEqual([sessionLater, sessionEarlier])
-      })
-
-      // Future-dated bottom-bucket sessions must NOT leapfrog a present-day
-      // top-bucket session: bucket ordering takes precedence over freshness
-      // even when the freshness column has been pinned to its clamp.
-      it("a future-clamped lexical session does not promote across bucket boundaries", async () => {
-        const future = new Date(Date.UTC(2200, 0, 1, 10, 0, 0))
-        const past = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
-        const sessionHighBucketStale = "clamp-hi"
-        const sessionLexFuture = "clamp-lo-future"
-        const traceHigh = padTrace("clh")
-        const traceFuture = padTrace("clf")
-
-        await insertSpans([
-          makeSpanRow({
-            traceId: traceHigh,
-            spanId: padSpan("clh"),
-            sessionId: sessionHighBucketStale,
-            startTime: past,
-          }),
-          makeSpanRow({
-            traceId: traceFuture,
-            spanId: padSpan("clf"),
-            sessionId: sessionLexFuture,
-            startTime: future,
-          }),
-        ])
-        await insertSearchDocs([
-          { traceId: traceHigh, text: "freshmark strong-match relevance", startTime: past, contentHashSuffix: "cl1" },
-          { traceId: traceFuture, text: "freshmark future-clamp weak", startTime: future, contentHashSuffix: "cl2" },
-        ])
-        // Only the stale session is semantically strong (bucket 0.8). The
-        // future-dated one is lexical-only (bucket 0.0).
-        await insertSearchEmbeddings([
-          { traceId: traceHigh, chunkIndex: 0, embedding: COSINE_081, startTime: past, contentHashSuffix: "cl1" },
-        ])
-
-        const page = await runCh(
-          repo.listByProjectId({
-            organizationId: ORG_ID,
-            projectId: PROJECT_ID,
-            options: { searchQuery: '"freshmark" match', limit: 10 },
-          }),
-        )
-
-        const ids = page.items.map((s) => s.sessionId)
-        expect(ids).toEqual([sessionHighBucketStale, sessionLexFuture])
-      })
-
-      // The wire cursor is the three-field freshness tuple, not the legacy
-      // (sortValue, sessionId) shape — and the values must round-trip into
-      // the HAVING predicate on the next page without losing rows.
-      it("nextCursor exposes the freshness-weighted (relevanceBucket, lastActivityAt, sessionId) tuple", async () => {
+    // sortBy axis dispatch: with searchQuery active, picking a real column
+    // (lastActivity/startTime/cost/...) swaps the primary axis to that axis
+    // DESC while the candidate set still respects the relevance floor
+    // applied inside `search-plan.ts`.
+    describe("sortBy axis dispatch in search mode", () => {
+      const insertScenario = async () => {
+        // Three sessions, all matching the lexical phrase. We give one a low
+        // relevance and the others a high relevance via embeddings — so an
+        // axis swap is what reorders them inside the result set. Timestamps
+        // and costs are picked to make each axis produce a distinct order.
         const start = new Date(Date.UTC(2026, 1, 1, 10, 0, 0))
-        const sessions = ["cur-a", "cur-b", "cur-c"] as const
+        const sessions = [
+          { id: "ax-A", offsetMs: 0, cost: 100, embed: alignedEmbedding },
+          { id: "ax-B", offsetMs: 60_000, cost: 50, embed: alignedEmbedding },
+          { id: "ax-C", offsetMs: 30_000, cost: 200, embed: alignedEmbedding },
+        ] as const
         await insertSpans(
           sessions.map((s, i) =>
             makeSpanRow({
-              traceId: padTrace(`cur${i}`),
-              spanId: padSpan(`cu${i}`),
-              sessionId: s,
-              startTime: new Date(start.getTime() + i * 1_000),
+              traceId: padTrace(`ax${i}`),
+              spanId: padSpan(`ax${i}`),
+              sessionId: s.id,
+              startTime: new Date(start.getTime() + s.offsetMs),
+              costTotalMicrocents: s.cost,
             }),
           ),
         )
         await insertSearchDocs(
           sessions.map((s, i) => ({
-            traceId: padTrace(`cur${i}`),
-            text: `freshmark cursor-shape ${s}`,
-            startTime: new Date(start.getTime() + i * 1_000),
-            contentHashSuffix: `cu${i}`,
+            traceId: padTrace(`ax${i}`),
+            text: `axis-fixture conversation ${s.id}`,
+            startTime: new Date(start.getTime() + s.offsetMs),
+            contentHashSuffix: `ax${i}`,
+          })),
+        )
+        await insertSearchEmbeddings(
+          sessions.map((s, i) => ({
+            traceId: padTrace(`ax${i}`),
+            chunkIndex: 0,
+            embedding: s.embed,
+            startTime: new Date(start.getTime() + s.offsetMs),
+            contentHashSuffix: `ax${i}`,
+          })),
+        )
+        return { sessions, start }
+      }
+
+      // The semantic prompt (`boost`) lifts `relevance_score` above 0 for the
+      // embedded fixtures; without it phrase-only mode collapses every match
+      // to `relevance_score = 0` (see `search-plan.ts`).
+      const SEARCH_QUERY = '"axis-fixture" boost'
+
+      it('sortBy="lastActivity" orders by session_end_time DESC', async () => {
+        await insertScenario()
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, sortBy: "lastActivity", limit: 10 },
+          }),
+        )
+        // B is newest (offset 60s), then C (30s), then A (0s).
+        expect(page.items.map((s) => s.sessionId)).toEqual(["ax-B", "ax-C", "ax-A"])
+      })
+
+      it('sortBy="startTime" orders by session_start_time DESC', async () => {
+        await insertScenario()
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, sortBy: "startTime", limit: 10 },
+          }),
+        )
+        // Same order as lastActivity for this fixture (each session has one trace).
+        expect(page.items.map((s) => s.sessionId)).toEqual(["ax-B", "ax-C", "ax-A"])
+      })
+
+      it('sortBy="cost" orders by cost_total_microcents DESC', async () => {
+        await insertScenario()
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, sortBy: "cost", limit: 10 },
+          }),
+        )
+        // C: 200, A: 100, B: 50.
+        expect(page.items.map((s) => s.sessionId)).toEqual(["ax-C", "ax-A", "ax-B"])
+      })
+
+      // ASC click on a column header flips the full sort tuple — primary
+      // axis, timestamp tiebreaker, AND session_id all reverse together.
+      // Regression guard for a bug where ORDER BY / HAVING were hardcoded
+      // to DESC and ASC clicks rendered the same order as DESC.
+      it('sortBy="cost" with sortDirection="asc" reverses the cost ordering', async () => {
+        await insertScenario()
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, sortBy: "cost", sortDirection: "asc", limit: 10 },
+          }),
+        )
+        // Mirror image of the DESC test: B (50), A (100), C (200).
+        expect(page.items.map((s) => s.sessionId)).toEqual(["ax-B", "ax-A", "ax-C"])
+      })
+
+      // ASC pagination has to flip both the ORDER BY and the keyset
+      // comparison (`<` → `>`) for the second page to pick up where the
+      // first left off. A half-flipped predicate would either drop rows
+      // or repeat the entire first page.
+      it("paginates ASC search results without losing or duplicating rows", async () => {
+        const { sessions } = await insertScenario()
+        const firstPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, sortBy: "lastActivity", sortDirection: "asc", limit: 2 },
+          }),
+        )
+        expect(firstPage.hasMore).toBe(true)
+        const cursor = nonNull(firstPage.nextCursor)
+        const secondPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, sortBy: "lastActivity", sortDirection: "asc", limit: 2, cursor },
+          }),
+        )
+        const collected = [...firstPage.items.map((s) => s.sessionId), ...secondPage.items.map((s) => s.sessionId)]
+        // ASC by lastActivity: oldest end_time first.
+        // ax-A (offset 0s) → ax-C (offset 30s) → ax-B (offset 60s).
+        expect(collected).toEqual(["ax-A", "ax-C", "ax-B"])
+        expect(new Set(collected).size).toBe(sessions.length)
+      })
+
+      // The relevance floor (>=0.3 in search-plan.ts) still gates the
+      // candidate set even when the user has picked a non-relevance sort
+      // axis — a sub-floor session must NOT appear regardless of how its
+      // lastActivity compares to the surviving rows.
+      it("preserves the relevance floor when sorting by a non-relevance axis", async () => {
+        const start = new Date(Date.UTC(2026, 1, 5, 10, 0, 0))
+        const sessionAbove = "flr-above"
+        const sessionBelow = "flr-below"
+        const traceAbove = padTrace("fa")
+        const traceBelow = padTrace("fb")
+
+        // The "below" session is the freshest one — it would top the
+        // lastActivity sort if the floor were not enforced.
+        await insertSpans([
+          makeSpanRow({ traceId: traceAbove, spanId: padSpan("fa"), sessionId: sessionAbove, startTime: start }),
+          makeSpanRow({
+            traceId: traceBelow,
+            spanId: padSpan("fb"),
+            sessionId: sessionBelow,
+            startTime: new Date(start.getTime() + 600_000),
+          }),
+        ])
+        await insertSearchDocs([
+          { traceId: traceAbove, text: "floor-check above", startTime: start, contentHashSuffix: "fa" },
+          {
+            traceId: traceBelow,
+            text: "floor-check below",
+            startTime: new Date(start.getTime() + 600_000),
+            contentHashSuffix: "fb",
+          },
+        ])
+        // `sessionAbove` has cosine ~ 1.0 against the all-0.1 mock query;
+        // `sessionBelow` has cosine 0 (orthogonal vector → below the 0.3
+        // floor inside search-plan.ts and dropped from the candidate set).
+        const orthogonalVec = (() => {
+          const v = new Array(DIMS).fill(0) as number[]
+          v[0] = 0.1
+          return v as readonly number[]
+        })()
+        await insertSearchEmbeddings([
+          {
+            traceId: traceAbove,
+            chunkIndex: 0,
+            embedding: alignedEmbedding,
+            startTime: start,
+            contentHashSuffix: "fa",
+          },
+          {
+            traceId: traceBelow,
+            chunkIndex: 0,
+            embedding: orthogonalVec,
+            startTime: new Date(start.getTime() + 600_000),
+            contentHashSuffix: "fb",
+          },
+        ])
+
+        // Pure-semantic query path: the only one that exercises the 0.3
+        // floor for both the default and the axis-swapped sort.
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "floor-check boost", sortBy: "lastActivity", limit: 10 },
+          }),
+        )
+
+        const ids = page.items.map((s) => s.sessionId)
+        expect(ids).toContain(sessionAbove)
+        expect(ids).not.toContain(sessionBelow)
+      })
+
+      // The wire cursor carries `(sortValue, secondaryValue, sessionId)` —
+      // `secondaryValue` is the timestamp tiebreaker (`session_end_time`)
+      // appended to every search-mode ORDER BY so within-tier rows stay in
+      // recency order. Round-trip the cursor through a second page to
+      // confirm the keyset comparison preserves the sort.
+      it("nextCursor carries the timestamp tiebreaker and round-trips for axis paging", async () => {
+        const { sessions } = await insertScenario()
+        const firstPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, sortBy: "lastActivity", limit: 2 },
+          }),
+        )
+        expect(firstPage.hasMore).toBe(true)
+        const cursor = nonNull(firstPage.nextCursor)
+        expect("sortValue" in cursor).toBe(true)
+        expect("secondaryValue" in cursor).toBe(true)
+        expect("sessionId" in cursor).toBe(true)
+        expect(typeof cursor.secondaryValue).toBe("string")
+        const secondPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, sortBy: "lastActivity", limit: 2, cursor },
+          }),
+        )
+        const collected = [...firstPage.items.map((s) => s.sessionId), ...secondPage.items.map((s) => s.sessionId)]
+        expect(collected).toEqual(["ax-B", "ax-C", "ax-A"])
+        expect(new Set(collected).size).toBe(sessions.length)
+      })
+
+      // Phrase-only queries collapse every match to `best_score = 0.0`, so
+      // the relevance axis ties on every row — the timestamp tiebreaker is
+      // the only signal that keeps the page in a meaningful order.
+      it("orders phrase-only matches by recency within the all-zero relevance bucket", async () => {
+        const start = new Date(Date.UTC(2026, 1, 10, 10, 0, 0))
+        // Three sessions with distinct timestamps but identical (zero)
+        // relevance scores — phrase-only matches against the same literal.
+        const sessions = [
+          { id: "lex-old", offsetSec: 0 },
+          { id: "lex-newest", offsetSec: 200 },
+          { id: "lex-middle", offsetSec: 100 },
+        ] as const
+        await insertSpans(
+          sessions.map((s, i) =>
+            makeSpanRow({
+              traceId: padTrace(`lt${i}`),
+              spanId: padSpan(`lt${i}`),
+              sessionId: s.id,
+              startTime: new Date(start.getTime() + s.offsetSec * 1_000),
+            }),
+          ),
+        )
+        await insertSearchDocs(
+          sessions.map((s, i) => ({
+            traceId: padTrace(`lt${i}`),
+            text: `tiebreak fixture ${s.id}`,
+            startTime: new Date(start.getTime() + s.offsetSec * 1_000),
+            contentHashSuffix: `lt${i}`,
           })),
         )
 
@@ -1557,55 +1480,93 @@ describe("SessionRepository", () => {
           repo.listByProjectId({
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
-            options: { searchQuery: '"freshmark"', limit: 2 },
+            options: { searchQuery: '"tiebreak"', limit: 10 },
           }),
         )
 
-        const cursor = nonNull(page.nextCursor)
-        expect("relevanceBucket" in cursor).toBe(true)
-        expect("lastActivityAt" in cursor).toBe(true)
-        expect("sessionId" in cursor).toBe(true)
-        expect("sortValue" in cursor).toBe(false)
-        if (!("relevanceBucket" in cursor)) throw new Error("unreachable")
-        // All lexical-only → bucket 0.0. Cursor encodes the snapped bucket
-        // exactly so the HAVING predicate round-trips deterministically.
-        expect(cursor.relevanceBucket).toBe(0)
-        // ISO-8601 — CH `DateTime64(9, 'UTC')` JSON-serializes that way.
-        expect(typeof cursor.lastActivityAt).toBe("string")
-        expect(cursor.lastActivityAt.length).toBeGreaterThan(0)
+        // All three are phrase-only → best_score = 0 → timestamp tiebreaker
+        // drives the order. Newest first, oldest last.
+        expect(page.items.map((s) => s.sessionId)).toEqual(["lex-newest", "lex-middle", "lex-old"])
+        for (const item of page.items) {
+          expect(nonNull(page.searchMatches?.[item.sessionId]).bestScore).toBe(0)
+        }
       })
 
-      // The full pagination contract under the new sort tuple: a mixed-bucket
-      // set walks (bucket DESC, last_activity_at DESC, session_id DESC) with
-      // no duplicates, no skips, and the final page reports hasMore = false.
-      it("pagination across mixed buckets walks the full sort tuple without duplicates", async () => {
-        const t = new Date(Date.UTC(2026, 1, 5, 10, 0, 0))
-        // Six sessions: 2 in bucket 0.8, 2 in bucket 0.6, 2 in bucket 0.0
-        // (lexical-only). Within each bucket the *-fresh suffix is newer.
+      // Default-relevance path: same fixture mix as the cursor round-trip
+      // above, but no `sortBy` — exercises pagination through the
+      // (best_score, session_end_time, session_id) keyset on the path that
+      // ~95% of search traffic takes.
+      it("paginates default relevance results using the timestamp tiebreaker in the cursor", async () => {
+        const { sessions } = await insertScenario()
+        const firstPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, limit: 2 },
+          }),
+        )
+        expect(firstPage.hasMore).toBe(true)
+        const cursor = nonNull(firstPage.nextCursor)
+        expect(typeof cursor.secondaryValue).toBe("string")
+        // All three sessions tie on best_score (aligned embeddings → cosine
+        // 1.0). The default ORDER BY's timestamp tiebreaker means the page
+        // walks them newest-first regardless of session_id ordering.
+        const secondPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, limit: 2, cursor },
+          }),
+        )
+        const collected = [...firstPage.items.map((s) => s.sessionId), ...secondPage.items.map((s) => s.sessionId)]
+        expect(collected).toEqual(["ax-B", "ax-C", "ax-A"])
+        expect(new Set(collected).size).toBe(sessions.length)
+      })
+
+      // The most thorough pagination check: fixtures span multiple relevance
+      // levels AND have ties within each level, so the full
+      // `(best_score, session_end_time, session_id)` keyset matters at every
+      // page boundary. A bug in any one of the three cursor fields would
+      // either drop a row or repeat one.
+      it("walks mixed-relevance fixtures across multiple pages without losing or duplicating rows", async () => {
+        // Cosine vectors chosen to land on distinct best_score values. The
+        // mock query embedding is all-0.1; flipping N coords negates their
+        // contribution so cosine = (DIMS - 2N) / DIMS.
+        const flippedVec = (flipped: number): readonly number[] => {
+          const v = new Array(DIMS).fill(0.1) as number[]
+          for (let i = 0; i < flipped; i++) v[i] = -0.1
+          return v as readonly number[]
+        }
+        const COSINE_HIGH = flippedVec(133) // ≈ 0.87
+        const COSINE_MID = flippedVec(461) // ≈ 0.55
+        const start = new Date(Date.UTC(2026, 1, 15, 10, 0, 0))
+        // Three relevance tiers × two timestamps per tier = 6 sessions.
+        // Within each tier the *-fresh fixture ends later, so the timestamp
+        // tiebreaker should put it ahead of *-stale at the same tier.
         const fixtures = [
-          { id: "pg-08-fresh", offset: 6_000, embed: COSINE_085 },
-          { id: "pg-08-stale", offset: 0, embed: COSINE_087 },
-          { id: "pg-06-fresh", offset: 7_000, embed: COSINE_065 },
-          { id: "pg-06-stale", offset: 1_000, embed: COSINE_065 },
-          { id: "pg-00-fresh", offset: 8_000, embed: undefined },
-          { id: "pg-00-stale", offset: 2_000, embed: undefined },
+          { id: "mp-hi-fresh", offsetSec: 60, embed: COSINE_HIGH },
+          { id: "mp-hi-stale", offsetSec: 0, embed: COSINE_HIGH },
+          { id: "mp-mid-fresh", offsetSec: 70, embed: COSINE_MID },
+          { id: "mp-mid-stale", offsetSec: 10, embed: COSINE_MID },
+          { id: "mp-lex-fresh", offsetSec: 80, embed: undefined },
+          { id: "mp-lex-stale", offsetSec: 20, embed: undefined },
         ] as const
         await insertSpans(
           fixtures.map((f, i) =>
             makeSpanRow({
-              traceId: padTrace(`pg${i}`),
-              spanId: padSpan(`pg${i}`),
+              traceId: padTrace(`mp${i}`),
+              spanId: padSpan(`mp${i}`),
               sessionId: f.id,
-              startTime: new Date(t.getTime() + f.offset),
+              startTime: new Date(start.getTime() + f.offsetSec * 1_000),
             }),
           ),
         )
         await insertSearchDocs(
           fixtures.map((f, i) => ({
-            traceId: padTrace(`pg${i}`),
-            text: `freshmark pagination ${f.id}`,
-            startTime: new Date(t.getTime() + f.offset),
-            contentHashSuffix: `pg${i}`,
+            traceId: padTrace(`mp${i}`),
+            text: `mixpage fixture ${f.id}`,
+            startTime: new Date(start.getTime() + f.offsetSec * 1_000),
+            contentHashSuffix: `mp${i}`,
           })),
         )
         await insertSearchEmbeddings(
@@ -1613,24 +1574,20 @@ describe("SessionRepository", () => {
             .map((f, i) =>
               f.embed
                 ? {
-                    traceId: padTrace(`pg${i}`),
+                    traceId: padTrace(`mp${i}`),
                     chunkIndex: 0,
                     embedding: f.embed,
-                    startTime: new Date(t.getTime() + f.offset),
-                    contentHashSuffix: `pg${i}`,
+                    startTime: new Date(start.getTime() + f.offsetSec * 1_000),
+                    contentHashSuffix: `mp${i}`,
                   }
                 : null,
             )
             .filter((e): e is NonNullable<typeof e> => e !== null),
         )
 
-        const expected = ["pg-08-fresh", "pg-08-stale", "pg-06-fresh", "pg-06-stale", "pg-00-fresh", "pg-00-stale"]
-
-        // The semantic-prompt half of the query (`relevance`) is what lifts
-        // `relevance_score` above 0 for the embedded fixtures — phrase-only
-        // mode collapses every match to `relevance_score = 0` (see
-        // `search-plan.ts`'s phrase-only branch), so the buckets only
-        // separate when a semantic prompt is present.
+        // Hybrid query (`"mixpage" relevance`) so semantic scoring runs and
+        // produces the distinct best_score tiers. Phrase-only mode would
+        // collapse everything to 0.0 (covered separately above).
         const collected: string[] = []
         let cursor: SessionListPage["nextCursor"]
         for (let i = 0; i < 5; i++) {
@@ -1638,7 +1595,7 @@ describe("SessionRepository", () => {
             repo.listByProjectId({
               organizationId: ORG_ID,
               projectId: PROJECT_ID,
-              options: { searchQuery: '"freshmark" relevance', limit: 2, ...(cursor ? { cursor } : {}) },
+              options: { searchQuery: '"mixpage" relevance', limit: 2, ...(cursor ? { cursor } : {}) },
             }),
           )
           for (const item of page.items) collected.push(item.sessionId)
@@ -1646,51 +1603,88 @@ describe("SessionRepository", () => {
           cursor = page.nextCursor
         }
 
-        expect(collected).toEqual(expected)
+        // Expected: by best_score DESC (HI > MID > LEX), and within each
+        // tier by session_end_time DESC (fresh before stale).
+        expect(collected).toEqual([
+          "mp-hi-fresh",
+          "mp-hi-stale",
+          "mp-mid-fresh",
+          "mp-mid-stale",
+          "mp-lex-fresh",
+          "mp-lex-stale",
+        ])
         expect(new Set(collected).size).toBe(collected.length)
       })
 
-      // Orphan traces (no row in `sessions`) take the LEFT JOIN's NULL
-      // branch and fall back to `max(trace_rollup.end_time)`; multiple
-      // orphans must still order by recency among themselves.
-      it("orphan traces fall back to trace-level end_time for freshness ordering", async () => {
-        const base = new Date(Date.UTC(2026, 2, 1, 10, 0, 0))
-        const orphanOld = padTrace("oro")
-        const orphanNew = padTrace("orn")
-        // No sessionId on either span → both become orphan sessions keyed
-        // by `toString(trace_id)`. The sessions table has nothing for them.
-        await insertSpans([
-          makeSpanRow({ traceId: orphanOld, spanId: padSpan("oro"), startTime: base }),
-          makeSpanRow({
-            traceId: orphanNew,
-            spanId: padSpan("orn"),
-            startTime: new Date(base.getTime() + 60_000),
+      // An unknown / typo'd `sortBy` value isn't an error — the repository
+      // falls through to the default relevance axis. Guards against a
+      // future regression where unknown values throw or silently produce a
+      // broken ORDER BY.
+      it("treats an unknown sortBy as the default relevance axis", async () => {
+        await insertScenario()
+        const defaultPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, limit: 10 },
           }),
-        ])
-        await insertSearchDocs([
-          { traceId: orphanOld, text: "freshmark orphan stale", startTime: base, contentHashSuffix: "or1" },
-          {
-            traceId: orphanNew,
-            text: "freshmark orphan recent",
-            startTime: new Date(base.getTime() + 60_000),
-            contentHashSuffix: "or2",
-          },
-        ])
+        )
+        const unknownPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: SEARCH_QUERY, sortBy: "not-a-real-axis", limit: 10 },
+          }),
+        )
+        expect(unknownPage.items.map((s) => s.sessionId)).toEqual(defaultPage.items.map((s) => s.sessionId))
+      })
+
+      // `sortBy="duration"` exercises a less-trafficked branch of
+      // SEARCH_SORT_AXES that requires the rollup to project
+      // `sum(duration_ns)` — confirms the SELECT-list extension wasn't
+      // dropped during refactors. Same fixture set as the cost test but
+      // sorted by duration instead.
+      it('sortBy="duration" orders by aggregated duration_ns DESC', async () => {
+        const start = new Date(Date.UTC(2026, 1, 20, 10, 0, 0))
+        const sessions = [
+          { id: "dur-short", durationMs: 1_000 },
+          { id: "dur-long", durationMs: 9_000 },
+          { id: "dur-medium", durationMs: 4_000 },
+        ] as const
+        await insertSpans(
+          sessions.map((s, i) =>
+            makeSpanRow({
+              traceId: padTrace(`du${i}`),
+              spanId: padSpan(`du${i}`),
+              sessionId: s.id,
+              startTime: new Date(start.getTime() + i * 1_000),
+              durationMs: s.durationMs,
+            }),
+          ),
+        )
+        await insertSearchDocs(
+          sessions.map((s, i) => ({
+            traceId: padTrace(`du${i}`),
+            text: `duration-fixture ${s.id}`,
+            startTime: new Date(start.getTime() + i * 1_000),
+            contentHashSuffix: `du${i}`,
+          })),
+        )
 
         const page = await runCh(
           repo.listByProjectId({
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
-            options: { searchQuery: '"freshmark"', limit: 10 },
+            options: { searchQuery: '"duration-fixture"', sortBy: "duration", limit: 10 },
           }),
         )
-
-        const ids = page.items.map((s) => s.sessionId)
-        // Both lexical-only → bucket 0.0. Without the coalesce fallback,
-        // both would tie at NULL last_activity_at and the ordering would
-        // collapse to session_id DESC — the newer orphan must come first.
-        expect(ids).toEqual([orphanNew, orphanOld])
+        expect(page.items.map((s) => s.sessionId)).toEqual(["dur-long", "dur-medium", "dur-short"])
       })
     })
+
+    // `buildAlignedAt` is currently unused but kept for fixtures that may
+    // want to inject specific cosine magnitudes; tagging via void keeps the
+    // import noise minimal without producing an unused-warning.
+    void buildAlignedAt
   })
 })

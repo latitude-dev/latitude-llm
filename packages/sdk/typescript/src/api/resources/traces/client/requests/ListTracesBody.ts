@@ -11,7 +11,7 @@ export interface ListTracesBody {
     cursor?: string;
     /** Page size. Defaults to 50; max 200. */
     limit?: number;
-    /** Field to sort by. Defaults to `startTime`. */
+    /** Field to sort by. Defaults to `startTime`. Pass `relevance` together with `query` to rank by semantic match (best match first, then most recent). */
     sortBy?: ListTracesBody.SortBy;
     /** Sort direction. Defaults to `desc` (most recent first). */
     sortDirection?: ListTracesBody.SortDirection;
@@ -21,8 +21,9 @@ export interface ListTracesBody {
 }
 
 export namespace ListTracesBody {
-    /** Field to sort by. Defaults to `startTime`. */
+    /** Field to sort by. Defaults to `startTime`. Pass `relevance` together with `query` to rank by semantic match (best match first, then most recent). */
     export const SortBy = {
+        Relevance: "relevance",
         StartTime: "startTime",
         EndTime: "endTime",
         DurationNs: "durationNs",

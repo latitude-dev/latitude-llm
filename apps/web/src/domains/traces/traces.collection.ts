@@ -61,7 +61,9 @@ export function useTracesInfiniteScroll({
       })
       return result ?? { traces: [], hasMore: false }
     },
-    initialPageParam: undefined as { sortValue: string; traceId: string } | undefined,
+    initialPageParam: undefined as
+      | { sortValue: string; secondaryValue?: string | undefined; traceId: string }
+      | undefined,
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
   })
 

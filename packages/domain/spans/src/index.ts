@@ -6,9 +6,7 @@
 
 export {
   SESSION_ID_MAX_LENGTH,
-  SESSION_SEARCH_MAX_CLOCK_SKEW_MS,
   SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW,
-  SESSION_SEARCH_RELEVANCE_BUCKET_WIDTH,
   SPAN_ID_LENGTH,
   TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS,
   TRACE_END_DEBOUNCE_MS,
@@ -78,7 +76,6 @@ export type {
   SessionListPage,
   SessionMetrics,
   SessionRepositoryShape,
-  SessionSearchCursor,
 } from "./ports/session-repository.ts"
 export { emptySessionMetrics, SessionRepository } from "./ports/session-repository.ts"
 export type { SpanListOptions, SpanMessagesData, SpanRepositoryShape } from "./ports/span-repository.ts"

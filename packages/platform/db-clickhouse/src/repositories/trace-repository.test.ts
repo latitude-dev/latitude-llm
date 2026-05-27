@@ -970,5 +970,301 @@ describe("TraceRepository", () => {
       expect(histogramTokenSum).toBe(metrics.tokensTotal.sum)
       expect(histogramCostSum).toBe(metrics.costTotalMicrocents.sum)
     })
+
+    // sortBy axis dispatch on the ranked search path: with searchQuery
+    // active, picking a real column (startTime/cost/...) swaps the primary
+    // axis to that axis DESC while the relevance floor still gates the
+    // candidate set inside `search-plan.ts`.
+    describe("sortBy axis dispatch in ranked search mode", () => {
+      const insertAxisFixtures = async () => {
+        const baseTime = new Date(Date.UTC(2026, 1, 1, 10, 0, 0))
+        // Three traces, all aligned embeddings → all clear the relevance
+        // floor. Timestamps and costs are picked so each axis produces a
+        // distinct order.
+        const fixtures = [
+          { traceId: TraceId(`${"a".repeat(31)}1`), offsetMs: 0, cost: 100 },
+          { traceId: TraceId(`${"a".repeat(31)}2`), offsetMs: 60_000, cost: 50 },
+          { traceId: TraceId(`${"a".repeat(31)}3`), offsetMs: 30_000, cost: 200 },
+        ] as const
+        await Effect.runPromise(
+          insertJsonEachRow(
+            ch.client,
+            "spans",
+            fixtures.map((f, i) =>
+              makeSpanRow({
+                traceId: f.traceId,
+                spanId: `${(i + 30).toString(16).padStart(2, "0")}${"d".repeat(14)}`,
+                startTime: new Date(baseTime.getTime() + f.offsetMs),
+                costTotalMicrocents: f.cost,
+                tokensInput: 0,
+                tokensOutput: 0,
+              }),
+            ),
+          ),
+        )
+        await Effect.runPromise(
+          insertJsonEachRow(
+            ch.client,
+            "trace_search_documents",
+            fixtures.map((f, i) => ({
+              organization_id: ORG_ID,
+              project_id: PROJECT_ID,
+              trace_id: f.traceId,
+              start_time: toClickHouseDateTime(new Date(baseTime.getTime() + f.offsetMs)),
+              root_span_name: "root",
+              search_text: `axis-fixture trace ${i}`,
+              content_hash: `${"e".repeat(63)}${i}`,
+              indexed_at: toClickHouseDateTime(baseTime),
+            })),
+          ),
+        )
+        await Effect.runPromise(
+          insertJsonEachRow(
+            ch.client,
+            "trace_search_embeddings",
+            fixtures.map((f, i) => ({
+              organization_id: ORG_ID,
+              project_id: PROJECT_ID,
+              trace_id: f.traceId,
+              chunk_index: 0,
+              start_time: toClickHouseDateTime(new Date(baseTime.getTime() + f.offsetMs)),
+              content_hash: `${"f".repeat(63)}${i}`,
+              embedding_model: "voyage-4-large",
+              embedding: [...alignedEmbedding],
+              indexed_at: toClickHouseDateTime(baseTime),
+            })),
+          ),
+        )
+        return fixtures
+      }
+
+      it("default (no sortBy) orders ranked search by relevance_score DESC then start_time DESC", async () => {
+        const fixtures = await insertAxisFixtures()
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace" },
+          }),
+        )
+        // All three score identically (aligned vectors). The timestamp
+        // tiebreaker on the search ORDER BY puts the newest start_time
+        // first, then trace_id DESC as the final tiebreaker.
+        expect(page.items.map((t) => t.traceId)).toEqual([
+          fixtures[1].traceId,
+          fixtures[2].traceId,
+          fixtures[0].traceId,
+        ])
+      })
+
+      it('sortBy="startTime" reorders ranked search by start_time DESC', async () => {
+        const fixtures = await insertAxisFixtures()
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace", sortBy: "startTime" },
+          }),
+        )
+        // offsetMs: fixture[1]=60s, fixture[2]=30s, fixture[0]=0s.
+        expect(page.items.map((t) => t.traceId)).toEqual([
+          fixtures[1].traceId,
+          fixtures[2].traceId,
+          fixtures[0].traceId,
+        ])
+      })
+
+      it('sortBy="cost" reorders ranked search by cost_total_microcents DESC', async () => {
+        const fixtures = await insertAxisFixtures()
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace", sortBy: "cost" },
+          }),
+        )
+        // cost: fixture[2]=200, fixture[0]=100, fixture[1]=50.
+        expect(page.items.map((t) => t.traceId)).toEqual([
+          fixtures[2].traceId,
+          fixtures[0].traceId,
+          fixtures[1].traceId,
+        ])
+      })
+
+      // ASC click on a column header flips the full sort tuple. Regression
+      // guard for a bug where ORDER BY / HAVING were hardcoded to DESC and
+      // ASC clicks on the ranked path rendered the same order as DESC.
+      it('sortBy="cost" with sortDirection="asc" reverses the cost ordering on the ranked path', async () => {
+        const fixtures = await insertAxisFixtures()
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace", sortBy: "cost", sortDirection: "asc" },
+          }),
+        )
+        // Mirror image of the DESC test: fixture[1]=50, fixture[0]=100, fixture[2]=200.
+        expect(page.items.map((t) => t.traceId)).toEqual([
+          fixtures[1].traceId,
+          fixtures[0].traceId,
+          fixtures[2].traceId,
+        ])
+      })
+
+      // ASC pagination has to flip both the ORDER BY and the keyset
+      // comparison (`<` → `>`) for the second page to pick up where the
+      // first left off.
+      it("paginates ASC ranked-search results without losing or duplicating rows", async () => {
+        const fixtures = await insertAxisFixtures()
+        const firstPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace", sortBy: "startTime", sortDirection: "asc", limit: 2 },
+          }),
+        )
+        expect(firstPage.hasMore).toBe(true)
+        const cursor = firstPage.nextCursor
+        if (!cursor) throw new Error("expected first page to have a cursor")
+        const secondPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: {
+              searchQuery: "axis-fixture trace",
+              sortBy: "startTime",
+              sortDirection: "asc",
+              limit: 2,
+              cursor,
+            },
+          }),
+        )
+        const collected = [...firstPage.items.map((t) => t.traceId), ...secondPage.items.map((t) => t.traceId)]
+        // ASC by startTime: oldest first. fixture[0]=0s, fixture[2]=30s, fixture[1]=60s.
+        expect(collected).toEqual([fixtures[0].traceId, fixtures[2].traceId, fixtures[1].traceId])
+        expect(new Set(collected).size).toBe(fixtures.length)
+      })
+
+      // The relevance floor (>= TRACE_SEARCH_MIN_RELEVANCE_SCORE) is
+      // enforced inside `search-plan.ts` regardless of which axis is
+      // picked downstream — a sub-floor trace must NOT appear even when
+      // sorting by a non-relevance axis that would otherwise pull it up.
+      it("preserves the relevance floor when sorting by a non-relevance axis", async () => {
+        const fixtures = await insertAxisFixtures()
+        // Add an anti-parallel trace whose start_time is the newest of all
+        // — would top startTime DESC if the floor weren't enforced.
+        const subFloorTrace = TraceId(`${"a".repeat(31)}9`)
+        const baseTime = new Date(Date.UTC(2026, 1, 1, 11, 0, 0))
+        await Effect.runPromise(
+          insertJsonEachRow(ch.client, "spans", [
+            makeSpanRow({
+              traceId: subFloorTrace,
+              spanId: `${"40"}${"d".repeat(14)}`,
+              startTime: baseTime,
+              costTotalMicrocents: 0,
+              tokensInput: 0,
+              tokensOutput: 0,
+            }),
+          ]),
+        )
+        await Effect.runPromise(
+          insertJsonEachRow(ch.client, "trace_search_documents", [
+            {
+              organization_id: ORG_ID,
+              project_id: PROJECT_ID,
+              trace_id: subFloorTrace,
+              start_time: toClickHouseDateTime(baseTime),
+              root_span_name: "root",
+              search_text: "axis-fixture sub-floor",
+              content_hash: `${"e".repeat(63)}9`,
+              indexed_at: toClickHouseDateTime(baseTime),
+            },
+          ]),
+        )
+        await Effect.runPromise(
+          insertJsonEachRow(ch.client, "trace_search_embeddings", [
+            {
+              organization_id: ORG_ID,
+              project_id: PROJECT_ID,
+              trace_id: subFloorTrace,
+              chunk_index: 0,
+              start_time: toClickHouseDateTime(baseTime),
+              content_hash: `${"f".repeat(63)}9`,
+              embedding_model: "voyage-4-large",
+              embedding: [...antiparallelEmbedding],
+              indexed_at: toClickHouseDateTime(baseTime),
+            },
+          ]),
+        )
+
+        const page = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace", sortBy: "startTime" },
+          }),
+        )
+        const ids = page.items.map((t) => t.traceId)
+        expect(ids).not.toContain(subFloorTrace)
+        expect(ids).toContain(fixtures[1].traceId)
+      })
+
+      // Cursor round-trip on the default relevance path: all three fixtures
+      // tie on relevance_score (aligned embeddings → cosine 1.0), so the
+      // timestamp tiebreaker drives the page order. The cursor's 3-tuple
+      // `(sortValue, secondaryValue, traceId)` has to round-trip through
+      // the HAVING keyset comparison for the second page to pick up where
+      // the first left off without dropping or duplicating rows.
+      it("paginates default relevance ranked-search results using the timestamp tiebreaker", async () => {
+        const fixtures = await insertAxisFixtures()
+        const firstPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace", limit: 2 },
+          }),
+        )
+        expect(firstPage.hasMore).toBe(true)
+        const cursor = firstPage.nextCursor
+        if (!cursor) throw new Error("expected first page to have a cursor")
+        expect(typeof cursor.secondaryValue).toBe("string")
+
+        const secondPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace", limit: 2, cursor },
+          }),
+        )
+        const collected = [...firstPage.items.map((t) => t.traceId), ...secondPage.items.map((t) => t.traceId)]
+        // offsetMs DESC: fixture[1]=60s, fixture[2]=30s, fixture[0]=0s.
+        expect(collected).toEqual([fixtures[1].traceId, fixtures[2].traceId, fixtures[0].traceId])
+        expect(new Set(collected).size).toBe(fixtures.length)
+      })
+
+      // An unknown / typo'd `sortBy` falls through to the default relevance
+      // axis on the ranked path — same defensive posture as the sessions
+      // search path.
+      it("treats an unknown sortBy as the default relevance axis on the ranked path", async () => {
+        const fixtures = await insertAxisFixtures()
+        const defaultPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace" },
+          }),
+        )
+        const unknownPage = await runCh(
+          repo.listByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            options: { searchQuery: "axis-fixture trace", sortBy: "not-a-real-axis" },
+          }),
+        )
+        expect(unknownPage.items.map((t) => t.traceId)).toEqual(defaultPage.items.map((t) => t.traceId))
+        // Sanity: both pages returned all three fixtures.
+        expect(defaultPage.items).toHaveLength(fixtures.length)
+      })
+    })
   })
 })

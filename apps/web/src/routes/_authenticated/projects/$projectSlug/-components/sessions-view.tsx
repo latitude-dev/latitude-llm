@@ -24,6 +24,7 @@ import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { IndicatorsCell } from "./table/indicators-cell.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
+import { DEFAULT_SEARCH_SORTING, RELEVANCE_SORT_COLUMN } from "./trace-page-state.ts"
 
 type SessionTableRow =
   | { readonly kind: "session"; readonly session: SessionRecord }
@@ -248,6 +249,10 @@ export function SessionsView({
   }, [])
 
   const hasActiveFilters = Object.keys(filters).length > 0
+  // When search-mode picks the default `relevance` sort, the Last Activity
+  // column header shows a "Sorted by relevance" subheader (the column's own
+  // sort icon stays neutral, since `relevance` doesn't map to a real column).
+  const isRelevanceSort = sorting.column === RELEVANCE_SORT_COLUMN
 
   const {
     data: sessions,
@@ -347,6 +352,12 @@ export function SessionsView({
             </Tooltip>
           )
         },
+        renderSubheader: () =>
+          isRelevanceSort ? (
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              Sorted by relevance
+            </span>
+          ) : null,
       },
       {
         key: "name",
@@ -505,7 +516,14 @@ export function SessionsView({
         ),
       },
     ]
-  }, [sessionMetrics, sessionMetricsLoading, getRowAnnotationCounts, isRowAnnotationCountsPending, searchMatches])
+  }, [
+    sessionMetrics,
+    sessionMetricsLoading,
+    getRowAnnotationCounts,
+    isRowAnnotationCountsPending,
+    searchMatches,
+    isRelevanceSort,
+  ])
 
   const columns = useMemo(() => {
     const columnsById = new Map(allColumns.map((column) => [column.key, column]))
@@ -701,7 +719,7 @@ export function SessionsView({
           selection={selection}
           infiniteScroll={infiniteScroll}
           sorting={sorting}
-          defaultSorting={DEFAULT_SESSION_SORTING}
+          defaultSorting={searchQuery ? DEFAULT_SEARCH_SORTING : DEFAULT_SESSION_SORTING}
           onSortChange={onSortingChange}
           blankSlate={hasActiveFilters || searchQuery ? "No sessions match the current search" : "No sessions found"}
           expandedRowKeys={expandedIds}
