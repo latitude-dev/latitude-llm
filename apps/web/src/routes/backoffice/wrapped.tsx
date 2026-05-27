@@ -1,7 +1,5 @@
 import {
   Badge,
-  BarChart,
-  type BarChartDataPoint,
   Button,
   Card,
   CardContent,
@@ -9,12 +7,6 @@ import {
   CardTitle,
   InfiniteTable,
   type InfiniteTableColumn,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Text,
 } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
@@ -23,7 +15,6 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useMemo, useState } from "react"
 import { adminListWrappedAnalytics } from "../../domains/admin/wrapped-analytics.functions.ts"
 import type {
-  ExcessHistogramDto,
   GatePassRateRowDto,
   PersonalityCountDto,
   PersonalityScoreRowDto,
@@ -187,7 +178,29 @@ function ListColumn({
   )
 }
 
-// ─── Stats column ───────────────────────────────────────────────────────────
+// ─── Stats column (narrative report) ────────────────────────────────────────
+
+/** Conditional archetypes require a usage-signal threshold gate to fire. */
+const CONDITIONAL_KINDS = new Set(["strategist", "scholar", "consultant", "shipper", "tester"])
+
+/** One-line description for each tool-mix bucket. */
+const BUCKET_DESC: Record<string, string> = {
+  bash: "Shell commands & scripts",
+  read: "File reads",
+  edit: "Line-level edits",
+  write: "New file writes",
+  search: "Grep / Glob / LS",
+  research: "Web research",
+  plan: "Task planning",
+  other: "Other tools",
+}
+
+/** Classify a win-score (p50) into a human-readable strength label. */
+const scoreStrengthLabel = (p50: number): string => {
+  if (p50 >= 0.7) return "Strong"
+  if (p50 >= 0.4) return "Moderate"
+  return "Weak"
+}
 
 function StatsColumn({
   stats,
@@ -211,33 +224,55 @@ function StatsColumn({
     )
   }
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
-      <SummaryRow summary={stats.summary} />
-      <PersonalityDistributionPanel data={stats.personalityDistribution} />
-      <ScorePercentilesPanel rows={stats.scorePercentilesByKind} />
-      <ToolMixBaselinePanel rows={stats.toolMixBaselineCheck} />
-      <GatePassRatesPanel rows={stats.gatePassRates} />
-      <ExcessHistogramsPanel histograms={stats.excessHistograms} />
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
+      <SummarySection summary={stats.summary} />
+      <ArchetypesSection
+        distribution={stats.personalityDistribution}
+        scorePercentiles={stats.scorePercentilesByKind}
+      />
+      <ToolMixSection rows={stats.toolMixBaselineCheck} />
+      <ConfidenceSection
+        gates={stats.gatePassRates}
+        distribution={stats.personalityDistribution}
+        scorePercentiles={stats.scorePercentilesByKind}
+      />
     </div>
   )
 }
 
-function SummaryRow({ summary }: { readonly summary: WrappedAnalyticsPayloadDto["stats"]["summary"] }) {
-  const items: Array<{ label: string; value: string }> = [
-    { label: "Reports", value: formatCount(summary.reports) },
-    { label: "Projects", value: formatCount(summary.projects) },
-    { label: "Organizations", value: formatCount(summary.organizations) },
-    {
-      label: "Window",
-      value:
-        summary.oldestCreatedAt && summary.newestCreatedAt
-          ? `${relativeTime(new Date(summary.oldestCreatedAt))} → ${relativeTime(new Date(summary.newestCreatedAt))}`
-          : "—",
-    },
-  ]
+// ─── Section 1: Summary ──────────────────────────────────────────────────────
+
+function SummarySection({
+  summary,
+}: {
+  readonly summary: WrappedAnalyticsPayloadDto["stats"]["summary"]
+}) {
+  const windowLabel = (() => {
+    if (!summary.oldestCreatedAt || !summary.newestCreatedAt) return "—"
+    const oldest = new Date(summary.oldestCreatedAt)
+    const newest = new Date(summary.newestCreatedAt)
+    // Same UTC day → all reports from one batch, just show the date
+    if (oldest.toISOString().slice(0, 10) === newest.toISOString().slice(0, 10)) {
+      return oldest.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+    }
+    return `${relativeTime(oldest)} → ${relativeTime(newest)}`
+  })()
+
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {items.map((item) => (
+      {(
+        [
+          { label: "Reports", value: formatCount(summary.reports) },
+          { label: "Projects", value: formatCount(summary.projects) },
+          { label: "Organizations", value: formatCount(summary.organizations) },
+          { label: "Date", value: windowLabel },
+        ] as const
+      ).map((item) => (
         <Card key={item.label}>
           <CardContent className="flex flex-col gap-1 p-4">
             <Text.H6 color="foregroundMuted">{item.label}</Text.H6>
@@ -251,235 +286,292 @@ function SummaryRow({ summary }: { readonly summary: WrappedAnalyticsPayloadDto[
   )
 }
 
-function PersonalityDistributionPanel({ data }: { readonly data: ReadonlyArray<PersonalityCountDto> }) {
-  const total = data.reduce((acc, d) => acc + d.count, 0)
-  const points: BarChartDataPoint[] = data.map((d) => ({
-    category: TITLE_FOR_KIND[d.kind],
-    value: d.count,
-  }))
-  const formatTooltip = (category: string, value: number) => {
-    const pct = total === 0 ? 0 : (value / total) * 100
-    return `${category}: ${formatCount(value)} (${pct.toFixed(1)}%)`
-  }
+// ─── Section 2: Archetypes ───────────────────────────────────────────────────
+
+function ArchetypesSection({
+  distribution,
+  scorePercentiles,
+}: {
+  readonly distribution: ReadonlyArray<PersonalityCountDto>
+  readonly scorePercentiles: ReadonlyArray<PersonalityScoreRowDto>
+}) {
+  const total = distribution.reduce((acc, d) => acc + d.count, 0)
+  const maxCount = Math.max(...distribution.map((d) => d.count), 1)
+  const fired = [...distribution].filter((d) => d.count > 0).sort((a, b) => b.count - a.count)
+  const silent = distribution.filter((d) => d.count === 0)
+  const p50Map = new Map(scorePercentiles.map((r) => [r.kind, r.p50]))
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>
-          <Text.H5 weight="semibold">Personality distribution</Text.H5>
+          <Text.H5 weight="semibold">This week's archetypes</Text.H5>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <BarChart
-          data={points}
-          height={220}
-          xAxisLabelFontSize={11}
-          formatTooltip={formatTooltip}
-          ariaLabel="Personality distribution across reports"
-        />
-      </CardContent>
-    </Card>
-  )
-}
-
-function ScorePercentilesPanel({ rows }: { readonly rows: ReadonlyArray<PersonalityScoreRowDto> }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <Text.H5 weight="semibold">Score percentiles by personality</Text.H5>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Personality</TableHead>
-              <TableHead className="text-right">n</TableHead>
-              <TableHead className="text-right">p25</TableHead>
-              <TableHead className="text-right">p50</TableHead>
-              <TableHead className="text-right">p75</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <Text.H6 color="foregroundMuted">No reports in the cohort.</Text.H6>
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.kind}>
-                  <TableCell>
-                    <Text.H6>{TITLE_FOR_KIND[row.kind]}</Text.H6>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="tabular-nums">{formatCount(row.n)}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="tabular-nums">{row.p25.toFixed(2)}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="tabular-nums">{row.p50.toFixed(2)}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="tabular-nums">{row.p75.toFixed(2)}</span>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  )
-}
-
-const DRIFT_THRESHOLDS = { okay: 0.03, warn: 0.1 }
-
-function ToolMixBaselinePanel({ rows }: { readonly rows: ReadonlyArray<ToolMixCheckRowDto> }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <Text.H5 weight="semibold">Tool-mix vs baseline</Text.H5>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Bucket</TableHead>
-              <TableHead className="text-right">Baseline</TableHead>
-              <TableHead className="text-right">p10</TableHead>
-              <TableHead className="text-right">p50</TableHead>
-              <TableHead className="text-right">p90</TableHead>
-              <TableHead className="text-right">Drift (p50 − baseline)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => {
-              const driftAbs = Math.abs(row.drift)
-              const driftClass =
-                driftAbs <= DRIFT_THRESHOLDS.okay
-                  ? "text-emerald-600"
-                  : driftAbs <= DRIFT_THRESHOLDS.warn
-                    ? "text-amber-600"
-                    : "text-rose-600"
-              return (
-                <TableRow key={row.bucket}>
-                  <TableCell>
-                    <Text.H6>{row.bucket}</Text.H6>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="tabular-nums">{row.baseline.toFixed(2)}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="tabular-nums">{row.p10.toFixed(2)}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="tabular-nums">{row.p50.toFixed(2)}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="tabular-nums">{row.p90.toFixed(2)}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className={`tabular-nums ${driftClass}`}>
-                      {row.drift >= 0 ? "+" : ""}
-                      {row.drift.toFixed(2)}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  )
-}
-
-function GatePassRatesPanel({ rows }: { readonly rows: ReadonlyArray<GatePassRateRowDto> }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <Text.H5 weight="semibold">Conditional-gate pass-rates</Text.H5>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Gate</TableHead>
-              <TableHead className="text-right">Passes</TableHead>
-              <TableHead className="text-right">Pass rate</TableHead>
-              <TableHead className="text-right">Median signal (passers)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.kind}>
-                <TableCell>
-                  <Text.H6>{TITLE_FOR_KIND[row.kind]}</Text.H6>
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className="tabular-nums">{formatCount(row.passCount)}</span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className="tabular-nums">{(row.passRate * 100).toFixed(1)}%</span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className="tabular-nums">
-                    {row.medianSignal === null
-                      ? "—"
-                      : row.kind === "consultant" || row.kind === "shipper" || row.kind === "tester"
-                        ? row.medianSignal.toFixed(2)
-                        : `${(row.medianSignal * 100).toFixed(1)}pp`}
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ExcessHistogramsPanel({ histograms }: { readonly histograms: ReadonlyArray<ExcessHistogramDto> }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <Text.H5 weight="semibold">Always-fires excess histograms</Text.H5>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 gap-4 p-4 pt-0 sm:grid-cols-2">
-        {histograms.map((h) => {
-          const points: BarChartDataPoint[] = h.buckets.map((b) => ({
-            category: bucketLabel(b.lower, b.upper),
-            value: b.count,
-          }))
+      <CardContent className="flex flex-col gap-0.5 px-4 pb-4 pt-0">
+        <Text.H6 color="foregroundMuted" className="mb-3 italic">
+          How reports were classified. <span className="not-italic font-medium">Conditional</span>{" "}
+          archetypes require a usage-signal threshold;{" "}
+          <span className="not-italic font-medium">fallback</span> ones win by tool-mix excess when
+          no conditional gate fires.
+        </Text.H6>
+        {fired.map((item, i) => {
+          const pct = total === 0 ? 0 : item.count / total
+          const fill = item.count / maxCount
+          const isConditional = CONDITIONAL_KINDS.has(item.kind)
+          const p50 = p50Map.get(item.kind)
+          const strength = p50 !== undefined ? scoreStrengthLabel(p50) : null
           return (
-            <div key={h.kind} className="flex flex-col gap-2">
-              <Text.H6 weight="medium">{TITLE_FOR_KIND[h.kind]}</Text.H6>
-              <BarChart
-                data={points}
-                height={140}
-                xAxisLabelFontSize={10}
-                ariaLabel={`Excess distribution for ${TITLE_FOR_KIND[h.kind]}`}
-              />
+            <div key={item.kind} className="flex items-center gap-2 py-1.5">
+              <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                {i + 1}
+              </span>
+              <div className="w-36 shrink-0">
+                <Text.H6 weight="medium" noWrap>
+                  {TITLE_FOR_KIND[item.kind]}
+                </Text.H6>
+              </div>
+              <span
+                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] leading-none ${
+                  isConditional
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                    : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                }`}
+              >
+                {isConditional ? "conditional" : "fallback"}
+              </span>
+              <div className="flex-1 overflow-hidden rounded-full bg-border" style={{ height: 8 }}>
+                <div
+                  className={`h-full rounded-full ${isConditional ? "bg-blue-500" : "bg-slate-400"}`}
+                  style={{ width: `${fill * 100}%` }}
+                />
+              </div>
+              <span className="w-6 shrink-0 text-right text-sm tabular-nums font-medium">
+                {item.count}
+              </span>
+              <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                {Math.round(pct * 100)}%
+              </span>
+              <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">
+                {strength ?? ""}
+              </span>
             </div>
           )
         })}
+        {fired.length === 0 && (
+          <Text.H6 color="foregroundMuted" className="py-4 text-center">
+            No reports in this cohort.
+          </Text.H6>
+        )}
+        {silent.length > 0 && (
+          <Text.H6 color="foregroundMuted" className="mt-3 italic">
+            0 reports:{" "}
+            {silent
+              .map((d) => TITLE_FOR_KIND[d.kind])
+              .join(", ")}
+            .
+          </Text.H6>
+        )}
       </CardContent>
     </Card>
   )
 }
 
-const bucketLabel = (lower: number, upper: number): string => {
-  if (!Number.isFinite(lower)) return `< ${upper.toFixed(2)}`
-  if (!Number.isFinite(upper)) return `≥ ${lower.toFixed(2)}`
-  return `${lower.toFixed(2)}–${upper.toFixed(2)}`
+// ─── Section 3: Tool mix ─────────────────────────────────────────────────────
+
+function ToolMixSection({ rows }: { readonly rows: ReadonlyArray<ToolMixCheckRowDto> }) {
+  const sorted = [...rows].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))
+
+  const driftColor = (drift: number): string => {
+    const abs = Math.abs(drift)
+    if (abs > 0.1) return "text-rose-600"
+    if (abs >= 0.05) return "text-amber-600"
+    return "text-emerald-600"
+  }
+
+  const statusBadge = (
+    drift: number,
+  ): { label: string; cls: string } | null => {
+    const abs = Math.abs(drift)
+    if (abs > 0.1)
+      return {
+        label: "Retune",
+        cls: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+      }
+    if (abs >= 0.05)
+      return {
+        label: "Watch",
+        cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      }
+    return null
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <Text.H5 weight="semibold">How people work</Text.H5>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-0 px-4 pb-4 pt-0">
+        <Text.H6 color="foregroundMuted" className="mb-4 italic">
+          Types of Claude Code tool calls this week, compared against our expected baselines. Large
+          drift means personalities may be mis-assigned — a "Retune" row is the clearest signal
+          to update the baseline.
+        </Text.H6>
+        <div className="flex flex-col gap-2">
+          {sorted.map((row) => {
+            const expectedPct = Math.round(row.baseline * 100)
+            const sawPct = Math.round(row.p50 * 100)
+            const driftPp = Math.round(Math.abs(row.drift) * 100)
+            const badge = statusBadge(row.drift)
+            return (
+              <div
+                key={row.bucket}
+                className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5"
+              >
+                <div className="w-32 shrink-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide">
+                    {row.bucket}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-snug">
+                    {BUCKET_DESC[row.bucket] ?? ""}
+                  </p>
+                </div>
+                <div className="flex flex-1 items-center gap-1.5">
+                  <span className="tabular-nums text-sm text-muted-foreground">
+                    Expected {expectedPct}%
+                  </span>
+                  <span className="text-muted-foreground">→</span>
+                  <span className="tabular-nums text-sm font-semibold">Saw {sawPct}%</span>
+                </div>
+                <span
+                  className={`w-12 shrink-0 text-right tabular-nums text-sm font-semibold ${driftColor(row.drift)}`}
+                >
+                  {row.drift >= 0 ? "+" : "−"}
+                  {driftPp}pp
+                </span>
+                <div className="w-14 shrink-0 text-right">
+                  {badge && (
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] leading-none ${badge.cls}`}>
+                      {badge.label}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          pp = percentage points · Drift = p50 actual − expected baseline · Sorted by largest
+          drift first
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Section 4: Confidence ───────────────────────────────────────────────────
+
+function ConfidenceSection({
+  gates,
+  distribution,
+  scorePercentiles,
+}: {
+  readonly gates: ReadonlyArray<GatePassRateRowDto>
+  readonly distribution: ReadonlyArray<PersonalityCountDto>
+  readonly scorePercentiles: ReadonlyArray<PersonalityScoreRowDto>
+}) {
+  const countMap = new Map(distribution.map((d) => [d.kind, d.count]))
+  const p50Map = new Map(scorePercentiles.map((r) => [r.kind, r.p50]))
+
+  const ALWAYS_FIRES = ["surgeon", "architect", "detective", "conductor"] as const
+  const alwaysFired = ALWAYS_FIRES.filter((k) => (countMap.get(k) ?? 0) > 0)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <Text.H5 weight="semibold">Personality confidence</Text.H5>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-5 px-4 pb-4 pt-0">
+        {/* 4A: Conditional gates */}
+        <div className="flex flex-col gap-2">
+          <Text.H6 color="foregroundMuted" className="italic">
+            Conditional archetypes only fire when usage exceeds a threshold. "Won" means
+            top-scoring overall; "passed" means the gate fired but it may have been outscored by
+            another archetype.
+          </Text.H6>
+          {gates.map((gate) => {
+            const won = countMap.get(gate.kind) ?? 0
+            const passed = gate.passCount
+            const neverWon = passed > 0 && won === 0
+            return (
+              <div key={gate.kind} className="flex items-center gap-3">
+                <div className="w-32 shrink-0">
+                  <Text.H6 weight="medium">{TITLE_FOR_KIND[gate.kind]}</Text.H6>
+                </div>
+                <div className="flex-1 overflow-hidden rounded-full bg-border" style={{ height: 8 }}>
+                  <div
+                    className="h-full rounded-full bg-blue-500"
+                    style={{ width: `${gate.passRate * 100}%` }}
+                  />
+                </div>
+                <span className="w-10 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
+                  {(gate.passRate * 100).toFixed(0)}%
+                </span>
+                <span className="w-28 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                  {won} won / {passed} passed
+                </span>
+                {neverWon && (
+                  <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] leading-none bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    never won
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="h-px bg-border" />
+
+        {/* 4B: Always-fires fallbacks */}
+        <div className="flex flex-col gap-2">
+          <Text.H6 color="foregroundMuted" className="italic">
+            Fallback archetypes win when no conditional gate clears. A weak score here is healthy —
+            it means the conditional archetypes are well-calibrated and winning cleanly.
+          </Text.H6>
+          {alwaysFired.length === 0 ? (
+            <Text.H6 color="foregroundMuted">No fallback archetypes fired this week.</Text.H6>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {alwaysFired.map((kind) => {
+                const count = countMap.get(kind) ?? 0
+                const p50 = p50Map.get(kind)
+                const strength = p50 !== undefined ? scoreStrengthLabel(p50) : null
+                return (
+                  <div
+                    key={kind}
+                    className="flex flex-col gap-1 rounded-lg border border-border p-3"
+                  >
+                    <Text.H6 weight="medium">{TITLE_FOR_KIND[kind]}</Text.H6>
+                    <Text.H6 color="foregroundMuted">{formatCount(count)} reports</Text.H6>
+                    {strength !== null && p50 !== undefined && (
+                      <div className="flex items-baseline gap-1.5">
+                        <Text.H6 weight="medium">{strength}</Text.H6>
+                        <Text.H6 color="foregroundMuted" className="text-[11px]">
+                          (p50: {p50.toFixed(2)})
+                        </Text.H6>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
