@@ -19,6 +19,7 @@ const SAMPLE_AUDIO_URI = "https://www.w3schools.com/html/horse.mp3"
 const SAMPLE_VIDEO_URI = "https://www.w3schools.com/html/mov_bbb.mp4"
 const BROKEN_IMAGE_URI = "https://example.com/this-image-does-not-exist.png"
 const BROKEN_VIDEO_URI = "https://invalid.invalid/private-clip.mp4"
+const BROKEN_AUDIO_URI = "https://invalid.invalid/voice-note.mp3"
 
 const MARKDOWN_SAMPLE = `Here's a breakdown with **rich markdown**:
 
@@ -77,6 +78,8 @@ const DEMO_MESSAGES = [
     parts: [
       { type: "text", content: "And some other attachments:" },
       { type: "uri", modality: "audio", mime_type: "audio/mpeg", uri: SAMPLE_AUDIO_URI },
+      // Audio source we can't reach — bar-shaped fallback.
+      { type: "uri", modality: "audio", mime_type: "audio/mpeg", uri: BROKEN_AUDIO_URI },
       { type: "uri", modality: "video", mime_type: "video/mp4", uri: SAMPLE_VIDEO_URI },
       // Video source we can't reach — fallback behavior.
       { type: "uri", modality: "video", mime_type: "video/mp4", uri: BROKEN_VIDEO_URI },

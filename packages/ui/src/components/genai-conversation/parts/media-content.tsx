@@ -1,23 +1,44 @@
-import { ExternalLinkIcon, ImageOffIcon, type LucideIcon, VideoOffIcon } from "lucide-react"
+import { ExternalLinkIcon, ImageOffIcon, type LucideIcon, VideoOffIcon, VolumeXIcon } from "lucide-react"
 import { useState } from "react"
 import { cn } from "../../../utils/cn.ts"
 import { Text } from "../../text/text.tsx"
 
 type MediaStatus = "loading" | "loaded" | "error"
 
-// Shared footprint for the loading skeleton and the error placeholder so the
+// Shared footprint for the loading skeleton and the (box) error placeholder so the
 // layout doesn't jump before the real media dimensions are known.
 const PLACEHOLDER_BOX = "h-40 w-64 max-w-md rounded-lg"
+// Bar footprint for thin, horizontal media (audio) where a square box would look wrong.
+const PLACEHOLDER_BAR = "w-72 max-w-md rounded-lg"
 
-/** Hover-revealed (keyboard-focusable) action pinned to the top-right of loaded media. */
-function OpenOriginalButton({ href, label }: { readonly href: string; readonly label: string }) {
+/**
+ * "Open in new tab" action for media backed by a real URL.
+ * - `overlay`: pinned top-right, hover-revealed — for box media (image/video) where it
+ *   would otherwise obscure the content.
+ * - `inline`: a persistent button sitting beside the media — for the audio bar, which has
+ *   no surface to overlay without covering the native controls.
+ */
+function OpenOriginalButton({
+  href,
+  label,
+  variant = "overlay",
+}: {
+  readonly href: string
+  readonly label: string
+  readonly variant?: "overlay" | "inline"
+}) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background/90 text-muted-foreground opacity-0 shadow-sm backdrop-blur transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/media:opacity-100"
+      className={cn(
+        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground shadow-sm transition-opacity hover:text-foreground",
+        variant === "overlay"
+          ? "absolute right-2 top-2 z-10 bg-background/90 opacity-0 backdrop-blur focus-visible:opacity-100 group-hover/media:opacity-100"
+          : "bg-background",
+      )}
     >
       <ExternalLinkIcon className="h-3.5 w-3.5" />
     </a>
@@ -30,12 +51,36 @@ function MediaErrorPlaceholder({
   label,
   mimeType,
   href,
+  layout = "box",
 }: {
   readonly icon: LucideIcon
   readonly label: string
   readonly mimeType?: string | undefined
   readonly href?: string | undefined
+  readonly layout?: "box" | "bar"
 }) {
+  const openLink = href ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">
+      <ExternalLinkIcon className="h-3.5 w-3.5 text-primary" />
+      <Text.H6 color="primary">Open original</Text.H6>
+    </a>
+  ) : null
+
+  if (layout === "bar") {
+    return (
+      <div
+        className={cn(
+          PLACEHOLDER_BAR,
+          "flex items-center gap-2 border border-dashed border-border bg-muted/30 px-3 py-2",
+        )}
+      >
+        <ErrorIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Text.H6 color="foregroundMuted">{label}</Text.H6>
+        {openLink ? <div className="ml-auto shrink-0">{openLink}</div> : null}
+      </div>
+    )
+  }
+
   return (
     <div
       className={cn(
@@ -46,17 +91,7 @@ function MediaErrorPlaceholder({
       <ErrorIcon className="h-6 w-6 text-muted-foreground" />
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
       {mimeType ? <Text.H6 color="foregroundMuted">{mimeType}</Text.H6> : null}
-      {href ? (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-1 inline-flex items-center gap-1 hover:underline"
-        >
-          <ExternalLinkIcon className="h-3.5 w-3.5 text-primary" />
-          <Text.H6 color="primary">Open original</Text.H6>
-        </a>
-      ) : null}
+      {openLink ? <div className="mt-1">{openLink}</div> : null}
     </div>
   )
 }
@@ -126,6 +161,43 @@ export function VideoContent({
       {/* biome-ignore lint/a11y/useMediaCaption: attachment playback; no caption track is available for arbitrary media */}
       <video src={src} controls onError={() => setHasError(true)} className="max-w-md max-h-64 rounded-lg" />
       {href ? <OpenOriginalButton href={href} label="Open video in new tab" /> : null}
+    </div>
+  )
+}
+
+/**
+ * Renders an audio content part using the native player. The player is a thin bar, so the
+ * open-original action sits inline beside it (persistent, not a hover overlay) and the error
+ * state is a bar-shaped placeholder rather than the square box used for image/video.
+ */
+export function AudioContent({
+  src,
+  mimeType,
+  href,
+}: {
+  readonly src: string
+  readonly mimeType?: string | undefined
+  readonly href?: string | undefined
+}) {
+  const [hasError, setHasError] = useState(false)
+
+  if (hasError) {
+    return (
+      <MediaErrorPlaceholder
+        icon={VolumeXIcon}
+        label="Audio unavailable"
+        mimeType={mimeType}
+        href={href}
+        layout="bar"
+      />
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* biome-ignore lint/a11y/useMediaCaption: attachment playback; no caption track is available for arbitrary media */}
+      <audio src={src} controls onError={() => setHasError(true)} className="max-w-md" />
+      {href ? <OpenOriginalButton href={href} label="Open audio in new tab" variant="inline" /> : null}
     </div>
   )
 }
