@@ -124,7 +124,7 @@ export function FileCard({
   ) : null
 
   return (
-    <div className="flex max-w-md items-center gap-3 rounded-lg border border-border bg-card px-3 py-2 shadow-sm">
+    <div className="flex max-w-md items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
         <FileTypeIcon className="h-5 w-5 text-muted-foreground" />
       </div>
