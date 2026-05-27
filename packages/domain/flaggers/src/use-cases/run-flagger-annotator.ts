@@ -11,6 +11,7 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { FLAGGER_ANNOTATOR_MAX_TOKENS, FLAGGER_ANNOTATOR_MODEL } from "../constants.ts"
 import { getFlaggerStrategy } from "../flagger-strategies/index.ts"
+import { reflagSuppressionTags } from "../reflag.ts"
 import { flaggerAnnotatorOutputSchema } from "./flagger-annotator-contracts.ts"
 
 export interface RunFlaggerAnnotatorInput {
@@ -299,7 +300,9 @@ Return structured data with a single "feedback" field per the system instruction
     schema: flaggerAnnotatorOutputSchema,
     telemetry: {
       spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerDraft,
-      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft],
+      // Same recursion break as classify: a draft for a flagger-generated trace
+      // must not itself be flagged.
+      tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft, ...reflagSuppressionTags(input.trace.tags)],
       metadata: buildProjectScopedAiMetadata(
         { organizationId: input.organizationId, projectId: input.projectId },
         { traceId: input.traceId, flaggerSlug: input.flaggerSlug, scoreId: input.scoreId },

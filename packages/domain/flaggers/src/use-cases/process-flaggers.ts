@@ -17,6 +17,7 @@ import {
   isLlmCapableStrategy,
   listFlaggerStrategySlugs,
 } from "../flagger-strategies/index.ts"
+import { isReflagSuppressed } from "../reflag.ts"
 import { type FlaggerCacheEntry, getProjectFlaggersUseCase } from "./get-project-flaggers.ts"
 import { upsertFlaggerAnnotationScore } from "./upsert-flagger-annotation-score.ts"
 
@@ -90,6 +91,15 @@ export const processFlaggersUseCase = Effect.fn("flaggers.processFlaggers")(func
     projectId: ProjectId(input.projectId),
     traceId: TraceId(input.traceId),
   })
+
+  // Recursion break: a trace marked no-reflag is the output of a flagger that ran
+  // on a flagger-generated trace. Flagging it would spawn yet another flagger
+  // trace, and so on. Skipping here bounds flagger-on-flagger to a single level
+  // while still letting the (unmarked) production flagger traces be flagged.
+  if (isReflagSuppressed(trace.tags)) {
+    yield* Effect.annotateCurrentSpan("flaggers.skipped", "reflag-suppressed")
+    return { decisions: [] } satisfies ProcessFlaggersResult
+  }
 
   const flaggers = yield* getProjectFlaggersUseCase({
     organizationId: input.organizationId,

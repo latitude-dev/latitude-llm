@@ -58,6 +58,7 @@ export {
   type UpdateFlaggerEnabledForProjectInput,
   type UpdateFlaggerInput as RepositoryUpdateFlaggerInput,
 } from "./ports/flagger-repository.ts"
+export { isFlaggerGeneratedTrace, isReflagSuppressed, reflagSuppressionTags } from "./reflag.ts"
 export {
   type ConfigureProjectFlaggersForOnboardingError,
   type ConfigureProjectFlaggersForOnboardingInput,

@@ -9,6 +9,10 @@ export const AI_GENERATE_TELEMETRY_TAGS = {
   annotationEnrichPublication: ["annotation:enrichment"],
   flaggerClassify: ["flagger:classify"],
   flaggerDraft: ["flagger:draft"],
+  // Appended to a flagger's own LLM calls when the trace being flagged is itself
+  // flagger-generated. Marks the output so it is never re-flagged, bounding the
+  // flagger-on-flagger recursion to a single level. See @domain/flaggers reflag helpers.
+  flaggerNoReflag: ["flagger:no-reflag"],
   evaluationJudgeLive: ["eval:execute", "live"],
   evaluationJudgeAlignment: ["eval:execute", "alignment"],
   evaluationJudgeOptimization: ["eval:execute", "optimization"],
