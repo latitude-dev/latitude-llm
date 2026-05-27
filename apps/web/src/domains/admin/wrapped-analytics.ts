@@ -43,7 +43,8 @@ export interface WrappedAnalyticsListItemDto {
   readonly organizationName: string
   readonly personalityKind: PersonalityKind
   readonly personalityScore: number
-  readonly toolCalls: number
+  /** null for V1 reports that predate the tokensTotal field */
+  readonly tokensTotal: number | null
   readonly sessions: number
   readonly createdAt: string
 }
@@ -221,18 +222,21 @@ export const buildAnalyticsPayload = (records: ReadonlyArray<WrappedReportRecord
   }
   const sortedByActivity = [...records].sort((a, b) => sortMetric(b) - sortMetric(a))
 
-  const list: WrappedAnalyticsListItemDto[] = sortedByActivity.map((r, i) => ({
-    rank: i + 1,
-    id: r.id,
-    projectName: r.report.project.name,
-    ownerName: r.ownerName,
-    organizationName: r.report.organization.name,
-    personalityKind: r.report.personality.kind,
-    personalityScore: r.report.personality.score,
-    toolCalls: r.report.totals.toolCalls,
-    sessions: r.report.totals.sessions,
-    createdAt: r.createdAt.toISOString(),
-  }))
+  const list: WrappedAnalyticsListItemDto[] = sortedByActivity.map((r, i) => {
+    const totals = r.report.totals as { tokensTotal?: number; toolCalls: number }
+    return {
+      rank: i + 1,
+      id: r.id,
+      projectName: r.report.project.name,
+      ownerName: r.ownerName,
+      organizationName: r.report.organization.name,
+      personalityKind: r.report.personality.kind,
+      personalityScore: r.report.personality.score,
+      tokensTotal: totals.tokensTotal ?? null,
+      sessions: r.report.totals.sessions,
+      createdAt: r.createdAt.toISOString(),
+    }
+  })
 
   // Summary card row.
   const orgIds = new Set<string>()

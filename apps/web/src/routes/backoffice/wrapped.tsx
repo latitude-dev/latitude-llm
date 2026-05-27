@@ -120,14 +120,16 @@ function ListColumn({
         ),
       },
       {
-        key: "toolCalls",
-        header: "Tool calls",
+        key: "tokensTotal",
+        header: "Tokens",
         align: "end",
         minWidth: 90,
-        width: 110,
+        width: 120,
         render: (row) => (
           <Text.H5 weight="medium" noWrap>
-            <span className="tabular-nums">{formatCount(row.toolCalls)}</span>
+            <span className="tabular-nums">
+              {row.tokensTotal !== null ? formatCount(row.tokensTotal) : "—"}
+            </span>
           </Text.H5>
         ),
       },
