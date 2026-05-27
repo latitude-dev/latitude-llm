@@ -249,9 +249,6 @@ export function SessionsView({
   }, [])
 
   const hasActiveFilters = Object.keys(filters).length > 0
-  // When search-mode picks the default `relevance` sort, the Last Activity
-  // column header shows a "Sorted by relevance" subheader (the column's own
-  // sort icon stays neutral, since `relevance` doesn't map to a real column).
   const isRelevanceSort = sorting.column === RELEVANCE_SORT_COLUMN
 
   const {

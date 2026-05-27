@@ -99,9 +99,6 @@ export function ProjectTracesTable({
   onAnnotationClick,
 }: ProjectTracesTableProps) {
   const showMetricSubheaders = traceMetrics !== undefined || metricsLoading !== undefined
-  // When search-mode picks the default `relevance` sort, the Start Time
-  // column header shows a "Sorted by relevance" subheader (the column's own
-  // sort icon stays neutral, since `relevance` doesn't map to a real column).
   const isRelevanceSort = sorting?.column === RELEVANCE_SORT_COLUMN
 
   const allColumns = useMemo((): InfiniteTableColumn<TraceRecord>[] => {

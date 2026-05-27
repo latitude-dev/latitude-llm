@@ -73,15 +73,6 @@ type SessionSearchRow = {
   time_to_first_token_ns: string
 }
 
-/**
- * Sort axis dispatch for the session-search list path. Default axis is
- * relevance (`best_score DESC, session_id DESC`); any other `sortBy` matching
- * one of these keys swaps the primary axis to the column's projection while
- * the relevance floor (≥ `TRACE_SEARCH_MIN_RELEVANCE_SCORE`) still gates the
- * candidate set inside `search-plan.ts`. Keys mirror `SORT_COLUMNS` in
- * `session-repository.ts` so the column-header click in the UI carries the
- * same value into search mode as out of it.
- */
 interface SearchSortAxis {
   readonly expr: string
   readonly chType: string
@@ -89,10 +80,6 @@ interface SearchSortAxis {
 }
 
 const SEARCH_SORT_AXES: Record<string, SearchSortAxis> = {
-  // `session_end_time = max(end_time)` over the *matching* trace rollup. It's
-  // the closest analogue to the panel's "Last activity" timestamp that we can
-  // compute without re-joining the `sessions` table — good enough for sort
-  // tiebreaking inside a single query.
   lastActivity: { expr: "session_end_time", chType: "DateTime64(9, 'UTC')", rowKey: "session_end_time" },
   startTime: { expr: "session_start_time", chType: "DateTime64(9, 'UTC')", rowKey: "session_start_time" },
   duration: { expr: "duration_ns", chType: "Int64", rowKey: "duration_ns" },
@@ -270,19 +257,6 @@ interface ListSearchInput {
   readonly fetchFullSessions: FetchFullSessions
 }
 
-/**
- * Search-active list path (spec §4.3). Runs the trace → session rollup
- * query, then resolves full `Session` rows via `fetchFullSessions`
- * (orphan-trace synthesized ids that don't exist in the `sessions` table
- * fall back to `toOrphanSession`).
- *
- * Sort axis follows `sortBy`: any recognized key in `SEARCH_SORT_AXES`
- * swaps the primary axis to that column's projection; otherwise the
- * default `relevance` axis (`best_score DESC, session_id DESC`) applies.
- * The relevance floor (≥ `TRACE_SEARCH_MIN_RELEVANCE_SCORE`) is enforced
- * inside `search-plan.ts` and gates the candidate set regardless of axis,
- * so re-sorting by `lastActivity` still only sees relevant rows.
- */
 export const listSessionsBySearchQuery = ({
   organizationId,
   projectId,
@@ -300,17 +274,6 @@ export const listSessionsBySearchQuery = ({
     const { telemetryParams, traceScoreWhere, scoreParams, finalHaving } = buildSearchFilters(filters)
 
     const axis = sortBy ? SEARCH_SORT_AXES[sortBy] : undefined
-    // ORDER BY references aliases in the outer SELECT. The full sort tuple
-    // is `(<primary>, session_end_time, session_id)`: the timestamp
-    // tiebreaker keeps within-tier rows in recency order — without it,
-    // phrase-only queries (which score every match at `best_score = 0.0`)
-    // and ties on any other axis would fall through to a meaningless
-    // `session_id` order. When the primary IS `session_end_time` the
-    // duplicate is harmless and keeps the cursor shape uniform.
-    //
-    // All three axes flip together with `sortDirection` so an ASC click on
-    // a column header gives a fully-reversed walk (newest-last, lowest-id
-    // last) instead of a half-flipped tuple.
     const primaryExpr = axis ? axis.expr : "best_score"
     const primaryChType = axis ? axis.chType : "Float64"
     const orderDir = sortDirection === "asc" ? "ASC" : "DESC"
@@ -383,11 +346,6 @@ export const listSessionsBySearchQuery = ({
             ...(cursor
               ? {
                   cursorSortValue: cursor.sortValue,
-                  // A search-mode cursor always carries a `secondaryValue`
-                  // (the previous page's `session_end_time`). Out-of-shape
-                  // cursors from a stale client would omit it; fall back
-                  // to the DateTime64 zero so the keyset comparison still
-                  // produces a deterministic restart from the top.
                   cursorSecondaryValue: cursor.secondaryValue ?? "1970-01-01 00:00:00.000000000",
                   cursorSessionId: cursor.sessionId,
                 }
@@ -428,10 +386,6 @@ export const listSessionsBySearchQuery = ({
       hasMore,
       nextCursor: {
         sortValue: String(last[cursorRowKey]),
-        // Pass CH's DateTime64 string back unchanged: ClickHouse accepts the
-        // same ISO-8601 form it emits as `{x:DateTime64(9, 'UTC')}` input,
-        // so round-tripping through the wire as a string preserves the
-        // nanosecond precision the keyset comparison needs.
         secondaryValue: last.session_end_time,
         sessionId: normalizeCHString(last.session_id),
       },

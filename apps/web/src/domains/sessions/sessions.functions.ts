@@ -56,10 +56,6 @@ const serializeSearchMatch = (match: SessionSearchMatch) => ({
 
 export type SessionSearchMatchRecord = ReturnType<typeof serializeSearchMatch>
 
-// `secondaryValue` is only set by the search-mode list path (carries
-// `session_end_time` for the timestamp tiebreaker); the non-search path
-// omits it and the repository accepts the absence by falling back to the
-// DateTime64 zero — see `search-by-project.ts`.
 const sessionListCursorSchema = z.object({
   sortValue: z.string(),
   secondaryValue: z.string().optional(),
