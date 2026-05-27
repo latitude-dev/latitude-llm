@@ -154,7 +154,10 @@ function TokenHeadline({
         </p>
       ) : null}
       {leaderboard !== null ? (
-        <p className="mt-2 text-sm" style={{ color: ACCENT, fontFamily: "Georgia, serif" }}>
+        <p
+          className="mt-2 text-2xl sm:text-3xl"
+          style={{ color: ACCENT, fontFamily: "Georgia, serif", fontWeight: 500 }}
+        >
           {leaderboardText(leaderboard)}
         </p>
       ) : null}
