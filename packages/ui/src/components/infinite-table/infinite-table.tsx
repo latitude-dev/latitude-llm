@@ -90,6 +90,7 @@ export function InfiniteTable<T>({
   expandedRowKeys,
   getExpandedRows,
   isRowExpandable,
+  onToggleExpand,
 }: InfiniteTableProps<T>) {
   const hasExpansion = !!expandedRowKeys && !!getExpandedRows
   const colCount = columns.length + (selection ? 1 : 0) + (hasExpansion ? 1 : 0)
@@ -312,6 +313,7 @@ export function InfiniteTable<T>({
                     isExpandable={canExpand}
                     isExpanded={isExpanded}
                     isActive={isActive}
+                    {...(onToggleExpand ? { onToggleExpand } : {})}
                     {...(selection
                       ? {
                           checkedState: selection.getCheckedState?.(rowKey) ?? selection.isSelected(rowKey),

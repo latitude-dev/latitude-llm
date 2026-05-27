@@ -4,6 +4,7 @@ import {
   CopyableText,
   cn,
   DetailDrawer,
+  Icon,
   ProviderIcon,
   Skeleton,
   Status,
@@ -22,15 +23,15 @@ import {
   MessageSquareIcon,
   MessagesSquareIcon,
 } from "lucide-react"
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useAnnotationsByTrace } from "../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../domains/annotations/annotations.functions.ts"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
-import { isGlobalAnnotation, useAnnotationNavigation } from "./annotations/hooks/use-annotation-navigation.ts"
-import type { TextSelectionPopoverControls } from "./annotations/hooks/use-annotation-popover.ts"
+import { isGlobalAnnotation } from "./annotations/hooks/use-annotation-navigation.ts"
+import { useConversationAnnotationFocus } from "./annotations/hooks/use-conversation-annotation-focus.ts"
 import { TraceAnnotationsList } from "./annotations/trace-annotations-list.tsx"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
@@ -39,24 +40,25 @@ import { TraceTab } from "./trace-detail-drawer/tabs/trace-tab.tsx"
 type TabId = "trace" | "conversation" | "spans" | "annotations"
 
 const TABS: TabOption<TabId>[] = [
-  { id: "trace", label: "Trace", icon: <GroupIcon className="w-4 h-4" />, tooltip: <HotkeyBadge hotkey="Shift+1" /> },
+  {
+    id: "trace",
+    label: "Trace",
+    icon: <Icon icon={GroupIcon} size="sm" />,
+  },
   {
     id: "conversation",
     label: "Conversation",
-    icon: <MessagesSquareIcon className="w-4 h-4" />,
-    tooltip: <HotkeyBadge hotkey="Shift+2" />,
+    icon: <Icon icon={MessagesSquareIcon} size="sm" />,
   },
   {
     id: "spans",
     label: "Spans",
-    icon: <ListTreeIcon className="w-4 h-4" />,
-    tooltip: <HotkeyBadge hotkey="Shift+3" />,
+    icon: <Icon icon={ListTreeIcon} size="sm" />,
   },
   {
     id: "annotations",
     label: "Annotations",
-    icon: <MessageSquareIcon className="w-4 h-4" />,
-    tooltip: <HotkeyBadge hotkey="Shift+4" />,
+    icon: <Icon icon={MessageSquareIcon} size="sm" />,
   },
 ]
 
@@ -117,6 +119,8 @@ export type TraceDetailDrawerProps = {
   readonly closeLabel?: ReactNode
   /** LocalStorage key for persisted drawer width. */
   readonly drawerStoreKey?: string
+  /** Active search query — drives literal/token highlights in the Conversation tab. */
+  readonly searchQuery?: string
 }
 
 export function TraceDetailDrawer({ urlSyncedTabs = true, ...props }: TraceDetailDrawerProps) {
@@ -128,7 +132,9 @@ export function TraceDetailDrawer({ urlSyncedTabs = true, ...props }: TraceDetai
 
 function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSyncedTabs">) {
   const { initialTab: _initialTabIgnored, closeLabel, drawerStoreKey, ...rest } = props
-  const [activeTab, setActiveTab] = useParamState("traceDetailTab", "trace", {
+  // Shared with the session panel via the `detailTab` URL param so Conversation
+  // / Annotations carry over when switching between trace and session views.
+  const [activeTab, setActiveTab] = useParamState("detailTab", "trace", {
     validate: isTraceDetailTab,
   })
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
@@ -169,28 +175,39 @@ type TraceDetailTabControlProps = {
   readonly onSelectedSpanIdChange: (spanId: string) => void
 }
 
-function TraceDetailDrawerShell({
+export type TraceDetailBodyProps = {
+  readonly traceId: string
+  readonly trace?: TraceRecord | undefined
+  readonly projectId: string
+  readonly filters?: FilterSet | undefined
+  readonly onFiltersChange?: (filters: FilterSet) => void
+  readonly focusAnnotationId?: string
+  /** Active search query — drives literal/token highlights in the Conversation tab. */
+  readonly searchQuery?: string
+} & TraceDetailTabControlProps
+
+/**
+ * The trace detail surface minus the `DetailDrawer` chrome (width, close
+ * button, next/prev nav): the sticky header + the four tabs + the lazy-mounted
+ * tab panes, plus the annotation scroll/flash wiring.
+ *
+ * Mounted two ways: by `TraceDetailDrawer` (its own `DetailDrawer` + next/prev
+ * actions) and by the session panel's trace slot (no nested drawer, no
+ * next/prev — the slot supplies a "← View session" back control instead).
+ */
+export function TraceDetailBody({
   traceId,
   trace,
   projectId,
   filters,
   onFiltersChange,
-  onClose,
-  onNextTrace,
-  onPrevTrace,
-  canNavigateNext,
-  canNavigatePrev,
   activeTab,
   onActiveTabChange,
   selectedSpanId,
   onSelectedSpanIdChange,
-  closeLabel,
-  drawerStoreKey = "trace-detail-drawer-width",
-}: Omit<TraceDetailDrawerProps, "urlSyncedTabs" | "initialTab" | "closeLabel" | "drawerStoreKey"> &
-  TraceDetailTabControlProps & {
-    readonly closeLabel?: ReactNode
-    readonly drawerStoreKey?: string
-  }) {
+  focusAnnotationId,
+  searchQuery,
+}: TraceDetailBodyProps) {
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
     traceId,
@@ -227,14 +244,13 @@ function TraceDetailDrawerShell({
     [annotationTabSuffix, spansTabSuffix],
   )
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set([activeTab]))
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const textSelectionPopoverControlsRef = useRef<TextSelectionPopoverControls | null>(null)
 
-  const { scrollToAnnotation, executePendingScroll } = useAnnotationNavigation({
-    scrollContainerRef,
-    onSwitchToConversation: () => handleSetActiveTab("conversation"),
+  const { scrollContainerRef, textSelectionPopoverControlsRef, scrollToAnnotation } = useConversationAnnotationFocus({
+    projectId,
+    traceId,
+    focusAnnotationId,
     isConversationActive: activeTab === "conversation",
-    textSelectionPopoverControlsRef,
+    onActivateConversation: () => handleSetActiveTab("conversation"),
   })
 
   useEffect(() => {
@@ -251,22 +267,151 @@ function TraceDetailDrawerShell({
     scrollToAnnotation(annotation)
   }
 
-  useEffect(() => {
-    if (activeTab === "conversation" && visitedTabs.has("conversation")) {
-      executePendingScroll()
-    }
-  }, [activeTab, visitedTabs, executePendingScroll])
-
   function navigateToSpan(spanId: string | null) {
     handleSetActiveTab("spans")
     onSelectedSpanIdChange(spanId ?? "")
   }
 
+  return (
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-col px-6 py-4 gap-5 border-b shrink-0">
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-row items-center gap-2">
+            {isRecordLoading ? (
+              <Skeleton className="h-6 w-48" />
+            ) : (
+              <>
+                <Text.H4>{traceRecord?.rootSpanName ?? "Unnamed Trace"}</Text.H4>
+                {traceRecord?.providers && traceRecord.providers.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    {traceRecord.providers.map((p) => (
+                      <Tooltip
+                        key={p}
+                        asChild
+                        trigger={
+                          <span>
+                            <ProviderIcon provider={p} size="sm" />
+                          </span>
+                        }
+                      >
+                        {p}
+                      </Tooltip>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            {isRecordLoading ? (
+              <Skeleton className="h-6 w-12" />
+            ) : traceRecord && traceRecord.errorCount > 0 ? (
+              <Status
+                variant="destructive"
+                indicator={false}
+                label={`${formatCount(traceRecord.errorCount)} ${traceRecord.errorCount === 1 ? "error" : "errors"}`}
+              />
+            ) : null}
+          </div>
+          <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />
+        </div>
+
+        <Tabs options={tabsWithCounts} active={activeTab} onSelect={handleSetActiveTab} />
+      </div>
+
+      <div
+        className={cn("flex flex-col flex-1 overflow-hidden", {
+          hidden: activeTab !== "trace",
+        })}
+      >
+        {visitedTabs.has("trace") && (
+          <TraceTab
+            traceId={traceId}
+            projectId={projectId}
+            traceRecord={traceRecord}
+            traceDetail={traceDetail}
+            isRecordLoading={isRecordLoading}
+            isDetailLoading={isDetailLoading}
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+          />
+        )}
+      </div>
+      <div
+        className={cn("flex flex-col flex-1 overflow-hidden", {
+          hidden: activeTab !== "conversation",
+        })}
+      >
+        {visitedTabs.has("conversation") && (
+          <ConversationTab
+            traceDetail={traceDetail}
+            isDetailLoading={isDetailLoading}
+            navigateToSpan={navigateToSpan}
+            projectId={projectId}
+            isActive={activeTab === "conversation"}
+            scrollContainerRef={scrollContainerRef}
+            textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
+            {...(searchQuery ? { searchQuery } : {})}
+          />
+        )}
+      </div>
+      <div
+        className={cn("flex flex-col flex-1 overflow-hidden", {
+          hidden: activeTab !== "spans",
+        })}
+      >
+        {visitedTabs.has("spans") && (
+          <SpansTab
+            projectId={projectId}
+            traceId={traceId}
+            startTimeFrom={traceRecord?.startTime}
+            startTimeTo={traceRecord?.endTime}
+            selectedSpanId={selectedSpanId}
+            onSelectSpan={navigateToSpan}
+            isActive={activeTab === "spans"}
+          />
+        )}
+      </div>
+      <div
+        className={cn("flex flex-col flex-1 overflow-hidden", {
+          hidden: activeTab !== "annotations",
+        })}
+      >
+        {visitedTabs.has("annotations") && (
+          <TraceAnnotationsList
+            projectId={projectId}
+            traceId={traceId}
+            hideAnnotationIntro
+            onAnnotationClick={handleAnnotationClick}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function TraceDetailDrawerShell({
+  traceId,
+  trace,
+  projectId,
+  filters,
+  onFiltersChange,
+  onClose,
+  onNextTrace,
+  onPrevTrace,
+  canNavigateNext,
+  canNavigatePrev,
+  activeTab,
+  onActiveTabChange,
+  selectedSpanId,
+  onSelectedSpanIdChange,
+  closeLabel,
+  drawerStoreKey = "trace-detail-drawer-width",
+  searchQuery,
+}: Omit<TraceDetailDrawerProps, "urlSyncedTabs" | "initialTab" | "closeLabel" | "drawerStoreKey"> &
+  TraceDetailTabControlProps & {
+    readonly closeLabel?: ReactNode
+    readonly drawerStoreKey?: string
+  }) {
   useHotkeys([
-    { hotkey: "Shift+1", callback: () => handleSetActiveTab("trace") },
-    { hotkey: "Shift+2", callback: () => handleSetActiveTab("conversation") },
-    { hotkey: "Shift+3", callback: () => handleSetActiveTab("spans") },
-    { hotkey: "Shift+4", callback: () => handleSetActiveTab("annotations") },
     {
       hotkey: "Alt+ArrowDown",
       callback: () => onNextTrace?.(),
@@ -330,101 +475,19 @@ function TraceDetailDrawerShell({
           </Tooltip>
         </>
       }
-      header={
-        <>
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-row items-center gap-2">
-              {isRecordLoading ? (
-                <Skeleton className="h-6 w-48" />
-              ) : (
-                <>
-                  <Text.H4>{traceRecord?.rootSpanName ?? "Unnamed Trace"}</Text.H4>
-                  {traceRecord?.providers && traceRecord.providers.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      {traceRecord.providers.map((p) => (
-                        <Tooltip
-                          key={p}
-                          asChild
-                          trigger={
-                            <span>
-                              <ProviderIcon provider={p} size="sm" />
-                            </span>
-                          }
-                        >
-                          {p}
-                        </Tooltip>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-              {isRecordLoading ? (
-                <Skeleton className="h-6 w-12" />
-              ) : traceRecord && traceRecord.errorCount > 0 ? (
-                <Status
-                  variant="destructive"
-                  indicator={false}
-                  label={`${formatCount(traceRecord.errorCount)} ${traceRecord.errorCount === 1 ? "error" : "errors"}`}
-                />
-              ) : null}
-            </div>
-            <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />
-          </div>
-
-          <Tabs options={tabsWithCounts} active={activeTab} onSelect={handleSetActiveTab} />
-        </>
-      }
     >
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "trace" })}>
-        {visitedTabs.has("trace") && (
-          <TraceTab
-            traceId={traceId}
-            projectId={projectId}
-            traceRecord={traceRecord}
-            traceDetail={traceDetail}
-            isRecordLoading={isRecordLoading}
-            isDetailLoading={isDetailLoading}
-            filters={filters}
-            onFiltersChange={onFiltersChange}
-          />
-        )}
-      </div>
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "conversation" })}>
-        {visitedTabs.has("conversation") && (
-          <ConversationTab
-            traceDetail={traceDetail}
-            isDetailLoading={isDetailLoading}
-            navigateToSpan={navigateToSpan}
-            projectId={projectId}
-            isActive={activeTab === "conversation"}
-            scrollContainerRef={scrollContainerRef}
-            textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
-          />
-        )}
-      </div>
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "spans" })}>
-        {visitedTabs.has("spans") && (
-          <SpansTab
-            projectId={projectId}
-            traceId={traceId}
-            startTimeFrom={traceRecord?.startTime}
-            startTimeTo={traceRecord?.endTime}
-            selectedSpanId={selectedSpanId}
-            onSelectSpan={navigateToSpan}
-            isActive={activeTab === "spans"}
-          />
-        )}
-      </div>
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "annotations" })}>
-        {visitedTabs.has("annotations") && (
-          <TraceAnnotationsList
-            projectId={projectId}
-            traceId={traceId}
-            hideAnnotationIntro
-            onAnnotationClick={handleAnnotationClick}
-          />
-        )}
-      </div>
+      <TraceDetailBody
+        traceId={traceId}
+        trace={trace}
+        projectId={projectId}
+        filters={filters}
+        {...(onFiltersChange ? { onFiltersChange } : {})}
+        activeTab={activeTab}
+        onActiveTabChange={onActiveTabChange}
+        selectedSpanId={selectedSpanId}
+        onSelectedSpanIdChange={onSelectedSpanIdChange}
+        {...(searchQuery ? { searchQuery } : {})}
+      />
     </DetailDrawer>
   )
 }

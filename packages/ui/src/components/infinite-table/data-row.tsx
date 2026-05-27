@@ -24,6 +24,8 @@ interface DataRowProps<T> {
   isExpanded?: boolean
   onClick?: (row: T) => void
   renderRowLink?: (row: T, props: { className: string }) => ReactNode
+  /** When set, the chevron toggles expansion independently of the row click. */
+  onToggleExpand?: (row: T) => void
   rowInteractionRole?: "button" | "link"
   rowAriaLabel?: string
   dataIndex: number
@@ -44,6 +46,7 @@ function DataRowInner<T>({
   isExpanded,
   onClick,
   renderRowLink,
+  onToggleExpand,
   rowInteractionRole = "button",
   rowAriaLabel,
   dataIndex,
@@ -62,7 +65,7 @@ function DataRowInner<T>({
   const hasRowLink = Boolean(renderRowLink)
   const isClickable = Boolean(onClick) || hasRowLink
   const interactiveRole = onClick ? rowInteractionRole : undefined
-  const isExpandToggleRow = Boolean(onClick && isExpandable && !isSubRow)
+  const isExpandToggleRow = Boolean(isClickable && isExpandable && !isSubRow && !onToggleExpand)
   const ariaExpanded = isExpandToggleRow ? Boolean(isExpanded) : undefined
   const ariaPressed = onClick && interactiveRole === "button" && !isExpandToggleRow ? Boolean(isActive) : undefined
 
@@ -97,26 +100,50 @@ function DataRowInner<T>({
             "px-2 py-2 w-8",
             "first:rounded-l-lg last:rounded-r-lg",
             "align-middle text-sm leading-5 whitespace-nowrap",
-            { "relative z-[1]": hasRowLink },
+            { "relative z-1": hasRowLink },
           )}
         >
-          {isExpandable && (
-            <ChevronRight
-              className={cn("h-4 w-4 text-muted-foreground transition-transform", {
-                "rotate-90": isExpanded,
-              })}
-            />
-          )}
+          {isExpandable &&
+            (onToggleExpand ? (
+              <button
+                type="button"
+                aria-label={isExpanded ? "Collapse row" : "Expand row"}
+                aria-expanded={Boolean(isExpanded)}
+                className="flex items-center justify-center rounded p-0.5 hover:bg-muted-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleExpand(row)
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <ChevronRight
+                  className={cn("h-4 w-4 text-muted-foreground transition-transform", {
+                    "rotate-90": isExpanded,
+                  })}
+                />
+              </button>
+            ) : (
+              <ChevronRight
+                className={cn("h-4 w-4 text-muted-foreground transition-transform", {
+                  "rotate-90": isExpanded,
+                })}
+              />
+            ))}
         </td>
       )}
       {hasSelection && (
         <td
-          style={{ width: SELECTION_COLUMN_WIDTH, minWidth: SELECTION_COLUMN_WIDTH, maxWidth: SELECTION_COLUMN_WIDTH }}
+          style={{
+            width: SELECTION_COLUMN_WIDTH,
+            minWidth: SELECTION_COLUMN_WIDTH,
+            maxWidth: SELECTION_COLUMN_WIDTH,
+          }}
           className={cn(
             "px-4 py-2",
             "first:rounded-l-lg last:rounded-r-lg overflow-hidden",
             "align-middle text-sm leading-5 font-normal whitespace-nowrap text-ellipsis",
-            { "relative z-[1]": hasRowLink },
+            { "relative z-1": hasRowLink },
           )}
           onClick={(e) => {
             e.stopPropagation()

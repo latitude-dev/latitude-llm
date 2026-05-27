@@ -81,6 +81,17 @@ export interface ScoreRepositoryShape {
     readonly source?: ScoreSource
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
+  /**
+   * Lists scores across a set of traces (e.g. every trace in a session). Scopes
+   * by `trace_id IN (...)` rather than `session_id` so it works for orphan
+   * sessions, whose scores carry no `session_id`. Optionally filtered by source.
+   */
+  listByTraceIds(input: {
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly source?: ScoreSource
+    readonly options?: ScoreListOptions
+  }): Effect.Effect<ScoreListPage, RepositoryError, SqlClient>
   countAnnotationsByTraceIds(input: {
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]

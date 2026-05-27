@@ -421,6 +421,69 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
+  // listIssuesByTraceIds
+  // ------------------------------------------------------------------
+
+  describe("listIssuesByTraceIds", () => {
+    const fixture = setupFixture()
+    const traceA = "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    const traceB = "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+    const traceOther = "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+    const issueA = "issue_a_".padEnd(24, "0")
+    const issueB = "issue_b_".padEnd(24, "0")
+    const issueOther = "issue_x_".padEnd(24, "0")
+
+    beforeEach(async () => {
+      await fixture.insertScores([
+        // issueA seen on traceA twice (occurrences = 2) + once on traceB.
+        makeScoreRow({ trace_id: traceA, issue_id: issueA, created_at: "2026-03-20 10:00:00.000" }),
+        makeScoreRow({ trace_id: traceA, issue_id: issueA, created_at: "2026-03-25 10:00:00.000" }),
+        makeScoreRow({ trace_id: traceB, issue_id: issueA, created_at: "2026-03-22 10:00:00.000" }),
+        // issueB only on traceB, more recent than issueA's last-seen.
+        makeScoreRow({ trace_id: traceB, issue_id: issueB, created_at: "2026-03-28 10:00:00.000" }),
+        // No-issue score on traceA and an issue on a trace outside the session.
+        makeScoreRow({ trace_id: traceA, issue_id: "" }),
+        makeScoreRow({ trace_id: traceOther, issue_id: issueOther }),
+      ])
+    })
+
+    it("rolls up issues across the given traces, ordered by last seen desc", async () => {
+      const rollups = await fixture.runCh(
+        fixture.repo.listIssuesByTraceIds({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [TraceId(traceA), TraceId(traceB)],
+        }),
+      )
+
+      // issueB (last seen 03-28) before issueA (last seen 03-25); the
+      // outside-the-session issue is excluded.
+      expect(rollups.map((r) => r.issueId as string)).toEqual([issueB, issueA])
+
+      const rollupA = rollups.find((r) => (r.issueId as string) === issueA)
+      expect(rollupA?.occurrences).toBe(3)
+      expect([...(rollupA?.traceIds ?? [])].sort()).toEqual([traceA, traceB].sort())
+      expect(rollupA?.firstSeenAt).toEqual(new Date("2026-03-20T10:00:00.000Z"))
+      expect(rollupA?.lastSeenAt).toEqual(new Date("2026-03-25T10:00:00.000Z"))
+
+      const rollupB = rollups.find((r) => (r.issueId as string) === issueB)
+      expect(rollupB?.occurrences).toBe(1)
+      expect([...(rollupB?.traceIds ?? [])]).toEqual([traceB])
+    })
+
+    it("returns empty for no trace ids", async () => {
+      const rollups = await fixture.runCh(
+        fixture.repo.listIssuesByTraceIds({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceIds: [],
+        }),
+      )
+      expect(rollups).toHaveLength(0)
+    })
+  })
+
+  // ------------------------------------------------------------------
   // rollupBySessionIds
   // ------------------------------------------------------------------
 

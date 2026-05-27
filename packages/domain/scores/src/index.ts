@@ -57,6 +57,7 @@ export {
   type ScoreAnalyticsRepositoryShape,
   type ScoreAnalyticsTimeRange,
   type ScoreTrendBucket,
+  type SessionIssueRollup,
   type SessionScoreRollup,
   type TraceScoreRollup,
 } from "./ports/score-analytics-repository.ts"

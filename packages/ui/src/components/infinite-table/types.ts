@@ -94,6 +94,13 @@ export interface InfiniteTableSharedProps<T> {
    * Defaults to "every top-level row is expandable" when expansion is enabled.
    */
   isRowExpandable?: (row: T) => boolean
+  /**
+   * When provided, the expand chevron becomes an independent control: clicking
+   * it toggles expansion (the caller flips `expandedRowKeys`) without firing
+   * `onRowClick`, so a row can both expand inline and open a detail surface on
+   * row-body click. When omitted, expansion is driven by `onRowClick` as before.
+   */
+  onToggleExpand?: (row: T) => void
 }
 
 export type InfiniteTableProps<T> =

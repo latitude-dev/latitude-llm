@@ -61,6 +61,20 @@ export interface SpanRepositoryShape {
     readonly startTimeFrom: Date
     readonly startTimeTo: Date
   }): Effect.Effect<readonly SpanMessagesData[], RepositoryError, ChSqlClient>
+
+  /**
+   * The trace of the latest output-producing span across a set of traces —
+   * `argMaxIf(trace_id, end_time, output_messages != '')`. Matches the session
+   * materialization's "current state" output (same span-level argMax by
+   * `end_time`), so the session panel's Conversation tab renders the trace whose
+   * messages the session surfaces. Scoped by `traceIds` (orphan-safe). Returns
+   * `null` when none of the traces produced output.
+   */
+  findLatestOutputTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+  }): Effect.Effect<TraceId | null, RepositoryError, ChSqlClient>
 }
 
 export interface SpanListOptions {

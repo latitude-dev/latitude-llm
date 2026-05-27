@@ -14,14 +14,15 @@ import {
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { useQueries } from "@tanstack/react-query"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
-import { type RefObject, useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
 import { useSessionMetrics, useSessionsInfiniteScroll } from "../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
-import { listTracesByProject, type TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
+import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
+import { sessionTracesQueryOptions } from "./session-detail-drawer/use-session-traces.ts"
 import { IndicatorsCell } from "./table/indicators-cell.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 import { DEFAULT_SEARCH_SORTING, RELEVANCE_SORT_COLUMN } from "./trace-page-state.ts"
@@ -36,9 +37,10 @@ function field<K extends keyof SessionRecord & keyof TraceRecord>(row: SessionTa
 
 const EMPTY_CELL = <Text.H5 color="foregroundMuted">-</Text.H5>
 
-export const DEFAULT_SESSION_SORTING: InfiniteTableSorting = { column: "lastActivity", direction: "desc" }
-
-const SESSION_TRACES_LIMIT = 25
+export const DEFAULT_SESSION_SORTING: InfiniteTableSorting = {
+  column: "lastActivity",
+  direction: "desc",
+}
 
 export const SESSION_COLUMN_OPTIONS = [
   { id: "indicators", label: "Indicators" },
@@ -67,26 +69,11 @@ function useExpandedSessionTraces(
     [sessions, expandedIds],
   )
 
+  // Shared cache with the session panel's `useSessionTraces` — same key, same
+  // query function, same limit. With the panel open on an expanded row the
+  // ClickHouse query runs once and both surfaces read from it.
   const results = useQueries({
-    queries: expandedSessionIds.map((sessionId) => ({
-      queryKey: ["session-traces", projectId, sessionId],
-      queryFn: async () => {
-        // Child traces are always shown in chronological order — they form a
-        // conversation, and reading order is what users want regardless of
-        // how the parent sessions list is sorted.
-        const result = await listTracesByProject({
-          data: {
-            projectId,
-            limit: SESSION_TRACES_LIMIT,
-            sortBy: "startTime",
-            sortDirection: "asc",
-            filters: { sessionId: [{ op: "eq", value: sessionId }] },
-          },
-        })
-        return { sessionId, traces: result?.traces ?? [] }
-      },
-      staleTime: 30_000,
-    })),
+    queries: expandedSessionIds.map((sessionId) => sessionTracesQueryOptions(projectId, sessionId)),
   })
 
   return useMemo(() => {
@@ -96,11 +83,7 @@ function useExpandedSessionTraces(
       const sessionId = expandedSessionIds[i]
       if (!r || !sessionId) continue
       const isLoading = r.isPending || (r.isFetching && r.data === undefined)
-      if (r.data) {
-        traceMap.set(r.data.sessionId, { data: r.data.traces, isLoading })
-      } else {
-        traceMap.set(sessionId, { data: [], isLoading })
-      }
+      traceMap.set(sessionId, { data: r.data ?? [], isLoading })
     }
     return traceMap
   }, [results, expandedSessionIds])
@@ -188,8 +171,10 @@ interface SessionsViewProps {
   readonly projectId: string
   readonly filters: FilterSet
   readonly filtersOpen: boolean
-  readonly activeTraceId: string | undefined
-  readonly activeDrawerTab: string
+  /** Session whose detail panel is open — highlights its row. */
+  readonly activeSessionId: string | undefined
+  /** Trace currently shown in the panel's trace slot — highlights its sub-row. */
+  readonly activeTraceId?: string | undefined
   readonly sorting: InfiniteTableSorting
   readonly onSortingChange: (sorting: InfiniteTableSorting) => void
   readonly selectionState: SelectionState<string>
@@ -197,8 +182,14 @@ interface SessionsViewProps {
   readonly totalTraceCount: number
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onFiltersClose: () => void
-  readonly onActiveTraceChange: (traceId: string | undefined) => void
-  readonly traceIdsRef: RefObject<string[]>
+  /**
+   * Opens the session detail panel. A bare session-row click passes just the
+   * session id (panel lands on Metadata); a trace reference passes the trace id
+   * too (panel slides straight into that trace's slot).
+   */
+  readonly onOpenSession: (sessionId: string, traceId?: string) => void
+  /** Closes the session detail panel (clicking the already-open session row). */
+  readonly onCloseSession: () => void
   readonly visibleColumnIds: readonly SessionColumnId[]
   /**
    * Free-text search query forwarded to `listSessionsByProject`. Optional —
@@ -219,8 +210,8 @@ export function SessionsView({
   projectId,
   filters,
   filtersOpen,
+  activeSessionId,
   activeTraceId,
-  activeDrawerTab: _activeDrawerTab,
   sorting,
   onSortingChange,
   selectionState,
@@ -228,22 +219,60 @@ export function SessionsView({
   totalTraceCount,
   onFiltersChange,
   onFiltersClose,
-  onActiveTraceChange,
-  traceIdsRef,
+  onOpenSession,
+  onCloseSession,
   visibleColumnIds,
   searchQuery,
 }: SessionsViewProps) {
-  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set())
-  // Per-session "show non-matching traces" toggle (search mode only). Two-way
-  // — the header row stays visible while the session is expanded and flips
-  // between show/hide states. The only auto-reset is on session collapse,
-  // wired into `onRowClick` below so we don't need a `useEffect` to sync.
+  // Inline expansion (independent of the row-body click, which opens the panel).
+  // The chevron toggles `expandedIds`; `showAllInSessionIds` is the per-session
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(() =>
+    activeSessionId ? new Set([activeSessionId]) : new Set(),
+  )
   const [showAllInSessionIds, setShowAllInSessionIds] = useState<ReadonlySet<string>>(new Set())
   const toggleShowAllForSession = useCallback((sessionId: string) => {
     setShowAllInSessionIds((prev) => {
       const next = new Set(prev)
       if (next.has(sessionId)) next.delete(sessionId)
       else next.add(sessionId)
+      return next
+    })
+  }, [])
+
+  const toggleSessionExpanded = useCallback((sessionId: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(sessionId)) next.delete(sessionId)
+      else next.add(sessionId)
+      return next
+    })
+    // Collapsing resets the matches-only view for next time.
+    setShowAllInSessionIds((prev) => {
+      if (!prev.has(sessionId)) return prev
+      const next = new Set(prev)
+      next.delete(sessionId)
+      return next
+    })
+  }, [])
+
+  // Row click ensures the session is expanded (never collapses — that's the
+  // chevron's job), so returning to a session from one of its traces keeps the
+  // inline trace rows visible instead of toggling them shut.
+  const expandSession = useCallback((sessionId: string) => {
+    setExpandedIds((prev) => (prev.has(sessionId) ? prev : new Set([...prev, sessionId])))
+  }, [])
+
+  const collapseSession = useCallback((sessionId: string) => {
+    setExpandedIds((prev) => {
+      if (!prev.has(sessionId)) return prev
+      const next = new Set(prev)
+      next.delete(sessionId)
+      return next
+    })
+    setShowAllInSessionIds((prev) => {
+      if (!prev.has(sessionId)) return prev
+      const next = new Set(prev)
+      next.delete(sessionId)
       return next
     })
   }, [])
@@ -387,7 +416,8 @@ export function SessionsView({
           if (!match) return EMPTY_CELL
           return (
             <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              {match.matchingTraceCount} matching trace{match.matchingTraceCount === 1 ? "" : "s"}
+              {match.matchingTraceCount} matching trace
+              {match.matchingTraceCount === 1 ? "" : "s"}
             </span>
           )
         },
@@ -530,8 +560,6 @@ export function SessionsView({
     })
   }, [allColumns, visibleColumnIds])
 
-  const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions)
-
   const selection = useSessionSelectionAdapter({
     selectionState,
     onSelectionChange,
@@ -539,16 +567,11 @@ export function SessionsView({
     totalTraceCount,
   })
 
+  const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions)
+
   const tableData: readonly SessionTableRow[] = sessions.map(
     (session): SessionTableRow => ({ kind: "session", session }),
   )
-  // Drawer prev/next navigates traces in ingestion order across every visible
-  // session (matching the project Sessions tab today). Search-mode treats
-  // matching vs. non-matching as a visual cue, not a navigation distinction,
-  // so we always concatenate the full `traceIds` from each session in page
-  // order — `bestTraceId` lookups slot in naturally because they're members
-  // of their session's `traceIds`.
-  traceIdsRef.current = sessions.flatMap((s) => Array.from(s.traceIds))
 
   const getRowKey = (row: SessionTableRow) => (row.kind === "session" ? row.session.sessionId : row.trace.traceId)
 
@@ -557,49 +580,46 @@ export function SessionsView({
     [],
   )
 
+  // Clicking a session row opens the detail panel and expands its inline trace
+  // rows (idempotent — never collapses). Clicking the row of the session that's
+  // already open on the session slot (no trace selected) toggles it closed
+  // (collapse + close panel). The chevron (`onToggleExpand`) is the explicit
+  // expand/collapse affordance; clicking a trace sub-row opens that trace.
   const onRowClick = (row: SessionTableRow) => {
+    const sel = window.getSelection()
+    if (sel && sel.toString().length > 0) return
     if (row.kind === "session") {
-      // Single-trace sessions (including orphan-as-session) have nothing
-      // meaningful to expand into, so the row click drops straight to the
-      // drawer on that one trace.
-      if (row.session.traceCount <= 1) {
-        const traceId = row.session.traceIds[0]
-        if (!traceId) return
-        onActiveTraceChange(traceId === activeTraceId ? undefined : traceId)
+      const sessionId = row.session.sessionId
+      if (activeSessionId === sessionId && !activeTraceId) {
+        collapseSession(sessionId)
+        onCloseSession()
         return
       }
-      // Multi-trace sessions toggle expansion regardless of search mode.
-      // Expansion shows the full conversation with matching traces visually
-      // flagged — the most useful action when triaging a search hit. Users
-      // can then click individual trace rows to open the drawer.
-      //
-      // Collapse also resets `showAllInSessionIds` for this session so the
-      // next expansion starts in the matches-only state (per UX: the only
-      // way to re-hide non-matching traces is to collapse the session).
-      const sessionId = row.session.sessionId
-      setExpandedIds((prev) => {
-        const next = new Set(prev)
-        if (next.has(sessionId)) next.delete(sessionId)
-        else next.add(sessionId)
-        return next
-      })
-      setShowAllInSessionIds((prev) => {
-        if (!prev.has(sessionId)) return prev
-        const next = new Set(prev)
-        next.delete(sessionId)
-        return next
-      })
+      onOpenSession(sessionId)
+      if (row.session.traceCount > 1) expandSession(sessionId)
     } else {
-      const sel = window.getSelection()
-      if (sel && sel.toString().length > 0) return
-      onActiveTraceChange(row.trace.traceId === activeTraceId ? undefined : row.trace.traceId)
+      onOpenSession(row.trace.sessionId, row.trace.traceId)
     }
   }
 
-  // Flat set of every matching trace id across the visible session rows, used
-  // by `getRowClassName` to flag matching expanded trace rows. Computed once
-  // per `searchMatches` change so the per-row hot path is an O(1) lookup
-  // instead of a nested object access per render.
+  const onToggleExpand = useCallback(
+    (row: SessionTableRow) => {
+      if (row.kind === "session") toggleSessionExpanded(row.session.sessionId)
+    },
+    [toggleSessionExpanded],
+  )
+
+  const getRowAriaLabel = useCallback((row: SessionTableRow) => {
+    if (row.kind === "session") {
+      const short = row.session.rootSpanName || row.session.sessionId.slice(0, 8)
+      return `View session ${short}`
+    }
+    const short = row.trace.rootSpanName || row.trace.traceId.slice(0, 8)
+    return `View trace ${short}`
+  }, [])
+
+  // Flat set of every matching trace id across visible sessions → dim the
+  // non-matching expanded sub-rows so search hits stand out (search mode only).
   const matchingTraceIdSet = useMemo(() => {
     if (!searchMatches) return undefined
     const set = new Set<string>()
@@ -609,16 +629,6 @@ export function SessionsView({
     return set
   }, [searchMatches])
 
-  // Dim NON-matching expanded trace rows to 50% opacity so the matching
-  // turns stand out by contrast. We tried positive-highlight approaches
-  // first (outer aura, inset ring with rounded corners) but they ran into
-  // layout constraints: the parent scroll container clipped horizontally,
-  // adjacent rows left no vertical space for an outer glow, and an inset
-  // ring competed visually with the row's active-state outline. Dimming
-  // non-matches sidesteps all of that — the matching rows stay fully
-  // legible at default opacity, the surrounding rows fade enough to read
-  // as supporting context. `opacity` doesn't change pointer-events, so
-  // every row stays clickable.
   const getRowClassName = useCallback(
     (row: SessionTableRow, context: { isActive: boolean; isExpanded: boolean; isSubRow: boolean }) => {
       if (!matchingTraceIdSet || row.kind !== "trace" || !context.isSubRow) return undefined
@@ -627,53 +637,30 @@ export function SessionsView({
     [matchingTraceIdSet],
   )
 
-  const getRowAriaLabel = useCallback(
-    (row: SessionTableRow) => {
-      if (row.kind === "session") {
-        const id = row.session.sessionId
-        if (row.session.traceCount <= 1) {
-          const traceId = row.session.traceIds[0] ?? id
-          const short = row.session.rootSpanName || traceId.slice(0, 8)
-          return traceId === activeTraceId ? `Deselect trace ${short}` : `View trace ${short}`
-        }
-        return expandedIds.has(id) ? `Collapse session ${id}` : `Expand session ${id}`
-      }
-      const short = row.trace.rootSpanName || row.trace.traceId.slice(0, 8)
-      return row.trace.traceId === activeTraceId ? `Deselect trace ${short}` : `View trace ${short}`
-    },
-    [expandedIds, activeTraceId],
-  )
-
   const getExpandedRows = (row: SessionTableRow): ExpandedRows<SessionTableRow> => {
     if (row.kind !== "session") return { data: [] }
     const sessionId = row.session.sessionId
     const entry = traceMap.get(sessionId)
     if (!entry) return { data: [], isLoading: true }
 
-    // Search mode + we know which traces matched → default-hide the rest.
-    // Render a full-width toggle row above the matches with a count and
-    // double-chevron icon; it stays visible the whole time and flips
-    // between show/hide. Session collapse still resets the toggle so the
-    // next expansion starts in the matches-only state (handled in
-    // onRowClick, which prunes `showAllInSessionIds`).
+    // Search mode: default-hide non-matching traces behind a show/hide toggle row.
     const match = searchMatches?.[sessionId]
     if (match) {
       const matchingSet = new Set(match.matchingTraceIds)
       const showingAll = showAllInSessionIds.has(sessionId)
-      const visibleTraces = showingAll ? entry.data : entry.data.filter((t) => matchingSet.has(t.traceId))
-      const hiddenCount = entry.data.length - matchingSet.size
+      const matchingTraces = entry.data.filter((t) => matchingSet.has(t.traceId))
+      const visibleTraces = showingAll ? entry.data : matchingTraces
+      const hiddenCount = entry.data.length - matchingTraces.length
       const header =
         hiddenCount > 0 ? (
           <button
             type="button"
             onClick={() => toggleShowAllForSession(sessionId)}
-            // The InfiniteTable's `header` slot already injects empty cells
-            // matching the expand + selection columns, so `px-4` here aligns
-            // with the first data column's content (Indicators).
             className="flex w-full items-center justify-start gap-2 px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             {showingAll ? <ChevronsDownUpIcon className="size-3.5" /> : <ChevronsUpDownIcon className="size-3.5" />}
-            {showingAll ? "Hide" : "Show"} {hiddenCount} non-matching trace{hiddenCount === 1 ? "" : "s"}
+            {showingAll ? "Hide" : "Show"} {hiddenCount} non-matching trace
+            {hiddenCount === 1 ? "" : "s"}
           </button>
         ) : undefined
       return {
@@ -710,9 +697,10 @@ export function SessionsView({
           columns={columns}
           getRowKey={getRowKey}
           onRowClick={onRowClick}
+          onToggleExpand={onToggleExpand}
           getRowAriaLabel={getRowAriaLabel}
           getRowClassName={getRowClassName}
-          {...(activeTraceId ? { activeRowKey: activeTraceId } : {})}
+          {...(activeTraceId || activeSessionId ? { activeRowKey: activeTraceId || (activeSessionId as string) } : {})}
           selection={selection}
           infiniteScroll={infiniteScroll}
           sorting={sorting}

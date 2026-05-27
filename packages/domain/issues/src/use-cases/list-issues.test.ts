@@ -5,15 +5,8 @@ import {
   type EvaluationRepositoryShape,
   emptyEvaluationAlignment,
 } from "@domain/evaluations"
-import {
-  type IssueOccurrenceAggregate,
-  type IssueOccurrenceBucket,
-  type IssueTagsAggregate,
-  type IssueTrendSeries,
-  type IssueWindowMetric,
-  ScoreAnalyticsRepository,
-  type ScoreAnalyticsRepositoryShape,
-} from "@domain/scores"
+import { type IssueOccurrenceAggregate, type IssueWindowMetric, ScoreAnalyticsRepository } from "@domain/scores"
+import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import { ChSqlClient, EvaluationId, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { TraceRepository } from "@domain/spans"
@@ -125,87 +118,18 @@ const createEvaluationRepository = (seed: readonly Evaluation[] = []) => {
   return { repository, listByIssueIdsCalls }
 }
 
-const createScoreAnalyticsRepository = (input: {
-  readonly windowMetrics: readonly IssueWindowMetric[]
-  readonly fullHistoryOccurrences: readonly IssueOccurrenceAggregate[]
-  readonly histogramBuckets?: readonly IssueOccurrenceBucket[]
-  readonly trendSeries?: readonly IssueTrendSeries[]
-  readonly tagsAggregates?: readonly IssueTagsAggregate[]
-}) => {
-  const windowMetricInputs: unknown[] = []
-  const aggregateInputs: unknown[] = []
-  const histogramInputs: Array<{
-    issueIds: readonly string[]
-    from: Date
-    to: Date
-    bucketSeconds: number
-  }> = []
-  const trendInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date }> = []
-  const tagsInputs: Array<{ issueIds: readonly string[]; from: Date; to: Date | undefined }> = []
+// `aggregateByIssues` is invoked with the operator-projected `issueIds`, so
+// the fake filters the seeded full-history occurrences by what was asked for.
+const aggregateOccurrences =
+  (seed: readonly IssueOccurrenceAggregate[]) => (input: { readonly issueIds: readonly string[] }) =>
+    Effect.sync(() => seed.filter((occurrence) => input.issueIds.includes(occurrence.issueId)))
 
-  const repository: ScoreAnalyticsRepositoryShape = {
-    existsById: () => Effect.die("Unexpected existsById"),
-    insert: () => Effect.die("Unexpected insert"),
-    delete: () => Effect.die("Unexpected delete"),
-    aggregateByProject: () => Effect.die("Unexpected aggregateByProject"),
-    aggregateBySource: () => Effect.die("Unexpected aggregateBySource"),
-    trendBySource: () => Effect.die("Unexpected trendBySource"),
-    trendByProject: () => Effect.die("Unexpected trendByProject"),
-    rollupByTraceIds: () => Effect.die("Unexpected rollupByTraceIds"),
-    rollupBySessionIds: () => Effect.die("Unexpected rollupBySessionIds"),
-    aggregateByIssues: (aggregateInput) =>
-      Effect.sync(() => {
-        aggregateInputs.push(aggregateInput)
-        return input.fullHistoryOccurrences.filter((occurrence) => aggregateInput.issueIds.includes(occurrence.issueId))
-      }),
-    aggregateTagsByIssues: ({ issueIds, timeRange }) =>
-      Effect.sync(() => {
-        tagsInputs.push({ issueIds, from: timeRange.from, to: timeRange.to })
-        return (input.tagsAggregates ?? []).filter((entry) => issueIds.includes(entry.issueId))
-      }),
-    trendByIssue: () => Effect.die("Unexpected trendByIssue"),
-    listIssueWindowMetrics: (windowMetricInput) =>
-      Effect.sync(() => {
-        windowMetricInputs.push(windowMetricInput)
-        return input.windowMetrics
-      }),
-    histogramByIssues: ({ issueIds, timeRange, bucketSeconds }) =>
-      Effect.sync(() => {
-        histogramInputs.push({
-          issueIds,
-          from: timeRange.from ?? new Date(0),
-          to: timeRange.to ?? new Date(0),
-          bucketSeconds,
-        })
-        return input.histogramBuckets ?? []
-      }),
-    trendByIssues: ({ issueIds, timeRange }) =>
-      Effect.sync(() => {
-        trendInputs.push({
-          issueIds,
-          from: timeRange.from ?? new Date(0),
-          to: timeRange.to ?? new Date(0),
-        })
-        return input.trendSeries ?? []
-      }),
-    countDistinctTracesByTimeRange: () => Effect.die("Unexpected countDistinctTracesByTimeRange"),
-    listTracesByIssue: () => Effect.die("Unexpected listTracesByIssue"),
-    countTracesByIssue: () => Effect.die("Unexpected countTracesByIssue"),
-    escalationSignalsByIssues: () => Effect.die("Unexpected escalationSignalsByIssues"),
-    escalationThresholdHistogramByIssues: () => Effect.die("Unexpected escalationThresholdHistogramByIssues"),
-  }
-
-  return { repository, windowMetricInputs, aggregateInputs, histogramInputs, trendInputs, tagsInputs }
-}
-
-// `provideTraceRepository` reads from this module-level counter at call time
-// (via `Effect.sync`), so each test just sets `traceCount = N` before it runs
-// `Effect.runPromise(listIssuesUseCase(...))`. Vitest runs tests sequentially
-// within a file, so the shared variable doesn't race.
 let traceCount = 0
 const provideTraceRepository = Layer.succeed(
   TraceRepository,
-  createFakeTraceRepository({ countByProjectId: () => Effect.sync(() => traceCount) }).repository,
+  createFakeTraceRepository({
+    countByProjectId: () => Effect.sync(() => traceCount),
+  }).repository,
 )
 
 const createIssueSearch = (
@@ -216,13 +140,19 @@ const createIssueSearch = (
     score: number
   }[],
 ) => {
-  const calls: Array<{ query: string; normalizedEmbedding: readonly number[] }> = []
+  const calls: Array<{
+    query: string
+    normalizedEmbedding: readonly number[]
+  }> = []
 
   return {
     calls,
     hybridSearch: (input: { readonly query: string; readonly normalizedEmbedding: readonly number[] }) =>
       Effect.sync(() => {
-        calls.push({ query: input.query, normalizedEmbedding: input.normalizedEmbedding })
+        calls.push({
+          query: input.query,
+          normalizedEmbedding: input.normalizedEmbedding,
+        })
         return candidates
       }),
   }
@@ -237,14 +167,25 @@ describe("listIssuesUseCase", () => {
     const now = new Date("2026-04-10T00:00:00.000Z")
     const { repository: issueRepository } = createFakeIssueRepository([])
     const { repository: evaluationRepository } = createEvaluationRepository()
-    const {
-      repository: scoreAnalyticsRepository,
-      windowMetricInputs,
-      aggregateInputs,
-      histogramInputs,
-    } = createScoreAnalyticsRepository({
-      windowMetrics: [],
-      fullHistoryOccurrences: [],
+    const windowMetricInputs: unknown[] = []
+    const aggregateInputs: unknown[] = []
+    const histogramInputs: unknown[] = []
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listIssueWindowMetrics: (input) =>
+        Effect.sync(() => {
+          windowMetricInputs.push(input)
+          return []
+        }),
+      aggregateByIssues: (input) =>
+        Effect.sync(() => {
+          aggregateInputs.push(input)
+          return []
+        }),
+      histogramByIssues: (input) =>
+        Effect.sync(() => {
+          histogramInputs.push(input)
+          return []
+        }),
     })
     let traceCountCalls = 0
     const { repository: traceRepository } = createFakeTraceRepository({
@@ -305,57 +246,64 @@ describe("listIssuesUseCase", () => {
 
     const { repository: issueRepository } = createFakeIssueRepository([ignoredIssue, regressedIssue, newestIssue])
     const { repository: evaluationRepository, listByIssueIdsCalls } = createEvaluationRepository()
-    const {
-      repository: scoreAnalyticsRepository,
-      aggregateInputs,
-      windowMetricInputs,
-    } = createScoreAnalyticsRepository({
-      windowMetrics: [
-        makeWindowMetric({
-          issueId: newestIssue.id,
-          occurrences: 4,
-          firstSeenAt: new Date("2026-04-07T08:00:00.000Z"),
-          lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
+    const fullHistoryOccurrences: readonly IssueOccurrenceAggregate[] = [
+      makeOccurrence({
+        issueId: newestIssue.id,
+        totalOccurrences: 4,
+        recentOccurrences: 4,
+        baselineAvgOccurrences: 2,
+        firstSeenAt: new Date("2026-04-07T08:00:00.000Z"),
+        lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
+      }),
+      makeOccurrence({
+        issueId: regressedIssue.id,
+        totalOccurrences: 6,
+        recentOccurrences: 0,
+        baselineAvgOccurrences: 0,
+        firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
+        lastSeenAt: new Date("2026-04-05T08:00:00.000Z"),
+      }),
+      makeOccurrence({
+        issueId: ignoredIssue.id,
+        totalOccurrences: 2,
+        recentOccurrences: 0,
+        baselineAvgOccurrences: 0,
+        firstSeenAt: new Date("2026-03-10T08:00:00.000Z"),
+        lastSeenAt: new Date("2026-04-02T08:00:00.000Z"),
+      }),
+    ]
+    const windowMetricInputs: unknown[] = []
+    const aggregateInputs: unknown[] = []
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listIssueWindowMetrics: (input) =>
+        Effect.sync(() => {
+          windowMetricInputs.push(input)
+          return [
+            makeWindowMetric({
+              issueId: newestIssue.id,
+              occurrences: 4,
+              firstSeenAt: new Date("2026-04-07T08:00:00.000Z"),
+              lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
+            }),
+            makeWindowMetric({
+              issueId: regressedIssue.id,
+              occurrences: 6,
+              firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
+              lastSeenAt: new Date("2026-04-05T08:00:00.000Z"),
+            }),
+            makeWindowMetric({
+              issueId: ignoredIssue.id,
+              occurrences: 2,
+              firstSeenAt: new Date("2026-03-10T08:00:00.000Z"),
+              lastSeenAt: new Date("2026-04-02T08:00:00.000Z"),
+            }),
+          ]
         }),
-        makeWindowMetric({
-          issueId: regressedIssue.id,
-          occurrences: 6,
-          firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
-          lastSeenAt: new Date("2026-04-05T08:00:00.000Z"),
+      aggregateByIssues: (input) =>
+        Effect.sync(() => {
+          aggregateInputs.push(input)
+          return fullHistoryOccurrences.filter((occurrence) => input.issueIds.includes(occurrence.issueId))
         }),
-        makeWindowMetric({
-          issueId: ignoredIssue.id,
-          occurrences: 2,
-          firstSeenAt: new Date("2026-03-10T08:00:00.000Z"),
-          lastSeenAt: new Date("2026-04-02T08:00:00.000Z"),
-        }),
-      ],
-      fullHistoryOccurrences: [
-        makeOccurrence({
-          issueId: newestIssue.id,
-          totalOccurrences: 4,
-          recentOccurrences: 4,
-          baselineAvgOccurrences: 2,
-          firstSeenAt: new Date("2026-04-07T08:00:00.000Z"),
-          lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
-        }),
-        makeOccurrence({
-          issueId: regressedIssue.id,
-          totalOccurrences: 6,
-          recentOccurrences: 0,
-          baselineAvgOccurrences: 0,
-          firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
-          lastSeenAt: new Date("2026-04-05T08:00:00.000Z"),
-        }),
-        makeOccurrence({
-          issueId: ignoredIssue.id,
-          totalOccurrences: 2,
-          recentOccurrences: 0,
-          baselineAvgOccurrences: 0,
-          firstSeenAt: new Date("2026-03-10T08:00:00.000Z"),
-          lastSeenAt: new Date("2026-04-02T08:00:00.000Z"),
-        }),
-      ],
     })
     const { calls } = createIssueSearch([])
 
@@ -454,32 +402,39 @@ describe("listIssuesUseCase", () => {
         name: "Archived monitor",
       }),
     ])
-    const {
-      repository: scoreAnalyticsRepository,
-      histogramInputs,
-      trendInputs,
-    } = createScoreAnalyticsRepository({
-      windowMetrics: [
-        makeWindowMetric({
-          issueId: activeIssue.id,
-          occurrences: 5,
-          firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
-          lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
-        }),
-        makeWindowMetric({
-          issueId: regressedIssue.id,
-          occurrences: 4,
-          firstSeenAt: new Date("2026-03-02T00:00:00.000Z"),
-          lastSeenAt: new Date("2026-04-08T00:00:00.000Z"),
-        }),
-        makeWindowMetric({
-          issueId: archivedIssue.id,
-          occurrences: 7,
-          firstSeenAt: new Date("2026-03-03T00:00:00.000Z"),
-          lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
-        }),
-      ],
-      fullHistoryOccurrences: [
+    const histogramInputs: Array<{
+      issueIds: readonly string[]
+      from: Date
+      to: Date
+    }> = []
+    const trendInputs: Array<{
+      issueIds: readonly string[]
+      from: Date
+      to: Date
+    }> = []
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listIssueWindowMetrics: () =>
+        Effect.succeed([
+          makeWindowMetric({
+            issueId: activeIssue.id,
+            occurrences: 5,
+            firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
+            lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
+          }),
+          makeWindowMetric({
+            issueId: regressedIssue.id,
+            occurrences: 4,
+            firstSeenAt: new Date("2026-03-02T00:00:00.000Z"),
+            lastSeenAt: new Date("2026-04-08T00:00:00.000Z"),
+          }),
+          makeWindowMetric({
+            issueId: archivedIssue.id,
+            occurrences: 7,
+            firstSeenAt: new Date("2026-03-03T00:00:00.000Z"),
+            lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
+          }),
+        ]),
+      aggregateByIssues: aggregateOccurrences([
         makeOccurrence({
           issueId: activeIssue.id,
           recentOccurrences: 3,
@@ -498,21 +453,31 @@ describe("listIssuesUseCase", () => {
           baselineAvgOccurrences: 0,
           lastSeenAt: new Date("2026-04-04T00:00:00.000Z"),
         }),
-      ],
-      histogramBuckets: [
-        { bucket: "2026-04-09", count: 3 },
-        { bucket: "2026-04-10", count: 2 },
-      ],
-      trendSeries: [
-        {
-          issueId: activeIssue.id,
-          buckets: [{ bucket: "2026-04-09", count: 5 }],
-        },
-        {
-          issueId: regressedIssue.id,
-          buckets: [{ bucket: "2026-04-08", count: 4 }],
-        },
-      ],
+      ]),
+      histogramByIssues: ({ issueIds, timeRange }) =>
+        Effect.sync(() => {
+          histogramInputs.push({
+            issueIds,
+            from: timeRange.from ?? new Date(0),
+            to: timeRange.to ?? new Date(0),
+          })
+          return [
+            { bucket: "2026-04-09", count: 3 },
+            { bucket: "2026-04-10", count: 2 },
+          ]
+        }),
+      trendByIssues: ({ issueIds, timeRange }) =>
+        Effect.sync(() => {
+          trendInputs.push({
+            issueIds,
+            from: timeRange.from ?? new Date(0),
+            to: timeRange.to ?? new Date(0),
+          })
+          return [
+            { issueId: activeIssue.id, buckets: [{ bucket: "2026-04-09", count: 5 }] },
+            { issueId: regressedIssue.id, buckets: [{ bucket: "2026-04-08", count: 4 }] },
+          ]
+        }),
     })
     const { calls } = createIssueSearch([])
     traceCount = 10
@@ -578,16 +543,28 @@ describe("listIssuesUseCase", () => {
 
     const { repository: issueRepository } = createFakeIssueRepository([taggedIssue, untaggedIssue])
     const { repository: evaluationRepository } = createEvaluationRepository()
-    const { repository: scoreAnalyticsRepository, tagsInputs } = createScoreAnalyticsRepository({
-      windowMetrics: [
-        makeWindowMetric({ issueId: taggedIssue.id, occurrences: 1 }),
-        makeWindowMetric({ issueId: untaggedIssue.id, occurrences: 1 }),
-      ],
-      fullHistoryOccurrences: [
+    const tagsInputs: Array<{
+      issueIds: readonly string[]
+      from: Date
+      to: Date | undefined
+    }> = []
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listIssueWindowMetrics: () =>
+        Effect.succeed([
+          makeWindowMetric({ issueId: taggedIssue.id, occurrences: 1 }),
+          makeWindowMetric({ issueId: untaggedIssue.id, occurrences: 1 }),
+        ]),
+      aggregateByIssues: aggregateOccurrences([
         makeOccurrence({ issueId: taggedIssue.id }),
         makeOccurrence({ issueId: untaggedIssue.id }),
-      ],
-      tagsAggregates: [{ issueId: taggedIssue.id, tags: ["checkout", "billing"] }],
+      ]),
+      aggregateTagsByIssues: ({ issueIds, timeRange }) =>
+        Effect.sync(() => {
+          tagsInputs.push({ issueIds, from: timeRange.from, to: timeRange.to })
+          return [{ issueId: taggedIssue.id, tags: ["checkout", "billing"] }].filter((entry) =>
+            issueIds.includes(entry.issueId),
+          )
+        }),
     })
     createIssueSearch([])
 
@@ -624,9 +601,19 @@ describe("listIssuesUseCase", () => {
     const issue = makeIssue({ id: IssueId("a".repeat(24)) })
     const { repository: issueRepository } = createFakeIssueRepository([issue])
     const { repository: evaluationRepository } = createEvaluationRepository()
-    const { repository: scoreAnalyticsRepository, tagsInputs } = createScoreAnalyticsRepository({
-      windowMetrics: [makeWindowMetric({ issueId: issue.id })],
-      fullHistoryOccurrences: [makeOccurrence({ issueId: issue.id })],
+    const tagsInputs: Array<{
+      issueIds: readonly string[]
+      from: Date
+      to: Date | undefined
+    }> = []
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listIssueWindowMetrics: () => Effect.succeed([makeWindowMetric({ issueId: issue.id })]),
+      aggregateByIssues: aggregateOccurrences([makeOccurrence({ issueId: issue.id })]),
+      aggregateTagsByIssues: ({ issueIds, timeRange }) =>
+        Effect.sync(() => {
+          tagsInputs.push({ issueIds, from: timeRange.from, to: timeRange.to })
+          return []
+        }),
     })
     createIssueSearch([])
 
@@ -739,16 +726,23 @@ describe("listIssuesUseCase", () => {
 
       const { repository: issueRepository } = createFakeIssueRepository([issue])
       const { repository: evaluationRepository } = createEvaluationRepository()
-      const { repository: scoreAnalyticsRepository, histogramInputs } = createScoreAnalyticsRepository({
-        windowMetrics: [
-          makeWindowMetric({
-            issueId: issue.id,
-            occurrences: 3,
-            firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
-            lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
-          }),
-        ],
-        fullHistoryOccurrences: [
+      const histogramInputs: Array<{
+        issueIds: readonly string[]
+        from: Date
+        to: Date
+        bucketSeconds: number
+      }> = []
+      const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+        listIssueWindowMetrics: () =>
+          Effect.succeed([
+            makeWindowMetric({
+              issueId: issue.id,
+              occurrences: 3,
+              firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
+              lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
+            }),
+          ]),
+        aggregateByIssues: aggregateOccurrences([
           makeOccurrence({
             issueId: issue.id,
             totalOccurrences: 3,
@@ -757,7 +751,17 @@ describe("listIssuesUseCase", () => {
             firstSeenAt: new Date("2026-03-01T00:00:00.000Z"),
             lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
           }),
-        ],
+        ]),
+        histogramByIssues: ({ issueIds, timeRange, bucketSeconds }) =>
+          Effect.sync(() => {
+            histogramInputs.push({
+              issueIds,
+              from: timeRange.from ?? new Date(0),
+              to: timeRange.to ?? new Date(0),
+              bucketSeconds,
+            })
+            return []
+          }),
       })
       createIssueSearch([])
       traceCount = 3
@@ -834,29 +838,41 @@ describe("listIssuesUseCase", () => {
       hybridSearch: issueSearch.hybridSearch,
     })
     const { repository: evaluationRepository } = createEvaluationRepository()
-    const { repository: scoreAnalyticsRepository, histogramInputs } = createScoreAnalyticsRepository({
-      windowMetrics: [
-        makeWindowMetric({
+    const histogramInputs: Array<{ issueIds: readonly string[] }> = []
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listIssueWindowMetrics: () =>
+        Effect.succeed([
+          makeWindowMetric({
+            issueId: firstIssue.id,
+            occurrences: 4,
+            lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
+          }),
+          makeWindowMetric({
+            issueId: secondIssue.id,
+            occurrences: 4,
+            lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
+          }),
+          makeWindowMetric({
+            issueId: thirdIssue.id,
+            occurrences: 9,
+            lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
+          }),
+        ]),
+      aggregateByIssues: aggregateOccurrences([
+        makeOccurrence({
           issueId: firstIssue.id,
-          occurrences: 4,
           lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
         }),
-        makeWindowMetric({
+        makeOccurrence({
           issueId: secondIssue.id,
-          occurrences: 4,
           lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
         }),
-        makeWindowMetric({
-          issueId: thirdIssue.id,
-          occurrences: 9,
-          lastSeenAt: new Date("2026-04-10T00:00:00.000Z"),
+      ]),
+      histogramByIssues: ({ issueIds }) =>
+        Effect.sync(() => {
+          histogramInputs.push({ issueIds })
+          return [{ bucket: "2026-04-09", count: 8 }]
         }),
-      ],
-      fullHistoryOccurrences: [
-        makeOccurrence({ issueId: firstIssue.id, lastSeenAt: new Date("2026-04-09T00:00:00.000Z") }),
-        makeOccurrence({ issueId: secondIssue.id, lastSeenAt: new Date("2026-04-09T00:00:00.000Z") }),
-      ],
-      histogramBuckets: [{ bucket: "2026-04-09", count: 8 }],
     })
     const { calls } = issueSearch
     traceCount = 20
@@ -918,23 +934,37 @@ describe("listIssuesUseCase", () => {
         name: "Second issue evaluation",
       }),
     ])
-    const { repository: scoreAnalyticsRepository } = createScoreAnalyticsRepository({
-      windowMetrics: [
-        makeWindowMetric({ issueId: firstIssue.id, occurrences: 3, lastSeenAt: new Date("2026-04-09T00:00:00.000Z") }),
-        makeWindowMetric({ issueId: secondIssue.id, occurrences: 1, lastSeenAt: new Date("2026-04-08T00:00:00.000Z") }),
-        makeWindowMetric({ issueId: thirdIssue.id, occurrences: 2, lastSeenAt: new Date("2026-04-07T00:00:00.000Z") }),
-      ],
-      fullHistoryOccurrences: [
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listIssueWindowMetrics: () =>
+        Effect.succeed([
+          makeWindowMetric({
+            issueId: firstIssue.id,
+            occurrences: 3,
+            lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
+          }),
+          makeWindowMetric({
+            issueId: secondIssue.id,
+            occurrences: 1,
+            lastSeenAt: new Date("2026-04-08T00:00:00.000Z"),
+          }),
+          makeWindowMetric({
+            issueId: thirdIssue.id,
+            occurrences: 2,
+            lastSeenAt: new Date("2026-04-07T00:00:00.000Z"),
+          }),
+        ]),
+      aggregateByIssues: aggregateOccurrences([
         makeOccurrence({ issueId: firstIssue.id }),
         makeOccurrence({ issueId: secondIssue.id }),
         makeOccurrence({ issueId: thirdIssue.id }),
-      ],
-      trendSeries: [
-        {
-          issueId: secondIssue.id,
-          buckets: [{ bucket: "2026-04-08", count: 1 }],
-        },
-      ],
+      ]),
+      trendByIssues: () =>
+        Effect.succeed([
+          {
+            issueId: secondIssue.id,
+            buckets: [{ bucket: "2026-04-08", count: 1 }],
+          },
+        ]),
     })
     createIssueSearch([])
     traceCount = 5
@@ -984,23 +1014,30 @@ describe("listIssuesUseCase", () => {
 
     const { repository: issueRepository } = createFakeIssueRepository([oldestIssue, newestIssue])
     const { repository: evaluationRepository } = createEvaluationRepository()
-    const { repository: scoreAnalyticsRepository } = createScoreAnalyticsRepository({
-      windowMetrics: [
-        makeWindowMetric({
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listIssueWindowMetrics: () =>
+        Effect.succeed([
+          makeWindowMetric({
+            issueId: oldestIssue.id,
+            occurrences: 2,
+            lastSeenAt: new Date("2026-04-02T00:00:00.000Z"),
+          }),
+          makeWindowMetric({
+            issueId: newestIssue.id,
+            occurrences: 1,
+            lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
+          }),
+        ]),
+      aggregateByIssues: aggregateOccurrences([
+        makeOccurrence({
           issueId: oldestIssue.id,
-          occurrences: 2,
           lastSeenAt: new Date("2026-04-02T00:00:00.000Z"),
         }),
-        makeWindowMetric({
+        makeOccurrence({
           issueId: newestIssue.id,
-          occurrences: 1,
           lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
         }),
-      ],
-      fullHistoryOccurrences: [
-        makeOccurrence({ issueId: oldestIssue.id, lastSeenAt: new Date("2026-04-02T00:00:00.000Z") }),
-        makeOccurrence({ issueId: newestIssue.id, lastSeenAt: new Date("2026-04-09T00:00:00.000Z") }),
-      ],
+      ]),
     })
     createIssueSearch([])
     traceCount = 4

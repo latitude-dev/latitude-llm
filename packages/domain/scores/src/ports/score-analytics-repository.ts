@@ -183,6 +183,16 @@ export interface IssueTracePage {
   readonly offset: number
 }
 
+/** Per-issue rollup of the scores recorded within a single session. */
+export interface SessionIssueRollup {
+  readonly issueId: IssueId
+  readonly occurrences: number
+  readonly firstSeenAt: Date
+  readonly lastSeenAt: Date
+  /** Distinct traces in the session that contributed a score to this issue. */
+  readonly traceIds: readonly TraceId[]
+}
+
 /** Common options for analytics queries. */
 export interface ScoreAnalyticsOptions {
   readonly excludeSimulations?: boolean
@@ -366,6 +376,22 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly issueId: IssueId
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<number, RepositoryError, ChSqlClient>
+  /**
+   * Per-issue rollup of the scores recorded across a set of traces — the
+   * reverse of `listTracesByIssue`. Drives the session panel's Issues tab,
+   * scoped to the session's `traceIds`. Scoping by `trace_id` (not
+   * `session_id`) is deliberate: orphan sessions synthesize their id from the
+   * trace id in the sessions MV, but the raw `scores` rows carry no
+   * `session_id`, so a `session_id` filter would miss them entirely. Every
+   * score reliably carries a `trace_id`. `issue_id` is `''` when a score isn't
+   * tied to an issue, so those rows are excluded. Ordered by `lastSeenAt` desc.
+   */
+  listIssuesByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<readonly SessionIssueRollup[], RepositoryError, ChSqlClient>
 }
 
 export class ScoreAnalyticsRepository extends Context.Service<

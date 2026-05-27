@@ -10,6 +10,7 @@ import {
   createAnnotation,
   deleteAnnotation,
   listAnnotationCountsByTraceIds,
+  listAnnotationsBySession,
   listAnnotationsByTrace,
   rejectSystemAnnotation,
   type TraceAnnotationCountsRecord,
@@ -71,6 +72,46 @@ export function useAnnotationsByTrace({
         data: { projectId, traceId, limit, offset, draftMode: effectiveDraftMode },
       }),
     enabled,
+  })
+}
+
+const annotationsBySessionQueryKey = (
+  projectId: string,
+  traceIds: readonly string[],
+  limit?: number,
+  offset?: number,
+  draftMode: "exclude" | "include" | "only" = DEFAULT_TRACE_DRAFT_MODE,
+) => ["annotations", "session", projectId, [...traceIds].sort(), limit, offset, draftMode] as const
+
+/**
+ * Every annotation across a session's traces (session panel Annotations tab).
+ * Scoped by `traceIds` rather than `sessionId` so orphan sessions still surface
+ * their annotations (their scores carry no `session_id`).
+ */
+export function useAnnotationsBySession({
+  projectId,
+  traceIds,
+  limit,
+  offset,
+  draftMode,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceIds: readonly string[]
+  readonly limit?: number
+  readonly offset?: number
+  readonly draftMode?: "exclude" | "include" | "only"
+  readonly enabled?: boolean
+}) {
+  const effectiveDraftMode = draftMode ?? DEFAULT_TRACE_DRAFT_MODE
+
+  return useQuery({
+    queryKey: annotationsBySessionQueryKey(projectId, traceIds, limit, offset, effectiveDraftMode),
+    queryFn: () =>
+      listAnnotationsBySession({
+        data: { projectId, traceIds: [...traceIds], limit, offset, draftMode: effectiveDraftMode },
+      }),
+    enabled: enabled && projectId.length > 0 && traceIds.length > 0,
   })
 }
 

@@ -298,12 +298,17 @@ export function useAnnotationNavigation({
       if (!container) return false
 
       const { messageIndex, partIndex, startOffset, endOffset } = annotation.metadata
-      const isTextSelection =
-        messageIndex !== undefined && partIndex !== undefined && startOffset !== undefined && endOffset !== undefined
+      if (messageIndex === undefined) return false
 
-      if (isTextSelection) {
-        const textElement = container.querySelector<HTMLElement>(`[data-annotation-id="${annotation.id}"]`)
-        if (textElement) {
+      const isTextSelection = partIndex !== undefined && startOffset !== undefined && endOffset !== undefined
+
+      // Try to resolve the target element now; returns true once it scrolls.
+      // Both branches may run before the conversation DOM mounts (e.g. sliding
+      // into a freshly opened trace), so the caller falls back to an observer.
+      const tryScroll = (): boolean => {
+        if (isTextSelection) {
+          const textElement = container.querySelector<HTMLElement>(`[data-annotation-id="${annotation.id}"]`)
+          if (!textElement) return false
           scrollToElement({
             element: textElement,
             clickTarget: textElement,
@@ -313,45 +318,30 @@ export function useAnnotationNavigation({
           return true
         }
 
-        const observer = new MutationObserver((_, obs) => {
-          const element = container.querySelector<HTMLElement>(`[data-annotation-id="${annotation.id}"]`)
-          if (element) {
-            obs.disconnect()
-            observerRef.current = null
-            scrollToElement({
-              element,
-              clickTarget: element,
-              annotation,
-              openTextSelectionPopoverImmediately: true,
-            })
-          }
-        })
-
-        observerRef.current = observer
-        observer.observe(container, { childList: true, subtree: true })
-        observerTimeoutRef.current = setTimeout(() => {
-          observer.disconnect()
-          observerRef.current = null
-          observerTimeoutRef.current = null
-        }, 5000)
-        return false
-      }
-
-      if (messageIndex !== undefined) {
         const messageElement = container.querySelector<HTMLElement>(`[data-message-index="${messageIndex}"]`)
+        if (!messageElement) return false
         const triggerElement = container.querySelector<HTMLElement>(
           `[data-message-annotation-trigger="${messageIndex}"]`,
         )
-        if (messageElement) {
-          scrollToElement({
-            element: messageElement,
-            clickTarget: triggerElement,
-            annotation,
-          })
-          return true
-        }
+        scrollToElement({ element: messageElement, clickTarget: triggerElement, annotation })
+        return true
       }
 
+      if (tryScroll()) return true
+
+      const observer = new MutationObserver((_, obs) => {
+        if (tryScroll()) {
+          obs.disconnect()
+          observerRef.current = null
+        }
+      })
+      observerRef.current = observer
+      observer.observe(container, { childList: true, subtree: true })
+      observerTimeoutRef.current = setTimeout(() => {
+        observer.disconnect()
+        observerRef.current = null
+        observerTimeoutRef.current = null
+      }, 5000)
       return false
     },
     [scrollContainerRef, scrollToElement, clearObserver],

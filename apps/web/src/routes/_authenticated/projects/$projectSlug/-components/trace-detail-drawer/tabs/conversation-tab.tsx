@@ -1,9 +1,21 @@
-import { Button, Conversation, Icon, ScrollNavigator, type ScrollNavigatorHandle, Skeleton, Text } from "@repo/ui"
+import type { TraceSearchHighlightsResult } from "@domain/spans"
+import {
+  Button,
+  Conversation,
+  type FirstMatchHint,
+  type HighlightRange,
+  Icon,
+  ScrollNavigator,
+  type ScrollNavigatorHandle,
+  Skeleton,
+  Text,
+} from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
-import { type RefObject, useCallback, useRef } from "react"
+import { type RefObject, useCallback, useMemo, useRef } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
+import { useTraceSearchHighlights } from "../../../../../../../domains/traces/traces.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 import { useAuthenticatedImpersonatedBy, useAuthenticatedUser } from "../../../../../-route-data.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
@@ -13,6 +25,18 @@ import {
 } from "../../annotations/hooks/use-annotation-popover.ts"
 import { useTraceAnnotationsData } from "../../annotations/hooks/use-trace-annotations-data.ts"
 import { MessageAnnotationTrigger } from "../../annotations/message-annotation-trigger.tsx"
+import { useScrollToFirstHighlight } from "./use-scroll-to-first-highlight.ts"
+
+function toSearchHighlightRanges(result: TraceSearchHighlightsResult | undefined): readonly HighlightRange[] {
+  if (!result || result.highlights.length === 0) return []
+  return result.highlights.map((h) => ({
+    messageIndex: h.messageIndex,
+    partIndex: h.partIndex,
+    startOffset: h.startOffset,
+    endOffset: h.endOffset,
+    type: h.type,
+  }))
+}
 
 function ConversationContent({
   traceDetail,
@@ -22,6 +46,7 @@ function ConversationContent({
   scrollContainerRef,
   textSelectionPopoverControlsRef,
   onPopoverClose,
+  searchQuery,
 }: {
   readonly traceDetail: TraceDetailRecord
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
@@ -30,6 +55,7 @@ function ConversationContent({
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
   readonly textSelectionPopoverControlsRef?: RefObject<TextSelectionPopoverControls | null> | undefined
   readonly onPopoverClose?: (() => void) | undefined
+  readonly searchQuery?: string | undefined
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
@@ -82,7 +108,7 @@ function ConversationContent({
   })
 
   const {
-    highlightRanges,
+    highlightRanges: annotationHighlightRanges,
     onAnnotationClick,
     handleTextSelect,
     openExistingAnnotationPopover,
@@ -98,6 +124,34 @@ function ConversationContent({
     traceId: traceDetail.traceId,
     isActive,
     getSpanIdForMessage,
+  })
+
+  const effectiveSearchQuery = searchQuery ?? ""
+  const { data: searchHighlightsData } = useTraceSearchHighlights({
+    projectId,
+    traceId: traceDetail.traceId,
+    searchQuery: effectiveSearchQuery,
+  })
+
+  const searchHighlightRanges = useMemo(() => toSearchHighlightRanges(searchHighlightsData), [searchHighlightsData])
+
+  const mergedHighlightRanges = useMemo<readonly HighlightRange[]>(
+    () => [...annotationHighlightRanges, ...searchHighlightRanges],
+    [annotationHighlightRanges, searchHighlightRanges],
+  )
+
+  const firstMatchHint = useMemo<FirstMatchHint | null>(() => {
+    if (!searchHighlightsData || searchHighlightsData.firstMatchIndex < 0) return null
+    const first = searchHighlightsData.highlights[searchHighlightsData.firstMatchIndex]
+    if (!first) return null
+    return { messageIndex: first.messageIndex, partIndex: first.partIndex }
+  }, [searchHighlightsData])
+
+  useScrollToFirstHighlight({
+    scrollRef,
+    traceId: traceDetail.traceId,
+    searchQuery: effectiveSearchQuery,
+    highlightsData: searchHighlightsData,
   })
 
   if (textSelectionPopoverControlsRef) {
@@ -136,7 +190,8 @@ function ConversationContent({
           onTextSelect={handleTextSelect}
           onSelectionDismiss={closeAnnotationPopover}
           clearSelectionRef={clearSelectionRef}
-          highlightRanges={highlightRanges}
+          highlightRanges={mergedHighlightRanges}
+          firstMatchHint={firstMatchHint}
           onAnnotationClick={onAnnotationClick}
           messageAnnotationSlot={(messageIndex, role) => {
             const data = messageLevelAnnotations.get(messageIndex)
@@ -211,6 +266,7 @@ export function ConversationTab({
   scrollContainerRef,
   textSelectionPopoverControlsRef,
   onPopoverClose,
+  searchQuery,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
@@ -223,6 +279,7 @@ export function ConversationTab({
   readonly textSelectionPopoverControlsRef?: RefObject<TextSelectionPopoverControls | null> | undefined
   /** Optional callback when annotation popover closes. Used to clear selection state. */
   readonly onPopoverClose?: (() => void) | undefined
+  readonly searchQuery?: string | undefined
 }) {
   if (isDetailLoading) {
     return (
@@ -251,6 +308,7 @@ export function ConversationTab({
       scrollContainerRef={scrollContainerRef}
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
       onPopoverClose={onPopoverClose}
+      searchQuery={searchQuery}
     />
   )
 }

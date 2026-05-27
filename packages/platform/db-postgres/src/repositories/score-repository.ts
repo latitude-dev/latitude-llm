@@ -414,6 +414,36 @@ export const ScoreRepositoryLive = Layer.effect(
             )
         }),
 
+      listByTraceIds: ({
+        projectId,
+        traceIds,
+        source,
+        options,
+      }: {
+        readonly projectId: ProjectId
+        readonly traceIds: readonly TraceId[]
+        readonly source?: ScoreSource
+        readonly options?: ScoreListOptions
+      }) => {
+        if (traceIds.length === 0) {
+          return Effect.succeed({
+            items: [],
+            hasMore: false,
+            limit: options?.limit ?? 50,
+            offset: options?.offset ?? 0,
+          })
+        }
+        const traceIdValues = traceIds.map((traceId) => String(traceId))
+        const combined =
+          source !== undefined
+            ? and(eq(scores.projectId, projectId), inArray(scores.traceId, traceIdValues), eq(scores.source, source))
+            : and(eq(scores.projectId, projectId), inArray(scores.traceId, traceIdValues))
+        return list({
+          baseWhere: combined ?? eq(scores.projectId, projectId),
+          options,
+        })
+      },
+
       listBySessionId: ({
         projectId,
         sessionId,

@@ -4,14 +4,31 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { useMemo } from "react"
 import {
   countSessionsByProject,
+  getSessionDetail,
   getSessionDistinctValues,
   getSessionMetricsByProject,
+  listSessionIssues,
   listSessionsByProject,
+  type SessionDetailRecord,
   type SessionRecord,
   type SessionSearchMatchRecord,
 } from "./sessions.functions.ts"
 
 const BATCH_SIZE = 50
+
+/**
+ * A session is "live" while its most recent span end (`max_end_time`,
+ * serialized as `endTime`) is within this window of now; otherwise "idle".
+ * Derived inline at read time — there is no PG status table or cron.
+ */
+const SESSION_LIVE_THRESHOLD_MS = 5 * 60 * 1000
+
+export type SessionStatus = "live" | "idle"
+
+export function deriveSessionStatus(endTime: string | Date, now: number = Date.now()): SessionStatus {
+  const last = typeof endTime === "string" ? new Date(endTime).getTime() : endTime.getTime()
+  return now - last < SESSION_LIVE_THRESHOLD_MS ? "live" : "idle"
+}
 
 export function useSessionsInfiniteScroll({
   projectId,
@@ -115,6 +132,57 @@ export function useSessionsCount({
     matchingTraceCount: data?.matchingTraceCount,
     isLoading,
   }
+}
+
+/**
+ * Single-session point lookup for the session panel header + Metadata tab.
+ * While the session reads as `live`, the query refetches every 30s so the
+ * header pill stays fresh; once it goes `idle` the polling stops.
+ */
+export function useSessionDetail({
+  projectId,
+  sessionId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly sessionId: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: ["session-detail", projectId, sessionId],
+    queryFn: async () => {
+      const result = await getSessionDetail({ data: { projectId, sessionId } })
+      return result as SessionDetailRecord | null
+    },
+    enabled: enabled && projectId.length > 0 && sessionId.length > 0,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      return deriveSessionStatus(data.endTime) === "live" ? 30_000 : false
+    },
+  })
+}
+
+/**
+ * Issues scored across a session's traces — drives the panel's Issues tab.
+ * Scoped by `traceIds` (the session's authoritative trace set) so orphan
+ * sessions still surface their issues.
+ */
+export function useSessionIssues({
+  projectId,
+  traceIds,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceIds: readonly string[]
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: ["session-issues", projectId, [...traceIds].sort()],
+    queryFn: () => listSessionIssues({ data: { projectId, traceIds: [...traceIds] } }),
+    enabled: enabled && projectId.length > 0 && traceIds.length > 0,
+    staleTime: 30_000,
+  })
 }
 
 export function useSessionMetrics({

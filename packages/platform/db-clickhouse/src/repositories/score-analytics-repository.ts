@@ -15,6 +15,7 @@ import type {
   ScoreAnalyticsOptions,
   ScoreAnalyticsTimeRange,
   ScoreTrendBucket,
+  SessionIssueRollup,
   SessionScoreRollup,
   TraceScoreRollup,
 } from "@domain/scores"
@@ -206,6 +207,14 @@ type CountRow = {
 type IssueTraceSummaryRow = {
   trace_id: string
   last_seen_at: string
+}
+
+type SessionIssueRollupRow = {
+  issue_id: string
+  occurrences: string
+  first_seen_at: string
+  last_seen_at: string
+  trace_ids: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -1354,6 +1363,48 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             .pipe(
               Effect.map((rows) => Number(rows[0]?.total ?? 0)),
               Effect.mapError((error) => toRepositoryError(error, "countTracesByIssue")),
+            )
+        }),
+      listIssuesByTraceIds: ({ organizationId, projectId, traceIds, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (traceIds.length === 0) return []
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                        issue_id,
+                        count()                                    AS occurrences,
+                        min(created_at)                            AS first_seen_at,
+                        max(created_at)                            AS last_seen_at,
+                        groupUniqArrayIf(trace_id, trace_id != '') AS trace_ids
+                      FROM scores
+                      WHERE ${scopeClause(options)}
+                        AND trace_id IN ({traceIds:Array(String)})
+                        AND issue_id != ''
+                      GROUP BY issue_id
+                      ORDER BY last_seen_at DESC`,
+                query_params: {
+                  ...scopeParams(organizationId, projectId),
+                  traceIds: Array.from(traceIds) as string[],
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionIssueRollupRow>()
+            })
+            .pipe(
+              Effect.map((rows) =>
+                rows.map(
+                  (row): SessionIssueRollup => ({
+                    issueId: toIssueId(normalizeCHString(row.issue_id)),
+                    occurrences: Number(row.occurrences),
+                    firstSeenAt: parseCHDate(row.first_seen_at),
+                    lastSeenAt: parseCHDate(row.last_seen_at),
+                    traceIds: row.trace_ids.map((id) => toTraceId(normalizeCHString(id))),
+                  }),
+                ),
+              ),
+              Effect.mapError((error) => toRepositoryError(error, "listIssuesByTraceIds")),
             )
         }),
       // Lightweight DELETE (row mask); omits deleted rows from subsequent SELECTs without full part rewrite.

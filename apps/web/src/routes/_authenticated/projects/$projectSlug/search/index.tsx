@@ -106,9 +106,7 @@ function SearchPage() {
     liveTaxonomyRecommendationsEnabled &&
     (taxonomyOverview?.topClusters.some((cluster) => cluster.name !== "Pending") ?? false)
   const behaviorEmptyState =
-    liveTaxonomyRecommendationsEnabled &&
-    taxonomyOverview !== undefined &&
-    taxonomyOverview.totalActiveClusters === 0
+    liveTaxonomyRecommendationsEnabled && taxonomyOverview !== undefined && taxonomyOverview.totalActiveClusters === 0
       ? "detecting"
       : hasRecommendedSearches
         ? "recommendations"
@@ -151,6 +149,13 @@ function SearchPage() {
     setActiveTraceId("")
     setSelectedSpanId("")
     setTraceDetailTab("trace")
+  }
+
+  // Submitting a new query invalidates the currently-open trace context —
+  // keep the panel up against the new result set is misleading, so close it.
+  const handleSubmitQ = (next: string) => {
+    if (next !== q) closeTraceDrawer()
+    setQ(next)
   }
 
   const onActiveTraceChange = (traceId: string | undefined) => {
@@ -233,7 +238,7 @@ function SearchPage() {
                 Clear search
               </Tooltip>
             ) : null}
-            <SearchInput key={q} initialValue={q} onSubmit={setQ} />
+            <SearchInput key={q} initialValue={q} onSubmit={handleSubmitQ} />
             <SearchSyntaxLegend />
           </div>
         </Layout.ActionsRow>

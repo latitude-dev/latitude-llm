@@ -147,8 +147,6 @@ function useSlidingIndicator<T extends string>({ active, options, variant, size 
   const tabRefs = useRef<Map<T, HTMLButtonElement>>(new Map())
   const indicatorRef = useRef<HTMLDivElement>(null)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
-  const animationFrameRef = useRef<number | null>(null)
-  const hasPositionedRef = useRef(false)
   const [isIndicatorVisible, setIsIndicatorVisible] = useState(false)
   const [isIndicatorAnimated, setIsIndicatorAnimated] = useState(false)
 
@@ -179,17 +177,6 @@ function useSlidingIndicator<T extends string>({ active, options, variant, size 
     indicatorElement.style.transform = `translate(${x}px, ${y}px)`
     indicatorElement.style.width = `${tabRect.width}px`
     indicatorElement.style.height = `${tabRect.height}px`
-
-    if (!hasPositionedRef.current) {
-      hasPositionedRef.current = true
-      setIsIndicatorVisible(true)
-
-      animationFrameRef.current = requestAnimationFrame(() => {
-        setIsIndicatorAnimated(true)
-      })
-
-      return
-    }
 
     setIsIndicatorVisible(true)
   }, [active])
@@ -223,13 +210,17 @@ function useSlidingIndicator<T extends string>({ active, options, variant, size 
     }
   }, [options, updateIndicator, variant, size])
 
+  // Enable the slide transition one frame after the first paint: the indicator
+  // snaps to the initial tab (no animation), then animates subsequent moves.
+  // Scheduling it in a mount effect (whose setup re-runs on remount) keeps it
+  // working if the Tabs are re-mounted in dev (Fast Refresh / StrictMode) — a
+  // one-shot frame guarded by a persistent ref would be cancelled on the first
+  // unmount and never rescheduled, leaving the animation silently off.
   useMountEffect(() => {
+    const frame = requestAnimationFrame(() => setIsIndicatorAnimated(true))
     return () => {
+      cancelAnimationFrame(frame)
       resizeObserverRef.current?.disconnect()
-
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
     }
   })
 

@@ -228,6 +228,49 @@ export const listAnnotationsByTrace = createServerFn({ method: "GET" })
     return toListResult(result)
   })
 
+/**
+ * Every annotation across a set of traces (the session panel's Annotations
+ * tab passes the session's `traceIds`). Scopes by `trace_id IN (...)` rather
+ * than `session_id` so orphan sessions — whose scores carry no `session_id` —
+ * still surface their annotations.
+ */
+export const listAnnotationsBySession = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceIds: z.array(z.string().length(32)).max(100),
+      limit: z.number().optional(),
+      offset: z.number().optional(),
+      draftMode: scoreDraftModeSchema.optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<AnnotationListResult> => {
+    if (data.traceIds.length === 0) {
+      return { items: [], hasMore: false, limit: data.limit ?? 50, offset: data.offset ?? 0 }
+    }
+
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ScoreRepository
+        return yield* repo.listByTraceIds({
+          projectId: ProjectId(data.projectId),
+          traceIds: data.traceIds.map(TraceId),
+          source: "annotation",
+          options: {
+            ...(data.limit !== undefined ? { limit: data.limit } : {}),
+            ...(data.offset !== undefined ? { offset: data.offset } : {}),
+            draftMode: data.draftMode ?? "include",
+          },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, client, organizationId), withTracing),
+    )
+
+    return toListResult(result)
+  })
+
 export const listAnnotationCountsByTraceIds = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({

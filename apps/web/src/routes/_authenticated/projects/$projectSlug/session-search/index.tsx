@@ -12,7 +12,7 @@ import {
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { ArrowLeftIcon, CircleHelpIcon, FilterIcon, SearchIcon, XIcon } from "lucide-react"
-import { useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { hasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.functions.ts"
 import { useSessionsCount } from "../../../../../domains/sessions/sessions.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -21,6 +21,7 @@ import { useSearchSegments } from "../../../../../lib/hooks/useSearchSegments.ts
 import { EMPTY_SELECTION, type SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
+import { SessionDetailDrawer } from "../-components/session-detail-drawer.tsx"
 import { SESSION_COLUMN_OPTIONS, type SessionColumnId, SessionsView } from "../-components/sessions-view.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
@@ -32,7 +33,6 @@ import {
 } from "../-components/trace-page-state.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { SearchSyntaxLegendContent } from "../search/-components/search-syntax-legend.tsx"
-import { SessionTraceDetailDrawer } from "./-components/session-trace-detail-drawer.tsx"
 
 const SEARCH_QUERY_MAX_LENGTH = 500
 
@@ -72,6 +72,7 @@ function SessionSearchPage() {
   const [q, setQ] = useParamState("q", "")
 
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
+  const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
@@ -79,14 +80,6 @@ function SessionSearchPage() {
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SEARCH_SORTING.direction, {
     validate: (v): v is SortDirection => v === "asc" || v === "desc",
   })
-  // Active query lands on Conversation so the lazy-mount fires highlights immediately.
-  const defaultTraceDetailTab: "trace" | "conversation" = q.length > 0 ? "conversation" : "trace"
-  const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", defaultTraceDetailTab, {
-    validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
-      v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
-  })
-
-  const traceIdsRef = useRef<string[]>([])
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
   const sessionColumnSettings = useTableColumnSettings<SessionColumnId>({
@@ -137,43 +130,38 @@ function SessionSearchPage() {
     setRawFilters("")
   }
 
-  const closeTraceDrawer = () => {
+  // Row click opens the session detail panel. A trace reference (deep link)
+  // also sets `traceId` so the panel slides straight into that trace's slot.
+  const onOpenSession = useCallback(
+    (sessionId: string, traceId?: string) => {
+      setActiveSessionId(sessionId)
+      setActiveTraceId(traceId ?? "")
+    },
+    [setActiveSessionId, setActiveTraceId],
+  )
+
+  const closeSessionPanel = useCallback(() => {
+    setActiveSessionId("")
     setActiveTraceId("")
     setSelectedSpanId("")
-    setTraceDetailTab(defaultTraceDetailTab)
-  }
+  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId])
 
-  const onActiveTraceChange = (traceId: string | undefined) => {
-    if (!traceId) {
-      closeTraceDrawer()
-      return
-    }
-    setActiveTraceId(traceId)
-  }
+  // Submitting a new query invalidates the currently-open session/trace context
+  // — keep the panel up against the new result set is misleading, so close it.
+  const handleSubmitQ = useCallback(
+    (next: string) => {
+      if (next !== q) closeSessionPanel()
+      setQ(next)
+    },
+    [q, setQ, closeSessionPanel],
+  )
 
-  const navigateTrace = (delta: 1 | -1) => {
-    const ids = traceIdsRef.current
-    if (ids.length === 0) return
-    const idx = ids.indexOf(activeTraceId)
-    const target = idx < 0 ? ids[0] : ids[idx + delta]
-    if (target) setActiveTraceId(target)
-  }
-
-  const activeTraceIndex = traceIdsRef.current.indexOf(activeTraceId)
-  const canNavigateNext =
-    traceIdsRef.current.length > 0 && (activeTraceIndex < 0 || activeTraceIndex < traceIdsRef.current.length - 1)
-  const canNavigatePrev = traceIdsRef.current.length > 0 && (activeTraceIndex < 0 || activeTraceIndex > 0)
-
+  // Esc inside the panel is owned by the panel (back to session, then close).
   useHotkeys([
     {
       hotkey: "F",
       callback: () => setFiltersOpen((prev) => !prev),
       options: { enabled: hasContent },
-    },
-    {
-      hotkey: "Escape",
-      callback: closeTraceDrawer,
-      options: { enabled: !!activeTraceId, ignoreInputs: true },
     },
   ])
 
@@ -206,7 +194,7 @@ function SessionSearchPage() {
                 Clear search
               </Tooltip>
             ) : null}
-            <SearchInput key={q} initialValue={q} onSubmit={setQ} />
+            <SearchInput key={q} initialValue={q} onSubmit={handleSubmitQ} />
           </div>
         </Layout.ActionsRow>
       </Layout.Actions>
@@ -273,8 +261,8 @@ function SessionSearchPage() {
           projectId={projectId}
           filters={filters}
           filtersOpen={filtersOpen}
+          activeSessionId={activeSessionId || undefined}
           activeTraceId={activeTraceId || undefined}
-          activeDrawerTab={traceDetailTab}
           sorting={sorting}
           onSortingChange={onSortingChange}
           selectionState={selectionState}
@@ -282,27 +270,21 @@ function SessionSearchPage() {
           totalTraceCount={totalTraceCount}
           onFiltersChange={onFiltersChange}
           onFiltersClose={() => setFiltersOpen(false)}
-          onActiveTraceChange={onActiveTraceChange}
-          traceIdsRef={traceIdsRef}
+          onOpenSession={onOpenSession}
+          onCloseSession={closeSessionPanel}
           visibleColumnIds={sessionColumnSettings.visibleColumnIds}
           {...(hasSearchQuery ? { searchQuery: q } : {})}
         />
       ) : null}
 
-      {hasContent && activeTraceId ? (
+      {hasContent && activeSessionId ? (
         <Layout.Aside>
-          <SessionTraceDetailDrawer
-            key={activeTraceId}
-            traceId={activeTraceId}
+          <SessionDetailDrawer
+            key={activeSessionId}
             projectId={projectId}
-            filters={filters}
-            onFiltersChange={onFiltersChange}
-            onClose={closeTraceDrawer}
-            onNextTrace={() => navigateTrace(1)}
-            onPrevTrace={() => navigateTrace(-1)}
-            canNavigateNext={canNavigateNext}
-            canNavigatePrev={canNavigatePrev}
-            searchQuery={q}
+            sessionId={activeSessionId}
+            onClose={closeSessionPanel}
+            {...(hasSearchQuery ? { searchQuery: q } : {})}
           />
         </Layout.Aside>
       ) : null}

@@ -518,6 +518,41 @@ export const SpanRepositoryLive = Layer.effect(
               Effect.mapError((error) => toRepositoryError(error, "findMessagesForTrace")),
             )
         }),
+
+      findLatestOutputTraceId: ({ organizationId, projectId, traceIds }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          if (traceIds.length === 0) return null
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT argMaxIf(trace_id, end_time, output_messages != '') AS trace_id
+                      FROM (
+                        SELECT trace_id, end_time, output_messages
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND trace_id IN ({traceIds:Array(String)})
+                        ORDER BY span_id, ingested_at DESC
+                        LIMIT 1 BY span_id
+                      )`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  traceIds: Array.from(traceIds) as string[],
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ trace_id: string }>()
+            })
+            .pipe(
+              Effect.map((rows) => {
+                const raw = normalizeCHString(rows[0]?.trace_id ?? "")
+                return raw.length > 0 ? toTraceId(raw) : null
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "findLatestOutputTraceId")),
+            )
+        }),
     }
   }),
 )

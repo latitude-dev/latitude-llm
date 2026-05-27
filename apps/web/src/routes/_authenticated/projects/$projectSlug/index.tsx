@@ -23,6 +23,7 @@ import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-
 import { ColumnsSelector } from "./-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "./-components/export-confirmation-modal.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./-components/project-traces-table.tsx"
+import { SessionDetailDrawer } from "./-components/session-detail-drawer.tsx"
 import {
   DEFAULT_SESSION_SORTING,
   SESSION_COLUMN_OPTIONS,
@@ -57,11 +58,12 @@ function ProjectPage() {
     [projectSlug],
   )
   const currentProject = project ?? routeProject
-  const [activeTab, setActiveTab] = useParamState("tab", "traces", {
+  const [activeTab, setActiveTab] = useParamState("tab", "sessions", {
     validate: (v): v is "traces" | "sessions" => v === "traces" || v === "sessions",
   })
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
+  const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
   const tabDefaultSorting = activeTab === "sessions" ? DEFAULT_SESSION_SORTING : DEFAULT_TRACE_SORTING
@@ -69,7 +71,7 @@ function ProjectPage() {
   const [sortDirection, setSortDirection] = useParamState("sortDirection", tabDefaultSorting.direction, {
     validate: (v): v is SortDirection => v === "asc" || v === "desc",
   })
-  const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", "trace", {
+  const [traceDetailTab] = useParamState("detailTab", "trace", {
     validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
       v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
   })
@@ -141,8 +143,7 @@ function ProjectPage() {
   const closeTraceDrawer = useCallback(() => {
     setActiveTraceId("")
     setSelectedSpanId("")
-    setTraceDetailTab("trace")
-  }, [setActiveTraceId, setSelectedSpanId, setTraceDetailTab])
+  }, [setActiveTraceId, setSelectedSpanId])
 
   const onActiveTraceChange = (traceId: string | undefined) => {
     if (!traceId) {
@@ -151,6 +152,23 @@ function ProjectPage() {
     }
     setActiveTraceId(traceId)
   }
+
+  // Sessions tab: clicking a session row opens the session detail panel. A
+  // trace reference (currently only via deep link) also sets `traceId` so the
+  // panel slides straight into that trace's slot.
+  const onOpenSession = useCallback(
+    (sessionId: string, traceId?: string) => {
+      setActiveSessionId(sessionId)
+      setActiveTraceId(traceId ?? "")
+    },
+    [setActiveSessionId, setActiveTraceId],
+  )
+
+  const closeSessionPanel = useCallback(() => {
+    setActiveSessionId("")
+    setActiveTraceId("")
+    setSelectedSpanId("")
+  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId])
 
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
 
@@ -201,15 +219,17 @@ function ProjectPage() {
     traceIdsRef.current.length > 0 && (activeTraceIndex < 0 || activeTraceIndex < traceIdsRef.current.length - 1)
   const canNavigatePrev = traceIdsRef.current.length > 0 && (activeTraceIndex < 0 || activeTraceIndex > 0)
 
-  // Page-level hotkeys
+  // Page-level hotkeys. Tab switching is disabled while either drawer is open;
+  // the trace-drawer Esc only applies on the Traces tab (the session panel owns
+  // Esc on the Sessions tab).
   useHotkeys([
     { hotkey: "F", callback: () => setFiltersOpen((prev) => !prev) },
-    { hotkey: "1", callback: () => setActiveTab("traces"), options: { enabled: !activeTraceId } },
-    { hotkey: "2", callback: () => setActiveTab("sessions"), options: { enabled: !activeTraceId } },
+    { hotkey: "1", callback: () => setActiveTab("sessions"), options: { enabled: !activeTraceId && !activeSessionId } },
+    { hotkey: "2", callback: () => setActiveTab("traces"), options: { enabled: !activeTraceId && !activeSessionId } },
     {
       hotkey: "Escape",
       callback: closeTraceDrawer,
-      options: { enabled: !!activeTraceId, ignoreInputs: true },
+      options: { enabled: !!activeTraceId && !activeSessionId, ignoreInputs: true, conflictBehavior: "allow" },
     },
   ])
 
@@ -322,14 +342,14 @@ function ProjectPage() {
               size="sm"
               options={[
                 {
-                  id: "traces",
-                  label: "Traces",
-                  icon: <TextIcon className="w-4 h-4" />,
-                },
-                {
                   id: "sessions",
                   label: "Sessions",
                   icon: <MessagesSquareIcon className="w-4 h-4" />,
+                },
+                {
+                  id: "traces",
+                  label: "Traces",
+                  icon: <TextIcon className="w-4 h-4" />,
                 },
               ]}
               active={activeTab}
@@ -366,10 +386,26 @@ function ProjectPage() {
       {activeTab === "traces" ? (
         <TracesView {...sharedViewProps} visibleColumnIds={traceColumnSettings.visibleColumnIds} />
       ) : (
-        <SessionsView {...sharedViewProps} visibleColumnIds={sessionColumnSettings.visibleColumnIds} />
+        <SessionsView
+          projectId={currentProject.id}
+          filters={filters}
+          filtersOpen={filtersOpen}
+          activeSessionId={activeSessionId || undefined}
+          activeTraceId={activeTraceId || undefined}
+          sorting={sorting}
+          onSortingChange={onSortingChange}
+          selectionState={selectionState}
+          onSelectionChange={setSelectionState}
+          totalTraceCount={totalTraceCount}
+          onFiltersChange={onFiltersChange}
+          onFiltersClose={() => setFiltersOpen(false)}
+          onOpenSession={onOpenSession}
+          onCloseSession={closeSessionPanel}
+          visibleColumnIds={sessionColumnSettings.visibleColumnIds}
+        />
       )}
 
-      {activeTraceId ? (
+      {activeTab === "traces" && activeTraceId ? (
         <Layout.Aside>
           <TraceDetailDrawer
             key={activeTraceId}
@@ -382,6 +418,17 @@ function ProjectPage() {
             onPrevTrace={onPrevTrace}
             canNavigateNext={canNavigateNext}
             canNavigatePrev={canNavigatePrev}
+          />
+        </Layout.Aside>
+      ) : null}
+
+      {activeTab === "sessions" && activeSessionId ? (
+        <Layout.Aside>
+          <SessionDetailDrawer
+            key={activeSessionId}
+            projectId={currentProject.id}
+            sessionId={activeSessionId}
+            onClose={closeSessionPanel}
           />
         </Layout.Aside>
       ) : null}
