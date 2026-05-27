@@ -34,9 +34,9 @@ function OpenOriginalButton({
       rel="noopener noreferrer"
       aria-label={label}
       className={cn(
-        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground shadow-sm transition-opacity hover:text-foreground",
+        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-opacity hover:text-foreground",
         variant === "overlay"
-          ? "absolute right-2 top-2 z-10 bg-background/90 opacity-0 backdrop-blur focus-visible:opacity-100 group-hover/media:opacity-100"
+          ? "absolute right-2 top-2 z-10 bg-background/90 opacity-0 shadow-sm backdrop-blur focus-visible:opacity-100 group-hover/media:opacity-100"
           : "bg-background",
       )}
     >

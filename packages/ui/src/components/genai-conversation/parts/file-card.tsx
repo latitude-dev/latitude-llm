@@ -16,7 +16,7 @@ import {
 import { Text } from "../../text/text.tsx"
 
 const ACTION_CLASS =
-  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:text-foreground"
 
 const MIME_LABELS: Record<string, string> = {
   "application/pdf": "PDF document",
