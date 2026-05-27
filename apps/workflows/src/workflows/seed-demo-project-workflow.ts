@@ -1,12 +1,15 @@
-import { proxyActivities } from "@temporalio/workflow"
+import { patched, proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 /**
- * Two sequential activities, one per datastore. Each writes a fresh
- * project's worth of seed content (datasets, evaluations, issues, queues,
- * scores, ~30 days of telemetry) under the supplied
- * `(organizationId, projectId)` pair.
+ * Seeds the base demo content and the derived read models that make the
+ * demo immediately usable. The first two activities write a fresh project's
+ * worth of seed content (datasets, evaluations, issues, queues, scores,
+ * tau telemetry) under the supplied `(organizationId, projectId)` pair.
+ * The derived activities then build trace-search documents/embeddings and
+ * run taxonomy observation + gardening so behaviours are visible without
+ * waiting for background workers.
  *
  * Postgres → ClickHouse is the dependency order. ClickHouse doesn't
  * strictly read from Postgres at write-time, but the row identity is shared
@@ -14,10 +17,10 @@ import { defaultActivityRetryPolicy } from "./retry-policy.ts"
  * first means the audit trail (and the org's project list) surfaces a
  * non-empty project before the longer telemetry insert kicks off.
  *
- * Activity timeouts: 15 minutes. The full ClickHouse insert (the long
- * pole) typically completes in under five minutes on a healthy cluster
- * but spikes are routine on shared infra; the cap is generous so a slow
- * insert doesn't trip the retry policy.
+ * Activity timeouts: 30 minutes. ClickHouse insertion and derived AI work
+ * (Voyage embeddings + taxonomy naming) are the long poles. The cap is
+ * generous so a slow provider or shared-infra spike doesn't trip the retry
+ * policy.
  *
  * Retry policy: spreads `defaultActivityRetryPolicy` and marks
  * `SeedError` non-retryable. The Postgres seed runner wraps every
@@ -37,8 +40,13 @@ import { defaultActivityRetryPolicy } from "./retry-policy.ts"
  * use-case created it) but its content is partial. Operators clean up
  * via the existing `softDeleteProject` admin server function.
  */
-const { seedDemoProjectPostgresActivity, seedDemoProjectClickHouseActivity } = proxyActivities<typeof activities>({
-  startToCloseTimeout: "15 minutes",
+const {
+  seedDemoProjectPostgresActivity,
+  seedDemoProjectClickHouseActivity,
+  seedDemoProjectTraceSearchActivity,
+  seedDemoProjectTaxonomyActivity,
+} = proxyActivities<typeof activities>({
+  startToCloseTimeout: "30 minutes",
   retry: { ...defaultActivityRetryPolicy, nonRetryableErrorTypes: ["SeedError"] },
 })
 
@@ -71,6 +79,13 @@ export interface SeedDemoProjectWorkflowInput {
 export const seedDemoProjectWorkflow = async (input: SeedDemoProjectWorkflowInput) => {
   await seedDemoProjectPostgresActivity(input)
   await seedDemoProjectClickHouseActivity(input)
+
+  // Version gate so workflows already running with the previous two-activity
+  // history can finish replaying without scheduling the derived-data steps.
+  if (patched("seed-demo-project-derived-search-taxonomy-v1")) {
+    await seedDemoProjectTraceSearchActivity(input)
+    await seedDemoProjectTaxonomyActivity(input)
+  }
 
   return { action: "seeded" as const, projectId: input.projectId }
 }

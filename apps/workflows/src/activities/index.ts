@@ -33,6 +33,8 @@ export {
   type SeedDemoProjectActivityInput,
   seedDemoProjectClickHouseActivity,
   seedDemoProjectPostgresActivity,
+  seedDemoProjectTaxonomyActivity,
+  seedDemoProjectTraceSearchActivity,
 } from "./seed-demo-project-activities.ts"
 export {
   type NameTaxonomyCategoryActivityInput,

@@ -1,8 +1,39 @@
-import { ApiKeyId, OrganizationId, ProjectId } from "@domain/shared"
+import { AI } from "@domain/ai"
+import { ApiKeyId, OrganizationId, type OrganizationId as OrganizationIdType, ProjectId, TraceId } from "@domain/shared"
 import { createSeedScope, type SeedScope } from "@domain/shared/seeding"
+import {
+  buildTraceSearchDocument,
+  SessionRepository,
+  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+  TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
+  TRACE_SEARCH_EMBEDDING_MODEL,
+  TraceRepository,
+  TraceSearchRepository,
+} from "@domain/spans"
+import { recordSessionObservationUseCase, runProjectGardeningUseCase } from "@domain/taxonomy"
+import { withAi } from "@platform/ai"
+import { AIGenerateLive } from "@platform/ai-vercel"
+import { AIEmbedLive } from "@platform/ai-voyage"
+import { RedisCacheStoreLive, RedisTaxonomyLockRepositoryLive } from "@platform/cache-redis"
+import {
+  BehaviorObservationRepositoryLive,
+  queryClickhouse,
+  SessionRepositoryLive,
+  TraceRepositoryLive,
+  TraceSearchRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import { seedDemoProjectClickHouse } from "@platform/db-clickhouse/seeding"
+import {
+  TaxonomyCategoryRepositoryLive,
+  TaxonomyClusterRepositoryLive,
+  TaxonomyLineageRepositoryLive,
+  TaxonomyRunRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { seedDemoProjectPostgres } from "@platform/db-postgres/seeding"
-import { getAdminPostgresClient, getClickhouseClient } from "../clients.ts"
+import { Effect, Layer } from "effect"
+import { getAdminPostgresClient, getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 /**
  * Plain-data input that the workflow hands every activity. Workflow code
@@ -59,3 +90,177 @@ export const seedDemoProjectPostgresActivity = (input: SeedDemoProjectActivityIn
  */
 export const seedDemoProjectClickHouseActivity = (input: SeedDemoProjectActivityInput): Promise<void> =>
   seedDemoProjectClickHouse({ client: getClickhouseClient(), scope: buildScope(input) })
+
+type DemoTraceRow = {
+  readonly trace_id: string
+  readonly start_time_ms: number | string
+  readonly root_span_name: string
+}
+
+const DEMO_PROJECT_RETENTION_DAYS = 30
+const DEMO_PROJECT_TAXONOMY_SESSION_LIMIT = 10_000
+
+const listSeededTraceRows = (input: SeedDemoProjectActivityInput) =>
+  queryClickhouse<DemoTraceRow>(
+    getClickhouseClient(),
+    `SELECT
+       CAST(trace_id AS String) AS trace_id,
+       toUnixTimestamp64Milli(min(min_start_time)) AS start_time_ms,
+       argMinIfMerge(root_span_name) AS root_span_name
+     FROM traces
+     WHERE organization_id = {organizationId:String}
+       AND project_id = {projectId:String}
+     GROUP BY trace_id
+     ORDER BY start_time_ms ASC, trace_id ASC`,
+    { organizationId: input.organizationId, projectId: input.projectId },
+  )
+
+/**
+ * Derived trace-search seed: creates the lexical document and semantic
+ * embeddings that the behaviour/search page reads. This intentionally uses
+ * the same domain document builder, trace repository, and Voyage embedding
+ * provider as the trace-search worker so demo projects exercise the real
+ * search path instead of fixture-only rows.
+ */
+export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivityInput): Promise<void> => {
+  const clickhouse = getClickhouseClient()
+  const redis = getRedisClient()
+  const organizationId = OrganizationId(input.organizationId)
+  const projectId = ProjectId(input.projectId)
+
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const traceRows = yield* listSeededTraceRows(input)
+      const traceRepo = yield* TraceRepository
+      const searchRepo = yield* TraceSearchRepository
+      const ai = yield* AI
+
+      for (const row of traceRows) {
+        const traceId = TraceId(row.trace_id)
+        const startTimeMs = typeof row.start_time_ms === "string" ? Number(row.start_time_ms) : row.start_time_ms
+        const startTime = new Date(startTimeMs)
+        const trace = yield* traceRepo.findByTraceId({ organizationId, projectId, traceId })
+        if (trace.allMessages.length === 0) continue
+
+        const document = yield* buildTraceSearchDocument({
+          traceId,
+          startTime,
+          rootSpanName: row.root_span_name,
+          messages: trace.allMessages,
+        })
+
+        yield* searchRepo.upsertDocument({
+          organizationId,
+          projectId,
+          traceId,
+          startTime,
+          rootSpanName: document.rootSpanName,
+          searchText: document.searchText,
+          contentHash: document.contentHash,
+          retentionDays: DEMO_PROJECT_RETENTION_DAYS,
+        })
+
+        const eligibleChunks = document.chunks
+          .filter((item) => item.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
+          .sort((a, b) => b.chunkIndex - a.chunkIndex)
+
+        for (const chunk of eligibleChunks) {
+          const hasExisting = yield* searchRepo.hasEmbeddingWithHash(
+            organizationId,
+            projectId,
+            traceId,
+            chunk.chunkIndex,
+            chunk.contentHash,
+          )
+          if (hasExisting) continue
+
+          const embedding = yield* ai.embed({
+            text: chunk.text,
+            model: TRACE_SEARCH_EMBEDDING_MODEL,
+            dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+            telemetry: {
+              spanName: "demo-project.trace-search.embed",
+              name: "demo-project-trace-search-embed",
+              tags: ["demo-project", "trace-search", "embedding"],
+            },
+          })
+
+          yield* searchRepo.upsertEmbedding({
+            organizationId,
+            projectId,
+            traceId,
+            chunkIndex: chunk.chunkIndex,
+            startTime,
+            contentHash: chunk.contentHash,
+            embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+            embedding: embedding.embedding as readonly number[],
+            retentionDays: DEMO_PROJECT_RETENTION_DAYS,
+            firstMessageIndex: chunk.firstMessageIndex,
+            lastMessageIndex: chunk.lastMessageIndex,
+          })
+        }
+      }
+    }).pipe(
+      withClickHouse(Layer.mergeAll(TraceRepositoryLive, TraceSearchRepositoryLive), clickhouse, organizationId),
+      withAi(AIEmbedLive, redis),
+    ),
+  )
+}
+
+/**
+ * Derived taxonomy seed: records behaviour observations from the freshly
+ * inserted tau sessions, then runs gardening once so the demo project opens
+ * with named behaviours/categories instead of waiting for the periodic
+ * production sweep.
+ */
+export const seedDemoProjectTaxonomyActivity = (input: SeedDemoProjectActivityInput): Promise<void> => {
+  const clickhouse = getClickhouseClient()
+  const postgres = getPostgresClient()
+  const redis = getRedisClient()
+  const organizationId = OrganizationId(input.organizationId)
+  const projectId = ProjectId(input.projectId)
+
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const sessions = yield* Effect.gen(function* () {
+        const repository = yield* SessionRepository
+        const page = yield* repository.listByProjectId({
+          organizationId: input.organizationId as OrganizationIdType,
+          projectId,
+          options: { limit: DEMO_PROJECT_TAXONOMY_SESSION_LIMIT, sortBy: "lastActivity", sortDirection: "asc" },
+        })
+        return page.items
+      }).pipe(withClickHouse(SessionRepositoryLive, clickhouse, organizationId))
+
+      for (const session of sessions) {
+        yield* recordSessionObservationUseCase({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          sessionId: session.sessionId,
+          triggeringTraceId: session.traceIds[0] ?? session.sessionId,
+          triggeringStartTime: session.startTime.toISOString(),
+        })
+      }
+
+      yield* runProjectGardeningUseCase({ organizationId, projectId, trigger: "manual" })
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(
+          TaxonomyCategoryRepositoryLive,
+          TaxonomyClusterRepositoryLive,
+          TaxonomyLineageRepositoryLive,
+          TaxonomyRunRepositoryLive,
+        ),
+        postgres,
+        organizationId,
+      ),
+      withClickHouse(
+        Layer.mergeAll(BehaviorObservationRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
+        clickhouse,
+        organizationId,
+      ),
+      withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), redis),
+      Effect.provide(Layer.mergeAll(RedisCacheStoreLive(redis), RedisTaxonomyLockRepositoryLive(redis))),
+    ),
+  )
+}

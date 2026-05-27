@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { callOrder, mockActivities } = vi.hoisted(() => {
+const { callOrder, mockActivities, patchedState } = vi.hoisted(() => {
   const callOrder: string[] = []
+  const patchedState = { enabled: true }
   const mockActivities = {
     seedDemoProjectPostgresActivity: vi.fn(async () => {
       callOrder.push("postgres")
@@ -9,11 +10,18 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     seedDemoProjectClickHouseActivity: vi.fn(async () => {
       callOrder.push("clickhouse")
     }),
+    seedDemoProjectTraceSearchActivity: vi.fn(async () => {
+      callOrder.push("trace-search")
+    }),
+    seedDemoProjectTaxonomyActivity: vi.fn(async () => {
+      callOrder.push("taxonomy")
+    }),
   }
-  return { callOrder, mockActivities }
+  return { callOrder, mockActivities, patchedState }
 })
 
 vi.mock("@temporalio/workflow", () => ({
+  patched: () => patchedState.enabled,
   proxyActivities: () => mockActivities,
 }))
 
@@ -30,13 +38,14 @@ const baseInput = {
 describe("seedDemoProjectWorkflow", () => {
   beforeEach(() => {
     callOrder.length = 0
+    patchedState.enabled = true
     vi.clearAllMocks()
   })
 
-  it("runs Postgres → ClickHouse in dependency order", async () => {
+  it("runs Postgres → ClickHouse → trace search → taxonomy in dependency order", async () => {
     const result = await seedDemoProjectWorkflow(baseInput)
 
-    expect(callOrder).toEqual(["postgres", "clickhouse"])
+    expect(callOrder).toEqual(["postgres", "clickhouse", "trace-search", "taxonomy"])
     expect(result).toEqual({ action: "seeded", projectId: "proj-demo" })
   })
 
@@ -45,6 +54,19 @@ describe("seedDemoProjectWorkflow", () => {
 
     expect(mockActivities.seedDemoProjectPostgresActivity).toHaveBeenCalledWith(baseInput)
     expect(mockActivities.seedDemoProjectClickHouseActivity).toHaveBeenCalledWith(baseInput)
+    expect(mockActivities.seedDemoProjectTraceSearchActivity).toHaveBeenCalledWith(baseInput)
+    expect(mockActivities.seedDemoProjectTaxonomyActivity).toHaveBeenCalledWith(baseInput)
+  })
+
+  it("keeps replay compatibility for workflows started before derived data seeding", async () => {
+    patchedState.enabled = false
+
+    const result = await seedDemoProjectWorkflow(baseInput)
+
+    expect(callOrder).toEqual(["postgres", "clickhouse"])
+    expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
+    expect(mockActivities.seedDemoProjectTaxonomyActivity).not.toHaveBeenCalled()
+    expect(result).toEqual({ action: "seeded", projectId: "proj-demo" })
   })
 
   it("propagates failure from the Postgres activity and skips downstream activities", async () => {
@@ -54,5 +76,7 @@ describe("seedDemoProjectWorkflow", () => {
 
     await expect(seedDemoProjectWorkflow(baseInput)).rejects.toThrow("postgres seed failed")
     expect(mockActivities.seedDemoProjectClickHouseActivity).not.toHaveBeenCalled()
+    expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
+    expect(mockActivities.seedDemoProjectTaxonomyActivity).not.toHaveBeenCalled()
   })
 })
