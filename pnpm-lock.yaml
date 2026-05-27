@@ -2768,9 +2768,6 @@ importers:
 
   tools/live-seeds:
     dependencies:
-      '@domain/ai':
-        specifier: workspace:*
-        version: link:../../packages/domain/ai
       '@domain/annotation-queues':
         specifier: workspace:*
         version: link:../../packages/domain/annotation-queues
@@ -2795,6 +2792,9 @@ importers:
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
+      '@platform/ai-vercel':
+        specifier: workspace:*
+        version: link:../../packages/platform/ai-vercel
       '@platform/ai-voyage':
         specifier: workspace:*
         version: link:../../packages/platform/ai-voyage

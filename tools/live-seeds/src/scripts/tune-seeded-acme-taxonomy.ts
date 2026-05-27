@@ -1,5 +1,4 @@
 #!/usr/bin/env tsx
-import { AIGenerate, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { SessionRepository } from "@domain/spans"
 import {
@@ -10,6 +9,7 @@ import {
   type TaxonomySummaryStrategy,
 } from "@domain/taxonomy"
 import { withAi } from "@platform/ai"
+import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import {
   createRedisClient,
@@ -47,7 +47,7 @@ interface Args {
 }
 
 const usage =
-  () => `Usage: pnpm --filter @tools/live-seeds taxonomy:tune-seeded-acme -- --organization-id <orgId> --project-id <projectId> [--limit <n>] [--reset] [--garden-now <iso>] [--rebase-observations-to-now]
+  () => `Usage: pnpm --filter @tools/live-seeds taxonomy:tune-seeded-acme --organization-id <orgId> --project-id <projectId> [--limit <n>] [--reset] [--garden-now <iso>] [--rebase-observations-to-now]
 
 Runs the seeded-corpus taxonomy tuning loop with the production Voyage embedding adapter:
   1. optionally clears taxonomy rows for the project (--reset),
@@ -57,7 +57,7 @@ Runs the seeded-corpus taxonomy tuning loop with the production Voyage embedding
 
 Use --rebase-observations-to-now for historical seed corpora whose session timestamps are outside the gardening lookback window.
 
-Requires LAT_VOYAGE_API_KEY. Naming uses a deterministic local generator because this script tunes embedding-space thresholds, not naming quality.
+Requires LAT_VOYAGE_API_KEY plus the normal production generation provider credentials used by @platform/ai-vercel.
 Current threshold pair: link=${TAXONOMY_BIRTH_LINK_THRESHOLD}, maxDiameter=${TAXONOMY_BIRTH_MAX_DIAMETER}.
 `
 
@@ -111,25 +111,6 @@ const parseArgs = (argv: readonly string[]): Args => {
   return { organizationId, projectId, limit, reset, gardenNow, rebaseObservationsToNow }
 }
 
-const fakeNamingLayer = Layer.succeed(AIGenerate, {
-  generate: <T>(input: GenerateInput<T>) =>
-    Effect.sync((): GenerateResult<T> => {
-      const raw = input.system.includes("proposeCandidateThemes")
-        ? { candidates: [{ theme: "Seeded Acme behavior", examples: [0, 1, 2] }] }
-        : {
-            name: "Seeded Acme Behavior",
-            description: "Seeded Acme sessions with similar customer support behavior.",
-          }
-
-      return {
-        object: input.schema.parse(raw),
-        tokens: 0,
-        tokenUsage: { input: 0, output: 0 },
-        duration: 0,
-      }
-    }),
-})
-
 const main = async () => {
   const args = parseArgs(process.argv.slice(2))
   if (!process.env.LAT_VOYAGE_API_KEY) {
@@ -157,7 +138,7 @@ const main = async () => {
     effect.pipe(
       withClickHouse(clickhouseLayer, clickhouse, organizationId),
       withPostgres(postgresLayer, postgres, organizationId),
-      withAi(Layer.mergeAll(AIEmbedLive, fakeNamingLayer), redis),
+      withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), redis),
       Effect.provide(RedisTaxonomyLockRepositoryLive(redis)),
     )
 
