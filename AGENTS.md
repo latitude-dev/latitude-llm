@@ -14,16 +14,7 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 - Never invoke `tsc` directly. Typechecking goes through `tsgo` via the package `typecheck` script — use `pnpm --filter <pkg> typecheck` for one package or `pnpm typecheck` for the whole workspace. `tsc` would diverge from CI.
 - ClickHouse migrations must be created with `pnpm --filter @platform/db-clickhouse ch:create <migration_name>`. Do not create ClickHouse migration files manually.
 - **PR base branch follows the branch's origin.** Branches forked from `development` (v2 work, default) PR into `development`; branches forked from `latitude-v1` (v1 maintenance) PR into `latitude-v1`. Never start a branch from `main` without confirmation — if the working branch is based on `main`, or the user asks to branch from `main`, confirm with the user first. Detect an existing branch's base by testing ancestry in order: if `git merge-base --is-ancestor origin/latitude-v1 HEAD` is true → `latitude-v1`; else if `git merge-base --is-ancestor origin/development HEAD` is true → `development`; else the branch is likely based on `main` (or something unusual) — stop and confirm with the user before opening a PR. When the user asks to start a new branch, take the base from their wording (mentions of v1 → `latitude-v1`; otherwise default to `development`).
-- **After completing any user-facing change, append one line to `CHANGELOG.md`** under the `## Unreleased` section (create the file and section if absent). Format:
-  ```
-  - YYYY-MM-DD [area] [type] Short description of the change (ref: <commit-sha-or-PR-number>)
-  ```
-  **Area tags** (pick the closest): `evaluations` · `traces` · `sdk` · `annotations` · `platform` · `api` · `internal`
-  **Type tags**: `feat` · `fix` · `improvement` · `breaking`
-  Use today's date. For `ref`, prefer the PR number (`#1234`) when one exists; otherwise use the short commit SHA (`abc1234`).
-  Example: `- 2026-05-22 [evaluations] [feat] Add support for LLM-as-judge scoring templates (ref: #1234)`
-  Skip only for changes invisible to users: tests, CI config, tooling, docs-only.
-- Production deploys use the single-branch release-tag flow: `development` is trunk and deploys to staging by default; production is triggered only by pushing a `vX.Y.Z` tag that points at a commit reachable from `origin/development`. Use `scripts/release.sh [version]` from the commit to tag and push it; without a version it bumps the latest `vX.Y.Z` tag to the next patch version, with `--minor` / `--major` available for larger bumps. Do not promote by merging `development` into `main`.
+- Production deploys use the single-branch release-tag flow: `development` is trunk and deploys to staging by default; production is triggered only by pushing a `vX.Y.Z` tag that points at a commit reachable from `origin/development`. Before tagging a production release, update `CHANGELOG.md` with a human-readable diff of the code being pushed to production since the previous production deploy, focusing on the major aspects rather than every commit. Use `scripts/release.sh [version]` from the commit to tag and push it; without a version it bumps the latest `vX.Y.Z` tag to the next patch version, with `--minor` / `--major` available for larger bumps. Do not promote by merging `development` into `main`.
 
 ## How to use this guide
 
@@ -32,7 +23,7 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 
 Detailed policies, command examples, and code samples live under **`.agents/skills/<skill-name>/SKILL.md`**. Load narrow skills instead of memorizing the entire monorepo at once.
 
-**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **23** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
+**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **24** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
 
 ## Skill glossary
 
@@ -56,6 +47,7 @@ Detailed policies, command examples, and code samples live under **`.agents/skil
 | **Environment configuration** | [.agents/skills/env-configuration/SKILL.md](.agents/skills/env-configuration/SKILL.md) | **`LAT_*` / `VITE_LAT_*`**, `.env.example`, **`parseEnv` / `parseEnvOptional`** |
 | **GitHub issues** | [.agents/skills/gh-issue/SKILL.md](.agents/skills/gh-issue/SKILL.md) | Creating clear, actionable GitHub issues for bugs, features, and improvements, optimized for LLM/actionability |
 | **Notifications** | [.agents/skills/notifications/SKILL.md](.agents/skills/notifications/SKILL.md) | Adding a notification **kind**, **group**, or **channel**; in-app + email delivery; `NOTIFICATION_KIND_META` / `NOTIFICATION_GROUPS`; per-user prefs (`users.notification_preferences`); project-level gates (`projects.settings.notifications`); idempotency + cascade-on-`ProjectDeleted` |
+| **Production release** | [.agents/skills/production-release/SKILL.md](.agents/skills/production-release/SKILL.md) | Preparing a production release, updating `CHANGELOG.md` from the production diff, and pushing `vX.Y.Z` release tags with `scripts/release.sh` |
 | **Review PR comments** | [.agents/skills/review-pr-comments/SKILL.md](.agents/skills/review-pr-comments/SKILL.md) | Loading issue-level and inline PR feedback with GitHub CLI/API, deduping comments, replying in the right thread, and resolving addressed review threads |
 | **Temporal workflows** | [.agents/skills/temporal-developer/SKILL.md](.agents/skills/temporal-developer/SKILL.md) | Editing workflows or activities in **`apps/workflows`**, **reordering/inserting activities** in a running workflow, **`patched()` / `deprecatePatch()` / Worker Versioning**, debugging **non-determinism errors**, terminating stuck workflows, replay/history semantics |
 | **Testing** | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md) | Vitest layers, PGlite/chdb testkit, **`/testing` package exports**, avoiding `vi.mock` for repositories |
