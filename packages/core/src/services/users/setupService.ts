@@ -3,6 +3,7 @@ import { type WorkspaceDto } from '../../schema/models/types/Workspace'
 import { Providers } from '@latitude-data/constants'
 import { env } from '@latitude-data/env'
 import { publisher } from '../../events/publisher'
+import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { createApiKey } from '../apiKeys'
@@ -15,6 +16,9 @@ import { UserTitle } from '@latitude-data/constants/users'
 import { createDatasetOnboarding } from '../onboardingResources/createDatasetOnboarding'
 
 const DEFAULT_MODEL = 'gpt-4o-mini'
+
+export const NEW_SIGNUPS_DISABLED_MESSAGE =
+  'Latitude is no longer accepting new signups'
 
 export default async function setupService(
   {
@@ -38,6 +42,10 @@ export default async function setupService(
   },
   transaction = new Transaction(),
 ): PromisedResult<{ user: User; workspace: WorkspaceDto }> {
+  if (env.LATITUDE_CLOUD) {
+    return Result.error(new BadRequestError(NEW_SIGNUPS_DISABLED_MESSAGE))
+  }
+
   return transaction.call(async () => {
     const user = await createUser(
       {

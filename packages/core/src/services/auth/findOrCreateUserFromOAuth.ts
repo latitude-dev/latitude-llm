@@ -9,7 +9,9 @@ import { oauthAccounts } from '../../schema/models/oauthAccounts'
 import { OAuthProvider } from '../../schema/models/oauthAccounts'
 import { users } from '../../schema/models/users'
 import { workspaces } from '../../schema/models/workspaces'
-import setupServiceFn from '../users/setupService'
+import setupServiceFn, {
+  NEW_SIGNUPS_DISABLED_MESSAGE,
+} from '../users/setupService'
 
 interface FindOrCreateUserFromOAuthInput {
   providerId: OAuthProvider
@@ -105,6 +107,10 @@ export function findOrCreateUserFromOAuth(
         )
       }
       return Result.ok({ ...found, isNewUser: false })
+    }
+
+    if (env.LATITUDE_CLOUD) {
+      return Result.error(new BadRequestError(NEW_SIGNUPS_DISABLED_MESSAGE))
     }
 
     const setupResult = await setupServiceFn(

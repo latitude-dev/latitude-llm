@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import setupService from './setupService'
+import setupService, { NEW_SIGNUPS_DISABLED_MESSAGE } from './setupService'
 import { SubscriptionPlan } from '../../plans'
+import { unsafelyFindUserByEmail } from '../../queries/users/findByEmail'
 import * as envModule from '@latitude-data/env'
 
 vi.mock('../../events/publisher', () => ({
@@ -51,6 +52,31 @@ describe('setupService', () => {
 
     expect(workspace.currentSubscription).toBeDefined()
     expect(workspace.currentSubscription.plan).toBeDefined()
+  })
+
+  describe('when LATITUDE_CLOUD is true', () => {
+    it('does not create a user and returns an error', async () => {
+      vi.spyOn(envModule, 'env', 'get').mockReturnValue({
+        ...envModule.env,
+        LATITUDE_CLOUD: true,
+      } as typeof envModule.env)
+
+      const result = await setupService({
+        email: 'cloud-blocked@example.com',
+        name: 'Blocked User',
+        companyName: 'Blocked Company',
+        defaultProviderName: 'OpenAI',
+        defaultProviderApiKey: 'test-api-key',
+      })
+
+      expect(result.ok).toBe(false)
+      expect(result.error!.message).toBe(NEW_SIGNUPS_DISABLED_MESSAGE)
+
+      const user = await unsafelyFindUserByEmail({
+        email: 'cloud-blocked@example.com',
+      })
+      expect(user).toBeNull()
+    })
   })
 
   describe('when LATITUDE_ENTERPRISE_MODE is false', () => {

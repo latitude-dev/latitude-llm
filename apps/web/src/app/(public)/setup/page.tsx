@@ -2,6 +2,7 @@ import AuthFooter from '$/app/(public)/_components/Footer'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { FocusLayout } from '$/components/layouts'
 import { GoogleTagManager } from '$/components/Providers/GoogleTagManager'
+import { env } from '@latitude-data/env'
 import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 
@@ -28,6 +29,7 @@ export default async function SetupPage({
   }>
 }) {
   const { email, name, companyName, source, returnTo } = await searchParams
+  const signupsDisabled = env.LATITUDE_CLOUD
 
   return (
     <>
@@ -50,6 +52,7 @@ export default async function SetupPage({
               footer={<AuthFooter />}
               source={source}
               returnTo={returnTo}
+              signupsDisabled={signupsDisabled}
             />
           </CardContent>
         </Card>

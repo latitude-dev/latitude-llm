@@ -4,6 +4,7 @@ import { ReactNode } from 'react'
 import { setupAction } from '$/actions/user/setupAction'
 import { useFormAction } from '$/hooks/useFormAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -19,6 +20,7 @@ export default function SetupForm({
   footer,
   source,
   returnTo,
+  signupsDisabled = false,
 }: {
   footer: ReactNode
   email?: string
@@ -26,6 +28,7 @@ export default function SetupForm({
   companyName?: string
   source?: string
   returnTo?: string
+  signupsDisabled?: boolean
 }) {
   const { toast } = useToast()
   const { execute, isPending } = useLatitudeAction(setupAction)
@@ -46,6 +49,13 @@ export default function SetupForm({
       <input type='hidden' name='returnTo' value={returnTo} />
       <input type='hidden' name='source' value={source} />
       <FormWrapper>
+        {signupsDisabled && (
+          <Alert
+            variant='warning'
+            title='Signups are disabled'
+            description='Latitude is no longer accepting new signups. If you already have an account, log in.'
+          />
+        )}
         <Input
           autoFocus
           required
@@ -55,6 +65,7 @@ export default function SetupForm({
           placeholder='Jon Snow'
           errors={errors?.name}
           defaultValue={data?.name || name}
+          disabled={signupsDisabled}
         />
         <Input
           required
@@ -64,6 +75,7 @@ export default function SetupForm({
           placeholder='jon@winterfell.com'
           errors={errors?.email}
           defaultValue={data?.email || email}
+          disabled={signupsDisabled}
         />
         <Input
           required
@@ -72,9 +84,15 @@ export default function SetupForm({
           placeholder='Acme Inc.'
           errors={errors?.companyName}
           defaultValue={data?.companyName || companyName}
+          disabled={signupsDisabled}
         />
         <div className='flex flex-col gap-6'>
-          <Button fullWidth isLoading={isPending} fancy>
+          <Button
+            fullWidth
+            isLoading={isPending}
+            disabled={signupsDisabled}
+            fancy
+          >
             Create account
           </Button>
 
@@ -87,18 +105,30 @@ export default function SetupForm({
             </div>
           </div>
 
-          <Button variant='outline' fullWidth asChild>
-            <a
-              href={
-                '/api/auth/google/start' +
-                (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '')
-              }
+          {signupsDisabled ? (
+            <Button
+              variant='outline'
+              fullWidth
+              disabled
               className='flex items-center gap-2'
             >
               <Icon name='googleWorkspace' />
               <Text.H5>Continue with Google</Text.H5>
-            </a>
-          </Button>
+            </Button>
+          ) : (
+            <Button variant='outline' fullWidth asChild>
+              <a
+                href={
+                  '/api/auth/google/start' +
+                  (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '')
+                }
+                className='flex items-center gap-2'
+              >
+                <Icon name='googleWorkspace' />
+                <Text.H5>Continue with Google</Text.H5>
+              </a>
+            </Button>
+          )}
         </div>
 
         {footer}

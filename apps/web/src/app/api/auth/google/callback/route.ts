@@ -1,8 +1,10 @@
 import { googleProvider } from '$/services/auth'
 import { setSession } from '$/services/auth/setSession'
+import { ROUTES } from '$/services/routes'
 import { isLatitudeUrl } from '@latitude-data/constants'
 import { OAuthProvider } from '@latitude-data/core/schema/models/oauthAccounts'
 import { findOrCreateUserFromOAuth } from '@latitude-data/core/services/auth/findOrCreateUserFromOAuth'
+import { NEW_SIGNUPS_DISABLED_MESSAGE } from '@latitude-data/core/services/users/setupService'
 import { env } from '@latitude-data/env'
 import { ObjectParser } from '@pilcrowjs/object-parser'
 import { decodeIdToken, OAuth2RequestError, OAuth2Tokens } from 'arctic'
@@ -57,6 +59,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     })
 
     if (userResult.error) {
+      if (userResult.error.message === NEW_SIGNUPS_DISABLED_MESSAGE) {
+        return NextResponse.redirect(env.APP_URL + ROUTES.auth.setup)
+      }
+
       console.error(
         'Failed to find or create user from OAuth:',
         userResult.error,
