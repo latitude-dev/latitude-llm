@@ -24,6 +24,8 @@ export interface RunFlaggerInput {
 
 export interface RunFlaggerResult {
   readonly matched: boolean
+  readonly feedback?: string | undefined
+  readonly messageIndex?: number | undefined
 }
 
 export type RunFlaggerError = NotFoundError | RepositoryError | AIError | AICredentialError
@@ -49,9 +51,66 @@ export interface ClassifyTraceForFlaggerInput {
   readonly strategyOverride?: FlaggerStrategy
 }
 
-const flaggerOutputSchema = z.object({
+const selfNegatingFeedbackPattern =
+  /\b(?:no\s+(?:[\w-]+\s+){0,6}(?:detected|found|present)|not\s+(?:a|an)?\s*(?:[\w-]+\s+){0,6}(?:issue|problem|violation|jailbreak|refusal|error)|does\s+not\s+(?:show|indicate|contain|demonstrate)|normal\s+(?:software\s+development\s+)?workflow|legitimate\s+(?:request|workflow|behavior)|correctly\s+(?:refused|handled))\b/i
+
+const isSelfNegatingFeedback = (feedback: string): boolean => selfNegatingFeedbackPattern.test(feedback)
+
+const baseFlaggerOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
+  feedback: z.string().min(1).nullable().optional(),
+  messageIndex: z.number().int().nonnegative().optional(),
 })
+
+const flaggerOutputSchema = baseFlaggerOutputSchema
+  .superRefine((value, ctx) => {
+    const feedback = value.feedback?.trim()
+
+    if (value.matched) {
+      if (!feedback) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["feedback"],
+          message: "matched=true requires positive annotation feedback",
+        })
+        return
+      }
+
+      if (isSelfNegatingFeedback(feedback)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["feedback"],
+          message: "matched=true feedback must describe the issue, not explain that no issue was detected",
+        })
+      }
+    } else if (feedback) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["feedback"],
+        message: "matched=false must not include annotation feedback",
+      })
+    }
+  })
+  .transform((value) => ({
+    matched: value.matched,
+    ...(value.matched && value.feedback ? { feedback: value.feedback.trim() } : {}),
+    ...(value.matched && value.messageIndex !== undefined ? { messageIndex: value.messageIndex } : {}),
+  }))
+
+const FLAGGER_OUTPUT_CONTRACT = `
+Structured output contract:
+- Set matched=false when the trace does not belong to this flagger; in that case feedback must be null or omitted.
+- Set matched=true only when the trace belongs to this flagger; in that case feedback is required.
+- For matched=true, feedback must be the final human-readable annotation: one or two short sentences describing the issue and concrete evidence.
+- Never use matched=true with feedback that says no issue was detected, the workflow was legitimate, or the assistant behaved correctly.
+- Include messageIndex only when one transcript line is clearly the best evidence.
+`.trim()
+
+const parseFlaggerOutput = (input: unknown): RunFlaggerResult => {
+  const parsed = flaggerOutputSchema.safeParse(input)
+  if (!parsed.success) return { matched: false }
+  return parsed.data
+}
 
 const loadTraceDetail = (input: RunFlaggerInput) =>
   Effect.gen(function* () {
@@ -98,9 +157,9 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
     .generate({
       ...FLAGGER_MODEL,
       maxTokens: FLAGGER_MAX_TOKENS,
-      system: strategy.buildSystemPrompt!(input.trace),
+      system: `${strategy.buildSystemPrompt!(input.trace)}\n\n${FLAGGER_OUTPUT_CONTRACT}`,
       prompt: strategy.buildPrompt!(input.trace),
-      schema: flaggerOutputSchema,
+      schema: baseFlaggerOutputSchema,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
         tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
@@ -111,18 +170,18 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
       },
     })
     .pipe(
-      Effect.map((result) => result.object),
+      Effect.map((result) => parseFlaggerOutput(result.object)),
       Effect.catchIf(
         (error): error is AIError => error instanceof AIError && isSchemaMismatchCause(error.cause),
         () =>
           Effect.gen(function* () {
             yield* Effect.annotateCurrentSpan("flagger.flaggerSchemaMismatch", true)
-            return { matched: false }
+            return { matched: false } satisfies RunFlaggerResult
           }),
       ),
     )
 
-  return { matched: decisions.matched } satisfies RunFlaggerResult
+  return decisions satisfies RunFlaggerResult
 })
 
 /**

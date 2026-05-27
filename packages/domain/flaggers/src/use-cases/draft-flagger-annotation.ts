@@ -1,4 +1,13 @@
-import { BadRequestError, generateId, type RepositoryError, type ScoreId } from "@domain/shared"
+import {
+  BadRequestError,
+  generateId,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  type ScoreId,
+  TraceId,
+} from "@domain/shared"
+import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { type RunFlaggerAnnotatorError, runFlaggerAnnotatorUseCase } from "./run-flagger-annotator.ts"
@@ -10,6 +19,8 @@ const draftFlaggerAnnotationInputSchema = z.object({
   projectId: z.string().min(1),
   flaggerSlug: z.string().min(1),
   traceId: z.string().min(1),
+  feedback: z.string().min(1).optional(),
+  messageIndex: z.number().int().nonnegative().optional(),
 })
 
 const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, message: string) =>
@@ -36,6 +47,8 @@ interface DraftFlaggerAnnotationInput {
   readonly projectId: string
   readonly flaggerSlug: string
   readonly traceId: string
+  readonly feedback?: string | undefined
+  readonly messageIndex?: number | undefined
 }
 
 export type DraftFlaggerAnnotationError = BadRequestError | RepositoryError | RunFlaggerAnnotatorError
@@ -56,6 +69,25 @@ export const draftFlaggerAnnotationUseCase = Effect.fn("flaggers.draftFlaggerAnn
     "Invalid flagger annotate input",
   )
 
+  if (parsedInput.feedback !== undefined) {
+    const traceRepository = yield* TraceRepository
+    const trace = yield* traceRepository.findByTraceId({
+      organizationId: OrganizationId(parsedInput.organizationId),
+      projectId: ProjectId(parsedInput.projectId),
+      traceId: TraceId(parsedInput.traceId),
+    })
+
+    return {
+      traceId: parsedInput.traceId,
+      feedback: parsedInput.feedback,
+      traceCreatedAt: trace.startTime.toISOString(),
+      sessionId: trace.sessionId,
+      simulationId: trace.simulationId === "" ? null : trace.simulationId,
+      scoreId,
+      messageIndex: parsedInput.messageIndex,
+    } satisfies DraftFlaggerAnnotationOutput
+  }
+
   const annotatorResult = yield* runFlaggerAnnotatorUseCase({
     organizationId: parsedInput.organizationId,
     projectId: parsedInput.projectId,
@@ -72,5 +104,5 @@ export const draftFlaggerAnnotationUseCase = Effect.fn("flaggers.draftFlaggerAnn
     simulationId: annotatorResult.simulationId,
     scoreId,
     messageIndex: annotatorResult.messageIndex,
-  } as DraftFlaggerAnnotationOutput
+  } satisfies DraftFlaggerAnnotationOutput
 })

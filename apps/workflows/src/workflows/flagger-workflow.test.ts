@@ -4,18 +4,26 @@ const TEST_TRACE_CREATED_AT = "2024-01-15T10:00:00.000Z"
 
 const { mockActivities } = vi.hoisted(() => {
   const mockActivities = {
-    runFlagger: vi.fn(async (): Promise<{ matched: boolean }> => ({ matched: false })),
+    runFlagger: vi.fn(
+      async (): Promise<{ matched: boolean; feedback?: string | undefined; messageIndex?: number | undefined }> => ({
+        matched: false,
+      }),
+    ),
     draftAnnotate: vi.fn(
       async (): Promise<{
         traceId: string
         feedback: string
         traceCreatedAt: string
+        sessionId: string | null
+        simulationId: string | null
         scoreId: string
         messageIndex?: number | undefined
       }> => ({
         traceId: "trace-1",
         feedback: "Test feedback",
         traceCreatedAt: "2024-01-15T10:00:00.000Z",
+        sessionId: null,
+        simulationId: null,
         scoreId: "score-default",
       }),
     ),
@@ -73,13 +81,20 @@ describe("flaggerWorkflow", () => {
     expect(mockActivities.saveAnnotation).not.toHaveBeenCalled()
   })
 
-  it("calls draftAnnotate and saveAnnotation when flagger returns matched=true", async () => {
-    mockActivities.runFlagger.mockResolvedValueOnce({ matched: true })
+  it("passes classifier feedback through draftAnnotate and saveAnnotation when matched", async () => {
+    mockActivities.runFlagger.mockResolvedValueOnce({
+      matched: true,
+      feedback: "Classifier feedback",
+      messageIndex: 2,
+    })
     mockActivities.draftAnnotate.mockResolvedValueOnce({
       traceId: "trace-1",
-      feedback: "Generated feedback",
+      feedback: "Classifier feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      sessionId: "session-1",
+      simulationId: null,
       scoreId: "score-from-draft",
+      messageIndex: 2,
     })
     mockActivities.saveAnnotation.mockResolvedValueOnce({
       flaggerId: FLAGGER_ID,
@@ -117,20 +132,22 @@ describe("flaggerWorkflow", () => {
       projectId: "proj-1",
       traceId: "trace-1",
       flaggerSlug: "refusal",
+      feedback: "Classifier feedback",
+      messageIndex: 2,
     })
     expect(mockActivities.saveAnnotation).toHaveBeenCalledTimes(1)
-    // The scoreId emitted by draftAnnotate must flow verbatim into
-    // saveAnnotation so the LLM telemetry span and the persisted score row
-    // share the same id (see PRD: "Identity strategy").
     expect(mockActivities.saveAnnotation).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-1",
       flaggerId: FLAGGER_ID,
       flaggerSlug: "refusal",
-      feedback: "Generated feedback",
+      feedback: "Classifier feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      sessionId: "session-1",
+      simulationId: null,
       scoreId: "score-from-draft",
+      messageIndex: 2,
     })
   })
 
@@ -140,6 +157,8 @@ describe("flaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      sessionId: null,
+      simulationId: "simulation-1",
       scoreId: "score-msg-idx",
       messageIndex: 5,
     })
@@ -161,6 +180,7 @@ describe("flaggerWorkflow", () => {
       expect.objectContaining({
         messageIndex: 5,
         scoreId: "score-msg-idx",
+        simulationId: "simulation-1",
       }),
     )
   })
@@ -190,6 +210,8 @@ describe("flaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Generated feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      sessionId: null,
+      simulationId: null,
       scoreId: "score-save-failure",
     })
     mockActivities.saveAnnotation.mockRejectedValueOnce(new Error("Save failed"))
@@ -215,6 +237,8 @@ describe("flaggerWorkflow", () => {
       traceId: "trace-1",
       feedback: "Tool call error feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      sessionId: null,
+      simulationId: null,
       scoreId: "score-tool",
     })
     mockActivities.saveAnnotation.mockResolvedValueOnce({
@@ -251,6 +275,8 @@ describe("flaggerWorkflow", () => {
       flaggerSlug: "tool-call-errors",
       feedback: "Tool call error feedback",
       traceCreatedAt: TEST_TRACE_CREATED_AT,
+      sessionId: null,
+      simulationId: null,
       scoreId: "score-tool",
     })
   })

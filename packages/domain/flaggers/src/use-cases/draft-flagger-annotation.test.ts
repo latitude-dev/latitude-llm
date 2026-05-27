@@ -57,6 +57,40 @@ const makeTraceDetail = (): TraceDetail => ({
 })
 
 describe("draftFlaggerAnnotationUseCase", () => {
+  it("uses classifier feedback directly and skips the second annotator LLM call", async () => {
+    const { repository: traceRepo } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail()),
+    })
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () => Effect.die("AI should not be called when classifier feedback is provided"),
+    })
+
+    const result = await Effect.runPromise(
+      draftFlaggerAnnotationUseCase({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        flaggerSlug: "jailbreaking",
+        traceId: TRACE_ID,
+        feedback: "User attempted to override the assistant's system instructions.",
+        messageIndex: 0,
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, traceRepo),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(ORG_ID) })),
+            aiLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result.feedback).toBe("User attempted to override the assistant's system instructions.")
+    expect(result.sessionId).toBe("session")
+    expect(result.simulationId).toBeNull()
+    expect(result.messageIndex).toBe(0)
+    expect(calls.generate).toHaveLength(0)
+  })
+
   it("generates a scoreId, returns messageIndex and other fields in the output, and forwards them to the annotator's telemetry", async () => {
     const { repository: traceRepo } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(makeTraceDetail()),

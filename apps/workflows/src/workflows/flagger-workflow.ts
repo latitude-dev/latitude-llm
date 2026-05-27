@@ -49,6 +49,8 @@ export const flaggerWorkflow = async (input: {
       projectId: input.projectId,
       traceId: input.traceId,
       flaggerSlug: input.flaggerSlug,
+      ...(result.feedback !== undefined ? { feedback: result.feedback } : {}),
+      ...(result.messageIndex !== undefined ? { messageIndex: result.messageIndex } : {}),
     })
 
     log.info("Flagger draft annotate completed, starting save", {
@@ -67,6 +69,8 @@ export const flaggerWorkflow = async (input: {
       flaggerSlug: input.flaggerSlug,
       feedback: draftResult.feedback,
       traceCreatedAt: draftResult.traceCreatedAt,
+      sessionId: draftResult.sessionId,
+      simulationId: draftResult.simulationId,
       scoreId: draftResult.scoreId,
       messageIndex: draftResult.messageIndex,
     })

@@ -83,6 +83,8 @@ export const draftAnnotate = async (input: {
   readonly projectId: string
   readonly traceId: string
   readonly flaggerSlug: string
+  readonly feedback?: string | undefined
+  readonly messageIndex?: number | undefined
 }): Promise<DraftAnnotateOutput> => {
   return Effect.runPromise(
     draftFlaggerAnnotationWithBillingUseCase(input).pipe(

@@ -13,6 +13,8 @@ export interface DraftFlaggerAnnotationWithBillingInput {
   readonly projectId: string
   readonly traceId: string
   readonly flaggerSlug: string
+  readonly feedback?: string | undefined
+  readonly messageIndex?: number | undefined
 }
 
 export const draftFlaggerAnnotationWithBillingUseCase = Effect.fn("flaggers.draftFlaggerAnnotationWithBilling")(
