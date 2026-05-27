@@ -257,7 +257,7 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
                     }),
                   ),
                 ),
-                Effect.catch((error) =>
+                Effect.catchTag("WorkflowAlreadyStartedError", (error) =>
                   Effect.sync(() =>
                     logger.info("Taxonomy cluster naming workflow already active", { workflowId, error }),
                   ),
@@ -288,7 +288,7 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
                     }),
                   ),
                 ),
-                Effect.catch((error) =>
+                Effect.catchTag("WorkflowAlreadyStartedError", (error) =>
                   Effect.sync(() =>
                     logger.info("Taxonomy category naming workflow already active", { workflowId, error }),
                   ),

@@ -28,7 +28,7 @@ import { createFakeTaxonomyCategoryRepository } from "../testing/fake-taxonomy-c
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyLineageRepository } from "../testing/fake-taxonomy-lineage-repository.ts"
 import { createFakeTaxonomyRunRepository } from "../testing/fake-taxonomy-run-repository.ts"
-import { getClusterTrendUseCase, getLastRunUseCase, getTaxonomyAnalyticsUseCase } from "./analytics.ts"
+import { getLastRunUseCase, getTaxonomyAnalyticsUseCase } from "./analytics.ts"
 import { getCategoryDetailsUseCase, getClusterDetailsUseCase } from "./get-details.ts"
 import { listCategoriesUseCase } from "./list-categories.ts"
 import { listClustersInCategoryUseCase, listClustersUseCase } from "./list-clusters.ts"
@@ -410,33 +410,6 @@ describe("listObservationsInClusterUseCase", () => {
 })
 
 describe("analytics read use-cases", () => {
-  it("gets a cluster trend for the requested window", async () => {
-    const clusterId = TaxonomyClusterId("t".repeat(24))
-    const observations = createFakeBehaviorObservationRepository([
-      { ...makeObservation(1, clusterId), startTime: new Date("2026-05-23T10:00:00.000Z") },
-      { ...makeObservation(2, clusterId), startTime: new Date("2026-05-24T10:00:00.000Z") },
-      { ...makeObservation(3, clusterId), startTime: new Date("2026-05-24T11:00:00.000Z") },
-    ])
-
-    const result = await Effect.runPromise(
-      getClusterTrendUseCase({
-        organizationId,
-        projectId,
-        clusterId,
-        windowDays: 2,
-        now: new Date("2026-05-24T12:00:00.000Z"),
-      }).pipe(
-        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
-        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
-      ),
-    )
-
-    expect(result.buckets).toEqual([
-      { date: "2026-05-23", count: 1 },
-      { date: "2026-05-24", count: 2 },
-    ])
-  })
-
   it("gets taxonomy analytics counts and top clusters", async () => {
     const categories = createFakeTaxonomyCategoryRepository([
       makeCategory({ id: TaxonomyCategoryId("a".repeat(24)) }),

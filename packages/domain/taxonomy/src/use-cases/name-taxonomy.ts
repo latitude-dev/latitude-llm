@@ -169,7 +169,7 @@ export const nameCategoryUseCase = (input: NameCategoryInput) =>
       .filter((cluster) => cluster !== undefined)
       .map((cluster) => `${cluster.name}: ${cluster.description}`)
     const generated = yield* generateCategoryName({ samples })
-    if (/pending|uncategorized|miscellaneous|other behaviors/i.test(generated.name)) {
+    if (/\bpending\s+states?\b|\buncategorized\b|\bmiscellaneous\b|\bother\s+behaviors?\b/i.test(generated.name)) {
       return yield* Effect.fail(new Error(`Generated unusable taxonomy category name: ${generated.name}`))
     }
     yield* categories.save({

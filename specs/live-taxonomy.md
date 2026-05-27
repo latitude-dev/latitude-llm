@@ -568,8 +568,7 @@ Update the `taxonomy_runs` row with `status = 'completed'`, `completed_at`, the 
 - `listObservationsInClusterUseCase(orgId, projectId, clusterId, { cursor?, pageSize? })` — paginated ClickHouse list of observations attached to a cluster, ordered by `start_time DESC`.
 - `getClusterDetailsUseCase(orgId, projectId, clusterId)` — cluster row + a small sample of recent observation summaries for the details drawer.
 - `getCategoryDetailsUseCase(orgId, projectId, categoryId)` — category row + its member clusters.
-- `getClusterTrendUseCase(orgId, projectId, clusterId, { window? })` — observation count per day for the window (default 14 days), for the histogram in the cluster details drawer. Read from CH; mirror `getIssueTrendUseCase`.
-- `getTaxonomyAnalyticsUseCase(orgId, projectId, { window? })` — top-line counts (total active categories, total active clusters, total observations in window, top-5 clusters by occurrence). For the page-level summary panel.
+- `getTaxonomyAnalyticsUseCase(orgId, projectId, { window? })` — top-line counts (total active categories, total active clusters, total observations in window, top-5 clusters by occurrence) plus ClickHouse-side current-vs-baseline trend summaries for those top clusters. For the page-level summary panel.
 - `getLastRunUseCase(orgId, projectId)` — the most recent `taxonomy_runs` row plus a small slice of lineage transitions (last 10 births/merges) for an "Activity" panel.
 
 Operational use-cases (not user-surfaced):
@@ -974,7 +973,7 @@ Domain read paths consumed later by `apps/web`. No frontend; just the domain sur
 - [ ] **P6-2**: `listClustersInCategoryUseCase`, `listClustersUseCase`.
 - [ ] **P6-3**: `getClusterDetailsUseCase`, `getCategoryDetailsUseCase`.
 - [ ] **P6-4**: `listObservationsInClusterUseCase`.
-- [ ] **P6-5**: `getClusterTrendUseCase`, `getTaxonomyAnalyticsUseCase`, `getLastRunUseCase`.
+- [ ] **P6-5**: `getTaxonomyAnalyticsUseCase`, `getLastRunUseCase`.
 - [ ] **P6-6**: Hybrid search inside `listClustersUseCase` — `IssueRepository.hybridSearch`-equivalent over `taxonomy_clusters`. Reuses the same Voyage embed (cached) for `inputType: "query"`.
 - [ ] **P6-7**: Integration tests against PGlite + chdb fakes for every read use-case.
 

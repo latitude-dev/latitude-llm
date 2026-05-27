@@ -9,7 +9,7 @@ export type TaxonomyNameClusterWorkflowResult = Awaited<ReturnType<typeof activi
 export type TaxonomyNameCategoryWorkflowResult = Awaited<ReturnType<typeof activities.nameTaxonomyCategoryActivity>>
 
 const { nameTaxonomyClusterActivity, nameTaxonomyCategoryActivity } = proxyActivities<typeof activities>({
-  startToCloseTimeout: "1 minute",
+  startToCloseTimeout: "2 minutes",
   retry: {
     ...defaultActivityRetryPolicy,
     initialInterval: "1 minute",

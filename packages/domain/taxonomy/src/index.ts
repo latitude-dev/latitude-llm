@@ -160,13 +160,10 @@ export {
   type TaxonomyRunRepositoryShape,
 } from "./ports/taxonomy-run-repository.ts"
 export {
-  type GetClusterTrendInput,
-  type GetClusterTrendResult,
   type GetLastRunInput,
   type GetLastRunResult,
   type GetTaxonomyAnalyticsInput,
   type GetTaxonomyAnalyticsResult,
-  getClusterTrendUseCase,
   getLastRunUseCase,
   getTaxonomyAnalyticsUseCase,
   type TaxonomyClusterTrendStatus,

@@ -1,6 +1,5 @@
-import type { OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
+import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
-import { TAXONOMY_LIST_ALL_BY_CLUSTER_MAX } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyClusterLineage, TaxonomyRun } from "../entities/lineage.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
@@ -8,23 +7,6 @@ import { TaxonomyCategoryRepository } from "../ports/taxonomy-category-repositor
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLineageRepository } from "../ports/taxonomy-lineage-repository.ts"
 import { TaxonomyRunRepository } from "../ports/taxonomy-run-repository.ts"
-
-export interface GetClusterTrendInput {
-  readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
-  readonly clusterId: TaxonomyClusterId
-  readonly windowDays?: number
-  readonly now?: Date
-}
-
-interface ClusterTrendBucket {
-  readonly date: string
-  readonly count: number
-}
-
-export interface GetClusterTrendResult {
-  readonly buckets: readonly ClusterTrendBucket[]
-}
 
 export interface GetTaxonomyAnalyticsInput {
   readonly organizationId: OrganizationId
@@ -73,7 +55,6 @@ const TREND_BASELINE_DAYS = 7
 
 const startOfUtcDay = (date: Date): Date =>
   new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
-const dayKey = (date: Date): string => startOfUtcDay(date).toISOString().slice(0, 10)
 const windowStart = (now: Date, windowDays: number): Date =>
   startOfUtcDay(new Date(now.getTime() - (windowDays - 1) * MS_PER_DAY))
 
@@ -126,32 +107,6 @@ const classifyClusterTrend = (input: {
     ratio,
   }
 }
-
-export const getClusterTrendUseCase = (input: GetClusterTrendInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
-    const observations = yield* BehaviorObservationRepository
-    const now = input.now ?? new Date()
-    const days = Math.max(input.windowDays ?? 14, 1)
-    const since = windowStart(now, days)
-    const counts = new Map<string, number>()
-    for (let index = 0; index < days; index++) {
-      counts.set(dayKey(new Date(since.getTime() + index * MS_PER_DAY)), 0)
-    }
-    const rows = yield* observations.listAllByCluster({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      clusterId: input.clusterId,
-      limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
-    })
-    for (const row of rows) {
-      if (row.startTime < since || row.startTime > now) continue
-      const key = dayKey(row.startTime)
-      counts.set(key, (counts.get(key) ?? 0) + 1)
-    }
-    return { buckets: [...counts.entries()].map(([date, count]) => ({ date, count })) } satisfies GetClusterTrendResult
-  }).pipe(Effect.withSpan("taxonomy.getClusterTrend"))
 
 export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
   Effect.gen(function* () {

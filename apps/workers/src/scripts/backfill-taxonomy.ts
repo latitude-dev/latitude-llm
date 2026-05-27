@@ -68,7 +68,7 @@ async function listProjects(filters: { readonly organizationId?: string; readonl
   }
 
   const result = await adminPostgres.pool.query<ProjectRow>(
-    `SELECT organization_id, id AS project_id FROM projects WHERE ${clauses.join(" AND ")} ORDER BY organization_id, id`,
+    `SELECT organization_id, id AS project_id FROM latitude.projects WHERE ${clauses.join(" AND ")} ORDER BY organization_id, id`,
     values,
   )
   return result.rows
