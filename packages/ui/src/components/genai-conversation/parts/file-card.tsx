@@ -85,7 +85,8 @@ function fileExtensionForMime(mimeType?: string | null): string | undefined {
 /**
  * Renders a non-previewable attachment (document/file) as a card: type-aware icon + label + optional size.
  * The action depends on the source — `href` (uri) opens in a new tab, `downloadDataUri` (blob) downloads,
- * and a bare `fileId` (no resolvable source) shows no action and surfaces the id as the secondary line.
+ * and a bare `fileId` (no resolvable source) renders a disabled action with an explanatory tooltip while
+ * surfacing the id as the secondary line.
  */
 export function FileCard({
   fileName,
