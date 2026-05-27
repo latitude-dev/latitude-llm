@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "../../../utils/cn.ts"
+import { Icon } from "../../icons/icons.tsx"
 import { Text } from "../../text/text.tsx"
 import { Tooltip } from "../../tooltip/tooltip.tsx"
 
@@ -117,11 +118,11 @@ export function FileCard({
 
   const action = href ? (
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label="Open file in new tab" className={ACTION_CLASS}>
-      <ExternalLinkIcon className="h-3.5 w-3.5" />
+      <Icon icon={ExternalLinkIcon} size="sm" />
     </a>
   ) : downloadDataUri ? (
     <a href={downloadDataUri} download={downloadName} aria-label="Download file" className={ACTION_CLASS}>
-      <DownloadIcon className="h-3.5 w-3.5" />
+      <Icon icon={DownloadIcon} size="sm" />
     </a>
   ) : (
     // No resolvable source — keep the affordance but disable it and explain why on hover.
@@ -135,7 +136,7 @@ export function FileCard({
           aria-label="No downloadable source"
           className={cn(ACTION_CLASS, "cursor-not-allowed opacity-50")}
         >
-          <DownloadIcon className="h-3.5 w-3.5" />
+          <Icon icon={DownloadIcon} size="sm" />
         </button>
       }
     >
@@ -146,7 +147,7 @@ export function FileCard({
   return (
     <div className="flex max-w-md items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
-        <FileTypeIcon className="h-5 w-5 text-muted-foreground" />
+        <Icon icon={FileTypeIcon} size="default" color="foregroundMuted" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <Text.H6 ellipsis>{primary}</Text.H6>

@@ -1,6 +1,7 @@
 import { ExternalLinkIcon, ImageOffIcon, type LucideIcon, VideoOffIcon, VolumeXIcon } from "lucide-react"
 import { useState } from "react"
 import { cn } from "../../../utils/cn.ts"
+import { Icon } from "../../icons/icons.tsx"
 import { Text } from "../../text/text.tsx"
 
 type MediaStatus = "loading" | "loaded" | "error"
@@ -40,7 +41,7 @@ function OpenOriginalButton({
           : "bg-background",
       )}
     >
-      <ExternalLinkIcon className="h-3.5 w-3.5" />
+      <Icon icon={ExternalLinkIcon} size="sm" />
     </a>
   )
 }
@@ -61,7 +62,7 @@ function MediaErrorPlaceholder({
 }) {
   const openLink = href ? (
     <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">
-      <ExternalLinkIcon className="h-3.5 w-3.5 text-primary" />
+      <Icon icon={ExternalLinkIcon} size="sm" color="primary" />
       <Text.H6 color="primary">Open original</Text.H6>
     </a>
   ) : null
@@ -74,7 +75,7 @@ function MediaErrorPlaceholder({
           "flex items-center gap-2 border border-dashed border-border bg-card px-3 py-2",
         )}
       >
-        <ErrorIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Icon icon={ErrorIcon} size="sm" color="foregroundMuted" className="shrink-0" />
         <Text.H6 color="foregroundMuted">{label}</Text.H6>
         {openLink ? <div className="ml-auto shrink-0">{openLink}</div> : null}
       </div>
@@ -88,7 +89,7 @@ function MediaErrorPlaceholder({
         "flex flex-col items-center justify-center gap-1.5 border border-dashed border-border bg-card p-4 text-center",
       )}
     >
-      <ErrorIcon className="h-6 w-6 text-muted-foreground" />
+      <Icon icon={ErrorIcon} size="md" color="foregroundMuted" />
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
       {mimeType ? <Text.H6 color="foregroundMuted">{mimeType}</Text.H6> : null}
       {openLink ? <div className="mt-1">{openLink}</div> : null}
