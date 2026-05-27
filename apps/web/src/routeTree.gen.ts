@@ -20,6 +20,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as WrappedIdRouteImport } from './routes/wrapped/$id'
 import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
 import { Route as DesignSystemColorsRouteImport } from './routes/design-system/colors'
+import { Route as DesignSystemChatRouteImport } from './routes/design-system/chat'
 import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
 import { Route as CcWrappedIdRouteImport } from './routes/cc-wrapped/$id'
 import { Route as BackofficeWrappedRouteImport } from './routes/backoffice/wrapped'
@@ -119,6 +120,11 @@ const DownloadsExportRoute = DownloadsExportRouteImport.update({
 const DesignSystemColorsRoute = DesignSystemColorsRouteImport.update({
   id: '/colors',
   path: '/colors',
+  getParentRoute: () => DesignSystemRouteRoute,
+} as any)
+const DesignSystemChatRoute = DesignSystemChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => DesignSystemRouteRoute,
 } as any)
 const DesignSystemButtonRoute = DesignSystemButtonRouteImport.update({
@@ -399,6 +405,7 @@ export interface FileRoutesByFullPath {
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/design-system/button': typeof DesignSystemButtonRoute
+  '/design-system/chat': typeof DesignSystemChatRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
@@ -454,6 +461,7 @@ export interface FileRoutesByTo {
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/design-system/button': typeof DesignSystemButtonRoute
+  '/design-system/chat': typeof DesignSystemChatRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
@@ -512,6 +520,7 @@ export interface FileRoutesById {
   '/backoffice/wrapped': typeof BackofficeWrappedRoute
   '/cc-wrapped/$id': typeof CcWrappedIdRouteWithChildren
   '/design-system/button': typeof DesignSystemButtonRoute
+  '/design-system/chat': typeof DesignSystemChatRoute
   '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/wrapped/$id': typeof WrappedIdRouteWithChildren
@@ -573,6 +582,7 @@ export interface FileRouteTypes {
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/design-system/button'
+    | '/design-system/chat'
     | '/design-system/colors'
     | '/downloads/export'
     | '/wrapped/$id'
@@ -628,6 +638,7 @@ export interface FileRouteTypes {
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/design-system/button'
+    | '/design-system/chat'
     | '/design-system/colors'
     | '/downloads/export'
     | '/wrapped/$id'
@@ -685,6 +696,7 @@ export interface FileRouteTypes {
     | '/backoffice/wrapped'
     | '/cc-wrapped/$id'
     | '/design-system/button'
+    | '/design-system/chat'
     | '/design-system/colors'
     | '/downloads/export'
     | '/wrapped/$id'
@@ -832,6 +844,13 @@ declare module '@tanstack/react-router' {
       path: '/colors'
       fullPath: '/design-system/colors'
       preLoaderRoute: typeof DesignSystemColorsRouteImport
+      parentRoute: typeof DesignSystemRouteRoute
+    }
+    '/design-system/chat': {
+      id: '/design-system/chat'
+      path: '/chat'
+      fullPath: '/design-system/chat'
+      preLoaderRoute: typeof DesignSystemChatRouteImport
       parentRoute: typeof DesignSystemRouteRoute
     }
     '/design-system/button': {
@@ -1188,12 +1207,14 @@ const BackofficeRouteRouteWithChildren = BackofficeRouteRoute._addFileChildren(
 
 interface DesignSystemRouteRouteChildren {
   DesignSystemButtonRoute: typeof DesignSystemButtonRoute
+  DesignSystemChatRoute: typeof DesignSystemChatRoute
   DesignSystemColorsRoute: typeof DesignSystemColorsRoute
   DesignSystemIndexRoute: typeof DesignSystemIndexRoute
 }
 
 const DesignSystemRouteRouteChildren: DesignSystemRouteRouteChildren = {
   DesignSystemButtonRoute: DesignSystemButtonRoute,
+  DesignSystemChatRoute: DesignSystemChatRoute,
   DesignSystemColorsRoute: DesignSystemColorsRoute,
   DesignSystemIndexRoute: DesignSystemIndexRoute,
 }

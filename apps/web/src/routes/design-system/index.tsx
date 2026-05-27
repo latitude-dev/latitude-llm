@@ -705,6 +705,12 @@ function DesignSystemPage() {
               >
                 Colors
               </Link>
+              <Link
+                to="/design-system/chat"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Chat
+              </Link>
             </div>
 
             <div className="flex flex-col gap-2">
