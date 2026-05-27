@@ -13,7 +13,9 @@ import {
   FileVideoIcon,
   type LucideIcon,
 } from "lucide-react"
+import { cn } from "../../../utils/cn.ts"
 import { Text } from "../../text/text.tsx"
+import { Tooltip } from "../../tooltip/tooltip.tsx"
 
 const ACTION_CLASS =
   "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:text-foreground"
@@ -121,7 +123,25 @@ export function FileCard({
     <a href={downloadDataUri} download={downloadName} aria-label="Download file" className={ACTION_CLASS}>
       <DownloadIcon className="h-3.5 w-3.5" />
     </a>
-  ) : null
+  ) : (
+    // No resolvable source — keep the affordance but disable it and explain why on hover.
+    // `aria-disabled` (not the native `disabled` attr) so the tooltip still fires.
+    <Tooltip
+      asChild
+      trigger={
+        <button
+          type="button"
+          aria-disabled="true"
+          aria-label="No downloadable source"
+          className={cn(ACTION_CLASS, "cursor-not-allowed opacity-50")}
+        >
+          <DownloadIcon className="h-3.5 w-3.5" />
+        </button>
+      }
+    >
+      This attachment has no downloadable source.
+    </Tooltip>
+  )
 
   return (
     <div className="flex max-w-md items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
