@@ -160,12 +160,16 @@ export {
   type TaxonomyRunRepositoryShape,
 } from "./ports/taxonomy-run-repository.ts"
 export {
+  classifyClusterTrend,
   type GetLastRunInput,
   type GetLastRunResult,
   type GetTaxonomyAnalyticsInput,
   type GetTaxonomyAnalyticsResult,
   getLastRunUseCase,
   getTaxonomyAnalyticsUseCase,
+  TAXONOMY_TREND_BASELINE_DAYS,
+  TAXONOMY_TREND_CURRENT_DAYS,
+  TAXONOMY_TREND_MS_PER_DAY,
   type TaxonomyClusterTrendStatus,
   type TaxonomyClusterTrendSummary,
   type TopTaxonomyCluster,

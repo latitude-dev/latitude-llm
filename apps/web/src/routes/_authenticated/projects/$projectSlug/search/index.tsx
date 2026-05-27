@@ -105,6 +105,12 @@ function SearchPage() {
   const hasRecommendedSearches =
     liveTaxonomyRecommendationsEnabled &&
     (taxonomyOverview?.topClusters.some((cluster) => cluster.name !== "Pending") ?? false)
+  const behaviorEmptyState =
+    liveTaxonomyRecommendationsEnabled && taxonomyOverview?.totalActiveClusters === 0
+      ? "detecting"
+      : hasRecommendedSearches
+        ? "recommendations"
+        : "default"
 
   // Compare canonical serializations of both filter sets. `rawFilters` is whatever TanStack Router
   // wrote to the URL (potentially JSON-stringified twice depending on encoding), so going through
@@ -233,11 +239,7 @@ function SearchPage() {
 
       {!hasContent ? (
         <div className="flex min-h-0 grow flex-col">
-          <SavedSearchesList
-            projectId={projectId}
-            projectSlug={projectSlug}
-            hasRecommendedSearches={hasRecommendedSearches}
-          />
+          <SavedSearchesList projectId={projectId} projectSlug={projectSlug} behaviorEmptyState={behaviorEmptyState} />
           {liveTaxonomyRecommendationsEnabled ? (
             <LiveTaxonomyPanel projectId={projectId} projectSlug={projectSlug} />
           ) : null}

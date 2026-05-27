@@ -1,8 +1,13 @@
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import {
+  BehaviorObservationRepository,
+  classifyClusterTrend,
   getLastRunUseCase,
   getTaxonomyAnalyticsUseCase,
   listCategoriesUseCase,
+  TAXONOMY_TREND_BASELINE_DAYS,
+  TAXONOMY_TREND_CURRENT_DAYS,
+  TAXONOMY_TREND_MS_PER_DAY,
   type TaxonomyCategory,
   type TaxonomyCluster,
   type TaxonomyClusterLineage,
@@ -77,18 +82,22 @@ export interface TaxonomyLineageRecord {
   readonly createdAt: string
 }
 
+export type TaxonomyClusterWithTrendRecord = TaxonomyClusterRecord & {
+  readonly trend: TaxonomyClusterTrendSummary
+}
+
 export interface TaxonomyCategoryWithClustersRecord {
   readonly category: TaxonomyCategoryRecord
-  readonly clusters: readonly TaxonomyClusterRecord[]
+  readonly trend: TaxonomyClusterTrendSummary | null
+  readonly clusters: readonly TaxonomyClusterWithTrendRecord[]
 }
 
 export interface TaxonomyOverviewRecord {
   readonly totalActiveCategories: number
   readonly totalActiveClusters: number
   readonly totalObservations: number
-  readonly topClusters: readonly (TaxonomyClusterRecord & {
+  readonly topClusters: readonly (TaxonomyClusterWithTrendRecord & {
     readonly occurrences: number
-    readonly trend: TaxonomyClusterTrendSummary
   })[]
   readonly categories: readonly TaxonomyCategoryWithClustersRecord[]
   readonly lastRun: TaxonomyRunRecord | null
@@ -163,7 +172,8 @@ export const getTaxonomyOverview = createServerFn({ method: "GET" })
 
     return Effect.runPromise(
       Effect.gen(function* () {
-        const analytics = yield* getTaxonomyAnalyticsUseCase({ organizationId: orgId, projectId })
+        const now = new Date()
+        const analytics = yield* getTaxonomyAnalyticsUseCase({ organizationId: orgId, projectId, now })
         const categoryResult = yield* listCategoriesUseCase({ organizationId: orgId, projectId, includeEmpty: false })
         const clusters = yield* TaxonomyClusterRepository
         const categories = yield* Effect.forEach(
@@ -186,6 +196,61 @@ export const getTaxonomyOverview = createServerFn({ method: "GET" })
               ),
           { concurrency: 4 },
         )
+        const categoryClusterIds = categories.flatMap((item) =>
+          item.clusters.map((cluster) => TaxonomyClusterId(cluster.id)),
+        )
+        const observations = yield* BehaviorObservationRepository
+        const trendCounts =
+          categoryClusterIds.length > 0
+            ? yield* observations.getClusterTrendCounts({
+                organizationId: orgId,
+                projectId,
+                clusterIds: categoryClusterIds,
+                currentSince: new Date(now.getTime() - TAXONOMY_TREND_CURRENT_DAYS * TAXONOMY_TREND_MS_PER_DAY),
+                baselineSince: new Date(
+                  now.getTime() -
+                    (TAXONOMY_TREND_CURRENT_DAYS + TAXONOMY_TREND_BASELINE_DAYS) * TAXONOMY_TREND_MS_PER_DAY,
+                ),
+                baselineDays: TAXONOMY_TREND_BASELINE_DAYS,
+              })
+            : []
+        const trendCountByClusterId = new Map(trendCounts.map((trend) => [trend.clusterId, trend] as const))
+        const trendByClusterId = new Map(
+          trendCounts.map((trend) => [trend.clusterId, classifyClusterTrend(trend)] as const),
+        )
+        const emptyTrend = classifyClusterTrend({
+          currentCount: 0,
+          baselineCount: 0,
+          baselineDays: TAXONOMY_TREND_BASELINE_DAYS,
+        })
+        const categoriesWithTrends = categories.map((item) => {
+          const categoryTrendCounts = item.clusters.reduce(
+            (totals, cluster) => {
+              const trend = trendCountByClusterId.get(TaxonomyClusterId(cluster.id))
+              if (!trend) return totals
+              return {
+                currentCount: totals.currentCount + trend.currentCount,
+                baselineCount: totals.baselineCount + trend.baselineCount,
+              }
+            },
+            { currentCount: 0, baselineCount: 0 },
+          )
+
+          return {
+            category: item.category,
+            trend:
+              item.clusters.length > 0
+                ? classifyClusterTrend({
+                    ...categoryTrendCounts,
+                    baselineDays: TAXONOMY_TREND_BASELINE_DAYS,
+                  })
+                : null,
+            clusters: item.clusters.map((cluster) => ({
+              ...cluster,
+              trend: trendByClusterId.get(TaxonomyClusterId(cluster.id)) ?? emptyTrend,
+            })),
+          }
+        })
         const lastRun = yield* getLastRunUseCase({ organizationId: orgId, projectId })
 
         return {
@@ -197,7 +262,7 @@ export const getTaxonomyOverview = createServerFn({ method: "GET" })
             occurrences: row.occurrences,
             trend: row.trend,
           })),
-          categories,
+          categories: categoriesWithTrends,
           lastRun: lastRun.run ? toRunRecord(lastRun.run) : null,
           recentLineage: lastRun.lineage.map(toLineageRecord),
         } satisfies TaxonomyOverviewRecord

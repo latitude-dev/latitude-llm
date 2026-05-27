@@ -33,14 +33,16 @@ const formatDate = (iso: string): string => dateFormatter.format(new Date(iso))
 
 const filtersCount = (filterSet: SavedSearchRecord["filterSet"]): number => Object.keys(filterSet).length
 
+type BehaviorEmptyState = "default" | "detecting" | "recommendations"
+
 export function SavedSearchesList({
   projectId,
   projectSlug,
-  hasRecommendedSearches,
+  behaviorEmptyState,
 }: {
   readonly projectId: string
   readonly projectSlug: string
-  readonly hasRecommendedSearches: boolean
+  readonly behaviorEmptyState: BehaviorEmptyState
 }) {
   const router = useRouter()
   const { data, isLoading } = useSavedSearchesList(projectId)
@@ -50,7 +52,7 @@ export function SavedSearchesList({
   const [assignOpenForId, setAssignOpenForId] = useState<string | null>(null)
 
   if (!isLoading && data.length === 0) {
-    return <SavedSearchesEmpty hasRecommendedSearches={hasRecommendedSearches} />
+    return <SavedSearchesEmpty behaviorEmptyState={behaviorEmptyState} />
   }
 
   const columns: InfiniteTableColumn<SavedSearchRecord>[] = [
@@ -225,7 +227,9 @@ function DeleteSavedSearchModal({
   )
 }
 
-function SavedSearchesEmpty({ hasRecommendedSearches }: { readonly hasRecommendedSearches: boolean }) {
+function SavedSearchesEmpty({ behaviorEmptyState }: { readonly behaviorEmptyState: BehaviorEmptyState }) {
+  const hasRecommendedSearches = behaviorEmptyState === "recommendations"
+
   return (
     <div
       className={
@@ -239,20 +243,20 @@ function SavedSearchesEmpty({ hasRecommendedSearches }: { readonly hasRecommende
           <Icon icon={SparklesIcon} size="lg" color="foregroundMuted" />
         </div>
         <div className="flex flex-col items-center gap-2">
-          <Text.H3 centered>Search your traces</Text.H3>
-          {hasRecommendedSearches ? (
-            <Text.H5 centered color="foregroundMuted">
-              Describe what you're looking for in plain language, or start from one of the recommended behavior searches
-              below.
-            </Text.H5>
+          {behaviorEmptyState === "detecting" ? (
+            <>
+              <Text.H3 centered>Detecting behaviors</Text.H3>
+              <Text.H5 centered color="foregroundMuted">
+                Latitude is reading incoming traces to find repeated user and agent behaviors. The first behaviors
+                usually appear after enough similar sessions arrive, which can take a few minutes on active projects.
+              </Text.H5>
+            </>
           ) : (
             <>
+              <Text.H3 centered>Explore behaviours</Text.H3>
               <Text.H5 centered color="foregroundMuted">
-                Describe what you're looking for in plain language. Search blends keywords with meaning, so phrases like
-                "failed payments" or "long latency on signup" work as well as exact matches.
-              </Text.H5>
-              <Text.H5 centered color="foregroundMuted">
-                Once you've built a useful search, save it from the action bar to come back to it later.
+                Explore behaviours Latitude detected from user and agent interactions, or describe the behavior you want
+                to investigate. Latitude keeps them up to date as new data comes in.
               </Text.H5>
             </>
           )}

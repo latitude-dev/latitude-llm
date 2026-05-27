@@ -49,16 +49,16 @@ export interface GetLastRunResult {
   readonly lineage: readonly TaxonomyClusterLineage[]
 }
 
-const MS_PER_DAY = 24 * 60 * 60_000
-const TREND_CURRENT_DAYS = 1
-const TREND_BASELINE_DAYS = 7
+export const TAXONOMY_TREND_MS_PER_DAY = 24 * 60 * 60_000
+export const TAXONOMY_TREND_CURRENT_DAYS = 1
+export const TAXONOMY_TREND_BASELINE_DAYS = 7
 
 const startOfUtcDay = (date: Date): Date =>
   new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
 const windowStart = (now: Date, windowDays: number): Date =>
-  startOfUtcDay(new Date(now.getTime() - (windowDays - 1) * MS_PER_DAY))
+  startOfUtcDay(new Date(now.getTime() - (windowDays - 1) * TAXONOMY_TREND_MS_PER_DAY))
 
-const classifyClusterTrend = (input: {
+export const classifyClusterTrend = (input: {
   readonly currentCount: number
   readonly baselineCount: number
   readonly baselineDays: number
@@ -133,9 +133,11 @@ export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
       organizationId: input.organizationId,
       projectId: input.projectId,
       clusterIds: topClusterIds,
-      currentSince: new Date(now.getTime() - TREND_CURRENT_DAYS * MS_PER_DAY),
-      baselineSince: new Date(now.getTime() - (TREND_CURRENT_DAYS + TREND_BASELINE_DAYS) * MS_PER_DAY),
-      baselineDays: TREND_BASELINE_DAYS,
+      currentSince: new Date(now.getTime() - TAXONOMY_TREND_CURRENT_DAYS * TAXONOMY_TREND_MS_PER_DAY),
+      baselineSince: new Date(
+        now.getTime() - (TAXONOMY_TREND_CURRENT_DAYS + TAXONOMY_TREND_BASELINE_DAYS) * TAXONOMY_TREND_MS_PER_DAY,
+      ),
+      baselineDays: TAXONOMY_TREND_BASELINE_DAYS,
     })
     const clusterById = new Map(topClusterRows.map((cluster) => [cluster.id, cluster] as const))
     const trendByClusterId = new Map(trendCounts.map((trend) => [trend.clusterId, trend] as const))

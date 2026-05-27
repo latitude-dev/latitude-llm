@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, Icon, Skeleton } from "@repo/ui"
+import { Button, Card, CardContent, Icon, useMountEffect } from "@repo/ui"
 import { Link } from "@tanstack/react-router"
 import {
   ArrowDownIcon,
@@ -11,12 +11,25 @@ import {
   SparklesIcon,
   TagIcon,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { useTaxonomyOverview } from "../../../../../../domains/taxonomy/taxonomy.collection.ts"
 import type { TaxonomyOverviewRecord } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
 
-const numberFormatter = new Intl.NumberFormat()
+const numberFormatter = new Intl.NumberFormat("en-US")
+const compactNumberFormatter = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 })
+const COMPACT_SESSION_COUNT_THRESHOLD = 100_000
+const RECOMMENDATION_ROTATION_INITIAL_DELAY_MS = 10_000
+const RECOMMENDATION_ROTATION_INTERVAL_MS = 5_000
+const RECOMMENDATION_FADE_MS = 500
+const RECOMMENDATION_COUNT = 4
+
 const formatCount = (value: number): string => numberFormatter.format(value)
+const formatDisplayCount = (value: number): string =>
+  value >= COMPACT_SESSION_COUNT_THRESHOLD ? compactNumberFormatter.format(value) : formatCount(value)
+const formatSessionLabel = (value: number, display: "compact" | "full" = "compact"): string => {
+  const count = display === "compact" ? formatDisplayCount(value) : formatCount(value)
+  return `${count} session${value === 1 ? "" : "s"}`
+}
 
 function shuffle<T>(items: readonly T[]): T[] {
   const shuffled = [...items]
@@ -42,18 +55,13 @@ export function LiveTaxonomyPanel({
     () => (data?.topClusters ?? []).filter((cluster) => cluster.name !== "Pending"),
     [data?.topClusters],
   )
-  const recommendations = useMemo(() => shuffle(namedTopClusters).slice(0, 4), [namedTopClusters])
-  const trendByClusterId = useMemo(
-    () => new Map(namedTopClusters.map((cluster) => [cluster.id, cluster.trend] as const)),
-    [namedTopClusters],
-  )
+  const shuffledTopClusters = useMemo(() => shuffle(namedTopClusters), [namedTopClusters])
   const categoryNameById = useMemo(
     () => new Map((data?.categories ?? []).map((item) => [item.category.id, item.category.name])),
     [data?.categories],
   )
 
-  if (isLoading) return <LiveTaxonomySkeleton />
-  if (!data || recommendations.length === 0) return null
+  if (isLoading || !data || shuffledTopClusters.length === 0) return null
 
   return (
     <section className="mx-auto grid w-full max-w-4xl px-6 pb-8">
@@ -63,17 +71,13 @@ export function LiveTaxonomyPanel({
         }`}
         aria-hidden={showAllBehaviors}
       >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {recommendations.map((cluster) => (
-            <RecommendationCard
-              key={cluster.id}
-              cluster={cluster}
-              projectSlug={projectSlug}
-              categoryName={cluster.parentCategoryId ? categoryNameById.get(cluster.parentCategoryId) : undefined}
-            />
-          ))}
-        </div>
-        {data.totalActiveClusters > recommendations.length ? (
+        <RotatingRecommendationGrid
+          key={shuffledTopClusters.map((cluster) => cluster.id).join(":")}
+          clusters={shuffledTopClusters}
+          projectSlug={projectSlug}
+          categoryNameById={categoryNameById}
+        />
+        {data.totalActiveClusters > RECOMMENDATION_COUNT ? (
           <div className="mt-4 flex justify-center">
             <Button variant="ghost" size="sm" onClick={() => setShowAllBehaviors(true)}>
               See all behaviors & categories
@@ -91,7 +95,6 @@ export function LiveTaxonomyPanel({
           <AllBehaviorsList
             data={data}
             projectSlug={projectSlug}
-            trendByClusterId={trendByClusterId}
             onShowRecommendations={() => setShowAllBehaviors(false)}
           />
         ) : null}
@@ -100,15 +103,99 @@ export function LiveTaxonomyPanel({
   )
 }
 
+function RotatingRecommendationGrid({
+  clusters,
+  projectSlug,
+  categoryNameById,
+}: {
+  readonly clusters: readonly RecommendationCluster[]
+  readonly projectSlug: string
+  readonly categoryNameById: ReadonlyMap<string, string>
+}) {
+  const slotCount = Math.min(RECOMMENDATION_COUNT, clusters.length)
+  const [slots, setSlots] = useState(() =>
+    Array.from({ length: slotCount }, (_, index) => ({ clusterIndex: index, visible: true })),
+  )
+  const nextClusterIndex = useRef(slotCount)
+  const lastRotatedSlotIndex = useRef<number | null>(null)
+
+  useMountEffect(() => {
+    if (clusters.length <= slotCount) return
+
+    const timeouts: ReturnType<typeof setTimeout>[] = []
+    const chooseSlotIndex = () => {
+      if (slotCount <= 1) return 0
+
+      let slotIndex = Math.floor(Math.random() * slotCount)
+      while (slotIndex === lastRotatedSlotIndex.current) {
+        slotIndex = Math.floor(Math.random() * slotCount)
+      }
+      lastRotatedSlotIndex.current = slotIndex
+      return slotIndex
+    }
+    const rotateOneSlot = () => {
+      const slotIndex = chooseSlotIndex()
+      setSlots((previous) => previous.map((slot, index) => (index === slotIndex ? { ...slot, visible: false } : slot)))
+
+      const fadeTimeout = setTimeout(() => {
+        setSlots((previous) => {
+          const visibleClusterIndexes = new Set(previous.map((slot) => slot.clusterIndex))
+          visibleClusterIndexes.delete(previous[slotIndex]?.clusterIndex)
+
+          let candidateIndex = nextClusterIndex.current % clusters.length
+          while (visibleClusterIndexes.has(candidateIndex)) {
+            nextClusterIndex.current += 1
+            candidateIndex = nextClusterIndex.current % clusters.length
+          }
+          nextClusterIndex.current += 1
+
+          return previous.map((slot, index) =>
+            index === slotIndex ? { clusterIndex: candidateIndex, visible: true } : slot,
+          )
+        })
+      }, RECOMMENDATION_FADE_MS)
+      timeouts.push(fadeTimeout)
+    }
+
+    const initialTimeout = setTimeout(() => {
+      rotateOneSlot()
+      const interval = setInterval(rotateOneSlot, RECOMMENDATION_ROTATION_INTERVAL_MS)
+      timeouts.push(interval)
+    }, RECOMMENDATION_ROTATION_INITIAL_DELAY_MS)
+    timeouts.push(initialTimeout)
+
+    return () => {
+      for (const timeout of timeouts) clearTimeout(timeout)
+    }
+  })
+
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {slots.map((slot, index) => {
+        const cluster = clusters[slot.clusterIndex]
+        if (!cluster) return null
+
+        return (
+          <div key={index} className={`transition-opacity duration-500 ${slot.visible ? "opacity-100" : "opacity-0"}`}>
+            <RecommendationCard
+              cluster={cluster}
+              projectSlug={projectSlug}
+              categoryName={cluster.parentCategoryId ? categoryNameById.get(cluster.parentCategoryId) : undefined}
+            />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function AllBehaviorsList({
   data,
   projectSlug,
-  trendByClusterId,
   onShowRecommendations,
 }: {
   readonly data: TaxonomyOverviewRecord
   readonly projectSlug: string
-  readonly trendByClusterId: ReadonlyMap<string, RecommendationCluster["trend"]>
   readonly onShowRecommendations: () => void
 }) {
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<ReadonlySet<string>>(
@@ -156,9 +243,12 @@ function AllBehaviorsList({
                     <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{item.category.description}</p>
                   ) : null}
                 </div>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {formatCount(item.category.observationCount)} sessions
-                </span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {item.trend ? (
+                    <ClusterTag icon={trendMeta(item.trend.status).icon} label={trendMeta(item.trend.status).label} />
+                  ) : null}
+                  <SessionCount value={item.category.observationCount} />
+                </div>
               </button>
               {isExpanded ? (
                 <div className="grid grid-cols-1 gap-2 px-3 pb-3 md:grid-cols-2">
@@ -176,18 +266,14 @@ function AllBehaviorsList({
                             {cluster.name}
                           </div>
                           <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground">
-                            {cluster.description || `${formatCount(cluster.observationCount)} sessions`}
+                            {cluster.description || formatSessionLabel(cluster.observationCount, "full")}
                           </p>
                           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            {trendByClusterId.get(cluster.id) ? (
-                              <ClusterTag
-                                icon={trendMeta(trendByClusterId.get(cluster.id)?.status ?? "steady").icon}
-                                label={trendMeta(trendByClusterId.get(cluster.id)?.status ?? "steady").label}
-                              />
-                            ) : null}
-                            <span className="text-xs text-muted-foreground">
-                              {formatCount(cluster.observationCount)} sessions
-                            </span>
+                            <ClusterTag
+                              icon={trendMeta(cluster.trend.status).icon}
+                              label={trendMeta(cluster.trend.status).label}
+                            />
+                            <SessionCount value={cluster.observationCount} />
                           </div>
                         </div>
                         <Icon
@@ -206,19 +292,6 @@ function AllBehaviorsList({
         })}
       </div>
     </div>
-  )
-}
-
-function LiveTaxonomySkeleton() {
-  return (
-    <section className="mx-auto flex w-full max-w-4xl flex-col px-6 pb-8">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <Skeleton className="h-36 rounded-2xl" />
-        <Skeleton className="h-36 rounded-2xl" />
-        <Skeleton className="h-36 rounded-2xl" />
-        <Skeleton className="h-36 rounded-2xl" />
-      </div>
-    </section>
   )
 }
 
@@ -243,6 +316,16 @@ const trendMeta = (
     case "fading":
       return { label: "fading", icon: ArrowDownIcon }
   }
+}
+
+function SessionCount({ value }: { readonly value: number }) {
+  const exactLabel = formatSessionLabel(value, "full")
+
+  return (
+    <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground" title={exactLabel}>
+      {formatSessionLabel(value)}
+    </span>
+  )
 }
 
 function ClusterTag({ icon, label }: { readonly icon: TagIconType; readonly label: string }) {
@@ -288,12 +371,12 @@ function RecommendationCard({
             />
           </div>
           <p className="line-clamp-3 min-h-12 text-xs leading-4 text-muted-foreground">
-            {cluster.description || `${formatCount(cluster.observationCount)} matching sessions`}
+            {cluster.description || `${formatSessionLabel(cluster.observationCount, "full")} matching`}
           </p>
           <div className="mt-auto flex flex-wrap items-center gap-1.5">
             <ClusterTag icon={trendMeta(cluster.trend.status).icon} label={trendMeta(cluster.trend.status).label} />
             {categoryName ? <ClusterTag icon={TagIcon} label={categoryName} /> : null}
-            <span className="text-xs text-muted-foreground">{formatCount(cluster.observationCount)} sessions</span>
+            <SessionCount value={cluster.observationCount} />
           </div>
         </CardContent>
       </Card>
