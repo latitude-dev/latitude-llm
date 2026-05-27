@@ -98,6 +98,8 @@ export const recordSessionObservationUseCase = (input: RecordSessionObservationI
         traceIds,
         summary: document.summaryPreview,
         summaryHash,
+        // Deliberately excluded from gardening birth sweeps: short sessions do
+        // not have enough behavioral signal to justify an embedding.
         embedding: [],
         embeddingModel: TAXONOMY_EMBEDDING_MODEL,
         assignedClusterId: null,

@@ -1,8 +1,13 @@
 import { generateId, type OrganizationId, type ProjectId, TaxonomyRunId } from "@domain/shared"
 import { Effect } from "effect"
-import { TAXONOMY_GARDEN_LOCK_TTL_SECONDS, TAXONOMY_GARDENING_MAX_RUNTIME_MS } from "../constants.ts"
+import {
+  TAXONOMY_GARDEN_LOCK_TTL_SECONDS,
+  TAXONOMY_GARDENING_MAX_RUNTIME_MS,
+  TAXONOMY_NOISE_LOOKBACK_DAYS,
+} from "../constants.ts"
 import type { TaxonomyClusterLineage, TaxonomyRunTrigger } from "../entities/lineage.ts"
 import { TaxonomyGardeningTimeoutError } from "../errors.ts"
+import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
 import { TaxonomyCategoryRepository } from "../ports/taxonomy-category-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
@@ -21,6 +26,9 @@ export interface RunProjectGardeningInput {
   readonly trigger: TaxonomyRunTrigger
   readonly now?: Date
 }
+
+const gardeningLookbackStart = (now: Date): Date =>
+  new Date(now.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
 const errorMessage = (error: unknown): string => {
   if (typeof error === "object" && error !== null && "_tag" in error && typeof error._tag === "string")
@@ -44,6 +52,7 @@ export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
     const runs = yield* TaxonomyRunRepository
     const clusters = yield* TaxonomyClusterRepository
     const categories = yield* TaxonomyCategoryRepository
+    const observations = yield* BehaviorObservationRepository
     const startedAt = input.now ?? new Date()
     const runId = TaxonomyRunId(generateId())
     const initialRun = {
@@ -75,6 +84,11 @@ export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
         const completed = yield* Effect.gen(function* () {
           const now = startedAt
           const lineage: TaxonomyClusterLineage[] = []
+          const observationCounts = yield* observations.getCounts({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            since: gardeningLookbackStart(now),
+          })
 
           const births = yield* sweepNoiseAndBirthClustersUseCase({
             organizationId: input.organizationId,
@@ -151,7 +165,7 @@ export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
             ...initialRun,
             status: "completed" as const,
             completedAt: new Date(),
-            observationsScanned: births.noiseScanned + reassign.noiseScanned,
+            observationsScanned: observationCounts.total,
             noiseScanned: births.noiseScanned + reassign.noiseScanned,
             clustersBorn: births.clustersBorn,
             clustersMerged: merges.clustersMerged,

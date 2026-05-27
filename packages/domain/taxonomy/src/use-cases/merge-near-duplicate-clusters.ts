@@ -31,7 +31,13 @@ const connectedComponents = (clusters: readonly TaxonomyCluster[]): readonly (re
   for (let index = 0; index < n; index++) parent[index] = index
   const find = (x: number): number => {
     let root = x
-    while (parent[root] !== root) root = parent[root] ?? root
+    while (parent[root] !== root) {
+      const next = parent[root]
+      if (next === undefined) return root
+      const grandparent = parent[next]
+      if (grandparent !== undefined) parent[root] = grandparent
+      root = next
+    }
     return root
   }
   const union = (a: number, b: number) => {

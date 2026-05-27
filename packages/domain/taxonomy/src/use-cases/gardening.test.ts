@@ -368,7 +368,16 @@ describe("gardening use-cases", () => {
   })
 
   it("orchestrates a project gardening run through activities and closes the run", async () => {
-    const observations = createFakeBehaviorObservationRepository([0, 1, 2, 3].map((index) => makeObservation(index)))
+    const assignedObservation = {
+      ...makeObservation(4),
+      assignedClusterId: "existing-cluster" as TaxonomyCluster["id"],
+      assignmentMethod: "centroid_online" as const,
+      assignmentConfidence: 0.9,
+    }
+    const observations = createFakeBehaviorObservationRepository([
+      ...[0, 1, 2, 3].map((index) => makeObservation(index)),
+      assignedObservation,
+    ])
     const clusters = createFakeTaxonomyClusterRepository([])
     const categories = createFakeTaxonomyCategoryRepository([])
     const lineage = createFakeTaxonomyLineageRepository()
@@ -389,6 +398,8 @@ describe("gardening use-cases", () => {
     )
 
     expect(result.status).toBe("completed")
+    expect(result.observationsScanned).toBe(5)
+    expect(result.noiseScanned).toBe(4)
     expect(result.clustersBorn).toBe(1)
     expect(result.categoriesRebuilt).toBe(1)
     expect([...runs.runs.values()][0]?.status).toBe("completed")
