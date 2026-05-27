@@ -1,4 +1,4 @@
-import { AI, type AIShape, type GenerateResult } from "@domain/ai"
+import { AI, type AIShape, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { ChSqlClient, OrganizationId, ProjectId, SessionId, SqlClient, TaxonomyRunId, TraceId } from "@domain/shared"
@@ -113,25 +113,20 @@ const runUseCase = <A, E>(
     ),
   )
 
-const createDeterministicAi = (): AIShape => {
-  let calls = 0
-  return {
-    generate: <T>() =>
-      Effect.sync((): GenerateResult<T> => {
-        calls++
-        const object =
-          calls % 2 === 1
-            ? { candidates: [{ theme: "deterministic theme", examples: [0] }] }
-            : {
-                name: calls === 2 ? "Named cluster" : "Named category",
-                description: "A deterministic long enough generated description.",
-              }
-        return { object: object as T, tokens: 1, duration: 1 }
-      }),
-    embed: () => Effect.succeed({ embedding: [] }),
-    rerank: () => Effect.succeed([]),
-  }
-}
+const createDeterministicAi = (): AIShape => ({
+  generate: <T>(input: GenerateInput<T>) =>
+    Effect.sync((): GenerateResult<T> => {
+      const raw = input.system.includes("proposeCandidateThemes")
+        ? { candidates: [{ theme: "deterministic theme", examples: [0] }] }
+        : {
+            name: input.system.includes("category") ? "Named category" : "Named cluster",
+            description: "A deterministic long enough generated description.",
+          }
+      return { object: input.schema.parse(raw), tokens: 1, duration: 1 }
+    }),
+  embed: () => Effect.succeed({ embedding: [] }),
+  rerank: () => Effect.succeed([]),
+})
 
 describe("gardening use-cases", () => {
   it("computes the proportional birth member floor", () => {
@@ -328,17 +323,16 @@ describe("gardening use-cases", () => {
     ])
     let calls = 0
     const ai: AIShape = {
-      generate: <T>() =>
+      generate: <T>(input: GenerateInput<T>) =>
         Effect.sync((): GenerateResult<T> => {
           calls++
-          const object =
-            calls % 2 === 1
-              ? { candidates: [{ theme: "deterministic theme", examples: [0] }] }
-              : {
-                  name: calls === 2 ? "Named cluster" : "Named category",
-                  description: "A deterministic long enough generated description.",
-                }
-          return { object: object as T, tokens: 1, duration: 1 }
+          const raw = input.system.includes("proposeCandidateThemes")
+            ? { candidates: [{ theme: "deterministic theme", examples: [0] }] }
+            : {
+                name: input.system.includes("category") ? "Named category" : "Named cluster",
+                description: "A deterministic long enough generated description.",
+              }
+          return { object: input.schema.parse(raw), tokens: 1, duration: 1 }
         }),
       embed: () => Effect.succeed({ embedding: [] }),
       rerank: () => Effect.succeed([]),
@@ -362,7 +356,7 @@ describe("gardening use-cases", () => {
       ),
     )
 
-    expect(calls).toBe(4)
+    expect(calls).toBe(3)
     expect(clusters.clusters.get(cluster.id)?.name).toBe("Named cluster")
     expect(categories.categories.get(categoryId)?.name).toBe("Named category")
   })

@@ -8,11 +8,14 @@ import {
 import type { TaxonomyClusterLineage, TaxonomyRunTrigger } from "../entities/lineage.ts"
 import { TaxonomyGardeningTimeoutError } from "../errors.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
+import { TaxonomyCategoryRepository } from "../ports/taxonomy-category-repository.ts"
+import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
 import { TaxonomyRunRepository } from "../ports/taxonomy-run-repository.ts"
 import { deprecateInactiveClustersUseCase } from "./deprecate-inactive-clusters.ts"
 import { emitLineageUseCase } from "./emit-lineage.ts"
 import { mergeNearDuplicateClustersUseCase } from "./merge-near-duplicate-clusters.ts"
+import { nameCategoryUseCase, nameClusterUseCase } from "./name-taxonomy.ts"
 import { reassignNoiseToCurrentClustersUseCase } from "./reassign-noise-to-current-clusters.ts"
 import { rebuildCategoryHierarchyUseCase } from "./rebuild-category-hierarchy.ts"
 import { sweepNoiseAndBirthClustersUseCase } from "./sweep-noise-and-birth-clusters.ts"
@@ -47,6 +50,8 @@ export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     const locks = yield* TaxonomyLockRepository
     const runs = yield* TaxonomyRunRepository
+    const clusters = yield* TaxonomyClusterRepository
+    const categories = yield* TaxonomyCategoryRepository
     const observations = yield* BehaviorObservationRepository
     const startedAt = input.now ?? new Date()
     const runId = TaxonomyRunId(generateId())
@@ -121,6 +126,38 @@ export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
             projectId: input.projectId,
             now,
           })
+
+          const bornClusterIds = new Set(
+            lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])),
+          )
+          const activeClusters = yield* clusters.listActiveByProject({
+            projectId: input.projectId,
+          })
+          for (const cluster of activeClusters) {
+            if (bornClusterIds.has(cluster.id) || cluster.name === "Pending") {
+              yield* nameClusterUseCase({
+                organizationId: input.organizationId,
+                projectId: input.projectId,
+                clusterId: cluster.id,
+                now,
+              })
+            }
+          }
+
+          const activeCategories = yield* categories.listByProject({
+            projectId: input.projectId,
+            state: "active",
+          })
+          for (const category of activeCategories) {
+            if (category.name === "Pending") {
+              yield* nameCategoryUseCase({
+                organizationId: input.organizationId,
+                projectId: input.projectId,
+                categoryId: category.id,
+                now,
+              })
+            }
+          }
 
           yield* emitLineageUseCase({ transitions: lineage })
 
