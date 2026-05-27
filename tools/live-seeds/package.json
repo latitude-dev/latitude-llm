@@ -15,25 +15,17 @@
     "test": "vitest run --passWithNoTests --dir src",
     "seed:live-seeds": "node --import tsx src/scripts/send-live-seeds.ts",
     "seed:multi-project-demo": "node --import tsx src/scripts/send-multi-project-demo.ts",
-    "seed:session-search-qa": "node --import tsx src/scripts/send-session-search-qa.ts",
-    "taxonomy:tune-seeded-acme": "node --import tsx src/scripts/tune-seeded-acme-taxonomy.ts"
+    "seed:session-search-qa": "node --import tsx src/scripts/send-session-search-qa.ts"
   },
   "dependencies": {
-    "@domain/ai": "workspace:*",
     "@domain/annotation-queues": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
-    "@domain/taxonomy": "workspace:*",
-    "@platform/ai": "workspace:*",
-    "@platform/ai-voyage": "workspace:*",
-    "@platform/cache-redis": "workspace:*",
-    "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
-    "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "tsx": "catalog:"
   }

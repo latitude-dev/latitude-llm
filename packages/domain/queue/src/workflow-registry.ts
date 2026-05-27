@@ -3,6 +3,15 @@ function input<T extends Record<string, unknown>>(): T {
 }
 
 const _registry = {
+  analyzeSessionWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly sessionId: string
+    readonly triggeringTraceId: string
+    readonly triggeringStartTime: string
+    readonly reason: "trace_completed" | "backfill" | "manual_reprocess"
+    readonly debounceMs?: number
+  }>(),
   refreshEvaluationAlignmentWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
@@ -54,15 +63,16 @@ const _registry = {
     readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }>(),
-  taxonomyNameClusterWorkflow: input<{
+  gardenProjectTaxonomyWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
-    readonly clusterId: string
+    readonly trigger: "cron" | "manual" | "threshold"
   }>(),
-  taxonomyNameCategoryWorkflow: input<{
+  gardenTaxonomyWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string
-    readonly categoryId: string
+    readonly dimension: "topic"
+    readonly trigger: "cron" | "manual" | "threshold"
   }>(),
 }
 

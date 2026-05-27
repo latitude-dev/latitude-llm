@@ -9,7 +9,6 @@ import { and, asc, desc, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { projects } from "../schema/projects.ts"
-import { taxonomyCategories } from "../schema/taxonomy-categories.ts"
 import { taxonomyClusters } from "../schema/taxonomy-clusters.ts"
 
 /**
@@ -41,40 +40,22 @@ export const AdminTaxonomyRepositoryLive = Layer.effect(
             return yield* Effect.fail(new NotFoundError({ entity: "Project", id: projectId }))
           }
 
-          const categoryRows = yield* sqlClient.query((db) =>
-            db
-              .select({
-                id: taxonomyCategories.id,
-                name: taxonomyCategories.name,
-                description: taxonomyCategories.description,
-                clusterCount: taxonomyCategories.clusterCount,
-                observationCount: taxonomyCategories.observationCount,
-                state: taxonomyCategories.state,
-                clusteredAt: taxonomyCategories.clusteredAt,
-                createdAt: taxonomyCategories.createdAt,
-                updatedAt: taxonomyCategories.updatedAt,
-              })
-              .from(taxonomyCategories)
-              .where(
-                and(
-                  eq(taxonomyCategories.organizationId, project.organizationId),
-                  eq(taxonomyCategories.projectId, projectId),
-                ),
-              )
-              .orderBy(desc(taxonomyCategories.observationCount), asc(taxonomyCategories.name)),
-          )
-
+          // The unified cluster tree replaced flat categories: depth-0 roots
+          // are the top-level groups and every descendant rolls up to its
+          // root (first path segment).
           const clusterRows = yield* sqlClient.query((db) =>
             db
               .select({
                 id: taxonomyClusters.id,
-                categoryId: taxonomyClusters.parentCategoryId,
+                parentClusterId: taxonomyClusters.parentClusterId,
+                path: taxonomyClusters.path,
                 name: taxonomyClusters.name,
                 description: taxonomyClusters.description,
                 observationCount: taxonomyClusters.observationCount,
                 state: taxonomyClusters.state,
                 firstObservedAt: taxonomyClusters.firstObservedAt,
                 lastObservedAt: taxonomyClusters.lastObservedAt,
+                clusteredAt: taxonomyClusters.clusteredAt,
                 createdAt: taxonomyClusters.createdAt,
                 updatedAt: taxonomyClusters.updatedAt,
               })
@@ -88,14 +69,17 @@ export const AdminTaxonomyRepositoryLive = Layer.effect(
               .orderBy(desc(taxonomyClusters.observationCount), asc(taxonomyClusters.name)),
           )
 
-          const categoryIds = new Set(categoryRows.map((row) => row.id))
-          const subcategoriesByCategory = new Map<string, AdminTaxonomySubcategory[]>()
+          const rootRows = clusterRows.filter((row) => row.parentClusterId === null && row.state !== "merged")
+          const rootIds = new Set(rootRows.map((row) => row.id))
+          const subcategoriesByRoot = new Map<string, AdminTaxonomySubcategory[]>()
           const uncategorized: AdminTaxonomySubcategory[] = []
 
           for (const row of clusterRows) {
+            if (row.parentClusterId === null) continue
+            const rootId = row.path.split("/")[0] ?? ""
             const subcategory: AdminTaxonomySubcategory = {
               id: row.id,
-              categoryId: row.categoryId,
+              categoryId: rootIds.has(rootId) ? rootId : null,
               name: row.name,
               description: row.description,
               observationCount: row.observationCount,
@@ -105,29 +89,32 @@ export const AdminTaxonomyRepositoryLive = Layer.effect(
               createdAt: row.createdAt,
               updatedAt: row.updatedAt,
             }
-
-            if (row.categoryId === null || !categoryIds.has(row.categoryId)) {
+            if (subcategory.categoryId === null) {
               uncategorized.push(subcategory)
               continue
             }
-
-            const existing = subcategoriesByCategory.get(row.categoryId) ?? []
+            const existing = subcategoriesByRoot.get(subcategory.categoryId) ?? []
             existing.push(subcategory)
-            subcategoriesByCategory.set(row.categoryId, existing)
+            subcategoriesByRoot.set(subcategory.categoryId, existing)
           }
 
-          const categories: AdminTaxonomyCategory[] = categoryRows.map((row) => ({
-            id: row.id,
-            name: row.name,
-            description: row.description,
-            clusterCount: row.clusterCount,
-            observationCount: row.observationCount,
-            state: row.state,
-            clusteredAt: row.clusteredAt,
-            createdAt: row.createdAt,
-            updatedAt: row.updatedAt,
-            subcategories: subcategoriesByCategory.get(row.id) ?? [],
-          }))
+          const categories: AdminTaxonomyCategory[] = rootRows.map((row) => {
+            const subcategories = subcategoriesByRoot.get(row.id) ?? []
+            return {
+              id: row.id,
+              name: row.name,
+              description: row.description,
+              clusterCount: subcategories.length,
+              observationCount:
+                row.observationCount +
+                subcategories.reduce((sum, subcategory) => sum + subcategory.observationCount, 0),
+              state: row.state === "active" ? "active" : "deprecated",
+              clusteredAt: row.clusteredAt,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+              subcategories,
+            }
+          })
 
           return { categories, uncategorized } satisfies AdminProjectTaxonomy
         }),

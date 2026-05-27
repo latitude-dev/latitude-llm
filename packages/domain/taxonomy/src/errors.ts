@@ -7,13 +7,6 @@ export class TaxonomyClusterNotFoundError extends Data.TaggedError("TaxonomyClus
   readonly httpMessage = "Taxonomy cluster not found"
 }
 
-export class TaxonomyCategoryNotFoundError extends Data.TaggedError("TaxonomyCategoryNotFoundError")<{
-  readonly categoryId: string
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "Taxonomy category not found"
-}
-
 export class TaxonomyRunNotFoundError extends Data.TaggedError("TaxonomyRunNotFoundError")<{
   readonly runId: string
 }> {

@@ -1,13 +1,7 @@
-import type {
-  NotFoundError,
-  ProjectId,
-  RepositoryError,
-  SqlClient,
-  TaxonomyCategoryId,
-  TaxonomyClusterId,
-} from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, SqlClient, TaxonomyClusterId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
+import type { TaxonomyDimension } from "../entities/dimension.ts"
 
 export interface NearestClusterMatch {
   readonly cluster: TaxonomyCluster
@@ -26,8 +20,8 @@ export type TaxonomyClusterSort = "observation_count_desc" | "last_observed_desc
 
 export interface ListClustersInput {
   readonly projectId: ProjectId
+  readonly dimension: TaxonomyDimension
   readonly state?: TaxonomyCluster["state"]
-  readonly parentCategoryId?: TaxonomyCategoryId
   readonly sort?: TaxonomyClusterSort
   readonly limit: number
   readonly offset: number
@@ -40,24 +34,10 @@ export interface TaxonomyClusterListPage {
   readonly offset: number
 }
 
-export interface BulkUpdateParentCategoryInput {
-  readonly projectId: ProjectId
-  readonly assignments: ReadonlyArray<{
-    readonly clusterId: TaxonomyClusterId
-    readonly parentCategoryId: TaxonomyCategoryId | null
-  }>
-}
-
 export interface MarkMergedInput {
   readonly clusterId: TaxonomyClusterId
   readonly mergedIntoClusterId: TaxonomyClusterId
   readonly timestamp: Date
-}
-
-export interface IncrementObservationCountInput {
-  readonly clusterId: TaxonomyClusterId
-  readonly delta: number
-  readonly lastObservedAt: Date
 }
 
 export interface TaxonomyClusterRepositoryShape {
@@ -65,7 +45,15 @@ export interface TaxonomyClusterRepositoryShape {
   listByIds(ids: readonly TaxonomyClusterId[]): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
   listActiveByProject(input: {
     readonly projectId: ProjectId
+    readonly dimension: TaxonomyDimension
+    /** Omit for all nodes; null for roots; an id for that node's children. */
+    readonly parentClusterId?: TaxonomyClusterId | null
   }): Effect.Effect<readonly TaxonomyCluster[], RepositoryError, SqlClient>
+  /** Active ids of the node plus all its descendants (path prefix match). */
+  listSubtreeIds(input: {
+    readonly projectId: ProjectId
+    readonly clusterId: TaxonomyClusterId
+  }): Effect.Effect<readonly TaxonomyClusterId[], RepositoryError, SqlClient>
   /**
    * Exact pgvector cosine over `(organization_id, project_id)` for state =
    * 'active' clusters with a non-null `centroid_embedding`. Sub-ms at the
@@ -75,15 +63,18 @@ export interface TaxonomyClusterRepositoryShape {
    */
   listNearestActive(input: {
     readonly projectId: ProjectId
+    readonly dimension: TaxonomyDimension
     readonly queryVector: readonly number[]
     readonly k: number
+    /** Omit for all nodes; null for roots; an id for that node's children. */
+    readonly parentClusterId?: TaxonomyClusterId | null
   }): Effect.Effect<readonly NearestClusterMatch[], RepositoryError, SqlClient>
   hybridSearch(input: {
     readonly projectId: ProjectId
+    readonly dimension: TaxonomyDimension
     readonly query: string
     readonly normalizedEmbedding: readonly number[]
     readonly state?: TaxonomyCluster["state"]
-    readonly parentCategoryId?: TaxonomyCategoryId
     readonly limit: number
     readonly offset: number
   }): Effect.Effect<readonly TaxonomyClusterSearchCandidate[], RepositoryError, SqlClient>
@@ -94,13 +85,11 @@ export interface TaxonomyClusterRepositoryShape {
    * `IssueRepository.save`).
    */
   save(cluster: TaxonomyCluster): Effect.Effect<void, RepositoryError, SqlClient>
-  bulkUpdateParentCategory(input: BulkUpdateParentCategoryInput): Effect.Effect<void, RepositoryError, SqlClient>
   markMerged(input: MarkMergedInput): Effect.Effect<void, RepositoryError, SqlClient>
   markDeprecated(input: {
     readonly clusterId: TaxonomyClusterId
     readonly timestamp: Date
   }): Effect.Effect<void, RepositoryError, SqlClient>
-  incrementObservationCount(input: IncrementObservationCountInput): Effect.Effect<void, RepositoryError, SqlClient>
 }
 
 export class TaxonomyClusterRepository extends Context.Service<

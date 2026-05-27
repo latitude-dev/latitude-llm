@@ -10,6 +10,7 @@ const toDomainLineage = (row: typeof taxonomyClusterLineage.$inferSelect): Taxon
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
+    dimension: row.dimension,
     runId: row.runId,
     transitionType: row.transitionType,
     fromClusterIds: row.fromClusterIds,
@@ -22,6 +23,7 @@ const toInsertRow = (lineage: TaxonomyClusterLineage): typeof taxonomyClusterLin
   id: lineage.id,
   organizationId: lineage.organizationId,
   projectId: lineage.projectId,
+  dimension: lineage.dimension,
   runId: lineage.runId,
   transitionType: lineage.transitionType,
   fromClusterIds: [...lineage.fromClusterIds],
@@ -44,7 +46,7 @@ export const TaxonomyLineageRepositoryLive = Layer.effect(
           )
         }),
 
-      listRecent: ({ projectId, limit }) =>
+      listRecent: ({ projectId, dimension, limit }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -55,6 +57,7 @@ export const TaxonomyLineageRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyClusterLineage.organizationId, organizationId),
                   eq(taxonomyClusterLineage.projectId, projectId),
+                  eq(taxonomyClusterLineage.dimension, dimension),
                 ),
               )
               .orderBy(desc(taxonomyClusterLineage.createdAt))
@@ -63,7 +66,7 @@ export const TaxonomyLineageRepositoryLive = Layer.effect(
           return rows.map(toDomainLineage)
         }),
 
-      listRecentByTransitionTypes: ({ projectId, transitionTypes, limit }) =>
+      listRecentByTransitionTypes: ({ projectId, dimension, transitionTypes, limit }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -74,6 +77,7 @@ export const TaxonomyLineageRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyClusterLineage.organizationId, organizationId),
                   eq(taxonomyClusterLineage.projectId, projectId),
+                  eq(taxonomyClusterLineage.dimension, dimension),
                   inArray(taxonomyClusterLineage.transitionType, transitionTypes),
                 ),
               )

@@ -6,8 +6,7 @@ export {
   TAXONOMY_ASSIGN_TOPK,
   TAXONOMY_BIRTH_LINK_THRESHOLD,
   TAXONOMY_BIRTH_MAX_DIAMETER,
-  TAXONOMY_CATEGORY_CONTINUATION_THRESHOLD,
-  TAXONOMY_CATEGORY_STATES,
+  TAXONOMY_CALIBRATION_TTL_MS,
   TAXONOMY_CENTROID_HALF_LIFE_SECONDS,
   TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH,
   TAXONOMY_CLUSTER_LOCK_MAX_RETRIES,
@@ -18,6 +17,7 @@ export {
   TAXONOMY_CLUSTER_STATES,
   TAXONOMY_DEAD_CLUSTER_INACTIVITY_DAYS,
   TAXONOMY_DEAD_CLUSTER_MASS_FLOOR,
+  TAXONOMY_DIMENSIONS,
   TAXONOMY_EMBEDDING_DIMENSIONS,
   TAXONOMY_EMBEDDING_MODEL,
   TAXONOMY_FPS_SAMPLE_BUDGET_MAX,
@@ -30,7 +30,6 @@ export {
   TAXONOMY_GARDENING_STALE_GRACE_MS,
   TAXONOMY_GARDENING_SWEEP_BATCH,
   TAXONOMY_GARDENING_THROTTLE_MS,
-  TAXONOMY_HIERARCHY_MAX_CATEGORIES,
   TAXONOMY_LINEAGE_TRANSITION_TYPES,
   TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
   TAXONOMY_MERGE_THRESHOLD,
@@ -45,25 +44,27 @@ export {
   TAXONOMY_OBSERVATION_DEBOUNCE_MS,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   TAXONOMY_OBSERVATION_WEIGHT_SCHEME,
+  TAXONOMY_PENDING_DISPLAY_NAME,
+  TAXONOMY_PROJECTION_METHODS,
   TAXONOMY_RUN_STATUSES,
   TAXONOMY_RUN_TRIGGERS,
   TAXONOMY_SEARCH_MIN_SCORE,
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
-  TAXONOMY_SESSION_DOCUMENT_MAX_LENGTH,
-  TAXONOMY_SESSION_MIN_LENGTH,
-  TAXONOMY_SUMMARY_MIN_SESSION_TOKENS,
-  TAXONOMY_SUMMARY_MODEL,
-  TAXONOMY_SUMMARY_STRATEGIES,
-  TAXONOMY_SUMMARY_STRATEGY,
   type TaxonomyObservationWeightScheme,
-  type TaxonomySummaryStrategy,
 } from "./constants.ts"
 export {
-  type TaxonomyCategory,
-  TaxonomyCategoryState,
-  taxonomyCategorySchema,
-  taxonomyCategoryStateSchema,
-} from "./entities/category.ts"
+  type AnchorCalibration,
+  anchorCalibrationSchema,
+  CALIBRATION_SCOPES,
+  type CalibrationProfile,
+  type CalibrationScope,
+  type ClusteringCalibration,
+  type ConversationCalibration,
+  calibrationProfileSchema,
+  calibrationScopeSchema,
+  clusteringCalibrationSchema,
+  conversationCalibrationSchema,
+} from "./entities/calibration.ts"
 export {
   type TaxonomyCentroid,
   type TaxonomyCluster,
@@ -72,6 +73,7 @@ export {
   taxonomyClusterSchema,
   taxonomyClusterStateSchema,
 } from "./entities/cluster.ts"
+export { TaxonomyDimension, taxonomyDimensionSchema } from "./entities/dimension.ts"
 export {
   type TaxonomyClusterLineage,
   TaxonomyLineageTransitionType,
@@ -85,13 +87,14 @@ export {
   taxonomyRunTriggerSchema,
 } from "./entities/lineage.ts"
 export {
-  type TaxonomyObservation,
+  type TaxonomyMomentObservation,
   TaxonomyObservationAssignmentMethod,
+  TaxonomyProjectionMethod,
+  taxonomyMomentObservationSchema,
   taxonomyObservationAssignmentMethodSchema,
-  taxonomyObservationSchema,
+  taxonomyProjectionMethodSchema,
 } from "./entities/observation.ts"
 export {
-  TaxonomyCategoryNotFoundError,
   TaxonomyCentroidModelMismatchError,
   TaxonomyClusterLockUnavailableError,
   TaxonomyClusterNotFoundError,
@@ -102,22 +105,17 @@ export {
   TaxonomyRunNotFoundError,
 } from "./errors.ts"
 export {
-  type AgglomerativeAssignment,
-  type AgglomerativeClusterInput,
-  agglomerativeCluster,
-  buildSessionDocument,
   clamp,
   cosineSimilarity,
   cosineSimilarityNormalized,
   createTaxonomyCentroid,
+  diameterBoundedGreedyClusters,
   farthestPointSample,
+  isDisplayableTaxonomyName,
   meanNormalized,
   normalizeTaxonomyCentroid,
   normalizeTaxonomyEmbedding,
-  type SessionDocument,
-  type SingleLinkageCandidate,
-  type SingleLinkageClustersInput,
-  singleLinkageClusters,
+  quantileSorted,
   softmax,
   type UpdateTaxonomyCentroidInput,
   updateTaxonomyCentroid,
@@ -129,22 +127,16 @@ export {
   withTaxonomyGardenLock,
 } from "./locks.ts"
 export {
-  type BehaviorObservationClusterOccurrence,
-  type BehaviorObservationCounts,
-  BehaviorObservationRepository,
-  type BehaviorObservationRepositoryShape,
-  type ListNoiseInput,
-  type ListObservationsInClusterInput,
-  type ReassignObservationInput,
-} from "./ports/behavior-observation-repository.ts"
+  CalibrationProfileRepository,
+  type CalibrationProfileRepositoryShape,
+} from "./ports/calibration-profile-repository.ts"
 export {
-  type BestCategoryMatch,
-  TaxonomyCategoryRepository,
-  type TaxonomyCategoryRepositoryShape,
-} from "./ports/taxonomy-category-repository.ts"
+  type ClusterAnalysisAggregate,
+  type ClusterRepresentativeExample,
+  TaxonomyClusterIntelligenceRepository,
+  type TaxonomyClusterIntelligenceRepositoryShape,
+} from "./ports/taxonomy-cluster-intelligence-repository.ts"
 export {
-  type BulkUpdateParentCategoryInput,
-  type IncrementObservationCountInput,
   type ListClustersInput,
   type MarkMergedInput,
   type NearestClusterMatch,
@@ -158,6 +150,16 @@ export {
   TaxonomyLineageRepository,
   type TaxonomyLineageRepositoryShape,
 } from "./ports/taxonomy-lineage-repository.ts"
+export {
+  type ListTaxonomyNoiseInput,
+  type ListTaxonomyObservationClusterInput,
+  type ReassignTaxonomyObservationInput,
+  type TaxonomyObservationClusterOccurrence,
+  type TaxonomyObservationClusterTrendCounts,
+  type TaxonomyObservationCounts,
+  TaxonomyObservationRepository,
+  type TaxonomyObservationRepositoryShape,
+} from "./ports/taxonomy-observation-repository.ts"
 export {
   TaxonomyRunRepository,
   type TaxonomyRunRepositoryShape,
@@ -182,6 +184,11 @@ export {
   assignObservationToClusterUseCase,
 } from "./use-cases/assign-observation-to-cluster.ts"
 export {
+  type CalibrateClusteringThresholdsInput,
+  type CalibrateClusteringThresholdsResult,
+  calibrateClusteringThresholdsUseCase,
+} from "./use-cases/calibrate-clustering-thresholds.ts"
+export {
   type ClusterAssignmentDecision,
   type DecideClusterAssignmentInput,
   decideClusterAssignment,
@@ -200,22 +207,17 @@ export {
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
 export { type FindNearestClustersInput, findNearestClustersUseCase } from "./use-cases/find-nearest-clusters.ts"
 export {
-  type GetCategoryDetailsInput,
-  type GetCategoryDetailsResult,
+  type GetClusterConversationIntelligenceInput,
+  type GetClusterConversationIntelligenceResult,
+  getClusterConversationIntelligenceUseCase,
+} from "./use-cases/get-cluster-conversation-intelligence.ts"
+export {
   type GetClusterDetailsInput,
   type GetClusterDetailsResult,
-  getCategoryDetailsUseCase,
   getClusterDetailsUseCase,
 } from "./use-cases/get-details.ts"
 export {
-  type ListCategoriesInput,
-  type ListCategoriesResult,
-  listCategoriesUseCase,
-} from "./use-cases/list-categories.ts"
-export {
-  type ListClustersInCategoryInput,
   type ListTaxonomyClustersInput,
-  listClustersInCategoryUseCase,
   listClustersUseCase,
   type TaxonomyClusterPage,
 } from "./use-cases/list-clusters.ts"
@@ -225,15 +227,24 @@ export {
   listObservationsInClusterUseCase,
 } from "./use-cases/list-observations-in-cluster.ts"
 export {
+  type BehaviourFirstSeenLabel,
+  type BehaviourNovelty,
+  type BehaviourSegment,
+  type BehaviourSortBy,
+  type ListProjectBehavioursInput,
+  type ListProjectBehavioursResult,
+  listProjectBehavioursUseCase,
+  type ProjectBehaviourNode,
+} from "./use-cases/list-project-behaviours.ts"
+export { loadClusteringCalibration, loadConversationCalibration } from "./use-cases/load-calibration.ts"
+export {
   type MergeNearDuplicateClustersInput,
   type MergeNearDuplicateClustersResult,
   mergeNearDuplicateClustersUseCase,
 } from "./use-cases/merge-near-duplicate-clusters.ts"
 export {
-  type NameCategoryInput,
   type NameClusterInput,
   type NameTaxonomyResult,
-  nameCategoryUseCase,
   nameClusterUseCase,
 } from "./use-cases/name-taxonomy.ts"
 export {
@@ -242,25 +253,11 @@ export {
   reassignNoiseToCurrentClustersUseCase,
 } from "./use-cases/reassign-noise-to-current-clusters.ts"
 export {
-  type RebuildCategoryHierarchyInput,
-  type RebuildCategoryHierarchyResult,
-  rebuildCategoryHierarchyUseCase,
-} from "./use-cases/rebuild-category-hierarchy.ts"
-export {
-  type RecordSessionObservationInput,
-  type RecordSessionObservationResult,
-  recordSessionObservationUseCase,
-} from "./use-cases/record-session-observation.ts"
-export {
-  type RunProjectGardeningInput,
-  runProjectGardeningUseCase,
-} from "./use-cases/run-project-gardening.ts"
-export {
-  type BehaviorSummary,
-  behaviorSummarySchema,
-  type SummarizeBehaviorInput,
-  summarizeBehaviorUseCase,
-} from "./use-cases/summarize-behavior.ts"
+  type RecurseTreeClustersInput,
+  type RecurseTreeClustersResult,
+  recurseTreeClustersUseCase,
+} from "./use-cases/recurse-tree-clusters.ts"
+export { type RouteToDeepestClusterInput, routeToDeepestClusterUseCase } from "./use-cases/route-to-deepest-cluster.ts"
 export {
   computeBirthMinMembers,
   type SweepNoiseAndBirthClustersInput,

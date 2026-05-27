@@ -12,7 +12,7 @@ import {
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
-import { type RefObject, useCallback, useMemo, useRef } from "react"
+import { type ReactNode, type RefObject, useCallback, useMemo, useRef } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
 import { useTraceSearchHighlights } from "../../../../../../../domains/traces/traces.collection.ts"
@@ -47,6 +47,7 @@ function ConversationContent({
   textSelectionPopoverControlsRef,
   onPopoverClose,
   searchQuery,
+  messageTrailingSlot,
 }: {
   readonly traceDetail: TraceDetailRecord
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
@@ -56,6 +57,8 @@ function ConversationContent({
   readonly textSelectionPopoverControlsRef?: RefObject<TextSelectionPopoverControls | null> | undefined
   readonly onPopoverClose?: (() => void) | undefined
   readonly searchQuery?: string | undefined
+  /** Renders a slot below each message (e.g. semantic moment labels). Receives the original messageIndex and role. */
+  readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
@@ -211,6 +214,7 @@ function ConversationContent({
           }}
           {...(messageActions ? { messageActions } : {})}
           {...(toolCallActions ? { toolCallActions } : {})}
+          {...(messageTrailingSlot ? { messageTrailingSlot } : {})}
         />
         <AnnotationPopover
           position={textSelectionPopoverPosition}
@@ -267,6 +271,7 @@ export function ConversationTab({
   textSelectionPopoverControlsRef,
   onPopoverClose,
   searchQuery,
+  messageTrailingSlot,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
@@ -280,6 +285,8 @@ export function ConversationTab({
   /** Optional callback when annotation popover closes. Used to clear selection state. */
   readonly onPopoverClose?: (() => void) | undefined
   readonly searchQuery?: string | undefined
+  /** Renders a slot below each message (e.g. semantic moment labels). Receives the original messageIndex and role. */
+  readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
 }) {
   if (isDetailLoading) {
     return (
@@ -309,6 +316,7 @@ export function ConversationTab({
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
       onPopoverClose={onPopoverClose}
       searchQuery={searchQuery}
+      messageTrailingSlot={messageTrailingSlot}
     />
   )
 }

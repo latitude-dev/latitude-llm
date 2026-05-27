@@ -2,10 +2,10 @@ import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyClusterLineage, TaxonomyRun } from "../entities/lineage.ts"
-import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
-import { TaxonomyCategoryRepository } from "../ports/taxonomy-category-repository.ts"
+import { isDisplayableTaxonomyName } from "../helpers.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLineageRepository } from "../ports/taxonomy-lineage-repository.ts"
+import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { TaxonomyRunRepository } from "../ports/taxonomy-run-repository.ts"
 
 export interface GetTaxonomyAnalyticsInput {
@@ -32,7 +32,6 @@ export interface TopTaxonomyCluster {
 }
 
 export interface GetTaxonomyAnalyticsResult {
-  readonly totalActiveCategories: number
   readonly totalActiveClusters: number
   /** Total observation count over the analytics window (default 14 days). */
   readonly totalObservations: number
@@ -114,16 +113,12 @@ export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
     const now = input.now ?? new Date()
     const days = Math.max(input.windowDays ?? 14, 1)
     const since = windowStart(now, days)
-    const categories = yield* TaxonomyCategoryRepository
     const clusters = yield* TaxonomyClusterRepository
-    const observations = yield* BehaviorObservationRepository
-    const activeCategories = yield* categories.listByProject({
-      projectId: input.projectId,
-      state: "active",
-    })
+    const observations = yield* TaxonomyObservationRepository
     const topOccurrences = yield* observations.getTopClustersByOccurrence({
       organizationId: input.organizationId,
       projectId: input.projectId,
+      dimension: "topic",
       since,
       limit: 5,
     })
@@ -132,6 +127,7 @@ export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
     const trendCounts = yield* observations.getClusterTrendCounts({
       organizationId: input.organizationId,
       projectId: input.projectId,
+      dimension: "topic",
       clusterIds: topClusterIds,
       currentSince: new Date(now.getTime() - TAXONOMY_TREND_CURRENT_DAYS * TAXONOMY_TREND_MS_PER_DAY),
       baselineSince: new Date(
@@ -144,21 +140,22 @@ export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
     const topClusters = topOccurrences.flatMap((row) => {
       const cluster = clusterById.get(row.clusterId)
       const trend = trendByClusterId.get(row.clusterId)
-      return cluster && cluster.state === "active" && trend
+      return cluster && cluster.state === "active" && isDisplayableTaxonomyName(cluster.name) && trend
         ? [{ cluster, occurrences: row.count, trend: classifyClusterTrend(trend) }]
         : []
     })
     const allActiveClusters = yield* clusters.listActiveByProject({
       projectId: input.projectId,
+      dimension: "topic",
     })
     const counts = yield* observations.getCounts({
       organizationId: input.organizationId,
       projectId: input.projectId,
+      dimension: "topic",
       since,
     })
     return {
-      totalActiveCategories: activeCategories.length,
-      totalActiveClusters: allActiveClusters.length,
+      totalActiveClusters: allActiveClusters.filter((cluster) => isDisplayableTaxonomyName(cluster.name)).length,
       totalObservations: counts.total,
       topClusters,
     } satisfies GetTaxonomyAnalyticsResult
@@ -169,9 +166,10 @@ export const getLastRunUseCase = (input: GetLastRunInput) =>
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     const runs = yield* TaxonomyRunRepository
     const lineageRepository = yield* TaxonomyLineageRepository
-    const run = yield* runs.findLatestByProject({ projectId: input.projectId })
+    const run = yield* runs.findLatestByProject({ projectId: input.projectId, dimension: "topic" })
     const lineage = yield* lineageRepository.listRecentByTransitionTypes({
       projectId: input.projectId,
+      dimension: "topic",
       transitionTypes: ["birth", "merge"],
       limit: 10,
     })

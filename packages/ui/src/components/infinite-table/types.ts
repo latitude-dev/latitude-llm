@@ -101,6 +101,8 @@ export interface InfiniteTableSharedProps<T> {
    * row-body click. When omitted, expansion is driven by `onRowClick` as before.
    */
   onToggleExpand?: (row: T) => void
+  /** Hide the horizontal separator rendered after expanded sub-rows. */
+  hideExpandedRowSeparator?: boolean
 }
 
 export type InfiniteTableProps<T> =

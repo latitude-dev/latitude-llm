@@ -30,6 +30,7 @@
     "@clickhouse/client": "catalog:",
     "@domain/admin": "workspace:*",
     "@domain/ai": "workspace:*",
+    "@domain/conversation-intelligence": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/monitors": "workspace:*",

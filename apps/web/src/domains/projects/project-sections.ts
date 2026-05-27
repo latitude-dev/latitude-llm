@@ -11,6 +11,7 @@ import {
   SearchIcon,
   SettingsIcon,
   ShieldAlertIcon,
+  TagsIcon,
   TextAlignStartIcon,
   UserRound,
   Users,
@@ -60,6 +61,13 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     icon: ShieldAlertIcon,
     path: (slug) => `/projects/${slug}/issues`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/issues`),
+  },
+  {
+    key: "behaviours",
+    label: "Behaviours",
+    icon: TagsIcon,
+    path: (slug) => `/projects/${slug}/behaviours`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
   },
   {
     key: "monitors",

@@ -19,6 +19,8 @@ export interface TraceFilterField {
    * use HTML's default integer step.
    */
   readonly displayStep?: number
+  /** Conversation-intelligence fields are session-scoped; hide them on the traces surface. */
+  readonly sessionOnly?: boolean
 }
 
 export const TRACE_FILTER_FIELDS = [
@@ -49,6 +51,8 @@ export const TRACE_FILTER_FIELDS = [
     placeholder: "Filter by user...",
   },
   { field: "tags", type: "multiSelect", label: "Tags" },
+  { field: "moments", type: "multiSelect", label: "Moments", sessionOnly: true },
+  { field: "topics", type: "multiSelect", label: "Topics", sessionOnly: true },
   { field: "models", type: "multiSelect", label: "Models" },
   { field: "providers", type: "multiSelect", label: "Providers" },
   { field: "serviceNames", type: "multiSelect", label: "Services" },
@@ -86,6 +90,12 @@ export const TRACE_FILTER_FIELDS = [
 ] as const satisfies readonly TraceFilterField[]
 
 export type TraceFilterFieldName = (typeof TRACE_FILTER_FIELDS)[number]["field"]
+
+/**
+ * Conversation-intelligence fields resolved via dedicated subqueries before
+ * the generic ClickHouse field registries see the filter set.
+ */
+export type SessionOnlyFilterFieldName = Extract<(typeof TRACE_FILTER_FIELDS)[number], { sessionOnly: true }>["field"]
 
 /**
  * Trace fields that support `gtePercentile` filtering.
