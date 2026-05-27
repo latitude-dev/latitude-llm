@@ -407,7 +407,11 @@ ClaudeCodeWrappedEmailV2.PreviewProps = {
     otherWorkspaceCount: 0,
     heatmap: Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0)),
     moments: { longestSession: null, busiestDay: null, biggestWrite: null },
-    personality: { kind: "shipper", score: 1, evidence: ["23 commits this week", "3.4 commits per session", "17 sessions of focused work"] },
+    personality: {
+      kind: "shipper",
+      score: 1,
+      evidence: ["23 commits this week", "3.4 commits per session", "17 sessions of focused work"],
+    },
     lastReport: {
       sessions: 12,
       toolCalls: 350,
