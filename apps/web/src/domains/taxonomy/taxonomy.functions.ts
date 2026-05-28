@@ -239,7 +239,8 @@ export const getTaxonomyOverview = createServerFn({ method: "GET" })
           return {
             category: item.category,
             trend:
-              item.clusters.length > 0
+              item.clusters.length > 0 &&
+              (categoryTrendCounts.currentCount > 0 || categoryTrendCounts.baselineCount > 0)
                 ? classifyClusterTrend({
                     ...categoryTrendCounts,
                     baselineDays: TAXONOMY_TREND_BASELINE_DAYS,

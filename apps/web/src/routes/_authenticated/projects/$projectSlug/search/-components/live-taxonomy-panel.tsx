@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, Icon, useMountEffect } from "@repo/ui"
+import { Button, Card, CardContent, Icon, Tooltip, useMountEffect } from "@repo/ui"
 import { Link } from "@tanstack/react-router"
 import {
   ArrowDownIcon,
@@ -70,6 +70,7 @@ export function LiveTaxonomyPanel({
           showAllBehaviors ? "pointer-events-none scale-[0.99] opacity-0" : "scale-100 opacity-100"
         }`}
         aria-hidden={showAllBehaviors}
+        inert={showAllBehaviors || undefined}
       >
         <RotatingRecommendationGrid
           key={shuffledTopClusters.map((cluster) => cluster.id).join(":")}
@@ -90,6 +91,7 @@ export function LiveTaxonomyPanel({
           showAllBehaviors ? "scale-100 opacity-100" : "pointer-events-none scale-[0.99] opacity-0"
         }`}
         aria-hidden={!showAllBehaviors}
+        inert={!showAllBehaviors || undefined}
       >
         {showAllBehaviors ? (
           <AllBehaviorsList
@@ -315,6 +317,10 @@ const trendMeta = (
       return { label: "cooling", icon: ArrowDownIcon }
     case "fading":
       return { label: "fading", icon: ArrowDownIcon }
+    default: {
+      const _exhaustiveCheck: never = status
+      throw new Error(`Unhandled trend status: ${_exhaustiveCheck}`)
+    }
   }
 }
 
@@ -322,9 +328,15 @@ function SessionCount({ value }: { readonly value: number }) {
   const exactLabel = formatSessionLabel(value, "full")
 
   return (
-    <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground" title={exactLabel}>
-      {formatSessionLabel(value)}
-    </span>
+    <Tooltip
+      trigger={
+        <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
+          {formatSessionLabel(value)}
+        </span>
+      }
+    >
+      {exactLabel}
+    </Tooltip>
   )
 }
 

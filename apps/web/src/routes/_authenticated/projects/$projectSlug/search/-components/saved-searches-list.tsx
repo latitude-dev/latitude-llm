@@ -245,7 +245,7 @@ function SavedSearchesEmpty({ behaviorEmptyState }: { readonly behaviorEmptyStat
         <div className="flex flex-col items-center gap-2">
           {behaviorEmptyState === "detecting" ? (
             <>
-              <Text.H3 centered>Detecting behaviors</Text.H3>
+              <Text.H3 centered>Detecting behaviours</Text.H3>
               <Text.H5 centered color="foregroundMuted">
                 Latitude is reading incoming traces to find repeated user and agent behaviors. The first behaviors
                 usually appear after enough similar sessions arrive, which can take a few minutes on active projects.

@@ -106,7 +106,9 @@ function SearchPage() {
     liveTaxonomyRecommendationsEnabled &&
     (taxonomyOverview?.topClusters.some((cluster) => cluster.name !== "Pending") ?? false)
   const behaviorEmptyState =
-    liveTaxonomyRecommendationsEnabled && taxonomyOverview?.totalActiveClusters === 0
+    liveTaxonomyRecommendationsEnabled &&
+    taxonomyOverview !== undefined &&
+    taxonomyOverview.totalActiveClusters === 0
       ? "detecting"
       : hasRecommendedSearches
         ? "recommendations"
