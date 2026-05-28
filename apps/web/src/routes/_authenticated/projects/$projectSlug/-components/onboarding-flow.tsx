@@ -1,498 +1,40 @@
-import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
-import {
-  Button,
-  CodeBlock,
-  CopyButton,
-  cn,
-  Icon,
-  Input,
-  ProviderIcon,
-  SlackIcon,
-  Tabs,
-  Text,
-  useMountEffect,
-  useToast,
-} from "@repo/ui"
-import { relativeTime } from "@repo/utils"
+import { useMountEffect, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import type { LucideIcon } from "lucide-react"
-import {
-  Bot,
-  Braces,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  FileCode2,
-  Radio,
-  SquareDashedBottomCode,
-  Terminal,
-} from "lucide-react"
-import { lazy, type ReactNode, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { useApiKeysCollection } from "../../../../../domains/api-keys/api-keys.collection.ts"
+import { useCallback, useRef, useState } from "react"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { invalidateProjectFlaggers, useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
 import {
   configureProjectFlaggersForOnboarding,
   listAvailableFlaggers,
 } from "../../../../../domains/flaggers/flaggers.functions.ts"
-import {
-  FLAGGER_ONBOARDING_ORDER,
-  FLAGGER_USE_CASE_PRESETS,
-  type FlaggerPresetSlug,
-} from "../../../../../domains/flaggers/presets.ts"
-import {
-  getActiveSlackIntegration,
-  type SlackIntegrationRecord,
-} from "../../../../../domains/integrations/integrations.functions.ts"
+import type { FlaggerPresetSlug } from "../../../../../domains/flaggers/presets.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
-import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
-import { IntegrationCard } from "../settings/-components/integration-card.tsx"
-import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../settings/-components/slack-route-row.tsx"
-import {
-  type CodingMachineAgentId,
-  getCodingAgentTelemetryPrompt,
-  getCodingMachineInstallDescription,
-  getCodingMachineTelemetryInstallCommand,
-  getEnvBlock,
-  getLatitudeTelemetryPyInstallCommand,
-  getLatitudeTelemetryTsInstallCommand,
-  getOnboardingSnippet,
-  getOtelCurlVerifySnippet,
-  getOtelExporterLanguageSnippet,
-  getProviderSdkPyInstallCommand,
-  getProviderSdkTsInstallCommand,
-  ONBOARDING_PROVIDER_SNIPPET_CONFIG,
-  type OnboardingProviderId,
-  OTEL_EXPORTER_LANGUAGE_OPTIONS,
-  type OtelExporterLanguageId,
-  PY_PACKAGE_MANAGERS,
-  type PyPackageManager,
-  type SdkLanguage,
-  TS_PACKAGE_MANAGERS,
-  type TsPackageManager,
-} from "./onboarding-integration-snippets.ts"
+import { createFormSubmitHandler } from "../../../../../lib/form-server-action.ts"
+import * as FlaggersStep from "./onboarding/steps/flaggers-step.tsx"
+import * as RoleStep from "./onboarding/steps/role-step.tsx"
+import * as SlackStep from "./onboarding/steps/slack-step.tsx"
+import type { StackChoice } from "./onboarding/steps/stack-step.tsx"
+import * as StackStep from "./onboarding/steps/stack-step.tsx"
+import * as TelemetryStep from "./onboarding/steps/telemetry-step.tsx"
 
 export const ONBOARDING_STEPS = ["role", "stack", "flaggers", "slack", "telemetry"] as const
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
-type StackChoice = "coding-agent-machine" | "production-agent"
-type TelemetrySetupMode = "coding-agent" | "manual"
-type IntegrationPanel = "typescript" | "python" | "opentelemetry"
 
-const SETUP_MODE_TAB_OPTIONS = [
-  { id: "coding-agent" as const, label: "Coding agent", icon: <Bot className="h-4 w-4" /> },
-  { id: "manual" as const, label: "Manual", icon: <Terminal className="h-4 w-4" /> },
-] as const satisfies ReadonlyArray<{ id: TelemetrySetupMode; label: string; icon: ReactNode }>
+type OnboardingFormValues = { jobTitle: string; phoneNumber: string }
 
-const ONBOARDING_CLAUDE_CODE_LOGO_SRC = "/onboarding/claude-code-logo.png"
-const ONBOARDING_OPENCLAW_LOGO_SRC = "/onboarding/openclaw-logo.png"
-
-function OnboardingCodingAgentTabIcon({ src }: { readonly src: string }) {
-  return (
-    <img
-      src={src}
-      alt=""
-      width={16}
-      height={16}
-      decoding="async"
-      className="h-4 w-4 shrink-0 rounded-sm object-contain"
-      aria-hidden
-    />
-  )
-}
-
-const CODING_MACHINE_AGENT_TAB_OPTIONS = [
-  {
-    id: "claude-code" as const,
-    label: "Claude Code",
-    icon: <OnboardingCodingAgentTabIcon src={ONBOARDING_CLAUDE_CODE_LOGO_SRC} />,
-  },
-  {
-    id: "openclaw" as const,
-    label: "OpenClaw",
-    icon: <OnboardingCodingAgentTabIcon src={ONBOARDING_OPENCLAW_LOGO_SRC} />,
-  },
-] as const satisfies ReadonlyArray<{ id: CodingMachineAgentId; label: string; icon: ReactNode }>
-
-const STACK_CHOICE_OPTIONS: ReadonlyArray<{
-  readonly id: StackChoice
-  readonly title: string
-  readonly description: string
-  readonly leading:
-    | { readonly type: "logo"; readonly src: string }
-    | { readonly type: "icon"; readonly Icon: LucideIcon }
-}> = [
-  {
-    id: "coding-agent-machine",
-    title: "Coding agent",
-    description: "Monitor your Claude Code or OpenClaw agent",
-    leading: { type: "logo", src: ONBOARDING_CLAUDE_CODE_LOGO_SRC },
-  },
-  {
-    id: "production-agent",
-    title: "Production app or agent",
-    description: "Track and debug LLM-powered features running in your own application",
-    leading: { type: "icon", Icon: SquareDashedBottomCode },
-  },
-]
-
-interface ProviderEntry {
-  readonly id: OnboardingProviderId
-  readonly name: string
-  readonly icon: string
-}
-
-const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> =
-  [
-    {
-      title: "Live traces coming in",
-      description: "As soon as we detect your first trace, you will start getting comprehensive insights",
-      image: "/onboarding/traces.png",
-    },
-    {
-      title: "Debug responses with context",
-      description: "Inspect model calls, timing, costs and session metadata in one place",
-      image: "/onboarding/home.png",
-    },
-    {
-      title: "Detect issues automatically",
-      description: "Once the telemetry is set up, Latitude will start monitoring your product for common issues",
-      image: "/onboarding/issues.png",
-    },
-  ]
-
-const ONBOARDING_IMAGE_DIMENSIONS: Record<
-  string,
-  {
-    readonly width: number
-    readonly height: number
-  }
-> = {
-  "/onboarding/role-engineer.png": { width: 1024, height: 567 },
-  "/onboarding/home.png": { width: 1024, height: 580 },
-  "/onboarding/issues.png": { width: 1024, height: 579 },
-  "/onboarding/traces.png": { width: 1024, height: 579 },
-}
-
-/** Full-width preview (matches step-2 gallery): uses the whole right pane width, natural image height. */
-function OnboardingPreviewImage({
-  src,
-  alt,
-  width,
-  height,
-}: {
-  readonly src: string
-  readonly alt: string
-  readonly width: number
-  readonly height: number
-}) {
-  return (
-    <div className="w-full overflow-hidden rounded-xl border-4 border-border bg-card shadow-xl">
-      <img src={src} alt={alt} width={width} height={height} className="block h-auto w-full max-w-full" />
-    </div>
-  )
-}
-
-const OnboardingWaitingLottie = lazy(() => import("./onboarding-waiting-lottie.tsx"))
-
-/** Order matches docs.latitude.so telemetry providers, then frameworks (see /telemetry/overview). */
-const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
-  { id: "openai", name: "OpenAI", icon: "openai" },
-  { id: "anthropic", name: "Anthropic", icon: "anthropic" },
-  { id: "gemini", name: "Gemini", icon: "google" },
-  { id: "azure-openai", name: "Azure OpenAI", icon: "azure" },
-  { id: "bedrock", name: "Amazon Bedrock", icon: "amazon-bedrock" },
-  { id: "aiplatform", name: "Google AI Platform", icon: "google" },
-  { id: "vertexai", name: "Vertex AI", icon: "google-vertex" },
-  { id: "groq", name: "Groq", icon: "groq" },
-  { id: "mistral", name: "Mistral", icon: "mistral" },
-  { id: "ollama", name: "Ollama", icon: "llama" },
-  { id: "cohere", name: "Cohere", icon: "cohere" },
-  { id: "togetherai", name: "Together AI", icon: "togetherai" },
-  { id: "litellm", name: "LiteLLM", icon: "generic" },
-  { id: "replicate", name: "Replicate", icon: "generic" },
-  { id: "sagemaker", name: "SageMaker", icon: "amazon-bedrock" },
-  { id: "watsonx", name: "watsonx.ai", icon: "generic" },
-  { id: "aleph-alpha", name: "Aleph Alpha", icon: "generic" },
-  { id: "transformers", name: "Transformers", icon: "huggingface" },
-  { id: "vercel-ai-sdk", name: "Vercel AI SDK", icon: "vercel" },
-  { id: "langchain", name: "LangChain", icon: "generic" },
-  { id: "llamaindex", name: "LlamaIndex", icon: "generic" },
-]
-
-function OtelExporterLanguageChips({
-  active,
-  onSelect,
-}: {
-  readonly active: OtelExporterLanguageId
-  readonly onSelect: (id: OtelExporterLanguageId) => void
-}) {
-  return (
-    <div className="flex flex-row flex-wrap gap-1">
-      {OTEL_EXPORTER_LANGUAGE_OPTIONS.map(({ id, label }) => {
-        const selected = active === id
-        return (
-          <button
-            key={id}
-            type="button"
-            onClick={() => onSelect(id)}
-            className={`h-6 cursor-pointer rounded-md border px-2 text-xs font-medium transition-colors ${selected ? "border-primary/30 bg-primary-muted text-primary" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
-          >
-            {label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-/** Figma-style package manager chips (Latitude Sandbox command pattern). */
-function PackageManagerChips<T extends string>({
-  options,
-  active,
-  onSelect,
-}: {
-  readonly options: ReadonlyArray<T>
-  readonly active: T
-  readonly onSelect: (id: T) => void
-}) {
-  return (
-    <div className="flex flex-row flex-wrap gap-1">
-      {options.map((id) => {
-        const selected = active === id
-        return (
-          <button
-            key={id}
-            type="button"
-            onClick={() => onSelect(id)}
-            className={`h-6 cursor-pointer rounded-md border px-2 text-xs font-medium transition-colors ${selected ? "border-primary/30 bg-primary-muted text-primary" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
-          >
-            {id}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-/**
- * One install command with its own chip row; `active*` / `onSelect*` are shared across
- * Latitude SDK + provider fields so both stay in sync (same package manager everywhere).
- */
-function InstallCommandField({
-  command,
-  isTs,
-  tsPm,
-  pyPm,
-  onSelectTs,
-  onSelectPy,
-}: {
-  readonly command: string
-  readonly isTs: boolean
-  readonly tsPm: TsPackageManager
-  readonly pyPm: PyPackageManager
-  readonly onSelectTs: (pm: TsPackageManager) => void
-  readonly onSelectPy: (pm: PyPackageManager) => void
-}) {
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-2">
-      <div className="flex w-full shrink-0 flex-row flex-wrap items-center justify-between gap-2">
-        {isTs ? (
-          <PackageManagerChips options={TS_PACKAGE_MANAGERS} active={tsPm} onSelect={onSelectTs} />
-        ) : (
-          <PackageManagerChips options={PY_PACKAGE_MANAGERS} active={pyPm} onSelect={onSelectPy} />
-        )}
-        <div className="ml-auto shrink-0">
-          <CopyButton value={command} tooltip="Copy" size="sm" />
-        </div>
-      </div>
-      <div className="min-w-0 overflow-hidden rounded-lg bg-muted">
-        <CodeBlock value={command} copyable={false} className="rounded-lg bg-muted" />
-      </div>
-    </div>
-  )
-}
-
-function SdkIntegrationInstructions({
-  selectedProviderId,
-  providerDisplayName,
-  lang,
-  slugForSnippets,
-  defaultApiKeyToken,
-}: {
-  readonly selectedProviderId: OnboardingProviderId
-  readonly providerDisplayName: string
-  readonly lang: SdkLanguage
-  readonly slugForSnippets: string
-  readonly defaultApiKeyToken: string | null
-}) {
-  const [tsPm, setTsPm] = useState<TsPackageManager>("npm")
-  const [pyPm, setPyPm] = useState<PyPackageManager>("pip")
-
-  const snippet = getOnboardingSnippet(selectedProviderId, lang, slugForSnippets, defaultApiKeyToken)
-
-  const isTs = lang === "typescript"
-  const latInstall = isTs ? getLatitudeTelemetryTsInstallCommand(tsPm) : getLatitudeTelemetryPyInstallCommand(pyPm)
-  const sdkInstall = isTs
-    ? getProviderSdkTsInstallCommand(selectedProviderId, tsPm)
-    : getProviderSdkPyInstallCommand(selectedProviderId, pyPm)
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Text.H5M>Install</Text.H5M>
-        <Text.H5 color="foregroundMuted">
-          Follow these instructions to integrate Latitude telemetry into an application that uses {providerDisplayName}.
-        </Text.H5>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Text.H5 color="foregroundMuted">Latitude SDK</Text.H5>
-        <InstallCommandField
-          command={latInstall}
-          isTs={isTs}
-          tsPm={tsPm}
-          pyPm={pyPm}
-          onSelectTs={setTsPm}
-          onSelectPy={setPyPm}
-        />
-      </div>
-      {sdkInstall ? (
-        <div className="flex flex-col gap-2">
-          <Text.H5 color="foregroundMuted">Provider / framework packages</Text.H5>
-          <InstallCommandField
-            command={sdkInstall}
-            isTs={isTs}
-            tsPm={tsPm}
-            pyPm={pyPm}
-            onSelectTs={setTsPm}
-            onSelectPy={setPyPm}
-          />
-        </div>
-      ) : null}
-
-      <div className="flex flex-col gap-2">
-        <Text.H5M>Environment variables</Text.H5M>
-        <Text.H5 color="foregroundMuted">
-          Set these in your <code className="text-xs">.env</code> or runtime environment. Use a Latitude API key from
-          organization settings.
-        </Text.H5>
-        <CodeBlock value={getEnvBlock(selectedProviderId, slugForSnippets, defaultApiKeyToken)} copyable />
-      </div>
-
-      {snippet ? (
-        <div className="flex flex-col gap-2">
-          <Text.H5M>Initialize and use</Text.H5M>
-          <CodeBlock value={snippet} copyable />
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-function SlackOnboardingStep({
-  projectSlug,
-  onBack,
-  onContinue,
-}: {
-  readonly projectSlug: string
-  readonly onBack: () => void
-  readonly onContinue: () => void
-}) {
-  const { data: integration, isLoading } = useQuery({
-    queryKey: SLACK_INTEGRATION_QUERY_KEY,
-    queryFn: () => getActiveSlackIntegration(),
+// Helper exists purely for type inference — `useForm` has 12 generic parameters and
+// `ReturnType<typeof useForm<T>>` doesn't auto-default the rest. Calling it here in a
+// never-invoked function lets TS infer the full instance type from the actual call shape.
+function _onboardingFormTypeHelper() {
+  return useForm({
+    defaultValues: { jobTitle: "", phoneNumber: "" } as OnboardingFormValues,
   })
-  const connected = integration != null
-  // CTA reflects routing, not just connection — no route = nothing gets delivered.
-  const incidentsConfigured = (integration?.routes.incidents?.length ?? 0) > 0
-
-  const returnTo = `/projects/${projectSlug}/onboarding?step=slack`
-  const connectHref = `/integrations/slack/install?return_to=${encodeURIComponent(returnTo)}`
-
-  return (
-    <div className="mx-auto w-full max-w-[560px]">
-      <div className="flex w-full flex-col gap-6">
-        <div className="flex flex-col gap-4">
-          <div className="h-8 w-8">
-            <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Text.H2 weight="medium">Get notified in Slack</Text.H2>
-            <Text.H4 color="foregroundMuted">
-              Connect your workspace so Flaggers can alert your team the moment they detect an issue.
-            </Text.H4>
-          </div>
-        </div>
-
-        {isLoading ? null : connected ? (
-          <SlackConnectedOnboardingCard integration={integration} />
-        ) : (
-          <IntegrationCard
-            icon={SlackIcon}
-            title="Slack"
-            subtitle="Send Latitude notifications to your Slack workspace."
-            actions={
-              // Server-handler route — needs full-page nav, not `<Link>` client routing.
-              <Button asChild>
-                <a href={connectHref}>Connect Slack</a>
-              </Button>
-            }
-          />
-        )}
-
-        <div className="flex flex-row flex-wrap items-center gap-3">
-          <Button variant="outline" onClick={onBack}>
-            Back
-          </Button>
-          {incidentsConfigured ? (
-            <Button onClick={onContinue}>Continue</Button>
-          ) : (
-            <Button variant="ghost" onClick={onContinue}>
-              Skip for now
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
 }
-
-function SlackConnectedOnboardingCard({ integration }: { readonly integration: SlackIntegrationRecord }) {
-  const hasAnyRoute =
-    (integration.routes.incidents?.length ?? 0) > 0 ||
-    (integration.routes.wrapped_reports?.length ?? 0) > 0 ||
-    (integration.routes.custom_messages?.length ?? 0) > 0
-
-  const showWrapped = hasAnyRoute || (integration.routes.wrapped_reports?.length ?? 0) > 0
-  const showCustom = hasAnyRoute || (integration.routes.custom_messages?.length ?? 0) > 0
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="rounded-lg border border-border">
-        <div className="flex flex-row items-center gap-3 p-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
-            <Icon icon={SlackIcon} />
-          </div>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <Text.H5 weight="semibold">{integration.teamName}</Text.H5>
-            <Text.H6 color="foregroundMuted">Connected {relativeTime(new Date(integration.installedAt))}</Text.H6>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-border p-4">
-          <SlackRouteRow group="incidents" integration={integration} />
-          {showWrapped ? <SlackRouteRow group="wrapped_reports" integration={integration} /> : null}
-          {showCustom ? <SlackRouteRow group="custom_messages" integration={integration} /> : null}
-        </div>
-      </div>
-      <Text.H6 color="foregroundMuted">You can change these anytime in Settings → Integrations.</Text.H6>
-    </div>
-  )
-}
+export type OnboardingForm = ReturnType<typeof _onboardingFormTypeHelper>
 
 export function OnboardingFlow({
   projectId,
@@ -565,22 +107,17 @@ export function OnboardingFlow({
       replace: true,
     })
   })
+
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
-  const [codingMachineAgent, setCodingMachineAgent] = useState<CodingMachineAgentId>("claude-code")
-  const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
-    PROVIDER_ENTRIES[0] ?? { id: "openai", name: "OpenAI", icon: "openai" },
-  )
-  const [telemetrySetupMode, setTelemetrySetupMode] = useState<TelemetrySetupMode>("coding-agent")
-  const [integrationPanel, setIntegrationPanel] = useState<IntegrationPanel>("typescript")
-  const [otelExporterLanguage, setOtelExporterLanguage] = useState<OtelExporterLanguageId>("go")
   const [selectedFlaggerSlugs, setSelectedFlaggerSlugs] = useState<ReadonlySet<string> | null>(null)
   const [isSavingFlaggers, setIsSavingFlaggers] = useState(false)
+  const [galleryIndex, setGalleryIndex] = useState(0)
 
   const form = useForm({
     defaultValues: {
       jobTitle: "",
       phoneNumber: "",
-    },
+    } satisfies OnboardingFormValues,
     onSubmit: createFormSubmitHandler(
       async ({ jobTitle, phoneNumber }) => {
         const stack = stackChoice as StackChoice
@@ -602,33 +139,23 @@ export function OnboardingFlow({
     goToStep("stack")
   }
 
-  const { data: apiKeysList } = useApiKeysCollection()
+  const handleStackContinue = () => {
+    if (stackChoice === null) return
+    void form.handleSubmit()
+  }
+
   const { data: projectFlaggers = [], isLoading: isLoadingProjectFlaggers } = useProjectFlaggers(projectId)
   const { data: availableFlaggers = [], isLoading: isLoadingAvailableFlaggers } = useQuery({
     queryKey: ["availableFlaggers"],
     queryFn: () => listAvailableFlaggers(),
   })
 
-  const sortedAvailableFlaggers = useMemo(() => {
-    const indexBySlug = new Map<string, number>(FLAGGER_ONBOARDING_ORDER.map((slug, index) => [slug, index]))
-    const fallbackIndex = FLAGGER_ONBOARDING_ORDER.length
-    return [...availableFlaggers].sort(
-      (a, b) => (indexBySlug.get(a.slug) ?? fallbackIndex) - (indexBySlug.get(b.slug) ?? fallbackIndex),
-    )
-  }, [availableFlaggers])
-  const availableFlaggerSlugs = sortedAvailableFlaggers.map((flagger) => flagger.slug)
+  const availableFlaggerSlugs = availableFlaggers.map((flagger) => flagger.slug)
   const currentEnabledFlaggerSlugs = new Set(
     projectFlaggers.filter((flagger) => flagger.enabled).map((flagger) => flagger.slug),
   )
   const enabledFlaggerSlugs =
     selectedFlaggerSlugs ?? (projectFlaggers.length > 0 ? currentEnabledFlaggerSlugs : new Set(availableFlaggerSlugs))
-
-  const activePresetId =
-    FLAGGER_USE_CASE_PRESETS.find(
-      (preset) =>
-        preset.enabledSlugs.length === enabledFlaggerSlugs.size &&
-        preset.enabledSlugs.every((slug) => enabledFlaggerSlugs.has(slug)),
-    )?.id ?? null
 
   const toggleFlaggerSelection = (slug: string) => {
     setSelectedFlaggerSlugs((current) => {
@@ -664,45 +191,6 @@ export function OnboardingFlow({
     }
   }
 
-  const resolvedProjectSlug = projectSlug.trim()
-  const slugForSnippets = resolvedProjectSlug || "your-project-slug"
-  const projectSlugForCopy = resolvedProjectSlug
-
-  const defaultApiKeyToken = useMemo(() => {
-    const keys = apiKeysList ?? []
-    return keys.find((k) => k.name === DEFAULT_API_KEY_NAME)?.token ?? null
-  }, [apiKeysList])
-
-  const codingAgentPrompt = getCodingAgentTelemetryPrompt()
-
-  const integrationTabOptions = useMemo(() => {
-    const cfg = ONBOARDING_PROVIDER_SNIPPET_CONFIG[selectedProvider.id]
-    const opts: Array<{ id: IntegrationPanel; label: string; icon: ReactNode }> = []
-    if (cfg.supportsTypescript) {
-      opts.push({ id: "typescript", label: "TypeScript", icon: <Braces className="w-4 h-4" /> })
-    }
-    if (cfg.supportsPython) {
-      opts.push({ id: "python", label: "Python", icon: <FileCode2 className="w-4 h-4" /> })
-    }
-    opts.push({ id: "opentelemetry", label: "OpenTelemetry", icon: <Radio className="w-4 h-4" /> })
-    return opts
-  }, [selectedProvider.id])
-
-  useLayoutEffect(() => {
-    const cfg = ONBOARDING_PROVIDER_SNIPPET_CONFIG[selectedProvider.id]
-    setIntegrationPanel((current) => {
-      if (current === "opentelemetry") return current
-      if (current === "typescript" && !cfg.supportsTypescript) {
-        return cfg.supportsPython ? "python" : "opentelemetry"
-      }
-      if (current === "python" && !cfg.supportsPython) {
-        return cfg.supportsTypescript ? "typescript" : "opentelemetry"
-      }
-      return current
-    })
-  }, [selectedProvider.id])
-
-  const [galleryIndex, setGalleryIndex] = useState(0)
   const [traceReceived, setTraceReceived] = useState(false)
   const pollTimeoutRef = useRef<number | undefined>(undefined)
   const redirectTimeoutRef = useRef<number | undefined>(undefined)
@@ -753,547 +241,66 @@ export function OnboardingFlow({
     }
   })
 
-  const galleryItemIndex = WAITING_GALLERY.length === 0 ? 0 : galleryIndex % WAITING_GALLERY.length
-  const activeGalleryItem = WAITING_GALLERY[galleryItemIndex] ?? {
-    title: "",
-    description: "",
-    image: "",
+  const handleSkipToTraces = () => {
+    void onOpenProjectTraces(projectId)
   }
-  const galleryImageDimensions = ONBOARDING_IMAGE_DIMENSIONS[activeGalleryItem.image] ?? { width: 1024, height: 579 }
+
+  const telemetryBackStep: OnboardingStep = slackStepEnabled ? "slack" : "flaggers"
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
       <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-y-auto overscroll-y-contain px-6 pt-12 pb-16 sm:px-12 sm:pt-16 sm:pb-20 lg:w-1/2 lg:border-r lg:border-border lg:px-24 lg:pt-24 lg:pb-32 [scrollbar-gutter:stable]">
         {step === "role" ? (
-          <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
-            <div className="flex w-full flex-col gap-8">
-              <div className="flex flex-col gap-4">
-                <div className="h-8 w-8">
-                  <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Text.H2 weight="medium">Tell us about yourself</Text.H2>
-                  <Text.H4 color="foregroundMuted">Help Latitude personalize your experience.</Text.H4>
-                </div>
-              </div>
-              <form.Field
-                name="jobTitle"
-                validators={{
-                  onChange: ({ value }) => (value.trim() === "" ? "Please enter your job title" : undefined),
-                }}
-              >
-                {(field) => (
-                  <Input
-                    type="text"
-                    label="Job title"
-                    placeholder="e.g. Software Architect, Fractional CMO, ML Engineer"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                    maxLength={256}
-                    autoComplete="organization-title"
-                  />
-                )}
-              </form.Field>
-              <form.Field name="phoneNumber">
-                {(field) => (
-                  <Input
-                    type="tel"
-                    label="Phone number (optional)"
-                    description="Helpful if we need to reach you about your setup."
-                    placeholder="+1 555 0100"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                    maxLength={64}
-                    autoComplete="tel"
-                  />
-                )}
-              </form.Field>
-              <div>
-                <Button onClick={() => void handleAdvanceFromRole()}>Next</Button>
-              </div>
-            </div>
-          </div>
+          <RoleStep.Left form={form} onNext={() => void handleAdvanceFromRole()} />
         ) : step === "stack" ? (
-          <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
-            <div className="flex w-full flex-col gap-8">
-              <div className="flex flex-col gap-4">
-                <div className="h-8 w-8">
-                  <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Text.H2 weight="medium">What do you want to monitor?</Text.H2>
-                  <Text.H4 color="foregroundMuted">
-                    Choose the type of AI system you want to observe with Latitude.
-                  </Text.H4>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3">
-                {STACK_CHOICE_OPTIONS.map((option) => {
-                  const selected = stackChoice === option.id
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      className={cn(
-                        "flex w-full flex-row items-start justify-between gap-4 rounded-lg border p-4 text-left cursor-pointer transition-colors hover:bg-accent/10",
-                        selected ? "border-primary bg-accent/20" : "border-border",
-                      )}
-                      onClick={() => setStackChoice(option.id)}
-                    >
-                      <div className="flex min-w-0 flex-1 flex-row items-start gap-4">
-                        <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-lg border border-border bg-card p-2">
-                          {option.leading.type === "logo" ? (
-                            <img
-                              src={option.leading.src}
-                              alt=""
-                              decoding="async"
-                              className="max-h-12 w-full max-w-full object-contain"
-                              aria-hidden
-                            />
-                          ) : (
-                            <option.leading.Icon className="h-6 w-6 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
-                          <Text.H4 weight="medium">{option.title}</Text.H4>
-                          <Text.H5 color="foregroundMuted">{option.description}</Text.H5>
-                        </div>
-                      </div>
-                      <div className="pt-1">
-                        <span
-                          aria-hidden
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}
-                        >
-                          {selected ? <Icon icon={Check} size="xs" /> : null}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => goToStep("role")}>
-                  Back
-                </Button>
-                <Button
-                  disabled={stackChoice === null || form.state.isSubmitting}
-                  onClick={() => {
-                    if (stackChoice === null) return
-                    void form.handleSubmit()
-                  }}
-                >
-                  Continue
-                </Button>
-              </div>
-            </div>
-          </div>
+          <StackStep.Left
+            stackChoice={stackChoice}
+            setStackChoice={setStackChoice}
+            isSubmitting={form.state.isSubmitting}
+            onBack={() => goToStep("role")}
+            onContinue={handleStackContinue}
+          />
         ) : step === "flaggers" ? (
-          <div className="flex w-full max-w-[880px] self-center">
-            <div className="flex w-full flex-col gap-8">
-              <div className="flex flex-col gap-4">
-                <div className="h-8 w-8">
-                  <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Text.H2 weight="medium">Choose automatic flaggers</Text.H2>
-                  <Text.H4 color="foregroundMuted">
-                    Latitude inspects all incoming traces and creates issues when they detect common failure patterns.
-                    Choose the patterns you want to monitor.
-                  </Text.H4>
-                  <Text.H5 color="foregroundMuted">
-                    You can fine-tune sampling rates per flagger later in Project settings.
-                  </Text.H5>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-row flex-wrap gap-2">
-                  {FLAGGER_USE_CASE_PRESETS.map((preset) => {
-                    const isActive = activePresetId === preset.id
-                    return (
-                      <Button
-                        key={preset.id}
-                        variant={isActive ? "default-soft" : "outline"}
-                        size="sm"
-                        aria-pressed={isActive}
-                        onClick={() => applyFlaggerPreset(preset.enabledSlugs)}
-                        title={preset.description}
-                      >
-                        {preset.label}
-                      </Button>
-                    )
-                  })}
-                </div>
-
-                {isLoadingAvailableFlaggers || isLoadingProjectFlaggers ? (
-                  <Text.H5 color="foregroundMuted">Loading flaggers…</Text.H5>
-                ) : (
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3">
-                    {sortedAvailableFlaggers.map((flagger) => {
-                      const selected = enabledFlaggerSlugs.has(flagger.slug)
-                      return (
-                        <button
-                          key={flagger.slug}
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() => toggleFlaggerSelection(flagger.slug)}
-                          className={cn(
-                            "group flex min-h-[132px] w-full cursor-pointer flex-col justify-between gap-4 rounded-xl border p-4 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/10",
-                            {
-                              "border-primary bg-primary-muted/40 ring-1 ring-primary/20": selected,
-                              "border-border bg-card": !selected,
-                            },
-                          )}
-                        >
-                          <div className="flex min-w-0 flex-col gap-1.5">
-                            <Text.H5M>{flagger.name}</Text.H5M>
-                            <Text.H6 color="foregroundMuted">{flagger.description}</Text.H6>
-                          </div>
-                          <div className="flex flex-row justify-end">
-                            <span
-                              aria-hidden
-                              className={cn(
-                                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors",
-                                {
-                                  "border-primary bg-primary text-primary-foreground": selected,
-                                  "border-border bg-background text-transparent group-hover:border-primary/40":
-                                    !selected,
-                                },
-                              )}
-                            >
-                              <Icon icon={Check} size="sm" />
-                            </span>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => goToStep("stack")}>
-                  Back
-                </Button>
-                <Button
-                  disabled={isLoadingAvailableFlaggers || availableFlaggers.length === 0 || isSavingFlaggers}
-                  onClick={() => void handleConfigureFlaggers()}
-                >
-                  {isSavingFlaggers ? "Saving…" : "Continue"}
-                </Button>
-              </div>
-            </div>
-          </div>
+          <FlaggersStep.Left
+            availableFlaggers={availableFlaggers}
+            isLoadingAvailableFlaggers={isLoadingAvailableFlaggers}
+            isLoadingProjectFlaggers={isLoadingProjectFlaggers}
+            enabledFlaggerSlugs={enabledFlaggerSlugs}
+            toggleFlaggerSelection={toggleFlaggerSelection}
+            applyFlaggerPreset={applyFlaggerPreset}
+            isSavingFlaggers={isSavingFlaggers}
+            onBack={() => goToStep("stack")}
+            onContinue={() => void handleConfigureFlaggers()}
+          />
         ) : step === "slack" ? (
-          <SlackOnboardingStep
-            projectSlug={resolvedProjectSlug || projectSlug}
+          <SlackStep.Left
+            projectSlug={projectSlug}
             onBack={() => goToStep("flaggers")}
             onContinue={() => goToStep("telemetry")}
           />
-        ) : stackChoice === "production-agent" ? (
-          <div className="mx-auto w-full max-w-[560px]">
-            <div className="flex w-full flex-col gap-6">
-              <div className="flex flex-col gap-4">
-                <div className="h-8 w-8 overflow-hidden rounded-md">
-                  <Suspense fallback={<div className="h-8 w-8 shrink-0" aria-hidden />}>
-                    <OnboardingWaitingLottie />
-                  </Suspense>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Text.H2 weight="medium">
-                    {traceReceived ? "Trace received. Redirecting…" : "Set up your first project"}
-                  </Text.H2>
-                  <Text.H4 color="foregroundMuted">
-                    {traceReceived ? "Taking you to your traces…" : "Initiate your first project on Latitude"}
-                  </Text.H4>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <Text.H5M>Installation method</Text.H5M>
-                <Tabs
-                  options={SETUP_MODE_TAB_OPTIONS}
-                  active={telemetrySetupMode}
-                  onSelect={(id) => setTelemetrySetupMode(id)}
-                  size="sm"
-                  variant="bordered"
-                />
-              </div>
-
-              {telemetrySetupMode === "coding-agent" ? (
-                <div className="flex flex-col gap-2">
-                  <Text.H5M>Prompt</Text.H5M>
-                  <Text.H5 color="foregroundMuted">
-                    Paste this into the chat with your coding agent — Cursor, Claude Code, Codex, or any other — to set
-                    up Latitude telemetry in your project.
-                  </Text.H5>
-                  <CodeBlock value={codingAgentPrompt} copyable wrapLines />
-                  <Text.H5 color="foregroundMuted">
-                    For the smoothest experience, install both the{" "}
-                    <a
-                      href="https://github.com/latitude-dev/skills"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline-offset-2 hover:underline"
-                    >
-                      Latitude telemetry skill
-                    </a>{" "}
-                    and the{" "}
-                    <a
-                      href="https://docs.latitude.so/getting-started/mcp"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline-offset-2 hover:underline"
-                    >
-                      Latitude MCP server
-                    </a>{" "}
-                    in your agent. The MCP lets the agent create projects and look up API keys directly; the skill wires
-                    tracing into your codebase.
-                  </Text.H5>
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-col gap-3">
-                    <Text.H5M>Select your LLM provider</Text.H5M>
-                    <div className="flex flex-row flex-wrap gap-1">
-                      {PROVIDER_ENTRIES.map((provider) => (
-                        <button
-                          key={provider.id}
-                          type="button"
-                          onClick={() => setSelectedProvider(provider)}
-                          className={`h-6 px-2 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors ${selectedProvider.id === provider.id ? "bg-primary-muted text-primary border-primary/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
-                        >
-                          <ProviderIcon provider={provider.icon} size="xs" />
-                          <span>{provider.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <hr className="w-full border-0 border-t border-dashed border-border" />
-
-                  <Tabs
-                    options={integrationTabOptions}
-                    active={integrationPanel}
-                    onSelect={(id) => setIntegrationPanel(id as IntegrationPanel)}
-                  />
-
-                  {integrationPanel === "opentelemetry" ? (
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-2">
-                        <Text.H5M>OpenTelemetry (OTLP)</Text.H5M>
-                        <Text.H5 color="foregroundMuted">
-                          Send a standard OTLP <code className="text-xs">ExportTraceServiceRequest</code> over HTTP.
-                          Successful ingest returns <code className="text-xs">202</code> with{" "}
-                          <code className="text-xs">{"{}"}</code>.
-                        </Text.H5>
-                      </div>
-
-                      <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-2 font-mono text-xs leading-relaxed text-muted-foreground">
-                        <div>
-                          <span className="text-foreground">POST</span>{" "}
-                          <span className="break-all">https://ingest.latitude.so/v1/traces</span>
-                        </div>
-                        <div>
-                          <span className="text-foreground">Authorization:</span> Bearer{" "}
-                          {defaultApiKeyToken ?? "<api-key>"}
-                        </div>
-                        <div>
-                          <span className="text-foreground">X-Latitude-Project:</span> {slugForSnippets}
-                        </div>
-                        <div>
-                          <span className="text-foreground">Content-Type:</span> application/json or
-                          application/x-protobuf
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-6">
-                        <div className="flex flex-col gap-2">
-                          <Text.H5M>Verify with cURL</Text.H5M>
-                          <Text.H5 color="foregroundMuted">
-                            POST a minimal OTLP JSON trace.{" "}
-                            {defaultApiKeyToken ? (
-                              "The authorization header is prefilled with your default Latitude API key."
-                            ) : (
-                              <>
-                                Replace <code className="text-xs">YOUR_API_KEY</code> with a Latitude API key from
-                                Settings.
-                              </>
-                            )}{" "}
-                            Expect <code className="text-xs">202</code> and an empty JSON body on success. Project slug
-                            is prefilled on the header line.
-                          </Text.H5>
-                          <CodeBlock value={getOtelCurlVerifySnippet(slugForSnippets, defaultApiKeyToken)} copyable />
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          <Text.H5M>Language examples</Text.H5M>
-                          <Text.H5 color="foregroundMuted">Configure an OTLP HTTP exporter in your stack.</Text.H5>
-                          <OtelExporterLanguageChips active={otelExporterLanguage} onSelect={setOtelExporterLanguage} />
-                          <CodeBlock
-                            value={getOtelExporterLanguageSnippet(
-                              otelExporterLanguage,
-                              slugForSnippets,
-                              defaultApiKeyToken,
-                            )}
-                            copyable
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <SdkIntegrationInstructions
-                      selectedProviderId={selectedProvider.id}
-                      providerDisplayName={selectedProvider.name}
-                      lang={integrationPanel === "typescript" ? "typescript" : "python"}
-                      slugForSnippets={slugForSnippets}
-                      defaultApiKeyToken={defaultApiKeyToken}
-                    />
-                  )}
-                </>
-              )}
-
-              <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => goToStep(slackStepEnabled ? "slack" : "flaggers")}>
-                  Back
-                </Button>
-                <Button variant="ghost" onClick={() => void onOpenProjectTraces(projectId)}>
-                  Skip for now
-                </Button>
-              </div>
-            </div>
-          </div>
         ) : (
-          <div className="mx-auto w-full max-w-[560px]">
-            <div className="flex w-full flex-col gap-6">
-              <div className="flex flex-col gap-4">
-                <div className="h-8 w-8 overflow-hidden rounded-md">
-                  <Suspense fallback={<div className="h-8 w-8 shrink-0" aria-hidden />}>
-                    <OnboardingWaitingLottie />
-                  </Suspense>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Text.H2 weight="medium">
-                    {traceReceived ? "Trace received. Redirecting…" : "Install the plugin"}
-                  </Text.H2>
-                  <Text.H4 color="foregroundMuted">
-                    {traceReceived
-                      ? "Taking you to your traces…"
-                      : "Set up Latitude telemetry for your agent in one command"}
-                  </Text.H4>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <Text.H5M>Select your agent</Text.H5M>
-                <Tabs
-                  options={CODING_MACHINE_AGENT_TAB_OPTIONS}
-                  active={codingMachineAgent}
-                  onSelect={(id) => setCodingMachineAgent(id)}
-                  size="sm"
-                  variant="bordered"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Text.H5M>Install the plugin to your machine</Text.H5M>
-                <Text.H5 color="foregroundMuted">{getCodingMachineInstallDescription(codingMachineAgent)}</Text.H5>
-                <CodeBlock value={getCodingMachineTelemetryInstallCommand(codingMachineAgent)} copyable />
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <Text.H5M>Latitude API key</Text.H5M>
-                  <Text.H5 color="foregroundMuted">
-                    Default organization key (<code className="text-xs">{DEFAULT_API_KEY_NAME}</code>) — paste when the
-                    installer asks for your API key.
-                  </Text.H5>
-                  {defaultApiKeyToken ? (
-                    <CodeBlock value={defaultApiKeyToken} copyable />
-                  ) : (
-                    <Text.H5 color="foregroundMuted">
-                      No key with that name yet. Create one under Settings → API Keys (you can name it{" "}
-                      <code className="text-xs">{DEFAULT_API_KEY_NAME}</code>).
-                    </Text.H5>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Text.H5M>Project slug</Text.H5M>
-                  <Text.H5 color="foregroundMuted">
-                    Use this value when the installer asks for your Latitude project.
-                  </Text.H5>
-                  {projectSlugForCopy ? (
-                    <CodeBlock value={projectSlugForCopy} copyable />
-                  ) : (
-                    <Text.H5 color="foregroundMuted">
-                      Project slug is not ready yet. Wait a moment or open project settings, then refresh this page.
-                    </Text.H5>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => goToStep(slackStepEnabled ? "slack" : "flaggers")}>
-                  Back
-                </Button>
-                <Button variant="ghost" onClick={() => void onOpenProjectTraces(projectId)}>
-                  Skip for now
-                </Button>
-              </div>
-            </div>
-          </div>
+          <TelemetryStep.Left
+            stackChoice={stackChoice}
+            traceReceived={traceReceived}
+            projectSlug={projectSlug}
+            onBack={() => goToStep(telemetryBackStep)}
+            onSkip={handleSkipToTraces}
+          />
         )}
       </div>
 
       <div className="hidden h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary lg:flex lg:w-1/2">
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24 [scrollbar-gutter:stable]">
           {step === "role" ? (
-            <div className="flex h-fit w-full flex-col items-center gap-4">
-              <OnboardingPreviewImage
-                src="/onboarding/traces.png"
-                alt="Latitude traces preview"
-                width={1024}
-                height={579}
-              />
-              <Text.H5 className="w-full max-w-[591px]" color="foregroundMuted" align="center">
-                Latitude gives your whole team visibility into what your AI is doing
-              </Text.H5>
-            </div>
+            <RoleStep.Right />
+          ) : step === "stack" ? (
+            <StackStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+          ) : step === "flaggers" ? (
+            <FlaggersStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+          ) : step === "slack" ? (
+            <SlackStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
           ) : (
-            <div className="flex h-fit w-full flex-col items-start">
-              <div className="flex w-full max-w-[591px] flex-col gap-6">
-                <div className="flex flex-col gap-1">
-                  <Text.H5M>{activeGalleryItem.title}</Text.H5M>
-                  <Text.H6 color="foregroundMuted">{activeGalleryItem.description}</Text.H6>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setGalleryIndex((c) => (c === 0 ? WAITING_GALLERY.length - 1 : c - 1))}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setGalleryIndex((c) => (c + 1) % WAITING_GALLERY.length)}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="mt-10 w-full">
-                <OnboardingPreviewImage
-                  src={activeGalleryItem.image}
-                  alt={activeGalleryItem.title}
-                  width={galleryImageDimensions.width}
-                  height={galleryImageDimensions.height}
-                />
-              </div>
-            </div>
+            <TelemetryStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
           )}
         </div>
       </div>
