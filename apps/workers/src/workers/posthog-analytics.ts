@@ -29,7 +29,10 @@ export const createPostHogAnalyticsWorker = ({ consumer, posthog }: PostHogAnaly
           // Runs before the whitelist check — this event isn't captured, only
           // used to enrich the person profile.
           if (payload.eventName === "UserOnboardingCompleted") {
-            const p = payload.payload as { readonly userId: string; readonly stackChoice: "coding-agent-machine" | "production-agent" }
+            const p = payload.payload as {
+              readonly userId: string
+              readonly stackChoice: "coding-agent-machine" | "production-agent"
+            }
             await client.personIdentify({
               distinctId: p.userId,
               properties: { onboardingType: stackChoiceToOnboardingType(p.stackChoice) },

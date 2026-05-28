@@ -330,9 +330,7 @@ function SessionCount({ value }: { readonly value: number }) {
   return (
     <Tooltip
       trigger={
-        <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
-          {formatSessionLabel(value)}
-        </span>
+        <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">{formatSessionLabel(value)}</span>
       }
     >
       {exactLabel}
