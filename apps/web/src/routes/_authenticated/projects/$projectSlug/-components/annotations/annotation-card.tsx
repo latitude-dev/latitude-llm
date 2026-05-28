@@ -1,7 +1,7 @@
 import { canUpdateAnnotation, getAnnotationProvenance } from "@domain/annotations"
 import { Avatar, Badge, Button, DropdownMenu, Icon, LatitudeLogo, type MenuOption, Text, Tooltip } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { useNavigate, useParams } from "@tanstack/react-router"
+import { Link, useParams } from "@tanstack/react-router"
 import { ArrowUpRightIcon, EllipsisIcon, GlobeIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useDeleteAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
@@ -31,7 +31,6 @@ export function AnnotationCard({
   onUpdate,
   onDelete,
 }: AnnotationCardProps) {
-  const navigate = useNavigate()
   const { projectSlug } = useParams({ strict: false })
   const [isEditing, setIsEditing] = useState(false)
   const memberByUserId = useMemberByUserIdMap()
@@ -71,22 +70,6 @@ export function AnnotationCard({
   function handleSave(data: { passed: boolean; comment: string; issueId: string | null }) {
     onUpdate(data)
     setIsEditing(false)
-  }
-
-  function openLinkedIssue(event: { stopPropagation: () => void; preventDefault?: () => void }) {
-    if (!annotation.issueId || !projectSlug) {
-      return
-    }
-
-    event.stopPropagation()
-    event.preventDefault?.()
-    void navigate({
-      to: "/projects/$projectSlug/issues",
-      params: { projectSlug },
-      search: {
-        issueId: annotation.issueId,
-      },
-    })
   }
 
   if (isEditing) {
@@ -189,38 +172,45 @@ export function AnnotationCard({
         <div className="flex items-center gap-2 pt-1">
           {linkedIssueName &&
             (() => {
-              const issueLinkBadge = (
+              const isNavigable = Boolean(projectSlug && annotation.issueId)
+              const badge = (
                 <Badge
-                  data-no-navigate
                   variant="outline"
                   size="small"
                   ellipsis
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Open issue ${linkedIssueName}`}
-                  className="cursor-pointer hover:bg-muted"
+                  {...(isNavigable ? { className: "cursor-pointer hover:bg-muted" } : {})}
                   iconProps={{
                     icon: ShieldAlertIcon,
                     color: "foregroundMuted",
                     placement: "start",
                     className: "stroke-[2.5]",
                   }}
-                  onClick={openLinkedIssue}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      openLinkedIssue(event)
-                    }
-                  }}
                 >
                   {linkedIssueName}
                 </Badge>
               )
+              const trigger =
+                projectSlug && annotation.issueId ? (
+                  <Link
+                    data-no-navigate
+                    to="/projects/$projectSlug/issues"
+                    params={{ projectSlug }}
+                    search={{ issueId: annotation.issueId }}
+                    aria-label={`Open issue ${linkedIssueName}`}
+                    onClick={(event) => event.stopPropagation()}
+                    className="inline-flex min-w-0"
+                  >
+                    {badge}
+                  </Link>
+                ) : (
+                  badge
+                )
               return linkedIssueDescription ? (
-                <Tooltip asChild trigger={issueLinkBadge}>
+                <Tooltip asChild trigger={trigger}>
                   <span className="block max-w-xs whitespace-pre-wrap text-left">{linkedIssueDescription}</span>
                 </Tooltip>
               ) : (
-                issueLinkBadge
+                trigger
               )
             })()}
           {isAgentDraft && (
@@ -250,22 +240,10 @@ interface FlaggerBadgeProps {
  * (e.g. it was de-provisioned after the annotation was created).
  */
 function FlaggerBadge({ projectId, projectSlug, slug }: FlaggerBadgeProps) {
-  const navigate = useNavigate()
   const { data: flaggers = [] } = useProjectFlaggers(projectId)
   const flagger = flaggers.find((candidate) => candidate.slug === slug)
   const name = flagger?.name ?? humanizeFlaggerSlug(slug)
   const label = `${name} flagger`
-
-  function openFlaggerSettings(event: { stopPropagation: () => void; preventDefault?: () => void }) {
-    if (!projectSlug) return
-    event.stopPropagation()
-    event.preventDefault?.()
-    void navigate({
-      to: "/projects/$projectSlug/settings/flaggers",
-      params: { projectSlug },
-      search: { flagger: slug },
-    })
-  }
 
   if (!projectSlug) {
     return (
@@ -279,24 +257,24 @@ function FlaggerBadge({ projectId, projectSlug, slug }: FlaggerBadgeProps) {
     <Tooltip
       asChild
       trigger={
-        <Badge
+        <Link
           data-no-navigate
-          variant="secondary"
-          size="small"
-          role="button"
-          tabIndex={0}
+          to="/projects/$projectSlug/settings/flaggers"
+          params={{ projectSlug }}
+          search={{ flagger: slug }}
           aria-label={`Open the ${name} flagger settings`}
-          className="cursor-pointer hover:bg-muted"
-          iconProps={{ icon: ArrowUpRightIcon, color: "foregroundMuted", placement: "end" }}
-          onClick={openFlaggerSettings}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              openFlaggerSettings(event)
-            }
-          }}
+          onClick={(event) => event.stopPropagation()}
+          className="inline-flex"
         >
-          {label}
-        </Badge>
+          <Badge
+            variant="secondary"
+            size="small"
+            className="cursor-pointer hover:bg-muted"
+            iconProps={{ icon: ArrowUpRightIcon, color: "foregroundMuted", placement: "end" }}
+          >
+            {label}
+          </Badge>
+        </Link>
       }
     >
       Flagged automatically by the {name} flagger — open its settings

@@ -1,11 +1,11 @@
 ---
 name: web-frontend
-description: apps/web UI — routes, @repo/ui, TanStack Start server functions and collections, forms (useForm + createFormSubmitHandler + fieldErrorsAsStrings for Zod field errors), Tailwind layout rules, design-system updates, and useEffect / useMountEffect policy.
+description: apps/web UI — routes, @repo/ui, TanStack Start server functions and collections, navigation (Link vs useNavigate), forms (useForm + createFormSubmitHandler + fieldErrorsAsStrings for Zod field errors), Tailwind layout rules, design-system updates, and useEffect / useMountEffect policy.
 ---
 
 # Web app frontend (`apps/web`)
 
-**When to use:** `apps/web` UI — routes, `@repo/ui`, TanStack Start server functions and collections, forms (**`useForm`** with **`createFormSubmitHandler`** + **`fieldErrorsAsStrings`** when Zod validation errors should appear on fields), Tailwind layout rules, design-system updates, and **`useEffect` / `useMountEffect` policy**.
+**When to use:** `apps/web` UI — routes, `@repo/ui`, TanStack Start server functions and collections, **navigation (`Link` vs `useNavigate`)**, forms (**`useForm`** with **`createFormSubmitHandler`** + **`fieldErrorsAsStrings`** when Zod validation errors should appear on fields), Tailwind layout rules, design-system updates, and **`useEffect` / `useMountEffect` policy**.
 
 ## Legacy UI reference
 
@@ -217,6 +217,84 @@ export function useAuthenticatedUser() {
 - Use `useState` for local UI state (modals, form visibility); no global stores
 - Invalidate query cache after mutations: `getQueryClient().invalidateQueries({ queryKey: [...] })`
 - Forms use TanStack React Form (`useForm` + `form.Field`)
+
+## Navigation: `<Link>` vs `useNavigate`
+
+**Rule:** if navigation is triggered by a user clicking something, render a **`<Link>`** (from `@tanstack/react-router`). Reserve **`useNavigate`** for *programmatic* redirects — work the user didn't directly click "go there" for.
+
+A real anchor (`<Link>` → `<a href>`) is the only way to get:
+
+- `href` (hover-preview the URL, right-click → copy/open, browser history correctness)
+- **cmd/ctrl-click and middle-click to open in a new tab**
+- Keyboard activation (Enter) and focus-visible handling for free, no manual `onKeyDown`
+- Works before client-side JS has hydrated
+
+| Trigger | Use |
+| --- | --- |
+| User clicks a button / badge / row / link-styled element to go to a different page | **`<Link>`** |
+| Same-route navigation that only flips a search param (drawer toggle, "apply saved search" on the page you're already on) | `useNavigate` is fine — there is no new document to link to |
+| After a mutation completes (`createX` → go to the new resource, `deleteX` → go back to the listing) | `useNavigate` |
+| Auth flows (sign in, sign out, OAuth callback, redirect-after-login) | `useNavigate` |
+
+### Anti-pattern to avoid
+
+Do **not** put `role="button"`, `onClick`, and a hand-rolled `onKeyDown` on a `Badge`/`div`/`span` to call `navigate(...)`. That re-implements (badly) what `<Link>` already provides, and silently breaks cmd-click / middle-click / right-click flows.
+
+```tsx
+// ❌ Bad — click-to-navigate via useNavigate
+const navigate = useNavigate()
+function open() {
+  navigate({ to: "/projects/$projectSlug/settings/flaggers", params: { projectSlug }, search: { flagger: slug } })
+}
+return (
+  <Badge
+    role="button"
+    tabIndex={0}
+    onClick={open}
+    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && open()}
+  >
+    {label}
+  </Badge>
+)
+
+// ✅ Good — real anchor wraps the visual badge
+return (
+  <Link
+    to="/projects/$projectSlug/settings/flaggers"
+    params={{ projectSlug }}
+    search={{ flagger: slug }}
+    aria-label={`Open the ${name} flagger settings`}
+    className="inline-flex"
+  >
+    <Badge variant="secondary" size="small" className="cursor-pointer hover:bg-muted">
+      {label}
+    </Badge>
+  </Link>
+)
+```
+
+`Badge` (and other `@repo/ui` primitives that are plain `<div>`s without `asChild`) should be wrapped *inside* the `<Link>` as visual children — the `<Link>` is the interactive anchor.
+
+For `<Button>` (which **does** support `asChild`), use the Radix Slot pattern: `<Button asChild><Link to="…">…</Link></Button>`.
+
+When the clickable element sits inside a larger row-level click handler, add `data-no-navigate` to the `<Link>` (the parent handler skips elements under `[data-no-navigate]`) and `onClick={(e) => e.stopPropagation()}` for belt-and-suspenders.
+
+### Table rows that navigate
+
+If clicking an `InfiniteTable` row opens a different page, use the **`renderRowLink`** prop — not `onRowClick` + `useNavigate`. `renderRowLink` is router-agnostic: the table renders a stretched-link overlay, the app supplies the `<Link>` element.
+
+```tsx
+<InfiniteTable
+  data={items}
+  columns={columns}
+  getRowKey={(r) => r.id}
+  renderRowLink={(row, props) => (
+    <Link to="/items/$id" params={{ id: row.id }} aria-label={`Open ${row.name}`} {...props} />
+  )}
+/>
+```
+
+Keep `onRowClick` only for **same-route** row interactions: selecting a row to open a drawer, applying a saved filter on the same page, toggling expansion state, etc. — the cases where there is no new URL to navigate to.
 
 ## TanStack Form + Zod field errors (`createFormSubmitHandler` + `fieldErrorsAsStrings`)
 

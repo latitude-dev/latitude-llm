@@ -76,6 +76,7 @@ export function InfiniteTable<T>({
   onRowClick,
   rowInteractionRole = "button",
   getRowAriaLabel,
+  renderRowLink,
   activeRowKey,
   activeRowAutoScroll = false,
   selection,
@@ -324,6 +325,7 @@ export function InfiniteTable<T>({
                           ...(getRowAriaLabel ? { rowAriaLabel: getRowAriaLabel(row) } : {}),
                         }
                       : {})}
+                    {...(renderRowLink ? { renderRowLink } : {})}
                     dataIndex={virtualRow.index}
                   />
                   {expanded?.isLoading && renderExpandedSkeletonRows(columns, hasExpansion, !!selection)}
@@ -384,6 +386,7 @@ export function InfiniteTable<T>({
                                 ...(getRowAriaLabel ? { rowAriaLabel: getRowAriaLabel(subRow) } : {}),
                               }
                             : {})}
+                          {...(renderRowLink ? { renderRowLink } : {})}
                           dataIndex={virtualRow.index}
                           isSubRow
                         />

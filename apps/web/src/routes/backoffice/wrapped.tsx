@@ -150,13 +150,20 @@ function ListColumn({
     [],
   )
 
-  const handleRowClick = useCallback((row: WrappedAnalyticsListItemDto) => {
-    // Open in a new tab. The Wrapped page is a public surface, not part of
-    // the backoffice tree, so we never want to navigate the admin in place.
-    if (typeof window !== "undefined") {
-      window.open(`/wrapped/${row.id}`, "_blank", "noopener,noreferrer")
-    }
-  }, [])
+  // The Wrapped page is a public surface, not part of the backoffice tree, so
+  // rows open in a new tab via a plain anchor (no TanStack route navigation).
+  const renderRowLink = useCallback(
+    (row: WrappedAnalyticsListItemDto, props: { className: string }) => (
+      <a
+        href={`/wrapped/${row.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open Wrapped report for ${row.projectName}`}
+        {...props}
+      />
+    ),
+    [],
+  )
 
   return (
     <div className="flex min-h-0 flex-col overflow-hidden border-r border-border">
@@ -166,9 +173,7 @@ function ListColumn({
           isLoading={isLoading}
           columns={columns}
           getRowKey={(row) => row.id}
-          onRowClick={handleRowClick}
-          getRowAriaLabel={(row) => `Open Wrapped report for ${row.projectName}`}
-          rowInteractionRole="link"
+          renderRowLink={renderRowLink}
           blankSlate="No Wrapped reports older than 7 days yet."
         />
       </div>

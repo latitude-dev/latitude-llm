@@ -1,9 +1,12 @@
 import { ChevronRight } from "lucide-react"
-import { type KeyboardEvent, memo, useCallback } from "react"
+import { type KeyboardEvent, type ReactNode, memo, useCallback } from "react"
 import { cn } from "../../utils/cn.ts"
 import { Checkbox, type CheckedState } from "../checkbox/checkbox.tsx"
 import { Text } from "../text/text.tsx"
 import type { InfiniteTableColumn } from "./types.ts"
+
+const LINK_STRETCH_CLASS =
+  "absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
 
 const SELECTION_COLUMN_WIDTH = 48
 
@@ -20,6 +23,7 @@ interface DataRowProps<T> {
   isExpandable?: boolean
   isExpanded?: boolean
   onClick?: (row: T) => void
+  renderRowLink?: (row: T, props: { className: string }) => ReactNode
   rowInteractionRole?: "button" | "link"
   rowAriaLabel?: string
   dataIndex: number
@@ -39,6 +43,7 @@ function DataRowInner<T>({
   isExpandable,
   isExpanded,
   onClick,
+  renderRowLink,
   rowInteractionRole = "button",
   rowAriaLabel,
   dataIndex,
@@ -54,17 +59,18 @@ function DataRowInner<T>({
     [onClick, row],
   )
 
-  const isClickable = Boolean(onClick)
-  const interactiveRole = isClickable ? rowInteractionRole : undefined
-  const isExpandToggleRow = Boolean(isClickable && isExpandable && !isSubRow)
+  const hasRowLink = Boolean(renderRowLink)
+  const isClickable = Boolean(onClick) || hasRowLink
+  const interactiveRole = onClick ? rowInteractionRole : undefined
+  const isExpandToggleRow = Boolean(onClick && isExpandable && !isSubRow)
   const ariaExpanded = isExpandToggleRow ? Boolean(isExpanded) : undefined
-  const ariaPressed = isClickable && interactiveRole === "button" && !isExpandToggleRow ? Boolean(isActive) : undefined
+  const ariaPressed = onClick && interactiveRole === "button" && !isExpandToggleRow ? Boolean(isActive) : undefined
 
   return (
     <tr
       data-index={dataIndex}
       role={interactiveRole}
-      {...(isClickable && rowAriaLabel ? { "aria-label": rowAriaLabel } : {})}
+      {...(onClick && rowAriaLabel ? { "aria-label": rowAriaLabel } : {})}
       {...(ariaExpanded !== undefined ? { "aria-expanded": ariaExpanded } : {})}
       {...(ariaPressed !== undefined ? { "aria-pressed": ariaPressed } : {})}
       className={cn(
@@ -72,10 +78,11 @@ function DataRowInner<T>({
           "bg-secondary": !isSubRow && !isExpanded,
           "bg-muted": isExpanded && !isActive,
           "bg-accent": isActive,
-          "hover:bg-muted cursor-pointer": onClick && !isExpanded && !isActive,
-          "hover:bg-accent cursor-pointer": onClick && (isExpanded || isActive),
+          "hover:bg-muted cursor-pointer": isClickable && !isExpanded && !isActive,
+          "hover:bg-accent cursor-pointer": isClickable && (isExpanded || isActive),
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset":
-            isClickable,
+            Boolean(onClick),
+          relative: hasRowLink,
         },
         rowClassName,
       )}
@@ -90,6 +97,7 @@ function DataRowInner<T>({
             "px-2 py-2 w-8",
             "first:rounded-l-lg last:rounded-r-lg",
             "align-middle text-sm leading-5 whitespace-nowrap",
+            { "relative z-[1]": hasRowLink },
           )}
         >
           {isExpandable && (
@@ -108,6 +116,7 @@ function DataRowInner<T>({
             "px-4 py-2",
             "first:rounded-l-lg last:rounded-r-lg overflow-hidden",
             "align-middle text-sm leading-5 font-normal whitespace-nowrap text-ellipsis",
+            { "relative z-[1]": hasRowLink },
           )}
           onClick={(e) => {
             e.stopPropagation()
@@ -119,9 +128,10 @@ function DataRowInner<T>({
           <Checkbox checked={checkedState ?? false} className="pointer-events-none" />
         </td>
       )}
-      {columns.map((col) => {
+      {columns.map((col, columnIndex) => {
         const content = col.render(row, dataIndex)
         const useEllipsis = col.ellipsis !== false
+        const isFirstCol = columnIndex === 0
         return (
           <td
             key={col.key}
@@ -135,6 +145,7 @@ function DataRowInner<T>({
               col.cellClassName,
             )}
           >
+            {isFirstCol && renderRowLink ? renderRowLink(row, { className: LINK_STRETCH_CLASS }) : null}
             {typeof content === "string" ? (
               <Text.H5 {...(useEllipsis ? { noWrap: true, ellipsis: true } : {})}>{content || "-"}</Text.H5>
             ) : (

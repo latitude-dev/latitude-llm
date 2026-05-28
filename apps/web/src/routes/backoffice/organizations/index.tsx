@@ -8,7 +8,7 @@ import {
 } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { useInfiniteQuery } from "@tanstack/react-query"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router"
 import { useCallback, useMemo } from "react"
 import {
   type AdminOrganizationUsageItemDto,
@@ -22,8 +22,6 @@ export const Route = createFileRoute("/backoffice/organizations/")({
 })
 
 function BackofficeOrganizationsByUsagePage() {
-  const navigate = useNavigate()
-
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["backoffice", "organizations-by-usage"],
     queryFn: ({ pageParam }) =>
@@ -125,14 +123,16 @@ function BackofficeOrganizationsByUsagePage() {
     [],
   )
 
-  const handleRowClick = useCallback(
-    (row: AdminOrganizationUsageItemDto) => {
-      void navigate({
-        to: "/backoffice/organizations/$organizationId",
-        params: { organizationId: row.id },
-      })
-    },
-    [navigate],
+  const renderRowLink = useCallback(
+    (row: AdminOrganizationUsageItemDto, props: { className: string }) => (
+      <Link
+        to="/backoffice/organizations/$organizationId"
+        params={{ organizationId: row.id }}
+        aria-label={`Open ${row.name}`}
+        {...props}
+      />
+    ),
+    [],
   )
 
   return (
@@ -149,9 +149,7 @@ function BackofficeOrganizationsByUsagePage() {
           isLoading={isLoading}
           columns={columns}
           getRowKey={(row) => row.id}
-          onRowClick={handleRowClick}
-          getRowAriaLabel={(row) => `Open ${row.name}`}
-          rowInteractionRole="link"
+          renderRowLink={renderRowLink}
           infiniteScroll={infiniteScroll}
           blankSlate="No organizations have produced traces in the last 30 days."
         />

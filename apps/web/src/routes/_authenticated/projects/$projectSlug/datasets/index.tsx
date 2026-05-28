@@ -11,7 +11,7 @@ import {
   useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
@@ -85,16 +85,17 @@ function DatasetsPage() {
   })
 
   const getRowKey = useCallback((d: DatasetRecord) => d.id, [])
-  const onRowClick = useCallback(
-    (d: DatasetRecord) =>
-      navigate({
-        to: "/projects/$projectSlug/datasets/$datasetId",
-        params: { projectSlug, datasetId: d.id },
-      }),
-    [navigate, projectSlug],
+  const renderRowLink = useCallback(
+    (d: DatasetRecord, props: { className: string }) => (
+      <Link
+        to="/projects/$projectSlug/datasets/$datasetId"
+        params={{ projectSlug, datasetId: d.id }}
+        aria-label={`Open dataset ${d.name}`}
+        {...props}
+      />
+    ),
+    [projectSlug],
   )
-
-  const getRowAriaLabel = useCallback((d: DatasetRecord) => `Open dataset ${d.name}`, [])
 
   const hasNoDatasets = datasets.length === 0
   const showEmptyState = !isLoading && hasNoDatasets
@@ -154,9 +155,7 @@ function DatasetsPage() {
             isLoading={isLoading}
             columns={columns}
             getRowKey={getRowKey}
-            onRowClick={onRowClick}
-            rowInteractionRole="link"
-            getRowAriaLabel={getRowAriaLabel}
+            renderRowLink={renderRowLink}
             infiniteScroll={infiniteScroll}
             sorting={sorting}
             defaultSorting={DEFAULT_SORTING}
