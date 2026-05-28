@@ -100,12 +100,13 @@ function DisconnectedSlackCard() {
       title="Slack"
       subtitle="Send Latitude notifications to your Slack workspace."
       actions={
-        <Button
-          onClick={() => {
-            window.location.href = "/integrations/slack/install"
-          }}
-        >
-          Connect Slack
+        // `/integrations/slack/install` is a server-handler-only route
+        // that 302s the browser to Slack — needs a full-page GET, not
+        // client-side routing. Plain `<a>` (inside a `Button asChild`)
+        // gives cmd/middle-click + copy-link affordances while keeping
+        // the full-page nav.
+        <Button asChild>
+          <a href="/integrations/slack/install">Connect Slack</a>
         </Button>
       }
     />
