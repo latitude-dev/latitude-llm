@@ -304,7 +304,7 @@ export function OnboardingFlow({
               ) : slideStep === "stack" ? (
                 <StackStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
               ) : slideStep === "flaggers" ? (
-                <FlaggersStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+                <FlaggersStep.Right enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
               ) : slideStep === "slack" ? (
                 <SlackStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
               ) : (

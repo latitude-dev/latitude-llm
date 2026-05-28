@@ -1,13 +1,12 @@
 import { Button, cn, Icon, Text } from "@repo/ui"
 import { Check } from "lucide-react"
-import type { Dispatch, SetStateAction } from "react"
 import { useMemo } from "react"
 import {
   FLAGGER_ONBOARDING_ORDER,
   FLAGGER_USE_CASE_PRESETS,
   type FlaggerPresetSlug,
 } from "../../../../../../../domains/flaggers/presets.ts"
-import { OnboardingGallery } from "../onboarding-gallery.tsx"
+import { MockIssuesFeed } from "../mocks/mock-issues-feed.tsx"
 
 type AvailableFlagger = {
   readonly slug: string
@@ -151,11 +150,11 @@ export function Left({
 }
 
 export function Right({
-  galleryIndex,
-  setGalleryIndex,
+  enabledFlaggerSlugs,
+  availableFlaggers,
 }: {
-  readonly galleryIndex: number
-  readonly setGalleryIndex: Dispatch<SetStateAction<number>>
+  readonly enabledFlaggerSlugs: ReadonlySet<string>
+  readonly availableFlaggers: ReadonlyArray<AvailableFlagger>
 }) {
-  return <OnboardingGallery galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+  return <MockIssuesFeed enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
 }
