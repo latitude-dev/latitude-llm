@@ -48,10 +48,12 @@ export function SessionDetailDrawer({
   })
   const { traces } = useSessionTraces({ projectId, sessionId })
 
-  // Trace beats issue when both are set — clicking a trace from inside the
-  // issue slot sets `traceId` without touching `issueId`, and we want the
-  // trace pane on top. Going back to session clears both, so we never end up
-  // in a state where the issue would reappear after the trace closes.
+  // Defensive precedence for URLs that arrive with both params already set
+  // (deep links, browser history, hand-edited URLs). Our own code never sets
+  // both at the same time — opening a trace from inside the issue slot uses
+  // `IssueDetailBody`'s local Sheet state, not the `traceId` param. Trace
+  // wins so a stale `issueId` doesn't shadow the requested trace; "View
+  // session" clears both so we can't land in an ambiguous state after close.
   const detailKind: DetailSlotKind | null = traceId.length > 0 ? "trace" : issueId.length > 0 ? "issue" : null
   const showDetail = detailKind !== null
 
