@@ -78,7 +78,6 @@ interface FlaggerGroup {
   readonly slugs: ReadonlyArray<FlaggerPresetSlug>
 }
 
-// Groups must collectively cover every FLAGGER_STRATEGY_SLUG. Add new strategies here when they ship.
 export const FLAGGER_GROUPS = [
   {
     id: "response-validity",
@@ -99,6 +98,15 @@ export const FLAGGER_GROUPS = [
     slugs: ["refusal", "laziness", "forgetting", "trashing"],
   },
 ] as const satisfies ReadonlyArray<FlaggerGroup>
+
+// Compile-time assertion: FLAGGER_GROUPS must cover every FLAGGER_STRATEGY_SLUG. If a new slug
+// is added but missing from any group, the type below resolves to the missing slug name(s)
+// instead of `true`, and the assignment fails typecheck with the missing slug surfaced in the
+// diagnostic. Keeps settings from silently dropping rows when a strategy ships.
+type _MissingFromFlaggerGroups = Exclude<FlaggerPresetSlug, (typeof FLAGGER_GROUPS)[number]["slugs"][number]>
+const _assertFlaggerGroupsExhaustive: [_MissingFromFlaggerGroups] extends [never] ? true : _MissingFromFlaggerGroups =
+  true
+void _assertFlaggerGroupsExhaustive
 
 // Onboarding sorts the flat card grid by user-side first, then agent-side, then deterministic
 // programmatic checks — easier-to-grasp categories lead so the user can scan and pick fast.

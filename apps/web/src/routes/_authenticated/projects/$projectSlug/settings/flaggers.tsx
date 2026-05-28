@@ -136,6 +136,8 @@ function ProjectFlaggersSettingsPage() {
 
   const applyRef = useRef(apply)
   applyRef.current = apply
+  const isApplyingRef = useRef(isApplying)
+  isApplyingRef.current = isApplying
 
   useEffect(() => {
     if (!hasDirty) return
@@ -146,7 +148,7 @@ function ProjectFlaggersSettingsPage() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault()
         void applyRef.current()
-      } else if (event.key === "Escape" && !inField) {
+      } else if (event.key === "Escape" && !inField && !isApplyingRef.current) {
         event.preventDefault()
         setPending({})
       }
