@@ -1,14 +1,13 @@
 import { Button, Icon, SlackIcon, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useQuery } from "@tanstack/react-query"
-import type { Dispatch, SetStateAction } from "react"
 import {
   getActiveSlackIntegration,
   type SlackIntegrationRecord,
 } from "../../../../../../../domains/integrations/integrations.functions.ts"
 import { IntegrationCard } from "../../../settings/-components/integration-card.tsx"
 import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../../../settings/-components/slack-route-row.tsx"
-import { OnboardingGallery } from "../onboarding-gallery.tsx"
+import { MockSlackQueue } from "../mocks/mock-slack-queue.tsx"
 
 export function Left({
   projectSlug,
@@ -111,12 +110,6 @@ function SlackConnectedOnboardingCard({ integration }: { readonly integration: S
   )
 }
 
-export function Right({
-  galleryIndex,
-  setGalleryIndex,
-}: {
-  readonly galleryIndex: number
-  readonly setGalleryIndex: Dispatch<SetStateAction<number>>
-}) {
-  return <OnboardingGallery galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+export function Right() {
+  return <MockSlackQueue />
 }
