@@ -1,0 +1,1392 @@
+# Monitors
+
+> Eventual durable home: `dev-docs/monitors.md` (created at the end of this plan; this spec is removed at that point).
+
+## Purpose
+
+This spec defines the **Monitors** feature: a domain entity that owns _what to watch_ and _when an incident is open_. It supersedes today's split between project-level "incident notification toggles" and the alert-incident firing pipeline, and extends alerting to saved searches.
+
+A **Monitor** is the user-facing umbrella under which one or more **alerts** live. Each alert is a `(kind, source, condition, severity)` tuple. When any of a monitor's alerts fires, the existing notifications pipeline takes over: a single `alert_incidents` row is written carrying the `monitor_id`, an `IncidentCreated` event flows out, and downstream the `request-incident-notifications` → `create-notification` → `notification-email:send` chain handles delivery with no monitor-specific code.
+
+**Monitors do not own notification configuration**. Notification settings live where they already do — per-organization and per-project gating on `projects.settings.notifications` / `users.notification_preferences`. The single new wire from monitors into the notifications domain is a **mute gate**: when an incident is created by a monitor and that monitor is muted, the producer step skips the fan-out so no notification rows are written.
+
+## Goals
+
+- One UI surface — the **Monitors** page — where users see, configure, mute, and (for non-system monitors) delete every alert in their project.
+- One backend pipeline — monitor → alert evaluation → incident → existing notifications fan-out — that subsumes both today's issue-event path and a new saved-search path.
+- A **`monitors` feature flag** to roll out the new path behind a gate while legacy behaviour keeps running for orgs without it.
+- A data model whose lifecycle distinction (system vs user-managed) is independent of the alert source type, so the product can later add system monitors of any source type and open user-creatable monitors to any source type without schema churn.
+- Visible progress as early as possible: each milestone PR ships something a stakeholder can click on, even when the backend isn't fully wired.
+
+## Non-goals
+
+- New notification channels in the monitors domain. Channels are owned by `@domain/notifications` and gated by org/project settings — monitors only set the `monitor_id` on the incident and (optionally) mute it.
+- Per-monitor notification settings. Out of scope by design — see "Notifications" below.
+- New alert evaluation algorithms for issues. The seasonal-anomaly detector (`evaluateSeasonalEscalation` in `packages/domain/issues/src/helpers.ts`) is reused as-is. Its sensitivity continues to come from `projects.settings.escalation.sensitivity`.
+- Slack channel. The existing `slack` flag and integration already exist; nothing in this spec touches that pipeline.
+- Cleaning up the old code paths around per-kind notification gating (`projects.settings.notifications.incidents`). We leave them in place under the unflagged branch, gate the new path, and revisit in a future cleanup PR once the `monitors` flag is on for everyone.
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| **Monitor** | A user-facing entity that owns one or more alerts. Scoped to a single project. Mute prevents notifications; soft-delete hides and stops the monitor firing. |
+| **System monitor** | A monitor with `system = true`. Auto-provisioned per project; fully immutable except for mute/unmute. Not deletable. |
+| **Alert** (`MonitorAlert`) | A `(kind, source, condition, severity)` tuple owned by a monitor. Multiple alerts per monitor are allowed; firing any of them produces an incident. |
+| **Alert kind** | A discriminated enum identifying the watched signal: `issue.new`, `issue.regressed`, `issue.escalating`, `savedSearch.match`, `savedSearch.threshold`, `savedSearch.escalating`. |
+| **Alert source** | The entity the alert watches: `{ type, id? }`. `id = null` means "all of that type". |
+| **Alert condition** | A polymorphic config that parameterises the kind's evaluator. `null` for kinds that need no parameters. |
+| **Severity** | `low | medium | high`. Copied onto the incident; drives badge tone and email subject tone. |
+| **Incident** | A row in `alert_incidents` linked to a monitor via `monitor_id`. Eventful kinds (`issue.new`, `issue.regressed`, `savedSearch.match`, threshold point-in-time) have `endedAt = startedAt`; sustained kinds (`issue.escalating`, `savedSearch.escalating`) leave `endedAt = null` until the condition clears. |
+
+## Current state
+
+Three pieces of existing work this spec builds on:
+
+- **Alert incidents** — `specs/alerts.md`, `packages/domain/alerts/`. The `alert_incidents` table and firing/closing logic for `issue.new` / `issue.regressed` / `issue.escalating` are in place. The escalating detector lives in `packages/domain/issues/src/helpers.ts` (`evaluateSeasonalEscalation`).
+- **Multi-channel notifications** — `specs/notifications-multi-channel.md`, `dev-docs/notifications.md`. The producer → creator → channel pipeline (`apps/workers/src/workers/notifications.ts`, `notification-emailer.ts`) is reused unchanged for monitor-driven incidents. The only modification is in the producer step, which adds a mute check. **Important distinction**: the three system monitors replace today's three project-level per-kind toggles in `projects.settings.notifications.incidents` (the "Notify when a new issue is discovered" / "Notify when an issue regresses" / "Notify when an issue starts or stops escalating" checkboxes on the `/settings/issues` page). They do **not** replace the per-user-per-group preferences in `users.notification_preferences` (`incidents`, `wrapped_reports`, `custom_messages` group toggles) — those continue to apply to monitor-driven incidents unchanged.
+- **Saved searches** — `packages/domain/saved-searches/`, `apps/web/src/routes/_authenticated/projects/$projectSlug/search/`. Today they live on a standalone `/search` page with `assignedUserId` / `createdByUserId` fields. Monitors reference saved searches by id; the page goes away and the columns are dropped.
+
+## Conceptual model
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Monitor                                                     │
+│   id, organizationId, projectId, slug, name, description    │
+│   system: boolean                                           │
+│   mutedAt?, deletedAt?, createdAt, updatedAt                │
+│                                                             │
+│   ┌────────────────────────────┐                            │
+│   │ MonitorAlert[] (1..n)      │                            │
+│   │   kind                     │                            │
+│   │   source { type, id? }     │                            │
+│   │   condition?               │                            │
+│   │   severity                 │                            │
+│   └────────────────────────────┘                            │
+└─────────────────────────────────────────────────────────────┘
+            │
+            ▼   each firing produces
+┌─────────────────────────────────────────────────────────────┐
+│ AlertIncident                                               │
+│   id, organizationId, projectId                             │
+│   monitorId? (new)                                          │
+│   condition? (new, snapshotted)                             │
+│   sourceType, sourceId, kind, severity                      │
+│   startedAt, endedAt?                                       │
+│   entrySignals?, exitEligibleSince?                         │
+└─────────────────────────────────────────────────────────────┘
+            │
+            ▼   IncidentCreated / IncidentClosed
+┌─────────────────────────────────────────────────────────────┐
+│ existing @domain/notifications pipeline                     │
+│   request-incident-notifications                            │
+│     ┌──────────────────────────────────────────────────┐    │
+│     │ NEW: if incident.monitorId, load monitor;        │    │
+│     │ if monitor.mutedAt, skip the whole fan-out.      │    │
+│     │ Project-level gates + user prefs still apply for │    │
+│     │ monitor-driven incidents (no change).            │    │
+│     └──────────────────────────────────────────────────┘    │
+│   → create-notification → notification-email:send → …       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Cardinality rules
+
+- A monitor has **at least one alert**. Enforced in the create/update use-cases (not as a DB constraint).
+- Multiple alerts on a single monitor are allowed in any combination — both within the same kind and across kinds.
+- The data model places no restriction on which source types can appear on system vs user-managed monitors. The two MVP product rules below are enforced in code via constants, not schema:
+  - **System monitors are fully immutable** (except `mutedAt`). Today: the three hardcoded issue monitors. The data model is agnostic to source type — future system monitors of any source type are unblocked.
+  - **User-creatable monitors** are restricted via a `USER_CREATABLE_ALERT_KINDS` allowlist. Today: the three `savedSearch.*` kinds. Future product expansion is one constant edit; no migration.
+
+### Lifecycle
+
+- **Mute** sets `mutedAt = now()`. Incidents continue to be created. The notifications producer step short-circuits when `incident.monitorId` resolves to a muted monitor.
+- **Soft delete** sets `deletedAt = now()` (user-managed monitors only; the use-case rejects on `system === true`). The monitor disappears from lists and stops firing. Existing incidents remain queryable.
+- **Source cascade** — when a referenced source entity (issue or saved search) is hard- or soft-deleted, every alert with `source.id === <deletedEntityId>` is removed. If that empties a monitor's alert list, the monitor is soft-deleted in the same transaction. System monitors are unaffected because their alert sources are configured `id = null` ("all of type").
+- **Removing the last alert** from a user-managed monitor is rejected by the update use-case. The UI flow offers "Delete monitor" once the last alert is about to go.
+
+## Data model
+
+All comments below land **verbatim in code** (entity-level JSDoc), so future readers can `cmd-click` and understand each field without re-deriving it from this spec.
+
+### Shared enums (`@domain/shared`)
+
+#### `AlertIncidentSourceType`
+
+```ts
+/**
+ * The kind of entity an alert watches. Determines which Latitude domain
+ * owns the matching/lifecycle logic for the alert. `issue` watches issue
+ * lifecycle events (created, regressed, escalating). `savedSearch` watches
+ * traces that match the referenced saved search's `query` + `filterSet`.
+ */
+export const ALERT_INCIDENT_SOURCE_TYPES = ["issue", "savedSearch"] as const
+export type AlertIncidentSourceType = (typeof ALERT_INCIDENT_SOURCE_TYPES)[number]
+```
+
+#### `AlertIncidentKind`
+
+```ts
+/**
+ * Discriminator that, paired with the source type and condition, fully
+ * determines the firing logic for an alert. Each kind has a fixed
+ * `sourceType` — they are not interchangeable.
+ *
+ *   issue.new           — fires when an issue is created from a score
+ *   issue.regressed     — fires when a resolved issue receives a new score
+ *   issue.escalating    — fires when an issue's recent occurrence band
+ *                          exceeds its seasonal baseline (sustained;
+ *                          closes when the band returns or 72h timeout).
+ *                          Sensitivity lives in project settings, not on
+ *                          the alert.
+ *   savedSearch.match   — fires every time a new trace matches the saved
+ *                          search (point-in-time)
+ *   savedSearch.threshold
+ *                       — fires when the match count crosses a configured
+ *                          threshold. Absolute mode is one-time
+ *                          (cumulative-since-creation milestone); multiplier
+ *                          mode is a spike detector that can re-fire on
+ *                          each rising edge. Both produce point-in-time
+ *                          notifications.
+ *   savedSearch.escalating
+ *                       — fires when the match count sustains above a
+ *                          configured threshold for a `window` period
+ *                          (sustained; closes after the same `window`
+ *                          of the condition no longer holding).
+ */
+export const ALERT_INCIDENT_KINDS = [
+  "issue.new",
+  "issue.regressed",
+  "issue.escalating",
+  "savedSearch.match",
+  "savedSearch.threshold",
+  "savedSearch.escalating",
+] as const
+export type AlertIncidentKind = (typeof ALERT_INCIDENT_KINDS)[number]
+
+/**
+ * Static map enforced at the type level: each alert kind has exactly one
+ * legal source type. Used by the create/update use-cases to reject
+ * mismatched combinations before they hit the DB.
+ */
+export const ALERT_INCIDENT_KIND_SOURCE_TYPE: Record<AlertIncidentKind, AlertIncidentSourceType> = {
+  "issue.new":              "issue",
+  "issue.regressed":        "issue",
+  "issue.escalating":       "issue",
+  "savedSearch.match":      "savedSearch",
+  "savedSearch.threshold":  "savedSearch",
+  "savedSearch.escalating": "savedSearch",
+}
+
+/**
+ * Whether the incident is a one-shot event (start == end) or a sustained
+ * state that needs closing. Drives both the `endedAt` write semantics on
+ * incident creation and which notification kinds the existing pipeline
+ * picks (`incident.event` for point, `incident.opened` + `incident.closed`
+ * pair for sustained).
+ */
+export const ALERT_INCIDENT_KIND_LIFECYCLE: Record<AlertIncidentKind, "point" | "sustained"> = {
+  "issue.new":              "point",
+  "issue.regressed":        "point",
+  "issue.escalating":       "sustained",
+  "savedSearch.match":      "point",
+  "savedSearch.threshold":  "point",
+  "savedSearch.escalating": "sustained",
+}
+
+/**
+ * Alert kinds that today's product surfaces let users add to a monitor
+ * they create or edit. The data model places no restriction here — the
+ * field exists so the create/update use-cases can reject kinds that are
+ * supposed to live exclusively on system monitors (currently the three
+ * `issue.*` kinds). Future product expansion is a one-constant edit.
+ */
+export const USER_CREATABLE_ALERT_KINDS = [
+  "savedSearch.match",
+  "savedSearch.threshold",
+  "savedSearch.escalating",
+] as const satisfies readonly AlertIncidentKind[]
+```
+
+#### `AlertIncidentCondition`
+
+```ts
+/**
+ * Polymorphic alert condition. The `kind` of the parent alert chooses
+ * the variant; kinds with no parameters store `null`. Keeping every
+ * variant in a single discriminated union lets one jsonb column carry
+ * every shape without schema churn per new kind.
+ *
+ * `issue.escalating` deliberately has no condition variant — sensitivity
+ * is centralised in `projects.settings.escalation.sensitivity` so the
+ * detector keeps a single source of truth. The system "Issue escalating"
+ * monitor's alert stores `condition: null` and the runtime reads
+ * sensitivity from the project settings.
+ *
+ * `savedSearch.match` has no tunable parameters either (the look-back
+ * window and the throttle interval are the same single value, hardcoded
+ * to 5 minutes — see "Saved-search firing" below), so it also stores
+ * `condition: null`.
+ */
+export type AlertIncidentCondition =
+  | AlertIncidentSavedSearchThresholdCondition
+  | AlertIncidentSavedSearchEscalatingCondition
+
+/**
+ * The "X times" parameter used by saved-search condition variants.
+ *
+ *   absolute   — `{ mode: "absolute", count }` — a fixed match count.
+ *   multiplier — `{ mode: "multiplier", factor, baselineWindow }` — the
+ *                threshold value is computed at evaluation time as
+ *                `factor × matches(baselineWindow)`, normalised to
+ *                the "current" window's size (see the evaluator
+ *                section for the math). Supported on both
+ *                `savedSearch.threshold` (current window hardcoded to
+ *                5 min, the throttle interval) and `savedSearch.escalating`
+ *                (current window = the user-configured `window` field).
+ *
+ * Humanised examples:
+ *   { mode: "absolute", count: 100 }
+ *     → "occurred 100 times"
+ *   { mode: "multiplier", factor: 3, baselineWindow: { hours: 72 } }
+ *     → "occurred 3 times more than the last 3 days"
+ *   { mode: "multiplier", factor: 2,
+ *     baselineWindow: { days: 1, anchor: "previous-day" } }
+ *     → "occurred 2 times more than yesterday"
+ */
+export type AlertCountThreshold =
+  | { mode: "absolute"; count: number }
+  | {
+      mode: "multiplier"
+      factor: number
+      baselineWindow:
+        | { hours: number }
+        | { days: number; anchor?: "trailing" | "previous-day" | "previous-week" }
+    }
+
+/**
+ * Threshold-based alert. The two modes have different rearm semantics
+ * but the same notification shape — each firing produces a single
+ * point-in-time notification (no separate "closed" notification), so
+ * the recipient always sees one alarm per crossing event.
+ *
+ * - `absolute` ("100 times"): one-time milestone. Fires exactly once,
+ *   when the cumulative count of matches since the monitor was created
+ *   crosses `threshold`. After firing, the alert is durably "spent" —
+ *   the firing logic short-circuits on any prior incident for this
+ *   monitor alert, regardless of close state. Re-arm requires the user
+ *   to remove and re-add the alert.
+ *
+ * - `multiplier` ("3 times more than the last 3 days"): spike detector
+ *   that can re-fire. The "current" side of the comparison is the
+ *   match count over the last 5 minutes (= the firing throttle interval;
+ *   not user-configurable, kept simple). The "baseline" side is the
+ *   match count over `baselineWindow`, normalised to a 5-minute slice.
+ *   `isMet` when (current >= factor × normalisedBaseline). Re-arm
+ *   happens via the incident row itself: the firing creates an
+ *   `alert_incidents` row with `endedAt = null` and emits a single
+ *   `IncidentCreated` notification; while the condition keeps holding,
+ *   no further notifications fire; when the condition drops, the row
+ *   is silently closed (`endedAt = now`, no `IncidentClosed`
+ *   notification), and the next rising edge produces a new incident.
+ *
+ *   The incidents panel will render the open row as "Ongoing since X"
+ *   while the spike is still active — useful context, even though the
+ *   alarm itself was one-shot.
+ */
+export type AlertIncidentSavedSearchThresholdCondition = {
+  kind: "savedSearch.threshold"
+  threshold: AlertCountThreshold // absolute (one-time) OR multiplier (rearm)
+}
+
+/**
+ * Sustained alert. The count is taken over a rolling `window` ending at
+ * evaluation time; the same `window` doubles as the dwell-on-exit for
+ * the close transition. This single field is what the user types into
+ * the form ("for at least 5 minutes") and it plays two roles in the
+ * state machine:
+ *
+ *   - **Count window**: at every evaluation tick, `count = matches in
+ *     [now - window, now]`. The window is the user's lever for ignoring
+ *     transient spikes — a 1-second burst doesn't trip a 5-minute
+ *     window because the spike's contribution to the rolling count
+ *     ages out quickly.
+ *   - **Exit dwell**: when `isMet` flips from true to false on an open
+ *     incident, the dwell timer (`exitEligibleSince`) starts. The
+ *     incident closes once the condition has stayed false for `window`
+ *     minutes continuously.
+ *
+ * Minimum 5 minutes (= the throttle interval of the firing task; a
+ * shorter window would be evaluated less often than it claims).
+ */
+export type AlertIncidentSavedSearchEscalatingCondition = {
+  kind: "savedSearch.escalating"
+  threshold: AlertCountThreshold // absolute or multiplier
+  window: { minutes: number }    // ≥ 5
+}
+```
+
+#### `AlertIncidentSeverity`
+
+```ts
+/**
+ * User-facing severity attached to the alert and copied onto each
+ * incident at creation time. Drives badge colour, email subject tone,
+ * and (later) Slack channel routing. Hardcoded for system monitors,
+ * user-selectable for non-system monitors.
+ */
+export const ALERT_SEVERITIES = ["low", "medium", "high"] as const
+export type AlertIncidentSeverity = (typeof ALERT_SEVERITIES)[number]
+```
+
+### Monitor entity (`@domain/monitors`)
+
+```ts
+/**
+ * A user-managed entity that owns one or more alerts. Scoped to a single
+ * project. Mute disables notification dispatch but keeps incident
+ * creation running; soft-delete hides it from lists and stops it firing.
+ *
+ * Monitors do NOT own notification configuration. Notification routing
+ * lives in `@domain/notifications` and is gated by org/project settings
+ * and per-user preferences. The only seam from monitors into that pipeline
+ * is `mutedAt`: when a monitor-driven incident reaches the notifications
+ * producer (`request-incident-notifications`), a muted monitor short-
+ * circuits the fan-out.
+ *
+ * `system: true` monitors are auto-provisioned per project (today: the
+ * three issue monitors below). They are fully immutable except for
+ * `mutedAt` and cannot be deleted. The system-vs-user distinction is
+ * orthogonal to source type — future system monitors of any source type
+ * are accommodated by the data model with no schema change.
+ */
+export type Monitor = {
+  id: MonitorId
+  organizationId: OrganizationId
+  projectId: ProjectId
+  /**
+   * URL-safe identifier derived from `name`; regenerated when the name
+   * changes meaningfully. Unique per project (with soft-delete nulls
+   * partitioning the constraint). For system monitors, the slug is
+   * fixed at provision time — never regenerated since the name is
+   * immutable.
+   */
+  slug: string
+  name: string
+  description: string
+  system: boolean
+  alerts: readonly MonitorAlert[]
+  mutedAt: Date | null
+  deletedAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * Firing condition owned by a monitor. `source.id` is optional —
+ * leaving it `null` means the alert watches all entities of `source.type`
+ * in the project. The (kind, source.type) pair is constrained by
+ * `ALERT_INCIDENT_KIND_SOURCE_TYPE` and validated in the use-cases.
+ *
+ * `condition` is `null` when the kind has no tunable parameters
+ * (`issue.new`, `issue.regressed`, `issue.escalating`, `savedSearch.match`).
+ * Otherwise it carries the kind-specific shape from `AlertIncidentCondition`.
+ *
+ * `severity` is independent of kind — the user (or system definition)
+ * chooses how loud each alert sounds.
+ */
+export type MonitorAlert = {
+  id: MonitorAlertId
+  monitorId: MonitorId
+  kind: AlertIncidentKind
+  source: {
+    type: AlertIncidentSourceType
+    id: string | null
+  }
+  condition: AlertIncidentCondition | null
+  severity: AlertIncidentSeverity
+}
+```
+
+### Postgres schema
+
+Two new tables; one column addition; one column rename of nothing — additive only.
+
+```sql
+CREATE TABLE latitude.monitors (
+  id              varchar(24) PRIMARY KEY,
+  organization_id varchar(24) NOT NULL,
+  project_id      varchar(24) NOT NULL,
+  slug            varchar(128) NOT NULL,
+  name            varchar(128) NOT NULL,
+  description     text         NOT NULL DEFAULT '',
+  system          boolean      NOT NULL DEFAULT false,
+  muted_at        timestamptz,
+  deleted_at      timestamptz,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX monitors_project_slug_uq
+  ON latitude.monitors (project_id, slug) WHERE deleted_at IS NULL;
+
+CREATE INDEX monitors_org_project_active_idx
+  ON latitude.monitors (organization_id, project_id) WHERE deleted_at IS NULL;
+
+ALTER TABLE latitude.monitors ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY monitors_org_isolation_policy ON latitude.monitors
+  USING (organization_id = current_setting('app.organization_id', true));
+
+CREATE TABLE latitude.monitor_alerts (
+  id              varchar(24) PRIMARY KEY,
+  organization_id varchar(24) NOT NULL,
+  monitor_id      varchar(24) NOT NULL,
+  kind            varchar(64) NOT NULL,        -- AlertIncidentKind
+  source_type     varchar(32) NOT NULL,        -- AlertIncidentSourceType
+  source_id       varchar(24),                 -- null means "all of source_type"
+  condition       jsonb,                       -- AlertIncidentCondition | null
+  severity        varchar(16) NOT NULL,        -- AlertIncidentSeverity
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX monitor_alerts_monitor_idx
+  ON latitude.monitor_alerts (monitor_id);
+
+-- Hot path: "find all monitors whose alerts watch savedSearch X"
+CREATE INDEX monitor_alerts_source_idx
+  ON latitude.monitor_alerts (organization_id, source_type, source_id);
+
+ALTER TABLE latitude.monitor_alerts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY monitor_alerts_org_isolation_policy ON latitude.monitor_alerts
+  USING (organization_id = current_setting('app.organization_id', true));
+
+ALTER TABLE latitude.alert_incidents
+  ADD COLUMN monitor_id       varchar(24),
+  ADD COLUMN monitor_alert_id varchar(24),  -- which specific alert on the monitor fired
+  ADD COLUMN condition        jsonb;        -- snapshot of the firing MonitorAlert.condition
+
+CREATE INDEX alert_incidents_monitor_idx
+  ON latitude.alert_incidents (monitor_id) WHERE monitor_id IS NOT NULL;
+
+-- Hot path: "has this monitor alert ever fired?" (savedSearch.threshold)
+-- and "find the open incident for this monitor alert" (savedSearch.escalating).
+CREATE INDEX alert_incidents_monitor_alert_idx
+  ON latitude.alert_incidents (monitor_alert_id) WHERE monitor_alert_id IS NOT NULL;
+```
+
+`monitor_alert_id` joins each incident to the specific `monitor_alerts` row that fired it. We need this granularity because (a) a single monitor can carry multiple alerts of the same kind on the same source (e.g. two `savedSearch.escalating` alerts with different thresholds), and (b) the saved-search state machines query "is there an open incident for *this alert*" rather than "for this monitor". Issue-event monitors currently never produce two incidents for the same `(monitor, kind, sourceId)` combo, but storing `monitor_alert_id` for them too keeps the schema consistent and the panel queries simpler.
+
+Per the codebase no-FK rule, none of the references above carry an FK constraint; integrity is maintained by the cascade logic in use-cases and the `monitorId IS NULL` fallback in `alert_incidents`.
+
+#### Why snapshot `condition` on the incident
+
+A user can edit a monitor mid-incident: bump the threshold, change the window. The incident that's already open was opened under the previous condition — both the notification emails and the close-side re-evaluation should use the original. Snapshotting `condition` onto `alert_incidents` at creation time makes the row self-describing for the whole notifications pipeline (the in-app and email templates need it to render the humanised "Alert: when matches > 100 in 5 minutes" line) and isolates ongoing incidents from monitor edits.
+
+For point-in-time kinds, the snapshot is just informational. For sustained kinds, the close-side worker reads the snapshot to know what to re-evaluate against.
+
+#### `entrySignals` polymorphism
+
+The existing `alert_incidents.entrySignals` (jsonb) column already serves `issue.escalating` as the seasonal-signal snapshot used by the close-side comparison. We **reuse** that column for saved-search incidents instead of adding a new one — the shape varies by alert kind:
+
+- `issue.escalating` (existing): the seasonal-signal snapshot, exactly as today.
+- `savedSearch.escalating` (new): `{ evaluatedThreshold: number, baselineCount?: number, baselineWindow?: AlertBaselineWindow }`. `baselineCount` and `baselineWindow` are present only for multiplier-mode conditions. The frozen `evaluatedThreshold` is what the close-side compares the live `count` against — the multiplier baseline is *not* re-resolved at evaluation time.
+- Other kinds (`issue.new`, `issue.regressed`, `savedSearch.threshold`, `savedSearch.match`): not used. Column stays `null`.
+
+Per-kind narrowing happens at the read site via a Zod parse, mirroring how `payloadSchemaFor(kind)` works in `@domain/notifications`.
+
+### Saved-search schema changes
+
+`assigned_user_id` and `created_by_user_id` columns on `saved_searches` go away in the milestone that also removes the standalone search page and the `assign` endpoint. Until that milestone lands, the columns stay and every use site gets a `// TODO: Remove this after releasing monitors for everybody` annotation.
+
+### `alert_incidents.monitorId` and `condition` write semantics
+
+- Monitor-driven incidents: `monitorId` set, `condition` set (snapshot of the firing alert's condition or `null` if the alert had no condition).
+- Legacy issue-event path, orgs without the `monitors` flag: `monitorId = null`, `condition = null`. The producer step in `request-incident-notifications` continues to consult `projects.settings.notifications.incidents` for these.
+- Once an org has the `monitors` flag enabled: the issue-event worker resolves the matching system monitor and writes its id + the snapshot condition.
+
+### "Did this incident notify anyone?" derivation
+
+We don't store this on `alert_incidents`. Notification rows carry `idempotencyKey` in the format `${notificationKind}:${alertIncidentId}` (`buildIdempotencyKey` in `@domain/notifications`), and the existing `UNIQUE(organization_id, user_id, idempotency_key)` index supports a prefix scan on `(organization_id, …)` filtered by `idempotency_key`. The dashboard query for the "Notified"/"Muted" badge in the incidents details panel is:
+
+```sql
+SELECT idempotency_key FROM notifications
+WHERE organization_id = $org
+  AND idempotency_key = ANY(ARRAY['incident.event:<id>', 'incident.opened:<id>', 'incident.closed:<id>'])
+LIMIT 1;
+```
+
+The "Notified" verdict is `EXISTS(any row) ⇒ Notified, else Muted`. No new index is needed — org-level cardinality is bounded (tens of users) so the prefix scan is cheap. The query is batched across visible incidents in one round-trip.
+
+## Architecture
+
+### Issue-driven alerts (existing path, additive change)
+
+```
+IssueCreated / IssueRegressed / IssueEscalated / IssueEscalationEnded
+    │
+    ▼  alert-incidents worker (apps/workers/src/workers/domain-events/alert-incidents.ts)
+[NEW] resolveMonitorsForSourceEvent({ orgId, projectId, kind, sourceId })
+    │  Returns the list of monitors whose alerts match:
+    │    - kind = event kind
+    │    - source.type = "issue"
+    │    - source.id IS NULL OR source.id = sourceId
+    │
+    │  If the org does NOT have the `monitors` flag, skip the lookup and
+    │  write a single legacy incident with monitorId = null.
+    │  (Existing project-level gate in request-incident-notifications
+    │  continues to apply for legacy rows.)
+    │
+    ▼
+createAlertIncidentFromIssueEventUseCase  (one row per matching monitor)
+    │  Each row carries monitorId, condition (snapshot or null),
+    │  severity (from the matching alert; if multiple matched, see
+    │  "Severity merging" below), startedAt (see "startedAt backtracking"
+    │  below), and the standard issue-event fields (sourceId, kind,
+    │  entrySignals for escalating).
+    ▼
+IncidentCreated outbox event
+    │
+    ▼  domain-events worker → notifications:request-incident-notifications
+request-incident-notifications  (apps/workers/src/workers/notifications.ts)
+    │  [NEW] If incident.monitorId IS NOT NULL:
+    │    - Load monitor; if mutedAt set, return { skipped: "monitor-muted" }.
+    │    - Otherwise, build notification requests as today.
+    │      Project-level notifications.incidents gate still applies (it is
+    │      org-wide noise control, orthogonal to monitor scoping).
+    │  Else: existing behaviour unchanged.
+    ▼
+create-notification → notification-email:send → …
+```
+
+#### Severity merging
+
+If a single issue event matches multiple monitors (the common case is "the all-issues system monitor matches" plus "the user has a monitor narrowed to that specific issue.id"), one incident is written per matching monitor. Each incident carries the severity of its monitor's matching alert. The notifications pipeline treats them independently — that's the right behaviour: muting one monitor doesn't mute the other.
+
+#### `startedAt` backtracking for `issue.escalating`
+
+Today `createAlertIncidentFromIssueEventUseCase` sets `startedAt = now()` for all kinds. For `issue.escalating`, this is wrong: the seasonal detector flags an escalation only after the band has been crossed for a while, so the "real" start of the escalation is meaningfully earlier than now. We backtrack `startedAt` to the **first bucket in the trend window where the count crossed the threshold**. The `entrySignals` snapshot already captures the trend window; the backtracking helper consumes it.
+
+For other kinds, behaviour is unchanged (`issue.new` / `issue.regressed` are eventful — `startedAt = endedAt = now()` stays correct).
+
+#### Escalation sensitivity sourcing
+
+Sensitivity continues to be read from `projects.settings.escalation.sensitivity` (`DEFAULT_ESCALATION_SENSITIVITY_K` if unset). The data model carries no per-monitor sensitivity. This keeps the detector with a single source of truth.
+
+### Saved-search alerts (new path)
+
+The same data shape on `alert_incidents` that powers `issue.escalating` (polymorphic `entrySignals`, `exitEligibleSince`, `startedAt` backtracking) is reused. The evaluator is different — instead of the seasonal anomaly detector, a pure count-vs-threshold function — and there are three distinct state machines on top of it (one per saved-search alert kind). We deliberately do **not** abstract over both issues and saved searches at the use-case level: `issue.escalating` reads seasonal grids from ClickHouse with very different inputs from saved-search, and forcing one abstraction would obscure rather than clarify. Code organisation: parallel implementations sharing only the storage shape and trigger plumbing.
+
+#### Trigger paths
+
+Same pattern as today's `issue.escalating`:
+
+1. **Trace-end-driven, throttled** — trace-end publishes `monitors:checkSavedSearchMonitors` for the org with the queue layer's `throttleMs` option (`throttleMs: 5 * 60 * 1000`). Within the throttle window only one job runs, regardless of trace volume. The handler iterates every active saved-search-source monitor alert in the org and runs the evaluator for each.
+2. **Periodic sweep cron, 5-minute interval** — mirrors `sweep-escalating-issues.ts`. Scans all sustained saved-search incidents with `endedAt IS NULL` plus active threshold/match alerts and runs the same handler. This catches closes for low-traffic orgs (no trace-end retriggers the throttled task) and is the safety net for opens. 5 minutes = the minimum `window` for escalating alerts; coarser cadence would delay close transitions by more than one tick.
+
+#### Shared evaluator
+
+```ts
+// packages/domain/monitors/src/use-cases/evaluate-saved-search-alert.ts
+//
+// Pure function (modulo IO for trace queries + baseline resolution).
+// Returns the verdict and the supporting numbers so the state-machine
+// callers can snapshot them onto entrySignals.
+export const evaluateSavedSearchAlert = (input: {
+  alert: MonitorAlert
+  monitor: Monitor              // for monitor.createdAt (threshold.absolute)
+  now: Date
+}): Effect.Effect<{
+  isMet: boolean
+  count: number                 // matches in the "current" window
+  threshold: number             // resolved threshold at this `now`
+  firstMatchInWindow: Date | null  // for startedAt backtracking
+  baselineCount?: number        // present when condition mode is multiplier
+}, ...>
+```
+
+What the evaluator does, per alert kind:
+
+**`savedSearch.threshold`, absolute mode** ("100 times")
+1. `count = matches in [monitor.createdAt, now]` (cumulative since monitor creation).
+2. `threshold = condition.threshold.count`.
+3. `isMet = count >= threshold`.
+
+**`savedSearch.threshold`, multiplier mode** ("3 times more than the last 3 days")
+1. `currentWindow = 5 minutes` (= the firing throttle, hardcoded; no user-configurable "current window" field).
+2. `count = matches in [now - 5min, now]`.
+3. `baselineCount = matches in [now - condition.threshold.baselineWindow, now]`.
+4. Normalise the baseline to a 5-minute slice:
+   `normalisedBaseline = baselineCount × (5min / baselineWindow)`.
+5. `threshold = factor × normalisedBaseline`.
+6. `isMet = count >= threshold`.
+
+**`savedSearch.escalating`, absolute mode** ("2000 times for at least 5 minutes")
+1. `count = matches in [now - condition.window, now]`.
+2. `threshold = condition.threshold.count`.
+3. `isMet = count >= threshold`.
+
+**`savedSearch.escalating`, multiplier mode** ("2 times more than yesterday for at least 1 hour")
+1. `count = matches in [now - condition.window, now]`.
+2. `baselineCount = matches in [now - baselineWindow, now]` (or anchored variants — `previous-day`, `previous-week`).
+3. `normalisedBaseline = baselineCount × (condition.window / baselineWindow)`.
+4. `threshold = factor × normalisedBaseline`.
+5. `isMet = count >= threshold`.
+
+**`savedSearch.match`**: TBD — semantics open (see "Open questions"). The look-back window is the throttle interval (5 minutes).
+
+##### Why this multiplier math
+
+For multiplier mode the natural-language form is "*current activity* is N times the *baseline activity*". The two sides have to be expressed in the same units (counts per the same time slice) to compare — otherwise "3× the last 3 days" against "the last 5 minutes" would always be met if you compared raw counts (3-day count vastly exceeds 5-min count). The normalisation step `baselineCount × (currentWindow / baselineWindow)` projects the baseline into a current-window-sized slice, giving an apples-to-apples comparison.
+
+Worked example for `savedSearch.threshold, multiplier`, "3 times more than the last 3 days":
+
+- Last 3 days produced 8,640 matches → 2 matches per 5-min on average.
+- `normalisedBaseline = 8,640 × (5min / 3 days) = 10` (matches per 5-min).
+- `threshold = 3 × 10 = 30`.
+- Last 5 min produced 7 matches → `isMet = (7 >= 30) = false`. No fire.
+- A spike of 35 matches in 5 min would fire (`35 >= 30`).
+
+Worked example for `savedSearch.escalating, multiplier`, "2 times more than yesterday for at least 1 hour":
+
+- Yesterday produced 1,200 matches → 50 per hour.
+- `normalisedBaseline = 1,200 × (1hr / 24hr) = 50` (matches per hour).
+- `threshold = 2 × 50 = 100`.
+- Last 1 hour produced 110 matches → `isMet = true`. Open the incident; dwell-on-exit also = 1 hour.
+
+The multiplier snapshot stored in `entrySignals` at the open transition (`evaluatedThreshold`, `baselineCount`, `baselineWindow`) lets the close-side re-evaluate with the *same* baseline number — preventing the open incident's own elevated counts from drifting the threshold sideways. We compare the *current* count (which is recomputed each tick) against the *frozen* threshold.
+
+#### State machine — `savedSearch.threshold`
+
+Two distinct sub-behaviours by mode:
+
+**Absolute mode (one-time):**
+
+```
+At evaluation:
+  if there exists any alert_incidents row with monitor_alert_id = A:
+    SHORT-CIRCUIT. This alert has already fired once and is durably spent.
+    No further evaluation, no rearm.
+  else if evaluateSavedSearchAlert(...).isMet:
+    INSERT alert_incidents:
+      startedAt        = firstMatchInWindow ?? now
+      endedAt          = startedAt   (point-in-time, immediate close)
+      monitorId        = A.monitor_id
+      monitorAlertId   = A.id
+      condition        = snapshot of A.condition
+    emit IncidentCreated (which is also IncidentClosed for point-in-time)
+  else:
+    no-op
+```
+
+The "any prior incident" check uses `alert_incidents_monitor_alert_idx`. Read-then-insert is wrapped in a transaction with `SELECT … FOR UPDATE` on the `monitor_alerts` row to absorb at-least-once worker retries.
+
+**Multiplier mode (can re-fire, silent close):**
+
+```
+At evaluation:
+  let v    = evaluateSavedSearchAlert(...)
+  let open = alert_incidents WHERE monitor_alert_id = A.id AND endedAt IS NULL
+
+  if open is null and v.isMet:
+    // RISING EDGE — fire
+    INSERT alert_incidents:
+      startedAt        = v.firstMatchInWindow ?? now
+      endedAt          = null      // stays open while condition holds
+      monitorId        = A.monitor_id
+      monitorAlertId   = A.id
+      condition        = snapshot of A.condition
+      entrySignals     = { evaluatedThreshold: v.threshold,
+                           baselineCount:     v.baselineCount,
+                           baselineWindow:    A.condition.threshold.baselineWindow }
+    emit IncidentCreated   // single point-in-time notification
+
+  else if open is not null and not v.isMet:
+    // SILENT CLOSE — no notification
+    UPDATE alert_incidents SET endedAt = now WHERE id = open.id
+
+  // else: open and still met (no-op), or not open and not met (no-op)
+```
+
+The lack of an `IncidentClosed` emit on the silent-close branch is what makes this point-in-time from the user's perspective — they get one notification at the rising edge and nothing else. The `endedAt = null` window is internal state for rearm tracking, not a separate notification surface.
+
+The incidents panel will render an open multiplier-threshold incident as "Ongoing since X". That's a deliberate UX choice — the spike is still happening; the alert just doesn't keep nagging about it.
+
+#### State machine — `savedSearch.escalating` (sustained)
+
+Mirrors `issue.escalating`:
+
+```
+At evaluation:
+  let v = evaluateSavedSearchAlert(...)
+  let open = alert_incidents with monitor_id = A.monitor_id,
+                                  monitor_alert_id = A.id,
+                                  endedAt IS NULL
+  if open is null and v.isMet:
+    // OPEN TRANSITION
+    INSERT alert_incidents:
+      startedAt    = v.firstMatchInWindow ?? now
+      endedAt      = null
+      monitorId    = A.monitor_id
+      condition    = snapshot of A.condition
+      entrySignals = {
+        evaluatedThreshold: v.threshold,
+        baselineCount: v.baselineCount,         // present for multiplier
+        baselineWindow: A.condition.threshold.baselineWindow,  // multiplier only
+      }
+      exitEligibleSince = null
+    emit IncidentCreated
+
+  else if open is not null and v.isMet:
+    if open.exitEligibleSince is not null:
+      // condition came back, cancel the dwell timer
+      UPDATE alert_incidents SET exitEligibleSince = null
+
+  else if open is not null and not v.isMet:
+    if open.exitEligibleSince is null:
+      // EXIT-ELIGIBLE TRANSITION
+      UPDATE alert_incidents SET exitEligibleSince = now
+    else if now - open.exitEligibleSince >= A.condition.window:
+      // CLOSE TRANSITION
+      UPDATE alert_incidents SET endedAt = now
+      emit IncidentClosed
+```
+
+Notes:
+
+- **Multiplier baseline is frozen at entry.** The threshold value (and the supporting baselineCount) is snapshotted into `entrySignals` on the open transition. The close-side does NOT re-resolve `factor × matches(baselineWindow)` at evaluation time — it compares `v.count >= entrySignals.evaluatedThreshold`. This prevents the open incident's own elevated counts from polluting a sliding baseline and pinning the incident open.
+- **No 72h backstop.** Saved-search conditions are deterministic and user-configured; if the user said "alert me when 5xx > 100 for 1 hour" and it's been holding for a week, that's the system working as designed.
+- The "alert is met" semantics for sustained incidents are entirely on the count window, not the dwell — the dwell only applies to the exit transition. This is what handles your reconnection-spike concern: a 1-second burst doesn't trip a 5-minute window because at the next evaluation tick the burst is already aged out of the rolling count.
+
+#### State machine — `savedSearch.match`
+
+The simplest of the three — no new state, no prior-incident lookup, the queue's `throttleMs` is the entire mechanism:
+
+```
+At evaluation (handler invoked at most every 5 min per org via throttleMs):
+  let v = evaluateSavedSearchAlert(...)
+  // For savedSearch.match: v.count = matches in [now - 5min, now],
+  // v.isMet = v.count > 0, v.firstMatchInWindow = timestamp of the
+  // first matching trace in the window.
+
+  if v.isMet:
+    INSERT alert_incidents:
+      startedAt        = v.firstMatchInWindow
+      endedAt          = startedAt       (point-in-time, immediate close)
+      monitorId        = A.monitor_id
+      monitorAlertId   = A.id
+      condition        = null            (no condition for this kind)
+      severity         = A.severity
+    emit IncidentCreated
+  else:
+    no-op
+```
+
+Behaviour over time:
+
+| Activity pattern | What the user sees |
+|---|---|
+| A burst of 500 matches arriving simultaneously | 1 alert. The 499 redundant `monitors:checkSavedSearchMonitors` publishes from the trailing traces are dropped by the queue's throttle for that 5-min window. |
+| Continuous matching activity over 30 minutes | 6 alerts, one every 5 minutes. Literal throttle keeps surfacing that activity is still ongoing. |
+| Sporadic matches with sub-5-min gaps | One alert per 5-min window that contains ≥1 match. |
+| Long quiet period, then activity resumes | Fresh alert on the first trace-end after the throttle key opens up. |
+
+The trade-off vs a "burst detection" alternative (one alert per activity burst with ≥5-min quiet boundary): literal throttle is louder for continuous activity but is dramatically simpler and uses no new state. The user-docs page calls this trade-off out explicitly so customers know what to expect.
+
+No new column on `monitor_alerts`. No prior-incident lookup. The throttle-key collision on the queue is doing all the work.
+
+#### Source cascade
+
+When an issue or saved search is deleted:
+
+- A `SourceDeleted` event (or the existing entity-specific deleted events) routes to a new `monitors:onSourceDeleted` task.
+- Handler: hard-deletes `monitor_alerts` with `(source_type = $1, source_id = $2)`. For each affected `monitor_id`: counts remaining alerts; if zero, soft-deletes the monitor.
+
+System monitors are unaffected because their alerts use `source.id = null`.
+
+### Notification payload extension
+
+The existing `NOTIFICATION_KIND_META` registry (`incident.event` / `incident.opened` / `incident.closed`) is kept as-is — the kinds capture the **shape** of the notification (one-shot vs sustained) and the templates already render whatever the alert kind is. The single change is on the **base payload shape**:
+
+```ts
+// packages/domain/notifications/src/entities/notification.ts
+const incidentBasePayloadShape = {
+  alertIncidentId: cuidSchema,
+  sourceType: alertIncidentSourceTypeSchema,
+  sourceId: cuidSchema,
+  incidentKind: alertIncidentKindSchema,
+  severity: alertSeveritySchema,
+  /** NEW */
+  monitorId: cuidSchema.optional(),
+  /** NEW: snapshot from alert_incidents.condition. */
+  condition: alertIncidentConditionSchema.nullable().optional(),
+}
+```
+
+Templates use the new fields conditionally:
+
+- When `monitorId` is set, the existing email and in-app templates show a "Created by monitor <name>" line that links to the monitor details panel. (The producer step resolves the monitor's name into the payload at request time; no extra round-trip from the renderer.)
+- When `condition` is set, the templates show a humanised summary of the alert: "Alert: when matches > 100 in 5 minutes". Driven by the shared `formatHumanReadableAlert` helper.
+
+For incidents that were created on the legacy path (no monitor), both fields are absent and the templates fall back to today's copy.
+
+## Web UI
+
+### Left navbar
+
+A new `Monitors` item under `apps/web/src/routes/_authenticated/projects/$projectSlug.tsx` (`ProjectSidebar`), positioned between **Issues** and **Datasets**. Suggested icon: `RadarIcon`. Active when `pathname.startsWith("/monitors")`. Gated by `useHasFeatureFlag("monitors")`.
+
+### Monitors dashboard route
+
+`apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/index.tsx`. Mirrors the issues dashboard structurally:
+
+- Layout: `ListingLayout` with `Layout.Content` + `Layout.Aside`.
+- Top toolbar: debounced search input (URL param `q`) + primary "+ New monitor" button (kept on the dashboard for discoverability even though the most common entry-point is the saved-searches dropdown).
+- Table: `InfiniteTable` with offset/limit pagination (50 per page) — infinite-scroll UX matching the issues table.
+- URL params: `monitorSlug` (selected), `q` (search), `sortBy` (default `lastIncident`), `sortDirection` (default `desc`).
+
+#### Empty state
+
+Mirrors `issues-empty-state.tsx`. In practice rarely seen post-backfill, since every project has the three system monitors. Still present for the edge case (provisioning lag, flag-off projects) and for visual consistency.
+
+#### Columns
+
+| Column | Sortable | Behaviour |
+|---|---|---|
+| Name | no | Truncated. `<LatitudeLogo />` prepended when `system === true`, mirroring the annotation-card pattern. |
+| Status | yes | `<Status variant="primary">Live</Status>` when `mutedAt = null`; `<Status variant="muted">Muted</Status>` otherwise. |
+| Last incident | yes (default desc) | Empty when no incidents. Otherwise: warning badge "Closed Xh ago" if the latest incident has `endedAt != null`; destructive badge "Ongoing since Xh" if `endedAt = null`. Uses `relativeTime` from `@repo/utils`. |
+
+The "Notifications" column from earlier drafts is gone — notifications are not per-monitor and there's nothing meaningful to surface here.
+
+Row click toggles `monitorSlug`. The selected row gets `activeRowKey` highlight.
+
+### Monitor details panel
+
+`apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/-components/monitor-detail-drawer.tsx`. Mirrors `issue-detail-drawer.tsx`. The panel renders two modes depending on `monitor.system`:
+
+#### System monitor mode (read-only)
+
+- `DetailDrawer` with the same `storeKey="monitor-detail-drawer-width"`.
+- Actions slot: next/prev (chevrons + `Alt+ArrowUp/Down`, `J`/`K` hotkeys).
+- Header:
+  - **Mute / Unmute** ghost button (behind a confirmation modal).
+  - **No delete button**, no edit pencil.
+  - Title = monitor name, subtitle = description — both rendered as plain text (no edit affordance on hover).
+  - `<CopyableText value={monitor.slug} size="sm" />` below the description.
+- Body sections (collapsible):
+  - **Incidents** — embedded `InfiniteTable` of incidents for this monitor.
+  - **Alerts** — vertical stack of alert cards, **read-only**. No `X` button per card, no "+ Add alert" dashed card. Each card renders the human-readable summary via `formatHumanReadableAlert`.
+
+#### User monitor mode (editable)
+
+Same shape as above plus:
+
+- Header gets a **Delete** destructive button (behind a confirmation modal).
+- Title and description are **in-place editable**: on hover, dim + show an edit pencil; click to edit; blur to save (`useEditableText` hook drives this). Slug regen happens server-side on name change.
+- **Alerts** section has the per-card `X` button and a dashed "+ Add alert" footer.
+
+#### Incidents section table
+
+Columns:
+
+- **Start time** (sortable, default desc)
+- **End time** — warning badge "Closed Xh ago" or destructive badge "Ongoing since Xh"
+- **Source** — when `sourceId IS NULL`: "All issues" / "All saved searches" linking to the source dashboards. When set: the source name, linking to the source's dashboard with the id pre-selected (issue → issue detail; saved search → `/traces?savedSearch=<slug>` once the search bar is on the traces page).
+- **Notified** — success badge "Notified" or muted badge "Muted". Derived from `EXISTS(notifications row with idempotency_key IN (...))` — see the data model section.
+
+### Create monitor modal
+
+Opened from the dashboard "+ New monitor" button or from the saved-searches dropdown on the traces/sessions page. Fields:
+
+- Name (required, 1..128 chars).
+- Description (optional, multiline).
+- Alerts — vertical card stack. Starts with one alert card pre-populated:
+  - If opened from the saved-searches dropdown: pre-populated to `savedSearch.match` with the saved search selected.
+  - If opened from the dashboard button: pre-populated to `savedSearch.match` with an empty source picker the user must fill.
+- The kind dropdown is limited to `USER_CREATABLE_ALERT_KINDS` (today: three `savedSearch.*` kinds).
+
+At submit time, the server-side create use-case re-validates `every alert.kind in USER_CREATABLE_ALERT_KINDS` and rejects any attempt to bypass.
+
+#### Alert card form
+
+Per card:
+
+1. **Kind dropdown** — humanised labels for the three saved-search kinds.
+2. **Source** — a searchable `Combobox` listing the project's saved searches. **No "All saved searches" option** — the user must pick one. If the project has no saved searches, an inline "Create a saved search" link redirects to `/traces` with the save flow ready.
+3. **Condition** — rendered conditionally on kind:
+   - `savedSearch.match`: no condition fields.
+   - `savedSearch.threshold` and `savedSearch.escalating`: the threshold form (below).
+4. **Severity** — `low | medium | high`.
+
+#### Threshold/window form
+
+Expresses `AlertCountThreshold` + (for escalating) `window` in two rows:
+
+- Row 1 (both threshold and escalating): `"Alert me when it occurred"` + count input + `Select` `["times", "times more than"]`. When "times more than": multiplier mode; an additional `Select` follows for baseline window (`"the last hour"`, `"the last 24 hours"`, `"the last 3 days"`, `"the last week"`, `"yesterday"`, `"the previous week"`).
+- Row 2 (`savedSearch.escalating` only): `"for at least"` + duration input + `Select` `["minutes", "hours", "days"]`. This is the `window` field. Minimum 5 minutes.
+
+The form binds bidirectionally to the discriminated union. `formatHumanReadableAlert(alert)` renders the union back to text — used in the card preview, table tooltips, and notification templates.
+
+Tooltip copy lives next to every field (see the M5 task list). The intent is that a user reading just the form, with no docs open, can correctly predict what each combination of fields will do.
+
+### Saved searches integration in traces / sessions pages
+
+After the standalone `/search` page is removed (M8):
+
+- Traces page (`/projects/$projectSlug` index) and sessions page (`/projects/$projectSlug/session-search`) render the existing `<SearchInput>` in `Layout.Actions`.
+- A new `<SavedSearchSelector>` dropdown sits immediately left of `<SearchInput>`. It contains a search filter, the project's saved searches list, and a `"Save current search…"` footer.
+- A `<SaveOrUpdateSearchButton>` sits immediately right of `<SearchInput>`:
+  - Hidden when no query / no filters / no saved search selected.
+  - "Save search" when query+filters present but no `savedSearch` slug in the URL.
+  - "Update saved search" when a `savedSearch` is selected and active filters/query differ from the stored ones.
+  - Disabled when the selected saved search matches the active state exactly.
+- Each saved-search row in `<SavedSearchSelector>` exposes:
+  - A delete button.
+  - "Create monitor" (opens the create modal pre-populated with this saved search) or "Edit monitor" (opens the existing monitor's details panel via cross-route navigation) — the dropdown row knows whether a monitor referencing this saved search by `source.id` already exists.
+
+The saved-search assign-user UI is removed. `assignedUserId` and `createdByUserId` columns drop in the same migration.
+
+### Human-readable alert summaries
+
+`formatHumanReadableAlert(alert)` (in `packages/domain/monitors/src/helpers.ts`) returns one sentence per alert. Examples:
+
+| Alert | Output |
+|---|---|
+| `issue.new`, source `all` | `"Alert me every time a new issue is discovered."` |
+| `issue.regressed`, source `all` | `"Alert me every time a resolved issue regresses."` |
+| `issue.escalating`, source `all` | `"Alert me when an issue's occurrence rate crosses the project escalation threshold."` |
+| `savedSearch.match`, search `"5xx"` | `"Alert me every time a trace matches '5xx'."` |
+| `savedSearch.threshold`, abs 100 | `"Alert me when '5xx' matches occurred 100 times."` |
+| `savedSearch.threshold`, mult 3× of last 3 days | `"Alert me when '5xx' matches occurred 3 times more than the last 3 days."` |
+| `savedSearch.escalating`, abs 2000, window 5m | `"Alert me when '5xx' matches occurred 2000 times for at least 5 minutes."` |
+| `savedSearch.escalating`, mult 2× of yesterday, window 1h | `"Alert me when '5xx' matches occurred 2 times more than yesterday for at least 1 hour."` |
+
+Tests cover the matrix. The helper is shared between the API documentation entity (sentence appears in OpenAPI examples), the frontend, and notification templates (rendered into in-app/email when `condition` is set).
+
+## API / SDK / MCP
+
+### Endpoints (under `/v1/projects/{projectSlug}/monitors`)
+
+| Method | Path | Operation id |
+|---|---|---|
+| GET | `/` | `listMonitors` |
+| POST | `/` | `createMonitor` |
+| GET | `/{monitorSlug}` | `getMonitor` |
+| PATCH | `/{monitorSlug}` | `updateMonitor` |
+| DELETE | `/{monitorSlug}` | `deleteMonitor` |
+| GET | `/{monitorSlug}/incidents` | `listMonitorIncidents` |
+| POST | `/{monitorSlug}/mute` | `muteMonitor` |
+| POST | `/{monitorSlug}/unmute` | `unmuteMonitor` |
+
+- `createMonitor` and `updateMonitor` reject `kind ∉ USER_CREATABLE_ALERT_KINDS`, reject any input with `system: true`, and require a valid `source.id` for saved-search alerts.
+- `updateMonitor` and `deleteMonitor` reject when the target's `system === true` (only `mute` / `unmute` are valid for system monitors).
+- Field descriptions on the OpenAPI schemas are rich enough to render meaningfully as MCP tool descriptions (the same descriptions propagate to the TS SDK via codegen).
+
+### `assign` endpoint removal
+
+`POST /v1/projects/{projectSlug}/searches/{searchSlug}/assign` is removed in M8 alongside the column drops. No SDK back-compat shim; the SDK gets a single regen at M9.
+
+### SDK + MCP regeneration
+
+Per the project convention, regen is batched and happens once at the end of M9, not per PR. Steps:
+
+1. `pnpm openapi:emit`
+2. `pnpm mcp:emit`
+3. `pnpm --filter @latitude-data/sdk generate`
+4. Bump SDK version in `packages/sdk/package.json` + CHANGELOG entry.
+
+## Feature flag
+
+Identifier: `monitors`. Added to `FEATURE_FLAGS` in `packages/domain/feature-flags/src/registry.ts`:
+
+```ts
+"monitors": {
+  emoji: "📡",
+  name: "Monitors",
+  description: "Unified alerting surface (per-monitor lifecycle, with notification delivery routed through the existing org/project notification settings).",
+}
+```
+
+### Backend gating strategy
+
+- The new path is **additive**: the same alert-incidents worker keeps the legacy code path and adds the monitor lookup behind a per-org `hasFeatureFlagUseCase({ identifier: "monitors" })` check.
+- Flag off: `alert_incidents.monitorId = null`, `condition = null`. The project-level gate (`projects.settings.notifications.incidents`) applies in the producer.
+- Flag on: the worker resolves matching monitors and writes one incident per monitor with `monitorId` set and `condition` snapshotted. The producer's mute gate kicks in for monitor-driven incidents.
+- TODO comments — `// TODO: Remove this after releasing monitors for everybody` — placed at:
+  - `projects.settings.notifications.incidents` definition (`packages/domain/shared/src/settings.ts`) and every read site.
+  - The three issue-notification checkboxes on `/settings/issues` page (`apps/web/src/routes/_authenticated/projects/$projectSlug/settings/issues.tsx`).
+  - The standalone `/search` route components.
+  - `saved_searches.assignedUserId` / `createdByUserId` schema columns and every read/write.
+  - The legacy non-monitor branch in `request-incident-notifications`.
+
+### Frontend gating
+
+- Sidebar nav item hidden when the flag is off.
+- `/projects/$slug/monitors` route renders a "Not available" splash when accessed directly without the flag.
+- The `monitors` flag itself stays in place after M10 — only the three stale flags (`email-notifications`, `notifications`, `timeline-incidents`) are removed there. The `monitors` flag's own cleanup is a future post-rollout PR.
+
+## Stale flag removal
+
+In M10, three flags are removed and every reference cleaned up:
+
+| Flag | Removal action |
+|---|---|
+| `email-notifications` | Drop the worker org-level gate in `notifications.ts`. Drop the frontend query in `account.tsx`. |
+| `notifications` | Drop `<NotificationBell>` gate. Drop the issues settings page gate. |
+| `timeline-incidents` | Drop `use-show-incidents-overlay.ts` gate so the overlay always shows. |
+
+Cleanup of the override table (`DELETE FROM organization_feature_flags WHERE identifier IN (...)`) runs as a one-shot SQL command (manual, not a Drizzle migration).
+
+## Provisioning system monitors
+
+### On project creation
+
+The `ProjectCreated` event already fans out to a `projects:provision` task in `apps/workers/src/workers/projects.ts`. We extend that task to call `provisionSystemMonitorsUseCase(projectId)` after `provisionFlaggers()`.
+
+The system monitor definitions are hardcoded in `packages/domain/monitors/src/system-monitors.ts`:
+
+```ts
+export const SYSTEM_MONITOR_DEFINITIONS = [
+  {
+    slug: "issue-discovered",
+    name: "Issue discovered",
+    description: "Notifies each time a new issue is detected.",
+    alerts: [
+      { kind: "issue.new", source: { type: "issue", id: null }, condition: null, severity: "medium" },
+    ],
+  },
+  {
+    slug: "issue-regressed",
+    name: "Issue regressed",
+    description: "Notifies each time a resolved issue is detected again.",
+    alerts: [
+      { kind: "issue.regressed", source: { type: "issue", id: null }, condition: null, severity: "high" },
+    ],
+  },
+  {
+    slug: "issue-escalating",
+    name: "Issue escalating",
+    description:
+      "Notifies when an ongoing issue's occurrence rate crosses the escalation threshold, and again when it returns to baseline.",
+    alerts: [
+      { kind: "issue.escalating", source: { type: "issue", id: null }, condition: null, severity: "medium" },
+    ],
+  },
+] as const
+```
+
+The definitions are source-type-agnostic at the data-model level — future system monitors of any source type can be added by extending this array.
+
+The provision use-case is idempotent: on re-run (e.g. re-publish of the `provision` task) it inserts only missing slugs.
+
+### Backfill for existing projects
+
+A **data SQL migration** ships in M3, separate from the structural migration that creates the tables in M2. It's deliberately simple: every project gets all three system monitors unmuted, regardless of whether the project had previously disabled any of the three per-kind notification toggles. We do not migrate existing `projects.settings.notifications.incidents.<kind> = false` settings into `mutedAt` — that would couple a hardcoded data migration to a polymorphic JSONB read, and the org-level rollout of the flag is the natural moment for users to re-confirm their preferences via the new Monitors UI.
+
+The migration is a fixed-shape `INSERT … SELECT … WHERE NOT EXISTS` per system slug:
+
+```sql
+-- Repeated three times (one per SYSTEM_MONITOR_DEFINITION), with hardcoded
+-- values so the migration is self-contained and reproducible.
+INSERT INTO latitude.monitors (id, organization_id, project_id, slug, name, description, system, created_at, updated_at)
+SELECT
+  gen_random_uuid()::text,  -- replaced by the repo's cuid helper at migration time
+  p.organization_id,
+  p.id,
+  'issue-discovered',
+  'Issue discovered',
+  'Notifies each time a new issue is detected.',
+  true,
+  now(), now()
+FROM latitude.projects p
+WHERE NOT EXISTS (
+  SELECT 1 FROM latitude.monitors m
+  WHERE m.project_id = p.id AND m.slug = 'issue-discovered' AND m.deleted_at IS NULL
+);
+
+INSERT INTO latitude.monitor_alerts (id, organization_id, monitor_id, kind, source_type, source_id, condition, severity, created_at)
+SELECT
+  gen_random_uuid()::text,
+  m.organization_id,
+  m.id,
+  'issue.new',
+  'issue',
+  NULL,
+  NULL,
+  'medium',
+  now()
+FROM latitude.monitors m
+WHERE m.slug = 'issue-discovered' AND m.system = true AND NOT EXISTS (
+  SELECT 1 FROM latitude.monitor_alerts a WHERE a.monitor_id = m.id
+);
+-- … and same for "issue-regressed" / "issue-escalating".
+```
+
+The idempotency comes from `NOT EXISTS`. Future projects pick up monitors through the worker hook; the data migration only fills the historical gap.
+
+## Mute behaviour in detail
+
+Single change to `packages/domain/notifications/src/use-cases/request-incident-notifications.ts`:
+
+```ts
+// Pseudo-code; actual implementation uses Effect.
+const incident = yield* alertIncidents.findById(alertIncidentId)
+if (incident.monitorId !== null) {
+  const monitor = yield* monitors.findById(incident.monitorId)
+  if (monitor.mutedAt !== null) {
+    return { skipped: "monitor-muted" }
+  }
+}
+// existing logic continues unchanged
+```
+
+Effects:
+
+- Mute does not stop incident creation. Incidents continue to land in the table and show in the details panel's Incidents section.
+- Mute does stop notification rows from being created. The "Notified"/"Muted" badge in the incidents table relies on `EXISTS(notifications row)` and naturally reads "Muted" for rows opened while the monitor was muted.
+- Toggling mute back on for an open sustained incident has no retroactive effect — the open-time notification was already skipped, and the close-time notification will be skipped too if mute is still on when the close happens.
+
+**What the mute gate is and isn't**: it short-circuits the producer step before any per-recipient resolution. It is *not* a replacement for user-level per-group prefs (`users.notification_preferences.incidents.email`, etc.) — those continue to apply to monitor-driven incidents downstream of the mute gate. So the layering for a monitor-driven incident is:
+
+1. **Monitor mute** (new) — if the monitor is muted, the entire fan-out is skipped.
+2. **Project-level per-kind gate** (`projects.settings.notifications.incidents`) — *skipped* for monitor-driven incidents (`monitorId IS NOT NULL`); the per-kind toggle is conceptually replaced by per-monitor muting.
+3. **Per-user-per-group prefs** (`users.notification_preferences.<group>`) — applied as today; a user opted out of the `incidents` group still won't see anything.
+
+For legacy incidents (`monitorId IS NULL`, flag-off orgs), layer 1 is absent and layer 2 applies as before.
+
+## Test strategy (backend only — no frontend tests)
+
+Backend tests follow the testing skill's conventions (PGlite testkit; org/project fixtures from `@repo/testing`):
+
+- **Schema & repository** — round-trip writes; uniqueness on `(project_id, slug) WHERE deleted_at IS NULL`; RLS enforcement (a query without the org context returns nothing).
+- **Use-cases** — create/update/delete (rejection on `system === true` for the latter two), update with kind ∉ `USER_CREATABLE_ALERT_KINDS` rejected, mute/unmute (system monitors allowed), list with name search, get by slug, list incidents.
+- **System monitor provisioning** — idempotent re-run; data-migration backfill correctness against `SYSTEM_MONITOR_DEFINITIONS`.
+- **Issue-event monitor resolution** — `resolveMonitorsForSourceEvent` returns all-of-type + specific-id matches; flag-on multi-monitor fan-out; flag-off legacy parity.
+- **`startedAt` backtracking** — `issue.escalating` incident `startedAt` is the first-bucket-crossing timestamp from the trend window, not now.
+- **Mute gate in notifications producer** — muted-monitor incident skips all downstream fan-out; non-muted continues; project-level gates still apply.
+- **Condition snapshot on `alert_incidents`** — editing the firing alert mid-incident does not change the row's `condition`.
+- **Notification payload** — `monitorId` and `condition` propagate into `incident.event` / `incident.opened` / `incident.closed` payloads when present; absent for legacy incidents.
+- **Saved-search firing** — covered in M7 against the actual firing helpers.
+- **Source cascade** — soft-delete of issue / saved search hard-deletes matching alerts and soft-deletes the monitor if empty.
+- **Human-readable alert formatter** — table-driven test over the matrix above.
+- **API endpoints** — request/response contract for the eight endpoints; 400s for forbidden combos (kind not in user-creatable allowlist, kind/source.type mismatch, delete on system monitor, empty alerts).
+
+## Documentation
+
+After M11:
+
+- Non-implementation-plan content of this spec moves to `dev-docs/monitors.md`.
+- `specs/monitors.md` is deleted (per the spec → dev-docs promotion convention).
+- Cross-links added from `dev-docs/notifications.md` and `dev-docs/reliability.md`.
+- No new entry in the `CLAUDE.md` skill glossary — monitors are well-covered by the existing `alerts`, `notifications`, `async-jobs-and-events`, and `architecture-boundaries` skills.
+
+---
+
+## Implementation plan
+
+Each milestone is one branch, one commit, one PR. The branch prefix is `LAT-630/`. PRs are sized to ≤ 3,000 lines of changes excluding Drizzle migrations and auto-generated files (OpenAPI / MCP / SDK output).
+
+Milestones are sequential — do not begin the next until the previous is reviewed, polished, and merged.
+
+The first milestones prioritise **visible progress**: M1 ships the sidebar entry and an empty page; M3 ships three real system monitors on the dashboard; M4 ships a working details panel; M5 ships an end-to-end create flow. The saved-search firing logic and API endpoints come later, once the surface is convincing.
+
+### Milestone 1 — Visual scaffold: feature flag, sidebar entry, empty Monitors page
+
+> Branch: `LAT-630/visual-scaffold` · Estimated size: ~400 lines
+
+**Goal:** A stakeholder enables the `monitors` flag for their org and sees a new "Monitors" item in the project sidebar that leads to an empty page with a "No monitors yet" empty state. Zero backend wiring.
+
+- [ ] Register `monitors` in `packages/domain/feature-flags/src/registry.ts`.
+- [ ] Add the `Monitors` nav item in `apps/web/src/routes/_authenticated/projects/$projectSlug.tsx` (`ProjectSidebar`), positioned between Issues and Datasets, gated by `useHasFeatureFlag("monitors")`.
+- [ ] Create `apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/index.tsx` with the `ListingLayout` shell, empty toolbar (search input + disabled "+ New monitor" button), and an empty state component (`monitors-empty-state.tsx`).
+- [ ] Frontend feature-flag gate on the route: "Not available" splash if the flag is off, mirroring `session-search-v2`.
+
+### Milestone 2 — Backend foundation: schema, entities, repository, list/get use-cases
+
+> Branch: `LAT-630/backend-foundation` · Estimated size: ~2,400 lines (excluding migration SQL)
+
+**Goal:** Domain layer is complete for the read paths. The dashboard table from M1 starts pulling from real (still-empty) data via a server function. No write paths yet; no system-monitor provisioning yet.
+
+- [ ] Drizzle structural migration via `pnpm --filter @platform/db-postgres pg:generate:custom monitors-tables`:
+  - `monitors`, `monitor_alerts` tables (with RLS enabled + org-isolation policy).
+  - `alert_incidents.monitor_id`, `alert_incidents.monitor_alert_id`, and `alert_incidents.condition` columns.
+  - Partial indexes on `(monitor_id)` and `(monitor_alert_id)` where each is non-null.
+- [ ] Drizzle schema files: `packages/platform/db-postgres/src/schema/monitors.ts`, `monitor-alerts.ts`. Update `alert-incidents.ts` for the three new columns.
+- [ ] Extend shared enums in `@domain/shared`:
+  - `alert-incident-kinds.ts` — add savedSearch kinds, `ALERT_INCIDENT_KIND_LIFECYCLE`, `ALERT_INCIDENT_KIND_SOURCE_TYPE`, `USER_CREATABLE_ALERT_KINDS`.
+  - New file `alert-incident-condition.ts` with the discriminated union (saved-search variants only — `issue.escalating` has no condition variant).
+- [ ] Create `packages/domain/monitors/` package:
+  - `src/entities/monitor.ts` — `Monitor`, `MonitorAlert` + Zod schemas + verbatim entity-level JSDoc.
+  - `src/ports/monitor-repository.ts` — `MonitorRepository` service.
+  - `src/use-cases/list-monitors.ts` — pagination + `LIKE` name search.
+  - `src/use-cases/get-monitor-by-slug.ts`.
+  - `src/use-cases/get-monitor-incidents.ts` — proxy to `alert-incidents` filtered by `monitor_id`, with the "notified" derivation (batched idempotency-key lookup against `notifications`).
+  - `src/helpers.ts` — `formatHumanReadableAlert`.
+- [ ] Implement `MonitorRepositoryLive` in `packages/platform/db-postgres/src/repositories/monitor-repository.ts`.
+- [ ] Web side: `apps/web/src/domains/monitors/monitors.functions.ts` + `monitors.collection.ts` for list/get. Wire the dashboard table to `useMonitors(...)`. Columns render correctly against empty data.
+- [ ] Backend tests: schema constraints, RLS, repository, use-cases, formatter.
+
+### Milestone 3 — System monitor data migration, provisioning, escalating `startedAt` fix
+
+> Branch: `LAT-630/system-monitors` · Estimated size: ~1,800 lines
+
+**Goal:** Every project has the three system monitors. New projects get them via the provisioning hook; existing projects get them via a data SQL migration. The dashboard shows three live system monitors with their correct names and empty last-incident state. Issue.escalating incidents now backtrack `startedAt` correctly.
+
+- [ ] `packages/domain/monitors/src/system-monitors.ts` — `SYSTEM_MONITOR_DEFINITIONS` (per spec).
+- [ ] `provisionSystemMonitorsUseCase(projectId)` — idempotent per slug. Always provisions monitors unmuted (no read of existing `projects.settings.notifications.incidents`).
+- [ ] Modify `apps/workers/src/workers/projects.ts` — call `provisionSystemMonitorsUseCase` after `provisionFlaggers()`.
+- [ ] **Data SQL migration** (separate from M2's structural migration): three `INSERT … SELECT … WHERE NOT EXISTS` pairs covering the historical project set. Idempotent. All new monitors are unmuted; existing per-kind notification toggles in project settings are deliberately not consulted.
+- [ ] **`issue.escalating` `startedAt` backtracking**: modify `createAlertIncidentFromIssueEventUseCase` to derive `startedAt` from the `entrySignals` trend window's first-crossing bucket for `issue.escalating`. Other kinds unchanged.
+- [ ] Wire the dashboard's row click to set `monitorSlug` in the URL with a stub placeholder panel (the real panel lands in M4).
+- [ ] Backend tests: provisioning idempotency, data-migration shape, `startedAt` backtracking against representative trend windows.
+
+### Milestone 4 — Monitor details panel: read-only system mode + editable user mode
+
+> Branch: `LAT-630/details-panel` · Estimated size: ~2,500 lines
+
+**Goal:** Clicking a monitor opens a working details panel with all read-only data, next/prev navigation, mute/unmute (both modes), and delete (user mode only). The Incidents section is wired to the existing alert-incidents data. The Notified/Muted badge is correctly derived.
+
+- [ ] `muteMonitorUseCase`, `unmuteMonitorUseCase` (both modes allowed).
+- [ ] `deleteMonitorUseCase` — rejects on `system === true`.
+- [ ] `updateMonitorMetadataUseCase` — rejects on `system === true`; validates length; regenerates slug if name changed.
+- [ ] Web side: `monitor-detail-drawer.tsx` mirroring `issue-detail-drawer.tsx`. Both modes:
+  - System mode: read-only header (no edit pencil, no delete button), read-only Alerts section (no `X` / `+`).
+  - User mode: in-place editable name + description (`useEditableText` hook), delete button, editable Alerts section.
+- [ ] Mute/unmute/delete server functions; confirmation modals.
+- [ ] Incidents section: embedded `InfiniteTable`; "Notified"/"Muted" column driven by the batched idempotency-key lookup.
+- [ ] Backend tests: mute/unmute (both modes), delete (system rejection), metadata update (system rejection, slug regen).
+
+### Milestone 5 — Create monitor modal and alert editing
+
+> Branch: `LAT-630/create-and-edit` · Estimated size: ~2,600 lines
+
+**Goal:** Users can create a non-system monitor end-to-end. The details panel's Alerts section allows adding/removing/editing alerts via the same alert card form. All paths constrain to `USER_CREATABLE_ALERT_KINDS`.
+
+- [ ] `createMonitorUseCase` — Zod-validated input; inserts monitor + alerts atomically. Rejects: empty alert list; any alert kind ∉ `USER_CREATABLE_ALERT_KINDS`; `system: true` in the input; saved-search alerts without `source.id`.
+- [ ] `updateMonitorAlertsUseCase` — set-style replacement; alert list cannot become empty; same kind/source.id constraints.
+- [ ] Shared `alert-form` components in `apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/-components/`, reused by both the create modal and the panel Alerts section.
+- [ ] Saved-search Combobox source picker — no "All saved searches" option; inline "Create a saved search" link when the project has none.
+- [ ] Threshold + window form for the two complex saved-search kinds. `formatHumanReadableAlert` drives the card preview.
+- [ ] **Per-field help tooltips on every alert configuration field**, written so a non-engineer understands what they're choosing:
+  - **Kind dropdown**: one-line explanation per kind ("Alerts the first time the saved search has produced N matches", "Detects sudden spikes vs a baseline period", "Fires when matches stay elevated for a sustained period").
+  - **Absolute vs multiplier toggle**: "absolute" → "Compare against a fixed number". "multiplier" → "Compare against a baseline period — useful when normal activity levels change over time".
+  - **`window` field on escalating**: "How long the condition has to hold continuously before firing — and how long it has to stop holding before the incident closes. Short windows catch quick spikes; long windows ignore transient noise."
+  - **`baselineWindow` on multiplier**: "The historical period used as the baseline for comparison. The alert fires when current activity is N times this baseline's average rate."
+  - **`factor` on multiplier**: "The multiplier. 3 means 'fire when current activity is 3× the baseline rate'."
+  - **One-line live-preview** under each alert card showing `formatHumanReadableAlert(alert)` — so the user sees the sentence form of what they're configuring as they edit.
+- [ ] Server functions: `createMonitor`, `updateMonitorAlerts`.
+- [ ] Backend tests: creation invariants, alert update invariants, kind/source.type mismatch rejection, kind-not-in-allowlist rejection, saved-search source.id required.
+
+### Milestone 6 — Wire issue-event path to monitors (flag-gated)
+
+> Branch: `LAT-630/issue-firing` · Estimated size: ~2,300 lines
+
+**Goal:** With the `monitors` flag enabled for an org, every issue event creates one incident per matching monitor; the existing notifications pipeline routes through the mute gate. Flag off = unchanged behaviour. After this milestone, the Incidents section of a flag-on org's system monitors shows live data.
+
+- [ ] `resolveMonitorsForSourceEvent({ orgId, projectId, kind, sourceId })` in `@domain/monitors`.
+- [ ] Modify `apps/workers/src/workers/domain-events/alert-incidents.ts`:
+  - Flag on: call resolver; for each match, call `createAlertIncidentFromIssueEventUseCase` once with `monitorId` and `condition` (snapshot) populated.
+  - Flag off: existing behaviour, `monitorId = null`.
+- [ ] Extend `createAlertIncidentFromIssueEventUseCase` to accept optional `monitorId` and `condition` (snapshot).
+- [ ] Extend `incidentBasePayloadShape` in `@domain/notifications` with optional `monitorId` and `condition`. Update the producer step (`request-incident-notifications`) to populate them onto the payload when the source incident has them.
+- [ ] **Mute gate** in `request-incident-notifications`: when `incident.monitorId IS NOT NULL`, load monitor; if muted, short-circuit with `skipped: "monitor-muted"`.
+- [ ] Update the existing email + in-app templates to conditionally render a "Created by monitor X" line and a humanised condition line when present.
+- [ ] Hide the three issue-notification checkboxes on `/settings/issues` when the `monitors` flag is on (replaced by mute on the corresponding system monitors). Leave the form fields and their read-paths in place — final cleanup happens in the post-rollout PR.
+- [ ] TODO comments per spec at every legacy site.
+- [ ] Backend tests: flag-on multi-monitor fan-out, flag-off parity, mute short-circuit (verify project-level per-kind gate is skipped but user-per-group prefs still apply), payload extension, template conditional rendering.
+
+### Milestone 7 — Saved-search firing pipeline
+
+> Branch: `LAT-630/saved-search-firing` · Estimated size: ~2,800 lines
+
+**Goal:** With the flag on, a monitor with a `savedSearch.*` alert fires incidents that land in the details panel and route through the notifications pipeline (subject to mute). Three distinct state machines (threshold one-time, escalating sustained, match) on top of one shared pure evaluator. No new columns on `alert_incidents` — the schema additions in M2 cover everything.
+
+- [ ] New worker file `apps/workers/src/workers/monitors.ts`:
+  - `checkSavedSearchMonitorsTask` — orchestrator handler, called by both trigger paths.
+  - Sweep cron registration: 5-minute interval, scans active alerts + open sustained incidents.
+- [ ] Trace-end hook: publish `monitors:checkSavedSearchMonitors` with the queue's `throttleMs: 5 * 60 * 1000` option (per-org throttle key).
+- [ ] `evaluateSavedSearchAlert` in `@domain/monitors` — pure evaluator returning `{ isMet, count, threshold, firstMatchInWindow, baselineCount? }`. Drives all three state machines. Reuses the trace repo's count + match primitives.
+- [ ] Three state-machine use-cases:
+  - `runSavedSearchThresholdAlert` — two sub-modes:
+    - Absolute: one-time. Short-circuits on any prior incident for the monitor alert. Read-then-insert wrapped in a transaction with `SELECT … FOR UPDATE` on the `monitor_alerts` row.
+    - Multiplier: rearming. Reuses `alert_incidents` rows as state — opens with `endedAt = null` on the rising edge (emits `IncidentCreated`); silently closes (`endedAt = now`, no event emit) when the condition stops holding. Single point-in-time notification per rising edge.
+  - `runSavedSearchEscalatingAlert` — sustained, mirrors `issue.escalating`'s open/exit-eligible/reset/close transitions. Snapshots `entrySignals = { evaluatedThreshold, baselineCount?, baselineWindow? }` at the open transition (multiplier baseline frozen at entry).
+  - `runSavedSearchMatchAlert` — literal throttle. If `evaluateSavedSearchAlert` reports `count > 0`, insert one point-in-time incident with `startedAt = endedAt = firstMatchInWindow`. No prior-incident check, no new state on `monitor_alerts`. The queue's `throttleMs` is the rate-limiter.
+- [ ] All three writers stamp `monitor_id`, `monitor_alert_id`, `condition` snapshot, and `severity` on the new `alert_incidents` row; `startedAt` is backtracked to the first matching trace in the look-back window.
+- [ ] `monitors:onSourceDeleted` task — wired from saved-search delete and issue delete events; hard-deletes matching `monitor_alerts`; soft-deletes the monitor if its alert list becomes empty.
+- [ ] No abstraction over issue.escalating and saved-search kinds at the use-case level — parallel implementations sharing only the storage shape and trigger plumbing. (`evaluateSeasonalEscalation` stays in `@domain/issues`; `evaluateSavedSearchAlert` lives in `@domain/monitors`.)
+- [ ] Backend tests: each state machine independently; backtracked `startedAt`; multiplier baseline frozen at entry; `isMet` flapping during dwell resets `exitEligibleSince`; threshold short-circuit after prior fire; sweep cron closes incidents in low-traffic orgs.
+
+### Milestone 8 — Move search bar to traces/sessions, retire `/search` page
+
+> Branch: `LAT-630/search-bar-relocation` · Estimated size: ~2,600 lines (frontend-heavy)
+
+**Goal:** The traces and sessions pages each carry their own search bar and saved-searches dropdown directly. The standalone `/search` page is gone. Saved searches no longer have `assignedUserId` / `createdByUserId`.
+
+- [ ] Drop `assignedUserId` and `createdByUserId` columns via Drizzle migration. Update `saved_searches.ts` schema, `SavedSearch` entity, repository, every use-case, and the OpenAPI `SavedSearchSchema`.
+- [ ] Delete `assignSavedSearchUseCase`, the `POST /searches/{slug}/assign` endpoint, and the assign UI.
+- [ ] Extract `<SavedSearchSelector>` and `<SaveOrUpdateSearchButton>` into shared components. Place both in `<Layout.Actions>` of the traces and sessions pages.
+- [ ] "Create monitor" / "Edit monitor" entry-point inside `<SavedSearchSelector>` rows.
+- [ ] Delete the standalone `/search` route and its `-components/`. Redirect stale links to `/` (traces).
+- [ ] Backend tests: saved-search create/update without the dropped columns; OpenAPI snapshot updated.
+
+### Milestone 9 — API endpoints + SDK + MCP regeneration
+
+> Branch: `LAT-630/api-endpoints` · Estimated size: ~2,000 lines (excluding auto-generated files)
+
+**Goal:** All eight monitor endpoints live. SDK regenerated and bumped.
+
+- [ ] `apps/api/src/routes/monitors.ts` — eight endpoints on the `defineApiEndpoint<OrganizationScopedEnv>` factory.
+- [ ] `apps/api/src/openapi/entities/monitor.ts` — `MonitorSchema` + `toMonitorResponse(monitor)` mapper. Rich `.describe(...)` on every field so SDK and MCP tools carry useful docs.
+- [ ] Register routes in `apps/api/src/routes/index.ts` at `/v1/projects/:projectSlug/monitors`.
+- [ ] Reuse domain Zod schemas for input validation.
+- [ ] `pnpm openapi:emit && pnpm mcp:emit && pnpm --filter @latitude-data/sdk generate`. Commit the generated files in the same PR.
+- [ ] Bump SDK version in `packages/sdk/package.json` and add a CHANGELOG entry under `packages/sdk/CHANGELOG.md`.
+- [ ] Backend tests for the eight endpoints: schema validation, auth/scope, response shape, error cases (delete on system monitor, kind not in allowlist, mismatched kind/source.type).
+
+### Milestone 10 — User-facing documentation
+
+> Branch: `LAT-630/user-docs` · Estimated size: ~600 lines (markdown + screenshots)
+
+**Goal:** A customer reading our public Mintlify docs can understand monitors end-to-end without reading any source code, and can configure one from scratch.
+
+- [ ] New page `docs/monitors.mdx` (Mintlify format, mirroring the existing pages under `docs/`). Sections:
+  - **What monitors are**: the concept, the system-vs-user distinction, what they monitor today (issues + saved searches), how they relate to incidents and notifications.
+  - **The three system monitors**: one paragraph each on Issue discovered / Issue regressed / Issue escalating, including how to mute one (and noting they're not deletable).
+  - **Creating a monitor for a saved search**: step-by-step. Where to enter the flow (saved-searches dropdown on the traces page OR the "+ New monitor" button on the Monitors page), the alert-form fields, how the human-readable preview at the bottom of the card reflects the configuration.
+  - **The three saved-search alert kinds**, with worked examples and screenshots:
+    - **match** — "alert me when matching traces start arriving". Explain the 5-minute throttle: a burst of 500 simultaneous matches produces one alert; continuous matching activity surfaces one alert every 5 minutes (so the customer doesn't tune it out and forget); a quiet period followed by new matches produces a fresh alert. Make the "every 5 minutes if activity is continuous" behaviour explicit so it's not a surprise.
+    - **threshold (absolute)** — milestone alarms ("alert me when 100 5xx traces have matched").
+    - **threshold (multiplier)** — spike detection ("alert me when I'm seeing 3× my baseline rate"). Worked example with concrete numbers showing the normalisation, so customers don't have to derive it.
+    - **escalating (absolute and multiplier)** — sustained-condition alerts, with explanation of how the `window` field doubles as count window + exit dwell, and why that filters out short noise spikes.
+  - **Mute, delete, edit**: what each action does, mute semantics (incidents still recorded, no notifications), what's editable on system vs user monitors.
+  - **How notifications work**: brief, links to existing notification docs page. Clarify that monitors don't have their own notification settings — channel-level routing lives in the existing user/project preferences.
+- [ ] Add the page to the Mintlify nav (`docs/mint.json` or equivalent config), under the appropriate section (likely "Alerts" or "Reliability").
+- [ ] Add cross-links from existing related pages (issues, saved searches, notifications) to the new monitors page.
+- [ ] If feasible: 2-3 inline screenshots of the dashboard and the create modal. Optional if the screenshots block on the UI not being final-final.
+
+### Milestone 11 — Remove stale feature flags
+
+> Branch: `LAT-630/remove-stale-flags` · Estimated size: ~400 lines
+
+**Goal:** Three flags that are on for everyone get removed. The `monitors` flag stays.
+
+- [ ] Remove `email-notifications`, `notifications`, `timeline-incidents` from the registry. Drop every read site (worker, frontend hooks, settings pages).
+- [ ] One-shot SQL cleanup: `DELETE FROM organization_feature_flags WHERE identifier IN ('email-notifications', 'notifications', 'timeline-incidents');` (manual command, runbook entry, not a Drizzle migration).
+- [ ] `grep -r` sanity check: no remaining references.
+
+### Milestone 12 — Promote spec to dev-docs
+
+> Branch: `LAT-630/dev-docs` · Estimated size: minimal
+
+**Goal:** Durable design knowledge lives at `dev-docs/monitors.md`; `specs/monitors.md` is removed.
+
+- [ ] Copy the non-implementation-plan sections of `specs/monitors.md` to `dev-docs/monitors.md`, reframed as durable docs.
+- [ ] Add cross-links from `dev-docs/notifications.md` and `dev-docs/reliability.md`.
+- [ ] Delete `specs/monitors.md`.
+- [ ] No code changes.
+
+---
+
