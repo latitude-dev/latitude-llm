@@ -419,6 +419,10 @@ function SlackOnboardingStep({
     queryFn: () => getActiveSlackIntegration(),
   })
   const connected = integration != null
+  // The step's pitch only materialises once `incidents` is routed
+  // somewhere. Until then, leaving counts as skipping — so the
+  // primary CTA stays a ghost "Skip for now" even after connect.
+  const incidentsConfigured = (integration?.routes.incidents?.length ?? 0) > 0
 
   const returnTo = `/projects/${projectSlug}/onboarding?step=slack`
   const connectHref = `/integrations/slack/install?return_to=${encodeURIComponent(returnTo)}`
@@ -461,7 +465,7 @@ function SlackOnboardingStep({
           <Button variant="outline" onClick={onBack}>
             Back
           </Button>
-          {connected ? (
+          {incidentsConfigured ? (
             <Button onClick={onContinue}>Continue</Button>
           ) : (
             <Button variant="ghost" onClick={onContinue}>
@@ -558,12 +562,18 @@ export function OnboardingFlow({
   // deep-links would skip past. `onboardingType` is fed in from the
   // parent route's loader so it's synchronously available on first
   // render (the route's loader awaits the project lookup).
+  //
+  // We deliberately do NOT also gate on `slackStepEnabled` here:
+  // `slackEnvConfigured` comes from an async query that is `false`
+  // until it loads, and the user only reaches `?step=slack` by
+  // already having seen the (env-gated) step — so if the URL says
+  // `slack`, trust it. Forward and back transitions still consult
+  // `slackStepEnabled` to route around the step when truly disabled.
   const onboardingTypeSet = onboardingType != null
   const resolvedInitialStep: OnboardingStep = (() => {
     if (initialStep == null) return "role"
     if (initialStep === "role" || initialStep === "stack") return initialStep
     if (!onboardingTypeSet) return "role"
-    if (initialStep === "slack" && !slackStepEnabled) return "telemetry"
     return initialStep
   })()
 
