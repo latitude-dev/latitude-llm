@@ -35,7 +35,7 @@ import {
   listAvailableFlaggers,
 } from "../../../../../domains/flaggers/flaggers.functions.ts"
 import {
-  FLAGGER_DISPLAY_ORDER,
+  FLAGGER_ONBOARDING_ORDER,
   FLAGGER_USE_CASE_PRESETS,
   type FlaggerPresetSlug,
 } from "../../../../../domains/flaggers/presets.ts"
@@ -444,8 +444,8 @@ export function OnboardingFlow({
   })
 
   const sortedAvailableFlaggers = useMemo(() => {
-    const indexBySlug = new Map<string, number>(FLAGGER_DISPLAY_ORDER.map((slug, index) => [slug, index]))
-    const fallbackIndex = FLAGGER_DISPLAY_ORDER.length
+    const indexBySlug = new Map<string, number>(FLAGGER_ONBOARDING_ORDER.map((slug, index) => [slug, index]))
+    const fallbackIndex = FLAGGER_ONBOARDING_ORDER.length
     return [...availableFlaggers].sort(
       (a, b) => (indexBySlug.get(a.slug) ?? fallbackIndex) - (indexBySlug.get(b.slug) ?? fallbackIndex),
     )

@@ -100,4 +100,14 @@ export const FLAGGER_GROUPS = [
   },
 ] as const satisfies ReadonlyArray<FlaggerGroup>
 
-export const FLAGGER_DISPLAY_ORDER: ReadonlyArray<FlaggerPresetSlug> = FLAGGER_GROUPS.flatMap((group) => group.slugs)
+// Onboarding sorts the flat card grid by user-side first, then agent-side, then deterministic
+// programmatic checks — easier-to-grasp categories lead so the user can scan and pick fast.
+const ONBOARDING_GROUP_ORDER: ReadonlyArray<(typeof FLAGGER_GROUPS)[number]["id"]> = [
+  "user-signals",
+  "agent-behavior",
+  "response-validity",
+]
+
+export const FLAGGER_ONBOARDING_ORDER: ReadonlyArray<FlaggerPresetSlug> = ONBOARDING_GROUP_ORDER.flatMap(
+  (groupId) => FLAGGER_GROUPS.find((group) => group.id === groupId)?.slugs ?? [],
+)
