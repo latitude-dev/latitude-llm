@@ -70,3 +70,34 @@ export const FLAGGER_USE_CASE_PRESETS = [
     enabledSlugs: ["nsfw", "jailbreaking", "refusal", "frustration", "empty-response"],
   },
 ] as const satisfies ReadonlyArray<FlaggerUseCasePreset>
+
+interface FlaggerGroup {
+  readonly id: string
+  readonly label: string
+  readonly description: string
+  readonly slugs: ReadonlyArray<FlaggerPresetSlug>
+}
+
+// Groups must collectively cover every FLAGGER_STRATEGY_SLUG. Add new strategies here when they ship.
+export const FLAGGER_GROUPS = [
+  {
+    id: "response-validity",
+    label: "Response validity",
+    description: "Free deterministic checks; always run on every trace.",
+    slugs: ["empty-response", "tool-call-errors", "output-schema-validation"],
+  },
+  {
+    id: "user-signals",
+    label: "User-side signals",
+    description: "LLM-based detection of risky or unhappy user behavior.",
+    slugs: ["frustration", "jailbreaking", "nsfw"],
+  },
+  {
+    id: "agent-behavior",
+    label: "Agent behavior",
+    description: "LLM-based detection of failure modes in the agent's own output.",
+    slugs: ["refusal", "laziness", "forgetting", "trashing"],
+  },
+] as const satisfies ReadonlyArray<FlaggerGroup>
+
+export const FLAGGER_DISPLAY_ORDER: ReadonlyArray<FlaggerPresetSlug> = FLAGGER_GROUPS.flatMap((group) => group.slugs)

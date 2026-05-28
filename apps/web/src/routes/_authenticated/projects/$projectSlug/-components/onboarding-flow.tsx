@@ -1,6 +1,5 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import {
-  Badge,
   Button,
   CodeBlock,
   CopyButton,
@@ -35,7 +34,11 @@ import {
   configureProjectFlaggersForOnboarding,
   listAvailableFlaggers,
 } from "../../../../../domains/flaggers/flaggers.functions.ts"
-import { FLAGGER_USE_CASE_PRESETS, type FlaggerPresetSlug } from "../../../../../domains/flaggers/presets.ts"
+import {
+  FLAGGER_DISPLAY_ORDER,
+  FLAGGER_USE_CASE_PRESETS,
+  type FlaggerPresetSlug,
+} from "../../../../../domains/flaggers/presets.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
@@ -440,7 +443,14 @@ export function OnboardingFlow({
     queryFn: () => listAvailableFlaggers(),
   })
 
-  const availableFlaggerSlugs = availableFlaggers.map((flagger) => flagger.slug)
+  const sortedAvailableFlaggers = useMemo(() => {
+    const indexBySlug = new Map<string, number>(FLAGGER_DISPLAY_ORDER.map((slug, index) => [slug, index]))
+    const fallbackIndex = FLAGGER_DISPLAY_ORDER.length
+    return [...availableFlaggers].sort(
+      (a, b) => (indexBySlug.get(a.slug) ?? fallbackIndex) - (indexBySlug.get(b.slug) ?? fallbackIndex),
+    )
+  }, [availableFlaggers])
+  const availableFlaggerSlugs = sortedAvailableFlaggers.map((flagger) => flagger.slug)
   const currentEnabledFlaggerSlugs = new Set(
     projectFlaggers.filter((flagger) => flagger.enabled).map((flagger) => flagger.slug),
   )
@@ -760,9 +770,8 @@ export function OnboardingFlow({
                   <Text.H5 color="foregroundMuted">Loading flaggers…</Text.H5>
                 ) : (
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3">
-                    {availableFlaggers.map((flagger) => {
+                    {sortedAvailableFlaggers.map((flagger) => {
                       const selected = enabledFlaggerSlugs.has(flagger.slug)
-                      const isDeterministic = flagger.mode === "deterministic"
                       return (
                         <button
                           key={flagger.slug}
@@ -778,14 +787,7 @@ export function OnboardingFlow({
                           )}
                         >
                           <div className="flex min-w-0 flex-col gap-1.5">
-                            <div className="flex flex-row items-center gap-2">
-                              <Text.H5M>{flagger.name}</Text.H5M>
-                              {isDeterministic ? (
-                                <Badge variant="muted" size="small">
-                                  Always-on · free
-                                </Badge>
-                              ) : null}
-                            </div>
+                            <Text.H5M>{flagger.name}</Text.H5M>
                             <Text.H6 color="foregroundMuted">{flagger.description}</Text.H6>
                           </div>
                           <div className="flex flex-row justify-end">

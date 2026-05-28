@@ -1,25 +1,14 @@
-import {
-  Badge,
-  Button,
-  cn,
-  Slider,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Text,
-  Tooltip,
-  useToast,
-} from "@repo/ui"
+import { Button, cn, Slider, Switch, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, useBlocker } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { updateFlaggerMutation, useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
 import type { FlaggerRecord } from "../../../../../domains/flaggers/flaggers.functions.ts"
-import { FLAGGER_USE_CASE_PRESETS, type FlaggerPresetSlug } from "../../../../../domains/flaggers/presets.ts"
+import {
+  FLAGGER_GROUPS,
+  FLAGGER_USE_CASE_PRESETS,
+  type FlaggerPresetSlug,
+} from "../../../../../domains/flaggers/presets.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -177,7 +166,7 @@ function ProjectFlaggersSettingsPage() {
 
   const [targetFlaggerSlug] = useParamState("flagger", "")
   const hasScrolledToTargetRef = useRef(false)
-  const scrollTargetRef = (node: HTMLTableRowElement | null) => {
+  const scrollTargetRef = (node: HTMLDivElement | null) => {
     if (node && !hasScrolledToTargetRef.current) {
       hasScrolledToTargetRef.current = true
       node.scrollIntoView({ block: "center", behavior: "smooth" })
@@ -206,7 +195,7 @@ function ProjectFlaggersSettingsPage() {
       description="Flaggers automatically inspect new traces for known failure patterns and create issues when they detect regressions"
       footer={footer}
     >
-      <div className="flex w-full flex-col gap-4">
+      <div className="flex w-full flex-col gap-6">
         {isLoadingFlaggers ? null : flaggers.length === 0 ? (
           <Text.H5 color="foregroundMuted">No flaggers have been provisioned for this project yet</Text.H5>
         ) : (
@@ -237,90 +226,81 @@ function ProjectFlaggersSettingsPage() {
               </div>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Flagger</TableHead>
-                  <TableHead className="w-10">Enabled</TableHead>
-                  <TableHead className="w-[280px]">Sampling</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resolved.map((row) => {
-                  const isTarget = targetFlaggerSlug !== "" && row.slug === targetFlaggerSlug
-                  const isDeterministic = row.mode === "deterministic"
-                  return (
-                    <TableRow
-                      key={row.id}
-                      ref={isTarget ? scrollTargetRef : undefined}
-                      verticalPadding
-                      hoverable={false}
-                      className={cn({ "ring-2 ring-primary ring-offset-2 ring-offset-background": isTarget })}
-                    >
-                      <TableCell className="max-w-[28rem]">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex flex-row items-center gap-2">
-                            <Text.H5M>{row.name}</Text.H5M>
-                            {isDeterministic ? (
-                              <Badge variant="muted" size="small">
-                                Always-on · free
-                              </Badge>
-                            ) : null}
-                            {row.isDirty ? (
-                              <span
-                                role="img"
-                                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
-                                aria-label="Unsaved changes"
-                                title="Unsaved changes"
-                              />
-                            ) : null}
-                          </div>
-                          <Text.H6 color="foregroundMuted">{row.description}</Text.H6>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={row.viewEnabled}
-                          onCheckedChange={(checked) => setRowChange(row.id, { enabled: checked })}
-                          aria-label={`${row.viewEnabled ? "Disable" : "Enable"} ${row.name}`}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {isDeterministic ? (
-                          <Tooltip
-                            asChild
-                            trigger={
-                              <span className="inline-flex">
-                                <Text.H5 color="foregroundMuted">—</Text.H5>
-                              </span>
-                            }
+            <div className="flex flex-col gap-8">
+              {FLAGGER_GROUPS.map((group) => {
+                const groupRows = group.slugs
+                  .map((slug) => resolved.find((row) => row.slug === slug))
+                  .filter((row): row is NonNullable<typeof row> => row !== undefined)
+                if (groupRows.length === 0) return null
+                return (
+                  <div key={group.id} className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <Text.H5M>{group.label}</Text.H5M>
+                      <Text.H6 color="foregroundMuted">{group.description}</Text.H6>
+                    </div>
+                    <div className="divide-y divide-border">
+                      {groupRows.map((row) => {
+                        const isTarget = targetFlaggerSlug !== "" && row.slug === targetFlaggerSlug
+                        const isDeterministic = row.mode === "deterministic"
+                        return (
+                          <div
+                            key={row.id}
+                            ref={isTarget ? scrollTargetRef : undefined}
+                            className={cn("flex flex-col gap-3 rounded-md py-4", {
+                              "ring-2 ring-primary ring-offset-2 ring-offset-background": isTarget,
+                            })}
                           >
-                            Always runs · sampling not applicable
-                          </Tooltip>
-                        ) : (
-                          <div className="flex flex-col gap-1">
-                            <div className="flex flex-row items-center gap-3">
-                              <Slider
-                                min={0}
-                                max={100}
-                                step={1}
-                                value={[row.viewSampling]}
-                                onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
-                                className="w-44"
-                              />
-                              <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
+                            <div className="flex flex-row items-start justify-between gap-4">
+                              <div className="flex min-w-0 flex-col gap-1">
+                                <div className="flex flex-row items-center gap-2">
+                                  <Text.H5M>{row.name}</Text.H5M>
+                                  {row.isDirty ? (
+                                    <span
+                                      role="img"
+                                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                                      aria-label="Unsaved changes"
+                                      title="Unsaved changes"
+                                    />
+                                  ) : null}
+                                </div>
+                                <Text.H6 color="foregroundMuted">{row.description}</Text.H6>
+                              </div>
+                              <div className="shrink-0">
+                                <Switch
+                                  checked={row.viewEnabled}
+                                  onCheckedChange={(checked) => setRowChange(row.id, { enabled: checked })}
+                                  aria-label={`${row.viewEnabled ? "Disable" : "Enable"} ${row.name}`}
+                                />
+                              </div>
                             </div>
-                            <Text.H6 color="foregroundMuted">
-                              30 credits per scan · runs on {row.viewSampling}% of eligible traces
-                            </Text.H6>
+                            {isDeterministic ? (
+                              <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible traces</Text.H6>
+                            ) : (
+                              <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
+                                <div className="flex min-w-[200px] flex-1 flex-row items-center gap-3">
+                                  <Slider
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={[row.viewSampling]}
+                                    onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
+                                    className="flex-1"
+                                  />
+                                  <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
+                                </div>
+                                <Text.H6 color="foregroundMuted">
+                                  30 credits per scan · runs on {row.viewSampling}% of eligible traces
+                                </Text.H6>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </>
         )}
       </div>
