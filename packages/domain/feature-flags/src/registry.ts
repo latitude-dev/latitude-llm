@@ -36,16 +36,6 @@ export const FEATURE_FLAGS = {
     name: "Slack integration",
     description: "Enables the Slack integration settings and incident delivery to Slack.",
   },
-  "session-search-v2": {
-    emoji: "🔍",
-    name: "Session search v2",
-    description: "Routes users to the new session-rollup search at /session-search instead of the legacy /search.",
-  },
-  "live-taxonomy-search-recommendations": {
-    emoji: "🌱",
-    name: "Live taxonomy search recommendations",
-    description: "Shows behavior taxonomy recommendations and category browsing on the search blank slate.",
-  },
   "timeline-incidents": {
     emoji: "📊",
     name: "Timeline incidents overlay",

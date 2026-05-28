@@ -432,9 +432,6 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
-      '@domain/taxonomy':
-        specifier: workspace:*
-        version: link:../../packages/domain/taxonomy
       '@domain/users':
         specifier: workspace:*
         version: link:../../packages/domain/users

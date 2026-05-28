@@ -1,10 +1,8 @@
 import type { FilterSet } from "@domain/shared"
 import {
-  type CheckedState,
   type ExpandedRows,
   InfiniteTable,
   type InfiniteTableColumn,
-  type InfiniteTableSelection,
   type InfiniteTableSorting,
   ProviderIcon,
   TagList,
@@ -20,12 +18,13 @@ import { useSessionMetrics, useSessionsInfiniteScroll } from "../../../../../dom
 import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
-import { type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
+import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { sessionTracesQueryOptions } from "./session-detail-drawer/use-session-traces.ts"
 import { IndicatorsCell } from "./table/indicators-cell.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 import { DEFAULT_SEARCH_SORTING, RELEVANCE_SORT_COLUMN } from "./trace-page-state.ts"
+import { useSessionSelectionAdapter } from "./use-session-selection-adapter.ts"
 
 type SessionTableRow =
   | { readonly kind: "session"; readonly session: SessionRecord }
@@ -89,84 +88,6 @@ function useExpandedSessionTraces(
   }, [results, expandedSessionIds])
 }
 
-function useSessionSelectionAdapter({
-  selectionState,
-  onSelectionChange,
-  sessions,
-  totalTraceCount,
-}: {
-  selectionState: SelectionState<string>
-  onSelectionChange: (state: SelectionState<string>) => void
-  sessions: readonly SessionRecord[]
-  totalTraceCount: number
-}): InfiniteTableSelection {
-  const sessionTraceIndex = useMemo(() => {
-    const index = new Map<string, readonly string[]>()
-    for (const s of sessions) index.set(s.sessionId, s.traceIds)
-    return index
-  }, [sessions])
-
-  const allVisibleTraceIds = useMemo(() => {
-    const ids: string[] = []
-    for (const traceIds of sessionTraceIndex.values()) {
-      for (const id of traceIds) ids.push(id)
-    }
-    return ids
-  }, [sessionTraceIndex])
-
-  const traceSelection = useSelectableRows({
-    rowIds: allVisibleTraceIds,
-    totalRowCount: totalTraceCount,
-    controlledState: selectionState,
-    onStateChange: onSelectionChange,
-  })
-
-  const getSessionCheckedState = useCallback(
-    (sessionId: string): CheckedState => {
-      const traceIds = sessionTraceIndex.get(sessionId)
-      if (!traceIds || traceIds.length === 0) return false
-      const selectedCount = traceIds.filter((id) => traceSelection.isSelected(id)).length
-      if (selectedCount === 0) return false
-      if (selectedCount === traceIds.length) return true
-      return "indeterminate"
-    },
-    [sessionTraceIndex, traceSelection],
-  )
-
-  const toggleSessionTraces = useCallback(
-    (sessionId: string, checked: CheckedState) => {
-      const traceIds = sessionTraceIndex.get(sessionId)
-      if (!traceIds || traceIds.length === 0) return
-      if (checked) {
-        traceSelection.selectMany(traceIds as string[])
-      } else {
-        traceSelection.deselectMany(traceIds as string[])
-      }
-    },
-    [sessionTraceIndex, traceSelection],
-  )
-
-  return useMemo(
-    (): InfiniteTableSelection => ({
-      headerState: traceSelection.headerState,
-      isSelected: (key) => traceSelection.isSelected(key),
-      getCheckedState: (key) => {
-        if (sessionTraceIndex.has(key)) return getSessionCheckedState(key)
-        return traceSelection.isSelected(key)
-      },
-      toggleRow: (key, checked, options) => {
-        if (sessionTraceIndex.has(key)) {
-          toggleSessionTraces(key, checked)
-          return
-        }
-        traceSelection.toggleRow(key, checked, options)
-      },
-      toggleAll: () => traceSelection.toggleAll(),
-    }),
-    [traceSelection, sessionTraceIndex, getSessionCheckedState, toggleSessionTraces],
-  )
-}
-
 interface SessionsViewProps {
   readonly projectId: string
   readonly filters: FilterSet
@@ -194,8 +115,7 @@ interface SessionsViewProps {
   /**
    * Free-text search query forwarded to `listSessionsByProject`. Optional —
    * the project page's Sessions tab (the original consumer) renders this view
-   * without search, and the temporary `/session-search` route passes the
-   * current query through.
+   * without search, and the `/search` route passes the current query through.
    *
    * When non-empty, `useSessionsInfiniteScroll` returns the per-session
    * `searchMatches` payload (keyed by `sessionId`) alongside the sessions
@@ -536,7 +456,6 @@ export function SessionsView({
         align: "end",
         sortKey: "spans",
         width: 110,
-        // Errors moved to the dedicated `indicators` column.
         render: (row) => <span>{formatCount(field(row, "spanCount"))}</span>,
         renderSubheader: () => (
           <TableMetricSubheader rollup={sessionMetrics?.spanCount} format="count" isLoading={sessionMetricsLoading} />
@@ -560,14 +479,15 @@ export function SessionsView({
     })
   }, [allColumns, visibleColumnIds])
 
+  const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions)
+
   const selection = useSessionSelectionAdapter({
     selectionState,
     onSelectionChange,
     sessions,
     totalTraceCount,
+    expandedTraces: traceMap,
   })
-
-  const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions)
 
   const tableData: readonly SessionTableRow[] = sessions.map(
     (session): SessionTableRow => ({ kind: "session", session }),
@@ -580,11 +500,6 @@ export function SessionsView({
     [],
   )
 
-  // Clicking a session row opens the detail panel and expands its inline trace
-  // rows (idempotent — never collapses). Clicking the row of the session that's
-  // already open on the session slot (no trace selected) toggles it closed
-  // (collapse + close panel). The chevron (`onToggleExpand`) is the explicit
-  // expand/collapse affordance; clicking a trace sub-row opens that trace.
   const onRowClick = (row: SessionTableRow) => {
     const sel = window.getSelection()
     if (sel && sel.toString().length > 0) return

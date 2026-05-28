@@ -102,7 +102,7 @@ export function IssuesTab({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-6">
+    <div className="flex min-h-0 flex-1 flex-col pt-6 px-6">
       <InfiniteTable
         data={sortedIssues}
         isLoading={isLoading}

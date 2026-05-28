@@ -1,15 +1,34 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, cn, Icon, type SortDirection, SplitButton, Tooltip, toast } from "@repo/ui"
+import {
+  Button,
+  cn,
+  Icon,
+  type InfiniteTableSorting,
+  Popover,
+  PopoverTrigger,
+  type SortDirection,
+  SplitButton,
+  Tooltip,
+  toast,
+} from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { ArrowLeftIcon, DatabaseIcon, DownloadIcon, FilterIcon, PinIcon, SearchIcon, XIcon } from "lucide-react"
-import { useRef, useState } from "react"
-import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
+import {
+  ArrowLeftIcon,
+  CircleHelpIcon,
+  DatabaseIcon,
+  DownloadIcon,
+  FilterIcon,
+  PinIcon,
+  SearchIcon,
+  XIcon,
+} from "lucide-react"
+import { useCallback, useMemo, useState } from "react"
 import {
   useSavedSearchBySlug,
   useUpdateSavedSearch,
 } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
-import { useTaxonomyOverview } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
+import { useSessionsCount, withSessionDefaults } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTracesCount } from "../../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -26,22 +45,20 @@ import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { AddToDatasetModal } from "../-components/add-to-dataset-modal.tsx"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
-import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "../-components/project-traces-table.tsx"
+import { SaveSearchModal } from "../-components/save-search-modal.tsx"
+import { SavedSearchesList } from "../-components/saved-searches-list.tsx"
+import { SearchSyntaxLegendContent } from "../-components/search-syntax-legend.tsx"
+import { SessionDetailDrawer } from "../-components/session-detail-drawer.tsx"
+import { SESSION_COLUMN_OPTIONS, type SessionColumnId, SessionsView } from "../-components/sessions-view.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
-import { TraceDetailDrawer } from "../-components/trace-detail-drawer.tsx"
 import {
   DEFAULT_SEARCH_SORTING,
   getTimeFilterValue,
   parseFilters,
   serializeFilters,
 } from "../-components/trace-page-state.ts"
-import { TracesView } from "../-components/traces-view.tsx"
 import { useRouteProject } from "../-route-data.ts"
-import { LiveTaxonomyPanel } from "./-components/live-taxonomy-panel.tsx"
-import { SaveSearchModal } from "./-components/save-search-modal.tsx"
-import { SavedSearchesList } from "./-components/saved-searches-list.tsx"
-import { SearchSyntaxLegend } from "./-components/search-syntax-legend.tsx"
 
 const SEARCH_QUERY_MAX_LENGTH = 500
 
@@ -61,11 +78,8 @@ function SearchPage() {
   const [q, setQ] = useParamState("q", "")
   const [savedSearchSlug] = useParamState("savedSearch", "")
 
-  // Results state — kept at the top level so the layout slots below
-  // (`Layout.Actions`, `Layout.Aside`, …) remain DIRECT children of `<Layout>`.
-  // `ListingLayout` discovers its panes via `Children.toArray`, which doesn't
-  // see through function components.
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
+  const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
@@ -73,44 +87,18 @@ function SearchPage() {
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SEARCH_SORTING.direction, {
     validate: (v): v is SortDirection => v === "asc" || v === "desc",
   })
-  const [traceDetailTab, setTraceDetailTab] = useParamState("traceDetailTab", "trace", {
-    validate: (v): v is "trace" | "conversation" | "spans" | "annotations" =>
-      v === "trace" || v === "conversation" || v === "spans" || v === "annotations",
-  })
-
-  const traceIdsRef = useRef<string[]>([])
-
-  const filters = parseFilters(rawFilters || undefined)
-  const traceColumnSettings = useTableColumnSettings<TraceColumnId>({
-    storageKey: "projects.search.traces.columns.v1",
-    columns: TRACE_COLUMN_OPTIONS,
-  })
-  const hasSearchQuery = q.length > 0
-  const hasActiveFilters = Object.keys(filters).length > 0
-  const hasContent = hasSearchQuery || hasActiveFilters
-  const timeFrom = getTimeFilterValue(filters, "gte")
-  const timeTo = getTimeFilterValue(filters, "lte")
-  const sorting = { column: sortBy, direction: sortDirection } as const
-
-  const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
-  const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
-  const [exportModalOpen, setExportModalOpen] = useState(false)
-  const [exporting, setExporting] = useState(false)
   const [saveModalOpen, setSaveModalOpen] = useState(false)
+
+  const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
+  // Sessions hooks (useSessionsInfiniteScroll / useSessionsCount) apply
+  // `withSessionDefaults` internally, but everything that hits the *trace*
+  // surface (count, export, add-to-dataset) needs the same default applied
+  // here so a Select-All export doesn't sweep orphan-fragment traces that
+  // the user never saw in the list.
+  const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
 
   const { data: loadedSavedSearch } = useSavedSearchBySlug(projectId, savedSearchSlug || null)
   const updateSavedSearchMutation = useUpdateSavedSearch(projectId)
-  const liveTaxonomyRecommendationsEnabled = useHasFeatureFlag("live-taxonomy-search-recommendations")
-  const { data: taxonomyOverview } = useTaxonomyOverview(liveTaxonomyRecommendationsEnabled ? projectId : "")
-  const hasRecommendedSearches =
-    liveTaxonomyRecommendationsEnabled &&
-    (taxonomyOverview?.topClusters.some((cluster) => cluster.name !== "Pending") ?? false)
-  const behaviorEmptyState =
-    liveTaxonomyRecommendationsEnabled && taxonomyOverview !== undefined && taxonomyOverview.totalActiveClusters === 0
-      ? "detecting"
-      : hasRecommendedSearches
-        ? "recommendations"
-        : "default"
 
   // Compare canonical serializations of both filter sets. `rawFilters` is whatever TanStack Router
   // wrote to the URL (potentially JSON-stringified twice depending on encoding), so going through
@@ -120,10 +108,42 @@ function SearchPage() {
     ? (loadedSavedSearch.query ?? "") !== q ||
       (serializeFilters(loadedSavedSearch.filterSet) ?? "") !== (serializeFilters(filters) ?? "")
     : false
+  const sessionColumnSettings = useTableColumnSettings<SessionColumnId>({
+    // Distinct from the project Sessions tab (`projects.sessions.columns.v3`)
+    // so the two views can keep independent column layouts.
+    storageKey: "projects.search.sessions.columns.v1",
+    columns: SESSION_COLUMN_OPTIONS,
+  })
+  const hasSearchQuery = q.length > 0
+  const hasActiveFilters = Object.keys(filters).length > 0
+  const hasContent = hasSearchQuery || hasActiveFilters
+  const timeFrom = getTimeFilterValue(filters, "gte")
+  const timeTo = getTimeFilterValue(filters, "lte")
+  const sorting: InfiniteTableSorting = {
+    column: sortBy,
+    direction: sortDirection,
+  }
 
-  const { totalCount: totalTraceCount } = useTracesCount({
+  const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
+  const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  const { totalCount, matchingTraceCount } = useSessionsCount({
     projectId: hasContent ? projectId : "",
     ...(hasActiveFilters ? { filters } : {}),
+    ...(hasSearchQuery ? { searchQuery: q } : {}),
+  })
+
+  // Selection is by traceId (see useSessionSelectionAdapter in sessions-view.tsx).
+  // For "select all" semantics across pages and for the bulk-action count label,
+  // we need the actual trace count under the current filters/query — not the
+  // session count. `useTracesCount` returns exactly that. We pass
+  // `effectiveFilters` so the count matches what the sessions list shows
+  // (orphan fragments excluded by default).
+  const { totalCount: totalTraceCount } = useTracesCount({
+    projectId: hasContent ? projectId : "",
+    filters: effectiveFilters,
     searchQuery: q,
   })
 
@@ -131,7 +151,7 @@ function SearchPage() {
   const bulkSelection = getBulkSelection(selectionState)
   const showBulkActions = selectedCount > 0
 
-  const onSortingChange = (next: { column: string; direction: SortDirection }) => {
+  const onSortingChange = (next: InfiniteTableSorting) => {
     setSortBy(next.column)
     setSortDirection(next.direction)
   }
@@ -145,26 +165,31 @@ function SearchPage() {
     setRawFilters("")
   }
 
-  const closeTraceDrawer = () => {
+  // Row click opens the session detail panel. A trace reference (deep link)
+  // also sets `traceId` so the panel slides straight into that trace's slot.
+  const onOpenSession = useCallback(
+    (sessionId: string, traceId?: string) => {
+      setActiveSessionId(sessionId)
+      setActiveTraceId(traceId ?? "")
+    },
+    [setActiveSessionId, setActiveTraceId],
+  )
+
+  const closeSessionPanel = useCallback(() => {
+    setActiveSessionId("")
     setActiveTraceId("")
     setSelectedSpanId("")
-    setTraceDetailTab("trace")
-  }
+  }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId])
 
-  // Submitting a new query invalidates the currently-open trace context —
-  // keep the panel up against the new result set is misleading, so close it.
-  const handleSubmitQ = (next: string) => {
-    if (next !== q) closeTraceDrawer()
-    setQ(next)
-  }
-
-  const onActiveTraceChange = (traceId: string | undefined) => {
-    if (!traceId) {
-      closeTraceDrawer()
-      return
-    }
-    setActiveTraceId(traceId)
-  }
+  // Submitting a new query invalidates the currently-open session/trace context
+  // — keep the panel up against the new result set is misleading, so close it.
+  const handleSubmitQ = useCallback(
+    (next: string) => {
+      if (next !== q) closeSessionPanel()
+      setQ(next)
+    },
+    [q, setQ, closeSessionPanel],
+  )
 
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
 
@@ -177,7 +202,7 @@ function SearchPage() {
         data: {
           projectId,
           selection: bulkSelection,
-          ...(hasActiveFilters ? { filters } : {}),
+          filters: effectiveFilters,
           ...(hasSearchQuery ? { searchQuery: q } : {}),
         },
       })
@@ -197,27 +222,24 @@ function SearchPage() {
     }
   }
 
-  const navigateTrace = (delta: 1 | -1) => {
-    const ids = traceIdsRef.current
-    if (ids.length === 0) return
-    const idx = ids.indexOf(activeTraceId)
-    const target = idx < 0 ? ids[0] : ids[idx + delta]
-    if (target) setActiveTraceId(target)
-  }
-
-  const activeTraceIndex = traceIdsRef.current.indexOf(activeTraceId)
-  const canNavigateNext =
-    traceIdsRef.current.length > 0 && (activeTraceIndex < 0 || activeTraceIndex < traceIdsRef.current.length - 1)
-  const canNavigatePrev = traceIdsRef.current.length > 0 && (activeTraceIndex < 0 || activeTraceIndex > 0)
-
+  // Esc inside the panel is owned by the panel (back to session, then close).
   useHotkeys([
-    { hotkey: "F", callback: () => setFiltersOpen((prev) => !prev), options: { enabled: hasContent } },
     {
-      hotkey: "Escape",
-      callback: closeTraceDrawer,
-      options: { enabled: !!activeTraceId, ignoreInputs: true },
+      hotkey: "F",
+      callback: () => setFiltersOpen((prev) => !prev),
+      options: { enabled: hasContent },
     },
   ])
+
+  // Count-string variants (spec §PR4 / "Count string + drawer prev/next"):
+  //  - filters-only or no content    → "N sessions"
+  //  - active search query           → "N sessions · M matching traces"
+  // `matchingTraceCount` is populated only when `searchQuery` was active on
+  // the server, so we gate on `hasSearchQuery` rather than the optional being
+  // present to avoid showing "· 0 matching traces" during the brief load.
+  const countLabel = hasSearchQuery
+    ? `${totalCount} sessions · ${matchingTraceCount ?? 0} matching traces`
+    : `${totalCount} sessions`
 
   return (
     <Layout>
@@ -239,17 +261,13 @@ function SearchPage() {
               </Tooltip>
             ) : null}
             <SearchInput key={q} initialValue={q} onSubmit={handleSubmitQ} />
-            <SearchSyntaxLegend />
           </div>
         </Layout.ActionsRow>
       </Layout.Actions>
 
       {!hasContent ? (
         <div className="flex min-h-0 grow flex-col">
-          <SavedSearchesList projectId={projectId} projectSlug={projectSlug} behaviorEmptyState={behaviorEmptyState} />
-          {liveTaxonomyRecommendationsEnabled ? (
-            <LiveTaxonomyPanel projectId={projectId} projectSlug={projectSlug} />
-          ) : null}
+          <SavedSearchesList projectId={projectId} projectSlug={projectSlug} behaviorEmptyState="default" />
         </div>
       ) : null}
 
@@ -292,13 +310,18 @@ function SearchPage() {
                   Clear all
                 </Button>
               ) : null}
+              <span className="text-xs text-muted-foreground">{countLabel}</span>
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
               <ColumnsSelector
-                columns={traceColumnSettings.columns}
-                selectedColumnIds={traceColumnSettings.visibleColumnIds}
-                onChange={(nextColumnIds) => traceColumnSettings.setVisibleColumnIds(nextColumnIds as TraceColumnId[])}
-                onOrderChange={(nextColumnIds) => traceColumnSettings.setColumnIds(nextColumnIds as TraceColumnId[])}
+                columns={sessionColumnSettings.columns}
+                selectedColumnIds={sessionColumnSettings.visibleColumnIds}
+                onChange={(nextColumnIds) =>
+                  sessionColumnSettings.setVisibleColumnIds(nextColumnIds as SessionColumnId[])
+                }
+                onOrderChange={(nextColumnIds) =>
+                  sessionColumnSettings.setColumnIds(nextColumnIds as SessionColumnId[])
+                }
               />
               {loadedSavedSearch ? (
                 <SplitButton
@@ -358,12 +381,12 @@ function SearchPage() {
       ) : null}
 
       {hasContent ? (
-        <TracesView
+        <SessionsView
           projectId={projectId}
           filters={filters}
           filtersOpen={filtersOpen}
+          activeSessionId={activeSessionId || undefined}
           activeTraceId={activeTraceId || undefined}
-          activeDrawerTab={traceDetailTab}
           sorting={sorting}
           onSortingChange={onSortingChange}
           selectionState={selectionState}
@@ -371,26 +394,21 @@ function SearchPage() {
           totalTraceCount={totalTraceCount}
           onFiltersChange={onFiltersChange}
           onFiltersClose={() => setFiltersOpen(false)}
-          onActiveTraceChange={onActiveTraceChange}
-          traceIdsRef={traceIdsRef}
-          visibleColumnIds={traceColumnSettings.visibleColumnIds}
-          searchQuery={q}
+          onOpenSession={onOpenSession}
+          onCloseSession={closeSessionPanel}
+          visibleColumnIds={sessionColumnSettings.visibleColumnIds}
+          {...(hasSearchQuery ? { searchQuery: q } : {})}
         />
       ) : null}
 
-      {hasContent && activeTraceId ? (
+      {hasContent && activeSessionId ? (
         <Layout.Aside>
-          <TraceDetailDrawer
-            key={activeTraceId}
-            traceId={activeTraceId}
+          <SessionDetailDrawer
+            key={activeSessionId}
             projectId={projectId}
-            filters={filters}
-            onFiltersChange={onFiltersChange}
-            onClose={closeTraceDrawer}
-            onNextTrace={() => navigateTrace(1)}
-            onPrevTrace={() => navigateTrace(-1)}
-            canNavigateNext={canNavigateNext}
-            canNavigatePrev={canNavigatePrev}
+            sessionId={activeSessionId}
+            onClose={closeSessionPanel}
+            {...(hasSearchQuery ? { searchQuery: q } : {})}
           />
         </Layout.Aside>
       ) : null}
@@ -415,7 +433,7 @@ function SearchPage() {
           selectedCount={selectedCount}
           onSuccess={clearSelections}
           {...(hasSearchQuery ? { searchQuery: q } : {})}
-          {...(hasActiveFilters ? { filters } : {})}
+          filters={effectiveFilters}
         />
       ) : null}
 
@@ -459,22 +477,47 @@ function SearchInput({
     focusAdjacentSegment,
   } = useSearchSegments(initialValue, onSubmit, SEARCH_QUERY_MAX_LENGTH)
 
+  const [legendOpen, setLegendOpen] = useState(false)
+  const active = segments.some((segment) => segment.text.length > 0) || legendOpen
+
   return (
-    <div className="relative flex-1">
-      <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-        <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
-      </div>
-      <div className="flex h-10 w-full items-center gap-1 overflow-x-auto rounded-xl border border-input bg-transparent pr-3 pl-9 text-sm transition-colors focus-within:ring-1 focus-within:ring-ring">
+    <div
+      data-active={active ? "" : undefined}
+      className="group/search flex h-10 flex-1 items-center rounded-xl border border-input bg-transparent pl-1 transition-colors focus-within:ring-1 focus-within:ring-ring"
+    >
+      <Popover open={legendOpen} onOpenChange={setLegendOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Search syntax help">
+            <Icon
+              icon={SearchIcon}
+              size="sm"
+              color="foregroundMuted"
+              className="group-focus-within/search:hidden group-data-active/search:hidden"
+            />
+            <Icon
+              icon={CircleHelpIcon}
+              size="sm"
+              color="primary"
+              className="hidden group-focus-within/search:block group-data-active/search:block"
+            />
+          </Button>
+        </PopoverTrigger>
+        <SearchSyntaxLegendContent
+          align="start"
+          onCloseAutoFocus={(event) => {
+            // Radix's default returns focus to the trigger button, which then
+            // shows :focus-visible ring after Esc.
+            event.preventDefault()
+          }}
+        />
+      </Popover>
+      <div className="flex h-full flex-1 items-center gap-1 overflow-x-auto pr-3 pl-1 text-sm">
         {segments.map((segment, index) => {
           const isSemantic = segment.kind === "semantic"
           const label = segment.kind === "literal" ? "Literal" : "Phrase"
-          const tooltip =
-            segment.kind === "literal"
-              ? "Exact text: results must contain this text exactly as typed, including capital letters and punctuation."
-              : "Words in order: results must contain these words next to each other, in this order. Capitalization and punctuation do not matter."
           const placeholder =
             isSemantic && index === 0 ? 'Search by meaning. Use "literal text" or `ordered token phrase`.' : ""
-          const segmentInput = (
+          return (
             <span
               key={segment.id}
               className={cn(
@@ -535,14 +578,6 @@ function SearchInput({
                 </button>
               ) : null}
             </span>
-          )
-
-          if (isSemantic) return segmentInput
-
-          return (
-            <Tooltip key={segment.id} asChild side="bottom" align="start" delayDuration={400} trigger={segmentInput}>
-              {tooltip}
-            </Tooltip>
           )
         })}
         <button

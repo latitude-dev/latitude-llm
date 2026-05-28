@@ -51,7 +51,7 @@ export function deriveSessionStatus(endTime: string | Date, now: number = Date.n
  * synthetic clause would otherwise narrow the list to *only* orphans, which is
  * not what "Including orphan fragments" means.
  */
-function withSessionDefaults(filters: FilterSet | undefined): FilterSet {
+export function withSessionDefaults(filters: FilterSet | undefined): FilterSet {
   if (filters?.hasLlmActivity !== undefined) {
     const explicit = filters.hasLlmActivity
     const optedOut = explicit.some((c) => c.op === "eq" && (c.value === false || c.value === "false"))

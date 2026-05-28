@@ -7,6 +7,7 @@ import { DatabaseIcon, DownloadIcon, FilterIcon, MessagesSquareIcon, TextIcon } 
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
+import { withSessionDefaults } from "../../../../domains/sessions/sessions.collection.ts"
 import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
@@ -80,6 +81,17 @@ function ProjectPage() {
   const traceIdsRef = useRef<string[]>([])
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
+  // The Sessions tab's hooks (useSessionsInfiniteScroll / useSessionsCount)
+  // apply `withSessionDefaults` internally to hide orphan-fragment sessions
+  // by default. The trace-side surfaces here (count, export, add-to-dataset)
+  // need the same default applied on that tab so a Select-All export doesn't
+  // sweep traces the user never saw. On the Traces tab `hasLlmActivity` is
+  // a session-only synthetic and isn't part of the trace filter registry,
+  // so we keep the raw filter set there.
+  const effectiveFilters = useMemo(
+    () => (activeTab === "sessions" ? withSessionDefaults(filters) : filters),
+    [filters, activeTab],
+  )
   const traceColumnSettings = useTableColumnSettings<TraceColumnId>({
     storageKey: "projects.traces.columns.v1",
     columns: TRACE_COLUMN_OPTIONS,
@@ -104,7 +116,7 @@ function ProjectPage() {
 
   const { totalCount: totalTraceCount, isLoading: isTracesCountLoading } = useTracesCount({
     projectId: currentProject.id,
-    ...(hasActiveFilters ? { filters } : {}),
+    filters: effectiveFilters,
   })
 
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
@@ -181,7 +193,7 @@ function ProjectPage() {
         data: {
           projectId: currentProject.id,
           selection: bulkSelection,
-          ...(hasActiveFilters ? { filters } : {}),
+          filters: effectiveFilters,
         },
       })
       toast({
@@ -198,7 +210,7 @@ function ProjectPage() {
     } finally {
       setExporting(false)
     }
-  }, [bulkSelection, clearSelections, currentProject.id, filters, hasActiveFilters])
+  }, [bulkSelection, clearSelections, currentProject.id, effectiveFilters])
 
   // Compute next/prev trace callbacks from the loaded list
   const navigateTrace = useCallback(
@@ -450,7 +462,7 @@ function ProjectPage() {
             selection={bulkSelection}
             selectedCount={selectedCount}
             onSuccess={clearSelections}
-            {...(hasActiveFilters ? { filters } : {})}
+            filters={effectiveFilters}
           />
         </>
       )}

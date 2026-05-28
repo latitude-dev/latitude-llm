@@ -1,4 +1,4 @@
-import { Button, DetailDrawer, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Button, DetailDrawer, Icon, Skeleton, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronLeftIcon } from "lucide-react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
@@ -48,14 +48,33 @@ export function SessionDetailDrawer({
   })
   const { traces } = useSessionTraces({ projectId, sessionId })
 
+  // The session search returns hits from the trace search index, which can
+  // reference traces that have no row in the `sessions` table. Two cases
+  // (see `search-by-project.ts:100-127`):
+  //   1. **Pre-migration orphan**: trace written before migration 00016
+  //      (#3224), when `sessions_mv` filtered `WHERE session_id != ''`. The
+  //      search index entry survives until its TTL (90 days lexical / 30
+  //      days embedding) but no `sessions` row was ever materialized.
+  //   2. **MV replication lag**: the trace landed but `sessions_mv` hasn't
+  //      propagated yet — a structural race between the two write paths.
+  //
+  // In both cases the search list synthesizes a stand-in Session via
+  // `toOrphanSession(row)` where `sessionId = toString(trace_id)`. So when
+  // `findBySessionId` returns null here, we render the trace slot using the
+  // same id as a traceId — the orphan's underlying trace exists. Falls back
+  // to TraceDetailBody's own not-found UI if neither resolves.
+  const isSessionMissing = !sessionLoading && !session
+
   // Defensive precedence for URLs that arrive with both params already set
   // (deep links, browser history, hand-edited URLs). Our own code never sets
   // both at the same time — opening a trace from inside the issue slot uses
   // `IssueDetailBody`'s local Sheet state, not the `traceId` param. Trace
   // wins so a stale `issueId` doesn't shadow the requested trace; "View
   // session" clears both so we can't land in an ambiguous state after close.
+  // When the session itself is missing we suppress the back affordance —
+  // there is nothing to go back to.
   const detailKind: DetailSlotKind | null = traceId.length > 0 ? "trace" : issueId.length > 0 ? "issue" : null
-  const showDetail = detailKind !== null
+  const showDetail = detailKind !== null && !isSessionMissing
 
   const openTrace = (nextTraceId: string, options: OpenTraceOptions = {}) => {
     const { focusAnnotationId, targetTab } = options
@@ -128,11 +147,9 @@ export function SessionDetailDrawer({
           <Skeleton className="h-4 w-64" />
           <Skeleton className="h-32 w-full" />
         </div>
-      ) : !session ? (
-        <div className="flex flex-1 items-center justify-center px-6 py-10">
-          <Text.H5 color="foregroundMuted">Session not found.</Text.H5>
-        </div>
-      ) : (
+      ) : isSessionMissing ? (
+        <TraceSlot projectId={projectId} traceId={traceId || sessionId} {...(searchQuery ? { searchQuery } : {})} />
+      ) : !session ? null : (
         <SlotTransition
           detailKind={detailKind}
           sessionSlot={

@@ -1,4 +1,5 @@
 import {
+  isPercentileSessionFilterField,
   isPercentileTraceFilterField,
   type PercentileSessionFilterField,
   type PercentileTraceFilterField,
@@ -38,11 +39,16 @@ export const NUMBER_RANGE_FIELDS: readonly NumberRangeFieldDefinition[] = TRACE_
   (f) => f.type === "numberRange",
 ).map((f) => {
   const supportsPercentile = "percentile" in f ? f.percentile === true : false
+  // Today `PERCENTILE_TRACE_FILTER_FIELDS === PERCENTILE_SESSION_FILTER_FIELDS`,
+  // so this OR is redundant; checking both keeps the percentile UI wired up
+  // if a session-only percentile field is added later (otherwise it would
+  // silently fall to `{}` and `PercentileFilter` would render nothing).
+  const isPercentileField = isPercentileTraceFilterField(f.field) || isPercentileSessionFilterField(f.field)
   return {
     field: f.field,
     label: f.label,
     tooltip: "tooltip" in f ? f.tooltip : undefined,
-    ...(supportsPercentile ? { percentile: isPercentileTraceFilterField(f.field) ? { field: f.field } : {} } : {}),
+    ...(supportsPercentile ? { percentile: isPercentileField ? { field: f.field } : {} } : {}),
   }
 })
 
