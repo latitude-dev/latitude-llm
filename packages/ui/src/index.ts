@@ -231,6 +231,7 @@ export {
   type SelectOptionGroup,
   type SelectProps,
 } from "./components/select/index.tsx"
+export { Sheet } from "./components/sheet/sheet.tsx"
 export { Skeleton } from "./components/skeleton/skeleton.tsx"
 export { Slider, type SliderProps } from "./components/slider/index.tsx"
 export {

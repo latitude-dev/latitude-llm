@@ -35,18 +35,18 @@ export function SessionSlot({
   activeTab,
   onActiveTabChange,
   onOpenTrace,
+  onOpenIssue,
   onOpenInConversation,
   searchQuery,
 }: {
   readonly projectId: string
   readonly session: SessionDetailRecord
-  /** Session's traces, ordered by start time — used for the "Trace N" badges. */
   readonly traces: readonly TraceRecord[]
   readonly latestTraceId: string
   readonly activeTab: SessionTabId
   readonly onActiveTabChange: (tab: SessionTabId) => void
   readonly onOpenTrace: (traceId: string, options?: OpenTraceOptions) => void
-  /** Inline annotation on the latest trace → switch to Conversation, focused on it. */
+  readonly onOpenIssue: (issueId: string) => void
   readonly onOpenInConversation: (annotationId: string) => void
   readonly searchQuery?: string
 }) {
@@ -182,12 +182,7 @@ export function SessionSlot({
         )}
         {visitedTabs.has("issues") && (
           <div className={activeTab === "issues" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-            <IssuesTab
-              projectId={projectId}
-              traceIds={traceIds}
-              traceNumberById={traceNumberById}
-              onOpenTrace={onOpenTrace}
-            />
+            <IssuesTab projectId={projectId} traceIds={traceIds} onOpenIssue={onOpenIssue} />
           </div>
         )}
       </div>

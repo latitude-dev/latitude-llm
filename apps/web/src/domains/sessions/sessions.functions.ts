@@ -261,7 +261,7 @@ export const getSessionDetail = createServerFn({ method: "GET" })
  * `traceIds` (not `session_id`) so orphan sessions still surface their issues.
  * Ordered by last-seen descending (the CH query's order).
  */
-interface SessionIssueRecord {
+export interface SessionIssueRecord {
   readonly id: string
   readonly name: string
   readonly description: string

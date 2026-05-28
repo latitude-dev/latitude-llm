@@ -2,12 +2,12 @@ import {
   Button,
   CloseTrigger,
   CopyableText,
-  cn,
   DetailDrawer,
   DetailSection,
   Icon,
   Label,
   Modal,
+  Sheet,
   Skeleton,
   Switch,
   TagList,
@@ -28,7 +28,7 @@ import {
   TextAlignStartIcon,
   XIcon,
 } from "lucide-react"
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
@@ -115,12 +115,6 @@ type LifecycleConfirmationAction = "ignore" | "unignore" | "unresolve"
 
 const ISSUE_TRACE_COLUMN_IDS = ["startTime", "name", "tags", "duration"] as const satisfies readonly TraceColumnId[]
 
-// Must match the trace overlay panel's `duration-300` slide animation. We tear the overlay down
-// with a timer after this delay rather than listening for `transitionend`, because that event
-// never fires when motion is reduced or the transition is interrupted, which would leave the
-// overlay logically open and the trace row stuck in its active state.
-const TRACE_PANEL_TRANSITION_MS = 300
-
 function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
   switch (action) {
     case "ignore":
@@ -151,22 +145,27 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
   }
 }
 
-export function IssueDetailDrawer({
+/**
+ * Issue detail surface minus the `DetailDrawer` chrome (close, next/prev nav).
+ *
+ * Owns which trace is showing in the side `Sheet` so the standalone drawer
+ * and the session-panel issue slot share the same "click trace → sliding
+ * panel on top" behavior — Escape closes the sheet back to the issue, never
+ * to whatever the parent panel would do next (the `Sheet` captures Escape
+ * with `stopImmediatePropagation`).
+ *
+ * `onOverlayActiveChange` lets the parent observe sheet open/close — used by
+ * the standalone drawer to disable its next/previous-issue arrows while a
+ * trace is showing.
+ */
+export function IssueDetailBody({
   projectId,
   issueId,
-  onClose,
-  onNextIssue,
-  onPrevIssue,
-  canNavigateNext,
-  canNavigatePrev,
+  onOverlayActiveChange,
 }: {
   readonly projectId: string
   readonly issueId: string
-  readonly onClose: () => void
-  readonly onNextIssue?: () => void
-  readonly onPrevIssue?: () => void
-  readonly canNavigateNext: boolean
-  readonly canNavigatePrev: boolean
+  readonly onOverlayActiveChange?: (active: boolean) => void
 }) {
   const { toast } = useToast()
   const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
@@ -184,10 +183,8 @@ export function IssueDetailDrawer({
   const [keepMonitoring, setKeepMonitoring] = useState(true)
   const [isLifecycleLoading, setIsLifecycleLoading] = useState(false)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
-  const [traceOverlayTraceId, setTraceOverlayTraceId] = useState<string | null>(null)
-  const [tracePanelEntered, setTracePanelEntered] = useState(false)
-  const traceOverlayCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const previousTraceOverlayIdRef = useRef<string | null>(null)
+  const [traceSheetTraceId, setTraceSheetTraceId] = useState<string | null>(null)
+  const [traceSheetOpen, setTraceSheetOpen] = useState(false)
 
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
   const totalTraceCount = useIssueTracesCount({ projectId, issueId, enabled: issue !== null })
@@ -227,74 +224,33 @@ export function IssueDetailDrawer({
     issue?.evaluations.some((evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null) ?? false
   const lifecycleConfirmation = lifecycleConfirmAction ? getLifecycleConfirmation(lifecycleConfirmAction) : null
 
-  const clearTraceOverlayCloseTimer = useCallback(() => {
-    if (traceOverlayCloseTimerRef.current !== null) {
-      clearTimeout(traceOverlayCloseTimerRef.current)
-      traceOverlayCloseTimerRef.current = null
-    }
-  }, [])
-
-  const finishCloseTraceOverlay = useCallback(() => {
-    clearTraceOverlayCloseTimer()
-    setTraceOverlayTraceId(null)
-  }, [clearTraceOverlayCloseTimer])
-
-  const openTraceOverlay = useCallback(
-    (traceId: string) => {
-      clearTraceOverlayCloseTimer()
-      setTraceOverlayTraceId(traceId)
-    },
-    [clearTraceOverlayCloseTimer],
-  )
-
-  const requestCloseTraceOverlay = useCallback(() => {
-    if (traceOverlayTraceId === null) return
-    setTracePanelEntered(false)
-    clearTraceOverlayCloseTimer()
-    traceOverlayCloseTimerRef.current = setTimeout(finishCloseTraceOverlay, TRACE_PANEL_TRANSITION_MS)
-  }, [traceOverlayTraceId, clearTraceOverlayCloseTimer, finishCloseTraceOverlay])
-
-  useEffect(() => clearTraceOverlayCloseTimer, [clearTraceOverlayCloseTimer])
-
-  useEffect(() => {
-    if (traceOverlayTraceId === null) {
-      setTracePanelEntered(false)
-      previousTraceOverlayIdRef.current = null
-      return
-    }
-    const wasAlreadyOpen = previousTraceOverlayIdRef.current !== null
-    previousTraceOverlayIdRef.current = traceOverlayTraceId
-    if (wasAlreadyOpen) {
-      setTracePanelEntered(true)
-      return
-    }
-    setTracePanelEntered(false)
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setTracePanelEntered(true))
-    })
-    return () => cancelAnimationFrame(id)
-  }, [traceOverlayTraceId])
-
-  const traceOverlayIndex = traceOverlayTraceId ? traceIds.indexOf(traceOverlayTraceId) : -1
-  const canNavigateNextTraceInOverlay =
-    traceOverlayTraceId !== null &&
-    traceIds.length > 0 &&
-    (traceOverlayIndex < 0 || traceOverlayIndex < traceIds.length - 1)
-  const canNavigatePrevTraceInOverlay =
-    traceOverlayTraceId !== null && traceIds.length > 0 && (traceOverlayIndex < 0 || traceOverlayIndex > 0)
-
-  const onNextTraceInOverlay = () => {
-    if (!traceOverlayTraceId) return
-    const idx = traceIds.indexOf(traceOverlayTraceId)
-    const next = idx < 0 ? traceIds[0] : traceIds[idx + 1]
-    if (next) setTraceOverlayTraceId(next)
+  const openTraceSheet = (traceId: string) => {
+    setTraceSheetTraceId(traceId)
+    setTraceSheetOpen(true)
   }
 
-  const onPrevTraceInOverlay = () => {
-    if (!traceOverlayTraceId) return
-    const idx = traceIds.indexOf(traceOverlayTraceId)
+  useEffect(() => {
+    onOverlayActiveChange?.(traceSheetOpen)
+  }, [traceSheetOpen, onOverlayActiveChange])
+
+  const traceSheetIndex = traceSheetTraceId ? traceIds.indexOf(traceSheetTraceId) : -1
+  const canNavigateNextTraceInSheet =
+    traceSheetTraceId !== null && traceIds.length > 0 && (traceSheetIndex < 0 || traceSheetIndex < traceIds.length - 1)
+  const canNavigatePrevTraceInSheet =
+    traceSheetTraceId !== null && traceIds.length > 0 && (traceSheetIndex < 0 || traceSheetIndex > 0)
+
+  const onNextTraceInSheet = () => {
+    if (!traceSheetTraceId) return
+    const idx = traceIds.indexOf(traceSheetTraceId)
+    const next = idx < 0 ? traceIds[0] : traceIds[idx + 1]
+    if (next) setTraceSheetTraceId(next)
+  }
+
+  const onPrevTraceInSheet = () => {
+    if (!traceSheetTraceId) return
+    const idx = traceIds.indexOf(traceSheetTraceId)
     const prev = idx <= 0 ? undefined : traceIds[idx - 1]
-    if (prev) setTraceOverlayTraceId(prev)
+    if (prev) setTraceSheetTraceId(prev)
   }
 
   const getTraceRowAriaLabel = (input: { readonly traceId: string; readonly rootSpanName: string }) => {
@@ -336,125 +292,64 @@ export function IssueDetailDrawer({
     }
   }
 
-  useHotkeys([
-    {
-      hotkey: "Alt+ArrowDown",
-      callback: () => onNextIssue?.(),
-      options: { enabled: canNavigateNext && !!onNextIssue && traceOverlayTraceId === null },
-    },
-    {
-      hotkey: "Alt+ArrowUp",
-      callback: () => onPrevIssue?.(),
-      options: { enabled: canNavigatePrev && !!onPrevIssue && traceOverlayTraceId === null },
-    },
-    {
-      hotkey: "Escape",
-      callback: requestCloseTraceOverlay,
-      options: { enabled: traceOverlayTraceId !== null, ignoreInputs: true },
-    },
-  ])
-
   return (
     <>
-      <DetailDrawer
-        storeKey="issue-detail-drawer-width"
-        onClose={onClose}
-        closeLabel={
-          <>
-            Close <HotkeyBadge hotkey="Escape" />
-          </>
-        }
-        actions={
-          <>
-            <Tooltip
-              asChild
-              side="bottom"
-              trigger={
-                <Button
-                  variant="ghost"
-                  className="w-8 h-8 p-0"
-                  disabled={!canNavigateNext}
-                  onClick={onNextIssue}
-                  type="button"
-                  aria-label="Next issue"
-                >
-                  <ArrowDownIcon className="w-4 h-4 text-muted-foreground" />
-                </Button>
-              }
-            >
-              Next issue <HotkeyBadge hotkey="Alt+ArrowDown" /> <HotkeyBadge hotkey="J" />
-            </Tooltip>
-            <Tooltip
-              asChild
-              side="bottom"
-              trigger={
-                <Button
-                  variant="ghost"
-                  className="w-8 h-8 p-0"
-                  disabled={!canNavigatePrev}
-                  onClick={onPrevIssue}
-                  type="button"
-                  aria-label="Previous issue"
-                >
-                  <ArrowUpIcon className="w-4 h-4 text-muted-foreground" />
-                </Button>
-              }
-            >
-              Previous issue <HotkeyBadge hotkey="Alt+ArrowUp" /> <HotkeyBadge hotkey="K" />
-            </Tooltip>
-          </>
-        }
-        rightActions={
-          <>
-            <Button
-              variant="ghost"
-              className="text-foreground group-hover:text-secondary-foreground/80"
-              disabled={issue === null || issue === undefined || isLifecycleLoading}
-              onClick={() => setLifecycleConfirmAction(issue?.ignoredAt ? "unignore" : "ignore")}
-            >
-              <Icon icon={issue?.ignoredAt ? PlayIcon : PauseIcon} size="sm" />
-              {issue?.ignoredAt ? "Unignore" : "Ignore"}
-            </Button>
-            <Button
-              variant="outline"
-              disabled={issue === null || issue === undefined || isLifecycleLoading}
-              onClick={() => {
-                if (issue?.resolvedAt) {
-                  setLifecycleConfirmAction("unresolve")
-                  return
-                }
-
-                setKeepMonitoring(issue?.keepMonitoringDefault ?? true)
-                setResolveModalOpen(true)
-              }}
-            >
-              <Icon icon={issue?.resolvedAt ? XIcon : CheckIcon} size="sm" />
-              {issue?.resolvedAt ? "Unresolve" : "Resolve"}
-            </Button>
-          </>
-        }
-        header={
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-1">
-              {isLoading ? <Skeleton className="h-7 w-56" /> : <Text.H4M>{issue?.name ?? "Issue not found"}</Text.H4M>}
-              {isLoading ? (
-                <Skeleton className="h-5 w-full" />
-              ) : (
-                <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex shrink-0 flex-col gap-3 border-b px-6 py-4">
+          <div className="flex flex-row items-start justify-between gap-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="flex flex-col gap-1">
+                {isLoading ? (
+                  <Skeleton className="h-7 w-56" />
+                ) : (
+                  <Text.H4M>{issue?.name ?? "Issue not found"}</Text.H4M>
+                )}
+                {isLoading ? (
+                  <Skeleton className="h-5 w-full" />
+                ) : (
+                  <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
+                )}
+              </div>
+              {!isLoading && issue && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-[33%] max-w-max flex-1">
+                    <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
+                  </div>
+                  {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
+                </div>
               )}
             </div>
-            {!isLoading && issue && (
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex min-w-[33%] max-w-max flex-1">
-                  <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
-                </div>
-                {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
-              </div>
-            )}
+            <div className="flex shrink-0 flex-row items-center gap-1">
+              <Button
+                variant="ghost"
+                className="text-foreground group-hover:text-secondary-foreground/80"
+                disabled={issue === null || issue === undefined || isLifecycleLoading}
+                onClick={() => setLifecycleConfirmAction(issue?.ignoredAt ? "unignore" : "ignore")}
+              >
+                <Icon icon={issue?.ignoredAt ? PlayIcon : PauseIcon} size="sm" />
+                {issue?.ignoredAt ? "Unignore" : "Ignore"}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={issue === null || issue === undefined || isLifecycleLoading}
+                onClick={() => {
+                  if (issue?.resolvedAt) {
+                    setLifecycleConfirmAction("unresolve")
+                    return
+                  }
+
+                  setKeepMonitoring(issue?.keepMonitoringDefault ?? true)
+                  setResolveModalOpen(true)
+                }}
+              >
+                <Icon icon={issue?.resolvedAt ? XIcon : CheckIcon} size="sm" />
+                {issue?.resolvedAt ? "Unresolve" : "Resolve"}
+              </Button>
+            </div>
           </div>
-        }
-      >
-        <div className="flex flex-col flex-1 overflow-y-auto p-6 gap-6">
+        </div>
+
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
               {isLoading ? (
@@ -535,7 +430,6 @@ export function IssueDetailDrawer({
               issueId={issueId}
               issueSource={issue?.source ?? "annotation"}
               evaluations={issue?.evaluations ?? []}
-              flaggerSlugs={issue?.flaggerSlugs ?? []}
               canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
               isIssueLoading={isLoading}
             />
@@ -562,10 +456,10 @@ export function IssueDetailDrawer({
               isLoading={tracesLoading}
               visibleColumnIds={ISSUE_TRACE_COLUMN_IDS}
               defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
-              onTraceClick={(trace) => openTraceOverlay(trace.traceId)}
+              onTraceClick={(trace) => openTraceSheet(trace.traceId)}
               getTraceRowAriaLabel={getTraceRowAriaLabel}
               rowInteractionRole="button"
-              activeTraceId={traceOverlayTraceId ?? undefined}
+              activeTraceId={traceSheetTraceId ?? undefined}
               selection={traceSelection}
               infiniteScroll={infiniteScroll}
               blankSlate="This issue has not been seen on any traces yet."
@@ -574,121 +468,197 @@ export function IssueDetailDrawer({
             />
           </DetailSection>
         </div>
-      </DetailDrawer>
 
-      {bulkSelection && (
-        <AddToDatasetModal
-          open={addToDatasetOpen}
-          onOpenChange={setAddToDatasetOpen}
-          projectId={projectId}
-          issueId={issueId}
-          selection={bulkSelection}
-          selectedCount={selectedCount}
-          onSuccess={clearSelections}
-        />
-      )}
-
-      <Modal.Root open={resolveModalOpen} onOpenChange={setResolveModalOpen}>
-        <Modal.Content dismissible>
-          <Modal.Header
-            title="Resolve issue"
-            description="Mark this issue as resolved. If this issue starts occurring again we will alert you and promote it as regressed"
+        {bulkSelection && (
+          <AddToDatasetModal
+            open={addToDatasetOpen}
+            onOpenChange={setAddToDatasetOpen}
+            projectId={projectId}
+            issueId={issueId}
+            selection={bulkSelection}
+            selectedCount={selectedCount}
+            onSuccess={clearSelections}
           />
-          {hasActiveLinkedEvaluations ? (
-            <Modal.Body>
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-row items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor="keep-monitoring-on-resolve">Keep monitoring this issue</Label>
-                    <Text.H6 color="foregroundMuted">
-                      Evaluations monitoring this issue will stay active to detect further regressions
-                    </Text.H6>
-                  </div>
-                  <Switch
-                    id="keep-monitoring-on-resolve"
-                    checked={keepMonitoring}
-                    onCheckedChange={setKeepMonitoring}
-                    disabled={isLifecycleLoading}
-                    aria-label="Keep monitoring this issue"
-                  />
-                </div>
-              </div>
-            </Modal.Body>
-          ) : null}
-          <Modal.Footer>
-            <Button variant="outline" onClick={() => setResolveModalOpen(false)} disabled={isLifecycleLoading}>
-              Cancel
-            </Button>
-            <Button onClick={() => void runLifecycleCommand("resolve", keepMonitoring)} disabled={isLifecycleLoading}>
-              <Icon icon={CheckIcon} size="sm" />
-              Resolve
-            </Button>
-          </Modal.Footer>
-        </Modal.Content>
-      </Modal.Root>
+        )}
 
-      <Modal.Root
-        open={lifecycleConfirmAction !== null}
-        onOpenChange={(open) => (!open ? setLifecycleConfirmAction(null) : undefined)}
-      >
-        <Modal.Content dismissible>
-          <Modal.Header
-            title={lifecycleConfirmation?.title ?? "Confirm issue action"}
-            description={lifecycleConfirmation?.description ?? "Are you sure you want to continue?"}
-          />
-          <Modal.Footer>
-            <CloseTrigger />
-            <Button
-              {...(lifecycleConfirmation?.confirmVariant ? { variant: lifecycleConfirmation.confirmVariant } : {})}
-              onClick={() => (lifecycleConfirmAction ? void runLifecycleCommand(lifecycleConfirmAction) : undefined)}
-              disabled={lifecycleConfirmAction === null || isLifecycleLoading}
-            >
-              <Icon icon={lifecycleConfirmation?.confirmIcon ?? XIcon} size="sm" />
-              {lifecycleConfirmation?.confirmLabel ?? "Confirm"}
-            </Button>
-          </Modal.Footer>
-        </Modal.Content>
-      </Modal.Root>
-
-      {traceOverlayTraceId !== null ? (
-        <>
-          <button
-            type="button"
-            aria-label="Close trace panel"
-            className={cn(
-              "fixed inset-0 z-[45] bg-foreground/10 transition-opacity duration-200",
-              tracePanelEntered ? "opacity-100" : "pointer-events-none opacity-0",
-            )}
-            onClick={requestCloseTraceOverlay}
-          />
-          <div
-            className={cn(
-              "fixed inset-y-0 right-0 z-[50] flex max-h-dvh shadow-2xl will-change-transform transition-transform duration-300 ease-out",
-              tracePanelEntered ? "translate-x-0" : "translate-x-full",
-            )}
-          >
-            <TraceDetailDrawer
-              key={traceOverlayTraceId}
-              projectId={projectId}
-              traceId={traceOverlayTraceId}
-              trace={traces.find((t) => t.traceId === traceOverlayTraceId)}
-              onClose={requestCloseTraceOverlay}
-              onNextTrace={onNextTraceInOverlay}
-              onPrevTrace={onPrevTraceInOverlay}
-              canNavigateNext={canNavigateNextTraceInOverlay}
-              canNavigatePrev={canNavigatePrevTraceInOverlay}
-              urlSyncedTabs={false}
-              initialTab="conversation"
-              drawerStoreKey="issue-trace-detail-drawer-width"
-              closeLabel={
-                <>
-                  Back to issue <HotkeyBadge hotkey="Escape" />
-                </>
-              }
+        <Modal.Root open={resolveModalOpen} onOpenChange={setResolveModalOpen}>
+          <Modal.Content dismissible>
+            <Modal.Header
+              title="Resolve issue"
+              description="Mark this issue as resolved. If this issue starts occurring again we will alert you and promote it as regressed"
             />
-          </div>
-        </>
-      ) : null}
+            {hasActiveLinkedEvaluations ? (
+              <Modal.Body>
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-row items-center justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor="keep-monitoring-on-resolve">Keep monitoring this issue</Label>
+                      <Text.H6 color="foregroundMuted">
+                        Evaluations monitoring this issue will stay active to detect further regressions
+                      </Text.H6>
+                    </div>
+                    <Switch
+                      id="keep-monitoring-on-resolve"
+                      checked={keepMonitoring}
+                      onCheckedChange={setKeepMonitoring}
+                      disabled={isLifecycleLoading}
+                      aria-label="Keep monitoring this issue"
+                    />
+                  </div>
+                </div>
+              </Modal.Body>
+            ) : null}
+            <Modal.Footer>
+              <Button variant="outline" onClick={() => setResolveModalOpen(false)} disabled={isLifecycleLoading}>
+                Cancel
+              </Button>
+              <Button onClick={() => void runLifecycleCommand("resolve", keepMonitoring)} disabled={isLifecycleLoading}>
+                <Icon icon={CheckIcon} size="sm" />
+                Resolve
+              </Button>
+            </Modal.Footer>
+          </Modal.Content>
+        </Modal.Root>
+
+        <Modal.Root
+          open={lifecycleConfirmAction !== null}
+          onOpenChange={(open) => (!open ? setLifecycleConfirmAction(null) : undefined)}
+        >
+          <Modal.Content dismissible>
+            <Modal.Header
+              title={lifecycleConfirmation?.title ?? "Confirm issue action"}
+              description={lifecycleConfirmation?.description ?? "Are you sure you want to continue?"}
+            />
+            <Modal.Footer>
+              <CloseTrigger />
+              <Button
+                {...(lifecycleConfirmation?.confirmVariant ? { variant: lifecycleConfirmation.confirmVariant } : {})}
+                onClick={() => (lifecycleConfirmAction ? void runLifecycleCommand(lifecycleConfirmAction) : undefined)}
+                disabled={lifecycleConfirmAction === null || isLifecycleLoading}
+              >
+                <Icon icon={lifecycleConfirmation?.confirmIcon ?? XIcon} size="sm" />
+                {lifecycleConfirmation?.confirmLabel ?? "Confirm"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Content>
+        </Modal.Root>
+      </div>
+
+      <Sheet
+        open={traceSheetOpen}
+        onClose={() => setTraceSheetOpen(false)}
+        onClosed={() => setTraceSheetTraceId(null)}
+        closeAriaLabel="Close trace panel"
+      >
+        {traceSheetTraceId ? (
+          <TraceDetailDrawer
+            key={traceSheetTraceId}
+            projectId={projectId}
+            traceId={traceSheetTraceId}
+            trace={traces.find((t) => t.traceId === traceSheetTraceId)}
+            onClose={() => setTraceSheetOpen(false)}
+            onNextTrace={onNextTraceInSheet}
+            onPrevTrace={onPrevTraceInSheet}
+            canNavigateNext={canNavigateNextTraceInSheet}
+            canNavigatePrev={canNavigatePrevTraceInSheet}
+            urlSyncedTabs={false}
+            initialTab="conversation"
+            drawerStoreKey="issue-trace-detail-drawer-width"
+            closeLabel={
+              <>
+                Back to issue <HotkeyBadge hotkey="Escape" />
+              </>
+            }
+          />
+        ) : null}
+      </Sheet>
     </>
+  )
+}
+
+export function IssueDetailDrawer({
+  projectId,
+  issueId,
+  onClose,
+  onNextIssue,
+  onPrevIssue,
+  canNavigateNext,
+  canNavigatePrev,
+}: {
+  readonly projectId: string
+  readonly issueId: string
+  readonly onClose: () => void
+  readonly onNextIssue?: () => void
+  readonly onPrevIssue?: () => void
+  readonly canNavigateNext: boolean
+  readonly canNavigatePrev: boolean
+}) {
+  const [overlayActive, setOverlayActive] = useState(false)
+
+  useHotkeys([
+    {
+      hotkey: "Alt+ArrowDown",
+      callback: () => onNextIssue?.(),
+      options: { enabled: canNavigateNext && !!onNextIssue && !overlayActive },
+    },
+    {
+      hotkey: "Alt+ArrowUp",
+      callback: () => onPrevIssue?.(),
+      options: { enabled: canNavigatePrev && !!onPrevIssue && !overlayActive },
+    },
+  ])
+
+  return (
+    <DetailDrawer
+      storeKey="issue-detail-drawer-width"
+      onClose={onClose}
+      closeLabel={
+        <>
+          Close <HotkeyBadge hotkey="Escape" />
+        </>
+      }
+      actions={
+        <>
+          <Tooltip
+            asChild
+            side="bottom"
+            trigger={
+              <Button
+                variant="ghost"
+                className="w-8 h-8 p-0"
+                disabled={!canNavigateNext}
+                onClick={onNextIssue}
+                type="button"
+                aria-label="Next issue"
+              >
+                <ArrowDownIcon className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            }
+          >
+            Next issue <HotkeyBadge hotkey="Alt+ArrowDown" /> <HotkeyBadge hotkey="J" />
+          </Tooltip>
+          <Tooltip
+            asChild
+            side="bottom"
+            trigger={
+              <Button
+                variant="ghost"
+                className="w-8 h-8 p-0"
+                disabled={!canNavigatePrev}
+                onClick={onPrevIssue}
+                type="button"
+                aria-label="Previous issue"
+              >
+                <ArrowUpIcon className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            }
+          >
+            Previous issue <HotkeyBadge hotkey="Alt+ArrowUp" /> <HotkeyBadge hotkey="K" />
+          </Tooltip>
+        </>
+      }
+    >
+      <IssueDetailBody projectId={projectId} issueId={issueId} onOverlayActiveChange={setOverlayActive} />
+    </DetailDrawer>
   )
 }
