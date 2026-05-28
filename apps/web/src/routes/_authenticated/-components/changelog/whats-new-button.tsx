@@ -6,18 +6,37 @@ import { useChangelogEntries } from "../../../../domains/changelog/changelog.col
 import type { ChangelogEntryRecord } from "../../../../domains/changelog/changelog.functions.ts"
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" })
+const RECENT_ENTRY_WINDOW_MS = 48 * 60 * 60 * 1000
 
-function ChangelogRow({ entry }: { entry: ChangelogEntryRecord }) {
-  const [expanded, setExpanded] = useState(false)
+const changelogEntryUrl = (entry: ChangelogEntryRecord) => `${FULL_CHANGELOG_URL}/${entry.slug}`
 
+const isRecentlyPublished = (entry: ChangelogEntryRecord, now: number) => {
+  const publishedAt = new Date(entry.publishedAt).getTime()
+  const age = now - publishedAt
+  return !Number.isNaN(publishedAt) && age >= 0 && age <= RECENT_ENTRY_WINDOW_MS
+}
+
+function ChangelogRow({
+  entry,
+  expanded,
+  onActivate,
+  onDeactivate,
+}: {
+  entry: ChangelogEntryRecord
+  expanded: boolean
+  onActivate: () => void
+  onDeactivate: () => void
+}) {
   return (
     <li>
-      <button
-        type="button"
-        onMouseEnter={() => setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
-        onFocus={() => setExpanded(true)}
-        onBlur={() => setExpanded(false)}
+      <a
+        href={changelogEntryUrl(entry)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onMouseEnter={onActivate}
+        onMouseLeave={onDeactivate}
+        onFocus={onActivate}
+        onBlur={onDeactivate}
         className="flex w-full flex-col rounded-md px-2 py-2 text-left transition-colors hover:bg-muted"
       >
         <div className="flex w-full items-center gap-2">
@@ -30,10 +49,10 @@ function ChangelogRow({ entry }: { entry: ChangelogEntryRecord }) {
         </div>
         {entry.summary ? (
           <div
-            className={cn(
-              "grid transition-[grid-template-rows] duration-200 ease-out",
-              expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-            )}
+            className={cn("grid transition-[grid-template-rows] duration-200 ease-out", {
+              "grid-rows-[1fr]": expanded,
+              "grid-rows-[0fr]": !expanded,
+            })}
           >
             <div className="overflow-hidden">
               <Text.H6 color="foregroundMuted" className="whitespace-normal pt-1">
@@ -42,19 +61,26 @@ function ChangelogRow({ entry }: { entry: ChangelogEntryRecord }) {
             </div>
           </div>
         ) : null}
-      </button>
+      </a>
     </li>
   )
 }
 
 function WhatsNewContent() {
   const { entries } = useChangelogEntries()
+  const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
 
   return (
     <div className="flex flex-col">
-      <ul className="flex max-h-80 flex-col gap-0.5 overflow-y-auto p-1">
+      <ul className="flex max-h-80 flex-col gap-0.5 overflow-y-auto p-1" onMouseLeave={() => setActiveEntryId(null)}>
         {entries.map((entry) => (
-          <ChangelogRow key={entry.id} entry={entry} />
+          <ChangelogRow
+            key={entry.id}
+            entry={entry}
+            expanded={activeEntryId === entry.id}
+            onActivate={() => setActiveEntryId(entry.id)}
+            onDeactivate={() => setActiveEntryId((current) => (current === entry.id ? null : current))}
+          />
         ))}
       </ul>
       <a
@@ -79,12 +105,14 @@ function WhatsNewContent() {
 export function WhatsNewButton({ collapsed = false }: { collapsed?: boolean }) {
   const [open, setOpen] = useState(false)
   const { entries, isLoading } = useChangelogEntries()
+  const now = Date.now()
+  const hasRecentEntry = entries.some((entry) => isRecentlyPublished(entry, now))
 
   if (!isLoading && entries.length === 0) {
     return null
   }
 
-  const triggerClassName = cn("rounded-lg transition-colors hover:bg-muted", {
+  const triggerClassName = cn("relative rounded-lg transition-colors hover:bg-muted", {
     "flex h-10 w-10 items-center justify-center": collapsed,
     "flex w-full items-center gap-2 px-2 py-2 text-left": !collapsed,
   })
@@ -103,6 +131,15 @@ export function WhatsNewButton({ collapsed = false }: { collapsed?: boolean }) {
             <Text.H5M color="foregroundMuted" ellipsis className="min-w-0 flex-1">
               What's new
             </Text.H5M>
+          ) : null}
+          {hasRecentEntry ? (
+            <span
+              aria-hidden="true"
+              className={cn("h-2 w-2 rounded-full bg-primary", {
+                "absolute right-2 top-2": collapsed,
+                "shrink-0 animate-pulse": true,
+              })}
+            />
           ) : null}
         </button>
       </PopoverTrigger>
