@@ -13,6 +13,7 @@ import {
   useMountEffect,
   useToast,
 } from "@repo/ui"
+import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
@@ -44,12 +45,14 @@ import {
 import {
   getActiveSlackIntegration,
   isSlackConfigured,
+  type SlackIntegrationRecord,
 } from "../../../../../domains/integrations/integrations.functions.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 import { IntegrationCard } from "../settings/-components/integration-card.tsx"
+import { SLACK_INTEGRATION_QUERY_KEY, SlackRouteRow } from "../settings/-components/slack-route-row.tsx"
 import {
   type CodingMachineAgentId,
   getCodingAgentTelemetryPrompt,
@@ -80,7 +83,6 @@ type StackChoice = "coding-agent-machine" | "production-agent"
 type TelemetrySetupMode = "coding-agent" | "manual"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
 
-const SLACK_INTEGRATION_QUERY_KEY = ["slack-integration"] as const
 const SLACK_CONFIGURED_QUERY_KEY = ["slack-configured"] as const
 
 const SETUP_MODE_TAB_OPTIONS = [
@@ -431,18 +433,13 @@ function SlackOnboardingStep({
           <div className="flex flex-col gap-2">
             <Text.H2 weight="medium">Get notified in Slack</Text.H2>
             <Text.H4 color="foregroundMuted">
-              Connect your workspace so Flaggers can alert your team the moment they detect an issue. You can configure
-              which channel receives what in settings later.
+              Connect your workspace so Flaggers can alert your team the moment they detect an issue.
             </Text.H4>
           </div>
         </div>
 
         {isLoading ? null : connected ? (
-          <IntegrationCard
-            icon={SlackIcon}
-            title={integration.teamName}
-            subtitle="Connected — channel routing available in settings."
-          />
+          <SlackConnectedOnboardingCard integration={integration} />
         ) : (
           <IntegrationCard
             icon={SlackIcon}
@@ -473,6 +470,54 @@ function SlackOnboardingStep({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Onboarding-only variant of the settings page's connected card.
+ * Differs in two ways:
+ *
+ * - No "Disconnect" affordance — onboarding is not the place to undo
+ *   a connection the user just made.
+ * - Progressive group reveal: `incidents` shows immediately (the
+ *   group this step is selling), while `wrapped_reports` and
+ *   `custom_messages` only appear once the user has set at least one
+ *   route. The second condition also keeps already-routed groups
+ *   visible for users who reconnect after a previous setup.
+ *
+ * Full routing for all groups (and disconnect) lives at
+ * `/settings/integrations`; the footer note points users there.
+ */
+function SlackConnectedOnboardingCard({ integration }: { readonly integration: SlackIntegrationRecord }) {
+  const hasAnyRoute =
+    (integration.routes.incidents?.length ?? 0) > 0 ||
+    (integration.routes.wrapped_reports?.length ?? 0) > 0 ||
+    (integration.routes.custom_messages?.length ?? 0) > 0
+
+  const showWrapped = hasAnyRoute || (integration.routes.wrapped_reports?.length ?? 0) > 0
+  const showCustom = hasAnyRoute || (integration.routes.custom_messages?.length ?? 0) > 0
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="rounded-lg border border-border">
+        <div className="flex flex-row items-center gap-3 p-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
+            <Icon icon={SlackIcon} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Text.H5 weight="semibold">{integration.teamName}</Text.H5>
+            <Text.H6 color="foregroundMuted">Connected {relativeTime(new Date(integration.installedAt))}</Text.H6>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border p-4">
+          <SlackRouteRow group="incidents" integration={integration} />
+          {showWrapped ? <SlackRouteRow group="wrapped_reports" integration={integration} /> : null}
+          {showCustom ? <SlackRouteRow group="custom_messages" integration={integration} /> : null}
+        </div>
+      </div>
+      <Text.H6 color="foregroundMuted">You can change these anytime in Settings → Integrations.</Text.H6>
     </div>
   )
 }
