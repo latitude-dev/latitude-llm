@@ -12,11 +12,7 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/onboarding")({
   validateSearch: searchSchema,
-  // Resolve the env probe at load time so the slack step's visibility
-  // gate is synchronous on first render. A client `useQuery` defaults
-  // to `false` while loading, which would race with the user clicking
-  // "Continue" on the flaggers step and silently skip the slack step
-  // even when it should be shown.
+  // Loader-resolved so the visibility gate is synchronous on first render.
   loader: async () => ({ slackEnvConfigured: await isSlackConfigured() }),
   component: ProjectOnboardingPage,
 })

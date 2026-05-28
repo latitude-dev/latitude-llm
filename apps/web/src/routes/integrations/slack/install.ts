@@ -35,9 +35,6 @@ export const Route = createFileRoute("/integrations/slack/install")({
         const webUrl = rawWebUrl.replace(/\/$/, "")
         const redirectUri = `${webUrl}/integrations/slack/oauth/callback`
 
-        // Optional `return_to`: where to send the user after a successful
-        // install. Validated to a safe `/projects/...` path; anything else
-        // is dropped and the callback falls back to its default redirect.
         const returnTo = validateReturnTo(new URL(request.url).searchParams.get("return_to"))
 
         const state = await generateSlackOAuthState({

@@ -23,30 +23,14 @@ import {
 } from "../../../../../../domains/integrations/integrations.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 
-/**
- * Query key for the active Slack integration. Shared between the
- * settings page and the onboarding step so a save here (the row
- * triggers `invalidateQueries`) refreshes both surfaces.
- */
+// Shared with the onboarding step so a save here invalidates both surfaces.
 export const SLACK_INTEGRATION_QUERY_KEY = ["slack-integration"] as const
 export const SLACK_CHANNELS_QUERY_KEY = ["slack-channels"] as const
 
 type ChannelOption = { readonly id: string; readonly name: string }
 const DON_T_SEND: ChannelOption = { id: "", name: "Don't send" }
 
-/**
- * One row of the Slack notifications routing table: a label for the
- * notification group plus a channel-picker combobox. Saves on
- * selection via `configureSlackRoute` / `removeSlackRoute`.
- *
- * Used by both the settings page (full table of all groups) and the
- * onboarding flow (progressive subset). The channel list is fetched
- * eagerly on mount (TanStack Query default), refetched whenever the
- * combobox opens, and otherwise cached for 30s — the open-time
- * refetch is intentional so a freshly-invited bot's new channels
- * show up the next time the user opens the picker without waiting
- * for `staleTime` to elapse.
- */
+// Refetches on open so freshly-invited bot channels appear without waiting for `staleTime`.
 export function SlackRouteRow({
   group,
   integration,

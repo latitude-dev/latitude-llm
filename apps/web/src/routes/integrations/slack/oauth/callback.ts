@@ -26,14 +26,7 @@ type FlashStatus = "installed=ok" | "error=workspace_taken" | "error=oauth_faile
 
 const DEFAULT_RETURN_PATH = "/?next=integrations"
 
-/**
- * Build the post-install redirect response. If the caller passed a
- * `returnTo` through the OAuth state, append the flash status to that
- * path; otherwise fall back to the historical settings entry point.
- *
- * Exported for unit testing — keeps the URL-shape logic free of the
- * Slack SDK + Redis dependencies the surrounding handler needs.
- */
+// Exported for unit testing.
 export const buildPostInstallRedirect = (input: {
   readonly returnTo: string | null
   readonly status: FlashStatus
@@ -80,19 +73,13 @@ export const Route = createFileRoute("/integrations/slack/oauth/callback")({
         const state = url.searchParams.get("state")
         const code = url.searchParams.get("code")
 
-        // No state at all → either a replay attempt or a manually-typed
-        // URL. We have no `returnTo` to honor, so fall back to the
-        // default settings redirect.
+        // No state → no returnTo to honor.
         if (!state) {
           logger.warn("slack oauth callback missing state")
           return redirectToSettings("error=oauth_failed", webUrl)
         }
 
-        // Consume state *before* the missing-code check. If the user
-        // denied access on Slack's consent screen, Slack redirects here
-        // with `state` set but no `code` — we still want to honor the
-        // caller's `returnTo` so onboarding doesn't dump them on the
-        // settings page when they bail out of the OAuth dance.
+        // Consume state before checking `code` so the user-denied path (state without code) still honors returnTo.
         const stateEntry = await consumeSlackOAuthState({ redis: getRedisClient(), state })
         if (!stateEntry) {
           logger.warn("slack oauth state not found, expired, or already consumed")

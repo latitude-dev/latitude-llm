@@ -393,15 +393,6 @@ function SdkIntegrationInstructions({
   )
 }
 
-/**
- * Optional onboarding step that prompts the user to connect Slack so
- * they get notified when their Flaggers detect issues. Hidden via the
- * `slack` feature flag + env-config probe in {@link OnboardingFlow}.
- *
- * Connect leaves the page (Slack OAuth redirect); the callback
- * bounces back to `/projects/{slug}/onboarding?step=slack&installed=ok`
- * which `OnboardingFlow` toasts on mount.
- */
 function SlackOnboardingStep({
   projectSlug,
   onBack,
@@ -416,9 +407,7 @@ function SlackOnboardingStep({
     queryFn: () => getActiveSlackIntegration(),
   })
   const connected = integration != null
-  // The step's pitch only materialises once `incidents` is routed
-  // somewhere. Until then, leaving counts as skipping — so the
-  // primary CTA stays a ghost "Skip for now" even after connect.
+  // CTA reflects routing, not just connection — no route = nothing gets delivered.
   const incidentsConfigured = (integration?.routes.incidents?.length ?? 0) > 0
 
   const returnTo = `/projects/${projectSlug}/onboarding?step=slack`
@@ -447,11 +436,7 @@ function SlackOnboardingStep({
             title="Slack"
             subtitle="Send Latitude notifications to your Slack workspace."
             actions={
-              // `/integrations/slack/install` is a server-handler-only
-              // route that 302s the browser to Slack — needs a full-
-              // page GET, not client-side routing. Plain `<a>` (inside
-              // a `Button asChild`) gives cmd/middle-click + copy-link
-              // affordances while keeping the full-page nav.
+              // Server-handler route — needs full-page nav, not `<Link>` client routing.
               <Button asChild>
                 <a href={connectHref}>Connect Slack</a>
               </Button>
@@ -476,21 +461,6 @@ function SlackOnboardingStep({
   )
 }
 
-/**
- * Onboarding-only variant of the settings page's connected card.
- * Differs in two ways:
- *
- * - No "Disconnect" affordance — onboarding is not the place to undo
- *   a connection the user just made.
- * - Progressive group reveal: `incidents` shows immediately (the
- *   group this step is selling), while `wrapped_reports` and
- *   `custom_messages` only appear once the user has set at least one
- *   route. The second condition also keeps already-routed groups
- *   visible for users who reconnect after a previous setup.
- *
- * Full routing for all groups (and disconnect) lives at
- * `/settings/integrations`; the footer note points users there.
- */
 function SlackConnectedOnboardingCard({ integration }: { readonly integration: SlackIntegrationRecord }) {
   const hasAnyRoute =
     (integration.routes.incidents?.length ?? 0) > 0 ||
@@ -546,25 +516,10 @@ export function OnboardingFlow({
   const { toast } = useToast()
   const navigate = useNavigate()
 
-  // Slack visibility gate: feature flag is client-side, env probe is
-  // server-side (pre-resolved by the route loader so it's synchronous
-  // on first render — otherwise a click on Continue on the flaggers
-  // step could race the env query and silently skip the slack step).
   const slackFlagEnabled = useHasFeatureFlag("slack")
   const slackStepEnabled = slackFlagEnabled && slackEnvConfigured
 
-  // Honor URL-driven step only if the user has completed the `stack`
-  // step on the server (`onboardingType` is the marker). Otherwise
-  // force them back to `role` — earlier steps have prerequisites that
-  // deep-links would skip past. `onboardingType` is fed in from the
-  // parent route's loader so it's synchronously available on first
-  // render (the route's loader awaits the project lookup).
-  //
-  // We deliberately do NOT also gate on `slackStepEnabled` here: the
-  // user only reaches `?step=slack` by already having seen the
-  // (env-gated) step, so if the URL says `slack`, trust it. Forward
-  // and back transitions still consult `slackStepEnabled` to route
-  // around the step when truly disabled.
+  // Force back to `role` if a URL deep-links past `stack` without `onboardingType` set.
   const onboardingTypeSet = onboardingType != null
   const resolvedInitialStep: OnboardingStep = (() => {
     if (initialStep == null) return "role"
@@ -575,8 +530,6 @@ export function OnboardingFlow({
 
   const [step, setStep] = useState<OnboardingStep>(resolvedInitialStep)
 
-  // Centralizes URL ↔ React state sync. Every step transition flows
-  // through here so the URL stays authoritative and refresh-safe.
   const goToStep = useCallback(
     (next: OnboardingStep) => {
       setStep(next)
@@ -590,8 +543,6 @@ export function OnboardingFlow({
     [navigate, projectSlug],
   )
 
-  // OAuth bounce-back: toast and strip the flash params, preserving
-  // `step` so the user lands exactly where they left.
   useMountEffect(() => {
     if (!flashInstalled && !flashError) return
     if (flashInstalled === "ok") {

@@ -46,22 +46,7 @@ export interface SlackOAuthStateRedis {
 
 const RETURN_TO_MAX_LENGTH = 512
 
-/**
- * Validate a caller-supplied `returnTo` path. Returns the original
- * string if safe, `null` otherwise. The OAuth callback redirects to
- * this path verbatim, so any failure here is an open-redirect risk.
- *
- * Rules:
- * - Must be a path starting with `/`.
- * - No `//` or `/\` prefix (defeats protocol-relative URLs).
- * - No control characters.
- * - No `#` — the callback appends flash params with `&`/`?`, so a
- *   fragment in the input would push the status param past the
- *   fragment boundary and out of the query string.
- * - Allow-list: must begin with `/projects/`. Onboarding is the only
- *   legitimate caller; settings hits the callback's default redirect.
- * - Length capped to discourage abuse and keep Redis payloads small.
- */
+// Reject anything not safe to feed verbatim into the callback's `Location` header.
 export const validateReturnTo = (input: string | null | undefined): string | null => {
   if (typeof input !== "string") return null
   if (input.length === 0 || input.length > RETURN_TO_MAX_LENGTH) return null
@@ -150,9 +135,7 @@ export const consumeSlackOAuthState = async (input: {
     return null
   }
 
-  // Re-validate `returnTo` on consume too — defends against a state
-  // record forged or tampered with after generate (e.g. a future bug
-  // that wrote to Redis without going through `generateSlackOAuthState`).
+  // Re-validate in case the Redis record was written outside this module.
   const validatedReturnTo = parsed.data.returnTo == null ? null : validateReturnTo(parsed.data.returnTo)
 
   return {
