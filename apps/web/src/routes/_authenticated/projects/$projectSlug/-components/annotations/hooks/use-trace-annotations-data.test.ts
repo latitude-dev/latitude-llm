@@ -152,7 +152,7 @@ describe("useTraceAnnotationsData", () => {
       )
     })
 
-    it("trims whitespace and defaults empty comment to single space", () => {
+    it("trims whitespace and leaves empty comments empty", () => {
       const { result } = renderHook(() => useTraceAnnotationsData({ projectId: "proj-1", traceId: "trace-1" }))
 
       act(() => {
@@ -165,7 +165,7 @@ describe("useTraceAnnotationsData", () => {
 
       expect(mockMutate).toHaveBeenCalledWith(
         expect.objectContaining({
-          feedback: " ",
+          feedback: "",
         }),
         undefined,
       )
