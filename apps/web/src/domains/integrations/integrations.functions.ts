@@ -82,16 +82,7 @@ const toRecord = (row: SlackIntegration): SlackIntegrationRecord => ({
   routes: row.routes ?? {},
 })
 
-/**
- * Probes whether Slack OAuth env vars are present in this deployment.
- * Self-hosters without a Slack app registered get `false` so the UI
- * can hide the Connect button (e.g. on the onboarding Slack step)
- * instead of letting users hit a 503 on `/integrations/slack/install`.
- *
- * Dynamic import keeps `@platform/slack` off the client bundle —
- * `@platform/slack`'s barrel re-exports `client.ts` which transitively
- * pulls in `@slack/web-api` (uses `require("node:path")`).
- */
+// Dynamic import keeps `@platform/slack` (and its `@slack/web-api` transitive dep) off the client bundle.
 export const isSlackConfigured = createServerFn({ method: "GET" }).handler(async (): Promise<boolean> => {
   await requireSession()
   const { loadSlackConfig } = await import("@platform/slack")
