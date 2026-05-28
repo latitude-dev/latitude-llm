@@ -112,6 +112,37 @@ describe("posthog-analytics worker", () => {
     })
   })
 
+  it("personIdentifies the user on UserOnboardingCompleted so onboardingType is a person property", async () => {
+    const consumer = new TestQueueConsumer()
+    const posthog = createFakePostHog()
+    createPostHogAnalyticsWorker({ consumer, posthog })
+
+    await consumer.dispatch("track", {
+      eventName: "UserOnboardingCompleted",
+      organizationId: "system",
+      payload: { userId: "user-1", stackChoice: "coding-agent-machine" },
+      occurredAt: "2026-04-13T12:00:00.000Z",
+    })
+
+    expect(posthog.personIdentifies).toHaveLength(1)
+    expect(posthog.personIdentifies[0]).toEqual({
+      distinctId: "user-1",
+      properties: { onboardingType: "code-agents" },
+    })
+
+    await consumer.dispatch("track", {
+      eventName: "UserOnboardingCompleted",
+      organizationId: "system",
+      payload: { userId: "user-2", stackChoice: "production-agent" },
+      occurredAt: "2026-04-13T12:00:00.000Z",
+    })
+
+    expect(posthog.personIdentifies[1]).toEqual({
+      distinctId: "user-2",
+      properties: { onboardingType: "prod-traces" },
+    })
+  })
+
   it("skips non-whitelisted events (defense-in-depth)", async () => {
     const consumer = new TestQueueConsumer()
     const posthog = createFakePostHog()

@@ -1,3 +1,4 @@
+import { stackChoiceToOnboardingType } from "@domain/marketing"
 import type { QueueConsumer } from "@domain/queue"
 import { mapEventToPostHog, mapOrganizationGroupIdentify, type PostHogClientShape } from "@platform/analytics-posthog"
 import { createLogger, withTracing } from "@repo/observability"
@@ -23,6 +24,19 @@ export const createPostHogAnalyticsWorker = ({ consumer, posthog }: PostHogAnaly
     track: (payload) =>
       Effect.tryPromise({
         try: async () => {
+          // Set onboardingType as a person property so it retroactively applies
+          // to UserSignedUp and all other past events for this user in PostHog.
+          // Runs before the whitelist check — this event isn't captured, only
+          // used to enrich the person profile.
+          if (payload.eventName === "UserOnboardingCompleted") {
+            const p = payload.payload as { readonly userId: string; readonly stackChoice: "coding-agent-machine" | "production-agent" }
+            await client.personIdentify({
+              distinctId: p.userId,
+              properties: { onboardingType: stackChoiceToOnboardingType(p.stackChoice) },
+            })
+            return
+          }
+
           const mapped = mapEventToPostHog(payload)
           // Defense-in-depth: if the upstream whitelist filter regresses and an
           // untracked event reaches us, skip rather than emit garbage.
