@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react"
-import { type KeyboardEvent, type ReactNode, memo, useCallback } from "react"
+import { type KeyboardEvent, memo, type ReactNode, useCallback } from "react"
 import { cn } from "../../utils/cn.ts"
 import { Checkbox, type CheckedState } from "../checkbox/checkbox.tsx"
 import { Text } from "../text/text.tsx"
