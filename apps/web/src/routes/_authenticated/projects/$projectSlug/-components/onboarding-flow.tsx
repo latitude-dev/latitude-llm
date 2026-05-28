@@ -14,6 +14,7 @@ import { countTracesByProject } from "../../../../../domains/traces/traces.funct
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler } from "../../../../../lib/form-server-action.ts"
+import { CarouselSlide, CarouselTrack } from "./onboarding/carousel-track.tsx"
 import * as FlaggersStep from "./onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./onboarding/steps/role-step.tsx"
 import * as SlackStep from "./onboarding/steps/slack-step.tsx"
@@ -247,6 +248,11 @@ export function OnboardingFlow({
 
   const telemetryBackStep: OnboardingStep = slackStepEnabled ? "slack" : "flaggers"
 
+  const visibleSteps: ReadonlyArray<OnboardingStep> = slackStepEnabled
+    ? ONBOARDING_STEPS
+    : ONBOARDING_STEPS.filter((s): s is Exclude<OnboardingStep, "slack"> => s !== "slack")
+  const activeRightSlideIndex = Math.max(0, visibleSteps.indexOf(step))
+
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
       <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-y-auto overscroll-y-contain px-6 pt-12 pb-16 sm:px-12 sm:pt-16 sm:pb-20 lg:w-1/2 lg:border-r lg:border-border lg:px-24 lg:pt-24 lg:pb-32 [scrollbar-gutter:stable]">
@@ -290,19 +296,23 @@ export function OnboardingFlow({
       </div>
 
       <div className="hidden h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary lg:flex lg:w-1/2">
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24 [scrollbar-gutter:stable]">
-          {step === "role" ? (
-            <RoleStep.Right />
-          ) : step === "stack" ? (
-            <StackStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
-          ) : step === "flaggers" ? (
-            <FlaggersStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
-          ) : step === "slack" ? (
-            <SlackStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
-          ) : (
-            <TelemetryStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
-          )}
-        </div>
+        <CarouselTrack activeIndex={activeRightSlideIndex}>
+          {visibleSteps.map((slideStep) => (
+            <CarouselSlide key={slideStep}>
+              {slideStep === "role" ? (
+                <RoleStep.Right />
+              ) : slideStep === "stack" ? (
+                <StackStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+              ) : slideStep === "flaggers" ? (
+                <FlaggersStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+              ) : slideStep === "slack" ? (
+                <SlackStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+              ) : (
+                <TelemetryStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+              )}
+            </CarouselSlide>
+          ))}
+        </CarouselTrack>
       </div>
     </div>
   )
