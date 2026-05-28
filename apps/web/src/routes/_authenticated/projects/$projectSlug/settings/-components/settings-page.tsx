@@ -14,9 +14,10 @@ interface SettingsPageProps {
   readonly description?: ReactNode
   readonly actions?: ReactNode
   readonly children: ReactNode
+  readonly footer?: ReactNode
 }
 
-export function SettingsPage({ title, description, actions, children }: SettingsPageProps) {
+export function SettingsPage({ title, description, actions, children, footer }: SettingsPageProps) {
   const header = (
     <div className="flex flex-col gap-1">
       {typeof title === "string" ? <SettingsPageTitle>{title}</SettingsPageTitle> : title}
@@ -34,7 +35,12 @@ export function SettingsPage({ title, description, actions, children }: Settings
       ) : (
         header
       )}
-      <div className="flex flex-col gap-6">{children}</div>
+      <div className="flex flex-col gap-6 pb-2">{children}</div>
+      {footer ? (
+        <div className="sticky bottom-0 -mx-6 border-t border-border bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          {footer}
+        </div>
+      ) : null}
     </>
   )
 }

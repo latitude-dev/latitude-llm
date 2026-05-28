@@ -1,9 +1,7 @@
 import {
+  Badge,
   Button,
-  CloseTrigger,
   cn,
-  Icon,
-  Modal,
   Slider,
   Switch,
   Table,
@@ -17,11 +15,11 @@ import {
   useToast,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute } from "@tanstack/react-router"
-import { Pencil } from "lucide-react"
-import { useRef, useState } from "react"
+import { createFileRoute, useBlocker } from "@tanstack/react-router"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { updateFlaggerMutation, useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
 import type { FlaggerRecord } from "../../../../../domains/flaggers/flaggers.functions.ts"
+import { FLAGGER_USE_CASE_PRESETS, type FlaggerPresetSlug } from "../../../../../domains/flaggers/presets.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -32,11 +30,17 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
   component: ProjectFlaggersSettingsPage,
 })
 
+interface PendingFlagger {
+  readonly enabled: boolean
+  readonly sampling: number
+}
+
 function ProjectFlaggersSettingsPage() {
   const { projectSlug } = Route.useParams()
   const { toast } = useToast()
   const routeProject = useRouteProject()
-  const [editingFlagger, setEditingFlagger] = useState<FlaggerRecord | null>(null)
+  const [pending, setPending] = useState<Record<string, PendingFlagger>>({})
+  const [isApplying, setIsApplying] = useState(false)
 
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
@@ -46,8 +50,131 @@ function ProjectFlaggersSettingsPage() {
   const currentProject = project ?? routeProject
   const { data: flaggers = [], isLoading: isLoadingFlaggers } = useProjectFlaggers(currentProject.id)
 
-  // Flagger annotations deep-link here with `?flagger=<slug>` to point at the
-  // flagger that authored them; scroll it into view once and keep it highlighted.
+  const flaggersById = useMemo(() => {
+    const map = new Map<string, FlaggerRecord>()
+    for (const flagger of flaggers) map.set(flagger.id, flagger)
+    return map
+  }, [flaggers])
+
+  const resolved = useMemo(
+    () =>
+      flaggers.map((flagger) => {
+        const overlay = pending[flagger.id]
+        const viewEnabled = overlay?.enabled ?? flagger.enabled
+        const viewSampling = overlay?.sampling ?? flagger.sampling
+        const isDirty =
+          overlay !== undefined && (overlay.enabled !== flagger.enabled || overlay.sampling !== flagger.sampling)
+        return { ...flagger, viewEnabled, viewSampling, isDirty }
+      }),
+    [flaggers, pending],
+  )
+
+  const dirtyCount = resolved.reduce((acc, row) => (row.isDirty ? acc + 1 : acc), 0)
+  const hasDirty = dirtyCount > 0
+
+  const enabledSlugsResolved = useMemo(
+    () => new Set(resolved.filter((row) => row.viewEnabled).map((row) => row.slug)),
+    [resolved],
+  )
+  const activePresetId =
+    FLAGGER_USE_CASE_PRESETS.find(
+      (preset) =>
+        preset.enabledSlugs.length === enabledSlugsResolved.size &&
+        preset.enabledSlugs.every((slug) => enabledSlugsResolved.has(slug)),
+    )?.id ?? null
+
+  const setRowChange = (id: string, change: Partial<PendingFlagger>) => {
+    setPending((prev) => {
+      const server = flaggersById.get(id)
+      if (!server) return prev
+      const baseline = prev[id] ?? { enabled: server.enabled, sampling: server.sampling }
+      const next: PendingFlagger = { ...baseline, ...change }
+      if (next.enabled === server.enabled && next.sampling === server.sampling) {
+        const { [id]: _drop, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [id]: next }
+    })
+  }
+
+  const applyPreset = (presetEnabledSlugs: ReadonlyArray<FlaggerPresetSlug>) => {
+    const enabledSet = new Set<string>(presetEnabledSlugs)
+    setPending((prev) => {
+      const next: Record<string, PendingFlagger> = {}
+      for (const flagger of flaggers) {
+        const desiredEnabled = enabledSet.has(flagger.slug)
+        const desiredSampling = prev[flagger.id]?.sampling ?? flagger.sampling
+        if (desiredEnabled !== flagger.enabled || desiredSampling !== flagger.sampling) {
+          next[flagger.id] = { enabled: desiredEnabled, sampling: desiredSampling }
+        }
+      }
+      return next
+    })
+  }
+
+  const discard = () => setPending({})
+
+  const apply = async () => {
+    if (!hasDirty || isApplying) return
+    setIsApplying(true)
+    try {
+      const entries = Object.entries(pending)
+      const transactions = entries
+        .map(([id, overlay]) => {
+          const flagger = flaggersById.get(id)
+          if (!flagger) return null
+          return updateFlaggerMutation({
+            projectId: currentProject.id,
+            id,
+            slug: flagger.slug,
+            enabled: overlay.enabled,
+            sampling: overlay.sampling,
+          })
+        })
+        .filter((t): t is NonNullable<typeof t> => t !== null)
+
+      await Promise.all(transactions.map((t) => t.isPersisted.promise))
+      setPending({})
+      toast({
+        description: `Updated ${entries.length} flagger${entries.length === 1 ? "" : "s"}`,
+      })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setIsApplying(false)
+    }
+  }
+
+  const applyRef = useRef(apply)
+  applyRef.current = apply
+
+  useEffect(() => {
+    if (!hasDirty) return
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const inField =
+        !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable === true)
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault()
+        void applyRef.current()
+      } else if (event.key === "Escape" && !inField) {
+        event.preventDefault()
+        setPending({})
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [hasDirty])
+
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!hasDirty) return false
+      return !window.confirm("You have unsaved flagger changes. Leave anyway?")
+    },
+    enableBeforeUnload: () => hasDirty,
+    disabled: !hasDirty,
+  })
+
   const [targetFlaggerSlug] = useParamState("flagger", "")
   const hasScrolledToTargetRef = useRef(false)
   const scrollTargetRef = (node: HTMLTableRowElement | null) => {
@@ -57,170 +184,146 @@ function ProjectFlaggersSettingsPage() {
     }
   }
 
-  const handleFlaggerEnabledChange = async (flagger: FlaggerRecord, enabled: boolean) => {
-    try {
-      const transaction = updateFlaggerMutation({
-        projectId: currentProject.id,
-        id: flagger.id,
-        slug: flagger.slug,
-        enabled,
-      })
-      await transaction.isPersisted.promise
-      toast({ description: "Flagger settings updated" })
-    } catch (error) {
-      toast({ variant: "destructive", description: toUserMessage(error) })
-    }
-  }
-
-  const handleFlaggerSamplingUpdate = async (flagger: FlaggerRecord, sampling: number) => {
-    try {
-      const transaction = updateFlaggerMutation({
-        projectId: currentProject.id,
-        id: flagger.id,
-        slug: flagger.slug,
-        sampling,
-      })
-      await transaction.isPersisted.promise
-      toast({ description: "Flagger settings updated" })
-      setEditingFlagger(null)
-    } catch (error) {
-      toast({ variant: "destructive", description: toUserMessage(error) })
-    }
-  }
+  const footer = hasDirty ? (
+    <div className="flex flex-row items-center justify-between gap-4">
+      <Text.H5 color="foregroundMuted">
+        {dirtyCount} unsaved change{dirtyCount === 1 ? "" : "s"}
+      </Text.H5>
+      <div className="flex flex-row items-center gap-2">
+        <Button variant="outline" onClick={discard} disabled={isApplying}>
+          Discard
+        </Button>
+        <Button onClick={() => void apply()} isLoading={isApplying}>
+          Apply
+        </Button>
+      </div>
+    </div>
+  ) : null
 
   return (
     <SettingsPage
       title="Flaggers"
       description="Flaggers automatically inspect new traces for known failure patterns and create issues when they detect regressions"
+      footer={footer}
     >
-      <div className="flex w-full flex-col gap-1">
+      <div className="flex w-full flex-col gap-4">
         {isLoadingFlaggers ? null : flaggers.length === 0 ? (
           <Text.H5 color="foregroundMuted">No flaggers have been provisioned for this project yet</Text.H5>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Flagger</TableHead>
-                <TableHead className="w-10">Enabled</TableHead>
-                <TableHead>Sampling</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {flaggers.map((flagger) => {
-                const isTarget = targetFlaggerSlug !== "" && flagger.slug === targetFlaggerSlug
-                return (
-                  <TableRow
-                    key={flagger.id}
-                    ref={isTarget ? scrollTargetRef : undefined}
-                    verticalPadding
-                    hoverable={false}
-                    className={cn({ "ring-2 ring-primary ring-offset-2 ring-offset-background": isTarget })}
-                  >
-                    <TableCell className="max-w-[28rem]">
-                      <div className="flex flex-col gap-1">
-                        <Text.H5M>{flagger.name}</Text.H5M>
-                        <Text.H6 color="foregroundMuted">{flagger.description}</Text.H6>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={flagger.enabled}
-                        onCheckedChange={(checked) => void handleFlaggerEnabledChange(flagger, checked)}
-                        aria-label={`${flagger.enabled ? "Disable" : "Enable"} ${flagger.name}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-row items-center gap-1">
-                        <Text.H5>{flagger.sampling}%</Text.H5>
-                        <Tooltip
-                          asChild
-                          trigger={
-                            <Button variant="ghost" size="icon" onClick={() => setEditingFlagger(flagger)}>
-                              <Icon icon={Pencil} size="sm" />
-                            </Button>
-                          }
-                        >
-                          Edit sampling rate
-                        </Tooltip>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+          <>
+            <div className="flex flex-col gap-2">
+              <Text.H6 color="foregroundMuted">Apply a use-case preset</Text.H6>
+              <div className="flex flex-row flex-wrap gap-2">
+                {FLAGGER_USE_CASE_PRESETS.map((preset) => {
+                  const isActive = activePresetId === preset.id
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => applyPreset(preset.enabledSlugs)}
+                      className={cn(
+                        "inline-flex cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                        isActive
+                          ? "border-primary bg-primary-muted/40 text-primary"
+                          : "border-border bg-background text-foreground hover:border-primary/40 hover:bg-accent/10",
+                      )}
+                      title={preset.description}
+                    >
+                      {preset.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Flagger</TableHead>
+                  <TableHead className="w-10">Enabled</TableHead>
+                  <TableHead className="w-[280px]">Sampling</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {resolved.map((row) => {
+                  const isTarget = targetFlaggerSlug !== "" && row.slug === targetFlaggerSlug
+                  const isDeterministic = row.mode === "deterministic"
+                  return (
+                    <TableRow
+                      key={row.id}
+                      ref={isTarget ? scrollTargetRef : undefined}
+                      verticalPadding
+                      hoverable={false}
+                      className={cn({ "ring-2 ring-primary ring-offset-2 ring-offset-background": isTarget })}
+                    >
+                      <TableCell className="max-w-[28rem]">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-row items-center gap-2">
+                            <Text.H5M>{row.name}</Text.H5M>
+                            {isDeterministic ? (
+                              <Badge variant="muted" size="small">
+                                Always-on · free
+                              </Badge>
+                            ) : null}
+                            {row.isDirty ? (
+                              <span
+                                role="img"
+                                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                                aria-label="Unsaved changes"
+                                title="Unsaved changes"
+                              />
+                            ) : null}
+                          </div>
+                          <Text.H6 color="foregroundMuted">{row.description}</Text.H6>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={row.viewEnabled}
+                          onCheckedChange={(checked) => setRowChange(row.id, { enabled: checked })}
+                          aria-label={`${row.viewEnabled ? "Disable" : "Enable"} ${row.name}`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {isDeterministic ? (
+                          <Tooltip
+                            asChild
+                            trigger={
+                              <span className="inline-flex">
+                                <Text.H5 color="foregroundMuted">—</Text.H5>
+                              </span>
+                            }
+                          >
+                            Always runs · sampling not applicable
+                          </Tooltip>
+                        ) : (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex flex-row items-center gap-3">
+                              <Slider
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={[row.viewSampling]}
+                                onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
+                                className="w-44"
+                              />
+                              <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
+                            </div>
+                            <Text.H6 color="foregroundMuted">
+                              30 credits per scan · runs on {row.viewSampling}% of eligible traces
+                            </Text.H6>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </>
         )}
       </div>
-
-      {editingFlagger ? (
-        <EditFlaggerModal
-          flagger={editingFlagger}
-          onClose={() => setEditingFlagger(null)}
-          onSave={handleFlaggerSamplingUpdate}
-        />
-      ) : null}
     </SettingsPage>
-  )
-}
-
-function EditFlaggerModal({
-  flagger,
-  onClose,
-  onSave,
-}: {
-  readonly flagger: FlaggerRecord
-  readonly onClose: () => void
-  readonly onSave: (flagger: FlaggerRecord, sampling: number) => Promise<void>
-}) {
-  const [sampling, setSampling] = useState(flagger.sampling)
-  const [isSaving, setIsSaving] = useState(false)
-
-  const handleSave = async () => {
-    setIsSaving(true)
-    try {
-      await onSave(flagger, sampling)
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  return (
-    <Modal
-      open
-      dismissible
-      scrollable={false}
-      onOpenChange={(open) => (!open ? onClose() : undefined)}
-      title={`Edit ${flagger.name} sampling`}
-      description="Configure what percentage of eligible traces this flagger samples."
-      footer={
-        <>
-          <CloseTrigger />
-          <Button onClick={() => void handleSave()} isLoading={isSaving}>
-            Save
-          </Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-6 pb-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-row items-baseline justify-between gap-4">
-            <Text.H6 color="foregroundMuted">Sampling rate</Text.H6>
-            <Text.H4M color="foreground">{sampling}%</Text.H4M>
-          </div>
-          <Slider
-            min={0}
-            max={100}
-            step={1}
-            value={[sampling]}
-            onValueChange={(values) => setSampling(values[0] ?? 0)}
-          />
-          <Text.H6 color="foregroundMuted">
-            {sampling === 0
-              ? "0% pauses sampling for this flagger."
-              : `Runs on ${sampling}% of eligible incoming traces.`}
-          </Text.H6>
-        </div>
-      </div>
-    </Modal>
   )
 }
