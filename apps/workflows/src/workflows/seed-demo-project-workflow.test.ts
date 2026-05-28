@@ -79,4 +79,14 @@ describe("seedDemoProjectWorkflow", () => {
     expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
     expect(mockActivities.seedDemoProjectTaxonomyActivity).not.toHaveBeenCalled()
   })
+
+  it("propagates failure from the ClickHouse activity and skips derived-data activities", async () => {
+    mockActivities.seedDemoProjectClickHouseActivity.mockImplementationOnce(async () => {
+      throw new Error("clickhouse seed failed")
+    })
+
+    await expect(seedDemoProjectWorkflow(baseInput)).rejects.toThrow("clickhouse seed failed")
+    expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
+    expect(mockActivities.seedDemoProjectTaxonomyActivity).not.toHaveBeenCalled()
+  })
 })

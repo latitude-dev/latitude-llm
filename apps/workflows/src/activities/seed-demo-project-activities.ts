@@ -1,5 +1,5 @@
 import { AI } from "@domain/ai"
-import { ApiKeyId, OrganizationId, type OrganizationId as OrganizationIdType, ProjectId, TraceId } from "@domain/shared"
+import { ApiKeyId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { createSeedScope, type SeedScope } from "@domain/shared/seeding"
 import {
   buildTraceSearchDocument,
@@ -97,6 +97,7 @@ type DemoTraceRow = {
   readonly root_span_name: string
 }
 
+// Hardcoded rather than resolved from org settings so demo rows never expire per-tenant config.
 const DEMO_PROJECT_RETENTION_DAYS = 30
 const DEMO_PROJECT_TAXONOMY_SESSION_LIMIT = 10_000
 
@@ -160,6 +161,8 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
           retentionDays: DEMO_PROJECT_RETENTION_DAYS,
         })
 
+        // NOTE: mirrors `prioritizeChunksForEmbedding` in apps/workers/src/workers/trace-search.ts.
+        // Not imported directly because extracting it to @domain/spans is a larger refactor.
         const eligibleChunks = document.chunks
           .filter((item) => item.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
           .sort((a, b) => b.chunkIndex - a.chunkIndex)
@@ -174,16 +177,27 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
           )
           if (hasExisting) continue
 
-          const embedding = yield* ai.embed({
-            text: chunk.text,
-            model: TRACE_SEARCH_EMBEDDING_MODEL,
-            dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
-            telemetry: {
-              spanName: "demo-project.trace-search.embed",
-              name: "demo-project-trace-search-embed",
-              tags: ["demo-project", "trace-search", "embedding"],
-            },
-          })
+          const embedding = yield* ai
+            .embed({
+              text: chunk.text,
+              model: TRACE_SEARCH_EMBEDDING_MODEL,
+              dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+              telemetry: {
+                spanName: "demo-project.trace-search.embed",
+                name: "demo-project-trace-search-embed",
+                tags: ["demo-project", "trace-search", "embedding"],
+              },
+            })
+            .pipe(
+              Effect.tapError((err) =>
+                Effect.logWarning("demo-project trace-search embed failed — skipping chunk", {
+                  chunkIndex: chunk.chunkIndex,
+                  error: err,
+                }),
+              ),
+              Effect.orElseSucceed(() => null),
+            )
+          if (embedding === null) continue
 
           yield* searchRepo.upsertEmbedding({
             organizationId,
@@ -225,10 +239,16 @@ export const seedDemoProjectTaxonomyActivity = (input: SeedDemoProjectActivityIn
       const sessions = yield* Effect.gen(function* () {
         const repository = yield* SessionRepository
         const page = yield* repository.listByProjectId({
-          organizationId: input.organizationId as OrganizationIdType,
+          organizationId,
           projectId,
           options: { limit: DEMO_PROJECT_TAXONOMY_SESSION_LIMIT, sortBy: "lastActivity", sortDirection: "asc" },
         })
+        if (page.hasMore) {
+          yield* Effect.logWarning(
+            "demo-project taxonomy seed: session list was truncated; some sessions will not be observed",
+            { projectId, limit: DEMO_PROJECT_TAXONOMY_SESSION_LIMIT },
+          )
+        }
         return page.items
       }).pipe(withClickHouse(SessionRepositoryLive, clickhouse, organizationId))
 
