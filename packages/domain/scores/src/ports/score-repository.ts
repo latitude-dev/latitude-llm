@@ -114,9 +114,11 @@ export interface ScoreRepositoryShape {
    * "annotation"`, `sourceId = "SYSTEM"`, `draftedAt IS NULL`), ordered with
    * the most-recently-firing flagger first.
    *
-   * Bounded to the most-recent annotation occurrences on the issue (slug
-   * variety converges fast) to keep the scan cheap for noisy issues — same
-   * sampling rationale as `aggregateTagsByIssues` in the CH analytics path.
+   * Implementations sample the most-recent
+   * `ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT` annotation occurrences on the issue
+   * before collapsing to distinct slugs — slug variety converges fast, so
+   * this keeps the scan cheap for noisy issues (same sampling rationale as
+   * `aggregateTagsByIssues` in the CH analytics path).
    */
   listFlaggerSlugsByIssueId(input: {
     readonly projectId: ProjectId

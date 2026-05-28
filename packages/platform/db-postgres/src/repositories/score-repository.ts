@@ -1,5 +1,5 @@
 import type { Score, ScoreListOptions, ScoreSource, TraceAnnotationCounts } from "@domain/scores"
-import { ScoreRepository, scoreSchema } from "@domain/scores"
+import { ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT, ScoreRepository, scoreSchema } from "@domain/scores"
 import {
   type IssueId,
   NotFoundError,
@@ -18,14 +18,6 @@ import type { Operator } from "../client.ts"
 import { scores } from "../schema/scores.ts"
 
 const logger = createLogger("db-postgres/score-repository")
-
-// Cap on how many of an issue's most-recent SYSTEM annotation occurrences we
-// scan when collecting distinct `metadata.flaggerSlug` values. Flagger variety
-// converges fast (an issue is almost always tagged by one or two flaggers),
-// so a small recent sample captures effectively all the slugs while keeping
-// the scan bounded for noisy issues — same rationale as
-// `ISSUE_TAG_TRACE_SAMPLE_LIMIT` in the ClickHouse tags-by-issue path.
-const ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT = 200
 
 type RlsOrganizationQueryResult = {
   readonly rows?: ReadonlyArray<{
@@ -519,8 +511,8 @@ export const ScoreRepositoryLive = Layer.effect(
           return yield* sqlClient
             .query((db, organizationId) => {
               // Recent-N sample of the issue's published SYSTEM annotation occurrences that
-              // carry a `flaggerSlug` in their metadata. Bounded by
-              // `ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT` (see file-level comment).
+              // carry a `flaggerSlug` in their metadata. Bounded by the domain-level
+              // `ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT` so the fake repo applies the same cap.
               const recent = db
                 .select({
                   slug: sql<string>`${scores.metadata}->>'flaggerSlug'`.as("slug"),

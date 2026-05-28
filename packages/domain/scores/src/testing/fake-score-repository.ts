@@ -1,5 +1,6 @@
 import { NotFoundError, type ScoreId } from "@domain/shared"
 import { Effect } from "effect"
+import { ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT } from "../constants.ts"
 import type { Score } from "../entities/score.ts"
 import type { ScoreRepositoryShape } from "../ports/score-repository.ts"
 
@@ -82,18 +83,25 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
     listFlaggerSlugsByIssueId: ({ projectId, issueId }) =>
       Effect.succeed(
         (() => {
-          // Most-recent-firing flagger slug first — mirrors the Postgres impl's ordering.
+          // Mirror the Postgres impl exactly: take the most-recent
+          // `ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT` SYSTEM annotation occurrences for
+          // the issue, *then* collapse to distinct slugs ordered by most-recent.
+          // Applying the same sample cap means fake-backed tests can't observe
+          // slugs that production would drop on noisy issues.
+          const candidates = [...scores.values()]
+            .filter(
+              (score) =>
+                score.projectId === projectId &&
+                score.issueId === issueId &&
+                score.source === "annotation" &&
+                score.sourceId === "SYSTEM" &&
+                score.draftedAt === null,
+            )
+            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+            .slice(0, ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT)
+
           const lastSeenBySlug = new Map<string, Date>()
-          for (const score of scores.values()) {
-            if (
-              score.projectId !== projectId ||
-              score.issueId !== issueId ||
-              score.source !== "annotation" ||
-              score.sourceId !== "SYSTEM" ||
-              score.draftedAt !== null
-            ) {
-              continue
-            }
+          for (const score of candidates) {
             const slug = (score.metadata as { flaggerSlug?: unknown }).flaggerSlug
             if (typeof slug !== "string" || slug.length === 0) continue
             const previous = lastSeenBySlug.get(slug)
