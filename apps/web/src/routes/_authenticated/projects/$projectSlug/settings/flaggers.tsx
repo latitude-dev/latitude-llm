@@ -284,6 +284,7 @@ function ProjectFlaggersSettingsPage() {
                                       step={1}
                                       value={[row.viewSampling]}
                                       onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
+                                      disabled={!row.viewEnabled}
                                     />
                                   </div>
                                   <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
