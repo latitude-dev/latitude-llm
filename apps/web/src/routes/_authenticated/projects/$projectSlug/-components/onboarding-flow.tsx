@@ -44,7 +44,6 @@ import {
 } from "../../../../../domains/flaggers/presets.ts"
 import {
   getActiveSlackIntegration,
-  isSlackConfigured,
   type SlackIntegrationRecord,
 } from "../../../../../domains/integrations/integrations.functions.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
@@ -82,8 +81,6 @@ export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
 type StackChoice = "coding-agent-machine" | "production-agent"
 type TelemetrySetupMode = "coding-agent" | "manual"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
-
-const SLACK_CONFIGURED_QUERY_KEY = ["slack-configured"] as const
 
 const SETUP_MODE_TAB_OPTIONS = [
   { id: "coding-agent" as const, label: "Coding agent", icon: <Bot className="h-4 w-4" /> },
@@ -450,12 +447,13 @@ function SlackOnboardingStep({
             title="Slack"
             subtitle="Send Latitude notifications to your Slack workspace."
             actions={
-              <Button
-                onClick={() => {
-                  window.location.href = connectHref
-                }}
-              >
-                Connect Slack
+              // `/integrations/slack/install` is a server-handler-only
+              // route that 302s the browser to Slack — needs a full-
+              // page GET, not client-side routing. Plain `<a>` (inside
+              // a `Button asChild`) gives cmd/middle-click + copy-link
+              // affordances while keeping the full-page nav.
+              <Button asChild>
+                <a href={connectHref}>Connect Slack</a>
               </Button>
             }
           />
@@ -530,6 +528,7 @@ export function OnboardingFlow({
   projectId,
   projectSlug,
   onboardingType,
+  slackEnvConfigured,
   initialStep,
   flashInstalled,
   flashError,
@@ -538,6 +537,7 @@ export function OnboardingFlow({
   readonly projectId: string
   readonly projectSlug: string
   readonly onboardingType: "code-agents" | "prod-traces" | undefined
+  readonly slackEnvConfigured: boolean
   readonly initialStep?: OnboardingStep
   readonly flashInstalled?: "ok"
   readonly flashError?: "workspace_taken" | "oauth_failed"
@@ -547,13 +547,10 @@ export function OnboardingFlow({
   const navigate = useNavigate()
 
   // Slack visibility gate: feature flag is client-side, env probe is
-  // server-side. The step is shown only when both agree.
+  // server-side (pre-resolved by the route loader so it's synchronous
+  // on first render — otherwise a click on Continue on the flaggers
+  // step could race the env query and silently skip the slack step).
   const slackFlagEnabled = useHasFeatureFlag("slack")
-  const { data: slackEnvConfigured = false } = useQuery({
-    queryKey: SLACK_CONFIGURED_QUERY_KEY,
-    queryFn: () => isSlackConfigured(),
-    staleTime: Infinity,
-  })
   const slackStepEnabled = slackFlagEnabled && slackEnvConfigured
 
   // Honor URL-driven step only if the user has completed the `stack`
@@ -563,12 +560,11 @@ export function OnboardingFlow({
   // parent route's loader so it's synchronously available on first
   // render (the route's loader awaits the project lookup).
   //
-  // We deliberately do NOT also gate on `slackStepEnabled` here:
-  // `slackEnvConfigured` comes from an async query that is `false`
-  // until it loads, and the user only reaches `?step=slack` by
-  // already having seen the (env-gated) step — so if the URL says
-  // `slack`, trust it. Forward and back transitions still consult
-  // `slackStepEnabled` to route around the step when truly disabled.
+  // We deliberately do NOT also gate on `slackStepEnabled` here: the
+  // user only reaches `?step=slack` by already having seen the
+  // (env-gated) step, so if the URL says `slack`, trust it. Forward
+  // and back transitions still consult `slackStepEnabled` to route
+  // around the step when truly disabled.
   const onboardingTypeSet = onboardingType != null
   const resolvedInitialStep: OnboardingStep = (() => {
     if (initialStep == null) return "role"
