@@ -381,8 +381,11 @@ const HIGH_PRECISION_JAILBREAK_PATTERNS = [
   { pattern: /\[system\]:.*\[user\]:.*\[assistant\]:/is, reason: "role tag injection" },
 ]
 
-function hasHighPrecisionJailbreakPatterns(trace: Pick<TraceDetail, "allMessages">): boolean {
-  for (const message of trace.allMessages) {
+function findHighPrecisionJailbreakMatch(trace: Pick<TraceDetail, "allMessages">): number | null {
+  for (let i = 0; i < trace.allMessages.length; i++) {
+    const message = trace.allMessages[i]
+    if (!message) continue
+
     let textContent = ""
     for (const part of message.parts) {
       if (part.type === "text" && typeof part.content === "string") {
@@ -394,12 +397,12 @@ function hasHighPrecisionJailbreakPatterns(trace: Pick<TraceDetail, "allMessages
 
     for (const { pattern } of HIGH_PRECISION_JAILBREAK_PATTERNS) {
       if (pattern.test(textContent)) {
-        return true
+        return i
       }
     }
   }
 
-  return false
+  return null
 }
 
 // ---------------------------------------------------------------------------
@@ -419,11 +422,13 @@ export const jailbreakingStrategy: FlaggerStrategy = {
   },
 
   detectDeterministically(trace: TraceDetail): DetectionResult {
-    if (hasHighPrecisionJailbreakPatterns(trace)) {
+    const messageIndex = findHighPrecisionJailbreakMatch(trace)
+    if (messageIndex !== null) {
       return {
         kind: "matched",
         feedback:
           "Jailbreak attempt: matched a high-precision bypass pattern (prompt injection / instruction override)",
+        messageIndex,
       }
     }
 

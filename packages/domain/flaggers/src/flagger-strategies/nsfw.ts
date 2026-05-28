@@ -200,29 +200,41 @@ export const nsfwStrategy: FlaggerStrategy = {
   },
 
   detectDeterministically(trace: TraceDetail): DetectionResult {
-    // Extract all user and assistant text
-    const textOnlyMessages = extractNsfwSuspiciousSnippets(trace)
+    // Walk allMessages directly so we can anchor a deterministic match to its
+    // originating message index. Only user/assistant text contributes.
+    let hasAnyText = false
+    for (let i = 0; i < trace.allMessages.length; i++) {
+      const message = trace.allMessages[i]
+      if (!message) continue
+      if (message.role !== "user" && message.role !== "assistant") continue
 
-    // No text to analyze
-    if (textOnlyMessages.length === 0) {
-      return { kind: "no-match" }
-    }
+      const textParts: string[] = []
+      for (const part of message.parts) {
+        if (part.type === "text" && typeof part.content === "string") {
+          const trimmed = part.content.trim()
+          if (trimmed) textParts.push(trimmed)
+        }
+      }
+      if (textParts.length === 0) continue
 
-    // Check for high-precision patterns first
-    for (const snippet of textOnlyMessages) {
-      if (hasHighPrecisionNsfwPatterns(snippet.text)) {
-        // Check if it's actually benign context
-        if (!isBenignAnatomyOrHealth(snippet.text)) {
-          return {
-            kind: "matched",
-            feedback: "NSFW content: matched a high-precision workplace-inappropriate pattern",
-          }
+      hasAnyText = true
+      const content = textParts.join(" ")
+
+      if (hasHighPrecisionNsfwPatterns(content) && !isBenignAnatomyOrHealth(content)) {
+        return {
+          kind: "matched",
+          feedback: "NSFW content: matched a high-precision workplace-inappropriate pattern",
+          messageIndex: i,
         }
       }
     }
 
-    // If we have suspicious snippets but no clear match, go to LLM
-    if (textOnlyMessages.length > 0) {
+    if (!hasAnyText) {
+      return { kind: "no-match" }
+    }
+
+    // Suspicious snippets present but no high-precision match → defer to LLM
+    if (extractNsfwSuspiciousSnippets(trace).length > 0) {
       return { kind: "ambiguous" }
     }
 
