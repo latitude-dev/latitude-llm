@@ -186,6 +186,7 @@ describe("validateReturnTo", () => {
     ["root", "/"],
     ["contains newline", "/projects/acme/\nonboarding"],
     ["contains null byte", "/projects/acme/\x00onboarding"],
+    ["contains fragment", "/projects/acme/onboarding#section"],
     ["exceeds length cap", `/projects/${"a".repeat(600)}`],
   ])("rejects %s", (_label, input) => {
     expect(validateReturnTo(input as string | null | undefined)).toBeNull()

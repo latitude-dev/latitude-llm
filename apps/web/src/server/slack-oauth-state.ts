@@ -55,6 +55,9 @@ const RETURN_TO_MAX_LENGTH = 512
  * - Must be a path starting with `/`.
  * - No `//` or `/\` prefix (defeats protocol-relative URLs).
  * - No control characters.
+ * - No `#` — the callback appends flash params with `&`/`?`, so a
+ *   fragment in the input would push the status param past the
+ *   fragment boundary and out of the query string.
  * - Allow-list: must begin with `/projects/`. Onboarding is the only
  *   legitimate caller; settings hits the callback's default redirect.
  * - Length capped to discourage abuse and keep Redis payloads small.
@@ -68,6 +71,7 @@ export const validateReturnTo = (input: string | null | undefined): string | nul
     const code = input.charCodeAt(i)
     if (code <= 0x1f || code === 0x7f) return null
   }
+  if (input.includes("#")) return null
   if (!input.startsWith("/projects/")) return null
   return input
 }
