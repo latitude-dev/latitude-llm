@@ -1,6 +1,11 @@
 import { OrganizationId, UserId } from "@domain/shared"
 import { beforeEach, describe, expect, it } from "vitest"
-import { consumeSlackOAuthState, generateSlackOAuthState, type SlackOAuthStateRedis } from "./slack-oauth-state.ts"
+import {
+  consumeSlackOAuthState,
+  generateSlackOAuthState,
+  type SlackOAuthStateRedis,
+  validateReturnTo,
+} from "./slack-oauth-state.ts"
 
 class FakeRedis implements SlackOAuthStateRedis {
   private readonly values = new Map<string, string>()
@@ -105,5 +110,84 @@ describe("generateSlackOAuthState + consumeSlackOAuthState", () => {
     const winners = [a, b].filter((result) => result !== null)
     expect(winners).toHaveLength(1)
     expect(redis.size()).toBe(0)
+  })
+
+  it("round-trips a valid returnTo through generate → consume", async () => {
+    const state = await generateSlackOAuthState({
+      redis,
+      organizationId: ORG_A,
+      userId: USER_A,
+      returnTo: "/projects/acme/onboarding",
+    })
+
+    const payload = await consumeSlackOAuthState({ redis, state })
+    expect(payload?.returnTo).toBe("/projects/acme/onboarding")
+  })
+
+  it("returns returnTo=null when caller passes nothing", async () => {
+    const state = await generateSlackOAuthState({ redis, organizationId: ORG_A, userId: USER_A })
+
+    const payload = await consumeSlackOAuthState({ redis, state })
+    expect(payload?.returnTo).toBeNull()
+  })
+
+  it("drops an invalid returnTo at generate time (stored as null)", async () => {
+    const state = await generateSlackOAuthState({
+      redis,
+      organizationId: ORG_A,
+      userId: USER_A,
+      returnTo: "//evil.com/path",
+    })
+
+    const payload = await consumeSlackOAuthState({ redis, state })
+    expect(payload?.returnTo).toBeNull()
+  })
+
+  it("drops a tampered returnTo at consume time", async () => {
+    // Simulate a record that bypassed `generateSlackOAuthState` and
+    // wrote a bad returnTo directly.
+    await redis.set(
+      "slack:oauth-state:tampered",
+      JSON.stringify({
+        organizationId: ORG_A,
+        userId: USER_A,
+        createdAt: new Date().toISOString(),
+        returnTo: "https://evil.com",
+      }),
+      "EX",
+      600,
+    )
+
+    const payload = await consumeSlackOAuthState({ redis, state: "tampered" })
+    expect(payload).not.toBeNull()
+    expect(payload?.returnTo).toBeNull()
+  })
+})
+
+describe("validateReturnTo", () => {
+  it("accepts a path under /projects/", () => {
+    expect(validateReturnTo("/projects/acme/onboarding")).toBe("/projects/acme/onboarding")
+  })
+
+  it("accepts a /projects/ path with query string", () => {
+    expect(validateReturnTo("/projects/acme/onboarding?step=slack")).toBe("/projects/acme/onboarding?step=slack")
+  })
+
+  it.each([
+    ["empty string", ""],
+    ["null", null],
+    ["undefined", undefined],
+    ["non-string number", 42 as unknown as string],
+    ["protocol-relative", "//evil.com"],
+    ["backslash-escape", "/\\evil.com"],
+    ["absolute URL", "https://evil.com"],
+    ["relative path", "projects/acme/onboarding"],
+    ["unrelated path", "/settings/integrations"],
+    ["root", "/"],
+    ["contains newline", "/projects/acme/\nonboarding"],
+    ["contains null byte", "/projects/acme/\x00onboarding"],
+    ["exceeds length cap", `/projects/${"a".repeat(600)}`],
+  ])("rejects %s", (_label, input) => {
+    expect(validateReturnTo(input as string | null | undefined)).toBeNull()
   })
 })

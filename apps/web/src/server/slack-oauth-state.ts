@@ -44,28 +44,61 @@ export interface SlackOAuthStateRedis {
   getdel(key: string): Promise<string | null>
 }
 
+const RETURN_TO_MAX_LENGTH = 512
+
+/**
+ * Validate a caller-supplied `returnTo` path. Returns the original
+ * string if safe, `null` otherwise. The OAuth callback redirects to
+ * this path verbatim, so any failure here is an open-redirect risk.
+ *
+ * Rules:
+ * - Must be a path starting with `/`.
+ * - No `//` or `/\` prefix (defeats protocol-relative URLs).
+ * - No control characters.
+ * - Allow-list: must begin with `/projects/`. Onboarding is the only
+ *   legitimate caller; settings hits the callback's default redirect.
+ * - Length capped to discourage abuse and keep Redis payloads small.
+ */
+export const validateReturnTo = (input: string | null | undefined): string | null => {
+  if (typeof input !== "string") return null
+  if (input.length === 0 || input.length > RETURN_TO_MAX_LENGTH) return null
+  if (!input.startsWith("/")) return null
+  if (input.startsWith("//") || input.startsWith("/\\")) return null
+  for (let i = 0; i < input.length; i += 1) {
+    const code = input.charCodeAt(i)
+    if (code <= 0x1f || code === 0x7f) return null
+  }
+  if (!input.startsWith("/projects/")) return null
+  return input
+}
+
 const statePayloadSchema = z.object({
   organizationId: z.string().min(1),
   userId: z.string().min(1),
   createdAt: z.iso.datetime(),
+  returnTo: z.string().optional(),
 })
 
 interface SlackOAuthStatePayload {
   readonly organizationId: OrganizationIdType
   readonly userId: UserIdType
   readonly createdAt: Date
+  readonly returnTo: string | null
 }
 
 export const generateSlackOAuthState = async (input: {
   readonly redis: SlackOAuthStateRedis
   readonly organizationId: OrganizationIdType
   readonly userId: UserIdType
+  readonly returnTo?: string | null
 }): Promise<string> => {
   const state = randomBytes(STATE_BYTES).toString("hex")
+  const validatedReturnTo = input.returnTo == null ? null : validateReturnTo(input.returnTo)
   const payload = JSON.stringify({
     organizationId: input.organizationId,
     userId: input.userId,
     createdAt: new Date().toISOString(),
+    ...(validatedReturnTo === null ? {} : { returnTo: validatedReturnTo }),
   })
   await input.redis.set(buildKey(state), payload, "EX", STATE_TTL_SECONDS)
   return state
@@ -113,9 +146,15 @@ export const consumeSlackOAuthState = async (input: {
     return null
   }
 
+  // Re-validate `returnTo` on consume too — defends against a state
+  // record forged or tampered with after generate (e.g. a future bug
+  // that wrote to Redis without going through `generateSlackOAuthState`).
+  const validatedReturnTo = parsed.data.returnTo == null ? null : validateReturnTo(parsed.data.returnTo)
+
   return {
     organizationId: OrganizationId(parsed.data.organizationId),
     userId: UserId(parsed.data.userId),
     createdAt: new Date(parsed.data.createdAt),
+    returnTo: validatedReturnTo,
   }
 }
