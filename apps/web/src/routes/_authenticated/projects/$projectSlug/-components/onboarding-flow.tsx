@@ -112,7 +112,6 @@ export function OnboardingFlow({
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
   const [selectedFlaggerSlugs, setSelectedFlaggerSlugs] = useState<ReadonlySet<string> | null>(null)
   const [isSavingFlaggers, setIsSavingFlaggers] = useState(false)
-  const [galleryIndex, setGalleryIndex] = useState(0)
 
   const form = useForm({
     defaultValues: {
@@ -302,13 +301,13 @@ export function OnboardingFlow({
               {slideStep === "role" ? (
                 <RoleStep.Right />
               ) : slideStep === "stack" ? (
-                <StackStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+                <StackStep.Right />
               ) : slideStep === "flaggers" ? (
                 <FlaggersStep.Right enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
               ) : slideStep === "slack" ? (
                 <SlackStep.Right />
               ) : (
-                <TelemetryStep.Right galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+                <TelemetryStep.Right traceReceived={traceReceived} />
               )}
             </CarouselSlide>
           ))}

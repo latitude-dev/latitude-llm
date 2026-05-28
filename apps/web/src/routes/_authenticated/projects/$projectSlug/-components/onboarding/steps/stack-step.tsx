@@ -1,7 +1,7 @@
 import { Button, cn, Icon, Text } from "@repo/ui"
 import type { LucideIcon } from "lucide-react"
 import { Check, SquareDashedBottomCode } from "lucide-react"
-import type { Dispatch, SetStateAction } from "react"
+import { useState } from "react"
 import { ONBOARDING_CLAUDE_CODE_LOGO_SRC } from "../assets.ts"
 import { OnboardingGallery } from "../onboarding-gallery.tsx"
 
@@ -111,12 +111,7 @@ export function Left({
   )
 }
 
-export function Right({
-  galleryIndex,
-  setGalleryIndex,
-}: {
-  readonly galleryIndex: number
-  readonly setGalleryIndex: Dispatch<SetStateAction<number>>
-}) {
+export function Right() {
+  const [galleryIndex, setGalleryIndex] = useState(0)
   return <OnboardingGallery galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
 }

@@ -1,7 +1,7 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import { Button, CodeBlock, CopyButton, ProviderIcon, Tabs, Text } from "@repo/ui"
 import { Bot, Braces, FileCode2, Radio, Terminal } from "lucide-react"
-import type { Dispatch, ReactNode, SetStateAction } from "react"
+import type { ReactNode } from "react"
 import { lazy, Suspense, useLayoutEffect, useMemo, useState } from "react"
 import { useApiKeysCollection } from "../../../../../../../domains/api-keys/api-keys.collection.ts"
 import {
@@ -28,7 +28,7 @@ import {
   type TsPackageManager,
 } from "../../onboarding-integration-snippets.ts"
 import { ONBOARDING_CLAUDE_CODE_LOGO_SRC, ONBOARDING_OPENCLAW_LOGO_SRC } from "../assets.ts"
-import { OnboardingGallery } from "../onboarding-gallery.tsx"
+import { TraceTail } from "../mocks/trace-tail.tsx"
 import type { StackChoice } from "./stack-step.tsx"
 
 type TelemetrySetupMode = "coding-agent" | "manual"
@@ -580,12 +580,6 @@ export function Left({
   )
 }
 
-export function Right({
-  galleryIndex,
-  setGalleryIndex,
-}: {
-  readonly galleryIndex: number
-  readonly setGalleryIndex: Dispatch<SetStateAction<number>>
-}) {
-  return <OnboardingGallery galleryIndex={galleryIndex} setGalleryIndex={setGalleryIndex} />
+export function Right({ traceReceived }: { readonly traceReceived: boolean }) {
+  return <TraceTail traceReceived={traceReceived} />
 }
