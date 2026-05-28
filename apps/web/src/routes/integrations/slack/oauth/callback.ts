@@ -77,23 +77,45 @@ export const Route = createFileRoute("/integrations/slack/oauth/callback")({
         const webUrl = rawWebUrl.replace(/\/$/, "")
 
         const url = new URL(request.url)
-        const code = url.searchParams.get("code")
         const state = url.searchParams.get("state")
-        if (!code || !state) {
-          logger.warn("slack oauth callback missing code or state")
+        const code = url.searchParams.get("code")
+
+        // No state at all → either a replay attempt or a manually-typed
+        // URL. We have no `returnTo` to honor, so fall back to the
+        // default settings redirect.
+        if (!state) {
+          logger.warn("slack oauth callback missing state")
           return redirectToSettings("error=oauth_failed", webUrl)
         }
 
+        // Consume state *before* the missing-code check. If the user
+        // denied access on Slack's consent screen, Slack redirects here
+        // with `state` set but no `code` — we still want to honor the
+        // caller's `returnTo` so onboarding doesn't dump them on the
+        // settings page when they bail out of the OAuth dance.
         const stateEntry = await consumeSlackOAuthState({ redis: getRedisClient(), state })
         if (!stateEntry) {
           logger.warn("slack oauth state not found, expired, or already consumed")
           return redirectToSettings("error=oauth_failed", webUrl)
         }
 
+        if (!code) {
+          logger.info("slack oauth callback missing code (user denied or upstream error)")
+          return buildPostInstallRedirect({
+            returnTo: stateEntry.returnTo,
+            status: "error=oauth_failed",
+            webUrl,
+          })
+        }
+
         const config = await Effect.runPromise(loadSlackConfig)
         if (!config) {
           logger.warn("slack config missing at callback time")
-          return redirectToSettings("error=oauth_failed", webUrl)
+          return buildPostInstallRedirect({
+            returnTo: stateEntry.returnTo,
+            status: "error=oauth_failed",
+            webUrl,
+          })
         }
 
         const redirectUri = `${webUrl}/integrations/slack/oauth/callback`
