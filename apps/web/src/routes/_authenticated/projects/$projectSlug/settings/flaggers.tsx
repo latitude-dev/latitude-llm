@@ -195,7 +195,7 @@ function ProjectFlaggersSettingsPage() {
       description="Flaggers automatically inspect new traces for known failure patterns and create issues when they detect regressions"
       footer={footer}
     >
-      <div className="flex w-full flex-col gap-6">
+      <div className="flex w-full max-w-2xl flex-col gap-8">
         {isLoadingFlaggers ? null : flaggers.length === 0 ? (
           <Text.H5 color="foregroundMuted">No flaggers have been provisioned for this project yet</Text.H5>
         ) : (
@@ -233,12 +233,12 @@ function ProjectFlaggersSettingsPage() {
                   .filter((row): row is NonNullable<typeof row> => row !== undefined)
                 if (groupRows.length === 0) return null
                 return (
-                  <div key={group.id} className="flex flex-col gap-3">
+                  <div key={group.id} className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1">
-                      <Text.H5M>{group.label}</Text.H5M>
-                      <Text.H6 color="foregroundMuted">{group.description}</Text.H6>
+                      <Text.H4M>{group.label}</Text.H4M>
+                      <Text.H5 color="foregroundMuted">{group.description}</Text.H5>
                     </div>
-                    <div className="divide-y divide-border">
+                    <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
                       {groupRows.map((row) => {
                         const isTarget = targetFlaggerSlug !== "" && row.slug === targetFlaggerSlug
                         const isDeterministic = row.mode === "deterministic"
@@ -246,8 +246,8 @@ function ProjectFlaggersSettingsPage() {
                           <div
                             key={row.id}
                             ref={isTarget ? scrollTargetRef : undefined}
-                            className={cn("flex flex-col gap-3 rounded-md py-4", {
-                              "ring-2 ring-primary ring-offset-2 ring-offset-background": isTarget,
+                            className={cn("flex flex-col gap-3 border-l-2 border-transparent px-4 py-4", {
+                              "border-primary bg-primary-muted/20": isTarget,
                             })}
                           >
                             <div className="flex flex-row items-start justify-between gap-4">
@@ -277,15 +277,16 @@ function ProjectFlaggersSettingsPage() {
                               <Text.H6 color="foregroundMuted">Free · Runs on 100% of eligible traces</Text.H6>
                             ) : (
                               <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
-                                <div className="flex min-w-[200px] flex-1 flex-row items-center gap-3">
-                                  <Slider
-                                    min={0}
-                                    max={100}
-                                    step={1}
-                                    value={[row.viewSampling]}
-                                    onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
-                                    className="flex-1"
-                                  />
+                                <div className="flex flex-row items-center gap-3">
+                                  <div className="w-48">
+                                    <Slider
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      value={[row.viewSampling]}
+                                      onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
+                                    />
+                                  </div>
                                   <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
                                 </div>
                                 <Text.H6 color="foregroundMuted">
