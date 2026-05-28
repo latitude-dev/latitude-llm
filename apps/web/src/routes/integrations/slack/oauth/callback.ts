@@ -24,12 +24,31 @@ const logger = createLogger("slack-oauth-callback")
 
 type FlashStatus = "installed=ok" | "error=workspace_taken" | "error=oauth_failed"
 
-const redirectToSettings = (status: FlashStatus, webUrl: string): Response => {
+const DEFAULT_RETURN_PATH = "/?next=integrations"
+
+/**
+ * Build the post-install redirect response. If the caller passed a
+ * `returnTo` through the OAuth state, append the flash status to that
+ * path; otherwise fall back to the historical settings entry point.
+ *
+ * Exported for unit testing — keeps the URL-shape logic free of the
+ * Slack SDK + Redis dependencies the surrounding handler needs.
+ */
+export const buildPostInstallRedirect = (input: {
+  readonly returnTo: string | null
+  readonly status: FlashStatus
+  readonly webUrl: string
+}): Response => {
+  const path = input.returnTo ?? DEFAULT_RETURN_PATH
+  const separator = path.includes("?") ? "&" : "?"
   const headers = new Headers()
-  headers.set("Location", `${webUrl}/?next=integrations&${status}`)
+  headers.set("Location", `${input.webUrl}${path}${separator}${input.status}`)
   headers.set("Cache-Control", "no-store")
   return new Response(null, { status: 302, headers })
 }
+
+const redirectToSettings = (status: FlashStatus, webUrl: string): Response =>
+  buildPostInstallRedirect({ returnTo: null, status, webUrl })
 
 /**
  * `Effect.runPromise` wraps domain failures in a `FiberFailure` whose
@@ -109,14 +128,22 @@ export const Route = createFileRoute("/integrations/slack/oauth/callback")({
             ),
           )
 
-          return redirectToSettings("installed=ok", webUrl)
+          return buildPostInstallRedirect({ returnTo: stateEntry.returnTo, status: "installed=ok", webUrl })
         } catch (cause) {
           if (isWorkspaceConflict(cause)) {
             logger.info("slack workspace already claimed by another organization")
-            return redirectToSettings("error=workspace_taken", webUrl)
+            return buildPostInstallRedirect({
+              returnTo: stateEntry.returnTo,
+              status: "error=workspace_taken",
+              webUrl,
+            })
           }
           logger.error("slack oauth callback failed", cause)
-          return redirectToSettings("error=oauth_failed", webUrl)
+          return buildPostInstallRedirect({
+            returnTo: stateEntry.returnTo,
+            status: "error=oauth_failed",
+            webUrl,
+          })
         }
       },
     },

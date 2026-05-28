@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Effect } from "effect"
 import { requireSession } from "../../../server/auth.ts"
 import { getRedisClient } from "../../../server/clients.ts"
-import { generateSlackOAuthState } from "../../../server/slack-oauth-state.ts"
+import { generateSlackOAuthState, validateReturnTo } from "../../../server/slack-oauth-state.ts"
 
 /**
  * Public OAuth entry point. The user clicks "Connect Slack" in
@@ -21,7 +21,7 @@ import { generateSlackOAuthState } from "../../../server/slack-oauth-state.ts"
 export const Route = createFileRoute("/integrations/slack/install")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }: { request: Request }) => {
         const { organizationId, userId } = await requireSession()
 
         const config = await Effect.runPromise(loadSlackConfig)
@@ -35,10 +35,16 @@ export const Route = createFileRoute("/integrations/slack/install")({
         const webUrl = rawWebUrl.replace(/\/$/, "")
         const redirectUri = `${webUrl}/integrations/slack/oauth/callback`
 
+        // Optional `return_to`: where to send the user after a successful
+        // install. Validated to a safe `/projects/...` path; anything else
+        // is dropped and the callback falls back to its default redirect.
+        const returnTo = validateReturnTo(new URL(request.url).searchParams.get("return_to"))
+
         const state = await generateSlackOAuthState({
           redis: getRedisClient(),
           organizationId,
           userId,
+          returnTo,
         })
 
         const url = await Effect.runPromise(
