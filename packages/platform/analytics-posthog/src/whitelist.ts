@@ -11,6 +11,7 @@ export const POSTHOG_TRACKED_EVENTS = new Set<TrackedEventName>([
   "OrganizationCreated",
   "ProjectCreated",
   "UserSignedUp",
+  "UserOnboardingCompleted", // Not sent to Posthog, but used to enrich person properties
   "MemberJoined",
   "MemberInvited",
   "ApiKeyCreated",

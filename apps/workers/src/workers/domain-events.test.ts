@@ -321,6 +321,20 @@ describe("domain-events dispatcher", () => {
     expect(ph?.options?.dedupeKey).toBe(`posthog:${envelope.id}`)
   })
 
+  it("fans out UserOnboardingCompleted to posthog-analytics:track so the worker can set onboardingType as a person property", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope(
+      "UserOnboardingCompleted",
+      { userId: "user-1", stackChoice: "coding-agent-machine" },
+      "system",
+    )
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
+  })
+
   it("does NOT fan out non-whitelisted events to posthog-analytics", async () => {
     const { consumer, published } = setupDispatcher()
 
