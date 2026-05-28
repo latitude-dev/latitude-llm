@@ -207,21 +207,16 @@ function ProjectFlaggersSettingsPage() {
                 {FLAGGER_USE_CASE_PRESETS.map((preset) => {
                   const isActive = activePresetId === preset.id
                   return (
-                    <button
+                    <Button
                       key={preset.id}
-                      type="button"
+                      variant={isActive ? "default-soft" : "outline"}
+                      size="sm"
                       aria-pressed={isActive}
                       onClick={() => applyPreset(preset.enabledSlugs)}
-                      className={cn(
-                        "inline-flex cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                        isActive
-                          ? "border-primary bg-primary-muted/40 text-primary"
-                          : "border-border bg-background text-foreground hover:border-primary/40 hover:bg-accent/10",
-                      )}
                       title={preset.description}
                     >
                       {preset.label}
-                    </button>
+                    </Button>
                   )
                 })}
               </div>
