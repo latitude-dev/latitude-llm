@@ -1,5 +1,5 @@
 import { FULL_CHANGELOG_URL } from "@domain/changelog"
-import { cn, Icon, Popover, PopoverContent, PopoverTrigger, Text } from "@repo/ui"
+import { cn, DotIndicator, Icon, Popover, PopoverContent, PopoverTrigger, Text } from "@repo/ui"
 import { ExternalLink, Megaphone } from "lucide-react"
 import { useState } from "react"
 import { useChangelogEntries } from "../../../../domains/changelog/changelog.collection.ts"
@@ -133,13 +133,7 @@ export function WhatsNewButton({ collapsed = false }: { collapsed?: boolean }) {
             </Text.H5M>
           ) : null}
           {hasRecentEntry ? (
-            <span
-              aria-hidden="true"
-              className={cn("h-2 w-2 rounded-full bg-primary", {
-                "absolute right-2 top-2": collapsed,
-                "shrink-0 animate-pulse": true,
-              })}
-            />
+            <DotIndicator variant="primary" size="md" ping className={cn({ "absolute right-2 top-2": collapsed })} />
           ) : null}
         </button>
       </PopoverTrigger>
