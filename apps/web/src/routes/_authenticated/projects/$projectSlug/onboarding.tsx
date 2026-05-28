@@ -25,6 +25,7 @@ function ProjectOnboardingPage() {
       <OnboardingFlow
         projectId={project.id}
         projectSlug={project.slug}
+        onboardingType={project.settings.onboardingType}
         initialStep={search.step}
         flashInstalled={search.installed}
         flashError={search.error}

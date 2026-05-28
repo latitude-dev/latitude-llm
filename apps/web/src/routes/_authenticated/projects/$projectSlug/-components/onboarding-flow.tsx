@@ -13,7 +13,6 @@ import {
   useMountEffect,
   useToast,
 } from "@repo/ui"
-import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
@@ -46,7 +45,6 @@ import {
   getActiveSlackIntegration,
   isSlackConfigured,
 } from "../../../../../domains/integrations/integrations.functions.ts"
-import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
@@ -482,6 +480,7 @@ function SlackOnboardingStep({
 export function OnboardingFlow({
   projectId,
   projectSlug,
+  onboardingType,
   initialStep,
   flashInstalled,
   flashError,
@@ -489,6 +488,7 @@ export function OnboardingFlow({
 }: {
   readonly projectId: string
   readonly projectSlug: string
+  readonly onboardingType: "code-agents" | "prod-traces" | undefined
   readonly initialStep?: OnboardingStep
   readonly flashInstalled?: "ok"
   readonly flashError?: "workspace_taken" | "oauth_failed"
@@ -507,16 +507,13 @@ export function OnboardingFlow({
   })
   const slackStepEnabled = slackFlagEnabled && slackEnvConfigured
 
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project: p }) => eq(p.id, projectId)).findOne(),
-    [projectId],
-  )
-
   // Honor URL-driven step only if the user has completed the `stack`
   // step on the server (`onboardingType` is the marker). Otherwise
   // force them back to `role` — earlier steps have prerequisites that
-  // deep-links would skip past.
-  const onboardingTypeSet = project?.settings?.onboardingType != null
+  // deep-links would skip past. `onboardingType` is fed in from the
+  // parent route's loader so it's synchronously available on first
+  // render (the route's loader awaits the project lookup).
+  const onboardingTypeSet = onboardingType != null
   const resolvedInitialStep: OnboardingStep = (() => {
     if (initialStep == null) return "role"
     if (initialStep === "role" || initialStep === "stack") return initialStep
@@ -665,7 +662,7 @@ export function OnboardingFlow({
     }
   }
 
-  const resolvedProjectSlug = project?.slug?.trim() || projectSlug.trim()
+  const resolvedProjectSlug = projectSlug.trim()
   const slugForSnippets = resolvedProjectSlug || "your-project-slug"
   const projectSlugForCopy = resolvedProjectSlug
 
