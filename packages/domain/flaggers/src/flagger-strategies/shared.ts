@@ -24,9 +24,16 @@ export interface SuspiciousSnippet {
 /**
  * Truncate text to maximum excerpt length.
  */
+const loneSurrogatePattern = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
+
+function replaceLoneSurrogates(text: string): string {
+  return text.replace(loneSurrogatePattern, "�")
+}
+
 export function truncateExcerpt(text: string, maxLength: number = 500): string {
-  if (text.length <= maxLength) return text
-  return `${text.slice(0, maxLength)}...`
+  const wellFormedText = replaceLoneSurrogates(text)
+  if (wellFormedText.length <= maxLength) return wellFormedText
+  return `${replaceLoneSurrogates(wellFormedText.slice(0, maxLength))}...`
 }
 
 // ---------------------------------------------------------------------------

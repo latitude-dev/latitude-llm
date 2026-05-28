@@ -6,6 +6,7 @@ import { emptyResponseStrategy } from "./empty-response.ts"
 import { frustrationStrategy } from "./frustration.ts"
 import { lazinessStrategy } from "./laziness.ts"
 import { refusalStrategy } from "./refusal.ts"
+import { truncateExcerpt } from "./shared.ts"
 import { trashingStrategy } from "./trashing.ts"
 
 const ORG_ID = "a".repeat(24)
@@ -57,6 +58,26 @@ const user = (text: string): TraceMessage => ({
 const assistant = (text: string): TraceMessage => ({
   role: "assistant",
   parts: [{ type: "text", content: text }],
+})
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+describe("truncateExcerpt", () => {
+  it("does not emit lone UTF-16 surrogates when truncation splits an emoji", () => {
+    const excerpt = truncateExcerpt(`prefix ${"🎯"} suffix`, 8)
+
+    expect(excerpt).toBe("prefix �...")
+    expect(excerpt).not.toMatch(/[\uD800-\uDFFF]/)
+  })
+
+  it("replaces malformed surrogates in untruncated text", () => {
+    const excerpt = truncateExcerpt("bad \uD83D input")
+
+    expect(excerpt).toBe("bad � input")
+    expect(excerpt).not.toMatch(/[\uD800-\uDFFF]/)
+  })
 })
 
 let toolCallCounter = 0
