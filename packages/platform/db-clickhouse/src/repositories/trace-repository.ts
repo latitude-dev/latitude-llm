@@ -134,6 +134,7 @@ type TraceDetailRow = TraceListRow & {
  * `quantileTDigest(0.5)` (TTFT also gates on `> 0` to ignore the sentinel).
  */
 const HISTOGRAM_BUCKET_SELECT = `count() AS trace_count,
+  uniqExact(coalesce(nullIf(session_id, ''), toString(trace_id))) AS session_count,
   sum(cost_total_microcents) AS cost_sum,
   quantileTDigest(0.5)(duration_ns) AS duration_median,
   sum(tokens_total) AS tokens_sum,
@@ -143,6 +144,7 @@ const HISTOGRAM_BUCKET_SELECT = `count() AS trace_count,
 type TraceHistogramBucketRow = {
   bucket_start: string
   trace_count: string
+  session_count: string
   cost_sum: string
   duration_median: string
   tokens_sum: string
@@ -254,6 +256,7 @@ const toTtftRollup = (row: TraceMetricsRow) => ({
 const toHistogramBucket = (row: TraceHistogramBucketRow): TraceTimeHistogramBucket => ({
   bucketStart: parseCHDate(row.bucket_start).toISOString(),
   traceCount: Number(row.trace_count),
+  sessionCount: Number(row.session_count),
   costTotalMicrocentsSum: Number(row.cost_sum),
   durationNsMedian: Number(row.duration_median),
   tokensTotalSum: Number(row.tokens_sum),

@@ -4,6 +4,7 @@ import { insertJsonEachRow } from "../../sql.ts"
 import type { SeedContext, Seeder } from "../types.ts"
 import { fixedTraceSeeders } from "./fixed-traces.ts"
 import { generateAllSpans, type SpanRow, type TraceConfig } from "./generator.ts"
+import { orphanFragmentSeeders } from "./orphan-fragments.ts"
 
 const TRACE_COUNT = 2000
 const BATCH_SIZE = 500
@@ -49,4 +50,4 @@ export const runSpansSeed = (
     return traceIds
   })
 
-export const spanSeeders: Seeder[] = [...fixedTraceSeeders]
+export const spanSeeders: Seeder[] = [...fixedTraceSeeders, ...orphanFragmentSeeders]

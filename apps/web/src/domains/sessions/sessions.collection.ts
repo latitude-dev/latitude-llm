@@ -1,4 +1,5 @@
-import type { FilterSet } from "@domain/shared"
+import type { FilterCondition, FilterSet, PercentileSessionFilterField } from "@domain/shared"
+import type { TraceDistribution } from "@domain/spans"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -6,6 +7,7 @@ import {
   countSessionsByProject,
   getSessionDetail,
   getSessionDistinctValues,
+  getSessionDistribution,
   getSessionMetricsByProject,
   listSessionIssues,
   listSessionsByProject,
@@ -30,6 +32,38 @@ export function deriveSessionStatus(endTime: string | Date, now: number = Date.n
   return now - last < SESSION_LIVE_THRESHOLD_MS ? "live" : "idle"
 }
 
+/**
+ * Default-on session filter: hide "orphan fragment" rows that carry no LLM
+ * activity (sessions whose every span produced 0 tokens and no model name —
+ * typically OTel-direct customers with mixed span/session-id propagation where
+ * framework spans split off into their own session).
+ *
+ * URL representation of the sidebar toggle:
+ *   - key absent          → default ON; this helper injects the filter.
+ *   - `{op:"eq",value:true}`  → explicit ON; equivalent to absent, filter is kept.
+ *   - `{op:"eq",value:false}` → sentinel meaning "user opted out of the default";
+ *                                this helper STRIPS the field so the repo applies
+ *                                no `hasLlmActivity` clause at all (i.e. shows
+ *                                both LLM-active sessions and orphan fragments).
+ *
+ * The `false` sentinel lives in the URL so the toggle state is shareable, but
+ * never reaches the repo as a filter condition — sending `false` to the
+ * synthetic clause would otherwise narrow the list to *only* orphans, which is
+ * not what "Including orphan fragments" means.
+ */
+function withSessionDefaults(filters: FilterSet | undefined): FilterSet {
+  if (filters?.hasLlmActivity !== undefined) {
+    const explicit = filters.hasLlmActivity
+    const optedOut = explicit.some((c) => c.op === "eq" && (c.value === false || c.value === "false"))
+    if (optedOut) {
+      const { hasLlmActivity: _drop, ...rest } = filters as Record<string, readonly FilterCondition[]>
+      return rest as FilterSet
+    }
+    return filters
+  }
+  return { ...(filters ?? {}), hasLlmActivity: [{ op: "eq", value: true }] }
+}
+
 export function useSessionsInfiniteScroll({
   projectId,
   sorting,
@@ -41,6 +75,8 @@ export function useSessionsInfiniteScroll({
   readonly filters?: FilterSet
   readonly searchQuery?: string
 }) {
+  const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
+
   const {
     data: paginatedData,
     isLoading,
@@ -48,7 +84,7 @@ export function useSessionsInfiniteScroll({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["sessionsInfiniteScroll", projectId, sorting, filters, searchQuery],
+    queryKey: ["sessionsInfiniteScroll", projectId, sorting, effectiveFilters, searchQuery],
     queryFn: async ({ pageParam }) => {
       const result = await listSessionsByProject({
         data: {
@@ -57,14 +93,18 @@ export function useSessionsInfiniteScroll({
           cursor: pageParam,
           sortBy: sorting.column,
           sortDirection: sorting.direction,
-          filters,
+          filters: effectiveFilters,
           ...(searchQuery ? { searchQuery } : {}),
         },
       })
       return result ?? { sessions: [], hasMore: false }
     },
     initialPageParam: undefined as
-      | { sortValue: string; secondaryValue?: string | undefined; sessionId: string }
+      | {
+          sortValue: string
+          secondaryValue?: string | undefined
+          sessionId: string
+        }
       | undefined,
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
   })
@@ -113,13 +153,15 @@ export function useSessionsCount({
   readonly filters?: FilterSet
   readonly searchQuery?: string
 }) {
+  const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
+
   const { data, isLoading } = useQuery({
-    queryKey: ["sessionsCount", projectId, filters, searchQuery],
+    queryKey: ["sessionsCount", projectId, effectiveFilters, searchQuery],
     queryFn: () =>
       countSessionsByProject({
         data: {
           projectId,
-          ...(filters ? { filters } : {}),
+          filters: effectiveFilters,
           ...(searchQuery ? { searchQuery } : {}),
         },
       }),
@@ -192,16 +234,38 @@ export function useSessionMetrics({
   readonly projectId: string
   readonly filters?: FilterSet
 }) {
+  const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
+
   return useQuery({
-    queryKey: ["sessions-metrics", projectId, filters],
+    queryKey: ["sessions-metrics", projectId, effectiveFilters],
     queryFn: () =>
       getSessionMetricsByProject({
         data: {
           projectId,
-          ...(filters ? { filters } : {}),
+          filters: effectiveFilters,
         },
       }),
     staleTime: 30_000,
+  })
+}
+
+export function useSessionDistribution({
+  projectId,
+  field,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly field: PercentileSessionFilterField
+  readonly enabled?: boolean
+}) {
+  return useQuery<TraceDistribution>({
+    queryKey: ["session-distribution", projectId, field],
+    queryFn: () => getSessionDistribution({ data: { projectId, field } }),
+    // Distribution is intentionally insensitive to other filters and changes
+    // slowly relative to a user's interaction window — long stale time keeps
+    // the chart steady while picking a threshold.
+    staleTime: 60_000,
+    enabled: enabled && projectId.length > 0,
   })
 }
 
@@ -218,7 +282,10 @@ export function useSessionDistinctValues({
 }) {
   return useQuery({
     queryKey: ["session-distinct", projectId, column, search],
-    queryFn: () => getSessionDistinctValues({ data: { projectId, column, limit: 50, ...(search ? { search } : {}) } }),
+    queryFn: () =>
+      getSessionDistinctValues({
+        data: { projectId, column, limit: 50, ...(search ? { search } : {}) },
+      }),
     staleTime: 60_000,
     enabled: enabled && projectId.length > 0,
     // Keep the previous matches visible while the next query for a new search

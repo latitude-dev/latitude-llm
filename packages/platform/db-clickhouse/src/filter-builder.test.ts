@@ -203,3 +203,145 @@ describe("buildClickHouseWhere", () => {
     expect(values).toContainEqual([])
   })
 })
+
+describe("buildClickHouseWhere with arrayContains", () => {
+  const arrayContainsRegistry: ChFieldRegistry = {
+    traceId: { column: "trace_ids", chType: "FixedString(32)", isArray: true, arrayContains: true },
+    tags: { column: "tags", chType: "String", isArray: true, arrayContains: true },
+  }
+
+  it("routes scalar eq to has(col, …)", () => {
+    const filters: FilterSet = { traceId: [{ op: "eq", value: "abc123" }] }
+    const { clauses, params } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("has(trace_ids, {f_0:FixedString(32)})")
+    expect(params.f_0).toBe("abc123")
+  })
+
+  it("routes scalar neq to NOT has(col, …)", () => {
+    const filters: FilterSet = { traceId: [{ op: "neq", value: "abc123" }] }
+    const { clauses } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("NOT has(trace_ids, {f_0:FixedString(32)})")
+  })
+
+  it("routes contains to has(col, …) and does NOT auto-wrap value in %", () => {
+    const filters: FilterSet = { traceId: [{ op: "contains", value: "abc123" }] }
+    const { clauses, params } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("has(trace_ids, {f_0:FixedString(32)})")
+    expect(params.f_0).toBe("abc123")
+  })
+
+  it("routes notContains to NOT has(col, …) without % wrapping", () => {
+    const filters: FilterSet = { tags: [{ op: "notContains", value: "internal" }] }
+    const { clauses, params } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("NOT has(tags, {f_0:String})")
+    expect(params.f_0).toBe("internal")
+  })
+
+  it("keeps in/notIn on hasAny — arrayContains only affects scalar ops", () => {
+    const filters: FilterSet = {
+      tags: [{ op: "in", value: ["prod", "staging"] }],
+    }
+    const { clauses, params } = buildClickHouseWhere(filters, arrayContainsRegistry)
+    expect(clauses[0]).toBe("hasAny(tags, {f_0:Array(String)})")
+    expect(params.f_0).toEqual(["prod", "staging"])
+  })
+})
+
+describe("buildClickHouseWhere with synthetic fields", () => {
+  const syntheticRegistry: ChFieldRegistry = {
+    status: {
+      kind: "synthetic",
+      buildClause: (cond) => {
+        const fragments: Record<string, string> = {
+          ok: "(error_count = 0 AND span_count > 0)",
+          error: "(error_count > 0)",
+          unset: "(span_count = 0)",
+        }
+        const raw = Array.isArray(cond.value) ? cond.value : [cond.value]
+        const parts = raw.map((v) => fragments[String(v)] ?? "1 = 0")
+        const disjunction = parts.join(" OR ")
+        switch (cond.op) {
+          case "eq":
+          case "in":
+            return { clause: `(${disjunction})`, params: {} }
+          case "neq":
+          case "notIn":
+            return { clause: `NOT (${disjunction})`, params: {} }
+          default:
+            throw new Error(`Unsupported status op: ${cond.op}`)
+        }
+      },
+    },
+    hasLlmActivity: {
+      kind: "synthetic",
+      buildClause: (cond) => {
+        const fragment = "(tokens_total > 0 OR length(models) > 0)"
+        const truthy = cond.value === true
+        return {
+          clause: truthy ? fragment : `NOT ${fragment}`,
+          params: {},
+        }
+      },
+    },
+  }
+
+  it("invokes the synthetic buildClause for eq", () => {
+    const filters: FilterSet = { status: [{ op: "eq", value: "error" }] }
+    const { clauses, params } = buildClickHouseWhere(filters, syntheticRegistry)
+    expect(clauses[0]).toBe("((error_count > 0))")
+    expect(params).toEqual({})
+  })
+
+  it("invokes the synthetic buildClause for in across multiple values", () => {
+    const filters: FilterSet = { status: [{ op: "in", value: ["ok", "error"] }] }
+    const { clauses } = buildClickHouseWhere(filters, syntheticRegistry)
+    expect(clauses[0]).toBe("((error_count = 0 AND span_count > 0) OR (error_count > 0))")
+  })
+
+  it("invokes the synthetic buildClause for neq (negation)", () => {
+    const filters: FilterSet = { status: [{ op: "neq", value: "error" }] }
+    const { clauses } = buildClickHouseWhere(filters, syntheticRegistry)
+    expect(clauses[0]).toBe("NOT ((error_count > 0))")
+  })
+
+  it("handles boolean-valued synthetic clauses", () => {
+    const filters: FilterSet = { hasLlmActivity: [{ op: "eq", value: true }] }
+    const { clauses } = buildClickHouseWhere(filters, syntheticRegistry)
+    expect(clauses[0]).toBe("(tokens_total > 0 OR length(models) > 0)")
+  })
+
+  it("handles boolean-valued synthetic clauses (negated)", () => {
+    const filters: FilterSet = { hasLlmActivity: [{ op: "eq", value: false }] }
+    const { clauses } = buildClickHouseWhere(filters, syntheticRegistry)
+    expect(clauses[0]).toBe("NOT (tokens_total > 0 OR length(models) > 0)")
+  })
+
+  it("merges params returned by the synthetic buildClause", () => {
+    const paramRegistry: ChFieldRegistry = {
+      paramSynthetic: {
+        kind: "synthetic",
+        buildClause: (_cond, paramPrefix) => ({
+          clause: `(some_col > {${paramPrefix}_a:UInt64} AND other_col < {${paramPrefix}_b:UInt64})`,
+          params: { [`${paramPrefix}_a`]: 10, [`${paramPrefix}_b`]: 100 },
+        }),
+      },
+    }
+    const filters: FilterSet = { paramSynthetic: [{ op: "eq", value: "ignored" }] }
+    const { clauses, params } = buildClickHouseWhere(filters, paramRegistry)
+    expect(clauses[0]).toBe("(some_col > {f_0_a:UInt64} AND other_col < {f_0_b:UInt64})")
+    expect(params).toEqual({ f_0_a: 10, f_0_b: 100 })
+  })
+
+  it("emits multiple clauses when a synthetic field has multiple conditions", () => {
+    const filters: FilterSet = {
+      status: [
+        { op: "in", value: ["error"] },
+        { op: "notIn", value: ["unset"] },
+      ],
+    }
+    const { clauses } = buildClickHouseWhere(filters, syntheticRegistry)
+    expect(clauses).toHaveLength(2)
+    expect(clauses[0]).toBe("((error_count > 0))")
+    expect(clauses[1]).toBe("NOT ((span_count = 0))")
+  })
+})

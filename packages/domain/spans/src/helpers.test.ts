@@ -45,6 +45,7 @@ describe("denseTraceTimeHistogramBuckets", () => {
     const populated = {
       bucketStart: "2024-06-01T11:00:00.000Z",
       traceCount: 7,
+      sessionCount: 5,
       costTotalMicrocentsSum: 1234,
       durationNsMedian: 5_000_000,
       tokensTotalSum: 200,
@@ -65,6 +66,7 @@ describe("denseTraceTimeHistogramBuckets", () => {
     expect(dense).toHaveLength(2)
     for (const bucket of dense) {
       expect(bucket.traceCount).toBe(0)
+      expect(bucket.sessionCount).toBe(0)
       expect(bucket.costTotalMicrocentsSum).toBe(0)
       expect(bucket.durationNsMedian).toBe(0)
       expect(bucket.tokensTotalSum).toBe(0)
@@ -89,6 +91,7 @@ describe("denseTraceTimeHistogramBuckets", () => {
       {
         bucketStart: "2024-06-01T10:00:00.000Z",
         traceCount: 2,
+        sessionCount: 2,
         costTotalMicrocentsSum: 100,
         durationNsMedian: 1_000,
         tokensTotalSum: 30,
@@ -98,6 +101,7 @@ describe("denseTraceTimeHistogramBuckets", () => {
       {
         bucketStart: "2024-06-01T10:00:00.123Z",
         traceCount: 3,
+        sessionCount: 1,
         costTotalMicrocentsSum: 200,
         durationNsMedian: 2_000,
         tokensTotalSum: 70,
@@ -110,6 +114,7 @@ describe("denseTraceTimeHistogramBuckets", () => {
     expect(dense[0]).toEqual({
       bucketStart: "2024-06-01T10:00:00.000Z",
       traceCount: 5,
+      sessionCount: 3,
       costTotalMicrocentsSum: 300,
       durationNsMedian: 2_000,
       tokensTotalSum: 100,

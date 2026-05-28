@@ -1,22 +1,30 @@
 import { CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
-import { GroupIcon, MessageSquareIcon, MessagesSquareIcon, TriangleAlertIcon } from "lucide-react"
+import { GroupIcon, ListTreeIcon, MessageSquareIcon, MessagesSquareIcon, TriangleAlertIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useAnnotationsBySession } from "../../../../../../domains/annotations/annotations.collection.ts"
 import { deriveSessionStatus, useSessionIssues } from "../../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
+import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
+import { SpansTab } from "../trace-detail-drawer/tabs/spans-tab.tsx"
 import { AnnotationsTab } from "./annotations-tab.tsx"
 import { ConversationTab } from "./conversation-tab.tsx"
 import { IssuesTab } from "./issues-tab.tsx"
 import { MetadataTab } from "./metadata-tab.tsx"
 import { SessionStatusPill } from "./session-status-pill.tsx"
 
-export type SessionTabId = "session" | "conversation" | "annotations" | "issues"
+export type SessionTabId = "session" | "conversation" | "spans" | "annotations" | "issues"
 
 export function isSessionTab(value: string): value is SessionTabId {
-  return value === "session" || value === "conversation" || value === "annotations" || value === "issues"
+  return (
+    value === "session" ||
+    value === "conversation" ||
+    value === "spans" ||
+    value === "annotations" ||
+    value === "issues"
+  )
 }
 
 const tabCountPillClass =
@@ -51,15 +59,18 @@ export function SessionSlot({
   readonly searchQuery?: string
 }) {
   const traceIds = session.traceIds
-  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<SessionTabId>>(() => new Set([activeTab]))
 
-  // TODO(frontend-use-effect-policy): reactive on `activeTab` because the tab can
-  // change from a URL param (deep link, browser back/forward), not just from the
-  // tab control here. The single source of truth for "mark visited" is this
-  // effect — `selectTab` does not need to write the set itself.
+  // A single-trace session can surface its spans inline
+  const singleTrace = traces.length === 1 ? traces[0] : undefined
+  const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
+  const effectiveActiveTab: SessionTabId = activeTab === "spans" && !singleTrace ? "session" : activeTab
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<SessionTabId>>(() => new Set([effectiveActiveTab]))
+
+  // TODO(frontend-use-effect-policy): visited-set is an accumulator over a
+  // sequence of activeTab changes; can't be derived from current props alone.
   useEffect(() => {
-    setVisitedTabs((prev) => (prev.has(activeTab) ? prev : new Set([...prev, activeTab])))
-  }, [activeTab])
+    setVisitedTabs((prev) => (prev.has(effectiveActiveTab) ? prev : new Set([...prev, effectiveActiveTab])))
+  }, [effectiveActiveTab])
 
   function selectTab(tab: SessionTabId) {
     onActiveTabChange(tab)
@@ -84,8 +95,8 @@ export function SessionSlot({
     return map
   }, [traces])
 
-  const tabs = useMemo<TabOption<SessionTabId>[]>(
-    () => [
+  const tabs = useMemo<TabOption<SessionTabId>[]>(() => {
+    const all: TabOption<SessionTabId>[] = [
       {
         id: "session",
         label: "Session",
@@ -96,6 +107,16 @@ export function SessionSlot({
         label: "Conversation",
         icon: <Icon icon={MessagesSquareIcon} size="sm" />,
       },
+    ]
+    if (singleTrace) {
+      all.push({
+        id: "spans",
+        label: "Spans",
+        icon: <Icon icon={ListTreeIcon} size="sm" />,
+        suffix: countSuffix(singleTrace.spanCount),
+      })
+    }
+    all.push(
       {
         id: "annotations",
         label: "Annotations",
@@ -108,9 +129,9 @@ export function SessionSlot({
         icon: <Icon icon={TriangleAlertIcon} size="sm" />,
         suffix: countSuffix(issueCount),
       },
-    ],
-    [annotationCount, issueCount],
-  )
+    )
+    return all
+  }, [annotationCount, issueCount, singleTrace])
 
   const title = session.rootSpanName || session.sessionId.slice(0, 12)
   const status = deriveSessionStatus(session.endTime)
@@ -156,23 +177,34 @@ export function SessionSlot({
             tooltip="Copy session ID"
           />
         </div>
-        <Tabs options={tabs} active={activeTab} onSelect={selectTab} />
+        <Tabs options={tabs} active={effectiveActiveTab} onSelect={selectTab} />
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {activeTab === "session" && <MetadataTab session={session} />}
+        {effectiveActiveTab === "session" && <MetadataTab session={session} />}
         {visitedTabs.has("conversation") && (
-          <div className={activeTab === "conversation" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+          <div className={effectiveActiveTab === "conversation" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
             <ConversationTab
               projectId={projectId}
               latestTraceId={latestTraceId}
-              isActive={activeTab === "conversation"}
+              isActive={effectiveActiveTab === "conversation"}
               {...(searchQuery ? { searchQuery } : {})}
             />
           </div>
         )}
+        {singleTrace && visitedTabs.has("spans") && (
+          <div className={effectiveActiveTab === "spans" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+            <SpansTab
+              projectId={projectId}
+              traceId={singleTrace.traceId}
+              selectedSpanId={selectedSpanId}
+              onSelectSpan={setSelectedSpanId}
+              isActive={effectiveActiveTab === "spans"}
+            />
+          </div>
+        )}
         {visitedTabs.has("annotations") && (
-          <div className={activeTab === "annotations" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+          <div className={effectiveActiveTab === "annotations" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
             <AnnotationsTab
               projectId={projectId}
               traceIds={traceIds}
@@ -184,7 +216,7 @@ export function SessionSlot({
           </div>
         )}
         {visitedTabs.has("issues") && (
-          <div className={activeTab === "issues" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+          <div className={effectiveActiveTab === "issues" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
             <IssuesTab projectId={projectId} traceIds={traceIds} onOpenIssue={onOpenIssue} />
           </div>
         )}

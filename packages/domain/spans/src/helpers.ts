@@ -178,6 +178,7 @@ export function denseTraceTimeHistogramBuckets(
     buckets.set(key, {
       bucketStart: prev.bucketStart,
       traceCount: prev.traceCount + b.traceCount,
+      sessionCount: prev.sessionCount + b.sessionCount,
       costTotalMicrocentsSum: prev.costTotalMicrocentsSum + b.costTotalMicrocentsSum,
       durationNsMedian: Math.max(prev.durationNsMedian, b.durationNsMedian),
       tokensTotalSum: prev.tokensTotalSum + b.tokensTotalSum,

@@ -34,6 +34,7 @@ const buildLayer = (input: {
   readonly histogramBuckets?: ReadonlyArray<{
     bucketStart: string
     traceCount: number
+    sessionCount: number
     costTotalMicrocentsSum: number
     durationNsMedian: number
     tokensTotalSum: number
@@ -115,6 +116,7 @@ describe("getTraceAnalyticsUseCase", () => {
       {
         bucketStart: "2026-04-15T00:00:00.000Z",
         traceCount: 5,
+        sessionCount: 4,
         costTotalMicrocentsSum: 100,
         durationNsMedian: 1000,
         tokensTotalSum: 200,
@@ -124,6 +126,7 @@ describe("getTraceAnalyticsUseCase", () => {
       {
         bucketStart: "2026-04-15T12:00:00.000Z",
         traceCount: 3,
+        sessionCount: 2,
         costTotalMicrocentsSum: 50,
         durationNsMedian: 800,
         tokensTotalSum: 150,

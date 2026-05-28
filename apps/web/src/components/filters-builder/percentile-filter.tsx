@@ -1,16 +1,26 @@
-import type { PercentileTraceFilterField } from "@domain/shared"
+import type { PercentileSessionFilterField, PercentileTraceFilterField } from "@domain/shared"
 import { Button, Text, useMountEffect } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice } from "@repo/utils"
 import { XIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
+import { useSessionDistribution } from "../../domains/sessions/sessions.collection.ts"
 import { useTraceDistribution } from "../../domains/traces/traces.collection.ts"
+import type { FilterMode } from "./multi-select-filter.tsx"
+
+type PercentileField = PercentileTraceFilterField | PercentileSessionFilterField
 
 interface PercentileFilterProps {
   readonly projectId: string
-  readonly field: PercentileTraceFilterField
-  /** Locked percentile threshold (0–100), or undefined when no filter is set. */
+  readonly field: PercentileField
   readonly value: number | undefined
   readonly onChange: (percentile: number | undefined) => void
+  readonly mode?: FilterMode
+}
+
+function useDistributionForMode(mode: FilterMode, args: { projectId: string; field: PercentileField }) {
+  const trace = useTraceDistribution({ projectId: args.projectId, field: args.field, enabled: mode === "traces" })
+  const session = useSessionDistribution({ projectId: args.projectId, field: args.field, enabled: mode === "sessions" })
+  return mode === "sessions" ? session : trace
 }
 
 const CHART_HEIGHT = 64
@@ -85,14 +95,14 @@ function buildAreaPath(points: readonly { x: number; y: number }[]): string {
   return `${head} ${curve} L ${last.x.toFixed(2)} ${CHART_HEIGHT} Z`
 }
 
-function formatValueForField(field: PercentileTraceFilterField, value: number): string {
+function formatValueForField(field: PercentileField, value: number): string {
   if (field === "duration" || field === "ttft") return formatDuration(value)
   if (field === "cost") return formatPrice(value / 100_000_000)
   return String(value)
 }
 
-export function PercentileFilter({ projectId, field, value, onChange }: PercentileFilterProps) {
-  const { data: distribution, isLoading, isError } = useTraceDistribution({ projectId, field })
+export function PercentileFilter({ projectId, field, value, onChange, mode = "traces" }: PercentileFilterProps) {
+  const { data: distribution, isLoading, isError } = useDistributionForMode(mode, { projectId, field })
   const [hoverPercentile, setHoverPercentile] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -346,7 +356,9 @@ export function PercentileFilter({ projectId, field, value, onChange }: Percenti
               <Text.H7 color={activeIsHover && lockedPercentile === null ? "foregroundMuted" : "foreground"}>
                 {`≥ p${activePercentile}`}
                 {activeValue !== undefined && totalCount > 0 ? ` · ${formatValueForField(field, activeValue)}` : null}
-                {tracesAtOrAbove !== null ? ` · ~${formatCount(tracesAtOrAbove)} traces` : null}
+                {tracesAtOrAbove !== null
+                  ? ` · ~${formatCount(tracesAtOrAbove)} ${mode === "sessions" ? "sessions" : "traces"}`
+                  : null}
               </Text.H7>
             ) : (
               <Text.H7 color="foregroundMuted">Click chart to set a percentile threshold</Text.H7>

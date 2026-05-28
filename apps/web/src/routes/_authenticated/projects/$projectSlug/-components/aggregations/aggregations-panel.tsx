@@ -8,7 +8,7 @@ import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { GeneralAggregations } from "./general-aggregations.tsx"
 import { Histogram } from "./histogram.tsx"
 
-const DEFAULT_HISTOGRAM_METRIC: TraceHistogramMetric = "traces"
+const DEFAULT_HISTOGRAM_METRIC: TraceHistogramMetric = "sessions"
 
 interface TraceAggregationsPanelProps {
   readonly projectId: string
@@ -42,7 +42,7 @@ export function TraceAggregationsPanel({
         <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-1.5">
             <Icon icon={BarChart2} size="sm" color="foregroundMuted" />
-            <Text.H6 color="foregroundMuted">Traces statistics</Text.H6>
+            <Text.H6 color="foregroundMuted">Statistics</Text.H6>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setCollapsed(false)} aria-label="Expand statistics">
             <Icon icon={ChevronDown} size="sm" />

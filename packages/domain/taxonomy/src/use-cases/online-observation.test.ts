@@ -11,7 +11,13 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
-import { type SessionDetail, SessionRepository, type TraceDetail, TraceRepository } from "@domain/spans"
+import {
+  emptyTraceDistribution,
+  type SessionDetail,
+  SessionRepository,
+  type TraceDetail,
+  TraceRepository,
+} from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { TAXONOMY_EMBEDDING_DIMENSIONS } from "../constants.ts"
@@ -153,6 +159,7 @@ const makeSessionRepository = (session: SessionDetail | null) =>
         timeToFirstTokenNs: { min: 0, max: 0, avg: 0, median: 0, sum: 0 },
       }),
     distinctFilterValues: () => Effect.succeed([]),
+    getDistribution: () => Effect.succeed(emptyTraceDistribution()),
   })
 
 const makeTraceRepository = (traces: readonly TraceDetail[]) =>

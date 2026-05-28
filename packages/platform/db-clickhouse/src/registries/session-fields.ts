@@ -1,15 +1,18 @@
 import type { ChFieldRegistry } from "../filter-builder.ts"
-import { mapDateTime64UtcQueryParam } from "./helpers.ts"
+import { buildHasLlmActivityClause, buildStatusClause, mapDateTime64UtcQueryParam } from "./helpers.ts"
 
 export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
+  status: { kind: "synthetic", buildClause: buildStatusClause },
+  hasLlmActivity: { kind: "synthetic", buildClause: buildHasLlmActivityClause },
   sessionId: { column: "session_id", chType: "String" },
+  traceId: { column: "trace_ids", chType: "FixedString(32)", isArray: true, arrayContains: true },
   simulationId: { column: "simulation_id", chType: "String" },
   userId: { column: "user_id", chType: "String" },
   name: { column: "root_span_name", chType: "String" },
-  tags: { column: "tags", chType: "String", isArray: true },
-  models: { column: "models", chType: "String", isArray: true },
-  providers: { column: "providers", chType: "String", isArray: true },
-  serviceNames: { column: "service_names", chType: "String", isArray: true },
+  tags: { column: "tags", chType: "String", isArray: true, arrayContains: true },
+  models: { column: "models", chType: "String", isArray: true, arrayContains: true },
+  providers: { column: "providers", chType: "String", isArray: true, arrayContains: true },
+  serviceNames: { column: "service_names", chType: "String", isArray: true, arrayContains: true },
   cost: { column: "cost_total_microcents", chType: "UInt64" },
   duration: { column: "duration_ns", chType: "Int64" },
   ttft: { column: "time_to_first_token_ns", chType: "Int64" },

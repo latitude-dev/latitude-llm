@@ -56,5 +56,12 @@ export type PercentileTraceFilterField = (typeof PERCENTILE_TRACE_FILTER_FIELDS)
 export const isPercentileTraceFilterField = (value: string): value is PercentileTraceFilterField =>
   (PERCENTILE_TRACE_FILTER_FIELDS as readonly string[]).includes(value)
 
+export const PERCENTILE_SESSION_FILTER_FIELDS = ["duration", "ttft", "cost"] as const
+
+export type PercentileSessionFilterField = (typeof PERCENTILE_SESSION_FILTER_FIELDS)[number]
+
+export const isPercentileSessionFilterField = (value: string): value is PercentileSessionFilterField =>
+  (PERCENTILE_SESSION_FILTER_FIELDS as readonly string[]).includes(value)
+
 export const STATUS_OPTIONS = ["ok", "error", "unset"] as const
 export type TraceStatus = (typeof STATUS_OPTIONS)[number]

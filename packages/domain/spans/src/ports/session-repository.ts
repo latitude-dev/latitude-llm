@@ -3,6 +3,7 @@ import type {
   FilterSet,
   NotFoundError,
   OrganizationId,
+  PercentileSessionFilterField,
   ProjectId,
   RepositoryError,
   SessionId,
@@ -10,7 +11,7 @@ import type {
 import { Context, type Effect } from "effect"
 import type { Session, SessionDetail } from "../entities/session.ts"
 import type { SessionSearchMatch } from "../entities/session-search-match.ts"
-import type { NumericRollup } from "./trace-repository.ts"
+import type { NumericRollup, TraceDistribution } from "./trace-repository.ts"
 
 /**
  * Repository port for sessions (ClickHouse materialized view).
@@ -51,6 +52,20 @@ export interface SessionRepositoryShape {
     readonly limit?: number
     readonly search?: string
   }): Effect.Effect<readonly string[], RepositoryError, ChSqlClient>
+
+  /**
+   * Numeric distribution of one session column for the project, sampled at every
+   * integer percentile (p0..p100 — 101 values). Mirrors `TraceRepository.getDistribution`
+   * but computed against the session aggregate, since per-session and per-trace
+   * distributions are independent (a session-cost distribution is not the same
+   * as a trace-cost distribution). Intentionally ignores other user filters so
+   * the visualization is stable while the user picks a threshold.
+   */
+  getDistribution(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly field: PercentileSessionFilterField
+  }): Effect.Effect<TraceDistribution, RepositoryError, ChSqlClient>
 }
 
 export type SessionDistinctColumn = "tags" | "models" | "providers" | "serviceNames"

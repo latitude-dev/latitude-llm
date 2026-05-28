@@ -138,7 +138,7 @@ export function Histogram({ projectId, projectSlug, filters, metric, showInciden
   if (denseBuckets.length === 0) {
     return (
       <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
-        <Text.H6 color="foregroundMuted">No traces in this time window</Text.H6>
+        <Text.H6 color="foregroundMuted">No activity in this time window</Text.H6>
       </div>
     )
   }

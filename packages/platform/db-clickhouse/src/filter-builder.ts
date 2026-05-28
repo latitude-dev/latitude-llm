@@ -4,18 +4,26 @@ import type { FilterCondition, FilterOperator, FilterSet } from "@domain/shared"
 // ClickHouse-specific field mapping
 // ---------------------------------------------------------------------------
 
-export interface ChFieldMapping {
-  /** SQL column expression or alias used in SELECT/HAVING */
+export interface ScalarFieldMapping {
   readonly column: string
-  /** ClickHouse parameter type (e.g. "String", "UInt64", "Array(String)") */
   readonly chType: string
-  /** Whether this is an array column (in/notIn use hasAny instead of IN) */
   readonly isArray?: boolean
-  /**
-   * Optional value transform before SQL binding (e.g. status string -> int).
-   * Receives the condition value and must return a value suitable for the chType.
-   */
+  readonly arrayContains?: boolean
   readonly mapValue?: (value: FilterCondition["value"]) => FilterCondition["value"]
+}
+
+export interface SyntheticFieldMapping {
+  readonly kind: "synthetic"
+  readonly buildClause: (
+    cond: FilterCondition,
+    paramPrefix: string,
+  ) => { readonly clause: string; readonly params: Record<string, unknown> }
+}
+
+export type ChFieldMapping = ScalarFieldMapping | SyntheticFieldMapping
+
+function isSyntheticMapping(mapping: ChFieldMapping): mapping is SyntheticFieldMapping {
+  return "kind" in mapping && mapping.kind === "synthetic"
 }
 
 export type ChFieldRegistry<K extends string = string> = Readonly<Record<K, ChFieldMapping>>
@@ -90,10 +98,22 @@ export function buildClickHouseWhere(
     const mapping = registry[field]
     if (!mapping) continue
 
+    if (isSyntheticMapping(mapping)) {
+      for (const cond of conditions) {
+        const subPrefix = `${prefix}_${paramIdx++}`
+        const { clause, params: extraParams } = mapping.buildClause(cond, subPrefix)
+        clauses.push(clause)
+        Object.assign(params, extraParams)
+      }
+      continue
+    }
+
     for (const cond of conditions) {
       const p = `${prefix}_${paramIdx++}`
       let value: FilterCondition["value"] = mapping.mapValue ? mapping.mapValue(cond.value) : cond.value
-      if ((cond.op === "contains" || cond.op === "notContains") && typeof value === "string") {
+      const ilikeWrap =
+        (cond.op === "contains" || cond.op === "notContains") && !(mapping.isArray && mapping.arrayContains)
+      if (ilikeWrap && typeof value === "string") {
         value = `%${value}%`
       }
       params[p] = value
@@ -108,14 +128,21 @@ export function buildClickHouseWhere(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function buildClause(mapping: ChFieldMapping, paramName: string, cond: FilterCondition): string {
-  const { column, chType, isArray } = mapping
+function buildClause(mapping: ScalarFieldMapping, paramName: string, cond: FilterCondition): string {
+  const { column, chType, isArray, arrayContains } = mapping
 
   // Array fields: in/notIn use hasAny
   if (isArray && (cond.op === "in" || cond.op === "notIn")) {
     return cond.op === "in"
       ? `hasAny(${column}, {${paramName}:Array(${chType})})`
       : `NOT hasAny(${column}, {${paramName}:Array(${chType})})`
+  }
+
+  if (isArray && arrayContains && (cond.op === "eq" || cond.op === "contains")) {
+    return `has(${column}, {${paramName}:${chType}})`
+  }
+  if (isArray && arrayContains && (cond.op === "neq" || cond.op === "notContains")) {
+    return `NOT has(${column}, {${paramName}:${chType}})`
   }
 
   // Scalar in/notIn

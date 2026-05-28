@@ -23,6 +23,17 @@ export interface HistogramMetricDefinition {
 const microcentsToUSD = (microcents: number): string => formatPrice(microcents / 100_000_000)
 
 export const HISTOGRAM_METRIC_DEFINITIONS: Readonly<Record<TraceHistogramMetric, HistogramMetricDefinition>> = {
+  sessions: {
+    id: "sessions",
+    label: "Sessions",
+    cardSkeletonWidthClassName: "w-16",
+    tooltipNoun: "sessions",
+    formatBucket: formatCount,
+    selectBucket: (b) => b.sessionCount,
+    // Card value is rendered out-of-band from a session-count query — see
+    // `general-aggregations.tsx`. This stub is unused for `sessions`.
+    selectMetricsValue: () => 0,
+  },
   traces: {
     id: "traces",
     label: "Traces",

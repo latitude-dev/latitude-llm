@@ -3,6 +3,7 @@ import type { TraceHistogramMetric } from "@domain/spans"
 import { Button, cn, Icon, Skeleton, Text } from "@repo/ui"
 import { ChevronUp } from "lucide-react"
 import { useState } from "react"
+import { useSessionsCount } from "../../../../../../domains/sessions/sessions.collection.ts"
 import { useTraceMetrics, useTracesCount } from "../../../../../../domains/traces/traces.collection.ts"
 import { HISTOGRAM_METRIC_DEFINITIONS, type HistogramMetricDefinition } from "./histogram-metrics.ts"
 
@@ -46,7 +47,15 @@ function AggregationItem({
 
 const DASH = "—"
 
-const METRIC_ORDER: readonly TraceHistogramMetric[] = ["traces", "cost", "duration", "tokens", "ttft", "spans"]
+const METRIC_ORDER: readonly TraceHistogramMetric[] = [
+  "sessions",
+  "cost",
+  "duration",
+  "tokens",
+  "ttft",
+  "traces",
+  "spans",
+]
 
 export function GeneralAggregations({
   projectId,
@@ -72,8 +81,12 @@ export function GeneralAggregations({
     projectId,
     ...filterOpts,
   })
+  const { totalCount: sessionTotalCount, isLoading: sessionCountLoading } = useSessionsCount({
+    projectId,
+    ...filterOpts,
+  })
 
-  const loading = metricsLoading || countLoading
+  const loading = metricsLoading || countLoading || sessionCountLoading
 
   // TTFT card is hidden when no trace in the current view recorded a first-token timestamp
   // (`> 0`); showing it would just render "—" forever for projects that don't stream.
@@ -86,6 +99,7 @@ export function GeneralAggregations({
   const [showLeftFade, setShowLeftFade] = useState(false)
 
   const renderValue = (def: HistogramMetricDefinition): string => {
+    if (def.id === "sessions") return def.formatBucket(sessionTotalCount)
     if (def.id === "traces") return def.formatBucket(totalCount)
     if (!traceMetrics) return DASH
     return def.formatBucket(def.selectMetricsValue(traceMetrics, totalCount))

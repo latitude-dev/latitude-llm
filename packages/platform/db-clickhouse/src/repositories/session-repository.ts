@@ -3,9 +3,15 @@ import {
   ChSqlClient,
   type ChSqlClientShape,
   ExternalUserId,
+  type FilterCondition,
   type FilterSet,
   isNotFoundError,
+  isPercentileSessionFilterField,
   NotFoundError,
+  type OrganizationId,
+  type PercentileSessionFilterField,
+  type ProjectId,
+  type RepositoryError,
   SessionId,
   SimulationId,
   SpanId,
@@ -13,8 +19,14 @@ import {
   ProjectId as toProjectId,
   toRepositoryError,
 } from "@domain/shared"
-import type { Session, SessionDetail, SessionListPage, SessionMetrics } from "@domain/spans"
-import { emptySessionMetrics, parseSearchQuery, SessionRepository, type SessionRepositoryShape } from "@domain/spans"
+import type { Session, SessionDetail, SessionListPage, SessionMetrics, TraceDistribution } from "@domain/spans"
+import {
+  emptySessionMetrics,
+  emptyTraceDistribution,
+  parseSearchQuery,
+  SessionRepository,
+  type SessionRepositoryShape,
+} from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -292,6 +304,128 @@ function buildSessionFilterClauses(filters: FilterSet | undefined): {
   }
 }
 
+interface PercentileColumnSpec {
+  readonly column: string
+  readonly ignoreZeros: boolean
+}
+
+const PERCENTILE_FIELD_SPECS: Readonly<Record<PercentileSessionFilterField, PercentileColumnSpec>> = {
+  duration: { column: "duration_ns", ignoreZeros: false },
+  cost: { column: "cost_total_microcents", ignoreZeros: false },
+  ttft: { column: "time_to_first_token_ns", ignoreZeros: true },
+}
+
+function quantileExpr(spec: PercentileColumnSpec, levelParam: string): string {
+  return spec.ignoreZeros
+    ? `quantileTDigestIf({${levelParam}:Float64})(${spec.column}, ${spec.column} > 0)`
+    : `quantileTDigest({${levelParam}:Float64})(${spec.column})`
+}
+
+const PERCENTILE_NO_MATCH_SENTINEL = Number.MAX_SAFE_INTEGER
+
+/** Number of percentile buckets sampled in the distribution: p0..p100 inclusive. */
+const PERCENTILE_LEVEL_COUNT = 101
+const PERCENTILE_LEVELS = Array.from({ length: PERCENTILE_LEVEL_COUNT }, (_, i) => (i / 100).toFixed(2)).join(", ")
+
+interface PercentileRequestEntry {
+  readonly field: PercentileSessionFilterField
+  readonly percentile: number
+  readonly conditionIndex: number
+  readonly conditions: FilterCondition[]
+}
+
+function collectPercentileRequests(filters: FilterSet | undefined): {
+  readonly requests: readonly PercentileRequestEntry[]
+  readonly cloned: Record<string, FilterCondition[]> | undefined
+} {
+  if (!filters) return { requests: [], cloned: undefined }
+
+  let cloned: Record<string, FilterCondition[]> | undefined
+  const requests: PercentileRequestEntry[] = []
+
+  for (const [field, conds] of Object.entries(filters)) {
+    if (!conds) continue
+    const hasPct = conds.some((c) => c.op === "gtePercentile")
+    if (!hasPct) continue
+
+    if (!isPercentileSessionFilterField(field)) continue
+
+    if (!cloned) cloned = {}
+    const arr = [...conds] as FilterCondition[]
+    cloned[field] = arr
+    arr.forEach((c, idx) => {
+      if (c.op === "gtePercentile" && typeof c.value === "number") {
+        requests.push({ field, percentile: c.value, conditionIndex: idx, conditions: arr })
+      }
+    })
+  }
+
+  if (!cloned) return { requests: [], cloned: undefined }
+
+  // Carry over fields without percentile filters into the cloned set.
+  for (const [field, conds] of Object.entries(filters)) {
+    if (!conds) continue
+    if (cloned[field]) continue
+    cloned[field] = conds as FilterCondition[]
+  }
+
+  return { requests, cloned }
+}
+
+const resolvePercentileFilters = (
+  organizationId: OrganizationId,
+  projectId: ProjectId,
+  filters: FilterSet | undefined,
+): Effect.Effect<FilterSet | undefined, RepositoryError, ChSqlClient> => {
+  const { requests, cloned } = collectPercentileRequests(filters)
+  if (requests.length === 0 || !cloned) return Effect.succeed(filters)
+
+  return Effect.gen(function* () {
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+
+    const params: Record<string, unknown> = {
+      organizationId: organizationId as string,
+      projectId: projectId as string,
+    }
+    const aliases: string[] = []
+    requests.forEach((req, idx) => {
+      const spec = PERCENTILE_FIELD_SPECS[req.field]
+      const levelParam = `pct_lvl_${idx}`
+      params[levelParam] = Math.max(0, Math.min(1, req.percentile / 100))
+      aliases.push(`${quantileExpr(spec, levelParam)} AS pct_${idx}`)
+    })
+
+    const rows = yield* chSqlClient
+      .query(async (client) => {
+        const result = await client.query({
+          query: `SELECT ${aliases.join(", ")}
+                  FROM (
+                    SELECT ${LIST_SELECT}
+                    FROM sessions
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                    GROUP BY organization_id, project_id, session_id
+                  )`,
+          query_params: params,
+          format: "JSONEachRow",
+        })
+        return result.json<Record<string, number | string | null>>()
+      })
+      .pipe(Effect.mapError((error) => toRepositoryError(error, "resolvePercentileFilters")))
+
+    const row = rows[0] ?? {}
+    requests.forEach((req, idx) => {
+      const raw = row[`pct_${idx}`]
+      const numeric =
+        typeof raw === "number" ? raw : raw != null && raw !== "" && !Number.isNaN(Number(raw)) ? Number(raw) : NaN
+      const threshold = Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric) : PERCENTILE_NO_MATCH_SENTINEL
+      req.conditions[req.conditionIndex] = { op: "gte", value: threshold }
+    })
+
+    return cloned as FilterSet
+  })
+}
+
 const DEFAULT_SORT: SortColumn = SORT_COLUMNS.lastActivity as SortColumn
 
 export const SessionRepositoryLive = Layer.effect(
@@ -332,6 +466,8 @@ export const SessionRepositoryLive = Layer.effect(
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         const limit = options.limit ?? 50
 
+        const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, options.filters)
+
         const parsed =
           options.searchQuery && options.searchQuery.length > 0 ? parseSearchQuery(options.searchQuery) : undefined
 
@@ -340,7 +476,7 @@ export const SessionRepositoryLive = Layer.effect(
             organizationId,
             projectId,
             parsed,
-            filters: options.filters,
+            filters: resolvedFilters,
             cursor: options.cursor,
             limit,
             sortBy: options.sortBy,
@@ -356,7 +492,7 @@ export const SessionRepositoryLive = Layer.effect(
         const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
         const cmp = orderDir === "DESC" ? "<" : ">"
 
-        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
+        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(resolvedFilters)
 
         const havingParts: string[] = [...havingClauses]
         if (options.cursor) {
@@ -420,13 +556,14 @@ export const SessionRepositoryLive = Layer.effect(
       countByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
 
           const parsed = searchQuery && searchQuery.length > 0 ? parseSearchQuery(searchQuery) : undefined
           if (parsed && isActiveSearch(parsed)) {
-            return yield* countSessionsBySearchQuery({ organizationId, projectId, parsed, filters })
+            return yield* countSessionsBySearchQuery({ organizationId, projectId, parsed, filters: resolvedFilters })
           }
 
-          const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
+          const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(resolvedFilters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
@@ -463,7 +600,8 @@ export const SessionRepositoryLive = Layer.effect(
       aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
+          const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+          const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(resolvedFilters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
@@ -549,6 +687,55 @@ export const SessionRepositoryLive = Layer.effect(
               Effect.mapError((error) =>
                 isNotFoundError(error) ? error : toRepositoryError(error, "findBySessionId"),
               ),
+            )
+        }),
+
+      getDistribution: ({ organizationId, projectId, field }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const spec = PERCENTILE_FIELD_SPECS[field]
+
+          const filterClause = spec.ignoreZeros ? `, ${spec.column} > 0` : ""
+          const quantilesFn = spec.ignoreZeros ? "quantilesTDigestIf" : "quantilesTDigest"
+          const countFn = spec.ignoreZeros ? `countIf(${spec.column} > 0)` : "count()"
+
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          ${countFn} AS cnt,
+                          ${quantilesFn}(${PERCENTILE_LEVELS})(${spec.column}${filterClause}) AS pcts
+                        FROM (
+                          SELECT ${LIST_SELECT}
+                          FROM sessions
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                          GROUP BY organization_id, project_id, session_id
+                        )`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<{ cnt: string | number; pcts: ReadonlyArray<number | string | null> }>()
+            })
+            .pipe(
+              Effect.map((rows): TraceDistribution => {
+                const row = rows[0]
+                if (!row) return emptyTraceDistribution()
+                const count = Number(row.cnt) || 0
+                if (count === 0) return emptyTraceDistribution()
+                const percentileValues = (row.pcts ?? []).map((v) => {
+                  const n = typeof v === "number" ? v : v != null ? Number(v) : 0
+                  return Number.isFinite(n) ? n : 0
+                })
+                while (percentileValues.length < PERCENTILE_LEVEL_COUNT)
+                  percentileValues.push(percentileValues.at(-1) ?? 0)
+                if (percentileValues.length > PERCENTILE_LEVEL_COUNT) percentileValues.length = PERCENTILE_LEVEL_COUNT
+                return { count, percentileValues }
+              }),
+              Effect.mapError((error) => toRepositoryError(error, "getDistribution")),
             )
         }),
 

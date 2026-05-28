@@ -516,6 +516,75 @@ describe("SessionRepository", () => {
     })
   })
 
+  describe("getDistribution", () => {
+    it("returns the empty distribution shape when the project has no sessions", async () => {
+      const dist = await runCh(
+        repo.getDistribution({
+          organizationId: ORG_ID,
+          projectId: ProjectId("ppppppppppppppppppppppp9"),
+          field: "cost",
+        }),
+      )
+      expect(dist.count).toBe(0)
+      expect(dist.percentileValues).toHaveLength(101)
+      expect(dist.percentileValues.every((v) => v === 0)).toBe(true)
+    })
+
+    it("samples 101 percentile levels with p100 hitting the max for sum-aggregated fields", async () => {
+      const start = new Date(Date.UTC(2026, 0, 2, 10, 0, 0))
+      const costs = [100, 500, 5_000, 50_000]
+      await insertSpans(
+        costs.map((cost, i) =>
+          makeSpanRow({
+            traceId: `c${i}`.padEnd(32, "0"),
+            spanId: `c${i}`.padEnd(16, "0"),
+            sessionId: `cost-session-${i}`,
+            startTime: new Date(start.getTime() + i * 1_000),
+            costTotalMicrocents: cost,
+          }),
+        ),
+      )
+
+      const dist = await runCh(repo.getDistribution({ organizationId: ORG_ID, projectId: PROJECT_ID, field: "cost" }))
+      expect(dist.count).toBe(costs.length)
+      expect(dist.percentileValues).toHaveLength(101)
+      expect(dist.percentileValues[0]).toBe(100)
+      expect(dist.percentileValues[100]).toBe(50_000)
+    })
+
+    it("ignores zero-valued rows for ttft so the distribution reflects only sessions that streamed", async () => {
+      const start = new Date(Date.UTC(2026, 0, 3, 10, 0, 0))
+      await insertSpans([
+        makeSpanRow({
+          traceId: "ttft-a".padEnd(32, "0"),
+          spanId: "ttft-a".padEnd(16, "0"),
+          sessionId: "ttft-a",
+          startTime: start,
+          timeToFirstTokenNs: 10_000_000,
+        }),
+        makeSpanRow({
+          traceId: "ttft-b".padEnd(32, "0"),
+          spanId: "ttft-b".padEnd(16, "0"),
+          sessionId: "ttft-b",
+          startTime: new Date(start.getTime() + 1_000),
+          timeToFirstTokenNs: 50_000_000,
+        }),
+        makeSpanRow({
+          traceId: "ttft-z".padEnd(32, "0"),
+          spanId: "ttft-z".padEnd(16, "0"),
+          sessionId: "ttft-zero",
+          startTime: new Date(start.getTime() + 2_000),
+          // sentinel 0 — must not contribute to the distribution
+        }),
+      ])
+
+      const dist = await runCh(repo.getDistribution({ organizationId: ORG_ID, projectId: PROJECT_ID, field: "ttft" }))
+      expect(dist.count).toBe(2)
+      expect(dist.percentileValues[0]).toBe(10_000_000)
+      expect(dist.percentileValues[100]).toBe(50_000_000)
+    })
+  })
+
   describe("aggregateMetricsByProjectId", () => {
     it("rolls up time_to_first_token_ns across sessions, ignoring sentinel zeros", async () => {
       const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))

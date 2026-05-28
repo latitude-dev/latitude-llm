@@ -146,6 +146,9 @@ export function MetadataTab({ session }: { readonly session: SessionDetailRecord
           <DetailSummary
             items={[
               { label: "Session ID", value: session.sessionId, copyable: true },
+              ...(session.traceIds.length === 1
+                ? [{ label: "Trace ID", value: session.traceIds[0] as string, copyable: true }]
+                : []),
               ...(session.simulationId?.trim()
                 ? [
                     {

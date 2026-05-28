@@ -194,6 +194,7 @@ export interface TraceTimeHistogramBucket {
   /** Bucket start instant (UTC ISO string). */
   readonly bucketStart: string
   readonly traceCount: number
+  readonly sessionCount: number
   readonly costTotalMicrocentsSum: number
   readonly durationNsMedian: number
   readonly tokensTotalSum: number
@@ -201,8 +202,7 @@ export interface TraceTimeHistogramBucket {
   readonly timeToFirstTokenNsMedian: number
 }
 
-/** Metric series the traces histogram can render. Order matches the metric cards above the chart. */
-export const TRACE_HISTOGRAM_METRICS = ["traces", "cost", "duration", "tokens", "ttft", "spans"] as const
+export const TRACE_HISTOGRAM_METRICS = ["sessions", "cost", "duration", "tokens", "ttft", "traces", "spans"] as const
 
 export type TraceHistogramMetric = (typeof TRACE_HISTOGRAM_METRICS)[number]
 
@@ -230,6 +230,7 @@ export const emptyTraceDistribution = (): TraceDistribution => ({
 export const emptyTraceTimeHistogramBucket = (bucketStart: string): TraceTimeHistogramBucket => ({
   bucketStart,
   traceCount: 0,
+  sessionCount: 0,
   costTotalMicrocentsSum: 0,
   durationNsMedian: 0,
   tokensTotalSum: 0,

@@ -1,7 +1,22 @@
 import { deriveIssueLifecycleStates, IssueRepository } from "@domain/issues"
 import { ScoreAnalyticsRepository } from "@domain/scores"
-import { filterSetSchema, OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
-import type { Session, SessionDetail, SessionDistinctColumn, SessionMetrics, SessionSearchMatch } from "@domain/spans"
+import {
+  filterSetSchema,
+  OrganizationId,
+  PERCENTILE_SESSION_FILTER_FIELDS,
+  type PercentileSessionFilterField,
+  ProjectId,
+  SessionId,
+  TraceId,
+} from "@domain/shared"
+import type {
+  Session,
+  SessionDetail,
+  SessionDistinctColumn,
+  SessionMetrics,
+  SessionSearchMatch,
+  TraceDistribution,
+} from "@domain/spans"
 import { SessionRepository, SpanRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
@@ -334,6 +349,33 @@ export const listSessionIssues = createServerFn({ method: "GET" })
       }).pipe(
         withPostgres(IssueRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
+    )
+  })
+
+export const getSessionDistribution = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      field: z.enum(PERCENTILE_SESSION_FILTER_FIELDS),
+    }),
+  )
+  .handler(async ({ data }): Promise<TraceDistribution> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SessionRepository
+        return yield* repo.getDistribution({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          field: data.field as PercentileSessionFilterField,
+        })
+      }).pipe(
+        withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
         withTracing,
       ),
     )

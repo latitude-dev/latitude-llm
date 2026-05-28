@@ -1,15 +1,18 @@
-import type { FilterCondition, FilterSet, PercentileTraceFilterField } from "@domain/shared"
-import { Button, Icon, Input, Tabs, Text, Tooltip } from "@repo/ui"
+import type { FilterCondition, FilterSet } from "@domain/shared"
+import { Button, Icon, Input, Switch, Tabs, Text, Tooltip } from "@repo/ui"
 import { ChevronDown, ChevronUp, InfoIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import {
   getTextFieldsForMode,
   MULTI_SELECT_FIELDS,
   NUMBER_RANGE_FIELDS,
+  type PercentileFieldName,
+  STATUS_FIELDS,
 } from "../../../../../components/filters-builder/constants.ts"
 import { MetadataFilter } from "../../../../../components/filters-builder/metadata-filter/metadata-filter.tsx"
 import { type FilterMode, MultiSelectFilter } from "../../../../../components/filters-builder/multi-select-filter.tsx"
 import { PercentileFilter } from "../../../../../components/filters-builder/percentile-filter.tsx"
+import { StatusFilter, type StatusFilterValue } from "../../../../../components/filters-builder/status-filter.tsx"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 
@@ -46,6 +49,29 @@ function getRangeValues(filters: FilterSet, field: string): { min: number | unde
 function getPercentileValue(filters: FilterSet, field: string): number | undefined {
   const cond = filters[field]?.find((c) => c.op === "gtePercentile")
   return typeof cond?.value === "number" ? cond.value : undefined
+}
+
+const STATUS_VALUES: readonly StatusFilterValue[] = ["ok", "error"]
+
+function getStatusValues(filters: FilterSet, field: string): readonly StatusFilterValue[] {
+  const cond = filters[field]?.find((c) => c.op === "in")
+  const raw = Array.isArray(cond?.value) ? cond.value.map(String) : []
+  return raw.filter((v): v is StatusFilterValue => (STATUS_VALUES as readonly string[]).includes(v))
+}
+
+/**
+ * Tri-state for the "Has LLM activity" toggle:
+ * - URL key absent → treated as on (the default chip applies at the call site).
+ * - `[{op: "eq", value: false}]` → off (user explicitly opted out).
+ * - `[{op: "eq", value: true}]` → on (explicit; equivalent to absent).
+ *
+ * Returning a plain boolean lets the Switch render the right state regardless
+ * of which representation lives in the URL.
+ */
+function getHasLlmActivityOn(filters: FilterSet): boolean {
+  const cond = filters.hasLlmActivity?.find((c) => c.op === "eq")
+  if (cond === undefined) return true
+  return cond.value !== false && cond.value !== "false"
 }
 
 function setFieldConditions(filters: FilterSet, field: string, conditions: FilterCondition[]): FilterSet {
@@ -255,8 +281,9 @@ interface NumberFilterSectionProps {
   readonly label: ReactNode
   readonly field: string
   readonly tooltip: string | undefined
-  readonly percentileField: PercentileTraceFilterField | undefined
+  readonly percentileField: PercentileFieldName | undefined
   readonly projectId: string
+  readonly mode: FilterMode
   readonly minValue: number | undefined
   readonly maxValue: number | undefined
   readonly percentileValue: number | undefined
@@ -270,6 +297,7 @@ function NumberFilterSection({
   tooltip,
   percentileField,
   projectId,
+  mode,
   minValue,
   maxValue,
   percentileValue,
@@ -335,6 +363,7 @@ function NumberFilterSection({
           field={percentileField}
           value={percentileValue}
           onChange={onPercentileChange}
+          mode={mode}
         />
       ) : (
         <NumberRangeFilter
@@ -358,7 +387,8 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
 
   const setContainsFilter = useCallback(
     (field: string, value: string) => {
-      setField(field, value ? [{ op: "contains", value }] : [])
+      const normalized = value.trim()
+      setField(field, normalized ? [{ op: "contains", value: normalized }] : [])
     },
     [setField],
   )
@@ -381,6 +411,13 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
   )
 
   const textFields = getTextFieldsForMode(mode)
+
+  const setHasLlmActivity = useCallback(
+    (on: boolean) => {
+      setField("hasLlmActivity", on ? [] : [{ op: "eq", value: false }])
+    },
+    [setField],
+  )
 
   const metadataEntries = useMemo(() => {
     const entries: { key: string; value: string }[] = []
@@ -420,6 +457,35 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
       </div>
 
       <div className="flex flex-col px-4 overflow-y-auto flex-1">
+        {mode === "sessions" && (
+          <CollapsibleSection
+            label="Has LLM activity"
+            defaultOpen={filters.hasLlmActivity !== undefined && !getHasLlmActivityOn(filters)}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <Text.H7 color="foregroundMuted">
+                {getHasLlmActivityOn(filters) ? "Hiding sessions without any LLM call." : "Including orphan fragments."}
+              </Text.H7>
+              <Switch
+                checked={getHasLlmActivityOn(filters)}
+                onCheckedChange={(next) => setHasLlmActivity(next === true)}
+              />
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {STATUS_FIELDS.map(({ label, field }) => {
+          const selected = getStatusValues(filters, field)
+          return (
+            <CollapsibleSection key={field} label={label} defaultOpen={selected.length > 0}>
+              <StatusFilter
+                selected={selected}
+                onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: [...values] }] : [])}
+              />
+            </CollapsibleSection>
+          )
+        })}
+
         {textFields.map(({ label, field, placeholder }) => {
           const value = getTextFilterValue(filters, field)
           return (
@@ -460,6 +526,7 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
               tooltip={tooltip}
               percentileField={percentile?.field}
               projectId={projectId}
+              mode={mode}
               minValue={range.min}
               maxValue={range.max}
               percentileValue={percentileValue}
