@@ -97,7 +97,8 @@ export const createAnnotation = createServerFn({ method: "POST" })
       queueId: z.string().optional(),
       value: z.number(),
       passed: z.boolean(),
-      feedback: z.string().min(1),
+      // Empty feedback is allowed — `passed` carries the signal. Downstream issue eligibility drops empty-feedback rows before embedding.
+      feedback: z.string(),
       anchor: annotationAnchorSchema.optional(),
       issueId: z.string().optional(),
     }),
@@ -147,7 +148,7 @@ export const updateAnnotation = createServerFn({ method: "POST" })
       queueId: z.string().optional(),
       value: z.number(),
       passed: z.boolean(),
-      feedback: z.string().min(1),
+      feedback: z.string(),
       issueId: z.string().optional(),
     }),
   )
@@ -238,7 +239,7 @@ export const listAnnotationsBySession = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(100),
+      traceIds: z.array(z.string().length(32)).max(500),
       limit: z.number().optional(),
       offset: z.number().optional(),
       draftMode: scoreDraftModeSchema.optional(),
@@ -275,7 +276,7 @@ export const listAnnotationCountsByTraceIds = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(100),
+      traceIds: z.array(z.string().length(32)).max(500),
       draftMode: scoreDraftModeSchema.optional(),
     }),
   )

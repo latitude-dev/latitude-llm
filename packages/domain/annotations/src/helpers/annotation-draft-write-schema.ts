@@ -20,7 +20,7 @@ const annotationDraftWriteCoreSchema = z.object({
   annotatorId: cuidSchema.transform(UserId).nullable().default(null),
   value: scoreValueSchema,
   passed: z.boolean(),
-  feedback: z.string().min(1),
+  feedback: z.string(),
 })
 
 /** Persist payload: optional nested `anchor` carrying message/part/offset indices. */

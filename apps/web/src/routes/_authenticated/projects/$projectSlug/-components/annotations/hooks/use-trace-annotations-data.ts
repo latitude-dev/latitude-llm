@@ -121,7 +121,7 @@ export function useTraceAnnotationsData({ projectId, traceId }: UseTraceAnnotati
 
   const createAnnotation = useCallback(
     (data: AnnotationFormData, options?: { onSuccess?: () => void }) => {
-      const feedback = data.comment.trim() || " "
+      const feedback = data.comment.trim()
       createMutation.mutate(
         {
           projectId,
@@ -141,7 +141,7 @@ export function useTraceAnnotationsData({ projectId, traceId }: UseTraceAnnotati
 
   const updateAnnotation = useCallback(
     (scoreId: string, data: AnnotationFormData, options?: { onSuccess?: () => void }) => {
-      const feedback = data.comment.trim() || " "
+      const feedback = data.comment.trim()
       updateMutation.mutate(
         {
           scoreId,

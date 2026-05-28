@@ -51,7 +51,7 @@ export function AnnotationsTab({
           traceId: latestTraceId,
           value: annotationData.passed ? 1 : 0,
           passed: annotationData.passed,
-          feedback: annotationData.comment || " ",
+          feedback: annotationData.comment.trim(),
           ...(annotationData.issueId ? { issueId: annotationData.issueId } : {}),
         })
       }}
@@ -65,7 +65,7 @@ export function AnnotationsTab({
           traceId,
           value: annotationData.passed ? 1 : 0,
           passed: annotationData.passed,
-          feedback: annotationData.comment || " ",
+          feedback: annotationData.comment.trim(),
           issueId: annotationData.issueId ?? undefined,
         })
       }}

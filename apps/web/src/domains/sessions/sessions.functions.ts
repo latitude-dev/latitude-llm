@@ -277,7 +277,7 @@ export const listSessionIssues = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string().length(32)).max(100),
+      traceIds: z.array(z.string().length(32)).max(500),
     }),
   )
   .handler(async ({ data }): Promise<readonly SessionIssueRecord[]> => {

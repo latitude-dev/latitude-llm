@@ -1,11 +1,7 @@
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
-import { TraceDetailBody } from "../trace-detail-drawer.tsx"
+import { isTraceDetailTab, TraceDetailBody, type TraceDetailTabId } from "../trace-detail-drawer.tsx"
 
-export type TraceDetailTabId = "trace" | "conversation" | "spans" | "annotations"
-
-export function isTraceDetailTab(value: string): value is TraceDetailTabId {
-  return value === "trace" || value === "conversation" || value === "spans" || value === "annotations"
-}
+export { isTraceDetailTab, type TraceDetailTabId }
 
 /**
  * The trace slot reuses the standalone trace drawer's body (`TraceDetailBody`)

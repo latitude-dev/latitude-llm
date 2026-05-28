@@ -46,11 +46,18 @@ export function useConversationAnnotationFocus({
     textSelectionPopoverControlsRef,
   })
 
+  // TODO(frontend-use-effect-policy): reactive on `isConversationActive` flipping
+  // true — drains a scroll request that was queued while the tab was mounted but
+  // not visible. No callback exists at the activation site; this needs the effect.
   useEffect(() => {
     if (isConversationActive) executePendingScroll()
   }, [isConversationActive, executePendingScroll])
 
   const focusHandledRef = useRef<string | null>(null)
+  // TODO(frontend-use-effect-policy): four independent async conditions must all
+  // be true simultaneously (tab active, detail loaded, annotations loaded, focus
+  // id present). Replacing this with an event would require a multi-source state
+  // machine; the effect is the right shape here.
   useEffect(() => {
     // Cleared request → reset the guard so the next one (even the same id) fires.
     if (!focusAnnotationId) {

@@ -53,13 +53,16 @@ export function SessionSlot({
   const traceIds = session.traceIds
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<SessionTabId>>(() => new Set([activeTab]))
 
+  // TODO(frontend-use-effect-policy): reactive on `activeTab` because the tab can
+  // change from a URL param (deep link, browser back/forward), not just from the
+  // tab control here. The single source of truth for "mark visited" is this
+  // effect — `selectTab` does not need to write the set itself.
   useEffect(() => {
     setVisitedTabs((prev) => (prev.has(activeTab) ? prev : new Set([...prev, activeTab])))
   }, [activeTab])
 
   function selectTab(tab: SessionTabId) {
     onActiveTabChange(tab)
-    setVisitedTabs((prev) => new Set([...prev, tab]))
   }
 
   // Badge counts. Both queries are shared (same key) with the tab panes, so

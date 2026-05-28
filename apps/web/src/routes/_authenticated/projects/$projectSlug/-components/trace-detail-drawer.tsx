@@ -37,7 +37,13 @@ import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
 import { TraceTab } from "./trace-detail-drawer/tabs/trace-tab.tsx"
 
-type TabId = "trace" | "conversation" | "spans" | "annotations"
+export type TraceDetailTabId = "trace" | "conversation" | "spans" | "annotations"
+
+export function isTraceDetailTab(value: string): value is TraceDetailTabId {
+  return value === "trace" || value === "conversation" || value === "spans" || value === "annotations"
+}
+
+type TabId = TraceDetailTabId
 
 const TABS: TabOption<TabId>[] = [
   {
@@ -61,10 +67,6 @@ const TABS: TabOption<TabId>[] = [
     icon: <Icon icon={MessageSquareIcon} size="sm" />,
   },
 ]
-
-function isTraceDetailTab(v: string): v is TabId {
-  return v === "trace" || v === "conversation" || v === "spans" || v === "annotations"
-}
 
 const tabCountPillClass =
   "inline-flex min-h-5 min-w-[1.125rem] shrink-0 items-center justify-center rounded-full bg-muted px-1.5 text-[0.6875rem] font-medium leading-none text-muted-foreground"

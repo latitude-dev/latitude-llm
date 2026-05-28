@@ -55,7 +55,7 @@ export function TraceAnnotationsList({
           traceId,
           value: data.passed ? 1 : 0,
           passed: data.passed,
-          feedback: data.comment || " ",
+          feedback: data.comment.trim(),
           ...(data.issueId ? { issueId: data.issueId } : {}),
         })
       }
@@ -67,7 +67,7 @@ export function TraceAnnotationsList({
           traceId,
           value: data.passed ? 1 : 0,
           passed: data.passed,
-          feedback: data.comment || " ",
+          feedback: data.comment.trim(),
           issueId: data.issueId ?? undefined,
         })
       }
