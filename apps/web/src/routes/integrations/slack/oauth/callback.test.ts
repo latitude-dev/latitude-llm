@@ -65,9 +65,7 @@ describe("buildPostInstallRedirect", () => {
       status: "error=workspace_taken",
       webUrl,
     })
-    expect(taken.headers.get("Location")).toBe(
-      "https://app.example.com/projects/acme/onboarding?error=workspace_taken",
-    )
+    expect(taken.headers.get("Location")).toBe("https://app.example.com/projects/acme/onboarding?error=workspace_taken")
 
     const failed = buildPostInstallRedirect({
       returnTo: null,

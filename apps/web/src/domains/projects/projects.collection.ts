@@ -68,7 +68,7 @@ export function createProjectMutation(name: string) {
     organizationId: OrganizationId(""),
     name,
     slug: "",
-    settings: { keepMonitoring: undefined, notifications: undefined, escalation: undefined },
+    settings: { keepMonitoring: undefined, notifications: undefined, escalation: undefined, onboardingType: undefined },
     deletedAt: null,
     createdAt: now,
     updatedAt: now,

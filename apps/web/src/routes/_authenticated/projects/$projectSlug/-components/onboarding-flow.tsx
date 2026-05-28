@@ -7,6 +7,7 @@ import {
   Icon,
   Input,
   ProviderIcon,
+  SlackIcon,
   Tabs,
   Text,
   useMountEffect,
@@ -15,6 +16,7 @@ import {
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { useQuery } from "@tanstack/react-query"
+import { useNavigate } from "@tanstack/react-router"
 import type { LucideIcon } from "lucide-react"
 import {
   Bot,
@@ -27,8 +29,9 @@ import {
   SquareDashedBottomCode,
   Terminal,
 } from "lucide-react"
-import { lazy, type ReactNode, Suspense, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { lazy, type ReactNode, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useApiKeysCollection } from "../../../../../domains/api-keys/api-keys.collection.ts"
+import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { invalidateProjectFlaggers, useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
 import {
   configureProjectFlaggersForOnboarding,
@@ -39,11 +42,16 @@ import {
   FLAGGER_USE_CASE_PRESETS,
   type FlaggerPresetSlug,
 } from "../../../../../domains/flaggers/presets.ts"
+import {
+  getActiveSlackIntegration,
+  isSlackConfigured,
+} from "../../../../../domains/integrations/integrations.functions.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import { submitOnboarding } from "../../../../../domains/users/user.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
+import { IntegrationCard } from "../settings/-components/integration-card.tsx"
 import {
   type CodingMachineAgentId,
   getCodingAgentTelemetryPrompt,
@@ -68,10 +76,14 @@ import {
   type TsPackageManager,
 } from "./onboarding-integration-snippets.ts"
 
-type OnboardingStep = "role" | "stack" | "flaggers" | "telemetry"
+export const ONBOARDING_STEPS = ["role", "stack", "flaggers", "slack", "telemetry"] as const
+export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
 type StackChoice = "coding-agent-machine" | "production-agent"
 type TelemetrySetupMode = "coding-agent" | "manual"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
+
+const SLACK_INTEGRATION_QUERY_KEY = ["slack-integration"] as const
+const SLACK_CONFIGURED_QUERY_KEY = ["slack-configured"] as const
 
 const SETUP_MODE_TAB_OPTIONS = [
   { id: "coding-agent" as const, label: "Coding agent", icon: <Bot className="h-4 w-4" /> },
@@ -384,17 +396,176 @@ function SdkIntegrationInstructions({
   )
 }
 
+/**
+ * Optional onboarding step that prompts the user to connect Slack so
+ * they get notified when their Flaggers detect issues. Hidden via the
+ * `slack` feature flag + env-config probe in {@link OnboardingFlow}.
+ *
+ * Connect leaves the page (Slack OAuth redirect); the callback
+ * bounces back to `/projects/{slug}/onboarding?step=slack&installed=ok`
+ * which `OnboardingFlow` toasts on mount.
+ */
+function SlackOnboardingStep({
+  projectSlug,
+  onBack,
+  onContinue,
+}: {
+  readonly projectSlug: string
+  readonly onBack: () => void
+  readonly onContinue: () => void
+}) {
+  const { data: integration, isLoading } = useQuery({
+    queryKey: SLACK_INTEGRATION_QUERY_KEY,
+    queryFn: () => getActiveSlackIntegration(),
+  })
+  const connected = integration != null
+
+  const returnTo = `/projects/${projectSlug}/onboarding?step=slack`
+  const connectHref = `/integrations/slack/install?return_to=${encodeURIComponent(returnTo)}`
+
+  return (
+    <div className="mx-auto w-full max-w-[560px]">
+      <div className="flex w-full flex-col gap-6">
+        <div className="flex flex-col gap-4">
+          <div className="h-8 w-8">
+            <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H2 weight="medium">Get notified in Slack</Text.H2>
+            <Text.H4 color="foregroundMuted">
+              Connect your workspace so Flaggers can alert your team the moment they detect an issue. You can configure
+              which channel receives what in settings later.
+            </Text.H4>
+          </div>
+        </div>
+
+        {isLoading ? null : connected ? (
+          <IntegrationCard
+            icon={SlackIcon}
+            title={integration.teamName}
+            subtitle="Connected — channel routing available in settings."
+          />
+        ) : (
+          <IntegrationCard
+            icon={SlackIcon}
+            title="Slack"
+            subtitle="Send Latitude notifications to your Slack workspace."
+            actions={
+              <Button
+                onClick={() => {
+                  window.location.href = connectHref
+                }}
+              >
+                Connect Slack
+              </Button>
+            }
+          />
+        )}
+
+        <div className="flex flex-row flex-wrap items-center gap-3">
+          <Button variant="outline" onClick={onBack}>
+            Back
+          </Button>
+          {connected ? (
+            <Button onClick={onContinue}>Continue</Button>
+          ) : (
+            <Button variant="ghost" onClick={onContinue}>
+              Skip for now
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function OnboardingFlow({
   projectId,
   projectSlug,
+  initialStep,
+  flashInstalled,
+  flashError,
   onOpenProjectTraces,
 }: {
   readonly projectId: string
   readonly projectSlug: string
+  readonly initialStep?: OnboardingStep
+  readonly flashInstalled?: "ok"
+  readonly flashError?: "workspace_taken" | "oauth_failed"
   readonly onOpenProjectTraces: (projectId: string) => Promise<void>
 }) {
   const { toast } = useToast()
-  const [step, setStep] = useState<OnboardingStep>("role")
+  const navigate = useNavigate()
+
+  // Slack visibility gate: feature flag is client-side, env probe is
+  // server-side. The step is shown only when both agree.
+  const slackFlagEnabled = useHasFeatureFlag("slack")
+  const { data: slackEnvConfigured = false } = useQuery({
+    queryKey: SLACK_CONFIGURED_QUERY_KEY,
+    queryFn: () => isSlackConfigured(),
+    staleTime: Infinity,
+  })
+  const slackStepEnabled = slackFlagEnabled && slackEnvConfigured
+
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project: p }) => eq(p.id, projectId)).findOne(),
+    [projectId],
+  )
+
+  // Honor URL-driven step only if the user has completed the `stack`
+  // step on the server (`onboardingType` is the marker). Otherwise
+  // force them back to `role` — earlier steps have prerequisites that
+  // deep-links would skip past.
+  const onboardingTypeSet = project?.settings?.onboardingType != null
+  const resolvedInitialStep: OnboardingStep = (() => {
+    if (initialStep == null) return "role"
+    if (initialStep === "role" || initialStep === "stack") return initialStep
+    if (!onboardingTypeSet) return "role"
+    if (initialStep === "slack" && !slackStepEnabled) return "telemetry"
+    return initialStep
+  })()
+
+  const [step, setStep] = useState<OnboardingStep>(resolvedInitialStep)
+
+  // Centralizes URL ↔ React state sync. Every step transition flows
+  // through here so the URL stays authoritative and refresh-safe.
+  const goToStep = useCallback(
+    (next: OnboardingStep) => {
+      setStep(next)
+      void navigate({
+        to: "/projects/$projectSlug/onboarding",
+        params: { projectSlug },
+        search: (prev: Record<string, unknown>) => ({ ...prev, step: next }),
+        replace: true,
+      })
+    },
+    [navigate, projectSlug],
+  )
+
+  // OAuth bounce-back: toast and strip the flash params, preserving
+  // `step` so the user lands exactly where they left.
+  useMountEffect(() => {
+    if (!flashInstalled && !flashError) return
+    if (flashInstalled === "ok") {
+      toast({ description: "Slack connected" })
+    } else if (flashError === "workspace_taken") {
+      toast({
+        variant: "destructive",
+        description: "This Slack workspace is already connected to another Latitude organization.",
+      })
+    } else if (flashError === "oauth_failed") {
+      toast({
+        variant: "destructive",
+        description: "Couldn't complete the Slack install. Please try again.",
+      })
+    }
+    void navigate({
+      to: "/projects/$projectSlug/onboarding",
+      params: { projectSlug },
+      search: ({ installed: _installed, error: _error, ...rest }: Record<string, unknown>) => rest,
+      replace: true,
+    })
+  })
   const [stackChoice, setStackChoice] = useState<StackChoice | null>(null)
   const [codingMachineAgent, setCodingMachineAgent] = useState<CodingMachineAgentId>("claude-code")
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
@@ -417,7 +588,7 @@ export function OnboardingFlow({
         await submitOnboarding({ data: { jobTitle, phoneNumber, stackChoice: stack, projectId } })
       },
       {
-        onSuccess: () => setStep("flaggers"),
+        onSuccess: () => goToStep("flaggers"),
         onError: (error) => {
           toast({ variant: "destructive", description: toUserMessage(error) })
         },
@@ -429,13 +600,9 @@ export function OnboardingFlow({
     await form.validateField("jobTitle", "change")
     const meta = form.getFieldMeta("jobTitle")
     if (meta && meta.errors.length > 0) return
-    setStep("stack")
+    goToStep("stack")
   }
 
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project: p }) => eq(p.id, projectId)).findOne(),
-    [projectId],
-  )
   const { data: apiKeysList } = useApiKeysCollection()
   const { data: projectFlaggers = [], isLoading: isLoadingProjectFlaggers } = useProjectFlaggers(projectId)
   const { data: availableFlaggers = [], isLoading: isLoadingAvailableFlaggers } = useQuery({
@@ -490,7 +657,7 @@ export function OnboardingFlow({
         },
       })
       await invalidateProjectFlaggers(projectId)
-      setStep("telemetry")
+      goToStep(slackStepEnabled ? "slack" : "telemetry")
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
     } finally {
@@ -708,7 +875,7 @@ export function OnboardingFlow({
                 })}
               </div>
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => setStep("role")}>
+                <Button variant="outline" onClick={() => goToStep("role")}>
                   Back
                 </Button>
                 <Button
@@ -808,7 +975,7 @@ export function OnboardingFlow({
               </div>
 
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => setStep("stack")}>
+                <Button variant="outline" onClick={() => goToStep("stack")}>
                   Back
                 </Button>
                 <Button
@@ -820,6 +987,12 @@ export function OnboardingFlow({
               </div>
             </div>
           </div>
+        ) : step === "slack" ? (
+          <SlackOnboardingStep
+            projectSlug={resolvedProjectSlug || projectSlug}
+            onBack={() => goToStep("flaggers")}
+            onContinue={() => goToStep("telemetry")}
+          />
         ) : stackChoice === "production-agent" ? (
           <div className="mx-auto w-full max-w-[560px]">
             <div className="flex w-full flex-col gap-6">
@@ -984,7 +1157,7 @@ export function OnboardingFlow({
               )}
 
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => setStep("flaggers")}>
+                <Button variant="outline" onClick={() => goToStep(slackStepEnabled ? "slack" : "flaggers")}>
                   Back
                 </Button>
                 <Button variant="ghost" onClick={() => void onOpenProjectTraces(projectId)}>
@@ -1063,7 +1236,7 @@ export function OnboardingFlow({
               </div>
 
               <div className="flex flex-row flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => setStep("flaggers")}>
+                <Button variant="outline" onClick={() => goToStep(slackStepEnabled ? "slack" : "flaggers")}>
                   Back
                 </Button>
                 <Button variant="ghost" onClick={() => void onOpenProjectTraces(projectId)}>
