@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://latitude.so/v2/?utm_source=github_readme" rel="dofollow">Website</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="https://latitude.so/?utm_source=github_readme" rel="dofollow">Website</a>&nbsp;&nbsp;·&nbsp;&nbsp;
   <a href="https://docs.latitude.so" rel="dofollow">Docs</a>&nbsp;&nbsp;·&nbsp;&nbsp;
   <a href="https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw">Slack</a>&nbsp;&nbsp;·&nbsp;&nbsp;
   <a href="https://x.com/trylatitude">X</a>
