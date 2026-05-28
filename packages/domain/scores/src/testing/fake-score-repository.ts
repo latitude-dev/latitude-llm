@@ -79,6 +79,31 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
             score.draftedAt === null,
         ) ?? null,
       ),
+    listFlaggerSlugsByIssueId: ({ projectId, issueId }) =>
+      Effect.succeed(
+        (() => {
+          // Most-recent-firing flagger slug first — mirrors the Postgres impl's ordering.
+          const lastSeenBySlug = new Map<string, Date>()
+          for (const score of scores.values()) {
+            if (
+              score.projectId !== projectId ||
+              score.issueId !== issueId ||
+              score.source !== "annotation" ||
+              score.sourceId !== "SYSTEM" ||
+              score.draftedAt !== null
+            ) {
+              continue
+            }
+            const slug = (score.metadata as { flaggerSlug?: unknown }).flaggerSlug
+            if (typeof slug !== "string" || slug.length === 0) continue
+            const previous = lastSeenBySlug.get(slug)
+            if (previous === undefined || score.createdAt > previous) {
+              lastSeenBySlug.set(slug, score.createdAt)
+            }
+          }
+          return [...lastSeenBySlug.entries()].sort(([, a], [, b]) => b.getTime() - a.getTime()).map(([slug]) => slug)
+        })(),
+      ),
     ...overrides,
   }
 

@@ -19,6 +19,14 @@ import { scores } from "../schema/scores.ts"
 
 const logger = createLogger("db-postgres/score-repository")
 
+// Cap on how many of an issue's most-recent SYSTEM annotation occurrences we
+// scan when collecting distinct `metadata.flaggerSlug` values. Flagger variety
+// converges fast (an issue is almost always tagged by one or two flaggers),
+// so a small recent sample captures effectively all the slugs while keeping
+// the scan bounded for noisy issues — same rationale as
+// `ISSUE_TAG_TRACE_SAMPLE_LIMIT` in the ClickHouse tags-by-issue path.
+const ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT = 200
+
 type RlsOrganizationQueryResult = {
   readonly rows?: ReadonlyArray<{
     readonly organization_id?: string | null
@@ -497,6 +505,55 @@ export const ScoreRepositoryLive = Layer.effect(
                 .limit(1),
             )
             .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null)))
+        }),
+
+      listFlaggerSlugsByIssueId: ({
+        projectId,
+        issueId,
+      }: {
+        readonly projectId: ProjectId
+        readonly issueId: IssueId
+      }) =>
+        Effect.gen(function* () {
+          const sqlClient = yield* resolveSqlClient()
+          return yield* sqlClient
+            .query((db, organizationId) => {
+              // Recent-N sample of the issue's published SYSTEM annotation occurrences that
+              // carry a `flaggerSlug` in their metadata. Bounded by
+              // `ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT` (see file-level comment).
+              const recent = db
+                .select({
+                  slug: sql<string>`${scores.metadata}->>'flaggerSlug'`.as("slug"),
+                  createdAt: scores.createdAt,
+                })
+                .from(scores)
+                .where(
+                  and(
+                    eq(scores.organizationId, organizationId),
+                    eq(scores.projectId, projectId),
+                    eq(scores.issueId, issueId as string),
+                    eq(scores.source, "annotation"),
+                    eq(scores.sourceId, "SYSTEM"),
+                    isNull(scores.draftedAt),
+                    sql`${scores.metadata} ? 'flaggerSlug'`,
+                  ),
+                )
+                .orderBy(desc(scores.createdAt))
+                .limit(ISSUE_FLAGGER_SLUG_SAMPLE_LIMIT)
+                .as("recent")
+
+              // Collapse to distinct slugs, ordered by most-recently-firing flagger first.
+              return db
+                .select({
+                  slug: recent.slug,
+                  lastSeenAt: sql<Date>`max(${recent.createdAt})`.as("last_seen_at"),
+                })
+                .from(recent)
+                .where(sql`${recent.slug} IS NOT NULL AND ${recent.slug} <> ''`)
+                .groupBy(recent.slug)
+                .orderBy(sql`max(${recent.createdAt}) DESC`)
+            })
+            .pipe(Effect.map((rows) => rows.map((row) => row.slug)))
         }),
     }
   }),

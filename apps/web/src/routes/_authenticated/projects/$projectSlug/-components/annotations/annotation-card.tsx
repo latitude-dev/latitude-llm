@@ -2,14 +2,14 @@ import { canUpdateAnnotation, getAnnotationProvenance } from "@domain/annotation
 import { Avatar, Badge, Button, DropdownMenu, Icon, LatitudeLogo, type MenuOption, Text, Tooltip } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { Link, useParams } from "@tanstack/react-router"
-import { ArrowUpRightIcon, EllipsisIcon, GlobeIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
+import { EllipsisIcon, GlobeIcon, ShieldAlertIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useDeleteAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
-import { useProjectFlaggers } from "../../../../../../domains/flaggers/flaggers.collection.ts"
 import { useIssue } from "../../../../../../domains/issues/issues.collection.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
+import { FlaggerBadge } from "../flaggers/flagger-badge.tsx"
 import { AnnotationApprovalPopover } from "./annotation-approval-popover.tsx"
 import { AnnotationInput } from "./annotation-input.tsx"
 import { EnrichmentPopover } from "./enrichment-popover.tsx"
@@ -221,63 +221,5 @@ export function AnnotationCard({
         </div>
       )}
     </div>
-  )
-}
-
-const humanizeFlaggerSlug = (slug: string) =>
-  slug.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
-
-interface FlaggerBadgeProps {
-  readonly projectId: string
-  readonly projectSlug: string | undefined
-  readonly slug: string
-}
-
-/**
- * Names the automatic flagger that authored an annotation and, when we know the
- * current project slug, links to its row in project settings. Falls back to a
- * humanized slug when the flagger isn't in the project's provisioned list
- * (e.g. it was de-provisioned after the annotation was created).
- */
-function FlaggerBadge({ projectId, projectSlug, slug }: FlaggerBadgeProps) {
-  const { data: flaggers = [] } = useProjectFlaggers(projectId)
-  const flagger = flaggers.find((candidate) => candidate.slug === slug)
-  const name = flagger?.name ?? humanizeFlaggerSlug(slug)
-  const label = `${name} flagger`
-
-  if (!projectSlug) {
-    return (
-      <Badge variant="secondary" size="small">
-        {label}
-      </Badge>
-    )
-  }
-
-  return (
-    <Tooltip
-      asChild
-      trigger={
-        <Link
-          data-no-navigate
-          to="/projects/$projectSlug/settings/flaggers"
-          params={{ projectSlug }}
-          search={{ flagger: slug }}
-          aria-label={`Open the ${name} flagger settings`}
-          onClick={(event) => event.stopPropagation()}
-          className="inline-flex"
-        >
-          <Badge
-            variant="secondary"
-            size="small"
-            className="cursor-pointer hover:bg-muted"
-            iconProps={{ icon: ArrowUpRightIcon, color: "foregroundMuted", placement: "end" }}
-          >
-            {label}
-          </Badge>
-        </Link>
-      }
-    >
-      Flagged automatically by the {name} flagger — open its settings
-    </Tooltip>
   )
 }

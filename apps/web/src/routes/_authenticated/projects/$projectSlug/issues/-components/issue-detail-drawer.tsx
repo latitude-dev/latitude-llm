@@ -535,6 +535,7 @@ export function IssueDetailDrawer({
               issueId={issueId}
               issueSource={issue?.source ?? "annotation"}
               evaluations={issue?.evaluations ?? []}
+              flaggerSlugs={issue?.flaggerSlugs ?? []}
               canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
               isIssueLoading={isLoading}
             />

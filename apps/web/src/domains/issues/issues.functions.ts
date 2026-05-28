@@ -23,13 +23,20 @@ import {
   type IssueEscalationThresholdBucket,
   type IssueOccurrenceBucket,
   ScoreAnalyticsRepository,
+  ScoreRepository,
 } from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, resolveSettings, SettingsReader } from "@domain/shared"
 import type { TraceDetail } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { EvaluationRepositoryLive, IssueRepositoryLive, SettingsReaderLive, withPostgres } from "@platform/db-postgres"
+import {
+  EvaluationRepositoryLive,
+  IssueRepositoryLive,
+  ScoreRepositoryLive,
+  SettingsReaderLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -197,6 +204,7 @@ const toIssueDetailRecord = (input: {
   readonly trendEscalationThresholds: readonly IssueEscalationThresholdBucket[]
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly tags: readonly string[]
+  readonly flaggerSlugs: readonly string[]
   readonly keepMonitoringDefault: boolean
 }) => ({
   id: input.issue.id,
@@ -220,6 +228,7 @@ const toIssueDetailRecord = (input: {
   trendEscalationThresholds: input.trendEscalationThresholds,
   evaluations: input.evaluations,
   tags: input.tags,
+  flaggerSlugs: input.flaggerSlugs,
   keepMonitoringDefault: input.keepMonitoringDefault,
 })
 
@@ -411,6 +420,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         const issueRepository = yield* IssueRepository
         const evaluationRepository = yield* EvaluationRepository
         const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        const scoreRepository = yield* ScoreRepository
         const settingsReader = yield* SettingsReader
 
         const issues = yield* issueRepository.findByIds({
@@ -444,43 +454,52 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         const projectSettings = yield* settingsReader.getProjectSettings(projectId)
         const kShort = projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
 
-        const [occurrences, trend, thresholdSeries, evaluationPage, tagsAggregates, settings] = yield* Effect.all([
-          scoreAnalyticsRepository.aggregateByIssues({
-            organizationId: orgId,
-            projectId,
-            issueIds: [issue.id],
-          }),
-          scoreAnalyticsRepository.trendByIssue({
-            organizationId: orgId,
-            projectId,
-            issueId: issue.id,
-            days: 14,
-            bucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
-          }),
-          scoreAnalyticsRepository.escalationThresholdHistogramByIssues({
-            organizationId: orgId,
-            projectId,
-            issueIds: [issue.id],
-            timeRange: { from: trendFrom, to: trendTo },
-            bucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
-            kShort,
-          }),
-          evaluationRepository.listByIssueId({
-            projectId,
-            issueId: issue.id,
-            options: {
-              lifecycle: "active",
-              limit: 1000,
-            },
-          }),
-          scoreAnalyticsRepository.aggregateTagsByIssues({
-            organizationId: orgId,
-            projectId,
-            issueIds: [issue.id],
-            timeRange: { from: tagsFrom, to: now },
-          }),
-          resolveSettings({ projectId }),
-        ])
+        // Only flagger-sourced issues need the slug query — annotation/custom issues
+        // never carry a `metadata.flaggerSlug` so we skip the Postgres read entirely.
+        const flaggerSlugsEffect =
+          issue.source === "flagger"
+            ? scoreRepository.listFlaggerSlugsByIssueId({ projectId, issueId: issue.id })
+            : Effect.succeed<readonly string[]>([])
+
+        const [occurrences, trend, thresholdSeries, evaluationPage, tagsAggregates, flaggerSlugs, settings] =
+          yield* Effect.all([
+            scoreAnalyticsRepository.aggregateByIssues({
+              organizationId: orgId,
+              projectId,
+              issueIds: [issue.id],
+            }),
+            scoreAnalyticsRepository.trendByIssue({
+              organizationId: orgId,
+              projectId,
+              issueId: issue.id,
+              days: 14,
+              bucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
+            }),
+            scoreAnalyticsRepository.escalationThresholdHistogramByIssues({
+              organizationId: orgId,
+              projectId,
+              issueIds: [issue.id],
+              timeRange: { from: trendFrom, to: trendTo },
+              bucketSeconds: ISSUE_DETAIL_TREND_BUCKET_SECONDS,
+              kShort,
+            }),
+            evaluationRepository.listByIssueId({
+              projectId,
+              issueId: issue.id,
+              options: {
+                lifecycle: "active",
+                limit: 1000,
+              },
+            }),
+            scoreAnalyticsRepository.aggregateTagsByIssues({
+              organizationId: orgId,
+              projectId,
+              issueIds: [issue.id],
+              timeRange: { from: tagsFrom, to: now },
+            }),
+            flaggerSlugsEffect,
+            resolveSettings({ projectId }),
+          ])
 
         const occurrence = occurrences[0] ?? null
         const thresholdBuckets = thresholdSeries[0]?.buckets ?? []
@@ -506,11 +525,12 @@ export const getIssueDetail = createServerFn({ method: "GET" })
           trendEscalationThresholds: thresholdBuckets,
           evaluations: evaluationPage.items.map(toEvaluationSummaryRecord),
           tags: tagsAggregates[0]?.tags ?? [],
+          flaggerSlugs,
           keepMonitoringDefault: settings.keepMonitoring,
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive, SettingsReaderLive),
+          Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive, ScoreRepositoryLive, SettingsReaderLive),
           pgClient,
           orgId,
         ),

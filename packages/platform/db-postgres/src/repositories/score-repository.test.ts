@@ -853,4 +853,123 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(found?.sourceId).toBe("SYSTEM")
     expect(found?.traceId).toBe(traceId1)
   })
+
+  it("listFlaggerSlugsByIssueId returns distinct flagger slugs ordered most-recent-first and filters out drafts, non-SYSTEM annotations, and other issues", async () => {
+    const organizationId = "z".repeat(24)
+    const issueA = IssueId("a".repeat(24))
+    const issueB = IssueId("b".repeat(24))
+
+    // Inserted via the use-case so RLS + metadata validation runs; `createdAt`
+    // is then pinned per row so recency ordering is deterministic regardless of
+    // sub-ms timing in the in-memory Postgres.
+    const created = await Effect.runPromise(
+      Effect.gen(function* () {
+        const alphaOld = yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          source: "annotation",
+          sourceId: "SYSTEM",
+          issueId: issueA,
+          value: 0,
+          passed: false,
+          feedback: "old alpha occurrence",
+          metadata: { rawFeedback: "old alpha occurrence", flaggerSlug: "alpha" },
+          draftedAt: null,
+        })
+        const alphaMid = yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          source: "annotation",
+          sourceId: "SYSTEM",
+          issueId: issueA,
+          value: 0,
+          passed: false,
+          feedback: "newer alpha occurrence",
+          metadata: { rawFeedback: "newer alpha occurrence", flaggerSlug: "alpha" },
+          draftedAt: null,
+        })
+        const betaNewest = yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          source: "annotation",
+          sourceId: "SYSTEM",
+          issueId: issueA,
+          value: 0,
+          passed: false,
+          feedback: "newest beta occurrence",
+          metadata: { rawFeedback: "newest beta occurrence", flaggerSlug: "beta" },
+          draftedAt: null,
+        })
+        const gammaDraft = yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          source: "annotation",
+          sourceId: "SYSTEM",
+          issueId: issueA,
+          value: 0,
+          passed: false,
+          feedback: "drafted gamma occurrence",
+          metadata: { rawFeedback: "drafted gamma occurrence", flaggerSlug: "gamma" },
+          draftedAt: new Date("2026-04-01T00:00:00.000Z"),
+        })
+        const uiNotSystem = yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          source: "annotation",
+          sourceId: "UI",
+          issueId: issueA,
+          value: 0,
+          passed: false,
+          feedback: "human-authored",
+          metadata: { rawFeedback: "human-authored" },
+          draftedAt: null,
+        })
+        const systemNoSlug = yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          source: "annotation",
+          sourceId: "SYSTEM",
+          issueId: issueA,
+          value: 0,
+          passed: false,
+          feedback: "system without slug",
+          metadata: { rawFeedback: "system without slug" },
+          draftedAt: null,
+        })
+        const otherIssue = yield* writeScoreUseCase({
+          projectId: annotationProjectId,
+          source: "annotation",
+          sourceId: "SYSTEM",
+          issueId: issueB,
+          value: 0,
+          passed: false,
+          feedback: "different issue",
+          metadata: { rawFeedback: "different issue", flaggerSlug: "should-be-ignored" },
+          draftedAt: null,
+        })
+        return { alphaOld, alphaMid, betaNewest, gammaDraft, uiNotSystem, systemNoSlug, otherIssue }
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    // Pin createdAt per row so `max(created_at)` ordering is deterministic:
+    //   alphaOld < alphaMid < betaNewest. Expected output: ["beta", "alpha"].
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+      .where(eq(scoresTable.id, created.alphaOld.id as string))
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2026-04-01T11:00:00.000Z") })
+      .where(eq(scoresTable.id, created.alphaMid.id as string))
+    await database.db
+      .update(scoresTable)
+      .set({ createdAt: new Date("2026-04-01T12:00:00.000Z") })
+      .where(eq(scoresTable.id, created.betaNewest.id as string))
+
+    const slugs = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.listFlaggerSlugsByIssueId({
+          projectId: annotationProjectId,
+          issueId: issueA,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(slugs).toEqual(["beta", "alpha"])
+  })
 })

@@ -108,6 +108,20 @@ export interface ScoreRepositoryShape {
     readonly traceId: TraceId
     readonly feedback: string
   }): Effect.Effect<Score | null, RepositoryError, SqlClient>
+  /**
+   * Returns the distinct `metadata.flaggerSlug` values found across an issue's
+   * published flagger-authored annotation occurrences (i.e. `source =
+   * "annotation"`, `sourceId = "SYSTEM"`, `draftedAt IS NULL`), ordered with
+   * the most-recently-firing flagger first.
+   *
+   * Bounded to the most-recent annotation occurrences on the issue (slug
+   * variety converges fast) to keep the scan cheap for noisy issues — same
+   * sampling rationale as `aggregateTagsByIssues` in the CH analytics path.
+   */
+  listFlaggerSlugsByIssueId(input: {
+    readonly projectId: ProjectId
+    readonly issueId: IssueId
+  }): Effect.Effect<readonly string[], RepositoryError, SqlClient>
 }
 
 export class ScoreRepository extends Context.Service<ScoreRepository, ScoreRepositoryShape>()(

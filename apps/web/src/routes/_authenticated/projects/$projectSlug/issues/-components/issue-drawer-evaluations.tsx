@@ -13,6 +13,7 @@ import {
   useToast,
 } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
+import { useParams } from "@tanstack/react-router"
 import { BellPlusIcon, FilterIcon, PencilIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import {
@@ -26,6 +27,7 @@ import {
 import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { createFormSubmitHandler } from "../../../../../../lib/form-server-action.ts"
+import { FlaggerBadge } from "../../-components/flaggers/flagger-badge.tsx"
 import { AlignmentStatsModal } from "./alignment-stats-modal.tsx"
 import { EvaluationFilterModal } from "./evaluation-filter-modal.tsx"
 import { formatPercent, getAlignmentVariant } from "./issue-formatters.ts"
@@ -230,6 +232,7 @@ export function IssueDrawerEvaluations({
   issueId,
   issueSource,
   evaluations,
+  flaggerSlugs,
   canMonitorIssue,
   isIssueLoading,
 }: {
@@ -237,10 +240,12 @@ export function IssueDrawerEvaluations({
   readonly issueId: string
   readonly issueSource: "annotation" | "custom" | "flagger"
   readonly evaluations: readonly EvaluationSummaryRecord[]
+  readonly flaggerSlugs?: readonly string[]
   readonly canMonitorIssue: boolean
   readonly isIssueLoading: boolean
 }) {
   const { toast } = useToast()
+  const { projectSlug } = useParams({ strict: false })
   const [tracked, setTracked] = useState<TrackedWorkflow | null>(null)
   const [monitorModalOpen, setMonitorModalOpen] = useState(false)
   const [realignEvaluationId, setRealignEvaluationId] = useState<string | null>(null)
@@ -401,12 +406,24 @@ export function IssueDrawerEvaluations({
   }
 
   if (visibleEvaluations.length === 0 && issueSource === "flagger") {
+    const hasFlaggers = flaggerSlugs !== undefined && flaggerSlugs.length > 0
     return (
       <div className="flex w-full items-start gap-3 rounded-lg border border-dashed border-border px-5 py-4">
         <Icon icon={ShieldCheckIcon} size="md" color="foregroundMuted" />
         <div className="flex min-w-0 flex-col gap-1">
           <Text.H5M>Automatically monitored</Text.H5M>
-          <Text.H6 color="foregroundMuted">This issue is automatically monitored by the system</Text.H6>
+          <Text.H6 color="foregroundMuted">
+            {hasFlaggers
+              ? "This issue is automatically monitored by:"
+              : "This issue is automatically monitored by the system"}
+          </Text.H6>
+          {hasFlaggers ? (
+            <div className="flex flex-wrap items-center gap-1 pt-1">
+              {flaggerSlugs.map((slug) => (
+                <FlaggerBadge key={slug} projectId={projectId} projectSlug={projectSlug} slug={slug} />
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     )
