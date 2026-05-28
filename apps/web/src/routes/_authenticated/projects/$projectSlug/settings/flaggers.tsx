@@ -285,6 +285,7 @@ function ProjectFlaggersSettingsPage() {
                                       value={[row.viewSampling]}
                                       onValueChange={(values) => setRowChange(row.id, { sampling: values[0] ?? 0 })}
                                       disabled={!row.viewEnabled}
+                                      aria-label={`Sampling rate for ${row.name}`}
                                     />
                                   </div>
                                   <Text.H5 className="w-10 tabular-nums">{row.viewSampling}%</Text.H5>
