@@ -16,6 +16,11 @@ export const FEATURE_FLAGS = {
     name: "Claude Code Wrapped",
     description: "Creates the weekly Wrapped for projects with Claude Code telemetry within the organization.",
   },
+  "wrapped-merch-promo": {
+    emoji: "👕",
+    name: "Wrapped merch promo",
+    description: "Shows the 41st.latitude.so 'share on X for free merch' banner inside the weekly Wrapped email.",
+  },
   "email-notifications": {
     emoji: "✉️",
     name: "Email notifications",

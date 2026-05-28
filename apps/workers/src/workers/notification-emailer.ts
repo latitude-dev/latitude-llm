@@ -1,5 +1,6 @@
 import type { RenderedEmail } from "@domain/email"
 import { NOTIFICATION_EMAIL_RENDERERS, type NotificationEmailRenderContext, sendEmail } from "@domain/email"
+import type { FeatureFlagRepository } from "@domain/feature-flags"
 import type { IssueRepository } from "@domain/issues"
 import {
   type NotificationEmailRenderer,
@@ -12,6 +13,7 @@ import type { QueueConsumer } from "@domain/queue"
 import { NotificationId, OrganizationId, type SqlClient } from "@domain/shared"
 import type { WrappedReportRepository } from "@domain/spans"
 import {
+  FeatureFlagRepositoryLive,
   IssueRepositoryLive,
   NotificationRepositoryLive,
   OrganizationRepositoryLive,
@@ -51,7 +53,7 @@ const repoLayer = Layer.mergeAll(
  * into the use case's signature. Add to this when a new kind needs a
  * new repo for server-side rendering.
  */
-const rendererLayer = Layer.mergeAll(IssueRepositoryLive, WrappedReportRepositoryLive)
+const rendererLayer = Layer.mergeAll(IssueRepositoryLive, WrappedReportRepositoryLive, FeatureFlagRepositoryLive)
 
 const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
@@ -84,7 +86,7 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   // `Effect.suspend` for TS's call-signature narrowing, so widen the
   // dispatch result to the layer's superset and let `Effect.provide`
   // strip everything except `SqlClient` (the boundary contract).
-  type RendererSupersetR = IssueRepository | WrappedReportRepository | SqlClient
+  type RendererSupersetR = IssueRepository | WrappedReportRepository | FeatureFlagRepository | SqlClient
   const renderEmailAdapter: NotificationEmailRenderer = ({
     notificationId,
     notificationCreatedAt,

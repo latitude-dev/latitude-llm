@@ -1,3 +1,4 @@
+import { FeatureFlagRepository } from "@domain/feature-flags"
 import { WrappedReportId } from "@domain/shared"
 import {
   CURRENT_REPORT_VERSION,
@@ -43,33 +44,64 @@ interface RenderInput {
   readonly webAppUrl: string
   readonly reportId: string
   readonly reportVersion: ReportVersion
+  /**
+   * Resolved upstream from the `wrapped-merch-promo` flag. V1 ignores it
+   * (the V1 component never received this prop); V2 renders the
+   * 41st.latitude.so banner when true.
+   */
+  readonly showMerchPromo: boolean
 }
+
+const MERCH_PROMO_URL =
+  "https://41st.latitude.so/?utm_source=wrapped_email&utm_medium=email&utm_campaign=merch_41st#howto"
 
 /**
  * Pure HTML builder. Picks a versioned React template by `(type,
  * reportVersion)` and renders to HTML + plaintext.
+ *
+ * V2 receives the optional `showMerchPromo` prop; V1 is rendered through
+ * the shared registry signature, which doesn't include the prop, so old
+ * V1 reports keep their frozen output verbatim.
  */
 const renderWrappedHtml = async (input: RenderInput): Promise<RenderedEmail> => {
   const projectName = input.report.project.name
   const fullReportUrl = `${input.webAppUrl.replace(/\/$/, "")}/wrapped/${input.reportId}`
+  const reportIdBranded = WrappedReportId(input.reportId)
   const templatesForType = TEMPLATE_BY_TYPE_VERSION[input.type] ?? TEMPLATE_BY_TYPE_VERSION.claude_code
-  const Template = templatesForType[input.reportVersion] ?? templatesForType[CURRENT_REPORT_VERSION]
-  return {
-    html: await renderEmail(
+  const resolvedVersion: ReportVersion =
+    input.reportVersion in templatesForType ? input.reportVersion : CURRENT_REPORT_VERSION
+  const Template = templatesForType[resolvedVersion]
+  const emailJsx =
+    resolvedVersion === 2 ? (
+      <ClaudeCodeWrappedEmailV2
+        userName={input.userName}
+        report={input.report}
+        webAppUrl={input.webAppUrl}
+        reportId={reportIdBranded}
+        showMerchPromo={input.showMerchPromo}
+      />
+    ) : (
       <Template
         userName={input.userName}
         report={input.report}
         webAppUrl={input.webAppUrl}
-        reportId={WrappedReportId(input.reportId)}
-      />,
-    ),
+        reportId={reportIdBranded}
+      />
+    )
+  const baseText = `Hi ${input.userName},\n\nYour Claude Code Wrapped for ${projectName} (${formatPlainRange(
+    input.report.window.start,
+    input.report.window.end,
+  )} UTC):\n\n• ${input.report.totals.sessions.toLocaleString("en-US")} sessions\n• ${input.report.totals.toolCalls.toLocaleString(
+    "en-US",
+  )} tool calls\n• ${input.report.totals.filesTouched.toLocaleString("en-US")} files touched\n\nSee your full week:\n${fullReportUrl}`
+  const promoText =
+    input.showMerchPromo && resolvedVersion === 2
+      ? `\n\n---\nShare your Wrapped on X · win free Latitude merch\nPost this week's Wrapped on X and tag @trylatitude. Top 5 posts each week get a free tee, DM'd by us, shipped worldwide.\n${MERCH_PROMO_URL}`
+      : ""
+  return {
+    html: await renderEmail(emailJsx),
     subject: `Your Claude Code week in ${projectName}`,
-    text: `Hi ${input.userName},\n\nYour Claude Code Wrapped for ${projectName} (${formatPlainRange(
-      input.report.window.start,
-      input.report.window.end,
-    )} UTC):\n\n• ${input.report.totals.sessions.toLocaleString("en-US")} sessions\n• ${input.report.totals.toolCalls.toLocaleString(
-      "en-US",
-    )} tool calls\n• ${input.report.totals.filesTouched.toLocaleString("en-US")} files touched\n\nSee your full week:\n${fullReportUrl}`,
+    text: `${baseText}${promoText}`,
   }
 }
 
@@ -99,6 +131,12 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
         cause,
       })),
     )
+    // Promo flag failures are non-fatal — render the email without the
+    // banner rather than dropping the whole send because of a flag lookup.
+    const flags = yield* FeatureFlagRepository
+    const showMerchPromo = yield* flags
+      .isEnabledForOrganization("wrapped-merch-promo")
+      .pipe(Effect.orElseSucceed(() => false))
     return yield* Effect.tryPromise({
       try: () =>
         renderWrappedHtml({
@@ -108,6 +146,7 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
           webAppUrl: ctx.webAppUrl,
           reportId: record.id,
           reportVersion: record.reportVersion,
+          showMerchPromo,
         }),
       catch: (cause) => ({
         _tag: "RenderNotificationEmailError" as const,
@@ -117,4 +156,7 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
     })
   })
 
-export default ClaudeCodeWrappedEmailV1
+// Default export drives the React Email dev preview at /wrapped-report/index —
+// keep it pointed at the current (highest) report version so the parent route
+// in the preview server reflects the version users actually receive.
+export default ClaudeCodeWrappedEmailV2

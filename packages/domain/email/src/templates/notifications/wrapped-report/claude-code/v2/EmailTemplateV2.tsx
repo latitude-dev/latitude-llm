@@ -6,6 +6,7 @@ import React from "react"
 import { EmailHeading } from "../../../../../components/EmailHeading.tsx"
 import { WrappedLayout } from "../../../../../components/WrappedLayout.tsx"
 import { emailDesignTokens } from "../../../../../tokens/design-system.ts"
+import { MerchPromoBanner } from "../-components/MerchPromoBanner.tsx"
 import { PersonalityCard } from "../-components/PersonalityCard.tsx"
 import { StatCard } from "../-components/StatCard.tsx"
 
@@ -28,6 +29,12 @@ interface EmailTemplateV2Props {
   readonly report: Report
   readonly webAppUrl: string
   readonly reportId: WrappedReportId
+  /**
+   * Resolved by the dispatcher from the `wrapped-merch-promo` flag. When
+   * true, renders the 41st.latitude.so merch banner between the primary
+   * CTA and the footer. Defaults to false so previews stay flag-free.
+   */
+  readonly showMerchPromo?: boolean
 }
 
 const DATE_RANGE_FMT = new Intl.DateTimeFormat("en-US", {
@@ -336,7 +343,13 @@ function WrappedFooter({
   )
 }
 
-export function ClaudeCodeWrappedEmailV2({ userName, report: reportBase, webAppUrl, reportId }: EmailTemplateV2Props) {
+export function ClaudeCodeWrappedEmailV2({
+  userName,
+  report: reportBase,
+  webAppUrl,
+  reportId,
+  showMerchPromo = false,
+}: EmailTemplateV2Props) {
   // Safe: dispatcher only routes here when reportVersion === 2.
   const report = reportBase as ReportV2
   const base = webAppUrl.replace(/\/$/, "")
@@ -366,6 +379,7 @@ export function ClaudeCodeWrappedEmailV2({ userName, report: reportBase, webAppU
       <LocSection report={report} />
       <PersonalityRevealSection personality={report.personality} imageBaseUrl={imageBaseUrl} />
       <CtaBanner url={reportUrl} />
+      {showMerchPromo ? <MerchPromoBanner /> : null}
     </WrappedLayout>
   )
 }
@@ -374,6 +388,7 @@ ClaudeCodeWrappedEmailV2.PreviewProps = {
   userName: "Alex",
   webAppUrl: "http://localhost:3000",
   reportId: "ccwv2p".padEnd(24, "x").slice(0, 24) as WrappedReportId,
+  showMerchPromo: true,
   report: {
     project: { id: ProjectId("proj-preview"), name: "poncho-ios", slug: "poncho-ios" },
     organization: { id: OrganizationId("org-preview"), name: "Acme" },

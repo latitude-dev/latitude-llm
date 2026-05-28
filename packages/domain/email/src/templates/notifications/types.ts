@@ -1,3 +1,4 @@
+import type { FeatureFlagRepository } from "@domain/feature-flags"
 import type { IssueRepository } from "@domain/issues"
 import type { NOTIFICATION_KIND_META, NotificationKind, RenderNotificationEmailError } from "@domain/notifications"
 import type { SqlClient } from "@domain/shared"
@@ -56,7 +57,7 @@ export type RenderDepsByKind = {
   readonly "incident.event": IssueRepository | SqlClient
   readonly "incident.opened": IssueRepository | SqlClient
   readonly "incident.closed": IssueRepository | SqlClient
-  readonly "wrapped.report": WrappedReportRepository | SqlClient
+  readonly "wrapped.report": WrappedReportRepository | FeatureFlagRepository | SqlClient
   readonly "custom.message": never
 }
 
