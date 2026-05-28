@@ -28,7 +28,7 @@ import {
   TextAlignStartIcon,
   XIcon,
 } from "lucide-react"
-import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
@@ -227,11 +227,13 @@ export function IssueDetailBody({
   const openTraceSheet = (traceId: string) => {
     setTraceSheetTraceId(traceId)
     setTraceSheetOpen(true)
+    onOverlayActiveChange?.(true)
   }
 
-  useEffect(() => {
-    onOverlayActiveChange?.(traceSheetOpen)
-  }, [traceSheetOpen, onOverlayActiveChange])
+  const closeTraceSheet = () => {
+    setTraceSheetOpen(false)
+    onOverlayActiveChange?.(false)
+  }
 
   const traceSheetIndex = traceSheetTraceId ? traceIds.indexOf(traceSheetTraceId) : -1
   const canNavigateNextTraceInSheet =
@@ -546,7 +548,7 @@ export function IssueDetailBody({
 
       <Sheet
         open={traceSheetOpen}
-        onClose={() => setTraceSheetOpen(false)}
+        onClose={closeTraceSheet}
         onClosed={() => setTraceSheetTraceId(null)}
         closeAriaLabel="Close trace panel"
       >
@@ -556,7 +558,7 @@ export function IssueDetailBody({
             projectId={projectId}
             traceId={traceSheetTraceId}
             trace={traces.find((t) => t.traceId === traceSheetTraceId)}
-            onClose={() => setTraceSheetOpen(false)}
+            onClose={closeTraceSheet}
             onNextTrace={onNextTraceInSheet}
             onPrevTrace={onPrevTraceInSheet}
             canNavigateNext={canNavigateNextTraceInSheet}
