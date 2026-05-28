@@ -40,8 +40,12 @@ const DON_T_SEND: ChannelOption = { id: "", name: "Don't send" }
  * selection via `configureSlackRoute` / `removeSlackRoute`.
  *
  * Used by both the settings page (full table of all groups) and the
- * onboarding flow (progressive subset). Channel list is fetched on
- * first open of the combobox and cached for 30s.
+ * onboarding flow (progressive subset). The channel list is fetched
+ * eagerly on mount (TanStack Query default), refetched whenever the
+ * combobox opens, and otherwise cached for 30s — the open-time
+ * refetch is intentional so a freshly-invited bot's new channels
+ * show up the next time the user opens the picker without waiting
+ * for `staleTime` to elapse.
  */
 export function SlackRouteRow({
   group,
