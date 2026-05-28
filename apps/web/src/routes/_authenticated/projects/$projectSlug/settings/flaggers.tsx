@@ -173,19 +173,17 @@ function ProjectFlaggersSettingsPage() {
     }
   }
 
-  const footer = hasDirty ? (
-    <div className="flex flex-row items-center justify-between gap-4">
+  const dirtyActions = hasDirty ? (
+    <div className="flex flex-row items-center gap-3">
       <Text.H5 color="foregroundMuted">
         {dirtyCount} unsaved change{dirtyCount === 1 ? "" : "s"}
       </Text.H5>
-      <div className="flex flex-row items-center gap-2">
-        <Button variant="outline" onClick={discard} disabled={isApplying}>
-          Discard
-        </Button>
-        <Button onClick={() => void apply()} isLoading={isApplying}>
-          Apply
-        </Button>
-      </div>
+      <Button variant="outline" onClick={discard} disabled={isApplying}>
+        Discard
+      </Button>
+      <Button onClick={() => void apply()} isLoading={isApplying}>
+        Apply
+      </Button>
     </div>
   ) : null
 
@@ -193,7 +191,8 @@ function ProjectFlaggersSettingsPage() {
     <SettingsPage
       title="Flaggers"
       description="Flaggers automatically inspect new traces for known failure patterns and create issues when they detect regressions"
-      footer={footer}
+      actions={dirtyActions}
+      headerSticky={hasDirty}
     >
       <div className="flex w-full max-w-2xl flex-col gap-8">
         {isLoadingFlaggers ? null : flaggers.length === 0 ? (
