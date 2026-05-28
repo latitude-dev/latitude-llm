@@ -41,6 +41,10 @@ export function Sheet({
 }) {
   const [mounted, setMounted] = useState(open)
   const [entered, setEntered] = useState(false)
+  // Tracks whether this Sheet has ever been opened. Without it, the first
+  // render with `open === false` would schedule the exit timer and fire
+  // `onClosed` 300ms later — even though no open/close cycle happened.
+  const hasOpenedRef = useRef(open)
   const onClosedRef = useRef(onClosed)
   onClosedRef.current = onClosed
 
@@ -54,6 +58,7 @@ export function Sheet({
 
   useEffect(() => {
     if (open) {
+      hasOpenedRef.current = true
       setMounted(true)
       // Double rAF: mount first paint at `translate-x-full`, then flip on
       // the next frame so the browser actually animates the transform.
@@ -71,6 +76,7 @@ export function Sheet({
         cancelAnimationFrame(enterId)
       }
     }
+    if (!hasOpenedRef.current) return
     setEntered(false)
     const exitId = setTimeout(() => {
       setMounted(false)
@@ -112,6 +118,9 @@ export function Sheet({
         onClick={closeOnBackdrop ? onClose : undefined}
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={closeAriaLabel}
         className={cn(
           "fixed inset-y-0 right-0 z-[50] flex max-h-dvh shadow-2xl will-change-transform transition-transform duration-300 ease-out",
           entered ? "translate-x-0" : "translate-x-full",
