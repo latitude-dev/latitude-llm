@@ -1,8 +1,7 @@
-import { Button, FormWrapper, Input, Label, Modal, Slider, Switch, Text, useToast, useValueWithDefault } from "@repo/ui"
+import { Button, FormWrapper, Input, Label, Modal, Slider, Switch, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { useForm } from "@tanstack/react-form"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { useState } from "react"
+import { createFileRoute, useBlocker, useRouter } from "@tanstack/react-router"
+import { useEffect, useRef, useState } from "react"
 import {
   deleteProjectMutation,
   updateProjectMutation,
@@ -10,13 +9,29 @@ import {
 } from "../../../../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../../../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
-import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings/general")({
   component: ProjectGeneralSettingsPage,
 })
+
+interface Draft {
+  readonly name: string
+  readonly samplingEnabled: boolean
+  readonly samplingRate: number
+}
+
+function DirtyDot() {
+  return (
+    <span
+      role="img"
+      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+      aria-label="Unsaved changes"
+      title="Unsaved changes"
+    />
+  )
+}
 
 function ProjectGeneralSettingsPage() {
   const { toast } = useToast()
@@ -28,125 +43,169 @@ function ProjectGeneralSettingsPage() {
   )
   const currentProject = liveProject ?? routeProject
 
-  const form = useForm({
-    defaultValues: { name: currentProject.name },
-    onSubmit: createFormSubmitHandler(
-      async ({ name }) => {
-        const trimmed = name.trim()
-        const transaction = updateProjectMutation(currentProject.id, { name: trimmed })
-        await transaction.isPersisted.promise
-      },
-      {
-        resetOnSuccess: false,
-        onSuccess: () => {
-          toast({ description: "Project name updated" })
-        },
-        onError: (error) => {
-          toast({ variant: "destructive", description: toUserMessage(error) })
-        },
-      },
-    ),
+  const baseline: Draft = {
+    name: currentProject.name,
+    samplingEnabled: currentProject.settings.sampling?.enabled ?? false,
+    samplingRate: Math.round((currentProject.settings.sampling?.rate ?? 1) * 100),
+  }
+
+  const [pending, setPending] = useState<Partial<Draft>>({})
+  const [isApplying, setIsApplying] = useState(false)
+
+  const view: Draft = { ...baseline, ...pending }
+
+  const setField = <K extends keyof Draft>(key: K, value: Draft[K]) => {
+    setPending((prev) => {
+      if (value === baseline[key]) {
+        const { [key]: _drop, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [key]: value }
+    })
+  }
+
+  const dirtyFields = (Object.keys(pending) as (keyof Draft)[]).filter((k) => pending[k] !== baseline[k])
+  const dirtyCount = dirtyFields.length
+  const hasDirty = dirtyCount > 0
+  const nameIsDirty = dirtyFields.includes("name")
+  const samplingIsDirty = dirtyFields.includes("samplingEnabled") || dirtyFields.includes("samplingRate")
+
+  const nameError = view.name.trim() === "" ? ["Name is required"] : undefined
+  const canApply = hasDirty && !nameError && !isApplying
+
+  const discard = () => setPending({})
+
+  const apply = async () => {
+    if (!hasDirty || nameError || isApplying) return
+    setIsApplying(true)
+    try {
+      const patch: Partial<ProjectRecord> = {}
+      if (nameIsDirty) patch.name = view.name.trim()
+      if (samplingIsDirty) {
+        patch.settings = {
+          ...currentProject.settings,
+          sampling: { enabled: view.samplingEnabled, rate: view.samplingRate / 100 },
+        }
+      }
+      const transaction = updateProjectMutation(currentProject.id, patch)
+      await transaction.isPersisted.promise
+      setPending({})
+      toast({ description: "Project settings updated" })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setIsApplying(false)
+    }
+  }
+
+  const applyRef = useRef(apply)
+  applyRef.current = apply
+  const isApplyingRef = useRef(isApplying)
+  isApplyingRef.current = isApplying
+
+  useEffect(() => {
+    if (!hasDirty) return
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const inField =
+        !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable === true)
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault()
+        void applyRef.current()
+      } else if (event.key === "Escape" && !inField && !isApplyingRef.current) {
+        event.preventDefault()
+        setPending({})
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [hasDirty])
+
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!hasDirty) return false
+      return !window.confirm("You have unsaved changes. Leave anyway?")
+    },
+    enableBeforeUnload: () => hasDirty,
+    disabled: !hasDirty,
   })
 
+  const dirtyActions = hasDirty ? (
+    <div className="flex flex-row items-center gap-3">
+      <Text.H5 color="foregroundMuted">
+        {dirtyCount} unsaved change{dirtyCount === 1 ? "" : "s"}
+      </Text.H5>
+      <Button variant="outline" onClick={discard} disabled={isApplying}>
+        Discard
+      </Button>
+      <Button onClick={() => void apply()} isLoading={isApplying} disabled={!canApply}>
+        Apply
+      </Button>
+    </div>
+  ) : null
+
   return (
-    <SettingsPage title="Project settings" description="Set up your project info">
-      <form
-        className="flex w-full flex-col gap-3 @[800px]:w-1/2"
-        onSubmit={(e) => {
-          e.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <form.Field name="name">
-          {(field) => (
-            <Input
-              key={currentProject.id}
-              type="text"
-              name={field.name}
-              label="Name"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              errors={fieldErrorsAsStrings(field.state.meta.errors)}
-              placeholder="Project name"
-              aria-label="Project name"
-            />
-          )}
-        </form.Field>
-        <div className="self-start">
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button type="submit" isLoading={isSubmitting}>
-                Save
-              </Button>
-            )}
-          </form.Subscribe>
-        </div>
-      </form>
-      <TraceSamplingSection projectId={currentProject.id} settings={currentProject.settings} />
+    <SettingsPage
+      title="Project settings"
+      description="Set up your project info"
+      actions={dirtyActions}
+      headerSticky={hasDirty}
+    >
+      <div className="flex w-full flex-col gap-3 @[800px]:w-1/2">
+        <Input
+          type="text"
+          label={
+            <span className="flex flex-row items-center gap-2">
+              Name
+              {nameIsDirty ? <DirtyDot /> : null}
+            </span>
+          }
+          value={view.name}
+          onChange={(e) => setField("name", e.target.value)}
+          errors={nameError}
+          placeholder="Project name"
+          aria-label="Project name"
+        />
+      </div>
+      <TraceSamplingSection
+        enabled={view.samplingEnabled}
+        rate={view.samplingRate}
+        isDirty={samplingIsDirty}
+        onEnabledChange={(checked) => setField("samplingEnabled", checked)}
+        onRateChange={(percent) => setField("samplingRate", percent)}
+      />
       <DeleteProjectSection projectId={currentProject.id} projectName={currentProject.name} />
     </SettingsPage>
   )
 }
 
-function TraceSamplingSection({ projectId, settings }: { projectId: string; settings: ProjectRecord["settings"] }) {
-  const { toast } = useToast()
-  const sampling = settings.sampling
-  const enabled = sampling?.enabled ?? false
-  const rate = sampling?.rate ?? 1
-  const [isSavingEnabled, setIsSavingEnabled] = useState(false)
-  const [draftPercent, setDraftPercent] = useValueWithDefault(Math.round(rate * 100))
-
-  const persist = async (next: { enabled?: boolean; rate?: number }) => {
-    const transaction = updateProjectMutation(projectId, {
-      settings: {
-        ...settings,
-        sampling: {
-          ...(sampling ?? {}),
-          ...next,
-        },
-      },
-    })
-    await transaction.isPersisted.promise
-  }
-
-  const handleToggle = async (checked: boolean) => {
-    if (isSavingEnabled) return
-    setIsSavingEnabled(true)
-    try {
-      await persist({ enabled: checked })
-      toast({ description: checked ? "Trace sampling enabled" : "Trace sampling disabled" })
-    } catch (error) {
-      toast({ variant: "destructive", description: toUserMessage(error) })
-    } finally {
-      setIsSavingEnabled(false)
-    }
-  }
-
-  const handleRateCommit = async (percent: number) => {
-    try {
-      await persist({ rate: percent / 100 })
-      toast({ description: "Sampling rate updated" })
-    } catch (error) {
-      toast({ variant: "destructive", description: toUserMessage(error) })
-    }
-  }
-
+function TraceSamplingSection({
+  enabled,
+  rate,
+  isDirty,
+  onEnabledChange,
+  onRateChange,
+}: {
+  enabled: boolean
+  rate: number
+  isDirty: boolean
+  onEnabledChange: (checked: boolean) => void
+  onRateChange: (percent: number) => void
+}) {
   return (
     <div className="flex w-full flex-col gap-3 @[800px]:w-1/2">
       <div className="flex w-full flex-row items-start justify-between gap-4 rounded-lg bg-muted/30 p-4">
         <div className="flex flex-col gap-1">
-          <Label htmlFor="trace-sampling-enabled">Trace sampling</Label>
+          <Label htmlFor="trace-sampling-enabled" className="flex flex-row items-center gap-2">
+            Trace sampling
+            {isDirty ? <DirtyDot /> : null}
+          </Label>
           <Text.H6 color="foregroundMuted">
             Store only a fraction of incoming traces. Sampling decisions are deterministic on session ID, so all spans
             sharing a session are kept or dropped together. You're only billed for stored traces.
           </Text.H6>
         </div>
-        <Switch
-          id="trace-sampling-enabled"
-          checked={enabled}
-          loading={isSavingEnabled}
-          onCheckedChange={(checked) => void handleToggle(checked)}
-        />
+        <Switch id="trace-sampling-enabled" checked={enabled} onCheckedChange={onEnabledChange} />
       </div>
       {enabled ? (
         <div className="flex w-full flex-col gap-3 rounded-lg bg-muted/30 p-4">
@@ -162,19 +221,12 @@ function TraceSamplingSection({ projectId, settings }: { projectId: string; sett
               min={1}
               max={100}
               step={1}
-              value={[draftPercent]}
-              onValueChange={(values) => {
-                const next = values[0] ?? draftPercent
-                setDraftPercent(next)
-              }}
-              onValueCommit={(values) => {
-                const next = values[0] ?? draftPercent
-                void handleRateCommit(next)
-              }}
+              value={[rate]}
+              onValueChange={(values) => onRateChange(values[0] ?? rate)}
               aria-label="Sampling rate"
             />
             <Text.H5 weight="medium" className="w-12 text-right">
-              {draftPercent}%
+              {rate}%
             </Text.H5>
           </div>
         </div>
