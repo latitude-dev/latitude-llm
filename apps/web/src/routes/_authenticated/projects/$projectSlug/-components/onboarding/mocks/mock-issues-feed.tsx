@@ -1,6 +1,6 @@
 import { cn, Status, type StatusProps, TagList, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { type ReactNode, useEffect, useMemo, useRef } from "react"
+import { type ReactNode, useMemo } from "react"
 
 type MockIssueStatus = "new" | "regressed" | "escalating" | "ongoing"
 
@@ -216,26 +216,6 @@ export function MockIssuesFeed({
 
   const openCount = mockRows.filter((f) => enabledFlaggerSlugs.has(f.slug)).length
 
-  // Stagger only bulk changes (presets) so a single toggle stays immediate. We compare the
-  // current open set against the previously committed one; if more than one row flipped, we
-  // cascade the delay across the flipped rows in render order.
-  const prevOpenRef = useRef<ReadonlySet<string>>(enabledFlaggerSlugs)
-  const delayBySlug = useMemo(() => {
-    const prev = prevOpenRef.current
-    const changed = mockRows.filter((f) => enabledFlaggerSlugs.has(f.slug) !== prev.has(f.slug))
-    const map = new Map<string, number>()
-    if (changed.length > 1) {
-      changed.forEach((f, i) => {
-        map.set(f.slug, Math.min(i * STAGGER_STEP_MS, STAGGER_MAX_MS))
-      })
-    }
-    return map
-  }, [mockRows, enabledFlaggerSlugs])
-
-  useEffect(() => {
-    prevOpenRef.current = new Set(mockRows.filter((f) => enabledFlaggerSlugs.has(f.slug)).map((f) => f.slug))
-  })
-
   return (
     <div className="flex h-fit w-full max-w-[591px] flex-col gap-4 self-center">
       <div className="flex flex-col gap-1">
@@ -248,14 +228,16 @@ export function MockIssuesFeed({
       </div>
 
       <div className="flex w-full flex-col">
-        {mockRows.map((flagger) => {
+        {mockRows.map((flagger, index) => {
           const issue = MOCK_ISSUES_BY_FLAGGER[flagger.slug]
           if (!issue) return null
+          // Static per-position delay: a preset (bulk toggle) cascades top-to-bottom, while a
+          // single toggle keeps a barely-perceptible delay — no need to track prior open state.
           return (
             <CollapsibleRow
               key={flagger.slug}
               open={enabledFlaggerSlugs.has(flagger.slug)}
-              delayMs={delayBySlug.get(flagger.slug) ?? 0}
+              delayMs={Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS)}
             >
               <IssueCard issue={issue} />
             </CollapsibleRow>
