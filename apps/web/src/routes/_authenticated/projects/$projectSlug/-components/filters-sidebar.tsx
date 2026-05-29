@@ -11,6 +11,7 @@ import {
   STATUS_FIELDS,
 } from "../../../../../components/filters-builder/constants.ts"
 import { MetadataFilter } from "../../../../../components/filters-builder/metadata-filter/metadata-filter.tsx"
+import { MultiSelectFilterSection } from "../../../../../components/filters-builder/multi-select-filter-section.tsx"
 import {
   type FilterMode,
   MultiSelectFilter,
@@ -33,11 +34,6 @@ interface FiltersSidebarProps {
   readonly filters: FilterSet
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onClose: () => void
-}
-
-function getInValues(filters: FilterSet, field: string): readonly string[] {
-  const cond = filters[field]?.find((c) => c.op === "in")
-  return Array.isArray(cond?.value) ? cond.value.map(String) : []
 }
 
 function getTextFilterValue(filters: FilterSet, field: string): string {
@@ -599,16 +595,16 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
         })}
 
         {getMultiSelectFieldsForMode(mode).map(({ label, field }) => {
-          const selectedValues = getInValues(filters, field)
+          const hasValues = (filters[field]?.length ?? 0) > 0
           const staticItems = staticItemsByField[field]
           return (
-            <CollapsibleSection key={field} label={label} defaultOpen={selectedValues.length > 0}>
-              <MultiSelectFilter
+            <CollapsibleSection key={field} label={label} defaultOpen={hasValues}>
+              <MultiSelectFilterSection
                 mode={mode}
                 projectId={projectId}
-                column={field as DistinctColumn}
-                selected={selectedValues}
-                onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
+                field={field as DistinctColumn}
+                filters={filters}
+                onFiltersChange={onFiltersChange}
                 {...(staticItems ? { staticItems } : {})}
               />
             </CollapsibleSection>

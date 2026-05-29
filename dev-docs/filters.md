@@ -37,6 +37,7 @@ interface FilterCondition {
 
 - **Scalar comparisons** (`eq`, `neq`, `gt`, `gte`, `lt`, `lte`) — map to SQL `=`, `!=`, `>`, `>=`, `<`, `<=`
 - **Set membership** (`in`, `notIn`) — map to SQL `IN` / `NOT IN` for scalar columns, `hasAny()` / `NOT hasAny()` for array columns
+- **Array contains all** (multiple `eq` on the same array field, AND'd) — maps to `has(column, value)` per element. The traces UI labels this **Contains all of**
 - **Substring match** (`contains`, `notContains`) — map to SQL `ILIKE` / `NOT ILIKE` with auto-wrapped `%` wildcards
 
 ### Validation
@@ -116,10 +117,10 @@ Translates a `FilterSet` into parameterized SQL clauses. Behavior:
 | name | root_span_name | String | |
 | sessionId | session_id | String | |
 | userId | user_id | String | |
-| tags | tags | String[] | isArray |
-| models | models | String[] | isArray |
-| providers | providers | String[] | isArray |
-| serviceNames | service_names | String[] | isArray |
+| tags | tags | String[] | isArray, arrayContains |
+| models | models | String[] | isArray, arrayContains |
+| providers | providers | String[] | isArray, arrayContains |
+| serviceNames | service_names | String[] | isArray, arrayContains |
 | cost | cost_total_microcents | UInt64 | |
 | duration | duration_ns | Int64 | |
 | spanCount | span_count | UInt64 | |
