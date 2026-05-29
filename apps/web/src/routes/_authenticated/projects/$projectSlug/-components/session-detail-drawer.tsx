@@ -4,6 +4,7 @@ import { ChevronLeftIcon } from "lucide-react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useSessionDetail } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
+import { IssueLifecycleActions } from "../issues/-components/issue-lifecycle-actions.tsx"
 import { IssueSlot } from "./session-detail-drawer/issue-slot.tsx"
 import { isSessionTab, SessionSlot } from "./session-detail-drawer/session-slot.tsx"
 import { type DetailSlotKind, SlotTransition } from "./session-detail-drawer/slot-transition.tsx"
@@ -120,6 +121,9 @@ export function SessionDetailDrawer({
             View session <HotkeyBadge hotkey="Escape" />
           </Tooltip>
         ) : undefined
+      }
+      rightActions={
+        detailKind === "issue" ? <IssueLifecycleActions projectId={projectId} issueId={issueId} /> : undefined
       }
     >
       {sessionLoading && !session ? (
