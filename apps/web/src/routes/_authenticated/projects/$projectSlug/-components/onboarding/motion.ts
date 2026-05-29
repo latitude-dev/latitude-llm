@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react"
 
-/**
- * House animation timings for the onboarding right-pane previews. Keep the Tailwind
- * `duration-*` classes used across the panes in sync with this convention: enters use
- * `duration-300`, exits use `duration-200`. `MOTION_EXIT_MS` is the JS-driven unmount
- * delay and must match the `duration-200` exit classes exactly.
- */
-export const MOTION_EXIT_MS = 200
-
 /** Dwell time per image before the intro gallery auto-advances. */
 export const GALLERY_DWELL_MS = 5000
 

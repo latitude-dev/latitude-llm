@@ -1,6 +1,6 @@
 import { cn, Text } from "@repo/ui"
 import { type ReactNode, useEffect, useRef, useState } from "react"
-import { MOTION_EXIT_MS, usePrefersReducedMotion } from "../motion.ts"
+import { usePrefersReducedMotion } from "../motion.ts"
 
 type VariantId = "incident" | "report" | "resolved"
 
@@ -40,45 +40,70 @@ const NOTIFICATION_VARIANTS_BY_ID = Object.fromEntries(NOTIFICATION_VARIANTS.map
 >
 
 const TICK_MS = 2500
-const MAX_VISIBLE = 3
+const ENTRY_MS = 300
+// Cards kept in the steady stack: the top 3 are fully visible, the next 2 fade into depth.
+const STACK_SIZE = 5
+
+// Depth styling by stack position. Index STACK_SIZE is the transient slot a card passes
+// through on its way out — already at opacity 0, so dropping it from the DOM is invisible.
+const DEPTH_OPACITY = [1, 1, 1, 0.55, 0.22, 0]
+const DEPTH_SCALE = [1, 0.985, 0.97, 0.955, 0.94, 0.925]
+const LAST_DEPTH_INDEX = DEPTH_OPACITY.length - 1
+
+function depthFor(index: number): { opacity: number; scale: number } {
+  const i = Math.min(index, LAST_DEPTH_INDEX)
+  return { opacity: DEPTH_OPACITY[i] ?? 0, scale: DEPTH_SCALE[i] ?? 0.9 }
+}
 
 type RenderedCard = {
   readonly id: number
   readonly variant: VariantId
-  readonly leaving: boolean
   readonly seeded: boolean
 }
 
-// Seed the stack so the pane is populated the instant the user arrives, newest (incident,
-// "just now") on top. Negative ids keep them clear of the live tick counter (which starts at 0).
-const SEED_CARDS: ReadonlyArray<RenderedCard> = [
-  { id: -1, variant: "incident", leaving: false, seeded: true },
-  { id: -2, variant: "report", leaving: false, seeded: true },
-  { id: -3, variant: "resolved", leaving: false, seeded: true },
-]
+// Seed a full depth stack so the pane is populated the instant the user arrives, newest on top.
+const SEED_CARDS: ReadonlyArray<RenderedCard> = Array.from({ length: STACK_SIZE }, (_, i) => {
+  const variant = NOTIFICATION_VARIANTS[i % NOTIFICATION_VARIANTS.length]
+  return { id: -1 - i, variant: (variant?.id ?? "incident") as VariantId, seeded: true }
+})
 
-function QueueCard({ card, children }: { readonly card: RenderedCard; readonly children: ReactNode }) {
-  // Seeded cards render already-open (no entry animation); ticked cards start collapsed and
-  // expand on the next frame so the height transition plays.
-  const [open, setOpen] = useState(card.seeded)
+function QueueCard({
+  card,
+  index,
+  children,
+}: {
+  readonly card: RenderedCard
+  readonly index: number
+  readonly children: ReactNode
+}) {
+  // Seeded cards render in place; freshly-added cards start collapsed and expand next frame.
+  const [entered, setEntered] = useState(card.seeded)
   useEffect(() => {
-    if (open) return
-    const raf = requestAnimationFrame(() => setOpen(true))
+    if (entered) return
+    const raf = requestAnimationFrame(() => setEntered(true))
     return () => cancelAnimationFrame(raf)
-  }, [open])
+  }, [entered])
 
-  const expanded = open && !card.leaving
+  // Past the stack: collapse height while already faded to 0 — an invisible exit, no snap
+  // (the entering card grows by the same amount this one shrinks).
+  const evicting = index >= STACK_SIZE
+  const heightOpen = entered && !evicting
+  const { opacity, scale } = depthFor(index)
+
   return (
     <div
-      aria-hidden={!expanded}
       className={cn(
-        "grid transition-[grid-template-rows,opacity] ease-out motion-reduce:transition-none",
-        card.leaving ? "duration-200" : "duration-300",
-        expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
+        heightOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
       )}
     >
       <div className="min-h-0 overflow-hidden">
-        <div className="pb-2">{children}</div>
+        <div
+          className="origin-top pb-2 transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none"
+          style={{ opacity: entered ? opacity : 0, transform: `scale(${scale})` }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   )
@@ -98,32 +123,18 @@ export function MockSlackQueue({ isActive }: { readonly isActive: boolean }) {
       const id = counterRef.current++
       const variant = NOTIFICATION_VARIANTS[variantIndexRef.current++ % NOTIFICATION_VARIANTS.length]
       if (!variant) return
-      setCards((prev) => {
-        const next: RenderedCard[] = [{ id, variant: variant.id, leaving: false, seeded: false }, ...prev]
-        const visibleCount = next.reduce((acc, c) => acc + (c.leaving ? 0 : 1), 0)
-        if (visibleCount > MAX_VISIBLE) {
-          // Mark the oldest still-visible card (last non-leaving) to slide out.
-          for (let i = next.length - 1; i >= 0; i--) {
-            const card = next[i]
-            if (card && !card.leaving) {
-              next[i] = { ...card, leaving: true }
-              break
-            }
-          }
-        }
-        return next
-      })
+      setCards((prev) => [{ id, variant: variant.id, seeded: false }, ...prev])
     }, TICK_MS)
     return () => window.clearInterval(interval)
   }, [isActive, reducedMotion])
 
-  // Drop leaving cards once their collapse animation has played. Watching `cards` keeps this
-  // decoupled from the tick, so the cap can never silently fail.
+  // Once a new card has pushed the oldest into the transient slot (faded to 0 and collapsed),
+  // drop it. Watching `cards` keeps removal decoupled from the tick.
   useEffect(() => {
-    if (!cards.some((c) => c.leaving)) return
+    if (cards.length <= STACK_SIZE) return
     const timer = window.setTimeout(() => {
-      setCards((prev) => prev.filter((c) => !c.leaving))
-    }, MOTION_EXIT_MS)
+      setCards((prev) => prev.slice(0, STACK_SIZE))
+    }, ENTRY_MS)
     return () => window.clearTimeout(timer)
   }, [cards])
 
@@ -136,11 +147,11 @@ export function MockSlackQueue({ isActive }: { readonly isActive: boolean }) {
         </Text.H6>
       </div>
 
-      <div className="flex max-h-[280px] w-full flex-col overflow-hidden">
-        {cards.map((card) => {
+      <div className="flex w-full flex-col">
+        {cards.map((card, index) => {
           const v = NOTIFICATION_VARIANTS_BY_ID[card.variant]
           return (
-            <QueueCard key={card.id} card={card}>
+            <QueueCard key={card.id} card={card} index={index}>
               <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-lg">
                   <span aria-hidden>{v.emoji}</span>
