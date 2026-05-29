@@ -70,9 +70,9 @@ const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
     affectedTracesPercent: 0.01,
   },
   refusal: {
-    title: "Assistant won't look up orders for signed-in users",
+    title: "Assistant refuses to write SQL, calling it a security risk",
     status: "new",
-    tags: ["support", "over-refusal"],
+    tags: ["coding-agent", "over-refusal"],
     trend: [1, 0, 2, 1, 1, 2, 1, 3, 2, 1, 2, 3],
     occurrences: 6,
     affectedTracesPercent: 0.02,
@@ -94,9 +94,9 @@ const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
     affectedTracesPercent: 0.02,
   },
   trashing: {
-    title: "Agent loops cart validation without resolving",
+    title: "Agent retries a failing tool with identical arguments",
     status: "regressed",
-    tags: ["tool-loop", "checkout"],
+    tags: ["tool-loop", "retries"],
     trend: [1, 0, 1, 2, 1, 3, 2, 4, 3, 5, 7, 8],
     occurrences: 3,
     affectedTracesPercent: 0.01,
