@@ -1,4 +1,4 @@
-import { Button, FormWrapper, Input, Label, Modal, Slider, Switch, Text, useToast } from "@repo/ui"
+import { Button, DotIndicator, FormWrapper, Input, Label, Modal, Slider, Switch, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, useBlocker, useRouter } from "@tanstack/react-router"
 import { useEffect, useRef, useState } from "react"
@@ -20,17 +20,6 @@ interface Draft {
   readonly name: string
   readonly samplingEnabled: boolean
   readonly samplingRate: number
-}
-
-function DirtyDot() {
-  return (
-    <span
-      role="img"
-      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
-      aria-label="Unsaved changes"
-      title="Unsaved changes"
-    />
-  )
 }
 
 function ProjectGeneralSettingsPage() {
@@ -157,7 +146,7 @@ function ProjectGeneralSettingsPage() {
           label={
             <span className="flex flex-row items-center gap-2">
               Name
-              {nameIsDirty ? <DirtyDot /> : null}
+              {nameIsDirty ? <DotIndicator variant="primary" aria-label="Unsaved changes" /> : null}
             </span>
           }
           value={view.name}
@@ -199,7 +188,7 @@ function TraceSamplingSection({
           <div className="flex flex-col gap-1">
             <Label htmlFor="trace-sampling-enabled" className="flex flex-row items-center gap-2">
               Trace sampling
-              {isDirty ? <DirtyDot /> : null}
+              {isDirty ? <DotIndicator variant="primary" aria-label="Unsaved changes" /> : null}
             </Label>
             <Text.H6 color="foregroundMuted">
               Process and store only a portion of the traces you send, instead of all of them. Useful for reducing
@@ -210,25 +199,32 @@ function TraceSamplingSection({
           <Switch id="trace-sampling-enabled" checked={enabled} onCheckedChange={onEnabledChange} />
         </div>
         {enabled ? (
-          <div className="flex w-full flex-row items-center justify-between gap-4 border-border border-t p-4">
-            <Label htmlFor="trace-sampling-rate" className="shrink-0">
-              Sampling rate
-            </Label>
-            <div className="flex flex-row items-center gap-4">
-              <Slider
-                id="trace-sampling-rate"
-                className="w-40"
-                min={1}
-                max={100}
-                step={1}
-                value={[rate]}
-                onValueChange={(values) => onRateChange(values[0] ?? rate)}
-                aria-label="Sampling rate"
-              />
-              <Text.H5 weight="medium" className="w-12 text-right">
-                {rate}%
-              </Text.H5>
+          <div className="flex w-full flex-col gap-2 border-border border-t p-4">
+            <div className="flex w-full flex-row items-center justify-between gap-4">
+              <Label htmlFor="trace-sampling-rate" className="shrink-0">
+                Sampling rate
+              </Label>
+              <div className="flex flex-row items-center gap-4">
+                <Slider
+                  id="trace-sampling-rate"
+                  className="w-40"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={[rate]}
+                  onValueChange={(values) => onRateChange(values[0] ?? rate)}
+                  aria-label="Sampling rate"
+                />
+                <Text.H5 weight="medium" className="w-12 text-right">
+                  {rate}%
+                </Text.H5>
+              </div>
             </div>
+            {rate === 0 ? (
+              <Text.H6 color="destructive">
+                At 0% no traces will be processed or stored. Nothing from this project will be ingested.
+              </Text.H6>
+            ) : null}
           </div>
         ) : null}
       </div>
