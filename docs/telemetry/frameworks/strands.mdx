@@ -1,0 +1,114 @@
+---
+title: Strands Agents
+description: Connect your Strands Agents application to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Strands Agents** — AWS's open-source AI agents SDK.
+
+Strands Agents has first-class OpenTelemetry support built in (`strands-agents[otel]`). It emits standard `gen_ai.*` spans for every agent run, LLM call, and tool execution, so you can point Strands' OTLP exporter directly at Latitude's ingestion endpoint — no Latitude SDK required.
+
+<Check>
+  You'll keep using Strands Agents exactly as you do today. The exporter simply
+  sends your traces to Latitude alongside any other observability backend.
+</Check>
+
+<Note>
+  The Strands Agents integration is **Python only**.
+</Note>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A Python project that uses **Strands Agents** (`strands-agents`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    <CodeGroup>
+      ```bash pip
+      pip install 'strands-agents[otel]'
+      ```
+
+      ```bash uv
+      uv add 'strands-agents[otel]'
+      ```
+
+      ```bash poetry
+      poetry add 'strands-agents[otel]'
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Configure the exporter">
+    Set the required environment variables so Strands sends traces to Latitude:
+
+    ```bash
+    export OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.latitude.so"
+    export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer YOUR_API_KEY,X-Latitude-Project=YOUR_PROJECT_SLUG"
+    export OTEL_EXPORTER_OTLP_TRACES_PROTOCOL="http/protobuf"
+    export OTEL_SEMCONV_STABILITY_OPT_IN="gen_ai_latest_experimental"
+    ```
+
+    <Note>
+      `OTEL_EXPORTER_OTLP_ENDPOINT` is the **base URL** — the OTel SDK automatically appends `/v1/traces`. Do not include the path yourself or traces will fail to reach Latitude.
+    </Note>
+
+    Then initialize telemetry before creating your agent:
+
+    ```python
+    from strands import Agent
+    from strands.telemetry.config import StrandsTelemetry
+
+    # Initialize and configure the OTLP exporter (reads env vars above)
+    telemetry = StrandsTelemetry()
+    telemetry.setup_otlp_exporter()
+
+    # Your agent code is unchanged
+    agent = Agent(
+        system_prompt="You are a helpful assistant.",
+    )
+
+    result = agent("Summarize the key features of AWS Strands Agents.")
+    print(result)
+    ```
+  </Step>
+
+  <Step title="Ensure GenAI span attributes">
+    Getting traces into Latitude is only half the job. For Latitude to display the model name, token counts, and input/output messages, your spans must carry the right `gen_ai.*` attributes in the format Latitude expects.
+
+    `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` (set in the previous step) tells Strands to emit these attributes automatically.
+
+    See [GenAI Span Attributes](/telemetry/otel-exporter#genai-span-attributes-llm-metadata) for the full list of required attributes and the exact message format Latitude expects.
+  </Step>
+
+</Steps>
+
+---
+
+## What you get
+
+Each agent run shows up as a trace with nested spans:
+
+- **Agent spans** — agent name, ID, description, user message, full response, total token usage
+- **Cycle spans** — one span per event-loop cycle with `event_loop.cycle_id`
+- **LLM spans** — model invocations with input/output messages, token counts (prompt, completion, cache), model parameters
+- **Tool spans** — tool name, input arguments, output result, and `tool.status`
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each agent run shows the full hierarchy: agent → LLM calls → tool executions
+3. Token usage and latency are aggregated at every level
