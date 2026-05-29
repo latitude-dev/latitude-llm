@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useMountEffect } from "@repo/ui"
+import { useState } from "react"
 
 /** Dwell time per image before the intro gallery auto-advances. */
 export const GALLERY_DWELL_MS = 5000
@@ -11,13 +12,13 @@ export const GALLERY_DWELL_MS = 5000
 export function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false)
 
-  useEffect(() => {
+  useMountEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)")
     setReduced(query.matches)
     const onChange = (event: MediaQueryListEvent) => setReduced(event.matches)
     query.addEventListener("change", onChange)
     return () => query.removeEventListener("change", onChange)
-  }, [])
+  })
 
   return reduced
 }

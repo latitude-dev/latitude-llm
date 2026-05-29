@@ -1,4 +1,4 @@
-import { cn, Text } from "@repo/ui"
+import { cn, Text, useMountEffect } from "@repo/ui"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { usePrefersReducedMotion } from "../motion.ts"
 
@@ -171,11 +171,11 @@ function QueueCard({
 }) {
   // Seeded cards render in place; freshly-added cards start collapsed and expand next frame.
   const [entered, setEntered] = useState(card.seeded)
-  useEffect(() => {
-    if (entered) return
+  useMountEffect(() => {
+    if (card.seeded) return
     const raf = requestAnimationFrame(() => setEntered(true))
     return () => cancelAnimationFrame(raf)
-  }, [entered])
+  })
 
   // Past the stack: collapse height while already faded to 0 — an invisible exit, no snap
   // (the entering card grows by the same amount this one shrinks).
