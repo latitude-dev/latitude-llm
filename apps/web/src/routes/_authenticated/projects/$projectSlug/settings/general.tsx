@@ -193,44 +193,45 @@ function TraceSamplingSection({
   onRateChange: (percent: number) => void
 }) {
   return (
-    <div className="flex w-full flex-col gap-3 @[800px]:w-1/2">
-      <div className="flex w-full flex-row items-start justify-between gap-4 rounded-lg bg-muted/30 p-4">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="trace-sampling-enabled" className="flex flex-row items-center gap-2">
-            Trace sampling
-            {isDirty ? <DirtyDot /> : null}
-          </Label>
-          <Text.H6 color="foregroundMuted">
-            Store only a fraction of incoming traces. Sampling decisions are deterministic on session ID, so all spans
-            sharing a session are kept or dropped together. You're only billed for stored traces.
-          </Text.H6>
-        </div>
-        <Switch id="trace-sampling-enabled" checked={enabled} onCheckedChange={onEnabledChange} />
-      </div>
-      {enabled ? (
-        <div className="flex w-full flex-col gap-3 rounded-lg bg-muted/30 p-4">
+    <div className="flex w-full flex-col @[800px]:w-1/2">
+      <div className="flex w-full flex-col rounded-lg bg-muted/30">
+        <div className="flex w-full flex-row items-start justify-between gap-4 p-4">
           <div className="flex flex-col gap-1">
-            <Label htmlFor="trace-sampling-rate">Sampling rate</Label>
+            <Label htmlFor="trace-sampling-enabled" className="flex flex-row items-center gap-2">
+              Trace sampling
+              {isDirty ? <DirtyDot /> : null}
+            </Label>
             <Text.H6 color="foregroundMuted">
-              Percentage of traces to store. 100% stores everything; 10% stores roughly 1 in 10.
+              Process and store only a portion of the traces you send, instead of all of them. Useful for reducing
+              costs. Only recommended if you have really high traffic, where a smaller sample is still enough to spot
+              issues.
             </Text.H6>
           </div>
-          <div className="flex w-full flex-row items-center gap-4">
-            <Slider
-              id="trace-sampling-rate"
-              min={1}
-              max={100}
-              step={1}
-              value={[rate]}
-              onValueChange={(values) => onRateChange(values[0] ?? rate)}
-              aria-label="Sampling rate"
-            />
-            <Text.H5 weight="medium" className="w-12 text-right">
-              {rate}%
-            </Text.H5>
-          </div>
+          <Switch id="trace-sampling-enabled" checked={enabled} onCheckedChange={onEnabledChange} />
         </div>
-      ) : null}
+        {enabled ? (
+          <div className="flex w-full flex-row items-center justify-between gap-4 border-border border-t p-4">
+            <Label htmlFor="trace-sampling-rate" className="shrink-0">
+              Sampling rate
+            </Label>
+            <div className="flex flex-row items-center gap-4">
+              <Slider
+                id="trace-sampling-rate"
+                className="w-40"
+                min={1}
+                max={100}
+                step={1}
+                value={[rate]}
+                onValueChange={(values) => onRateChange(values[0] ?? rate)}
+                aria-label="Sampling rate"
+              />
+              <Text.H5 weight="medium" className="w-12 text-right">
+                {rate}%
+              </Text.H5>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }
