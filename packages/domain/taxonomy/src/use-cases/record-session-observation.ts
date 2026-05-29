@@ -4,7 +4,8 @@ import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import {
   TAXONOMY_CLUSTER_LOCK_MAX_RETRIES,
-  TAXONOMY_CLUSTER_LOCK_RETRY_DELAY_MS,
+  TAXONOMY_CLUSTER_LOCK_RETRY_BASE_DELAY_MS,
+  TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS,
   TAXONOMY_EMBEDDING_MODEL,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   TAXONOMY_SESSION_MIN_LENGTH,
@@ -32,7 +33,12 @@ export interface RecordSessionObservationInput {
   readonly retentionDays?: number
   /** Test/operator override; defaults to TAXONOMY_SUMMARY_STRATEGY. */
   readonly summaryStrategy?: TaxonomySummaryStrategy
-  /** Test/operator override for short lock-contention backoff. */
+  /**
+   * Test/operator override for the lock-contention backoff. `delayMs` is the
+   * exponential base delay; the per-attempt cap stays
+   * `TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS`. Pass `delayMs: 0` to disable
+   * sleeping (deterministic tests).
+   */
   readonly clusterLockRetry?: {
     readonly maxRetries: number
     readonly delayMs: number
@@ -56,42 +62,48 @@ const parseTraceIds = (traceIds: readonly string[], fallback?: string): TraceId[
   return parsed
 }
 
-const delayWithJitter = (delayMs: number) =>
-  Effect.sync(() => Math.max(0, delayMs) + Math.floor(Math.random() * Math.max(1, delayMs))).pipe(
-    Effect.flatMap((durationMs) => Effect.sleep(`${durationMs} millis`)),
-  )
+// Capped exponential backoff with full jitter (sleep ∈ [0, min(cap, base·2^attempt)]).
+// Full jitter de-correlates contenders so a thundering herd on one hot cluster
+// spreads out instead of re-colliding on a fixed cadence. base=0 collapses every
+// sleep to 0, which keeps tests deterministic and fast.
+const backoffDelayWithJitter = (input: { baseDelayMs: number; maxDelayMs: number; attempt: number }) =>
+  Effect.sync(() => {
+    const exponential = Math.min(input.maxDelayMs, input.baseDelayMs * 2 ** input.attempt)
+    return Math.floor(Math.random() * (Math.max(0, exponential) + 1))
+  }).pipe(Effect.flatMap((durationMs) => Effect.sleep(`${durationMs} millis`)))
 
 const assignObservationToClusterWithBackoff = (
   input: AssignObservationToClusterInput & {
     readonly sessionId: SessionId
     readonly maxRetries: number
-    readonly retryDelayMs: number
+    readonly baseDelayMs: number
+    readonly maxDelayMs: number
   },
 ) =>
   Effect.gen(function* () {
-    let remainingRetries = input.maxRetries
+    let attempt = 0
 
     while (true) {
-      const attempt = yield* assignObservationToClusterUseCase(input).pipe(
+      const result = yield* assignObservationToClusterUseCase(input).pipe(
         Effect.as(true as const),
         Effect.catchTag("TaxonomyClusterLockUnavailableError", (error) => Effect.succeed({ error } as const)),
       )
 
-      if (attempt === true) return true
+      if (result === true) return true
 
-      if (remainingRetries <= 0) {
+      if (attempt >= input.maxRetries) {
         yield* Effect.logWarning("Taxonomy cluster lock unavailable; recording observation as noise", {
           organizationId: input.organizationId,
           projectId: input.projectId,
           sessionId: input.sessionId,
           clusterId: input.clusterId,
-          error: attempt.error,
+          error: result.error,
         })
         return false
       }
 
-      remainingRetries--
-      yield* delayWithJitter(input.retryDelayMs)
+      yield* backoffDelayWithJitter({ baseDelayMs: input.baseDelayMs, maxDelayMs: input.maxDelayMs, attempt })
+      attempt++
     }
   })
 
@@ -215,7 +227,8 @@ export const recordSessionObservationUseCase = (input: RecordSessionObservationI
         observedAt: session.startTime,
         assignedAt: now,
         maxRetries: input.clusterLockRetry?.maxRetries ?? TAXONOMY_CLUSTER_LOCK_MAX_RETRIES,
-        retryDelayMs: input.clusterLockRetry?.delayMs ?? TAXONOMY_CLUSTER_LOCK_RETRY_DELAY_MS,
+        baseDelayMs: input.clusterLockRetry?.delayMs ?? TAXONOMY_CLUSTER_LOCK_RETRY_BASE_DELAY_MS,
+        maxDelayMs: TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS,
       })
 
       if (!assigned) {
