@@ -1,5 +1,5 @@
 import { cn, Text, useMountEffect } from "@repo/ui"
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import { type ReactNode, useRef, useState } from "react"
 import { usePrefersReducedMotion } from "../motion.ts"
 
 type IncidentKind = "new" | "escalating" | "regressed" | "resolved"
@@ -208,28 +208,35 @@ export function MockSlackQueue({ isActive }: { readonly isActive: boolean }) {
   const counterRef = useRef(0)
   const variantIndexRef = useRef(0)
 
-  // Tick only while the Slack step is visible (and motion is allowed), so the queue never
-  // builds a backlog off-screen and stays still under reduced-motion.
-  useEffect(() => {
-    if (!isActive || reducedMotion) return
+  // Latest-value refs so the mount-only interval reads current visibility/motion state without
+  // re-subscribing. Skipping ticks while inactive keeps the queue from building a backlog
+  // off-screen (all carousel slides stay mounted) and holds it still under reduced-motion.
+  const isActiveRef = useRef(isActive)
+  isActiveRef.current = isActive
+  const reducedMotionRef = useRef(reducedMotion)
+  reducedMotionRef.current = reducedMotion
+
+  useMountEffect(() => {
+    const evictionTimers = new Set<number>()
     const interval = window.setInterval(() => {
+      if (!isActiveRef.current || reducedMotionRef.current) return
       const id = counterRef.current++
       const variant = NOTIFICATION_VARIANTS[variantIndexRef.current++ % NOTIFICATION_VARIANTS.length]
       if (!variant) return
       setCards((prev) => [{ id, variant: variant.id, seeded: false }, ...prev])
+      // The new card pushes the oldest into the transient slot; drop it once it has faded to 0
+      // and collapsed out of sight.
+      const evict = window.setTimeout(() => {
+        evictionTimers.delete(evict)
+        setCards((prev) => (prev.length > STACK_SIZE ? prev.slice(0, STACK_SIZE) : prev))
+      }, ENTRY_MS)
+      evictionTimers.add(evict)
     }, TICK_MS)
-    return () => window.clearInterval(interval)
-  }, [isActive, reducedMotion])
-
-  // Once a new card has pushed the oldest into the transient slot (faded to 0 and collapsed),
-  // drop it. Watching `cards` keeps removal decoupled from the tick.
-  useEffect(() => {
-    if (cards.length <= STACK_SIZE) return
-    const timer = window.setTimeout(() => {
-      setCards((prev) => prev.slice(0, STACK_SIZE))
-    }, ENTRY_MS)
-    return () => window.clearTimeout(timer)
-  }, [cards])
+    return () => {
+      window.clearInterval(interval)
+      for (const timer of evictionTimers) window.clearTimeout(timer)
+    }
+  })
 
   return (
     <div className="flex h-fit w-full max-w-[440px] flex-col gap-4 self-center">

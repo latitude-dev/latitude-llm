@@ -1,6 +1,6 @@
-import { Button, cn, Text } from "@repo/ui"
+import { Button, cn, Text, useMountEffect } from "@repo/ui"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useRef, useState } from "react"
 import { GALLERY_DWELL_MS, usePrefersReducedMotion } from "./motion.ts"
 
 const INTRO_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> = [
@@ -32,13 +32,21 @@ export function OnboardingGallery() {
   const [paused, setPaused] = useState(false)
   const count = INTRO_GALLERY.length
 
-  // Resets the dwell timer after every change (manual or automatic), so a click buys a
-  // fresh interval rather than an immediate auto-advance.
-  useEffect(() => {
-    if (reducedMotion || paused || count <= 1) return
-    const id = window.setTimeout(() => setIndex((i) => (i + 1) % count), GALLERY_DWELL_MS)
-    return () => window.clearTimeout(id)
-  }, [index, paused, reducedMotion, count])
+  // Latest-value refs so the mount-only interval reads current pause/motion state without
+  // re-subscribing. Each tick advances unless the pointer is over the pane or motion is reduced.
+  const pausedRef = useRef(paused)
+  pausedRef.current = paused
+  const reducedMotionRef = useRef(reducedMotion)
+  reducedMotionRef.current = reducedMotion
+
+  useMountEffect(() => {
+    if (count <= 1) return
+    const interval = window.setInterval(() => {
+      if (pausedRef.current || reducedMotionRef.current) return
+      setIndex((i) => (i + 1) % count)
+    }, GALLERY_DWELL_MS)
+    return () => window.clearInterval(interval)
+  })
 
   const goPrev = () => setIndex((i) => (i === 0 ? count - 1 : i - 1))
   const goNext = () => setIndex((i) => (i + 1) % count)
