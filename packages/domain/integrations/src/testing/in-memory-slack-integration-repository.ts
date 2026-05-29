@@ -87,5 +87,19 @@ export const InMemorySlackIntegrationRepositoryLive = (init: {
         rows.set(integrationId, { ...row, routes: nextRoutes, updatedAt: new Date() })
         return true
       }),
+
+    updateTokens: (integrationId, tokens) =>
+      Effect.sync(() => {
+        const row = rows.get(integrationId)
+        if (!row || row.organizationId !== init.organizationId || row.revokedAt !== null) return false
+        rows.set(integrationId, {
+          ...row,
+          botAccessToken: tokens.botAccessToken,
+          refreshToken: tokens.refreshToken,
+          tokenExpiresAt: tokens.tokenExpiresAt,
+          updatedAt: new Date(),
+        })
+        return true
+      }),
   })
 }

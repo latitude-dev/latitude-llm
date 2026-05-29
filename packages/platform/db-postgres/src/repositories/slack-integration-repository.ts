@@ -264,6 +264,42 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
 
           return rows.length > 0
         }),
+
+      updateTokens: (integrationId, tokens) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const botAccessToken = yield* encrypt(tokens.botAccessToken, encryptionKey).pipe(
+            Effect.mapError((e) => toRepositoryError(e, "encryptSlackIntegrationToken")),
+          )
+          const refreshToken = yield* encrypt(tokens.refreshToken, encryptionKey).pipe(
+            Effect.mapError((e) => toRepositoryError(e, "encryptSlackIntegrationRefreshToken")),
+          )
+
+          // Single atomic UPDATE — re-encrypts the rotated triple and writes
+          // it on the active details row scoped to the RLS org. No transaction
+          // needed (mirrors `updateRoutes`).
+          const rows = yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(slackIntegrationDetails)
+                .set({
+                  botAccessToken,
+                  refreshToken,
+                  tokenExpiresAt: tokens.tokenExpiresAt,
+                  updatedAt: new Date(),
+                })
+                .where(
+                  and(
+                    eq(slackIntegrationDetails.integrationId, integrationId),
+                    eq(slackIntegrationDetails.organizationId, organizationId),
+                  ),
+                )
+                .returning({ id: slackIntegrationDetails.integrationId }),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "updateSlackIntegrationTokens")))
+
+          return rows.length > 0
+        }),
     }
   }),
 )
