@@ -1814,6 +1814,9 @@ importers:
       '@domain/billing':
         specifier: workspace:*
         version: link:../../domain/billing
+      '@domain/integrations':
+        specifier: workspace:*
+        version: link:../../domain/integrations
       '@domain/issues':
         specifier: workspace:*
         version: link:../../domain/issues
