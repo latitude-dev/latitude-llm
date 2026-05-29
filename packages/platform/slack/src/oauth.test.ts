@@ -1,6 +1,6 @@
 import { Cause, Effect, Exit } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { SlackOAuthError } from "./errors.ts"
+import type { SlackAuthError, SlackOAuthError } from "./errors.ts"
 
 const { accessMock } = vi.hoisted(() => ({ accessMock: vi.fn() }))
 
@@ -14,7 +14,7 @@ vi.mock("@slack/web-api", async (importActual) => {
   }
 })
 
-const { buildSlackAuthorizeUrl, exchangeOAuthCode } = await import("./oauth.ts")
+const { buildSlackAuthorizeUrl, exchangeOAuthCode, refreshBotToken } = await import("./oauth.ts")
 
 const failure = async (effect: Effect.Effect<unknown, SlackOAuthError>): Promise<SlackOAuthError> => {
   const exit = await Effect.runPromiseExit(effect)
@@ -130,5 +130,76 @@ describe("exchangeOAuthCode", () => {
     const err = await failure(exchangeOAuthCode(baseInput))
     expect(err.slackError).toBeUndefined()
     expect(err.cause).toBeInstanceOf(Error)
+  })
+})
+
+describe("refreshBotToken", () => {
+  beforeEach(() => {
+    accessMock.mockReset()
+  })
+
+  afterEach(() => {
+    accessMock.mockReset()
+  })
+
+  const baseInput = { clientId: "cid", clientSecret: "csec", refreshToken: "xoxe-1-refresh" } as const
+
+  it("calls oauth.v2.access with grant_type=refresh_token and projects the rotated triple", async () => {
+    accessMock.mockResolvedValue({
+      ok: true,
+      access_token: "xoxe-2-access",
+      refresh_token: "xoxe-2-refresh",
+      expires_in: 43200,
+    })
+
+    const result = await Effect.runPromise(refreshBotToken(baseInput))
+
+    expect(result).toEqual({
+      botAccessToken: "xoxe-2-access",
+      refreshToken: "xoxe-2-refresh",
+      expiresIn: 43200,
+    })
+    expect(accessMock).toHaveBeenCalledWith({
+      client_id: "cid",
+      client_secret: "csec",
+      grant_type: "refresh_token",
+      refresh_token: "xoxe-1-refresh",
+    })
+  })
+
+  it("maps invalid_refresh_token to SlackAuthError (token_revoked)", async () => {
+    const slackError = Object.assign(new Error("slack api failed"), {
+      data: { ok: false, error: "invalid_refresh_token" },
+    })
+    accessMock.mockRejectedValue(slackError)
+
+    const exit = await Effect.runPromiseExit(refreshBotToken(baseInput))
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (!Exit.isFailure(exit)) return
+    const failReason = exit.cause.reasons.find(Cause.isFailReason)
+    const error = failReason?.error as SlackAuthError
+    expect(error._tag).toBe("SlackAuthError")
+    expect(error.reason).toBe("token_revoked")
+  })
+
+  it("maps other Slack errors to SlackOAuthError", async () => {
+    const slackError = Object.assign(new Error("slack api failed"), {
+      data: { ok: false, error: "invalid_client_id" },
+    })
+    accessMock.mockRejectedValue(slackError)
+
+    const exit = await Effect.runPromiseExit(refreshBotToken(baseInput))
+    if (!Exit.isFailure(exit)) throw new Error("Expected failure")
+    const failReason = exit.cause.reasons.find(Cause.isFailReason)
+    expect((failReason?.error as SlackOAuthError).slackError).toBe("invalid_client_id")
+  })
+
+  it("treats a response missing token fields as incomplete", async () => {
+    accessMock.mockResolvedValue({ ok: true, access_token: "xoxe-only" })
+
+    const exit = await Effect.runPromiseExit(refreshBotToken(baseInput))
+    if (!Exit.isFailure(exit)) throw new Error("Expected failure")
+    const failReason = exit.cause.reasons.find(Cause.isFailReason)
+    expect((failReason?.error as SlackOAuthError).slackError).toBe("incomplete_refresh_response")
   })
 })
