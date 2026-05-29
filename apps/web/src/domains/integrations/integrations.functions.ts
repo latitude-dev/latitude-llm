@@ -12,6 +12,7 @@
  */
 import {
   configureSlackRouteUseCase,
+  getOrRefreshBotTokenUseCase,
   removeSlackRouteUseCase,
   revokeSlackIntegrationUseCase,
   type SlackChannel,
@@ -36,7 +37,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getPostgresClient, getRedisClient } from "../../server/clients.ts"
 
 const logger = createLogger("slack-disconnect")
 
@@ -198,31 +199,36 @@ export const listSlackChannels = createServerFn({ method: "GET" }).handler(
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
 
-    const integration = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* SlackIntegrationRepository
-        return yield* repo.findActiveByOrganizationId()
-      }).pipe(withPostgres(SlackIntegrationRepositoryLive, client, organizationId), withTracing),
-    )
-    if (!integration) return []
-
     // Dynamic import keeps `@slack/web-api` off the client bundle (see
     // the disconnect path for the same dance).
-    const { listAllConversations } = await import("@platform/slack")
-    const channels = await Effect.runPromise(
-      listAllConversations({ botToken: integration.botAccessToken }).pipe(
-        Effect.map((all): readonly SlackChannel[] =>
-          all
-            .filter((c) => !c.isArchived)
-            .map((c) => ({
-              id: c.id,
-              name: c.name,
-              isPrivate: c.isPrivate,
-              isMember: c.isMember,
-              isArchived: c.isArchived,
-            }))
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        ),
+    const { listAllConversations, loadSlackConfig, SlackTokenRefresherLive } = await import("@platform/slack")
+    const config = await Effect.runPromise(loadSlackConfig)
+    // Slack not configured → there is nothing we can list (and no creds
+    // to refresh a rotated token with).
+    if (!config) return []
+    const { RedisSlackRefreshLockRepositoryLive } = await import("@platform/cache-redis")
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        const integration = yield* repo.findActiveByOrganizationId()
+        if (!integration) return [] as readonly SlackChannel[]
+
+        // Refresh the rotated token first when it is at/near expiry.
+        const botToken = yield* getOrRefreshBotTokenUseCase({ integration })
+
+        const all = yield* listAllConversations({ botToken })
+        return all
+          .filter((c) => !c.isArchived)
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            isPrivate: c.isPrivate,
+            isMember: c.isMember,
+            isArchived: c.isArchived,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)) as readonly SlackChannel[]
+      }).pipe(
         Effect.catchTag("SlackAuthError", () => Effect.fail(new SlackChannelListerError({ reason: "auth" }))),
         Effect.catchTag("SlackChannelGoneError", () => Effect.succeed([] as readonly SlackChannel[])),
         Effect.catchTag("SlackRateLimitError", () =>
@@ -231,10 +237,28 @@ export const listSlackChannels = createServerFn({ method: "GET" }).handler(
         Effect.catchTag("SlackTransportError", (cause) =>
           Effect.fail(new SlackChannelListerError({ reason: "transport", cause })),
         ),
+        // A broken rotation chain reads as an auth failure to the channel
+        // list; transient refresh/lock failures are retryable transport.
+        Effect.catchTag("SlackTokenRefreshError", (cause) =>
+          Effect.fail(
+            new SlackChannelListerError({
+              reason: cause.reason === "invalid_refresh_token" ? "auth" : "transport",
+              cause,
+            }),
+          ),
+        ),
+        Effect.catchTag("SlackRefreshLockUnavailableError", (cause) =>
+          Effect.fail(new SlackChannelListerError({ reason: "transport", cause })),
+        ),
+        Effect.catchTag("CacheError", (cause) =>
+          Effect.fail(new SlackChannelListerError({ reason: "transport", cause })),
+        ),
+        withPostgres(SlackIntegrationRepositoryLive, client, organizationId),
+        Effect.provide(SlackTokenRefresherLive(config)),
+        Effect.provide(RedisSlackRefreshLockRepositoryLive(getRedisClient())),
+        withTracing,
       ),
     )
-
-    return channels
   },
 )
 

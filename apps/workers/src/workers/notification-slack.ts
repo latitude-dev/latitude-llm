@@ -1,16 +1,20 @@
 import {
   type DispatchSlackOutcome,
   dispatchSlackNotificationUseCase,
+  getOrRefreshBotTokenUseCase,
   SlackIntegrationRepository,
   type SlackMessenger,
   SlackMessengerError,
   type SlackRenderContext,
+  SlackTokenRefreshError,
+  SlackTokenRefresher,
 } from "@domain/integrations"
 import type { NotificationKind } from "@domain/notifications"
 import { OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { NotificationId, OrganizationId, ProjectId, SlackIntegrationId } from "@domain/shared"
+import { type RedisClient, RedisSlackRefreshLockRepositoryLive } from "@platform/cache-redis"
 import {
   IssueRepositoryLive,
   OrganizationRepositoryLive,
@@ -20,7 +24,14 @@ import {
   withPostgres,
 } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
-import { postMessage, SlackAuthError, SlackChannelGoneError, SlackRateLimitError } from "@platform/slack"
+import {
+  loadSlackConfig,
+  postMessage,
+  SlackAuthError,
+  SlackChannelGoneError,
+  SlackRateLimitError,
+  SlackTokenRefresherLive,
+} from "@platform/slack"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getPostgresClient } from "../clients.ts"
@@ -29,6 +40,22 @@ const logger = createLogger("notification-slack")
 
 interface NotificationSlackDeps {
   consumer: QueueConsumer
+  redisClient: RedisClient
+}
+
+/**
+ * Refresher layer for the on-use token refresh inside the worker. Built
+ * once from env; when Slack credentials are absent we still provide a
+ * (failing) layer so the use-case's type requirements are satisfied —
+ * in practice fresh tokens take the fast path and never call it, and no
+ * Slack jobs are produced without credentials anyway.
+ */
+const buildSlackRefresherLayer = () => {
+  const config = Effect.runSync(loadSlackConfig.pipe(Effect.orElseSucceed(() => undefined)))
+  if (config) return SlackTokenRefresherLive(config)
+  return Layer.succeed(SlackTokenRefresher, {
+    refresh: () => Effect.fail(new SlackTokenRefreshError({ reason: "transport" })),
+  })
 }
 
 const repoLayer = Layer.mergeAll(
@@ -85,11 +112,16 @@ const messenger: SlackMessenger = {
  * renders the per-kind block layout, and posts to the configured Slack
  * channel.
  *
+ * Before posting it refreshes the rotated bot token on-use via
+ * `getOrRefreshBotTokenUseCase` (single-flighted per workspace by the
+ * refresh lock).
+ *
  * Idempotency lives in the use case (claim-then-act against
  * `slack_deliveries`). Error policy:
  *
  *   - `auth` (token revoked/expired/invalid) → log, **ack** (no retry).
- *     Phase 4 will plug in token refresh here.
+ *   - refresh chain broken (`invalid_refresh_token`) → log, **ack**; the
+ *     integration must be reconnected (settings UI surfaces this).
  *   - `channel-gone` (not_in_channel, channel_not_found, archived) →
  *     log, **ack**. The route is orphaned — future UI work surfaces this.
  *   - `rate-limited` → throw to surface the Retry-After. BullMQ honours
@@ -97,8 +129,9 @@ const messenger: SlackMessenger = {
  *   - render/invalid-payload → log, **ack** (retrying won't help).
  *   - transport/network → throw to retry (default BullMQ backoff).
  */
-export const createNotificationSlackWorker = ({ consumer }: NotificationSlackDeps) => {
+export const createNotificationSlackWorker = ({ consumer, redisClient }: NotificationSlackDeps) => {
   const webAppUrl = resolveWebAppUrl()
+  const slackRefresherLayer = buildSlackRefresherLayer()
 
   consumer.subscribe("notification-slack", {
     send: (payload) => {
@@ -138,13 +171,18 @@ export const createNotificationSlackWorker = ({ consumer }: NotificationSlackDep
           notificationId: payload.notificationId !== null ? NotificationId(payload.notificationId) : null,
         }
 
+        // Refresh the rotated bot token first when it is at/near expiry.
+        // Single-flighted per workspace by the refresh lock so a concurrent
+        // sweep can't double-rotate.
+        const botToken = yield* getOrRefreshBotTokenUseCase({ integration })
+
         // SlackMessengerError with reason "auth" or "channel-gone" → ack (skip retry).
         // SlackMessengerError with reason "rate-limited" or "transport" → propagate so BullMQ retries.
         // RenderSlackError → ack (re-rendering won't help).
         // RepositoryError → propagate so BullMQ retries.
         const dispatched = yield* dispatchSlackNotificationUseCase({
           integrationId,
-          botToken: integration.botAccessToken,
+          botToken,
           channelId: payload.channelId,
           kind,
           payload: payload.payload,
@@ -173,6 +211,20 @@ export const createNotificationSlackWorker = ({ consumer }: NotificationSlackDep
 
         logger.info(`notification-slack.send orgId=${orgId} channelId=${payload.channelId} status=${dispatched.status}`)
       }).pipe(
+        // A broken rotation chain (refresh token revoked) is terminal — the
+        // integration must be reconnected — so ack without retry, mirroring
+        // the "auth" policy above. Transient refresh failures fall through
+        // and propagate so BullMQ retries.
+        Effect.catchTag("SlackTokenRefreshError", (error) => {
+          if (error.reason === "invalid_refresh_token") {
+            logger.warn(
+              `notification-slack.send acknowledged broken refresh chain; integration needs reconnect channelId=${payload.channelId}`,
+              error,
+            )
+            return Effect.void
+          }
+          return Effect.fail(error)
+        }),
         Effect.tapError((error) =>
           Effect.sync(() =>
             logger.error(
@@ -182,6 +234,8 @@ export const createNotificationSlackWorker = ({ consumer }: NotificationSlackDep
           ),
         ),
         withPostgres(repoLayer, getPostgresClient(), orgId),
+        Effect.provide(slackRefresherLayer),
+        Effect.provide(RedisSlackRefreshLockRepositoryLive(redisClient)),
         Effect.asVoid,
         withTracing,
       )
