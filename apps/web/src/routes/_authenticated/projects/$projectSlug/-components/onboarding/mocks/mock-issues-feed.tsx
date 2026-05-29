@@ -22,23 +22,23 @@ const STATUS_META: Record<MockIssueStatus, { readonly label: string; readonly va
 
 const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
   "empty-response": {
-    title: "Empty response on tool call",
+    title: "Blank reply on long PDF uploads",
     status: "new",
-    tags: ["production", "tool:search_kb"],
+    tags: ["rag", "documents"],
     trend: [0, 1, 0, 1, 2, 1, 2, 3, 2, 4, 3, 5],
     occurrences: 12,
     affectedTracesPercent: 0.03,
   },
   "tool-call-errors": {
-    title: "Tool call failure",
+    title: "Checkout total fails on string amounts",
     status: "regressed",
-    tags: ["production", "tool:fetch_user", "regression"],
+    tags: ["tool:calculate_total", "types"],
     trend: [2, 1, 2, 1, 3, 2, 1, 2, 4, 6, 9, 14],
     occurrences: 47,
     affectedTracesPercent: 0.09,
   },
   "output-schema-validation": {
-    title: "Output schema mismatch",
+    title: "Address extraction drops the postal code",
     status: "ongoing",
     tags: ["extraction", "schema"],
     trend: [3, 4, 3, 4, 3, 4, 3, 4, 3, 4, 3, 4],
@@ -46,15 +46,15 @@ const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
     affectedTracesPercent: 0.02,
   },
   frustration: {
-    title: "User frustration detected",
+    title: "User abandons password reset after the agent loops",
     status: "escalating",
-    tags: ["support", "sentiment"],
+    tags: ["support", "auth"],
     trend: [1, 2, 1, 3, 2, 4, 3, 5, 4, 6, 8, 11],
     occurrences: 23,
     affectedTracesPercent: 0.06,
   },
   jailbreaking: {
-    title: "Jailbreak attempt",
+    title: "Users extract the system prompt via 'repeat the above'",
     status: "escalating",
     tags: ["security", "prompt-injection"],
     trend: [0, 1, 0, 0, 1, 2, 1, 0, 2, 1, 3, 4],
@@ -62,7 +62,7 @@ const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
     affectedTracesPercent: 0.01,
   },
   nsfw: {
-    title: "NSFW content in user prompt",
+    title: "Agent mirrors abusive language back at angry users",
     status: "new",
     tags: ["moderation", "safety"],
     trend: [0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1],
@@ -70,7 +70,7 @@ const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
     affectedTracesPercent: 0.01,
   },
   refusal: {
-    title: "Refusal on policy-compliant query",
+    title: "Assistant won't look up orders for signed-in users",
     status: "new",
     tags: ["support", "over-refusal"],
     trend: [1, 0, 2, 1, 1, 2, 1, 3, 2, 1, 2, 3],
@@ -78,7 +78,7 @@ const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
     affectedTracesPercent: 0.02,
   },
   laziness: {
-    title: "Lazy completion",
+    title: "Coding agent leaves TODO stubs instead of code",
     status: "ongoing",
     tags: ["coding-agent", "incomplete"],
     trend: [2, 3, 2, 4, 3, 3, 2, 4, 3, 2, 3, 4],
@@ -86,7 +86,7 @@ const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
     affectedTracesPercent: 0.03,
   },
   forgetting: {
-    title: "Forgot earlier context",
+    title: "Agent re-asks for the order number already given",
     status: "ongoing",
     tags: ["context", "long-session"],
     trend: [4, 3, 4, 2, 3, 2, 3, 1, 2, 2, 1, 2],
@@ -94,9 +94,9 @@ const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
     affectedTracesPercent: 0.02,
   },
   trashing: {
-    title: "Destructive edit",
+    title: "Agent loops cart validation without resolving",
     status: "regressed",
-    tags: ["coding-agent", "destructive"],
+    tags: ["tool-loop", "checkout"],
     trend: [1, 0, 1, 2, 1, 3, 2, 4, 3, 5, 7, 8],
     occurrences: 3,
     affectedTracesPercent: 0.01,
