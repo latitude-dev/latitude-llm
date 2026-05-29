@@ -1,9 +1,9 @@
 import {
   buildMultiSelectArrayFilter,
+  type FilterSet,
   getMultiSelectArrayFilter,
   MULTI_SELECT_ARRAY_OP_LABELS,
   MULTI_SELECT_ARRAY_OPS,
-  type FilterSet,
   type MultiSelectArrayOp,
 } from "@domain/shared"
 import { Select } from "@repo/ui"
