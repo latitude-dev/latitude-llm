@@ -11,6 +11,7 @@ type IncidentNotification = {
   readonly severity: Severity
   readonly issueName: string
   readonly detail: string
+  readonly trend?: ReadonlyArray<number>
 }
 
 const KIND_LABEL: Record<IncidentKind, string> = {
@@ -20,6 +21,13 @@ const KIND_LABEL: Record<IncidentKind, string> = {
   resolved: "Resolved",
 }
 
+const KIND_EMOJI: Record<IncidentKind, string> = {
+  new: "🆕",
+  escalating: "📈",
+  regressed: "🔴",
+  resolved: "✅",
+}
+
 const KIND_TEXT_CLASS: Record<IncidentKind, string> = {
   new: "text-blue-600 dark:text-blue-400",
   escalating: "text-amber-600 dark:text-amber-400",
@@ -27,20 +35,29 @@ const KIND_TEXT_CLASS: Record<IncidentKind, string> = {
   resolved: "text-green-600 dark:text-green-400",
 }
 
+const KIND_SPARK_CLASS: Record<IncidentKind, string> = {
+  new: "bg-blue-500/60 dark:bg-blue-400/60",
+  escalating: "bg-amber-500/70 dark:bg-amber-400/70",
+  regressed: "bg-rose-500/70 dark:bg-rose-400/70",
+  resolved: "bg-green-500/60 dark:bg-green-400/60",
+}
+
 // Severity bar colors mirror COLORS in
 // packages/domain/integrations/src/templates/notifications/blocks.ts — resolved is always green.
-const SEVERITY_BAR: Record<Severity, string> = {
+const SEVERITY_COLOR: Record<Severity, string> = {
   low: "#F2C94C",
   medium: "#F2994A",
   high: "#E8534B",
 }
-const RESOLVED_BAR = "#27AE60"
+const RESOLVED_COLOR = "#27AE60"
 
-function barColor(notification: IncidentNotification): string {
-  return notification.kind === "resolved" ? RESOLVED_BAR : SEVERITY_BAR[notification.severity]
+function accentColor(notification: IncidentNotification): string {
+  return notification.kind === "resolved" ? RESOLVED_COLOR : SEVERITY_COLOR[notification.severity]
 }
 
 // Reuses the flaggers-feed scenarios so the alerts read as "those issues → these notifications".
+// Trends mirror the real incident chart: rising for escalating, baseline→spike for regressed,
+// spike→recovered for resolved. New issues have no history yet, so no chart.
 const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
   {
     id: "checkout-regressed",
@@ -48,6 +65,7 @@ const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
     severity: "high",
     issueName: "Checkout total fails on string amounts",
     detail: "Reopened after deploy 7c2b",
+    trend: [2, 1, 1, 1, 1, 2, 5, 8],
   },
   {
     id: "pdf-new",
@@ -62,6 +80,7 @@ const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
     severity: "high",
     issueName: "User abandons password reset after the agent loops",
     detail: "Climbed to 18/hr · 3× baseline",
+    trend: [1, 1, 2, 2, 3, 4, 6, 9],
   },
   {
     id: "injection-new",
@@ -76,6 +95,7 @@ const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
     severity: "medium",
     issueName: "Agent retries a failing tool with identical args",
     detail: "Reopened · was resolved 2d ago",
+    trend: [1, 2, 1, 1, 1, 2, 4, 7],
   },
   {
     id: "abuse-resolved",
@@ -83,6 +103,7 @@ const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
     severity: "medium",
     issueName: "Abusive language mirrored back at users",
     detail: "Recovered · elevated for 42 min",
+    trend: [5, 7, 8, 6, 4, 2, 1, 0],
   },
 ]
 
@@ -120,6 +141,24 @@ const SEED_CARDS: ReadonlyArray<RenderedCard> = Array.from({ length: STACK_SIZE 
   const variant = NOTIFICATION_VARIANTS[i % NOTIFICATION_VARIANTS.length]
   return { id: -1 - i, variant: variant?.id ?? "pdf-new", seeded: true }
 })
+
+function MiniSparkline({ trend, barClass }: { readonly trend: ReadonlyArray<number>; readonly barClass: string }) {
+  const max = Math.max(1, ...trend)
+  return (
+    <div className="flex h-6 w-16 shrink-0 items-end gap-[2px]" aria-hidden>
+      {trend.map((count, i) => {
+        const heightPercent = count === 0 ? 0 : Math.max(14, (count / max) * 92)
+        return (
+          <span
+            key={i}
+            className={cn("min-w-0 flex-1 rounded-t-[2px]", barClass)}
+            style={{ height: `${heightPercent}%` }}
+          />
+        )
+      })}
+    </div>
+  )
+}
 
 function QueueCard({
   card,
@@ -208,26 +247,31 @@ export function MockSlackQueue({ isActive }: { readonly isActive: boolean }) {
           const age = AGES_BY_INDEX[Math.min(index, AGES_BY_INDEX.length - 1)]
           return (
             <QueueCard key={card.id} card={card} index={index}>
-              <div className="flex items-stretch gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-                <div className="w-1 shrink-0 self-stretch rounded-full" style={{ backgroundColor: barColor(v) }} />
+              <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-lg"
+                  style={{ backgroundColor: `${accentColor(v)}1F` }}
+                >
+                  <span aria-hidden>{KIND_EMOJI[v.kind]}</span>
+                </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <div className="flex flex-row items-baseline justify-between gap-2">
-                    <div className="flex min-w-0 flex-row items-baseline gap-1.5">
-                      <span className={cn("shrink-0 text-xs font-medium", KIND_TEXT_CLASS[v.kind])}>
-                        {KIND_LABEL[v.kind]}
-                      </span>
-                      <span className="shrink-0 text-muted-foreground">·</span>
-                      <Text.H5M ellipsis noWrap className="min-w-0">
-                        {v.issueName}
-                      </Text.H5M>
-                    </div>
+                    <span className={cn("shrink-0 text-xs font-medium", KIND_TEXT_CLASS[v.kind])}>
+                      {KIND_LABEL[v.kind]}
+                    </span>
                     <Text.H6 color="foregroundMuted" className="shrink-0">
                       {age}
                     </Text.H6>
                   </div>
-                  <Text.H6 color="foregroundMuted" className="truncate">
-                    {v.detail}
-                  </Text.H6>
+                  <Text.H5M ellipsis noWrap className="min-w-0">
+                    {v.issueName}
+                  </Text.H5M>
+                  <div className="flex flex-row items-end justify-between gap-2">
+                    <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
+                      {v.detail}
+                    </Text.H6>
+                    {v.trend ? <MiniSparkline trend={v.trend} barClass={KIND_SPARK_CLASS[v.kind]} /> : null}
+                  </div>
                 </div>
               </div>
             </QueueCard>
