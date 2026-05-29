@@ -9,6 +9,14 @@ import { SlackTokenRefresher } from "../ports/slack-token-refresher.ts"
 
 export interface GetOrRefreshBotTokenInput {
   readonly integration: SlackIntegration
+  /**
+   * Refresh when the token expires within this many seconds. Defaults to
+   * the on-use skew ({@link SLACK_TOKEN_REFRESH_SKEW_SECONDS}, ~5 min) so
+   * normal reads only refresh at the last moment. The scheduled sweep
+   * passes the larger lookahead window so it proactively refreshes well
+   * ahead of expiry.
+   */
+  readonly refreshIfExpiringWithinSeconds?: number
 }
 
 export type GetOrRefreshBotTokenError =
@@ -52,7 +60,7 @@ export const getOrRefreshBotTokenUseCase = (
 > =>
   Effect.gen(function* () {
     const { integration } = input
-    const skewMs = SLACK_TOKEN_REFRESH_SKEW_SECONDS * 1000
+    const skewMs = (input.refreshIfExpiringWithinSeconds ?? SLACK_TOKEN_REFRESH_SKEW_SECONDS) * 1000
 
     // Rotation disabled — token never expires.
     if (integration.tokenExpiresAt === null || integration.refreshToken === null) {

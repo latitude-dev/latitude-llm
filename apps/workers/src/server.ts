@@ -1,6 +1,7 @@
 import { createBullBoard } from "@bull-board/api"
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { HonoAdapter } from "@bull-board/hono"
+import { SLACK_TOKEN_REFRESH_SCAN_KEY, SLACK_TOKEN_REFRESH_SCAN_PATTERN } from "@domain/integrations"
 import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/issues"
 import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
@@ -59,6 +60,7 @@ import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createScoresWorker } from "./workers/scores.ts"
+import { createSlackTokenRefreshWorker } from "./workers/slack-token-refresh.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
 import { createTaxonomyWorker } from "./workers/taxonomy.ts"
@@ -227,6 +229,13 @@ const bootstrap = async () => {
       adminPostgresClient: getAdminPostgresClient(),
       clickhouseClient: ctx.clickhouseClient,
     })
+    createSlackTokenRefreshWorker({
+      consumer: ctx.consumer,
+      publisher: ctx.publisher,
+      postgresClient: ctx.postgresClient,
+      adminPostgresClient: getAdminPostgresClient(),
+      redisClient: ctx.redisClient,
+    })
 
     // Register (or refresh) the weekly Wrapped trigger. upsert semantics
     // make this idempotent across worker restarts. The handler derives
@@ -266,6 +275,21 @@ const bootstrap = async () => {
           "gardenSweep",
           { triggeredAt: new Date().toISOString() },
           { key: TAXONOMY_GARDENING_CRON_KEY, pattern: TAXONOMY_GARDENING_CRON_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // Hourly Slack token-rotation sweep. Refreshes integrations whose
+    // rotated bot token is within the lookahead window of expiry, so an
+    // idle workspace's refresh token never ages out. Refresh-on-use in
+    // the web + notification workers is the correctness backstop.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "slack-token-refresh",
+          "scan",
+          {},
+          { key: SLACK_TOKEN_REFRESH_SCAN_KEY, pattern: SLACK_TOKEN_REFRESH_SCAN_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )
