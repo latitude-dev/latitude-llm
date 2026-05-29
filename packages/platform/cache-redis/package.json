@@ -14,10 +14,8 @@
   "dependencies": {
     "@domain/billing": "workspace:*",
     "@domain/integrations": "workspace:*",
-    "@domain/issues": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
-    "@domain/taxonomy": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
     "ioredis": "catalog:"

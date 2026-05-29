@@ -1855,18 +1855,12 @@ importers:
       '@domain/integrations':
         specifier: workspace:*
         version: link:../../domain/integrations
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../../domain/issues
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
       '@domain/spans':
         specifier: workspace:*
         version: link:../../domain/spans
-      '@domain/taxonomy':
-        specifier: workspace:*
-        version: link:../../domain/taxonomy
       '@platform/env':
         specifier: workspace:*
         version: link:../env
