@@ -7,8 +7,9 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
-import { DatabaseIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
+import { DatabaseIcon, RadarIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { z } from "zod"
+import { useHasFeatureFlag } from "../../../domains/feature-flags/feature-flags.collection.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
 import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
@@ -74,8 +75,10 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     pathname.startsWith(`/projects/${projectSlug}/traces`)
   const isSearchActive = pathname.startsWith(`/projects/${projectSlug}/search`)
   const isIssuesActive = pathname.startsWith(`/projects/${projectSlug}/issues`)
+  const isMonitorsActive = pathname.startsWith(`/projects/${projectSlug}/monitors`)
   const isDatasetsActive = pathname.startsWith(`/projects/${projectSlug}/datasets`)
   const isSettingsActive = pathname.startsWith(`/projects/${projectSlug}/settings`)
+  const monitorsEnabled = useHasFeatureFlag("monitors")
 
   // Fire-and-forget client-side fetch: surfaces a sidebar shortcut to this
   // week's Wrapped report when one exists. Returns null for the typical
@@ -136,6 +139,15 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
             active={isIssuesActive}
             collapsed={collapsed}
           />
+          {monitorsEnabled ? (
+            <NavItem
+              icon={RadarIcon}
+              label="Monitors"
+              to={`/projects/${projectSlug}/monitors`}
+              active={isMonitorsActive}
+              collapsed={collapsed}
+            />
+          ) : null}
           <NavItem
             icon={DatabaseIcon}
             label="Datasets"

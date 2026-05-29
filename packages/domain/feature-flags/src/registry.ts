@@ -41,6 +41,12 @@ export const FEATURE_FLAGS = {
     name: "Timeline incidents overlay",
     description: "Renders the incident overlay on trace and issue timeline histograms.",
   },
+  monitors: {
+    emoji: "📡",
+    name: "Monitors",
+    description:
+      "Unified alerting surface (per-monitor lifecycle, with notification delivery routed through the existing org/project notification settings).",
+  },
 } as const satisfies Record<string, { readonly emoji: string; readonly name: string; readonly description: string }>
 
 export type FeatureFlagId = keyof typeof FEATURE_FLAGS

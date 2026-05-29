@@ -1198,10 +1198,10 @@ The first milestones prioritise **visible progress**: M1 ships the sidebar entry
 
 **Goal:** A stakeholder enables the `monitors` flag for their org and sees a new "Monitors" item in the project sidebar that leads to an empty page with a "No monitors yet" empty state. Zero backend wiring.
 
-- [ ] Register `monitors` in `packages/domain/feature-flags/src/registry.ts`.
-- [ ] Add the `Monitors` nav item in `apps/web/src/routes/_authenticated/projects/$projectSlug.tsx` (`ProjectSidebar`), positioned between Issues and Datasets, gated by `useHasFeatureFlag("monitors")`.
-- [ ] Create `apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/index.tsx` with the `ListingLayout` shell, empty toolbar (search input + disabled "+ New monitor" button), and an empty state component (`monitors-empty-state.tsx`).
-- [ ] Frontend feature-flag gate on the route: "Not available" splash if the flag is off (no longer a borrowable pattern in the codebase — `session-search-v2` was removed in #3320; implement as a small consistent helper).
+- [x] Register `monitors` in `packages/domain/feature-flags/src/registry.ts`.
+- [x] Add the `Monitors` nav item in `apps/web/src/routes/_authenticated/projects/$projectSlug.tsx` (`ProjectSidebar`), positioned between Issues and Datasets, gated by `useHasFeatureFlag("monitors")`.
+- [x] Create `apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/index.tsx` with the `ListingLayout` shell, empty toolbar (search input + disabled "+ New monitor" button), and an empty state component (`monitors-empty-state.tsx`).
+- [x] Frontend feature-flag gate on the route: "Not available" splash if the flag is off (no longer a borrowable pattern in the codebase — `session-search-v2` was removed in #3320; implement as a small consistent helper).
 
 ### Milestone 2 — Backend foundation: schema, entities, repository, list/get use-cases
 
