@@ -12,31 +12,30 @@ return 0
 
 export const RedisDistributedLockRepositoryLive = (redis: RedisClient) =>
   Layer.succeed(DistributedLockRepository, {
-    withLock: (input, effect) =>
-      Effect.gen(function* () {
-        const lockToken = randomUUID()
-
-        const acquired = yield* Effect.tryPromise({
-          try: () => redis.set(input.key, lockToken, "EX", input.ttlSeconds, "NX"),
-          catch: (cause) => new CacheError({ message: `Distributed lock acquire failed: ${String(cause)}`, cause }),
-        })
-
-        if (acquired !== "OK") {
-          return yield* new DistributedLockUnavailableError({ key: input.key })
-        }
-
-        return yield* effect.pipe(
-          Effect.ensuring(
-            Effect.tryPromise({
-              try: () => redis.eval(releaseLockScript, 1, input.key, lockToken),
-              catch: (cause) => new CacheError({ message: `Distributed lock release failed: ${String(cause)}`, cause }),
-            }).pipe(
-              Effect.tapError((error) =>
-                Effect.logWarning("Distributed lock release failed", { key: input.key, error }),
+    withLock: (input, effect) => {
+      const lockToken = randomUUID()
+      return Effect.tryPromise({
+        try: () => redis.set(input.key, lockToken, "EX", input.ttlSeconds, "NX"),
+        catch: (cause) => new CacheError({ message: `Distributed lock acquire failed: ${String(cause)}`, cause }),
+      }).pipe(
+        Effect.flatMap((acquired) =>
+          acquired !== "OK"
+            ? Effect.fail(new DistributedLockUnavailableError({ key: input.key }))
+            : effect.pipe(
+                Effect.ensuring(
+                  Effect.tryPromise({
+                    try: () => redis.eval(releaseLockScript, 1, input.key, lockToken),
+                    catch: (cause) =>
+                      new CacheError({ message: `Distributed lock release failed: ${String(cause)}`, cause }),
+                  }).pipe(
+                    Effect.tapError((error) =>
+                      Effect.logWarning("Distributed lock release failed", { key: input.key, error }),
+                    ),
+                    Effect.ignore,
+                  ),
+                ),
               ),
-              Effect.ignore,
-            ),
-          ),
-        )
-      }),
+        ),
+      )
+    },
   })

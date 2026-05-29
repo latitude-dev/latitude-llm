@@ -62,182 +62,90 @@ const parseTraceIds = (traceIds: readonly string[], fallback?: string): TraceId[
   return parsed
 }
 
-// Capped exponential backoff with full jitter (sleep ∈ [0, min(cap, base·2^attempt)]).
-// Full jitter de-correlates contenders so a thundering herd on one hot cluster
-// spreads out instead of re-colliding on a fixed cadence. base=0 collapses every
-// sleep to 0, which keeps tests deterministic and fast.
 const backoffDelayWithJitter = (input: { baseDelayMs: number; maxDelayMs: number; attempt: number }) =>
   Effect.sync(() => {
     const exponential = Math.min(input.maxDelayMs, input.baseDelayMs * 2 ** input.attempt)
     return Math.floor(Math.random() * (Math.max(0, exponential) + 1))
   }).pipe(Effect.flatMap((durationMs) => Effect.sleep(`${durationMs} millis`)))
 
-const assignObservationToClusterWithBackoff = (
+const assignObservationToClusterWithBackoff = Effect.fn(function* (
   input: AssignObservationToClusterInput & {
     readonly sessionId: SessionId
     readonly maxRetries: number
     readonly baseDelayMs: number
     readonly maxDelayMs: number
   },
-) =>
-  Effect.gen(function* () {
-    let attempt = 0
+) {
+  let attempt = 0
 
-    while (true) {
-      const result = yield* assignObservationToClusterUseCase(input).pipe(
-        Effect.as(true as const),
-        Effect.catchTag("TaxonomyClusterLockUnavailableError", (error) => Effect.succeed({ error } as const)),
-      )
+  while (true) {
+    const result = yield* assignObservationToClusterUseCase(input).pipe(
+      Effect.as(true as const),
+      Effect.catchTag("TaxonomyClusterLockUnavailableError", (error) => Effect.succeed({ error } as const)),
+    )
 
-      if (result === true) return true
+    if (result === true) return true
 
-      if (attempt >= input.maxRetries) {
-        yield* Effect.logWarning("Taxonomy cluster lock unavailable; recording observation as noise", {
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          sessionId: input.sessionId,
-          clusterId: input.clusterId,
-          error: result.error,
-        })
-        return false
-      }
-
-      yield* backoffDelayWithJitter({ baseDelayMs: input.baseDelayMs, maxDelayMs: input.maxDelayMs, attempt })
-      attempt++
+    if (attempt >= input.maxRetries) {
+      yield* Effect.logWarning("Taxonomy cluster lock unavailable; recording observation as noise", {
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        clusterId: input.clusterId,
+        error: result.error,
+      })
+      return false
     }
+
+    yield* backoffDelayWithJitter({ baseDelayMs: input.baseDelayMs, maxDelayMs: input.maxDelayMs, attempt })
+    attempt++
+  }
+})
+
+export const recordSessionObservationUseCase = Effect.fn("taxonomy.recordSessionObservation")(function* (
+  input: RecordSessionObservationInput,
+) {
+  yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
+  yield* Effect.annotateCurrentSpan("taxonomy.sessionId", input.sessionId)
+
+  const organizationId = OrganizationId(input.organizationId)
+  const projectId = ProjectId(input.projectId)
+  const sessionId = SessionId(input.sessionId)
+  const sessions = yield* SessionRepository
+  const traces = yield* TraceRepository
+  const observations = yield* BehaviorObservationRepository
+
+  const session = yield* sessions
+    .findBySessionId({ organizationId, projectId, sessionId })
+    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+  if (session === null)
+    return { action: "skipped", reason: "session-not-found" } satisfies RecordSessionObservationResult
+
+  const traceIds = parseTraceIds(session.traceIds, input.triggeringTraceId)
+  const traceDetails =
+    traceIds.length > 0 ? yield* traces.listByTraceIds({ organizationId, projectId, traceIds }) : []
+  const sessionMessages =
+    traceDetails.length > 0
+      ? [...traceDetails]
+          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+          .flatMap((trace) => trace.allMessages)
+      : [...session.lastInputMessages, ...session.outputMessages]
+  const document = buildSessionDocument({
+    sessionId: input.sessionId,
+    messages: sessionMessages,
+    traceIds,
   })
 
-export const recordSessionObservationUseCase = (input: RecordSessionObservationInput) =>
-  Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
-    yield* Effect.annotateCurrentSpan("taxonomy.sessionId", input.sessionId)
+  if (document.conversationText.length === 0) {
+    return { action: "skipped", reason: "empty-session" } satisfies RecordSessionObservationResult
+  }
 
-    const organizationId = OrganizationId(input.organizationId)
-    const projectId = ProjectId(input.projectId)
-    const sessionId = SessionId(input.sessionId)
-    const sessions = yield* SessionRepository
-    const traces = yield* TraceRepository
-    const observations = yield* BehaviorObservationRepository
+  const summaryHash = yield* hash(`${input.sessionId}\0${document.conversationText}`)
+  const now = new Date()
+  const retentionDays = input.retentionDays ?? TAXONOMY_OBSERVATION_RETENTION_DAYS
 
-    const session = yield* sessions
-      .findBySessionId({ organizationId, projectId, sessionId })
-      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-
-    if (session === null)
-      return { action: "skipped", reason: "session-not-found" } satisfies RecordSessionObservationResult
-
-    const traceIds = parseTraceIds(session.traceIds, input.triggeringTraceId)
-    const traceDetails =
-      traceIds.length > 0 ? yield* traces.listByTraceIds({ organizationId, projectId, traceIds }) : []
-    const sessionMessages =
-      traceDetails.length > 0
-        ? [...traceDetails]
-            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-            .flatMap((trace) => trace.allMessages)
-        : [...session.lastInputMessages, ...session.outputMessages]
-    const document = buildSessionDocument({
-      sessionId: input.sessionId,
-      messages: sessionMessages,
-      traceIds,
-    })
-
-    if (document.conversationText.length === 0) {
-      return { action: "skipped", reason: "empty-session" } satisfies RecordSessionObservationResult
-    }
-
-    const summaryHash = yield* hash(`${input.sessionId}\0${document.conversationText}`)
-    const now = new Date()
-    const retentionDays = input.retentionDays ?? TAXONOMY_OBSERVATION_RETENTION_DAYS
-
-    if (document.conversationText.length < TAXONOMY_SESSION_MIN_LENGTH) {
-      yield* observations.upsert({
-        organizationId,
-        projectId,
-        sessionId,
-        startTime: session.startTime,
-        endTime: session.endTime,
-        traceIds,
-        summary: document.summaryPreview,
-        summaryHash,
-        // Deliberately excluded from gardening birth sweeps: short sessions do
-        // not have enough behavioral signal to justify an embedding.
-        embedding: [],
-        embeddingModel: TAXONOMY_EMBEDDING_MODEL,
-        assignedClusterId: null,
-        assignmentConfidence: 0,
-        assignmentMethod: "noise",
-        reassignmentRunId: null,
-        retentionDays,
-        indexedAt: now,
-      })
-      return {
-        action: "recorded",
-        assignmentMethod: "noise",
-        clusterId: null,
-        confidence: 0,
-      } satisfies RecordSessionObservationResult
-    }
-
-    let summary = document.summaryPreview
-    let textToEmbed = document.conversationText
-
-    const summaryStrategy = input.summaryStrategy ?? TAXONOMY_SUMMARY_STRATEGY
-    if (summaryStrategy === "llm" && estimateTokens(document.conversationText) >= TAXONOMY_SUMMARY_MIN_SESSION_TOKENS) {
-      const existing = yield* observations.findBySummaryHash({ organizationId, projectId, sessionId, summaryHash })
-      if (existing !== null && existing.summary.length > 0) {
-        summary = existing.summary
-        textToEmbed = existing.summary
-      } else {
-        const generated = yield* summarizeBehaviorUseCase({
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          sessionId: input.sessionId,
-          conversationText: document.conversationText,
-        })
-        summary = generated.summary
-        textToEmbed = generated.summary
-      }
-    }
-
-    const embedded = yield* embedBehaviorSummaryUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      sessionId: input.sessionId,
-      text: textToEmbed,
-    })
-
-    const topK = yield* findNearestClustersUseCase({
-      organizationId,
-      projectId,
-      queryVector: embedded.normalizedEmbedding,
-    })
-    const decision = yield* decideClusterAssignmentUseCase({ topK })
-
-    let assignedClusterId = decision.clusterId === null ? null : TaxonomyClusterId(decision.clusterId)
-    let assignmentMethod = decision.method
-    let assignmentConfidence = decision.confidence
-
-    if (decision.method === "centroid_online") {
-      const assigned = yield* assignObservationToClusterWithBackoff({
-        organizationId,
-        projectId,
-        sessionId,
-        clusterId: decision.clusterId,
-        embedding: embedded.normalizedEmbedding,
-        observedAt: session.startTime,
-        assignedAt: now,
-        maxRetries: input.clusterLockRetry?.maxRetries ?? TAXONOMY_CLUSTER_LOCK_MAX_RETRIES,
-        baseDelayMs: input.clusterLockRetry?.delayMs ?? TAXONOMY_CLUSTER_LOCK_RETRY_BASE_DELAY_MS,
-        maxDelayMs: TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS,
-      })
-
-      if (!assigned) {
-        assignedClusterId = null
-        assignmentMethod = "noise"
-        assignmentConfidence = 0
-      }
-    }
-
+  if (document.conversationText.length < TAXONOMY_SESSION_MIN_LENGTH) {
     yield* observations.upsert({
       organizationId,
       projectId,
@@ -245,22 +153,110 @@ export const recordSessionObservationUseCase = (input: RecordSessionObservationI
       startTime: session.startTime,
       endTime: session.endTime,
       traceIds,
-      summary,
+      summary: document.summaryPreview,
       summaryHash,
-      embedding: embedded.normalizedEmbedding,
-      embeddingModel: embedded.embeddingModel,
-      assignedClusterId,
-      assignmentConfidence,
-      assignmentMethod,
+      // Deliberately excluded from gardening birth sweeps: short sessions do
+      // not have enough behavioral signal to justify an embedding.
+      embedding: [],
+      embeddingModel: TAXONOMY_EMBEDDING_MODEL,
+      assignedClusterId: null,
+      assignmentConfidence: 0,
+      assignmentMethod: "noise",
       reassignmentRunId: null,
       retentionDays,
       indexedAt: now,
     })
-
     return {
       action: "recorded",
-      assignmentMethod,
-      clusterId: assignedClusterId,
-      confidence: assignmentConfidence,
+      assignmentMethod: "noise",
+      clusterId: null,
+      confidence: 0,
     } satisfies RecordSessionObservationResult
-  }).pipe(Effect.withSpan("taxonomy.recordSessionObservation"))
+  }
+
+  let summary = document.summaryPreview
+  let textToEmbed = document.conversationText
+
+  const summaryStrategy = input.summaryStrategy ?? TAXONOMY_SUMMARY_STRATEGY
+  if (summaryStrategy === "llm" && estimateTokens(document.conversationText) >= TAXONOMY_SUMMARY_MIN_SESSION_TOKENS) {
+    const existing = yield* observations.findBySummaryHash({ organizationId, projectId, sessionId, summaryHash })
+    if (existing !== null && existing.summary.length > 0) {
+      summary = existing.summary
+      textToEmbed = existing.summary
+    } else {
+      const generated = yield* summarizeBehaviorUseCase({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        conversationText: document.conversationText,
+      })
+      summary = generated.summary
+      textToEmbed = generated.summary
+    }
+  }
+
+  const embedded = yield* embedBehaviorSummaryUseCase({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    sessionId: input.sessionId,
+    text: textToEmbed,
+  })
+
+  const topK = yield* findNearestClustersUseCase({
+    organizationId,
+    projectId,
+    queryVector: embedded.normalizedEmbedding,
+  })
+  const decision = yield* decideClusterAssignmentUseCase({ topK })
+
+  let assignedClusterId = decision.clusterId === null ? null : TaxonomyClusterId(decision.clusterId)
+  let assignmentMethod = decision.method
+  let assignmentConfidence = decision.confidence
+
+  if (decision.method === "centroid_online") {
+    const assigned = yield* assignObservationToClusterWithBackoff({
+      organizationId,
+      projectId,
+      sessionId,
+      clusterId: decision.clusterId,
+      embedding: embedded.normalizedEmbedding,
+      observedAt: session.startTime,
+      assignedAt: now,
+      maxRetries: input.clusterLockRetry?.maxRetries ?? TAXONOMY_CLUSTER_LOCK_MAX_RETRIES,
+      baseDelayMs: input.clusterLockRetry?.delayMs ?? TAXONOMY_CLUSTER_LOCK_RETRY_BASE_DELAY_MS,
+      maxDelayMs: TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS,
+    })
+
+    if (!assigned) {
+      assignedClusterId = null
+      assignmentMethod = "noise"
+      assignmentConfidence = 0
+    }
+  }
+
+  yield* observations.upsert({
+    organizationId,
+    projectId,
+    sessionId,
+    startTime: session.startTime,
+    endTime: session.endTime,
+    traceIds,
+    summary,
+    summaryHash,
+    embedding: embedded.normalizedEmbedding,
+    embeddingModel: embedded.embeddingModel,
+    assignedClusterId,
+    assignmentConfidence,
+    assignmentMethod,
+    reassignmentRunId: null,
+    retentionDays,
+    indexedAt: now,
+  })
+
+  return {
+    action: "recorded",
+    assignmentMethod,
+    clusterId: assignedClusterId,
+    confidence: assignmentConfidence,
+  } satisfies RecordSessionObservationResult
+})

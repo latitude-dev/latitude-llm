@@ -20,16 +20,15 @@ export const withTaxonomyClusterLock = <A, E, R>(
   },
   effect: Effect.Effect<A, E, R>,
 ) =>
-  Effect.gen(function* () {
-    const locks = yield* DistributedLockRepository
-    return yield* locks
-      .withLock({ key: taxonomyClusterLockKey(input), ttlSeconds: input.ttlSeconds }, effect)
-      .pipe(
+  DistributedLockRepository.pipe(
+    Effect.flatMap((locks) =>
+      locks.withLock({ key: taxonomyClusterLockKey(input), ttlSeconds: input.ttlSeconds }, effect).pipe(
         Effect.catchTag("DistributedLockUnavailableError", () =>
           Effect.fail(new TaxonomyClusterLockUnavailableError({ clusterId: String(input.clusterId) })),
         ),
-      )
-  })
+      ),
+    ),
+  )
 
 export const withTaxonomyGardenLock = <A, E, R>(
   input: {
@@ -39,13 +38,12 @@ export const withTaxonomyGardenLock = <A, E, R>(
   },
   effect: Effect.Effect<A, E, R>,
 ) =>
-  Effect.gen(function* () {
-    const locks = yield* DistributedLockRepository
-    return yield* locks
-      .withLock({ key: taxonomyGardenLockKey(input), ttlSeconds: input.ttlSeconds }, effect)
-      .pipe(
+  DistributedLockRepository.pipe(
+    Effect.flatMap((locks) =>
+      locks.withLock({ key: taxonomyGardenLockKey(input), ttlSeconds: input.ttlSeconds }, effect).pipe(
         Effect.catchTag("DistributedLockUnavailableError", () =>
           Effect.fail(new TaxonomyGardenLockUnavailableError({ projectId: String(input.projectId) })),
         ),
-      )
-  })
+      ),
+    ),
+  )

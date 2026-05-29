@@ -192,12 +192,7 @@ export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 90
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTER_LOCK_TTL_SECONDS = 30
-// Online cluster assignment treats lock contention as transient backpressure and
-// retries with capped exponential backoff + full jitter before degrading to noise.
-// Sized so the worst-case cumulative wait (sum of the per-attempt caps:
-// 100+200+400+800+1600 + 13×2000 ≈ 29.1s) sits just under the lock TTL, so a
-// normally-held lock (including a gardening merge holding the same per-cluster lock)
-// almost always frees before we give up.
+// Retry policy: worst-case cumulative wait ≈29s, just under the lock TTL.
 export const TAXONOMY_CLUSTER_LOCK_MAX_RETRIES = 18
 export const TAXONOMY_CLUSTER_LOCK_RETRY_BASE_DELAY_MS = 100
 export const TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS = 2_000
