@@ -80,8 +80,6 @@ export type {
 export { emptySessionMetrics, SessionRepository } from "./ports/session-repository.ts"
 export type { SpanListOptions, SpanMessagesData, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
-export { deterministicSample } from "./sampling/deterministic-sampler.ts"
-export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export type {
   NumericRollup,
   TraceDistinctColumn,
@@ -111,6 +109,8 @@ export type {
   TraceSemanticHighlightMatch,
 } from "./ports/trace-search-repository.ts"
 export { TraceSearchRepository } from "./ports/trace-search-repository.ts"
+export { deterministicSample } from "./sampling/deterministic-sampler.ts"
+export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
 export {
   buildTraceCohortSummaryEntries,
   buildTraceMetricBaseline,
