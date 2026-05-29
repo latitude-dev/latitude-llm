@@ -1,9 +1,9 @@
 import type { FilterSet } from "@domain/shared"
-import type { TraceHistogramMetric } from "@domain/spans"
+import type { SessionMetrics, TraceHistogramMetric, TraceMetrics } from "@domain/spans"
 import { Button, cn, Icon, Skeleton, Text } from "@repo/ui"
 import { ChevronUp } from "lucide-react"
 import { useState } from "react"
-import { useSessionsCount } from "../../../../../../domains/sessions/sessions.collection.ts"
+import { useSessionMetrics, useSessionsCount } from "../../../../../../domains/sessions/sessions.collection.ts"
 import { useTraceMetrics, useTracesCount } from "../../../../../../domains/traces/traces.collection.ts"
 import { HISTOGRAM_METRIC_DEFINITIONS, type HistogramMetricDefinition } from "./histogram-metrics.ts"
 
@@ -60,37 +60,52 @@ const METRIC_ORDER: readonly TraceHistogramMetric[] = [
 export function GeneralAggregations({
   projectId,
   filters,
+  mode,
   selectedMetric,
   onMetricSelect,
   onCollapse,
 }: {
   readonly projectId: string
   readonly filters: FilterSet
+  readonly mode: "traces" | "sessions"
   readonly selectedMetric: TraceHistogramMetric
   readonly onMetricSelect: (metric: TraceHistogramMetric) => void
   readonly onCollapse: () => void
 }) {
+  const isSessionsMode = mode === "sessions"
   const hasActiveFilters = Object.keys(filters).length > 0
   const filterOpts = hasActiveFilters ? { filters } : {}
+  const traceModeProjectId = isSessionsMode ? "" : projectId
+  const sessionModeProjectId = isSessionsMode ? projectId : ""
 
-  const { data: traceMetrics, isLoading: metricsLoading } = useTraceMetrics({
-    projectId,
+  const { data: traceMetrics, isLoading: traceMetricsLoading } = useTraceMetrics({
+    projectId: traceModeProjectId,
     ...filterOpts,
   })
-  const { totalCount, isLoading: countLoading } = useTracesCount({
-    projectId,
+  const { totalCount: traceTotalCount, isLoading: traceCountLoading } = useTracesCount({
+    projectId: traceModeProjectId,
     ...filterOpts,
   })
   const { totalCount: sessionTotalCount, isLoading: sessionCountLoading } = useSessionsCount({
     projectId,
     ...filterOpts,
   })
+  const { data: sessionMetrics, isLoading: sessionMetricsLoading } = useSessionMetrics({
+    projectId: sessionModeProjectId,
+    ...filterOpts,
+  })
 
-  const loading = metricsLoading || countLoading || sessionCountLoading
+  const activeMetrics: TraceMetrics | SessionMetrics | undefined = isSessionsMode
+    ? (sessionMetrics ?? undefined)
+    : (traceMetrics ?? undefined)
+  // Session-mode trace count is `sum(trace_count)` over matched sessions, not the project-wide count.
+  const traceCount = isSessionsMode ? (sessionMetrics?.traceCount ?? 0) : traceTotalCount
+  const traceCardLoading = isSessionsMode ? sessionMetricsLoading : traceCountLoading
+  const metricsCardLoading = isSessionsMode ? sessionMetricsLoading : traceMetricsLoading
 
-  // TTFT card is hidden when no trace in the current view recorded a first-token timestamp
+  // TTFT card is hidden when no row in the current view recorded a first-token timestamp
   // (`> 0`); showing it would just render "—" forever for projects that don't stream.
-  const showTtft = !!traceMetrics && traceMetrics.timeToFirstTokenNs.max > 0
+  const showTtft = !!activeMetrics && activeMetrics.timeToFirstTokenNs.max > 0
 
   const visibleMetrics = METRIC_ORDER.filter((id) => id !== "ttft" || showTtft).map(
     (id) => HISTOGRAM_METRIC_DEFINITIONS[id],
@@ -100,9 +115,15 @@ export function GeneralAggregations({
 
   const renderValue = (def: HistogramMetricDefinition): string => {
     if (def.id === "sessions") return def.formatBucket(sessionTotalCount)
-    if (def.id === "traces") return def.formatBucket(totalCount)
-    if (!traceMetrics) return DASH
-    return def.formatBucket(def.selectMetricsValue(traceMetrics, totalCount))
+    if (def.id === "traces") return def.formatBucket(traceCount)
+    if (!activeMetrics) return DASH
+    return def.formatBucket(def.selectMetricsValue(activeMetrics, traceCount))
+  }
+
+  const loadingForCard = (id: TraceHistogramMetric): boolean => {
+    if (id === "sessions") return sessionCountLoading
+    if (id === "traces") return traceCardLoading
+    return metricsCardLoading
   }
 
   return (
@@ -117,7 +138,7 @@ export function GeneralAggregations({
               key={def.id}
               label={def.label}
               value={renderValue(def)}
-              isLoading={loading}
+              isLoading={loadingForCard(def.id)}
               isSelected={selectedMetric === def.id}
               skeletonWidthClassName={def.cardSkeletonWidthClassName}
               onClick={() => onMetricSelect(def.id)}

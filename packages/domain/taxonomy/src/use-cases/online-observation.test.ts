@@ -147,6 +147,16 @@ const makeTrace = (
 
 const makeSessionRepository = (session: SessionDetail | null) =>
   Layer.succeed(SessionRepository, {
+    getCohortBaselineByTags: () =>
+      Effect.succeed({
+        count: 0,
+        metrics: {
+          costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+          durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+          timeToFirstTokenNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+          tokensTotal: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+        },
+      }),
     findBySessionId: () =>
       session ? Effect.succeed(session) : Effect.fail(new NotFoundError({ entity: "Session", id: sessionId })),
     listByProjectId: () => Effect.succeed({ items: [], hasMore: false }),
@@ -156,8 +166,11 @@ const makeSessionRepository = (session: SessionDetail | null) =>
         durationNs: { min: 0, max: 0, avg: 0, median: 0, sum: 0 },
         costTotalMicrocents: { min: 0, max: 0, avg: 0, median: 0, sum: 0 },
         spanCount: { min: 0, max: 0, avg: 0, median: 0, sum: 0 },
+        tokensTotal: { min: 0, max: 0, avg: 0, median: 0, sum: 0 },
         timeToFirstTokenNs: { min: 0, max: 0, avg: 0, median: 0, sum: 0 },
+        traceCount: 0,
       }),
+    histogramByProjectId: () => Effect.succeed([]),
     distinctFilterValues: () => Effect.succeed([]),
     getDistribution: () => Effect.succeed(emptyTraceDistribution()),
   })
@@ -166,7 +179,7 @@ const makeTraceRepository = (traces: readonly TraceDetail[]) =>
   Layer.succeed(TraceRepository, {
     getCohortBaselineByTags: () =>
       Effect.succeed({
-        traceCount: 0,
+        count: 0,
         metrics: {
           costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
           durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },

@@ -1,3 +1,4 @@
+import type { FilterSet } from "@domain/shared"
 import {
   CodeBlock,
   Conversation,
@@ -12,18 +13,79 @@ import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon } from "lucide-react"
 import { useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
+import { SessionOutlierBadge, type SessionOutlierMetric } from "../session-outlier-badge.tsx"
 import { UsageSummary } from "../trace-detail-drawer/tabs/spans-tab/span-detail/usage-summary.tsx"
+
+// Sessions only expose percentile filters for duration/TTFT/cost
+// (`PERCENTILE_SESSION_FILTER_FIELDS`), so the tokens badge stays informational
+// — there is no session-level `tokens` filter to push.
+const METRIC_FILTER_FIELD: Partial<Record<SessionOutlierMetric, string>> = {
+  durationNs: "duration",
+  timeToFirstTokenNs: "ttft",
+  costTotalMicrocents: "cost",
+}
 
 function JsonBlock({ value }: { readonly value: unknown }) {
   const formatted = useMemo(() => JSON.stringify(value, null, 2), [value])
   return <CodeBlock value={formatted} className="bg-secondary" />
 }
 
-export function MetadataTab({ session }: { readonly session: SessionDetailRecord }) {
+export function MetadataTab({
+  session,
+  filters,
+  onFiltersChange,
+}: {
+  readonly session: SessionDetailRecord
+  readonly filters?: FilterSet | undefined
+  readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
+}) {
   const hasProviders = session.providers.length > 0
   const hasModels = session.models.length > 0
   const hasTags = session.tags.length > 0
   const hasMetadata = Object.keys(session.metadata).length > 0
+
+  const handleFilterByThreshold = (metric: SessionOutlierMetric, threshold: number) => {
+    if (!onFiltersChange) return
+    const field = METRIC_FILTER_FIELD[metric]
+    if (!field) return
+
+    const newFilters = { ...(filters ?? {}) }
+    const existingConditions = newFilters[field] ?? []
+    const otherConditions = existingConditions.filter((c) => c.op !== "gte")
+    newFilters[field] = [...otherConditions, { op: "gte", value: threshold }]
+
+    onFiltersChange(newFilters)
+  }
+
+  const renderBadge = (metric: SessionOutlierMetric, value: number) => (
+    <SessionOutlierBadge
+      projectId={session.projectId}
+      tags={session.tags}
+      value={value}
+      metric={metric}
+      onThresholdClick={
+        onFiltersChange && METRIC_FILTER_FIELD[metric]
+          ? (threshold) => handleFilterByThreshold(metric, threshold)
+          : undefined
+      }
+    />
+  )
+
+  const durationValue = (
+    <span className="flex items-center gap-1">
+      {renderBadge("durationNs", session.durationNs)}
+      {session.durationNs > 0 ? formatDuration(session.durationNs) : "-"}
+    </span>
+  )
+
+  const ttftValue = (
+    <span className="flex items-center gap-1">
+      {renderBadge("timeToFirstTokenNs", session.timeToFirstTokenNs)}
+      {session.timeToFirstTokenNs > 0 ? formatDuration(session.timeToFirstTokenNs) : "-"}
+    </span>
+  )
+
+  const costBadgesNode = renderBadge("costTotalMicrocents", session.costTotalMicrocents)
 
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-6">
@@ -36,11 +98,11 @@ export function MetadataTab({ session }: { readonly session: SessionDetailRecord
           },
           {
             label: "Duration",
-            value: session.durationNs > 0 ? formatDuration(session.durationNs) : "-",
+            value: durationValue,
           },
           {
             label: "TTFT",
-            value: session.timeToFirstTokenNs > 0 ? formatDuration(session.timeToFirstTokenNs) : "-",
+            value: ttftValue,
           },
           {
             label: "Spans",
@@ -74,7 +136,7 @@ export function MetadataTab({ session }: { readonly session: SessionDetailRecord
         </div>
       )}
 
-      <UsageSummary data={session} />
+      <UsageSummary data={session} costBadges={costBadgesNode} />
 
       <div className="flex flex-col gap-1">
         <Text.H6 color="foregroundMuted">Tags</Text.H6>

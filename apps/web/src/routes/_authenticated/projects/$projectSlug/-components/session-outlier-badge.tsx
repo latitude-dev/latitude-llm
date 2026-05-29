@@ -1,19 +1,19 @@
 import { type CohortMetric, type CohortSummary, getMetricPercentileThreshold } from "@domain/spans"
 import { Status, type StatusProps, TagBadgeList, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice } from "@repo/utils"
-import { useTraceCohortSummaryByTags } from "../../../../../domains/traces/traces.collection.ts"
+import { useSessionCohortSummaryByTags } from "../../../../../domains/sessions/sessions.collection.ts"
 
 type Baselines = CohortSummary["baselines"]
-export type TraceOutlierMetric = keyof Baselines
-export type TraceOutlierLevel = "p99" | "p95" | "p90"
+export type SessionOutlierMetric = keyof Baselines
+export type SessionOutlierLevel = "p99" | "p95" | "p90"
 
-const LEVEL_LABELS: Record<TraceOutlierLevel, string> = {
+const LEVEL_LABELS: Record<SessionOutlierLevel, string> = {
   p99: "99%",
   p95: "95%",
   p90: "90%",
 }
 
-const METRIC_LABELS: Record<TraceOutlierMetric, string> = {
+const METRIC_LABELS: Record<SessionOutlierMetric, string> = {
   durationNs: "duration",
   timeToFirstTokenNs: "Time to First Token",
   costTotalMicrocents: "cost",
@@ -22,8 +22,8 @@ const METRIC_LABELS: Record<TraceOutlierMetric, string> = {
 
 function computeLevel(
   value: number,
-  baseline: Baselines[TraceOutlierMetric] | undefined,
-): TraceOutlierLevel | undefined {
+  baseline: Baselines[SessionOutlierMetric] | undefined,
+): SessionOutlierLevel | undefined {
   if (!baseline || value <= 0) return undefined
   const p99 = getMetricPercentileThreshold(baseline, "p99")
   if (p99 !== null && value >= p99) return "p99"
@@ -34,7 +34,7 @@ function computeLevel(
   return undefined
 }
 
-function levelVariant(level: TraceOutlierLevel | "p50"): NonNullable<StatusProps["variant"]> {
+function levelVariant(level: SessionOutlierLevel | "p50"): NonNullable<StatusProps["variant"]> {
   switch (level) {
     case "p99":
       return "destructive"
@@ -69,7 +69,7 @@ function CohortBaseline({
 }: {
   cohorts: CohortSummary
   metric: CohortMetric
-  level: TraceOutlierLevel | "p50"
+  level: SessionOutlierLevel | "p50"
 }) {
   const baseline = cohorts.baselines[metric]
   // p50 has no sample-count gate — read it directly. p90/p95/p99 flow through
@@ -84,11 +84,11 @@ function CohortBaseline({
   )
 }
 
-function TraceValueRow({ value, metric, p50 }: { value: number; metric: CohortMetric; p50: number }) {
+function SessionValueRow({ value, metric, p50 }: { value: number; metric: CohortMetric; p50: number }) {
   const ratio = p50 > 0 ? value / p50 : null
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <Text.H6 color="foregroundMuted">This trace</Text.H6>
+      <Text.H6 color="foregroundMuted">This session</Text.H6>
       <div className="flex items-baseline gap-2">
         <Text.H5 weight="medium">{formatValue({ value, metric })}</Text.H5>
         {ratio !== null && ratio >= 1.05 && <Text.H6 color="foregroundMuted">{ratio.toFixed(1)}× median</Text.H6>}
@@ -97,7 +97,7 @@ function TraceValueRow({ value, metric, p50 }: { value: number; metric: CohortMe
   )
 }
 
-function QuantileStrip({ baseline, value }: { baseline: Baselines[TraceOutlierMetric]; value: number }) {
+function QuantileStrip({ baseline, value }: { baseline: Baselines[SessionOutlierMetric]; value: number }) {
   const p90 = getMetricPercentileThreshold(baseline, "p90")
   const p95 = getMetricPercentileThreshold(baseline, "p95")
   const p99 = getMetricPercentileThreshold(baseline, "p99")
@@ -105,13 +105,13 @@ function QuantileStrip({ baseline, value }: { baseline: Baselines[TraceOutlierMe
   // The badge only renders when at least p90 is available; mirror that here.
   if (p90 === null) return null
 
-  // Strip's right edge: past the highest known percentile (or the trace's value
+  // Strip's right edge: past the highest known percentile (or the session's value
   // if it outran p99) so the marker never clips the end.
   const highestPercentile = p99 ?? p95 ?? p90
   const stripMax = Math.max(value, highestPercentile) * 1.05
 
   // Zones are *badge tiers*, not distribution buckets — the marker's color must
-  // match the badge the trace earns. Tiers: normal [0,p90), p90 [p90,p95),
+  // match the badge the session earns. Tiers: normal [0,p90), p90 [p90,p95),
   // p95 [p95,p99), p99 [p99,max). When higher percentiles are null the current
   // tier absorbs the rest of the strip (no empty trailing space).
   const zones: { upper: number; className: string }[] = [
@@ -147,7 +147,7 @@ function QuantileStrip({ baseline, value }: { baseline: Baselines[TraceOutlierMe
 }
 
 /**
- * A tooltip that explains that the outlier is only scoped to the subset of traces that match the given tags.
+ * A tooltip that explains that the outlier is only scoped to the subset of sessions that match the given tags.
  * And then displays the baseline values for the given metric.
  */
 function OutlierTooltip({
@@ -160,7 +160,7 @@ function OutlierTooltip({
   tags: ReadonlyArray<string>
   cohorts: CohortSummary
   metric: CohortMetric
-  level: TraceOutlierLevel
+  level: SessionOutlierLevel
   value: number
 }) {
   const baseline = cohorts.baselines[metric]
@@ -168,13 +168,13 @@ function OutlierTooltip({
     <div className="flex flex-col gap-4 min-w-64">
       <div className="flex flex-col gap-2">
         <Text.H6>
-          This trace's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the traces with{" "}
-          {tags.length === 0 ? "no tags." : tags.length === 1 ? "this tag:" : "these tags:"}
+          This session's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the sessions
+          with {tags.length === 0 ? "no tags." : tags.length === 1 ? "this tag:" : "these tags:"}
         </Text.H6>
         {tags.length > 0 && <TagBadgeList tags={tags} />}
       </div>
       <div className="flex flex-col gap-2">
-        <TraceValueRow value={value} metric={metric} p50={baseline.p50} />
+        <SessionValueRow value={value} metric={metric} p50={baseline.p50} />
         <QuantileStrip baseline={baseline} value={value} />
       </div>
       <div className="flex flex-col gap-1">
@@ -192,15 +192,15 @@ function OutlierTooltip({
 }
 
 /**
- * Renders a p90/p95/p99 outlier badge when a trace's metric value exceeds the
+ * Renders a p90/p95/p99 outlier badge when a session's metric value exceeds the
  * percentile thresholds of its tag-scoped cohort. The cohort baseline is fetched
- * lazily per trace via `useTraceCohortSummaryByTags` — TanStack Query dedupes
+ * lazily per session via `useSessionCohortSummaryByTags` — TanStack Query dedupes
  * across rows sharing a tag combination.
  *
  * When `onThresholdClick` is provided the badge becomes a button that reports
  * the numeric threshold of the matched level (useful for filter-by-threshold).
  */
-export function TraceOutlierBadge({
+export function SessionOutlierBadge({
   projectId,
   tags,
   value,
@@ -210,10 +210,10 @@ export function TraceOutlierBadge({
   readonly projectId: string
   readonly tags: ReadonlyArray<string>
   readonly value: number
-  readonly metric: TraceOutlierMetric
-  readonly onThresholdClick?: ((threshold: number, level: TraceOutlierLevel) => void) | undefined
+  readonly metric: SessionOutlierMetric
+  readonly onThresholdClick?: ((threshold: number, level: SessionOutlierLevel) => void) | undefined
 }) {
-  const { data } = useTraceCohortSummaryByTags({ projectId, tags })
+  const { data } = useSessionCohortSummaryByTags({ projectId, tags })
   const level = computeLevel(value, data?.baselines[metric])
   if (!level || !data) return null
 

@@ -1,6 +1,7 @@
+import type { FilterSet } from "@domain/shared"
 import { CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
-import { GroupIcon, ListTreeIcon, MessageSquareIcon, MessagesSquareIcon, TriangleAlertIcon } from "lucide-react"
+import { GroupIcon, ListTreeIcon, MessageSquareIcon, MessagesSquareIcon, ShieldAlertIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useAnnotationsBySession } from "../../../../../../domains/annotations/annotations.collection.ts"
 import { deriveSessionStatus, useSessionIssues } from "../../../../../../domains/sessions/sessions.collection.ts"
@@ -46,6 +47,8 @@ export function SessionSlot({
   onOpenIssue,
   onOpenInConversation,
   searchQuery,
+  filters,
+  onFiltersChange,
 }: {
   readonly projectId: string
   readonly session: SessionDetailRecord
@@ -57,6 +60,8 @@ export function SessionSlot({
   readonly onOpenIssue: (issueId: string) => void
   readonly onOpenInConversation: (annotationId: string) => void
   readonly searchQuery?: string
+  readonly filters?: FilterSet | undefined
+  readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
 }) {
   const traceIds = session.traceIds
 
@@ -126,7 +131,7 @@ export function SessionSlot({
       {
         id: "issues",
         label: "Issues",
-        icon: <Icon icon={TriangleAlertIcon} size="sm" />,
+        icon: <Icon icon={ShieldAlertIcon} size="sm" />,
         suffix: countSuffix(issueCount),
       },
     )
@@ -181,7 +186,13 @@ export function SessionSlot({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {effectiveActiveTab === "session" && <MetadataTab session={session} />}
+        {effectiveActiveTab === "session" && (
+          <MetadataTab
+            session={session}
+            {...(filters ? { filters } : {})}
+            {...(onFiltersChange ? { onFiltersChange } : {})}
+          />
+        )}
         {visitedTabs.has("conversation") && (
           <div className={effectiveActiveTab === "conversation" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
             <ConversationTab

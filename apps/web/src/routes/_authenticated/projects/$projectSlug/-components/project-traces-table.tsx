@@ -26,7 +26,7 @@ export const TRACE_COLUMN_OPTIONS = [
   { id: "name", label: "Name" },
   { id: "tags", label: "Tags" },
   { id: "duration", label: "Duration" },
-  { id: "ttft", label: "Time To First Token" },
+  { id: "ttft", label: "Time To First Token", defaultHidden: true },
   { id: "cost", label: "Cost" },
   { id: "sessionId", label: "Session ID" },
   { id: "userId", label: "User ID" },

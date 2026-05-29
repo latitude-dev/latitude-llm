@@ -5,8 +5,8 @@ export const SPAN_ID_LENGTH = 16
 /** Debounce window for trace end detection (1:30 minutes in milliseconds). */
 export const TRACE_END_DEBOUNCE_MS = 90 * 1000
 
-/** TTL for cached tag-scoped cohort baseline summaries (1 hour in seconds). */
-export const TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS = 60 * 60
+/** TTL for cached tag-scoped cohort baseline summaries (1 hour in seconds). Shared by traces and sessions. */
+export const COHORT_SUMMARY_CACHE_TTL_SECONDS = 60 * 60
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Trace Search Constants

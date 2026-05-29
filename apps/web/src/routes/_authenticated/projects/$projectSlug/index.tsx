@@ -27,7 +27,7 @@ import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./-components/project-
 import { SessionDetailDrawer } from "./-components/session-detail-drawer.tsx"
 import {
   DEFAULT_SESSION_SORTING,
-  SESSION_COLUMN_OPTIONS,
+  getSessionColumnOptions,
   type SessionColumnId,
   SessionsView,
 } from "./-components/sessions-view.tsx"
@@ -102,7 +102,7 @@ function ProjectPage() {
     // layouts don't drop the unknown `startTime` id and stick `lastActivity`
     // at the end — they pick up the new default order instead.
     storageKey: "projects.sessions.columns.v3",
-    columns: SESSION_COLUMN_OPTIONS,
+    columns: getSessionColumnOptions(false),
   })
   const hasActiveFilters = Object.keys(filters).length > 0
   const timeFrom = getTimeFilterValue(filters, "gte")
@@ -391,6 +391,7 @@ function ProjectPage() {
           projectId={currentProject.id}
           projectSlug={currentProject.slug}
           filters={filters}
+          mode={activeTab}
           onTimeRangeSelect={onTimeRangeSelect}
         />
       </div>
@@ -414,6 +415,7 @@ function ProjectPage() {
           onOpenSession={onOpenSession}
           onCloseSession={closeSessionPanel}
           visibleColumnIds={sessionColumnSettings.visibleColumnIds}
+          isSearching={false}
         />
       )}
 
@@ -441,6 +443,8 @@ function ProjectPage() {
             projectId={currentProject.id}
             sessionId={activeSessionId}
             onClose={closeSessionPanel}
+            filters={filters}
+            onFiltersChange={onFiltersChange}
           />
         </Layout.Aside>
       ) : null}

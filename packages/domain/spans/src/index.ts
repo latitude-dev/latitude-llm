@@ -5,10 +5,26 @@
 // don't need to import from `wrapped/types/claude-code` directly.
 
 export {
+  buildMetricBaseline,
+  buildMetricBaselines,
+  COHORT_P90_MIN_SAMPLES,
+  COHORT_P95_MIN_SAMPLES,
+  COHORT_P99_MIN_SAMPLES,
+  type CohortBaselineData,
+  type CohortMetric,
+  type CohortSummary,
+  cohortMetrics,
+  getMetricPercentileThreshold,
+  isMetricPercentileAvailable,
+  type MetricBaseline,
+  type MetricPercentileLevel,
+  type MetricPercentiles,
+} from "./cohort-baselines.ts"
+export {
+  COHORT_SUMMARY_CACHE_TTL_SECONDS,
   SESSION_ID_MAX_LENGTH,
   SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW,
   SPAN_ID_LENGTH,
-  TRACE_COHORT_SUMMARY_CACHE_TTL_SECONDS,
   TRACE_END_DEBOUNCE_MS,
   TRACE_ID_LENGTH,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
@@ -111,38 +127,6 @@ export type {
 export { TraceSearchRepository } from "./ports/trace-search-repository.ts"
 export { deterministicSample } from "./sampling/deterministic-sampler.ts"
 export { extractSamplingKey } from "./sampling/extract-sampling-key.ts"
-export {
-  buildTraceCohortSummaryEntries,
-  buildTraceMetricBaseline,
-  buildTraceMetricBaselines,
-  emptyTraceCohortSummaryEntry,
-  evaluateTraceResourceOutliers,
-  getTraceCohortMetricValue,
-  getTraceMetricPercentileThreshold,
-  isTraceCohortKeyAvailable,
-  isTraceCohortMetricEligible,
-  isTraceMetricPercentileAvailable,
-  TRACE_COHORT_MEDIAN_X3_MIN_SAMPLES,
-  TRACE_COHORT_P90_MIN_SAMPLES,
-  TRACE_COHORT_P95_MIN_SAMPLES,
-  TRACE_COHORT_P99_MIN_SAMPLES,
-  TRACE_RESOURCE_OUTLIER_MULTIPLIER,
-  type TraceCohortBaselineData,
-  type TraceCohortKey,
-  type TraceCohortMetric,
-  type TraceCohortSummary,
-  type TraceCohortSummaryEntry,
-  type TraceCohortThresholdMode,
-  type TraceCohortUnavailableReason,
-  type TraceMetricBaseline,
-  type TraceMetricPercentileLevel,
-  type TraceMetricPercentiles,
-  type TraceResourceOutlierEvaluation,
-  type TraceResourceOutlierReason,
-  traceCohortKeys,
-  traceCohortMetrics,
-  traceResourceOutlierSeverityRank,
-} from "./trace-cohorts.ts"
 export type {
   TraceSearchChunk,
   TraceSearchDocument,
@@ -159,6 +143,8 @@ export type {
   TraceSearchHighlightsResult,
 } from "./use-cases/compute-trace-search-highlights.ts"
 export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
+export type { GetSessionCohortSummaryByTagsInput } from "./use-cases/get-session-cohort-summary-by-tags.ts"
+export { getSessionCohortSummaryByTagsUseCase } from "./use-cases/get-session-cohort-summary-by-tags.ts"
 export type {
   GetTraceAnalyticsError,
   GetTraceAnalyticsInput,

@@ -33,6 +33,8 @@ interface NumberRangeFieldDefinition {
   readonly percentile?: {
     readonly field?: PercentileFieldName
   }
+  readonly displayScale?: number
+  readonly displayStep?: number
 }
 
 export const NUMBER_RANGE_FIELDS: readonly NumberRangeFieldDefinition[] = TRACE_FILTER_FIELDS.filter(
@@ -44,11 +46,15 @@ export const NUMBER_RANGE_FIELDS: readonly NumberRangeFieldDefinition[] = TRACE_
   // if a session-only percentile field is added later (otherwise it would
   // silently fall to `{}` and `PercentileFilter` would render nothing).
   const isPercentileField = isPercentileTraceFilterField(f.field) || isPercentileSessionFilterField(f.field)
+  const displayScale = "displayScale" in f ? f.displayScale : undefined
+  const displayStep = "displayStep" in f ? f.displayStep : undefined
   return {
     field: f.field,
     label: f.label,
     tooltip: "tooltip" in f ? f.tooltip : undefined,
     ...(supportsPercentile ? { percentile: isPercentileField ? { field: f.field } : {} } : {}),
+    ...(displayScale !== undefined ? { displayScale } : {}),
+    ...(displayStep !== undefined ? { displayStep } : {}),
   }
 })
 

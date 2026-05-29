@@ -14,6 +14,8 @@ interface TraceAggregationsPanelProps {
   readonly projectId: string
   readonly projectSlug: string
   readonly filters: FilterSet
+  /** Must match the table below the panel — drives which rollup the cards + histogram use. */
+  readonly mode: "traces" | "sessions"
   /** Called when user selects a time range via brush on the histogram. */
   readonly onTimeRangeSelect?: (range: { from: string; to: string } | null) => void
 }
@@ -22,12 +24,10 @@ export function TraceAggregationsPanel({
   projectId,
   projectSlug,
   filters,
+  mode,
   onTimeRangeSelect,
 }: TraceAggregationsPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
-
-  // The default metric ("traces") is intentionally omitted from the URL by `useParamState` so the
-  // canonical link stays clean; only non-default selections make it into the query string.
   const [selectedMetric, setSelectedMetric] = useParamState("histogramMetric", DEFAULT_HISTOGRAM_METRIC, {
     validate: isTraceHistogramMetric,
   })
@@ -58,6 +58,7 @@ export function TraceAggregationsPanel({
         <GeneralAggregations
           projectId={projectId}
           filters={filters}
+          mode={mode}
           selectedMetric={selectedMetric}
           onMetricSelect={onMetricSelect}
           onCollapse={() => setCollapsed(true)}
@@ -86,6 +87,7 @@ export function TraceAggregationsPanel({
           projectId={projectId}
           projectSlug={projectSlug}
           filters={filters}
+          mode={mode}
           metric={selectedMetric}
           showIncidents={incidentsFlagEnabled && showIncidents}
           onRangeSelect={onTimeRangeSelect}

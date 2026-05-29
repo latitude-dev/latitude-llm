@@ -34,6 +34,9 @@ function reconcileColumnSettings<ColumnId extends string>({
   const defaultColumnIds = columns.map((column) => column.id as ColumnId)
   const knownColumnIds = new Set(defaultColumnIds)
   const requiredColumnIds = columns.filter((column) => column.required === true).map((column) => column.id as ColumnId)
+  const defaultVisibleColumnIds = columns
+    .filter((column) => column.defaultHidden !== true)
+    .map((column) => column.id as ColumnId)
 
   const storedColumnIds = uniqueKnownColumnIds({ columnIds: settings?.columnIds, knownColumnIds })
   const columnIds = [...storedColumnIds, ...defaultColumnIds.filter((columnId) => !storedColumnIds.includes(columnId))]
@@ -41,8 +44,11 @@ function reconcileColumnSettings<ColumnId extends string>({
   const storedVisibleColumnIds = uniqueKnownColumnIds({ columnIds: settings?.visibleColumnIds, knownColumnIds })
   const visibleColumnIds =
     storedVisibleColumnIds.length > 0
-      ? [...storedVisibleColumnIds, ...defaultColumnIds.filter((columnId) => !storedColumnIds.includes(columnId))]
-      : [...defaultColumnIds]
+      ? [
+          ...storedVisibleColumnIds,
+          ...defaultVisibleColumnIds.filter((columnId) => !storedColumnIds.includes(columnId)),
+        ]
+      : [...defaultVisibleColumnIds]
 
   const requiredVisibleColumnIds = requiredColumnIds.filter((columnId) => !visibleColumnIds.includes(columnId))
   const nextVisibleColumnIds = [...requiredVisibleColumnIds, ...visibleColumnIds].sort(

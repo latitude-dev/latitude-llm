@@ -9,9 +9,10 @@ import type {
   SessionId,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
+import type { CohortBaselineData } from "../cohort-baselines.ts"
 import type { Session, SessionDetail } from "../entities/session.ts"
 import type { SessionSearchMatch } from "../entities/session-search-match.ts"
-import type { NumericRollup, TraceDistribution } from "./trace-repository.ts"
+import type { NumericRollup, TraceDistribution, TraceTimeHistogramBucket } from "./trace-repository.ts"
 
 /**
  * Repository port for sessions (ClickHouse materialized view).
@@ -20,6 +21,19 @@ import type { NumericRollup, TraceDistribution } from "./trace-repository.ts"
  * by a materialized view on each insert into spans.
  */
 export interface SessionRepositoryShape {
+  /**
+   * Baseline percentiles scoped to the exact tag combination. Empty `tags` array
+   * matches only untagged sessions. Tag match is order-independent set equality.
+   * Intentionally ignores user filters — the goal is a stable "what's normal for
+   * this kind of session" reference.
+   */
+  getCohortBaselineByTags(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly tags: ReadonlyArray<string>
+    readonly excludeSessionId?: SessionId
+  }): Effect.Effect<CohortBaselineData, RepositoryError, ChSqlClient>
+
   listByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -38,6 +52,13 @@ export interface SessionRepositoryShape {
     readonly projectId: ProjectId
     readonly filters?: FilterSet
   }): Effect.Effect<SessionMetrics, RepositoryError, ChSqlClient>
+
+  histogramByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly filters?: FilterSet
+    readonly bucketSeconds: number
+  }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError, ChSqlClient>
 
   findBySessionId(input: {
     readonly organizationId: OrganizationId
@@ -113,17 +134,27 @@ export interface SessionMetrics {
   readonly durationNs: NumericRollup
   readonly costTotalMicrocents: NumericRollup
   readonly spanCount: NumericRollup
+  readonly tokensTotal: NumericRollup
   readonly timeToFirstTokenNs: NumericRollup
+  readonly traceCount: number
 }
 
-const zeroRollup = (): NumericRollup => ({ min: 0, max: 0, avg: 0, median: 0, sum: 0 })
+const zeroRollup = (): NumericRollup => ({
+  min: 0,
+  max: 0,
+  avg: 0,
+  median: 0,
+  sum: 0,
+})
 
 /** Metrics when no sessions match the filter (same shape as a populated aggregate). */
 export const emptySessionMetrics = (): SessionMetrics => ({
   durationNs: zeroRollup(),
   costTotalMicrocents: zeroRollup(),
   spanCount: zeroRollup(),
+  tokensTotal: zeroRollup(),
   timeToFirstTokenNs: zeroRollup(),
+  traceCount: 0,
 })
 
 export class SessionRepository extends Context.Service<SessionRepository, SessionRepositoryShape>()(

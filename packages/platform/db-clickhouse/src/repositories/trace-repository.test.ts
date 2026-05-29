@@ -252,21 +252,21 @@ describe("TraceRepository", () => {
 
       expect(cheapBaseline.metrics.costTotalMicrocents.p50).toBe(100)
       expect(expensiveBaseline.metrics.costTotalMicrocents.p50).toBe(10_000)
-      expect(cheapBaseline.traceCount).toBe(5)
-      expect(expensiveBaseline.traceCount).toBe(5)
+      expect(cheapBaseline.count).toBe(5)
+      expect(expensiveBaseline.count).toBe(5)
 
       // Order-independent match: query ["alpha","beta"] finds rows stored with ["beta","alpha"]
       const alphaBetaBaseline = await runCh(
         repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha", "beta"] }),
       )
-      expect(alphaBetaBaseline.traceCount).toBe(3)
+      expect(alphaBetaBaseline.count).toBe(3)
       expect(alphaBetaBaseline.metrics.costTotalMicrocents.p50).toBe(500)
 
       // A subset of tags must NOT match a strict superset cohort.
       const alphaOnlyBaseline = await runCh(
         repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha"] }),
       )
-      expect(alphaOnlyBaseline.traceCount).toBe(0)
+      expect(alphaOnlyBaseline.count).toBe(0)
     })
 
     it("treats the empty-tags cohort as a distinct bucket of untagged traces", async () => {
@@ -288,7 +288,7 @@ describe("TraceRepository", () => {
         repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: [] }),
       )
 
-      expect(emptyCohort.traceCount).toBe(3)
+      expect(emptyCohort.count).toBe(3)
       expect(emptyCohort.metrics.costTotalMicrocents.p50).toBe(777)
 
       // Tagged-cohort queries must not pick up untagged rows.
@@ -358,7 +358,7 @@ describe("TraceRepository", () => {
         }),
       )
 
-      expect(baseline.traceCount).toBe(3)
+      expect(baseline.count).toBe(3)
       expect(baseline.metrics.costTotalMicrocents.p50).toBe(100)
     })
   })

@@ -1,4 +1,4 @@
-import type { TraceHistogramMetric, TraceMetrics, TraceTimeHistogramBucket } from "@domain/spans"
+import type { SessionMetrics, TraceHistogramMetric, TraceMetrics, TraceTimeHistogramBucket } from "@domain/spans"
 import { formatCount, formatDuration, formatPrice } from "@repo/utils"
 
 /**
@@ -16,8 +16,12 @@ export interface HistogramMetricDefinition {
   readonly tooltipNoun: string
   readonly formatBucket: (value: number) => string
   readonly selectBucket: (bucket: TraceTimeHistogramBucket) => number
-  /** Returns the scalar value shown on the card; undefined when metrics haven't loaded yet. */
-  readonly selectMetricsValue: (metrics: TraceMetrics, totalCount: number) => number
+  /**
+   * Returns the scalar value shown on the card. Accepts either rollup so the panel can switch
+   * sources without casting; TS catches divergence if a future field exists on one but not the
+   * other.
+   */
+  readonly selectMetricsValue: (metrics: TraceMetrics | SessionMetrics, totalCount: number) => number
 }
 
 const microcentsToUSD = (microcents: number): string => formatPrice(microcents / 100_000_000)

@@ -8,8 +8,8 @@ import {
   TraceId,
 } from "@domain/shared"
 import type {
+  CohortSummary,
   Trace,
-  TraceCohortSummary,
   TraceDetail,
   TraceDistinctColumn,
   TraceDistribution,
@@ -297,7 +297,7 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
 
 export const getTraceCohortSummaryByTags = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string(), tags: z.array(z.string()).readonly() }))
-  .handler(async ({ data }): Promise<TraceCohortSummary> => {
+  .handler(async ({ data }): Promise<CohortSummary> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 

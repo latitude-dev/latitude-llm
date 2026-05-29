@@ -9,8 +9,8 @@ import type {
   TraceId,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
+import type { CohortBaselineData } from "../cohort-baselines.ts"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
-import type { TraceCohortBaselineData } from "../trace-cohorts.ts"
 
 /**
  * Repository port for traces (ClickHouse materialized view).
@@ -30,7 +30,7 @@ export interface TraceRepositoryShape {
     readonly projectId: ProjectId
     readonly tags: ReadonlyArray<string>
     readonly excludeTraceId?: TraceId
-  }): Effect.Effect<TraceCohortBaselineData, RepositoryError, ChSqlClient>
+  }): Effect.Effect<CohortBaselineData, RepositoryError, ChSqlClient>
 
   listByProjectId(input: {
     readonly organizationId: OrganizationId

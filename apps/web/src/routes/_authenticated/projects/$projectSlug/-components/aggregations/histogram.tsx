@@ -7,6 +7,7 @@ import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alert
 import { IncidentMarkerPopover } from "../../../../../../domains/alerts/incident-marker-popover.tsx"
 import { buildIncidentMarkers } from "../../../../../../domains/alerts/incident-markers.ts"
 import { useIncidentBucketHoverPopover } from "../../../../../../domains/alerts/use-incident-bucket-hover-popover.ts"
+import { useSessionTimeHistogram } from "../../../../../../domains/sessions/sessions.collection.ts"
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
 import { HISTOGRAM_METRIC_DEFINITIONS } from "./histogram-metrics.ts"
 
@@ -24,14 +25,30 @@ interface HistogramProps {
   readonly projectId: string
   readonly projectSlug: string
   readonly filters: FilterSet
+  readonly mode: "traces" | "sessions"
   readonly metric: TraceHistogramMetric
-  /** When true, fetch and overlay incidents on the histogram. */
   readonly showIncidents: boolean
-  /** Called when user selects a time range via brush on the histogram. */
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }
 
-export function Histogram({ projectId, projectSlug, filters, metric, showIncidents, onRangeSelect }: HistogramProps) {
+export function Histogram({
+  projectId,
+  projectSlug,
+  filters,
+  mode,
+  metric,
+  showIncidents,
+  onRangeSelect,
+}: HistogramProps) {
+  const isSessionsMode = mode === "sessions"
+  const traceHistogram = useTraceTimeHistogram({
+    projectId: isSessionsMode ? "" : projectId,
+    filters,
+  })
+  const sessionHistogram = useSessionTimeHistogram({
+    projectId: isSessionsMode ? projectId : "",
+    filters,
+  })
   const {
     data: sparseBuckets,
     isLoading,
@@ -39,7 +56,7 @@ export function Histogram({ projectId, projectSlug, filters, metric, showInciden
     rangeStartIso,
     rangeEndIso,
     bucketSeconds,
-  } = useTraceTimeHistogram({ projectId, filters })
+  } = isSessionsMode ? sessionHistogram : traceHistogram
 
   const denseBuckets = useMemo(
     () => denseTraceTimeHistogramBuckets(sparseBuckets, rangeStartIso, rangeEndIso, bucketSeconds),

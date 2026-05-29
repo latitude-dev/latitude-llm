@@ -614,6 +614,440 @@ describe("SessionRepository", () => {
     })
   })
 
+  describe("getCohortBaselineByTags", () => {
+    const makeTaggedSpan = (overrides: SpanOverrides & { readonly tags: readonly string[] }): SpanRow => ({
+      ...makeSpanRow(overrides),
+      tags: [...overrides.tags],
+    })
+
+    it("ignores zero-filled cost and token values in percentile baselines", async () => {
+      const start = new Date(Date.UTC(2026, 5, 1, 10, 0, 0))
+      const rows = Array.from({ length: 10 }, (_v, i) =>
+        makeTaggedSpan({
+          traceId: `${i.toString(16).padStart(2, "0")}${"a".repeat(30)}`,
+          spanId: `${i.toString(16).padStart(2, "0")}${"b".repeat(14)}`,
+          sessionId: `cohort-zero-${i}`,
+          startTime: new Date(start.getTime() + i * 1_000),
+          costTotalMicrocents: i === 9 ? 500 : 0,
+          tokensOutput: i === 9 ? 100 : 0,
+          tags: ["cohort-zero"],
+        }),
+      )
+
+      await insertSpans(rows)
+
+      const baseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["cohort-zero"] }),
+      )
+
+      expect(baseline.count).toBe(10)
+      expect(baseline.metrics.costTotalMicrocents.sampleCount).toBe(1)
+      expect(baseline.metrics.costTotalMicrocents.p50).toBe(500)
+      expect(baseline.metrics.costTotalMicrocents.p90).toBe(500)
+      expect(baseline.metrics.tokensTotal.sampleCount).toBe(1)
+      expect(baseline.metrics.tokensTotal.p50).toBe(100)
+      expect(baseline.metrics.durationNs.sampleCount).toBe(10)
+    })
+
+    it("isolates cohorts by exact tag combination, independent of order", async () => {
+      const start = new Date(Date.UTC(2026, 5, 2, 10, 0, 0))
+      const cheapRows = Array.from({ length: 5 }, (_v, i) =>
+        makeTaggedSpan({
+          traceId: `${(20 + i).toString(16).padStart(2, "0")}${"c".repeat(30)}`,
+          spanId: `${(20 + i).toString(16).padStart(2, "0")}${"d".repeat(14)}`,
+          sessionId: `cheap-${i}`,
+          startTime: new Date(start.getTime() + i * 1_000),
+          costTotalMicrocents: 100,
+          tags: ["cheap"],
+        }),
+      )
+      const expensiveRows = Array.from({ length: 5 }, (_v, i) =>
+        makeTaggedSpan({
+          traceId: `${(30 + i).toString(16).padStart(2, "0")}${"c".repeat(30)}`,
+          spanId: `${(30 + i).toString(16).padStart(2, "0")}${"d".repeat(14)}`,
+          sessionId: `expensive-${i}`,
+          startTime: new Date(start.getTime() + i * 1_000),
+          costTotalMicrocents: 10_000,
+          tags: ["expensive"],
+        }),
+      )
+      const reversedOrderRows = Array.from({ length: 3 }, (_v, i) =>
+        makeTaggedSpan({
+          traceId: `${(40 + i).toString(16).padStart(2, "0")}${"c".repeat(30)}`,
+          spanId: `${(40 + i).toString(16).padStart(2, "0")}${"d".repeat(14)}`,
+          sessionId: `mixed-${i}`,
+          startTime: new Date(start.getTime() + i * 1_000),
+          costTotalMicrocents: 500,
+          tags: ["beta", "alpha"],
+        }),
+      )
+
+      await insertSpans([...cheapRows, ...expensiveRows, ...reversedOrderRows])
+
+      const cheapBaseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["cheap"] }),
+      )
+      const expensiveBaseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["expensive"] }),
+      )
+
+      expect(cheapBaseline.count).toBe(5)
+      expect(cheapBaseline.metrics.costTotalMicrocents.p50).toBe(100)
+      expect(expensiveBaseline.count).toBe(5)
+      expect(expensiveBaseline.metrics.costTotalMicrocents.p50).toBe(10_000)
+
+      // Order-independent: query ["alpha","beta"] finds sessions stored with ["beta","alpha"].
+      const alphaBetaBaseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha", "beta"] }),
+      )
+      expect(alphaBetaBaseline.count).toBe(3)
+      expect(alphaBetaBaseline.metrics.costTotalMicrocents.p50).toBe(500)
+
+      // A subset must NOT match a strict superset cohort.
+      const alphaOnlyBaseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha"] }),
+      )
+      expect(alphaOnlyBaseline.count).toBe(0)
+    })
+
+    it("treats the empty-tags cohort as a distinct bucket of untagged sessions", async () => {
+      const start = new Date(Date.UTC(2026, 5, 3, 10, 0, 0))
+      const taggedRows = Array.from({ length: 2 }, (_v, i) =>
+        makeTaggedSpan({
+          traceId: `${(50 + i).toString(16).padStart(2, "0")}${"e".repeat(30)}`,
+          spanId: `${(50 + i).toString(16).padStart(2, "0")}${"f".repeat(14)}`,
+          sessionId: `tagged-${i}`,
+          startTime: new Date(start.getTime() + i * 1_000),
+          costTotalMicrocents: 123,
+          tags: ["empty-cohort-marker"],
+        }),
+      )
+      const untaggedRows = Array.from({ length: 3 }, (_v, i) =>
+        makeTaggedSpan({
+          traceId: `${(60 + i).toString(16).padStart(2, "0")}${"e".repeat(30)}`,
+          spanId: `${(60 + i).toString(16).padStart(2, "0")}${"f".repeat(14)}`,
+          sessionId: `untagged-${i}`,
+          startTime: new Date(start.getTime() + i * 1_000),
+          costTotalMicrocents: 777,
+          tags: [],
+        }),
+      )
+
+      await insertSpans([...taggedRows, ...untaggedRows])
+
+      const emptyCohort = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: [] }),
+      )
+      expect(emptyCohort.count).toBe(3)
+      expect(emptyCohort.metrics.costTotalMicrocents.p50).toBe(777)
+
+      const taggedCohort = await runCh(
+        repo.getCohortBaselineByTags({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          tags: ["empty-cohort-marker"],
+        }),
+      )
+      expect(taggedCohort.count).toBe(2)
+      expect(taggedCohort.metrics.costTotalMicrocents.p50).toBe(123)
+    })
+
+    it("gates p95 (<100 samples) and p99 (<1000 samples) to null", async () => {
+      const start = new Date(Date.UTC(2026, 5, 4, 10, 0, 0))
+      const rows = Array.from({ length: 10 }, (_v, i) =>
+        makeTaggedSpan({
+          traceId: `${(70 + i).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
+          spanId: `${(70 + i).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
+          sessionId: `gated-${i}`,
+          startTime: new Date(start.getTime() + i * 1_000),
+          costTotalMicrocents: (i + 1) * 10,
+          tags: ["gated"],
+        }),
+      )
+
+      await insertSpans(rows)
+
+      const baseline = await runCh(
+        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["gated"] }),
+      )
+
+      expect(baseline.metrics.costTotalMicrocents.p95).toBeNull()
+      expect(baseline.metrics.costTotalMicrocents.p99).toBeNull()
+    })
+
+    it("honors excludeSessionId", async () => {
+      const start = new Date(Date.UTC(2026, 5, 5, 10, 0, 0))
+      const keptRows = Array.from({ length: 3 }, (_v, i) =>
+        makeTaggedSpan({
+          traceId: `${(80 + i).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
+          spanId: `${(80 + i).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
+          sessionId: `kept-${i}`,
+          startTime: new Date(start.getTime() + i * 1_000),
+          costTotalMicrocents: 100,
+          tags: ["excluded"],
+        }),
+      )
+      const excludedSessionId = "excluded-session"
+      const excludedRow = makeTaggedSpan({
+        traceId: `90${"a".repeat(30)}`,
+        spanId: `90${"b".repeat(14)}`,
+        sessionId: excludedSessionId,
+        startTime: new Date(start.getTime() + 10_000),
+        costTotalMicrocents: 999_999,
+        tags: ["excluded"],
+      })
+
+      await insertSpans([...keptRows, excludedRow])
+
+      const baseline = await runCh(
+        repo.getCohortBaselineByTags({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          tags: ["excluded"],
+          excludeSessionId: SessionId(excludedSessionId),
+        }),
+      )
+
+      expect(baseline.count).toBe(3)
+      expect(baseline.metrics.costTotalMicrocents.p50).toBe(100)
+    })
+  })
+
+  describe("histogramByProjectId", () => {
+    it("buckets sessions by their start_time", async () => {
+      const bucketA = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+      const bucketB = new Date(Date.UTC(2026, 0, 1, 11, 0, 0))
+      await insertSpans([
+        makeSpanRow({
+          traceId: "a".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "session-bucket-a",
+          startTime: bucketA,
+          model: "gpt-4",
+          tokensOutput: 10,
+        }),
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "session-bucket-b",
+          startTime: bucketB,
+          model: "gpt-4",
+          tokensOutput: 20,
+        }),
+      ])
+
+      const buckets = await runCh(
+        repo.histogramByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          bucketSeconds: 3600,
+        }),
+      )
+
+      expect(buckets).toHaveLength(2)
+      const [first, second] = buckets
+      expect(nonNull(first).bucketStart).toBe(bucketA.toISOString())
+      expect(nonNull(first).sessionCount).toBe(1)
+      expect(nonNull(second).bucketStart).toBe(bucketB.toISOString())
+      expect(nonNull(second).sessionCount).toBe(1)
+    })
+
+    it("aggregates sessions sharing a bucket: counts, sums, medians", async () => {
+      const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+      // Two sessions in the same hour, each with one trace.
+      // Session 1: 100 tokens, 200 microcents, 5s duration, ttft 10ms.
+      // Session 2: 50 tokens, 100 microcents, 1s duration, ttft 30ms.
+      // Both must have non-empty model so they aren't excluded by the default
+      // `hasLlmActivity` filter applied by the panel (this test doesn't apply
+      // it, but it keeps fixtures realistic).
+      await insertSpans([
+        makeSpanRow({
+          traceId: "1".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "session-1",
+          startTime: start,
+          durationMs: 5_000,
+          model: "gpt-4",
+          tokensOutput: 100,
+          costTotalMicrocents: 200,
+          timeToFirstTokenNs: 10_000_000,
+        }),
+        makeSpanRow({
+          traceId: "2".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "session-2",
+          startTime: start,
+          durationMs: 1_000,
+          model: "gpt-4",
+          tokensOutput: 50,
+          costTotalMicrocents: 100,
+          timeToFirstTokenNs: 30_000_000,
+        }),
+      ])
+
+      const buckets = await runCh(
+        repo.histogramByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          bucketSeconds: 3600,
+        }),
+      )
+
+      expect(buckets).toHaveLength(1)
+      const bucket = nonNull(buckets[0])
+      expect(bucket.sessionCount).toBe(2)
+      expect(bucket.traceCount).toBe(2)
+      expect(bucket.tokensTotalSum).toBe(150)
+      expect(bucket.costTotalMicrocentsSum).toBe(300)
+      expect(bucket.spanCountSum).toBe(2)
+      // quantileTDigest on two values is one of them (no interpolation guarantee).
+      expect([1_000_000_000, 5_000_000_000]).toContain(bucket.durationNsMedian)
+      expect([10_000_000, 30_000_000]).toContain(bucket.timeToFirstTokenNsMedian)
+    })
+
+    it("applies session-level filter semantics (hasLlmActivity excludes orphans)", async () => {
+      const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+      await insertSpans([
+        makeSpanRow({
+          traceId: "3".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "active-session",
+          startTime: start,
+          model: "gpt-4",
+          tokensOutput: 100,
+        }),
+        // Orphan: no session id, no model, no tokens — synthesizes a 1-trace
+        // session that fails `hasLlmActivity`.
+        makeSpanRow({
+          traceId: "4".repeat(32),
+          spanId: "1".repeat(16),
+          startTime: start,
+        }),
+      ])
+
+      const filtered = await runCh(
+        repo.histogramByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          bucketSeconds: 3600,
+          filters: { hasLlmActivity: [{ op: "eq", value: true }] },
+        }),
+      )
+      const unfiltered = await runCh(
+        repo.histogramByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          bucketSeconds: 3600,
+        }),
+      )
+
+      const filteredCount = filtered.reduce((sum, b) => sum + b.sessionCount, 0)
+      const unfilteredCount = unfiltered.reduce((sum, b) => sum + b.sessionCount, 0)
+      expect(unfilteredCount).toBe(2)
+      expect(filteredCount).toBe(1)
+    })
+
+    it("agrees with aggregateMetricsByProjectId on the same filter set", async () => {
+      const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+      await insertSpans([
+        makeSpanRow({
+          traceId: "5".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "agree-1",
+          startTime: start,
+          model: "gpt-4",
+          tokensOutput: 100,
+          costTotalMicrocents: 200,
+        }),
+        makeSpanRow({
+          traceId: "6".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "agree-2",
+          startTime: new Date(start.getTime() + 30 * 60 * 1000),
+          model: "gpt-4",
+          tokensOutput: 50,
+          costTotalMicrocents: 100,
+        }),
+      ])
+
+      const [histogram, metrics] = await Promise.all([
+        runCh(
+          repo.histogramByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            bucketSeconds: 3600,
+          }),
+        ),
+        runCh(repo.aggregateMetricsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID })),
+      ])
+
+      const histogramSessionCount = histogram.reduce((sum, b) => sum + b.sessionCount, 0)
+      const histogramTraceCount = histogram.reduce((sum, b) => sum + b.traceCount, 0)
+      const histogramTokenSum = histogram.reduce((sum, b) => sum + b.tokensTotalSum, 0)
+      const histogramCostSum = histogram.reduce((sum, b) => sum + b.costTotalMicrocentsSum, 0)
+      const histogramSpanSum = histogram.reduce((sum, b) => sum + b.spanCountSum, 0)
+
+      expect(histogramSessionCount).toBe(2)
+      expect(histogramTraceCount).toBe(metrics.traceCount)
+      expect(histogramTokenSum).toBe(metrics.tokensTotal.sum)
+      expect(histogramCostSum).toBe(metrics.costTotalMicrocents.sum)
+      expect(histogramSpanSum).toBe(metrics.spanCount.sum)
+    })
+
+    it("applies percentile filters through resolvePercentileFilters (same cohort as aggregateMetricsByProjectId)", async () => {
+      // Three sessions with stepped costs so a `gtePercentile` resolves to a
+      // deterministic threshold and excludes a known subset. Same fixtures hit
+      // both queries — they must agree.
+      const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+      await insertSpans([
+        makeSpanRow({
+          traceId: "a".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "pct-low",
+          startTime: start,
+          model: "gpt-4",
+          tokensOutput: 10,
+          costTotalMicrocents: 100,
+        }),
+        makeSpanRow({
+          traceId: "b".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "pct-mid",
+          startTime: new Date(start.getTime() + 10 * 60 * 1000),
+          model: "gpt-4",
+          tokensOutput: 10,
+          costTotalMicrocents: 500,
+        }),
+        makeSpanRow({
+          traceId: "c".repeat(32),
+          spanId: "1".repeat(16),
+          sessionId: "pct-high",
+          startTime: new Date(start.getTime() + 20 * 60 * 1000),
+          model: "gpt-4",
+          tokensOutput: 10,
+          costTotalMicrocents: 900,
+        }),
+      ])
+
+      const filters = { cost: [{ op: "gtePercentile" as const, value: 50 }] }
+      const [histogram, metrics] = await Promise.all([
+        runCh(
+          repo.histogramByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, bucketSeconds: 3600, filters }),
+        ),
+        runCh(repo.aggregateMetricsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, filters })),
+      ])
+
+      const histogramSessionCount = histogram.reduce((sum, b) => sum + b.sessionCount, 0)
+      const histogramCostSum = histogram.reduce((sum, b) => sum + b.costTotalMicrocentsSum, 0)
+
+      // Whichever exact threshold p50 resolves to, the two queries must agree
+      // on the cohort — that's the property we're proving.
+      expect(histogramSessionCount).toBeGreaterThan(0)
+      expect(histogramSessionCount).toBeLessThan(3)
+      expect(histogramCostSum).toBe(metrics.costTotalMicrocents.sum)
+    })
+  })
+
   describe("search", () => {
     const DIMS = TRACE_SEARCH_EMBEDDING_DIMENSIONS
     const alignedEmbedding = new Array(DIMS).fill(0.1) as readonly number[]

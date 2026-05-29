@@ -7,33 +7,77 @@ export interface TraceFilterField {
   readonly placeholder?: string
   readonly tooltip?: string
   readonly percentile?: boolean // Numeric fields with this flag also support `gtePercentile` filtering
+  /**
+   * For numberRange fields whose UI unit differs from the wire/storage unit.
+   * `wire = display * displayScale` (e.g. dollars → microcents uses 100_000_000).
+   * Omit when the UI value is the wire value.
+   */
+  readonly displayScale?: number
+  /**
+   * `step` attribute for the numberRange input — the meaningful resolution of
+   * the display unit (e.g. 0.01 for dollars, 1 for integer counts). Omit to
+   * use HTML's default integer step.
+   */
+  readonly displayStep?: number
 }
 
 export const TRACE_FILTER_FIELDS = [
   { field: "status", type: "status", label: "Status" },
   { field: "name", type: "text", label: "Name", placeholder: "Enter name..." },
-  { field: "traceId", type: "text", label: "Trace ID", placeholder: "Filter by trace..." },
-  { field: "sessionId", type: "text", label: "Session ID", placeholder: "Filter by session..." },
-  { field: "simulationId", type: "text", label: "Simulation ID", placeholder: "Filter by simulation..." },
-  { field: "userId", type: "text", label: "User ID", placeholder: "Filter by user..." },
+  {
+    field: "traceId",
+    type: "text",
+    label: "Trace ID",
+    placeholder: "Filter by trace...",
+  },
+  {
+    field: "sessionId",
+    type: "text",
+    label: "Session ID",
+    placeholder: "Filter by session...",
+  },
+  {
+    field: "simulationId",
+    type: "text",
+    label: "Simulation ID",
+    placeholder: "Filter by simulation...",
+  },
+  {
+    field: "userId",
+    type: "text",
+    label: "User ID",
+    placeholder: "Filter by user...",
+  },
   { field: "tags", type: "multiSelect", label: "Tags" },
   { field: "models", type: "multiSelect", label: "Models" },
   { field: "providers", type: "multiSelect", label: "Providers" },
   { field: "serviceNames", type: "multiSelect", label: "Services" },
-  { field: "duration", type: "numberRange", label: "Duration (ns)", percentile: true },
+  {
+    field: "duration",
+    type: "numberRange",
+    label: "Duration (seconds)",
+    tooltip: "Active execution time, in seconds.",
+    percentile: true,
+    displayScale: 1_000_000_000,
+    displayStep: 0.001,
+  },
   {
     field: "ttft",
     type: "numberRange",
-    label: "TTFT (ns)",
-    tooltip: "Time to first token, measured in nanoseconds.",
+    label: "TTFT (milliseconds)",
+    tooltip: "Time to first token, in milliseconds.",
     percentile: true,
+    displayScale: 1_000_000,
+    displayStep: 1,
   },
   {
     field: "cost",
     type: "numberRange",
-    label: "Cost (µ$)",
-    tooltip: "Generation cost, measured in microcents.",
+    label: "Cost ($)",
+    tooltip: "Generation cost, in US dollars.",
     percentile: true,
+    displayScale: 100_000_000,
+    displayStep: 0.01,
   },
   { field: "spanCount", type: "numberRange", label: "Span Count" },
   { field: "errorCount", type: "numberRange", label: "Error Count" },

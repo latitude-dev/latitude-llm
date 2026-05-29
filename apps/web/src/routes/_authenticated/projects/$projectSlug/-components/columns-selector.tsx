@@ -16,6 +16,7 @@ export interface TableColumnOption {
   readonly id: string
   readonly label: string
   readonly required?: boolean
+  readonly defaultHidden?: boolean
 }
 
 export function ColumnsSelector({

@@ -1,3 +1,4 @@
+import type { FilterSet } from "@domain/shared"
 import { Button, DetailDrawer, Icon, Skeleton, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronLeftIcon } from "lucide-react"
@@ -23,11 +24,15 @@ export function SessionDetailDrawer({
   sessionId,
   onClose,
   searchQuery,
+  filters,
+  onFiltersChange,
 }: {
   readonly projectId: string
   readonly sessionId: string
   readonly onClose: () => void
   readonly searchQuery?: string
+  readonly filters?: FilterSet | undefined
+  readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
 }) {
   const [traceId, setTraceId] = useParamState("traceId", "")
   const [issueId, setIssueId] = useParamState("issueId", "")
@@ -168,6 +173,8 @@ export function SessionDetailDrawer({
               onOpenIssue={openIssue}
               onOpenInConversation={focusAnnotationInConversation}
               {...(searchQuery ? { searchQuery } : {})}
+              {...(filters ? { filters } : {})}
+              {...(onFiltersChange ? { onFiltersChange } : {})}
             />
           }
           traceSlot={

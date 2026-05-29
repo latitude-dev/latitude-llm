@@ -21,6 +21,7 @@ import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../
 import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { FiltersSidebar } from "./filters-sidebar.tsx"
 import { sessionTracesQueryOptions } from "./session-detail-drawer/use-session-traces.ts"
+import { SessionOutlierBadge } from "./session-outlier-badge.tsx"
 import { IndicatorsCell } from "./table/indicators-cell.tsx"
 import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 import { DEFAULT_SEARCH_SORTING, RELEVANCE_SORT_COLUMN } from "./trace-page-state.ts"
@@ -48,7 +49,7 @@ export const SESSION_COLUMN_OPTIONS = [
   { id: "tags", label: "Tags" },
   { id: "searchMatches", label: "Matching traces" },
   { id: "duration", label: "Duration" },
-  { id: "ttft", label: "Time To First Token" },
+  { id: "ttft", label: "Time To First Token", defaultHidden: true },
   { id: "cost", label: "Cost" },
   { id: "sessionId", label: "Session ID" },
   { id: "userId", label: "User ID" },
@@ -57,6 +58,11 @@ export const SESSION_COLUMN_OPTIONS = [
 ] as const
 
 export type SessionColumnId = (typeof SESSION_COLUMN_OPTIONS)[number]["id"]
+
+export function getSessionColumnOptions(isSearching: boolean): readonly (typeof SESSION_COLUMN_OPTIONS)[number][] {
+  if (isSearching) return SESSION_COLUMN_OPTIONS
+  return SESSION_COLUMN_OPTIONS.filter((column) => column.id !== "searchMatches")
+}
 
 function useExpandedSessionTraces(
   projectId: string,
@@ -112,6 +118,7 @@ interface SessionsViewProps {
   /** Closes the session detail panel (clicking the already-open session row). */
   readonly onCloseSession: () => void
   readonly visibleColumnIds: readonly SessionColumnId[]
+  readonly isSearching: boolean
   /**
    * Free-text search query forwarded to `listSessionsByProject`. Optional —
    * the project page's Sessions tab (the original consumer) renders this view
@@ -142,8 +149,13 @@ export function SessionsView({
   onOpenSession,
   onCloseSession,
   visibleColumnIds,
+  isSearching,
   searchQuery,
 }: SessionsViewProps) {
+  const effectiveVisibleColumnIds = useMemo(
+    () => (isSearching ? visibleColumnIds : visibleColumnIds.filter((id) => id !== "searchMatches")),
+    [visibleColumnIds, isSearching],
+  )
   // Inline expansion (independent of the row-body click, which opens the panel).
   // The chevron toggles `expandedIds`; `showAllInSessionIds` is the per-session
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(() =>
@@ -352,7 +364,19 @@ export function SessionsView({
         // wrap, which would apply `text-left` and override the td's `text-right`.
         render: (row) => {
           const duration = field(row, "durationNs")
-          return <span>{duration > 0 ? formatDuration(duration) : "-"}</span>
+          return (
+            <span className="flex items-center justify-end gap-1">
+              {row.kind === "session" && (
+                <SessionOutlierBadge
+                  projectId={projectId}
+                  tags={row.session.tags}
+                  value={duration}
+                  metric="durationNs"
+                />
+              )}
+              {duration > 0 ? formatDuration(duration) : "-"}
+            </span>
+          )
         },
         renderSubheader: () => (
           <TableMetricSubheader
@@ -370,7 +394,19 @@ export function SessionsView({
         width: 176,
         render: (row) => {
           const ttft = field(row, "timeToFirstTokenNs")
-          return <span>{ttft > 0 ? formatDuration(ttft) : "-"}</span>
+          return (
+            <span className="flex items-center justify-end gap-1">
+              {row.kind === "session" && (
+                <SessionOutlierBadge
+                  projectId={projectId}
+                  tags={row.session.tags}
+                  value={ttft}
+                  metric="timeToFirstTokenNs"
+                />
+              )}
+              {ttft > 0 ? formatDuration(ttft) : "-"}
+            </span>
+          )
         },
         renderSubheader: () => (
           <TableMetricSubheader
@@ -392,7 +428,19 @@ export function SessionsView({
         width: 146,
         render: (row) => {
           const costTotalMicrocents = field(row, "costTotalMicrocents")
-          return <span>{costTotalMicrocents > 0 ? formatPrice(costTotalMicrocents / 100_000_000) : "-"}</span>
+          return (
+            <span className="flex items-center justify-end gap-1">
+              {row.kind === "session" && (
+                <SessionOutlierBadge
+                  projectId={projectId}
+                  tags={row.session.tags}
+                  value={costTotalMicrocents}
+                  metric="costTotalMicrocents"
+                />
+              )}
+              {costTotalMicrocents > 0 ? formatPrice(costTotalMicrocents / 100_000_000) : "-"}
+            </span>
+          )
         },
         renderSubheader: () => (
           <TableMetricSubheader
@@ -473,11 +521,11 @@ export function SessionsView({
 
   const columns = useMemo(() => {
     const columnsById = new Map(allColumns.map((column) => [column.key, column]))
-    return visibleColumnIds.flatMap((columnId) => {
+    return effectiveVisibleColumnIds.flatMap((columnId) => {
       const column = columnsById.get(columnId)
       return column ? [column] : []
     })
-  }, [allColumns, visibleColumnIds])
+  }, [allColumns, effectiveVisibleColumnIds])
 
   const traceMap = useExpandedSessionTraces(projectId, expandedIds, sessions)
 

@@ -49,7 +49,7 @@ import { SaveSearchModal } from "../-components/save-search-modal.tsx"
 import { SavedSearchesList } from "../-components/saved-searches-list.tsx"
 import { SearchSyntaxLegendContent } from "../-components/search-syntax-legend.tsx"
 import { SessionDetailDrawer } from "../-components/session-detail-drawer.tsx"
-import { SESSION_COLUMN_OPTIONS, type SessionColumnId, SessionsView } from "../-components/sessions-view.tsx"
+import { getSessionColumnOptions, type SessionColumnId, SessionsView } from "../-components/sessions-view.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import {
@@ -112,7 +112,7 @@ function SearchPage() {
     // Distinct from the project Sessions tab (`projects.sessions.columns.v3`)
     // so the two views can keep independent column layouts.
     storageKey: "projects.search.sessions.columns.v1",
-    columns: SESSION_COLUMN_OPTIONS,
+    columns: getSessionColumnOptions(true),
   })
   const hasSearchQuery = q.length > 0
   const hasActiveFilters = Object.keys(filters).length > 0
@@ -397,6 +397,7 @@ function SearchPage() {
           onOpenSession={onOpenSession}
           onCloseSession={closeSessionPanel}
           visibleColumnIds={sessionColumnSettings.visibleColumnIds}
+          isSearching
           {...(hasSearchQuery ? { searchQuery: q } : {})}
         />
       ) : null}
@@ -408,6 +409,8 @@ function SearchPage() {
             projectId={projectId}
             sessionId={activeSessionId}
             onClose={closeSessionPanel}
+            filters={filters}
+            onFiltersChange={onFiltersChange}
             {...(hasSearchQuery ? { searchQuery: q } : {})}
           />
         </Layout.Aside>

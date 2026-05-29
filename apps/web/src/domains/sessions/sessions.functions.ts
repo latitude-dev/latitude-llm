@@ -10,16 +10,24 @@ import {
   TraceId,
 } from "@domain/shared"
 import type {
+  CohortSummary,
   Session,
   SessionDetail,
   SessionDistinctColumn,
   SessionMetrics,
   SessionSearchMatch,
   TraceDistribution,
+  TraceTimeHistogramBucket,
 } from "@domain/spans"
-import { SessionRepository, SpanRepository } from "@domain/spans"
+import {
+  getSessionCohortSummaryByTagsUseCase,
+  mergeTraceHistogramTimeFilters,
+  SessionRepository,
+  SpanRepository,
+} from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,
   SessionRepositoryLive,
@@ -190,6 +198,45 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
     },
   )
 
+const sessionHistogramInputSchema = z.object({
+  projectId: z.string(),
+  filters: filterSetSchema.optional(),
+  rangeStartIso: z.string(),
+  rangeEndIso: z.string(),
+  bucketSeconds: z
+    .number()
+    .int()
+    .positive()
+    .max(90 * 24 * 60 * 60),
+})
+
+export const getSessionTimeHistogramByProject = createServerFn({ method: "GET" })
+  .inputValidator(sessionHistogramInputSchema)
+  .handler(async ({ data }): Promise<readonly TraceTimeHistogramBucket[]> => {
+    const startMs = Date.parse(data.rangeStartIso)
+    const endMs = Date.parse(data.rangeEndIso)
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+      return []
+    }
+
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const mergedFilters = mergeTraceHistogramTimeFilters(data.filters, data.rangeStartIso, data.rangeEndIso)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SessionRepository
+        return yield* repo.histogramByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          filters: mergedFilters,
+          bucketSeconds: data.bucketSeconds,
+        })
+      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
 export const getSessionMetricsByProject = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
   .handler(async ({ data }): Promise<SessionMetrics | null> => {
@@ -205,6 +252,25 @@ export const getSessionMetricsByProject = createServerFn({ method: "GET" })
           ...(data.filters ? { filters: data.filters } : {}),
         })
       }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+export const getSessionCohortSummaryByTags = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), tags: z.array(z.string()).readonly() }))
+  .handler(async ({ data }): Promise<CohortSummary> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      getSessionCohortSummaryByTagsUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        tags: data.tags,
+      }).pipe(
+        withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
+        Effect.provide(RedisCacheStoreLive(getRedisClient())),
+        withTracing,
+      ),
     )
   })
 

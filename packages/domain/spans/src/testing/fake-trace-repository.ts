@@ -6,7 +6,7 @@ export const createFakeTraceRepository = (overrides?: Partial<TraceRepositorySha
   const repository: TraceRepositoryShape = {
     getCohortBaselineByTags: () =>
       Effect.succeed({
-        traceCount: 0,
+        count: 0,
         metrics: {
           durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
           costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },

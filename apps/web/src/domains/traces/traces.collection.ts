@@ -1,9 +1,9 @@
 import type { FilterSet, PercentileTraceFilterField } from "@domain/shared"
 import type { TraceSearchHighlightsResult } from "@domain/spans"
 import {
+  type CohortSummary,
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
-  type TraceCohortSummary,
   type TraceDistribution,
   type TraceTimeHistogramBucket,
 } from "@domain/spans"
@@ -123,6 +123,7 @@ export function useTraceMetrics({
         },
       }),
     staleTime: 30_000,
+    enabled: projectId.length > 0,
   })
 }
 
@@ -137,7 +138,7 @@ export function useTraceCohortSummaryByTags({
   // ["a","b"] and ["b","a"] share a single query. Tag comparison is case-sensitive
   // on the backend (ClickHouse String equality), so do NOT lowercase.
   const sortedTags = useMemo(() => [...new Set(tags)].sort(), [tags])
-  return useQuery<TraceCohortSummary>({
+  return useQuery<CohortSummary>({
     queryKey: ["traces-cohort-summary-by-tags", projectId, sortedTags],
     queryFn: () =>
       getTraceCohortSummaryByTags({
@@ -205,6 +206,7 @@ export function useTraceTimeHistogram({
         },
       }),
     staleTime: 30_000,
+    enabled: projectId.length > 0,
   })
 
   return {

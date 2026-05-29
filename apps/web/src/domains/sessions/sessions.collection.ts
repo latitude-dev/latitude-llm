@@ -1,14 +1,17 @@
 import type { FilterCondition, FilterSet, PercentileSessionFilterField } from "@domain/shared"
-import type { TraceDistribution } from "@domain/spans"
+import type { CohortSummary, TraceDistribution, TraceTimeHistogramBucket } from "@domain/spans"
+import { pickTraceHistogramBucketSeconds, resolveTraceHistogramRangeIso } from "@domain/spans"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
   countSessionsByProject,
+  getSessionCohortSummaryByTags,
   getSessionDetail,
   getSessionDistinctValues,
   getSessionDistribution,
   getSessionMetricsByProject,
+  getSessionTimeHistogramByProject,
   listSessionIssues,
   listSessionsByProject,
   type SessionDetailRecord,
@@ -227,6 +230,28 @@ export function useSessionIssues({
   })
 }
 
+export function useSessionCohortSummaryByTags({
+  projectId,
+  tags,
+}: {
+  readonly projectId: string
+  readonly tags: ReadonlyArray<string>
+}) {
+  const sortedTags = useMemo(() => [...new Set(tags)].sort(), [tags])
+  return useQuery<CohortSummary>({
+    queryKey: ["sessions-cohort-summary-by-tags", projectId, sortedTags],
+    queryFn: () =>
+      getSessionCohortSummaryByTags({
+        data: {
+          projectId,
+          tags: sortedTags,
+        },
+      }),
+    staleTime: 30_000,
+    enabled: projectId.length > 0,
+  })
+}
+
 export function useSessionMetrics({
   projectId,
   filters,
@@ -246,7 +271,71 @@ export function useSessionMetrics({
         },
       }),
     staleTime: 30_000,
+    enabled: projectId.length > 0,
   })
+}
+
+export function useSessionTimeHistogram({
+  projectId,
+  filters,
+  rangeStartIso: rangeStartIsoOverride,
+  rangeEndIso: rangeEndIsoOverride,
+}: {
+  readonly projectId: string
+  readonly filters: FilterSet
+  readonly rangeStartIso?: string
+  readonly rangeEndIso?: string
+}) {
+  const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
+
+  const { rangeStartIso, rangeEndIso, bucketSeconds, queryKey } = useMemo(() => {
+    const nowMs = Date.now()
+    const { rangeStartIso: rs, rangeEndIso: re } = resolveTraceHistogramRangeIso(effectiveFilters, nowMs)
+    const effectiveRangeStartIso = rangeStartIsoOverride ?? rs
+    const effectiveRangeEndIso = rangeEndIsoOverride ?? re
+    const startMs = Date.parse(effectiveRangeStartIso)
+    const endMs = Date.parse(effectiveRangeEndIso)
+    const bs =
+      Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+        ? pickTraceHistogramBucketSeconds(startMs, endMs)
+        : 60
+    return {
+      rangeStartIso: effectiveRangeStartIso,
+      rangeEndIso: effectiveRangeEndIso,
+      bucketSeconds: bs,
+      queryKey: [
+        "sessions-histogram",
+        projectId,
+        effectiveFilters,
+        effectiveRangeStartIso,
+        effectiveRangeEndIso,
+        bs,
+      ] as const,
+    }
+  }, [projectId, effectiveFilters, rangeStartIsoOverride, rangeEndIsoOverride])
+
+  const query = useQuery({
+    queryKey,
+    queryFn: (): Promise<readonly TraceTimeHistogramBucket[]> =>
+      getSessionTimeHistogramByProject({
+        data: {
+          projectId,
+          rangeStartIso,
+          rangeEndIso,
+          bucketSeconds,
+          ...(Object.keys(effectiveFilters).length > 0 ? { filters: effectiveFilters } : {}),
+        },
+      }),
+    staleTime: 30_000,
+    enabled: projectId.length > 0,
+  })
+
+  return {
+    ...query,
+    rangeStartIso,
+    rangeEndIso,
+    bucketSeconds,
+  }
 }
 
 export function useSessionDistribution({

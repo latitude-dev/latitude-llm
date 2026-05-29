@@ -2,9 +2,9 @@ import { CacheStore, type OrganizationId, type ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { buildMetricBaselines, type CohortSummary } from "../cohort-baselines.ts"
 import { COHORT_SUMMARY_CACHE_TTL_SECONDS } from "../constants.ts"
-import { TraceRepository } from "../ports/trace-repository.ts"
+import { SessionRepository } from "../ports/session-repository.ts"
 
-export interface GetTraceCohortSummaryByTagsInput {
+export interface GetSessionCohortSummaryByTagsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly tags: ReadonlyArray<string>
@@ -12,7 +12,7 @@ export interface GetTraceCohortSummaryByTagsInput {
 
 const buildCacheKey = (organizationId: string, projectId: string, sortedTags: readonly string[]): string =>
   // JSON-encode the tags array so delimiters inside tag values can't collide with the key structure.
-  `org:${organizationId}:projects:${projectId}:trace-cohort-baselines:${JSON.stringify(sortedTags)}`
+  `org:${organizationId}:projects:${projectId}:session-cohort-baselines:${JSON.stringify(sortedTags)}`
 
 const parseCachedSummary = (json: string): CohortSummary | null => {
   try {
@@ -34,8 +34,8 @@ const parseCachedSummary = (json: string): CohortSummary | null => {
   }
 }
 
-export const getTraceCohortSummaryByTagsUseCase = Effect.fn("spans.getTraceCohortSummaryByTags")(function* (
-  input: GetTraceCohortSummaryByTagsInput,
+export const getSessionCohortSummaryByTagsUseCase = Effect.fn("spans.getSessionCohortSummaryByTags")(function* (
+  input: GetSessionCohortSummaryByTagsInput,
 ) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
   yield* Effect.annotateCurrentSpan("tagsLength", input.tags.length)
@@ -59,8 +59,8 @@ export const getTraceCohortSummaryByTagsUseCase = Effect.fn("spans.getTraceCohor
   }
   yield* Effect.annotateCurrentSpan("cache.hit", false)
 
-  const traceRepository = yield* TraceRepository
-  const baselineData = yield* traceRepository.getCohortBaselineByTags({
+  const sessionRepository = yield* SessionRepository
+  const baselineData = yield* sessionRepository.getCohortBaselineByTags({
     organizationId: input.organizationId,
     projectId: input.projectId,
     tags: sortedTags,

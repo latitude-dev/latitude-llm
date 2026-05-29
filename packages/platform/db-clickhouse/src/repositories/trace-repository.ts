@@ -21,12 +21,12 @@ import {
   TraceId as toTraceId,
 } from "@domain/shared"
 import type {
+  CohortBaselineData,
+  MetricPercentiles,
   Trace,
-  TraceCohortBaselineData,
   TraceDetail,
   TraceDistribution,
   TraceListPage,
-  TraceMetricPercentiles,
   TraceMetrics,
   TraceTimeHistogramBucket,
 } from "@domain/spans"
@@ -540,7 +540,7 @@ export const TraceRepositoryLive = Layer.effect(
           .query(async (client) => {
             const result = await client.query({
               query: `SELECT
-                      count() AS trace_count,
+                      count() AS cohort_count,
                       countIf(duration_ns > 0) AS duration_ns_samples,
                       quantileTDigestIf(0.5)(duration_ns, duration_ns > 0) AS duration_ns_p50,
                       quantileTDigestIf(0.9)(duration_ns, duration_ns > 0) AS duration_ns_p90,
@@ -581,7 +581,7 @@ export const TraceRepositoryLive = Layer.effect(
               format: "JSONEachRow",
             })
             return result.json<{
-              trace_count: string
+              cohort_count: string
               duration_ns_samples: string
               duration_ns_p50: string
               duration_ns_p90: string
@@ -605,11 +605,11 @@ export const TraceRepositoryLive = Layer.effect(
             }>()
           })
           .pipe(
-            Effect.map((rows): TraceCohortBaselineData => {
+            Effect.map((rows): CohortBaselineData => {
               const row = rows[0]
-              if (!row || Number(row.trace_count) === 0) {
+              if (!row || Number(row.cohort_count) === 0) {
                 return {
-                  traceCount: 0,
+                  count: 0,
                   metrics: {
                     durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
                     costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
@@ -619,14 +619,14 @@ export const TraceRepositoryLive = Layer.effect(
                 }
               }
 
-              const traceCount = Number(row.trace_count)
+              const count = Number(row.cohort_count)
               const toMetricPercentiles = (
                 samples: string,
                 p50: string,
                 p90: string,
                 p95: string,
                 p99: string,
-              ): TraceMetricPercentiles => {
+              ): MetricPercentiles => {
                 const sampleCount = Number(samples)
                 return {
                   sampleCount,
@@ -638,7 +638,7 @@ export const TraceRepositoryLive = Layer.effect(
               }
 
               return {
-                traceCount,
+                count,
                 metrics: {
                   durationNs: toMetricPercentiles(
                     row.duration_ns_samples,

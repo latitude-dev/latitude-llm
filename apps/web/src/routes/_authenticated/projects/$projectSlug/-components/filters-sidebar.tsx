@@ -46,6 +46,19 @@ function getRangeValues(filters: FilterSet, field: string): { min: number | unde
   }
 }
 
+function toDisplayUnit(value: number | undefined, displayScale: number | undefined): number | undefined {
+  if (value === undefined) return undefined
+  if (!displayScale) return value
+  return value / displayScale
+}
+
+function toWireUnit(value: number | undefined, displayScale: number | undefined): number | undefined {
+  if (value === undefined) return undefined
+  if (!displayScale) return value
+  // Round to avoid float drift on conversions like 123.45 × 100_000_000.
+  return Math.round(value * displayScale)
+}
+
 function getPercentileValue(filters: FilterSet, field: string): number | undefined {
   const cond = filters[field]?.find((c) => c.op === "gtePercentile")
   return typeof cond?.value === "number" ? cond.value : undefined
@@ -180,6 +193,7 @@ function NumberRangeFilter({
   onMaxChange,
   minPlaceholder = "Min",
   maxPlaceholder = "Max",
+  step,
 }: {
   readonly minValue: number | undefined
   readonly maxValue: number | undefined
@@ -187,6 +201,8 @@ function NumberRangeFilter({
   readonly onMaxChange: (v: number | undefined) => void
   readonly minPlaceholder?: string
   readonly maxPlaceholder?: string
+  /** HTML `step` for both inputs; defaults to integer step when omitted. */
+  readonly step?: number
 }) {
   const [localMin, setLocalMin] = useState(minValue?.toString() ?? "")
   const [localMax, setLocalMax] = useState(maxValue?.toString() ?? "")
@@ -236,6 +252,7 @@ function NumberRangeFilter({
       <input
         type="number"
         min={0}
+        step={step ?? 1}
         placeholder={minPlaceholder}
         value={localMin}
         onChange={(e) => {
@@ -249,6 +266,7 @@ function NumberRangeFilter({
       <input
         type="number"
         min={0}
+        step={step ?? 1}
         placeholder={maxPlaceholder}
         value={localMax}
         onChange={(e) => {
@@ -289,6 +307,7 @@ interface NumberFilterSectionProps {
   readonly percentileValue: number | undefined
   readonly onRangeChange: (min: number | undefined, max: number | undefined) => void
   readonly onPercentileChange: (percentile: number | undefined) => void
+  readonly step?: number
 }
 
 function NumberFilterSection({
@@ -303,6 +322,7 @@ function NumberFilterSection({
   percentileValue,
   onRangeChange,
   onPercentileChange,
+  step,
 }: NumberFilterSectionProps) {
   const hasRange = minValue !== undefined || maxValue !== undefined
   const hasPercentile = percentileValue !== undefined
@@ -371,6 +391,7 @@ function NumberFilterSection({
           maxValue={maxValue}
           onMinChange={(min) => onRangeChange(min, maxValue)}
           onMaxChange={(max) => onRangeChange(minValue, max)}
+          {...(step !== undefined ? { step } : {})}
         />
       )}
     </CollapsibleSection>
@@ -515,7 +536,7 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
           )
         })}
 
-        {NUMBER_RANGE_FIELDS.map(({ label, field, tooltip, percentile }) => {
+        {NUMBER_RANGE_FIELDS.map(({ label, field, tooltip, percentile, displayScale, displayStep }) => {
           const range = getRangeValues(filters, field)
           const percentileValue = getPercentileValue(filters, field)
           return (
@@ -527,11 +548,14 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
               percentileField={percentile?.field}
               projectId={projectId}
               mode={mode}
-              minValue={range.min}
-              maxValue={range.max}
+              minValue={toDisplayUnit(range.min, displayScale)}
+              maxValue={toDisplayUnit(range.max, displayScale)}
               percentileValue={percentileValue}
-              onRangeChange={(min, max) => setRangeFilter(field, min, max)}
+              onRangeChange={(min, max) =>
+                setRangeFilter(field, toWireUnit(min, displayScale), toWireUnit(max, displayScale))
+              }
               onPercentileChange={(p) => setPercentileFilter(field, p)}
+              {...(displayStep !== undefined ? { step: displayStep } : {})}
             />
           )
         })}

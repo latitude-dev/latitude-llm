@@ -19,7 +19,16 @@ import {
   ProjectId as toProjectId,
   toRepositoryError,
 } from "@domain/shared"
-import type { Session, SessionDetail, SessionListPage, SessionMetrics, TraceDistribution } from "@domain/spans"
+import type {
+  CohortBaselineData,
+  MetricPercentiles,
+  Session,
+  SessionDetail,
+  SessionListPage,
+  SessionMetrics,
+  TraceDistribution,
+  TraceTimeHistogramBucket,
+} from "@domain/spans"
 import {
   emptySessionMetrics,
   emptyTraceDistribution,
@@ -131,6 +140,7 @@ type SessionDetailRow = SessionListRow & {
 
 type SessionMetricsRow = {
   row_count: string
+  trace_count_sum: string
   duration_min: string
   duration_max: string
   duration_avg: string
@@ -146,6 +156,11 @@ type SessionMetricsRow = {
   span_avg: string
   span_median: string
   span_sum: string
+  tokens_min: string
+  tokens_max: string
+  tokens_avg: string
+  tokens_median: string
+  tokens_sum: string
   ttft_min: string
   ttft_max: string
   ttft_avg: string
@@ -175,6 +190,36 @@ const toTtftRollup = (row: SessionMetricsRow) => ({
   sum: finiteOrZero(row.ttft_sum),
 })
 
+const HISTOGRAM_BUCKET_SELECT = `count() AS session_count,
+  sum(trace_count) AS trace_count,
+  sum(cost_total_microcents) AS cost_sum,
+  quantileTDigest(0.5)(duration_ns) AS duration_median,
+  sum(tokens_total) AS tokens_sum,
+  sum(span_count) AS span_sum,
+  quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median`
+
+type SessionHistogramBucketRow = {
+  bucket_start: string
+  session_count: string
+  trace_count: string
+  cost_sum: string
+  duration_median: string
+  tokens_sum: string
+  span_sum: string
+  ttft_median: string
+}
+
+const toSessionHistogramBucket = (row: SessionHistogramBucketRow): TraceTimeHistogramBucket => ({
+  bucketStart: parseCHDate(row.bucket_start).toISOString(),
+  sessionCount: Number(row.session_count),
+  traceCount: Number(row.trace_count),
+  costTotalMicrocentsSum: Number(row.cost_sum),
+  durationNsMedian: Number(row.duration_median),
+  tokensTotalSum: Number(row.tokens_sum),
+  spanCountSum: Number(row.span_sum),
+  timeToFirstTokenNsMedian: finiteOrZero(row.ttft_median),
+})
+
 const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics => {
   if (!row || Number(row.row_count) === 0) return emptySessionMetrics()
   return {
@@ -193,7 +238,15 @@ const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics =>
       row.cost_sum,
     ),
     spanCount: toSessionNumericRollup(row.span_min, row.span_max, row.span_avg, row.span_median, row.span_sum),
+    tokensTotal: toSessionNumericRollup(
+      row.tokens_min,
+      row.tokens_max,
+      row.tokens_avg,
+      row.tokens_median,
+      row.tokens_sum,
+    ),
     timeToFirstTokenNs: toTtftRollup(row),
+    traceCount: Number(row.trace_count_sum),
   }
 }
 
@@ -550,7 +603,163 @@ export const SessionRepositoryLive = Layer.effect(
           )
       })
 
+    const getCohortBaselineByTags: SessionRepositoryShape["getCohortBaselineByTags"] = ({
+      organizationId,
+      projectId,
+      tags,
+      excludeSessionId,
+    }) =>
+      Effect.gen(function* () {
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const excludeClause = excludeSessionId ? `AND session_id != {excludeSessionId:String}` : ""
+        // Canonicalize as a sorted set for stable param shape. ClickHouse stores `tags` as
+        // `groupUniqArrayArray(tags)` (already deduped), so pairing `length(tags) = N` with
+        // `hasAll(tags, X)` gives order-independent set equality only when the input is a set
+        // too — passing duplicates would send `tagsLen=2` and match no sessions.
+        // Empty `tags` degenerates to `length(tags) = 0` (hasAll is trivially true), isolating untagged sessions.
+        const sortedTags = [...new Set(tags)].sort()
+
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                      count() AS cohort_count,
+                      countIf(duration_ns > 0) AS duration_ns_samples,
+                      quantileTDigestIf(0.5)(duration_ns, duration_ns > 0) AS duration_ns_p50,
+                      quantileTDigestIf(0.9)(duration_ns, duration_ns > 0) AS duration_ns_p90,
+                      quantileTDigestIf(0.95)(duration_ns, duration_ns > 0) AS duration_ns_p95,
+                      quantileTDigestIf(0.99)(duration_ns, duration_ns > 0) AS duration_ns_p99,
+                      countIf(cost_total_microcents > 0) AS cost_total_microcents_samples,
+                      quantileTDigestIf(0.5)(cost_total_microcents, cost_total_microcents > 0) AS cost_total_microcents_p50,
+                      quantileTDigestIf(0.9)(cost_total_microcents, cost_total_microcents > 0) AS cost_total_microcents_p90,
+                      quantileTDigestIf(0.95)(cost_total_microcents, cost_total_microcents > 0) AS cost_total_microcents_p95,
+                      quantileTDigestIf(0.99)(cost_total_microcents, cost_total_microcents > 0) AS cost_total_microcents_p99,
+                      countIf(tokens_total > 0) AS tokens_total_samples,
+                      quantileTDigestIf(0.5)(tokens_total, tokens_total > 0) AS tokens_total_p50,
+                      quantileTDigestIf(0.9)(tokens_total, tokens_total > 0) AS tokens_total_p90,
+                      quantileTDigestIf(0.95)(tokens_total, tokens_total > 0) AS tokens_total_p95,
+                      quantileTDigestIf(0.99)(tokens_total, tokens_total > 0) AS tokens_total_p99,
+                      countIf(time_to_first_token_ns > 0) AS time_to_first_token_ns_samples,
+                      quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p50,
+                      quantileTDigestIf(0.9)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p90,
+                      quantileTDigestIf(0.95)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p95,
+                      quantileTDigestIf(0.99)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p99
+                    FROM (
+                      SELECT ${LIST_SELECT}
+                      FROM sessions
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        ${excludeClause}
+                      GROUP BY organization_id, project_id, session_id
+                      HAVING length(tags) = {tagsLen:UInt32}
+                        AND hasAll(tags, {tags:Array(String)})
+                    )`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                tags: sortedTags,
+                tagsLen: sortedTags.length,
+                ...(excludeSessionId ? { excludeSessionId: excludeSessionId as string } : {}),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<{
+              cohort_count: string
+              duration_ns_samples: string
+              duration_ns_p50: string
+              duration_ns_p90: string
+              duration_ns_p95: string
+              duration_ns_p99: string
+              cost_total_microcents_samples: string
+              cost_total_microcents_p50: string
+              cost_total_microcents_p90: string
+              cost_total_microcents_p95: string
+              cost_total_microcents_p99: string
+              tokens_total_samples: string
+              tokens_total_p50: string
+              tokens_total_p90: string
+              tokens_total_p95: string
+              tokens_total_p99: string
+              time_to_first_token_ns_samples: string
+              time_to_first_token_ns_p50: string
+              time_to_first_token_ns_p90: string
+              time_to_first_token_ns_p95: string
+              time_to_first_token_ns_p99: string
+            }>()
+          })
+          .pipe(
+            Effect.map((rows): CohortBaselineData => {
+              const row = rows[0]
+              if (!row || Number(row.cohort_count) === 0) {
+                return {
+                  count: 0,
+                  metrics: {
+                    durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                    costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                    tokensTotal: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                    timeToFirstTokenNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                  },
+                }
+              }
+
+              const count = Number(row.cohort_count)
+              const toMetricPercentiles = (
+                samples: string,
+                p50: string,
+                p90: string,
+                p95: string,
+                p99: string,
+              ): MetricPercentiles => {
+                const sampleCount = Number(samples)
+                return {
+                  sampleCount,
+                  p50: Number(p50),
+                  p90: Number(p90),
+                  p95: sampleCount >= 100 ? Number(p95) : null,
+                  p99: sampleCount >= 1000 ? Number(p99) : null,
+                }
+              }
+
+              return {
+                count,
+                metrics: {
+                  durationNs: toMetricPercentiles(
+                    row.duration_ns_samples,
+                    row.duration_ns_p50,
+                    row.duration_ns_p90,
+                    row.duration_ns_p95,
+                    row.duration_ns_p99,
+                  ),
+                  costTotalMicrocents: toMetricPercentiles(
+                    row.cost_total_microcents_samples,
+                    row.cost_total_microcents_p50,
+                    row.cost_total_microcents_p90,
+                    row.cost_total_microcents_p95,
+                    row.cost_total_microcents_p99,
+                  ),
+                  tokensTotal: toMetricPercentiles(
+                    row.tokens_total_samples,
+                    row.tokens_total_p50,
+                    row.tokens_total_p90,
+                    row.tokens_total_p95,
+                    row.tokens_total_p99,
+                  ),
+                  timeToFirstTokenNs: toMetricPercentiles(
+                    row.time_to_first_token_ns_samples,
+                    row.time_to_first_token_ns_p50,
+                    row.time_to_first_token_ns_p90,
+                    row.time_to_first_token_ns_p95,
+                    row.time_to_first_token_ns_p99,
+                  ),
+                },
+              }
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "getCohortBaselineByTags")),
+          )
+      })
+
     return {
+      getCohortBaselineByTags,
       listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
@@ -610,6 +819,7 @@ export const SessionRepositoryLive = Layer.effect(
               const result = await client.query({
                 query: `SELECT
                         count() AS row_count,
+                        sum(trace_count) AS trace_count_sum,
                         min(duration_ns) AS duration_min,
                         max(duration_ns) AS duration_max,
                         avg(duration_ns) AS duration_avg,
@@ -625,6 +835,11 @@ export const SessionRepositoryLive = Layer.effect(
                         avg(span_count) AS span_avg,
                         quantileTDigest(0.5)(span_count) AS span_median,
                         sum(span_count) AS span_sum,
+                        min(tokens_total) AS tokens_min,
+                        max(tokens_total) AS tokens_max,
+                        avg(tokens_total) AS tokens_avg,
+                        quantileTDigest(0.5)(tokens_total) AS tokens_median,
+                        sum(tokens_total) AS tokens_sum,
                         minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
                         maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
                         avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,
@@ -651,6 +866,51 @@ export const SessionRepositoryLive = Layer.effect(
             .pipe(
               Effect.map((rows) => toSessionMetrics(rows[0])),
               Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
+            )
+        }),
+
+      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+          const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(resolvedFilters)
+          const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+          const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+          const bs = Math.floor(bucketSeconds)
+
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                        toDateTime(
+                          intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
+                          'UTC'
+                        ) AS bucket_start,
+                        ${HISTOGRAM_BUCKET_SELECT}
+                      FROM (
+                        SELECT session_id, ${LIST_SELECT}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          ${extraWhere}
+                        GROUP BY organization_id, project_id, session_id
+                        ${havingClause}
+                      )
+                      GROUP BY bucket_start
+                      ORDER BY bucket_start ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  bucketSeconds: bs,
+                  ...filterParams,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<SessionHistogramBucketRow>()
+            })
+            .pipe(
+              Effect.map((rows): readonly TraceTimeHistogramBucket[] => rows.map(toSessionHistogramBucket)),
+              Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
             )
         }),
 
