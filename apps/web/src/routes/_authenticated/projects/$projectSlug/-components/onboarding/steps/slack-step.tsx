@@ -110,6 +110,6 @@ function SlackConnectedOnboardingCard({ integration }: { readonly integration: S
   )
 }
 
-export function Right() {
-  return <MockSlackQueue />
+export function Right({ isActive }: { readonly isActive: boolean }) {
+  return <MockSlackQueue isActive={isActive} />
 }

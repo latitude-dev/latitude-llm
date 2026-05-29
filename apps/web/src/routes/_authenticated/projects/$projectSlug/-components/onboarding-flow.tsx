@@ -314,7 +314,7 @@ export function OnboardingFlow({
               ) : slide === "flaggers" ? (
                 <FlaggersStep.Right enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
               ) : slide === "slack" ? (
-                <SlackStep.Right />
+                <SlackStep.Right isActive={step === "slack"} />
               ) : (
                 <TelemetryStep.Right traceReceived={traceReceived} />
               )}
