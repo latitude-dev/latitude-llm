@@ -1,5 +1,5 @@
 import { NOTIFICATION_GROUPS } from "@domain/shared"
-import { Button, Icon, Modal, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
+import { Alert, Button, Icon, Modal, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
@@ -122,6 +122,25 @@ function ConnectedSlackCard({
 }) {
   return (
     <div className="rounded-lg border border-border">
+      {/* Expired-token recovery banner. Should never appear while the
+          on-use refresh + hourly sweep are healthy; when it does, the
+          rotation chain is broken and the workspace must be reconnected. */}
+      {integration.tokenExpired && (
+        <div className="border-b border-border p-4">
+          <Alert
+            variant="destructive"
+            showIcon
+            title="Slack connection expired"
+            description="We couldn't refresh the Slack token. Reconnect to restore notifications."
+            cta={
+              <Button asChild variant="destructive">
+                <a href="/integrations/slack/install">Reconnect</a>
+              </Button>
+            }
+          />
+        </div>
+      )}
+
       {/* Identity row */}
       <div className="flex flex-row items-center justify-between gap-4 p-4">
         <div className="flex min-w-0 flex-row items-center gap-3">

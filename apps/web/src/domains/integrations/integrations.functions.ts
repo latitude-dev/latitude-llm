@@ -66,6 +66,14 @@ export interface SlackIntegrationRecord {
   readonly installedByUserId: string
   /** Per-notification-group channel routing (Phase 3). */
   readonly routes: SlackRoutes
+  /**
+   * Derived: the rotated token's expiry is in the past. Under normal
+   * operation the on-use refresh + hourly sweep keep this `false`; a
+   * `true` here means the refresh chain broke (e.g. Slack revoked the
+   * refresh token) and the workspace must be reconnected. `false` when
+   * rotation is disabled (no expiry). Never exposes the token itself.
+   */
+  readonly tokenExpired: boolean
 }
 
 const toRecord = (row: SlackIntegration): SlackIntegrationRecord => ({
@@ -81,6 +89,7 @@ const toRecord = (row: SlackIntegration): SlackIntegrationRecord => ({
   installedAt: row.installedAt.toISOString(),
   installedByUserId: row.installedByUserId,
   routes: row.routes ?? {},
+  tokenExpired: row.tokenExpiresAt !== null && row.tokenExpiresAt.getTime() < Date.now(),
 })
 
 // Dynamic import keeps `@platform/slack` (and its `@slack/web-api` transitive dep) off the client bundle.
