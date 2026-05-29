@@ -2,42 +2,96 @@ import { cn, Text } from "@repo/ui"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { usePrefersReducedMotion } from "../motion.ts"
 
-type VariantId = "incident" | "report" | "resolved"
+type IncidentKind = "new" | "escalating" | "regressed" | "resolved"
+type Severity = "low" | "medium" | "high"
 
-const NOTIFICATION_VARIANTS: ReadonlyArray<{
-  readonly id: VariantId
-  readonly emoji: string
-  readonly title: string
-  readonly body: string
-  readonly age: string
-}> = [
+type IncidentNotification = {
+  readonly id: string
+  readonly kind: IncidentKind
+  readonly severity: Severity
+  readonly issueName: string
+  readonly detail: string
+}
+
+const KIND_LABEL: Record<IncidentKind, string> = {
+  new: "New issue",
+  escalating: "Issue escalating",
+  regressed: "Issue regressed",
+  resolved: "Resolved",
+}
+
+const KIND_TEXT_CLASS: Record<IncidentKind, string> = {
+  new: "text-blue-600 dark:text-blue-400",
+  escalating: "text-amber-600 dark:text-amber-400",
+  regressed: "text-rose-600 dark:text-rose-400",
+  resolved: "text-green-600 dark:text-green-400",
+}
+
+// Severity bar colors mirror COLORS in
+// packages/domain/integrations/src/templates/notifications/blocks.ts — resolved is always green.
+const SEVERITY_BAR: Record<Severity, string> = {
+  low: "#F2C94C",
+  medium: "#F2994A",
+  high: "#E8534B",
+}
+const RESOLVED_BAR = "#27AE60"
+
+function barColor(notification: IncidentNotification): string {
+  return notification.kind === "resolved" ? RESOLVED_BAR : SEVERITY_BAR[notification.severity]
+}
+
+// Reuses the flaggers-feed scenarios so the alerts read as "those issues → these notifications".
+const NOTIFICATION_VARIANTS: ReadonlyArray<IncidentNotification> = [
   {
-    id: "incident",
-    emoji: "🚨",
-    title: "Incident: PII leak detected",
-    body: "Trace 8f3a · production-agent",
-    age: "just now",
+    id: "checkout-regressed",
+    kind: "regressed",
+    severity: "high",
+    issueName: "Checkout total fails on string amounts",
+    detail: "Reopened after deploy 7c2b",
   },
   {
-    id: "report",
-    emoji: "📊",
-    title: "Weekly summary ready",
-    body: "1,243 traces · 8 issues flagged this week",
-    age: "1 min ago",
+    id: "pdf-new",
+    kind: "new",
+    severity: "medium",
+    issueName: "Blank reply on long PDF uploads",
+    detail: "12 occurrences · production",
   },
   {
-    id: "resolved",
-    emoji: "✅",
-    title: "Issue resolved",
-    body: `#142 "Empty response" · fixed in deploy 7c2b`,
-    age: "3 min ago",
+    id: "password-escalating",
+    kind: "escalating",
+    severity: "high",
+    issueName: "User abandons password reset after the agent loops",
+    detail: "Climbed to 18/hr · 3× baseline",
+  },
+  {
+    id: "injection-new",
+    kind: "new",
+    severity: "low",
+    issueName: "Prompt injection via 'repeat the above'",
+    detail: "4 occurrences this hour",
+  },
+  {
+    id: "retry-regressed",
+    kind: "regressed",
+    severity: "medium",
+    issueName: "Agent retries a failing tool with identical args",
+    detail: "Reopened · was resolved 2d ago",
+  },
+  {
+    id: "abuse-resolved",
+    kind: "resolved",
+    severity: "medium",
+    issueName: "Abusive language mirrored back at users",
+    detail: "Recovered · elevated for 42 min",
   },
 ]
 
 const NOTIFICATION_VARIANTS_BY_ID = Object.fromEntries(NOTIFICATION_VARIANTS.map((v) => [v.id, v])) as Record<
-  VariantId,
-  (typeof NOTIFICATION_VARIANTS)[number]
+  string,
+  IncidentNotification
 >
+
+const AGES_BY_INDEX = ["just now", "2m ago", "7m ago", "15m ago", "32m ago", "1h ago"]
 
 const TICK_MS = 2500
 const ENTRY_MS = 300
@@ -57,14 +111,14 @@ function depthFor(index: number): { opacity: number; scale: number } {
 
 type RenderedCard = {
   readonly id: number
-  readonly variant: VariantId
+  readonly variant: string
   readonly seeded: boolean
 }
 
 // Seed a full depth stack so the pane is populated the instant the user arrives, newest on top.
 const SEED_CARDS: ReadonlyArray<RenderedCard> = Array.from({ length: STACK_SIZE }, (_, i) => {
   const variant = NOTIFICATION_VARIANTS[i % NOTIFICATION_VARIANTS.length]
-  return { id: -1 - i, variant: (variant?.id ?? "incident") as VariantId, seeded: true }
+  return { id: -1 - i, variant: variant?.id ?? "pdf-new", seeded: true }
 })
 
 function QueueCard({
@@ -143,28 +197,36 @@ export function MockSlackQueue({ isActive }: { readonly isActive: boolean }) {
       <div className="flex flex-col gap-1">
         <Text.H5M>Notifications you'd see in Slack</Text.H5M>
         <Text.H6 color="foregroundMuted">
-          A sample of incidents, reports, and resolutions Latitude can route to your workspace
+          New, escalating, and regressed issues, routed to your workspace the moment they're flagged
         </Text.H6>
       </div>
 
       <div className="flex w-full flex-col">
         {cards.map((card, index) => {
           const v = NOTIFICATION_VARIANTS_BY_ID[card.variant]
+          if (!v) return null
+          const age = AGES_BY_INDEX[Math.min(index, AGES_BY_INDEX.length - 1)]
           return (
             <QueueCard key={card.id} card={card} index={index}>
-              <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-lg">
-                  <span aria-hidden>{v.emoji}</span>
-                </div>
+              <div className="flex items-stretch gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+                <div className="w-1 shrink-0 self-stretch rounded-full" style={{ backgroundColor: barColor(v) }} />
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <div className="flex flex-row items-baseline justify-between gap-2">
-                    <Text.H5M>{v.title}</Text.H5M>
+                    <div className="flex min-w-0 flex-row items-baseline gap-1.5">
+                      <span className={cn("shrink-0 text-xs font-medium", KIND_TEXT_CLASS[v.kind])}>
+                        {KIND_LABEL[v.kind]}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground">·</span>
+                      <Text.H5M ellipsis noWrap className="min-w-0">
+                        {v.issueName}
+                      </Text.H5M>
+                    </div>
                     <Text.H6 color="foregroundMuted" className="shrink-0">
-                      {v.age}
+                      {age}
                     </Text.H6>
                   </div>
                   <Text.H6 color="foregroundMuted" className="truncate">
-                    {v.body}
+                    {v.detail}
                   </Text.H6>
                 </div>
               </div>
