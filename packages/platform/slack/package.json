@@ -13,13 +13,13 @@
     "slack:install": "tsx ./scripts/slack-install.ts"
   },
   "dependencies": {
+    "@domain/integrations": "workspace:*",
     "@platform/env": "workspace:*",
     "@slack/oauth": "3.0.5",
     "@slack/web-api": "7.10.0",
     "effect": "catalog:"
   },
   "devDependencies": {
-    "@domain/integrations": "workspace:*",
     "@domain/shared": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@repo/utils": "workspace:*",

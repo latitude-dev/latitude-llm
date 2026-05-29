@@ -2209,6 +2209,9 @@ importers:
 
   packages/platform/slack:
     dependencies:
+      '@domain/integrations':
+        specifier: workspace:*
+        version: link:../../domain/integrations
       '@platform/env':
         specifier: workspace:*
         version: link:../env
@@ -2222,9 +2225,6 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.57
     devDependencies:
-      '@domain/integrations':
-        specifier: workspace:*
-        version: link:../../domain/integrations
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared

@@ -19,3 +19,4 @@ export {
 } from "./oauth.ts"
 export { SLACK_BOT_SCOPES, type SlackBotScope } from "./scopes.ts"
 export { verifySlackSignature } from "./signature.ts"
+export { SlackTokenRefresherLive } from "./token-refresher.ts"
