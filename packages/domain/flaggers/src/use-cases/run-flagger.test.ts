@@ -1,6 +1,9 @@
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import {
+  CacheStore,
   ChSqlClient,
   ExternalUserId,
   FlaggerId,
@@ -16,6 +19,8 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
+import { createAiLayer } from "@platform/ai"
+import { AIGenerateLive } from "@platform/ai-vercel"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
@@ -23,7 +28,7 @@ import { FLAGGER_MAX_TOKENS, FLAGGER_MODEL } from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
-import { type RunFlaggerInput, runFlaggerUseCase } from "./run-flagger.ts"
+import { classifyTraceForFlaggerUseCase, type RunFlaggerInput, runFlaggerUseCase } from "./run-flagger.ts"
 
 const INPUT: RunFlaggerInput = {
   organizationId: "a".repeat(24),
@@ -31,6 +36,16 @@ const INPUT: RunFlaggerInput = {
   flaggerSlug: "jailbreaking",
   traceId: "c".repeat(32),
 }
+
+const DEFAULT_SYSTEM_INSTRUCTIONS = [
+  { type: "text", content: "You are a helpful assistant. Answer the user's request directly." },
+] satisfies TraceDetail["systemInstructions"]
+
+const defaultCacheLayer = Layer.succeed(CacheStore, {
+  get: () => Effect.succeed(null),
+  set: () => Effect.void,
+  delete: () => Effect.void,
+})
 
 const { repository: defaultFlaggerRepo } = createFakeFlaggerRepository([], {
   findByProjectAndSlug: () =>
@@ -76,7 +91,11 @@ const createClassifyAndApproveAI = (
     },
   })
 
-function makeTraceDetail(allMessages: TraceDetail["allMessages"], tags: readonly string[] = []): TraceDetail {
+function makeTraceDetail(
+  allMessages: TraceDetail["allMessages"],
+  tags: readonly string[] = [],
+  systemInstructions: TraceDetail["systemInstructions"] = DEFAULT_SYSTEM_INSTRUCTIONS,
+): TraceDetail {
   return {
     organizationId: OrganizationId(INPUT.organizationId),
     projectId: ProjectId(INPUT.projectId),
@@ -106,10 +125,96 @@ function makeTraceDetail(allMessages: TraceDetail["allMessages"], tags: readonly
     serviceNames: [],
     rootSpanId: SpanId("r".repeat(16)),
     rootSpanName: "root",
-    systemInstructions: [],
+    systemInstructions,
     inputMessages: [],
     outputMessages: allMessages,
     allMessages,
+  }
+}
+
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = []
+  let row: string[] = []
+  let field = ""
+  let inQuotes = false
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    const next = text[i + 1]
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        field += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+      continue
+    }
+
+    if (char === "," && !inQuotes) {
+      row.push(field)
+      field = ""
+      continue
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") i++
+      row.push(field)
+      rows.push(row)
+      row = []
+      field = ""
+      continue
+    }
+
+    field += char
+  }
+
+  if (field !== "" || row.length > 0) {
+    row.push(field)
+    rows.push(row)
+  }
+
+  return rows
+}
+
+function readFlaggerRegressionRows(): Array<{ readonly metadata: Record<string, unknown> }> {
+  const csv = readFileSync(
+    new URL("../../../../../flagger-annotation-classification-problem.csv", import.meta.url),
+    "utf8",
+  )
+  const [header, ...rows] = parseCsv(csv)
+  if (!header) return []
+
+  const metadataIndex = header.indexOf("metadata")
+  return rows.flatMap((row) => {
+    const metadata = row[metadataIndex]
+    if (!metadata) return []
+    const parsed = JSON.parse(metadata) as unknown
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      ? [{ metadata: parsed as Record<string, unknown> }]
+      : []
+  })
+}
+
+function createMemoryCacheLayer(initialEntries: ReadonlyMap<string, string> = new Map()) {
+  const values = new Map(initialEntries)
+  const writes: Array<{ readonly key: string; readonly value: string; readonly ttlSeconds?: number | undefined }> = []
+
+  return {
+    writes,
+    layer: Layer.succeed(CacheStore, {
+      get: (key: string) => Effect.succeed(values.get(key) ?? null),
+      set: (key: string, value: string, options?: { readonly ttlSeconds?: number }) =>
+        Effect.sync(() => {
+          values.set(key, value)
+          writes.push({ key, value, ttlSeconds: options?.ttlSeconds })
+        }),
+      delete: (key: string) =>
+        Effect.sync(() => {
+          values.delete(key)
+        }),
+    }),
   }
 }
 
@@ -142,6 +247,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -171,12 +277,248 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate[0].prompt).toContain("Source: user")
   })
 
-  // Note: deterministic short-circuiting now happens in the `deterministic-flaggers`
-  // worker upstream of this use-case. By the time `runFlaggerUseCase` is
-  // invoked (via the Temporal activity), the trace was either sampled-in on no-match
-  // or rate-limited through on ambiguous — so this layer always calls the LLM.
-  // The deterministic behavior is covered by `process-deterministic-flaggers.test.ts`
-  // and the per-strategy `detectDeterministically` unit tests.
+  it("surfaces short inspected system prompts verbatim in classifier and annotation-review prompts", async () => {
+    const systemInstructions = [
+      {
+        type: "text",
+        content:
+          "You are a triage flagger. Return no explanation outside structured output. Set matched=false when the trace does not belong to this flagger.",
+      },
+    ] satisfies TraceDetail["systemInstructions"]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail(
+            [
+              {
+                role: "system",
+                parts: systemInstructions,
+              },
+              {
+                role: "user",
+                parts: [{ type: "text", content: "Review these snippets in context." }],
+              },
+              {
+                role: "assistant",
+                parts: [{ type: "text", content: "I can describe how you might review them, but I won't do it here." }],
+              },
+            ],
+            [],
+            systemInstructions,
+          ),
+        ),
+    })
+
+    const { calls, layer: aiLayer } = createClassifyAndApproveAI({
+      matched: true,
+      feedback: "The assistant gave a shallow answer.",
+    })
+
+    await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(calls.generate).toHaveLength(2)
+    for (const call of calls.generate) {
+      expect(call.prompt).toContain("EVALUATED AGENT SYSTEM PROMPT")
+      expect(call.prompt).toContain("trace produced by another AI agent")
+      expect(call.prompt).toContain("Return no explanation outside structured output")
+      expect(call.prompt).toContain("Set matched=false")
+    }
+  })
+
+  it("skips LLM flaggers when no inspected system prompt is captured", async () => {
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () => Effect.die("AI should not be called without inspected agent context"),
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Please do the work." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Maybe you can try it yourself." }] },
+          ],
+          [],
+          [],
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(0)
+  })
+
+  it("extracts context for long inspected system prompts before classification", async () => {
+    const longSystemPrompt = `You are a dashboard design assistant. ${"Detailed rubric. ".repeat(120)}`
+    const systemInstructions = [{ type: "text", content: longSystemPrompt }] satisfies TraceDetail["systemInstructions"]
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) => {
+        if (input.system.includes("You extract agent context")) {
+          return Effect.succeed({
+            object: {
+              understood: true,
+              agentContext: "This agent is a dashboard design assistant that should create dashboard designs.",
+            } as T,
+            tokens: 20,
+            duration: 90_000_000,
+          })
+        }
+
+        return Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 })
+      },
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Create the dashboard." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Here is the dashboard." }] },
+          ],
+          [],
+          systemInstructions,
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(2)
+    expect(calls.generate[0].system).toContain("You extract agent context")
+    expect(calls.generate[1].prompt).toContain("EVALUATED AGENT CONTEXT")
+    expect(calls.generate[1].prompt).toContain("dashboard design assistant")
+    expect(calls.generate[1].prompt).not.toContain("Detailed rubric")
+  })
+
+  it("skips long inspected system prompts when the extractor cannot understand the agent", async () => {
+    const systemInstructions = [
+      { type: "text", content: `Disconnected examples only. ${"example ".repeat(300)}` },
+    ] satisfies TraceDetail["systemInstructions"]
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>() =>
+        Effect.succeed({
+          object: { understood: false, reasonIfNotUnderstood: "No agent role or task is defined." } as T,
+          tokens: 20,
+          duration: 90_000_000,
+        }),
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Please do the work." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Maybe you can try it yourself." }] },
+          ],
+          [],
+          systemInstructions,
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, defaultCacheLayer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(1)
+  })
+
+  it("uses cached long-prompt extraction results", async () => {
+    const longSystemPrompt = `You are a dashboard design assistant. ${"Detailed rubric. ".repeat(120)}`
+    const cacheKey = `flaggers:inspected-agent-context:v1:sha256:${createHash("sha256").update(longSystemPrompt.trim()).digest("hex")}`
+    const cache = createMemoryCacheLayer(
+      new Map([
+        [
+          cacheKey,
+          JSON.stringify({
+            understood: true,
+            agentContext: "This cached agent designs dashboards.",
+          }),
+        ],
+      ]),
+    )
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: <T>() => Effect.succeed({ object: { matched: false } as T, tokens: 20, duration: 90_000_000 }),
+    })
+
+    const result = await Effect.runPromise(
+      classifyTraceForFlaggerUseCase({
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        traceId: INPUT.traceId,
+        flaggerSlug: "laziness",
+        trace: makeTraceDetail(
+          [
+            { role: "user", parts: [{ type: "text", content: "Create the dashboard." }] },
+            { role: "assistant", parts: [{ type: "text", content: "Here is the dashboard." }] },
+          ],
+          [],
+          [{ type: "text", content: longSystemPrompt }],
+        ),
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate[0].prompt).toContain("This cached agent designs dashboards.")
+  })
+
+  it("classifies the CSV false-positive regressions as no-match with the live LLM flaggers", async () => {
+    const rows = readFlaggerRegressionRows()
+    expect(rows.length).toBeGreaterThan(0)
+
+    const aiLayer = createAiLayer(AIGenerateLive)
+    const cache = createMemoryCacheLayer()
+
+    for (const [index, row] of rows.entries()) {
+      const traceMetadata = row.metadata.traceMetadata
+      expect(traceMetadata).toBeTypeOf("object")
+      expect(traceMetadata).not.toBeNull()
+      const flaggerSlug = (traceMetadata as { readonly flaggerSlug?: unknown }).flaggerSlug
+      expect(flaggerSlug).toBeTypeOf("string")
+
+      const allMessages = row.metadata.allMessages
+      const systemInstructions = row.metadata.systemInstructions
+      expect(Array.isArray(allMessages)).toBe(true)
+      expect(Array.isArray(systemInstructions)).toBe(true)
+
+      const result = await Effect.runPromise(
+        classifyTraceForFlaggerUseCase({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          traceId: `${INPUT.traceId.slice(0, 30)}${String(index).padStart(2, "0")}`,
+          flaggerSlug: flaggerSlug as string,
+          trace: makeTraceDetail(
+            allMessages as TraceDetail["allMessages"],
+            [],
+            systemInstructions as TraceDetail["systemInstructions"],
+          ),
+        }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+      )
+
+      expect(result, `row ${index} (${flaggerSlug}) should be no-match`).toEqual({ matched: false })
+    }
+  }, 180_000)
 
   it("stamps the LLM call with the no-reflag tag when the trace is itself flagger-generated", async () => {
     const { repository } = createFakeTraceRepository({
@@ -214,6 +556,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -244,6 +587,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -281,6 +625,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -292,8 +637,8 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate[0].system).toContain("declines, deflects, or over-restricts")
     expect(calls.generate[0].system).not.toContain("Jailbreaking")
     expect(calls.generate[0].prompt).toContain("CANDIDATE STAGES")
-    expect(calls.generate[0].prompt).toContain("User messages:")
-    expect(calls.generate[0].prompt).toContain("Assistant response:")
+    expect(calls.generate[0].prompt).toContain("User messages sent to the evaluated agent:")
+    expect(calls.generate[0].prompt).toContain("Assistant response from the evaluated agent:")
   })
 
   it("uses a user-message-only prompt for frustration", async () => {
@@ -328,6 +673,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -372,6 +718,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -398,6 +745,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -424,6 +772,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -464,6 +813,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, disabledFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -507,6 +857,7 @@ describe("runFlaggerUseCase", () => {
               Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
               Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
               aiLayer,
+              defaultCacheLayer,
             ),
           ),
         ),
@@ -564,6 +915,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -611,6 +963,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -657,6 +1010,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -693,6 +1047,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),
@@ -744,6 +1099,7 @@ describe("runFlaggerUseCase", () => {
             Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
             Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
             aiLayer,
+            defaultCacheLayer,
           ),
         ),
       ),

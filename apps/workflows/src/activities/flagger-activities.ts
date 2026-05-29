@@ -10,7 +10,7 @@ import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
-import { RedisBillingSpendReservationLive } from "@platform/cache-redis"
+import { RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,
@@ -45,6 +45,7 @@ export const runFlagger = async (input: {
       withPostgres(FlaggerRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
       withTracing,
       Effect.tap(() =>
         Effect.sync(() =>

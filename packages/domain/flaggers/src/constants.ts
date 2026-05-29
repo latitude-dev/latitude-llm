@@ -21,6 +21,8 @@ export const FLAGGER_MODEL = {
 
 export const FLAGGER_MAX_TOKENS = 2048
 
+export const FLAGGER_INSTRUCTION_EXTRACTOR_MAX_TOKENS = 512
+
 export const FLAGGER_ANNOTATOR_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",

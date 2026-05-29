@@ -1,5 +1,10 @@
 import type { TraceDetail } from "@domain/spans"
-import { type ConversationStage, extractConversationStages } from "./refusal.ts"
+import {
+  type ConversationStage,
+  extractConversationStages,
+  formatStageAssistantResponseForPrompt,
+  formatStageUserMessagesForPrompt,
+} from "./refusal.ts"
 import { MAX_STAGES_PER_PROMPT } from "./shared.ts"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
@@ -95,6 +100,7 @@ DO NOT FLAG
 - Iterative work where the assistant is converging on the answer step by step
 - Tool-only responses when a tool call was the correct action
 - Thoughtful brevity where more length would have been filler
+- Malformed, terse, or schema-incomplete structured outputs from classification/evaluation agents; those are format/schema problems, not laziness, unless the response explicitly punts, refuses, or asks the user to do the classification work
 
 ================================================================================
 ANALYSIS APPROACH
@@ -305,8 +311,8 @@ export const lazinessStrategy: FlaggerStrategy = {
         return [
           `--- Stage ${i + 1} ---`,
           `Work signals: ${signals}`,
-          `User messages:\n${stage.userMessages.join("\n") || "(none)"}`,
-          `Assistant response:\n${stage.assistantMessage || "(none)"}`,
+          formatStageUserMessagesForPrompt(stage.userMessages),
+          formatStageAssistantResponseForPrompt(stage.assistantMessage),
         ].join("\n")
       })
       .join("\n\n")
@@ -321,8 +327,6 @@ export const lazinessStrategy: FlaggerStrategy = {
       ``,
       `CANDIDATE STAGES (top ${topStages.length} ranked by laziness likelihood):`,
       formattedStages,
-      "",
-      "Review each stage. Return matched=true if ANY stage shows the assistant avoiding work, giving shallow answers, or pushing work back to the user.",
     ].join("\n")
   },
 }

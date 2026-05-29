@@ -315,6 +315,8 @@ function extractJailbreakSuspiciousSnippets(trace: Pick<TraceDetail, "allMessage
 
   for (const message of trace.allMessages) {
     const role = message.role
+    if (role === "system") continue
+
     const isUser = role === "user"
     const isTool = role === "tool" || role === "function"
 
@@ -384,7 +386,7 @@ const HIGH_PRECISION_JAILBREAK_PATTERNS = [
 function findHighPrecisionJailbreakMatch(trace: Pick<TraceDetail, "allMessages">): number | null {
   for (let i = 0; i < trace.allMessages.length; i++) {
     const message = trace.allMessages[i]
-    if (!message) continue
+    if (!message || message.role === "system") continue
 
     let textContent = ""
     for (const part of message.parts) {

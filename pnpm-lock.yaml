@@ -1257,6 +1257,13 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.3.6
+    devDependencies:
+      '@platform/ai':
+        specifier: workspace:*
+        version: link:../../platform/ai
+      '@platform/ai-vercel':
+        specifier: workspace:*
+        version: link:../../platform/ai-vercel
 
   packages/domain/integrations:
     dependencies:

@@ -27,5 +27,8 @@
     "effect": "catalog:",
     "zod": "catalog:"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@platform/ai": "workspace:*",
+    "@platform/ai-vercel": "workspace:*"
+  }
 }
