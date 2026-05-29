@@ -1817,18 +1817,12 @@ importers:
       '@domain/billing':
         specifier: workspace:*
         version: link:../../domain/billing
-      '@domain/issues':
-        specifier: workspace:*
-        version: link:../../domain/issues
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
       '@domain/spans':
         specifier: workspace:*
         version: link:../../domain/spans
-      '@domain/taxonomy':
-        specifier: workspace:*
-        version: link:../../domain/taxonomy
       '@platform/env':
         specifier: workspace:*
         version: link:../env
