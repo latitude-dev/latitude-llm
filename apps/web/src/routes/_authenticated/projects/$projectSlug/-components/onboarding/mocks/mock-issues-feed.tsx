@@ -1,148 +1,202 @@
-import { cn, Text } from "@repo/ui"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { MOTION_EXIT_MS } from "../motion.ts"
+import { cn, Status, type StatusProps, TagList, Text } from "@repo/ui"
+import { formatCount } from "@repo/utils"
+import { type ReactNode, useEffect, useMemo, useRef } from "react"
+
+type MockIssueStatus = "new" | "regressed" | "escalating" | "ongoing"
 
 type MockIssue = {
   readonly title: string
-  readonly caption: string
-  readonly severity: "low" | "medium" | "high"
+  readonly status: MockIssueStatus
+  readonly tags: ReadonlyArray<string>
+  readonly trend: ReadonlyArray<number>
   readonly occurrences: number
-  readonly hoursAgo: number
+  readonly affectedTracesPercent: number
+}
+
+const STATUS_META: Record<MockIssueStatus, { readonly label: string; readonly variant: StatusProps["variant"] }> = {
+  new: { label: "New", variant: "info" },
+  regressed: { label: "Regressed", variant: "destructive" },
+  escalating: { label: "Escalating", variant: "warning" },
+  ongoing: { label: "Ongoing", variant: "neutral" },
 }
 
 const MOCK_ISSUES_BY_FLAGGER: Record<string, MockIssue> = {
   "empty-response": {
     title: "Empty response on tool call",
-    caption: "search_kb returned no result for 3 traces",
-    severity: "medium",
+    status: "new",
+    tags: ["production", "tool:search_kb"],
+    trend: [0, 1, 0, 1, 2, 1, 2, 3, 2, 4, 3, 5],
     occurrences: 12,
-    hoursAgo: 3,
+    affectedTracesPercent: 0.03,
   },
   "tool-call-errors": {
     title: "Tool call failure",
-    caption: "fetch_user returned an undefined argument",
-    severity: "high",
+    status: "regressed",
+    tags: ["production", "tool:fetch_user", "regression"],
+    trend: [2, 1, 2, 1, 3, 2, 1, 2, 4, 6, 9, 14],
     occurrences: 47,
-    hoursAgo: 1,
+    affectedTracesPercent: 0.09,
   },
   "output-schema-validation": {
     title: "Output schema mismatch",
-    caption: "Missing required `confidence` field in response",
-    severity: "medium",
+    status: "ongoing",
+    tags: ["extraction", "schema"],
+    trend: [3, 4, 3, 4, 3, 4, 3, 4, 3, 4, 3, 4],
     occurrences: 8,
-    hoursAgo: 5,
+    affectedTracesPercent: 0.02,
   },
   frustration: {
     title: "User frustration detected",
-    caption: "Repeat phrasing and emoji markers across 7 sessions",
-    severity: "medium",
+    status: "escalating",
+    tags: ["support", "sentiment"],
+    trend: [1, 2, 1, 3, 2, 4, 3, 5, 4, 6, 8, 11],
     occurrences: 23,
-    hoursAgo: 2,
+    affectedTracesPercent: 0.06,
   },
   jailbreaking: {
     title: "Jailbreak attempt",
-    caption: "Prompt injection via spoofed system role",
-    severity: "high",
+    status: "escalating",
+    tags: ["security", "prompt-injection"],
+    trend: [0, 1, 0, 0, 1, 2, 1, 0, 2, 1, 3, 4],
     occurrences: 4,
-    hoursAgo: 8,
+    affectedTracesPercent: 0.01,
   },
   nsfw: {
     title: "NSFW content in user prompt",
-    caption: "Filtered by moderation before model call",
-    severity: "low",
+    status: "new",
+    tags: ["moderation", "safety"],
+    trend: [0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1],
     occurrences: 2,
-    hoursAgo: 12,
+    affectedTracesPercent: 0.01,
   },
   refusal: {
     title: "Refusal on policy-compliant query",
-    caption: "Asked for billing summary, returned safety boilerplate",
-    severity: "medium",
+    status: "new",
+    tags: ["support", "over-refusal"],
+    trend: [1, 0, 2, 1, 1, 2, 1, 3, 2, 1, 2, 3],
     occurrences: 6,
-    hoursAgo: 4,
+    affectedTracesPercent: 0.02,
   },
   laziness: {
     title: "Lazy completion",
-    caption: "Agent skipped 3 of 5 sub-tasks in the plan",
-    severity: "medium",
+    status: "ongoing",
+    tags: ["coding-agent", "incomplete"],
+    trend: [2, 3, 2, 4, 3, 3, 2, 4, 3, 2, 3, 4],
     occurrences: 11,
-    hoursAgo: 6,
+    affectedTracesPercent: 0.03,
   },
   forgetting: {
     title: "Forgot earlier context",
-    caption: "Lost the user's product preference after 8 turns",
-    severity: "low",
+    status: "ongoing",
+    tags: ["context", "long-session"],
+    trend: [4, 3, 4, 2, 3, 2, 3, 1, 2, 2, 1, 2],
     occurrences: 9,
-    hoursAgo: 10,
+    affectedTracesPercent: 0.02,
   },
   trashing: {
     title: "Destructive edit",
-    caption: "Agent overwrote a saved file without confirmation",
-    severity: "high",
+    status: "regressed",
+    tags: ["coding-agent", "destructive"],
+    trend: [1, 0, 1, 2, 1, 3, 2, 4, 3, 5, 7, 8],
     occurrences: 3,
-    hoursAgo: 7,
+    affectedTracesPercent: 0.01,
   },
 }
 
-const SEVERITY_DOT: Record<MockIssue["severity"], string> = {
-  high: "bg-destructive",
-  medium: "bg-amber-500",
-  low: "bg-muted-foreground/50",
-}
+const STAGGER_STEP_MS = 30
+const STAGGER_MAX_MS = 180
 
 type AvailableFlagger = {
   readonly slug: string
   readonly name: string
 }
 
-/**
- * Tracks a list of keys and keeps recently-removed keys in the render output for `exitMs`
- * so they can play an exit animation before being dropped. Re-adding a key while it's in
- * its exit phase cancels the exit instead of mounting a fresh copy.
- */
-function useAnimatedKeys(currentKeys: ReadonlyArray<string>, exitMs: number) {
-  const [items, setItems] = useState<ReadonlyArray<{ key: string; leaving: boolean }>>(() =>
-    currentKeys.map((k) => ({ key: k, leaving: false })),
+function formatPercent(value: number): string {
+  const pct = value * 100
+  if (pct > 0 && pct < 1) return "<1%"
+  return `${Math.round(pct)}%`
+}
+
+function MiniTrendBar({ trend, regressed }: { readonly trend: ReadonlyArray<number>; readonly regressed: boolean }) {
+  const max = Math.max(1, ...trend)
+  return (
+    <div className="flex h-7 w-20 items-end gap-[2px]" aria-hidden>
+      {trend.map((count, i) => {
+        const heightPercent = count === 0 ? 0 : Math.max(12, (count / max) * 88)
+        return (
+          <span
+            key={i}
+            className={cn(
+              "min-w-0 flex-1 rounded-t-[2px]",
+              regressed ? "bg-rose-500/70 dark:bg-rose-400/70" : "bg-muted-foreground/45",
+            )}
+            style={{ height: `${heightPercent}%` }}
+          />
+        )
+      })}
+    </div>
   )
-  const stableKey = useMemo(() => currentKeys.slice().sort().join("|"), [currentKeys])
-  const currentRef = useRef(currentKeys)
-  currentRef.current = currentKeys
-  const prevRef = useRef<ReadonlyArray<string>>(currentKeys)
+}
 
-  useEffect(() => {
-    const prev = prevRef.current
-    const next = currentRef.current
-    const prevSet = new Set(prev)
-    const nextSet = new Set(next)
+function IssueCard({ issue }: { readonly issue: MockIssue }) {
+  const isRegressed = issue.status === "regressed"
+  const status = STATUS_META[issue.status]
+  return (
+    <div
+      className={cn(
+        "rounded-lg border p-3 shadow-sm",
+        isRegressed ? "border-rose-500/30 bg-rose-500/[0.06] dark:bg-rose-500/[0.12]" : "border-border bg-card",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Status variant={status.variant} label={status.label} />
+          <Text.H5M ellipsis noWrap className="min-w-0">
+            {issue.title}
+          </Text.H5M>
+        </div>
+        <Text.H5 weight="medium" className="shrink-0 tabular-nums">
+          {formatCount(issue.occurrences)}
+        </Text.H5>
+      </div>
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <TagList tags={issue.tags} />
+        </div>
+        <div className="flex shrink-0 items-end gap-3">
+          <MiniTrendBar trend={issue.trend} regressed={isRegressed} />
+          <Text.H6 color="foregroundMuted" className="shrink-0 tabular-nums">
+            {formatPercent(issue.affectedTracesPercent)} traces
+          </Text.H6>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-    const added = next.filter((k) => !prevSet.has(k))
-    const removed = prev.filter((k) => !nextSet.has(k))
-
-    prevRef.current = next
-
-    if (added.length === 0 && removed.length === 0) return
-
-    setItems((existing) => {
-      const updated = existing.map((it) => {
-        if (removed.includes(it.key)) return { ...it, leaving: true }
-        if (added.includes(it.key) && it.leaving) return { ...it, leaving: false }
-        return it
-      })
-      const seen = new Set(updated.map((it) => it.key))
-      const merged = [...updated]
-      for (const key of added) {
-        if (!seen.has(key)) merged.push({ key, leaving: false })
-      }
-      return merged
-    })
-
-    if (removed.length > 0) {
-      window.setTimeout(() => {
-        setItems((existing) => existing.filter((it) => !removed.includes(it.key) || !it.leaving))
-      }, exitMs)
-    }
-  }, [stableKey, exitMs])
-
-  return items
+function CollapsibleRow({
+  open,
+  delayMs,
+  children,
+}: {
+  readonly open: boolean
+  readonly delayMs: number
+  readonly children: ReactNode
+}) {
+  return (
+    <div
+      aria-hidden={!open}
+      style={{ transitionDelay: `${delayMs}ms` }}
+      className={cn(
+        "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+        open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+      )}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <div className="pb-2">{children}</div>
+      </div>
+    </div>
+  )
 }
 
 export function MockIssuesFeed({
@@ -152,57 +206,69 @@ export function MockIssuesFeed({
   readonly enabledFlaggerSlugs: ReadonlySet<string>
   readonly availableFlaggers: ReadonlyArray<AvailableFlagger>
 }) {
-  // Stable order: render only slugs we have mock data for, in the available-flaggers order.
-  const orderedActiveSlugs = useMemo(() => {
-    return availableFlaggers
-      .filter((f) => enabledFlaggerSlugs.has(f.slug) && MOCK_ISSUES_BY_FLAGGER[f.slug] !== undefined)
-      .map((f) => f.slug)
-  }, [availableFlaggers, enabledFlaggerSlugs])
+  // Stable, fixed render order — every available flagger we have a mock issue for is always
+  // mounted. Rows collapse/expand in place via grid-rows, so the list never remounts and
+  // never reorders; toggling only flips a row's open state.
+  const mockRows = useMemo(
+    () => availableFlaggers.filter((f) => MOCK_ISSUES_BY_FLAGGER[f.slug] !== undefined),
+    [availableFlaggers],
+  )
 
-  const items = useAnimatedKeys(orderedActiveSlugs, MOTION_EXIT_MS)
-  const hasActiveItems = orderedActiveSlugs.length > 0
+  const openCount = mockRows.filter((f) => enabledFlaggerSlugs.has(f.slug)).length
+
+  // Stagger only bulk changes (presets) so a single toggle stays immediate. We compare the
+  // current open set against the previously committed one; if more than one row flipped, we
+  // cascade the delay across the flipped rows in render order.
+  const prevOpenRef = useRef<ReadonlySet<string>>(enabledFlaggerSlugs)
+  const delayBySlug = useMemo(() => {
+    const prev = prevOpenRef.current
+    const changed = mockRows.filter((f) => enabledFlaggerSlugs.has(f.slug) !== prev.has(f.slug))
+    const map = new Map<string, number>()
+    if (changed.length > 1) {
+      changed.forEach((f, i) => {
+        map.set(f.slug, Math.min(i * STAGGER_STEP_MS, STAGGER_MAX_MS))
+      })
+    }
+    return map
+  }, [mockRows, enabledFlaggerSlugs])
+
+  useEffect(() => {
+    prevOpenRef.current = new Set(mockRows.filter((f) => enabledFlaggerSlugs.has(f.slug)).map((f) => f.slug))
+  })
 
   return (
     <div className="flex h-fit w-full max-w-[591px] flex-col gap-4 self-center">
       <div className="flex flex-col gap-1">
         <Text.H5M>Issues you'd see in your project</Text.H5M>
-        <Text.H6 color="foregroundMuted">Example issues that the selected flaggers would create</Text.H6>
+        <Text.H6 color="foregroundMuted">
+          {openCount > 0
+            ? `${openCount} example ${openCount === 1 ? "issue" : "issues"} from your selected flaggers`
+            : "Example issues that the selected flaggers would create"}
+        </Text.H6>
       </div>
 
-      <div className="flex w-full flex-col gap-2">
-        {hasActiveItems
-          ? items.map(({ key, leaving }) => {
-              const issue = MOCK_ISSUES_BY_FLAGGER[key]
-              if (!issue) return null
-              return (
-                <div
-                  key={key}
-                  data-leaving={leaving}
-                  className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 shadow-sm animate-in fade-in-0 slide-in-from-top-1 duration-300 data-[leaving=true]:animate-out data-[leaving=true]:fade-out-0 data-[leaving=true]:slide-out-to-top-1 data-[leaving=true]:duration-200"
-                >
-                  <div className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", SEVERITY_DOT[issue.severity])} />
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <Text.H5M>{issue.title}</Text.H5M>
-                    <Text.H6 color="foregroundMuted" className="truncate">
-                      {issue.caption}
-                    </Text.H6>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-0.5">
-                    <Text.H5 weight="medium">{issue.occurrences}</Text.H5>
-                    <Text.H6 color="foregroundMuted">{issue.hoursAgo}h</Text.H6>
-                  </div>
-                </div>
-              )
-            })
-          : null}
+      <div className="flex w-full flex-col">
+        {mockRows.map((flagger) => {
+          const issue = MOCK_ISSUES_BY_FLAGGER[flagger.slug]
+          if (!issue) return null
+          return (
+            <CollapsibleRow
+              key={flagger.slug}
+              open={enabledFlaggerSlugs.has(flagger.slug)}
+              delayMs={delayBySlug.get(flagger.slug) ?? 0}
+            >
+              <IssueCard issue={issue} />
+            </CollapsibleRow>
+          )
+        })}
 
-        {!hasActiveItems ? (
+        <CollapsibleRow open={openCount === 0} delayMs={0}>
           <div className="rounded-lg border border-dashed border-border bg-card/50 p-4">
             <Text.H6 color="foregroundMuted" align="center">
               Pick a flagger to see what kinds of issues it would surface.
             </Text.H6>
           </div>
-        ) : null}
+        </CollapsibleRow>
       </div>
     </div>
   )
