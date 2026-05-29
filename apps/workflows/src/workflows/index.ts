@@ -2,6 +2,12 @@ export { publishAnnotationWorkflow } from "./annotation-publication-workflow.ts"
 export { assignScoreToKnownIssueWorkflow } from "./assign-score-to-known-issue-workflow.ts"
 export { type BillingOverageWorkflowInput, billingOverageWorkflow } from "./billing-overage-workflow.ts"
 export { flaggerWorkflow } from "./flagger-workflow.ts"
+export {
+  type GardenProjectWorkflowInput,
+  type GardenProjectWorkflowResult,
+  gardenProjectWorkflow,
+} from "./garden-project-workflow.ts"
+export { type GardenSweepWorkflowResult, gardenSweepWorkflow } from "./garden-sweep-workflow.ts"
 export { issueDiscoveryWorkflow } from "./issue-discovery-workflow.ts"
 export {
   type OptimizeEvaluationWorkflowResult,

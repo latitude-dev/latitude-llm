@@ -37,6 +37,25 @@ export {
   seedDemoProjectTraceSearchActivity,
 } from "./seed-demo-project-activities.ts"
 export {
+  type CompleteGardenRunActivityInput,
+  completeGardenRunActivity,
+  deprecateInactiveActivity,
+  type EligibleProject,
+  type FailGardenRunActivityInput,
+  failGardenRunActivity,
+  type GardenStageActivityInput,
+  listEligibleProjectsActivity,
+  listPendingNamingTargetsActivity,
+  type LockableActivityResult,
+  mergeClustersActivity,
+  type PendingNamingTargets,
+  reassignNoiseActivity,
+  rebuildHierarchyActivity,
+  type StartGardenRunActivityInput,
+  startGardenRunActivity,
+  sweepNoiseAndBirthActivity,
+} from "./taxonomy-gardening-activities.ts"
+export {
   type NameTaxonomyCategoryActivityInput,
   type NameTaxonomyClusterActivityInput,
   nameTaxonomyCategoryActivity,
