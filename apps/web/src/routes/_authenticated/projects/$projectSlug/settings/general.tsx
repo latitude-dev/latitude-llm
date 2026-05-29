@@ -1,7 +1,19 @@
-import { Button, DotIndicator, FormWrapper, Input, Label, Modal, Slider, Switch, Text, useToast } from "@repo/ui"
+import {
+  Button,
+  DotIndicator,
+  FormWrapper,
+  Input,
+  Label,
+  Modal,
+  Slider,
+  Switch,
+  Text,
+  useMountEffect,
+  useToast,
+} from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, useBlocker, useRouter } from "@tanstack/react-router"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import {
   deleteProjectMutation,
   updateProjectMutation,
@@ -87,14 +99,17 @@ function ProjectGeneralSettingsPage() {
     }
   }
 
+  // Latest-value refs so the mount-only keydown listener never needs to re-subscribe.
   const applyRef = useRef(apply)
   applyRef.current = apply
   const isApplyingRef = useRef(isApplying)
   isApplyingRef.current = isApplying
+  const hasDirtyRef = useRef(hasDirty)
+  hasDirtyRef.current = hasDirty
 
-  useEffect(() => {
-    if (!hasDirty) return
+  useMountEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      if (!hasDirtyRef.current) return
       const target = event.target as HTMLElement | null
       const inField =
         !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable === true)
@@ -108,7 +123,7 @@ function ProjectGeneralSettingsPage() {
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [hasDirty])
+  })
 
   useBlocker({
     shouldBlockFn: () => {
