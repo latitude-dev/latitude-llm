@@ -10,6 +10,12 @@ export {
   SlackTransportError,
 } from "./errors.ts"
 export { postMessage } from "./messages.ts"
-export { buildSlackAuthorizeUrl, exchangeOAuthCode, type SlackOAuthResult } from "./oauth.ts"
+export {
+  buildSlackAuthorizeUrl,
+  exchangeOAuthCode,
+  refreshBotToken,
+  type SlackOAuthResult,
+  type SlackRefreshResult,
+} from "./oauth.ts"
 export { SLACK_BOT_SCOPES, type SlackBotScope } from "./scopes.ts"
 export { verifySlackSignature } from "./signature.ts"

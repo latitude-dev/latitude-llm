@@ -1,7 +1,7 @@
 import { InstallProvider } from "@slack/oauth"
 import { WebClient } from "@slack/web-api"
 import { Effect } from "effect"
-import { SlackOAuthError } from "./errors.ts"
+import { SlackAuthError, SlackOAuthError } from "./errors.ts"
 import { SLACK_BOT_SCOPES } from "./scopes.ts"
 
 /**
@@ -130,6 +130,69 @@ export const exchangeOAuthCode = (input: {
       botAccessToken: response.access_token,
       botTokenScopes: response.scope,
       authedUserId: authedUser.id,
+      refreshToken: response.refresh_token,
+      expiresIn: response.expires_in,
+    }
+  })
+
+/**
+ * Result of refreshing a rotated bot token. When token rotation is
+ * enabled, every refresh returns a brand-new access token AND a new
+ * single-use refresh token (the one we sent is revoked after a short
+ * grace period) — both must be persisted or the rotation chain breaks.
+ */
+export interface SlackRefreshResult {
+  readonly botAccessToken: string
+  readonly refreshToken: string
+  readonly expiresIn: number
+}
+
+/**
+ * Exchanges a stored refresh token for a fresh bot token via
+ * `oauth.v2.access` with `grant_type=refresh_token` (the token-rotation
+ * renewal call — distinct from the initial code exchange in
+ * {@link exchangeOAuthCode}). `OAuthV2AccessArguments` already types
+ * `grant_type` / `refresh_token`, so no cast is needed.
+ *
+ * `invalid_refresh_token` is mapped to {@link SlackAuthError} (reason
+ * `token_revoked`) so callers can treat a broken rotation chain as
+ * "needs re-auth, do not retry" — distinct from transient transport
+ * failures, which surface as {@link SlackOAuthError}.
+ */
+export const refreshBotToken = (input: {
+  readonly clientId: string
+  readonly clientSecret: string
+  readonly refreshToken: string
+}): Effect.Effect<SlackRefreshResult, SlackOAuthError | SlackAuthError> =>
+  Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        new WebClient().oauth.v2.access({
+          client_id: input.clientId,
+          client_secret: input.clientSecret,
+          grant_type: "refresh_token",
+          refresh_token: input.refreshToken,
+        }),
+      catch: (cause) => {
+        if (cause instanceof Error && "data" in cause) {
+          const data = (cause as { data?: { error?: string } }).data
+          if (data?.error === "invalid_refresh_token") {
+            return new SlackAuthError({ reason: "token_revoked" })
+          }
+          if (data?.error && typeof data.error === "string") {
+            return new SlackOAuthError({ slackError: data.error, cause })
+          }
+        }
+        return new SlackOAuthError({ cause })
+      },
+    })
+
+    if (!response.access_token || !response.refresh_token || response.expires_in == null) {
+      return yield* Effect.fail(new SlackOAuthError({ slackError: "incomplete_refresh_response" }))
+    }
+
+    return {
+      botAccessToken: response.access_token,
       refreshToken: response.refresh_token,
       expiresIn: response.expires_in,
     }
