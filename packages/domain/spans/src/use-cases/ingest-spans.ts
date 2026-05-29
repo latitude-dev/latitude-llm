@@ -1,4 +1,4 @@
-import { ProjectRepository } from "@domain/projects"
+import { type Project, ProjectRepository } from "@domain/projects"
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
 import {
@@ -16,6 +16,8 @@ import { SpanDecodingError } from "../errors.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
 import { resolveSpanProjectSlug } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
+import { deterministicSample } from "../sampling/deterministic-sampler.ts"
+import { extractSamplingKey } from "../sampling/extract-sampling-key.ts"
 
 const INLINE_PAYLOAD_MAX_BYTES = 50_000 // 50 KB
 
@@ -79,13 +81,10 @@ function inspectPayload(request: OtlpExportTraceServiceRequest): PayloadInspecti
   return { totalSpans, spanSlugs, uniqueSlugs }
 }
 
-const resolveSlug = (slug: string): Effect.Effect<string | null, RepositoryError, ProjectRepository | SqlClient> =>
+const resolveProject = (slug: string): Effect.Effect<Project | null, RepositoryError, ProjectRepository | SqlClient> =>
   Effect.gen(function* () {
     const repo = yield* ProjectRepository
-    return yield* repo.findBySlug(slug).pipe(
-      Effect.map((project) => project.id as string),
-      Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
-    )
+    return yield* repo.findBySlug(slug).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
   })
 
 export const ingestSpansUseCase = (
@@ -109,23 +108,25 @@ export const ingestSpansUseCase = (
     }
 
     // Resolve every unique slug (including the header default) against the org. One DB call per
-    // unique slug; the request handler treats this map as the source of truth.
+    // unique slug; we keep the full `Project` (settings included) so the sampling step below
+    // doesn't have to re-fetch.
     const slugsToResolve = new Set<string>(uniqueSlugs)
     if (input.defaultProjectSlug) slugsToResolve.add(input.defaultProjectSlug)
 
-    const projectIdBySlug = new Map<string, string>()
+    const projectBySlug = new Map<string, Project>()
     for (const slug of slugsToResolve) {
-      const projectId = yield* resolveSlug(slug)
-      if (projectId) projectIdBySlug.set(slug, projectId)
+      const project = yield* resolveProject(slug)
+      if (project) projectBySlug.set(slug, project)
     }
 
-    const defaultProjectId = input.defaultProjectSlug ? (projectIdBySlug.get(input.defaultProjectSlug) ?? null) : null
+    const defaultProject = input.defaultProjectSlug ? (projectBySlug.get(input.defaultProjectSlug) ?? null) : null
+    const defaultProjectId = defaultProject?.id ?? null
 
     let acceptedSpans = 0
     let rejectedSpans = 0
     for (const slug of spanSlugs) {
       if (slug) {
-        if (projectIdBySlug.has(slug)) acceptedSpans++
+        if (projectBySlug.has(slug)) acceptedSpans++
         else rejectedSpans++
       } else if (defaultProjectId) {
         acceptedSpans++
@@ -142,13 +143,31 @@ export const ingestSpansUseCase = (
       return { totalSpans, acceptedSpans: 0, rejectedSpans }
     }
 
+    // Per-payload sampling. Apply the first resolvable project's sampling settings to the
+    // whole batch — in practice OTLP batches are single-project / single-session, and the
+    // imprecision in mixed batches is the documented tradeoff. Decision is deterministic on
+    // `session_id || trace_id`, so the same session always lands consistently across calls.
+    const samplingProject = defaultProject ?? projectBySlug.values().next().value ?? null
+    const sampling = samplingProject?.settings?.sampling
+    if (sampling?.enabled && (sampling.rate ?? 1) < 1) {
+      const samplingKey = extractSamplingKey(decoded)
+      if (samplingKey && !deterministicSample(samplingKey, sampling.rate ?? 1)) {
+        yield* Effect.annotateCurrentSpan("sampling.dropped", true)
+        yield* Effect.annotateCurrentSpan("sampling.rate", sampling.rate ?? 1)
+        // Sampled-out: don't store, don't enqueue. Spans still count as accepted in the OTLP
+        // response — the customer's exporter has nothing to retry. Billing is naturally
+        // skipped because no `TracesIngested` event will fire downstream.
+        return { totalSpans, acceptedSpans, rejectedSpans }
+      }
+    }
+
     const publisher = yield* QueuePublisher
 
     // Storage path needs *a* projectId for the existing `tmp-ingest/{org}/{project}/{id}` layout
     // — the actual per-span routing is done downstream from `projectIdBySlug` + `defaultProjectId`,
     // not from this key. Pick anything resolvable so the path stays predictable.
     const storageProjectId =
-      defaultProjectId ?? (projectIdBySlug.size > 0 ? (projectIdBySlug.values().next().value as string) : null)
+      defaultProjectId ?? (projectBySlug.size > 0 ? (projectBySlug.values().next().value?.id ?? null) : null)
 
     let fileKey: string | null = null
     let inlinePayload: string | null = null
@@ -170,6 +189,11 @@ export const ingestSpansUseCase = (
       })
     }
 
+    const projectIdBySlug: Record<string, string> = {}
+    for (const [slug, project] of projectBySlug) {
+      projectIdBySlug[slug] = project.id as string
+    }
+
     yield* publisher.publish("span-ingestion", "ingest", {
       fileKey,
       inlinePayload,
@@ -178,7 +202,7 @@ export const ingestSpansUseCase = (
       apiKeyId: input.apiKeyId,
       ingestedAt: new Date().toISOString(),
       defaultProjectId,
-      projectIdBySlug: Object.fromEntries(projectIdBySlug),
+      projectIdBySlug,
     })
 
     return { totalSpans, acceptedSpans, rejectedSpans }

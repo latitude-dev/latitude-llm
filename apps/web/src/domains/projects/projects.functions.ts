@@ -63,6 +63,7 @@ export const toRecord = (project: Project) => ({
     notifications: project.settings?.notifications,
     escalation: project.settings?.escalation,
     onboardingType: project.settings?.onboardingType,
+    sampling: project.settings?.sampling,
   },
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   createdAt: project.createdAt.toISOString(),

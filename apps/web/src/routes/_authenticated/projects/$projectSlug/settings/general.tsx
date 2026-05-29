@@ -1,4 +1,4 @@
-import { Button, FormWrapper, Input, Modal, Text, useToast } from "@repo/ui"
+import { Button, FormWrapper, Input, Label, Modal, Slider, Switch, Text, useToast, useValueWithDefault } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
@@ -8,6 +8,7 @@ import {
   updateProjectMutation,
   useProjectsCollection,
 } from "../../../../../domains/projects/projects.collection.ts"
+import type { ProjectRecord } from "../../../../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 import { useRouteProject } from "../-route-data.ts"
@@ -81,8 +82,104 @@ function ProjectGeneralSettingsPage() {
           </form.Subscribe>
         </div>
       </form>
+      <TraceSamplingSection projectId={currentProject.id} settings={currentProject.settings} />
       <DeleteProjectSection projectId={currentProject.id} projectName={currentProject.name} />
     </SettingsPage>
+  )
+}
+
+function TraceSamplingSection({ projectId, settings }: { projectId: string; settings: ProjectRecord["settings"] }) {
+  const { toast } = useToast()
+  const sampling = settings.sampling
+  const enabled = sampling?.enabled ?? false
+  const rate = sampling?.rate ?? 1
+  const [isSavingEnabled, setIsSavingEnabled] = useState(false)
+  const [draftPercent, setDraftPercent] = useValueWithDefault(Math.round(rate * 100))
+
+  const persist = async (next: { enabled?: boolean; rate?: number }) => {
+    const transaction = updateProjectMutation(projectId, {
+      settings: {
+        ...settings,
+        sampling: {
+          ...(sampling ?? {}),
+          ...next,
+        },
+      },
+    })
+    await transaction.isPersisted.promise
+  }
+
+  const handleToggle = async (checked: boolean) => {
+    if (isSavingEnabled) return
+    setIsSavingEnabled(true)
+    try {
+      await persist({ enabled: checked })
+      toast({ description: checked ? "Trace sampling enabled" : "Trace sampling disabled" })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setIsSavingEnabled(false)
+    }
+  }
+
+  const handleRateCommit = async (percent: number) => {
+    try {
+      await persist({ rate: percent / 100 })
+      toast({ description: "Sampling rate updated" })
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    }
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-3 @[800px]:w-1/2">
+      <div className="flex w-full flex-row items-start justify-between gap-4 rounded-lg bg-muted/30 p-4">
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="trace-sampling-enabled">Trace sampling</Label>
+          <Text.H6 color="foregroundMuted">
+            Store only a fraction of incoming traces. Sampling decisions are deterministic on session ID, so all spans
+            sharing a session are kept or dropped together. You're only billed for stored traces.
+          </Text.H6>
+        </div>
+        <Switch
+          id="trace-sampling-enabled"
+          checked={enabled}
+          loading={isSavingEnabled}
+          onCheckedChange={(checked) => void handleToggle(checked)}
+        />
+      </div>
+      {enabled ? (
+        <div className="flex w-full flex-col gap-3 rounded-lg bg-muted/30 p-4">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="trace-sampling-rate">Sampling rate</Label>
+            <Text.H6 color="foregroundMuted">
+              Percentage of traces to store. 100% stores everything; 10% stores roughly 1 in 10.
+            </Text.H6>
+          </div>
+          <div className="flex w-full flex-row items-center gap-4">
+            <Slider
+              id="trace-sampling-rate"
+              min={1}
+              max={100}
+              step={1}
+              value={[draftPercent]}
+              onValueChange={(values) => {
+                const next = values[0] ?? draftPercent
+                setDraftPercent(next)
+              }}
+              onValueCommit={(values) => {
+                const next = values[0] ?? draftPercent
+                void handleRateCommit(next)
+              }}
+              aria-label="Sampling rate"
+            />
+            <Text.H5 weight="medium" className="w-12 text-right">
+              {draftPercent}%
+            </Text.H5>
+          </div>
+        </div>
+      ) : null}
+    </div>
   )
 }
 

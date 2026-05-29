@@ -19,6 +19,7 @@ import {
   NotFoundError,
   OrganizationId,
   ProjectId,
+  type ProjectSettings,
   SettingsReader,
   SqlClient,
   StorageDisk,
@@ -88,25 +89,28 @@ const largeSinglePayload = (() => {
   )
 })()
 
-const makeProject = (slug: string, id: string) =>
+const makeProject = (slug: string, id: string, settings: ProjectSettings = {}) =>
   createProject({
     id: ProjectId(id),
     organizationId: ORGANIZATION_ID,
     name: `Project ${slug}`,
     slug,
-    settings: {},
+    settings,
     createdAt: new Date("2026-01-01T00:00:00Z"),
     updatedAt: new Date("2026-01-01T00:00:00Z"),
     lastEditedAt: new Date("2026-01-01T00:00:00Z"),
   })
 
-const makeProjectRepository = (resolutions: Record<string, string | null>) =>
+const makeProjectRepository = (
+  resolutions: Record<string, string | null>,
+  settingsBySlug: Record<string, ProjectSettings> = {},
+) =>
   ProjectRepository.of({
     findById: () => Effect.die("not used"),
     findBySlug: (slug: string) => {
       const id = resolutions[slug]
       if (!id) return Effect.fail(new NotFoundError({ entity: "Project", id: slug }))
-      return Effect.succeed(makeProject(slug, id))
+      return Effect.succeed(makeProject(slug, id, settingsBySlug[slug] ?? {}))
     },
     list: () => Effect.die("not used"),
     listIncludingDeleted: () => Effect.die("not used"),
@@ -130,13 +134,14 @@ const runUseCase = (
   diskPort: StorageDiskPort,
   publisher: QueuePublisherShape,
   resolutions: Record<string, string | null> = { primary: PRIMARY_PROJECT_ID },
+  settingsBySlug: Record<string, ProjectSettings> = {},
 ) =>
   ingestSpansUseCase(input).pipe(
     Effect.provide(
       Layer.mergeAll(
         Layer.succeed(StorageDisk, diskPort),
         Layer.succeed(QueuePublisher, publisher),
-        Layer.succeed(ProjectRepository, makeProjectRepository(resolutions)),
+        Layer.succeed(ProjectRepository, makeProjectRepository(resolutions, settingsBySlug)),
         Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
       ),
     ),
@@ -387,6 +392,219 @@ describe("ingestSpansUseCase project scoping", () => {
     await Effect.runPromise(ingestSpansUseCase(makeInput(manySpans)).pipe(Effect.provide(layer)))
 
     expect(findBySlugCalls).toBe(2)
+  })
+})
+
+describe("ingestSpansUseCase trace sampling", () => {
+  const buildBatch = (sessionId: string, slug = "primary"): Uint8Array =>
+    new TextEncoder().encode(
+      JSON.stringify({
+        resourceSpans: [
+          {
+            resource: { attributes: [{ key: "service.name", value: { stringValue: "test" } }] },
+            scopeSpans: [
+              {
+                scope: { name: "test", version: "1.0.0" },
+                spans: [
+                  {
+                    traceId: "0af7651916cd43dd8448eb211c80319c",
+                    spanId: "b7ad6b7169203331",
+                    name: "test-span",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [
+                      { key: "latitude.project", value: { stringValue: slug } },
+                      { key: "session.id", value: { stringValue: sessionId } },
+                    ],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+  it("drops the whole batch when rate = 0 and reports spans as accepted", async () => {
+    const { disk, written } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    const result = await Effect.runPromise(
+      runUseCase(
+        makeInput(buildBatch("sess-1"), { defaultProjectSlug: "primary" }),
+        disk,
+        publisher,
+        { primary: PRIMARY_PROJECT_ID },
+        { primary: { sampling: { enabled: true, rate: 0 } } },
+      ),
+    )
+
+    expect(result).toEqual({ totalSpans: 1, acceptedSpans: 1, rejectedSpans: 0 })
+    expect(published).toHaveLength(0)
+    expect(written).toHaveLength(0)
+  })
+
+  it("keeps the whole batch when rate >= 1", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    await Effect.runPromise(
+      runUseCase(
+        makeInput(buildBatch("sess-1"), { defaultProjectSlug: "primary" }),
+        disk,
+        publisher,
+        { primary: PRIMARY_PROJECT_ID },
+        { primary: { sampling: { enabled: true, rate: 1 } } },
+      ),
+    )
+
+    expect(published).toHaveLength(1)
+  })
+
+  it("is a no-op when sampling.enabled is false even with rate = 0", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    await Effect.runPromise(
+      runUseCase(
+        makeInput(buildBatch("sess-1"), { defaultProjectSlug: "primary" }),
+        disk,
+        publisher,
+        { primary: PRIMARY_PROJECT_ID },
+        { primary: { sampling: { enabled: false, rate: 0 } } },
+      ),
+    )
+
+    expect(published).toHaveLength(1)
+  })
+
+  it("produces the same decision for repeated batches with the same session_id", async () => {
+    const decisions = new Set<boolean>()
+    for (let i = 0; i < 5; i++) {
+      const { disk } = createFakeStorageDisk()
+      const { publisher, published } = createFakeQueuePublisher()
+      await Effect.runPromise(
+        runUseCase(
+          makeInput(buildBatch("repeat-key"), { defaultProjectSlug: "primary" }),
+          disk,
+          publisher,
+          { primary: PRIMARY_PROJECT_ID },
+          { primary: { sampling: { enabled: true, rate: 0.5 } } },
+        ),
+      )
+      decisions.add(published.length === 1)
+    }
+
+    expect(decisions.size).toBe(1)
+  })
+
+  it("samples roughly to the configured rate across many distinct session keys", async () => {
+    let kept = 0
+    const n = 200
+    for (let i = 0; i < n; i++) {
+      const { disk } = createFakeStorageDisk()
+      const { publisher, published } = createFakeQueuePublisher()
+      await Effect.runPromise(
+        runUseCase(
+          makeInput(buildBatch(`sess-${i}`), { defaultProjectSlug: "primary" }),
+          disk,
+          publisher,
+          { primary: PRIMARY_PROJECT_ID },
+          { primary: { sampling: { enabled: true, rate: 0.5 } } },
+        ),
+      )
+      if (published.length === 1) kept++
+    }
+
+    const ratio = kept / n
+    expect(ratio).toBeGreaterThan(0.35)
+    expect(ratio).toBeLessThan(0.65)
+  })
+
+  it("skips disk write and queue publish for large sampled-out batches", async () => {
+    const { disk, written } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    await Effect.runPromise(
+      runUseCase(
+        makeInput(largeSinglePayload, { defaultProjectSlug: "primary" }),
+        disk,
+        publisher,
+        { primary: PRIMARY_PROJECT_ID },
+        { primary: { sampling: { enabled: true, rate: 0 } } },
+      ),
+    )
+
+    // The whole point of HTTP-side sampling: a >50KB sampled-out batch must not touch
+    // object storage or the queue.
+    expect(written).toHaveLength(0)
+    expect(published).toHaveLength(0)
+  })
+
+  it("uses the header-default project's settings to decide the batch", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    // Two-project batch: header default is `primary` (sampling rate=0); the span itself
+    // points at `secondary` (no sampling settings). The decision must follow `primary`.
+    const twoProjectBatch = new TextEncoder().encode(
+      JSON.stringify({
+        resourceSpans: [
+          {
+            scopeSpans: [
+              {
+                spans: [
+                  {
+                    traceId: "0af7651916cd43dd8448eb211c80319c",
+                    spanId: "b7ad6b7169203331",
+                    name: "test-span",
+                    startTimeUnixNano: "1710590400000000000",
+                    endTimeUnixNano: "1710590401000000000",
+                    attributes: [
+                      { key: "latitude.project", value: { stringValue: "secondary" } },
+                      { key: "session.id", value: { stringValue: "sess-1" } },
+                    ],
+                    status: { code: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    await Effect.runPromise(
+      runUseCase(
+        makeInput(twoProjectBatch, { defaultProjectSlug: "primary" }),
+        disk,
+        publisher,
+        { primary: PRIMARY_PROJECT_ID, secondary: SECONDARY_PROJECT_ID },
+        { primary: { sampling: { enabled: true, rate: 0 } } },
+      ),
+    )
+
+    expect(published).toHaveLength(0)
+  })
+
+  it("returns zeros for an empty payload even when sampling is enabled", async () => {
+    const { disk, written } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    const result = await Effect.runPromise(
+      runUseCase(
+        makeInput(emptyBatch, { defaultProjectSlug: "primary" }),
+        disk,
+        publisher,
+        { primary: PRIMARY_PROJECT_ID },
+        { primary: { sampling: { enabled: true, rate: 0 } } },
+      ),
+    )
+
+    expect(result).toEqual({ totalSpans: 0, acceptedSpans: 0, rejectedSpans: 0 })
+    expect(published).toHaveLength(0)
+    expect(written).toHaveLength(0)
   })
 })
 
