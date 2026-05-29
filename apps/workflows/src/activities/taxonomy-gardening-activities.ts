@@ -311,9 +311,14 @@ export const listPendingNamingTargetsActivity = (input: {
         const clusters = yield* TaxonomyClusterRepository
         const categories = yield* TaxonomyCategoryRepository
         const activeClusters = yield* clusters.listActiveByProject({ projectId: ProjectId(input.projectId) })
-        const activeCategories = yield* categories.listByProject({ projectId: ProjectId(input.projectId), state: "active" })
+        const activeCategories = yield* categories.listByProject({
+          projectId: ProjectId(input.projectId),
+          state: "active",
+        })
         return {
-          clusterIds: activeClusters.filter((cluster) => cluster.name === "Pending").map((cluster) => cluster.id as string),
+          clusterIds: activeClusters
+            .filter((cluster) => cluster.name === "Pending")
+            .map((cluster) => cluster.id as string),
           categoryIds: activeCategories
             .filter((category) => category.name === "Pending")
             .map((category) => category.id as string),

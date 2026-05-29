@@ -52,11 +52,13 @@ const errorMessage = (error: unknown): string => (error instanceof Error ? error
 const startNamingChild = async (
   workflow: typeof taxonomyNameClusterWorkflow | typeof taxonomyNameCategoryWorkflow,
   workflowId: string,
-  input: { organizationId: string; projectId: string; clusterId: string } | {
-    organizationId: string
-    projectId: string
-    categoryId: string
-  },
+  input:
+    | { organizationId: string; projectId: string; clusterId: string }
+    | {
+        organizationId: string
+        projectId: string
+        categoryId: string
+      },
 ): Promise<void> => {
   try {
     // ABANDON: the rename outlives this gardening run. A same-id child still
