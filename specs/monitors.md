@@ -45,7 +45,7 @@ Three pieces of existing work this spec builds on:
 
 - **Alert incidents** — `specs/alerts.md`, `packages/domain/alerts/`. The `alert_incidents` table and firing/closing logic for `issue.new` / `issue.regressed` / `issue.escalating` are in place. The escalating detector lives in `packages/domain/issues/src/helpers.ts` (`evaluateSeasonalEscalation`).
 - **Multi-channel notifications** — `specs/notifications-multi-channel.md`, `dev-docs/notifications.md`. The producer → creator → channel pipeline (`apps/workers/src/workers/notifications.ts`, `notification-emailer.ts`) is reused unchanged for monitor-driven incidents. The only modification is in the producer step, which adds a mute check. **Important distinction**: the three system monitors replace today's three project-level per-kind toggles in `projects.settings.notifications.incidents` (the "Notify when a new issue is discovered" / "Notify when an issue regresses" / "Notify when an issue starts or stops escalating" checkboxes on the `/settings/issues` page). They do **not** replace the per-user-per-group preferences in `users.notification_preferences` (`incidents`, `wrapped_reports`, `custom_messages` group toggles) — those continue to apply to monitor-driven incidents unchanged.
-- **Saved searches** — `packages/domain/saved-searches/`, `apps/web/src/routes/_authenticated/projects/$projectSlug/search/`. Today they live on a standalone `/search` page with `assignedUserId` / `createdByUserId` fields. Monitors reference saved searches by id; the page goes away and the columns are dropped.
+- **Saved searches** — `packages/domain/saved-searches/`, `apps/web/src/routes/_authenticated/projects/$projectSlug/search/index.tsx`. Today they live on a standalone `/search` page (which since #3320 hosts the unified session-rollup search and the saved-searches list together — `/session-search` was retired in that PR, and the `save-search-modal`, `saved-searches-list`, and `search-syntax-legend` components already live in the shared `-components/` directory alongside the traces/sessions views). Saved searches still carry `assignedUserId` / `createdByUserId` fields. Monitors reference saved searches by id; the standalone `/search` route goes away and its functionality folds into the `/` page's Sessions and Traces tabs, and the user columns are dropped.
 
 ## Conceptual model
 
@@ -933,9 +933,9 @@ Tooltip copy lives next to every field (see the M5 task list). The intent is tha
 
 ### Saved searches integration in traces / sessions pages
 
-After the standalone `/search` page is removed (M8):
+After the standalone `/search` page is removed (M8) and its UI folds into the `/` page's existing Sessions/Traces tabs:
 
-- Traces page (`/projects/$projectSlug` index) and sessions page (`/projects/$projectSlug/session-search`) render the existing `<SearchInput>` in `Layout.Actions`.
+- The `/` page (`apps/web/src/routes/_authenticated/projects/$projectSlug/index.tsx`) already routes between `TracesView` and `SessionsView` via the `activeTab` query param. M8 adds the `<SearchInput>` to its `Layout.Actions` row so the bar is visible regardless of which tab is active. (Filters and time range already live there.)
 - A new `<SavedSearchSelector>` dropdown sits immediately left of `<SearchInput>`. It contains a search filter, the project's saved searches list, and a `"Save current search…"` footer.
 - A `<SaveOrUpdateSearchButton>` sits immediately right of `<SearchInput>`:
   - Hidden when no query / no filters / no saved search selected.
@@ -1201,7 +1201,7 @@ The first milestones prioritise **visible progress**: M1 ships the sidebar entry
 - [ ] Register `monitors` in `packages/domain/feature-flags/src/registry.ts`.
 - [ ] Add the `Monitors` nav item in `apps/web/src/routes/_authenticated/projects/$projectSlug.tsx` (`ProjectSidebar`), positioned between Issues and Datasets, gated by `useHasFeatureFlag("monitors")`.
 - [ ] Create `apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/index.tsx` with the `ListingLayout` shell, empty toolbar (search input + disabled "+ New monitor" button), and an empty state component (`monitors-empty-state.tsx`).
-- [ ] Frontend feature-flag gate on the route: "Not available" splash if the flag is off, mirroring `session-search-v2`.
+- [ ] Frontend feature-flag gate on the route: "Not available" splash if the flag is off (no longer a borrowable pattern in the codebase — `session-search-v2` was removed in #3320; implement as a small consistent helper).
 
 ### Milestone 2 — Backend foundation: schema, entities, repository, list/get use-cases
 
@@ -1319,17 +1319,20 @@ The first milestones prioritise **visible progress**: M1 ships the sidebar entry
 - [ ] No abstraction over issue.escalating and saved-search kinds at the use-case level — parallel implementations sharing only the storage shape and trigger plumbing. (`evaluateSeasonalEscalation` stays in `@domain/issues`; `evaluateSavedSearchAlert` lives in `@domain/monitors`.)
 - [ ] Backend tests: each state machine independently; backtracked `startedAt`; multiplier baseline frozen at entry; `isMet` flapping during dwell resets `exitEligibleSince`; threshold short-circuit after prior fire; sweep cron closes incidents in low-traffic orgs.
 
-### Milestone 8 — Move search bar to traces/sessions, retire `/search` page
+### Milestone 8 — Fold `/search` into the `/` page tabs, retire the standalone route
 
-> Branch: `LAT-630/search-bar-relocation` · Estimated size: ~2,600 lines (frontend-heavy)
+> Branch: `LAT-630/search-bar-relocation` · Estimated size: ~2,200 lines (frontend-heavy)
 
-**Goal:** The traces and sessions pages each carry their own search bar and saved-searches dropdown directly. The standalone `/search` page is gone. Saved searches no longer have `assignedUserId` / `createdByUserId`.
+**Goal:** The `/` page (which already has Sessions and Traces tabs as of #3320) gains the search bar and the saved-searches dropdown directly in its toolbar. The standalone `/search` route is gone. Saved searches no longer carry `assignedUserId` / `createdByUserId`.
+
+Smaller than originally estimated because most of the heavy lifting has already shipped: the session-rollup search was promoted, `/session-search` was retired, and the `save-search-modal` / `saved-searches-list` / `search-syntax-legend` components already live in the shared `-components/` directory. M8 finishes the job by folding `/search/index.tsx`'s logic into `/index.tsx` and dropping the route.
 
 - [ ] Drop `assignedUserId` and `createdByUserId` columns via Drizzle migration. Update `saved_searches.ts` schema, `SavedSearch` entity, repository, every use-case, and the OpenAPI `SavedSearchSchema`.
-- [ ] Delete `assignSavedSearchUseCase`, the `POST /searches/{slug}/assign` endpoint, and the assign UI.
-- [ ] Extract `<SavedSearchSelector>` and `<SaveOrUpdateSearchButton>` into shared components. Place both in `<Layout.Actions>` of the traces and sessions pages.
-- [ ] "Create monitor" / "Edit monitor" entry-point inside `<SavedSearchSelector>` rows.
-- [ ] Delete the standalone `/search` route and its `-components/`. Redirect stale links to `/` (traces).
+- [ ] Delete `assignSavedSearchUseCase` and the `POST /searches/{slug}/assign` endpoint. Remove the assign-user UI from `saved-searches-list.tsx`.
+- [ ] Add `<SearchInput>` (with the syntax-legend popover) to `Layout.Actions` of `apps/web/src/routes/_authenticated/projects/$projectSlug/index.tsx`. It applies to whichever tab is active. Both `TracesView` and `SessionsView` already accept a `searchQuery` prop.
+- [ ] Add `<SavedSearchSelector>` (a new component, dropdown listing project's saved searches with a filter input + "Save current search…" footer) immediately left of `<SearchInput>`. Add `<SaveOrUpdateSearchButton>` immediately right of `<SearchInput>` with the four-state behaviour described above.
+- [ ] "Create monitor" / "Edit monitor" entry-point inside each `<SavedSearchSelector>` row.
+- [ ] Delete `apps/web/src/routes/_authenticated/projects/$projectSlug/search/index.tsx`. Redirect stale links to `/` (defaulting to the `sessions` tab to match #3320's promotion). The shared `-components/` files (`save-search-modal`, `saved-searches-list`, `search-syntax-legend`) stay where they are — they're already imported from the parent directory.
 - [ ] Backend tests: saved-search create/update without the dropped columns; OpenAPI snapshot updated.
 
 ### Milestone 9 — API endpoints + SDK + MCP regeneration
