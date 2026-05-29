@@ -1,3 +1,10 @@
+export {
+  SLACK_REFRESH_LOCK_TTL_SECONDS,
+  SLACK_TOKEN_REFRESH_LOOKAHEAD_SECONDS,
+  SLACK_TOKEN_REFRESH_SCAN_KEY,
+  SLACK_TOKEN_REFRESH_SCAN_PATTERN,
+  SLACK_TOKEN_REFRESH_SKEW_SECONDS,
+} from "./constants.ts"
 export { type SlackChannel, slackChannelSchema } from "./entities/slack-channel.ts"
 export { type SlackDelivery, slackDeliverySchema } from "./entities/slack-delivery.ts"
 export {
@@ -13,7 +20,11 @@ export {
   slackRouteSchema,
   slackRoutesSchema,
 } from "./entities/slack-route.ts"
-export { SlackIntegrationConflictError } from "./errors.ts"
+export {
+  SlackIntegrationConflictError,
+  SlackRefreshLockUnavailableError,
+  SlackTokenRefreshError,
+} from "./errors.ts"
 export {
   type SlackDeliveryClaim,
   SlackDeliveryRepository,
@@ -23,6 +34,16 @@ export {
   SlackIntegrationRepository,
   type SlackIntegrationRepositoryShape,
 } from "./ports/slack-integration-repository.ts"
+export {
+  type SlackRefreshLockInput,
+  SlackRefreshLockRepository,
+  type SlackRefreshLockRepositoryShape,
+} from "./ports/slack-refresh-lock-repository.ts"
+export {
+  SlackTokenRefresher,
+  type SlackTokenRefresherShape,
+  type SlackTokenRefreshResult,
+} from "./ports/slack-token-refresher.ts"
 export { NOTIFICATION_SLACK_RENDERERS } from "./templates/notifications/registry.ts"
 export {
   type RenderedSlackMessage,
@@ -45,6 +66,11 @@ export {
   type SlackMessenger,
   SlackMessengerError,
 } from "./use-cases/dispatch-slack-notification.ts"
+export {
+  type GetOrRefreshBotTokenError,
+  type GetOrRefreshBotTokenInput,
+  getOrRefreshBotTokenUseCase,
+} from "./use-cases/get-or-refresh-bot-token.ts"
 export {
   type InstallSlackIntegrationError,
   type InstallSlackIntegrationInput,
