@@ -14,7 +14,7 @@ import { AIEmbedLive } from "@platform/ai-voyage"
 import {
   createRedisClient,
   createRedisConnection,
-  RedisTaxonomyLockRepositoryLive,
+  RedisDistributedLockRepositoryLive,
   waitForRedisClientReady,
 } from "@platform/cache-redis"
 import {
@@ -158,7 +158,7 @@ const main = async () => {
       withClickHouse(clickhouseLayer, clickhouse, organizationId),
       withPostgres(postgresLayer, postgres, organizationId),
       withAi(Layer.mergeAll(AIEmbedLive, fakeNamingLayer), redis),
-      Effect.provide(RedisTaxonomyLockRepositoryLive(redis)),
+      Effect.provide(RedisDistributedLockRepositoryLive(redis)),
     )
 
   try {

@@ -4,8 +4,8 @@ import { TAXONOMY_CLUSTER_LOCK_TTL_SECONDS } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyClusterNotFoundError } from "../errors.ts"
 import { updateTaxonomyCentroid } from "../helpers.ts"
+import { withTaxonomyClusterLock } from "../locks.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
 
 export interface AssignObservationToClusterInput {
   readonly organizationId: OrganizationId
@@ -44,11 +44,10 @@ export const assignObservationToClusterUseCase = (input: AssignObservationToClus
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
-    const lockRepository = yield* TaxonomyLockRepository
     const clusterRepository = yield* TaxonomyClusterRepository
     const clusterId = TaxonomyClusterId(input.clusterId)
 
-    return yield* lockRepository.withClusterLock(
+    return yield* withTaxonomyClusterLock(
       {
         organizationId: input.organizationId,
         clusterId,

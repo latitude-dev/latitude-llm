@@ -10,6 +10,8 @@ export {
   TAXONOMY_CATEGORY_STATES,
   TAXONOMY_CENTROID_HALF_LIFE_SECONDS,
   TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH,
+  TAXONOMY_CLUSTER_LOCK_MAX_RETRIES,
+  TAXONOMY_CLUSTER_LOCK_RETRY_DELAY_MS,
   TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
   TAXONOMY_CLUSTER_NAME_MAX_LENGTH,
   TAXONOMY_CLUSTER_STATES,
@@ -120,6 +122,12 @@ export {
   updateTaxonomyCentroid,
 } from "./helpers.ts"
 export {
+  taxonomyClusterLockKey,
+  taxonomyGardenLockKey,
+  withTaxonomyClusterLock,
+  withTaxonomyGardenLock,
+} from "./locks.ts"
+export {
   type BehaviorObservationClusterOccurrence,
   type BehaviorObservationCounts,
   BehaviorObservationRepository,
@@ -149,12 +157,6 @@ export {
   TaxonomyLineageRepository,
   type TaxonomyLineageRepositoryShape,
 } from "./ports/taxonomy-lineage-repository.ts"
-export {
-  type TaxonomyClusterLockInput,
-  type TaxonomyGardenLockInput,
-  TaxonomyLockRepository,
-  type TaxonomyLockRepositoryShape,
-} from "./ports/taxonomy-lock-repository.ts"
 export {
   TaxonomyRunRepository,
   type TaxonomyRunRepositoryShape,

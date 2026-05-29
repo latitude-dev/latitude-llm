@@ -8,7 +8,7 @@ import {
   ISSUE_DISCOVERY_PROJECT_LOCK_TTL_SECONDS,
 } from "../constants.ts"
 import { type CheckEligibilityError, type IssueDiscoveryLockUnavailableError, isEligibilityError } from "../errors.ts"
-import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
+import { withIssueDiscoveryLock } from "../locks.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import type { AssignScoreToIssueError, AssignScoreToIssueResult } from "./assign-score-to-issue.ts"
 import { assignScoreToIssueUseCase } from "./assign-score-to-issue.ts"
@@ -118,10 +118,9 @@ export const assignOrCreateIssueUseCase = (input: AssignOrCreateIssueInput) =>
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
 
-    const lockRepository = yield* IssueDiscoveryLockRepository
     const feedbackHash = yield* hash(input.feedback)
 
-    return yield* lockRepository.withLock(
+    return yield* withIssueDiscoveryLock(
       {
         organizationId: input.organizationId,
         projectId: ProjectId(input.projectId),
@@ -134,7 +133,7 @@ export const assignOrCreateIssueUseCase = (input: AssignOrCreateIssueInput) =>
           return yield* assignToIssue(input, feedbackAssignedIssueId)
         }
 
-        return yield* lockRepository.withLock(
+        return yield* withIssueDiscoveryLock(
           {
             organizationId: input.organizationId,
             projectId: ProjectId(input.projectId),

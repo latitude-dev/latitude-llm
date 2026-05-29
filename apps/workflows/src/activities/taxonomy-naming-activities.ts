@@ -3,7 +3,7 @@ import { nameCategoryUseCase, nameClusterUseCase } from "@domain/taxonomy"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
-import { RedisCacheStoreLive, RedisTaxonomyLockRepositoryLive } from "@platform/cache-redis"
+import { RedisCacheStoreLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import { BehaviorObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { TaxonomyCategoryRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
@@ -32,7 +32,7 @@ export const nameTaxonomyClusterActivity = (input: NameTaxonomyClusterActivityIn
       withClickHouse(BehaviorObservationRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
       Effect.provide(
-        Layer.mergeAll(RedisCacheStoreLive(getRedisClient()), RedisTaxonomyLockRepositoryLive(getRedisClient())),
+        Layer.mergeAll(RedisCacheStoreLive(getRedisClient()), RedisDistributedLockRepositoryLive(getRedisClient())),
       ),
     ),
   )
@@ -51,7 +51,7 @@ export const nameTaxonomyCategoryActivity = (input: NameTaxonomyCategoryActivity
       ),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), getRedisClient()),
       Effect.provide(
-        Layer.mergeAll(RedisCacheStoreLive(getRedisClient()), RedisTaxonomyLockRepositoryLive(getRedisClient())),
+        Layer.mergeAll(RedisCacheStoreLive(getRedisClient()), RedisDistributedLockRepositoryLive(getRedisClient())),
       ),
     ),
   )

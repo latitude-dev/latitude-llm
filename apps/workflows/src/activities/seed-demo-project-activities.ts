@@ -14,7 +14,7 @@ import { recordSessionObservationUseCase, runProjectGardeningUseCase } from "@do
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
-import { RedisCacheStoreLive, RedisTaxonomyLockRepositoryLive } from "@platform/cache-redis"
+import { RedisCacheStoreLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import {
   BehaviorObservationRepositoryLive,
   queryClickhouse,
@@ -280,7 +280,7 @@ export const seedDemoProjectTaxonomyActivity = (input: SeedDemoProjectActivityIn
         organizationId,
       ),
       withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), redis),
-      Effect.provide(Layer.mergeAll(RedisCacheStoreLive(redis), RedisTaxonomyLockRepositoryLive(redis))),
+      Effect.provide(Layer.mergeAll(RedisCacheStoreLive(redis), RedisDistributedLockRepositoryLive(redis))),
     ),
   )
 }

@@ -75,11 +75,7 @@ export {
   type UpdateIssueCentroidInput,
   updateIssueCentroid,
 } from "./helpers.ts"
-export {
-  type IssueDiscoveryLockInput,
-  IssueDiscoveryLockRepository,
-  type IssueDiscoveryLockRepositoryShape,
-} from "./ports/issue-discovery-lock-repository.ts"
+export { type IssueDiscoveryLockInput, issueDiscoveryLockKey, withIssueDiscoveryLock } from "./locks.ts"
 export {
   type IssueLifecycleFlags,
   type IssueListPage,

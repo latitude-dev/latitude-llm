@@ -3,6 +3,8 @@ import { SessionRepository, TraceRepository } from "@domain/spans"
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import {
+  TAXONOMY_CLUSTER_LOCK_MAX_RETRIES,
+  TAXONOMY_CLUSTER_LOCK_RETRY_DELAY_MS,
   TAXONOMY_EMBEDDING_MODEL,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   TAXONOMY_SESSION_MIN_LENGTH,
@@ -12,7 +14,10 @@ import {
 } from "../constants.ts"
 import { buildSessionDocument } from "../helpers.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
-import { assignObservationToClusterUseCase } from "./assign-observation-to-cluster.ts"
+import {
+  type AssignObservationToClusterInput,
+  assignObservationToClusterUseCase,
+} from "./assign-observation-to-cluster.ts"
 import { decideClusterAssignmentUseCase } from "./decide-cluster-assignment.ts"
 import { embedBehaviorSummaryUseCase } from "./embed-behavior-summary.ts"
 import { findNearestClustersUseCase } from "./find-nearest-clusters.ts"
@@ -27,6 +32,11 @@ export interface RecordSessionObservationInput {
   readonly retentionDays?: number
   /** Test/operator override; defaults to TAXONOMY_SUMMARY_STRATEGY. */
   readonly summaryStrategy?: TaxonomySummaryStrategy
+  /** Test/operator override for short lock-contention backoff. */
+  readonly clusterLockRetry?: {
+    readonly maxRetries: number
+    readonly delayMs: number
+  }
 }
 
 export type RecordSessionObservationResult =
@@ -45,6 +55,45 @@ const parseTraceIds = (traceIds: readonly string[], fallback?: string): TraceId[
   if (parsed.length === 0 && fallback && fallback.length === 32) return [TraceId(fallback)]
   return parsed
 }
+
+const delayWithJitter = (delayMs: number) =>
+  Effect.sync(() => Math.max(0, delayMs) + Math.floor(Math.random() * Math.max(1, delayMs))).pipe(
+    Effect.flatMap((durationMs) => Effect.sleep(`${durationMs} millis`)),
+  )
+
+const assignObservationToClusterWithBackoff = (
+  input: AssignObservationToClusterInput & {
+    readonly sessionId: SessionId
+    readonly maxRetries: number
+    readonly retryDelayMs: number
+  },
+) =>
+  Effect.gen(function* () {
+    let remainingRetries = input.maxRetries
+
+    while (true) {
+      const attempt = yield* assignObservationToClusterUseCase(input).pipe(
+        Effect.as(true as const),
+        Effect.catchTag("TaxonomyClusterLockUnavailableError", (error) => Effect.succeed({ error } as const)),
+      )
+
+      if (attempt === true) return true
+
+      if (remainingRetries <= 0) {
+        yield* Effect.logWarning("Taxonomy cluster lock unavailable; recording observation as noise", {
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          sessionId: input.sessionId,
+          clusterId: input.clusterId,
+          error: attempt.error,
+        })
+        return false
+      }
+
+      remainingRetries--
+      yield* delayWithJitter(input.retryDelayMs)
+    }
+  })
 
 export const recordSessionObservationUseCase = (input: RecordSessionObservationInput) =>
   Effect.gen(function* () {
@@ -152,15 +201,28 @@ export const recordSessionObservationUseCase = (input: RecordSessionObservationI
     })
     const decision = yield* decideClusterAssignmentUseCase({ topK })
 
+    let assignedClusterId = decision.clusterId === null ? null : TaxonomyClusterId(decision.clusterId)
+    let assignmentMethod = decision.method
+    let assignmentConfidence = decision.confidence
+
     if (decision.method === "centroid_online") {
-      yield* assignObservationToClusterUseCase({
+      const assigned = yield* assignObservationToClusterWithBackoff({
         organizationId,
         projectId,
+        sessionId,
         clusterId: decision.clusterId,
         embedding: embedded.normalizedEmbedding,
         observedAt: session.startTime,
         assignedAt: now,
+        maxRetries: input.clusterLockRetry?.maxRetries ?? TAXONOMY_CLUSTER_LOCK_MAX_RETRIES,
+        retryDelayMs: input.clusterLockRetry?.delayMs ?? TAXONOMY_CLUSTER_LOCK_RETRY_DELAY_MS,
       })
+
+      if (!assigned) {
+        assignedClusterId = null
+        assignmentMethod = "noise"
+        assignmentConfidence = 0
+      }
     }
 
     yield* observations.upsert({
@@ -174,9 +236,9 @@ export const recordSessionObservationUseCase = (input: RecordSessionObservationI
       summaryHash,
       embedding: embedded.normalizedEmbedding,
       embeddingModel: embedded.embeddingModel,
-      assignedClusterId: decision.clusterId === null ? null : TaxonomyClusterId(decision.clusterId),
-      assignmentConfidence: decision.confidence,
-      assignmentMethod: decision.method,
+      assignedClusterId,
+      assignmentConfidence,
+      assignmentMethod,
       reassignmentRunId: null,
       retentionDays,
       indexedAt: now,
@@ -184,8 +246,8 @@ export const recordSessionObservationUseCase = (input: RecordSessionObservationI
 
     return {
       action: "recorded",
-      assignmentMethod: decision.method,
-      clusterId: decision.clusterId,
-      confidence: decision.confidence,
+      assignmentMethod,
+      clusterId: assignedClusterId,
+      confidence: assignmentConfidence,
     } satisfies RecordSessionObservationResult
   }).pipe(Effect.withSpan("taxonomy.recordSessionObservation"))

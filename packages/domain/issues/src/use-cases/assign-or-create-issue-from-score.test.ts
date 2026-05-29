@@ -2,14 +2,21 @@ import { createFakeAI } from "@domain/ai/testing"
 import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { IssueId, OrganizationId, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  DistributedLockRepository,
+  DistributedLockUnavailableError,
+  IssueId,
+  OrganizationId,
+  ScoreId,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
 import { Cause, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { IssueDiscoveryLockUnavailableError } from "../errors.ts"
 import { createIssueCentroid } from "../helpers.ts"
-import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { createFakeIssueRepository } from "../testing/index.ts"
 import { assignOrCreateIssueUseCase } from "./assign-or-create-issue-from-score.ts"
@@ -115,10 +122,10 @@ describe("assignOrCreateIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(IssueDiscoveryLockRepository, {
+        Effect.provideService(DistributedLockRepository, {
           withLock: (input, effect) =>
             Effect.gen(function* () {
-              lockCalls.push(`${input.organizationId}:${input.projectId}:${input.lockKey}`)
+              lockCalls.push(input.key)
               return yield* effect
             }),
         }),
@@ -137,8 +144,10 @@ describe("assignOrCreateIssueUseCase", () => {
     expect(issues.size).toBe(1)
     // Outer feedback lock + inner per-issue update lock around the centroid recompute and projection sync.
     expect(lockCalls).toHaveLength(2)
-    expect(lockCalls[0]).toMatch(new RegExp(`^${organizationId}:${projectId}:feedback:[a-f0-9]{64}$`))
-    expect(lockCalls[1]).toBe(`${organizationId}:${projectId}:issue:${existingIssue.id}`)
+    expect(lockCalls[0]).toMatch(
+      new RegExp(`^org:${organizationId}:issues:discovery:${projectId}:feedback:[a-f0-9]{64}$`),
+    )
+    expect(lockCalls[1]).toBe(`org:${organizationId}:issues:discovery:${projectId}:issue:${existingIssue.id}`)
     expect(writtenEvents).toHaveLength(1)
     expect(fakeAi.calls.rerank).toHaveLength(1)
     expect(fakeAi.calls.generate).toHaveLength(0)
@@ -185,7 +194,7 @@ describe("assignOrCreateIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(IssueDiscoveryLockRepository, {
+        Effect.provideService(DistributedLockRepository, {
           withLock: (_input, effect) => effect,
         }),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
@@ -230,10 +239,10 @@ describe("assignOrCreateIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(IssueDiscoveryLockRepository, {
+        Effect.provideService(DistributedLockRepository, {
           withLock: (input, effect) =>
             Effect.gen(function* () {
-              lockCalls.push(`${input.organizationId}:${input.projectId}:${input.lockKey}`)
+              lockCalls.push(input.key)
               return yield* effect
             }),
         }),
@@ -247,8 +256,10 @@ describe("assignOrCreateIssueUseCase", () => {
     expect(scores.get(score.id)?.issueId).toBe(result.issueId)
     expect(issues.size).toBe(1)
     expect(lockCalls).toHaveLength(2)
-    expect(lockCalls[0]).toMatch(new RegExp(`^${organizationId}:${projectId}:feedback:[a-f0-9]{64}$`))
-    expect(lockCalls[1]).toBe(`${organizationId}:${projectId}:project`)
+    expect(lockCalls[0]).toMatch(
+      new RegExp(`^org:${organizationId}:issues:discovery:${projectId}:feedback:[a-f0-9]{64}$`),
+    )
+    expect(lockCalls[1]).toBe(`org:${organizationId}:issues:discovery:${projectId}:project`)
     expect(fakeAi.calls.rerank).toHaveLength(0)
     expect(fakeAi.calls.generate).toHaveLength(1)
   })
@@ -272,14 +283,8 @@ describe("assignOrCreateIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(IssueDiscoveryLockRepository, {
-          withLock: (input) =>
-            Effect.fail(
-              new IssueDiscoveryLockUnavailableError({
-                projectId: input.projectId,
-                lockKey: input.lockKey,
-              }),
-            ),
+        Effect.provideService(DistributedLockRepository, {
+          withLock: (input) => Effect.fail(new DistributedLockUnavailableError({ key: input.key })),
         }),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
@@ -324,7 +329,7 @@ describe("assignOrCreateIssueUseCase", () => {
         Effect.provide(fakeAi.layer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(IssueDiscoveryLockRepository, {
+        Effect.provideService(DistributedLockRepository, {
           withLock: (_input, effect) => effect,
         }),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),

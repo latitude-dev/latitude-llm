@@ -7,7 +7,7 @@ import type { Issue } from "../entities/issue.ts"
 import type { CheckEligibilityError, IssueDiscoveryLockUnavailableError } from "../errors.ts"
 import { IssueNotFoundForAssignmentError, ScoreAlreadyOwnedByIssueError } from "../errors.ts"
 import { updateIssueCentroid } from "../helpers.ts"
-import { IssueDiscoveryLockRepository } from "../ports/issue-discovery-lock-repository.ts"
+import { withIssueDiscoveryLock } from "../locks.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
 
@@ -119,7 +119,6 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
     yield* Effect.annotateCurrentSpan("issueId", input.issueId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
     const sqlClient = yield* SqlClient
-    const lockRepository = yield* IssueDiscoveryLockRepository
     const scoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
 
     if (scoreResult.action === "already-assigned") {
@@ -131,7 +130,7 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
 
     const score = scoreResult.score
 
-    return yield* lockRepository.withLock(
+    return yield* withIssueDiscoveryLock(
       {
         organizationId: input.organizationId,
         projectId: ProjectId(input.projectId),

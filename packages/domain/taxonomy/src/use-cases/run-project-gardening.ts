@@ -7,10 +7,10 @@ import {
 } from "../constants.ts"
 import type { TaxonomyClusterLineage, TaxonomyRunTrigger } from "../entities/lineage.ts"
 import { TaxonomyGardeningTimeoutError } from "../errors.ts"
+import { withTaxonomyGardenLock } from "../locks.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
 import { TaxonomyCategoryRepository } from "../ports/taxonomy-category-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
 import { TaxonomyRunRepository } from "../ports/taxonomy-run-repository.ts"
 import { deprecateInactiveClustersUseCase } from "./deprecate-inactive-clusters.ts"
 import { emitLineageUseCase } from "./emit-lineage.ts"
@@ -48,7 +48,6 @@ const errorMessage = (error: unknown): string => {
 export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
-    const locks = yield* TaxonomyLockRepository
     const runs = yield* TaxonomyRunRepository
     const clusters = yield* TaxonomyClusterRepository
     const categories = yield* TaxonomyCategoryRepository
@@ -72,7 +71,7 @@ export const runProjectGardeningUseCase = (input: RunProjectGardeningInput) =>
       error: null,
     }
 
-    return yield* locks.withGardenLock(
+    return yield* withTaxonomyGardenLock(
       {
         organizationId: input.organizationId,
         projectId: input.projectId,

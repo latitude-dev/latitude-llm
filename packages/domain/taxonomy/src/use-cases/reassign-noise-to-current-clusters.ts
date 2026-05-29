@@ -2,9 +2,9 @@ import { type OrganizationId, type ProjectId, TaxonomyClusterId, type TaxonomyRu
 import { Effect } from "effect"
 import { TAXONOMY_CLUSTER_LOCK_TTL_SECONDS, TAXONOMY_NOISE_LOOKBACK_DAYS } from "../constants.ts"
 import { updateTaxonomyCentroid } from "../helpers.ts"
+import { withTaxonomyClusterLock } from "../locks.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
 import { decideClusterAssignment } from "./decide-cluster-assignment.ts"
 
 export interface ReassignNoiseToCurrentClustersInput {
@@ -28,7 +28,6 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
     const now = input.now ?? new Date()
     const observations = yield* BehaviorObservationRepository
     const clusters = yield* TaxonomyClusterRepository
-    const locks = yield* TaxonomyLockRepository
     const noise = yield* observations.listNoise({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -50,7 +49,7 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
       if (decision.method !== "centroid_online") continue
 
       const clusterId = TaxonomyClusterId(decision.clusterId)
-      yield* locks.withClusterLock(
+      yield* withTaxonomyClusterLock(
         { organizationId: input.organizationId, clusterId, ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS },
         Effect.gen(function* () {
           const cluster = yield* clusters.findById(clusterId)
