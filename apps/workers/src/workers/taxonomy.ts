@@ -15,7 +15,7 @@ import {
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
-import { RedisCacheStoreLive, type RedisClient, RedisTaxonomyLockRepositoryLive } from "@platform/cache-redis"
+import { RedisCacheStoreLive, type RedisClient, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import {
   BehaviorObservationRepositoryLive,
@@ -127,7 +127,7 @@ export const runObserveSessionJob = (payload: ObserveSessionPayload, deps: Taxon
     ),
     withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), deps.redisClient),
     Effect.provide(
-      Layer.mergeAll(RedisCacheStoreLive(deps.redisClient), RedisTaxonomyLockRepositoryLive(deps.redisClient)),
+      Layer.mergeAll(RedisCacheStoreLive(deps.redisClient), RedisDistributedLockRepositoryLive(deps.redisClient)),
     ),
     withTracing,
     Effect.withSpan("taxonomy.observeSession"),
@@ -378,7 +378,7 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
     ),
     withAi(Layer.mergeAll(AIEmbedLive, AIGenerateLive), deps.redisClient),
     Effect.provide(
-      Layer.mergeAll(RedisCacheStoreLive(deps.redisClient), RedisTaxonomyLockRepositoryLive(deps.redisClient)),
+      Layer.mergeAll(RedisCacheStoreLive(deps.redisClient), RedisDistributedLockRepositoryLive(deps.redisClient)),
     ),
     withTracing,
     Effect.withSpan("taxonomy.gardenProject"),

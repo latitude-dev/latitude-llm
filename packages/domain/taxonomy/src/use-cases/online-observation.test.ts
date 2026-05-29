@@ -1,6 +1,8 @@
 import { AI } from "@domain/ai"
 import {
   ChSqlClient,
+  DistributedLockRepository,
+  DistributedLockUnavailableError,
   ExternalUserId,
   NotFoundError,
   OrganizationId,
@@ -10,7 +12,7 @@ import {
   TaxonomyClusterId,
   TraceId,
 } from "@domain/shared"
-import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
 import {
   emptyTraceDistribution,
   type SessionDetail,
@@ -25,10 +27,8 @@ import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { createTaxonomyCentroid, updateTaxonomyCentroid } from "../helpers.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
 import { createFakeBehaviorObservationRepository } from "../testing/fake-behavior-observation-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
-import { createFakeTaxonomyLockRepository } from "../testing/fake-taxonomy-lock-repository.ts"
 import { decideClusterAssignmentUseCase } from "./decide-cluster-assignment.ts"
 import { recordSessionObservationUseCase } from "./record-session-observation.ts"
 
@@ -286,7 +286,7 @@ describe("online taxonomy observation use-cases", () => {
   it("skips when the session is missing", async () => {
     const observations = createFakeBehaviorObservationRepository()
     const clusters = createFakeTaxonomyClusterRepository([])
-    const locks = createFakeTaxonomyLockRepository()
+    const locks = createFakeDistributedLockRepository()
 
     const result = await Effect.runPromise(
       recordSessionObservationUseCase({ organizationId, projectId, sessionId }).pipe(
@@ -295,7 +295,7 @@ describe("online taxonomy observation use-cases", () => {
         Effect.provide(makeAiLayer(embedding(0))),
         Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(TaxonomyLockRepository, locks.repository)),
+        Effect.provide(Layer.succeed(DistributedLockRepository, locks.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
@@ -308,7 +308,7 @@ describe("online taxonomy observation use-cases", () => {
   it("records short sessions as cheap noise without embedding", async () => {
     const observations = createFakeBehaviorObservationRepository()
     const clusters = createFakeTaxonomyClusterRepository([])
-    const locks = createFakeTaxonomyLockRepository()
+    const locks = createFakeDistributedLockRepository()
     const shortSession = makeSession({
       traceIds: [],
       lastInputMessages: [{ role: "user", parts: [{ type: "text", content: "hi" }] }],
@@ -322,7 +322,7 @@ describe("online taxonomy observation use-cases", () => {
         Effect.provide(makeAiLayer(embedding(0))),
         Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(TaxonomyLockRepository, locks.repository)),
+        Effect.provide(Layer.succeed(DistributedLockRepository, locks.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
@@ -335,7 +335,7 @@ describe("online taxonomy observation use-cases", () => {
   it("skips empty sessions", async () => {
     const observations = createFakeBehaviorObservationRepository()
     const clusters = createFakeTaxonomyClusterRepository([])
-    const locks = createFakeTaxonomyLockRepository()
+    const locks = createFakeDistributedLockRepository()
     const emptySession = makeSession({ traceIds: [], lastInputMessages: [], outputMessages: [] })
 
     const result = await Effect.runPromise(
@@ -345,7 +345,7 @@ describe("online taxonomy observation use-cases", () => {
         Effect.provide(makeAiLayer(embedding(0))),
         Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(TaxonomyLockRepository, locks.repository)),
+        Effect.provide(Layer.succeed(DistributedLockRepository, locks.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
@@ -358,7 +358,7 @@ describe("online taxonomy observation use-cases", () => {
   it("uses the LLM summary branch and caches by summary hash", async () => {
     const observations = createFakeBehaviorObservationRepository()
     const clusters = createFakeTaxonomyClusterRepository([])
-    const locks = createFakeTaxonomyLockRepository()
+    const locks = createFakeDistributedLockRepository()
     const calls = { generate: 0 }
     const longText = "I need to cancel my account and understand billing consequences. ".repeat(120)
     const longSession = makeSession({
@@ -377,7 +377,7 @@ describe("online taxonomy observation use-cases", () => {
       Effect.provide(makeAiLayer(embedding(0), calls)),
       Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
       Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-      Effect.provide(Layer.succeed(TaxonomyLockRepository, locks.repository)),
+      Effect.provide(Layer.succeed(DistributedLockRepository, locks.repository)),
       Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
       Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
     )
@@ -394,7 +394,7 @@ describe("online taxonomy observation use-cases", () => {
   it("records a noise observation during cold start", async () => {
     const observations = createFakeBehaviorObservationRepository()
     const clusters = createFakeTaxonomyClusterRepository([])
-    const locks = createFakeTaxonomyLockRepository()
+    const locks = createFakeDistributedLockRepository()
 
     const result = await Effect.runPromise(
       recordSessionObservationUseCase({ organizationId, projectId, sessionId }).pipe(
@@ -403,7 +403,7 @@ describe("online taxonomy observation use-cases", () => {
         Effect.provide(makeAiLayer(embedding(0))),
         Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(TaxonomyLockRepository, locks.repository)),
+        Effect.provide(Layer.succeed(DistributedLockRepository, locks.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
@@ -415,10 +415,89 @@ describe("online taxonomy observation use-cases", () => {
     expect(row?.embedding).toHaveLength(TAXONOMY_EMBEDDING_DIMENSIONS)
   })
 
+  it("retries short cluster lock contention before assigning to an existing cluster", async () => {
+    const observations = createFakeBehaviorObservationRepository()
+    const clusters = createFakeTaxonomyClusterRepository([makeCluster()])
+    let attempts = 0
+    const locks = createFakeDistributedLockRepository({
+      withLock: <A, E, R>(_input: unknown, effect: Effect.Effect<A, E, R>) =>
+        Effect.gen(function* () {
+          attempts++
+          if (attempts === 1) {
+            return yield* Effect.fail(new DistributedLockUnavailableError({ key: `lock:${clusterId}` }))
+          }
+          return yield* effect
+        }),
+    })
+
+    const result = await Effect.runPromise(
+      recordSessionObservationUseCase({
+        organizationId,
+        projectId,
+        sessionId,
+        triggeringTraceId: TraceId("a".repeat(32)),
+        clusterLockRetry: { maxRetries: 1, delayMs: 0 },
+      }).pipe(
+        Effect.provide(makeSessionRepository(makeSession())),
+        Effect.provide(makeTraceRepository([makeTrace(makeSession())])),
+        Effect.provide(makeAiLayer(embedding(0))),
+        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(DistributedLockRepository, locks.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result).toEqual({ action: "recorded", assignmentMethod: "centroid_online", clusterId, confidence: 1 })
+    expect(attempts).toBe(2)
+    expect([...observations.rows.values()][0]?.assignedClusterId).toBe(clusterId)
+    expect(clusters.clusters.get(clusterId)?.observationCount).toBe(2)
+  })
+
+  it("records the observation as noise when cluster lock contention outlasts retries", async () => {
+    const observations = createFakeBehaviorObservationRepository()
+    const clusters = createFakeTaxonomyClusterRepository([makeCluster()])
+    let attempts = 0
+    const locks = createFakeDistributedLockRepository({
+      withLock: () =>
+        Effect.sync(() => {
+          attempts++
+        }).pipe(Effect.flatMap(() => Effect.fail(new DistributedLockUnavailableError({ key: `lock:${clusterId}` })))),
+    })
+
+    const result = await Effect.runPromise(
+      recordSessionObservationUseCase({
+        organizationId,
+        projectId,
+        sessionId,
+        triggeringTraceId: TraceId("a".repeat(32)),
+        clusterLockRetry: { maxRetries: 0, delayMs: 0 },
+      }).pipe(
+        Effect.provide(makeSessionRepository(makeSession())),
+        Effect.provide(makeTraceRepository([makeTrace(makeSession())])),
+        Effect.provide(makeAiLayer(embedding(0))),
+        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(DistributedLockRepository, locks.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result).toEqual({ action: "recorded", assignmentMethod: "noise", clusterId: null, confidence: 0 })
+    expect(attempts).toBe(1)
+    const row = [...observations.rows.values()][0]
+    expect(row?.assignedClusterId).toBeNull()
+    expect(row?.assignmentMethod).toBe("noise")
+    expect(row?.embedding).toHaveLength(TAXONOMY_EMBEDDING_DIMENSIONS)
+    expect(clusters.clusters.get(clusterId)?.observationCount).toBe(1)
+  })
+
   it("assigns to an existing cluster and updates its centroid/counter", async () => {
     const observations = createFakeBehaviorObservationRepository()
     const clusters = createFakeTaxonomyClusterRepository([makeCluster()])
-    const locks = createFakeTaxonomyLockRepository()
+    const locks = createFakeDistributedLockRepository()
 
     const result = await Effect.runPromise(
       recordSessionObservationUseCase({
@@ -432,7 +511,7 @@ describe("online taxonomy observation use-cases", () => {
         Effect.provide(makeAiLayer(embedding(0))),
         Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(TaxonomyLockRepository, locks.repository)),
+        Effect.provide(Layer.succeed(DistributedLockRepository, locks.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),

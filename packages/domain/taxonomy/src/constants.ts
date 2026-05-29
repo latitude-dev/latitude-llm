@@ -192,4 +192,6 @@ export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 90
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTER_LOCK_TTL_SECONDS = 30
+export const TAXONOMY_CLUSTER_LOCK_MAX_RETRIES = 20
+export const TAXONOMY_CLUSTER_LOCK_RETRY_DELAY_MS = 100
 export const TAXONOMY_GARDEN_LOCK_TTL_SECONDS = Math.ceil(TAXONOMY_GARDENING_MAX_RUNTIME_MS / 1000) + 60

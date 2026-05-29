@@ -1,10 +1,9 @@
 export { CacheStore, type CacheStoreShape } from "@domain/shared"
 export { RedisCacheStoreLive } from "./ai-cache.ts"
 export { RedisBillingSpendReservationLive } from "./billing-spend-reservation.ts"
+export { RedisDistributedLockRepositoryLive } from "./distributed-lock.ts"
 export { EmbedBudgetResolverLive } from "./embed-budget-resolver.ts"
-export { RedisIssueDiscoveryLockRepositoryLive } from "./issue-discovery-lock.ts"
 export { RedisSlackRefreshLockRepositoryLive } from "./slack-refresh-lock.ts"
-export { RedisTaxonomyLockRepositoryLive } from "./taxonomy-lock.ts"
 export { TraceSearchBudgetLive } from "./trace-search-budget.ts"
 
 import { Context } from "effect"

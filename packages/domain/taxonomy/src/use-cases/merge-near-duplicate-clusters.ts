@@ -8,9 +8,9 @@ import {
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
 import { cosineSimilarityNormalized, mergeTaxonomyCentroids, normalizeTaxonomyCentroid } from "../helpers.ts"
+import { withTaxonomyClusterLock } from "../locks.ts"
 import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
 
 export interface MergeNearDuplicateClustersInput {
   readonly organizationId: OrganizationId
@@ -93,7 +93,6 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
     const now = input.now ?? new Date()
     const clusters = yield* TaxonomyClusterRepository
     const observations = yield* BehaviorObservationRepository
-    const locks = yield* TaxonomyLockRepository
     const active = yield* clusters.listActiveByProject({
       projectId: input.projectId,
     })
@@ -105,7 +104,7 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
 
     for (const component of components) {
       const survivor = chooseSurvivor(component)
-      const componentResult = yield* locks.withClusterLock(
+      const componentResult = yield* withTaxonomyClusterLock(
         { organizationId: input.organizationId, clusterId: survivor.id, ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS },
         Effect.gen(function* () {
           const losers = component.filter((cluster) => cluster.id !== survivor.id)

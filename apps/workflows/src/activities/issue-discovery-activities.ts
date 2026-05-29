@@ -17,7 +17,7 @@ import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive, AIRerankLive } from "@platform/ai-voyage"
-import { RedisIssueDiscoveryLockRepositoryLive } from "@platform/cache-redis"
+import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
@@ -84,7 +84,7 @@ export const assignOrCreateIssue = async (input: AssignOrCreateIssueInput) =>
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
-      Effect.provide(RedisIssueDiscoveryLockRepositoryLive(getRedisClient())),
+      Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
       // TODO(issue-discovery-rerank): drop AIRerankLive when assignOrCreateIssue
       // relies on Postgres pgvector hybrid search directly.
       withAi(Layer.mergeAll(AIGenerateLive, AIRerankLive), getRedisClient()),
@@ -113,7 +113,7 @@ export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
         getPostgresClient(),
         OrganizationId(input.organizationId),
       ),
-      Effect.provide(RedisIssueDiscoveryLockRepositoryLive(getRedisClient())),
+      Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
       withTracing,
       Effect.match({
         onFailure: (error) => {

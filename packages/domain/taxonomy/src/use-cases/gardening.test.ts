@@ -1,8 +1,17 @@
 import { AI, type AIShape, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { ChSqlClient, OrganizationId, ProjectId, SessionId, SqlClient, TaxonomyRunId, TraceId } from "@domain/shared"
-import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import {
+  ChSqlClient,
+  DistributedLockRepository,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SqlClient,
+  TaxonomyRunId,
+  TraceId,
+} from "@domain/shared"
+import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { TAXONOMY_EMBEDDING_DIMENSIONS } from "../constants.ts"
@@ -13,13 +22,11 @@ import { BehaviorObservationRepository } from "../ports/behavior-observation-rep
 import { TaxonomyCategoryRepository } from "../ports/taxonomy-category-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLineageRepository } from "../ports/taxonomy-lineage-repository.ts"
-import { TaxonomyLockRepository } from "../ports/taxonomy-lock-repository.ts"
 import { TaxonomyRunRepository } from "../ports/taxonomy-run-repository.ts"
 import { createFakeBehaviorObservationRepository } from "../testing/fake-behavior-observation-repository.ts"
 import { createFakeTaxonomyCategoryRepository } from "../testing/fake-taxonomy-category-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyLineageRepository } from "../testing/fake-taxonomy-lineage-repository.ts"
-import { createFakeTaxonomyLockRepository } from "../testing/fake-taxonomy-lock-repository.ts"
 import { createFakeTaxonomyRunRepository } from "../testing/fake-taxonomy-run-repository.ts"
 import { deprecateInactiveClustersUseCase } from "./deprecate-inactive-clusters.ts"
 import { emitLineageUseCase } from "./emit-lineage.ts"
@@ -98,7 +105,7 @@ const runUseCase = <A, E>(
   effect: Effect.Effect<
     A,
     E,
-    BehaviorObservationRepository | TaxonomyClusterRepository | TaxonomyLockRepository | SqlClient | ChSqlClient
+    BehaviorObservationRepository | TaxonomyClusterRepository | DistributedLockRepository | SqlClient | ChSqlClient
   >,
   observations: ReturnType<typeof createFakeBehaviorObservationRepository>,
   clusters: ReturnType<typeof createFakeTaxonomyClusterRepository>,
@@ -107,7 +114,7 @@ const runUseCase = <A, E>(
     effect.pipe(
       Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
       Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-      Effect.provide(Layer.succeed(TaxonomyLockRepository, createFakeTaxonomyLockRepository().repository)),
+      Effect.provide(Layer.succeed(DistributedLockRepository, createFakeDistributedLockRepository().repository)),
       Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
       Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
     ),
@@ -385,7 +392,7 @@ describe("gardening use-cases", () => {
         Effect.provide(Layer.succeed(TaxonomyCategoryRepository, categories.repository)),
         Effect.provide(Layer.succeed(TaxonomyLineageRepository, lineage.repository)),
         Effect.provide(Layer.succeed(TaxonomyRunRepository, runs.repository)),
-        Effect.provide(Layer.succeed(TaxonomyLockRepository, createFakeTaxonomyLockRepository().repository)),
+        Effect.provide(Layer.succeed(DistributedLockRepository, createFakeDistributedLockRepository().repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
