@@ -1,7 +1,6 @@
 import { Button, Input, Text } from "@repo/ui"
 import { fieldErrorsAsStrings } from "../../../../../../../lib/form-server-action.ts"
 import type { OnboardingForm } from "../../onboarding-flow.tsx"
-import { OnboardingPreviewImage } from "../onboarding-preview-image.tsx"
 
 export function Left({ form, onNext }: { readonly form: OnboardingForm; readonly onNext: () => void }) {
   return (
@@ -54,17 +53,6 @@ export function Left({ form, onNext }: { readonly form: OnboardingForm; readonly
           <Button onClick={onNext}>Next</Button>
         </div>
       </div>
-    </div>
-  )
-}
-
-export function Right() {
-  return (
-    <div className="flex h-fit w-full flex-col items-center gap-4">
-      <OnboardingPreviewImage src="/onboarding/traces.png" alt="Latitude traces preview" width={1024} height={579} />
-      <Text.H5 className="w-full max-w-[591px]" color="foregroundMuted" align="center">
-        Latitude gives your whole team visibility into what your AI is doing
-      </Text.H5>
     </div>
   )
 }

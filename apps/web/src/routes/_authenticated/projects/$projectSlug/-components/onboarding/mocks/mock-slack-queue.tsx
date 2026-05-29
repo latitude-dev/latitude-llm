@@ -1,5 +1,6 @@
 import { Text } from "@repo/ui"
 import { useEffect, useRef, useState } from "react"
+import { MOTION_EXIT_MS } from "../motion.ts"
 
 type VariantId = "incident" | "report" | "resolved"
 
@@ -39,7 +40,6 @@ const NOTIFICATION_VARIANTS_BY_ID = Object.fromEntries(NOTIFICATION_VARIANTS.map
 >
 
 const TICK_MS = 2500
-const EXIT_MS = 250
 const MAX_VISIBLE = 3
 
 type RenderedCard = {
@@ -81,7 +81,7 @@ export function MockSlackQueue() {
       if (markedForExit) {
         window.setTimeout(() => {
           setCards((prev) => prev.filter((c) => !c.leaving))
-        }, EXIT_MS)
+        }, MOTION_EXIT_MS)
       }
     }
 

@@ -15,6 +15,7 @@ import { submitOnboarding } from "../../../../../domains/users/user.functions.ts
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { createFormSubmitHandler } from "../../../../../lib/form-server-action.ts"
 import { CarouselSlide, CarouselTrack } from "./onboarding/carousel-track.tsx"
+import { OnboardingGallery } from "./onboarding/onboarding-gallery.tsx"
 import * as FlaggersStep from "./onboarding/steps/flaggers-step.tsx"
 import * as RoleStep from "./onboarding/steps/role-step.tsx"
 import * as SlackStep from "./onboarding/steps/slack-step.tsx"
@@ -247,10 +248,20 @@ export function OnboardingFlow({
 
   const telemetryBackStep: OnboardingStep = slackStepEnabled ? "slack" : "flaggers"
 
-  const visibleSteps: ReadonlyArray<OnboardingStep> = slackStepEnabled
-    ? ONBOARDING_STEPS
-    : ONBOARDING_STEPS.filter((s): s is Exclude<OnboardingStep, "slack"> => s !== "slack")
-  const activeRightSlideIndex = Math.max(0, visibleSteps.indexOf(step))
+  // Right-pane slides. `role` and `stack` share one "intro" slide so the gallery stays put
+  // across the first two steps; the pane first slides when entering `flaggers`.
+  type RightSlide = "intro" | "flaggers" | "slack" | "telemetry"
+  const STEP_TO_RIGHT_SLIDE: Record<OnboardingStep, RightSlide> = {
+    role: "intro",
+    stack: "intro",
+    flaggers: "flaggers",
+    slack: "slack",
+    telemetry: "telemetry",
+  }
+  const visibleRightSlides: ReadonlyArray<RightSlide> = slackStepEnabled
+    ? ["intro", "flaggers", "slack", "telemetry"]
+    : ["intro", "flaggers", "telemetry"]
+  const activeRightSlideIndex = Math.max(0, visibleRightSlides.indexOf(STEP_TO_RIGHT_SLIDE[step]))
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
@@ -296,15 +307,13 @@ export function OnboardingFlow({
 
       <div className="hidden h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary lg:flex lg:w-1/2">
         <CarouselTrack activeIndex={activeRightSlideIndex}>
-          {visibleSteps.map((slideStep) => (
-            <CarouselSlide key={slideStep}>
-              {slideStep === "role" ? (
-                <RoleStep.Right />
-              ) : slideStep === "stack" ? (
-                <StackStep.Right />
-              ) : slideStep === "flaggers" ? (
+          {visibleRightSlides.map((slide) => (
+            <CarouselSlide key={slide}>
+              {slide === "intro" ? (
+                <OnboardingGallery />
+              ) : slide === "flaggers" ? (
                 <FlaggersStep.Right enabledFlaggerSlugs={enabledFlaggerSlugs} availableFlaggers={availableFlaggers} />
-              ) : slideStep === "slack" ? (
+              ) : slide === "slack" ? (
                 <SlackStep.Right />
               ) : (
                 <TelemetryStep.Right traceReceived={traceReceived} />

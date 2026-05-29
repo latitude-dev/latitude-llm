@@ -1,86 +1,103 @@
-import { Button, Text } from "@repo/ui"
+import { Button, cn, Text } from "@repo/ui"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import type { Dispatch, SetStateAction } from "react"
-import { OnboardingPreviewImage } from "./onboarding-preview-image.tsx"
+import { useEffect, useState } from "react"
+import { GALLERY_DWELL_MS, usePrefersReducedMotion } from "./motion.ts"
 
-const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> =
-  [
-    {
-      title: "Live traces coming in",
-      description: "As soon as we detect your first trace, you will start getting comprehensive insights",
-      image: "/onboarding/traces.png",
-    },
-    {
-      title: "Debug responses with context",
-      description: "Inspect model calls, timing, costs and session metadata in one place",
-      image: "/onboarding/home.png",
-    },
-    {
-      title: "Detect issues automatically",
-      description: "Once the telemetry is set up, Latitude will start monitoring your product for common issues",
-      image: "/onboarding/issues.png",
-    },
-  ]
-
-const ONBOARDING_IMAGE_DIMENSIONS: Record<
-  string,
+const INTRO_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> = [
   {
-    readonly width: number
-    readonly height: number
-  }
-> = {
-  "/onboarding/role-engineer.png": { width: 1024, height: 567 },
-  "/onboarding/home.png": { width: 1024, height: 580 },
-  "/onboarding/issues.png": { width: 1024, height: 579 },
-  "/onboarding/traces.png": { width: 1024, height: 579 },
-}
+    title: "See every request your AI makes",
+    description: "Each call captured with full context — inputs, outputs, timing, and cost.",
+    image: "/onboarding/traces.png",
+  },
+  {
+    title: "Your whole project at a glance",
+    description: "Volume, latency, spend, and health across every agent and feature.",
+    image: "/onboarding/home.png",
+  },
+  {
+    title: "Catch problems before your users do",
+    description: "Latitude flags refusals, errors, and hallucinations — and groups them into issues.",
+    image: "/onboarding/issues.png",
+  },
+]
 
-export function OnboardingGallery({
-  galleryIndex,
-  setGalleryIndex,
-}: {
-  readonly galleryIndex: number
-  readonly setGalleryIndex: Dispatch<SetStateAction<number>>
-}) {
-  const galleryItemIndex = WAITING_GALLERY.length === 0 ? 0 : galleryIndex % WAITING_GALLERY.length
-  const activeGalleryItem = WAITING_GALLERY[galleryItemIndex] ?? {
-    title: "",
-    description: "",
-    image: "",
-  }
-  const galleryImageDimensions = ONBOARDING_IMAGE_DIMENSIONS[activeGalleryItem.image] ?? { width: 1024, height: 579 }
+/**
+ * Intro hero shared by the `role` and `stack` steps. Self-manages its active image with a
+ * crossfade, indicator dots, and auto-advance that pauses while the pointer is over the
+ * pane and is disabled entirely under reduced-motion (manual navigation still works).
+ */
+export function OnboardingGallery() {
+  const reducedMotion = usePrefersReducedMotion()
+  const [index, setIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const count = INTRO_GALLERY.length
+
+  // Resets the dwell timer after every change (manual or automatic), so a click buys a
+  // fresh interval rather than an immediate auto-advance.
+  useEffect(() => {
+    if (reducedMotion || paused || count <= 1) return
+    const id = window.setTimeout(() => setIndex((i) => (i + 1) % count), GALLERY_DWELL_MS)
+    return () => window.clearTimeout(id)
+  }, [index, paused, reducedMotion, count])
+
+  const goPrev = () => setIndex((i) => (i === 0 ? count - 1 : i - 1))
+  const goNext = () => setIndex((i) => (i + 1) % count)
+  const active = INTRO_GALLERY[index] ?? INTRO_GALLERY[0]
 
   return (
-    <div className="flex h-fit w-full flex-col items-start">
+    // biome-ignore lint/a11y/noStaticElementInteractions: hover only pauses decorative auto-advance; controls remain keyboard-operable
+    <div
+      className="flex h-fit w-full flex-col items-start"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
       <div className="flex w-full max-w-[591px] flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <Text.H5M>{activeGalleryItem.title}</Text.H5M>
-          <Text.H6 color="foregroundMuted">{activeGalleryItem.description}</Text.H6>
+        <div key={index} className="flex flex-col gap-1 animate-in fade-in-0 duration-300 motion-reduce:animate-none">
+          <Text.H5M>{active?.title}</Text.H5M>
+          <Text.H6 color="foregroundMuted">{active?.description}</Text.H6>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setGalleryIndex((c) => (c === 0 ? WAITING_GALLERY.length - 1 : c - 1))}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setGalleryIndex((c) => (c + 1) % WAITING_GALLERY.length)}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={goPrev} aria-label="Previous">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={goNext} aria-label="Next">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {INTRO_GALLERY.map((item, i) => (
+              <button
+                key={item.image}
+                type="button"
+                aria-label={`Show "${item.title}"`}
+                aria-current={i === index}
+                onClick={() => setIndex(i)}
+                className={cn(
+                  "h-1.5 cursor-pointer rounded-full transition-all duration-300 ease-out motion-reduce:transition-none",
+                  i === index ? "w-5 bg-primary" : "w-1.5 bg-border hover:bg-muted-foreground/40",
+                )}
+              />
+            ))}
+          </div>
         </div>
       </div>
-      <div className="mt-10 w-full">
-        <OnboardingPreviewImage
-          src={activeGalleryItem.image}
-          alt={activeGalleryItem.title}
-          width={galleryImageDimensions.width}
-          height={galleryImageDimensions.height}
-        />
+      <div className="relative mt-10 aspect-[1024/579] w-full overflow-hidden rounded-xl border-4 border-border bg-card shadow-xl">
+        {INTRO_GALLERY.map((item, i) => (
+          <img
+            key={item.image}
+            src={item.image}
+            alt={item.title}
+            width={1024}
+            height={579}
+            decoding="async"
+            aria-hidden={i !== index}
+            className={cn(
+              "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-out motion-reduce:transition-none",
+              i === index ? "opacity-100" : "opacity-0",
+            )}
+          />
+        ))}
       </div>
     </div>
   )

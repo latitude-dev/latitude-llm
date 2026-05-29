@@ -1,5 +1,6 @@
 import { cn, Text } from "@repo/ui"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { MOTION_EXIT_MS } from "../motion.ts"
 
 type MockIssue = {
   readonly title: string
@@ -88,8 +89,6 @@ const SEVERITY_DOT: Record<MockIssue["severity"], string> = {
   low: "bg-muted-foreground/50",
 }
 
-const EXIT_MS = 200
-
 type AvailableFlagger = {
   readonly slug: string
   readonly name: string
@@ -160,7 +159,7 @@ export function MockIssuesFeed({
       .map((f) => f.slug)
   }, [availableFlaggers, enabledFlaggerSlugs])
 
-  const items = useAnimatedKeys(orderedActiveSlugs, EXIT_MS)
+  const items = useAnimatedKeys(orderedActiveSlugs, MOTION_EXIT_MS)
   const hasActiveItems = orderedActiveSlugs.length > 0
 
   return (
@@ -179,7 +178,7 @@ export function MockIssuesFeed({
                 <div
                   key={key}
                   data-leaving={leaving}
-                  className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 shadow-sm animate-in fade-in-0 slide-in-from-top-1 duration-200 data-[leaving=true]:animate-out data-[leaving=true]:fade-out-0 data-[leaving=true]:slide-out-to-top-1 data-[leaving=true]:duration-200"
+                  className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 shadow-sm animate-in fade-in-0 slide-in-from-top-1 duration-300 data-[leaving=true]:animate-out data-[leaving=true]:fade-out-0 data-[leaving=true]:slide-out-to-top-1 data-[leaving=true]:duration-200"
                 >
                   <div className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", SEVERITY_DOT[issue.severity])} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
