@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { anySignal, getTimeoutSignal } from "./signals"
+import { anySignal, getTimeoutSignal } from "./signals.js"
 
 describe("anySignal", () => {
   it("forwards an abort from a source signal to the combined signal", () => {
