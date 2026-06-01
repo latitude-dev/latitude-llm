@@ -1,10 +1,4 @@
-export {
-  SLACK_REFRESH_LOCK_TTL_SECONDS,
-  SLACK_TOKEN_REFRESH_LOOKAHEAD_SECONDS,
-  SLACK_TOKEN_REFRESH_SCAN_KEY,
-  SLACK_TOKEN_REFRESH_SCAN_PATTERN,
-  SLACK_TOKEN_REFRESH_SKEW_SECONDS,
-} from "./constants.ts"
+export { SLACK_REFRESH_LOCK_TTL_SECONDS, SLACK_TOKEN_REFRESH_SKEW_SECONDS } from "./constants.ts"
 export { type SlackChannel, slackChannelSchema } from "./entities/slack-channel.ts"
 export { type SlackDelivery, slackDeliverySchema } from "./entities/slack-delivery.ts"
 export {

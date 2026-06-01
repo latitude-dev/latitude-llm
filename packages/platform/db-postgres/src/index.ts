@@ -54,7 +54,6 @@ export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts
 export { SlackDeliveryRepositoryLive } from "./repositories/slack-delivery-repository.ts"
 export {
   findActiveSlackIntegrationByTeamIdAcrossOrgs,
-  listSlackIntegrationsNeedingRefreshAcrossOrgs,
   SlackIntegrationRepositoryLive,
   softRevokeSlackIntegrationAcrossOrgs,
 } from "./repositories/slack-integration-repository.ts"

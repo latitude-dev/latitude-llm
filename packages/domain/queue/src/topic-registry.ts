@@ -199,20 +199,6 @@ const _registry = {
     }
   }>(),
 
-  // Slack rotated-token refresh. `scan` is fired by an hourly repeatable
-  // schedule; the handler enumerates active integrations whose token
-  // expires within the lookahead window (across all orgs, via the admin
-  // client) and fans out one `refreshIntegration` per match. The
-  // per-integration job refreshes on-use under the org's RLS scope. No
-  // `projectId` — Slack integrations are org-level.
-  "slack-token-refresh": payloads<{
-    scan: Record<string, never>
-    refreshIntegration: {
-      readonly organizationId: string
-      readonly integrationId: string
-    }
-  }>(),
-
   "alert-incidents": payloads<{
     "issue-created": {
       readonly organizationId: string

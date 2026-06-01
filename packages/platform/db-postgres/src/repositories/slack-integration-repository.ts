@@ -18,7 +18,7 @@ import {
 } from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { type CryptoError, decrypt, encrypt, hash } from "@repo/utils"
-import { and, eq, isNotNull, isNull, lt, sql } from "drizzle-orm"
+import { and, eq, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator, PostgresDb } from "../client.ts"
 import { integrations } from "../schema/integrations.ts"
@@ -337,43 +337,6 @@ export const findActiveSlackIntegrationByTeamIdAcrossOrgs = (
       return { id: SlackIntegrationId(row.id), organizationId: OrganizationId(row.organizationId) }
     },
     catch: (cause) => toRepositoryError(cause, "findActiveSlackIntegrationByTeamIdAcrossOrgs"),
-  })
-
-/**
- * Cross-organization enumeration for the scheduled refresh sweep. Lists
- * the active rotating integrations whose token expires before `notAfter`
- * (lookahead window), so the sweep can proactively refresh them ahead of
- * expiry. Bypasses RLS by not filtering on `organization_id` — the
- * connecting role must not be subject to forced RLS (the admin client).
- * `token_expires_at IS NULL` rows (rotation disabled) are skipped.
- */
-export const listSlackIntegrationsNeedingRefreshAcrossOrgs = (
-  db: PostgresDb,
-  notAfter: Date,
-): Effect.Effect<
-  readonly { readonly id: SlackIntegrationIdType; readonly organizationId: OrganizationId }[],
-  RepositoryError
-> =>
-  Effect.tryPromise({
-    try: async () => {
-      const rows = await db
-        .select({ id: integrations.id, organizationId: integrations.organizationId })
-        .from(integrations)
-        .innerJoin(slackIntegrationDetails, eq(slackIntegrationDetails.integrationId, integrations.id))
-        .where(
-          and(
-            eq(integrations.kind, SLACK_KIND),
-            isNull(integrations.revokedAt),
-            isNotNull(slackIntegrationDetails.tokenExpiresAt),
-            lt(slackIntegrationDetails.tokenExpiresAt, notAfter),
-          ),
-        )
-      return rows.map((row) => ({
-        id: SlackIntegrationId(row.id),
-        organizationId: OrganizationId(row.organizationId),
-      }))
-    },
-    catch: (cause) => toRepositoryError(cause, "listSlackIntegrationsNeedingRefreshAcrossOrgs"),
   })
 
 /**
