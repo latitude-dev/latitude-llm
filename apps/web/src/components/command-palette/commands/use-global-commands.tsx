@@ -1,10 +1,21 @@
+import { extractLeadingEmoji } from "@repo/utils"
 import { useRouter } from "@tanstack/react-router"
-import { BookOpenIcon, Building2Icon, LogOutIcon, MoonIcon, PlusIcon, ShieldAlertIcon, SunIcon } from "lucide-react"
+import {
+  ArrowLeftRightIcon,
+  BookOpenIcon,
+  Building2Icon,
+  LogOutIcon,
+  MoonIcon,
+  PlusIcon,
+  ShieldAlertIcon,
+  SunIcon,
+} from "lucide-react"
 import { useMemo } from "react"
+import { useOrganizationsCollection } from "../../../domains/organizations/organizations.collection.ts"
 import { authClient } from "../../../lib/auth-client.ts"
 import { resetPostHog } from "../../../lib/posthog/posthog-client.ts"
 import { useThemePreference } from "../../../lib/theme.ts"
-import { useAuthenticatedUser } from "../../../routes/_authenticated/-route-data.ts"
+import { useAuthenticatedOrganizationId, useAuthenticatedUser } from "../../../routes/_authenticated/-route-data.ts"
 import { useRootThemePreference } from "../../../routes/-root-route-data.ts"
 import { useCommandPalette } from "../command-palette-provider.tsx"
 import type { PaletteCommand } from "../types.ts"
@@ -13,12 +24,14 @@ const DOCS_URL = "https://docs.latitude.so"
 
 /**
  * Always-available global actions: theme toggle, create project/organization (open modals
- * owned by the provider), docs, log out, and backoffice (admins only). Mirrors the handlers
- * already wired into the app header so behaviour stays consistent.
+ * owned by the provider), switch organization (a drill-down sub-page), docs, log out, and
+ * backoffice (admins only). Mirrors the handlers already wired into the app header.
  */
 export function useGlobalCommands(): readonly PaletteCommand[] {
   const router = useRouter()
   const user = useAuthenticatedUser()
+  const organizationId = useAuthenticatedOrganizationId()
+  const { data: organizations } = useOrganizationsCollection()
   const initialTheme = useRootThemePreference()
   const { theme, setTheme } = useThemePreference(initialTheme)
   const { openCreateProject, openCreateOrganization } = useCommandPalette()
@@ -27,6 +40,8 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
   const isAdmin = (user as { role?: string }).role === "admin"
 
   return useMemo<readonly PaletteCommand[]>(() => {
+    const orgs = organizations ?? []
+
     const commands: PaletteCommand[] = [
       {
         id: "action:new-project",
@@ -44,6 +59,41 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
         keywords: "create organization workspace add",
         perform: openCreateOrganization,
       },
+    ]
+
+    // Offer the drill-down switcher only when there is more than one org to switch between.
+    if (orgs.length > 1) {
+      commands.push({
+        kind: "parent",
+        id: "action:switch-organization",
+        title: "Switch organization",
+        icon: ArrowLeftRightIcon,
+        section: "actions",
+        keywords: "switch organization workspace change",
+        getChildren: () =>
+          orgs.map((org): PaletteCommand => {
+            const [emoji, title] = extractLeadingEmoji(org.name)
+            const isCurrent = org.id === organizationId
+            return {
+              id: `switch-org:${org.id}`,
+              title: title || org.name,
+              icon: Building2Icon,
+              leading: emoji ? <span className="text-base leading-none">{emoji}</span> : undefined,
+              section: "actions",
+              ...(isCurrent ? { subtitle: "Current" } : {}),
+              keywords: org.name,
+              perform: () => {
+                if (isCurrent) return
+                void authClient.organization.setActive({ organizationId: org.id }).then(() => {
+                  window.location.href = "/"
+                })
+              },
+            }
+          }),
+      })
+    }
+
+    commands.push(
       {
         id: "action:switch-theme",
         title: `Switch to ${nextTheme} theme`,
@@ -58,7 +108,9 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
         icon: BookOpenIcon,
         section: "actions",
         keywords: "docs help guide",
-        perform: () => window.open(DOCS_URL, "_blank", "noopener,noreferrer"),
+        perform: () => {
+          window.open(DOCS_URL, "_blank", "noopener,noreferrer")
+        },
       },
       {
         id: "action:logout",
@@ -72,7 +124,7 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
             void router.navigate({ to: "/login" })
           }),
       },
-    ]
+    )
 
     if (isAdmin) {
       commands.push({
@@ -86,5 +138,5 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
     }
 
     return commands
-  }, [nextTheme, isAdmin, openCreateProject, openCreateOrganization, setTheme, router])
+  }, [nextTheme, isAdmin, organizations, organizationId, openCreateProject, openCreateOrganization, setTheme, router])
 }

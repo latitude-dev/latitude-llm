@@ -10,12 +10,13 @@ import {
   Text,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { useMemo, useState } from "react"
+import { ChevronLeftIcon } from "lucide-react"
+import { type KeyboardEvent, useMemo, useState } from "react"
 import { useCommandPalette } from "./command-palette-provider.tsx"
-import { useGlobalCommands } from "./commands/use-global-commands.ts"
+import { useGlobalCommands } from "./commands/use-global-commands.tsx"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
 import { useProjectCommands } from "./commands/use-project-commands.tsx"
-import { COMMAND_SECTION_LABELS, COMMAND_SECTION_ORDER, type PaletteCommand } from "./types.ts"
+import { COMMAND_SECTION_LABELS, COMMAND_SECTION_ORDER, type PaletteCommand, type ParentCommand } from "./types.ts"
 
 /**
  * Token-substring filter: a command matches when every whitespace-separated token of the
@@ -33,14 +34,22 @@ function searchKeywords(command: PaletteCommand): string[] {
   return [command.title, command.subtitle, command.keywords].filter((value): value is string => Boolean(value))
 }
 
+interface CommandGroupView {
+  readonly key: string
+  readonly label: string
+  readonly commands: readonly PaletteCommand[]
+}
+
 /**
  * Global Cmd+K command palette. Always mounted in the authenticated layout; opens via the
- * hotkey or the header button. Phase 1 surfaces navigation, project switching, and global
- * actions; contextual commands and entity search are layered on in later phases.
+ * hotkey or the header button. Surfaces navigation, project switching, and global actions;
+ * `parent` commands push a keyboard-navigable sub-page (e.g. "Switch organization").
  */
 export function CommandPalette() {
   const { open, setOpen, toggle } = useCommandPalette()
   const [search, setSearch] = useState("")
+  // Stack of opened sub-pages; the last entry is the page currently shown.
+  const [pageStack, setPageStack] = useState<readonly ParentCommand[]>([])
 
   useHotkeys([{ hotkey: "Mod+K", callback: toggle, options: { ignoreInputs: true } }])
 
@@ -48,32 +57,77 @@ export function CommandPalette() {
   const projectCommands = useProjectCommands()
   const globalCommands = useGlobalCommands()
 
-  const sections = useMemo(() => {
+  const currentPage = pageStack.at(-1) ?? null
+
+  const groups = useMemo<readonly CommandGroupView[]>(() => {
+    if (currentPage) {
+      return [{ key: currentPage.id, label: currentPage.title, commands: currentPage.getChildren() }]
+    }
     const all = [...navigationCommands, ...projectCommands, ...globalCommands]
     return COMMAND_SECTION_ORDER.map((section) => ({
-      section,
+      key: section,
       label: COMMAND_SECTION_LABELS[section],
       commands: all.filter((command) => command.section === section),
     })).filter((group) => group.commands.length > 0)
-  }, [navigationCommands, projectCommands, globalCommands])
+  }, [currentPage, navigationCommands, projectCommands, globalCommands])
+
+  const resetState = () => {
+    setSearch("")
+    setPageStack([])
+  }
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
-    if (!next) setSearch("")
+    if (!next) resetState()
+  }
+
+  const popPage = () => {
+    setSearch("")
+    setPageStack((stack) => stack.slice(0, -1))
   }
 
   const execute = (command: PaletteCommand) => {
+    if (command.kind === "parent") {
+      setSearch("")
+      setPageStack((stack) => [...stack, command])
+      return
+    }
     handleOpenChange(false)
     void command.perform()
   }
 
+  // Backspace on an empty query steps back out of a sub-page.
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Backspace" && search === "" && pageStack.length > 0) {
+      event.preventDefault()
+      popPage()
+    }
+  }
+
   return (
     <CommandDialog open={open} onOpenChange={handleOpenChange} loop filter={commandFilter}>
-      <CommandInput placeholder="Search projects, navigate, run actions…" value={search} onValueChange={setSearch} />
+      {currentPage ? (
+        <button
+          type="button"
+          onClick={popPage}
+          className="flex w-full items-center gap-1 border-b border-border px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronLeftIcon className="size-3.5" />
+          <Text.H6 color="foregroundMuted">{currentPage.title}</Text.H6>
+        </button>
+      ) : null}
+      <CommandInput
+        placeholder={
+          currentPage ? `Search ${currentPage.title.toLowerCase()}…` : "Search projects, navigate, run actions…"
+        }
+        value={search}
+        onValueChange={setSearch}
+        onKeyDown={handleInputKeyDown}
+      />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
-        {sections.map((group) => (
-          <CommandGroup key={group.section} heading={group.label}>
+        {groups.map((group) => (
+          <CommandGroup key={group.key} heading={group.label}>
             {group.commands.map((command) => (
               <CommandItem
                 key={command.id}
@@ -92,6 +146,9 @@ export function CommandPalette() {
                     </Text.H6>
                   ) : null}
                 </span>
+                {command.kind === "parent" ? (
+                  <ChevronLeftIcon className="size-3.5 rotate-180 text-muted-foreground" />
+                ) : null}
                 {command.badge}
               </CommandItem>
             ))}
@@ -105,9 +162,15 @@ export function CommandPalette() {
         <span className="flex items-center gap-1">
           <kbd className="rounded bg-muted px-1 font-mono">↵</kbd> select
         </span>
-        <span className="flex items-center gap-1">
-          <kbd className="rounded bg-muted px-1 font-mono">esc</kbd> close
-        </span>
+        {currentPage ? (
+          <span className="flex items-center gap-1">
+            <kbd className="rounded bg-muted px-1 font-mono">⌫</kbd> back
+          </span>
+        ) : (
+          <span className="flex items-center gap-1">
+            <kbd className="rounded bg-muted px-1 font-mono">esc</kbd> close
+          </span>
+        )}
       </CommandFooter>
     </CommandDialog>
   )

@@ -2,9 +2,9 @@ import type { LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 /** Groups commands into ordered, labelled sections in the palette. */
-export type CommandSection = "navigation" | "projects" | "actions"
+type CommandSection = "navigation" | "projects" | "actions"
 
-export interface PaletteCommand {
+interface BasePaletteCommand {
   /** Globally unique id (also used as cmdk's item value). */
   readonly id: string
   readonly title: string
@@ -18,9 +18,22 @@ export interface PaletteCommand {
   readonly badge?: ReactNode
   /** Extra search terms, beyond title/subtitle, used by the palette filter. */
   readonly keywords?: string
+}
+
+/** A command that runs and closes the palette. */
+export interface ActionCommand extends BasePaletteCommand {
+  readonly kind?: "action"
   /** Runs the command. The palette closes around this call. */
   readonly perform: () => void | Promise<void>
 }
+
+/** A command that opens a sub-page listing its child commands (keyboard drill-down). */
+export interface ParentCommand extends BasePaletteCommand {
+  readonly kind: "parent"
+  readonly getChildren: () => readonly PaletteCommand[]
+}
+
+export type PaletteCommand = ActionCommand | ParentCommand
 
 export const COMMAND_SECTION_ORDER: readonly CommandSection[] = ["navigation", "projects", "actions"]
 
