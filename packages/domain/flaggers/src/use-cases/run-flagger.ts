@@ -158,11 +158,21 @@ function extractInspectedSystemPrompt(trace: TraceDetail): string {
   )
 }
 
-const instructionExtractorOutputSchema = z.object({
-  understood: z.boolean().optional().default(false),
-  agentContext: z.string().min(1).nullable().optional(),
-  reasonIfNotUnderstood: z.string().min(1).nullable().optional(),
-})
+const instructionExtractorOutputSchema = z
+  .object({
+    understood: z.boolean().optional().default(false),
+    agentContext: z.string().min(1).nullable().optional(),
+    reasonIfNotUnderstood: z.string().min(1).nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.understood && !value.agentContext?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["agentContext"],
+        message: "agentContext is required when understood=true",
+      })
+    }
+  })
 
 type InstructionExtractorOutput = z.infer<typeof instructionExtractorOutputSchema>
 

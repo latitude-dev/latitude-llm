@@ -134,6 +134,7 @@ function makeTraceDetail(
 const REGRESSION_DATASET_PROJECT_SLUG = "latitude"
 const REGRESSION_DATASET_SLUG = "flagger-classification-regression-dataset"
 const REGRESSION_DATASET_PAGE_SIZE = 200
+const EXPECTED_REGRESSION_DATASET_ROWS = 55
 
 function readRequiredEnv(name: string): string {
   const value = process.env[name]?.trim()
@@ -498,12 +499,12 @@ describe("runFlaggerUseCase", () => {
     "classifies the Latitude dataset false-positive regressions as no-match with the live LLM flaggers",
     async () => {
       const rows = await fetchFlaggerRegressionRows()
-      expect(rows.length).toBeGreaterThan(0)
+      expect(rows).toHaveLength(EXPECTED_REGRESSION_DATASET_ROWS)
 
       const aiLayer = createAiLayer(AIGenerateLive)
-      const cache = createMemoryCacheLayer()
 
       for (const [index, row] of rows.entries()) {
+        const cache = createMemoryCacheLayer()
         const traceMetadata = row.metadata.traceMetadata
         expect(traceMetadata).toBeTypeOf("object")
         expect(traceMetadata).not.toBeNull()
