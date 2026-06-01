@@ -14,7 +14,7 @@
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests --dir src",
-    "test:regression": "pnpm --filter @latitude-data/sdk build && RUN_FLAGGER_REGRESSION=true vitest run --passWithNoTests --dir src src/use-cases/run-flagger.test.ts -t 'Latitude dataset false-positive regressions'"
+    "test:regression": "pnpm --filter @latitude-data/sdk build && RUN_FLAGGER_REGRESSION=true vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
