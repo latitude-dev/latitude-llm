@@ -187,6 +187,7 @@ Use the closest existing doc when possible:
 - `dev-docs/settings.md`: configuration and settings behavior
 - `dev-docs/spans.md`: span ingestion, storage, and query semantics
 - `dev-docs/repositories.md`: repository port naming, standard verbs, audit of domain ports
+- `dev-docs/command-palette.md`: global Cmd+K palette architecture and how to register new pages/actions/searchable entities
 
 If a change spans multiple domains, update multiple docs.
 

@@ -296,6 +296,21 @@ If clicking an `InfiniteTable` row opens a different page, use the **`renderRowL
 
 Keep `onRowClick` only for **same-route** row interactions: selecting a row to open a drawer, applying a saved filter on the same page, toggling expansion state, etc. — the cases where there is no new URL to navigate to.
 
+## Command palette (Cmd+K)
+
+The global command palette (`apps/web/src/components/command-palette/`, mounted in
+`_authenticated.tsx`) is the keyboard launcher for navigation, actions, contextual entity
+actions, and in-project search. **Full design + maintenance guide: `dev-docs/command-palette.md`** — read it before changing palette behavior.
+
+**Keep it in sync when you add UI.** Anything navigable or actionable should also be reachable from the palette:
+
+- **New project section / settings page** → add it to `apps/web/src/domains/projects/project-sections.ts`. The sidebar, settings sub-nav, **and** the palette navigation all consume that module, so it surfaces everywhere automatically — don't hardcode a nav entry in the palette.
+- **New global action** → add a command to `command-palette/commands/use-global-commands.tsx` (switch/navigate actions rank above create actions; keep Log out last).
+- **New action on an entity with a detail view** (issue/trace drawer, etc.) → contribute it from that view with `useRegisterCommands(...)` (`section: "context"`, a `group` label, reusing the view's existing handler).
+- **New searchable entity** → add a `commands/use-*-search-commands` hook gated on `useCurrentProject()` + a non-empty query, then wire a group into `command-palette.tsx`.
+
+The palette runs cmdk with `shouldFilter={false}` and filters in React — never rely on cmdk's built-in `keywords`/filter for query-driven rows (cmdk snapshots keywords on first registration). See the dev-doc for the rationale.
+
 ## TanStack Form + Zod field errors (`createFormSubmitHandler` + `fieldErrorsAsStrings`)
 
 **When:** `useForm` submits work that can fail with **Zod validation** (for example server functions using `inputValidator`), and you want **inline errors on `@repo/ui` fields** (not only a toast).
