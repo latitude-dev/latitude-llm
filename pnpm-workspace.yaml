@@ -65,7 +65,7 @@ catalog:
   typescript: 6.0.3
   vite: 8.0.5
   vitest: 4.1.0
-  zod: 4.3.6
+  zod: 4.4.3
   voyageai: 0.2.1
   "@modelcontextprotocol/sdk": 1.29.0
   "@modelcontextprotocol/inspector": 0.21.2
