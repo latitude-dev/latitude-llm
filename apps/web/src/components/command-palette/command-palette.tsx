@@ -67,6 +67,8 @@ export function CommandPalette() {
   const [search, setSearch] = useState("")
   // Stack of opened sub-pages; the last entry is the page currently shown.
   const [pageStack, setPageStack] = useState<readonly ParentCommand[]>([])
+  // The query active at each ancestor level, saved on push so going back restores it.
+  const [savedSearches, setSavedSearches] = useState<readonly string[]>([])
 
   useHotkeys([{ hotkey: "Mod+K", callback: toggle, options: { ignoreInputs: true } }])
 
@@ -93,6 +95,7 @@ export function CommandPalette() {
   const resetState = () => {
     setSearch("")
     setPageStack([])
+    setSavedSearches([])
   }
 
   const handleOpenChange = (next: boolean) => {
@@ -101,14 +104,18 @@ export function CommandPalette() {
   }
 
   const popPage = () => {
-    setSearch("")
+    // Restore the query that was active on the level we're returning to.
+    setSearch(savedSearches.at(-1) ?? "")
+    setSavedSearches((saved) => saved.slice(0, -1))
     setPageStack((stack) => stack.slice(0, -1))
   }
 
   const execute = (command: PaletteCommand) => {
     if (command.kind === "parent") {
-      setSearch("")
+      // Remember this level's query so popping back restores it; the sub-page starts empty.
+      setSavedSearches((saved) => [...saved, search])
       setPageStack((stack) => [...stack, command])
+      setSearch("")
       return
     }
     handleOpenChange(false)
