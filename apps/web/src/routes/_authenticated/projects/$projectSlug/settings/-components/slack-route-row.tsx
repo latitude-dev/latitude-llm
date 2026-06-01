@@ -2,18 +2,16 @@ import { NOTIFICATION_GROUP_META, type NotificationGroup } from "@domain/shared"
 import {
   Button,
   Combobox,
-  ComboboxChipsInput,
   ComboboxContent,
   ComboboxEmpty,
+  ComboboxInput,
   ComboboxItem,
   ComboboxList,
-  ComboboxSeparator,
   ComboboxTrigger,
   Text,
   useToast,
 } from "@repo/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Loader2, Search } from "lucide-react"
 import { useRef, useState } from "react"
 import {
   configureSlackRoute,
@@ -102,17 +100,12 @@ export function SlackRouteRow({
             </ComboboxTrigger>
           </Button>
           <ComboboxContent anchor={triggerRef} className="w-64">
-            <div className="flex items-center gap-2 px-3 py-2">
-              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <ComboboxChipsInput
-                placeholder="Search channels…"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground"
-              />
-              {isFetching ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" /> : null}
-            </div>
-            <ComboboxSeparator />
+            <ComboboxInput
+              placeholder="Search channels…"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              loading={isFetching}
+            />
             <ComboboxList>
               {(item: ChannelOption) => (
                 <ComboboxItem value={item}>
