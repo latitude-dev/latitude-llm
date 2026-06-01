@@ -22,7 +22,7 @@ import {
 } from "@platform/db-postgres"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect, Layer } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { mockAi, testEmbedding } = vi.hoisted(() => {
   const embedding = new Array(2048).fill(0)
@@ -264,6 +264,15 @@ const listLatestTaxonomyRun = () =>
   )
 
 describe("taxonomy observeSession worker", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(START_TIME)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("writes a noise observation when no active clusters exist", async () => {
     const traceId = TRACE_ID
     await insertSessionSpan(traceId, SESSION_ID)
