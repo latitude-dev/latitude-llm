@@ -114,12 +114,13 @@ describe("getOrRefreshBotTokenUseCase", () => {
     expect(calls).toEqual([])
   })
 
-  it("refreshes and persists when the token is at/near expiry", async () => {
+  it("refreshes and persists when the token is at/near expiry, clearing any reconnect flag", async () => {
     const id = SlackIntegrationId(generateId())
     const integration = seedIntegration(id, {
       botAccessToken: "xoxe-stale",
       refreshToken: "refresh-1",
       tokenExpiresAt: new Date(Date.now() + 60_000), // 60s out, inside 5m skew
+      reconnectRequiredAt: new Date(Date.now() - 60_000), // a prior failure left this set
     })
     const layer = InMemorySlackIntegrationRepositoryLive({ organizationId: ORG, seed: [integration] })
     const { layer: refresher, calls } = makeFakeRefresher((rt) => {
@@ -131,7 +132,7 @@ describe("getOrRefreshBotTokenUseCase", () => {
     expect(exit).toStrictEqual(Exit.succeed("xoxe-new"))
     expect(calls).toEqual(["refresh-1"])
 
-    // The rotated triple was persisted.
+    // The rotated triple was persisted and the reconnect flag cleared.
     const stored = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SlackIntegrationRepository
@@ -141,6 +142,7 @@ describe("getOrRefreshBotTokenUseCase", () => {
     expect(stored?.botAccessToken).toBe("xoxe-new")
     expect(stored?.refreshToken).toBe("refresh-2")
     expect(stored?.tokenExpiresAt?.getTime()).toBeGreaterThan(Date.now() + 60_000)
+    expect(stored?.reconnectRequiredAt).toBeNull()
   })
 
   it("skips the Slack call when a concurrent holder already refreshed (double-check)", async () => {
@@ -163,7 +165,7 @@ describe("getOrRefreshBotTokenUseCase", () => {
     expect(calls).toEqual([])
   })
 
-  it("propagates invalid_refresh_token (broken chain)", async () => {
+  it("marks reconnect-required and propagates on invalid_refresh_token (broken chain)", async () => {
     const id = SlackIntegrationId(generateId())
     const integration = seedIntegration(id, {
       tokenExpiresAt: new Date(Date.now() + 60_000),
@@ -182,6 +184,15 @@ describe("getOrRefreshBotTokenUseCase", () => {
       expect(failReason?.error).toBeInstanceOf(SlackTokenRefreshError)
       expect((failReason?.error as SlackTokenRefreshError).reason).toBe("invalid_refresh_token")
     }
+
+    // The dead chain was stamped so the UI can prompt a reconnect.
+    const stored = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SlackIntegrationRepository
+        return yield* repo.findActiveByOrganizationId()
+      }).pipe(Effect.provide(layer), Effect.provide(NoopSqlClient)),
+    )
+    expect(stored?.reconnectRequiredAt).not.toBeNull()
   })
 
   it("returns the held token when the integration was revoked mid-flight", async () => {
