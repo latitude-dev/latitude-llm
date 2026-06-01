@@ -1,9 +1,11 @@
+import { useToast } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { useRouter } from "@tanstack/react-router"
 import {
   ArrowLeftRightIcon,
   BookOpenIcon,
   Building2Icon,
+  LinkIcon,
   LogOutIcon,
   MoonIcon,
   PlusIcon,
@@ -29,6 +31,7 @@ const DOCS_URL = "https://docs.latitude.so"
  */
 export function useGlobalCommands(): readonly PaletteCommand[] {
   const router = useRouter()
+  const { toast } = useToast()
   const user = useAuthenticatedUser()
   const organizationId = useAuthenticatedOrganizationId()
   const { data: organizations } = useOrganizationsCollection()
@@ -102,6 +105,17 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
         perform: openCreateOrganization,
       },
       {
+        id: "action:copy-page-link",
+        title: "Copy link to this page",
+        icon: LinkIcon,
+        section: "actions",
+        keywords: "copy link url share current page",
+        perform: () => {
+          void navigator.clipboard.writeText(window.location.href)
+          toast({ description: "Page link copied to clipboard." })
+        },
+      },
+      {
         id: "action:docs",
         title: "Open documentation",
         icon: BookOpenIcon,
@@ -139,5 +153,15 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
     })
 
     return commands
-  }, [nextTheme, isAdmin, organizations, organizationId, openCreateProject, openCreateOrganization, setTheme, router])
+  }, [
+    nextTheme,
+    isAdmin,
+    organizations,
+    organizationId,
+    openCreateProject,
+    openCreateOrganization,
+    setTheme,
+    router,
+    toast,
+  ])
 }

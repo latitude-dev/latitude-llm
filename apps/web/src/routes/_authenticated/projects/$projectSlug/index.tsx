@@ -3,8 +3,10 @@ import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tool
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
-import { DatabaseIcon, DownloadIcon, FilterIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
+import { DatabaseIcon, DownloadIcon, FilterIcon, FilterXIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
+import { useRegisterCommands } from "../../../../components/command-palette/command-palette-provider.tsx"
+import type { PaletteCommand } from "../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { withSessionDefaults } from "../../../../domains/sessions/sessions.collection.ts"
@@ -67,6 +69,57 @@ function ProjectPage() {
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
+
+  // Contribute page-level Traces actions (tab switch + filters) to the command palette.
+  const paletteCommands = useMemo<readonly PaletteCommand[]>(() => {
+    const commands: PaletteCommand[] = []
+    if (activeTab !== "sessions") {
+      commands.push({
+        id: "traces:view-sessions",
+        title: "View sessions",
+        icon: MessagesSquareIcon,
+        section: "context",
+        group: "Traces",
+        keywords: "sessions tab switch",
+        perform: () => setActiveTab("sessions"),
+      })
+    }
+    if (activeTab !== "traces") {
+      commands.push({
+        id: "traces:view-traces",
+        title: "View traces",
+        icon: TextIcon,
+        section: "context",
+        group: "Traces",
+        keywords: "traces tab switch",
+        perform: () => setActiveTab("traces"),
+      })
+    }
+    commands.push({
+      id: "traces:toggle-filters",
+      title: filtersOpen ? "Hide filters" : "Show filters",
+      icon: FilterIcon,
+      section: "context",
+      group: "Traces",
+      keywords: "filters toggle show hide panel",
+      perform: () => setFiltersOpen(!filtersOpen),
+    })
+    if (rawFilters.length > 0) {
+      commands.push({
+        id: "traces:clear-filters",
+        title: "Clear filters",
+        icon: FilterXIcon,
+        section: "context",
+        group: "Traces",
+        keywords: "clear reset remove filters",
+        perform: () => setRawFilters(""),
+      })
+    }
+    return commands
+  }, [activeTab, filtersOpen, rawFilters, setActiveTab, setFiltersOpen, setRawFilters])
+
+  useRegisterCommands(paletteCommands)
+
   const tabDefaultSorting = activeTab === "sessions" ? DEFAULT_SESSION_SORTING : DEFAULT_TRACE_SORTING
   const [sortBy, setSortBy] = useParamState("sortBy", tabDefaultSorting.column)
   const [sortDirection, setSortDirection] = useParamState("sortDirection", tabDefaultSorting.direction, {

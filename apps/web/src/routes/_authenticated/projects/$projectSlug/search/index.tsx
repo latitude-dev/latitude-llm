@@ -15,15 +15,19 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import {
   ArrowLeftIcon,
+  BookmarkIcon,
   CircleHelpIcon,
   DatabaseIcon,
   DownloadIcon,
   FilterIcon,
+  FilterXIcon,
   PinIcon,
   SearchIcon,
   XIcon,
 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
+import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
+import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import {
   useSavedSearchBySlug,
   useUpdateSavedSearch,
@@ -128,6 +132,45 @@ function SearchPage() {
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+
+  // Contribute page-level Search actions to the command palette while this page is mounted.
+  const paletteCommands = useMemo<readonly PaletteCommand[]>(() => {
+    const commands: PaletteCommand[] = []
+    if (hasContent) {
+      commands.push({
+        id: "search:save",
+        title: "Save current search",
+        icon: BookmarkIcon,
+        section: "context",
+        group: "Search",
+        keywords: "save search bookmark store",
+        perform: () => setSaveModalOpen(true),
+      })
+    }
+    commands.push({
+      id: "search:toggle-filters",
+      title: filtersOpen ? "Hide filters" : "Show filters",
+      icon: FilterIcon,
+      section: "context",
+      group: "Search",
+      keywords: "filters toggle show hide panel",
+      perform: () => setFiltersOpen(!filtersOpen),
+    })
+    if (hasActiveFilters) {
+      commands.push({
+        id: "search:clear-filters",
+        title: "Clear filters",
+        icon: FilterXIcon,
+        section: "context",
+        group: "Search",
+        keywords: "clear reset remove filters",
+        perform: () => setRawFilters(""),
+      })
+    }
+    return commands
+  }, [hasContent, hasActiveFilters, filtersOpen, setFiltersOpen, setRawFilters])
+
+  useRegisterCommands(paletteCommands)
 
   const { totalCount, matchingTraceCount } = useSessionsCount({
     projectId: hasContent ? projectId : "",

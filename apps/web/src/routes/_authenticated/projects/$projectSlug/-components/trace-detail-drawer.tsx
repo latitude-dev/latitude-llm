@@ -16,17 +16,20 @@ import {
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
+import { useNavigate } from "@tanstack/react-router"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
   CopyIcon,
   GroupIcon,
+  LayersIcon,
   ListTreeIcon,
   MessageSquareIcon,
   MessagesSquareIcon,
 } from "lucide-react"
 import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
+import { useCurrentProject } from "../../../../../components/command-palette/commands/use-current-project.ts"
 import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useAnnotationsByTrace } from "../../../../../domains/annotations/annotations.collection.ts"
@@ -215,6 +218,8 @@ export function TraceDetailBody({
   searchQuery,
 }: TraceDetailBodyProps) {
   const { toast } = useToast()
+  const navigate = useNavigate()
+  const project = useCurrentProject()
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
     traceId,
@@ -314,19 +319,35 @@ export function TraceDetailBody({
         keywords: "annotations notes scores",
         perform: () => goToTab("annotations"),
       },
-      {
-        id: `trace:${traceId}:copy-id`,
-        title: "Copy trace ID",
-        icon: CopyIcon,
+    ]
+
+    if (project && traceRecord?.sessionId) {
+      const { sessionId } = traceRecord
+      const projectSlug = project.slug
+      commands.push({
+        id: `trace:${traceId}:open-session`,
+        title: "Open session",
+        icon: LayersIcon,
         section: "context",
         group: "Trace",
-        keywords: "copy trace id",
-        perform: () => {
-          void navigator.clipboard.writeText(traceId)
-          toast({ description: "Trace ID copied to clipboard." })
-        },
+        keywords: "open session view conversation",
+        perform: () => navigate({ to: `/projects/${projectSlug}/search`, search: { sessionId } }),
+      })
+    }
+
+    commands.push({
+      id: `trace:${traceId}:copy-id`,
+      title: "Copy trace ID",
+      icon: CopyIcon,
+      section: "context",
+      group: "Trace",
+      keywords: "copy trace id",
+      perform: () => {
+        void navigator.clipboard.writeText(traceId)
+        toast({ description: "Trace ID copied to clipboard." })
       },
-    ]
+    })
+
     if (traceRecord?.sessionId) {
       const { sessionId } = traceRecord
       commands.push({
@@ -342,8 +363,41 @@ export function TraceDetailBody({
         },
       })
     }
+
+    if (traceRecord?.userId) {
+      const { userId } = traceRecord
+      commands.push({
+        id: `trace:${traceId}:copy-user-id`,
+        title: "Copy user ID",
+        icon: CopyIcon,
+        section: "context",
+        group: "Trace",
+        keywords: "copy user id",
+        perform: () => {
+          void navigator.clipboard.writeText(userId)
+          toast({ description: "User ID copied to clipboard." })
+        },
+      })
+    }
+
+    if (traceRecord?.rootSpanId) {
+      const { rootSpanId } = traceRecord
+      commands.push({
+        id: `trace:${traceId}:copy-root-span-id`,
+        title: "Copy root span ID",
+        icon: CopyIcon,
+        section: "context",
+        group: "Trace",
+        keywords: "copy root span id",
+        perform: () => {
+          void navigator.clipboard.writeText(rootSpanId)
+          toast({ description: "Root span ID copied to clipboard." })
+        },
+      })
+    }
+
     return commands
-  }, [traceId, traceRecord?.sessionId, onActiveTabChange, toast])
+  }, [traceId, traceRecord, project, navigate, onActiveTabChange, toast])
 
   useRegisterCommands(traceCommands)
 

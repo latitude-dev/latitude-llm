@@ -54,7 +54,10 @@ optional `leading` (overrides the icon, e.g. a project emoji), `subtitle`, `badg
 The palette merges, in render order:
 
 1. **Contextual** (`registeredCommands`, grouped by `group`) — contributed by the current
-   view; rendered first.
+   view; rendered first. Two flavors: **entity-in-view** (an open issue/trace drawer
+   contributes actions on that record) and **current-page** (a route contributes its primary
+   actions while mounted, e.g. the Search and Traces pages add Save search / toggle-filters /
+   tab switches).
 2. **In-project search results** (only when inside a project with a non-empty query):
    **Issues**, **Datasets**, **Saved searches**.
 3. **Central providers** (always available hooks):
@@ -172,14 +175,17 @@ Add a `PaletteCommand` (or a `parent` for a drill-down) to the array in
 convention: switch/navigate before create; keep **Log out** last; gate admin-only actions on
 the user role.
 
-### 3. New action on an entity that has a detail view → `useRegisterCommands`
+### 3. New contextual action (entity view or page) → `useRegisterCommands`
 
-In the component that owns the open entity (e.g. the issue detail drawer's lifecycle toolbar,
-the trace detail body), build a memoized `PaletteCommand[]` and call `useRegisterCommands(...)`
-from `command-palette-provider.tsx`. Set `section: "context"` and a `group` label
-(`"Issue"`, `"Trace"`, …). Capture the entity id + reuse the view's existing handlers (open
-the same confirmation modal where one exists). Registration retracts automatically when the
-view unmounts. References: `issue-lifecycle-actions.tsx`, `trace-detail-drawer.tsx`.
+In the component that owns the context — an entity drawer (issue lifecycle toolbar, trace
+detail body) **or** a route component for "current page" actions (Search/Traces pages) — build
+a memoized `PaletteCommand[]` and call `useRegisterCommands(...)` from
+`command-palette-provider.tsx`. Set `section: "context"` and a `group` label (`"Issue"`,
+`"Trace"`, `"Search"`, `"Traces"`, …). Capture the entity id / page state and reuse the view's
+existing handlers (open the same confirmation modal where one exists; flip the same state the
+page's own buttons flip). Registration retracts automatically when the view/page unmounts.
+References: `issue-lifecycle-actions.tsx`, `trace-detail-drawer.tsx`, and the `search/index.tsx`
+/ project `index.tsx` page registrations.
 
 ### 4. New searchable entity type → new provider hook + wire it in
 
