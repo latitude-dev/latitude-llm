@@ -52,6 +52,7 @@ const seedExisting = (overrides: Partial<SlackIntegration> = {}): SlackIntegrati
     botTokenScopes: "chat:write,team:read",
     refreshToken: null,
     tokenExpiresAt: null,
+    reconnectRequiredAt: null,
     installedByUserId: INSTALLER,
     installedAt: now,
     revokedAt: null,

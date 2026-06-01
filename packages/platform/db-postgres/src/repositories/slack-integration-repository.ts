@@ -114,6 +114,7 @@ const toDomainSlackIntegration = (parent: IntegrationRow, details: SlackDetailsR
       botTokenScopes: details.botTokenScopes,
       refreshToken,
       tokenExpiresAt: details.tokenExpiresAt,
+      reconnectRequiredAt: details.reconnectRequiredAt,
       installedByUserId: UserId(parent.installedByUserId),
       installedAt: parent.installedAt,
       revokedAt: parent.revokedAt,
@@ -156,6 +157,7 @@ const buildInsertRows = (integration: SlackIntegration, organizationId: string, 
       botTokenScopes: integration.botTokenScopes,
       refreshToken,
       tokenExpiresAt: integration.tokenExpiresAt,
+      reconnectRequiredAt: integration.reconnectRequiredAt,
       routes: integration.routes,
     }
 

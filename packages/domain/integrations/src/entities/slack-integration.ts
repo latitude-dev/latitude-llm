@@ -6,12 +6,13 @@ import { slackRoutesSchema } from "./slack-route.ts"
  * SlackIntegration entity — one row represents a Slack workspace
  * connected to a Latitude organization.
  *
- * `botAccessToken` is the plaintext bot user OAuth token (`xoxb-…`) at
- * the domain layer; the repository encrypts on write and decrypts on
+ * `botAccessToken` is the plaintext bot user OAuth token (`xoxb-…`/`xoxe-…`)
+ * at the domain layer; the repository encrypts on write and decrypts on
  * read. `refreshToken` and `tokenExpiresAt` stay `null` while token
- * rotation is disabled on the Slack app (the v1 default); enabling
- * rotation later is a Slack-app toggle and a refresh-and-retry path in
- * the repository — no schema change.
+ * rotation is disabled on the Slack app; with rotation on, the token is
+ * refreshed on-use (`getOrRefreshBotToken`). `reconnectRequiredAt` is set
+ * only when a refresh fails with `invalid_refresh_token` (dead chain → the
+ * user must reconnect); it stays `null` while healthy.
  *
  * Active vs revoked is encoded by `revokedAt`: a row with
  * `revokedAt = null` is the workspace's currently-live install.
@@ -31,6 +32,7 @@ export const slackIntegrationSchema = z.object({
   botTokenScopes: z.string().min(1),
   refreshToken: z.string().min(1).nullable(),
   tokenExpiresAt: z.date().nullable(),
+  reconnectRequiredAt: z.date().nullable(),
   installedByUserId: userIdSchema,
   installedAt: z.date(),
   revokedAt: z.date().nullable(),

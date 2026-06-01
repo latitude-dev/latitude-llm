@@ -30,6 +30,7 @@ const seedIntegration = (id: SlackIntegrationId, overrides: Partial<SlackIntegra
     botTokenScopes: "chat:write",
     refreshToken: null,
     tokenExpiresAt: null,
+    reconnectRequiredAt: null,
     installedByUserId: UserId("u".repeat(24)),
     installedAt: now,
     revokedAt: null,

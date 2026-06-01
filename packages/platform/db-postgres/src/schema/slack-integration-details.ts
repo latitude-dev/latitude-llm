@@ -39,6 +39,14 @@ export const slackIntegrationDetails = latitudeSchema.table(
     refreshToken: text("refresh_token"),
     tokenExpiresAt: tzTimestamp("token_expires_at"),
     /**
+     * Set when a token refresh fails with `invalid_refresh_token` — the
+     * rotation chain is dead and the workspace must be reconnected.
+     * `null` while healthy; cleared on a successful refresh and on
+     * reinstall. Drives the "Reconnect" banner. An expired access token
+     * alone is normal (refresh-on-use), so this is the only "broken" signal.
+     */
+    reconnectRequiredAt: tzTimestamp("reconnect_required_at"),
+    /**
      * Per-notification-group channel routing. Empty object `{}` means
      * "no Slack delivery anywhere"; keys are `NotificationGroup` values
      * and values are arrays of `{ channelId, channelName }`. Operator-

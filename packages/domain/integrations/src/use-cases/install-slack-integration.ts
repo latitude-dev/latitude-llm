@@ -70,6 +70,7 @@ export const installSlackIntegrationUseCase = (
           botTokenScopes: input.botTokenScopes,
           refreshToken: input.refreshToken,
           tokenExpiresAt: input.tokenExpiresAt,
+          reconnectRequiredAt: null,
           installedByUserId: input.installedByUserId,
           installedAt: now,
           revokedAt: null,
