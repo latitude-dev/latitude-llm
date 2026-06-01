@@ -7,6 +7,11 @@ export type {
   MonitorRepositoryShape,
 } from "./ports/monitor-repository.ts"
 export { MonitorRepository } from "./ports/monitor-repository.ts"
+export type {
+  SystemMonitorAlertDefinition,
+  SystemMonitorDefinition,
+} from "./system-monitors.ts"
+export { SYSTEM_MONITOR_DEFINITIONS } from "./system-monitors.ts"
 export type { GetMonitorBySlugInput } from "./use-cases/get-monitor-by-slug.ts"
 export { getMonitorBySlugUseCase } from "./use-cases/get-monitor-by-slug.ts"
 export type {
@@ -21,3 +26,8 @@ export {
   listMonitorsUseCase,
   MAX_MONITORS_PAGE_SIZE,
 } from "./use-cases/list-monitors.ts"
+export type {
+  ProvisionSystemMonitorsError,
+  ProvisionSystemMonitorsInput,
+} from "./use-cases/provision-system-monitors.ts"
+export { provisionSystemMonitorsUseCase } from "./use-cases/provision-system-monitors.ts"

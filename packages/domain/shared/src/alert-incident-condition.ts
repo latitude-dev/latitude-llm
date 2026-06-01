@@ -10,6 +10,9 @@ export type AlertDuration = z.infer<typeof alertDurationSchema>
 /** Seasonal-detector sensitivity `k` (σ multiplier). 1–6, lower = noisier. Shared with `issue.escalating`. */
 export const escalationSensitivitySchema = z.number().int().min(1).max(6)
 
+/** Provisioned default for `sensitivity`. Single source of truth — `@domain/issues` re-exports it as `DEFAULT_ESCALATION_SENSITIVITY_K`. */
+export const DEFAULT_ESCALATION_SENSITIVITY = 3
+
 /**
  * Fixed-window baseline for `multiplier` mode. `average` is the rolling rate over
  * `[now - lookback, now]`; `period` is the equal-length window just before now

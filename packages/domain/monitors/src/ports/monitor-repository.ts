@@ -27,6 +27,13 @@ export interface MonitorRepositoryShape {
   }): Effect.Effect<Monitor, NotFoundError | RepositoryError, SqlClient>
   /** Non-deleted monitors for a project, system monitors first then `created_at DESC`. */
   list(input: ListMonitorsRepositoryInput): Effect.Effect<MonitorListPage, RepositoryError, SqlClient>
+  /**
+   * Insert each monitor (with its alerts) only when no live row already holds
+   * its `(projectId, slug)`. Atomic and idempotent — returns just the monitors
+   * that were newly inserted, so a re-run on an already-provisioned project
+   * returns `[]`.
+   */
+  provisionSystemMonitors(monitors: readonly Monitor[]): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
 }
 
 export class MonitorRepository extends Context.Service<MonitorRepository, MonitorRepositoryShape>()(

@@ -1,4 +1,5 @@
 import type { ScoreSource } from "@domain/scores"
+import { DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 
 export const ISSUE_NAME_MAX_LENGTH = 128
 
@@ -40,9 +41,11 @@ export const ESCALATION_EXIT_THRESHOLD_FACTOR = 0.7
  * multiplier on σ for the 1h window. `k_long = k_short − 1` for the
  * 6h window so the short-window can prove "now" without the long window
  * dominating it (multi-window-multi-burn-rate SRE pattern). Default 3
- * approximates 99% confidence under a normal assumption.
+ * approximates 99% confidence under a normal assumption. The value is the
+ * shared `DEFAULT_ESCALATION_SENSITIVITY` so monitor provisioning and the
+ * legacy detector path can't drift apart.
  */
-export const DEFAULT_ESCALATION_SENSITIVITY_K = 3
+export const DEFAULT_ESCALATION_SENSITIVITY_K = DEFAULT_ESCALATION_SENSITIVITY
 
 /**
  * Cold-start guard: when fewer than `MIN_SEASONAL_SAMPLES` of the last

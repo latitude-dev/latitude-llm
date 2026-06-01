@@ -9,6 +9,7 @@ import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { MonitorDetailDrawer } from "./-components/monitor-detail-drawer.tsx"
 import { MonitorsEmptyState } from "./-components/monitors-empty-state.tsx"
 import { type MonitorsTableRow, MonitorsView } from "./-components/monitors-view.tsx"
 
@@ -68,6 +69,8 @@ function MonitorsPageContent() {
     [monitors],
   )
 
+  const activeMonitor = monitorSlug ? monitors.find((monitor) => monitor.slug === monitorSlug) : undefined
+
   const hasMonitors = totalCount > 0
   const hasActiveFilters = Boolean(searchQuery)
   const showEmptyState = !isLoading && !hasMonitors && !hasActiveFilters
@@ -116,6 +119,15 @@ function MonitorsPageContent() {
           onActiveMonitorChange={(slug) => setMonitorSlug(slug ?? "")}
         />
       </Layout.Content>
+      {monitorSlug ? (
+        <Layout.Aside>
+          <MonitorDetailDrawer
+            key={monitorSlug}
+            monitorName={activeMonitor?.name ?? monitorSlug}
+            onClose={() => setMonitorSlug("")}
+          />
+        </Layout.Aside>
+      ) : null}
     </Layout>
   )
 }

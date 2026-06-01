@@ -1,6 +1,6 @@
 import { type Monitor, type MonitorAlert, MonitorRepository, monitorSchema } from "@domain/monitors"
 import { NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, count, desc, eq, ilike, inArray, isNull } from "drizzle-orm"
+import { and, asc, count, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { monitorAlerts } from "../schema/monitor-alerts.ts"
@@ -31,6 +31,35 @@ const toMonitor = (row: typeof monitors.$inferSelect, alerts: readonly MonitorAl
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
+
+const toMonitorRow = (monitor: Monitor): typeof monitors.$inferInsert => ({
+  id: monitor.id,
+  organizationId: monitor.organizationId,
+  projectId: monitor.projectId,
+  slug: monitor.slug,
+  name: monitor.name,
+  description: monitor.description,
+  system: monitor.system,
+  mutedAt: monitor.mutedAt,
+  deletedAt: monitor.deletedAt,
+  createdAt: monitor.createdAt,
+  updatedAt: monitor.updatedAt,
+})
+
+const toMonitorAlertRow = (
+  alert: MonitorAlert,
+  organizationId: Monitor["organizationId"],
+): typeof monitorAlerts.$inferInsert => ({
+  id: alert.id,
+  organizationId,
+  monitorId: alert.monitorId,
+  kind: alert.kind,
+  sourceType: alert.source.type,
+  sourceId: alert.source.id,
+  condition: alert.condition,
+  severity: alert.severity,
+  createdAt: alert.createdAt,
+})
 
 const groupAlertsByMonitorId = (
   rows: readonly (typeof monitorAlerts.$inferSelect)[],
@@ -162,6 +191,35 @@ export const MonitorRepositoryLive = Layer.effect(
             limit,
             offset,
           }
+        }),
+      provisionSystemMonitors: (monitorsToProvision) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // One transaction for the whole set. Each monitor inserts only when no
+          // live `(project_id, slug)` row exists — `onConflictDoNothing` against
+          // the partial unique index makes re-runs (and concurrent provisioners)
+          // no-op. Alerts are inserted only for monitors we actually created.
+          return yield* sqlClient.query(async (db) => {
+            const inserted: Monitor[] = []
+            for (const monitor of monitorsToProvision) {
+              const created = await db
+                .insert(monitors)
+                .values(toMonitorRow(monitor))
+                .onConflictDoNothing({
+                  target: [monitors.projectId, monitors.slug],
+                  where: sql`deleted_at IS NULL`,
+                })
+                .returning({ id: monitors.id })
+              if (created.length === 0) continue
+              if (monitor.alerts.length > 0) {
+                await db
+                  .insert(monitorAlerts)
+                  .values(monitor.alerts.map((alert) => toMonitorAlertRow(alert, monitor.organizationId)))
+              }
+              inserted.push(monitor)
+            }
+            return inserted
+          })
         }),
     }),
   ),

@@ -42,6 +42,7 @@
     "@domain/projects": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/marketing": "workspace:*",
+    "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",

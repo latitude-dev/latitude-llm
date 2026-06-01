@@ -1,5 +1,13 @@
-import { type Monitor, MonitorRepository } from "@domain/monitors"
-import { generateId, OrganizationId, ProjectId } from "@domain/shared"
+import { type Monitor, type MonitorAlert, MonitorRepository } from "@domain/monitors"
+import {
+  type AlertIncidentCondition,
+  type AlertSeverity,
+  generateId,
+  MonitorAlertId,
+  MonitorId,
+  OrganizationId,
+  ProjectId,
+} from "@domain/shared"
 import { Effect, Exit } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { monitorAlerts as monitorAlertsTable } from "../schema/monitor-alerts.ts"
@@ -351,6 +359,102 @@ describe("MonitorRepositoryLive", () => {
           .insert(monitorsTable)
           .values(makeMonitorRow({ id: generateId(), slug: "reusable", name: "Second" })),
       ).resolves.toBeDefined()
+    })
+  })
+
+  describe("provisionSystemMonitors", () => {
+    const makeSystemMonitor = (
+      slug: string,
+      name: string,
+      alert: { kind: MonitorAlert["kind"]; severity: AlertSeverity; condition: AlertIncidentCondition | null },
+    ): Monitor => {
+      const monitorId = MonitorId(generateId())
+      const now = new Date("2026-06-01T10:00:00.000Z")
+      return {
+        id: monitorId,
+        organizationId,
+        projectId,
+        slug,
+        name,
+        description: "",
+        system: true,
+        alerts: [
+          {
+            id: MonitorAlertId(generateId()),
+            monitorId,
+            kind: alert.kind,
+            source: { type: "issue", id: null },
+            condition: alert.condition,
+            severity: alert.severity,
+            createdAt: now,
+          },
+        ],
+        mutedAt: null,
+        deletedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      }
+    }
+
+    // Mirrors SYSTEM_MONITOR_DEFINITIONS materialised by the provision use-case.
+    const systemMonitors = (): Monitor[] => [
+      makeSystemMonitor("issue-discovered", "Issue discovered", {
+        kind: "issue.new",
+        severity: "medium",
+        condition: null,
+      }),
+      makeSystemMonitor("issue-regressed", "Issue regressed", {
+        kind: "issue.regressed",
+        severity: "high",
+        condition: null,
+      }),
+      makeSystemMonitor("issue-escalating", "Issue escalating", {
+        kind: "issue.escalating",
+        severity: "high",
+        condition: { kind: "issue.escalating", sensitivity: 3 },
+      }),
+    ]
+
+    const provision = (monitors: readonly Monitor[]) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.provisionSystemMonitors(monitors)
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+    const list = () =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.list({ projectId, limit: 50, offset: 0 })
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+    it("inserts all three monitors with their alerts on a fresh project", async () => {
+      const inserted = await provision(systemMonitors())
+      expect(inserted.map((m) => m.slug)).toEqual(["issue-discovered", "issue-regressed", "issue-escalating"])
+
+      const page = await list()
+      const bySlug = new Map(page.items.map((m) => [m.slug, m]))
+      expect(page.totalCount).toBe(3)
+      expect(bySlug.get("issue-discovered")?.alerts[0]).toMatchObject({ kind: "issue.new", severity: "medium" })
+      expect(bySlug.get("issue-regressed")?.alerts[0]).toMatchObject({ kind: "issue.regressed", severity: "high" })
+      expect(bySlug.get("issue-escalating")?.alerts[0]).toMatchObject({
+        kind: "issue.escalating",
+        severity: "high",
+        condition: { kind: "issue.escalating", sensitivity: 3 },
+      })
+    })
+
+    it("is idempotent — a second run inserts nothing and returns no monitors", async () => {
+      await provision(systemMonitors())
+      const secondRun = await provision(systemMonitors())
+
+      expect(secondRun).toEqual([])
+      const page = await list()
+      expect(page.totalCount).toBe(3)
+      expect(page.items.flatMap((m) => m.alerts).length).toBe(3)
     })
   })
 })

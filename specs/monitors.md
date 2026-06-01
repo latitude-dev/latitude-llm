@@ -625,9 +625,13 @@ If a single issue event matches multiple monitors (the common case is "the all-i
 
 #### `startedAt` backtracking for `issue.escalating`
 
-Today `createAlertIncidentFromIssueEventUseCase` sets `startedAt = now()` for all kinds. For `issue.escalating`, this is wrong: the seasonal detector flags an escalation only after the band has been crossed for a while, so the "real" start of the escalation is meaningfully earlier than now. We backtrack `startedAt` to the **first bucket in the trend window where the count crossed the threshold**. The `entrySignals` snapshot already captures the trend window; the backtracking helper consumes it.
+Today `createAlertIncidentFromIssueEventUseCase` sets `startedAt = occurredAt` (the escalation event time) for all kinds. For `issue.escalating`, this is late: the seasonal detector flags an escalation only after the band has been crossed for a while, so the "real" start is meaningfully earlier. We backtrack `startedAt` to the **first bucket in the trend window where the occurrence count crossed the seasonal threshold**.
 
-For other kinds, behaviour is unchanged (`issue.new` / `issue.regressed` are eventful — `startedAt = endedAt = now()` stays correct).
+Note: the `entrySignals` snapshot holds only scalar stats (expected / σ / thresholds / entry-time 24h count), **not** a timestamped timeline, so the backtrack cannot read buckets from it. Instead it reuses the analytics queries that already back the issue trend chart — `ScoreAnalyticsRepository.trendByIssue` (per-bucket occurrence counts) and `escalationThresholdHistogramByIssues` (per-bucket seasonal threshold) — and walks the two series in lockstep to find the first bucket where `count ≥ threshold`; that bucket's start becomes `startedAt`.
+
+The natural home for this is the producer side (`checkIssueEscalationUseCase`, which already has `ScoreAnalyticsRepository` + `ChSqlClient`): it resolves the backtracked timestamp and forwards it on the `IssueEscalated` event, which the alert-incidents worker passes through as `occurredAt`. Because it changes the existing **non-flag-gated** escalation path, it lands in **M6** alongside the rest of the issue-event work, not in M3.
+
+For other kinds, behaviour is unchanged (`issue.new` / `issue.regressed` are eventful — `startedAt = endedAt = occurredAt` stays correct).
 
 #### Escalation sensitivity sourcing
 
@@ -1124,7 +1128,7 @@ Cleanup of the override table (`DELETE FROM organization_feature_flags WHERE ide
 
 The `ProjectCreated` event already fans out to a `projects:provision` task in `apps/workers/src/workers/projects.ts`. We extend that task to call `provisionSystemMonitorsUseCase(projectId)` after `provisionFlaggers()`.
 
-The system monitor definitions are hardcoded in `packages/domain/monitors/src/system-monitors.ts`:
+The system monitor definitions are hardcoded in `packages/domain/monitors/src/system-monitors.ts`. Severity is intentionally **not** stored on the definition — it's a pure function of `kind` (`SEVERITY_FOR_KIND` in `@domain/shared`), applied by the provision use-case when it materialises the entity. This keeps the system monitors and the legacy issue-event path from reporting different severities for the same kind (`issue.new` → `medium`, `issue.regressed` / `issue.escalating` → `high`).
 
 ```ts
 export const SYSTEM_MONITOR_DEFINITIONS = [
@@ -1132,17 +1136,13 @@ export const SYSTEM_MONITOR_DEFINITIONS = [
     slug: "issue-discovered",
     name: "Issue discovered",
     description: "Notifies each time a new issue is detected.",
-    alerts: [
-      { kind: "issue.new", source: { type: "issue", id: null }, condition: null, severity: "medium" },
-    ],
+    alerts: [{ kind: "issue.new", source: { type: "issue", id: null }, condition: null }],
   },
   {
     slug: "issue-regressed",
     name: "Issue regressed",
     description: "Notifies each time a resolved issue is detected again.",
-    alerts: [
-      { kind: "issue.regressed", source: { type: "issue", id: null }, condition: null, severity: "high" },
-    ],
+    alerts: [{ kind: "issue.regressed", source: { type: "issue", id: null }, condition: null }],
   },
   {
     slug: "issue-escalating",
@@ -1154,8 +1154,9 @@ export const SYSTEM_MONITOR_DEFINITIONS = [
         kind: "issue.escalating",
         source: { type: "issue", id: null },
         // Sensitivity travels with the monitor (moved off projects.settings).
-        condition: { kind: "issue.escalating", sensitivity: DEFAULT_ESCALATION_SENSITIVITY_K },
-        severity: "medium",
+        // DEFAULT_ESCALATION_SENSITIVITY is the single source of truth in
+        // @domain/shared; @domain/issues re-exports it as DEFAULT_ESCALATION_SENSITIVITY_K.
+        condition: { kind: "issue.escalating", sensitivity: DEFAULT_ESCALATION_SENSITIVITY },
       },
     ],
   },
@@ -1320,19 +1321,20 @@ The first milestones prioritise **visible progress**: M1 ships the sidebar entry
 - [x] Web side: `apps/web/src/domains/monitors/monitors.functions.ts` + `monitors.collection.ts`. `useMonitors` (offset infinite) and `useMonitorIncidents` (cursor infinite) are `useInfiniteQuery` exposing an `InfiniteTableInfiniteScroll` handle; the dashboard `InfiniteTable` is wired to it. Columns render correctly against empty data.
 - [x] Backend tests: schema constraints (incl. slug-reuse after soft-delete), RLS, repository (incl. soft-deleted-alert join + exclusion), use-cases, formatter.
 
-### Milestone 3 — System monitor data migration, provisioning, escalating `startedAt` fix
+### Milestone 3 — System monitor provisioning + data migration
 
 > Branch: `LAT-630/system-monitors` · Estimated size: ~1,800 lines
 
-**Goal:** Every project has the three system monitors. New projects get them via the provisioning hook; existing projects get them via a data SQL migration. The dashboard shows three live system monitors with their correct names and empty last-incident state. Issue.escalating incidents now backtrack `startedAt` correctly.
+**Goal:** Every project has the three system monitors. New projects get them via the provisioning hook; existing projects get them via a data SQL migration. The dashboard shows three live system monitors with their correct names and empty last-incident state, and a row click opens a stub details panel.
 
-- [ ] `packages/domain/monitors/src/system-monitors.ts` — `SYSTEM_MONITOR_DEFINITIONS` (per spec). The `issue.escalating` alert carries `condition: { kind: "issue.escalating", sensitivity: DEFAULT_ESCALATION_SENSITIVITY_K }` (sensitivity moved off project settings onto the monitor).
-- [ ] `provisionSystemMonitorsUseCase(projectId)` — idempotent per slug. Always provisions monitors unmuted (no read of existing `projects.settings.notifications.incidents`).
-- [ ] Modify `apps/workers/src/workers/projects.ts` — call `provisionSystemMonitorsUseCase` after `provisionFlaggers()`.
-- [ ] **Data SQL migration** (separate from M2's structural migration): three `INSERT … SELECT … WHERE NOT EXISTS` pairs covering the historical project set. Idempotent. All new monitors are unmuted; existing per-kind notification toggles in project settings are deliberately not consulted. The `issue.escalating` alert's `condition` is backfilled with the hardcoded default sensitivity (not read from `projects.settings.escalation.sensitivity`).
-- [ ] **`issue.escalating` `startedAt` backtracking**: modify `createAlertIncidentFromIssueEventUseCase` to derive `startedAt` from the `entrySignals` trend window's first-crossing bucket for `issue.escalating`. Other kinds unchanged.
-- [ ] Wire the dashboard's row click to set `monitorSlug` in the URL with a stub placeholder panel (the real panel lands in M4).
-- [ ] Backend tests: provisioning idempotency, data-migration shape, `startedAt` backtracking against representative trend windows.
+> The `issue.escalating` `startedAt` backtracking originally bundled here moved to **M6** — it changes the existing (non-flag-gated) escalation path and reuses the seasonal trend/threshold queries, so it's cohesive with the issue-event work there. See M6.
+
+- [x] `packages/domain/monitors/src/system-monitors.ts` — `SYSTEM_MONITOR_DEFINITIONS` (slug/name/description + alert `kind`/`source`/`condition`). Severity is **not** stored on the definition: it's a pure function of `kind` (`SEVERITY_FOR_KIND`), applied when the use-case materialises the entity, so system monitors and the legacy issue-event path can't report different severities for the same kind (escalating = `high`). The `issue.escalating` alert carries `condition: { kind: "issue.escalating", sensitivity: DEFAULT_ESCALATION_SENSITIVITY }`. `DEFAULT_ESCALATION_SENSITIVITY` now lives in `@domain/shared` (next to `escalationSensitivitySchema`) as the single source of truth; `@domain/issues` re-exports it as `DEFAULT_ESCALATION_SENSITIVITY_K`.
+- [x] `provisionSystemMonitorsUseCase({ organizationId, projectId })` — builds the entities and delegates to `MonitorRepository.provisionSystemMonitors`. Always provisions monitors unmuted (no read of existing `projects.settings.notifications.incidents`). Idempotent: the repo inserts each monitor only when no live `(projectId, slug)` row exists (`onConflictDoNothing` against the partial unique index) and inserts alerts only for monitors it actually created, so a re-run returns `[]`.
+- [x] Modify `apps/workers/src/workers/projects.ts` (via `services/provisioning.ts`) — call `provisionSystemMonitors` after `provisionFlaggers()`. Runs for **every** project regardless of the `monitors` flag: the rows are inert until the firing/UI gates open, and provisioning up-front makes the eventual flag flip seamless.
+- [x] **Data SQL migration** (separate from M2's structural migration, via `pg:generate:custom`): three `INSERT … SELECT … WHERE NOT EXISTS` monitor inserts + three alert inserts covering the historical project set. Idempotent (`NOT EXISTS` on `(project_id, slug)` among live rows for monitors, on `monitor_id` for alerts). All monitors unmuted; existing per-kind notification toggles in project settings are deliberately not consulted. Slugs/names/severities/conditions are hardcoded to mirror `SYSTEM_MONITOR_DEFINITIONS` + `SEVERITY_FOR_KIND`; the `issue.escalating` alert's `condition` is backfilled with the hardcoded default sensitivity (`3`), not read from `projects.settings.escalation.sensitivity`.
+- [x] Wire the dashboard's row click to set `monitorSlug` in the URL with a stub placeholder panel (`monitor-detail-drawer.tsx`, named for the real panel that lands in M4).
+- [x] Backend tests: provision use-case (entity shape + severity derivation), repository idempotency (PGlite), data-migration shape (per-project fan-out + idempotency, run against the real `migration.sql`).
 
 ### Milestone 4 — Monitor details panel: structurally-locked system mode + editable user mode
 
@@ -1375,7 +1377,7 @@ The first milestones prioritise **visible progress**: M1 ships the sidebar entry
 
 ### Milestone 6 — Wire issue-event path to monitors (flag-gated)
 
-> Branch: `LAT-630/issue-firing` · Estimated size: ~2,300 lines
+> Branch: `LAT-630/issue-firing` · Estimated size: ~2,500 lines
 
 **Goal:** With the `monitors` flag enabled for an org, every issue event creates one incident per matching alert; the existing notifications pipeline routes through the mute gate. Flag off = unchanged behaviour. After this milestone, the Incidents section of a flag-on org's system monitors shows live data.
 
@@ -1389,6 +1391,7 @@ The first milestones prioritise **visible progress**: M1 ships the sidebar entry
 - [ ] **Mute gate** in `request-incident-notifications`: when `incident.monitorAlertId IS NOT NULL`, resolve its monitor (via the alert join); if muted, short-circuit with `skipped: "monitor-muted"`.
 - [ ] Update the existing email + in-app templates to conditionally render a "Created by monitor X" line and a humanised condition line when present.
 - [ ] **Escalation sensitivity sourcing**: on the flag-on path, the `issue.escalating` detector (`check-issue-escalation` in `@domain/issues`) resolves the project's system "Issue escalating" monitor alert and reads `condition.sensitivity` instead of `projects.settings.escalation.sensitivity`. Flag-off keeps reading project settings. Annotate `projects.settings.escalation.sensitivity` (and its read sites + the `/settings/issues` sensitivity control) with `// TODO: Remove this after releasing monitors for everybody`.
+- [ ] **`issue.escalating` `startedAt` backtracking** (moved from M3 — applies to all orgs, flag-independent): in `checkIssueEscalationUseCase`, on the `enter` transition, reuse `ScoreAnalyticsRepository.trendByIssue` + `escalationThresholdHistogramByIssues` to find the first trend bucket where `count ≥ threshold` and forward that timestamp on the `IssueEscalated` event; the alert-incidents worker passes it through as `occurredAt` so `createAlertIncidentFromIssueEventUseCase` stamps the backtracked `startedAt`. Other kinds unchanged. See the "`startedAt` backtracking" architecture note. Backend tests: backtracking against representative trend windows (first-crossing earlier than now; no-crossing fallback to event time).
 - [ ] Hide the three issue-notification checkboxes **and the escalation-sensitivity control** on `/settings/issues` when the `monitors` flag is on (replaced by the system monitors). Leave the form fields and their read-paths in place — final cleanup happens in the post-rollout PR.
 - [ ] TODO comments per spec at every legacy site.
 - [ ] Backend tests: flag-on multi-monitor fan-out, flag-off parity, mute short-circuit (verify project-level per-kind gate is skipped but user-per-group prefs still apply), payload extension, template conditional rendering.
