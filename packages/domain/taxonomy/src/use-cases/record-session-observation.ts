@@ -123,8 +123,7 @@ export const recordSessionObservationUseCase = Effect.fn("taxonomy.recordSession
     return { action: "skipped", reason: "session-not-found" } satisfies RecordSessionObservationResult
 
   const traceIds = parseTraceIds(session.traceIds, input.triggeringTraceId)
-  const traceDetails =
-    traceIds.length > 0 ? yield* traces.listByTraceIds({ organizationId, projectId, traceIds }) : []
+  const traceDetails = traceIds.length > 0 ? yield* traces.listByTraceIds({ organizationId, projectId, traceIds }) : []
   const sessionMessages =
     traceDetails.length > 0
       ? [...traceDetails]
