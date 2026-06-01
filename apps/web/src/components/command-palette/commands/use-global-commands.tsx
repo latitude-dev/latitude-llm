@@ -41,26 +41,9 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
 
   return useMemo<readonly PaletteCommand[]>(() => {
     const orgs = organizations ?? []
+    const commands: PaletteCommand[] = []
 
-    const commands: PaletteCommand[] = [
-      {
-        id: "action:new-project",
-        title: "New project",
-        icon: PlusIcon,
-        section: "actions",
-        keywords: "create project add",
-        perform: openCreateProject,
-      },
-      {
-        id: "action:new-organization",
-        title: "New organization",
-        icon: Building2Icon,
-        section: "actions",
-        keywords: "create organization workspace add",
-        perform: openCreateOrganization,
-      },
-    ]
-
+    // Switch/navigate actions rank above create actions — switching is the more frequent intent.
     // Offer the drill-down switcher only when there is more than one org to switch between.
     if (orgs.length > 1) {
       commands.push({
@@ -103,6 +86,22 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
         perform: () => setTheme(nextTheme),
       },
       {
+        id: "action:new-project",
+        title: "New project",
+        icon: PlusIcon,
+        section: "actions",
+        keywords: "create project add",
+        perform: openCreateProject,
+      },
+      {
+        id: "action:new-organization",
+        title: "New organization",
+        icon: Building2Icon,
+        section: "actions",
+        keywords: "create organization workspace add",
+        perform: openCreateOrganization,
+      },
+      {
         id: "action:docs",
         title: "Open documentation",
         icon: BookOpenIcon,
@@ -111,18 +110,6 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
         perform: () => {
           window.open(DOCS_URL, "_blank", "noopener,noreferrer")
         },
-      },
-      {
-        id: "action:logout",
-        title: "Log out",
-        icon: LogOutIcon,
-        section: "actions",
-        keywords: "logout sign out exit",
-        perform: () =>
-          void authClient.signOut().then(async () => {
-            await resetPostHog()
-            void router.navigate({ to: "/login" })
-          }),
       },
     )
 
@@ -136,6 +123,20 @@ export function useGlobalCommands(): readonly PaletteCommand[] {
         perform: () => void router.navigate({ to: "/backoffice" }),
       })
     }
+
+    // Log out sits last — it's the most destructive/terminal action.
+    commands.push({
+      id: "action:logout",
+      title: "Log out",
+      icon: LogOutIcon,
+      section: "actions",
+      keywords: "logout sign out exit",
+      perform: () =>
+        void authClient.signOut().then(async () => {
+          await resetPostHog()
+          void router.navigate({ to: "/login" })
+        }),
+    })
 
     return commands
   }, [nextTheme, isAdmin, organizations, organizationId, openCreateProject, openCreateOrganization, setTheme, router])
