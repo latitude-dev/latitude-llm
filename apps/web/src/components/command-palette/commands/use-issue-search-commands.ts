@@ -1,11 +1,11 @@
-import { useNavigate, useParams } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
 import { ShieldAlertIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useIssues } from "../../../domains/issues/issues.collection.ts"
 import type { IssueRecord } from "../../../domains/issues/issues.functions.ts"
-import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { useDebounce } from "../../../lib/hooks/useDebounce.ts"
 import type { PaletteCommand } from "../types.ts"
+import { useCurrentProject } from "./use-current-project.ts"
 
 const RESULT_LIMIT = 8
 const SEMANTIC_LIMIT = 6
@@ -31,20 +31,18 @@ export function useIssueSearchCommands(query: string): {
   readonly isLoading: boolean
 } {
   const navigate = useNavigate()
-  const { projectSlug } = useParams({ strict: false })
-  const { data: projects } = useProjectsCollection()
-  const projectId = useMemo(() => projects?.find((p) => p.slug === projectSlug)?.id, [projects, projectSlug])
+  const project = useCurrentProject()
 
   const liveQuery = query.trim()
   const [debouncedQuery, setDebouncedQuery] = useState("")
   useDebounce(() => setDebouncedQuery(query.trim()), SEMANTIC_DEBOUNCE_MS, [query])
 
-  const inProjectSearch = Boolean(projectId) && liveQuery.length > 0
-  const semanticEnabled = Boolean(projectId) && debouncedQuery.length > 0
+  const inProjectSearch = project !== null && liveQuery.length > 0
+  const semanticEnabled = project !== null && debouncedQuery.length > 0
 
   // Server-side semantic search (debounced).
   const { data: semanticIssues, isLoading: semanticLoading } = useIssues({
-    projectId: projectId ?? "",
+    projectId: project?.id ?? "",
     searchQuery: debouncedQuery,
     limit: SEMANTIC_LIMIT,
     enabled: semanticEnabled,
@@ -53,13 +51,13 @@ export function useIssueSearchCommands(query: string): {
   // Recent-issues pool for the substring fallback — no searchQuery, so it's fetched once per
   // project and reused for every keystroke.
   const { data: recentIssues } = useIssues({
-    projectId: projectId ?? "",
+    projectId: project?.id ?? "",
     limit: RECENT_POOL_LIMIT,
     enabled: inProjectSearch,
   })
 
   const commands = useMemo<readonly PaletteCommand[]>(() => {
-    if (!inProjectSearch || !projectSlug) return []
+    if (!project || liveQuery.length === 0) return []
 
     const tokens = liveQuery.toLowerCase().split(/\s+/)
     const substringMatches = recentIssues.filter((issue) => {
@@ -81,12 +79,11 @@ export function useIssueSearchCommands(query: string): {
       title: issue.name,
       icon: ShieldAlertIcon,
       section: "search",
-      matchesAnyQuery: true,
       ...(issue.states.length > 0 ? { subtitle: issue.states.join(", ") } : {}),
       keywords: issue.name,
-      perform: () => navigate({ to: `/projects/${projectSlug}/issues`, search: { issueId: issue.id } }),
+      perform: () => navigate({ to: `/projects/${project.slug}/issues`, search: { issueId: issue.id } }),
     }))
-  }, [inProjectSearch, projectSlug, liveQuery, recentIssues, semanticIssues, navigate])
+  }, [project, liveQuery, recentIssues, semanticIssues, navigate])
 
   return { commands, isLoading: semanticEnabled && semanticLoading }
 }

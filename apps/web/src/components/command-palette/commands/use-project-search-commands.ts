@@ -1,10 +1,10 @@
-import { useNavigate, useParams } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
 import { BookmarkIcon, DatabaseIcon, SearchIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useDatasetsList } from "../../../domains/datasets/datasets.collection.ts"
-import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { useSavedSearchesList } from "../../../domains/saved-searches/saved-searches.collection.ts"
 import type { PaletteCommand } from "../types.ts"
+import { useCurrentProject } from "./use-current-project.ts"
 
 interface ProjectSearchCommands {
   readonly datasets: readonly PaletteCommand[]
@@ -23,18 +23,17 @@ const EMPTY: ProjectSearchCommands = { datasets: [], savedSearches: [], tracesFa
  */
 export function useProjectSearchCommands(query: string): ProjectSearchCommands {
   const navigate = useNavigate()
-  const { projectSlug } = useParams({ strict: false })
-  const { data: projects } = useProjectsCollection()
-  const projectId = useMemo(() => projects?.find((p) => p.slug === projectSlug)?.id, [projects, projectSlug])
+  const project = useCurrentProject()
 
   const trimmed = query.trim()
-  const active = Boolean(projectId) && trimmed.length > 0
+  const active = project !== null && trimmed.length > 0
 
-  const { data: datasets } = useDatasetsList(projectId ?? "", { enabled: active })
-  const { data: savedSearches } = useSavedSearchesList(projectId ?? "", { enabled: active })
+  const { data: datasets } = useDatasetsList(project?.id ?? "", { enabled: active })
+  const { data: savedSearches } = useSavedSearchesList(project?.id ?? "", { enabled: active })
 
   return useMemo<ProjectSearchCommands>(() => {
-    if (!active || !projectSlug) return EMPTY
+    if (!project || trimmed.length === 0) return EMPTY
+    const projectSlug = project.slug
 
     const datasetCommands = datasets.map(
       (dataset): PaletteCommand => ({
@@ -64,12 +63,11 @@ export function useProjectSearchCommands(query: string): ProjectSearchCommands {
         title: `Search traces for "${trimmed}"`,
         icon: SearchIcon,
         section: "search",
-        matchesAnyQuery: true,
         keywords: "search traces",
         perform: () => navigate({ to: `/projects/${projectSlug}/search`, search: { q: trimmed } }),
       },
     ]
 
     return { datasets: datasetCommands, savedSearches: savedSearchCommands, tracesFallback }
-  }, [active, projectSlug, datasets, savedSearches, trimmed, navigate])
+  }, [project, datasets, savedSearches, trimmed, navigate])
 }

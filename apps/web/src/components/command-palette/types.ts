@@ -21,14 +21,8 @@ interface BasePaletteCommand {
   readonly subtitle?: string
   /** Trailing element (e.g. a status badge). */
   readonly badge?: ReactNode
-  /** Extra search terms, beyond title/subtitle, used by the palette filter. */
+  /** Extra search terms, beyond title/subtitle, used by the palette matcher. */
   readonly keywords?: string
-  /**
-   * Bypass the client substring filter so the command always matches the current query.
-   * For server-ranked results (semantic issue matches) and query-driven actions
-   * ("Search traces for …") that must stay visible regardless of literal text overlap.
-   */
-  readonly matchesAnyQuery?: boolean
 }
 
 /** A command that runs and closes the palette. */

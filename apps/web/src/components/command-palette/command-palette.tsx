@@ -22,25 +22,21 @@ import { useProjectSearchCommands } from "./commands/use-project-search-commands
 import { COMMAND_SECTION_LABELS, COMMAND_SECTION_ORDER, type PaletteCommand, type ParentCommand } from "./types.ts"
 
 /**
- * Token-substring filter: a command matches when every whitespace-separated token of the
- * query is a substring of its searchable text (title + subtitle + keywords). Returns 1/0;
- * cmdk hides zero-score items and preserves source order within a section for ties.
+ * Token-substring matcher: a command matches when every whitespace-separated token of the
+ * query is a substring of its searchable text (title + subtitle + keywords). We filter in
+ * React (cmdk runs with `shouldFilter={false}`) rather than via cmdk's built-in filter —
+ * cmdk snapshots an item's keywords on first registration and won't pick up keyword changes
+ * for items with a stable value, which made query-driven rows (e.g. "Search traces for …")
+ * silently stop matching as the query grew.
  */
-function commandFilter(_value: string, search: string, keywords?: string[]): number {
-  const query = search.trim().toLowerCase()
-  if (!query) return 1
-  const haystack = (keywords ?? []).join(" ").toLowerCase()
-  return query.split(/\s+/).every((token) => haystack.includes(token)) ? 1 : 0
-}
-
-function searchKeywords(command: PaletteCommand, query: string): string[] {
-  const keywords = [command.title, command.subtitle, command.keywords].filter((value): value is string =>
-    Boolean(value),
-  )
-  // Commands flagged matchesAnyQuery (server-ranked results, query-driven actions) must not
-  // be re-filtered by the client substring filter — inject the live query so they always pass.
-  if (command.matchesAnyQuery) keywords.push(query)
-  return keywords
+function commandMatches(command: PaletteCommand, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  const haystack = [command.title, command.subtitle, command.keywords]
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .toLowerCase()
+  return q.split(/\s+/).every((token) => haystack.includes(token))
 }
 
 interface CommandGroupView {
@@ -94,25 +90,38 @@ export function CommandPalette() {
   const currentPage = pageStack.at(-1) ?? null
 
   const groups = useMemo<readonly CommandGroupView[]>(() => {
+    const matches = (command: PaletteCommand) => commandMatches(command, search)
+
     if (currentPage) {
-      return [{ key: currentPage.id, label: currentPage.title, commands: currentPage.getChildren() }]
+      return [{ key: currentPage.id, label: currentPage.title, commands: currentPage.getChildren().filter(matches) }]
     }
-    const all = [...navigationCommands, ...projectCommands, ...globalCommands]
+
+    // Contextual commands (contributed by the current view) render first, grouped by sub-heading.
+    const contextGroups = buildContextGroups(registeredCommands.filter(matches))
+
+    // In-project search results. Issues are already curated by the hook (semantic + substring),
+    // so they render as-is; datasets/saved searches are full project lists we filter here.
+    const entityGroups: CommandGroupView[] = []
+    if (issueResults.length > 0) entityGroups.push({ key: "issues", label: "Issues", commands: issueResults })
+    const datasets = datasetResults.filter(matches)
+    if (datasets.length > 0) entityGroups.push({ key: "datasets", label: "Datasets", commands: datasets })
+    const saved = savedSearchResults.filter(matches)
+    if (saved.length > 0) entityGroups.push({ key: "saved-searches", label: "Saved searches", commands: saved })
+
+    const central = [...navigationCommands, ...projectCommands, ...globalCommands].filter(matches)
     const centralGroups = COMMAND_SECTION_ORDER.map((section) => ({
       key: section,
       label: COMMAND_SECTION_LABELS[section],
-      commands: all.filter((command) => command.section === section),
+      commands: central.filter((command) => command.section === section),
     })).filter((group) => group.commands.length > 0)
-    // In-project search results render between contextual commands and navigation, with the
-    // "Search traces for …" fallback alongside them so it stays visible above the fold.
-    const entityGroups: CommandGroupView[] = []
-    if (issueResults.length > 0) entityGroups.push({ key: "issues", label: "Issues", commands: issueResults })
-    if (datasetResults.length > 0) entityGroups.push({ key: "datasets", label: "Datasets", commands: datasetResults })
-    if (savedSearchResults.length > 0)
-      entityGroups.push({ key: "saved-searches", label: "Saved searches", commands: savedSearchResults })
-    if (tracesFallback.length > 0) entityGroups.push({ key: "traces", label: "Traces", commands: tracesFallback })
-    return [...buildContextGroups(registeredCommands), ...entityGroups, ...centralGroups]
+
+    // The "Search traces for …" fallback is the query itself, so it always shows last.
+    const trailingGroups =
+      tracesFallback.length > 0 ? [{ key: "traces", label: "Traces", commands: tracesFallback }] : []
+
+    return [...contextGroups, ...entityGroups, ...centralGroups, ...trailingGroups]
   }, [
+    search,
     currentPage,
     registeredCommands,
     issueResults,
@@ -173,7 +182,7 @@ export function CommandPalette() {
       open={open}
       onOpenChange={handleOpenChange}
       loop
-      filter={commandFilter}
+      shouldFilter={false}
       onEscapeKeyDown={handleEscapeKeyDown}
     >
       {currentPage ? (
@@ -205,12 +214,7 @@ export function CommandPalette() {
         {groups.map((group) => (
           <CommandGroup key={group.key} heading={group.label}>
             {group.commands.map((command) => (
-              <CommandItem
-                key={command.id}
-                value={command.id}
-                keywords={searchKeywords(command, search)}
-                onSelect={() => execute(command)}
-              >
+              <CommandItem key={command.id} value={command.id} onSelect={() => execute(command)}>
                 {command.leading ?? <Icon icon={command.icon} size="sm" color="foregroundMuted" />}
                 <span className="flex min-w-0 flex-1 items-center gap-2">
                   <Text.H5 ellipsis noWrap>
