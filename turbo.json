@@ -30,6 +30,11 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": []
+    },
+    "test:regression": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "outputs": []
     }
   }
 }

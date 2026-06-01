@@ -11,6 +11,7 @@
     "tmux": "tmuxinator start .",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "test:regression": "turbo test:regression",
     "knip": "knip",
     "knip:fix": "knip --fix",
     "knip:fix:files": "knip --fix-type files --allow-remove-files",

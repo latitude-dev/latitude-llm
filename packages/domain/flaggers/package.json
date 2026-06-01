@@ -13,7 +13,8 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests --dir src"
+    "test": "vitest run --passWithNoTests --dir src",
+    "test:regression": "RUN_FLAGGER_CSV_REGRESSION=true vitest run --passWithNoTests --dir src src/use-cases/run-flagger.test.ts -t 'CSV false-positive regressions'"
   },
   "dependencies": {
     "@domain/ai": "workspace:*",

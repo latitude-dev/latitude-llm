@@ -218,6 +218,8 @@ function createMemoryCacheLayer(initialEntries: ReadonlyMap<string, string> = ne
   }
 }
 
+const csvRegressionIt = process.env.RUN_FLAGGER_CSV_REGRESSION === "true" ? it : it.skip
+
 describe("runFlaggerUseCase", () => {
   it("uses the LLM flagger for jailbreaking with suspicious snippets prompt", async () => {
     const { repository } = createFakeTraceRepository({
@@ -483,42 +485,46 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate[0].prompt).toContain("This cached agent designs dashboards.")
   })
 
-  it("classifies the CSV false-positive regressions as no-match with the live LLM flaggers", async () => {
-    const rows = readFlaggerRegressionRows()
-    expect(rows.length).toBeGreaterThan(0)
+  csvRegressionIt(
+    "classifies the CSV false-positive regressions as no-match with the live LLM flaggers",
+    async () => {
+      const rows = readFlaggerRegressionRows()
+      expect(rows.length).toBeGreaterThan(0)
 
-    const aiLayer = createAiLayer(AIGenerateLive)
-    const cache = createMemoryCacheLayer()
+      const aiLayer = createAiLayer(AIGenerateLive)
+      const cache = createMemoryCacheLayer()
 
-    for (const [index, row] of rows.entries()) {
-      const traceMetadata = row.metadata.traceMetadata
-      expect(traceMetadata).toBeTypeOf("object")
-      expect(traceMetadata).not.toBeNull()
-      const flaggerSlug = (traceMetadata as { readonly flaggerSlug?: unknown }).flaggerSlug
-      expect(flaggerSlug).toBeTypeOf("string")
+      for (const [index, row] of rows.entries()) {
+        const traceMetadata = row.metadata.traceMetadata
+        expect(traceMetadata).toBeTypeOf("object")
+        expect(traceMetadata).not.toBeNull()
+        const flaggerSlug = (traceMetadata as { readonly flaggerSlug?: unknown }).flaggerSlug
+        expect(flaggerSlug).toBeTypeOf("string")
 
-      const allMessages = row.metadata.allMessages
-      const systemInstructions = row.metadata.systemInstructions
-      expect(Array.isArray(allMessages)).toBe(true)
-      expect(Array.isArray(systemInstructions)).toBe(true)
+        const allMessages = row.metadata.allMessages
+        const systemInstructions = row.metadata.systemInstructions
+        expect(Array.isArray(allMessages)).toBe(true)
+        expect(Array.isArray(systemInstructions)).toBe(true)
 
-      const result = await Effect.runPromise(
-        classifyTraceForFlaggerUseCase({
-          organizationId: INPUT.organizationId,
-          projectId: INPUT.projectId,
-          traceId: `${INPUT.traceId.slice(0, 30)}${String(index).padStart(2, "0")}`,
-          flaggerSlug: flaggerSlug as string,
-          trace: makeTraceDetail(
-            allMessages as TraceDetail["allMessages"],
-            [],
-            systemInstructions as TraceDetail["systemInstructions"],
-          ),
-        }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
-      )
+        const result = await Effect.runPromise(
+          classifyTraceForFlaggerUseCase({
+            organizationId: INPUT.organizationId,
+            projectId: INPUT.projectId,
+            traceId: `${INPUT.traceId.slice(0, 30)}${String(index).padStart(2, "0")}`,
+            flaggerSlug: flaggerSlug as string,
+            trace: makeTraceDetail(
+              allMessages as TraceDetail["allMessages"],
+              [],
+              systemInstructions as TraceDetail["systemInstructions"],
+            ),
+          }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
+        )
 
-      expect(result, `row ${index} (${flaggerSlug}) should be no-match`).toEqual({ matched: false })
-    }
-  }, 180_000)
+        expect(result, `row ${index} (${flaggerSlug}) should be no-match`).toEqual({ matched: false })
+      }
+    },
+    180_000,
+  )
 
   it("stamps the LLM call with the no-reflag tag when the trace is itself flagger-generated", async () => {
     const { repository } = createFakeTraceRepository({
