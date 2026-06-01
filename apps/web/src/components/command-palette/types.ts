@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
  * Groups commands into ordered, labelled sections. `context` commands are contributed by
  * the current view through the registry and render at the top, grouped by their `group`.
  */
-type CommandSection = "context" | "navigation" | "projects" | "actions"
+type CommandSection = "context" | "search" | "navigation" | "projects" | "actions"
 
 interface BasePaletteCommand {
   /** Globally unique id (also used as cmdk's item value). */
@@ -45,6 +45,7 @@ export const COMMAND_SECTION_ORDER: readonly CommandSection[] = ["navigation", "
 
 export const COMMAND_SECTION_LABELS: Record<CommandSection, string> = {
   context: "Actions",
+  search: "Search",
   navigation: "Navigation",
   projects: "Projects",
   actions: "Actions",

@@ -6,14 +6,16 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandLoading,
   Icon,
   Text,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ChevronLeftIcon } from "lucide-react"
+import { ChevronLeftIcon, Loader2Icon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useCommandPalette } from "./command-palette-provider.tsx"
 import { useGlobalCommands } from "./commands/use-global-commands.tsx"
+import { useIssueSearchCommands } from "./commands/use-issue-search-commands.ts"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
 import { useProjectCommands } from "./commands/use-project-commands.tsx"
 import { COMMAND_SECTION_LABELS, COMMAND_SECTION_ORDER, type PaletteCommand, type ParentCommand } from "./types.ts"
@@ -30,8 +32,14 @@ function commandFilter(_value: string, search: string, keywords?: string[]): num
   return query.split(/\s+/).every((token) => haystack.includes(token)) ? 1 : 0
 }
 
-function searchKeywords(command: PaletteCommand): string[] {
-  return [command.title, command.subtitle, command.keywords].filter((value): value is string => Boolean(value))
+function searchKeywords(command: PaletteCommand, query: string): string[] {
+  const keywords = [command.title, command.subtitle, command.keywords].filter((value): value is string =>
+    Boolean(value),
+  )
+  // Server-ranked search results (e.g. semantic issue matches) must not be re-filtered by
+  // the client substring filter — inject the live query so they always pass.
+  if (command.section === "search") keywords.push(query)
+  return keywords
 }
 
 interface CommandGroupView {
@@ -75,6 +83,7 @@ export function CommandPalette() {
   const navigationCommands = useNavigationCommands()
   const projectCommands = useProjectCommands()
   const globalCommands = useGlobalCommands()
+  const { commands: issueResults, isLoading: issuesLoading } = useIssueSearchCommands(search)
 
   const currentPage = pageStack.at(-1) ?? null
 
@@ -88,9 +97,10 @@ export function CommandPalette() {
       label: COMMAND_SECTION_LABELS[section],
       commands: all.filter((command) => command.section === section),
     })).filter((group) => group.commands.length > 0)
-    // Contextual commands contributed by the current view render ahead of navigation.
-    return [...buildContextGroups(registeredCommands), ...centralGroups]
-  }, [currentPage, registeredCommands, navigationCommands, projectCommands, globalCommands])
+    const searchGroups = issueResults.length > 0 ? [{ key: "issues", label: "Issues", commands: issueResults }] : []
+    // Contextual commands render first, then in-project search results, then navigation/etc.
+    return [...buildContextGroups(registeredCommands), ...searchGroups, ...centralGroups]
+  }, [currentPage, registeredCommands, issueResults, navigationCommands, projectCommands, globalCommands])
 
   const resetState = () => {
     setSearch("")
@@ -162,14 +172,21 @@ export function CommandPalette() {
         onValueChange={setSearch}
       />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+        {issuesLoading ? (
+          <CommandLoading>
+            <Loader2Icon className="size-3.5 animate-spin" />
+            Searching issues…
+          </CommandLoading>
+        ) : (
+          <CommandEmpty>No results found.</CommandEmpty>
+        )}
         {groups.map((group) => (
           <CommandGroup key={group.key} heading={group.label}>
             {group.commands.map((command) => (
               <CommandItem
                 key={command.id}
                 value={command.id}
-                keywords={searchKeywords(command)}
+                keywords={searchKeywords(command, search)}
                 onSelect={() => execute(command)}
               >
                 {command.leading ?? <Icon icon={command.icon} size="sm" color="foregroundMuted" />}

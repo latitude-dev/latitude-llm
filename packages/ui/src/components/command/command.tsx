@@ -130,6 +130,16 @@ function CommandItem({ className, ...props }: ComponentPropsWithRef<typeof Comma
   )
 }
 
+function CommandLoading({ className, ...props }: ComponentPropsWithRef<typeof CommandPrimitive.Loading>) {
+  return (
+    <CommandPrimitive.Loading
+      data-slot="command-loading"
+      className={cn("flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  )
+}
+
 function CommandFooter({ className, ...props }: ComponentPropsWithRef<"div">) {
   return (
     <div
@@ -143,4 +153,13 @@ function CommandFooter({ className, ...props }: ComponentPropsWithRef<"div">) {
   )
 }
 
-export { CommandDialog, CommandEmpty, CommandFooter, CommandGroup, CommandInput, CommandItem, CommandList }
+export {
+  CommandDialog,
+  CommandEmpty,
+  CommandFooter,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandLoading,
+}

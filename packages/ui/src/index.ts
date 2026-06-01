@@ -105,6 +105,7 @@ export {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandLoading,
 } from "./components/command/command.tsx"
 export {
   Container,
