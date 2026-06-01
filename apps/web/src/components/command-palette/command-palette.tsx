@@ -103,16 +103,15 @@ export function CommandPalette() {
       label: COMMAND_SECTION_LABELS[section],
       commands: all.filter((command) => command.section === section),
     })).filter((group) => group.commands.length > 0)
-    // In-project entity results render between contextual commands and navigation; the
-    // "Search traces for …" fallback sits last as a catch-all.
+    // In-project search results render between contextual commands and navigation, with the
+    // "Search traces for …" fallback alongside them so it stays visible above the fold.
     const entityGroups: CommandGroupView[] = []
     if (issueResults.length > 0) entityGroups.push({ key: "issues", label: "Issues", commands: issueResults })
     if (datasetResults.length > 0) entityGroups.push({ key: "datasets", label: "Datasets", commands: datasetResults })
     if (savedSearchResults.length > 0)
       entityGroups.push({ key: "saved-searches", label: "Saved searches", commands: savedSearchResults })
-    const trailingGroups =
-      tracesFallback.length > 0 ? [{ key: "traces", label: "Traces", commands: tracesFallback }] : []
-    return [...buildContextGroups(registeredCommands), ...entityGroups, ...centralGroups, ...trailingGroups]
+    if (tracesFallback.length > 0) entityGroups.push({ key: "traces", label: "Traces", commands: tracesFallback })
+    return [...buildContextGroups(registeredCommands), ...entityGroups, ...centralGroups]
   }, [
     currentPage,
     registeredCommands,
