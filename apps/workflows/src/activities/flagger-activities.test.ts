@@ -31,6 +31,7 @@ vi.mock("@domain/billing", () => ({
 
 vi.mock("@platform/cache-redis", () => ({
   RedisBillingSpendReservationLive: () => Layer.empty,
+  RedisCacheStoreLive: () => Layer.empty,
 }))
 
 vi.mock("@domain/queue", () => ({

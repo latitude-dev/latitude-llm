@@ -2,6 +2,7 @@ import type { FlaggerStrategy } from "@domain/flaggers"
 import { withAi } from "@platform/ai"
 import { Effect } from "effect"
 import type { FixtureRow } from "../types.ts"
+import { createBenchmarkCacheLayer } from "./cache.ts"
 import type { TokenUsageTotals } from "./meter.ts"
 import { createTokenMeter, sumTotals } from "./meter.ts"
 import { meteringAIGenerateLive } from "./metering-ai.ts"
@@ -43,6 +44,7 @@ const classifyOne = (target: BenchmarkTarget, row: FixtureRow, strategyOverride?
     const meter = createTokenMeter()
     const outcome = yield* target.classify(row, strategyOverride).pipe(
       withAi(meteringAIGenerateLive(meter)),
+      Effect.provide(createBenchmarkCacheLayer()),
       Effect.match({
         onFailure: (err): ClassifyOutcome => ({
           matched: false,

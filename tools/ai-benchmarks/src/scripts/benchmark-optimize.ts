@@ -55,6 +55,7 @@ import {
 import { fixtureRowToTraceDetail } from "../runner/adapter.ts"
 import { type Baseline, readBaseline } from "../runner/baseline.ts"
 import { type BenchmarkRunPhase, enforceFreshness, loadFixture, runBenchmark } from "../runner/benchmark.ts"
+import { createBenchmarkCacheLayer } from "../runner/cache.ts"
 import { createTokenMeter } from "../runner/meter.ts"
 import { meteringAIGenerateLive } from "../runner/metering-ai.ts"
 import type { Metrics, Prediction } from "../runner/metrics.ts"
@@ -1161,6 +1162,7 @@ const evaluateRow = async (input: {
   const result = await Effect.runPromise(
     input.target.classify(input.row, input.strategy).pipe(
       withAi(meteringAIGenerateLive(meter)),
+      Effect.provide(createBenchmarkCacheLayer()),
       Effect.match({
         onFailure: (err): { matched: boolean; error: string | null } => ({
           matched: false,
