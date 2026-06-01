@@ -4,8 +4,10 @@ import { Avatar, Button, cn, DropdownMenu, Icon, LatitudeLogo, Text, Tooltip, us
 import { extractLeadingEmoji } from "@repo/utils"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
-import { ChevronsUpDown, HatGlassesIcon, LifeBuoy, Moon, Plus, ShieldAlertIcon, Sun } from "lucide-react"
+import { ChevronsUpDown, HatGlassesIcon, LifeBuoy, Moon, Plus, SearchIcon, ShieldAlertIcon, Sun } from "lucide-react"
 import { useState } from "react"
+import { CommandPalette } from "../components/command-palette/command-palette.tsx"
+import { CommandPaletteProvider, useCommandPalette } from "../components/command-palette/command-palette-provider.tsx"
 import { createBillingCheckoutSession, getBillingOverview } from "../domains/billing/billing.functions.ts"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { createProject, listProjects } from "../domains/projects/projects.functions.ts"
@@ -193,6 +195,7 @@ function NavHeader() {
   const { theme, setTheme } = useThemePreference(initialTheme)
   const nextTheme = theme === "dark" ? "light" : "dark"
   const [createOrgModalOpen, setCreateOrgModalOpen] = useState(false)
+  const commandPalette = useCommandPalette()
 
   if (!org) return null
 
@@ -248,6 +251,15 @@ function NavHeader() {
         <BreadcrumbTrail />
       </div>
       <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => commandPalette.setOpen(true)}
+          className="flex items-center gap-2 rounded-md border border-border px-2 py-1 transition-colors hover:bg-muted"
+        >
+          <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
+          <Text.H6 color="foregroundMuted">Search</Text.H6>
+          <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">⌘K</kbd>
+        </button>
         <BillingCreditCounter organizationId={organizationId} />
         <NotificationBell />
         {supportEnabled && (
@@ -349,28 +361,31 @@ function AuthenticatedLayout() {
 
   return (
     <IntercomProvider identity={supportIdentity} floatingButton="none">
-      <div className="flex h-screen flex-col overflow-hidden">
-        <PostHogIdentity
-          key={user.id}
-          userId={user.id}
-          userEmail={user.email}
-          userName={user.name}
-          organizationId={organizationId}
-          organizationName={org?.name}
-          excludeFromAnalytics={isLatitudeStaffEmail(user.email) || impersonatedBy != null}
-        />
-        {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
-        {isProjectOnboarding ? null : <NavHeader />}
-        <main
-          className={
-            isProjectOnboarding
-              ? "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden"
-              : "relative h-full min-h-0 w-full grow overflow-y-auto"
-          }
-        >
-          <Outlet />
-        </main>
-      </div>
+      <CommandPaletteProvider>
+        <div className="flex h-screen flex-col overflow-hidden">
+          <PostHogIdentity
+            key={user.id}
+            userId={user.id}
+            userEmail={user.email}
+            userName={user.name}
+            organizationId={organizationId}
+            organizationName={org?.name}
+            excludeFromAnalytics={isLatitudeStaffEmail(user.email) || impersonatedBy != null}
+          />
+          {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
+          {isProjectOnboarding ? null : <NavHeader />}
+          <main
+            className={
+              isProjectOnboarding
+                ? "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+                : "relative h-full min-h-0 w-full grow overflow-y-auto"
+            }
+          >
+            <Outlet />
+          </main>
+        </div>
+        <CommandPalette />
+      </CommandPaletteProvider>
     </IntercomProvider>
   )
 }
