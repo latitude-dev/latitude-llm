@@ -75,7 +75,8 @@ export function CommandPalette() {
   // The query active at each ancestor level, saved on push so going back restores it.
   const [savedSearches, setSavedSearches] = useState<readonly string[]>([])
 
-  useHotkeys([{ hotkey: "Mod+K", callback: toggle, options: { ignoreInputs: true } }])
+  // ignoreInputs:false so Cmd+K still opens the palette while a text input is focused.
+  useHotkeys([{ hotkey: "Mod+K", callback: toggle, options: { ignoreInputs: false } }])
 
   const navigationCommands = useNavigationCommands()
   const projectCommands = useProjectCommands()
