@@ -122,10 +122,10 @@ function ConnectedSlackCard({
 }) {
   return (
     <div className="rounded-lg border border-border">
-      {/* Expired-token recovery banner. Should never appear while the
-          on-use refresh + hourly sweep are healthy; when it does, the
-          rotation chain is broken and the workspace must be reconnected. */}
-      {integration.tokenExpired && (
+      {/* Reconnect banner. Should never appear while on-use refresh is
+          healthy; when it does, the rotation chain is broken (refresh
+          token revoked) and the workspace must be reconnected. */}
+      {integration.needsReconnect && (
         <div className="border-b border-border p-4">
           <Alert
             variant="destructive"

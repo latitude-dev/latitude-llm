@@ -148,6 +148,14 @@ export const createNotificationSlackWorker = ({ consumer, redisClient }: Notific
           )
           return
         }
+        // Dead refresh chain — nothing can be sent until the user
+        // reconnects. Ack without attempting a refresh or send.
+        if (integration.reconnectRequiredAt !== null) {
+          logger.warn(
+            `notification-slack.send skipped — integration needs reconnect orgId=${orgId} integrationId=${integrationId}`,
+          )
+          return
+        }
 
         // Resolve render context. The org name is always present; the
         // project (if any) is best-effort — a deleted project shows

@@ -67,13 +67,12 @@ export interface SlackIntegrationRecord {
   /** Per-notification-group channel routing (Phase 3). */
   readonly routes: SlackRoutes
   /**
-   * Derived: the rotated token's expiry is in the past. Under normal
-   * operation the on-use refresh + hourly sweep keep this `false`; a
-   * `true` here means the refresh chain broke (e.g. Slack revoked the
-   * refresh token) and the workspace must be reconnected. `false` when
-   * rotation is disabled (no expiry). Never exposes the token itself.
+   * Derived: the rotation chain is dead (`reconnect_required_at` is set),
+   * so the workspace must be re-authorized. `false` while healthy — note
+   * an expired access token alone is normal (refresh-on-use), so this is
+   * the only "broken" signal. Never exposes the token itself.
    */
-  readonly tokenExpired: boolean
+  readonly needsReconnect: boolean
 }
 
 const toRecord = (row: SlackIntegration): SlackIntegrationRecord => ({
@@ -89,7 +88,7 @@ const toRecord = (row: SlackIntegration): SlackIntegrationRecord => ({
   installedAt: row.installedAt.toISOString(),
   installedByUserId: row.installedByUserId,
   routes: row.routes ?? {},
-  tokenExpired: row.tokenExpiresAt !== null && row.tokenExpiresAt.getTime() < Date.now(),
+  needsReconnect: row.reconnectRequiredAt !== null,
 })
 
 // Dynamic import keeps `@platform/slack` (and its `@slack/web-api` transitive dep) off the client bundle.
@@ -222,6 +221,9 @@ export const listSlackChannels = createServerFn({ method: "GET" }).handler(
         const repo = yield* SlackIntegrationRepository
         const integration = yield* repo.findActiveByOrganizationId()
         if (!integration) return [] as readonly SlackChannel[]
+        // Dead refresh chain — don't attempt Slack; the settings banner
+        // prompts the user to reconnect.
+        if (integration.reconnectRequiredAt !== null) return [] as readonly SlackChannel[]
 
         // Refresh the rotated token first when it is at/near expiry.
         const botToken = yield* getOrRefreshBotTokenUseCase({ integration })
