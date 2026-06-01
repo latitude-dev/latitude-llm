@@ -1,8 +1,10 @@
-import { deleteMonitorUseCase, type Monitor, MonitorRepository, type MonitorRepositoryShape } from "@domain/monitors"
-import { MonitorId, NotFoundError, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { deleteMonitorUseCase, type Monitor, MonitorRepository } from "@domain/monitors"
+import { createFakeMonitorRepository } from "@domain/monitors/testing"
+import { MonitorId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import type { MonitorRepositoryShape } from "../ports/monitor-repository.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -24,26 +26,6 @@ const makeMonitor = (overrides: Partial<Monitor> = {}): Monitor => ({
   updatedAt: at,
 })
 
-const buildRepo = (monitor: Monitor) => {
-  const calls = { softDelete: [] as string[] }
-  const repo: MonitorRepositoryShape = {
-    findById: (id) =>
-      id === monitor.id ? Effect.succeed(monitor) : Effect.fail(new NotFoundError({ entity: "Monitor", id })),
-    findBySlug: () => Effect.die("findBySlug not used"),
-    list: () => Effect.die("list not used"),
-    provisionSystemMonitors: () => Effect.die("provisionSystemMonitors not used"),
-    setMuted: () => Effect.die("setMuted not used"),
-    softDelete: (id) => {
-      calls.softDelete.push(id)
-      return Effect.void
-    },
-    updateMetadata: () => Effect.die("updateMetadata not used"),
-    updateAlert: () => Effect.die("updateAlert not used"),
-    countActiveBySlug: () => Effect.die("countActiveBySlug not used"),
-  }
-  return { repo, calls }
-}
-
 const provide = (repo: MonitorRepositoryShape) =>
   Layer.mergeAll(
     Layer.succeed(MonitorRepository, MonitorRepository.of(repo)),
@@ -52,18 +34,18 @@ const provide = (repo: MonitorRepositoryShape) =>
 
 describe("deleteMonitorUseCase", () => {
   it("soft-deletes a user monitor", async () => {
-    const { repo, calls } = buildRepo(makeMonitor({ system: false }))
+    const { repo, monitors } = createFakeMonitorRepository([makeMonitor({ system: false })])
     const result = await Effect.runPromise(deleteMonitorUseCase({ id: monitorId }).pipe(Effect.provide(provide(repo))))
     expect(result.deletedAt).toBeInstanceOf(Date)
-    expect(calls.softDelete).toEqual([monitorId])
+    expect(monitors[0]?.deletedAt).toBeInstanceOf(Date)
   })
 
-  it("rejects deleting a system monitor and does not call the repo", async () => {
-    const { repo, calls } = buildRepo(makeMonitor({ system: true }))
+  it("rejects deleting a system monitor and leaves it untouched", async () => {
+    const { repo, monitors } = createFakeMonitorRepository([makeMonitor({ system: true })])
     const error = await Effect.runPromise(
       deleteMonitorUseCase({ id: monitorId }).pipe(Effect.flip, Effect.provide(provide(repo))),
     )
     expect(error._tag).toBe("SystemMonitorForbiddenError")
-    expect(calls.softDelete).toEqual([])
+    expect(monitors[0]?.deletedAt).toBeNull()
   })
 })

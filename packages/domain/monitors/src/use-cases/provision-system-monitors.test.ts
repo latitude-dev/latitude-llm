@@ -1,33 +1,13 @@
-import { type Monitor, MonitorRepository, type MonitorRepositoryShape } from "@domain/monitors"
+import { MonitorRepository, provisionSystemMonitorsUseCase } from "@domain/monitors"
+import { createFakeMonitorRepository } from "@domain/monitors/testing"
 import { OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { provisionSystemMonitorsUseCase } from "./provision-system-monitors.ts"
+import type { MonitorRepositoryShape } from "../ports/monitor-repository.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
-
-const buildRepo = () => {
-  const calls: (readonly Monitor[])[] = []
-  const repo: MonitorRepositoryShape = {
-    findById: () => Effect.die("findById not used"),
-    findBySlug: () => Effect.die("findBySlug not used"),
-    list: () => Effect.die("list not used"),
-    // Echo the input — the use-case's job is to build the right entities; the
-    // idempotency/skip logic is the repository's and is tested against PGlite.
-    provisionSystemMonitors: (monitors) => {
-      calls.push(monitors)
-      return Effect.succeed(monitors)
-    },
-    setMuted: () => Effect.die("setMuted not used"),
-    softDelete: () => Effect.die("softDelete not used"),
-    updateMetadata: () => Effect.die("updateMetadata not used"),
-    updateAlert: () => Effect.die("updateAlert not used"),
-    countActiveBySlug: () => Effect.die("countActiveBySlug not used"),
-  }
-  return { repo, calls }
-}
 
 const run = (repo: MonitorRepositoryShape) =>
   Effect.runPromise(
@@ -43,11 +23,11 @@ const run = (repo: MonitorRepositoryShape) =>
 
 describe("provisionSystemMonitorsUseCase", () => {
   it("builds the three system monitors with org/project scoping, unmuted and system=true", async () => {
-    const { repo, calls } = buildRepo()
+    const { repo, monitors } = createFakeMonitorRepository()
     const result = await run(repo)
 
-    expect(calls.length).toBe(1)
     expect(result.map((m) => m.slug)).toEqual(["issue-discovered", "issue-regressed", "issue-escalating"])
+    expect(monitors.length).toBe(3)
     for (const monitor of result) {
       expect(monitor.system).toBe(true)
       expect(monitor.organizationId).toBe(organizationId)
@@ -61,7 +41,7 @@ describe("provisionSystemMonitorsUseCase", () => {
   })
 
   it("derives alert severity from kind and provisions the escalating sensitivity default", async () => {
-    const { repo } = buildRepo()
+    const { repo } = createFakeMonitorRepository()
     const result = await run(repo)
 
     const bySlug = new Map(result.map((m) => [m.slug, m]))
@@ -80,5 +60,14 @@ describe("provisionSystemMonitorsUseCase", () => {
       severity: "high",
       condition: { kind: "issue.escalating", sensitivity: 3 },
     })
+  })
+
+  it("is idempotent — re-provisioning an already-seeded project inserts nothing", async () => {
+    const { repo, monitors } = createFakeMonitorRepository()
+    await run(repo)
+    const secondRun = await run(repo)
+
+    expect(secondRun).toEqual([])
+    expect(monitors.length).toBe(3)
   })
 })
