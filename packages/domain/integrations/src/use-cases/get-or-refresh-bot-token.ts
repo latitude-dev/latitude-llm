@@ -2,7 +2,7 @@ import type { CacheError, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { SLACK_REFRESH_LOCK_TTL_SECONDS, SLACK_TOKEN_REFRESH_SKEW_SECONDS } from "../constants.ts"
 import type { SlackIntegration } from "../entities/slack-integration.ts"
-import type { SlackRefreshLockUnavailableError, SlackTokenRefreshError } from "../errors.ts"
+import { type SlackRefreshLockUnavailableError, SlackTokenRefreshError } from "../errors.ts"
 import { SlackIntegrationRepository } from "../ports/slack-integration-repository.ts"
 import { SlackRefreshLockRepository } from "../ports/slack-refresh-lock-repository.ts"
 import { SlackTokenRefresher } from "../ports/slack-token-refresher.ts"
@@ -39,9 +39,8 @@ const isFresh = (tokenExpiresAt: Date, skewMs: number): boolean => tokenExpiresA
  *     return the new token.
  *
  * The lock + double-check guarantee at most one Slack refresh per
- * workspace across all concurrent triggers (on-use reads and the
- * scheduled sweep), so the single-use refresh token is never rotated
- * twice and clobbered.
+ * workspace across concurrent on-use reads, so the single-use refresh
+ * token is never rotated twice and clobbered.
  */
 export const getOrRefreshBotTokenUseCase = (
   input: GetOrRefreshBotTokenInput,
@@ -99,12 +98,21 @@ export const getOrRefreshBotTokenUseCase = (
         )
         const tokenExpiresAt = new Date(Date.now() + refreshed.expiresIn * 1000)
         // Persist before returning: losing the new single-use refresh
-        // token would permanently break the rotation chain.
-        yield* repo.updateTokens(current.id, {
+        // token would permanently break the rotation chain. `updateTokens`
+        // matches on (id, org) regardless of `revoked_at`, so a 0-row
+        // result is practically unreachable here — but if it ever happens
+        // we must not hand back a token whose replacement refresh token
+        // was dropped. Surface a retryable failure instead; the retry
+        // re-reads, finds the old (now-consumed) refresh token, and lands
+        // on `invalid_refresh_token` → reconnect-required.
+        const persisted = yield* repo.updateTokens(current.id, {
           botAccessToken: refreshed.botAccessToken,
           refreshToken: refreshed.refreshToken,
           tokenExpiresAt,
         })
+        if (!persisted) {
+          return yield* Effect.fail(new SlackTokenRefreshError({ reason: "transport" }))
+        }
         return refreshed.botAccessToken
       }),
     )
