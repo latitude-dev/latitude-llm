@@ -103,6 +103,17 @@ export const createFakeNotificationRepository = () => {
         }
         return { deleted }
       }),
+    findExistingIdempotencyKeys: ({ organizationId, keys }) =>
+      Effect.sync(() => {
+        const set = new Set(keys)
+        const present = new Set<string>()
+        for (const r of rows) {
+          if (r.organizationId === organizationId && set.has(r.idempotencyKey)) {
+            present.add(r.idempotencyKey)
+          }
+        }
+        return [...present]
+      }),
   }
 
   return { repo, rows }

@@ -332,6 +332,52 @@ describe("NotificationRepositoryLive", () => {
     expect(remaining).toHaveLength(1)
     expect(remaining[0]?.projectId).toBe(PROJECT_2)
   })
+
+  it("findExistingIdempotencyKeys returns only the keys with matching rows in the current org", async () => {
+    const incidentId = "ai".padEnd(24, "0")
+    const presentKey = `incident.event:${incidentId}`
+    const absentKey = `incident.opened:${incidentId}`
+    const otherOrgKey = `incident.closed:${incidentId}`
+
+    await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        yield* repo.insertIfAbsent(makeNotification({ kind: "incident.event", idempotencyKey: presentKey }))
+        // Plant a row under ORG_B with a key we'll also ask about — it must NOT
+        // appear in ORG_A's result because the repository filters by org.
+        yield* repo.insertIfAbsent(
+          makeNotification({
+            organizationId: ORG_B,
+            kind: "incident.closed",
+            idempotencyKey: otherOrgKey,
+          }),
+        )
+      }),
+    )
+
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        return yield* repo.findExistingIdempotencyKeys({
+          organizationId: ORG_A,
+          keys: [presentKey, absentKey, otherOrgKey],
+        })
+      }),
+    )
+
+    expect([...result].sort()).toEqual([presentKey])
+  })
+
+  it("findExistingIdempotencyKeys returns an empty array when no keys are provided", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        return yield* repo.findExistingIdempotencyKeys({ organizationId: ORG_A, keys: [] })
+      }),
+    )
+
+    expect(result).toEqual([])
+  })
 })
 
 // Reference unused interface to keep TS happy if exports change.

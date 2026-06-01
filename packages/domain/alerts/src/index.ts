@@ -17,9 +17,13 @@ export {
   SEVERITY_FOR_KIND,
 } from "./entities/alert-incident.ts"
 export type {
+  AlertIncidentCursor,
+  AlertIncidentListPage,
   AlertIncidentRepositoryShape,
   CloseOpenAlertIncidentInput,
   FindOpenAlertIncidentInput,
+  ListAlertIncidentsByMonitorAlertIdInput,
+  ListAlertIncidentsByMonitorIdInput,
   ListAlertIncidentsByProjectInput,
   UpdateAlertIncidentExitDwellInput,
 } from "./ports/alert-incident-repository.ts"

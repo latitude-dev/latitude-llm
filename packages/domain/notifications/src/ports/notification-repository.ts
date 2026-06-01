@@ -95,6 +95,16 @@ export interface NotificationRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
   }): Effect.Effect<{ readonly deleted: number }, RepositoryError, SqlClient>
+
+  /**
+   * Returns the (deduped) subset of `keys` that have a notification row in the
+   * org. Backs the "Notified"/"Muted" badge — the caller asks about all visible
+   * incidents' keys in one round-trip.
+   */
+  findExistingIdempotencyKeys(input: {
+    readonly organizationId: OrganizationId
+    readonly keys: readonly string[]
+  }): Effect.Effect<readonly string[], RepositoryError, SqlClient>
 }
 
 export class NotificationRepository extends Context.Service<NotificationRepository, NotificationRepositoryShape>()(

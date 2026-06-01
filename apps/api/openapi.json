@@ -3817,9 +3817,10 @@
           "sourceType": {
             "type": "string",
             "enum": [
-              "issue"
+              "issue",
+              "savedSearch"
             ],
-            "description": "Kind of entity that triggered the incident. Currently always `\"issue\"`."
+            "description": "Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a saved search."
           },
           "sourceId": {
             "type": "string",
@@ -3832,17 +3833,21 @@
             "enum": [
               "issue.new",
               "issue.regressed",
-              "issue.escalating"
+              "issue.escalating",
+              "savedSearch.match",
+              "savedSearch.threshold",
+              "savedSearch.escalating"
             ],
-            "description": "Reason the incident opened. `issue.new` fires when a brand-new issue is discovered; `issue.regressed` when a resolved issue starts occurring again; `issue.escalating` when an existing issue's occurrence rate exceeds its seasonal baseline."
+            "description": "Reason the incident opened. `issue.new` fires when a brand-new issue is discovered; `issue.regressed` when a resolved issue starts occurring again; `issue.escalating` when an existing issue's occurrence rate exceeds its seasonal baseline. The `savedSearch.*` kinds are raised by monitors watching a saved search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when the match count crosses a configured threshold, and `savedSearch.escalating` when it stays elevated for a sustained window."
           },
           "severity": {
             "type": "string",
             "enum": [
+              "low",
               "medium",
               "high"
             ],
-            "description": "Severity bucket assigned to the incident. `issue.new` is `medium`; `issue.regressed` and `issue.escalating` are `high`."
+            "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
           },
           "startedAt": {
             "type": "string",
@@ -7972,7 +7977,8 @@
               "items": {
                 "type": "string",
                 "enum": [
-                  "issue"
+                  "issue",
+                  "savedSearch"
                 ]
               },
               "description": "Restrict to incidents whose source type matches any value in this list."
@@ -8002,7 +8008,10 @@
                 "enum": [
                   "issue.new",
                   "issue.regressed",
-                  "issue.escalating"
+                  "issue.escalating",
+                  "savedSearch.match",
+                  "savedSearch.threshold",
+                  "savedSearch.escalating"
                 ]
               },
               "description": "Restrict to incidents whose kind matches any value in this list."
@@ -8018,6 +8027,7 @@
               "items": {
                 "type": "string",
                 "enum": [
+                  "low",
                   "medium",
                   "high"
                 ]

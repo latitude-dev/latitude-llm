@@ -51,6 +51,8 @@ const provideRepository = (incidents: readonly AlertIncident[]): AlertIncidentRe
   listByProjectId: () => Effect.die("listByProjectId not used"),
   listOpenByKind: (kind) =>
     kind === "issue.escalating" ? Effect.succeed(incidents) : Effect.die(`unexpected kind ${kind}`),
+  listByMonitorId: () => Effect.die("listByMonitorId not used"),
+  listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used"),
 })
 
 const runSweep = (

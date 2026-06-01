@@ -25,7 +25,7 @@ const DEFAULT_ROW_BAR_CLASSES = "bg-muted-foreground/60 dark:bg-muted-foreground
 const DEFAULT_BACKGROUND_GUIDE_CLASSES = "border-border/60 dark:border-muted-foreground/30"
 const DEFAULT_MUTED_GUIDE_CLASSES = "border-muted-foreground/60 dark:border-muted-foreground/70"
 const DEFAULT_BUCKET_SECONDS = 24 * 60 * 60
-const SEVERITY_RANK: Record<AlertSeverity, number> = { medium: 1, high: 2 }
+const SEVERITY_RANK: Record<AlertSeverity, number> = { low: 0, medium: 1, high: 2 }
 
 /**
  * Parses either an ISO timestamp (sub-day or aligned) or a legacy `YYYY-MM-DD` string into

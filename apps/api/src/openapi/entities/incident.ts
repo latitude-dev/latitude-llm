@@ -13,18 +13,18 @@ export const IncidentSchema = z
     projectId: cuidSchema.describe("Project this incident belongs to."),
     sourceType: z
       .enum(INCIDENT_SOURCE_TYPES)
-      .describe('Kind of entity that triggered the incident. Currently always `"issue"`.'),
+      .describe(
+        "Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a saved search.",
+      ),
     sourceId: cuidSchema.describe("Id of the entity that triggered the incident (matches `sourceType`)."),
     kind: z
       .enum(INCIDENT_KINDS)
       .describe(
-        "Reason the incident opened. `issue.new` fires when a brand-new issue is discovered; `issue.regressed` when a resolved issue starts occurring again; `issue.escalating` when an existing issue's occurrence rate exceeds its seasonal baseline.",
+        "Reason the incident opened. `issue.new` fires when a brand-new issue is discovered; `issue.regressed` when a resolved issue starts occurring again; `issue.escalating` when an existing issue's occurrence rate exceeds its seasonal baseline. The `savedSearch.*` kinds are raised by monitors watching a saved search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when the match count crosses a configured threshold, and `savedSearch.escalating` when it stays elevated for a sustained window.",
       ),
     severity: z
       .enum(INCIDENT_SEVERITIES)
-      .describe(
-        "Severity bucket assigned to the incident. `issue.new` is `medium`; `issue.regressed` and `issue.escalating` are `high`.",
-      ),
+      .describe("Severity bucket assigned to the incident: `low`, `medium`, or `high`."),
     startedAt: z.string().describe("ISO-8601 timestamp at which the incident opened."),
     endedAt: z
       .string()

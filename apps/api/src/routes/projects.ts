@@ -64,13 +64,11 @@ const IncidentNotificationsSettingSchema = z
   })
   .openapi("IncidentNotificationsSetting")
 
-// Assert at compile time that the API schema covers every alert kind the
-// domain knows about — adding a new entry to `ALERT_INCIDENT_KINDS` makes
-// this assertion fail until we describe the new key here too.
-type _AlertKindsCovered = Exclude<
-  (typeof ALERT_INCIDENT_KINDS)[number],
-  keyof z.infer<typeof IncidentNotificationsSettingSchema>
->
+// Compile-time check that this per-project toggle covers every `issue.*` kind.
+// Saved-search kinds are scoped to monitors, not this settings block.
+// TODO: Remove this after releasing monitors for everybody (replaced by per-monitor mute).
+type _IssueAlertKind = Extract<(typeof ALERT_INCIDENT_KINDS)[number], `issue.${string}`>
+type _AlertKindsCovered = Exclude<_IssueAlertKind, keyof z.infer<typeof IncidentNotificationsSettingSchema>>
 const _alertKindsAreCovered: _AlertKindsCovered extends never ? true : false = true
 void _alertKindsAreCovered
 

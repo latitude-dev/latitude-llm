@@ -113,6 +113,8 @@ const provideTestLayers = (params: {
     closeOpen: () => Effect.die("closeOpen not used"),
     listByProjectId: () => Effect.die("listByProjectId not used"),
     listOpenByKind: () => Effect.die("listOpenByKind not used"),
+    listByMonitorId: () => Effect.die("listByMonitorId not used"),
+    listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used"),
     updateExitDwell: (input) =>
       Effect.sync(() => {
         dwellWrites.push(input)

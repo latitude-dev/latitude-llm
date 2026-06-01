@@ -1,10 +1,18 @@
-import { Button, Icon, Input, Text } from "@repo/ui"
+import { Button, Icon, Input, Text, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { LockIcon, PlusIcon, SearchIcon } from "lucide-react"
+import { useMemo } from "react"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
+import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
+import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
+import { useRouteProject } from "../-route-data.ts"
 import { MonitorsEmptyState } from "./-components/monitors-empty-state.tsx"
+import { type MonitorsTableRow, MonitorsView } from "./-components/monitors-view.tsx"
+
+const MONITORS_SEARCH_DEBOUNCE_MS = 300
 
 function MonitorsBreadcrumb() {
   return <BreadcrumbText variant="current">Monitors</BreadcrumbText>
@@ -30,6 +38,50 @@ function MonitorsPage() {
     )
   }
 
+  return <MonitorsPageContent />
+}
+
+function MonitorsPageContent() {
+  const project = useRouteProject()
+  const [monitorSlug, setMonitorSlug] = useParamState("monitorSlug", "")
+  const [searchQuery, setSearchQuery] = useParamState("q", "")
+  const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
+
+  useDebounce(
+    () => {
+      const normalized = searchInput.trim()
+      if (normalized !== searchQuery) {
+        setSearchQuery(normalized)
+      }
+    },
+    MONITORS_SEARCH_DEBOUNCE_MS,
+    [searchInput, searchQuery, setSearchQuery],
+  )
+
+  const { monitors, totalCount, isLoading, isReloading, infiniteScroll } = useMonitors({
+    projectId: project.id,
+    ...(searchQuery ? { searchQuery } : {}),
+  })
+
+  const rows = useMemo<readonly MonitorsTableRow[]>(
+    () => monitors.map((monitor) => ({ monitor, lastIncident: null })),
+    [monitors],
+  )
+
+  const hasMonitors = totalCount > 0
+  const hasActiveFilters = Boolean(searchQuery)
+  const showEmptyState = !isLoading && !hasMonitors && !hasActiveFilters
+
+  if (showEmptyState) {
+    return (
+      <Layout>
+        <Layout.Content>
+          <MonitorsEmptyState />
+        </Layout.Content>
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
       <Layout.Content>
@@ -38,17 +90,17 @@ function MonitorsPage() {
             <Layout.ActionRowItem>
               <div className="relative">
                 <Input
-                  value=""
-                  onChange={() => {}}
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
                   placeholder="Search monitors"
                   size="sm"
                   className="w-64 pl-8 rounded-lg"
-                  disabled
                 />
                 <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
+              {/* Disabled until the create-monitor modal lands in M5. */}
               <Button size="sm" disabled>
                 <Icon icon={PlusIcon} size="sm" />
                 New monitor
@@ -56,7 +108,13 @@ function MonitorsPage() {
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
-        <MonitorsEmptyState />
+        <MonitorsView
+          rows={rows}
+          isLoading={isLoading || isReloading}
+          infiniteScroll={infiniteScroll}
+          activeMonitorSlug={monitorSlug || undefined}
+          onActiveMonitorChange={(slug) => setMonitorSlug(slug ?? "")}
+        />
       </Layout.Content>
     </Layout>
   )

@@ -11,6 +11,7 @@ import type { AlertIncidentRecord } from "./alerts.functions.ts"
  * Exported so non-eCharts callers (e.g., the SVG-style `IssueTrendBar`) reuse the same palette.
  */
 export const INCIDENT_SEVERITY_COLOR: Record<AlertSeverity, string> = {
+  low: "hsl(217 91% 60%)",
   medium: "hsl(38 92% 50%)",
   high: "hsl(0 84% 60%)",
 }
@@ -26,15 +27,23 @@ const KIND_TOP_SYMBOL: Record<AlertIncidentKind, TopSymbol> = {
   // Escalating typically renders as an area, but we still render a tiny tick at the start so a
   // 1-bucket escalation that snaps to a single cell stays visible.
   "issue.escalating": { shape: "rect", size: 7 },
+  // Unused until M7 wires saved-search firing; shapes mirror the issue analogues.
+  "savedSearch.match": { shape: "triangle", size: 9 },
+  "savedSearch.threshold": { shape: "diamond", size: 10 },
+  "savedSearch.escalating": { shape: "rect", size: 7 },
 }
 
 export const KIND_LABELS: Record<AlertIncidentKind, string> = {
   "issue.new": "New issue",
   "issue.regressed": "Issue regressed",
   "issue.escalating": "Issue escalating",
+  "savedSearch.match": "Search match",
+  "savedSearch.threshold": "Search threshold",
+  "savedSearch.escalating": "Search escalating",
 }
 
 export const SEVERITY_LABELS: Record<AlertSeverity, string> = {
+  low: "Low",
   medium: "Medium",
   high: "High",
 }

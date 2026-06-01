@@ -1,5 +1,7 @@
 import type {
   AlertIncidentId,
+  MonitorAlertId,
+  MonitorId,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -59,6 +61,36 @@ export interface ListAlertIncidentsByProjectInput {
   readonly severities?: readonly AlertSeverity[]
 }
 
+/**
+ * Keyset cursor over `(started_at, id)` for the `started_at DESC, id DESC`
+ * monitor-incident lists — incidents are append-heavy and potentially large,
+ * so we page by cursor rather than offset (no scan-and-discard, no shift when
+ * new incidents arrive at the top).
+ */
+export interface AlertIncidentCursor {
+  readonly startedAt: Date
+  readonly id: AlertIncidentId
+}
+
+export interface ListAlertIncidentsByMonitorIdInput {
+  readonly monitorId: MonitorId
+  readonly limit: number
+  readonly cursor?: AlertIncidentCursor
+}
+
+export interface ListAlertIncidentsByMonitorAlertIdInput {
+  readonly monitorAlertId: MonitorAlertId
+  readonly limit: number
+  readonly cursor?: AlertIncidentCursor
+}
+
+export interface AlertIncidentListPage {
+  readonly items: readonly AlertIncident[]
+  /** Cursor for the next page, or `null` when there are no more rows. */
+  readonly nextCursor: AlertIncidentCursor | null
+  readonly hasMore: boolean
+}
+
 export interface AlertIncidentRepositoryShape {
   insert(incident: AlertIncident): Effect.Effect<void, RepositoryError, SqlClient>
   findById(id: AlertIncidentId): Effect.Effect<AlertIncident, NotFoundError | RepositoryError, SqlClient>
@@ -102,6 +134,19 @@ export interface AlertIncidentRepositoryShape {
    * regardless of which org owns it, then enqueue a per-issue recheck for each.
    */
   listOpenByKind(kind: AlertIncidentKind): Effect.Effect<readonly AlertIncident[], RepositoryError, SqlClient>
+  /**
+   * Incidents owned by a monitor (`started_at DESC`, paginated). The monitor
+   * isn't stored on the incident, so this joins through `monitor_alerts`,
+   * including soft-deleted alerts — an incident keeps showing after its alert
+   * is removed.
+   */
+  listByMonitorId(
+    input: ListAlertIncidentsByMonitorIdInput,
+  ): Effect.Effect<AlertIncidentListPage, RepositoryError, SqlClient>
+  /** Incidents fired by one specific alert (`started_at DESC`, paginated) — direct `monitor_alert_id` lookup. */
+  listByMonitorAlertId(
+    input: ListAlertIncidentsByMonitorAlertIdInput,
+  ): Effect.Effect<AlertIncidentListPage, RepositoryError, SqlClient>
 }
 
 export class AlertIncidentRepository extends Context.Service<AlertIncidentRepository, AlertIncidentRepositoryShape>()(

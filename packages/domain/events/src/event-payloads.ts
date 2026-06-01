@@ -1,3 +1,5 @@
+import type { AlertIncidentKind, AlertIncidentSourceType } from "@domain/shared"
+
 /**
  * NOTE: The *Requested events (MagicLinkEmailRequested, InvitationEmailRequested,
  * UserDeletionRequested) use imperative naming that borders on command-dispatch.
@@ -140,8 +142,8 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly alertIncidentId: string
-    readonly kind: "issue.new" | "issue.regressed" | "issue.escalating"
-    readonly sourceType: "issue"
+    readonly kind: AlertIncidentKind
+    readonly sourceType: AlertIncidentSourceType
     readonly sourceId: string
   }
   /**
@@ -160,8 +162,8 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly alertIncidentId: string
-    readonly kind: "issue.escalating"
-    readonly sourceType: "issue"
+    readonly kind: AlertIncidentKind
+    readonly sourceType: AlertIncidentSourceType
     readonly sourceId: string
     readonly reason?: "threshold" | "absolute-rate-drop" | "timeout"
   }

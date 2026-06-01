@@ -24,6 +24,10 @@ const ALERT_KIND_TO_HEADING: Record<AlertIncidentKind, string> = {
   "issue.new": "New issue",
   "issue.regressed": "Regressed issue",
   "issue.escalating": "Escalating issue",
+  // Placeholder copy until the monitors flag path ships polished templates (M6+).
+  "savedSearch.match": "Saved search match",
+  "savedSearch.threshold": "Saved search threshold",
+  "savedSearch.escalating": "Saved search escalating",
 }
 
 const ALERT_KIND_TO_SUBTITLE: Record<AlertIncidentKind, string> = {
@@ -31,6 +35,11 @@ const ALERT_KIND_TO_SUBTITLE: Record<AlertIncidentKind, string> = {
   "issue.regressed": "We notified everyone watching this project — this issue had previously been resolved.",
   "issue.escalating":
     "We notified everyone watching this project — the issue's occurrence rate crossed the escalation threshold.",
+  "savedSearch.match": "We notified everyone watching this project — a new trace matched the saved search.",
+  "savedSearch.threshold":
+    "We notified everyone watching this project — the saved-search match count crossed the configured threshold.",
+  "savedSearch.escalating":
+    "We notified everyone watching this project — the saved-search match count stayed above the threshold for the configured window.",
 }
 
 interface IncidentEventEmailProps {

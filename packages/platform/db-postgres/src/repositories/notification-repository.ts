@@ -1,6 +1,6 @@
 import { type Notification, NotificationRepository, notificationSchema } from "@domain/notifications"
 import { NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { notifications } from "../schema/notifications.ts"
@@ -172,6 +172,24 @@ export const NotificationRepositoryLive = Layer.effect(
               .returning({ id: notifications.id }),
           )
           return { deleted: deleted.length }
+        }),
+
+      findExistingIdempotencyKeys: ({ organizationId, keys }) =>
+        Effect.gen(function* () {
+          if (keys.length === 0) return []
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .selectDistinct({ idempotencyKey: notifications.idempotencyKey })
+              .from(notifications)
+              .where(
+                and(
+                  eq(notifications.organizationId, organizationId),
+                  inArray(notifications.idempotencyKey, keys as string[]),
+                ),
+              ),
+          )
+          return rows.map((r) => r.idempotencyKey)
         }),
     }),
   ),
