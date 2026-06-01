@@ -12,18 +12,22 @@ import {
   Tabs,
   Text,
   Tooltip,
+  useToast,
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  CopyIcon,
   GroupIcon,
   ListTreeIcon,
   MessageSquareIcon,
   MessagesSquareIcon,
 } from "lucide-react"
 import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
+import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useAnnotationsByTrace } from "../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../domains/annotations/annotations.functions.ts"
@@ -210,6 +214,7 @@ export function TraceDetailBody({
   focusAnnotationId,
   searchQuery,
 }: TraceDetailBodyProps) {
+  const { toast } = useToast()
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
     traceId,
@@ -273,6 +278,74 @@ export function TraceDetailBody({
     handleSetActiveTab("spans")
     onSelectedSpanIdChange(spanId ?? "")
   }
+
+  // Contribute trace-scoped commands (tab navigation + copy ids) to the command palette
+  // while this trace is open. Ids include the traceId so two mounted bodies never collide.
+  const traceCommands = useMemo<readonly PaletteCommand[]>(() => {
+    const goToTab = (tab: TabId) => {
+      onActiveTabChange(tab)
+      setVisitedTabs((prev) => new Set([...prev, tab]))
+    }
+    const commands: PaletteCommand[] = [
+      {
+        id: `trace:${traceId}:conversation`,
+        title: "View conversation",
+        icon: MessagesSquareIcon,
+        section: "context",
+        group: "Trace",
+        keywords: "conversation messages",
+        perform: () => goToTab("conversation"),
+      },
+      {
+        id: `trace:${traceId}:spans`,
+        title: "View spans",
+        icon: ListTreeIcon,
+        section: "context",
+        group: "Trace",
+        keywords: "spans tree",
+        perform: () => goToTab("spans"),
+      },
+      {
+        id: `trace:${traceId}:annotations`,
+        title: "View annotations",
+        icon: MessageSquareIcon,
+        section: "context",
+        group: "Trace",
+        keywords: "annotations notes scores",
+        perform: () => goToTab("annotations"),
+      },
+      {
+        id: `trace:${traceId}:copy-id`,
+        title: "Copy trace ID",
+        icon: CopyIcon,
+        section: "context",
+        group: "Trace",
+        keywords: "copy trace id",
+        perform: () => {
+          void navigator.clipboard.writeText(traceId)
+          toast({ description: "Trace ID copied to clipboard." })
+        },
+      },
+    ]
+    if (traceRecord?.sessionId) {
+      const { sessionId } = traceRecord
+      commands.push({
+        id: `trace:${traceId}:copy-session-id`,
+        title: "Copy session ID",
+        icon: CopyIcon,
+        section: "context",
+        group: "Trace",
+        keywords: "copy session id",
+        perform: () => {
+          void navigator.clipboard.writeText(sessionId)
+          toast({ description: "Session ID copied to clipboard." })
+        },
+      })
+    }
+    return commands
+  }, [traceId, traceRecord?.sessionId, onActiveTabChange, toast])
+
+  useRegisterCommands(traceCommands)
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
