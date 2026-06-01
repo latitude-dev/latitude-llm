@@ -1,4 +1,13 @@
-import type { MonitorId, NotFoundError, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
+import type {
+  AlertIncidentCondition,
+  AlertSeverity,
+  MonitorAlertId,
+  MonitorId,
+  NotFoundError,
+  ProjectId,
+  RepositoryError,
+  SqlClient,
+} from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Monitor } from "../entities/monitor.ts"
 
@@ -34,6 +43,33 @@ export interface MonitorRepositoryShape {
    * returns `[]`.
    */
   provisionSystemMonitors(monitors: readonly Monitor[]): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
+  /** Set or clear `mutedAt` on a live monitor. Fails `NotFoundError` if it doesn't exist. */
+  setMuted(input: {
+    readonly id: MonitorId
+    readonly mutedAt: Date | null
+  }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
+  /** Soft-delete a live monitor and cascade `deletedAt` to its live alerts (so firing stops; incident history stays joinable). */
+  softDelete(id: MonitorId): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
+  /** Update a live monitor's name/slug/description. Caller resolves the slug. */
+  updateMetadata(input: {
+    readonly id: MonitorId
+    readonly name: string
+    readonly slug: string
+    readonly description: string
+  }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
+  /** Update a live alert's `source.id` / `condition` / `severity` in place (kind + source type are fixed). */
+  updateAlert(input: {
+    readonly alertId: MonitorAlertId
+    readonly sourceId: string | null
+    readonly condition: AlertIncidentCondition | null
+    readonly severity: AlertSeverity
+  }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
+  /** Count live monitors in a project holding `slug`, excluding `excludeId` — backs slug regeneration. */
+  countActiveBySlug(input: {
+    readonly projectId: ProjectId
+    readonly slug: string
+    readonly excludeId: MonitorId
+  }): Effect.Effect<number, RepositoryError, SqlClient>
 }
 
 export class MonitorRepository extends Context.Service<MonitorRepository, MonitorRepositoryShape>()(

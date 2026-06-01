@@ -20,6 +20,11 @@ const buildRepo = () => {
       calls.push(monitors)
       return Effect.succeed(monitors)
     },
+    setMuted: () => Effect.die("setMuted not used"),
+    softDelete: () => Effect.die("softDelete not used"),
+    updateMetadata: () => Effect.die("updateMetadata not used"),
+    updateAlert: () => Effect.die("updateAlert not used"),
+    countActiveBySlug: () => Effect.die("countActiveBySlug not used"),
   }
   return { repo, calls }
 }

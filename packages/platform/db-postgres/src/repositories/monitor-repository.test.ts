@@ -1,4 +1,4 @@
-import { type Monitor, type MonitorAlert, MonitorRepository } from "@domain/monitors"
+import { type Monitor, type MonitorAlert, MonitorRepository, type MonitorRepositoryShape } from "@domain/monitors"
 import {
   type AlertIncidentCondition,
   type AlertSeverity,
@@ -7,7 +7,9 @@ import {
   MonitorId,
   OrganizationId,
   ProjectId,
+  type SqlClient,
 } from "@domain/shared"
+import { eq } from "drizzle-orm"
 import { Effect, Exit } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { monitorAlerts as monitorAlertsTable } from "../schema/monitor-alerts.ts"
@@ -455,6 +457,134 @@ describe("MonitorRepositoryLive", () => {
       const page = await list()
       expect(page.totalCount).toBe(3)
       expect(page.items.flatMap((m) => m.alerts).length).toBe(3)
+    })
+  })
+
+  describe("mutations", () => {
+    const exec = <A, E>(use: (repo: MonitorRepositoryShape) => Effect.Effect<A, E, SqlClient>) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* use(repository)
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+    const execExit = <A, E>(use: (repo: MonitorRepositoryShape) => Effect.Effect<A, E, SqlClient>) =>
+      Effect.runPromiseExit(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* use(repository)
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+    it("setMuted sets muted_at on a live monitor", async () => {
+      const id = generateId()
+      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
+      await exec((r) => r.setMuted({ id: MonitorId(id), mutedAt: new Date("2026-06-02T00:00:00.000Z") }))
+
+      const [row] = await database.db.select().from(monitorsTable).where(eq(monitorsTable.id, id))
+      expect(row?.mutedAt).not.toBeNull()
+    })
+
+    it("setMuted fails NotFoundError for a missing monitor", async () => {
+      const exit = await execExit((r) => r.setMuted({ id: MonitorId(generateId()), mutedAt: new Date() }))
+      expect(Exit.isFailure(exit)).toBe(true)
+    })
+
+    it("softDelete marks the monitor and cascades deleted_at to its live alerts", async () => {
+      const id = generateId()
+      const aliveAlert = generateId()
+      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
+      await database.db.insert(monitorAlertsTable).values(makeAlertRow({ id: aliveAlert, monitorId: id }))
+
+      await exec((r) => r.softDelete(MonitorId(id)))
+
+      const [monitorRow] = await database.db.select().from(monitorsTable).where(eq(monitorsTable.id, id))
+      expect(monitorRow?.deletedAt).not.toBeNull()
+      const [alertRow] = await database.db
+        .select()
+        .from(monitorAlertsTable)
+        .where(eq(monitorAlertsTable.id, aliveAlert))
+      expect(alertRow?.deletedAt).not.toBeNull()
+    })
+
+    it("updateMetadata updates name, slug and description", async () => {
+      const id = generateId()
+      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "old", name: "Old" }))
+
+      await exec((r) =>
+        r.updateMetadata({ id: MonitorId(id), name: "New name", slug: "new-name", description: "Desc" }),
+      )
+
+      const [row] = await database.db.select().from(monitorsTable).where(eq(monitorsTable.id, id))
+      expect(row).toMatchObject({ name: "New name", slug: "new-name", description: "Desc" })
+    })
+
+    it("updateAlert replaces an alert's source, condition and severity", async () => {
+      const id = generateId()
+      const alert = generateId()
+      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
+      await database.db.insert(monitorAlertsTable).values(
+        makeAlertRow({
+          id: alert,
+          monitorId: id,
+          kind: "savedSearch.threshold",
+          sourceType: "savedSearch",
+          sourceId: "s".repeat(24),
+          condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 100 } },
+          severity: "medium",
+        }),
+      )
+
+      await exec((r) =>
+        r.updateAlert({
+          alertId: MonitorAlertId(alert),
+          sourceId: "t".repeat(24),
+          condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 250 } },
+          severity: "high",
+        }),
+      )
+
+      const [row] = await database.db.select().from(monitorAlertsTable).where(eq(monitorAlertsTable.id, alert))
+      expect(row).toMatchObject({
+        sourceId: "t".repeat(24),
+        severity: "high",
+        condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 250 } },
+      })
+    })
+
+    it("updateAlert fails NotFoundError for a missing alert", async () => {
+      const exit = await execExit((r) =>
+        r.updateAlert({
+          alertId: MonitorAlertId(generateId()),
+          sourceId: null,
+          condition: { kind: "issue.escalating", sensitivity: 4 },
+          severity: "high",
+        }),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+    })
+
+    it("countActiveBySlug counts live same-slug monitors, excluding the target and soft-deleted rows", async () => {
+      const liveA = generateId()
+      const otherB = generateId()
+      const ghost = generateId()
+      await database.db.insert(monitorsTable).values([
+        makeMonitorRow({ id: liveA, slug: "taken", name: "A" }),
+        makeMonitorRow({ id: otherB, slug: "b-slug", name: "B" }),
+        // Soft-deleted "taken" — allowed alongside the live one by the partial unique index.
+        makeMonitorRow({ id: ghost, slug: "taken", name: "Ghost", deletedAt: new Date("2026-05-30T00:00:00.000Z") }),
+      ])
+
+      const countExcludingB = await exec((r) =>
+        r.countActiveBySlug({ projectId, slug: "taken", excludeId: MonitorId(otherB) }),
+      )
+      expect(countExcludingB).toBe(1)
+
+      const countExcludingA = await exec((r) =>
+        r.countActiveBySlug({ projectId, slug: "taken", excludeId: MonitorId(liveA) }),
+      )
+      expect(countExcludingA).toBe(0)
     })
   })
 })

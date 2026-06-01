@@ -1,6 +1,6 @@
 import { type Monitor, type MonitorAlert, MonitorRepository, monitorSchema } from "@domain/monitors"
 import { NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, count, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, ilike, inArray, isNull, ne, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { monitorAlerts } from "../schema/monitor-alerts.ts"
@@ -220,6 +220,101 @@ export const MonitorRepositoryLive = Layer.effect(
             }
             return inserted
           })
+        }),
+      setMuted: ({ id, mutedAt }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          const updated = yield* sqlClient.query((db) =>
+            db
+              .update(monitors)
+              .set({ mutedAt, updatedAt: new Date() })
+              .where(and(eq(monitors.organizationId, organizationId), eq(monitors.id, id), isNull(monitors.deletedAt)))
+              .returning({ id: monitors.id }),
+          )
+          if (updated.length === 0) return yield* new NotFoundError({ entity: "Monitor", id })
+        }),
+      softDelete: (id) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          // Monitor + its live alerts in one transaction: the alert cascade stops
+          // firing (active-alert reads filter deleted_at), while the incident→alert
+          // join (which ignores deleted_at) keeps history attributable.
+          const deleted = yield* sqlClient.query(async (db) => {
+            const now = new Date()
+            const rows = await db
+              .update(monitors)
+              .set({ deletedAt: now, updatedAt: now })
+              .where(and(eq(monitors.organizationId, organizationId), eq(monitors.id, id), isNull(monitors.deletedAt)))
+              .returning({ id: monitors.id })
+            if (rows.length > 0) {
+              await db
+                .update(monitorAlerts)
+                .set({ deletedAt: now })
+                .where(
+                  and(
+                    eq(monitorAlerts.organizationId, organizationId),
+                    eq(monitorAlerts.monitorId, id),
+                    isNull(monitorAlerts.deletedAt),
+                  ),
+                )
+            }
+            return rows
+          })
+          if (deleted.length === 0) return yield* new NotFoundError({ entity: "Monitor", id })
+        }),
+      updateMetadata: ({ id, name, slug, description }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          const updated = yield* sqlClient.query((db) =>
+            db
+              .update(monitors)
+              .set({ name, slug, description, updatedAt: new Date() })
+              .where(and(eq(monitors.organizationId, organizationId), eq(monitors.id, id), isNull(monitors.deletedAt)))
+              .returning({ id: monitors.id }),
+          )
+          if (updated.length === 0) return yield* new NotFoundError({ entity: "Monitor", id })
+        }),
+      updateAlert: ({ alertId, sourceId, condition, severity }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          const updated = yield* sqlClient.query((db) =>
+            db
+              .update(monitorAlerts)
+              .set({ sourceId, condition, severity, updatedAt: new Date() })
+              .where(
+                and(
+                  eq(monitorAlerts.organizationId, organizationId),
+                  eq(monitorAlerts.id, alertId),
+                  isNull(monitorAlerts.deletedAt),
+                ),
+              )
+              .returning({ id: monitorAlerts.id }),
+          )
+          if (updated.length === 0) return yield* new NotFoundError({ entity: "MonitorAlert", id: alertId })
+        }),
+      countActiveBySlug: ({ projectId, slug, excludeId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({ value: count() })
+              .from(monitors)
+              .where(
+                and(
+                  eq(monitors.organizationId, organizationId),
+                  eq(monitors.projectId, projectId),
+                  eq(monitors.slug, slug),
+                  ne(monitors.id, excludeId),
+                  isNull(monitors.deletedAt),
+                ),
+              ),
+          )
+          return Number(rows[0]?.value ?? 0)
         }),
     }),
   ),

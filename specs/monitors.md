@@ -955,7 +955,7 @@ Row click toggles `monitorSlug`. The selected row gets `activeRowKey` highlight.
   - `<CopyableText value={monitor.slug} size="sm" />` below the description.
 - Body sections (collapsible):
   - **Incidents** — embedded `InfiniteTable` of incidents for this monitor, **keyset-paginated** (`useMonitorIncidents` → `useInfiniteQuery`, cursor over `(started_at, id)`). Incidents are append-heavy and unbounded over time, so keyset avoids offset's scan-and-discard and the page-shift that new incidents would cause; backed by the composite `alert_incidents_monitor_alert_idx (monitor_alert_id, started_at DESC, id DESC)`.
-  - **Alerts** — vertical stack of alert cards. The set is locked (no per-card `X`, no "+ Add alert" dashed card, kind/source not editable), but each card's **configurable values are editable**: the `issue.escalating` card exposes a **sensitivity** control that saves via `configureMonitorAlertUseCase`. Cards whose alert has a `null` condition (`issue.new`, `issue.regressed`) have nothing to tune and render fully read-only. Each card still shows the human-readable summary via `formatHumanReadableAlert`.
+  - **Alerts** — vertical stack of alert cards. The set is locked (no per-card `X`, no "+ Add alert" dashed card, kind/source not editable), but each card's **configurable values are editable**: the `issue.escalating` card exposes a **sensitivity** control that saves via `updateMonitorAlertUseCase`. Cards whose alert has a `null` condition (`issue.new`, `issue.regressed`) have nothing to tune and render fully read-only. Each card still shows the human-readable summary via `formatHumanReadableAlert`.
 
 #### User monitor mode (editable)
 
@@ -1050,6 +1050,8 @@ Tests cover the matrix. The helper is shared between the API documentation entit
 
 ### Endpoints (under `/v1/projects/{projectSlug}/monitors`)
 
+Monitor CRUD and monitor-alert CRUD are separate operation families.
+
 | Method | Path | Operation id |
 |---|---|---|
 | GET | `/` | `listMonitors` |
@@ -1057,14 +1059,19 @@ Tests cover the matrix. The helper is shared between the API documentation entit
 | GET | `/{monitorSlug}` | `getMonitor` |
 | PATCH | `/{monitorSlug}` | `updateMonitor` |
 | DELETE | `/{monitorSlug}` | `deleteMonitor` |
-| PATCH | `/{monitorSlug}/alerts/{alertId}` | `configureMonitorAlert` |
+| GET | `/{monitorSlug}/alerts` | `listMonitorAlerts` |
+| POST | `/{monitorSlug}/alerts` | `createMonitorAlert` |
+| GET | `/{monitorSlug}/alerts/{alertId}` | `getMonitorAlert` |
+| PATCH | `/{monitorSlug}/alerts/{alertId}` | `updateMonitorAlert` |
+| DELETE | `/{monitorSlug}/alerts/{alertId}` | `deleteMonitorAlert` |
 | GET | `/{monitorSlug}/incidents` | `listMonitorIncidents` |
 | POST | `/{monitorSlug}/mute` | `muteMonitor` |
 | POST | `/{monitorSlug}/unmute` | `unmuteMonitor` |
 
-- `createMonitor` and `updateMonitor` reject `kind ∉ USER_CREATABLE_ALERT_KINDS`, reject any input with `system: true`, and require a valid `source.id` for saved-search alerts.
-- `updateMonitor` (metadata + alert-set changes) and `deleteMonitor` reject when the target's `system === true`. For system monitors the only valid mutations are `mute` / `unmute` and `configureMonitorAlert`.
-- `configureMonitorAlert` updates an existing alert's *configurable values* (its `condition`) in place — allowed on system **and** user monitors. It rejects any change to `kind` / `source` and any `condition` whose shape doesn't match the alert's kind. (For the system "Issue escalating" monitor this is how `sensitivity` is tuned.)
+- **Alert reads are projections, not a domain read path.** The domain has no separate "read alert" use-case — monitors are always read with their alerts baked in (`getMonitorBySlugUseCase`). `listMonitorAlerts` / `getMonitorAlert` exist only at the API layer, for SDK/MCP surface completeness and consistency: each reads the monitor via the existing use-case and projects `.alerts` (404 on an `alertId` not present). They add no extra query and no new domain code.
+
+- **Monitor CRUD.** `createMonitor` takes the monitor metadata + a non-empty list of alerts (each created through `createMonitorAlert` internally); it rejects `kind ∉ USER_CREATABLE_ALERT_KINDS`, `system: true`, and saved-search alerts without a `source.id`. `updateMonitor` edits **metadata only** (name + description) and rejects `system === true`. `deleteMonitor` soft-deletes the monitor and cascades `deleted_at` to its alerts; rejects `system === true`. `mute` / `unmute` are allowed on both modes.
+- **Monitor-alert CRUD.** `createMonitorAlert` adds one alert (rejects `system` monitors, enforces the user-creatable allowlist + `source.id`); `deleteMonitorAlert` removes one (soft-delete; rejects `system` monitors; can't empty the active alert list). `updateMonitorAlert` updates an existing alert's `source` / `condition` / `severity` in place — `kind` is immutable (and `source.type`, which the kind fixes). On **system** monitors it's the only permitted alert mutation, and only an existing alert's configurable condition values may change (source / severity / setting a condition on a no-condition kind are rejected). For the system "Issue escalating" monitor this is how `sensitivity` is tuned.
 - Field descriptions on the OpenAPI schemas are rich enough to render meaningfully as MCP tool descriptions (the same descriptions propagate to the TS SDK via codegen).
 
 ### `assign` endpoint removal
@@ -1253,7 +1260,7 @@ For legacy incidents (`monitorAlertId IS NULL`, flag-off orgs), layer 1 is absen
 Backend tests follow the testing skill's conventions (PGlite testkit; org/project fixtures from `@repo/testing`):
 
 - **Schema & repository** — round-trip writes; uniqueness on `(project_id, slug) WHERE deleted_at IS NULL`; RLS enforcement (a query without the org context returns nothing).
-- **Use-cases** — create/update/delete (rejection on `system === true` for update-metadata, alert-set update, and delete), update with kind ∉ `USER_CREATABLE_ALERT_KINDS` rejected, mute/unmute (system allowed), `configureMonitorAlert` (system allowed for condition values; kind/source change rejected; add/remove rejected), list with name search, get by slug, list incidents.
+- **Use-cases** — monitor CRUD: `createMonitor` (rejects empty alerts / non-allowlisted kind / `system: true` / missing saved-search `source.id`), `updateMonitor` (metadata only; `system` rejected), `deleteMonitor` (`system` rejected; cascades to alerts), `mute`/`unmute` (system allowed), list with name search, get by slug, list incidents. Alert CRUD: `createMonitorAlert` / `deleteMonitorAlert` (both reject `system`; allowlist + can't-empty enforced), `updateMonitorAlert` (kind immutable; condition-vs-kind + source-type validation; on system only an existing alert's configurable condition values change — source/severity/no-condition rejected).
 - **System monitor provisioning** — idempotent re-run; data-migration backfill correctness against `SYSTEM_MONITOR_DEFINITIONS`.
 - **Issue-event monitor resolution** — `resolveMonitorsForSourceEvent` returns all-of-type + specific-id matches; flag-on multi-monitor fan-out; flag-off legacy parity.
 - **`startedAt` backtracking** — `issue.escalating` incident `startedAt` is the first-bucket-crossing timestamp from the trend window, not now.
@@ -1263,7 +1270,7 @@ Backend tests follow the testing skill's conventions (PGlite testkit; org/projec
 - **Saved-search firing** — covered in M7 against the actual firing helpers.
 - **Source cascade** — delete of issue / saved search soft-deletes matching alerts (incidents stay attributable via the join) and soft-deletes the monitor if its active alert list empties.
 - **Human-readable alert formatter** — table-driven test over the matrix above.
-- **API endpoints** — request/response contract for the nine endpoints; 400s for forbidden combos (kind not in user-creatable allowlist, kind/source.type mismatch, delete on system monitor, empty alerts, `configureMonitorAlert` changing kind/source).
+- **API endpoints** — request/response contract for the thirteen endpoints; 400s for forbidden combos (kind not in user-creatable allowlist, kind/source.type mismatch, delete on system monitor, empty alerts, adding/deleting alerts on a system monitor, `updateMonitorAlert` changing kind/source on a system monitor).
 
 ## Documentation
 
@@ -1338,29 +1345,36 @@ The first milestones prioritise **visible progress**: M1 ships the sidebar entry
 
 ### Milestone 4 — Monitor details panel: structurally-locked system mode + editable user mode
 
-> Branch: `LAT-630/details-panel` · Estimated size: ~2,600 lines
+> Split into two PRs to stay reviewable: **backend mutations** (`LAT-630/monitor-mutations`, done) then the **details-panel UI** (`LAT-630/details-panel`). Combined estimate ~2,600 lines.
 
 **Goal:** Clicking a monitor opens a working details panel with next/prev navigation, mute/unmute (both modes), delete (user mode only), and editable alert configuration values (both modes — the system "Issue escalating" monitor's `sensitivity` is tunable here). The Incidents section is wired to the existing alert-incidents data. The Notified/Muted badge is correctly derived.
 
-- [ ] `muteMonitorUseCase`, `unmuteMonitorUseCase` (both modes allowed).
-- [ ] `deleteMonitorUseCase` — rejects on `system === true`.
-- [ ] `updateMonitorMetadataUseCase` — rejects on `system === true`; validates length; regenerates slug if name changed.
-- [ ] `configureMonitorAlertUseCase(alertId, condition)` — updates the *configurable values* of an existing alert in place (system AND user monitors). Validates that `kind` and `source` are unchanged and that the new `condition` matches the alert's kind; does NOT add/remove alerts. This is the only alert mutation permitted on system monitors.
-- [ ] Web side: `monitor-detail-drawer.tsx` mirroring `issue-detail-drawer.tsx`. Both modes:
-  - System mode: read-only header (no name/description pencil, no delete button); Alerts section locked structurally (no `X` / `+`, no kind/source change) but each card's configurable values are editable — the `issue.escalating` card exposes a sensitivity control (saves via `configureMonitorAlertUseCase`); `null`-condition cards render read-only.
-  - User mode: in-place editable name + description (`useEditableText` hook), delete button, fully editable Alerts section.
-- [ ] Mute/unmute/delete + configure-alert server functions; confirmation modals where destructive.
+Backend mutations (`LAT-630/monitor-mutations`):
+
+- [x] `muteMonitorUseCase`, `unmuteMonitorUseCase` (both modes allowed) + repo `setMuted`.
+- [x] `deleteMonitorUseCase` — rejects on `system === true` (`SystemMonitorForbiddenError`); repo `softDelete` cascades `deletedAt` to the monitor's live alerts so it stops firing while the incident→alert join keeps history attributable.
+- [x] `updateMonitorUseCase` — edits **metadata only** (name + description); rejects on `system === true`; validates name length (1–128); regenerates slug (via shared `generateSlug` + repo `countActiveBySlug`) only when the name's normalised form changes. Repo `updateMetadata`.
+- [x] `updateMonitorAlertUseCase({ monitorId, alertId, source?, condition?, severity? })` — the single per-alert update (replaces the old `configureMonitorAlert` + `updateMonitorAlerts` set-replacement). `kind` is immutable (and `source.type`, which the kind fixes). The resulting `condition` must match the alert's kind (`AlertConditionMismatchError` otherwise); source-type mismatch → `ValidationError`; unknown alert → `MonitorAlertNotFoundError`. On **system** monitors only an existing alert's configurable condition values may change — source / severity / setting a condition on a no-condition kind are rejected (`SystemMonitorForbiddenError`). Repo `updateAlert` sets `source_id` / `condition` / `severity`.
+- [x] Backend tests: mute/unmute (both modes), delete (system rejection + cascade), metadata update (system rejection, slug regen, cosmetic-rename stability, name validation), configure-alert (kind-mismatch rejected, unknown-alert rejected, `issue.escalating` sensitivity round-trips); repo-level idempotency/RLS via PGlite.
+
+Details-panel UI (`LAT-630/details-panel`):
+
+- [ ] Web side: `monitor-detail-drawer.tsx` mirroring `issue-detail-drawer.tsx` (replaces the M3 stub). Both modes:
+  - System mode: read-only header (no name/description pencil, no delete button); Alerts section locked structurally (no `X` / `+`, no kind/source change) but each card's configurable values are editable — the `issue.escalating` card exposes a sensitivity control (saves via `updateMonitorAlertUseCase`); `null`-condition cards render read-only.
+  - User mode: in-place editable name + description (`useEditableText` hook), delete button, and editable alert values (via `updateMonitorAlertUseCase`). Adding/removing alerts (the `+` / per-card `X`) lands in M5 alongside `createMonitorAlert` / `deleteMonitorAlert`.
+- [ ] Mute/unmute/delete monitor + update-alert server functions; confirmation modals where destructive.
 - [ ] Incidents section: embedded `InfiniteTable`; "Notified"/"Muted" column driven by the batched idempotency-key lookup.
-- [ ] Backend tests: mute/unmute (both modes), delete (system rejection), metadata update (system rejection, slug regen), configure-alert (system: condition-value edit allowed; kind/source change rejected; add/remove rejected; `issue.escalating` sensitivity round-trips).
 
 ### Milestone 5 — Create monitor modal and alert editing
 
 > Branch: `LAT-630/create-and-edit` · Estimated size: ~2,600 lines
 
-**Goal:** Users can create a non-system monitor end-to-end. The details panel's Alerts section allows adding/removing/editing alerts via the same alert card form. All paths constrain to `USER_CREATABLE_ALERT_KINDS`.
+**Goal:** Users can create a non-system monitor end-to-end. The details panel's Alerts section allows adding/removing alerts (editing already landed via `updateMonitorAlertUseCase` in M4) via the same alert card form. All paths constrain to `USER_CREATABLE_ALERT_KINDS`.
 
-- [ ] `createMonitorUseCase` — Zod-validated input; inserts monitor + alerts atomically. Rejects: empty alert list; any alert kind ∉ `USER_CREATABLE_ALERT_KINDS`; `system: true` in the input; saved-search alerts without `source.id`.
-- [ ] `updateMonitorAlertsUseCase` — set-style replacement via **soft-delete + insert** (removed alerts get `deleted_at = now()`, never hard-deleted, so their incident history stays attributable; edited alerts = soft-delete old + insert new). Active alert list cannot become empty; same kind/source.id constraints. **Rejects `system === true`** — system monitors are structurally locked, so their alerts change only via `configureMonitorAlertUseCase` (M4), which edits configurable values in place without touching the alert set.
+- [ ] `createMonitorUseCase` — Zod-validated input; inserts the monitor + its alerts atomically, composing `createMonitorAlertUseCase` per alert. Rejects: empty alert list; any alert kind ∉ `USER_CREATABLE_ALERT_KINDS`; `system: true` in the input; saved-search alerts without `source.id`.
+- [ ] `createMonitorAlertUseCase` — adds a single alert to an existing monitor (also used inside `createMonitor`). Enforces the user-creatable allowlist + kind/source.type match + `source.id` for saved searches. **Rejects `system === true`** — no alert may be added to a system monitor.
+- [ ] `deleteMonitorAlertUseCase` — soft-deletes a single alert (`deleted_at = now()`, never hard-deleted, so incident history stays attributable). The active alert list cannot become empty. **Rejects `system === true`** — system monitors are structurally locked.
+  > Per-alert *editing* (`updateMonitorAlertUseCase`) shipped in M4; M5 adds the create/delete halves of the alert CRUD family. There is no set-replacement use-case — alert changes are always granular.
 - [ ] Shared `alert-form` components in `apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/-components/`, reused by both the create modal and the panel Alerts section.
 - [ ] Saved-search Combobox source picker — no "All saved searches" option; inline "Create a saved search" link when the project has none.
 - [ ] Threshold + window form for the two complex saved-search kinds, covering all three threshold modes (absolute, multiplier, expected). The baseline `Select` includes the **expected** option, which switches the shared amount input to mean `sensitivity`. `formatHumanReadableAlert` drives the card preview.
@@ -1372,8 +1386,18 @@ The first milestones prioritise **visible progress**: M1 ships the sidebar entry
   - **`expected` baseline** (its own tooltip, since it behaves differently): "**Expected** is a smart baseline computed automatically from your history — it learns the normal shape of your traffic for each time of day and day of week, so a quiet Sunday night and a busy Monday morning each get their own 'normal'. You don't pick a comparison window; just how sensitive to be. It's the same engine that powers Latitude's automatic issue-escalation alerts." Pair with a **sensitivity** sub-tooltip: "How far above the learned normal counts as a spike. Lower = more sensitive (alerts on smaller deviations, noisier); higher = quieter."
   - **`factor` on multiplier**: "The multiplier. 3 means 'fire when current activity is 3× the baseline rate'."
   - **One-line live-preview** under each alert card showing `formatHumanReadableAlert(alert)` — so the user sees the sentence form of what they're configuring as they edit.
-- [ ] Server functions: `createMonitor`, `updateMonitorAlerts`.
+- [ ] Server functions: `createMonitor`, `createMonitorAlert`, `deleteMonitorAlert` (plus `updateMonitorAlert` from M4).
 - [ ] Backend tests: creation invariants, alert update invariants, kind/source.type mismatch rejection, kind-not-in-allowlist rejection, saved-search source.id required.
+
+### Milestone UX — Polish the full Monitors frontend
+
+> Branch: `LAT-630/ux-polish` · Runs after M5, before M6. Frontend-only — no domain/backend changes.
+
+**Goal:** A dedicated pass to bring the entire Monitors frontend (everything built across M1–M5: dashboard, details panel, create modal, alert card + threshold/window forms) to a finished, shippable feel. From M6 onward the work is almost entirely backend (issue-event firing, the saved-search pipeline, API/SDK), so this is the natural moment to fully polish the UI while it's fresh and before backend wiring lands on top of it.
+
+Scope is intentionally left open — the exact polish items are decided when the milestone starts, not prescribed here.
+
+Worth front-loading, since it enables the rest: a **`monitors` seeder** (`packages/platform/db-postgres/src/seeds/monitors/`, registered in `all.ts` next to the existing `alert-incidents` seeder, run by `pnpm seed`). It writes the M2/M3 schema directly — monitors + `monitor_alerts` + a spread of `alert_incidents` covering every visual state (open vs closed, muted vs live, notified vs not, each kind/severity, "all"-source vs named-source) — so the polish can exercise the whole frontend now, without waiting for M6/M7 to produce real incidents.
 
 ### Milestone 6 — Wire issue-event path to monitors (flag-gated)
 
@@ -1441,13 +1465,13 @@ Smaller than originally estimated because most of the heavy lifting has already 
 
 **Goal:** All nine monitor endpoints live. SDK regenerated and bumped.
 
-- [ ] `apps/api/src/routes/monitors.ts` — nine endpoints on the `defineApiEndpoint<OrganizationScopedEnv>` factory (incl. `configureMonitorAlert`).
+- [ ] `apps/api/src/routes/monitors.ts` — thirteen endpoints on the `defineApiEndpoint<OrganizationScopedEnv>` factory (incl. `createMonitorAlert` / `updateMonitorAlert` / `deleteMonitorAlert`).
 - [ ] `apps/api/src/openapi/entities/monitor.ts` — `MonitorSchema` + `toMonitorResponse(monitor)` mapper. Rich `.describe(...)` on every field so SDK and MCP tools carry useful docs.
 - [ ] Register routes in `apps/api/src/routes/index.ts` at `/v1/projects/:projectSlug/monitors`.
 - [ ] Reuse domain Zod schemas for input validation.
 - [ ] `pnpm openapi:emit && pnpm mcp:emit && pnpm --filter @latitude-data/sdk generate`. Commit the generated files in the same PR.
 - [ ] Bump SDK version in `packages/sdk/package.json` and add a CHANGELOG entry under `packages/sdk/CHANGELOG.md`.
-- [ ] Backend tests for the nine endpoints: schema validation, auth/scope, response shape, error cases (delete on system monitor, kind not in allowlist, mismatched kind/source.type, `configureMonitorAlert` rejecting kind/source change, system `updateMonitor`/`deleteMonitor` rejection, system `configureMonitorAlert` allowed).
+- [ ] Backend tests for the thirteen endpoints: schema validation, auth/scope, response shape, error cases (delete on system monitor, kind not in allowlist, mismatched kind/source.type, `updateMonitorAlert` rejecting kind/source change on system, create/delete alert on system rejected, system `updateMonitor`/`deleteMonitor` rejection, system `updateMonitorAlert` condition edit allowed).
 
 ### Milestone 10 — User-facing documentation
 

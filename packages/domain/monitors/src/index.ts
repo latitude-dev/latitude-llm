@@ -1,5 +1,10 @@
 export type { Monitor, MonitorAlert } from "./entities/monitor.ts"
 export { monitorAlertSchema, monitorSchema } from "./entities/monitor.ts"
+export {
+  AlertConditionMismatchError,
+  MonitorAlertNotFoundError,
+  SystemMonitorForbiddenError,
+} from "./errors.ts"
 export { formatHumanReadableAlert, type HumanReadableAlertContext } from "./helpers.ts"
 export type {
   ListMonitorsRepositoryInput,
@@ -12,6 +17,8 @@ export type {
   SystemMonitorDefinition,
 } from "./system-monitors.ts"
 export { SYSTEM_MONITOR_DEFINITIONS } from "./system-monitors.ts"
+export type { DeleteMonitorError, DeleteMonitorInput } from "./use-cases/delete-monitor.ts"
+export { deleteMonitorUseCase } from "./use-cases/delete-monitor.ts"
 export type { GetMonitorBySlugInput } from "./use-cases/get-monitor-by-slug.ts"
 export { getMonitorBySlugUseCase } from "./use-cases/get-monitor-by-slug.ts"
 export type {
@@ -26,8 +33,14 @@ export {
   listMonitorsUseCase,
   MAX_MONITORS_PAGE_SIZE,
 } from "./use-cases/list-monitors.ts"
+export type { SetMonitorMuteError, SetMonitorMuteInput } from "./use-cases/mute-monitor.ts"
+export { muteMonitorUseCase, unmuteMonitorUseCase } from "./use-cases/mute-monitor.ts"
 export type {
   ProvisionSystemMonitorsError,
   ProvisionSystemMonitorsInput,
 } from "./use-cases/provision-system-monitors.ts"
 export { provisionSystemMonitorsUseCase } from "./use-cases/provision-system-monitors.ts"
+export type { UpdateMonitorError, UpdateMonitorInput } from "./use-cases/update-monitor.ts"
+export { updateMonitorUseCase } from "./use-cases/update-monitor.ts"
+export type { UpdateMonitorAlertError, UpdateMonitorAlertInput } from "./use-cases/update-monitor-alert.ts"
+export { updateMonitorAlertUseCase } from "./use-cases/update-monitor-alert.ts"
