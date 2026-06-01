@@ -12,7 +12,8 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
-import { useCallback, useMemo, useState } from 'react'
+import { EditorState } from 'lexical'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { BlocksEditorProps } from '../types'
 import { CodeNode } from './nodes/CodeNode'
@@ -38,7 +39,10 @@ import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
 import { VariableTransformPlugin } from './plugins/VariableTransformPlugin'
 import { BlocksEditorProvider } from './Provider'
 import { fromBlocksToLexical } from './state/fromBlocksToLexical'
-import { fromLexicalToText } from './state/fromLexicalToText'
+import {
+  createBlocksChangeDeduper,
+  isBlockRootNode,
+} from './state/fromLexicalToText'
 
 const theme = {
   ltr: 'ltr',
@@ -66,11 +70,23 @@ const theme = {
 
 function OnChangeHandler({
   onChange,
+  initialValue,
 }: {
   onChange: BlocksEditorProps['onChange']
+  initialValue: BlocksEditorProps['initialValue']
 }) {
+  const deduper = useRef<
+    ReturnType<typeof createBlocksChangeDeduper> | undefined
+  >(undefined)
+  if (!deduper.current) {
+    deduper.current = createBlocksChangeDeduper(initialValue)
+  }
   const handleChange = useDebouncedCallback(
-    fromLexicalToText({ onChange }),
+    (editorState: EditorState) => {
+      const root = editorState.toJSON().root
+      if (!isBlockRootNode(root)) return
+      deduper.current!(root, onChange)
+    },
     100,
     { trailing: true },
   )
@@ -214,7 +230,7 @@ export function BlocksEditor({
             <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
           )}
           {autoFocus && <AutoFocusPlugin />}
-          <OnChangeHandler onChange={onChange} />
+          <OnChangeHandler onChange={onChange} initialValue={initialValue} />
           <SyncChangesPlugin
             project={project}
             commit={commit}
