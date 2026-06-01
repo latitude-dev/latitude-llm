@@ -16,6 +16,7 @@ import { useMemo, useState } from "react"
 import { useCommandPalette, useCommandPaletteState } from "./command-palette-provider.tsx"
 import { useGlobalCommands } from "./commands/use-global-commands.tsx"
 import { useIssueSearchCommands } from "./commands/use-issue-search-commands.ts"
+import { useMonitorSearchCommands } from "./commands/use-monitor-search-commands.ts"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
 import { useProjectCommands } from "./commands/use-project-commands.tsx"
 import { useProjectSearchCommands } from "./commands/use-project-search-commands.ts"
@@ -83,6 +84,7 @@ export function CommandPalette() {
   const projectCommands = useProjectCommands()
   const globalCommands = useGlobalCommands()
   const { commands: issueResults, isLoading: issuesLoading } = useIssueSearchCommands(search)
+  const monitorResults = useMonitorSearchCommands(search)
   const {
     datasets: datasetResults,
     savedSearches: savedSearchResults,
@@ -105,6 +107,8 @@ export function CommandPalette() {
     // so they render as-is; datasets/saved searches are full project lists we filter here.
     const entityGroups: CommandGroupView[] = []
     if (issueResults.length > 0) entityGroups.push({ key: "issues", label: "Issues", commands: issueResults })
+    const monitors = monitorResults.filter(matches)
+    if (monitors.length > 0) entityGroups.push({ key: "monitors", label: "Monitors", commands: monitors })
     const datasets = datasetResults.filter(matches)
     if (datasets.length > 0) entityGroups.push({ key: "datasets", label: "Datasets", commands: datasets })
     const saved = savedSearchResults.filter(matches)
@@ -127,6 +131,7 @@ export function CommandPalette() {
     currentPage,
     registeredCommands,
     issueResults,
+    monitorResults,
     datasetResults,
     savedSearchResults,
     tracesFallback,

@@ -143,6 +143,12 @@ in the Projects group, which renders before the Actions group, so it already out
   lists (`useDatasetsList` / `useSavedSearchesList`, each fetched only while searching via an
   `enabled` option), filtered client-side by `commandMatches`. Selecting navigates to the
   dataset, or applies the saved search on the Search page (`?savedSearch=<slug>`).
+- **Monitors** (`commands/use-monitor-search-commands.ts`): the project's monitors
+  (`useMonitors`, fetched only while searching), filtered client-side. **Gated behind the
+  `monitors` feature flag** — when the flag is off, monitors are neither fetched nor listed,
+  mirroring the flag-gated Monitors page/sidebar entry. Selecting opens the monitor drawer
+  (`?monitorSlug=<slug>`); muted/system monitors are labelled in their subtitle. Monitor
+  *mutations* (mute/unmute, create) are backend-pending, so no monitor actions are wired yet.
 - **Traces fallback** (same hook): always-present "Search traces for "<query>"" → opens the
   Search page with `?q=<query>`.
 
