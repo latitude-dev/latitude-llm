@@ -111,7 +111,7 @@ export function useDatasetRowsInfiniteScroll({
   return { data, isLoading, infiniteScroll, total }
 }
 
-export function useDatasetsList(projectId: string) {
+export function useDatasetsList(projectId: string, { enabled = true }: { enabled?: boolean } = {}) {
   const { data, isLoading } = useQuery({
     queryKey: ["datasets", projectId, { limit: 100 }],
     queryFn: async () => {
@@ -121,6 +121,7 @@ export function useDatasetsList(projectId: string) {
       return page.datasets
     },
     staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
   })
   return { data: data ?? [], isLoading }
 }

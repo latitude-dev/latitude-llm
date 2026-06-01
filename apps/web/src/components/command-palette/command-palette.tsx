@@ -18,6 +18,7 @@ import { useGlobalCommands } from "./commands/use-global-commands.tsx"
 import { useIssueSearchCommands } from "./commands/use-issue-search-commands.ts"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
 import { useProjectCommands } from "./commands/use-project-commands.tsx"
+import { useProjectSearchCommands } from "./commands/use-project-search-commands.ts"
 import { COMMAND_SECTION_LABELS, COMMAND_SECTION_ORDER, type PaletteCommand, type ParentCommand } from "./types.ts"
 
 /**
@@ -36,9 +37,9 @@ function searchKeywords(command: PaletteCommand, query: string): string[] {
   const keywords = [command.title, command.subtitle, command.keywords].filter((value): value is string =>
     Boolean(value),
   )
-  // Server-ranked search results (e.g. semantic issue matches) must not be re-filtered by
-  // the client substring filter — inject the live query so they always pass.
-  if (command.section === "search") keywords.push(query)
+  // Commands flagged matchesAnyQuery (server-ranked results, query-driven actions) must not
+  // be re-filtered by the client substring filter — inject the live query so they always pass.
+  if (command.matchesAnyQuery) keywords.push(query)
   return keywords
 }
 
@@ -84,6 +85,11 @@ export function CommandPalette() {
   const projectCommands = useProjectCommands()
   const globalCommands = useGlobalCommands()
   const { commands: issueResults, isLoading: issuesLoading } = useIssueSearchCommands(search)
+  const {
+    datasets: datasetResults,
+    savedSearches: savedSearchResults,
+    tracesFallback,
+  } = useProjectSearchCommands(search)
 
   const currentPage = pageStack.at(-1) ?? null
 
@@ -97,10 +103,27 @@ export function CommandPalette() {
       label: COMMAND_SECTION_LABELS[section],
       commands: all.filter((command) => command.section === section),
     })).filter((group) => group.commands.length > 0)
-    const searchGroups = issueResults.length > 0 ? [{ key: "issues", label: "Issues", commands: issueResults }] : []
-    // Contextual commands render first, then in-project search results, then navigation/etc.
-    return [...buildContextGroups(registeredCommands), ...searchGroups, ...centralGroups]
-  }, [currentPage, registeredCommands, issueResults, navigationCommands, projectCommands, globalCommands])
+    // In-project entity results render between contextual commands and navigation; the
+    // "Search traces for …" fallback sits last as a catch-all.
+    const entityGroups: CommandGroupView[] = []
+    if (issueResults.length > 0) entityGroups.push({ key: "issues", label: "Issues", commands: issueResults })
+    if (datasetResults.length > 0) entityGroups.push({ key: "datasets", label: "Datasets", commands: datasetResults })
+    if (savedSearchResults.length > 0)
+      entityGroups.push({ key: "saved-searches", label: "Saved searches", commands: savedSearchResults })
+    const trailingGroups =
+      tracesFallback.length > 0 ? [{ key: "traces", label: "Traces", commands: tracesFallback }] : []
+    return [...buildContextGroups(registeredCommands), ...entityGroups, ...centralGroups, ...trailingGroups]
+  }, [
+    currentPage,
+    registeredCommands,
+    issueResults,
+    datasetResults,
+    savedSearchResults,
+    tracesFallback,
+    navigationCommands,
+    projectCommands,
+    globalCommands,
+  ])
 
   const resetState = () => {
     setSearch("")

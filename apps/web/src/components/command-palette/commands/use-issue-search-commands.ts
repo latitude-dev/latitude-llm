@@ -43,6 +43,7 @@ export function useIssueSearchCommands(query: string): {
       title: issue.name,
       icon: ShieldAlertIcon,
       section: "search",
+      matchesAnyQuery: true,
       ...(issue.states.length > 0 ? { subtitle: issue.states.join(", ") } : {}),
       keywords: issue.name,
       perform: () => navigate({ to: `/projects/${projectSlug}/issues`, search: { issueId: issue.id } }),

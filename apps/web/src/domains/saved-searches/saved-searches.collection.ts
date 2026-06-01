@@ -16,11 +16,12 @@ import {
 const listKey = (projectId: string) => ["savedSearches", projectId] as const
 const slugKey = (projectId: string, slug: string) => ["savedSearches", projectId, "slug", slug] as const
 
-export function useSavedSearchesList(projectId: string) {
+export function useSavedSearchesList(projectId: string, { enabled = true }: { enabled?: boolean } = {}) {
   const { data, isLoading } = useQuery({
     queryKey: listKey(projectId),
     queryFn: () => listSavedSearchesByProject({ data: { projectId } }),
     staleTime: 30_000,
+    enabled: enabled && projectId.length > 0,
   })
   return { data: data ?? [], isLoading }
 }
