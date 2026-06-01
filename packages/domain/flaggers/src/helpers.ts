@@ -23,8 +23,11 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
 
   for (let msgIdx = 0; msgIdx < trace.allMessages.length; msgIdx++) {
     const message = trace.allMessages[msgIdx]!
+    if (message.role !== "assistant" && message.role !== "tool" && message.role !== "function") continue
+
     for (const part of message.parts) {
       if (part.type === "tool_call") {
+        if (message.role !== "assistant") continue
         const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
         const toolName = typeof part.name === "string" ? part.name.trim() : ""
 
@@ -41,7 +44,7 @@ export function detectToolCallErrorsFlagger(trace: TraceMessagesOnly): Determini
         continue
       }
 
-      if (part.type !== "tool_call_response") continue
+      if (part.type !== "tool_call_response" || (message.role !== "tool" && message.role !== "function")) continue
 
       const toolCallId = typeof part.id === "string" ? part.id.trim() : ""
       const call = toolCallId ? callById.get(toolCallId) : undefined

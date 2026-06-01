@@ -420,7 +420,7 @@ export const jailbreakingStrategy: FlaggerStrategy = {
   },
 
   hasRequiredContext(trace: TraceDetail): boolean {
-    return trace.allMessages.length > 0
+    return trace.allMessages.some((message) => message.role !== "system")
   },
 
   detectDeterministically(trace: TraceDetail): DetectionResult {

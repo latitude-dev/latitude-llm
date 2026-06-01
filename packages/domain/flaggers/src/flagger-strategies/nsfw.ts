@@ -194,9 +194,7 @@ export const nsfwStrategy: FlaggerStrategy = {
   },
 
   hasRequiredContext(trace: TraceDetail): boolean {
-    // NSFW needs at least some text to analyze
-    const textMessages = extractNsfwSuspiciousSnippets(trace)
-    return textMessages.length > 0 || trace.allMessages.length > 0
+    return extractTextOnlyMessages(trace).length > 0
   },
 
   detectDeterministically(trace: TraceDetail): DetectionResult {

@@ -42,6 +42,11 @@ export const makeTrace = (allMessages: readonly TraceMessage[]): TraceDetail => 
   allMessages: [...allMessages],
 })
 
+export const system = (text: string): TraceMessage => ({
+  role: "system",
+  parts: [{ type: "text", content: text }],
+})
+
 export const user = (text: string): TraceMessage => ({
   role: "user",
   parts: [{ type: "text", content: text }],
