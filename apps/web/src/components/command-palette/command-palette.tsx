@@ -13,7 +13,7 @@ import {
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronLeftIcon, Loader2Icon } from "lucide-react"
 import { useMemo, useState } from "react"
-import { useCommandPalette } from "./command-palette-provider.tsx"
+import { useCommandPalette, useCommandPaletteState } from "./command-palette-provider.tsx"
 import { useGlobalCommands } from "./commands/use-global-commands.tsx"
 import { useIssueSearchCommands } from "./commands/use-issue-search-commands.ts"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
@@ -68,7 +68,8 @@ function buildContextGroups(commands: readonly PaletteCommand[]): CommandGroupVi
  * `parent` commands push a keyboard-navigable sub-page (e.g. "Switch organization").
  */
 export function CommandPalette() {
-  const { open, setOpen, toggle, registeredCommands } = useCommandPalette()
+  const { setOpen, toggle } = useCommandPalette()
+  const { open, registeredCommands } = useCommandPaletteState()
   const [search, setSearch] = useState("")
   // Stack of opened sub-pages; the last entry is the page currently shown.
   const [pageStack, setPageStack] = useState<readonly ParentCommand[]>([])

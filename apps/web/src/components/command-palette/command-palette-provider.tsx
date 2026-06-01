@@ -3,20 +3,32 @@ import { CreateOrganizationModal } from "../../routes/_authenticated/-components
 import { CreateProjectModal } from "../../routes/_authenticated/-components/create-project-modal.tsx"
 import type { PaletteCommand } from "./types.ts"
 
-interface CommandPaletteContextValue {
-  readonly open: boolean
+/**
+ * The palette context is split in two on purpose:
+ *
+ * - **Actions** is referentially stable for the lifetime of the provider (`register`,
+ *   `unregister`, open/create handlers). Command contributors subscribe to *only* this, so a
+ *   registration updating the registry can never re-render them — which is what prevents an
+ *   infinite "register → setState → re-render → register" loop when a contributor's `commands`
+ *   array isn't perfectly memoized (e.g. `useParamState` setters aren't stable).
+ * - **State** (`open`, `registeredCommands`) is volatile and consumed only by the palette UI.
+ */
+interface CommandPaletteActions {
   readonly setOpen: (open: boolean) => void
   readonly toggle: () => void
-  /** Global actions that open a modal owned by this provider (reachable from anywhere). */
   readonly openCreateProject: () => void
   readonly openCreateOrganization: () => void
-  /** Contextual commands contributed by mounted views, flattened in registration order. */
-  readonly registeredCommands: readonly PaletteCommand[]
   readonly register: (id: string, commands: readonly PaletteCommand[]) => void
   readonly unregister: (id: string) => void
 }
 
-const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null)
+interface CommandPaletteState {
+  readonly open: boolean
+  readonly registeredCommands: readonly PaletteCommand[]
+}
+
+const CommandPaletteActionsContext = createContext<CommandPaletteActions | null>(null)
+const CommandPaletteStateContext = createContext<CommandPaletteState | null>(null)
 
 /**
  * Holds the command palette's open state, the contextual-command registry, and the global
@@ -46,34 +58,45 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const registeredCommands = useMemo(() => Array.from(registry.values()).flat(), [registry])
-
-  const value = useMemo<CommandPaletteContextValue>(
+  // Stable for the provider's lifetime — the state setters are stable, so this object never
+  // changes identity and never re-renders its consumers.
+  const actions = useMemo<CommandPaletteActions>(
     () => ({
-      open,
       setOpen,
       toggle: () => setOpen((prev) => !prev),
       openCreateProject: () => setCreateProjectOpen(true),
       openCreateOrganization: () => setCreateOrgOpen(true),
-      registeredCommands,
       register,
       unregister,
     }),
-    [open, registeredCommands, register, unregister],
+    [register, unregister],
   )
 
+  const registeredCommands = useMemo(() => Array.from(registry.values()).flat(), [registry])
+  const state = useMemo<CommandPaletteState>(() => ({ open, registeredCommands }), [open, registeredCommands])
+
   return (
-    <CommandPaletteContext.Provider value={value}>
-      {children}
-      <CreateProjectModal open={createProjectOpen} onClose={() => setCreateProjectOpen(false)} />
-      <CreateOrganizationModal open={createOrgOpen} onOpenChange={setCreateOrgOpen} />
-    </CommandPaletteContext.Provider>
+    <CommandPaletteActionsContext.Provider value={actions}>
+      <CommandPaletteStateContext.Provider value={state}>
+        {children}
+        <CreateProjectModal open={createProjectOpen} onClose={() => setCreateProjectOpen(false)} />
+        <CreateOrganizationModal open={createOrgOpen} onOpenChange={setCreateOrgOpen} />
+      </CommandPaletteStateContext.Provider>
+    </CommandPaletteActionsContext.Provider>
   )
 }
 
-export function useCommandPalette(): CommandPaletteContextValue {
-  const ctx = useContext(CommandPaletteContext)
+/** Stable palette actions (open/toggle/create + registry mutators). Safe to use anywhere. */
+export function useCommandPalette(): CommandPaletteActions {
+  const ctx = useContext(CommandPaletteActionsContext)
   if (!ctx) throw new Error("useCommandPalette must be used within a CommandPaletteProvider")
+  return ctx
+}
+
+/** Volatile palette state (open flag + contributed commands). Consumed by the palette UI. */
+export function useCommandPaletteState(): CommandPaletteState {
+  const ctx = useContext(CommandPaletteStateContext)
+  if (!ctx) throw new Error("useCommandPaletteState must be used within a CommandPaletteProvider")
   return ctx
 }
 
@@ -82,6 +105,9 @@ export function useCommandPalette(): CommandPaletteContextValue {
  * Pass a memoized `commands` array; commands typically capture the current entity and reuse
  * the same handlers the view's buttons call. Registration is retracted automatically on
  * unmount (e.g. when an entity drawer closes).
+ *
+ * Reads only the stable actions context, so a registration re-render of the palette never
+ * feeds back into the contributing component.
  */
 export function useRegisterCommands(commands: readonly PaletteCommand[]): void {
   const id = useId()

@@ -23,7 +23,20 @@ header **Search ⌘K** button.
 
 ### Provider, open state, and the contribution registry
 
-`command-palette-provider.tsx` exposes `useCommandPalette()` and holds:
+`command-palette-provider.tsx` splits its context in two on purpose:
+
+- **`useCommandPalette()` — stable actions** (`setOpen`, `toggle`, `openCreateProject`,
+  `openCreateOrganization`, `register`, `unregister`). This object never changes identity, so
+  consumers of it never re-render when the palette's state changes.
+- **`useCommandPaletteState()` — volatile state** (`open`, `registeredCommands`), consumed only
+  by the palette UI.
+
+This split is load-bearing: command contributors (`useRegisterCommands`) read **only** the
+stable actions context. If they subscribed to the volatile state, a registration would
+`setState` → re-render the contributor → (with a non-stable `commands` array, e.g. from
+`useParamState` setters) re-register → infinite loop. Reading the stable context cuts that edge.
+
+The provider also holds:
 
 - **Open state** (`open`, `setOpen`, `toggle`).
 - **Global "create" modals** — it owns `CreateProjectModal` and `CreateOrganizationModal`
@@ -209,3 +222,8 @@ References: `issue-lifecycle-actions.tsx`, `trace-detail-drawer.tsx`, and the `s
 - **knip runs in the pre-commit hook.** Only `export` symbols that are imported elsewhere;
   keep internal helpers/types unexported.
 - **z-index.** The palette dialog sits at `z-[80]`, above the combobox/popover/tooltip layers.
+- **Contributors read the stable actions context only.** `useRegisterCommands` uses
+  `useCommandPalette()` (stable); never wire a contributor to `useCommandPaletteState()`, or a
+  registration will re-render it and (with an unstable `commands` array) loop. A perfectly
+  memoized `commands` array isn't required for correctness thanks to this split, but stable
+  deps still avoid needless re-registration churn.
