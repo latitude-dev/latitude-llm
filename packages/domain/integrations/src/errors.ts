@@ -35,10 +35,12 @@ export class SlackTokenRefreshError extends Data.TaggedError("SlackTokenRefreshE
 }
 
 /**
- * The per-workspace refresh lock was already held by another caller.
- * Internal signal (never surfaces to HTTP): on-use reads treat it as
- * "someone else is refreshing, fall back / let the Slack call decide";
- * the sweep worker rethrows it so BullMQ retries later.
+ * The per-workspace refresh lock was already held by another caller — a
+ * concurrent refresh is in flight. Treated as a transient failure: the
+ * web channel-list maps it to a retryable transport error, and the
+ * notification worker propagates it so BullMQ retries — by which point
+ * the other holder has finished refreshing and the next read sees the
+ * fresh token.
  */
 export class SlackRefreshLockUnavailableError extends Data.TaggedError("SlackRefreshLockUnavailableError")<{
   readonly organizationId: string
