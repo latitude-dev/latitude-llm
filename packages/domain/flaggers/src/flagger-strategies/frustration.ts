@@ -97,6 +97,9 @@ Return no explanation outside the structured output.
 `.trim()
 
 export const frustrationStrategy: FlaggerStrategy = {
+  // Frustration lives in the user's own wording, not the assistant response.
+  classifiesAssistantResponseOnly: false,
+
   annotator: {
     name: "User Frustration",
     description: "The conversation shows clear user frustration or dissatisfaction",

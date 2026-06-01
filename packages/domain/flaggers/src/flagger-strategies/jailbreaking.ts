@@ -412,6 +412,10 @@ function findHighPrecisionJailbreakMatch(trace: Pick<TraceDetail, "allMessages">
 // ---------------------------------------------------------------------------
 
 export const jailbreakingStrategy: FlaggerStrategy = {
+  // Jailbreak attempts arrive through user messages or injected tool/retrieval
+  // content, so the judgement is not restricted to the assistant response.
+  classifiesAssistantResponseOnly: false,
+
   annotator: {
     name: "Jailbreaking",
     description: "Attempts to bypass system or safety constraints",

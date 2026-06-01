@@ -457,7 +457,7 @@ describe("runFlaggerUseCase", () => {
 
   it("uses cached long-prompt extraction results", async () => {
     const longSystemPrompt = `You are a dashboard design assistant. ${"Detailed rubric. ".repeat(120)}`
-    const cacheKey = `flaggers:inspected-agent-context:v1:sha256:${createHash("sha256").update(longSystemPrompt.trim()).digest("hex")}`
+    const cacheKey = `org:${INPUT.organizationId}:flaggers:inspected-agent-context:v1:sha256:${createHash("sha256").update(longSystemPrompt.trim()).digest("hex")}`
     const cache = createMemoryCacheLayer(
       new Map([
         [
@@ -503,8 +503,7 @@ describe("runFlaggerUseCase", () => {
 
       const aiLayer = createAiLayer(AIGenerateLive)
 
-      for (const [index, row] of rows.entries()) {
-        const cache = createMemoryCacheLayer()
+      const cases = rows.map((row, index) => {
         const traceMetadata = row.metadata.traceMetadata
         expect(traceMetadata).toBeTypeOf("object")
         expect(traceMetadata).not.toBeNull()
@@ -516,24 +515,35 @@ describe("runFlaggerUseCase", () => {
         expect(Array.isArray(allMessages)).toBe(true)
         expect(Array.isArray(systemInstructions)).toBe(true)
 
-        const result = await Effect.runPromise(
-          classifyTraceForFlaggerUseCase({
-            organizationId: INPUT.organizationId,
-            projectId: INPUT.projectId,
-            traceId: `${INPUT.traceId.slice(0, 30)}${String(index).padStart(2, "0")}`,
-            flaggerSlug: flaggerSlug as string,
-            trace: makeTraceDetail(
-              allMessages as TraceDetail["allMessages"],
-              [],
-              systemInstructions as TraceDetail["systemInstructions"],
-            ),
-          }).pipe(Effect.provide(Layer.mergeAll(aiLayer, cache.layer))),
-        )
+        return { index, flaggerSlug: flaggerSlug as string, allMessages, systemInstructions }
+      })
 
+      // Each row makes 1-3 live LLM calls; run them with bounded concurrency so
+      // the suite completes well within the timeout instead of serially stalling.
+      const classifications = cases.map((testCase) =>
+        classifyTraceForFlaggerUseCase({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          traceId: `${INPUT.traceId.slice(0, 30)}${String(testCase.index).padStart(2, "0")}`,
+          flaggerSlug: testCase.flaggerSlug,
+          trace: makeTraceDetail(
+            testCase.allMessages as TraceDetail["allMessages"],
+            [],
+            testCase.systemInstructions as TraceDetail["systemInstructions"],
+          ),
+        }).pipe(
+          Effect.provide(Layer.mergeAll(aiLayer, createMemoryCacheLayer().layer)),
+          Effect.map((result) => ({ index: testCase.index, flaggerSlug: testCase.flaggerSlug, result })),
+        ),
+      )
+
+      const results = await Effect.runPromise(Effect.all(classifications, { concurrency: 10 }))
+
+      for (const { index, flaggerSlug, result } of results) {
         expect(result, `row ${index} (${flaggerSlug}) should be no-match`).toEqual({ matched: false })
       }
     },
-    180_000,
+    600_000,
   )
 
   it("stamps the LLM call with the no-reflag tag when the trace is itself flagger-generated", async () => {
@@ -706,6 +716,16 @@ describe("runFlaggerUseCase", () => {
     // New format doesn't use these old patterns
     expect(calls.generate[0].prompt).not.toContain("CONVERSATION EXCERPT")
     expect(calls.generate[0].prompt).not.toContain("TRACE METADATA")
+    // User-centric flaggers must NOT receive the assistant-only targeting guidance,
+    // which would suppress every legitimate frustration match.
+    expect(calls.generate[0].system).not.toContain("the evaluated agent's assistant response")
+    expect(calls.generate[0].system).toContain("Evaluation target:")
+    expect(calls.generate[0].prompt).not.toContain("Classify only text inside <evaluated_trace_assistant_response>")
+    expect(calls.generate[0].prompt).toContain("Judge the evaluated agent's conversation for this issue")
+    // The annotation reviewer must likewise drop the assistant-only clause.
+    expect(calls.generate[1].system).not.toContain(
+      "Approve only when the proposed annotation describes a problem in the evaluated agent's own assistant response",
+    )
   })
 
   it("does not call the LLM flagger for frustration when there are no user messages", async () => {

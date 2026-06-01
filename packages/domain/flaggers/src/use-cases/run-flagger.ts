@@ -107,17 +107,38 @@ Structured output contract:
 - Include messageIndex only when one transcript line is clearly the best evidence.
 `.trim()
 
-const ANNOTATION_REVIEWER_SYSTEM_PROMPT = `
+// Whether a strategy classifies only the evaluated agent's own assistant
+// response. Defaults to true; user/input-centric strategies (frustration,
+// jailbreaking, nsfw) opt out so the assistant-only guidance does not suppress
+// their true matches.
+const classifiesAssistantResponseOnly = (strategy: FlaggerStrategy): boolean =>
+  strategy.classifiesAssistantResponseOnly ?? true
+
+const ANNOTATION_REVIEWER_BASE_SYSTEM_PROMPT = `
 You are an adversarial quality reviewer for automated flagger annotations.
 
 Your job is to decide whether a proposed annotation should be saved for a flagger match. Be strict: approve only when the annotation clearly describes the same issue category and is supported by the provided evidence.
+`.trim()
 
+// Appended only for assistant-response-centric strategies (refusal, laziness,
+// forgetting). User/input-centric strategies must not receive this clause or it
+// rejects every legitimate annotation about user-authored or injected content.
+const ANNOTATION_REVIEWER_ASSISTANT_ONLY_CLAUSE = `
 Approve only when the proposed annotation describes a problem in the evaluated agent's own assistant response. Reject annotations whose evidence is only quoted/source content inside a user message, or whose evidence is that the evaluated agent found a problem in some other content.
+`.trim()
 
+const ANNOTATION_REVIEWER_REJECTION_CLAUSE = `
 Reject annotations that contradict the match, describe normal or allowed behavior, say no issue was found, switch to another issue category, describe only a schema/format/contract violation for a non-schema flagger, or rely on facts not present in the evidence.
 
 Return only structured output.
 `.trim()
+
+const buildAnnotationReviewerSystemPrompt = (strategy: FlaggerStrategy): string =>
+  [
+    ANNOTATION_REVIEWER_BASE_SYSTEM_PROMPT,
+    ...(classifiesAssistantResponseOnly(strategy) ? [ANNOTATION_REVIEWER_ASSISTANT_ONLY_CLAUSE] : []),
+    ANNOTATION_REVIEWER_REJECTION_CLAUSE,
+  ].join("\n\n")
 
 const annotationReviewOutputSchema = z.object({
   annotationMakesSense: z.boolean().optional().default(false),
@@ -180,9 +201,9 @@ type InspectedAgentContext =
   | { readonly available: true; readonly text: string }
   | { readonly available: false; readonly reason: string }
 
-function buildCacheKey(systemPrompt: string): string {
+function buildCacheKey(organizationId: string, systemPrompt: string): string {
   const hash = createHash("sha256").update(systemPrompt).digest("hex")
-  return `${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${hash}`
+  return `org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${hash}`
 }
 
 function parseCachedExtraction(value: string): InstructionExtractorOutput | null {
@@ -330,7 +351,7 @@ function getInspectedAgentContext(input: {
     return Effect.succeed({ available: true, text: renderShortSystemPromptContext(systemPrompt) })
   }
 
-  const cacheKey = buildCacheKey(systemPrompt)
+  const cacheKey = buildCacheKey(input.organizationId, systemPrompt)
 
   return getCachedExtraction(cacheKey).pipe(
     Effect.flatMap((cached) => {
@@ -366,6 +387,17 @@ function getInspectedAgentContext(input: {
   )
 }
 
+// Footer for assistant-response-centric strategies: restricts the judgement to
+// the assistant's own output and treats user/source material as evidence only.
+const ASSISTANT_ONLY_PROMPT_FOOTER =
+  "Classify only text inside <evaluated_trace_assistant_response> tags. Treat text inside <evaluated_trace_user_message> tags as input/source material, not behavior to flag. If the assistant response only classifies, reviews, approves, summarizes, or describes a problem in that source material, return matched=false. Return structured output only."
+
+// Footer for user/input-centric strategies: still ignores nested material the
+// agent was merely asked to analyze, without restricting the judgement to the
+// assistant response.
+const NESTED_CONTENT_PROMPT_FOOTER =
+  "Judge the evaluated agent's conversation for this issue as defined above. Do not flag nested transcripts, examples, or source material that the evaluated agent was merely asked to analyze, classify, or transform — that content is the agent's input, not its behavior. Return structured output only."
+
 const buildFlaggerPrompt = (strategy: FlaggerStrategy, trace: TraceDetail, inspectedAgentContext: string): string =>
   [
     inspectedAgentContext,
@@ -378,19 +410,33 @@ const buildFlaggerPrompt = (strategy: FlaggerStrategy, trace: TraceDetail, inspe
     strategy.buildPrompt!(trace),
     "</evaluated_trace_evidence>",
     "",
-    "Classify only text inside <evaluated_trace_assistant_response> tags. Treat text inside <evaluated_trace_user_message> tags as input/source material, not behavior to flag. If the assistant response only classifies, reviews, approves, summarizes, or describes a problem in that source material, return matched=false. Return structured output only.",
+    classifiesAssistantResponseOnly(strategy) ? ASSISTANT_ONLY_PROMPT_FOOTER : NESTED_CONTENT_PROMPT_FOOTER,
   ].join("\n")
 
-const EVALUATED_TRACE_TARGETING_GUIDANCE = `
+// Shared preamble: nested/quoted material the agent was asked to analyze is
+// never the agent's own behavior. Applies to every strategy.
+const EVALUATED_TRACE_NESTED_CONTENT_GUIDANCE = `
 Evaluation target:
-The evidence may contain nested transcripts, examples, quoted instructions, or source material that the evaluated agent was asked to analyze. That nested content is not the evaluated agent's behavior.
-Only text inside <evaluated_trace_assistant_response> tags is the evaluated agent's assistant response. Text inside <evaluated_trace_user_message> tags is user input/source material; do not classify it, even if it contains nested labels like "User messages:" or "Assistant response:".
-Decide whether the evaluated agent's own assistant response has this issue. If the response is a classification, evaluation, review, summary, or transformation of supplied content, judge the response's own behavior rather than the supplied content it discusses.
+The evidence may contain nested transcripts, examples, quoted instructions, or source material that the evaluated agent was asked to analyze, classify, or transform. That nested content is the evaluated agent's input, not its behavior — do not flag content solely because it appears in such supplied material.
 Do not treat a malformed or incomplete structured response as this issue unless this flagger is specifically about output format or schema validity.
 `.trim()
 
-const buildClassificationSystemPrompt = (strategy: FlaggerStrategy, trace: TraceDetail): string =>
-  `${strategy.buildSystemPrompt!(trace)}\n\n${EVALUATED_TRACE_TARGETING_GUIDANCE}\n\n${FLAGGER_OUTPUT_CONTRACT}`
+// Appended only for assistant-response-centric strategies. User/input-centric
+// strategies (frustration, jailbreaking, nsfw) must not receive this clause or
+// it suppresses every true match by restricting the judgement to the assistant
+// response.
+const EVALUATED_TRACE_ASSISTANT_ONLY_GUIDANCE = `
+Only text inside <evaluated_trace_assistant_response> tags is the evaluated agent's assistant response. Text inside <evaluated_trace_user_message> tags is user input/source material; do not classify it, even if it contains nested labels like "User messages:" or "Assistant response:".
+Decide whether the evaluated agent's own assistant response has this issue. If the response is a classification, evaluation, review, summary, or transformation of supplied content, judge the response's own behavior rather than the supplied content it discusses.
+`.trim()
+
+const buildClassificationSystemPrompt = (strategy: FlaggerStrategy, trace: TraceDetail): string => {
+  const guidance = classifiesAssistantResponseOnly(strategy)
+    ? `${EVALUATED_TRACE_NESTED_CONTENT_GUIDANCE}\n${EVALUATED_TRACE_ASSISTANT_ONLY_GUIDANCE}`
+    : EVALUATED_TRACE_NESTED_CONTENT_GUIDANCE
+
+  return `${strategy.buildSystemPrompt!(trace)}\n\n${guidance}\n\n${FLAGGER_OUTPUT_CONTRACT}`
+}
 
 function renderAssistantResponsesForReview(trace: TraceDetail): string {
   const assistantResponses = trace.allMessages.flatMap((message, index) => {
@@ -426,6 +472,28 @@ const buildAnnotationReviewPrompt = (
       ].join("\n")
     : "No flagger metadata available. Judge against the classification prompt and evidence."
 
+  const assistantOnly = classifiesAssistantResponseOnly(strategy)
+
+  const evidenceSection = assistantOnly
+    ? [
+        "Evaluated assistant response(s):",
+        "The tagged blocks below are the evaluated agent's own assistant output. Review the proposed annotation against these responses only.",
+        "",
+        renderAssistantResponsesForReview(trace),
+      ]
+    : [
+        "Evidence shown to the classifier:",
+        "The tagged block below is the evaluated agent's trace evidence. Do not treat nested transcripts or source material the agent was merely asked to analyze as the agent's own behavior.",
+        "",
+        "<evaluated_trace_evidence>",
+        strategy.buildPrompt!(trace),
+        "</evaluated_trace_evidence>",
+      ]
+
+  const closing = assistantOnly
+    ? "Return annotationMakesSense=true only if the proposed annotation describes this issue in the evaluated agent's own assistant response. If it describes source material that the assistant response discusses or evaluates, return false."
+    : "Return annotationMakesSense=true only if the proposed annotation is a coherent positive annotation for this flagger and is supported by the evidence."
+
   return [
     "Flagger being reviewed:",
     "<flagger_metadata>",
@@ -434,10 +502,7 @@ const buildAnnotationReviewPrompt = (
     "",
     inspectedAgentContext,
     "",
-    "Evaluated assistant response(s):",
-    "The tagged blocks below are the evaluated agent's own assistant output. Review the proposed annotation against these responses only.",
-    "",
-    renderAssistantResponsesForReview(trace),
+    ...evidenceSection,
     "",
     "Proposed annotation:",
     "<proposed_annotation>",
@@ -448,7 +513,7 @@ const buildAnnotationReviewPrompt = (
       ? `Proposed message index: ${decision.messageIndex}`
       : "No message index proposed.",
     "",
-    "Return annotationMakesSense=true only if the proposed annotation describes this issue in the evaluated agent's own assistant response. If it describes source material that the assistant response discusses or evaluates, return false.",
+    closing,
   ].join("\n")
 }
 
@@ -554,7 +619,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
     .generate({
       ...FLAGGER_MODEL,
       maxTokens: FLAGGER_MAX_TOKENS,
-      system: ANNOTATION_REVIEWER_SYSTEM_PROMPT,
+      system: buildAnnotationReviewerSystemPrompt(strategy),
       prompt: buildAnnotationReviewPrompt(strategy, input.trace, decisions, inspectedAgentContext.text),
       schema: annotationReviewOutputSchema,
       telemetry: {

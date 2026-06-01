@@ -42,6 +42,23 @@ export interface FlaggerStrategy {
   readonly details?: FlaggerDisplayDetails
 
   /**
+   * Whether this strategy classifies ONLY the evaluated agent's own assistant
+   * response. When `true` (the default when omitted), the classifier and
+   * annotation reviewer receive assistant-only targeting guidance that tells
+   * them to treat user / tool / quoted content as source material and never
+   * flag it (e.g. refusal, laziness, forgetting — issues that live in the
+   * assistant's output).
+   *
+   * Set to `false` for strategies that judge user-authored or injected input
+   * content (e.g. frustration judges the user's wording, jailbreaking judges
+   * user/tool injection attempts). For those, the assistant-only guidance would
+   * suppress every true match, so they instead get nested-content guidance that
+   * still ignores material the agent was merely asked to analyze without
+   * restricting the judgement to the assistant response.
+   */
+  readonly classifiesAssistantResponseOnly?: boolean
+
+  /**
    * Slugs of strategies whose deterministic `matched` or `ambiguous` outcome makes
    * this strategy non-applicable for the same trace. When any listed suppressor
    * triggers, this strategy is skipped entirely (no det check, no LLM enqueue) and
