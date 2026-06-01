@@ -87,6 +87,10 @@ export function DocumentValueProvider({
 
       setContentValue(content, opts)
 
+      // Do not persist a no-op edit, otherwise a phantom document version is
+      // created in the draft even though the content did not actually change.
+      if (content === prevContent) return
+
       const updatedDocument = await updateContent({
         documentUuid: _document.documentUuid,
         content,
