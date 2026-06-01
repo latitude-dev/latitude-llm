@@ -288,6 +288,8 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
                   botAccessToken,
                   refreshToken,
                   tokenExpiresAt: tokens.tokenExpiresAt,
+                  // A successful refresh clears any prior dead-chain stamp.
+                  reconnectRequiredAt: null,
                   updatedAt: new Date(),
                 })
                 .where(
@@ -299,6 +301,27 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
                 .returning({ id: slackIntegrationDetails.integrationId }),
             )
             .pipe(Effect.mapError((e) => toRepositoryError(e, "updateSlackIntegrationTokens")))
+
+          return rows.length > 0
+        }),
+
+      markReconnectRequired: (id, at) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient
+            .query((db, organizationId) =>
+              db
+                .update(slackIntegrationDetails)
+                .set({ reconnectRequiredAt: at, updatedAt: new Date() })
+                .where(
+                  and(
+                    eq(slackIntegrationDetails.integrationId, id),
+                    eq(slackIntegrationDetails.organizationId, organizationId),
+                  ),
+                )
+                .returning({ id: slackIntegrationDetails.integrationId }),
+            )
+            .pipe(Effect.mapError((e) => toRepositoryError(e, "markSlackIntegrationReconnectRequired")))
 
           return rows.length > 0
         }),

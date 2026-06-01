@@ -87,7 +87,16 @@ export const getOrRefreshBotTokenUseCase = (
         }
 
         const refresher = yield* SlackTokenRefresher
-        const refreshed = yield* refresher.refresh(current.refreshToken)
+        const refreshed = yield* refresher.refresh(current.refreshToken).pipe(
+          // A dead refresh chain is terminal: stamp the integration so the
+          // settings UI prompts a reconnect and callers can short-circuit,
+          // then let the original error propagate (callers don't retry it).
+          Effect.tapError((error) =>
+            error.reason === "invalid_refresh_token"
+              ? repo.markReconnectRequired(current.id, new Date()).pipe(Effect.ignore)
+              : Effect.void,
+          ),
+        )
         const tokenExpiresAt = new Date(Date.now() + refreshed.expiresIn * 1000)
         // Persist before returning: losing the new single-use refresh
         // token would permanently break the rotation chain.

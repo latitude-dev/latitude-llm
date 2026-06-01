@@ -64,6 +64,16 @@ export interface SlackIntegrationRepositoryShape {
       readonly tokenExpiresAt: Date
     },
   ): Effect.Effect<boolean, RepositoryError, SqlClient>
+
+  /**
+   * Stamps `reconnect_required_at` on the active details row, scoped to
+   * the current RLS organization. Called when a refresh fails with
+   * `invalid_refresh_token` — the rotation chain is dead and the
+   * workspace must be reconnected. Idempotent (overwrites the stamp).
+   * Returns `true` when a row was updated. A successful {@link updateTokens}
+   * clears the stamp back to `null`.
+   */
+  markReconnectRequired(id: SlackIntegrationId, at: Date): Effect.Effect<boolean, RepositoryError, SqlClient>
 }
 
 export class SlackIntegrationRepository extends Context.Service<
