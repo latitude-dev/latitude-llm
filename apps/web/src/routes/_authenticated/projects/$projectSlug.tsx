@@ -7,9 +7,8 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
-import { DatabaseIcon, RadarIcon, SearchIcon, SettingsIcon, ShieldAlertIcon, TextAlignStartIcon } from "lucide-react"
 import { z } from "zod"
-import { useHasFeatureFlag } from "../../../domains/feature-flags/feature-flags.collection.ts"
+import { PROJECT_SETTINGS_SECTION, useVisibleProjectSections } from "../../../domains/projects/project-sections.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 import { type ProjectRecord, rememberLastProjectSlug, toRecord } from "../../../domains/projects/projects.functions.ts"
 import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapped.functions.ts"
@@ -68,17 +67,7 @@ const WRAPPED_REPORT_STALE_TIME_MS = 10 * 60 * 1000
 
 function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; projectSlug: string }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
-
-  const isTracesActive =
-    pathname === `/projects/${projectSlug}` ||
-    pathname === `/projects/${projectSlug}/` ||
-    pathname.startsWith(`/projects/${projectSlug}/traces`)
-  const isSearchActive = pathname.startsWith(`/projects/${projectSlug}/search`)
-  const isIssuesActive = pathname.startsWith(`/projects/${projectSlug}/issues`)
-  const isMonitorsActive = pathname.startsWith(`/projects/${projectSlug}/monitors`)
-  const isDatasetsActive = pathname.startsWith(`/projects/${projectSlug}/datasets`)
-  const isSettingsActive = pathname.startsWith(`/projects/${projectSlug}/settings`)
-  const monitorsEnabled = useHasFeatureFlag("monitors")
+  const sections = useVisibleProjectSections()
 
   // Fire-and-forget client-side fetch: surfaces a sidebar shortcut to this
   // week's Wrapped report when one exists. Returns null for the typical
@@ -107,10 +96,10 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
           ) : null}
           <WhatsNewButton collapsed={collapsed} />
           <NavItem
-            icon={SettingsIcon}
-            label="Settings"
-            to={`/projects/${projectSlug}/settings`}
-            active={isSettingsActive}
+            icon={PROJECT_SETTINGS_SECTION.icon}
+            label={PROJECT_SETTINGS_SECTION.label}
+            to={PROJECT_SETTINGS_SECTION.path(projectSlug)}
+            active={PROJECT_SETTINGS_SECTION.isActive(pathname, projectSlug)}
             collapsed={collapsed}
           />
         </>
@@ -118,43 +107,16 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     >
       {({ collapsed }) => (
         <>
-          <NavItem
-            icon={SearchIcon}
-            label="Search"
-            to={`/projects/${projectSlug}/search`}
-            active={isSearchActive}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={TextAlignStartIcon}
-            label="Traces"
-            to={`/projects/${projectSlug}`}
-            active={isTracesActive}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={ShieldAlertIcon}
-            label="Issues"
-            to={`/projects/${projectSlug}/issues`}
-            active={isIssuesActive}
-            collapsed={collapsed}
-          />
-          {monitorsEnabled ? (
+          {sections.map((section) => (
             <NavItem
-              icon={RadarIcon}
-              label="Monitors"
-              to={`/projects/${projectSlug}/monitors`}
-              active={isMonitorsActive}
+              key={section.key}
+              icon={section.icon}
+              label={section.label}
+              to={section.path(projectSlug)}
+              active={section.isActive(pathname, projectSlug)}
               collapsed={collapsed}
             />
-          ) : null}
-          <NavItem
-            icon={DatabaseIcon}
-            label="Datasets"
-            to={`/projects/${projectSlug}/datasets`}
-            active={isDatasetsActive}
-            collapsed={collapsed}
-          />
+          ))}
         </>
       )}
     </AppSidebar>
