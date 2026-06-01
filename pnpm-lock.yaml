@@ -1258,6 +1258,9 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
+      '@latitude-data/sdk':
+        specifier: workspace:*
+        version: link:../../sdk/typescript
       '@platform/ai':
         specifier: workspace:*
         version: link:../../platform/ai

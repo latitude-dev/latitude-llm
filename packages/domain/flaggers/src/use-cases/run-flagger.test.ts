@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
 import { AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import {
@@ -132,69 +131,79 @@ function makeTraceDetail(
   }
 }
 
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = []
-  let row: string[] = []
-  let field = ""
-  let inQuotes = false
+const REGRESSION_DATASET_PROJECT_SLUG = "latitude"
+const REGRESSION_DATASET_SLUG = "flagger-classification-regression-dataset"
+const REGRESSION_DATASET_PAGE_SIZE = 200
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    const next = text[i + 1]
-
-    if (char === '"') {
-      if (inQuotes && next === '"') {
-        field += '"'
-        i++
-      } else {
-        inQuotes = !inQuotes
-      }
-      continue
-    }
-
-    if (char === "," && !inQuotes) {
-      row.push(field)
-      field = ""
-      continue
-    }
-
-    if ((char === "\n" || char === "\r") && !inQuotes) {
-      if (char === "\r" && next === "\n") i++
-      row.push(field)
-      rows.push(row)
-      row = []
-      field = ""
-      continue
-    }
-
-    field += char
-  }
-
-  if (field !== "" || row.length > 0) {
-    row.push(field)
-    rows.push(row)
-  }
-
-  return rows
+function readRequiredEnv(name: string): string {
+  const value = process.env[name]?.trim()
+  if (value) return value
+  throw new Error(`${name} is required to run flagger regression tests`)
 }
 
-function readFlaggerRegressionRows(): Array<{ readonly metadata: Record<string, unknown> }> {
-  const csv = readFileSync(
-    new URL("../../../../../flagger-annotation-classification-problem.csv", import.meta.url),
-    "utf8",
-  )
-  const [header, ...rows] = parseCsv(csv)
-  if (!header) return []
+function toRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value === "string") {
+    const parsed = JSON.parse(value) as unknown
+    return toRecord(parsed)
+  }
 
-  const metadataIndex = header.indexOf("metadata")
-  return rows.flatMap((row) => {
-    const metadata = row[metadataIndex]
-    if (!metadata) return []
-    const parsed = JSON.parse(metadata) as unknown
-    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
-      ? [{ metadata: parsed as Record<string, unknown> }]
-      : []
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+
+  return null
+}
+
+interface DatasetRowsPage {
+  readonly items: readonly { readonly metadata: unknown }[]
+  readonly nextCursor?: string | null
+}
+
+interface LatitudeDatasetsClient {
+  listRows(
+    projectSlug: string,
+    datasetSlug: string,
+    request: { readonly limit: number; readonly cursor?: string },
+  ): Promise<DatasetRowsPage>
+}
+
+interface LatitudeApiClientConstructor {
+  new (options: {
+    readonly token: string
+    readonly baseUrl: string
+    readonly maxRetries: number
+  }): {
+    readonly datasets: LatitudeDatasetsClient
+  }
+}
+
+async function fetchFlaggerRegressionRows(): Promise<Array<{ readonly metadata: Record<string, unknown> }>> {
+  const sdk = (await import("@latitude-data/sdk")) as { readonly LatitudeApiClient: LatitudeApiClientConstructor }
+  const client = new sdk.LatitudeApiClient({
+    token: readRequiredEnv("LAT_LATITUDE_TELEMETRY_API_KEY"),
+    baseUrl: process.env.LAT_LATITUDE_API_URL?.trim() || "https://api.latitude.so",
+    maxRetries: 0,
   })
+
+  const rows: Array<{ readonly metadata: Record<string, unknown> }> = []
+  let cursor: string | undefined
+
+  do {
+    const page = await client.datasets.listRows(REGRESSION_DATASET_PROJECT_SLUG, REGRESSION_DATASET_SLUG, {
+      limit: REGRESSION_DATASET_PAGE_SIZE,
+      ...(cursor ? { cursor } : {}),
+    })
+
+    rows.push(
+      ...page.items.flatMap((row) => {
+        const metadata = toRecord(row.metadata)
+        return metadata ? [{ metadata }] : []
+      }),
+    )
+    cursor = page.nextCursor ?? undefined
+  } while (cursor)
+
+  return rows
 }
 
 function createMemoryCacheLayer(initialEntries: ReadonlyMap<string, string> = new Map()) {
@@ -218,7 +227,7 @@ function createMemoryCacheLayer(initialEntries: ReadonlyMap<string, string> = ne
   }
 }
 
-const csvRegressionIt = process.env.RUN_FLAGGER_CSV_REGRESSION === "true" ? it : it.skip
+const regressionIt = process.env.RUN_FLAGGER_REGRESSION === "true" ? it : it.skip
 
 describe("runFlaggerUseCase", () => {
   it("uses the LLM flagger for jailbreaking with suspicious snippets prompt", async () => {
@@ -485,10 +494,10 @@ describe("runFlaggerUseCase", () => {
     expect(calls.generate[0].prompt).toContain("This cached agent designs dashboards.")
   })
 
-  csvRegressionIt(
-    "classifies the CSV false-positive regressions as no-match with the live LLM flaggers",
+  regressionIt(
+    "classifies the Latitude dataset false-positive regressions as no-match with the live LLM flaggers",
     async () => {
-      const rows = readFlaggerRegressionRows()
+      const rows = await fetchFlaggerRegressionRows()
       expect(rows.length).toBeGreaterThan(0)
 
       const aiLayer = createAiLayer(AIGenerateLive)
