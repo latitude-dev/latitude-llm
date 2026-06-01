@@ -3,6 +3,7 @@ import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { createFileRoute, Link, notFound } from "@tanstack/react-router"
 import { ArrowRightIcon, CheckIcon, MinusIcon } from "lucide-react"
 import { adminGetProject } from "../../../domains/admin/projects.functions.ts"
+import { adminGetProjectTaxonomy } from "../../../domains/admin/taxonomy.functions.ts"
 import { ActionRow, ActionsSection } from "../-components/actions-section/section.tsx"
 import {
   DashboardHero,
@@ -13,13 +14,17 @@ import {
 } from "../-components/dashboard/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
 import { MetricsSection } from "./-components/metrics-section.tsx"
+import { TaxonomySection } from "./-components/taxonomy-section.tsx"
 import { WrappedTriggerButton } from "./-components/wrapped-trigger-button.tsx"
 
 export const Route = createFileRoute("/backoffice/projects/$projectId")({
   loader: async ({ params }) => {
     try {
-      const project = await adminGetProject({ data: { projectId: params.projectId } })
-      return { project }
+      const [project, taxonomy] = await Promise.all([
+        adminGetProject({ data: { projectId: params.projectId } }),
+        adminGetProjectTaxonomy({ data: { projectId: params.projectId } }),
+      ])
+      return { project, taxonomy }
     } catch (error) {
       // Same `_tag`-discriminating error handling as the other detail
       // pages: NotFound (= "project doesn't exist" or "caller isn't an
@@ -37,7 +42,7 @@ export const Route = createFileRoute("/backoffice/projects/$projectId")({
 })
 
 function BackofficeProjectDetailPage() {
-  const project = Route.useLoaderData({ select: (data) => data.project })
+  const { project, taxonomy } = Route.useLoaderData()
   const [emoji, nameWithoutEmoji] = extractLeadingEmoji(project.name)
   const displayName = nameWithoutEmoji || project.name
 
@@ -120,6 +125,8 @@ function BackofficeProjectDetailPage() {
       />
 
       <MetricsSection projectId={project.id} />
+
+      <TaxonomySection taxonomy={taxonomy} />
 
       <ActionsSection
         title="Project actions"
