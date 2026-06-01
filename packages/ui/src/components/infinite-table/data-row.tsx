@@ -174,7 +174,12 @@ function DataRowInner<T>({
           >
             {isFirstCol && renderRowLink ? renderRowLink(row, { className: LINK_STRETCH_CLASS }) : null}
             {typeof content === "string" ? (
-              <Text.H5 {...(useEllipsis ? { noWrap: true, ellipsis: true } : {})}>{content || "-"}</Text.H5>
+              <Text.H5
+                {...(useEllipsis ? { noWrap: true, ellipsis: true } : {})}
+                {...(col.align === "end" ? { align: "right" } : {})}
+              >
+                {content || "-"}
+              </Text.H5>
             ) : (
               content
             )}
