@@ -131,10 +131,15 @@ function CommandItem({ className, ...props }: ComponentPropsWithRef<typeof Comma
 }
 
 function CommandLoading({ className, ...props }: ComponentPropsWithRef<typeof CommandPrimitive.Loading>) {
+  // cmdk wraps children in an inner `<div aria-hidden>`, so the flex row has to target that
+  // child for the spinner + label to sit on one line.
   return (
     <CommandPrimitive.Loading
       data-slot="command-loading"
-      className={cn("flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground", className)}
+      className={cn(
+        "px-3 py-2 text-sm text-muted-foreground [&>div]:flex [&>div]:items-center [&>div]:gap-2",
+        className,
+      )}
       {...props}
     />
   )
