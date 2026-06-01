@@ -108,7 +108,7 @@ export function IssueLifecycleActions({
 
     if (issue.resolvedAt) {
       commands.push({
-        id: "issue:unresolve",
+        id: `issue:${issueId}:unresolve`,
         title: "Unresolve issue",
         icon: XIcon,
         section: "context",
@@ -118,7 +118,7 @@ export function IssueLifecycleActions({
       })
     } else {
       commands.push({
-        id: "issue:resolve",
+        id: `issue:${issueId}:resolve`,
         title: "Resolve issue",
         icon: CheckIcon,
         section: "context",
@@ -134,7 +134,7 @@ export function IssueLifecycleActions({
     commands.push(
       issue.ignoredAt
         ? {
-            id: "issue:unignore",
+            id: `issue:${issueId}:unignore`,
             title: "Unignore issue",
             icon: PlayIcon,
             section: "context",
@@ -143,7 +143,7 @@ export function IssueLifecycleActions({
             perform: () => setLifecycleConfirmAction("unignore"),
           }
         : {
-            id: "issue:ignore",
+            id: `issue:${issueId}:ignore`,
             title: "Ignore issue",
             icon: PauseIcon,
             section: "context",
@@ -155,7 +155,7 @@ export function IssueLifecycleActions({
 
     if (projectSlug) {
       commands.push({
-        id: "issue:copy-link",
+        id: `issue:${issueId}:copy-link`,
         title: "Copy issue link",
         icon: LinkIcon,
         section: "context",
