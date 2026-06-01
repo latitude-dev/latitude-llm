@@ -40,13 +40,30 @@ interface CommandGroupView {
   readonly commands: readonly PaletteCommand[]
 }
 
+/** Groups contextual commands by their `group` sub-heading, preserving registration order. */
+function buildContextGroups(commands: readonly PaletteCommand[]): CommandGroupView[] {
+  const order: string[] = []
+  const byGroup = new Map<string, PaletteCommand[]>()
+  for (const command of commands) {
+    const label = command.group ?? "Actions"
+    const existing = byGroup.get(label)
+    if (existing) {
+      existing.push(command)
+    } else {
+      byGroup.set(label, [command])
+      order.push(label)
+    }
+  }
+  return order.map((label) => ({ key: `context:${label}`, label, commands: byGroup.get(label) ?? [] }))
+}
+
 /**
  * Global Cmd+K command palette. Always mounted in the authenticated layout; opens via the
  * hotkey or the header button. Surfaces navigation, project switching, and global actions;
  * `parent` commands push a keyboard-navigable sub-page (e.g. "Switch organization").
  */
 export function CommandPalette() {
-  const { open, setOpen, toggle } = useCommandPalette()
+  const { open, setOpen, toggle, registeredCommands } = useCommandPalette()
   const [search, setSearch] = useState("")
   // Stack of opened sub-pages; the last entry is the page currently shown.
   const [pageStack, setPageStack] = useState<readonly ParentCommand[]>([])
@@ -64,12 +81,14 @@ export function CommandPalette() {
       return [{ key: currentPage.id, label: currentPage.title, commands: currentPage.getChildren() }]
     }
     const all = [...navigationCommands, ...projectCommands, ...globalCommands]
-    return COMMAND_SECTION_ORDER.map((section) => ({
+    const centralGroups = COMMAND_SECTION_ORDER.map((section) => ({
       key: section,
       label: COMMAND_SECTION_LABELS[section],
       commands: all.filter((command) => command.section === section),
     })).filter((group) => group.commands.length > 0)
-  }, [currentPage, navigationCommands, projectCommands, globalCommands])
+    // Contextual commands contributed by the current view render ahead of navigation.
+    return [...buildContextGroups(registeredCommands), ...centralGroups]
+  }, [currentPage, registeredCommands, navigationCommands, projectCommands, globalCommands])
 
   const resetState = () => {
     setSearch("")

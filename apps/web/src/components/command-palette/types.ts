@@ -1,8 +1,11 @@
 import type { LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
-/** Groups commands into ordered, labelled sections in the palette. */
-type CommandSection = "navigation" | "projects" | "actions"
+/**
+ * Groups commands into ordered, labelled sections. `context` commands are contributed by
+ * the current view through the registry and render at the top, grouped by their `group`.
+ */
+type CommandSection = "context" | "navigation" | "projects" | "actions"
 
 interface BasePaletteCommand {
   /** Globally unique id (also used as cmdk's item value). */
@@ -10,6 +13,8 @@ interface BasePaletteCommand {
   readonly title: string
   readonly icon: LucideIcon
   readonly section: CommandSection
+  /** Sub-heading for contextual commands (e.g. "Issue", "Trace"). */
+  readonly group?: string
   /** Custom leading visual that overrides `icon` (e.g. a project emoji). */
   readonly leading?: ReactNode
   /** Muted secondary text shown after the title (e.g. "Settings → Members"). */
@@ -35,9 +40,11 @@ export interface ParentCommand extends BasePaletteCommand {
 
 export type PaletteCommand = ActionCommand | ParentCommand
 
+/** Central sections, in display order. Context groups are rendered ahead of these. */
 export const COMMAND_SECTION_ORDER: readonly CommandSection[] = ["navigation", "projects", "actions"]
 
 export const COMMAND_SECTION_LABELS: Record<CommandSection, string> = {
+  context: "Actions",
   navigation: "Navigation",
   projects: "Projects",
   actions: "Actions",

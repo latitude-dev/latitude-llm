@@ -1,6 +1,9 @@
 import { Button, CloseTrigger, Icon, Label, Modal, Switch, Text, useToast } from "@repo/ui"
-import { CheckIcon, PauseIcon, PlayIcon, XIcon } from "lucide-react"
-import { useState } from "react"
+import { useParams } from "@tanstack/react-router"
+import { CheckIcon, LinkIcon, PauseIcon, PlayIcon, XIcon } from "lucide-react"
+import { useMemo, useState } from "react"
+import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
+import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
 import { invalidateIssueQueries, useIssueDetail } from "../../../../../../domains/issues/issues.collection.ts"
 import { applyIssueLifecycleAction } from "../../../../../../domains/issues/issues.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -52,6 +55,7 @@ export function IssueLifecycleActions({
   readonly issueId: string
 }) {
   const { toast } = useToast()
+  const { projectSlug } = useParams({ strict: false })
   const { data: issue } = useIssueDetail({ projectId, issueId })
   const [resolveModalOpen, setResolveModalOpen] = useState(false)
   const [lifecycleConfirmAction, setLifecycleConfirmAction] = useState<LifecycleConfirmationAction | null>(null)
@@ -95,6 +99,81 @@ export function IssueLifecycleActions({
       setIsLifecycleLoading(false)
     }
   }
+
+  // Contribute the lifecycle + copy actions to the global command palette while this issue
+  // is open, reusing the same modal flows the toolbar buttons trigger.
+  const paletteCommands = useMemo<readonly PaletteCommand[]>(() => {
+    if (!issue) return []
+    const commands: PaletteCommand[] = []
+
+    if (issue.resolvedAt) {
+      commands.push({
+        id: "issue:unresolve",
+        title: "Unresolve issue",
+        icon: XIcon,
+        section: "context",
+        group: "Issue",
+        keywords: "unresolve reopen regressed",
+        perform: () => setLifecycleConfirmAction("unresolve"),
+      })
+    } else {
+      commands.push({
+        id: "issue:resolve",
+        title: "Resolve issue",
+        icon: CheckIcon,
+        section: "context",
+        group: "Issue",
+        keywords: "resolve close fix done",
+        perform: () => {
+          setKeepMonitoring(issue.keepMonitoringDefault ?? true)
+          setResolveModalOpen(true)
+        },
+      })
+    }
+
+    commands.push(
+      issue.ignoredAt
+        ? {
+            id: "issue:unignore",
+            title: "Unignore issue",
+            icon: PlayIcon,
+            section: "context",
+            group: "Issue",
+            keywords: "unignore unmute resume",
+            perform: () => setLifecycleConfirmAction("unignore"),
+          }
+        : {
+            id: "issue:ignore",
+            title: "Ignore issue",
+            icon: PauseIcon,
+            section: "context",
+            group: "Issue",
+            keywords: "ignore mute dismiss",
+            perform: () => setLifecycleConfirmAction("ignore"),
+          },
+    )
+
+    if (projectSlug) {
+      commands.push({
+        id: "issue:copy-link",
+        title: "Copy issue link",
+        icon: LinkIcon,
+        section: "context",
+        group: "Issue",
+        keywords: "copy link url share",
+        perform: () => {
+          void navigator.clipboard.writeText(
+            `${window.location.origin}/projects/${projectSlug}/issues?issueId=${issueId}`,
+          )
+          toast({ description: "Issue link copied to clipboard." })
+        },
+      })
+    }
+
+    return commands
+  }, [issue, projectSlug, issueId, toast])
+
+  useRegisterCommands(paletteCommands)
 
   return (
     <>
