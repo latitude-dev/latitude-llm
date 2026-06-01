@@ -15,7 +15,6 @@ import type { PaletteCommand } from "./types.ts"
  */
 interface CommandPaletteActions {
   readonly setOpen: (open: boolean) => void
-  readonly toggle: () => void
   readonly openCreateProject: () => void
   readonly openCreateOrganization: () => void
   readonly register: (id: string, commands: readonly PaletteCommand[]) => void
@@ -63,7 +62,6 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const actions = useMemo<CommandPaletteActions>(
     () => ({
       setOpen,
-      toggle: () => setOpen((prev) => !prev),
       openCreateProject: () => setCreateProjectOpen(true),
       openCreateOrganization: () => setCreateOrgOpen(true),
       register,

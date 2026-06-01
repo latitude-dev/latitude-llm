@@ -69,16 +69,13 @@ function buildContextGroups(commands: readonly PaletteCommand[]): CommandGroupVi
  * `parent` commands push a keyboard-navigable sub-page (e.g. "Switch organization").
  */
 export function CommandPalette() {
-  const { setOpen, toggle } = useCommandPalette()
+  const { setOpen } = useCommandPalette()
   const { open, registeredCommands } = useCommandPaletteState()
   const [search, setSearch] = useState("")
   // Stack of opened sub-pages; the last entry is the page currently shown.
   const [pageStack, setPageStack] = useState<readonly ParentCommand[]>([])
   // The query active at each ancestor level, saved on push so going back restores it.
   const [savedSearches, setSavedSearches] = useState<readonly string[]>([])
-
-  // ignoreInputs:false so Cmd+K still opens the palette while a text input is focused.
-  useHotkeys([{ hotkey: "Mod+K", callback: toggle, options: { ignoreInputs: false } }])
 
   const navigationCommands = useNavigationCommands()
   const projectCommands = useProjectCommands()
@@ -150,6 +147,18 @@ export function CommandPalette() {
     setOpen(next)
     if (!next) resetState()
   }
+
+  // Cmd+K opens, or closes through handleOpenChange so closing via the hotkey resets the
+  // query/page stack just like Esc or an outside click. ignoreInputs:false so it still fires
+  // while a text input is focused. (Closing via setOpen directly would skip resetState, since
+  // Radix only runs onOpenChange for its own dismissals, not external open-prop changes.)
+  useHotkeys([
+    {
+      hotkey: "Mod+K",
+      callback: () => (open ? handleOpenChange(false) : setOpen(true)),
+      options: { ignoreInputs: false },
+    },
+  ])
 
   const popPage = () => {
     // Restore the query that was active on the level we're returning to.
