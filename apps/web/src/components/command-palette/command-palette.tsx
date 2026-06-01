@@ -122,12 +122,17 @@ export function CommandPalette() {
     void command.perform()
   }
 
-  // Escape steps back out of a sub-page; only the root page closes the palette. Preventing
-  // the default keeps Radix from dismissing the dialog while we pop the stack.
+  // Escape backs out one step (preventing Radix from closing): pop a sub-page, otherwise
+  // clear a non-empty query, and only close the palette from an empty root.
   const handleEscapeKeyDown = (event: KeyboardEvent) => {
     if (pageStack.length > 0) {
       event.preventDefault()
       popPage()
+      return
+    }
+    if (search !== "") {
+      event.preventDefault()
+      setSearch("")
     }
   }
 
@@ -195,7 +200,8 @@ export function CommandPalette() {
           <kbd className="rounded bg-muted px-1 font-mono">↵</kbd> select
         </span>
         <span className="flex items-center gap-1">
-          <kbd className="rounded bg-muted px-1 font-mono">esc</kbd> {currentPage ? "back" : "close"}
+          <kbd className="rounded bg-muted px-1 font-mono">esc</kbd>{" "}
+          {currentPage ? "back" : search !== "" ? "clear" : "close"}
         </span>
       </CommandFooter>
     </CommandDialog>
