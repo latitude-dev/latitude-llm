@@ -89,8 +89,10 @@ export const registerMcpRoute = ({
             "X-Forwarded-For": c.req.header("X-Forwarded-For") ?? "",
           })
 
+          const serializedBody = body !== undefined ? JSON.stringify(body) : undefined
+
           const response = await app.fetch(
-            new Request(url, { method, headers, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }),
+            new Request(url, { method, headers, ...(serializedBody !== undefined ? { body: serializedBody } : {}) }),
           )
           const output = await response.text()
 

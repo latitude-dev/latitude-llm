@@ -4,13 +4,11 @@ import type * as LatitudeApi from "../../../../index.js";
 
 /**
  * @example
- *     {
- *         recipient: "recipient"
- *     }
+ *     {}
  */
 export interface ExportDatasetRowsBody {
     /** Rows to export. Defaults to `{ mode: "all" }` when omitted. */
     selection?: LatitudeApi.ExportDatasetRowsBodySelection;
-    /** Email address the export download link is sent to. Must belong to a member of the requesting organization. */
-    recipient: string;
+    /** Email address to send the download link to when the export is too large for the synchronous path. Must belong to a member of the requesting organization. Ignored when the export fits the synchronous path; required for the async email flow. */
+    recipient?: string;
 }

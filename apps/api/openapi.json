@@ -4355,7 +4355,43 @@
           "traces"
         ]
       },
-      "ExportDatasetRowsResponse": {
+      "ExportDatasetRowsReadyResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ],
+            "description": "Always `\"ready\"`. The CSV is available at `downloadUrl`."
+          },
+          "downloadUrl": {
+            "type": "string",
+            "description": "Short-lived signed URL pointing to the CSV in object storage. Follow it with a plain HTTP GET."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Suggested filename for the downloaded CSV."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which `downloadUrl` stops working."
+          },
+          "rowCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of rows included in the export."
+          }
+        },
+        "required": [
+          "status",
+          "downloadUrl",
+          "filename",
+          "expiresAt",
+          "rowCount"
+        ]
+      },
+      "ExportDatasetRowsQueuedResponse": {
         "type": "object",
         "properties": {
           "status": {
@@ -4364,10 +4400,54 @@
               "queued"
             ],
             "description": "Always `\"queued\"`. The CSV is emailed to `recipient` when ready."
+          },
+          "recipient": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address the export download link will be sent to."
+          },
+          "rowCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of rows the export will produce."
           }
         },
         "required": [
-          "status"
+          "status",
+          "recipient",
+          "rowCount"
+        ]
+      },
+      "ExportDatasetRowsTooLargeResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "too_large"
+            ],
+            "description": "Always `\"too_large\"`. The export exceeds the synchronous threshold."
+          },
+          "rowCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of rows the export would have produced."
+          },
+          "threshold": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Maximum row count this endpoint will generate synchronously."
+          },
+          "recommendedAction": {
+            "type": "string",
+            "description": "Instructions for the caller — typically an LLM — on how to recover: ask the end user for an email address and retry the same call with `recipient` set to it."
+          }
+        },
+        "required": [
+          "status",
+          "rowCount",
+          "threshold",
+          "recommendedAction"
         ]
       },
       "ExportDatasetRowsBody": {
@@ -4438,12 +4518,9 @@
           "recipient": {
             "type": "string",
             "format": "email",
-            "description": "Email address the export download link is sent to. Must belong to a member of the requesting organization."
+            "description": "Email address to send the download link to when the export is too large for the synchronous path. Must belong to a member of the requesting organization. Ignored when the export fits the synchronous path; required for the async email flow."
           }
-        },
-        "required": [
-          "recipient"
-        ]
+        }
       },
       "ApiKey": {
         "type": "object",
@@ -8926,8 +9003,8 @@
         ],
         "x-fern-sdk-group-name": "datasets",
         "x-fern-sdk-method-name": "exportRows",
-        "summary": "Export dataset rows (async)",
-        "description": "Exports the selected rows as CSV. The download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
+        "summary": "Export dataset rows",
+        "description": "Exports the selected rows as CSV. Returns one of three outcomes, discriminated by `status`:\n\n- `\"ready\"` — the export fit in the synchronous path. Body carries a short-lived signed `downloadUrl` the caller follows with a plain HTTP GET.\n- `\"queued\"` — the export was too large for the synchronous path AND a `recipient` was supplied. The CSV will be emailed to that address. The recipient must be a member of the requesting organization.\n- `\"too_large\"` — the export was too large for the synchronous path AND no `recipient` was supplied. Body includes a `recommendedAction` describing how to recover (typically: ask the user for an email and retry with `recipient` set).",
         "security": [
           {
             "ApiKeyAuth": []
@@ -8967,12 +9044,22 @@
           }
         },
         "responses": {
-          "202": {
-            "description": "Export enqueued",
+          "200": {
+            "description": "CSV ready at the signed URL",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ExportDatasetRowsResponse"
+                  "$ref": "#/components/schemas/ExportDatasetRowsReadyResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Export queued; download link will be emailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportDatasetRowsQueuedResponse"
                 }
               }
             }
@@ -9003,6 +9090,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Export exceeds the synchronous threshold and no `recipient` was provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportDatasetRowsTooLargeResponse"
                 }
               }
             }

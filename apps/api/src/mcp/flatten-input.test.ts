@@ -132,10 +132,24 @@ describe("splitFlatInput", () => {
     expect(result.body).toEqual({ name: "key-1" })
   })
 
-  it("returns body undefined when there were no body-sourced fields (route with only params)", () => {
+  it("returns body undefined when the route itself declares no body (route with only params)", () => {
     const sources: Readonly<Record<string, FieldSource>> = { id: "param" }
     const result = splitFlatInput({ id: "abc" }, sources)
     expect(result.body).toBeUndefined()
+  })
+
+  it("returns an empty body object when the route declares a JSON body but the caller omitted every (optional) body field", () => {
+    // Routes with all-optional body fields must still ship `{}` so the inner
+    // Hono validator can parse the request body. Returning `undefined` here
+    // makes the dispatcher omit the body entirely, which surfaces as
+    // "Malformed JSON in request body" → 500 from the error handler.
+    const sources: Readonly<Record<string, FieldSource>> = {
+      id: "param",
+      selection: "body",
+    }
+    const result = splitFlatInput({ id: "abc" }, sources)
+    expect(result.params).toEqual({ id: "abc" })
+    expect(result.body).toEqual({})
   })
 
   it("hands back the wrapped body verbatim for routes with non-object bodies (wrapped-body source)", () => {
@@ -154,6 +168,16 @@ describe("splitFlatInput", () => {
     const result = splitFlatInput({ id: "abc", stray: "drop-me" }, sources)
     expect(result.params).toEqual({ id: "abc" })
     expect(result.query).toEqual({})
+    expect(result.body).toBeUndefined()
+  })
+
+  it("leaves wrapped-body undefined when the route declares one but the caller omitted it", () => {
+    // Wrapped-body routes carry a single required value (discriminated union,
+    // array, …) under the `body` key. Omitting it means the request shape was
+    // never assembled; let Zod return its own validation error rather than
+    // forging an empty value.
+    const sources: Readonly<Record<string, FieldSource>> = { body: "wrapped-body" }
+    const result = splitFlatInput({}, sources)
     expect(result.body).toBeUndefined()
   })
 })

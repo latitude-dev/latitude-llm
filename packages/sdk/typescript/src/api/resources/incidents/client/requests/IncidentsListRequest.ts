@@ -16,7 +16,7 @@ export interface IncidentsListRequest {
     /** Upper bound (inclusive) of the time window. Defaults to now. */
     toIso?: string;
     /** Restrict to incidents whose source type matches any value in this list. */
-    sourceTypes?: "issue" | "issue"[];
+    sourceTypes?: LatitudeApi.IncidentsListRequestSourceTypesItem | LatitudeApi.IncidentsListRequestSourceTypesItem[];
     /** Restrict to incidents tied to a single source entity (e.g. one issue id). */
     sourceId?: string;
     /** Restrict to incidents whose kind matches any value in this list. */

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-alpha.3] - 2026-06-02
+
+### Changed
+
+`datasets.exportRows(...)` now returns a discriminated `{ status: "ready" | "queued" | "too_large", ... }` envelope with `ExportDatasetRowsReadyResponse`, `ExportDatasetRowsQueuedResponse`, and `ExportDatasetRowsTooLargeResponse`
+types.
+
 ## [6.0.0-alpha.2] - 2026-05-20
 
 ### Added

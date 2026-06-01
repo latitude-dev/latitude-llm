@@ -56,3 +56,12 @@ jobs:
 
       - name: Fail if apps/api/mcp.json drifted
         run: git diff --exit-code apps/api/mcp.json
+
+      - name: Validate Fern config against the OpenAPI spec
+        run: ./fern/invoke.sh check
+
+      - name: Regenerate Fern-emitted TypeScript SDK
+        run: ./fern/invoke.sh generate --group local --local --force
+
+      - name: Fail if packages/sdk/typescript/src drifted
+        run: git diff --exit-code packages/sdk/typescript/src

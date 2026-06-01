@@ -46,6 +46,16 @@ export { getRowDetail } from "./use-cases/get-row-detail.ts"
 export { insertRows } from "./use-cases/insert-rows.ts"
 export { listDatasets } from "./use-cases/list-datasets.ts"
 export { listRows } from "./use-cases/list-rows.ts"
+export {
+  type PrepareDatasetDownloadInput,
+  type PrepareDatasetDownloadResult,
+  prepareDatasetDownloadUseCase,
+} from "./use-cases/prepare-dataset-download.ts"
+export {
+  type PrepareDatasetExportInput,
+  type PrepareDatasetExportResult,
+  prepareDatasetExportUseCase,
+} from "./use-cases/prepare-dataset-export.ts"
 export { renameDataset } from "./use-cases/rename-dataset.ts"
 export { updateDatasetDetails } from "./use-cases/update-dataset-details.ts"
 export { updateRow } from "./use-cases/update-row.ts"

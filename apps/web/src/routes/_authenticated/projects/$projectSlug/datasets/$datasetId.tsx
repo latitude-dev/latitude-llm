@@ -1,4 +1,4 @@
-import { parseDatasetCsv } from "@domain/datasets"
+import { DATASET_DOWNLOAD_DIRECT_THRESHOLD, parseDatasetCsv } from "@domain/datasets"
 import {
   Button,
   Container,
@@ -22,7 +22,7 @@ import {
   type DatasetRecord,
   type DatasetRowRecord,
   deleteDatasetRows,
-  enqueueDatasetExport,
+  downloadDatasetExport,
   getDatasetQuery,
   getRowQuery,
   insertDatasetRow,
@@ -55,6 +55,19 @@ const DEFAULT_ROW_SORTING: InfiniteTableSorting = {
 function formatCellValue(data: string | Record<string, unknown>): string {
   if (typeof data === "string") return data
   return JSON.stringify(data)
+}
+
+function triggerCsvBrowserDownload(csv: string, filename: string): void {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  a.style.display = "none"
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
@@ -524,13 +537,17 @@ function DatasetRowsView({
     async (sel: BulkSelection<string>) => {
       setDownloading(true)
       try {
-        await enqueueDatasetExport({
+        const result = await downloadDatasetExport({
           data: { datasetId, selection: sel },
         })
-        toast({
-          title: "Export started",
-          description: "You'll receive an email with a download link when your export is ready.",
-        })
+        if (result.type === "direct") {
+          triggerCsvBrowserDownload(result.csv, result.filename)
+        } else {
+          toast({
+            title: "Export started",
+            description: "You'll receive an email with a download link when your export is ready.",
+          })
+        }
       } catch (e) {
         toast({
           variant: "destructive",
@@ -683,6 +700,7 @@ function DatasetRowsView({
           }}
           itemLabel="row"
           selectedCount={pendingExport.selectedCount}
+          mode={pendingExport.selectedCount <= DATASET_DOWNLOAD_DIRECT_THRESHOLD ? "direct" : "email"}
           onConfirm={() => void confirmDownload()}
           exporting={downloading}
         />

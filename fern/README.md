@@ -127,9 +127,17 @@ would only introduce nested Docker-in-Docker complexity.
 
 ## CI
 
-Not wired in this PR. A follow-up will add a drift check (regenerate the SDK
-and fail if `git status` is dirty) and a publish workflow mirroring
-`.github/workflows/publish-typescript-telemetry.yml`.
+Drift is guarded by `.github/workflows/api-manifests.yml`. On every PR
+targeting `development`, the workflow regenerates `apps/api/openapi.json`,
+`apps/api/mcp.json`, and the Fern-emitted SDK under
+`packages/sdk/typescript/src/`, and fails if any of them differ from what's
+checked in. Forgetting to run `pnpm openapi:emit && pnpm mcp:emit && pnpm
+generate:sdk` after touching `apps/api/src/routes/*` will fail the
+**Fail if … drifted** steps, so the manifests and SDK can't fall out of
+sync with the route declarations.
+
+A publish workflow mirroring `.github/workflows/publish-typescript-telemetry.yml`
+is still a separate follow-up.
 
 ## Troubleshooting
 

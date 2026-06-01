@@ -893,7 +893,11 @@ export class DatasetsClient {
     }
 
     /**
-     * Exports the selected rows as CSV. The download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.
+     * Exports the selected rows as CSV. Returns one of three outcomes, discriminated by `status`:
+     *
+     * - `"ready"` — the export fit in the synchronous path. Body carries a short-lived signed `downloadUrl` the caller follows with a plain HTTP GET.
+     * - `"queued"` — the export was too large for the synchronous path AND a `recipient` was supplied. The CSV will be emailed to that address. The recipient must be a member of the requesting organization.
+     * - `"too_large"` — the export was too large for the synchronous path AND no `recipient` was supplied. Body includes a `recommendedAction` describing how to recover (typically: ask the user for an email and retry with `recipient` set).
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} datasetSlug - Dataset slug (human-readable identifier within the project).
@@ -903,18 +907,17 @@ export class DatasetsClient {
      * @throws {@link LatitudeApi.BadRequestError}
      * @throws {@link LatitudeApi.UnauthorizedError}
      * @throws {@link LatitudeApi.NotFoundError}
+     * @throws {@link LatitudeApi.ContentTooLargeError}
      *
      * @example
-     *     await client.datasets.exportRows("projectSlug", "datasetSlug", {
-     *         recipient: "recipient"
-     *     })
+     *     await client.datasets.exportRows("projectSlug", "datasetSlug")
      */
     public exportRows(
         projectSlug: string,
         datasetSlug: string,
-        request: LatitudeApi.ExportDatasetRowsBody,
+        request: LatitudeApi.ExportDatasetRowsBody = {},
         requestOptions?: DatasetsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.ExportDatasetRowsResponse> {
+    ): core.HttpResponsePromise<LatitudeApi.ExportDatasetRowsReadyResponse> {
         return core.HttpResponsePromise.fromPromise(
             this.__exportRows(projectSlug, datasetSlug, request, requestOptions),
         );
@@ -923,9 +926,9 @@ export class DatasetsClient {
     private async __exportRows(
         projectSlug: string,
         datasetSlug: string,
-        request: LatitudeApi.ExportDatasetRowsBody,
+        request: LatitudeApi.ExportDatasetRowsBody = {},
         requestOptions?: DatasetsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.ExportDatasetRowsResponse>> {
+    ): Promise<core.WithRawResponse<LatitudeApi.ExportDatasetRowsReadyResponse>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -953,7 +956,7 @@ export class DatasetsClient {
         });
         if (_response.ok) {
             return {
-                data: _response.body as LatitudeApi.ExportDatasetRowsResponse,
+                data: _response.body as LatitudeApi.ExportDatasetRowsReadyResponse,
                 rawResponse: _response.rawResponse,
             };
         }
@@ -973,6 +976,11 @@ export class DatasetsClient {
                 case 404:
                     throw new LatitudeApi.NotFoundError(
                         _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                case 413:
+                    throw new LatitudeApi.ContentTooLargeError(
+                        _response.error.body as LatitudeApi.ExportDatasetRowsTooLargeResponse,
                         _response.rawResponse,
                     );
                 default:

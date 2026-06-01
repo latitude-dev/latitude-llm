@@ -104,8 +104,10 @@ export const splitFlatInput = (
   const query: Record<string, unknown> = {}
   const body: Record<string, unknown> = {}
   let wrappedBody: unknown
-  let hasBody = false
   let hasWrappedBody = false
+
+  const routeHasObjectBody = Object.values(sources).some((s) => s === "body")
+  const routeHasWrappedBody = Object.values(sources).some((s) => s === "wrapped-body")
 
   for (const [key, value] of Object.entries(input)) {
     const source = sources[key]
@@ -118,7 +120,6 @@ export const splitFlatInput = (
         break
       case "body":
         body[key] = value
-        hasBody = true
         break
       case "wrapped-body":
         wrappedBody = value
@@ -132,6 +133,6 @@ export const splitFlatInput = (
   return {
     params,
     query,
-    body: hasWrappedBody ? wrappedBody : hasBody ? body : undefined,
+    body: routeHasWrappedBody ? (hasWrappedBody ? wrappedBody : undefined) : routeHasObjectBody ? body : undefined,
   }
 }

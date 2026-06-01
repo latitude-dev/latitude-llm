@@ -4,6 +4,9 @@ export const IncidentsListRequestKindsItem = {
     IssueNew: "issue.new",
     IssueRegressed: "issue.regressed",
     IssueEscalating: "issue.escalating",
+    SavedSearchMatch: "savedSearch.match",
+    SavedSearchThreshold: "savedSearch.threshold",
+    SavedSearchEscalating: "savedSearch.escalating",
 } as const;
 export type IncidentsListRequestKindsItem =
     (typeof IncidentsListRequestKindsItem)[keyof typeof IncidentsListRequestKindsItem];

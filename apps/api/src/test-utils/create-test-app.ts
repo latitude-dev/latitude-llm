@@ -11,6 +11,7 @@ import {
   organizations,
   users,
 } from "@platform/db-postgres/schema/better-auth"
+import { FakeStorageDisk } from "@platform/storage-object/testing"
 import {
   closeInMemoryPostgres,
   createInMemoryPostgres,
@@ -36,6 +37,7 @@ export interface ApiTestContext extends TestContext {
   database: InMemoryPostgres
   clickhouse: ClickHouseClient
   redis: RedisClient
+  storageDisk: FakeStorageDisk
 }
 
 /**
@@ -79,11 +81,13 @@ export const setupTestApi = () => {
   let app: OpenAPIHono<AppEnv>
   const clickhouse = setupTestClickHouse()
   let redis: RedisClient
+  let storageDisk: FakeStorageDisk
 
   beforeAll(async () => {
     process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
     database = await acquireDatabase()
     redis = createFakeRedis()
+    storageDisk = new FakeStorageDisk()
 
     // The MCP endpoint registry is module-global. Multiple test files mounted in
     // the same vitest worker would otherwise accumulate entries across
@@ -117,6 +121,7 @@ export const setupTestApi = () => {
       queuePublisher: fakePublisher,
       workflowStarter: fakeWorkflowStarter,
       workflowQuerier: fakeWorkflowQuerier,
+      storageDisk,
       logTouchBuffer: false,
     })
   })
@@ -126,6 +131,7 @@ export const setupTestApi = () => {
     context.database = database
     context.clickhouse = clickhouse.client
     context.redis = redis
+    context.storageDisk = storageDisk
   })
 
   afterAll(async () => {

@@ -1,3 +1,4 @@
+import { DATASET_DOWNLOAD_DIRECT_THRESHOLD } from "@domain/datasets"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { describe, expect, it } from "vitest"
@@ -460,6 +461,178 @@ describe("Datasets Routes Integration", () => {
     expect(res.status).toBe(404)
   })
 
+  it<ApiTestContext>("POST /{datasetSlug}/rows/export returns 200 ready with a signed URL for a small dataset (no recipient needed)", async ({
+    app,
+    database,
+    storageDisk,
+  }) => {
+    const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
+      app,
+      database,
+      "aaaaaaaaaaaa1111aaaaaaaa",
+      "Export Small",
+    )
+
+    // Seed a couple of rows so the export has content.
+    const insertRes = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/rows`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rows: [
+            { input: "a", output: "1" },
+            { input: "b", output: "2" },
+          ],
+        }),
+      }),
+    )
+    expect(insertRes.status).toBe(201)
+    const filesBefore = storageDisk.files.size
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/rows/export`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      status: string
+      downloadUrl: string
+      filename: string
+      expiresAt: string
+      rowCount: number
+    }
+    expect(body.status).toBe("ready")
+    expect(body.filename).toBe("Export_Small.csv")
+    expect(body.rowCount).toBe(2)
+    expect(body.downloadUrl).toMatch(/^https:\/\/download\.test\//)
+    expect(storageDisk.files.size).toBe(filesBefore + 1)
+  })
+
+  it<ApiTestContext>("POST /{datasetSlug}/rows/export still goes the synchronous path when the dataset is small and a `recipient` is supplied (recipient is ignored)", async ({
+    app,
+    database,
+    storageDisk,
+  }) => {
+    const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
+      app,
+      database,
+      "aaaaaaaaaaaa2222aaaaaaaa",
+      "Export Small Recipient",
+    )
+
+    const insertRes = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/rows`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: [{ input: "a", output: "1" }] }),
+      }),
+    )
+    expect(insertRes.status).toBe(201)
+    const filesBefore = storageDisk.files.size
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/rows/export`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        // Recipient is set but the dataset is small — the sync path should win.
+        body: JSON.stringify({ recipient: `${tenant.userId}@example.com` }),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { status: string; downloadUrl: string; rowCount: number }
+    expect(body.status).toBe("ready")
+    expect(body.rowCount).toBe(1)
+    expect(body.downloadUrl).toMatch(/^https:\/\/download\.test\//)
+    // The CSV was still uploaded; no email queue work happened.
+    expect(storageDisk.files.size).toBe(filesBefore + 1)
+  })
+
+  it<ApiTestContext>("POST /{datasetSlug}/rows/export returns 413 too_large with an LLM-readable recommendedAction when the export is too big and no `recipient` is provided", async ({
+    app,
+    database,
+    storageDisk,
+  }) => {
+    const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
+      app,
+      database,
+      "bbbbbbbbbbbb1111aaaaaaaa",
+      "Export Big",
+    )
+
+    const filesBefore = storageDisk.files.size
+    const oversizedRowCount = DATASET_DOWNLOAD_DIRECT_THRESHOLD + 1
+    const oversizedSelection = {
+      mode: "selected" as const,
+      rowIds: Array.from({ length: oversizedRowCount }, (_, i) => `r${i}`.padEnd(24, "0")),
+    }
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/rows/export`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ selection: oversizedSelection }),
+      }),
+    )
+
+    expect(res.status).toBe(413)
+    const body = (await res.json()) as {
+      status: string
+      rowCount: number
+      threshold: number
+      recommendedAction: string
+    }
+    expect(body.status).toBe("too_large")
+    expect(body.rowCount).toBe(oversizedRowCount)
+    expect(body.threshold).toBe(DATASET_DOWNLOAD_DIRECT_THRESHOLD)
+    expect(body.recommendedAction).toMatch(/recipient/)
+    expect(body.recommendedAction).toMatch(/email/)
+    expect(storageDisk.files.size).toBe(filesBefore)
+  })
+
+  it<ApiTestContext>("POST /{datasetSlug}/rows/export queues the email flow when the export is too big and `recipient` is an org member", async ({
+    app,
+    database,
+    storageDisk,
+  }) => {
+    const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
+      app,
+      database,
+      "cccccccccccc1111aaaaaaaa",
+      "Export Queued",
+    )
+
+    const filesBefore = storageDisk.files.size
+    const oversizedRowCount = DATASET_DOWNLOAD_DIRECT_THRESHOLD + 1
+    const oversizedSelection = {
+      mode: "selected" as const,
+      rowIds: Array.from({ length: oversizedRowCount }, (_, i) => `r${i}`.padEnd(24, "0")),
+    }
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/rows/export`, {
+        method: "POST",
+        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient: `${tenant.userId}@example.com`,
+          selection: oversizedSelection,
+        }),
+      }),
+    )
+
+    expect(res.status).toBe(202)
+    const body = (await res.json()) as { status: string; recipient: string; rowCount: number }
+    expect(body.status).toBe("queued")
+    expect(body.recipient).toBe(`${tenant.userId}@example.com`)
+    expect(body.rowCount).toBe(oversizedRowCount)
+    // The 413 path counted but did not upload; the queued path does not upload either.
+    expect(storageDisk.files.size).toBe(filesBefore)
+  })
+
   it<ApiTestContext>("POST /{datasetSlug}/rows/export rejects a non-member recipient with 400", async ({
     app,
     database,
@@ -467,8 +640,8 @@ describe("Datasets Routes Integration", () => {
     const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
       app,
       database,
-      "aaaaaaaaaaaa1111aaaaaaaa",
-      "Export Rows",
+      "dddddddddddd2222aaaaaaaa",
+      "Export Stranger",
     )
 
     const res = await app.fetch(
@@ -482,30 +655,6 @@ describe("Datasets Routes Integration", () => {
     expect(res.status).toBe(400)
   })
 
-  it<ApiTestContext>("POST /{datasetSlug}/rows/export enqueues when recipient is an org member", async ({
-    app,
-    database,
-  }) => {
-    const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
-      app,
-      database,
-      "bbbbbbbbbbbb1111aaaaaaaa",
-      "Export Rows Ok",
-    )
-
-    const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${projectSlug}/datasets/${datasetSlug}/rows/export`, {
-        method: "POST",
-        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
-        body: JSON.stringify({ recipient: `${tenant.userId}@example.com` }),
-      }),
-    )
-
-    expect(res.status).toBe(202)
-    const body = (await res.json()) as { status: string }
-    expect(body.status).toBe("queued")
-  })
-
   it<ApiTestContext>("POST /{datasetSlug}/rows/export validates `recipient` shape with 400", async ({
     app,
     database,
@@ -513,7 +662,7 @@ describe("Datasets Routes Integration", () => {
     const { tenant, projectSlug, datasetSlug } = await createDatasetForRows(
       app,
       database,
-      "cccccccccccc1111aaaaaaaa",
+      "eeeeeeeeeeee2222aaaaaaaa",
       "Export Validate",
     )
 

@@ -13,6 +13,7 @@ import {
   listDatasets,
   listRows,
   parseDatasetCsv,
+  prepareDatasetExportUseCase,
   type TraceSelection,
   type TraceSource,
   updateDatasetDetails,
@@ -338,18 +339,18 @@ export const deleteDatasetFunction = createServerFn({ method: "POST" })
     )
   })
 
-interface EnqueuedExportResult {
-  readonly type: "enqueued"
-}
+type DownloadDatasetExportResult =
+  | { readonly type: "direct"; readonly csv: string; readonly filename: string }
+  | { readonly type: "enqueued" }
 
-export const enqueueDatasetExport = createServerFn({ method: "POST" })
+export const downloadDatasetExport = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       datasetId: z.string(),
       selection: rowSelectionSchema,
     }),
   )
-  .handler(async ({ data }): Promise<EnqueuedExportResult> => {
+  .handler(async ({ data }): Promise<DownloadDatasetExportResult> => {
     const session = await ensureSession()
     const email = session?.user?.email
     const organizationId = getSessionOrganizationId(session)
@@ -360,43 +361,36 @@ export const enqueueDatasetExport = createServerFn({ method: "POST" })
 
     const orgId = OrganizationId(organizationId)
     const datasetId = DatasetId(data.datasetId)
-    const dataset = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* DatasetRepository
-        return yield* repo.findById(datasetId)
-      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
+
+    const result = await Effect.runPromise(
+      prepareDatasetExportUseCase({
+        datasetId,
+        selection: data.selection,
+        organizationId,
+        recipientEmail: email,
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        withTracing,
+      ),
     )
 
+    if (result.kind === "direct") {
+      return { type: "direct" as const, csv: result.csv, filename: result.filename }
+    }
+
+    // needsEnqueue — only here do we pay the queue/rate-limit cost.
     await enforceExportRequestRateLimit({
       redis: getRedisClient(),
       organizationId,
-      projectId: dataset.projectId,
+      projectId: result.payload.projectId,
       recipientEmail: email,
     })
 
-    const { selection } = data
     const publisher = await getQueuePublisher()
+    await Effect.runPromise(publisher.publish("exports", "generate", result.payload))
 
-    // Convert selection to the format expected by the exports worker
-    const exportSelection =
-      selection.mode === "selected"
-        ? { mode: "selected" as const, rowIds: selection.rowIds }
-        : selection.mode === "allExcept"
-          ? { mode: "allExcept" as const, rowIds: selection.rowIds }
-          : { mode: "all" as const }
-
-    await Effect.runPromise(
-      publisher.publish("exports", "generate", {
-        kind: "dataset",
-        datasetId: data.datasetId,
-        selection: exportSelection,
-        organizationId,
-        projectId: dataset.projectId,
-        recipientEmail: email,
-      }),
-    )
-
-    return { type: "enqueued" }
+    return { type: "enqueued" as const }
   })
 
 export const createDatasetFunction = createServerFn({ method: "POST" })

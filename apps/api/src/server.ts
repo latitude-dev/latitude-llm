@@ -13,6 +13,7 @@ import {
   getPostgresClient,
   getQueuePublisher,
   getRedisClient,
+  getStorageDisk,
   getWorkflowQuerier,
   getWorkflowStarter,
 } from "./clients.ts"
@@ -62,6 +63,7 @@ const startServer = async () => {
     queuePublisher,
     workflowStarter,
     workflowQuerier,
+    storageDisk: getStorageDisk(),
     logTouchBuffer: true,
   })
 

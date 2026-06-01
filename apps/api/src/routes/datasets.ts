@@ -8,12 +8,21 @@ import {
   insertRows,
   listDatasets,
   listRows,
+  prepareDatasetDownloadUseCase,
   updateDatasetDetails,
 } from "@domain/datasets"
 import { exportSelectionSchema } from "@domain/exports"
 import { MembershipRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
-import { BadRequestError, DatasetId, DatasetRowId, ProjectId, type SortDirection, TraceId } from "@domain/shared"
+import {
+  BadRequestError,
+  DatasetId,
+  DatasetRowId,
+  OrganizationId,
+  ProjectId,
+  type SortDirection,
+  TraceId,
+} from "@domain/shared"
 import { resolveTraceIdsFromRef, type TracesRef } from "@domain/spans"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import {
@@ -29,6 +38,7 @@ import {
   ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { StorageDiskLive } from "@platform/storage-object"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
@@ -42,7 +52,9 @@ import {
 import { DatasetRowSchema, toDatasetRowResponse } from "../openapi/entities/dataset-row.ts"
 import { Paginated, PaginatedQueryParamsSchema } from "../openapi/pagination.ts"
 import {
+  errorResponse,
   jsonBody,
+  jsonResponse,
   openApiNoContentResponses,
   openApiResponses,
   PROTECTED_SECURITY,
@@ -445,17 +457,45 @@ const ExportRowsBodySchema = z
     selection: exportSelectionSchema.optional().describe('Rows to export. Defaults to `{ mode: "all" }` when omitted.'),
     recipient: z
       .email()
+      .optional()
       .describe(
-        "Email address the export download link is sent to. Must belong to a member of the requesting organization.",
+        "Email address to send the download link to when the export is too large for the synchronous path. Must belong to a member of the requesting organization. Ignored when the export fits the synchronous path; required for the async email flow.",
       ),
   })
   .openapi("ExportDatasetRowsBody")
 
-const ExportRowsResponseSchema = z
+const ExportReadyResponseSchema = z
+  .object({
+    status: z.literal("ready").describe('Always `"ready"`. The CSV is available at `downloadUrl`.'),
+    downloadUrl: z
+      .string()
+      .describe("Short-lived signed URL pointing to the CSV in object storage. Follow it with a plain HTTP GET."),
+    filename: z.string().describe("Suggested filename for the downloaded CSV."),
+    expiresAt: z.string().describe("ISO-8601 timestamp at which `downloadUrl` stops working."),
+    rowCount: z.number().int().nonnegative().describe("Number of rows included in the export."),
+  })
+  .openapi("ExportDatasetRowsReadyResponse")
+
+const ExportQueuedResponseSchema = z
   .object({
     status: z.literal("queued").describe('Always `"queued"`. The CSV is emailed to `recipient` when ready.'),
+    recipient: z.email().describe("Email address the export download link will be sent to."),
+    rowCount: z.number().int().nonnegative().describe("Number of rows the export will produce."),
   })
-  .openapi("ExportDatasetRowsResponse")
+  .openapi("ExportDatasetRowsQueuedResponse")
+
+const ExportTooLargeResponseSchema = z
+  .object({
+    status: z.literal("too_large").describe('Always `"too_large"`. The export exceeds the synchronous threshold.'),
+    rowCount: z.number().int().nonnegative().describe("Number of rows the export would have produced."),
+    threshold: z.number().int().positive().describe("Maximum row count this endpoint will generate synchronously."),
+    recommendedAction: z
+      .string()
+      .describe(
+        "Instructions for the caller — typically an LLM — on how to recover: ask the end user for an email address and retry the same call with `recipient` set to it.",
+      ),
+  })
+  .openapi("ExportDatasetRowsTooLargeResponse")
 
 const listDatasetRowsEndpoint = datasetEndpoint({
   route: createRoute({
@@ -743,43 +783,51 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
     name: "exportDatasetRows",
     tags: ["Datasets"],
     ...datasetsFernGroup("exportRows"),
-    summary: "Export dataset rows (async)",
+    summary: "Export dataset rows",
     description:
-      "Exports the selected rows as CSV. The download link is emailed to `recipient` when the file is ready. The recipient must be a member of the requesting organization.",
+      'Exports the selected rows as CSV. Returns one of three outcomes, discriminated by `status`:\n\n- `"ready"` — the export fit in the synchronous path. Body carries a short-lived signed `downloadUrl` the caller follows with a plain HTTP GET.\n- `"queued"` — the export was too large for the synchronous path AND a `recipient` was supplied. The CSV will be emailed to that address. The recipient must be a member of the requesting organization.\n- `"too_large"` — the export was too large for the synchronous path AND no `recipient` was supplied. Body includes a `recommendedAction` describing how to recover (typically: ask the user for an email and retry with `recipient` set).',
     security: PROTECTED_SECURITY,
     request: { params: DatasetSlugParamsSchema, body: jsonBody(ExportRowsBodySchema) },
-    responses: openApiResponses({ status: 202, schema: ExportRowsResponseSchema, description: "Export enqueued" }),
+    responses: {
+      200: jsonResponse(ExportReadyResponseSchema, "CSV ready at the signed URL"),
+      202: jsonResponse(ExportQueuedResponseSchema, "Export queued; download link will be emailed"),
+      400: errorResponse("Validation error"),
+      401: errorResponse("Unauthorized"),
+      404: errorResponse("Not found"),
+      413: jsonResponse(
+        ExportTooLargeResponseSchema,
+        "Export exceeds the synchronous threshold and no `recipient` was provided",
+      ),
+    },
   }),
   handler: async (c) => {
     const { projectSlug, datasetSlug } = c.req.valid("param")
     const body = c.req.valid("json")
     const organizationId = c.var.organization.id
 
-    await Effect.runPromise(
+    // Resolve project + dataset once. We need the projectId and dataset.id for
+    // the queue payload, and the membership check on `recipient` (if supplied)
+    // should fail fast before we count rows or upload anything.
+    const { projectId, datasetId } = await Effect.runPromise(
       Effect.gen(function* () {
         const projectRepo = yield* ProjectRepository
         const project = yield* projectRepo.findBySlug(projectSlug)
-        const projectId = ProjectId(project.id as string)
+        const pid = ProjectId(project.id as string)
 
         const datasetRepo = yield* DatasetRepository
-        const dataset = yield* datasetRepo.findBySlug({ projectId, slug: datasetSlug })
+        const ds = yield* datasetRepo.findBySlug({ projectId: pid, slug: datasetSlug })
 
-        const membershipRepo = yield* MembershipRepository
-        const isMember = yield* membershipRepo.findMemberByEmail(body.recipient)
-        if (!isMember) {
-          return yield* new BadRequestError({
-            message: "`recipient` must belong to a member of this organization.",
-          })
+        if (body.recipient !== undefined) {
+          const membershipRepo = yield* MembershipRepository
+          const isMember = yield* membershipRepo.findMemberByEmail(body.recipient)
+          if (!isMember) {
+            return yield* new BadRequestError({
+              message: "`recipient` must belong to a member of this organization.",
+            })
+          }
         }
 
-        yield* c.var.queuePublisher.publish("exports", "generate", {
-          kind: "dataset",
-          organizationId: organizationId as string,
-          projectId: projectId as string,
-          datasetId: dataset.id as string,
-          recipientEmail: body.recipient,
-          selection: body.selection ?? { mode: "all" as const },
-        })
+        return { projectId: pid, datasetId: DatasetId(ds.id as string) }
       }).pipe(
         withPostgres(
           Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive, MembershipRepositoryLive),
@@ -790,7 +838,72 @@ const exportDatasetRowsEndpoint = datasetEndpoint({
       ),
     )
 
-    return c.json({ status: "queued" as const }, 202)
+    const selection = body.selection ?? { mode: "all" as const }
+
+    // Try the synchronous (small-dataset) path first. The use case counts
+    // rows, returns "ready" with a signed URL when it fits, or "tooLarge"
+    // when it doesn't — without uploading anything in the tooLarge case.
+    const downloadResult = await Effect.runPromise(
+      prepareDatasetDownloadUseCase({
+        datasetId,
+        organizationId: OrganizationId(organizationId as string),
+        selection,
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, c.var.postgresClient, organizationId),
+        withClickHouse(DatasetRowRepositoryLive, c.var.clickhouse, organizationId),
+        Effect.provide(StorageDiskLive(c.var.storageDisk)),
+        withTracing,
+      ),
+    )
+
+    if (downloadResult.kind === "ready") {
+      return c.json(
+        {
+          status: "ready" as const,
+          downloadUrl: downloadResult.downloadUrl,
+          filename: downloadResult.filename,
+          expiresAt: downloadResult.expiresAt,
+          rowCount: downloadResult.rowCount,
+        },
+        200,
+      )
+    }
+
+    // Too large for the synchronous path. With no recipient we tell the
+    // caller how to recover; with a recipient we queue the email flow.
+    if (body.recipient === undefined) {
+      return c.json(
+        {
+          status: "too_large" as const,
+          rowCount: downloadResult.rowCount,
+          threshold: downloadResult.threshold,
+          recommendedAction: `This dataset has ${downloadResult.rowCount} rows, above the ${downloadResult.threshold}-row synchronous limit. Ask the end user for an email address to send the download link to, then retry this call with \`recipient\` set to that email.`,
+        },
+        413,
+      )
+    }
+
+    await Effect.runPromise(
+      c.var.queuePublisher
+        .publish("exports", "generate", {
+          kind: "dataset",
+          organizationId: organizationId as string,
+          projectId: projectId as string,
+          datasetId: datasetId as string,
+          recipientEmail: body.recipient,
+          selection,
+        })
+        .pipe(withTracing),
+    )
+
+    return c.json(
+      {
+        status: "queued" as const,
+        recipient: body.recipient,
+        rowCount: downloadResult.rowCount,
+      },
+      202,
+    )
   },
 })
 
