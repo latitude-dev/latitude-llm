@@ -30,9 +30,18 @@ interface CommandDialogProps extends ComponentPropsWithRef<typeof CommandPrimiti
   /** Accessible name for the dialog (visually hidden). */
   readonly label?: string
   readonly children: ReactNode
+  /** Intercept Escape; call `event.preventDefault()` to keep the dialog open (e.g. to pop a sub-page). */
+  readonly onEscapeKeyDown?: (event: KeyboardEvent) => void
 }
 
-function CommandDialog({ open, onOpenChange, label = "Command palette", children, ...props }: CommandDialogProps) {
+function CommandDialog({
+  open,
+  onOpenChange,
+  label = "Command palette",
+  children,
+  onEscapeKeyDown,
+  ...props
+}: CommandDialogProps) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -44,6 +53,7 @@ function CommandDialog({ open, onOpenChange, label = "Command palette", children
         />
         <DialogPrimitive.Content
           aria-label={label}
+          {...(onEscapeKeyDown ? { onEscapeKeyDown } : {})}
           className={cn(
             "fixed top-[14vh] left-1/2 z-[80] w-[min(640px,calc(100vw---spacing(8)))] -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-popover shadow-2xl",
             "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

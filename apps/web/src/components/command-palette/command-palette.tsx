@@ -11,7 +11,7 @@ import {
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronLeftIcon } from "lucide-react"
-import { type KeyboardEvent, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useCommandPalette } from "./command-palette-provider.tsx"
 import { useGlobalCommands } from "./commands/use-global-commands.tsx"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
@@ -115,16 +115,23 @@ export function CommandPalette() {
     void command.perform()
   }
 
-  // Backspace on an empty query steps back out of a sub-page.
-  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Backspace" && search === "" && pageStack.length > 0) {
+  // Escape steps back out of a sub-page; only the root page closes the palette. Preventing
+  // the default keeps Radix from dismissing the dialog while we pop the stack.
+  const handleEscapeKeyDown = (event: KeyboardEvent) => {
+    if (pageStack.length > 0) {
       event.preventDefault()
       popPage()
     }
   }
 
   return (
-    <CommandDialog open={open} onOpenChange={handleOpenChange} loop filter={commandFilter}>
+    <CommandDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      loop
+      filter={commandFilter}
+      onEscapeKeyDown={handleEscapeKeyDown}
+    >
       {currentPage ? (
         <button
           type="button"
@@ -141,7 +148,6 @@ export function CommandPalette() {
         }
         value={search}
         onValueChange={setSearch}
-        onKeyDown={handleInputKeyDown}
       />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
@@ -181,15 +187,9 @@ export function CommandPalette() {
         <span className="flex items-center gap-1">
           <kbd className="rounded bg-muted px-1 font-mono">↵</kbd> select
         </span>
-        {currentPage ? (
-          <span className="flex items-center gap-1">
-            <kbd className="rounded bg-muted px-1 font-mono">⌫</kbd> back
-          </span>
-        ) : (
-          <span className="flex items-center gap-1">
-            <kbd className="rounded bg-muted px-1 font-mono">esc</kbd> close
-          </span>
-        )}
+        <span className="flex items-center gap-1">
+          <kbd className="rounded bg-muted px-1 font-mono">esc</kbd> {currentPage ? "back" : "close"}
+        </span>
       </CommandFooter>
     </CommandDialog>
   )
