@@ -84,6 +84,7 @@ export {
   type IssueSearchCandidate,
   type IssueWithLifecycle,
   type ListIssuesRepositoryInput,
+  type OrgIssueSearchHit,
 } from "./ports/issue-repository.ts"
 export {
   type ApplyIssueLifecycleCommandError,
@@ -211,6 +212,11 @@ export {
   type RetrievalResult,
   rerankIssueCandidatesUseCase,
 } from "./use-cases/rerank-issue-candidates.ts"
+export {
+  type OrgIssueSearchItem,
+  type SearchOrgIssuesInput,
+  searchOrgIssuesUseCase,
+} from "./use-cases/search-org-issues.ts"
 export {
   type SweepEscalatingIssuesPublish,
   type SweepEscalatingIssuesResult,

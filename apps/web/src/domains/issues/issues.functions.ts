@@ -17,6 +17,8 @@ import {
   type ListIssuesResult,
   listIssuesUseCase,
   listIssueTracesUseCase,
+  type OrgIssueSearchItem,
+  searchOrgIssuesUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
 } from "@domain/issues"
 import {
@@ -341,6 +343,71 @@ export const listIssues = createServerFn({ method: "GET" })
     )
 
     return toIssuesListResultRecord(result)
+  })
+
+export interface OrgIssueSearchRecord {
+  readonly id: string
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly projectName: string
+  readonly slug: string
+  readonly name: string
+  readonly states: readonly string[]
+}
+
+const toOrgIssueSearchRecord = (item: OrgIssueSearchItem): OrgIssueSearchRecord => ({
+  id: item.id,
+  projectId: item.projectId,
+  projectSlug: item.projectSlug,
+  projectName: item.projectName,
+  slug: item.slug,
+  name: item.name,
+  states: item.states,
+})
+
+/**
+ * Org-wide issue search for the Command Palette. Unlike {@link listIssues} (a project-scoped
+ * analytics pipeline), this is a lightweight search across every project in the caller's
+ * organization. The lexical tier runs always; the semantic tier runs only when `semantic` is set
+ * (the debounced call), embedding the query first. Each result carries its owning project's
+ * slug/name and derived lifecycle states.
+ */
+export const searchOrgIssues = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      searchQuery: z.string().min(1).max(500),
+      semantic: z.boolean().optional(),
+      limit: z.number().int().min(1).max(25).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<readonly OrgIssueSearchRecord[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+    const redisClient = getRedisClient()
+
+    const results = await Effect.runPromise(
+      Effect.gen(function* () {
+        const search = data.semantic
+          ? yield* embedIssueSearchQueryUseCase({
+              organizationId,
+              // Org-wide search has no single project; `projectId` is telemetry-only on this
+              // use-case (it does not scope the embedding), so we tag it with the org id.
+              projectId: organizationId,
+              query: data.searchQuery,
+            })
+          : undefined
+
+        return yield* searchOrgIssuesUseCase({
+          organizationId: orgId,
+          query: data.searchQuery,
+          ...(search ? { normalizedEmbedding: search.normalizedEmbedding } : {}),
+          ...(data.limit !== undefined ? { limit: data.limit } : {}),
+        })
+      }).pipe(withPostgres(IssueRepositoryLive, pgClient, orgId), withAi(AIEmbedLive, redisClient), withTracing),
+    )
+
+    return results.map(toOrgIssueSearchRecord)
   })
 
 export const getIssue = createServerFn({ method: "GET" })

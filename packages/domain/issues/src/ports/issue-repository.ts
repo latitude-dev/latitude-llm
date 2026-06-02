@@ -34,6 +34,18 @@ export interface IssueSearchCandidate {
   readonly score: number
 }
 
+/**
+ * One org-wide search hit for the Command Palette: the matched issue (with lifecycle flags so the
+ * caller can derive its states without a second read) plus its owning project's slug/name and the
+ * relevance score of whichever tier produced it.
+ */
+export interface OrgIssueSearchHit {
+  readonly issue: IssueWithLifecycle
+  readonly projectSlug: string
+  readonly projectName: string
+  readonly score: number
+}
+
 export interface ListIssuesRepositoryInput {
   readonly projectId: ProjectId
   readonly limit: number
@@ -57,6 +69,23 @@ export interface IssueRepositoryShape {
     readonly query: string
     readonly normalizedEmbedding: readonly number[]
   }): Effect.Effect<readonly IssueSearchCandidate[], RepositoryError, SqlClient>
+  /**
+   * Org-wide issue search across every project in the organization (RLS-scoped to the caller's
+   * org), powering the Command Palette. Two tiers selected by `normalizedEmbedding`:
+   *
+   * - **Lexical** (no embedding): full-text match on the issue's search document OR a
+   *   case-insensitive substring match on its name. Instant and index-backed (GIN).
+   * - **Semantic** (embedding present): the hybrid vector + lexical relevance blend, surfacing
+   *   related issues whose names don't literally contain the query.
+   *
+   * Each hit carries lifecycle flags and the owning project's slug/name. Issues in soft-deleted
+   * projects are excluded. The caller merges the two tiers (lexical first) and caps the result.
+   */
+  searchOrgWide(input: {
+    readonly query: string
+    readonly normalizedEmbedding?: readonly number[]
+    readonly limit: number
+  }): Effect.Effect<readonly OrgIssueSearchHit[], RepositoryError, SqlClient>
   /**
    * Point-lookup by `(projectId, slug)`. Slugs are unique within a project,
    * so this is the natural read path for slug-keyed API endpoints.

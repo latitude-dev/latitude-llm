@@ -10,6 +10,7 @@ import { Effect } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { alertIncidents as alertIncidentsTable } from "../schema/alert-incidents.ts"
 import { issues as issuesTable } from "../schema/issues.ts"
+import { projects as projectsTable } from "../schema/projects.ts"
 import { scores as scoresTable } from "../schema/scores.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
@@ -651,6 +652,135 @@ describe("IssueRepositoryLive", () => {
       const findByIdsFlags = new Map(findByIdsResult.map((item) => [item.id, item.lifecycle] as const))
       expect(findByIdsFlags.get(escalatingIssue.id)).toEqual({ isEscalating: true, isRegressed: false })
       expect(findByIdsFlags.get(regressedIssue.id)).toEqual({ isEscalating: false, isRegressed: true })
+    })
+  })
+})
+
+describe("IssueRepositoryLive searchOrgWide", () => {
+  let database: InMemoryPostgres
+
+  const iid = (prefix: string) => prefix.padEnd(24, "x").slice(0, 24)
+
+  // Issue reads go through `issueSchema.parse`, which requires 24-char cuid ids — pad org/project ids.
+  const searchOrgId = OrganizationId(iid("org-issue-search-test"))
+  const otherOrgId = OrganizationId(iid("org-issue-search-othr"))
+  const projA = ProjectId(iid("proj-issue-search-a"))
+  const projB = ProjectId(iid("proj-issue-search-b"))
+  const projDeleted = ProjectId(iid("proj-issue-search-del"))
+  const projOther = ProjectId(iid("proj-issue-search-oth"))
+  const baseTime = new Date("2026-04-01T00:00:00.000Z")
+
+  const issueRow = (
+    id: string,
+    org: OrganizationId,
+    project: ProjectId,
+    name: string,
+    extra: Partial<typeof issuesTable.$inferInsert> = {},
+  ): typeof issuesTable.$inferInsert => ({
+    id: iid(id),
+    organizationId: org,
+    projectId: project,
+    slug: toSlug(name),
+    name,
+    description: `Description for ${name}`,
+    source: "annotation",
+    centroid: createIssueCentroid(),
+    centroidEmbedding: null,
+    clusteredAt: baseTime,
+    escalatedAt: null,
+    resolvedAt: null,
+    ignoredAt: null,
+    createdAt: baseTime,
+    updatedAt: baseTime,
+    ...extra,
+  })
+
+  const search = (input: {
+    readonly query: string
+    readonly normalizedEmbedding?: readonly number[]
+    readonly limit: number
+  }) =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* IssueRepository
+        return yield* repo.searchOrgWide(input)
+      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, searchOrgId)),
+    )
+
+  beforeAll(async () => {
+    database = await createInMemoryPostgres()
+
+    await database.db.insert(projectsTable).values([
+      { id: projA, organizationId: searchOrgId, name: "Alpha Project", slug: "iss-alpha" },
+      { id: projB, organizationId: searchOrgId, name: "Beta Project", slug: "iss-beta" },
+      { id: projDeleted, organizationId: searchOrgId, name: "Gone Project", slug: "iss-gone", deletedAt: baseTime },
+      { id: projOther, organizationId: otherOrgId, name: "Other Org Project", slug: "iss-other" },
+    ])
+
+    // Lexical issues (no embedding) across two live projects, a deleted project, and another org.
+    await database.db
+      .insert(issuesTable)
+      .values([
+        issueRow("isl1", searchOrgId, projA, "Payment timeout errors"),
+        issueRow("isl2", searchOrgId, projB, "Checkout timeout"),
+        issueRow("isl3", searchOrgId, projA, "Unrelated latency"),
+        issueRow("isl4", searchOrgId, projDeleted, "Timeout in deleted project"),
+        issueRow("isl5", otherOrgId, projOther, "Timeout secret"),
+      ])
+
+    // Semantic issues: identical 1-hot embedding in two live projects + one in another org. The
+    // centroid must have positive mass + the right model to satisfy the embedding consistency check.
+    const sharedEmbedding = makeEmbedding({ 0: 1 })
+    const embeddedCentroid = { ...createIssueCentroid(), base: sharedEmbedding, mass: 1 }
+    const embedded = { centroid: embeddedCentroid, centroidEmbedding: sharedEmbedding }
+    await database.db
+      .insert(issuesTable)
+      .values([
+        issueRow("ise1", searchOrgId, projA, "Zeta alpha", embedded),
+        issueRow("ise2", searchOrgId, projB, "Zeta beta", embedded),
+        issueRow("ise3", otherOrgId, projOther, "Zeta secret", embedded),
+      ])
+  })
+
+  afterAll(async () => {
+    await closeInMemoryPostgres(database)
+  })
+
+  describe("lexical tier (no embedding)", () => {
+    it("matches across projects and tags each hit with its project", async () => {
+      const results = await search({ query: "timeout", limit: 25 })
+      const byName = new Map(results.map((r) => [r.issue.name, r]))
+      expect(byName.has("Payment timeout errors")).toBe(true)
+      expect(byName.has("Checkout timeout")).toBe(true)
+      expect(byName.get("Payment timeout errors")).toMatchObject({
+        projectSlug: "iss-alpha",
+        projectName: "Alpha Project",
+      })
+      expect(byName.get("Checkout timeout")).toMatchObject({ projectSlug: "iss-beta", projectName: "Beta Project" })
+    })
+
+    it("excludes issues in deleted projects and other organizations", async () => {
+      const results = await search({ query: "timeout", limit: 25 })
+      const names = results.map((r) => r.issue.name)
+      expect(names).not.toContain("Timeout in deleted project")
+      expect(names).not.toContain("Timeout secret")
+      expect(names).not.toContain("Unrelated latency")
+    })
+
+    it("respects the limit", async () => {
+      const results = await search({ query: "timeout", limit: 1 })
+      expect(results).toHaveLength(1)
+    })
+  })
+
+  describe("semantic tier (embedding)", () => {
+    it("matches by embedding across projects and excludes other orgs", async () => {
+      const results = await search({ query: "zeta", normalizedEmbedding: makeEmbedding({ 0: 1 }), limit: 25 })
+      const names = results.map((r) => r.issue.name)
+      expect(names).toContain("Zeta alpha")
+      expect(names).toContain("Zeta beta")
+      expect(names).not.toContain("Zeta secret")
+      expect(new Set(results.filter((r) => r.issue.name.startsWith("Zeta")).map((r) => r.issue.projectId)).size).toBe(2)
     })
   })
 })

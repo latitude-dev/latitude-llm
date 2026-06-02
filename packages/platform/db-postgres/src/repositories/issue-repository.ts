@@ -13,13 +13,15 @@ import {
   issueSchema,
   MIN_OCCURRENCES_FOR_VISIBILITY,
   normalizeIssueCentroid,
+  type OrgIssueSearchHit,
 } from "@domain/issues"
 import { IssueId, NotFoundError, type ProjectId, RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, desc, eq, getTableColumns, inArray, isNotNull, ne, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
 import { issues } from "../schema/issues.ts"
+import { projects } from "../schema/projects.ts"
 import { scores } from "../schema/scores.ts"
 
 // Lifecycle flags derived from `alert_incidents` are joined onto every
@@ -92,6 +94,19 @@ const toIssueWithLifecycle = (row: IssueRowWithLifecycle): IssueWithLifecycle =>
   }
   return Object.assign({}, issue, { lifecycle })
 }
+
+type OrgIssueSearchRow = IssueRowWithLifecycle & {
+  readonly projectSlug: string
+  readonly projectName: string
+  readonly score: number
+}
+
+const toOrgIssueSearchHit = (row: OrgIssueSearchRow): OrgIssueSearchHit => ({
+  issue: toIssueWithLifecycle(row),
+  projectSlug: row.projectSlug,
+  projectName: row.projectName,
+  score: Number(row.score),
+})
 
 const validateVector = (
   vector: readonly number[],
@@ -321,6 +336,77 @@ const issueRepositoryCoreLive = Layer.effect(
             ...row,
             issueId: IssueId(row.issueId),
           }))
+        }),
+
+      searchOrgWide: ({ query, normalizedEmbedding, limit }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const lexicalQuery = sql`websearch_to_tsquery('english', ${query})`
+
+          // Lexical tier: GIN-backed full-text match OR a literal name substring. No embedding
+          // round-trip, so this is the instant, index-backed path.
+          if (normalizedEmbedding === undefined) {
+            const lexicalScore = sql<number>`ts_rank_cd(${issues.searchDocument}, ${lexicalQuery})::double precision`
+            const rows = yield* sqlClient.query((db, organizationId) =>
+              db
+                .select({
+                  ...issueColumnsWithLifecycle,
+                  projectSlug: projects.slug,
+                  projectName: projects.name,
+                  score: lexicalScore,
+                })
+                .from(issues)
+                .innerJoin(projects, eq(projects.id, issues.projectId))
+                .where(
+                  and(
+                    eq(issues.organizationId, organizationId),
+                    isNull(projects.deletedAt),
+                    or(sql`${issues.searchDocument} @@ ${lexicalQuery}`, ilike(issues.name, `%${query}%`)),
+                  ),
+                )
+                .orderBy(desc(lexicalScore), desc(issues.updatedAt), asc(issues.id))
+                .limit(limit),
+            )
+            return rows.map(toOrgIssueSearchHit)
+          }
+
+          // Semantic tier: the same vector + lexical blend `hybridSearch` uses, but org-wide.
+          // NB: `centroid_embedding` has no ANN index (see schema) — this is an exact cosine scan
+          // over every org issue. Acceptable for the debounced, capped palette tier; revisit with
+          // an HNSW index if a large org regresses.
+          const vector = yield* validateVector(normalizedEmbedding, "IssueRepository.searchOrgWide")
+          const queryVector = sql.raw(`'[${vector.join(",")}]'::vector`)
+          const vectorScore = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
+          const lexicalScore = sql<number>`least(
+            1::double precision,
+            greatest(0::double precision, ts_rank_cd(${issues.searchDocument}, ${lexicalQuery})::double precision)
+          )`
+          const score = sql<number>`(${ISSUE_DISCOVERY_SEARCH_RATIO}::double precision * ${vectorScore} + ${
+            1 - ISSUE_DISCOVERY_SEARCH_RATIO
+          }::double precision * ${lexicalScore})`
+
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select({
+                ...issueColumnsWithLifecycle,
+                projectSlug: projects.slug,
+                projectName: projects.name,
+                score,
+              })
+              .from(issues)
+              .innerJoin(projects, eq(projects.id, issues.projectId))
+              .where(
+                and(
+                  eq(issues.organizationId, organizationId),
+                  isNull(projects.deletedAt),
+                  isNotNull(issues.centroidEmbedding),
+                  sql`(${score} >= ${ISSUE_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
+                ),
+              )
+              .orderBy(desc(score), desc(vectorScore), desc(issues.updatedAt), asc(issues.id))
+              .limit(limit),
+          )
+          return rows.map(toOrgIssueSearchHit)
         }),
 
       save: (issue: Issue) =>

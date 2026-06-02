@@ -9,8 +9,16 @@ import type {
   IssuesListResultRecord,
   IssueTracePageRecord,
   IssueTraceRecord,
+  OrgIssueSearchRecord,
 } from "./issues.functions.ts"
-import { countIssueTraces, getIssue, getIssueDetail, listIssues, listIssueTraces } from "./issues.functions.ts"
+import {
+  countIssueTraces,
+  getIssue,
+  getIssueDetail,
+  listIssues,
+  listIssueTraces,
+  searchOrgIssues,
+} from "./issues.functions.ts"
 
 const queryClient = getQueryClient()
 const DEFAULT_ISSUES_BATCH_SIZE = 50
@@ -199,6 +207,28 @@ export function useIssues(input: {
     isReloading: isPlaceholderData,
     infiniteScroll,
   }
+}
+
+const ORG_SEARCH_LIMIT = 10
+
+/**
+ * Org-wide issue search for the Command Palette. One tier per call: pass `semantic: false` for the
+ * instant lexical tier and `semantic: true` for the debounced semantic tier. Results span every
+ * project in the organization, each carrying its owning project's slug/name and derived states.
+ */
+export function useIssuesOrgSearch(
+  searchQuery: string,
+  { semantic = false, enabled = true }: { readonly semantic?: boolean; readonly enabled?: boolean } = {},
+) {
+  const trimmed = searchQuery.trim()
+  const { data, isLoading } = useQuery({
+    queryKey: ["issues", "orgSearch", trimmed, semantic],
+    queryFn: (): Promise<readonly OrgIssueSearchRecord[]> =>
+      searchOrgIssues({ data: { searchQuery: trimmed, semantic, limit: ORG_SEARCH_LIMIT } }),
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+    enabled: enabled && trimmed.length > 0,
+  })
+  return { data: data ?? [], isLoading }
 }
 
 export function useIssueDetail({
