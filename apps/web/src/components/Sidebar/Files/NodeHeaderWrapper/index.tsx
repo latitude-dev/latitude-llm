@@ -30,6 +30,7 @@ const MODIFICATION_LABELS: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.Updated]: 'Updated',
   [ModifiedDocumentType.UpdatedPath]: 'Renamed',
   [ModifiedDocumentType.Deleted]: 'Deleted',
+  [ModifiedDocumentType.UpdatedByReference]: 'Updated by reference',
 }
 export type NodeHeaderWrapperProps = {
   depth: number
