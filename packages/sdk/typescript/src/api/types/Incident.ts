@@ -7,11 +7,11 @@ export interface Incident {
     organizationId: string;
     /** Project this incident belongs to. */
     projectId: string;
-    /** Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a saved search. */
+    /** Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search. */
     sourceType: Incident.SourceType;
     /** Id of the entity that triggered the incident (matches `sourceType`). */
     sourceId: string;
-    /** Reason the incident opened. `issue.new` fires when a brand-new issue is discovered; `issue.regressed` when a resolved issue starts occurring again; `issue.escalating` when an existing issue's occurrence rate exceeds its seasonal baseline. The `savedSearch.*` kinds are raised by monitors watching a saved search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when the match count crosses a configured threshold, and `savedSearch.escalating` when it stays elevated for a sustained window. */
+    /** Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window. */
     kind: Incident.Kind;
     /** Severity bucket assigned to the incident: `low`, `medium`, or `high`. */
     severity: Incident.Severity;
@@ -24,13 +24,13 @@ export interface Incident {
 }
 
 export namespace Incident {
-    /** Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a saved search. */
+    /** Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search. */
     export const SourceType = {
         Issue: "issue",
         SavedSearch: "savedSearch",
     } as const;
     export type SourceType = (typeof SourceType)[keyof typeof SourceType];
-    /** Reason the incident opened. `issue.new` fires when a brand-new issue is discovered; `issue.regressed` when a resolved issue starts occurring again; `issue.escalating` when an existing issue's occurrence rate exceeds its seasonal baseline. The `savedSearch.*` kinds are raised by monitors watching a saved search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when the match count crosses a configured threshold, and `savedSearch.escalating` when it stays elevated for a sustained window. */
+    /** Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window. */
     export const Kind = {
         IssueNew: "issue.new",
         IssueRegressed: "issue.regressed",

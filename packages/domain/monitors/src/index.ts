@@ -2,6 +2,7 @@ export type { Monitor, MonitorAlert } from "./entities/monitor.ts"
 export { monitorAlertSchema, monitorSchema } from "./entities/monitor.ts"
 export {
   AlertConditionMismatchError,
+  LastMonitorAlertError,
   MonitorAlertNotFoundError,
   SystemMonitorForbiddenError,
 } from "./errors.ts"
@@ -17,8 +18,19 @@ export type {
   SystemMonitorDefinition,
 } from "./system-monitors.ts"
 export { SYSTEM_MONITOR_DEFINITIONS } from "./system-monitors.ts"
+export type { CreateMonitorError, CreateMonitorInput } from "./use-cases/create-monitor.ts"
+export { createMonitorUseCase } from "./use-cases/create-monitor.ts"
+export type {
+  BuildMonitorAlertError,
+  CreateMonitorAlertError,
+  CreateMonitorAlertInput,
+  MonitorAlertInput,
+} from "./use-cases/create-monitor-alert.ts"
+export { buildMonitorAlert, createMonitorAlertUseCase } from "./use-cases/create-monitor-alert.ts"
 export type { DeleteMonitorError, DeleteMonitorInput } from "./use-cases/delete-monitor.ts"
 export { deleteMonitorUseCase } from "./use-cases/delete-monitor.ts"
+export type { DeleteMonitorAlertError, DeleteMonitorAlertInput } from "./use-cases/delete-monitor-alert.ts"
+export { deleteMonitorAlertUseCase } from "./use-cases/delete-monitor-alert.ts"
 export type { GetMonitorBySlugInput } from "./use-cases/get-monitor-by-slug.ts"
 export { getMonitorBySlugUseCase } from "./use-cases/get-monitor-by-slug.ts"
 export type {
@@ -39,7 +51,7 @@ export type {
   ProvisionSystemMonitorsError,
   ProvisionSystemMonitorsInput,
 } from "./use-cases/provision-system-monitors.ts"
-export { provisionSystemMonitorsUseCase } from "./use-cases/provision-system-monitors.ts"
+export { buildSystemMonitors, provisionSystemMonitorsUseCase } from "./use-cases/provision-system-monitors.ts"
 export type { UpdateMonitorError, UpdateMonitorInput } from "./use-cases/update-monitor.ts"
 export { updateMonitorUseCase } from "./use-cases/update-monitor.ts"
 export type { UpdateMonitorAlertError, UpdateMonitorAlertInput } from "./use-cases/update-monitor-alert.ts"

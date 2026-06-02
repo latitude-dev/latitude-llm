@@ -141,7 +141,7 @@ function DatasetsPage() {
           <Layout.ActionsRow>
             <Layout.ActionRowItem />
             <Layout.ActionRowItem>
-              <Button variant="outline" onClick={handleCreate} disabled={creating} isLoading={creating}>
+              <Button onClick={handleCreate} disabled={creating} isLoading={creating}>
                 <Icon size="sm" icon={DatabaseAddIcon} />
                 Dataset
               </Button>

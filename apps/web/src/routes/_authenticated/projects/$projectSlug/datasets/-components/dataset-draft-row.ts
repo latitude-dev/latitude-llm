@@ -14,6 +14,7 @@ export function createDraftRowRecord(datasetId: string): DatasetRowRecord {
     datasetId,
     input: "",
     output: "",
+    expectedOutput: "",
     metadata: "",
     createdAt: new Date().toISOString(),
     version: 0,

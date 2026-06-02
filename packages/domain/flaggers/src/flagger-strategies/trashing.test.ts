@@ -15,7 +15,7 @@ describe("trashingStrategy.detectDeterministically", () => {
       const result = trashingStrategy.detectDeterministically?.(trace)
       expect(result?.kind).toBe("matched")
       if (result?.kind === "matched") {
-        expect(result.feedback).toMatch(/Trashing/i)
+        expect(result.feedback).toMatch(/Thrashing/)
         expect(result.feedback).toMatch(/3 times/)
       }
     })

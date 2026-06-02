@@ -12,6 +12,7 @@ export const updateRow = Effect.fn("datasets.updateRow")(function* (args: {
   readonly rowId: DatasetRowId
   readonly input: RowFieldValue
   readonly output: RowFieldValue
+  readonly expectedOutput: RowFieldValue
   readonly metadata: RowFieldValue
 }) {
   yield* Effect.annotateCurrentSpan("datasetId", args.datasetId)
@@ -38,6 +39,7 @@ export const updateRow = Effect.fn("datasets.updateRow")(function* (args: {
       version: version.version,
       input: args.input,
       output: args.output,
+      expectedOutput: args.expectedOutput,
       metadata: args.metadata,
     })
     .pipe(

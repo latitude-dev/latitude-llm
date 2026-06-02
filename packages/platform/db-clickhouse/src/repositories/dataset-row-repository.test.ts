@@ -49,6 +49,7 @@ describe("DatasetRowClickHouseRepository", () => {
           version: 2,
           input: { prompt: "updated" },
           output: { text: "v2" },
+          expectedOutput: { text: "golden" },
           metadata: {},
         }),
       )
@@ -57,6 +58,7 @@ describe("DatasetRowClickHouseRepository", () => {
 
       expect(row.input).toEqual({ prompt: "updated" })
       expect(row.output).toEqual({ text: "v2" })
+      expect(row.expectedOutput).toEqual({ text: "golden" })
       expect(row.version).toBe(2)
     })
 
@@ -79,6 +81,7 @@ describe("DatasetRowClickHouseRepository", () => {
             version: ver,
             input: { v: ver },
             output: {},
+            expectedOutput: {},
             metadata: {},
           }),
         )
@@ -239,6 +242,7 @@ describe("DatasetRowClickHouseRepository", () => {
           version: 2,
           input: "HOLA",
           output: "plain text output",
+          expectedOutput: "",
           metadata: "",
         }),
       )
@@ -452,6 +456,7 @@ describe("DatasetRowClickHouseRepository", () => {
           version: 3,
           input: { v: 3 },
           output: {},
+          expectedOutput: {},
           metadata: {},
         }),
       )

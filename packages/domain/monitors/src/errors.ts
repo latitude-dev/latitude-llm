@@ -15,13 +15,21 @@ export class SystemMonitorForbiddenError extends Data.TaggedError("SystemMonitor
   }
 }
 
-/** The alert id targeted by `updateMonitorAlertUseCase` is not a live alert of the monitor. */
+/** The alert id targeted by `updateMonitorAlertUseCase` / `deleteMonitorAlertUseCase` is not a live alert of the monitor. */
 export class MonitorAlertNotFoundError extends Data.TaggedError("MonitorAlertNotFoundError")<{
   readonly monitorId: string
   readonly alertId: string
 }> {
   readonly httpStatus = 404
   readonly httpMessage = "Monitor alert not found"
+}
+
+/** Deleting an alert would leave the monitor with no alerts — every monitor must keep at least one. */
+export class LastMonitorAlertError extends Data.TaggedError("LastMonitorAlertError")<{
+  readonly monitorId: string
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "A monitor must keep at least one alert"
 }
 
 /**

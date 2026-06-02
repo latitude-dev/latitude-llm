@@ -93,6 +93,7 @@ describe("updateRow", () => {
           rowId: DatasetRowId("nonexistent"),
           input: {},
           output: {},
+          expectedOutput: {},
           metadata: {},
         }),
       ),
@@ -108,6 +109,7 @@ describe("updateRow", () => {
         rowId: ROW_ID,
         input: { prompt: "updated" },
         output: { text: "v2" },
+        expectedOutput: { text: "golden" },
         metadata: { edited: true },
       }),
     )
@@ -122,6 +124,7 @@ describe("updateRow", () => {
     )
     expect(row.input).toEqual({ prompt: "updated" })
     expect(row.output).toEqual({ text: "v2" })
+    expect(row.expectedOutput).toEqual({ text: "golden" })
   })
 
   it("returns new versionId and version", async () => {
@@ -133,6 +136,7 @@ describe("updateRow", () => {
         rowId: ROW_ID,
         input: { prompt: "v3" },
         output: { text: "v3" },
+        expectedOutput: {},
         metadata: {},
       }),
     )

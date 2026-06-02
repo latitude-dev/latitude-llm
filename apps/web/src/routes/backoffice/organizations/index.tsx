@@ -137,11 +137,13 @@ function BackofficeOrganizationsByUsagePage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-border px-6 py-4">
-        <Text.H4 weight="semibold">Organizations by usage</Text.H4>
-        <Text.H6 color="foregroundMuted">
-          Sorted by trace count over the last 30 days. Click a row to open the org detail page.
-        </Text.H6>
+      <div className="flex items-center gap-4 border-b border-border px-6 py-4">
+        <div className="flex flex-1 flex-col gap-1">
+          <Text.H4 weight="semibold">Organizations by usage</Text.H4>
+          <Text.H6 color="foregroundMuted">
+            Sorted by trace count over the last 30 days. Click a row to open the org detail page.
+          </Text.H6>
+        </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col px-6 pt-4 pb-6">
         <InfiniteTable

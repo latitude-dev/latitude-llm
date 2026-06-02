@@ -22,6 +22,7 @@ function mapTraceToRow(t: TraceDetail) {
   return {
     input: t.inputMessages as unknown as Record<string, unknown>,
     output: t.outputMessages as unknown as Record<string, unknown>,
+    expectedOutput: "" as const,
     metadata: {
       traceId: t.traceId,
       rootSpanName: t.rootSpanName,

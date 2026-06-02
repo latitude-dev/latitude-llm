@@ -276,12 +276,12 @@ function SearchPage() {
 
   // Count-string variants (spec §PR4 / "Count string + drawer prev/next"):
   //  - filters-only or no content    → "N sessions"
-  //  - active search query           → "N sessions · M matching traces"
+  //  - active search query           → "M matching traces from N sessions"
   // `matchingTraceCount` is populated only when `searchQuery` was active on
   // the server, so we gate on `hasSearchQuery` rather than the optional being
-  // present to avoid showing "· 0 matching traces" during the brief load.
+  // present to avoid showing "0 matching traces" during the brief load.
   const countLabel = hasSearchQuery
-    ? `${totalCount} sessions · ${matchingTraceCount ?? 0} matching traces`
+    ? `${matchingTraceCount ?? 0} matching traces from ${totalCount} sessions`
     : `${totalCount} sessions`
 
   return (

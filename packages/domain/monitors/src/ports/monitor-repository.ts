@@ -9,7 +9,7 @@ import type {
   SqlClient,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { Monitor } from "../entities/monitor.ts"
+import type { Monitor, MonitorAlert } from "../entities/monitor.ts"
 
 export interface ListMonitorsRepositoryInput {
   readonly projectId: ProjectId
@@ -43,6 +43,23 @@ export interface MonitorRepositoryShape {
    * returns `[]`.
    */
   provisionSystemMonitors(monitors: readonly Monitor[]): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
+  /**
+   * Re-provision system monitors to the given definitions (backoffice reset).
+   * Upserts each by `(projectId, slug)` — updates name/description on an
+   * existing system monitor (preserving its `mutedAt`), inserts when missing,
+   * and resets its alerts to the definition (soft-deleting the old alerts so
+   * incident history stays joinable, then inserting fresh). Skips a slug held
+   * by a non-system monitor. Filters by the entity's `projectId`, so it is safe
+   * to run from the admin/`"system"` (RLS-off) context. Returns the monitors
+   * that were reset.
+   */
+  resetSystemMonitors(monitors: readonly Monitor[]): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
+  /** Insert a new monitor and its alerts atomically. The caller pre-resolves the slug. */
+  create(monitor: Monitor): Effect.Effect<void, RepositoryError, SqlClient>
+  /** Insert a single new alert (org resolved from the client). Used to add an alert to a live monitor. */
+  insertAlert(alert: MonitorAlert): Effect.Effect<void, RepositoryError, SqlClient>
+  /** Soft-delete a single live alert. Fails `NotFoundError` if it isn't a live alert. */
+  softDeleteAlert(alertId: MonitorAlertId): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
   /** Set or clear `mutedAt` on a live monitor. Fails `NotFoundError` if it doesn't exist. */
   setMuted(input: {
     readonly id: MonitorId

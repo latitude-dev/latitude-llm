@@ -81,10 +81,10 @@ export function IncidentOpenedEmail({
       footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        Escalating issue
+        Issue escalating
       </EmailText>
       <EmailText variant="body">
-        We notified everyone watching this project — the issue's occurrence rate crossed the escalation threshold.
+        We notified everyone watching this project — an ongoing issue is being detected more than expected.
       </EmailText>
 
       <SectionHeader label="Issue" />

@@ -17,6 +17,7 @@ export interface DatasetRowRepositoryShape {
       readonly id: DatasetRowId
       readonly input: InsertRowFieldValue
       readonly output?: InsertRowFieldValue
+      readonly expectedOutput?: InsertRowFieldValue
       readonly metadata?: InsertRowFieldValue
     }[]
   }): Effect.Effect<readonly DatasetRowId[], RepositoryError, ChSqlClient>
@@ -74,6 +75,7 @@ export interface DatasetRowRepositoryShape {
     readonly version: number
     readonly input: RowFieldValue
     readonly output: RowFieldValue
+    readonly expectedOutput: RowFieldValue
     readonly metadata: RowFieldValue
   }): Effect.Effect<void, RepositoryError, ChSqlClient>
 

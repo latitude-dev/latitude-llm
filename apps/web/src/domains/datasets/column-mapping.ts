@@ -1,6 +1,7 @@
 export interface ColumnMapping {
   readonly input: string[]
   readonly output: string[]
+  readonly expectedOutput: string[]
   readonly metadata: string[]
 }
 
@@ -15,7 +16,12 @@ export function applyMapping(
   row: Record<string, string>,
   mapping: ColumnMapping,
   options: CsvTransformOptions,
-): { input: MappedFieldValue; output: MappedFieldValue; metadata: MappedFieldValue } {
+): {
+  input: MappedFieldValue
+  output: MappedFieldValue
+  expectedOutput: MappedFieldValue
+  metadata: MappedFieldValue
+} {
   const pick = (columns: string[]): MappedFieldValue => {
     const result: Record<string, unknown> = {}
     for (const col of columns) {
@@ -35,6 +41,7 @@ export function applyMapping(
   return {
     input: pick(mapping.input),
     output: pick(mapping.output),
+    expectedOutput: pick(mapping.expectedOutput),
     metadata: pick(mapping.metadata),
   }
 }

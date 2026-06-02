@@ -7,6 +7,8 @@ export const FLAGGER_STRATEGY_SLUGS = [
   "laziness",
   "jailbreaking",
   "forgetting",
+  // Frozen slug (historical typo) — persisted in DB + exposed as a public API/SDK/MCP key.
+  // Do NOT rename. Display this flagger as "Thrashing" in any UI / prompt text.
   "trashing",
   "tool-call-errors",
   "output-schema-validation",

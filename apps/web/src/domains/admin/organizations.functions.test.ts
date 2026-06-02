@@ -4,6 +4,7 @@ import {
   adminCreateDemoProjectInputSchema,
   adminGetOrganizationInputSchema,
   adminListOrganizationsByUsageInputSchema,
+  adminResetSystemMonitorsInputSchema,
 } from "./organizations.functions.ts"
 
 describe("adminGetOrganizationInputSchema", () => {
@@ -92,5 +93,23 @@ describe("adminCreateDemoProjectInputSchema", () => {
 
   it("rejects a missing projectName", () => {
     expect(adminCreateDemoProjectInputSchema.safeParse({ organizationId: "org-123" }).success).toBe(false)
+  })
+})
+
+describe("adminResetSystemMonitorsInputSchema", () => {
+  it("accepts a valid organizationId", () => {
+    expect(adminResetSystemMonitorsInputSchema.safeParse({ organizationId: "org-123" }).success).toBe(true)
+  })
+
+  it("rejects an empty organizationId", () => {
+    expect(adminResetSystemMonitorsInputSchema.safeParse({ organizationId: "" }).success).toBe(false)
+  })
+
+  it("rejects an organizationId above the max length (defensive abuse bound)", () => {
+    expect(adminResetSystemMonitorsInputSchema.safeParse({ organizationId: "x".repeat(257) }).success).toBe(false)
+  })
+
+  it("rejects missing organizationId", () => {
+    expect(adminResetSystemMonitorsInputSchema.safeParse({}).success).toBe(false)
   })
 })

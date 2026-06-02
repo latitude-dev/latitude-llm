@@ -2,6 +2,7 @@ import { DATASET_DOWNLOAD_DIRECT_THRESHOLD, parseDatasetCsv } from "@domain/data
 import {
   Button,
   Container,
+  Icon,
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableSorting,
@@ -14,7 +15,7 @@ import {
 import { relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, getRouteApi } from "@tanstack/react-router"
 import { CirclePlus, Download, FileDownIcon, Trash2 } from "lucide-react"
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useDatasetRowsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
@@ -34,16 +35,43 @@ import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
+import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { CsvImportView, type ParsedCsv } from "./-components/csv-import-view.tsx"
 import { createDraftRowRecord, isDatasetDraftRowId } from "./-components/dataset-draft-row.ts"
-import { DatasetNameEdit } from "./-components/dataset-name-edit.tsx"
+import { DatasetActionsMenu, DatasetTitleBlock } from "./-components/dataset-name-edit.tsx"
 import { DeleteRowsModal } from "./-components/delete-rows-modal.tsx"
 import { RowDetailDrawer } from "./-components/row-detail-drawer.tsx"
 import { UploadBlankSlate } from "./-components/upload-blank-slate.tsx"
 
+const datasetDetailRoute = getRouteApi("/_authenticated/projects/$projectSlug/datasets/$datasetId")
+
+function DatasetBreadcrumb() {
+  const { projectSlug, datasetId } = datasetDetailRoute.useParams()
+  const { data: dataset } = useQuery({
+    queryKey: ["dataset", datasetId],
+    queryFn: () => getDatasetQuery({ data: { datasetId } }),
+  })
+  return (
+    <>
+      <BreadcrumbLink to="/projects/$projectSlug/datasets" params={{ projectSlug }}>
+        Datasets
+      </BreadcrumbLink>
+      {dataset ? (
+        <>
+          <BreadcrumbSeparator />
+          <BreadcrumbText variant="current">{dataset.name}</BreadcrumbText>
+        </>
+      ) : null}
+    </>
+  )
+}
+
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/datasets/$datasetId")({
+  staticData: {
+    breadcrumb: DatasetBreadcrumb,
+  },
   component: DatasetDetailPage,
 })
 
@@ -69,6 +97,21 @@ function triggerCsvBrowserDownload(csv: string, filename: string): void {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
+function isEmptyCell(data: string | Record<string, unknown>): boolean {
+  if (typeof data === "string") return data.length === 0
+  return Object.keys(data).length === 0
+}
+
+function ExpectedOutputCell({ value }: { value: string | Record<string, unknown> }) {
+  if (isEmptyCell(value)) {
+    return (
+      <span className="italic opacity-70">
+        <Text.Mono color="foregroundMuted">+ Add expected output</Text.Mono>
+      </span>
+    )
+  }
+  return <Text.Mono>{formatCellValue(value)}</Text.Mono>
+}
 
 const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
   {
@@ -84,6 +127,11 @@ const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
     header: "Created",
     sortKey: "createdAt",
     render: (r) => relativeTime(r.createdAt),
+  },
+  {
+    key: "expectedOutput",
+    header: "Expected output",
+    render: (r) => <ExpectedOutputCell value={r.expectedOutput} />,
   },
   {
     key: "input",
@@ -125,19 +173,22 @@ function DatasetDetailPage() {
   const [parsedCsv, setParsedCsv] = useState<ParsedCsv | null>(null)
 
   const handleInsertFirstRow = useCallback(
-    async (data: { input: string; output: string; metadata: string }) => {
+    async (data: { input: string; output: string; expectedOutput: string; metadata: string }) => {
       try {
         const result = await insertDatasetRow({
           data: {
             datasetId,
             input: data.input,
             output: data.output,
+            expectedOutput: data.expectedOutput,
             metadata: data.metadata,
           },
         })
         const qc = getQueryClient()
         await qc.invalidateQueries({ queryKey: ["dataset", datasetId] })
-        await qc.invalidateQueries({ queryKey: ["datasets", project?.id ?? ""] })
+        await qc.invalidateQueries({
+          queryKey: ["datasets", project?.id ?? ""],
+        })
         await qc.invalidateQueries({ queryKey: ["datasetRows", datasetId] })
         await qc.invalidateQueries({
           queryKey: ["datasetRowCount", datasetId],
@@ -223,7 +274,12 @@ function CsvMappingView({
       options,
     }: {
       file: File
-      mapping: { input: string[]; output: string[]; metadata: string[] }
+      mapping: {
+        input: string[]
+        output: string[]
+        expectedOutput: string[]
+        metadata: string[]
+      }
       options: { flattenSingleColumn: boolean; autoParseJson: boolean }
     }) => {
       const formData = new FormData()
@@ -283,7 +339,10 @@ function DatasetRowsView({
   })
 
   const listQuery = q.trim() || undefined
-  const sorting: InfiniteTableSorting = { column: sortBy, direction: sortDirection }
+  const sorting: InfiniteTableSorting = {
+    column: sortBy,
+    direction: sortDirection,
+  }
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
@@ -409,7 +468,7 @@ function DatasetRowsView({
   }
 
   const handleSaveRow = useCallback(
-    async (data: { input: string; output: string; metadata: string }) => {
+    async (data: { input: string; output: string; expectedOutput: string; metadata: string }) => {
       if (!rid) return
       setSaving(true)
       try {
@@ -419,6 +478,7 @@ function DatasetRowsView({
               datasetId,
               input: data.input,
               output: data.output,
+              expectedOutput: data.expectedOutput,
               metadata: data.metadata,
             },
           })
@@ -445,6 +505,7 @@ function DatasetRowsView({
             rowId: rid,
             input: data.input,
             output: data.output,
+            expectedOutput: data.expectedOutput,
             metadata: data.metadata,
           },
         })
@@ -568,11 +629,17 @@ function DatasetRowsView({
   const handleDownload = useCallback(() => {
     const { bulkSelection } = selection
     if (!bulkSelection) return
-    openExportModal({ selection: bulkSelection, selectedCount: selection.selectedCount })
+    openExportModal({
+      selection: bulkSelection,
+      selectedCount: selection.selectedCount,
+    })
   }, [openExportModal, selection])
 
   const handleDownloadAll = useCallback(() => {
-    openExportModal({ selection: { mode: "all" }, selectedCount: totalRowCount })
+    openExportModal({
+      selection: { mode: "all" },
+      selectedCount: totalRowCount,
+    })
   }, [openExportModal, totalRowCount])
 
   const confirmDownload = useCallback(async () => {
@@ -590,62 +657,77 @@ function DatasetRowsView({
       <Layout>
         <Layout.Content>
           <Layout.Actions>
-            <Layout.ActionsRow>
-              <Layout.ActionRowItem>
-                <DatasetNameEdit dataset={dataset} onDownload={handleDownloadAll} />
-              </Layout.ActionRowItem>
-            </Layout.ActionsRow>
-            <Layout.ActionsRow>
-              <Layout.ActionRowItem>
-                {selection.selectedCount > 0 && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDownload}
-                      disabled={downloading}
-                      isLoading={downloading}
-                    >
-                      <Download className="h-4 w-4" />
-                      Export Rows ({selection.selectedCount.toLocaleString()})
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => setDeleteModalOpen(true)}>
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </Layout.ActionRowItem>
-              <Layout.ActionRowItem>
-                <Input type="text" placeholder="Search rows..." value={q} onChange={(e) => setQ(e.target.value)} />
-                <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
-                  <FileDownIcon className="h-4 w-4" />
-                  <Text.H6>Import</Text.H6>
-                </Button>
-                <input
-                  ref={importFileRef}
-                  type="file"
-                  accept=".csv"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleImportFile(file)
-                  }}
-                />
+            <div className="@container/dataset-header">
+              <div className="flex flex-col gap-3 @[900px]/dataset-header:flex-row @[900px]/dataset-header:items-start @[900px]/dataset-header:justify-between @[900px]/dataset-header:gap-6">
+                <div className="flex-1 min-w-0">
+                  <DatasetTitleBlock dataset={dataset} />
+                </div>
+                <div className="flex flex-row items-center gap-2 shrink-0">
+                  <Input type="text" placeholder="Search rows..." value={q} onChange={(e) => setQ(e.target.value)} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 whitespace-nowrap"
+                    onClick={() => importFileRef.current?.click()}
+                  >
+                    <Icon icon={FileDownIcon} size="sm" />
+                    <Text.H6>Import</Text.H6>
+                  </Button>
+                  <input
+                    ref={importFileRef}
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleImportFile(file)
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 whitespace-nowrap"
+                    onClick={handleDownloadAll}
+                    disabled={downloading}
+                    isLoading={downloading}
+                  >
+                    <Icon icon={Download} size="sm" />
+                    <Text.H6>Export</Text.H6>
+                  </Button>
+                  <Button size="sm" className="shrink-0 whitespace-nowrap" onClick={handleAddRow} disabled={saving}>
+                    <Icon icon={CirclePlus} size="sm" />
+                    Add row
+                  </Button>
+                  <DatasetActionsMenu dataset={dataset} />
+                </div>
+              </div>
+            </div>
+          </Layout.Actions>
+          <Layout.List>
+            {selection.selectedCount > 0 && (
+              <div className="mb-2 flex flex-row items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="whitespace-nowrap"
-                  onClick={handleAddRow}
-                  disabled={saving}
+                  className="shrink-0 whitespace-nowrap"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  isLoading={downloading}
                 >
-                  <CirclePlus className="h-4 w-4" />
-                  Add row
+                  <Icon icon={Download} size="sm" />
+                  Export
                 </Button>
-              </Layout.ActionRowItem>
-            </Layout.ActionsRow>
-          </Layout.Actions>
-          <Layout.List>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="shrink-0 whitespace-nowrap"
+                  onClick={() => setDeleteModalOpen(true)}
+                >
+                  <Icon icon={Trash2} size="sm" />
+                  Delete
+                </Button>
+              </div>
+            )}
             <InfiniteTable<DatasetRowRecord>
               {...listingLayoutIntrinsicScroll.infiniteTable}
               data={displayRows}

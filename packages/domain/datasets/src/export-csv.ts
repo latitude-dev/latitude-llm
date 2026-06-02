@@ -2,6 +2,7 @@ import Papa from "papaparse"
 import type { DatasetRow } from "./entities/dataset-row.ts"
 
 export interface CsvRow {
+  readonly expected_output: string
   readonly input: string
   readonly output: string
   readonly metadata: string
@@ -11,12 +12,9 @@ function fieldToString(v: unknown): string {
   return typeof v === "string" ? v : JSON.stringify(v ?? null)
 }
 
-/**
- * Converts dataset rows to CSV row data (input, output, metadata as strings).
- * Use with a CSV serializer (e.g. Papa.unparse) to produce the final CSV string.
- */
 export function rowsToCsvData(rows: readonly DatasetRow[]): CsvRow[] {
   return rows.map((r) => ({
+    expected_output: fieldToString(r.expectedOutput),
     input: fieldToString(r.input),
     output: fieldToString(r.output),
     metadata: fieldToString(r.metadata),
@@ -35,10 +33,10 @@ export interface DatasetCsvExport {
   readonly filename: string
 }
 
-const CSV_EXPORT_COLUMNS = ["input", "output", "metadata"] as const
+const CSV_EXPORT_COLUMNS = ["expected_output", "input", "output", "metadata"] as const
 
 /**
- * Returns the CSV header line for dataset export (input, output, metadata).
+ * Returns the CSV header line for dataset export (expected_output, input, output, metadata).
  * Use with rowsToCsvFragment to build CSV incrementally.
  */
 export function csvExportHeader(): string {

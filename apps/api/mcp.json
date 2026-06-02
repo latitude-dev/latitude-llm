@@ -7463,7 +7463,7 @@
                     "issue",
                     "savedSearch"
                   ],
-                  "description": "Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a saved search."
+                  "description": "Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search."
                 },
                 "sourceId": {
                   "type": "string",
@@ -7481,7 +7481,7 @@
                     "savedSearch.threshold",
                     "savedSearch.escalating"
                   ],
-                  "description": "Reason the incident opened. `issue.new` fires when a brand-new issue is discovered; `issue.regressed` when a resolved issue starts occurring again; `issue.escalating` when an existing issue's occurrence rate exceeds its seasonal baseline. The `savedSearch.*` kinds are raised by monitors watching a saved search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when the match count crosses a configured threshold, and `savedSearch.escalating` when it stays elevated for a sustained window."
+                  "description": "Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
                 },
                 "severity": {
                   "type": "string",
@@ -8109,6 +8109,21 @@
                   ],
                   "description": "Free-form cell value. Either a plain string or an arbitrary JSON object."
                 },
+                "expectedOutput": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  ],
+                  "description": "The correct answer for this row. Curators fill this in by hand; it is not derived from `output`."
+                },
                 "metadata": {
                   "anyOf": [
                     {
@@ -8140,6 +8155,7 @@
                 "datasetId",
                 "input",
                 "output",
+                "expectedOutput",
                 "metadata",
                 "createdAt",
                 "version"
@@ -8226,6 +8242,30 @@
                 },
                 "output": {
                   "description": "Row output cell.",
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "expectedOutput": {
+                  "description": "Correct answer for this row. Filled in by curators; usually distinct from `output`.",
                   "anyOf": [
                     {
                       "type": "string"

@@ -350,6 +350,46 @@ describe("assignScoreToIssueUseCase", () => {
       )
     })
 
+    it("does not emit IssueRegressed or clear resolvedAt for ignored issues", async () => {
+      const resolvedAt = new Date("2026-04-01T00:00:00.000Z")
+      const ignoredAt = new Date("2026-04-02T00:00:00.000Z")
+      const existingIssue = makeIssue({ resolvedAt, ignoredAt })
+      const { repository: scoreRepository, scores } = createFakeScoreRepository()
+      const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
+      const score = makeScore({ createdAt: new Date("2026-04-15T10:00:00.000Z") })
+      scores.set(score.id, score)
+      const writtenEvents: unknown[] = []
+
+      await Effect.runPromise(
+        assignScoreToIssueUseCase({
+          organizationId,
+          projectId,
+          scoreId: score.id,
+          issueId: existingIssue.id,
+          normalizedEmbedding: makeEmbedding(),
+        }).pipe(
+          Effect.provideService(ScoreRepository, scoreRepository),
+          Effect.provideService(IssueRepository, issueRepository),
+          Effect.provideService(OutboxEventWriter, {
+            write: (event) =>
+              Effect.sync(() => {
+                writtenEvents.push(event)
+              }),
+          }),
+          Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+          Effect.provideService(DistributedLockRepository, passthroughLockRepository),
+        ),
+      )
+
+      expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
+      expect(issues.get(existingIssue.id)?.resolvedAt?.getTime()).toBe(resolvedAt.getTime())
+      expect(issues.get(existingIssue.id)?.ignoredAt?.getTime()).toBe(ignoredAt.getTime())
+      expect(writtenEvents.find((e) => (e as { eventName?: string }).eventName === "IssueRegressed")).toBeUndefined()
+      expect(
+        writtenEvents.find((e) => (e as { eventName?: string }).eventName === "ScoreAssignedToIssue"),
+      ).toBeDefined()
+    })
+
     it("does not emit IssueRegressed and preserves resolvedAt when score predates resolution", async () => {
       const resolvedAt = new Date("2026-04-15T00:00:00.000Z")
       const existingIssue = makeIssue({ resolvedAt })

@@ -9,7 +9,7 @@ import {
   ProjectId,
   type RepositoryError,
   SettingsReader,
-  type SqlClient,
+  SqlClient,
 } from "@domain/shared"
 import { Effect } from "effect"
 import { DEFAULT_ESCALATION_SENSITIVITY_K } from "../constants.ts"
@@ -65,6 +65,7 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
     const outboxEventWriter = yield* OutboxEventWriter
     const alertIncidentRepository = yield* AlertIncidentRepository
     const settingsReader = yield* SettingsReader
+    const sqlClient = yield* SqlClient
 
     const issueWithLifecycle = yield* issueRepository
       .findById(IssueId(input.issueId))
@@ -76,6 +77,13 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
 
     const wasEscalating = issueWithLifecycle.lifecycle.isEscalating
     const now = new Date()
+
+    // Ignored issues keep accepting score assignments for analytics / matching,
+    // but user intent is that they no longer drive automated lifecycle changes
+    // or alerting transitions.
+    if (issueWithLifecycle.ignoredAt !== null) {
+      return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckIssueEscalationResult
+    }
 
     const [signals, projectSettings, openIncident] = yield* Effect.all(
       [
@@ -115,19 +123,31 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
     })
 
     if (decision.transition === "enter") {
-      yield* outboxEventWriter.write({
-        eventName: "IssueEscalated",
-        aggregateType: "issue",
-        aggregateId: issueWithLifecycle.id,
-        organizationId: issueWithLifecycle.organizationId,
-        payload: {
-          organizationId: issueWithLifecycle.organizationId,
-          projectId: issueWithLifecycle.projectId,
-          issueId: issueWithLifecycle.id,
-          escalatedAt: now.toISOString(),
-          entrySignals: decision.entrySignalsSnapshot ?? null,
-        },
-      })
+      yield* sqlClient.transaction(
+        Effect.gen(function* () {
+          if (issueWithLifecycle.resolvedAt !== null) {
+            yield* issueRepository.save({
+              ...issueWithLifecycle,
+              resolvedAt: null,
+              updatedAt: now,
+            })
+          }
+
+          yield* outboxEventWriter.write({
+            eventName: "IssueEscalated",
+            aggregateType: "issue",
+            aggregateId: issueWithLifecycle.id,
+            organizationId: issueWithLifecycle.organizationId,
+            payload: {
+              organizationId: issueWithLifecycle.organizationId,
+              projectId: issueWithLifecycle.projectId,
+              issueId: issueWithLifecycle.id,
+              escalatedAt: now.toISOString(),
+              entrySignals: decision.entrySignalsSnapshot ?? null,
+            },
+          })
+        }),
+      )
       return { transition: "entered", currentlyEscalating: true } satisfies CheckIssueEscalationResult
     }
 

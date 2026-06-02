@@ -47,8 +47,7 @@ export const SYSTEM_MONITOR_DEFINITIONS: readonly SystemMonitorDefinition[] = [
   {
     slug: "issue-escalating",
     name: "Issue escalating",
-    description:
-      "Notifies when an ongoing issue's occurrence rate crosses the escalation threshold, and again when it returns to baseline.",
+    description: "Notifies when an ongoing issue is being detected more than expected.",
     alerts: [
       {
         kind: "issue.escalating",

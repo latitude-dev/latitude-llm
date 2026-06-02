@@ -50,6 +50,26 @@ Tag constants: `packages/domain/ai/src/ai-generate-telemetry.ts`. Evaluation-spe
 
 ## System queues
 
+> **Flagger Instruction Extraction**  
+> Summarizes the flagged agent's system prompt into a bounded instruction set before classification, so the classifier judges behavior against the agent's actual instructions. Cached per (org, system prompt) hash; falls back to a truncated prompt rendering on failure.  
+> **Tags:** `flagger:extract-instructions`  
+> **Metadata:**
+>
+> ```json
+> {
+>   "organizationId": "",
+>   "projectId": "",
+>   "traceId": "",
+>   "flaggerSlug": "jailbreaking",
+>   "stage": "instruction-extraction"
+> }
+> ```
+>
+> **Called from:**
+>
+> - `packages/domain/flaggers/src/use-cases/run-flagger.ts`
+> - `apps/workflows/src/activities/flagger-activities.ts`
+
 > **System Queue Classification**  
 > Decides whether a trace belongs in an LLM-backed system annotation queue from a bounded trace summary.  
 > **Tags:** `system-queue:classify`  

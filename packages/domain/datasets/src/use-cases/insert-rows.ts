@@ -11,6 +11,7 @@ export const insertRows = Effect.fn("datasets.insertRows")(function* (args: {
     readonly id?: DatasetRowId
     readonly input: InsertRowFieldValue
     readonly output?: InsertRowFieldValue
+    readonly expectedOutput?: InsertRowFieldValue
     readonly metadata?: InsertRowFieldValue
   }[]
   readonly source?: string

@@ -1,4 +1,5 @@
 import type { AlertIncidentKind, AlertSeverity } from "@domain/alerts"
+import { ALERT_INCIDENT_KIND_LABEL } from "@domain/shared"
 import type { BarChartOverlay, BarChartOverlayArea, BarChartOverlayLine } from "@repo/ui"
 import type { AlertIncidentRecord } from "./alerts.functions.ts"
 
@@ -31,15 +32,6 @@ const KIND_TOP_SYMBOL: Record<AlertIncidentKind, TopSymbol> = {
   "savedSearch.match": { shape: "triangle", size: 9 },
   "savedSearch.threshold": { shape: "diamond", size: 10 },
   "savedSearch.escalating": { shape: "rect", size: 7 },
-}
-
-export const KIND_LABELS: Record<AlertIncidentKind, string> = {
-  "issue.new": "New issue",
-  "issue.regressed": "Issue regressed",
-  "issue.escalating": "Issue escalating",
-  "savedSearch.match": "Search match",
-  "savedSearch.threshold": "Search threshold",
-  "savedSearch.escalating": "Search escalating",
 }
 
 export const SEVERITY_LABELS: Record<AlertSeverity, string> = {
@@ -242,5 +234,5 @@ export function buildIncidentMarkers({
 }
 
 export function formatIncidentKindLabel(kind: AlertIncidentKind): string {
-  return KIND_LABELS[kind]
+  return ALERT_INCIDENT_KIND_LABEL[kind]
 }

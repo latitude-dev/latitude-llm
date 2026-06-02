@@ -9,6 +9,8 @@ export interface DatasetRow {
     input: DatasetRow.Input;
     /** Free-form cell value. Either a plain string or an arbitrary JSON object. */
     output: DatasetRow.Output;
+    /** The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. */
+    expectedOutput: DatasetRow.ExpectedOutput;
     /** Free-form cell value. Either a plain string or an arbitrary JSON object. */
     metadata: DatasetRow.Metadata;
     /** ISO-8601 timestamp at which the row was inserted. */
@@ -26,6 +28,10 @@ export namespace DatasetRow {
      * Free-form cell value. Either a plain string or an arbitrary JSON object.
      */
     export type Output = string | Record<string, unknown>;
+    /**
+     * The correct answer for this row. Curators fill this in by hand; it is not derived from `output`.
+     */
+    export type ExpectedOutput = string | Record<string, unknown>;
     /**
      * Free-form cell value. Either a plain string or an arbitrary JSON object.
      */

@@ -35,6 +35,14 @@ const bucketMeta: Record<
     badge: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     dropHighlight: "border-green-400 bg-green-50 dark:bg-green-950/40",
   },
+  expectedOutput: {
+    label: "Expected output",
+    icon: "★",
+    border: "border-violet-200 dark:border-violet-800",
+    bg: "bg-violet-50/50 dark:bg-violet-950/20",
+    badge: "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200",
+    dropHighlight: "border-violet-400 bg-violet-50 dark:bg-violet-950/40",
+  },
   metadata: {
     label: "Metadata",
     icon: "{}",
@@ -45,7 +53,7 @@ const bucketMeta: Record<
   },
 }
 
-const bucketOrder: Bucket[] = ["input", "output", "metadata"]
+const bucketOrder: Bucket[] = ["expectedOutput", "input", "output", "metadata"]
 
 export function ColumnMapper({
   headers,
@@ -57,18 +65,20 @@ export function ColumnMapper({
   saving,
 }: ColumnMapperProps) {
   const moveAllToInput = useCallback(() => {
-    onMappingChange({ input: [...headers], output: [], metadata: [] })
+    onMappingChange({ input: [...headers], output: [], expectedOutput: [], metadata: [] })
   }, [headers, onMappingChange])
 
   const moveHeader = useCallback(
     (header: string, target: Bucket) => {
       const input = mapping.input.filter((h) => h !== header)
       const output = mapping.output.filter((h) => h !== header)
+      const expectedOutput = mapping.expectedOutput.filter((h) => h !== header)
       const metadata = mapping.metadata.filter((h) => h !== header)
 
       onMappingChange({
         input: target === "input" ? [...input, header] : input,
         output: target === "output" ? [...output, header] : output,
+        expectedOutput: target === "expectedOutput" ? [...expectedOutput, header] : expectedOutput,
         metadata: target === "metadata" ? [...metadata, header] : metadata,
       })
     },
@@ -80,6 +90,7 @@ export function ColumnMapper({
       onMappingChange({
         input: mapping.input.filter((h) => h !== header),
         output: mapping.output.filter((h) => h !== header),
+        expectedOutput: mapping.expectedOutput.filter((h) => h !== header),
         metadata: mapping.metadata.filter((h) => h !== header),
       })
     },
@@ -87,10 +98,15 @@ export function ColumnMapper({
   )
 
   const unmapped = headers.filter(
-    (h) => !mapping.input.includes(h) && !mapping.output.includes(h) && !mapping.metadata.includes(h),
+    (h) =>
+      !mapping.input.includes(h) &&
+      !mapping.output.includes(h) &&
+      !mapping.expectedOutput.includes(h) &&
+      !mapping.metadata.includes(h),
   )
 
-  const totalMapped = mapping.input.length + mapping.output.length + mapping.metadata.length
+  const totalMapped =
+    mapping.input.length + mapping.output.length + mapping.expectedOutput.length + mapping.metadata.length
 
   return (
     <div className="flex flex-col flex-1 min-h-0">

@@ -382,8 +382,11 @@ function getInspectedAgentContext(input: {
               prompt: buildInstructionExtractorPrompt(systemPrompt),
               schema: instructionExtractorOutputSchema,
               telemetry: {
-                spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
-                tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify, ...reflagSuppressionTags(input.trace.tags)],
+                spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerExtractInstructions,
+                tags: [
+                  ...AI_GENERATE_TELEMETRY_TAGS.flaggerExtractInstructions,
+                  ...reflagSuppressionTags(input.trace.tags),
+                ],
                 metadata: buildProjectScopedAiMetadata(
                   { organizationId: input.organizationId, projectId: input.projectId },
                   { traceId: input.traceId, flaggerSlug: input.flaggerSlug, stage: "instruction-extraction" },

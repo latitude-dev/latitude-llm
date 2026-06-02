@@ -8,6 +8,9 @@ export const AI_GENERATE_TELEMETRY_TAGS = {
   issueDetails: ["issue:details"],
   annotationEnrichPublication: ["annotation:enrichment"],
   flaggerClassify: ["flagger:classify"],
+  // The LLM call that summarizes the flagged agent's system prompt into a bounded
+  // instruction set before classification. Cached per (org, system prompt) hash.
+  flaggerExtractInstructions: ["flagger:extract-instructions"],
   flaggerDraft: ["flagger:draft"],
   // Appended to a flagger's own LLM calls when the trace being flagged is itself
   // flagger-generated. Marks the output so it is never re-flagged, bounding the
@@ -23,6 +26,7 @@ export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
   issueDetails: "issue.details",
   annotationEnrichPublication: "annotation.enrich.publication",
   flaggerClassify: "flagger.classify",
+  flaggerExtractInstructions: "flagger.extract-instructions",
   flaggerDraft: "flagger.draft",
   evaluationJudgeLive: "evaluation.judge.live",
   evaluationJudgeAlignment: "evaluation.judge.alignment",

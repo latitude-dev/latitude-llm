@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## v0.1.45 - 2026-06-02
+
+### Datasets
+
+- Returned small dataset CSV exports synchronously while queuing and emailing only exports above 5,000 rows, and surfaced typed ready/queued/too-large API and SDK responses (ref: #3344).
+- Added `expected_output` to dataset rows across CSV import/export, row editing, ClickHouse storage, API schemas, and the TypeScript SDK (ref: #3358).
+
+### Monitors and incidents
+
+- Added the monitor detail panel with incident history, mute confirmation, refreshed kind naming, and updated incident notification copy (ref: #3365).
+- Added a backoffice action to reset system monitors for an organization (ref: #3365).
+
+### Backoffice and taxonomy
+
+- Added project taxonomy visibility in backoffice, including domain read models and the Postgres taxonomy repository (ref: #3348).
+
+### Flaggers and AI generation
+
+- Displayed the thrashing flagger as "Thrashing" in docs and UI-facing metadata (ref: #3362).
+- Added custom OpenTelemetry tagging for system-instruction summarizer AI generation and avoided importing `node:crypto` into the client bundle (refs: 53b77b6, b05a506).
+
+### Platform
+
+- Refreshed bundled model metadata and upgraded deployment, workflow, CI action, PGlite, Pulumi, and CLI dependencies used by the platform (refs: #3335, #3349, #3350, #3351, #3352, #3353, #3354, #3355, #3356, #3357).
+
 ## v0.1.44 - 2026-06-01
 
 ### Flaggers

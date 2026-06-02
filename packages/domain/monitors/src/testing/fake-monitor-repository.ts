@@ -60,6 +60,49 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         }
         return inserted
       }),
+    resetSystemMonitors: (toReset) =>
+      Effect.sync(() => {
+        const reset: Monitor[] = []
+        for (const monitor of toReset) {
+          const existing = monitors.find(
+            (m) => m.projectId === monitor.projectId && m.slug === monitor.slug && isLive(m),
+          )
+          if (existing && !existing.system) continue
+          if (existing) {
+            replace(existing.id, {
+              ...existing,
+              name: monitor.name,
+              description: monitor.description,
+              alerts: monitor.alerts.map((alert) => ({ ...alert, monitorId: existing.id })),
+              updatedAt: new Date(),
+            })
+          } else {
+            monitors.push(monitor)
+          }
+          reset.push(monitor)
+        }
+        return reset
+      }),
+    create: (monitor) =>
+      Effect.sync(() => {
+        monitors.push(monitor)
+      }),
+    insertAlert: (alert) =>
+      Effect.sync(() => {
+        // Plain insert, mirroring the live repo: the use-case loads the owning
+        // monitor in the same transaction, so it's expected to exist.
+        const monitor = monitors.find((m) => m.id === alert.monitorId && isLive(m))
+        if (monitor) replace(monitor.id, { ...monitor, alerts: [...monitor.alerts, alert] })
+      }),
+    softDeleteAlert: (alertId) =>
+      Effect.suspend(() => {
+        const monitor = monitors.find((m) => isLive(m) && m.alerts.some((alert) => alert.id === alertId))
+        if (!monitor) return Effect.fail(new NotFoundError({ entity: "MonitorAlert", id: alertId }))
+        // Alert-level soft delete isn't modelled (the entity has no `deletedAt`);
+        // dropping it from the live list mirrors what reads would return.
+        replace(monitor.id, { ...monitor, alerts: monitor.alerts.filter((alert) => alert.id !== alertId) })
+        return Effect.void
+      }),
     setMuted: ({ id, mutedAt }) =>
       Effect.suspend(() => {
         const monitor = liveById(id)

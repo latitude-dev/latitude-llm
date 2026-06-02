@@ -70,6 +70,7 @@ const saveDatasetCsvDataSchema = z.object({
   mapping: z.object({
     input: z.array(z.string()),
     output: z.array(z.string()),
+    expectedOutput: z.array(z.string()),
     metadata: z.array(z.string()),
   }),
   options: z
@@ -103,6 +104,7 @@ export interface DatasetRowRecord {
   readonly datasetId: string
   readonly input: string | Record<string, JsonValue>
   readonly output: string | Record<string, JsonValue>
+  readonly expectedOutput: string | Record<string, JsonValue>
   readonly metadata: string | Record<string, JsonValue>
   readonly createdAt: string
   readonly version: number
@@ -127,6 +129,8 @@ const toRowRecord = (r: DatasetRow): DatasetRowRecord => ({
   datasetId: r.datasetId,
   input: typeof r.input === "string" ? r.input : (r.input as Record<string, JsonValue>),
   output: typeof r.output === "string" ? r.output : (r.output as Record<string, JsonValue>),
+  expectedOutput:
+    typeof r.expectedOutput === "string" ? r.expectedOutput : (r.expectedOutput as Record<string, JsonValue>),
   metadata: typeof r.metadata === "string" ? r.metadata : (r.metadata as Record<string, JsonValue>),
   createdAt: r.createdAt.toISOString(),
   version: r.version,
@@ -490,6 +494,7 @@ export const insertDatasetRow = createServerFn({ method: "POST" })
       datasetId: z.string(),
       input: z.string(),
       output: z.string(),
+      expectedOutput: z.string(),
       metadata: z.string(),
     }),
   )
@@ -507,7 +512,14 @@ export const insertDatasetRow = createServerFn({ method: "POST" })
       const result = await Effect.runPromise(
         insertRows({
           datasetId: DatasetId(data.datasetId),
-          rows: [{ input: data.input, output: data.output, metadata: data.metadata }],
+          rows: [
+            {
+              input: data.input,
+              output: data.output,
+              expectedOutput: data.expectedOutput,
+              metadata: data.metadata,
+            },
+          ],
           source: "web",
         }).pipe(
           withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
@@ -536,6 +548,7 @@ export const updateDatasetRow = createServerFn({ method: "POST" })
       rowId: z.string(),
       input: z.string(),
       output: z.string(),
+      expectedOutput: z.string(),
       metadata: z.string(),
     }),
   )
@@ -549,6 +562,7 @@ export const updateDatasetRow = createServerFn({ method: "POST" })
         rowId: DatasetRowId(data.rowId),
         input: data.input,
         output: data.output,
+        expectedOutput: data.expectedOutput,
         metadata: data.metadata,
       }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),

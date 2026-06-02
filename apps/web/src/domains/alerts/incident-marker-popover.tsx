@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router"
 import { ChevronRightIcon } from "lucide-react"
 import { useRef } from "react"
 import type { AlertIncidentRecord } from "./alerts.functions.ts"
-import { INCIDENT_SEVERITY_COLOR, KIND_LABELS, SEVERITY_LABELS } from "./incident-markers.ts"
+import { formatIncidentKindLabel, INCIDENT_SEVERITY_COLOR, SEVERITY_LABELS } from "./incident-markers.ts"
 
 /**
  * Popover anchored at a chart-bucket point, listing every incident touching that bucket. Each
@@ -118,7 +118,7 @@ export function IncidentMarkerPopover({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <Text.H6M color="foreground">{KIND_LABELS[incident.kind]}</Text.H6M>
+                    <Text.H6M color="foreground">{formatIncidentKindLabel(incident.kind)}</Text.H6M>
                     <Text.H6 color="foregroundMuted">·</Text.H6>
                     <Text.H6 color="foregroundMuted">{SEVERITY_LABELS[incident.severity]}</Text.H6>
                   </div>

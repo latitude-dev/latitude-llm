@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-alpha.4] - 2026-06-02
+
+### Added
+
+- **`DatasetRow.expectedOutput`** — new free-form cell (string or JSON object) for the curated "correct" answer, distinct from the recorded `output`. Returned on every `client.datasets.listRows` / `getRow` payload.
+- **`client.datasets.insertRows({ rows: [{ ..., expectedOutput }] })`** — optional input field on each row. Trace imports leave it empty; curators fill it in by hand.
+
 ## [6.0.0-alpha.3] - 2026-06-02
 
 ### Changed

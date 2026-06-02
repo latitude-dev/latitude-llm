@@ -9,6 +9,7 @@ describe("dataset-draft-row", () => {
     expect(row.datasetId).toBe("dataset-123")
     expect(row.input).toBe("")
     expect(row.output).toBe("")
+    expect(row.expectedOutput).toBe("")
     expect(row.metadata).toBe("")
     expect(row.version).toBe(0)
   })

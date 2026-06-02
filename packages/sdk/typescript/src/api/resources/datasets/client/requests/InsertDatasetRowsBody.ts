@@ -22,6 +22,8 @@ export namespace InsertDatasetRowsBody {
             input?: Item.Input | undefined;
             /** Row output cell. */
             output?: Item.Output | undefined;
+            /** Correct answer for this row. Filled in by curators; usually distinct from `output`. */
+            expectedOutput?: Item.ExpectedOutput | undefined;
             /** Row metadata cell. */
             metadata?: Item.Metadata | undefined;
         }
@@ -35,6 +37,10 @@ export namespace InsertDatasetRowsBody {
              * Row output cell.
              */
             export type Output = string | Record<string, unknown> | number | boolean;
+            /**
+             * Correct answer for this row. Filled in by curators; usually distinct from `output`.
+             */
+            export type ExpectedOutput = string | Record<string, unknown> | number | boolean;
             /**
              * Row metadata cell.
              */

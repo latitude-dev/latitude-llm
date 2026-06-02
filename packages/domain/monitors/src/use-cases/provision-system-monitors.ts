@@ -51,6 +51,16 @@ const buildSystemMonitor = (
 }
 
 /**
+ * Materialise the three system monitor entities for a project (fresh ids +
+ * timestamps). Shared by provisioning (insert-if-missing) and the backoffice
+ * reset (re-provision to the current definitions).
+ */
+export const buildSystemMonitors = (input: ProvisionSystemMonitorsInput): Monitor[] => {
+  const now = new Date()
+  return SYSTEM_MONITOR_DEFINITIONS.map((definition) => buildSystemMonitor(definition, input, now))
+}
+
+/**
  * Idempotently provisions the three system issue monitors for a project. On
  * re-run (e.g. a re-published `provision` task, or a project already covered by
  * the backfill) the repository inserts only the missing slugs and returns just
@@ -64,9 +74,6 @@ export const provisionSystemMonitorsUseCase = Effect.fn("monitors.provisionSyste
   yield* Effect.annotateCurrentSpan("monitors.projectId", input.projectId)
 
   const repository = yield* MonitorRepository
-  const now = new Date()
-  const monitors = SYSTEM_MONITOR_DEFINITIONS.map((definition) => buildSystemMonitor(definition, input, now))
-
-  const provisioned = yield* repository.provisionSystemMonitors(monitors)
+  const provisioned = yield* repository.provisionSystemMonitors(buildSystemMonitors(input))
   return provisioned satisfies readonly Monitor[]
 })

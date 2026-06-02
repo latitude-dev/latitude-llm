@@ -33,7 +33,7 @@ catalog:
   "@temporalio/activity": 1.17.0
   "@temporalio/client": 1.17.0
   "@temporalio/worker": 1.17.0
-  "@temporalio/workflow": 1.17.0
+  "@temporalio/workflow": 1.17.2
   "@types/node": 22.14.1
   "@types/pg": 8.16.0
   "@types/react": 19.2.14
