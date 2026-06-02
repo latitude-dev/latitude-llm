@@ -1,10 +1,13 @@
 import {
+  formatHumanReadableAlert,
   getMonitorBySlugUseCase,
   getMonitorIncidentsUseCase,
   type ListMonitorsResult,
   listMonitorsUseCase,
   type Monitor,
   type MonitorAlert,
+  muteMonitorUseCase,
+  unmuteMonitorUseCase,
 } from "@domain/monitors"
 import { AlertIncidentId, MonitorId, OrganizationId, ProjectId } from "@domain/shared"
 import {
@@ -27,6 +30,9 @@ const toMonitorAlertRecord = (alert: MonitorAlert) => ({
   source: { type: alert.source.type, id: alert.source.id },
   condition: alert.condition,
   severity: alert.severity,
+  // Rendered server-side so the panel/list don't pull `@domain/monitors` into
+  // the client bundle. Saved-search summaries gain the source name in M5.
+  summary: formatHumanReadableAlert(alert),
   createdAt: alert.createdAt.toISOString(),
 })
 
@@ -107,6 +113,30 @@ export const getMonitorBySlug = createServerFn({ method: "GET" })
 
     return result
   })
+
+const monitorMutationInputSchema = z.object({ monitorId: z.string() })
+
+const runMonitorMute = async (monitorId: string, muted: boolean): Promise<MonitorRecord> => {
+  const { organizationId } = await requireSession()
+  const pgClient = getPostgresClient()
+  const useCase = muted ? muteMonitorUseCase : unmuteMonitorUseCase
+
+  return Effect.runPromise(
+    useCase({ id: MonitorId(monitorId) }).pipe(
+      Effect.map(toMonitorRecord),
+      withPostgres(MonitorRepositoryLive, pgClient, OrganizationId(organizationId)),
+      withTracing,
+    ),
+  )
+}
+
+export const muteMonitor = createServerFn({ method: "POST" })
+  .inputValidator(monitorMutationInputSchema)
+  .handler(({ data }): Promise<MonitorRecord> => runMonitorMute(data.monitorId, true))
+
+export const unmuteMonitor = createServerFn({ method: "POST" })
+  .inputValidator(monitorMutationInputSchema)
+  .handler(({ data }): Promise<MonitorRecord> => runMonitorMute(data.monitorId, false))
 
 /** Keyset cursor over `(startedAt, id)`; `startedAt` is an ISO string on the wire. */
 const incidentCursorSchema = z.object({ startedAt: z.iso.datetime(), id: z.string() })

@@ -1,6 +1,7 @@
-import type { InfiniteTableInfiniteScroll } from "@repo/ui"
-import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
+import { type InfiniteTableInfiniteScroll, useToast } from "@repo/ui"
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo, useState } from "react"
+import { toUserMessage } from "../../lib/errors.ts"
 import {
   getMonitorBySlug,
   listMonitorIncidents,
@@ -8,6 +9,8 @@ import {
   type MonitorIncidentRecord,
   type MonitorIncidentsCursor,
   type MonitorRecord,
+  muteMonitor,
+  unmuteMonitor,
 } from "./monitors.functions.ts"
 
 export type { MonitorRecord }
@@ -112,4 +115,37 @@ export function useMonitorIncidents(input: {
   )
 
   return { incidents, isLoading, infiniteScroll }
+}
+
+/**
+ * Mute/unmute action shared by the dashboard 3-dots menu and the details panel.
+ * Calls the server fn, invalidates the monitor list + detail queries, and toasts.
+ * Re-throws so the caller can keep its confirmation modal open on failure.
+ */
+export function useMonitorMuteAction(projectId: string) {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const [isPending, setIsPending] = useState(false)
+
+  const setMuted = useCallback(
+    async (monitor: MonitorRecord, muted: boolean) => {
+      setIsPending(true)
+      try {
+        await (muted ? muteMonitor : unmuteMonitor)({ data: { monitorId: monitor.id } })
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["monitors", "list", projectId] }),
+          queryClient.invalidateQueries({ queryKey: ["monitors", "get", projectId] }),
+        ])
+        toast({ description: muted ? "Monitor muted." : "Monitor unmuted." })
+      } catch (error) {
+        toast({ variant: "destructive", description: toUserMessage(error) })
+        throw error
+      } finally {
+        setIsPending(false)
+      }
+    },
+    [projectId, queryClient, toast],
+  )
+
+  return { setMuted, isPending }
 }

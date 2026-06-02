@@ -1,18 +1,12 @@
 import { IssueRepository } from "@domain/issues"
-import { IssueId } from "@domain/shared"
+import { ALERT_INCIDENT_KIND_LABEL, IssueId } from "@domain/shared"
 import { Effect } from "effect"
 import { actionsLink, contextLine, projectOrOrgContext, sectionMarkdown, severityColor } from "./blocks.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
-const KIND_NAME: Record<string, string> = {
-  "issue.new": "New issue",
-  "issue.regressed": "Issue regressed",
-  "issue.escalating": "Issue escalating",
-}
-
 export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> = (payload, ctx) =>
   Effect.gen(function* () {
-    const name = KIND_NAME[payload.incidentKind] ?? "Incident"
+    const name = ALERT_INCIDENT_KIND_LABEL[payload.incidentKind] ?? "Incident"
     const color = severityColor(payload.severity)
     const issueUrl = ctx.project
       ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${payload.sourceId}`

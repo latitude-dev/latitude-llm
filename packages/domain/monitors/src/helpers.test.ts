@@ -22,18 +22,18 @@ const absolute = (count: number): AlertCountThreshold => ({ mode: "absolute", co
 
 describe("formatHumanReadableAlert", () => {
   it("renders the issue.new system alert", () => {
-    expect(formatHumanReadableAlert(baseAlert)).toBe("Alert me every time a new issue is discovered.")
+    expect(formatHumanReadableAlert(baseAlert)).toBe("Alerts each time a new issue is detected.")
   })
 
   it("renders the issue.regressed system alert", () => {
     expect(formatHumanReadableAlert(makeAlert({ kind: "issue.regressed" }))).toBe(
-      "Alert me every time a resolved issue regresses.",
+      "Alerts each time a resolved issue is detected again.",
     )
   })
 
   it("renders the issue.escalating system alert", () => {
     expect(formatHumanReadableAlert(makeAlert({ kind: "issue.escalating" }))).toBe(
-      "Alert me when an issue's occurrence rate crosses the project escalation threshold.",
+      "Alerts when an ongoing issue is being detected more than expected.",
     )
   })
 
@@ -43,7 +43,7 @@ describe("formatHumanReadableAlert", () => {
       source: { type: "savedSearch", id: "s".repeat(24) },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me every time a trace matches '5xx'.",
+      "Alerts each time a new trace matching '5xx' is detected.",
     )
   })
 
@@ -52,7 +52,7 @@ describe("formatHumanReadableAlert", () => {
       kind: "savedSearch.match",
       source: { type: "savedSearch", id: "s".repeat(24) },
     })
-    expect(formatHumanReadableAlert(alert)).toBe("Alert me every time a trace matches a saved search.")
+    expect(formatHumanReadableAlert(alert)).toBe("Alerts each time a new matching trace is detected.")
   })
 
   it("renders savedSearch.threshold absolute mode", () => {
@@ -62,7 +62,7 @@ describe("formatHumanReadableAlert", () => {
       condition: { kind: "savedSearch.threshold", threshold: absolute(100) },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred 100 times.",
+      "Alerts when traces matching '5xx' are detected 100 times.",
     )
   })
 
@@ -80,7 +80,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred 3 times more than the average of the last 72 hours.",
+      "Alerts when traces matching '5xx' are detected 3 times more than the average of the last 72 hours.",
     )
   })
 
@@ -98,7 +98,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred 2 times more than the average of the last 7 days.",
+      "Alerts when traces matching '5xx' are detected 2 times more than the average of the last 7 days.",
     )
   })
 
@@ -116,7 +116,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred 2 times more than yesterday.",
+      "Alerts when traces matching '5xx' are detected 2 times more than yesterday.",
     )
   })
 
@@ -134,7 +134,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred 2 times more than the previous week.",
+      "Alerts when traces matching '5xx' are detected 2 times more than the previous week.",
     )
   })
 
@@ -148,7 +148,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred 2 times more than expected.",
+      "Alerts when traces matching '5xx' are detected 2 times more than expected.",
     )
   })
 
@@ -163,7 +163,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred 3 times more than expected, sustained for at least 1 hour.",
+      "Alerts when traces matching '5xx' are detected 3 times more than expected, sustained for at least 1 hour.",
     )
   })
 
@@ -177,7 +177,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred more than expected.",
+      "Alerts when traces matching '5xx' are detected more than expected.",
     )
   })
 
@@ -192,7 +192,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred 2000 times, sustained for at least 5 minutes.",
+      "Alerts when traces matching '5xx' are detected 2000 times, sustained for at least 5 minutes.",
     )
   })
 
@@ -211,7 +211,7 @@ describe("formatHumanReadableAlert", () => {
       },
     })
     expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
-      "Alert me when '5xx' matches occurred 2 times more than the average of the last 7 days, sustained for at least 1 hour.",
+      "Alerts when traces matching '5xx' are detected 2 times more than the average of the last 7 days, sustained for at least 1 hour.",
     )
   })
 

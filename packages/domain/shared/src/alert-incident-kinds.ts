@@ -41,6 +41,20 @@ export const ALERT_INCIDENT_KIND_LIFECYCLE: Record<AlertIncidentKind, "point" | 
   "savedSearch.escalating": "sustained",
 }
 
+/**
+ * Canonical human-readable label per kind. Single source of truth — the monitor
+ * panel, incident-chart markers, and email/Slack notification templates all read
+ * this so the same kind never shows two different names.
+ */
+export const ALERT_INCIDENT_KIND_LABEL: Record<AlertIncidentKind, string> = {
+  "issue.new": "Issue discovered",
+  "issue.regressed": "Issue regressed",
+  "issue.escalating": "Issue escalating",
+  "savedSearch.match": "Search match",
+  "savedSearch.threshold": "Search threshold",
+  "savedSearch.escalating": "Search escalating",
+}
+
 /** Kinds users may put on their own monitors; `issue.*` are system-only. Create/update enforce this. */
 export const USER_CREATABLE_ALERT_KINDS = [
   "savedSearch.match",

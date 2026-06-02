@@ -1,4 +1,5 @@
 import {
+  BellRingIcon,
   Building2,
   CreditCard,
   DatabaseIcon,
@@ -6,7 +7,6 @@ import {
   type LucideIcon,
   Package,
   Plug,
-  RadarIcon,
   ScanSearch,
   SearchIcon,
   SettingsIcon,
@@ -64,7 +64,7 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
   {
     key: "monitors",
     label: "Monitors",
-    icon: RadarIcon,
+    icon: BellRingIcon,
     path: (slug) => `/projects/${slug}/monitors`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/monitors`),
     flag: "monitors",

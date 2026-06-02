@@ -33,7 +33,7 @@ WHERE NOT EXISTS (
 INSERT INTO "latitude"."monitors" (id, organization_id, project_id, slug, name, description, system, created_at, updated_at)
 SELECT substr(md5(gen_random_uuid()::text), 1, 24), p.organization_id, p.id,
   'issue-escalating', 'Issue escalating',
-  'Notifies when an ongoing issue''s occurrence rate crosses the escalation threshold, and again when it returns to baseline.',
+  'Notifies when an ongoing issue is being detected more than expected.',
   true, now(), now()
 FROM "latitude"."projects" p
 WHERE NOT EXISTS (

@@ -1,6 +1,6 @@
 import { Button, Icon, Input, Text, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { LockIcon, PlusIcon, SearchIcon } from "lucide-react"
+import { BellPlusIcon, LockIcon, SearchIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
@@ -70,6 +70,9 @@ function MonitorsPageContent() {
   )
 
   const activeMonitor = monitorSlug ? monitors.find((monitor) => monitor.slug === monitorSlug) : undefined
+  const activeIndex = activeMonitor ? monitors.findIndex((monitor) => monitor.slug === activeMonitor.slug) : -1
+  const prevMonitor = activeIndex > 0 ? monitors[activeIndex - 1] : undefined
+  const nextMonitor = activeIndex >= 0 ? monitors[activeIndex + 1] : undefined
 
   const hasMonitors = totalCount > 0
   const hasActiveFilters = Boolean(searchQuery)
@@ -104,9 +107,9 @@ function MonitorsPageContent() {
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
               {/* Disabled until the create-monitor modal lands in M5. */}
-              <Button size="sm" disabled>
-                <Icon icon={PlusIcon} size="sm" />
-                New monitor
+              <Button disabled>
+                <Icon icon={BellPlusIcon} size="sm" />
+                Monitor
               </Button>
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
@@ -117,14 +120,20 @@ function MonitorsPageContent() {
           infiniteScroll={infiniteScroll}
           activeMonitorSlug={monitorSlug || undefined}
           onActiveMonitorChange={(slug) => setMonitorSlug(slug ?? "")}
+          projectId={project.id}
         />
       </Layout.Content>
-      {monitorSlug ? (
+      {activeMonitor ? (
         <Layout.Aside>
           <MonitorDetailDrawer
-            key={monitorSlug}
-            monitorName={activeMonitor?.name ?? monitorSlug}
+            key={activeMonitor.slug}
+            projectId={project.id}
+            monitor={activeMonitor}
             onClose={() => setMonitorSlug("")}
+            {...(nextMonitor ? { onNext: () => setMonitorSlug(nextMonitor.slug) } : {})}
+            {...(prevMonitor ? { onPrev: () => setMonitorSlug(prevMonitor.slug) } : {})}
+            canNavigateNext={nextMonitor !== undefined}
+            canNavigatePrev={prevMonitor !== undefined}
           />
         </Layout.Aside>
       ) : null}

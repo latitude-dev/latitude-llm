@@ -2,7 +2,7 @@ import type { AlertBaseline, AlertCountThreshold, AlertDuration, AlertIncidentKi
 import type { MonitorAlert } from "./entities/monitor.ts"
 
 export interface HumanReadableAlertContext {
-  /** Saved-search display name; caller resolves it. Falls back to "a saved search" when absent. */
+  /** Humanised saved-search name/filter; caller resolves it. Falls back to "matching traces" when absent. */
   readonly savedSearchName?: string
 }
 
@@ -33,15 +33,15 @@ const formatBaseline = (baseline: AlertBaseline): string =>
 
 const formatThreshold = (threshold: AlertCountThreshold): string => {
   if (threshold.mode === "absolute") {
-    return `occurred ${threshold.count} times`
+    return `detected ${threshold.count} times`
   }
   if (threshold.mode === "multiplier") {
-    return `occurred ${threshold.factor} times more than ${formatBaseline(threshold.baseline)}`
+    return `detected ${threshold.factor} times more than ${formatBaseline(threshold.baseline)}`
   }
   // sensitivity is the user-facing "N times more than expected"; drop it when unset.
   return threshold.sensitivity === undefined
-    ? "occurred more than expected"
-    : `occurred ${threshold.sensitivity} times more than expected`
+    ? "detected more than expected"
+    : `detected ${threshold.sensitivity} times more than expected`
 }
 
 const formatWindowMinutes = (minutes: number): string => {
@@ -52,16 +52,14 @@ const formatWindowMinutes = (minutes: number): string => {
 }
 
 const issueSentenceForKind: Record<Extract<AlertIncidentKind, `issue.${string}`>, string> = {
-  "issue.new": "Alert me every time a new issue is discovered.",
-  "issue.regressed": "Alert me every time a resolved issue regresses.",
-  "issue.escalating": "Alert me when an issue's occurrence rate crosses the project escalation threshold.",
+  "issue.new": "Alerts each time a new issue is detected.",
+  "issue.regressed": "Alerts each time a resolved issue is detected again.",
+  "issue.escalating": "Alerts when an ongoing issue is being detected more than expected.",
 }
 
-const savedSearchSubject = (alert: MonitorAlert, context?: HumanReadableAlertContext): string => {
-  if (context?.savedSearchName) return `'${context.savedSearchName}' matches`
-  if (alert.source.id === null) return "saved-search matches"
-  return "matches of a saved search"
-}
+/** The thing being detected is a trace; the saved search (humanised by the caller) scopes which. */
+const savedSearchTraceSubject = (context?: HumanReadableAlertContext): string =>
+  context?.savedSearchName ? `traces matching '${context.savedSearchName}'` : "matching traces"
 
 /** Renders an alert as one complete sentence. Shared by the form preview, panel, and notification templates. */
 export function formatHumanReadableAlert(alert: MonitorAlert, context?: HumanReadableAlertContext): string {
@@ -69,19 +67,21 @@ export function formatHumanReadableAlert(alert: MonitorAlert, context?: HumanRea
     return issueSentenceForKind[alert.kind]
   }
 
-  const subject = savedSearchSubject(alert, context)
-
   if (alert.kind === "savedSearch.match") {
-    return `Alert me every time a trace matches ${context?.savedSearchName ? `'${context.savedSearchName}'` : "a saved search"}.`
+    return context?.savedSearchName
+      ? `Alerts each time a new trace matching '${context.savedSearchName}' is detected.`
+      : "Alerts each time a new matching trace is detected."
   }
 
+  const subject = savedSearchTraceSubject(context)
+
   if (alert.kind === "savedSearch.threshold" && alert.condition?.kind === "savedSearch.threshold") {
-    return `Alert me when ${subject} ${formatThreshold(alert.condition.threshold)}.`
+    return `Alerts when ${subject} are ${formatThreshold(alert.condition.threshold)}.`
   }
 
   if (alert.kind === "savedSearch.escalating" && alert.condition?.kind === "savedSearch.escalating") {
     // "sustained for at least X" keeps the window distinct from the baseline period.
-    return `Alert me when ${subject} ${formatThreshold(alert.condition.threshold)}, sustained for at least ${formatWindowMinutes(
+    return `Alerts when ${subject} are ${formatThreshold(alert.condition.threshold)}, sustained for at least ${formatWindowMinutes(
       alert.condition.window.minutes,
     )}.`
   }

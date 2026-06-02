@@ -294,17 +294,18 @@ export type AlertBaseline = {
  * hardcoded to 5 min, the throttle interval) and `savedSearch.escalating`
  * (current window = the user-configured `window` field).
  *
- * Humanised examples:
+ * Humanised examples (the full sentence prefixes with "Alerts when traces
+ * matching '<search>' are " — see `formatHumanReadableAlert`):
  *   { mode: "absolute", count: 100 }
- *     → "occurred 100 times"
+ *     → "detected 100 times"
  *   { mode: "multiplier", factor: 3,
  *     baseline: { kind: "average", lookback: { unit: "days", days: 7 } } }
- *     → "occurred 3 times more than the average of the last 7 days"
+ *     → "detected 3 times more than the average of the last 7 days"
  *   { mode: "multiplier", factor: 2,
  *     baseline: { kind: "period", lookback: { unit: "days", days: 1 } } }
- *     → "occurred 2 times more than yesterday"
+ *     → "detected 2 times more than yesterday"
  *   { mode: "expected", sensitivity: 2 }
- *     → "occurred 2 times more than expected"
+ *     → "detected 2 times more than expected"
  */
 export type AlertCountThreshold =
   | { mode: "absolute"; count: number }
@@ -932,38 +933,26 @@ Mirrors `issues-empty-state.tsx`. In practice rarely seen post-backfill, since e
 
 | Column | Sortable | Behaviour |
 |---|---|---|
-| Name | no | Truncated. `<LatitudeLogo />` prepended when `system === true`, mirroring the annotation-card pattern. |
+| Name | yes | Truncated. `<LatitudeLogo />` prepended when `system === true`, mirroring the annotation-card pattern. |
 | Status | yes | `<Status variant="primary">Live</Status>` when `mutedAt = null`; `<Status variant="muted">Muted</Status>` otherwise. |
-| Last incident | yes (default desc) | Empty when no incidents. Otherwise: warning badge "Closed Xh ago" if the latest incident has `endedAt != null`; destructive badge "Ongoing since Xh" if `endedAt = null`. Uses `relativeTime` from `@repo/utils`. |
+| Last incident | yes | Empty when no incidents. Otherwise: warning badge "Closed Xh ago" if the latest incident has `endedAt != null`; destructive badge "Ongoing since Xh" if `endedAt = null`. Uses `relativeTime` from `@repo/utils`. |
+| Actions | no | A trailing 3-dots `optionsColumn` menu (the home for all monitor management): **Mute/Unmute** (behind `MonitorMuteConfirmModal`), and **Rename** / **Delete** (user monitors only — disabled for system; the rename modal + delete confirmation are wired in M5). |
+
+**Ordering.** Name / Status / Last incident are all sortable. **System monitors are always pinned to the top of the list** regardless of the active sort; within each group (system, then user) the default sort is **last incident descending**. (Sorting by last incident requires the list read to surface each monitor's latest-incident timestamp — see the Milestone UX task. The current `lastIncident` column is `null` until that lands.)
 
 The "Notifications" column from earlier drafts is gone — notifications are not per-monitor and there's nothing meaningful to surface here.
 
-Row click toggles `monitorSlug`. The selected row gets `activeRowKey` highlight.
+Row click toggles `monitorSlug`. The selected row gets `activeRowKey` highlight. The actions cell stops click propagation so opening the menu doesn't open the panel.
 
 ### Monitor details panel
 
-`apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/-components/monitor-detail-drawer.tsx`. Mirrors `issue-detail-drawer.tsx`. The panel renders two modes depending on `monitor.system`:
+`apps/web/src/routes/_authenticated/projects/$projectSlug/monitors/-components/monitor-detail-drawer.tsx`. Mirrors `issue-detail-drawer.tsx`. **A single mode** — monitor management (mute / rename / delete) lives on the dashboard list's 3-dots menu, not the panel. There is no `useEditableText` in the repo, so rename is a modal off that menu (M5), not in-place editing here.
 
-#### System monitor mode (structurally locked, values editable)
-
-- `DetailDrawer` with the same `storeKey="monitor-detail-drawer-width"`.
-- Actions slot: next/prev (chevrons + `Alt+ArrowUp/Down`, `J`/`K` hotkeys).
-- Header:
-  - **Mute / Unmute** ghost button (behind a confirmation modal).
-  - **No delete button**, no name/description edit pencil.
-  - Title = monitor name, subtitle = description — both rendered as plain text (no edit affordance on hover).
-  - `<CopyableText value={monitor.slug} size="sm" />` below the description.
+- `DetailDrawer` with `storeKey="monitor-detail-drawer-width"`. `actions` = next/prev nav chevrons (`Alt+ArrowUp/Down`, `J`/`K`); `rightActions` = a Mute/Unmute button (behind `MonitorMuteConfirmModal`), mirroring where issue details put their lifecycle actions. No delete button.
+- Header body (mirrors `issue-detail-drawer`): bordered block with `Text.H4M` title, `Text.H5` muted description, then a row with `<CopyableText value={monitor.slug} size="sm" />` plus a **"System" tag** (LatitudeLogo + "System", styled like a `TagBadge`) for system monitors and a "Muted" badge when muted. Plain text, no edit affordance.
 - Body sections (collapsible):
+  - **Alerts** — vertical stack of cards showing `formatHumanReadableAlert` (rendered server-side onto the alert record) + kind/severity. **Read-only in M4**; editing the configurable values (the `issue.escalating` sensitivity + saved-search forms via the shared alert-form, saving through `updateMonitorAlertUseCase`) and add/remove (`createMonitorAlert` / `deleteMonitorAlert`) land in **M5**. `null`-condition cards (`issue.new`, `issue.regressed`) stay read-only regardless.
   - **Incidents** — embedded `InfiniteTable` of incidents for this monitor, **keyset-paginated** (`useMonitorIncidents` → `useInfiniteQuery`, cursor over `(started_at, id)`). Incidents are append-heavy and unbounded over time, so keyset avoids offset's scan-and-discard and the page-shift that new incidents would cause; backed by the composite `alert_incidents_monitor_alert_idx (monitor_alert_id, started_at DESC, id DESC)`.
-  - **Alerts** — vertical stack of alert cards. The set is locked (no per-card `X`, no "+ Add alert" dashed card, kind/source not editable), but each card's **configurable values are editable**: the `issue.escalating` card exposes a **sensitivity** control that saves via `updateMonitorAlertUseCase`. Cards whose alert has a `null` condition (`issue.new`, `issue.regressed`) have nothing to tune and render fully read-only. Each card still shows the human-readable summary via `formatHumanReadableAlert`.
-
-#### User monitor mode (editable)
-
-Same shape as above plus:
-
-- Header gets a **Delete** destructive button (behind a confirmation modal).
-- Title and description are **in-place editable**: on hover, dim + show an edit pencil; click to edit; blur to save (`useEditableText` hook drives this). Slug regen happens server-side on name change.
-- **Alerts** section has the per-card `X` button and a dashed "+ Add alert" footer.
 
 #### Incidents section table
 
@@ -1002,7 +991,7 @@ Per card:
 
 Expresses `AlertCountThreshold` + (for escalating) `window` in two rows:
 
-- Row 1 (both threshold and escalating): `"Alert me when it occurred"` + count/amount input + `Select` `["times", "times more than"]`. When "times more than", a second `Select` picks what to compare against. Three groups: **average** (`"the average of the last hour"`, `"… 24 hours"`, `"… 7 days"`), **previous period** (`"yesterday"`, `"the previous week"`), and **expected** (`"expected"`). "The average of the last 7 days" is the default. Picking **average**/**previous period** sets `mode: "multiplier"` and the amount input is the `factor`; picking **expected** sets `mode: "expected"` and the same amount input becomes the `sensitivity` (1–6). The expected option carries an info tooltip (below) explaining it's a dynamically-learned baseline.
+- Row 1 (both threshold and escalating): `"Alert when traces are detected"` + count/amount input + `Select` `["times", "times more than"]`. When "times more than", a second `Select` picks what to compare against. Three groups: **average** (`"the average of the last hour"`, `"… 24 hours"`, `"… 7 days"`), **previous period** (`"yesterday"`, `"the previous week"`), and **expected** (`"expected"`). "The average of the last 7 days" is the default. Picking **average**/**previous period** sets `mode: "multiplier"` and the amount input is the `factor`; picking **expected** sets `mode: "expected"` and the same amount input becomes the `sensitivity` (1–6). The expected option carries an info tooltip (below) explaining it's a dynamically-learned baseline.
 - Row 2 (`savedSearch.escalating` only): `"for at least"` + duration input + `Select` `["minutes", "hours", "days"]`. This is the `window` field. Minimum 5 minutes.
 
 The form binds bidirectionally to the discriminated union. `formatHumanReadableAlert(alert)` renders the union back to text — used in the card preview, table tooltips, and notification templates.
@@ -1030,21 +1019,25 @@ The saved-search assign-user UI is removed. `assignedUserId` and `createdByUserI
 
 `formatHumanReadableAlert(alert)` (in `packages/domain/monitors/src/helpers.ts`) returns one sentence per alert. Examples:
 
+All sentences start with "Alerts" (never "Alert me"); saved-search alerts speak of **traces** being **detected** (not matches "occurring"), and the saved search itself is humanised by the caller via `context.savedSearchName`.
+
 | Alert | Output |
 |---|---|
-| `issue.new`, source `all` | `"Alert me every time a new issue is discovered."` |
-| `issue.regressed`, source `all` | `"Alert me every time a resolved issue regresses."` |
-| `issue.escalating`, source `all` | `"Alert me when an issue's occurrence rate crosses the project escalation threshold."` |
-| `savedSearch.match`, search `"5xx"` | `"Alert me every time a trace matches '5xx'."` |
-| `savedSearch.threshold`, abs 100 | `"Alert me when '5xx' matches occurred 100 times."` |
-| `savedSearch.threshold`, mult 3× average / last 7 days | `"Alert me when '5xx' matches occurred 3 times more than the average of the last 7 days."` |
-| `savedSearch.threshold`, mult 2× of yesterday | `"Alert me when '5xx' matches occurred 2 times more than yesterday."` |
-| `savedSearch.threshold`, expected (sensitivity 2) | `"Alert me when '5xx' matches occurred 2 times more than expected."` |
-| `savedSearch.escalating`, abs 2000, window 5m | `"Alert me when '5xx' matches occurred 2000 times, sustained for at least 5 minutes."` |
-| `savedSearch.escalating`, mult 2× average / last 7 days, window 1h | `"Alert me when '5xx' matches occurred 2 times more than the average of the last 7 days, sustained for at least 1 hour."` |
-| `savedSearch.escalating`, expected (sensitivity 3), window 1h | `"Alert me when '5xx' matches occurred 3 times more than expected, sustained for at least 1 hour."` |
+| `issue.new`, source `all` | `"Alerts each time a new issue is detected."` |
+| `issue.regressed`, source `all` | `"Alerts each time a resolved issue is detected again."` |
+| `issue.escalating`, source `all` | `"Alerts when an ongoing issue is being detected more than expected."` |
+| `savedSearch.match`, search `"5xx"` | `"Alerts each time a new trace matching '5xx' is detected."` |
+| `savedSearch.threshold`, abs 100 | `"Alerts when traces matching '5xx' are detected 100 times."` |
+| `savedSearch.threshold`, mult 3× average / last 7 days | `"Alerts when traces matching '5xx' are detected 3 times more than the average of the last 7 days."` |
+| `savedSearch.threshold`, mult 2× of yesterday | `"Alerts when traces matching '5xx' are detected 2 times more than yesterday."` |
+| `savedSearch.threshold`, expected (sensitivity 2) | `"Alerts when traces matching '5xx' are detected 2 times more than expected."` |
+| `savedSearch.escalating`, abs 2000, window 5m | `"Alerts when traces matching '5xx' are detected 2000 times, sustained for at least 5 minutes."` |
+| `savedSearch.escalating`, mult 2× average / last 7 days, window 1h | `"Alerts when traces matching '5xx' are detected 2 times more than the average of the last 7 days, sustained for at least 1 hour."` |
+| `savedSearch.escalating`, expected (sensitivity 3), window 1h | `"Alerts when traces matching '5xx' are detected 3 times more than expected, sustained for at least 1 hour."` |
 
 Tests cover the matrix. The helper is shared between the API documentation entity (sentence appears in OpenAPI examples), the frontend, and notification templates (rendered into in-app/email when `condition` is set).
+
+**Kind labels** (the short title per kind — "Issue discovered", "Issue regressed", "Issue escalating", "Search match", "Search threshold", "Search escalating") have a single source of truth in `ALERT_INCIDENT_KIND_LABEL` (`@domain/shared`), consumed by the monitor panel, the incident-chart markers, and the email/Slack notification templates so the same kind never shows two different names.
 
 ## API / SDK / MCP
 
@@ -1155,7 +1148,7 @@ export const SYSTEM_MONITOR_DEFINITIONS = [
     slug: "issue-escalating",
     name: "Issue escalating",
     description:
-      "Notifies when an ongoing issue's occurrence rate crosses the escalation threshold, and again when it returns to baseline.",
+      "Notifies when an ongoing issue is being detected more than expected.",
     alerts: [
       {
         kind: "issue.escalating",
@@ -1359,17 +1352,19 @@ Backend mutations (`LAT-630/monitor-mutations`):
 
 Details-panel UI (`LAT-630/details-panel`):
 
-- [ ] Web side: `monitor-detail-drawer.tsx` mirroring `issue-detail-drawer.tsx` (replaces the M3 stub). Both modes:
-  - System mode: read-only header (no name/description pencil, no delete button); Alerts section locked structurally (no `X` / `+`, no kind/source change) but each card's configurable values are editable — the `issue.escalating` card exposes a sensitivity control (saves via `updateMonitorAlertUseCase`); `null`-condition cards render read-only.
-  - User mode: in-place editable name + description (`useEditableText` hook), delete button, and editable alert values (via `updateMonitorAlertUseCase`). Adding/removing alerts (the `+` / per-card `X`) lands in M5 alongside `createMonitorAlert` / `deleteMonitorAlert`.
-- [ ] Mute/unmute/delete monitor + update-alert server functions; confirmation modals where destructive.
-- [ ] Incidents section: embedded `InfiniteTable`; "Notified"/"Muted" column driven by the batched idempotency-key lookup.
+> Management actions (mute/rename/delete) live on a **3-dots menu on the dashboard list**, not in the panel. The panel itself is a single mode (no system/user branching) — `useEditableText` (which the spec originally assumed) doesn't exist in the repo, so rename is a modal off the list menu, landing in M5.
+
+- [x] Dashboard list **3-dots actions column** (`optionsColumn`): **Mute/Unmute** (functional, behind `MonitorMuteConfirmModal`), plus **Rename** and **Delete** items rendered **disabled** — they only apply to user monitors and are fully wired (rename modal + delete confirmation) in M5.
+- [x] `monitor-detail-drawer.tsx` (replaces the M3 stub), mirroring `issue-detail-drawer.tsx`: actions slot = next/prev nav (`Alt+↑/↓`, `J`/`K`) **+ Mute/Unmute** (confirmation); body = name → description → `CopyableText` slug → **Alerts** → **Incidents**. No delete button, no in-place editing.
+- [x] **Alerts section read-only in M4**: cards render `formatHumanReadableAlert` (computed server-side onto the alert record to keep `@domain/monitors` out of the client bundle) + kind/severity. Editing configurable values (the `issue.escalating` sensitivity + saved-search forms) lands in M5 with the shared alert-form components.
+- [x] **Incidents section**: embedded `InfiniteTable` (`useMonitorIncidents`, keyset) — Started / Status (Closed/Ongoing badge) / Source / Notified-or-Muted badge. (Deep-linking the Source to the issue/saved-search + resolving its name is a UX-milestone polish item.)
+- [x] `muteMonitor` / `unmuteMonitor` server functions + `useMonitorMuteAction` hook (invalidates the list + detail queries, toasts); shared `MonitorMuteConfirmModal` used by both the list menu and the panel.
 
 ### Milestone 5 — Create monitor modal and alert editing
 
 > Branch: `LAT-630/create-and-edit` · Estimated size: ~2,600 lines
 
-**Goal:** Users can create a non-system monitor end-to-end. The details panel's Alerts section allows adding/removing alerts (editing already landed via `updateMonitorAlertUseCase` in M4) via the same alert card form. All paths constrain to `USER_CREATABLE_ALERT_KINDS`.
+**Goal:** Users can create a non-system monitor end-to-end, edit/add/remove a monitor's alerts (the create modal and the panel's alert section share the alert-form components), and rename/delete user monitors from the dashboard 3-dots menu. The `updateMonitorAlertUseCase` backend shipped in M4 (monitor-mutations); M5 builds the editing UI on top of it. All paths constrain to `USER_CREATABLE_ALERT_KINDS`.
 
 - [ ] `createMonitorUseCase` — Zod-validated input; inserts the monitor + its alerts atomically, composing `createMonitorAlertUseCase` per alert. Rejects: empty alert list; any alert kind ∉ `USER_CREATABLE_ALERT_KINDS`; `system: true` in the input; saved-search alerts without `source.id`.
 - [ ] `createMonitorAlertUseCase` — adds a single alert to an existing monitor (also used inside `createMonitor`). Enforces the user-creatable allowlist + kind/source.type match + `source.id` for saved searches. **Rejects `system === true`** — no alert may be added to a system monitor.
@@ -1386,18 +1381,21 @@ Details-panel UI (`LAT-630/details-panel`):
   - **`expected` baseline** (its own tooltip, since it behaves differently): "**Expected** is a smart baseline computed automatically from your history — it learns the normal shape of your traffic for each time of day and day of week, so a quiet Sunday night and a busy Monday morning each get their own 'normal'. You don't pick a comparison window; just how sensitive to be. It's the same engine that powers Latitude's automatic issue-escalation alerts." Pair with a **sensitivity** sub-tooltip: "How far above the learned normal counts as a spike. Lower = more sensitive (alerts on smaller deviations, noisier); higher = quieter."
   - **`factor` on multiplier**: "The multiplier. 3 means 'fire when current activity is 3× the baseline rate'."
   - **One-line live-preview** under each alert card showing `formatHumanReadableAlert(alert)` — so the user sees the sentence form of what they're configuring as they edit.
-- [ ] Server functions: `createMonitor`, `createMonitorAlert`, `deleteMonitorAlert` (plus `updateMonitorAlert` from M4).
+- [ ] **Dashboard 3-dots menu — enable Rename + Delete** for user monitors (the M4 placeholders; stay disabled/hidden for system monitors): Rename opens a modal editing name + description (`updateMonitorUseCase`); Delete opens a confirmation (`deleteMonitorUseCase`). Mute/unmute already shipped in M4.
+- [ ] **In-panel alert editing**: the M4 read-only Alerts section becomes editable via the shared alert-form — the `issue.escalating` card's sensitivity control (system + user) and the saved-search threshold/window forms, saving through `updateMonitorAlertUseCase`; add/remove via `createMonitorAlert` / `deleteMonitorAlert`. `null`-condition cards stay read-only.
+- [ ] Server functions: `createMonitor`, `createMonitorAlert`, `deleteMonitorAlert`, `updateMonitor`, `deleteMonitor`, `updateMonitorAlert` (mute/unmute shipped in M4).
 - [ ] Backend tests: creation invariants, alert update invariants, kind/source.type mismatch rejection, kind-not-in-allowlist rejection, saved-search source.id required.
 
 ### Milestone UX — Polish the full Monitors frontend
 
-> Branch: `LAT-630/ux-polish` · Runs after M5, before M6. Frontend-only — no domain/backend changes.
+> Branch: `LAT-630/ux-polish` · Runs after M5, before M6. Mostly frontend — the one backend touch is extending the monitors list read for last-incident sorting (below).
 
 **Goal:** A dedicated pass to bring the entire Monitors frontend (everything built across M1–M5: dashboard, details panel, create modal, alert card + threshold/window forms) to a finished, shippable feel. From M6 onward the work is almost entirely backend (issue-event firing, the saved-search pipeline, API/SDK), so this is the natural moment to fully polish the UI while it's fresh and before backend wiring lands on top of it.
 
-Scope is intentionally left open — the exact polish items are decided when the milestone starts, not prescribed here.
+Scope is intentionally left open — the exact polish items are decided when the milestone starts, not prescribed here. Two items are pre-committed:
 
-Worth front-loading, since it enables the rest: a **`monitors` seeder** (`packages/platform/db-postgres/src/seeds/monitors/`, registered in `all.ts` next to the existing `alert-incidents` seeder, run by `pnpm seed`). It writes the M2/M3 schema directly — monitors + `monitor_alerts` + a spread of `alert_incidents` covering every visual state (open vs closed, muted vs live, notified vs not, each kind/severity, "all"-source vs named-source) — so the polish can exercise the whole frontend now, without waiting for M6/M7 to produce real incidents.
+- **Dashboard column sorting.** Make **Name / Status / Last incident** sortable, with **system monitors always pinned to the top** of the list and a default sort of **last incident descending** (within each group). This needs the monitors list read (`MonitorRepository.list` + `listMonitorsUseCase`) extended to surface and order by each monitor's latest-incident timestamp, and the `lastIncident` column populated from it — the one backend touch in this otherwise frontend milestone.
+- **`monitors` seeder** (worth front-loading, since it enables the rest): `packages/platform/db-postgres/src/seeds/monitors/`, registered in `all.ts` next to the existing `alert-incidents` seeder, run by `pnpm seed`. It writes the M2/M3 schema directly — monitors + `monitor_alerts` + a spread of `alert_incidents` covering every visual state (open vs closed, muted vs live, notified vs not, each kind/severity, "all"-source vs named-source) — so the polish can exercise the whole frontend now, without waiting for M6/M7 to produce real incidents.
 
 ### Milestone 6 — Wire issue-event path to monitors (flag-gated)
 
@@ -1463,7 +1461,7 @@ Smaller than originally estimated because most of the heavy lifting has already 
 
 > Branch: `LAT-630/api-endpoints` · Estimated size: ~2,000 lines (excluding auto-generated files)
 
-**Goal:** All nine monitor endpoints live. SDK regenerated and bumped.
+**Goal:** All thirteen monitor endpoints live. SDK regenerated and bumped.
 
 - [ ] `apps/api/src/routes/monitors.ts` — thirteen endpoints on the `defineApiEndpoint<OrganizationScopedEnv>` factory (incl. `createMonitorAlert` / `updateMonitorAlert` / `deleteMonitorAlert`).
 - [ ] `apps/api/src/openapi/entities/monitor.ts` — `MonitorSchema` + `toMonitorResponse(monitor)` mapper. Rich `.describe(...)` on every field so SDK and MCP tools carry useful docs.

@@ -1,5 +1,5 @@
 import type { IncidentSampleExcerpt } from "@domain/notifications"
-import type { AlertIncidentKind, AlertSeverity } from "@domain/shared"
+import { ALERT_INCIDENT_KIND_LABEL, type AlertIncidentKind, type AlertSeverity } from "@domain/shared"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -20,26 +20,16 @@ import {
   TagsChips,
 } from "../-incident-components.tsx"
 
-const ALERT_KIND_TO_HEADING: Record<AlertIncidentKind, string> = {
-  "issue.new": "New issue",
-  "issue.regressed": "Regressed issue",
-  "issue.escalating": "Escalating issue",
-  // Placeholder copy until the monitors flag path ships polished templates (M6+).
-  "savedSearch.match": "Saved search match",
-  "savedSearch.threshold": "Saved search threshold",
-  "savedSearch.escalating": "Saved search escalating",
-}
-
 const ALERT_KIND_TO_SUBTITLE: Record<AlertIncidentKind, string> = {
-  "issue.new": "We notified everyone watching this project of the new issue.",
-  "issue.regressed": "We notified everyone watching this project — this issue had previously been resolved.",
+  "issue.new": "We notified everyone watching this project — a new issue was discovered.",
+  "issue.regressed": "We notified everyone watching this project — a resolved issue was detected again.",
   "issue.escalating":
-    "We notified everyone watching this project — the issue's occurrence rate crossed the escalation threshold.",
-  "savedSearch.match": "We notified everyone watching this project — a new trace matched the saved search.",
+    "We notified everyone watching this project — an ongoing issue is being detected more than expected.",
+  "savedSearch.match": "We notified everyone watching this project — a new trace matching the search was detected.",
   "savedSearch.threshold":
-    "We notified everyone watching this project — the saved-search match count crossed the configured threshold.",
+    "We notified everyone watching this project — traces matching the search were detected above the configured threshold.",
   "savedSearch.escalating":
-    "We notified everyone watching this project — the saved-search match count stayed above the threshold for the configured window.",
+    "We notified everyone watching this project — traces matching the search stayed above the threshold for the configured window.",
 }
 
 interface IncidentEventEmailProps {
@@ -71,7 +61,7 @@ export function IncidentEventEmail({
   sampleExcerpt,
   webAppUrl,
 }: IncidentEventEmailProps) {
-  const heading = ALERT_KIND_TO_HEADING[incidentKind]
+  const heading = ALERT_INCIDENT_KIND_LABEL[incidentKind]
   const subtitle = ALERT_KIND_TO_SUBTITLE[incidentKind]
   const issueRef = issueName ?? "an issue"
   const scope = formatScope(organizationName, projectName)

@@ -46,7 +46,7 @@ function BackofficeWrappedAnalyticsPage() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-4 border-b border-border px-6 py-4">
-        <div className="flex-1">
+        <div className="flex flex-1 flex-col gap-1">
           <Text.H4 weight="semibold">Wrapped analytics</Text.H4>
           <Text.H6 color="foregroundMuted">
             Latest Wrapped report per project from the last 7 days. Click a row to open the report in a new tab.

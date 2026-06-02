@@ -3,15 +3,20 @@ import {
   type InfiniteTableColumn,
   type InfiniteTableInfiniteScroll,
   LatitudeLogo,
+  type MenuOption,
+  optionsColumn,
   Status,
   Text,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
+import { BellIcon, BellOffIcon, PencilIcon, Trash2Icon } from "lucide-react"
+import { useState } from "react"
 import type { MonitorRecord } from "../../../../../../domains/monitors/monitors.collection.ts"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { MonitorMuteConfirmModal } from "./monitor-mute-confirm-modal.tsx"
 
 /** Latest-incident summary per row; `null` until incidents land (M3+) → em dash. */
 export interface MonitorLastIncidentSummary {
@@ -44,13 +49,16 @@ export function MonitorsView({
   infiniteScroll,
   activeMonitorSlug,
   onActiveMonitorChange,
+  projectId,
 }: {
   readonly rows: readonly MonitorsTableRow[]
   readonly isLoading: boolean
   readonly infiniteScroll: InfiniteTableInfiniteScroll
   readonly activeMonitorSlug: string | undefined
   readonly onActiveMonitorChange: (slug: string | undefined) => void
+  readonly projectId: string
 }) {
+  const [pendingMute, setPendingMute] = useState<MonitorRecord | null>(null)
   const activeRowKey = activeMonitorSlug
     ? rows.find((r) => r.monitor.slug === activeMonitorSlug)?.monitor.id
     : undefined
@@ -88,27 +96,43 @@ export function MonitorsView({
       minWidth: 180,
       render: (row) => <LastIncidentCell summary={row.lastIncident} />,
     },
+    optionsColumn<MonitorsTableRow>({
+      getOptions: (row): MenuOption[] => [
+        {
+          label: row.monitor.mutedAt ? "Unmute" : "Mute",
+          iconProps: { icon: row.monitor.mutedAt ? BellIcon : BellOffIcon },
+          onClick: () => setPendingMute(row.monitor),
+        },
+        { type: "separator" },
+        // Rename + Delete only apply to user monitors; wired in M5.
+        { label: "Rename", iconProps: { icon: PencilIcon }, disabled: true },
+        { label: "Delete", type: "destructive", iconProps: { icon: Trash2Icon }, disabled: true },
+      ],
+    }),
   ]
 
   return (
-    <Layout.Body>
-      <Layout.List>
-        <InfiniteTable
-          {...listingLayoutIntrinsicScroll.infiniteTable}
-          data={rows}
-          isLoading={isLoading}
-          columns={columns}
-          getRowKey={(row) => row.monitor.id}
-          infiniteScroll={infiniteScroll}
-          {...(activeRowKey ? { activeRowKey } : {})}
-          onRowClick={(row) =>
-            onActiveMonitorChange(row.monitor.slug === activeMonitorSlug ? undefined : row.monitor.slug)
-          }
-          getRowAriaLabel={(row) =>
-            row.monitor.slug === activeMonitorSlug ? `Close ${row.monitor.name}` : `Open ${row.monitor.name}`
-          }
-        />
-      </Layout.List>
-    </Layout.Body>
+    <>
+      <Layout.Body>
+        <Layout.List>
+          <InfiniteTable
+            {...listingLayoutIntrinsicScroll.infiniteTable}
+            data={rows}
+            isLoading={isLoading}
+            columns={columns}
+            getRowKey={(row) => row.monitor.id}
+            infiniteScroll={infiniteScroll}
+            {...(activeRowKey ? { activeRowKey } : {})}
+            onRowClick={(row) =>
+              onActiveMonitorChange(row.monitor.slug === activeMonitorSlug ? undefined : row.monitor.slug)
+            }
+            getRowAriaLabel={(row) =>
+              row.monitor.slug === activeMonitorSlug ? `Close ${row.monitor.name}` : `Open ${row.monitor.name}`
+            }
+          />
+        </Layout.List>
+      </Layout.Body>
+      <MonitorMuteConfirmModal projectId={projectId} monitor={pendingMute} onOpenChange={setPendingMute} />
+    </>
   )
 }
