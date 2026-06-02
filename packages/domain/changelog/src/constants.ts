@@ -4,8 +4,7 @@ export const FULL_CHANGELOG_URL = "https://latitude.so/changelog"
 /** Global (non-org-scoped) cache key for the rendered changelog list. */
 export const CHANGELOG_CACHE_KEY = "changelog:framer:entries:v3"
 
-/** Cache TTL — entries change at most a few times per week, so the Framer
- * fetch is gated to once every 6 hours per cold cache. */
+/** Cache TTL — entries change at most a few times per week. */
 export const CHANGELOG_CACHE_TTL_SECONDS = 6 * 60 * 60
 
 /** Default number of entries surfaced in the in-app popover. */

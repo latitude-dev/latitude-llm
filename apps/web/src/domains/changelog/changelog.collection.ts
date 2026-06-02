@@ -3,9 +3,9 @@ import { type ChangelogEntryRecord, listChangelogEntries } from "./changelog.fun
 
 const CHANGELOG_QUERY_KEY = ["changelog", "entries"] as const
 
-// The changelog changes a few times a week at most — no need to revalidate
-// often. Pair this with the server-side Redis TTL that gates the Framer fetch.
+// The changelog changes a few times a week at most — pair with server-side Redis TTL.
 const CHANGELOG_STALE_TIME_MS = 6 * 60 * 60 * 1000
+const CHANGELOG_REFETCH_INTERVAL_MS = 6 * 60 * 60 * 1000
 
 const EMPTY_ENTRIES: readonly ChangelogEntryRecord[] = []
 
@@ -14,6 +14,8 @@ export function useChangelogEntries() {
     queryKey: CHANGELOG_QUERY_KEY,
     queryFn: () => listChangelogEntries(),
     staleTime: CHANGELOG_STALE_TIME_MS,
+    refetchOnWindowFocus: true,
+    refetchInterval: CHANGELOG_REFETCH_INTERVAL_MS,
   })
 
   return { entries: data ?? EMPTY_ENTRIES, isLoading }

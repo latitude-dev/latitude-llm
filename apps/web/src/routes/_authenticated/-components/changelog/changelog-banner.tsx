@@ -28,7 +28,7 @@ export function ChangelogBanner({ title, description, coverUrl, onCollapse, clas
   const collapseIconColor: TextColor = hasCover(coverUrl) ? "foreground" : "white"
 
   return (
-    <article className={cn("flex w-full flex-col gap-2 overflow-hidden rounded-2xl bg-secondary shadow-md", className)}>
+    <article className={cn("flex w-full flex-col gap-1 overflow-hidden rounded-2xl bg-secondary", className)}>
       <div className="flex w-full flex-col">
         <div className="relative h-[119px] w-full shrink-0">
           <img src={coverSrc} alt="" className="pointer-events-none absolute inset-0 size-full object-cover" />
@@ -46,7 +46,7 @@ export function ChangelogBanner({ title, description, coverUrl, onCollapse, clas
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-0.5 p-2">
+        <div className="flex min-w-0 flex-col gap-0.5 p-3">
           <Text.H4M display="block" ellipsis>
             {title}
           </Text.H4M>
@@ -60,12 +60,12 @@ export function ChangelogBanner({ title, description, coverUrl, onCollapse, clas
 
       <div className="block w-full p-2 [&>button]:w-full">
         <Button
-          variant="outline"
+          variant="secondary-soft"
           size="full"
           className="w-full [&>div]:gap-1 [&>div>div]:gap-1"
           onClick={() => window.open(FULL_CHANGELOG_URL, "_blank", "noopener,noreferrer")}
         >
-          See full changelog
+          Full changelog
           <Icon icon={ExternalLink} size="sm" color="foregroundMuted" />
         </Button>
       </div>
