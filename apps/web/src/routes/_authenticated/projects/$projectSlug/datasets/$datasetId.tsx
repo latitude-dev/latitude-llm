@@ -129,11 +129,6 @@ const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
     render: (r) => relativeTime(r.createdAt),
   },
   {
-    key: "expectedOutput",
-    header: "Expected output",
-    render: (r) => <ExpectedOutputCell value={r.expectedOutput} />,
-  },
-  {
     key: "input",
     header: "Input",
     render: (r) => <Text.Mono>{formatCellValue(r.input)}</Text.Mono>,
@@ -142,6 +137,11 @@ const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
     key: "output",
     header: "Output",
     render: (r) => <Text.Mono>{formatCellValue(r.output)}</Text.Mono>,
+  },
+  {
+    key: "expectedOutput",
+    header: "Expected output",
+    render: (r) => <ExpectedOutputCell value={r.expectedOutput} />,
   },
 ]
 
