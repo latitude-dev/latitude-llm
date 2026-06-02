@@ -19,8 +19,20 @@ export interface ListMonitorsRepositoryInput {
   readonly searchQuery?: string
 }
 
+/** Start/end of a monitor's most-recent incident; drives the dashboard "Last incident" column + default sort. */
+export interface MonitorLastIncident {
+  readonly startedAt: Date
+  readonly endedAt: Date | null
+}
+
 export interface MonitorListPage {
   readonly items: readonly Monitor[]
+  /**
+   * Latest incident per monitor id, keyed by `MonitorId` — present only for
+   * monitors with at least one incident (resolved through `monitor_alerts`,
+   * soft-deleted alerts included so history stays attributable).
+   */
+  readonly lastIncidentByMonitorId: ReadonlyMap<string, MonitorLastIncident>
   readonly totalCount: number
   readonly hasMore: boolean
   readonly limit: number
@@ -34,7 +46,7 @@ export interface MonitorRepositoryShape {
     readonly projectId: ProjectId
     readonly slug: string
   }): Effect.Effect<Monitor, NotFoundError | RepositoryError, SqlClient>
-  /** Non-deleted monitors for a project, system monitors first then `created_at DESC`. */
+  /** Non-deleted monitors for a project, most-recent incident first (no-incident monitors last), with `created_at DESC` then `id` as deterministic tiebreaks. */
   list(input: ListMonitorsRepositoryInput): Effect.Effect<MonitorListPage, RepositoryError, SqlClient>
   /**
    * Insert each monitor (with its alerts) only when no live row already holds

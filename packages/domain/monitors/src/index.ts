@@ -9,6 +9,7 @@ export {
 export { formatHumanReadableAlert, type HumanReadableAlertContext } from "./helpers.ts"
 export type {
   ListMonitorsRepositoryInput,
+  MonitorLastIncident,
   MonitorListPage,
   MonitorRepositoryShape,
 } from "./ports/monitor-repository.ts"

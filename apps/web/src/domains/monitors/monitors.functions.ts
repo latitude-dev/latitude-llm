@@ -11,6 +11,7 @@ import {
   type Monitor,
   type MonitorAlert,
   type MonitorAlertInput,
+  type MonitorLastIncident,
   muteMonitorUseCase,
   unmuteMonitorUseCase,
   updateMonitorAlertUseCase,
@@ -107,8 +108,33 @@ const toMonitorRecordResolved = async (orgId: OrganizationId, monitor: Monitor):
   return toMonitorRecord(monitor, names)
 }
 
+/** Latest-incident summary for the dashboard "Last incident" column; ISO strings on the wire. */
+export interface MonitorLastIncidentRecord {
+  readonly startedAtIso: string
+  readonly endedAtIso: string | null
+}
+
+/** One dashboard list row: the monitor record plus its latest-incident summary (sortable client-side). */
+export interface MonitorListRowRecord {
+  readonly monitor: MonitorRecord
+  readonly lastIncident: MonitorLastIncidentRecord | null
+}
+
+const toMonitorListRowRecord = (
+  monitor: Monitor,
+  savedSearchNames: ReadonlyMap<string, string>,
+  last: MonitorLastIncident | undefined,
+): MonitorListRowRecord => ({
+  monitor: toMonitorRecord(monitor, savedSearchNames),
+  lastIncident: last
+    ? { startedAtIso: last.startedAt.toISOString(), endedAtIso: last.endedAt?.toISOString() ?? null }
+    : null,
+})
+
 const toListMonitorsResultRecord = (result: ListMonitorsResult, savedSearchNames: ReadonlyMap<string, string>) => ({
-  items: result.items.map((monitor) => toMonitorRecord(monitor, savedSearchNames)),
+  items: result.items.map((monitor) =>
+    toMonitorListRowRecord(monitor, savedSearchNames, result.lastIncidentByMonitorId.get(monitor.id)),
+  ),
   totalCount: result.totalCount,
   hasMore: result.hasMore,
   limit: result.limit,

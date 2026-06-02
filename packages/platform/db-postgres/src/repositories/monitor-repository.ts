@@ -1,8 +1,15 @@
-import { type Monitor, type MonitorAlert, MonitorRepository, monitorSchema } from "@domain/monitors"
+import {
+  type Monitor,
+  type MonitorAlert,
+  type MonitorLastIncident,
+  MonitorRepository,
+  monitorSchema,
+} from "@domain/monitors"
 import { NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, count, desc, eq, ilike, inArray, isNull, ne, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, isNull, max, ne, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
+import { alertIncidents } from "../schema/alert-incidents.ts"
 import { monitorAlerts } from "../schema/monitor-alerts.ts"
 import { monitors } from "../schema/monitors.ts"
 
@@ -149,12 +156,28 @@ export const MonitorRepositoryLive = Layer.effect(
           )
 
           const [rows, totals] = yield* sqlClient.query(async (db) => {
+            // Per-monitor latest-incident start, resolved through monitor_alerts
+            // (soft-deleted alerts included, like the incidents panel join). Used
+            // only to order the page; RLS org-scopes the aggregate.
+            const lastIncident = db
+              .select({
+                monitorId: monitorAlerts.monitorId,
+                lastStartedAt: max(alertIncidents.startedAt).as("last_started_at"),
+              })
+              .from(alertIncidents)
+              .innerJoin(monitorAlerts, eq(monitorAlerts.id, alertIncidents.monitorAlertId))
+              .groupBy(monitorAlerts.monitorId)
+              .as("last_incident")
+
             const itemsPromise = db
-              .select()
+              .select(getTableColumns(monitors))
               .from(monitors)
+              .leftJoin(lastIncident, eq(lastIncident.monitorId, monitors.id))
               .where(where)
-              // System monitors land at the top, otherwise newest first.
-              .orderBy(desc(monitors.system), desc(monitors.createdAt), asc(monitors.id))
+              // Most-recently active first (no-incident monitors last); system
+              // monitors flow with the rest. createdAt desc + id are the fixed
+              // secondary/tertiary tiebreaks so the order is fully deterministic.
+              .orderBy(sql`${lastIncident.lastStartedAt} desc nulls last`, desc(monitors.createdAt), asc(monitors.id))
               .limit(limit)
               .offset(offset)
             const totalPromise = db.select({ value: count() }).from(monitors).where(where)
@@ -163,10 +186,34 @@ export const MonitorRepositoryLive = Layer.effect(
 
           const totalCount = Number(totals[0]?.value ?? 0)
           if (rows.length === 0) {
-            return { items: [], totalCount, hasMore: false, limit, offset }
+            return { items: [], lastIncidentByMonitorId: new Map(), totalCount, hasMore: false, limit, offset }
           }
 
           const ids = rows.map((r) => r.id)
+
+          // Latest incident (start + end) per monitor on this page, for the
+          // dashboard "Last incident" column. Ordered so the first row seen per
+          // monitor is the most recent, then deduped in JS (DISTINCT ON isn't
+          // ergonomic through the query builder).
+          const incidentRows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                monitorId: monitorAlerts.monitorId,
+                startedAt: alertIncidents.startedAt,
+                endedAt: alertIncidents.endedAt,
+              })
+              .from(alertIncidents)
+              .innerJoin(monitorAlerts, eq(monitorAlerts.id, alertIncidents.monitorAlertId))
+              .where(and(eq(alertIncidents.organizationId, organizationId), inArray(monitorAlerts.monitorId, ids)))
+              .orderBy(asc(monitorAlerts.monitorId), desc(alertIncidents.startedAt), desc(alertIncidents.id)),
+          )
+          const lastIncidentByMonitorId = new Map<string, MonitorLastIncident>()
+          for (const row of incidentRows) {
+            if (!lastIncidentByMonitorId.has(row.monitorId)) {
+              lastIncidentByMonitorId.set(row.monitorId, { startedAt: row.startedAt, endedAt: row.endedAt })
+            }
+          }
+
           const alertRows = yield* sqlClient.query((db) =>
             db
               .select()
@@ -186,6 +233,7 @@ export const MonitorRepositoryLive = Layer.effect(
 
           return {
             items,
+            lastIncidentByMonitorId,
             totalCount,
             hasMore: offset + rows.length < totalCount,
             limit,

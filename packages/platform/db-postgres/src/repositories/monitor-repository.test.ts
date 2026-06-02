@@ -1,6 +1,7 @@
 import { type Monitor, type MonitorAlert, MonitorRepository, type MonitorRepositoryShape } from "@domain/monitors"
 import {
   type AlertIncidentCondition,
+  AlertIncidentId,
   type AlertSeverity,
   generateId,
   MonitorAlertId,
@@ -12,6 +13,7 @@ import {
 import { eq } from "drizzle-orm"
 import { Effect, Exit } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { alertIncidents as alertIncidentsTable } from "../schema/alert-incidents.ts"
 import { monitorAlerts as monitorAlertsTable } from "../schema/monitor-alerts.ts"
 import { monitors as monitorsTable } from "../schema/monitors.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
@@ -72,6 +74,7 @@ describe("MonitorRepositoryLive", () => {
   })
 
   beforeEach(async () => {
+    await database.db.delete(alertIncidentsTable)
     await database.db.delete(monitorAlertsTable)
     await database.db.delete(monitorsTable)
   })
@@ -89,10 +92,17 @@ describe("MonitorRepositoryLive", () => {
         }).pipe(provideRls(database, organizationId)),
       )
 
-      expect(result).toEqual({ items: [], totalCount: 0, hasMore: false, limit: 50, offset: 0 })
+      expect(result).toEqual({
+        items: [],
+        lastIncidentByMonitorId: new Map(),
+        totalCount: 0,
+        hasMore: false,
+        limit: 50,
+        offset: 0,
+      })
     })
 
-    it("orders system monitors first, then by createdAt desc", async () => {
+    it("orders by createdAt desc when no monitor has incidents (system monitors are not pinned)", async () => {
       const systemId = generateId()
       const userOlderId = generateId()
       const userNewerId = generateId()
@@ -126,8 +136,108 @@ describe("MonitorRepositoryLive", () => {
         }).pipe(provideRls(database, organizationId)),
       )
 
-      expect(result.items.map((m) => m.slug)).toEqual(["issue-discovered", "user-newer", "user-older"])
+      expect(result.items.map((m) => m.slug)).toEqual(["user-newer", "user-older", "issue-discovered"])
       expect(result.totalCount).toBe(3)
+    })
+
+    it("orders by latest incident desc (no-incident monitors last, createdAt as tiebreak) and returns the map", async () => {
+      const systemId = generateId()
+      const recentId = generateId()
+      const olderId = generateId()
+      const noIncidentId = generateId()
+      const recentAlertId = generateId()
+      const olderAlertId = generateId()
+
+      await database.db.insert(monitorsTable).values([
+        // System monitor with no incident — flows with the other no-incident
+        // monitors, ordered by createdAt (this one defaults to 2026-05-29).
+        makeMonitorRow({ id: systemId, slug: "issue-discovered", name: "Issue discovered", system: true }),
+        // No incident but newest by createdAt → leads the no-incident tail.
+        makeMonitorRow({
+          id: noIncidentId,
+          slug: "no-incident",
+          name: "No incident",
+          createdAt: new Date("2026-05-31T10:00:00.000Z"),
+        }),
+        makeMonitorRow({
+          id: recentId,
+          slug: "recent",
+          name: "Recent",
+          createdAt: new Date("2026-05-28T10:00:00.000Z"),
+        }),
+        makeMonitorRow({
+          id: olderId,
+          slug: "older",
+          name: "Older",
+          createdAt: new Date("2026-05-29T10:00:00.000Z"),
+        }),
+      ])
+      await database.db
+        .insert(monitorAlertsTable)
+        .values([
+          makeAlertRow({ id: recentAlertId, monitorId: recentId }),
+          makeAlertRow({ id: olderAlertId, monitorId: olderId }),
+        ])
+
+      const recentStartedAt = new Date("2026-06-01T09:00:00.000Z")
+      const olderStartedAt = new Date("2026-05-20T09:00:00.000Z")
+      const olderEndedAt = new Date("2026-05-20T11:00:00.000Z")
+      await database.db.insert(alertIncidentsTable).values([
+        // Recent monitor: an older closed incident plus a newer ongoing one — the
+        // ongoing one must win and surface its null endedAt.
+        {
+          id: AlertIncidentId(generateId()),
+          organizationId: organizationId as string,
+          projectId: projectId as string,
+          sourceType: "savedSearch",
+          sourceId: "s".repeat(24),
+          kind: "savedSearch.match",
+          severity: "medium",
+          startedAt: new Date("2026-05-25T09:00:00.000Z"),
+          endedAt: new Date("2026-05-25T10:00:00.000Z"),
+          monitorAlertId: recentAlertId,
+        },
+        {
+          id: AlertIncidentId(generateId()),
+          organizationId: organizationId as string,
+          projectId: projectId as string,
+          sourceType: "savedSearch",
+          sourceId: "s".repeat(24),
+          kind: "savedSearch.match",
+          severity: "medium",
+          startedAt: recentStartedAt,
+          endedAt: null,
+          monitorAlertId: recentAlertId,
+        },
+        {
+          id: AlertIncidentId(generateId()),
+          organizationId: organizationId as string,
+          projectId: projectId as string,
+          sourceType: "savedSearch",
+          sourceId: "s".repeat(24),
+          kind: "savedSearch.match",
+          severity: "medium",
+          startedAt: olderStartedAt,
+          endedAt: olderEndedAt,
+          monitorAlertId: olderAlertId,
+        },
+      ])
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.list({ projectId, limit: 50, offset: 0 })
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+      expect(result.items.map((m) => m.slug)).toEqual(["recent", "older", "no-incident", "issue-discovered"])
+      expect(result.lastIncidentByMonitorId.get(recentId)).toEqual({ startedAt: recentStartedAt, endedAt: null })
+      expect(result.lastIncidentByMonitorId.get(olderId)).toEqual({
+        startedAt: olderStartedAt,
+        endedAt: olderEndedAt,
+      })
+      expect(result.lastIncidentByMonitorId.has(noIncidentId)).toBe(false)
+      expect(result.lastIncidentByMonitorId.has(systemId)).toBe(false)
     })
 
     it("filters by case-insensitive substring on name", async () => {

@@ -1,7 +1,7 @@
 import type { ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { Monitor } from "../entities/monitor.ts"
-import { MonitorRepository } from "../ports/monitor-repository.ts"
+import { type MonitorLastIncident, MonitorRepository } from "../ports/monitor-repository.ts"
 
 export const DEFAULT_MONITORS_PAGE_SIZE = 50
 export const MAX_MONITORS_PAGE_SIZE = 100
@@ -17,6 +17,8 @@ export interface ListMonitorsInput {
 
 export interface ListMonitorsResult {
   readonly items: readonly Monitor[]
+  /** Latest incident per monitor id; see {@link MonitorLastIncident}. */
+  readonly lastIncidentByMonitorId: ReadonlyMap<string, MonitorLastIncident>
   readonly totalCount: number
   readonly hasMore: boolean
   readonly limit: number

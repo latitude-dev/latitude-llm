@@ -13,6 +13,7 @@ import {
   listMonitors,
   type MonitorIncidentRecord,
   type MonitorIncidentsCursor,
+  type MonitorListRowRecord,
   type MonitorRecord,
   muteMonitor,
   unmuteMonitor,
@@ -28,7 +29,7 @@ export interface MonitorAlertDraft {
   readonly severity?: AlertSeverity
 }
 
-export type { MonitorRecord }
+export type { MonitorListRowRecord, MonitorRecord }
 /** @public Consumed by the M4 details panel incidents table; not yet wired in M2. */
 export type { MonitorIncidentRecord }
 
@@ -76,9 +77,11 @@ export function useMonitors(input: {
     [fetchNextPage, hasNextPage, isFetchingNextPage],
   )
 
-  const monitors = useMemo<readonly MonitorRecord[]>(() => data?.pages.flatMap((page) => page.items) ?? [], [data])
+  const rows = useMemo<readonly MonitorListRowRecord[]>(() => data?.pages.flatMap((page) => page.items) ?? [], [data])
+  const monitors = useMemo<readonly MonitorRecord[]>(() => rows.map((row) => row.monitor), [rows])
 
   return {
+    rows,
     monitors,
     totalCount: data?.pages[0]?.totalCount ?? 0,
     isLoading,

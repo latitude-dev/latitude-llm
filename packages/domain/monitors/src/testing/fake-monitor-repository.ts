@@ -48,7 +48,16 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
             return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
           })
         const items = all.slice(offset, offset + limit)
-        return { items, totalCount: all.length, hasMore: offset + items.length < all.length, limit, offset }
+        // The fake doesn't model incidents — callers that need last-incident
+        // data exercise the live repo. Keep the ordering by (system, createdAt).
+        return {
+          items,
+          lastIncidentByMonitorId: new Map(),
+          totalCount: all.length,
+          hasMore: offset + items.length < all.length,
+          limit,
+          offset,
+        }
       }),
     provisionSystemMonitors: (toProvision) =>
       Effect.sync(() => {
