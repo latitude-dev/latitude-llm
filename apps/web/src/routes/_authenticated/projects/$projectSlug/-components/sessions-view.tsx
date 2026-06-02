@@ -367,12 +367,7 @@ export function SessionsView({
           return (
             <span className="flex items-center justify-end gap-1">
               {row.kind === "session" && (
-                <SessionOutlierBadge
-                  projectId={projectId}
-                  tags={row.session.tags}
-                  value={duration}
-                  metric="durationNs"
-                />
+                <SessionOutlierBadge projectId={projectId} value={duration} metric="durationNs" />
               )}
               {duration > 0 ? formatDuration(duration) : "-"}
             </span>
@@ -397,12 +392,7 @@ export function SessionsView({
           return (
             <span className="flex items-center justify-end gap-1">
               {row.kind === "session" && (
-                <SessionOutlierBadge
-                  projectId={projectId}
-                  tags={row.session.tags}
-                  value={ttft}
-                  metric="timeToFirstTokenNs"
-                />
+                <SessionOutlierBadge projectId={projectId} value={ttft} metric="timeToFirstTokenNs" />
               )}
               {ttft > 0 ? formatDuration(ttft) : "-"}
             </span>
@@ -431,12 +421,7 @@ export function SessionsView({
           return (
             <span className="flex items-center justify-end gap-1">
               {row.kind === "session" && (
-                <SessionOutlierBadge
-                  projectId={projectId}
-                  tags={row.session.tags}
-                  value={costTotalMicrocents}
-                  metric="costTotalMicrocents"
-                />
+                <SessionOutlierBadge projectId={projectId} value={costTotalMicrocents} metric="costTotalMicrocents" />
               )}
               {costTotalMicrocents > 0 ? formatPrice(costTotalMicrocents / 100_000_000) : "-"}
             </span>

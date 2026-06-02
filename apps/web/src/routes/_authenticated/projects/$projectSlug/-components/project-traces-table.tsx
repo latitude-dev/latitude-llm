@@ -188,7 +188,7 @@ export function ProjectTracesTable({
         width: 140,
         render: (trace) => (
           <span className="flex items-center justify-end gap-1">
-            <TraceOutlierBadge projectId={projectId} tags={trace.tags} value={trace.durationNs} metric="durationNs" />
+            <TraceOutlierBadge projectId={projectId} value={trace.durationNs} metric="durationNs" />
             {trace.durationNs > 0 ? formatDuration(trace.durationNs) : "-"}
           </span>
         ),
@@ -212,12 +212,7 @@ export function ProjectTracesTable({
         width: 176,
         render: (trace) => (
           <span className="flex items-center justify-end gap-1">
-            <TraceOutlierBadge
-              projectId={projectId}
-              tags={trace.tags}
-              value={trace.timeToFirstTokenNs}
-              metric="timeToFirstTokenNs"
-            />
+            <TraceOutlierBadge projectId={projectId} value={trace.timeToFirstTokenNs} metric="timeToFirstTokenNs" />
             {trace.timeToFirstTokenNs > 0 ? formatDuration(trace.timeToFirstTokenNs) : "-"}
           </span>
         ),
@@ -245,12 +240,7 @@ export function ProjectTracesTable({
         width: 146,
         render: (trace) => (
           <span className="flex items-center justify-end gap-1">
-            <TraceOutlierBadge
-              projectId={projectId}
-              tags={trace.tags}
-              value={trace.costTotalMicrocents}
-              metric="costTotalMicrocents"
-            />
+            <TraceOutlierBadge projectId={projectId} value={trace.costTotalMicrocents} metric="costTotalMicrocents" />
             {trace.costTotalMicrocents > 0 ? formatPrice(trace.costTotalMicrocents / 100_000_000) : "-"}
           </span>
         ),

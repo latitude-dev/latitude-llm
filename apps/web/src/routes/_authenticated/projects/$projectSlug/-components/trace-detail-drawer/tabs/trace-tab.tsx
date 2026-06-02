@@ -71,7 +71,6 @@ export function TraceTab({
     traceRecord ? (
       <TraceOutlierBadge
         projectId={projectId}
-        tags={traceRecord.tags}
         value={value}
         metric={metric}
         onThresholdClick={onFiltersChange ? (threshold) => handleFilterByThreshold(metric, threshold) : undefined}

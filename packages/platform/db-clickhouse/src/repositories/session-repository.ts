@@ -603,21 +603,14 @@ export const SessionRepositoryLive = Layer.effect(
           )
       })
 
-    const getCohortBaselineByTags: SessionRepositoryShape["getCohortBaselineByTags"] = ({
+    const getCohortBaseline: SessionRepositoryShape["getCohortBaseline"] = ({
       organizationId,
       projectId,
-      tags,
       excludeSessionId,
     }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         const excludeClause = excludeSessionId ? `AND session_id != {excludeSessionId:String}` : ""
-        // Canonicalize as a sorted set for stable param shape. ClickHouse stores `tags` as
-        // `groupUniqArrayArray(tags)` (already deduped), so pairing `length(tags) = N` with
-        // `hasAll(tags, X)` gives order-independent set equality only when the input is a set
-        // too — passing duplicates would send `tagsLen=2` and match no sessions.
-        // Empty `tags` degenerates to `length(tags) = 0` (hasAll is trivially true), isolating untagged sessions.
-        const sortedTags = [...new Set(tags)].sort()
 
         return yield* chSqlClient
           .query(async (client) => {
@@ -651,14 +644,10 @@ export const SessionRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         ${excludeClause}
                       GROUP BY organization_id, project_id, session_id
-                      HAVING length(tags) = {tagsLen:UInt32}
-                        AND hasAll(tags, {tags:Array(String)})
                     )`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                tags: sortedTags,
-                tagsLen: sortedTags.length,
                 ...(excludeSessionId ? { excludeSessionId: excludeSessionId as string } : {}),
               },
               format: "JSONEachRow",
@@ -754,12 +743,12 @@ export const SessionRepositoryLive = Layer.effect(
                 },
               }
             }),
-            Effect.mapError((error) => toRepositoryError(error, "getCohortBaselineByTags")),
+            Effect.mapError((error) => toRepositoryError(error, "getCohortBaseline")),
           )
       })
 
     return {
-      getCohortBaselineByTags,
+      getCohortBaseline,
       listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>

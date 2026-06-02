@@ -6,7 +6,7 @@ import { emptyTraceDistribution } from "../ports/trace-repository.ts"
 
 export const createFakeSessionRepository = (overrides?: Partial<SessionRepositoryShape>) => {
   const repository: SessionRepositoryShape = {
-    getCohortBaselineByTags: () =>
+    getCohortBaseline: () =>
       Effect.succeed({
         count: 0,
         metrics: {

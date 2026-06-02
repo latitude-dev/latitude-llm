@@ -1,7 +1,7 @@
 import { type CohortMetric, type CohortSummary, getMetricPercentileThreshold } from "@domain/spans"
-import { Status, type StatusProps, TagBadgeList, Text, Tooltip } from "@repo/ui"
+import { Status, type StatusProps, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice } from "@repo/utils"
-import { useSessionCohortSummaryByTags } from "../../../../../domains/sessions/sessions.collection.ts"
+import { useSessionCohortSummary } from "../../../../../domains/sessions/sessions.collection.ts"
 
 type Baselines = CohortSummary["baselines"]
 export type SessionOutlierMetric = keyof Baselines
@@ -147,17 +147,15 @@ function QuantileStrip({ baseline, value }: { baseline: Baselines[SessionOutlier
 }
 
 /**
- * A tooltip that explains that the outlier is only scoped to the subset of sessions that match the given tags.
- * And then displays the baseline values for the given metric.
+ * A tooltip that explains that the outlier is scoped to all sessions in the
+ * current project, then displays the baseline values for the given metric.
  */
 function OutlierTooltip({
-  tags,
   cohorts,
   metric,
   level,
   value,
 }: {
-  tags: ReadonlyArray<string>
   cohorts: CohortSummary
   metric: CohortMetric
   level: SessionOutlierLevel
@@ -168,10 +166,9 @@ function OutlierTooltip({
     <div className="flex flex-col gap-4 min-w-64">
       <div className="flex flex-col gap-2">
         <Text.H6>
-          This session's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the sessions
-          with {tags.length === 0 ? "no tags." : tags.length === 1 ? "this tag:" : "these tags:"}
+          This session's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the sessions in
+          this project.
         </Text.H6>
-        {tags.length > 0 && <TagBadgeList tags={tags} />}
       </div>
       <div className="flex flex-col gap-2">
         <SessionValueRow value={value} metric={metric} p50={baseline.p50} />
@@ -193,27 +190,25 @@ function OutlierTooltip({
 
 /**
  * Renders a p90/p95/p99 outlier badge when a session's metric value exceeds the
- * percentile thresholds of its tag-scoped cohort. The cohort baseline is fetched
- * lazily per session via `useSessionCohortSummaryByTags` — TanStack Query dedupes
- * across rows sharing a tag combination.
+ * percentile thresholds of the project-wide cohort. The baseline is fetched
+ * once per project via `useSessionCohortSummary` — TanStack Query dedupes
+ * across every row in the table.
  *
  * When `onThresholdClick` is provided the badge becomes a button that reports
  * the numeric threshold of the matched level (useful for filter-by-threshold).
  */
 export function SessionOutlierBadge({
   projectId,
-  tags,
   value,
   metric,
   onThresholdClick,
 }: {
   readonly projectId: string
-  readonly tags: ReadonlyArray<string>
   readonly value: number
   readonly metric: SessionOutlierMetric
   readonly onThresholdClick?: ((threshold: number, level: SessionOutlierLevel) => void) | undefined
 }) {
-  const { data } = useSessionCohortSummaryByTags({ projectId, tags })
+  const { data } = useSessionCohortSummary({ projectId })
   const level = computeLevel(value, data?.baselines[metric])
   if (!level || !data) return null
 
@@ -234,7 +229,7 @@ export function SessionOutlierBadge({
 
   return (
     <Tooltip asChild trigger={trigger}>
-      <OutlierTooltip tags={tags} cohorts={data} metric={metric} level={level} value={value} />
+      <OutlierTooltip cohorts={data} metric={metric} level={level} value={value} />
     </Tooltip>
   )
 }

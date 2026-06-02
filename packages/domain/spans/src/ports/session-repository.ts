@@ -22,15 +22,13 @@ import type { NumericRollup, TraceDistribution, TraceTimeHistogramBucket } from 
  */
 export interface SessionRepositoryShape {
   /**
-   * Baseline percentiles scoped to the exact tag combination. Empty `tags` array
-   * matches only untagged sessions. Tag match is order-independent set equality.
-   * Intentionally ignores user filters — the goal is a stable "what's normal for
-   * this kind of session" reference.
+   * Baseline percentiles across every session in the project. Intentionally
+   * ignores user filters — the goal is a stable "what's normal for this
+   * project" reference.
    */
-  getCohortBaselineByTags(input: {
+  getCohortBaseline(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly tags: ReadonlyArray<string>
     readonly excludeSessionId?: SessionId
   }): Effect.Effect<CohortBaselineData, RepositoryError, ChSqlClient>
 

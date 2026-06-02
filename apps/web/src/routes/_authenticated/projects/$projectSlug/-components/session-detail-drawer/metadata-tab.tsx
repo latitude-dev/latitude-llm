@@ -60,7 +60,6 @@ export function MetadataTab({
   const renderBadge = (metric: SessionOutlierMetric, value: number) => (
     <SessionOutlierBadge
       projectId={session.projectId}
-      tags={session.tags}
       value={value}
       metric={metric}
       onThresholdClick={

@@ -81,10 +81,10 @@ export {
   TRACE_HISTOGRAM_METRICS,
   TraceRepository,
 } from "./ports/trace-repository.ts"
-export type { GetSessionCohortSummaryByTagsInput } from "./use-cases/get-session-cohort-summary-by-tags.ts"
-export { getSessionCohortSummaryByTagsUseCase } from "./use-cases/get-session-cohort-summary-by-tags.ts"
-export type { GetTraceCohortSummaryByTagsInput } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
-export { getTraceCohortSummaryByTagsUseCase } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
+export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
+export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
+export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
+export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
 export type {
   LoadTraceForTraceEndFound,
   LoadTraceForTraceEndResult,

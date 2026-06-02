@@ -186,13 +186,72 @@ describe("TraceRepository", () => {
     })
   })
 
-  describe("getCohortBaselineByTags", () => {
+  describe("getCohortBaseline", () => {
+    // Use a fresh project id so seeded BASELINE_SPANS don't pollute the cohort.
+    const COHORT_PROJECT_ID = ProjectId("cohort-project")
+
+    const makeCohortRow = (opts: {
+      readonly traceId: string
+      readonly spanId: string
+      readonly startTime: Date
+      readonly costTotalMicrocents: number
+      readonly tokensInput: number
+      readonly tokensOutput: number
+      readonly tags?: readonly string[]
+    }): SpanRow => {
+      const row = makeSpanRow(opts)
+      return {
+        ...row,
+        project_id: COHORT_PROJECT_ID,
+        ...(opts.tags ? { tags: [...opts.tags] } : {}),
+      }
+    }
+
+    it("aggregates every trace in the project regardless of tags", async () => {
+      const rows = [
+        makeCohortRow({
+          traceId: `01${"a".repeat(30)}`,
+          spanId: `01${"b".repeat(14)}`,
+          startTime: new Date(Date.UTC(2026, 0, 1, 0, 0, 0)),
+          costTotalMicrocents: 100,
+          tokensInput: 0,
+          tokensOutput: 0,
+          tags: ["cheap"],
+        }),
+        makeCohortRow({
+          traceId: `02${"a".repeat(30)}`,
+          spanId: `02${"b".repeat(14)}`,
+          startTime: new Date(Date.UTC(2026, 0, 1, 0, 0, 1)),
+          costTotalMicrocents: 200,
+          tokensInput: 0,
+          tokensOutput: 0,
+          tags: ["expensive"],
+        }),
+        makeCohortRow({
+          traceId: `03${"a".repeat(30)}`,
+          spanId: `03${"b".repeat(14)}`,
+          startTime: new Date(Date.UTC(2026, 0, 1, 0, 0, 2)),
+          costTotalMicrocents: 300,
+          tokensInput: 0,
+          tokensOutput: 0,
+          tags: [],
+        }),
+      ]
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", rows))
+
+      const baseline = await runCh(repo.getCohortBaseline({ organizationId: ORG_ID, projectId: COHORT_PROJECT_ID }))
+
+      expect(baseline.count).toBe(3)
+      expect(baseline.metrics.costTotalMicrocents.sampleCount).toBe(3)
+      expect(baseline.metrics.costTotalMicrocents.p50).toBe(200)
+    })
+
     it("ignores zero-filled cost and token values in percentile baselines", async () => {
       const rows = Array.from({ length: 10 }, (_value, index) => {
-        const startTime = new Date(Date.UTC(2026, 0, 1, 0, 0, index))
-        return makeSpanRow({
-          traceId: `${index.toString(16).padStart(2, "0")}${"a".repeat(30)}`,
-          spanId: `${index.toString(16).padStart(2, "0")}${"b".repeat(14)}`,
+        const startTime = new Date(Date.UTC(2026, 0, 2, 0, 0, index))
+        return makeCohortRow({
+          traceId: `${(10 + index).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
+          spanId: `${(10 + index).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
           startTime,
           costTotalMicrocents: index === 9 ? 500 : 0,
           tokensInput: index === 9 ? 100 : 0,
@@ -202,13 +261,7 @@ describe("TraceRepository", () => {
 
       await Effect.runPromise(insertJsonEachRow(ch.client, "spans", rows))
 
-      const baseline = await runCh(
-        repo.getCohortBaselineByTags({
-          organizationId: ORG_ID,
-          projectId: PROJECT_ID,
-          tags: [BASELINE_TEST_TAG],
-        }),
-      )
+      const baseline = await runCh(repo.getCohortBaseline({ organizationId: ORG_ID, projectId: COHORT_PROJECT_ID }))
 
       expect(baseline.metrics.costTotalMicrocents.sampleCount).toBe(1)
       expect(baseline.metrics.costTotalMicrocents.p50).toBe(500)
@@ -221,90 +274,9 @@ describe("TraceRepository", () => {
       expect(baseline.metrics.tokensTotal.p90).toBe(100)
     })
 
-    it("isolates cohorts by exact tag combination, independent of order", async () => {
-      const makeRowWithTags = (traceIdx: number, cost: number, tags: readonly string[]): SpanRow => {
-        const startTime = new Date(Date.UTC(2026, 0, 2, 0, 0, traceIdx))
-        const row = makeSpanRow({
-          traceId: `${traceIdx.toString(16).padStart(2, "0")}${"c".repeat(30)}`,
-          spanId: `${traceIdx.toString(16).padStart(2, "0")}${"d".repeat(14)}`,
-          startTime,
-          costTotalMicrocents: cost,
-          tokensInput: 0,
-          tokensOutput: 0,
-        })
-        return { ...row, tags: [...tags] }
-      }
-
-      const cheapRows = Array.from({ length: 5 }, (_v, i) => makeRowWithTags(i, 100, ["cheap"]))
-      const expensiveRows = Array.from({ length: 5 }, (_v, i) => makeRowWithTags(i + 5, 10_000, ["expensive"]))
-      const reversedOrderRows = Array.from({ length: 3 }, (_v, i) => makeRowWithTags(i + 10, 500, ["beta", "alpha"]))
-
-      await Effect.runPromise(
-        insertJsonEachRow(ch.client, "spans", [...cheapRows, ...expensiveRows, ...reversedOrderRows]),
-      )
-
-      const cheapBaseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["cheap"] }),
-      )
-      const expensiveBaseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["expensive"] }),
-      )
-
-      expect(cheapBaseline.metrics.costTotalMicrocents.p50).toBe(100)
-      expect(expensiveBaseline.metrics.costTotalMicrocents.p50).toBe(10_000)
-      expect(cheapBaseline.count).toBe(5)
-      expect(expensiveBaseline.count).toBe(5)
-
-      // Order-independent match: query ["alpha","beta"] finds rows stored with ["beta","alpha"]
-      const alphaBetaBaseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha", "beta"] }),
-      )
-      expect(alphaBetaBaseline.count).toBe(3)
-      expect(alphaBetaBaseline.metrics.costTotalMicrocents.p50).toBe(500)
-
-      // A subset of tags must NOT match a strict superset cohort.
-      const alphaOnlyBaseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha"] }),
-      )
-      expect(alphaOnlyBaseline.count).toBe(0)
-    })
-
-    it("treats the empty-tags cohort as a distinct bucket of untagged traces", async () => {
-      const untaggedRows = Array.from({ length: 3 }, (_v, i): SpanRow => {
-        const row = makeSpanRow({
-          traceId: `${(20 + i).toString(16).padStart(2, "0")}${"e".repeat(30)}`,
-          spanId: `${(20 + i).toString(16).padStart(2, "0")}${"f".repeat(14)}`,
-          startTime: new Date(Date.UTC(2026, 0, 3, 0, 0, i)),
-          costTotalMicrocents: 777,
-          tokensInput: 0,
-          tokensOutput: 0,
-        })
-        return { ...row, tags: [] }
-      })
-
-      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", untaggedRows))
-
-      const emptyCohort = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: [] }),
-      )
-
-      expect(emptyCohort.count).toBe(3)
-      expect(emptyCohort.metrics.costTotalMicrocents.p50).toBe(777)
-
-      // Tagged-cohort queries must not pick up untagged rows.
-      const taggedCohort = await runCh(
-        repo.getCohortBaselineByTags({
-          organizationId: ORG_ID,
-          projectId: PROJECT_ID,
-          tags: [BASELINE_TEST_TAG],
-        }),
-      )
-      expect(taggedCohort.metrics.costTotalMicrocents.p50).not.toBe(777)
-    })
-
     it("gates p95 (<100 samples) and p99 (<1000 samples) to null", async () => {
       const rows = Array.from({ length: 10 }, (_v, i) =>
-        makeSpanRow({
+        makeCohortRow({
           traceId: `${(30 + i).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
           spanId: `${(30 + i).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
           startTime: new Date(Date.UTC(2026, 0, 4, 0, 0, i)),
@@ -315,13 +287,7 @@ describe("TraceRepository", () => {
       )
       await Effect.runPromise(insertJsonEachRow(ch.client, "spans", rows))
 
-      const baseline = await runCh(
-        repo.getCohortBaselineByTags({
-          organizationId: ORG_ID,
-          projectId: PROJECT_ID,
-          tags: [BASELINE_TEST_TAG],
-        }),
-      )
+      const baseline = await runCh(repo.getCohortBaseline({ organizationId: ORG_ID, projectId: COHORT_PROJECT_ID }))
 
       expect(baseline.metrics.costTotalMicrocents.p95).toBeNull()
       expect(baseline.metrics.costTotalMicrocents.p99).toBeNull()
@@ -329,7 +295,7 @@ describe("TraceRepository", () => {
 
     it("honors excludeTraceId", async () => {
       const keptRows = Array.from({ length: 3 }, (_v, i) =>
-        makeSpanRow({
+        makeCohortRow({
           traceId: `${(40 + i).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
           spanId: `${(40 + i).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
           startTime: new Date(Date.UTC(2026, 0, 5, 0, 0, i)),
@@ -338,7 +304,7 @@ describe("TraceRepository", () => {
           tokensOutput: 0,
         }),
       )
-      const excludedRow = makeSpanRow({
+      const excludedRow = makeCohortRow({
         traceId: `44${"a".repeat(30)}`,
         spanId: `44${"b".repeat(14)}`,
         startTime: new Date(Date.UTC(2026, 0, 5, 0, 0, 3)),
@@ -350,10 +316,9 @@ describe("TraceRepository", () => {
       await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [...keptRows, excludedRow]))
 
       const baseline = await runCh(
-        repo.getCohortBaselineByTags({
+        repo.getCohortBaseline({
           organizationId: ORG_ID,
-          projectId: PROJECT_ID,
-          tags: [BASELINE_TEST_TAG],
+          projectId: COHORT_PROJECT_ID,
           excludeTraceId: excludedRow.trace_id as TraceId,
         }),
       )

@@ -20,15 +20,13 @@ import type { Trace, TraceDetail } from "../entities/trace.ts"
  */
 export interface TraceRepositoryShape {
   /**
-   * Baseline percentiles scoped to the exact tag combination. Empty `tags` array
-   * matches only untagged traces. Tag match is order-independent set equality.
-   * Intentionally ignores user filters — the goal is a stable "what's normal for
-   * this kind of trace" reference.
+   * Baseline percentiles across every trace in the project. Intentionally
+   * ignores user filters — the goal is a stable "what's normal for this
+   * project" reference.
    */
-  getCohortBaselineByTags(input: {
+  getCohortBaseline(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly tags: ReadonlyArray<string>
     readonly excludeTraceId?: TraceId
   }): Effect.Effect<CohortBaselineData, RepositoryError, ChSqlClient>
 

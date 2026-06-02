@@ -4,15 +4,13 @@ import { buildMetricBaselines, type CohortSummary } from "../cohort-baselines.ts
 import { COHORT_SUMMARY_CACHE_TTL_SECONDS } from "../constants.ts"
 import { SessionRepository } from "../ports/session-repository.ts"
 
-export interface GetSessionCohortSummaryByTagsInput {
+export interface GetSessionCohortSummaryInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly tags: ReadonlyArray<string>
 }
 
-const buildCacheKey = (organizationId: string, projectId: string, sortedTags: readonly string[]): string =>
-  // JSON-encode the tags array so delimiters inside tag values can't collide with the key structure.
-  `org:${organizationId}:projects:${projectId}:session-cohort-baselines:${JSON.stringify(sortedTags)}`
+const buildCacheKey = (organizationId: string, projectId: string): string =>
+  `org:${organizationId}:projects:${projectId}:session-cohort-baseline`
 
 const parseCachedSummary = (json: string): CohortSummary | null => {
   try {
@@ -34,20 +32,13 @@ const parseCachedSummary = (json: string): CohortSummary | null => {
   }
 }
 
-export const getSessionCohortSummaryByTagsUseCase = Effect.fn("spans.getSessionCohortSummaryByTags")(function* (
-  input: GetSessionCohortSummaryByTagsInput,
+export const getSessionCohortSummaryUseCase = Effect.fn("spans.getSessionCohortSummary")(function* (
+  input: GetSessionCohortSummaryInput,
 ) {
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
-  yield* Effect.annotateCurrentSpan("tagsLength", input.tags.length)
 
-  // Canonicalize as a sorted set: dedupe first (ClickHouse stores `tags` as
-  // `groupUniqArrayArray(tags)`, which is already deduped — passing duplicates
-  // through would break the `length(tags) = N` exact-set match and also split
-  // the cache key from the canonical cohort). Then sort for stable, order-
-  // independent cache keys and query params.
-  const sortedTags = [...new Set(input.tags)].sort()
   const cache = yield* CacheStore
-  const cacheKey = buildCacheKey(input.organizationId, input.projectId, sortedTags)
+  const cacheKey = buildCacheKey(input.organizationId, input.projectId)
 
   const cachedJson = yield* cache.get(cacheKey).pipe(Effect.catchTag("CacheError", () => Effect.succeed(null)))
   if (cachedJson !== null) {
@@ -60,10 +51,9 @@ export const getSessionCohortSummaryByTagsUseCase = Effect.fn("spans.getSessionC
   yield* Effect.annotateCurrentSpan("cache.hit", false)
 
   const sessionRepository = yield* SessionRepository
-  const baselineData = yield* sessionRepository.getCohortBaselineByTags({
+  const baselineData = yield* sessionRepository.getCohortBaseline({
     organizationId: input.organizationId,
     projectId: input.projectId,
-    tags: sortedTags,
   })
   const baselines = buildMetricBaselines(baselineData)
   const summary: CohortSummary = {

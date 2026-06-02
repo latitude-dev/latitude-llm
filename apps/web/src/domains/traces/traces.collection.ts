@@ -12,7 +12,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { useMemo } from "react"
 import {
   countTracesByProject,
-  getTraceCohortSummaryByTags,
+  getTraceCohortSummary,
   getTraceDetail,
   getTraceDistinctValues,
   getTraceDistribution,
@@ -127,25 +127,12 @@ export function useTraceMetrics({
   })
 }
 
-export function useTraceCohortSummaryByTags({
-  projectId,
-  tags,
-}: {
-  readonly projectId: string
-  readonly tags: ReadonlyArray<string>
-}) {
-  // Canonicalize the tag combination for a stable cache key: dedupe + sort so that
-  // ["a","b"] and ["b","a"] share a single query. Tag comparison is case-sensitive
-  // on the backend (ClickHouse String equality), so do NOT lowercase.
-  const sortedTags = useMemo(() => [...new Set(tags)].sort(), [tags])
+export function useTraceCohortSummary({ projectId }: { readonly projectId: string }) {
   return useQuery<CohortSummary>({
-    queryKey: ["traces-cohort-summary-by-tags", projectId, sortedTags],
+    queryKey: ["traces-cohort-summary", projectId],
     queryFn: () =>
-      getTraceCohortSummaryByTags({
-        data: {
-          projectId,
-          tags: sortedTags,
-        },
+      getTraceCohortSummary({
+        data: { projectId },
       }),
     staleTime: 30_000,
     enabled: projectId.length > 0,

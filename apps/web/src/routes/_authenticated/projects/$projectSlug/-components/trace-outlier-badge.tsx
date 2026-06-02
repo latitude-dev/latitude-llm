@@ -1,7 +1,7 @@
 import { type CohortMetric, type CohortSummary, getMetricPercentileThreshold } from "@domain/spans"
-import { Status, type StatusProps, TagBadgeList, Text, Tooltip } from "@repo/ui"
+import { Status, type StatusProps, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice } from "@repo/utils"
-import { useTraceCohortSummaryByTags } from "../../../../../domains/traces/traces.collection.ts"
+import { useTraceCohortSummary } from "../../../../../domains/traces/traces.collection.ts"
 
 type Baselines = CohortSummary["baselines"]
 export type TraceOutlierMetric = keyof Baselines
@@ -147,17 +147,15 @@ function QuantileStrip({ baseline, value }: { baseline: Baselines[TraceOutlierMe
 }
 
 /**
- * A tooltip that explains that the outlier is only scoped to the subset of traces that match the given tags.
- * And then displays the baseline values for the given metric.
+ * A tooltip that explains that the outlier is scoped to all traces in the
+ * current project, then displays the baseline values for the given metric.
  */
 function OutlierTooltip({
-  tags,
   cohorts,
   metric,
   level,
   value,
 }: {
-  tags: ReadonlyArray<string>
   cohorts: CohortSummary
   metric: CohortMetric
   level: TraceOutlierLevel
@@ -168,10 +166,9 @@ function OutlierTooltip({
     <div className="flex flex-col gap-4 min-w-64">
       <div className="flex flex-col gap-2">
         <Text.H6>
-          This trace's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the traces with{" "}
-          {tags.length === 0 ? "no tags." : tags.length === 1 ? "this tag:" : "these tags:"}
+          This trace's <b>{METRIC_LABELS[metric]}</b> is greater than <b>{LEVEL_LABELS[level]}</b> of the traces in this
+          project.
         </Text.H6>
-        {tags.length > 0 && <TagBadgeList tags={tags} />}
       </div>
       <div className="flex flex-col gap-2">
         <TraceValueRow value={value} metric={metric} p50={baseline.p50} />
@@ -193,27 +190,25 @@ function OutlierTooltip({
 
 /**
  * Renders a p90/p95/p99 outlier badge when a trace's metric value exceeds the
- * percentile thresholds of its tag-scoped cohort. The cohort baseline is fetched
- * lazily per trace via `useTraceCohortSummaryByTags` — TanStack Query dedupes
- * across rows sharing a tag combination.
+ * percentile thresholds of the project-wide cohort. The baseline is fetched
+ * once per project via `useTraceCohortSummary` — TanStack Query dedupes
+ * across every row in the table.
  *
  * When `onThresholdClick` is provided the badge becomes a button that reports
  * the numeric threshold of the matched level (useful for filter-by-threshold).
  */
 export function TraceOutlierBadge({
   projectId,
-  tags,
   value,
   metric,
   onThresholdClick,
 }: {
   readonly projectId: string
-  readonly tags: ReadonlyArray<string>
   readonly value: number
   readonly metric: TraceOutlierMetric
   readonly onThresholdClick?: ((threshold: number, level: TraceOutlierLevel) => void) | undefined
 }) {
-  const { data } = useTraceCohortSummaryByTags({ projectId, tags })
+  const { data } = useTraceCohortSummary({ projectId })
   const level = computeLevel(value, data?.baselines[metric])
   if (!level || !data) return null
 
@@ -234,7 +229,7 @@ export function TraceOutlierBadge({
 
   return (
     <Tooltip asChild trigger={trigger}>
-      <OutlierTooltip tags={tags} cohorts={data} metric={metric} level={level} value={value} />
+      <OutlierTooltip cohorts={data} metric={metric} level={level} value={value} />
     </Tooltip>
   )
 }

@@ -6,7 +6,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { useMemo } from "react"
 import {
   countSessionsByProject,
-  getSessionCohortSummaryByTags,
+  getSessionCohortSummary,
   getSessionDetail,
   getSessionDistinctValues,
   getSessionDistribution,
@@ -230,22 +230,12 @@ export function useSessionIssues({
   })
 }
 
-export function useSessionCohortSummaryByTags({
-  projectId,
-  tags,
-}: {
-  readonly projectId: string
-  readonly tags: ReadonlyArray<string>
-}) {
-  const sortedTags = useMemo(() => [...new Set(tags)].sort(), [tags])
+export function useSessionCohortSummary({ projectId }: { readonly projectId: string }) {
   return useQuery<CohortSummary>({
-    queryKey: ["sessions-cohort-summary-by-tags", projectId, sortedTags],
+    queryKey: ["sessions-cohort-summary", projectId],
     queryFn: () =>
-      getSessionCohortSummaryByTags({
-        data: {
-          projectId,
-          tags: sortedTags,
-        },
+      getSessionCohortSummary({
+        data: { projectId },
       }),
     staleTime: 30_000,
     enabled: projectId.length > 0,

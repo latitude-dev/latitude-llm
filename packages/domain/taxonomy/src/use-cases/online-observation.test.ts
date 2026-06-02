@@ -147,7 +147,7 @@ const makeTrace = (
 
 const makeSessionRepository = (session: SessionDetail | null) =>
   Layer.succeed(SessionRepository, {
-    getCohortBaselineByTags: () =>
+    getCohortBaseline: () =>
       Effect.succeed({
         count: 0,
         metrics: {
@@ -177,7 +177,7 @@ const makeSessionRepository = (session: SessionDetail | null) =>
 
 const makeTraceRepository = (traces: readonly TraceDetail[]) =>
   Layer.succeed(TraceRepository, {
-    getCohortBaselineByTags: () =>
+    getCohortBaseline: () =>
       Effect.succeed({
         count: 0,
         metrics: {

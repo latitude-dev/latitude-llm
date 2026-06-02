@@ -614,31 +614,65 @@ describe("SessionRepository", () => {
     })
   })
 
-  describe("getCohortBaselineByTags", () => {
-    const makeTaggedSpan = (overrides: SpanOverrides & { readonly tags: readonly string[] }): SpanRow => ({
+  describe("getCohortBaseline", () => {
+    const taggedSpan = (overrides: SpanOverrides & { readonly tags?: readonly string[] }): SpanRow => ({
       ...makeSpanRow(overrides),
-      tags: [...overrides.tags],
+      ...(overrides.tags ? { tags: [...overrides.tags] } : {}),
+    })
+
+    it("aggregates every session in the project regardless of tags", async () => {
+      const start = new Date(Date.UTC(2026, 5, 1, 10, 0, 0))
+      const rows = [
+        taggedSpan({
+          traceId: `01${"a".repeat(30)}`,
+          spanId: `01${"b".repeat(14)}`,
+          sessionId: "cheap-1",
+          startTime: new Date(start.getTime()),
+          costTotalMicrocents: 100,
+          tags: ["cheap"],
+        }),
+        taggedSpan({
+          traceId: `02${"a".repeat(30)}`,
+          spanId: `02${"b".repeat(14)}`,
+          sessionId: "expensive-1",
+          startTime: new Date(start.getTime() + 1_000),
+          costTotalMicrocents: 200,
+          tags: ["expensive"],
+        }),
+        taggedSpan({
+          traceId: `03${"a".repeat(30)}`,
+          spanId: `03${"b".repeat(14)}`,
+          sessionId: "untagged-1",
+          startTime: new Date(start.getTime() + 2_000),
+          costTotalMicrocents: 300,
+        }),
+      ]
+
+      await insertSpans(rows)
+
+      const baseline = await runCh(repo.getCohortBaseline({ organizationId: ORG_ID, projectId: PROJECT_ID }))
+
+      expect(baseline.count).toBe(3)
+      expect(baseline.metrics.costTotalMicrocents.sampleCount).toBe(3)
+      expect(baseline.metrics.costTotalMicrocents.p50).toBe(200)
     })
 
     it("ignores zero-filled cost and token values in percentile baselines", async () => {
-      const start = new Date(Date.UTC(2026, 5, 1, 10, 0, 0))
+      const start = new Date(Date.UTC(2026, 5, 2, 10, 0, 0))
       const rows = Array.from({ length: 10 }, (_v, i) =>
-        makeTaggedSpan({
-          traceId: `${i.toString(16).padStart(2, "0")}${"a".repeat(30)}`,
-          spanId: `${i.toString(16).padStart(2, "0")}${"b".repeat(14)}`,
+        taggedSpan({
+          traceId: `${(10 + i).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
+          spanId: `${(10 + i).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
           sessionId: `cohort-zero-${i}`,
           startTime: new Date(start.getTime() + i * 1_000),
           costTotalMicrocents: i === 9 ? 500 : 0,
           tokensOutput: i === 9 ? 100 : 0,
-          tags: ["cohort-zero"],
         }),
       )
 
       await insertSpans(rows)
 
-      const baseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["cohort-zero"] }),
-      )
+      const baseline = await runCh(repo.getCohortBaseline({ organizationId: ORG_ID, projectId: PROJECT_ID }))
 
       expect(baseline.count).toBe(10)
       expect(baseline.metrics.costTotalMicrocents.sampleCount).toBe(1)
@@ -649,127 +683,21 @@ describe("SessionRepository", () => {
       expect(baseline.metrics.durationNs.sampleCount).toBe(10)
     })
 
-    it("isolates cohorts by exact tag combination, independent of order", async () => {
-      const start = new Date(Date.UTC(2026, 5, 2, 10, 0, 0))
-      const cheapRows = Array.from({ length: 5 }, (_v, i) =>
-        makeTaggedSpan({
-          traceId: `${(20 + i).toString(16).padStart(2, "0")}${"c".repeat(30)}`,
-          spanId: `${(20 + i).toString(16).padStart(2, "0")}${"d".repeat(14)}`,
-          sessionId: `cheap-${i}`,
-          startTime: new Date(start.getTime() + i * 1_000),
-          costTotalMicrocents: 100,
-          tags: ["cheap"],
-        }),
-      )
-      const expensiveRows = Array.from({ length: 5 }, (_v, i) =>
-        makeTaggedSpan({
-          traceId: `${(30 + i).toString(16).padStart(2, "0")}${"c".repeat(30)}`,
-          spanId: `${(30 + i).toString(16).padStart(2, "0")}${"d".repeat(14)}`,
-          sessionId: `expensive-${i}`,
-          startTime: new Date(start.getTime() + i * 1_000),
-          costTotalMicrocents: 10_000,
-          tags: ["expensive"],
-        }),
-      )
-      const reversedOrderRows = Array.from({ length: 3 }, (_v, i) =>
-        makeTaggedSpan({
-          traceId: `${(40 + i).toString(16).padStart(2, "0")}${"c".repeat(30)}`,
-          spanId: `${(40 + i).toString(16).padStart(2, "0")}${"d".repeat(14)}`,
-          sessionId: `mixed-${i}`,
-          startTime: new Date(start.getTime() + i * 1_000),
-          costTotalMicrocents: 500,
-          tags: ["beta", "alpha"],
-        }),
-      )
-
-      await insertSpans([...cheapRows, ...expensiveRows, ...reversedOrderRows])
-
-      const cheapBaseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["cheap"] }),
-      )
-      const expensiveBaseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["expensive"] }),
-      )
-
-      expect(cheapBaseline.count).toBe(5)
-      expect(cheapBaseline.metrics.costTotalMicrocents.p50).toBe(100)
-      expect(expensiveBaseline.count).toBe(5)
-      expect(expensiveBaseline.metrics.costTotalMicrocents.p50).toBe(10_000)
-
-      // Order-independent: query ["alpha","beta"] finds sessions stored with ["beta","alpha"].
-      const alphaBetaBaseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha", "beta"] }),
-      )
-      expect(alphaBetaBaseline.count).toBe(3)
-      expect(alphaBetaBaseline.metrics.costTotalMicrocents.p50).toBe(500)
-
-      // A subset must NOT match a strict superset cohort.
-      const alphaOnlyBaseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["alpha"] }),
-      )
-      expect(alphaOnlyBaseline.count).toBe(0)
-    })
-
-    it("treats the empty-tags cohort as a distinct bucket of untagged sessions", async () => {
-      const start = new Date(Date.UTC(2026, 5, 3, 10, 0, 0))
-      const taggedRows = Array.from({ length: 2 }, (_v, i) =>
-        makeTaggedSpan({
-          traceId: `${(50 + i).toString(16).padStart(2, "0")}${"e".repeat(30)}`,
-          spanId: `${(50 + i).toString(16).padStart(2, "0")}${"f".repeat(14)}`,
-          sessionId: `tagged-${i}`,
-          startTime: new Date(start.getTime() + i * 1_000),
-          costTotalMicrocents: 123,
-          tags: ["empty-cohort-marker"],
-        }),
-      )
-      const untaggedRows = Array.from({ length: 3 }, (_v, i) =>
-        makeTaggedSpan({
-          traceId: `${(60 + i).toString(16).padStart(2, "0")}${"e".repeat(30)}`,
-          spanId: `${(60 + i).toString(16).padStart(2, "0")}${"f".repeat(14)}`,
-          sessionId: `untagged-${i}`,
-          startTime: new Date(start.getTime() + i * 1_000),
-          costTotalMicrocents: 777,
-          tags: [],
-        }),
-      )
-
-      await insertSpans([...taggedRows, ...untaggedRows])
-
-      const emptyCohort = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: [] }),
-      )
-      expect(emptyCohort.count).toBe(3)
-      expect(emptyCohort.metrics.costTotalMicrocents.p50).toBe(777)
-
-      const taggedCohort = await runCh(
-        repo.getCohortBaselineByTags({
-          organizationId: ORG_ID,
-          projectId: PROJECT_ID,
-          tags: ["empty-cohort-marker"],
-        }),
-      )
-      expect(taggedCohort.count).toBe(2)
-      expect(taggedCohort.metrics.costTotalMicrocents.p50).toBe(123)
-    })
-
     it("gates p95 (<100 samples) and p99 (<1000 samples) to null", async () => {
       const start = new Date(Date.UTC(2026, 5, 4, 10, 0, 0))
       const rows = Array.from({ length: 10 }, (_v, i) =>
-        makeTaggedSpan({
+        taggedSpan({
           traceId: `${(70 + i).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
           spanId: `${(70 + i).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
           sessionId: `gated-${i}`,
           startTime: new Date(start.getTime() + i * 1_000),
           costTotalMicrocents: (i + 1) * 10,
-          tags: ["gated"],
         }),
       )
 
       await insertSpans(rows)
 
-      const baseline = await runCh(
-        repo.getCohortBaselineByTags({ organizationId: ORG_ID, projectId: PROJECT_ID, tags: ["gated"] }),
-      )
+      const baseline = await runCh(repo.getCohortBaseline({ organizationId: ORG_ID, projectId: PROJECT_ID }))
 
       expect(baseline.metrics.costTotalMicrocents.p95).toBeNull()
       expect(baseline.metrics.costTotalMicrocents.p99).toBeNull()
@@ -778,32 +706,29 @@ describe("SessionRepository", () => {
     it("honors excludeSessionId", async () => {
       const start = new Date(Date.UTC(2026, 5, 5, 10, 0, 0))
       const keptRows = Array.from({ length: 3 }, (_v, i) =>
-        makeTaggedSpan({
+        taggedSpan({
           traceId: `${(80 + i).toString(16).padStart(2, "0")}${"a".repeat(30)}`,
           spanId: `${(80 + i).toString(16).padStart(2, "0")}${"b".repeat(14)}`,
           sessionId: `kept-${i}`,
           startTime: new Date(start.getTime() + i * 1_000),
           costTotalMicrocents: 100,
-          tags: ["excluded"],
         }),
       )
       const excludedSessionId = "excluded-session"
-      const excludedRow = makeTaggedSpan({
+      const excludedRow = taggedSpan({
         traceId: `90${"a".repeat(30)}`,
         spanId: `90${"b".repeat(14)}`,
         sessionId: excludedSessionId,
         startTime: new Date(start.getTime() + 10_000),
         costTotalMicrocents: 999_999,
-        tags: ["excluded"],
       })
 
       await insertSpans([...keptRows, excludedRow])
 
       const baseline = await runCh(
-        repo.getCohortBaselineByTags({
+        repo.getCohortBaseline({
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
-          tags: ["excluded"],
           excludeSessionId: SessionId(excludedSessionId),
         }),
       )

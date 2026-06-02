@@ -143,8 +143,8 @@ export type {
   TraceSearchHighlightsResult,
 } from "./use-cases/compute-trace-search-highlights.ts"
 export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
-export type { GetSessionCohortSummaryByTagsInput } from "./use-cases/get-session-cohort-summary-by-tags.ts"
-export { getSessionCohortSummaryByTagsUseCase } from "./use-cases/get-session-cohort-summary-by-tags.ts"
+export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
+export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
 export type {
   GetTraceAnalyticsError,
   GetTraceAnalyticsInput,
@@ -154,8 +154,8 @@ export type {
   TraceAnalyticsTotalMetric,
 } from "./use-cases/get-trace-analytics.ts"
 export { getTraceAnalyticsUseCase } from "./use-cases/get-trace-analytics.ts"
-export type { GetTraceCohortSummaryByTagsInput } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
-export { getTraceCohortSummaryByTagsUseCase } from "./use-cases/get-trace-cohort-summary-by-tags.ts"
+export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
+export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
 export { getTraceSearchHighlightsUseCase } from "./use-cases/get-trace-search-highlights.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"

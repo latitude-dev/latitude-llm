@@ -18,7 +18,7 @@ import type {
   TraceTimeHistogramBucket,
 } from "@domain/spans"
 import {
-  getTraceCohortSummaryByTagsUseCase,
+  getTraceCohortSummaryUseCase,
   getTraceSearchHighlightsUseCase,
   mergeTraceHistogramTimeFilters,
   TraceRepository,
@@ -295,17 +295,16 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
     )
   })
 
-export const getTraceCohortSummaryByTags = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), tags: z.array(z.string()).readonly() }))
+export const getTraceCohortSummary = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<CohortSummary> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
     return Effect.runPromise(
-      getTraceCohortSummaryByTagsUseCase({
+      getTraceCohortSummaryUseCase({
         organizationId: orgId,
         projectId: ProjectId(data.projectId),
-        tags: data.tags,
       }).pipe(
         withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId),
         Effect.provide(RedisCacheStoreLive(getRedisClient())),
