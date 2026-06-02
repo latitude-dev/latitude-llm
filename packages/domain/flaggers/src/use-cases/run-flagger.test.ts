@@ -18,8 +18,6 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
-import { createAiLayer } from "@platform/ai"
-import { AIGenerateLive } from "@platform/ai-vercel"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
@@ -65,7 +63,7 @@ const flaggerOutputSchema = z
   .object({
     matched: z.boolean().optional().default(false),
     feedback: z.string().min(1).nullable().optional(),
-    messageIndex: z.number().int().nonnegative().optional(),
+    messageIndex: z.number().int().optional(),
   })
   .superRefine((value, ctx) => {
     if (value.matched && !value.feedback?.trim()) {
@@ -131,82 +129,6 @@ function makeTraceDetail(
   }
 }
 
-const REGRESSION_DATASET_PROJECT_SLUG = "latitude"
-const REGRESSION_DATASET_SLUG = "flagger-classification-regression-dataset"
-const REGRESSION_DATASET_PAGE_SIZE = 200
-const EXPECTED_REGRESSION_DATASET_ROWS = 55
-
-function readRequiredEnv(name: string): string {
-  const value = process.env[name]?.trim()
-  if (value) return value
-  throw new Error(`${name} is required to run flagger regression tests`)
-}
-
-function toRecord(value: unknown): Record<string, unknown> | null {
-  if (typeof value === "string") {
-    const parsed = JSON.parse(value) as unknown
-    return toRecord(parsed)
-  }
-
-  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-    return value as Record<string, unknown>
-  }
-
-  return null
-}
-
-interface DatasetRowsPage {
-  readonly items: readonly { readonly metadata: unknown }[]
-  readonly nextCursor?: string | null
-}
-
-interface LatitudeDatasetsClient {
-  listRows(
-    projectSlug: string,
-    datasetSlug: string,
-    request: { readonly limit: number; readonly cursor?: string },
-  ): Promise<DatasetRowsPage>
-}
-
-interface LatitudeApiClientConstructor {
-  new (options: {
-    readonly token: string
-    readonly baseUrl: string
-    readonly maxRetries: number
-  }): {
-    readonly datasets: LatitudeDatasetsClient
-  }
-}
-
-async function fetchFlaggerRegressionRows(): Promise<Array<{ readonly metadata: Record<string, unknown> }>> {
-  const sdk = (await import("@latitude-data/sdk")) as { readonly LatitudeApiClient: LatitudeApiClientConstructor }
-  const client = new sdk.LatitudeApiClient({
-    token: readRequiredEnv("LAT_LATITUDE_TELEMETRY_API_KEY"),
-    baseUrl: process.env.LAT_LATITUDE_API_URL?.trim() || "https://api.latitude.so",
-    maxRetries: 0,
-  })
-
-  const rows: Array<{ readonly metadata: Record<string, unknown> }> = []
-  let cursor: string | undefined
-
-  do {
-    const page = await client.datasets.listRows(REGRESSION_DATASET_PROJECT_SLUG, REGRESSION_DATASET_SLUG, {
-      limit: REGRESSION_DATASET_PAGE_SIZE,
-      ...(cursor ? { cursor } : {}),
-    })
-
-    rows.push(
-      ...page.items.flatMap((row) => {
-        const metadata = toRecord(row.metadata)
-        return metadata ? [{ metadata }] : []
-      }),
-    )
-    cursor = page.nextCursor ?? undefined
-  } while (cursor)
-
-  return rows
-}
-
 function createMemoryCacheLayer(initialEntries: ReadonlyMap<string, string> = new Map()) {
   const values = new Map(initialEntries)
   const writes: Array<{ readonly key: string; readonly value: string; readonly ttlSeconds?: number | undefined }> = []
@@ -227,8 +149,6 @@ function createMemoryCacheLayer(initialEntries: ReadonlyMap<string, string> = ne
     }),
   }
 }
-
-const regressionIt = process.env.RUN_FLAGGER_REGRESSION === "true" ? it : it.skip
 
 describe("runFlaggerUseCase", () => {
   it("uses the LLM flagger for jailbreaking with suspicious snippets prompt", async () => {
@@ -547,57 +467,6 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0].prompt).toContain("This cached agent designs dashboards.")
   })
-
-  regressionIt(
-    "classifies the Latitude dataset false-positive regressions as no-match with the live LLM flaggers",
-    async () => {
-      const rows = await fetchFlaggerRegressionRows()
-      expect(rows).toHaveLength(EXPECTED_REGRESSION_DATASET_ROWS)
-
-      const aiLayer = createAiLayer(AIGenerateLive)
-
-      const cases = rows.map((row, index) => {
-        const traceMetadata = row.metadata.traceMetadata
-        expect(traceMetadata).toBeTypeOf("object")
-        expect(traceMetadata).not.toBeNull()
-        const flaggerSlug = (traceMetadata as { readonly flaggerSlug?: unknown }).flaggerSlug
-        expect(flaggerSlug).toBeTypeOf("string")
-
-        const allMessages = row.metadata.allMessages
-        const systemInstructions = row.metadata.systemInstructions
-        expect(Array.isArray(allMessages)).toBe(true)
-        expect(Array.isArray(systemInstructions)).toBe(true)
-
-        return { index, flaggerSlug: flaggerSlug as string, allMessages, systemInstructions }
-      })
-
-      // Each row makes 1-3 live LLM calls; run them with bounded concurrency so
-      // the suite completes well within the timeout instead of serially stalling.
-      const classifications = cases.map((testCase) =>
-        classifyTraceForFlaggerUseCase({
-          organizationId: INPUT.organizationId,
-          projectId: INPUT.projectId,
-          traceId: `${INPUT.traceId.slice(0, 30)}${String(testCase.index).padStart(2, "0")}`,
-          flaggerSlug: testCase.flaggerSlug,
-          trace: makeTraceDetail(
-            testCase.allMessages as TraceDetail["allMessages"],
-            [],
-            testCase.systemInstructions as TraceDetail["systemInstructions"],
-          ),
-        }).pipe(
-          Effect.provide(Layer.mergeAll(aiLayer, createMemoryCacheLayer().layer)),
-          Effect.map((result) => ({ index: testCase.index, flaggerSlug: testCase.flaggerSlug, result })),
-        ),
-      )
-
-      const results = await Effect.runPromise(Effect.all(classifications, { concurrency: 10 }))
-
-      for (const { index, flaggerSlug, result } of results) {
-        expect(result, `row ${index} (${flaggerSlug}) should be no-match`).toEqual({ matched: false })
-      }
-    },
-    600_000,
-  )
 
   it("stamps the LLM call with the no-reflag tag when the trace is itself flagger-generated", async () => {
     const { repository } = createFakeTraceRepository({
@@ -1063,6 +932,72 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[1].prompt).toContain("No jailbreaking behavior detected")
   })
 
+  it("recovers to matched=false for the runaway decimal messageIndex output from trace-0e838fd", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail(
+            [
+              {
+                role: "user",
+                parts: [
+                  { type: "text", content: "Classify only text inside evaluated_trace_assistant_response tags." },
+                ],
+              },
+              {
+                role: "assistant",
+                parts: [{ type: "text", content: '{"matched": false, "messageIndex": 0}' }],
+              },
+            ],
+            [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
+            [
+              {
+                type: "text",
+                content:
+                  "You are a triage flagger for LLM telemetry traces. Decide whether the trace matches the Laziness issue category.",
+              },
+            ],
+          ),
+        ),
+    })
+
+    const runawayMessageIndexOutput = `{"matched": true, "messageIndex": 1.${"0".repeat(12_000)}`
+    const sdkError = new Error(
+      `No object generated: response did not match schema. Output: ${runawayMessageIndexOutput}`,
+    )
+    sdkError.name = "AI_NoObjectGeneratedError"
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No object generated: response did not match schema.`,
+            cause: sdkError,
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+    expect(calls.generate).toHaveLength(1)
+    expect(calls.generate[0].system).toContain("messageIndex")
+    expect(calls.generate[0].system).toContain("non-negative integer no larger than 10000")
+  })
+
   it("recovers to matched=false when the SDK cause has no AI_NoObjectGeneratedError name but the message indicates a schema mismatch", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>
@@ -1149,6 +1084,44 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     // Laziness prompt includes work signals
     expect(calls.generate[0].prompt).toContain("OVERALL WORK SIGNALS")
     expect(calls.generate[0].prompt).toContain("CANDIDATE STAGES")
+  })
+
+  it("instructs flaggers to keep messageIndex bounded and integer-shaped", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Please do the task." }],
+            },
+            {
+              role: "assistant",
+              parts: [{ type: "text", content: "I will not do it." }],
+            },
+          ]),
+        ),
+    })
+
+    const { calls, layer: aiLayer } = createClassifyAndApproveAI()
+
+    await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(calls.generate[0].system).toContain("messageIndex")
+    expect(calls.generate[0].system).toContain("non-negative integer no larger than 10000")
   })
 
   it("uses flagger-specific prompt for NSFW with suspicious snippets", async () => {

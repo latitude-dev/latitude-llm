@@ -66,9 +66,16 @@ export interface ClassifyTraceForFlaggerInput {
   readonly strategyOverride?: FlaggerStrategy
 }
 
+const FLAGGER_MESSAGE_INDEX_MAX = 10_000
+
+const isValidMessageIndex = (value: number | undefined): value is number =>
+  value !== undefined && Number.isInteger(value) && value >= 0 && value <= FLAGGER_MESSAGE_INDEX_MAX
+
 const baseFlaggerOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
   feedback: z.string().min(1).nullable().optional(),
+  // Keep provider-facing schema broad: Bedrock rejects integer schemas with
+  // minimum/maximum constraints, so exact bounds are enforced after parsing below.
   messageIndex: z.number().optional(),
 })
 
@@ -98,9 +105,7 @@ const flaggerOutputSchema = baseFlaggerOutputSchema
     return {
       matched: value.matched,
       ...(value.matched && value.feedback ? { feedback: value.feedback.trim() } : {}),
-      ...(value.matched && Number.isInteger(messageIndex) && messageIndex !== undefined && messageIndex >= 0
-        ? { messageIndex }
-        : {}),
+      ...(value.matched && isValidMessageIndex(messageIndex) ? { messageIndex } : {}),
     }
   })
 
@@ -109,7 +114,7 @@ Structured output contract:
 - Set matched=false when the trace does not belong to this flagger; in that case feedback must be null or omitted.
 - Set matched=true only when the trace belongs to this flagger; in that case feedback is required.
 - For matched=true, feedback must be the final human-readable annotation: one or two short sentences describing the issue and concrete evidence.
-- Include messageIndex only when one transcript line is clearly the best evidence.
+- Include messageIndex only when one transcript line is clearly the best evidence; it must be a non-negative integer no larger than ${FLAGGER_MESSAGE_INDEX_MAX}.
 `.trim()
 
 // Whether a strategy classifies only the evaluated agent's own assistant
