@@ -1,7 +1,7 @@
 import { Button, Icon, Input, Text, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { BellPlusIcon, LockIcon, SearchIcon } from "lucide-react"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -9,6 +9,7 @@ import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { MonitorCreateModal } from "./-components/monitor-create-modal.tsx"
 import { MonitorDetailDrawer } from "./-components/monitor-detail-drawer.tsx"
 import { MonitorsEmptyState } from "./-components/monitors-empty-state.tsx"
 import { type MonitorsTableRow, MonitorsView } from "./-components/monitors-view.tsx"
@@ -47,6 +48,7 @@ function MonitorsPageContent() {
   const [monitorSlug, setMonitorSlug] = useParamState("monitorSlug", "")
   const [searchQuery, setSearchQuery] = useParamState("q", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
+  const [createOpen, setCreateOpen] = useState(false)
 
   useDebounce(
     () => {
@@ -78,11 +80,21 @@ function MonitorsPageContent() {
   const hasActiveFilters = Boolean(searchQuery)
   const showEmptyState = !isLoading && !hasMonitors && !hasActiveFilters
 
+  const createModal = createOpen ? (
+    <MonitorCreateModal
+      projectId={project.id}
+      projectSlug={project.slug}
+      onClose={() => setCreateOpen(false)}
+      onCreated={(slug) => setMonitorSlug(slug)}
+    />
+  ) : null
+
   if (showEmptyState) {
     return (
       <Layout>
         <Layout.Content>
-          <MonitorsEmptyState />
+          <MonitorsEmptyState onCreate={() => setCreateOpen(true)} />
+          {createModal}
         </Layout.Content>
       </Layout>
     )
@@ -106,8 +118,7 @@ function MonitorsPageContent() {
               </div>
             </Layout.ActionRowItem>
             <Layout.ActionRowItem>
-              {/* Disabled until the create-monitor modal lands in M5. */}
-              <Button disabled>
+              <Button onClick={() => setCreateOpen(true)}>
                 <Icon icon={BellPlusIcon} size="sm" />
                 Monitor
               </Button>
@@ -122,12 +133,14 @@ function MonitorsPageContent() {
           onActiveMonitorChange={(slug) => setMonitorSlug(slug ?? "")}
           projectId={project.id}
         />
+        {createModal}
       </Layout.Content>
       {activeMonitor ? (
         <Layout.Aside>
           <MonitorDetailDrawer
             key={activeMonitor.slug}
             projectId={project.id}
+            projectSlug={project.slug}
             monitor={activeMonitor}
             onClose={() => setMonitorSlug("")}
             {...(nextMonitor ? { onNext: () => setMonitorSlug(nextMonitor.slug) } : {})}

@@ -196,6 +196,21 @@ describe("formatHumanReadableAlert", () => {
     )
   })
 
+  it("renders a whole-day sustained window in days, not hours", () => {
+    const alert = makeAlert({
+      kind: "savedSearch.escalating",
+      source: { type: "savedSearch", id: "s".repeat(24) },
+      condition: {
+        kind: "savedSearch.escalating",
+        threshold: absolute(2000),
+        window: { minutes: 2880 },
+      },
+    })
+    expect(formatHumanReadableAlert(alert, { savedSearchName: "5xx" })).toBe(
+      "Alerts when traces matching '5xx' are detected 2000 times, sustained for at least 2 days.",
+    )
+  })
+
   it("renders savedSearch.escalating multiplier mode with an average lookback and 60-minute window", () => {
     const alert = makeAlert({
       kind: "savedSearch.escalating",

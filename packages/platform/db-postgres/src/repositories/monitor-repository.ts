@@ -274,6 +274,45 @@ export const MonitorRepositoryLive = Layer.effect(
             return reset
           })
         }),
+      create: (monitor) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // Monitor + its alerts in one transactional callback so a partially
+          // created monitor never lands.
+          yield* sqlClient.query(async (db) => {
+            await db.insert(monitors).values(toMonitorRow(monitor))
+            if (monitor.alerts.length > 0) {
+              await db
+                .insert(monitorAlerts)
+                .values(monitor.alerts.map((alert) => toMonitorAlertRow(alert, monitor.organizationId)))
+            }
+          })
+        }),
+      insertAlert: (alert) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          yield* sqlClient.query((db) => db.insert(monitorAlerts).values(toMonitorAlertRow(alert, organizationId)))
+        }),
+      softDeleteAlert: (alertId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          const updated = yield* sqlClient.query((db) =>
+            db
+              .update(monitorAlerts)
+              .set({ deletedAt: new Date() })
+              .where(
+                and(
+                  eq(monitorAlerts.organizationId, organizationId),
+                  eq(monitorAlerts.id, alertId),
+                  isNull(monitorAlerts.deletedAt),
+                ),
+              )
+              .returning({ id: monitorAlerts.id }),
+          )
+          if (updated.length === 0) return yield* new NotFoundError({ entity: "MonitorAlert", id: alertId })
+        }),
       setMuted: ({ id, mutedAt }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

@@ -740,5 +740,108 @@ describe("MonitorRepositoryLive", () => {
       )
       expect(countExcludingA).toBe(0)
     })
+
+    const buildUserMonitor = (slug: string, alertCount: number): Monitor => {
+      const monitorId = MonitorId(generateId())
+      const now = new Date("2026-06-02T10:00:00.000Z")
+      return {
+        id: monitorId,
+        organizationId,
+        projectId,
+        slug,
+        name: slug,
+        description: "",
+        system: false,
+        alerts: Array.from({ length: alertCount }, () => ({
+          id: MonitorAlertId(generateId()),
+          monitorId,
+          kind: "savedSearch.match" as const,
+          source: { type: "savedSearch" as const, id: "s".repeat(24) },
+          condition: null,
+          severity: "low" as const,
+          createdAt: now,
+        })),
+        mutedAt: null,
+        deletedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      }
+    }
+
+    it("create inserts the monitor and its alerts atomically", async () => {
+      const monitor = buildUserMonitor("created", 2)
+      await exec((r) => r.create(monitor))
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.findBySlug({ projectId, slug: "created" })
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(result.id).toBe(monitor.id)
+      expect(result.system).toBe(false)
+      expect(result.alerts).toHaveLength(2)
+    })
+
+    it("insertAlert adds a live alert to an existing monitor", async () => {
+      const id = generateId()
+      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
+      await database.db.insert(monitorAlertsTable).values(makeAlertRow({ id: generateId(), monitorId: id }))
+
+      await exec((r) =>
+        r.insertAlert({
+          id: MonitorAlertId(generateId()),
+          monitorId: MonitorId(id),
+          kind: "savedSearch.threshold",
+          source: { type: "savedSearch", id: "s".repeat(24) },
+          condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 100 } },
+          severity: "medium",
+          createdAt: new Date("2026-06-02T10:00:00.000Z"),
+        }),
+      )
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.findById(MonitorId(id))
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(result.alerts.map((a) => a.kind).sort()).toEqual(["savedSearch.match", "savedSearch.threshold"])
+    })
+
+    it("softDeleteAlert sets deleted_at and drops the alert from reads", async () => {
+      const id = generateId()
+      const keep = generateId()
+      const remove = generateId()
+      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
+      await database.db
+        .insert(monitorAlertsTable)
+        .values([makeAlertRow({ id: keep, monitorId: id }), makeAlertRow({ id: remove, monitorId: id })])
+
+      await exec((r) => r.softDeleteAlert(MonitorAlertId(remove)))
+
+      const [removedRow] = await database.db.select().from(monitorAlertsTable).where(eq(monitorAlertsTable.id, remove))
+      expect(removedRow?.deletedAt).not.toBeNull()
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.findById(MonitorId(id))
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(result.alerts.map((a) => a.id)).toEqual([keep])
+    })
+
+    it("softDeleteAlert fails NotFoundError for an already-deleted alert", async () => {
+      const id = generateId()
+      const alert = generateId()
+      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
+      await database.db
+        .insert(monitorAlertsTable)
+        .values(makeAlertRow({ id: alert, monitorId: id, deletedAt: new Date("2026-06-02T09:00:00.000Z") }))
+
+      const exit = await execExit((r) => r.softDeleteAlert(MonitorAlertId(alert)))
+      expect(Exit.isFailure(exit)).toBe(true)
+    })
   })
 })

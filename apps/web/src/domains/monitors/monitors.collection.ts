@@ -1,8 +1,13 @@
+import type { AlertIncidentCondition, AlertIncidentKind, AlertIncidentSourceType, AlertSeverity } from "@domain/shared"
 import { type InfiniteTableInfiniteScroll, useToast } from "@repo/ui"
-import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 import { toUserMessage } from "../../lib/errors.ts"
 import {
+  createMonitor,
+  createMonitorAlert,
+  deleteMonitor,
+  deleteMonitorAlert,
   getMonitorBySlug,
   listMonitorIncidents,
   listMonitors,
@@ -11,7 +16,17 @@ import {
   type MonitorRecord,
   muteMonitor,
   unmuteMonitor,
+  updateMonitor,
+  updateMonitorAlert,
 } from "./monitors.functions.ts"
+
+/** Client-side alert draft mirroring the server `createAlertFieldsSchema`. */
+export interface MonitorAlertDraft {
+  readonly kind: AlertIncidentKind
+  readonly source: { readonly type: AlertIncidentSourceType; readonly id: string | null }
+  readonly condition?: AlertIncidentCondition | null
+  readonly severity?: AlertSeverity
+}
 
 export type { MonitorRecord }
 /** @public Consumed by the M4 details panel incidents table; not yet wired in M2. */
@@ -148,4 +163,83 @@ export function useMonitorMuteAction(projectId: string) {
   )
 
   return { setMuted, isPending }
+}
+
+const invalidateMonitorQueries = (queryClient: ReturnType<typeof useQueryClient>, projectId: string) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["monitors", "list", projectId] }),
+    queryClient.invalidateQueries({ queryKey: ["monitors", "get", projectId] }),
+  ])
+
+/** Create a user monitor (with its alerts). Invalidates the list on success. */
+export function useCreateMonitor(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      readonly name: string
+      readonly description?: string
+      readonly alerts: readonly MonitorAlertDraft[]
+    }) =>
+      createMonitor({
+        data: {
+          projectId,
+          name: input.name,
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          alerts: input.alerts.map((alert) => ({ ...alert })),
+        },
+      }),
+    onSuccess: () => invalidateMonitorQueries(queryClient, projectId),
+  })
+}
+
+/** Rename / re-describe a user monitor. Renames change the slug, so the detail queries refetch too. */
+export function useUpdateMonitor(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { readonly monitorId: string; readonly name?: string; readonly description?: string }) =>
+      updateMonitor({ data: input }),
+    onSuccess: () => invalidateMonitorQueries(queryClient, projectId),
+  })
+}
+
+/** Soft-delete a user monitor. */
+export function useDeleteMonitor(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (monitorId: string) => deleteMonitor({ data: { monitorId } }),
+    onSuccess: () => invalidateMonitorQueries(queryClient, projectId),
+  })
+}
+
+/**
+ * Per-alert CRUD used by the details-panel Alerts section: add a new alert,
+ * edit an existing alert's configurable values, or remove one. Each invalidates
+ * the list + detail queries so the panel reflects the change.
+ */
+export function useMonitorAlertActions(projectId: string) {
+  const queryClient = useQueryClient()
+  const onSuccess = () => invalidateMonitorQueries(queryClient, projectId)
+
+  const addAlert = useMutation({
+    mutationFn: (input: { readonly monitorId: string } & MonitorAlertDraft) =>
+      createMonitorAlert({ data: { ...input } }),
+    onSuccess,
+  })
+  const editAlert = useMutation({
+    mutationFn: (input: {
+      readonly monitorId: string
+      readonly alertId: string
+      readonly source?: { readonly type: AlertIncidentSourceType; readonly id: string | null }
+      readonly condition?: AlertIncidentCondition | null
+      readonly severity?: AlertSeverity
+    }) => updateMonitorAlert({ data: input }),
+    onSuccess,
+  })
+  const removeAlert = useMutation({
+    mutationFn: (input: { readonly monitorId: string; readonly alertId: string }) =>
+      deleteMonitorAlert({ data: input }),
+    onSuccess,
+  })
+
+  return { addAlert, editAlert, removeAlert }
 }

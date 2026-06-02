@@ -16,7 +16,9 @@ import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { MonitorDeleteConfirmModal } from "./monitor-delete-confirm-modal.tsx"
 import { MonitorMuteConfirmModal } from "./monitor-mute-confirm-modal.tsx"
+import { MonitorRenameModal } from "./monitor-rename-modal.tsx"
 
 /** Latest-incident summary per row; `null` until incidents land (M3+) → em dash. */
 export interface MonitorLastIncidentSummary {
@@ -59,6 +61,8 @@ export function MonitorsView({
   readonly projectId: string
 }) {
   const [pendingMute, setPendingMute] = useState<MonitorRecord | null>(null)
+  const [renameTarget, setRenameTarget] = useState<MonitorRecord | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<MonitorRecord | null>(null)
   const activeRowKey = activeMonitorSlug
     ? rows.find((r) => r.monitor.slug === activeMonitorSlug)?.monitor.id
     : undefined
@@ -97,17 +101,29 @@ export function MonitorsView({
       render: (row) => <LastIncidentCell summary={row.lastIncident} />,
     },
     optionsColumn<MonitorsTableRow>({
-      getOptions: (row): MenuOption[] => [
-        {
-          label: row.monitor.mutedAt ? "Unmute" : "Mute",
-          iconProps: { icon: row.monitor.mutedAt ? BellIcon : BellOffIcon },
-          onClick: () => setPendingMute(row.monitor),
-        },
-        { type: "separator" },
-        // Rename + Delete only apply to user monitors; wired in M5.
-        { label: "Rename", iconProps: { icon: PencilIcon }, disabled: true },
-        { label: "Delete", type: "destructive", iconProps: { icon: Trash2Icon }, disabled: true },
-      ],
+      getOptions: (row): MenuOption[] => {
+        const isUser = !row.monitor.system
+        return [
+          {
+            label: row.monitor.mutedAt ? "Unmute" : "Mute",
+            iconProps: { icon: row.monitor.mutedAt ? BellIcon : BellOffIcon },
+            onClick: () => setPendingMute(row.monitor),
+          },
+          { type: "separator" },
+          // Rename + Delete only apply to user monitors; system monitors are locked.
+          {
+            label: "Rename",
+            iconProps: { icon: PencilIcon },
+            ...(isUser ? { onClick: () => setRenameTarget(row.monitor) } : { disabled: true }),
+          },
+          {
+            label: "Delete",
+            type: "destructive",
+            iconProps: { icon: Trash2Icon },
+            ...(isUser ? { onClick: () => setDeleteTarget(row.monitor) } : { disabled: true }),
+          },
+        ]
+      },
     }),
   ]
 
@@ -133,6 +149,22 @@ export function MonitorsView({
         </Layout.List>
       </Layout.Body>
       <MonitorMuteConfirmModal projectId={projectId} monitor={pendingMute} onOpenChange={setPendingMute} />
+      {renameTarget ? (
+        <MonitorRenameModal
+          key={renameTarget.id}
+          projectId={projectId}
+          monitor={renameTarget}
+          onClose={() => setRenameTarget(null)}
+        />
+      ) : null}
+      <MonitorDeleteConfirmModal
+        projectId={projectId}
+        monitor={deleteTarget}
+        onOpenChange={setDeleteTarget}
+        onDeleted={() => {
+          if (deleteTarget && deleteTarget.slug === activeMonitorSlug) onActiveMonitorChange(undefined)
+        }}
+      />
     </>
   )
 }
