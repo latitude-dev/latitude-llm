@@ -85,6 +85,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
       subtitle={<CopyableText value={project.slug} size="sm" tooltip="Copy project slug" ellipsis />}
       footer={({ collapsed }) => (
         <>
+          <ChangelogSidebarEntry collapsed={collapsed} />
           {latestWrapped ? (
             <NavItem
               icon={ClaudeCodeIcon}
@@ -94,7 +95,6 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
               collapsed={collapsed}
             />
           ) : null}
-          <ChangelogSidebarEntry collapsed={collapsed} />
           <NavItem
             icon={PROJECT_SETTINGS_SECTION.icon}
             label={PROJECT_SETTINGS_SECTION.label}

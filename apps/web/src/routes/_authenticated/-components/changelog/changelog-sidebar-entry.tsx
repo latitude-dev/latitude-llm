@@ -2,10 +2,10 @@ import { useLocalStorage } from "@repo/ui"
 import { useChangelogEntries } from "../../../../domains/changelog/changelog.collection.ts"
 import { ChangelogBanner } from "./changelog-banner.tsx"
 import {
+  type ChangelogBannerDismissed,
   isChangelogBannerDismissed,
   parseDismissedBannerState,
   toDismissedBannerState,
-  type ChangelogBannerDismissed,
 } from "./changelog-utils.ts"
 import { WhatsNewButton } from "./whats-new-button.tsx"
 
@@ -33,8 +33,7 @@ export function ChangelogSidebarEntry({ collapsed = false }: { collapsed?: boole
   }
 
   const latestEntry = entries[0]
-  const bannerDismissed =
-    latestEntry !== undefined && isChangelogBannerDismissed(latestEntry, dismissed)
+  const bannerDismissed = latestEntry !== undefined && isChangelogBannerDismissed(latestEntry, dismissed)
 
   if (!isLoading && entries.length === 0) {
     return null

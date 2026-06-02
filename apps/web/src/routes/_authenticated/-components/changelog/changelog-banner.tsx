@@ -28,7 +28,7 @@ export function ChangelogBanner({ title, description, coverUrl, onCollapse, clas
   const collapseIconColor: TextColor = hasCover(coverUrl) ? "foreground" : "white"
 
   return (
-    <article className={cn("flex w-full flex-col gap-1 overflow-hidden rounded-2xl bg-secondary", className)}>
+    <article className={cn("flex w-full flex-col gap-1 overflow-hidden rounded-2xl bg-secondary shadow-sm", className)}>
       <div className="flex w-full flex-col">
         <div className="relative h-[119px] w-full shrink-0">
           <img src={coverSrc} alt="" className="pointer-events-none absolute inset-0 size-full object-cover" />
