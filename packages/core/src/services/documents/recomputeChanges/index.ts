@@ -195,7 +195,21 @@ export type RecomputedChanges = {
   errors: { [documentUuid: string]: Error[] }
 }
 
-export async function recomputeChanges(
+/**
+ * Computes, in memory, the set of documents that have changed in a draft commit
+ * WITHOUT persisting anything.
+ *
+ * A document counts as changed when its resolved content (which inlines any
+ * referenced documents) differs from the head version. Documents that change
+ * only because a referenced document changed — e.g. a parent prompt of an edited
+ * child — are reported as changed but keep tracking the head content; they are
+ * NOT snapshotted into the draft. This keeps such parents inheriting later Live
+ * changes until the draft is actually published.
+ *
+ * Use this on read paths (e.g. listing draft changes). Persisting the changes is
+ * done separately at merge time via {@link recomputeChanges}.
+ */
+export async function computeChanges(
   {
     workspace,
     draft,
@@ -242,10 +256,9 @@ export async function recomputeChanges(
       { workspaceId: workspace.id },
       tx,
     )
-    if (agentToolsMapResult.error)
-      return Result.error(agentToolsMapResult.error)
+    if (agentToolsMapResult.error) return Result.error(agentToolsMapResult.error)
 
-    const { documents: documentsToUpdate, errors } =
+    const { documents: changedDocuments, errors } =
       await resolveDocumentChanges({
         originalDocuments: mergedDocuments,
         newDocuments: draftDocuments,
@@ -254,18 +267,53 @@ export async function recomputeChanges(
         integrationNames: allIntegrations.map((i) => i.name),
       })
 
+    return Result.ok({
+      headDocuments: mergedDocuments,
+      changedDocuments,
+      mainDocumentChanged,
+      errors,
+    })
+  })
+}
+
+/**
+ * Computes draft changes via {@link computeChanges} and PERSISTS them as
+ * document versions in the draft commit: inserting reference-only parents,
+ * updating existing rows, and removing rows that no longer differ from head.
+ *
+ * Because this snapshots reference-only parents into the commit (freezing their
+ * content), it must only be used when finalizing a draft (i.e. at merge), never
+ * on read paths — otherwise a parent stops inheriting later Live changes.
+ */
+export async function recomputeChanges(
+  {
+    workspace,
+    draft,
+  }: {
+    workspace: Workspace
+    draft: Commit
+  },
+  transaction = new Transaction(),
+): Promise<TypedResult<RecomputedChanges, Error>> {
+  return transaction.call(async () => {
+    const computed = await computeChanges({ workspace, draft }, transaction)
+    if (computed.error) return computed
+
+    const { changedDocuments, headDocuments, mainDocumentChanged, errors } =
+      computed.value
+
     const newDraftDocuments = (
       await replaceCommitChanges(
         {
           commit: draft,
-          documentChanges: documentsToUpdate,
+          documentChanges: changedDocuments,
         },
         transaction,
       )
     ).unwrap()
 
     return Result.ok({
-      headDocuments: mergedDocuments,
+      headDocuments,
       changedDocuments: newDraftDocuments,
       mainDocumentChanged,
       errors,
