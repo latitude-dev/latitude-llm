@@ -10,8 +10,12 @@ import {
   getSavedSearchBySlugFn,
   listSavedSearchesByProject,
   type SavedSearchRecord,
+  type SavedSearchSearchRecord,
+  searchSavedSearchesOrgWide,
   updateSavedSearchFn,
 } from "./saved-searches.functions.ts"
+
+const ORG_SEARCH_LIMIT = 8
 
 const listKey = (projectId: string) => ["savedSearches", projectId] as const
 const slugKey = (projectId: string, slug: string) => ["savedSearches", projectId, "slug", slug] as const
@@ -22,6 +26,22 @@ export function useSavedSearchesList(projectId: string, { enabled = true }: { en
     queryFn: () => listSavedSearchesByProject({ data: { projectId } }),
     staleTime: 30_000,
     enabled: enabled && projectId.length > 0,
+  })
+  return { data: data ?? [], isLoading }
+}
+
+/**
+ * Org-wide saved-search search for the Command Palette. Returns matching saved searches across
+ * every project in the organization (each carrying its owning project's slug/name).
+ */
+export function useSavedSearchesSearch(searchQuery: string, { enabled = true }: { enabled?: boolean } = {}) {
+  const trimmed = searchQuery.trim()
+  const { data, isLoading } = useQuery({
+    queryKey: ["savedSearches", "orgSearch", trimmed],
+    queryFn: (): Promise<readonly SavedSearchSearchRecord[]> =>
+      searchSavedSearchesOrgWide({ data: { searchQuery: trimmed, limit: ORG_SEARCH_LIMIT } }),
+    staleTime: 30_000,
+    enabled: enabled && trimmed.length > 0,
   })
   return { data: data ?? [], isLoading }
 }

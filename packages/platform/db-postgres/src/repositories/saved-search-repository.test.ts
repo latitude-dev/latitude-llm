@@ -1,7 +1,8 @@
 import { DuplicateSavedSearchSlugError, SavedSearchNotFoundError, SavedSearchRepository } from "@domain/saved-searches"
 import { OrganizationId, ProjectId, type SqlClient, UserId } from "@domain/shared"
 import { Effect } from "effect"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { projects } from "../schema/projects.ts"
 import { savedSearches } from "../schema/saved-searches.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
@@ -441,5 +442,102 @@ describe("SavedSearchRepositoryLive", () => {
       }),
     )
     expect(otherOrgPage.items).toHaveLength(0)
+  })
+})
+
+const SS_ORG_ID = OrganizationId("org-ss-search-test")
+const SS_OTHER_ORG_ID = OrganizationId("org-ss-search-other")
+const SS_PROJECT_A = ProjectId("proj-ss-search-a")
+const SS_PROJECT_B = ProjectId("proj-ss-search-b")
+const SS_PROJECT_DELETED = ProjectId("proj-ss-search-del")
+const SS_PROJECT_OTHER = ProjectId("proj-ss-search-oth")
+
+const ssId = (prefix: string) => prefix.padEnd(24, "x").slice(0, 24)
+
+describe("SavedSearchRepositoryLive searchOrgWide", () => {
+  const runSearch = <A, E>(effect: Effect.Effect<A, E, SavedSearchRepository | SqlClient>) =>
+    Effect.runPromise(effect.pipe(withPostgres(SavedSearchRepositoryLive, pg.adminPostgresClient, SS_ORG_ID)))
+
+  beforeAll(async () => {
+    const db = pg.db
+    const baseTime = new Date("2025-03-01T12:00:00.000Z")
+
+    await db.insert(projects).values([
+      { id: SS_PROJECT_A, organizationId: SS_ORG_ID, name: "Alpha Project", slug: "ss-alpha" },
+      { id: SS_PROJECT_B, organizationId: SS_ORG_ID, name: "Beta Project", slug: "ss-beta" },
+      { id: SS_PROJECT_DELETED, organizationId: SS_ORG_ID, name: "Gone Project", slug: "ss-gone", deletedAt: baseTime },
+      { id: SS_PROJECT_OTHER, organizationId: SS_OTHER_ORG_ID, name: "Other Org Project", slug: "ss-other" },
+    ])
+
+    const row = (
+      id: string,
+      organizationId: OrganizationId,
+      projectId: ProjectId,
+      slug: string,
+      name: string,
+      extra: { deletedAt?: Date } = {},
+    ) => ({
+      id: ssId(id),
+      organizationId,
+      projectId,
+      slug,
+      name,
+      query: "x",
+      filterSet: {},
+      assignedUserId: null,
+      createdByUserId: CREATOR_USER_ID,
+      createdAt: baseTime,
+      updatedAt: baseTime,
+      ...(extra.deletedAt ? { deletedAt: extra.deletedAt } : {}),
+    })
+
+    await db
+      .insert(savedSearches)
+      .values([
+        row("sss1", SS_ORG_ID, SS_PROJECT_A, "errors-a", "Payment Errors"),
+        row("sss2", SS_ORG_ID, SS_PROJECT_B, "errors-b", "Error Spikes"),
+        row("sss3", SS_ORG_ID, SS_PROJECT_A, "latency", "Latency"),
+        row("sss4", SS_ORG_ID, SS_PROJECT_A, "errors-del", "Errors Deleted", { deletedAt: baseTime }),
+        row("sss5", SS_ORG_ID, SS_PROJECT_DELETED, "errors-gone", "Errors In Deleted Project"),
+        row("sss6", SS_OTHER_ORG_ID, SS_PROJECT_OTHER, "errors-secret", "Errors Secret"),
+      ])
+  })
+
+  it("matches saved searches across multiple projects in the org and tags them with the project", async () => {
+    const results = await runSearch(
+      Effect.gen(function* () {
+        const repo = yield* SavedSearchRepository
+        return yield* repo.searchOrgWide({ searchQuery: "error", limit: 25 })
+      }),
+    )
+
+    expect(results.map((r) => r.name).sort()).toEqual(["Error Spikes", "Payment Errors"])
+    const payment = results.find((r) => r.name === "Payment Errors")
+    const spikes = results.find((r) => r.name === "Error Spikes")
+    expect(payment).toMatchObject({ projectId: SS_PROJECT_A, projectSlug: "ss-alpha", projectName: "Alpha Project" })
+    expect(spikes).toMatchObject({ projectId: SS_PROJECT_B, projectSlug: "ss-beta", projectName: "Beta Project" })
+  })
+
+  it("excludes soft-deleted saved searches, deleted projects, and other organizations", async () => {
+    const results = await runSearch(
+      Effect.gen(function* () {
+        const repo = yield* SavedSearchRepository
+        return yield* repo.searchOrgWide({ searchQuery: "error", limit: 25 })
+      }),
+    )
+    const names = results.map((r) => r.name)
+    expect(names).not.toContain("Errors Deleted")
+    expect(names).not.toContain("Errors In Deleted Project")
+    expect(names).not.toContain("Errors Secret")
+  })
+
+  it("respects the limit", async () => {
+    const results = await runSearch(
+      Effect.gen(function* () {
+        const repo = yield* SavedSearchRepository
+        return yield* repo.searchOrgWide({ searchQuery: "error", limit: 1 })
+      }),
+    )
+    expect(results).toHaveLength(1)
   })
 })

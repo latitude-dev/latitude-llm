@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { BookmarkIcon, DatabaseIcon, SearchIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useDatasetsSearch } from "../../../domains/datasets/datasets.collection.ts"
-import { useSavedSearchesList } from "../../../domains/saved-searches/saved-searches.collection.ts"
+import { useSavedSearchesSearch } from "../../../domains/saved-searches/saved-searches.collection.ts"
 import type { PaletteCommand } from "../types.ts"
 import { useCurrentProject } from "./use-current-project.ts"
 
@@ -16,11 +16,11 @@ interface ProjectSearchCommands {
 const EMPTY: ProjectSearchCommands = { datasets: [], savedSearches: [], tracesFallback: [] }
 
 /**
- * Entity results for the palette. Datasets are searched org-wide (across every project, each
- * result tagged with its owning project) so they surface regardless of which project — if any —
- * the user is currently viewing. Saved searches and the "Search traces for …" fallback remain
- * project-scoped: they navigate into the current project's Search page and so only render while
- * inside a project. Lists are only fetched while the user is actually searching.
+ * Entity results for the palette. Datasets and saved searches are searched org-wide (across every
+ * project, each result tagged with its owning project) so they surface regardless of which
+ * project — if any — the user is currently viewing, and selecting one navigates into that result's
+ * project. The "Search traces for …" fallback stays project-scoped: it opens the current project's
+ * Search page and so only renders while inside a project. Lists are only fetched while searching.
  */
 export function useProjectSearchCommands(query: string): ProjectSearchCommands {
   const navigate = useNavigate()
@@ -28,10 +28,9 @@ export function useProjectSearchCommands(query: string): ProjectSearchCommands {
 
   const trimmed = query.trim()
   const hasQuery = trimmed.length > 0
-  const inProject = project !== null && hasQuery
 
   const { data: datasets } = useDatasetsSearch(trimmed, { enabled: hasQuery })
-  const { data: savedSearches } = useSavedSearchesList(project?.id ?? "", { enabled: inProject })
+  const { data: savedSearches } = useSavedSearchesSearch(trimmed, { enabled: hasQuery })
 
   return useMemo<ProjectSearchCommands>(() => {
     if (!hasQuery) return EMPTY
@@ -48,18 +47,17 @@ export function useProjectSearchCommands(query: string): ProjectSearchCommands {
       }),
     )
 
-    const savedSearchCommands = project
-      ? savedSearches.map(
-          (saved): PaletteCommand => ({
-            id: `saved-search-result:${saved.id}`,
-            title: saved.name,
-            icon: BookmarkIcon,
-            section: "search",
-            keywords: saved.name,
-            perform: () => navigate({ to: `/projects/${project.slug}/search`, search: { savedSearch: saved.slug } }),
-          }),
-        )
-      : []
+    const savedSearchCommands = savedSearches.map(
+      (saved): PaletteCommand => ({
+        id: `saved-search-result:${saved.id}`,
+        title: saved.name,
+        icon: BookmarkIcon,
+        section: "search",
+        subtitle: saved.projectName,
+        keywords: `${saved.name} ${saved.projectName}`,
+        perform: () => navigate({ to: `/projects/${saved.projectSlug}/search`, search: { savedSearch: saved.slug } }),
+      }),
+    )
 
     const tracesFallback: readonly PaletteCommand[] = project
       ? [

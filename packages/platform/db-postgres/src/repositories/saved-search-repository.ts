@@ -3,6 +3,7 @@ import {
   type SavedSearch,
   SavedSearchNotFoundError,
   SavedSearchRepository,
+  type SavedSearchSearchResult,
 } from "@domain/saved-searches"
 import {
   OrganizationId,
@@ -13,9 +14,10 @@ import {
   type SqlClientShape,
   UserId,
 } from "@domain/shared"
-import { and, desc, eq, isNull, ne, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, isNull, ne, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
+import { projects } from "../schema/projects.ts"
 import { savedSearches } from "../schema/saved-searches.ts"
 
 const isUniqueViolation = (cause: unknown): boolean => {
@@ -157,6 +159,46 @@ export const SavedSearchRepositoryLive = Layer.effect(
             db.select().from(savedSearches).where(conditions).orderBy(desc(savedSearches.createdAt)),
           )
           return { items: rows.map(toSavedSearch) }
+        }),
+
+      searchOrgWide: (args) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const trimmed = args.searchQuery?.trim()
+          const conditions = and(
+            eq(savedSearches.organizationId, sqlClient.organizationId),
+            isNull(savedSearches.deletedAt),
+            isNull(projects.deletedAt),
+            ...(trimmed ? [ilike(savedSearches.name, `%${trimmed}%`)] : []),
+          )
+
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                id: savedSearches.id,
+                projectId: savedSearches.projectId,
+                projectSlug: projects.slug,
+                projectName: projects.name,
+                slug: savedSearches.slug,
+                name: savedSearches.name,
+              })
+              .from(savedSearches)
+              .innerJoin(projects, eq(projects.id, savedSearches.projectId))
+              .where(conditions)
+              .orderBy(desc(savedSearches.createdAt), desc(savedSearches.id))
+              .limit(args.limit),
+          )
+
+          return rows.map(
+            (row): SavedSearchSearchResult => ({
+              id: SavedSearchId(row.id),
+              projectId: ProjectId(row.projectId),
+              projectSlug: row.projectSlug,
+              projectName: row.projectName,
+              slug: row.slug,
+              name: row.name,
+            }),
+          )
         }),
 
       update: (args) =>

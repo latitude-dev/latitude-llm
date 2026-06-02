@@ -11,10 +11,12 @@ export {
   type SavedSearchListPage,
   SavedSearchRepository,
   type SavedSearchRepositoryShape,
+  type SavedSearchSearchResult,
 } from "./ports/saved-search-repository.ts"
 export { type AssignSavedSearchInput, assignSavedSearchUseCase } from "./use-cases/assign-saved-search.ts"
 export { type CreateSavedSearchInput, createSavedSearch } from "./use-cases/create-saved-search.ts"
 export { deleteSavedSearch } from "./use-cases/delete-saved-search.ts"
 export { getSavedSearchBySlug } from "./use-cases/get-saved-search-by-slug.ts"
 export { listSavedSearches } from "./use-cases/list-saved-searches.ts"
+export { searchSavedSearches } from "./use-cases/search-saved-searches.ts"
 export { type UpdateSavedSearchInput, updateSavedSearch } from "./use-cases/update-saved-search.ts"

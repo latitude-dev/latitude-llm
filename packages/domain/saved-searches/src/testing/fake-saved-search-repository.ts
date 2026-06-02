@@ -79,6 +79,25 @@ export const createFakeSavedSearchRepository = (seed: readonly SavedSearch[] = [
         return { items }
       }),
 
+    searchOrgWide: ({ searchQuery, limit }) =>
+      Effect.sync(() => {
+        const q = searchQuery?.trim().toLowerCase()
+        return [...rows.values()]
+          .filter(isLive)
+          .filter((row) => (q ? row.name.toLowerCase().includes(q) : true))
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, limit)
+          .map((row) => ({
+            id: row.id,
+            projectId: row.projectId,
+            // Fakes have no `projects` table; synthesize stable project display fields from the id.
+            projectSlug: `project-${row.projectId}`,
+            projectName: `Project ${row.projectId}`,
+            slug: row.slug,
+            name: row.name,
+          }))
+      }),
+
     update: (args) =>
       Effect.gen(function* () {
         const current = rows.get(args.id)

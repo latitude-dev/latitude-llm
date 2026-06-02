@@ -7,6 +7,20 @@ export interface SavedSearchListPage {
   readonly items: readonly SavedSearch[]
 }
 
+/**
+ * Lightweight, org-wide saved-search projection for the Command Palette. Carries the owning
+ * project's slug/name so a cross-project result can be displayed and navigated to without a
+ * second lookup.
+ */
+export interface SavedSearchSearchResult {
+  readonly id: SavedSearchId
+  readonly projectId: ProjectId
+  readonly projectSlug: string
+  readonly projectName: string
+  readonly slug: string
+  readonly name: string
+}
+
 export interface CreateSavedSearchRepoInput {
   readonly id?: SavedSearchId
   readonly projectId: ProjectId
@@ -51,6 +65,16 @@ export interface SavedSearchRepositoryShape {
   }): Effect.Effect<SavedSearch, SavedSearchNotFoundError | RepositoryError, SqlClient>
   countBySlug(args: CountBySlugRepoInput): Effect.Effect<number, RepositoryError, SqlClient>
   listByProject(args: ListSavedSearchesRepoInput): Effect.Effect<SavedSearchListPage, RepositoryError, SqlClient>
+  /**
+   * Org-wide name search across every project in the organization (RLS-scoped to the caller's
+   * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
+   * saved-search name; omit it to list the most recent. Soft-deleted saved searches and saved
+   * searches in soft-deleted projects are excluded.
+   */
+  searchOrgWide(args: {
+    readonly searchQuery?: string
+    readonly limit: number
+  }): Effect.Effect<readonly SavedSearchSearchResult[], RepositoryError, SqlClient>
   update(
     args: UpdateSavedSearchRepoInput,
   ): Effect.Effect<SavedSearch, SavedSearchNotFoundError | DuplicateSavedSearchSlugError | RepositoryError, SqlClient>

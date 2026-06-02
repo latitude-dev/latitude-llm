@@ -6,6 +6,7 @@ import {
   SAVED_SEARCH_NAME_MAX_LENGTH,
   SAVED_SEARCH_QUERY_MAX_LENGTH,
   type SavedSearch,
+  searchSavedSearches,
   updateSavedSearch,
 } from "@domain/saved-searches"
 import { filterSetSchema, OrganizationId, ProjectId, SavedSearchId, UserId } from "@domain/shared"
@@ -61,6 +62,50 @@ export const listSavedSearchesByProject = createServerFn({ method: "GET" })
       ),
     )
     return page.items.map(toRecord)
+  })
+
+export interface SavedSearchSearchRecord {
+  readonly id: string
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly projectName: string
+  readonly slug: string
+  readonly name: string
+}
+
+/**
+ * Org-wide saved-search search for the Command Palette. Unlike {@link listSavedSearchesByProject},
+ * this returns matching saved searches across every project in the caller's organization, each
+ * tagged with its owning project's slug/name.
+ */
+export const searchSavedSearchesOrgWide = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      searchQuery: z.string().max(500).optional(),
+      limit: z.number().int().min(1).max(25).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<readonly SavedSearchSearchRecord[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const results = await Effect.runPromise(
+      searchSavedSearches({
+        ...(data.searchQuery !== undefined ? { searchQuery: data.searchQuery } : {}),
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
+      }).pipe(withPostgres(SavedSearchRepositoryLive, getPostgresClient(), orgId), withTracing),
+    )
+
+    return results.map(
+      (r): SavedSearchSearchRecord => ({
+        id: r.id,
+        projectId: r.projectId,
+        projectSlug: r.projectSlug,
+        projectName: r.projectName,
+        slug: r.slug,
+        name: r.name,
+      }),
+    )
   })
 
 export const getSavedSearchBySlugFn = createServerFn({ method: "GET" })
