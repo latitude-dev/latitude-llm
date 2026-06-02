@@ -23,6 +23,7 @@ const STRATEGY_REGISTRY = {
   laziness: lazinessStrategy,
   jailbreaking: jailbreakingStrategy,
   forgetting: forgettingStrategy,
+  // Slug "trashing" is a frozen identifier (typo); the user-facing name is "Thrashing". Do not rename.
   trashing: trashingStrategy,
 
   // Deterministic-only

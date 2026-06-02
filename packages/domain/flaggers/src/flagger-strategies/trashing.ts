@@ -2,18 +2,24 @@ import type { TraceDetail } from "@domain/spans"
 import type { DetectionResult, FlaggerStrategy } from "./types.ts"
 
 // ---------------------------------------------------------------------------
-// Trashing Strategy - tool-call sequence view
+// Thrashing Strategy - tool-call sequence view
 // ---------------------------------------------------------------------------
+//
+// NAMING: the slug for this flagger is intentionally "trashing" (a historical typo). It is a
+// FROZEN identifier — it is persisted in `flaggers.slug`, in `scores.metadata.flaggerSlug`
+// (Postgres + ClickHouse), and exposed as a public API/SDK/MCP key. Do NOT rename the slug.
+// The correct user-facing name is "Thrashing": always use that spelling for any UI / display /
+// prompt / feedback text (see `annotator.name` below).
 
 const TRASHING_SYSTEM_PROMPT = `
-You are a triage flagger for LLM telemetry traces. Decide whether the trace belongs in the Trashing annotation queue.
+You are a triage flagger for LLM telemetry traces. Decide whether the trace belongs in the Thrashing annotation queue.
 
-Trashing is when an agent CYCLES between tool calls without making real progress — repeating the same calls, oscillating between states, or accumulating tool invocations that do not move the task forward.
+Thrashing is when an agent CYCLES between tool calls without making real progress — repeating the same calls, oscillating between states, or accumulating tool invocations that do not move the task forward.
 
 You will be given the ordered sequence of tool calls with their arguments. Judge whether the sequence advances the work or spins in place.
 
 ================================================================================
-TRASHING PATTERNS (flag when the tool-call sequence shows these)
+THRASHING PATTERNS (flag when the tool-call sequence shows these)
 ================================================================================
 
 1. IDENTICAL-CALL REPETITION
@@ -59,7 +65,7 @@ ANALYSIS APPROACH
 1. Read the tool-call sequence in order; ignore message text unless needed to judge state change.
 2. Look for the patterns above — repetition, oscillation, cycles, accumulation.
 3. Ask: does each call CHANGE STATE or PRODUCE NEW INFORMATION that the next call uses?
-   If calls repeat with no such change, that is trashing.
+   If calls repeat with no such change, that is thrashing.
 4. Point to the specific repeated or oscillating sub-sequence as your evidence.
 
 ================================================================================
@@ -181,12 +187,12 @@ const maxCount = (counts: Map<unknown, number>): number => {
 }
 
 // ---------------------------------------------------------------------------
-// Trashing Strategy implementation
+// Thrashing Strategy implementation
 // ---------------------------------------------------------------------------
 
 export const trashingStrategy: FlaggerStrategy = {
   annotator: {
-    name: "Trashing",
+    name: "Thrashing",
     description: "The agent cycles between tools without making progress",
     instructions:
       "Use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.",
@@ -208,7 +214,7 @@ export const trashingStrategy: FlaggerStrategy = {
     if (maxSignatureCount >= MATCHED_IDENTICAL_CALL_THRESHOLD) {
       return {
         kind: "matched",
-        feedback: `Trashing: identical tool+args invocation repeated ${maxSignatureCount} times`,
+        feedback: `Thrashing: identical tool+args invocation repeated ${maxSignatureCount} times`,
       }
     }
 

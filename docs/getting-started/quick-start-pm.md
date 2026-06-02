@@ -61,7 +61,7 @@ Some failure categories are common enough that Latitude detects them for you. Ev
 - **Frustration**: Clear user dissatisfaction
 - **Forgetting**: The agent loses conversation context
 - **Laziness**: The agent avoids doing the requested work
-- **Trashing**: The agent cycles between tools without making progress
+- **Thrashing**: The agent cycles between tools without making progress
 - **Tool Call Errors**: Failed tool invocations
 - **Output Schema Validation**: Structured output didn't conform to the declared schema
 - **Empty Response**: The assistant returned an empty or degenerate response
