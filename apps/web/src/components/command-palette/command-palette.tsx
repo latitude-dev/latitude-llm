@@ -100,8 +100,9 @@ export function CommandPalette() {
     // Contextual commands (contributed by the current view) render first, grouped by sub-heading.
     const contextGroups = buildContextGroups(registeredCommands.filter(matches))
 
-    // In-project search results. Issues are already curated by the hook (semantic + substring),
-    // so they render as-is; datasets/saved searches are full project lists we filter here.
+    // Org-wide search results (every project in the organization, each row tagged with its
+    // project). Issues are already curated and ranked by the hook (lexical + semantic), so they
+    // render as-is; datasets/saved searches/monitors get a secondary client-side token filter.
     const entityGroups: CommandGroupView[] = []
     if (issueResults.length > 0) entityGroups.push({ key: "issues", label: "Issues", commands: issueResults })
     const monitors = monitorResults.filter(matches)
