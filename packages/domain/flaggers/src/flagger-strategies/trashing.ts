@@ -82,6 +82,7 @@ Return no explanation outside the structured output.
 // ---------------------------------------------------------------------------
 
 interface ToolCallEntry {
+  readonly messageIndex: number
   readonly turn: number
   readonly name: string
   readonly argsPreview: string
@@ -104,7 +105,8 @@ function extractToolCallSequence(trace: Pick<TraceDetail, "allMessages">): reado
   const entries: ToolCallEntry[] = []
   let turn = 0
 
-  for (const message of trace.allMessages) {
+  for (let messageIndex = 0; messageIndex < trace.allMessages.length; messageIndex++) {
+    const message = trace.allMessages[messageIndex]!
     if (message.role !== "assistant") continue
     turn++
 
@@ -115,6 +117,7 @@ function extractToolCallSequence(trace: Pick<TraceDetail, "allMessages">): reado
 
       const rawArgs = (part as { arguments?: unknown }).arguments
       entries.push({
+        messageIndex,
         turn,
         name,
         argsPreview: previewArguments(rawArgs),
@@ -186,6 +189,36 @@ const maxCount = (counts: Map<unknown, number>): number => {
   return max
 }
 
+const toolCallSignature = (entry: ToolCallEntry): string => `${entry.name}\0${entry.argsPreview}`
+
+const longestConsecutiveSignatureRun = (
+  entries: readonly ToolCallEntry[],
+): { readonly count: number; readonly messageIndex?: number | undefined } => {
+  let bestCount = 0
+  let bestMessageIndex: number | undefined
+  let currentSignature: string | undefined
+  let currentCount = 0
+  let currentMessageIndex: number | undefined
+
+  for (const entry of entries) {
+    const signature = toolCallSignature(entry)
+    if (signature === currentSignature) {
+      currentCount++
+    } else {
+      currentSignature = signature
+      currentCount = 1
+    }
+    currentMessageIndex = entry.messageIndex
+
+    if (currentCount > bestCount) {
+      bestCount = currentCount
+      bestMessageIndex = currentMessageIndex
+    }
+  }
+
+  return { count: bestCount, messageIndex: bestMessageIndex }
+}
+
 // ---------------------------------------------------------------------------
 // Thrashing Strategy implementation
 // ---------------------------------------------------------------------------
@@ -208,13 +241,13 @@ export const trashingStrategy: FlaggerStrategy = {
       return { kind: "no-match" }
     }
 
-    const signatureCounts = countBy(entries, (entry) => `${entry.name} ${entry.argsPreview}`)
-    const maxSignatureCount = maxCount(signatureCounts)
+    const signatureRun = longestConsecutiveSignatureRun(entries)
 
-    if (maxSignatureCount >= MATCHED_IDENTICAL_CALL_THRESHOLD) {
+    if (signatureRun.count >= MATCHED_IDENTICAL_CALL_THRESHOLD) {
       return {
         kind: "matched",
-        feedback: `Thrashing: identical tool+args invocation repeated ${maxSignatureCount} times`,
+        feedback: `Thrashing: identical tool+args invocation repeated ${signatureRun.count} times`,
+        messageIndex: signatureRun.messageIndex,
       }
     }
 

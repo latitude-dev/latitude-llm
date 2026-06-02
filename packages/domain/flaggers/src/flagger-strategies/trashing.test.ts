@@ -17,10 +17,11 @@ describe("trashingStrategy.detectDeterministically", () => {
       if (result?.kind === "matched") {
         expect(result.feedback).toMatch(/Thrashing/)
         expect(result.feedback).toMatch(/3 times/)
+        expect(result.messageIndex).toBe(2)
       }
     })
 
-    it("matches an A-B-A-B-A oscillation (A appears 3×)", () => {
+    it("does not hard-match non-consecutive A-B-A-B-A repetition", () => {
       const trace = makeTrace([
         assistantToolCall("enable", { x: 1 }),
         assistantToolCall("disable", { x: 1 }),
@@ -29,7 +30,7 @@ describe("trashingStrategy.detectDeterministically", () => {
         assistantToolCall("enable", { x: 1 }),
       ])
 
-      expect(trashingStrategy.detectDeterministically?.(trace)).toMatchObject({ kind: "matched" })
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "ambiguous" })
     })
 
     it("reports the actual repeat count in feedback when >3", () => {
@@ -44,6 +45,7 @@ describe("trashingStrategy.detectDeterministically", () => {
       const result = trashingStrategy.detectDeterministically?.(trace)
       if (result?.kind === "matched") {
         expect(result.feedback).toMatch(/5 times/)
+        expect(result.messageIndex).toBe(4)
       } else {
         throw new Error("expected matched")
       }
@@ -104,6 +106,24 @@ describe("trashingStrategy.detectDeterministically", () => {
         assistantToolCall("search", { q: "a" }),
         assistantToolCall("search", { q: "b" }),
         assistantToolCall("search", { q: "c" }),
+      ])
+
+      expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
+    })
+
+    it("returns no-match when exact reads recur across separate work, not consecutively", () => {
+      const trace = makeTrace([
+        assistantToolCall("Read", { file_path: "/Users/paula/to-do/context/MARKETING-TODO.md" }),
+        assistantToolCall("Write", { file_path: "/Users/paula/to-do/context/MARKETING-TODO.md", content: "initial" }),
+        assistantToolCall("Read", { file_path: "/Users/paula/to-do/context/MARKETING-TODO.md" }),
+        assistantToolCall("Edit", {
+          file_path: "/Users/paula/to-do/context/MARKETING-TODO.md",
+          old_string: "a",
+          new_string: "b",
+        }),
+        assistantToolCall("Read", { file_path: "/Users/paula/to-do/context/MARKETING-TODO.md" }),
+        assistantToolCall("Skill", { skill: "anthropic-skills:marketing-todo" }),
+        assistantToolCall("Read", { file_path: "/Users/paula/to-do/context/MARKETING-TODO.md" }),
       ])
 
       expect(trashingStrategy.detectDeterministically?.(trace)).toEqual({ kind: "no-match" })
