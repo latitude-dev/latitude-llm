@@ -2,45 +2,39 @@ import { useNavigate } from "@tanstack/react-router"
 import { BellRingIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../../../domains/feature-flags/feature-flags.collection.ts"
-import { useMonitors } from "../../../domains/monitors/monitors.collection.ts"
+import { useMonitorsSearch } from "../../../domains/monitors/monitors.collection.ts"
 import type { PaletteCommand } from "../types.ts"
-import { useCurrentProject } from "./use-current-project.ts"
-
-const MONITOR_SEARCH_LIMIT = 50
 
 /**
- * Monitor search results for the current project. Gated behind the `monitors` feature flag —
- * mirroring the flag-gated Monitors page and sidebar entry — so monitors are neither fetched
- * nor listed when the flag is off. Results are the project's monitors (fetched only while
- * searching) filtered client-side by the palette; selecting one opens the monitor drawer via
- * the `monitorSlug` param. A muted/system monitor is labelled in its subtitle.
+ * Monitor search results across every project in the organization, each tagged with its owning
+ * project. Gated behind the `monitors` feature flag — mirroring the flag-gated Monitors page and
+ * sidebar entry — so monitors are neither fetched nor listed when the flag is off. Monitors are
+ * fetched only while searching; selecting one opens that project's Monitors page with the monitor
+ * drawer (`monitorSlug`). The subtitle shows the project name, with a muted/system label appended.
  */
 export function useMonitorSearchCommands(query: string): readonly PaletteCommand[] {
   const navigate = useNavigate()
-  const project = useCurrentProject()
   const monitorsEnabled = useHasFeatureFlag("monitors")
 
-  const active = monitorsEnabled && project !== null && query.trim().length > 0
+  const active = monitorsEnabled && query.trim().length > 0
 
-  const { monitors } = useMonitors({
-    projectId: project?.id ?? "",
-    limit: MONITOR_SEARCH_LIMIT,
-    enabled: active,
-  })
+  const { data: monitors } = useMonitorsSearch(query, { enabled: active })
 
   return useMemo<readonly PaletteCommand[]>(() => {
-    if (!active || !project) return []
+    if (!active) return []
     return monitors.map((monitor): PaletteCommand => {
-      const subtitle = monitor.mutedAt ? "Muted" : monitor.system ? "System" : undefined
+      const status = monitor.mutedAt ? "Muted" : monitor.system ? "System" : undefined
+      const subtitle = status ? `${monitor.projectName} · ${status}` : monitor.projectName
       return {
         id: `monitor-result:${monitor.id}`,
         title: monitor.name,
         icon: BellRingIcon,
         section: "search",
-        ...(subtitle ? { subtitle } : {}),
-        keywords: monitor.name,
-        perform: () => navigate({ to: `/projects/${project.slug}/monitors`, search: { monitorSlug: monitor.slug } }),
+        subtitle,
+        keywords: `${monitor.name} ${monitor.projectName}`,
+        perform: () =>
+          navigate({ to: `/projects/${monitor.projectSlug}/monitors`, search: { monitorSlug: monitor.slug } }),
       }
     })
-  }, [active, project, monitors, navigate])
+  }, [active, monitors, navigate])
 }

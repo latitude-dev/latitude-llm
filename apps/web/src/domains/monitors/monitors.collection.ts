@@ -16,7 +16,9 @@ import {
   type MonitorIncidentsCursor,
   type MonitorListRowRecord,
   type MonitorRecord,
+  type MonitorSearchRecord,
   muteMonitor,
+  searchMonitorsOrgWide,
   unmuteMonitor,
   updateMonitor,
   updateMonitorAlert,
@@ -35,6 +37,7 @@ export type { MonitorListRowRecord, MonitorRecord }
 export type { MonitorIncidentRecord }
 
 const DEFAULT_MONITORS_PAGE_SIZE = 50
+const ORG_SEARCH_LIMIT = 8
 const DEFAULT_INCIDENTS_PAGE_SIZE = 50
 const MONITORS_QUERY_STALE_TIME_MS = 30_000
 
@@ -92,6 +95,22 @@ export function useMonitors(input: {
     isReloading: isPlaceholderData,
     infiniteScroll,
   }
+}
+
+/**
+ * Org-wide monitor search for the Command Palette. Returns matching monitors across every project
+ * in the organization (each carrying its owning project's slug/name plus system/muted status).
+ */
+export function useMonitorsSearch(searchQuery: string, { enabled = true }: { enabled?: boolean } = {}) {
+  const trimmed = searchQuery.trim()
+  const { data, isLoading } = useQuery({
+    queryKey: ["monitors", "orgSearch", trimmed],
+    queryFn: (): Promise<readonly MonitorSearchRecord[]> =>
+      searchMonitorsOrgWide({ data: { searchQuery: trimmed, limit: ORG_SEARCH_LIMIT } }),
+    staleTime: MONITORS_QUERY_STALE_TIME_MS,
+    enabled: enabled && trimmed.length > 0,
+  })
+  return { data: data ?? [], isLoading }
 }
 
 /** @public Consumed by the M4 details panel; not yet wired in M2. */

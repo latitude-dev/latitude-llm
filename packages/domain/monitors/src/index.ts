@@ -16,6 +16,7 @@ export type {
   MonitorLastIncident,
   MonitorListPage,
   MonitorRepositoryShape,
+  MonitorSearchResult,
 } from "./ports/monitor-repository.ts"
 export { MonitorRepository } from "./ports/monitor-repository.ts"
 export type {
@@ -59,6 +60,8 @@ export type {
 export { buildSystemMonitors, provisionSystemMonitorsUseCase } from "./use-cases/provision-system-monitors.ts"
 export type { ResolveMonitorAlertsForSourceEventInput } from "./use-cases/resolve-monitor-alerts-for-source-event.ts"
 export { resolveMonitorAlertsForSourceEventUseCase } from "./use-cases/resolve-monitor-alerts-for-source-event.ts"
+export type { SearchMonitorsInput } from "./use-cases/search-monitors.ts"
+export { searchMonitorsUseCase } from "./use-cases/search-monitors.ts"
 export type { UpdateMonitorError, UpdateMonitorInput } from "./use-cases/update-monitor.ts"
 export { updateMonitorUseCase } from "./use-cases/update-monitor.ts"
 export type { UpdateMonitorAlertError, UpdateMonitorAlertInput } from "./use-cases/update-monitor-alert.ts"

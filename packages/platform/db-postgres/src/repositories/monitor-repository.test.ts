@@ -16,6 +16,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { alertIncidents as alertIncidentsTable } from "../schema/alert-incidents.ts"
 import { monitorAlerts as monitorAlertsTable } from "../schema/monitor-alerts.ts"
 import { monitors as monitorsTable } from "../schema/monitors.ts"
+import { projects as projectsTable } from "../schema/projects.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { MonitorRepositoryLive } from "./monitor-repository.ts"
@@ -1054,5 +1055,98 @@ describe("MonitorRepositoryLive", () => {
       expect(await resolve({ kind: "issue.new", sourceId: issueId })).toHaveLength(1)
       expect(await resolve({ kind: "issue.new", sourceId: "z".repeat(24) })).toEqual([])
     })
+  })
+})
+
+describe("MonitorRepositoryLive searchOrgWide", () => {
+  let database: InMemoryPostgres
+
+  const searchOrgId = OrganizationId("org-mon-search-test")
+  const otherOrgId = OrganizationId("org-mon-search-other")
+  const projA = ProjectId("proj-mon-search-a")
+  const projB = ProjectId("proj-mon-search-b")
+  const projDeleted = ProjectId("proj-mon-search-del")
+  const projOther = ProjectId("proj-mon-search-oth")
+
+  const monId = (prefix: string) => prefix.padEnd(24, "x").slice(0, 24)
+
+  beforeAll(async () => {
+    database = await createInMemoryPostgres()
+    const baseTime = new Date("2026-05-29T10:00:00.000Z")
+
+    await database.db.insert(projectsTable).values([
+      { id: projA, organizationId: searchOrgId, name: "Alpha Project", slug: "mon-alpha" },
+      { id: projB, organizationId: searchOrgId, name: "Beta Project", slug: "mon-beta" },
+      { id: projDeleted, organizationId: searchOrgId, name: "Gone Project", slug: "mon-gone", deletedAt: baseTime },
+      { id: projOther, organizationId: otherOrgId, name: "Other Org Project", slug: "mon-other" },
+    ])
+
+    const monitorRow = (
+      id: string,
+      organizationId: OrganizationId,
+      projectId: ProjectId,
+      slug: string,
+      name: string,
+      extra: Partial<typeof monitorsTable.$inferInsert> = {},
+    ): typeof monitorsTable.$inferInsert => ({
+      id: monId(id),
+      organizationId,
+      projectId,
+      slug,
+      name,
+      description: "",
+      system: false,
+      mutedAt: null,
+      deletedAt: null,
+      createdAt: baseTime,
+      updatedAt: baseTime,
+      ...extra,
+    })
+
+    await database.db
+      .insert(monitorsTable)
+      .values([
+        monitorRow("msm1", searchOrgId, projA, "errors-a", "Payment Errors"),
+        monitorRow("msm2", searchOrgId, projB, "errors-b", "Error Rate", { mutedAt: baseTime }),
+        monitorRow("msm3", searchOrgId, projA, "latency", "Latency"),
+        monitorRow("msm4", searchOrgId, projA, "errors-del", "Errors Deleted", { deletedAt: baseTime }),
+        monitorRow("msm5", searchOrgId, projDeleted, "errors-gone", "Errors In Deleted Project"),
+        monitorRow("msm6", otherOrgId, projOther, "errors-secret", "Errors Secret"),
+      ])
+  })
+
+  afterAll(async () => {
+    await closeInMemoryPostgres(database)
+  })
+
+  const search = (args: { readonly searchQuery?: string; readonly limit: number }) =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* MonitorRepository
+        return yield* repo.searchOrgWide(args)
+      }).pipe(withPostgres(MonitorRepositoryLive, database.appPostgresClient, searchOrgId)),
+    )
+
+  it("matches monitors across multiple projects in the org and tags them with the project + status", async () => {
+    const results = await search({ searchQuery: "error", limit: 25 })
+    expect(results.map((r) => r.name).sort()).toEqual(["Error Rate", "Payment Errors"])
+    const payment = results.find((r) => r.name === "Payment Errors")
+    const errorRate = results.find((r) => r.name === "Error Rate")
+    expect(payment).toMatchObject({ projectId: projA, projectSlug: "mon-alpha", projectName: "Alpha Project" })
+    expect(errorRate?.projectSlug).toBe("mon-beta")
+    expect(errorRate?.mutedAt).not.toBeNull()
+  })
+
+  it("excludes soft-deleted monitors, deleted projects, and other organizations", async () => {
+    const results = await search({ searchQuery: "error", limit: 25 })
+    const names = results.map((r) => r.name)
+    expect(names).not.toContain("Errors Deleted")
+    expect(names).not.toContain("Errors In Deleted Project")
+    expect(names).not.toContain("Errors Secret")
+  })
+
+  it("respects the limit", async () => {
+    const results = await search({ searchQuery: "error", limit: 1 })
+    expect(results).toHaveLength(1)
   })
 })

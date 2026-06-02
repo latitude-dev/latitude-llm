@@ -58,6 +58,30 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           offset,
         }
       }),
+    searchOrgWide: ({ searchQuery, limit }) =>
+      Effect.sync(() => {
+        const query = searchQuery?.trim().toLowerCase()
+        return monitors
+          .filter(isLive)
+          .filter((m) => (query ? m.name.toLowerCase().includes(query) : true))
+          .sort((a, b) => {
+            if (a.system !== b.system) return a.system ? -1 : 1
+            if (a.createdAt.getTime() !== b.createdAt.getTime()) return b.createdAt.getTime() - a.createdAt.getTime()
+            return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+          })
+          .slice(0, limit)
+          .map((m) => ({
+            id: m.id,
+            projectId: m.projectId,
+            // Fakes have no `projects` table; synthesize stable project display fields from the id.
+            projectSlug: `project-${m.projectId}`,
+            projectName: `Project ${m.projectId}`,
+            slug: m.slug,
+            name: m.name,
+            system: m.system,
+            mutedAt: m.mutedAt,
+          }))
+      }),
     provisionSystemMonitors: (toProvision) =>
       Effect.sync(() => {
         const inserted: Monitor[] = []

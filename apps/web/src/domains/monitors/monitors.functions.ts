@@ -14,7 +14,9 @@ import {
   type MonitorAlert,
   type MonitorAlertInput,
   type MonitorLastIncident,
+  type MonitorSearchResult,
   muteMonitorUseCase,
+  searchMonitorsUseCase,
   unmuteMonitorUseCase,
   updateMonitorAlertUseCase,
   updateMonitorUseCase,
@@ -170,6 +172,54 @@ export const listMonitors = createServerFn({ method: "GET" })
 
     const names = await resolveSavedSearchNames(orgId, ProjectId(data.projectId), result.items)
     return toListMonitorsResultRecord(result, names)
+  })
+
+export interface MonitorSearchRecord {
+  readonly id: string
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly projectName: string
+  readonly slug: string
+  readonly name: string
+  readonly system: boolean
+  readonly mutedAt: string | null
+}
+
+const toMonitorSearchRecord = (m: MonitorSearchResult): MonitorSearchRecord => ({
+  id: m.id,
+  projectId: m.projectId,
+  projectSlug: m.projectSlug,
+  projectName: m.projectName,
+  slug: m.slug,
+  name: m.name,
+  system: m.system,
+  mutedAt: m.mutedAt?.toISOString() ?? null,
+})
+
+/**
+ * Org-wide monitor search for the Command Palette. Unlike {@link listMonitors}, this returns
+ * matching monitors across every project in the caller's organization, each tagged with its
+ * owning project's slug/name.
+ */
+export const searchMonitorsOrgWide = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      searchQuery: z.string().max(500).optional(),
+      limit: z.number().int().min(1).max(25).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<readonly MonitorSearchRecord[]> => {
+    const { organizationId } = await requireSession()
+    const pgClient = getPostgresClient()
+
+    const results = await Effect.runPromise(
+      searchMonitorsUseCase({
+        ...(data.searchQuery !== undefined ? { searchQuery: data.searchQuery } : {}),
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
+      }).pipe(withPostgres(MonitorRepositoryLive, pgClient, OrganizationId(organizationId)), withTracing),
+    )
+
+    return results.map(toMonitorSearchRecord)
   })
 
 const getMonitorInputSchema = z.object({

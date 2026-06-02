@@ -36,6 +36,23 @@ export interface MonitorListPage {
   readonly offset: number
 }
 
+/**
+ * Lightweight, org-wide monitor projection for the Command Palette. Carries the owning project's
+ * slug/name (for display + navigation) plus the `system`/`mutedAt` status the palette shows in a
+ * result's subtitle. Skips the alert join the full {@link Monitor} read does — search doesn't need
+ * alerts.
+ */
+export interface MonitorSearchResult {
+  readonly id: MonitorId
+  readonly projectId: ProjectId
+  readonly projectSlug: string
+  readonly projectName: string
+  readonly slug: string
+  readonly name: string
+  readonly system: boolean
+  readonly mutedAt: Date | null
+}
+
 export interface MonitorRepositoryShape {
   findById(id: MonitorId): Effect.Effect<Monitor, NotFoundError | RepositoryError, SqlClient>
   /** Point-lookup by `(projectId, slug)` over non-deleted rows. */
@@ -45,6 +62,16 @@ export interface MonitorRepositoryShape {
   }): Effect.Effect<Monitor, NotFoundError | RepositoryError, SqlClient>
   /** Non-deleted monitors for a project, ordered most-recent incident first (no-incident last), tiebroken by `created_at DESC, id`. */
   list(input: ListMonitorsRepositoryInput): Effect.Effect<MonitorListPage, RepositoryError, SqlClient>
+  /**
+   * Org-wide name search across every project in the organization (RLS-scoped to the caller's
+   * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
+   * monitor name; omit it to list the most recent. Soft-deleted monitors and monitors in
+   * soft-deleted projects are excluded.
+   */
+  searchOrgWide(input: {
+    readonly searchQuery?: string
+    readonly limit: number
+  }): Effect.Effect<readonly MonitorSearchResult[], RepositoryError, SqlClient>
   /**
    * Insert each monitor (with its alerts) only when no live row already holds
    * its `(projectId, slug)`. Atomic and idempotent — returns just the monitors

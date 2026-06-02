@@ -3,15 +3,17 @@ import {
   type MonitorAlert,
   type MonitorLastIncident,
   MonitorRepository,
+  type MonitorSearchResult,
   monitorSchema,
 } from "@domain/monitors"
-import { NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
+import { type MonitorId, NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, isNull, max, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
 import { monitorAlerts } from "../schema/monitor-alerts.ts"
 import { monitors } from "../schema/monitors.ts"
+import { projects } from "../schema/projects.ts"
 
 const toMonitorAlert = (row: typeof monitorAlerts.$inferSelect): MonitorAlert => ({
   id: row.id as MonitorAlert["id"],
@@ -230,6 +232,51 @@ export const MonitorRepositoryLive = Layer.effect(
             limit,
             offset,
           }
+        }),
+      searchOrgWide: ({ searchQuery, limit }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const { organizationId } = sqlClient
+          const trimmed = searchQuery?.trim()
+          const where = and(
+            eq(monitors.organizationId, organizationId),
+            isNull(monitors.deletedAt),
+            isNull(projects.deletedAt),
+            trimmed ? ilike(monitors.name, `%${trimmed}%`) : undefined,
+          )
+
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                id: monitors.id,
+                projectId: monitors.projectId,
+                projectSlug: projects.slug,
+                projectName: projects.name,
+                slug: monitors.slug,
+                name: monitors.name,
+                system: monitors.system,
+                mutedAt: monitors.mutedAt,
+              })
+              .from(monitors)
+              .innerJoin(projects, eq(projects.id, monitors.projectId))
+              .where(where)
+              // System monitors land at the top, otherwise newest first.
+              .orderBy(desc(monitors.system), desc(monitors.createdAt), asc(monitors.id))
+              .limit(limit),
+          )
+
+          return rows.map(
+            (row): MonitorSearchResult => ({
+              id: row.id as MonitorId,
+              projectId: row.projectId as ProjectId,
+              projectSlug: row.projectSlug,
+              projectName: row.projectName,
+              slug: row.slug,
+              name: row.name,
+              system: row.system,
+              mutedAt: row.mutedAt,
+            }),
+          )
         }),
       provisionSystemMonitors: (monitorsToProvision) =>
         Effect.gen(function* () {
