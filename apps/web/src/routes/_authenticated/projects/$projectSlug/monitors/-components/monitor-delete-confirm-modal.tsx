@@ -1,4 +1,4 @@
-import { Button, Modal, Text, useToast } from "@repo/ui"
+import { Button, Modal, useToast } from "@repo/ui"
 import { useDeleteMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -39,8 +39,9 @@ export function MonitorDeleteConfirmModal({
       onOpenChange={(open) => {
         if (!open) onOpenChange(null)
       }}
-      title="Delete monitor"
+      title="Remove monitor"
       dismissible
+      description="Removing this monitor cannot be undone. Existing incidents will stay in your history"
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="outline" disabled={remove.isPending} onClick={() => onOpenChange(null)}>
@@ -52,19 +53,10 @@ export function MonitorDeleteConfirmModal({
             isLoading={remove.isPending}
             onClick={() => void onConfirm()}
           >
-            Delete
+            Remove
           </Button>
         </div>
       }
-    >
-      <Text.H5 color="foregroundMuted">
-        {monitor ? (
-          <>
-            Delete <span className="font-medium text-foreground">{monitor.name}</span>? It will stop creating incidents.
-            Existing incidents stay in your history.
-          </>
-        ) : null}
-      </Text.H5>
-    </Modal>
+    />
   )
 }

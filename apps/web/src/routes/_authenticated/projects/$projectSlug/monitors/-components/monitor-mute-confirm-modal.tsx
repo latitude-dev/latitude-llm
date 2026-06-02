@@ -37,8 +37,8 @@ export function MonitorMuteConfirmModal({
       title={muted ? "Unmute monitor" : "Mute monitor"}
       description={
         muted
-          ? "Notifications will resume for new incidents this monitor creates."
-          : "This monitor will keep creating incidents, but it will stop sending notifications."
+          ? "Notifications will resume for new incidents this monitor creates"
+          : "This monitor will keep creating incidents, but it will stop sending notifications"
       }
       dismissible
       footer={

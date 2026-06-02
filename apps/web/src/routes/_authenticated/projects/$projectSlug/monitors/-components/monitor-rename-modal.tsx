@@ -44,7 +44,7 @@ export function MonitorRenameModal({
         if (!next) onClose()
       }}
       title="Edit monitor"
-      description="Renaming changes the monitor's URL slug."
+      description="Rename the monitor's name or change its description"
       footer={
         <>
           <CloseTrigger />

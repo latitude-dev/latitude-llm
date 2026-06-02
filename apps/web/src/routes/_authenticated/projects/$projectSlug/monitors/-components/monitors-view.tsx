@@ -200,22 +200,22 @@ export function MonitorsView({
       getOptions: (row): MenuOption[] => {
         const isUser = !row.monitor.system
         return [
-          {
-            label: row.monitor.mutedAt ? "Unmute" : "Mute",
-            iconProps: { icon: row.monitor.mutedAt ? BellIcon : BellOffIcon },
-            onClick: () => setPendingMute(row.monitor),
-          },
-          { type: "separator" },
-          // Rename + Delete only apply to user monitors; system monitors are locked.
+          // Rename + Remove only apply to user monitors; system monitors are locked.
           {
             label: "Rename",
             iconProps: { icon: PencilIcon },
             ...(isUser ? { onClick: () => setRenameTarget(row.monitor) } : { disabled: true }),
           },
           {
-            label: "Delete",
+            label: row.monitor.mutedAt ? "Unmute" : "Mute",
+            iconProps: { icon: row.monitor.mutedAt ? BellIcon : BellOffIcon },
+            onClick: () => setPendingMute(row.monitor),
+          },
+          { type: "separator" },
+          {
+            label: "Remove",
             type: "destructive",
-            iconProps: { icon: Trash2Icon },
+            iconProps: { icon: Trash2Icon, color: "destructive" },
             ...(isUser ? { onClick: () => setDeleteTarget(row.monitor) } : { disabled: true }),
           },
         ]
