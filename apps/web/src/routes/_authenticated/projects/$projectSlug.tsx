@@ -15,7 +15,7 @@ import { getLatestWrappedReportForProject } from "../../../domains/wrapped/wrapp
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { requireSession } from "../../../server/auth.ts"
 import { getPostgresClient } from "../../../server/clients.ts"
-import { WhatsNewButton } from "../-components/changelog/whats-new-button.tsx"
+import { ChangelogSidebarEntry } from "../-components/changelog/changelog-sidebar-entry.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
 
 const getProjectBySlug = createServerFn({ method: "GET" })
@@ -94,7 +94,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
               collapsed={collapsed}
             />
           ) : null}
-          <WhatsNewButton collapsed={collapsed} />
+          <ChangelogSidebarEntry collapsed={collapsed} />
           <NavItem
             icon={PROJECT_SETTINGS_SECTION.icon}
             label={PROJECT_SETTINGS_SECTION.label}

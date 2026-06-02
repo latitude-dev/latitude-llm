@@ -16,6 +16,7 @@ const FIELD = {
   publishedAt: "xTS8qzuAR",
   summary: "EsBafd9Vo",
   category: "VNJ0I2D1T",
+  cover: "bnv0I682E",
 } as const
 
 interface FramerFieldValue {
@@ -46,6 +47,35 @@ const stringField = (fieldData: FramerItem["fieldData"], id: string): string | n
   return typeof value === "string" && value.length > 0 ? value : null
 }
 
+const imageUrlFromValue = (value: unknown): string | null => {
+  if (typeof value === "string" && value.length > 0) {
+    return value
+  }
+  if (value !== null && typeof value === "object") {
+    if ("url" in value) {
+      const url = (value as { url?: unknown }).url
+      if (typeof url === "string" && url.length > 0) {
+        return url
+      }
+    }
+    if ("thumbnailUrl" in value) {
+      const thumbnailUrl = (value as { thumbnailUrl?: unknown }).thumbnailUrl
+      if (typeof thumbnailUrl === "string" && thumbnailUrl.length > 0) {
+        return thumbnailUrl
+      }
+    }
+  }
+  return null
+}
+
+const imageField = (fieldData: FramerItem["fieldData"], id: string): string | null => {
+  const field = fieldData[id]
+  if (!field || field.type !== "image") {
+    return null
+  }
+  return imageUrlFromValue(field.value)
+}
+
 const toEntry = (item: FramerItem): ChangelogEntry | null => {
   const title = stringField(item.fieldData, FIELD.title)
   const rawDate = item.fieldData[FIELD.publishedAt]?.value
@@ -59,6 +89,7 @@ const toEntry = (item: FramerItem): ChangelogEntry | null => {
     title,
     summary: stringField(item.fieldData, FIELD.summary),
     category: stringField(item.fieldData, FIELD.category),
+    coverUrl: imageField(item.fieldData, FIELD.cover),
     publishedAt,
   }
 }

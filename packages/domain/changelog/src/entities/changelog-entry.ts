@@ -14,6 +14,8 @@ export const changelogEntrySchema = z.object({
   title: z.string().min(1),
   summary: z.string().nullable(),
   category: z.string().nullable(),
+  /** Framer CMS image field URL, when configured. */
+  coverUrl: z.string().nullable(),
   publishedAt: z.date(),
 })
 

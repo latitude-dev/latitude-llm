@@ -12,6 +12,7 @@ export interface ChangelogEntryRecord {
   readonly title: string
   readonly summary: string | null
   readonly category: string | null
+  readonly coverUrl: string | null
   readonly publishedAt: string
 }
 
@@ -21,6 +22,7 @@ const toRecord = (entry: ChangelogEntry): ChangelogEntryRecord => ({
   title: entry.title,
   summary: entry.summary,
   category: entry.category,
+  coverUrl: entry.coverUrl,
   publishedAt: entry.publishedAt.toISOString(),
 })
 

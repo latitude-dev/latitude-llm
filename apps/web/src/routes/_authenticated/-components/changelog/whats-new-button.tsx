@@ -4,17 +4,9 @@ import { ExternalLink, Megaphone } from "lucide-react"
 import { useState } from "react"
 import { useChangelogEntries } from "../../../../domains/changelog/changelog.collection.ts"
 import type { ChangelogEntryRecord } from "../../../../domains/changelog/changelog.functions.ts"
+import { changelogEntryUrl, isRecentlyPublished } from "./changelog-utils.ts"
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" })
-const RECENT_ENTRY_WINDOW_MS = 48 * 60 * 60 * 1000
-
-const changelogEntryUrl = (entry: ChangelogEntryRecord) => `${FULL_CHANGELOG_URL}/${entry.slug}`
-
-const isRecentlyPublished = (entry: ChangelogEntryRecord, now: number) => {
-  const publishedAt = new Date(entry.publishedAt).getTime()
-  const age = now - publishedAt
-  return !Number.isNaN(publishedAt) && age >= 0 && age <= RECENT_ENTRY_WINDOW_MS
-}
 
 function ChangelogRow({
   entry,
@@ -99,8 +91,8 @@ function WhatsNewContent() {
 }
 
 /**
- * Sidebar-footer "What's new" entry point. Renders nothing when no changelog
- * entries are available (Framer unconfigured or unreachable).
+ * Compact sidebar-footer "What's new" popover. Used when the changelog banner is
+ * collapsed or the sidebar is narrow.
  */
 export function WhatsNewButton({ collapsed = false }: { collapsed?: boolean }) {
   const [open, setOpen] = useState(false)
