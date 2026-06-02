@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto"
 import {
   AI,
   AI_GENERATE_TELEMETRY_SPAN_NAMES,
@@ -17,6 +16,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
+import { hash } from "@repo/utils"
 import { Effect, Option } from "effect"
 import { z } from "zod"
 import {
@@ -213,9 +213,11 @@ type InspectedAgentContext =
   | { readonly available: true; readonly text: string }
   | { readonly available: false; readonly reason: string }
 
-function buildCacheKey(organizationId: string, systemPrompt: string): string {
-  const hash = createHash("sha256").update(systemPrompt).digest("hex")
-  return `org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${hash}`
+function buildCacheKey(organizationId: string, systemPrompt: string): Effect.Effect<string> {
+  return hash(systemPrompt).pipe(
+    Effect.map((digest) => `org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}${digest}`),
+    Effect.orElseSucceed(() => `org:${organizationId}:${INSPECTED_AGENT_CONTEXT_CACHE_PREFIX}fallback`),
+  )
 }
 
 function parseCachedExtraction(value: string): InstructionExtractorOutput | null {
@@ -357,60 +359,58 @@ function getInspectedAgentContext(input: {
   readonly traceId: string
   readonly flaggerSlug: string
 }): Effect.Effect<InspectedAgentContext, never, CacheStore> {
-  const systemPrompt = extractInspectedSystemPrompt(input.trace)
+  return Effect.gen(function* () {
+    const systemPrompt = extractInspectedSystemPrompt(input.trace)
 
-  if (!systemPrompt) {
-    return Effect.succeed({ available: false, reason: "missing inspected agent system prompt" })
-  }
+    if (!systemPrompt) {
+      return { available: false, reason: "missing inspected agent system prompt" } satisfies InspectedAgentContext
+    }
 
-  if (systemPrompt.length <= INSPECTED_AGENT_VERBATIM_MAX_CHARS) {
-    return Effect.succeed({ available: true, text: renderShortSystemPromptContext(systemPrompt) })
-  }
+    if (systemPrompt.length <= INSPECTED_AGENT_VERBATIM_MAX_CHARS) {
+      return { available: true, text: renderShortSystemPromptContext(systemPrompt) } satisfies InspectedAgentContext
+    }
 
-  const cacheKey = buildCacheKey(input.organizationId, systemPrompt)
+    const cacheKey = yield* buildCacheKey(input.organizationId, systemPrompt)
+    const cached = yield* getCachedExtraction(cacheKey)
+    if (cached) return renderExtractionResult(cached)
 
-  return getCachedExtraction(cacheKey).pipe(
-    Effect.flatMap((cached) => {
-      if (cached) return Effect.succeed(renderExtractionResult(cached))
-
-      return input.ai
-        .generate({
-          ...FLAGGER_INSTRUCTION_EXTRACTOR_MODEL,
-          maxTokens: FLAGGER_INSTRUCTION_EXTRACTOR_MAX_TOKENS,
-          system: INSTRUCTION_EXTRACTOR_SYSTEM_PROMPT,
-          prompt: buildInstructionExtractorPrompt(systemPrompt),
-          schema: instructionExtractorOutputSchema,
-          telemetry: {
-            spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
-            tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify, ...reflagSuppressionTags(input.trace.tags)],
-            metadata: buildProjectScopedAiMetadata(
-              { organizationId: input.organizationId, projectId: input.projectId },
-              { traceId: input.traceId, flaggerSlug: input.flaggerSlug, stage: "instruction-extraction" },
-            ),
-          },
-        })
-        .pipe(
-          Effect.flatMap((result) =>
-            Effect.try({
-              try: () => instructionExtractorOutputSchema.parse(result.object),
-              catch: (error) =>
-                new AIError({
-                  message: "Instruction extractor returned invalid structured output.",
-                  cause: error,
-                }),
-            }),
+    return yield* input.ai
+      .generate({
+        ...FLAGGER_INSTRUCTION_EXTRACTOR_MODEL,
+        maxTokens: FLAGGER_INSTRUCTION_EXTRACTOR_MAX_TOKENS,
+        system: INSTRUCTION_EXTRACTOR_SYSTEM_PROMPT,
+        prompt: buildInstructionExtractorPrompt(systemPrompt),
+        schema: instructionExtractorOutputSchema,
+        telemetry: {
+          spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
+          tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify, ...reflagSuppressionTags(input.trace.tags)],
+          metadata: buildProjectScopedAiMetadata(
+            { organizationId: input.organizationId, projectId: input.projectId },
+            { traceId: input.traceId, flaggerSlug: input.flaggerSlug, stage: "instruction-extraction" },
           ),
-          Effect.tap((result) => setCachedExtraction(cacheKey, result)),
-          Effect.map((result) => renderExtractionResult(result)),
-          Effect.catch(() =>
-            Effect.gen(function* () {
-              yield* Effect.annotateCurrentSpan("flagger.instructionExtractionFallback", true)
-              return { available: true, text: renderFallbackAgentContext(systemPrompt) } satisfies InspectedAgentContext
-            }),
-          ),
-        )
-    }),
-  )
+        },
+      })
+      .pipe(
+        Effect.flatMap((result) =>
+          Effect.try({
+            try: () => instructionExtractorOutputSchema.parse(result.object),
+            catch: (error) =>
+              new AIError({
+                message: "Instruction extractor returned invalid structured output.",
+                cause: error,
+              }),
+          }),
+        ),
+        Effect.tap((result) => setCachedExtraction(cacheKey, result)),
+        Effect.map((result) => renderExtractionResult(result)),
+        Effect.catch(() =>
+          Effect.gen(function* () {
+            yield* Effect.annotateCurrentSpan("flagger.instructionExtractionFallback", true)
+            return { available: true, text: renderFallbackAgentContext(systemPrompt) } satisfies InspectedAgentContext
+          }),
+        ),
+      )
+  })
 }
 
 // Footer for assistant-response-centric strategies: restricts the judgement to
