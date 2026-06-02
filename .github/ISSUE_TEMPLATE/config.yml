@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Community
+    url: https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw
+    about: Ask questions and chat with the community in our Slack.
+  - name: Security vulnerability
+    url: https://github.com/latitude-dev/latitude-llm/security/policy
+    about: Please report security issues privately — do not open a public issue.
