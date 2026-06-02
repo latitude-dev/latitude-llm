@@ -6,6 +6,9 @@ export enum ModifiedDocumentType {
   Updated = 'updated',
   UpdatedPath = 'updated_path',
   Deleted = 'deleted',
+  // The document's own content did not change; it shows up as changed only
+  // because it references another prompt that did change.
+  UpdatedByReference = 'updated_by_reference',
 }
 
 export type ChangedDocument = {

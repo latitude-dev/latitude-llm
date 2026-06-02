@@ -1,17 +1,23 @@
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { DiffViewer } from '@latitude-data/web-ui/molecules/DiffViewer'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useMemo } from 'react'
 
+const REFERENCE_ONLY_DESCRIPTION =
+  "This prompt's content hasn't changed — it references another prompt that was modified in this version."
+
 function DocumentDiff({
   oldContent,
   newContent,
+  changeType,
 }: {
   oldContent?: string
   newContent?: string
+  changeType?: ModifiedDocumentType
 }) {
   if (oldContent === undefined || newContent === undefined) {
     return (
@@ -22,7 +28,10 @@ function DocumentDiff({
   }
 
   return (
-    <div className='flex w-full flex-grow'>
+    <div className='flex w-full flex-col flex-grow gap-2'>
+      {changeType === ModifiedDocumentType.UpdatedByReference && (
+        <Alert description={REFERENCE_ONLY_DESCRIPTION} />
+      )}
       <DiffViewer newValue={newContent} oldValue={oldContent} />
     </div>
   )
@@ -69,6 +78,7 @@ export function ChangeDiff({ change }: { change: ChangedDocument }) {
 
   return (
     <DocumentDiff
+      changeType={change.changeType}
       oldContent={change.changeType === ModifiedDocumentType.Created ? '' : headDocument?.content} // prettier-ignore
       newContent={change.changeType === ModifiedDocumentType.Deleted ? '' : currentDocument?.content} // prettier-ignore
     />

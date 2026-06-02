@@ -7,18 +7,21 @@ export const MODIFICATION_ICONS: Record<ModifiedDocumentType, IconName> = {
   [ModifiedDocumentType.Updated]: 'modification',
   [ModifiedDocumentType.UpdatedPath]: 'squareArrowRight',
   [ModifiedDocumentType.Deleted]: 'deletion',
+  [ModifiedDocumentType.UpdatedByReference]: 'squareDashed',
 }
 export const MODIFICATION_COLORS: Record<ModifiedDocumentType, TextColor> = {
   [ModifiedDocumentType.Created]: 'success',
   [ModifiedDocumentType.Updated]: 'accentForeground',
   [ModifiedDocumentType.UpdatedPath]: 'accentForeground',
   [ModifiedDocumentType.Deleted]: 'destructive',
+  [ModifiedDocumentType.UpdatedByReference]: 'foregroundMuted',
 }
 export const MODIFICATION_BACKGROUNDS: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.Created]: 'bg-success/10',
   [ModifiedDocumentType.Updated]: 'bg-accent-foreground/5',
   [ModifiedDocumentType.UpdatedPath]: 'bg-accent-foreground/5',
   [ModifiedDocumentType.Deleted]: 'bg-destructive/10',
+  [ModifiedDocumentType.UpdatedByReference]: 'bg-muted',
 }
 
 export const MODIFICATION_BACKGROUNDS_HOVER: Record<
@@ -29,6 +32,7 @@ export const MODIFICATION_BACKGROUNDS_HOVER: Record<
   [ModifiedDocumentType.Updated]: 'hover:bg-accent-foreground/5',
   [ModifiedDocumentType.UpdatedPath]: 'hover:bg-accent-foreground/5',
   [ModifiedDocumentType.Deleted]: 'hover:bg-destructive/10',
+  [ModifiedDocumentType.UpdatedByReference]: 'hover:bg-muted',
 }
 
 export const MODIFICATION_LABELS: Record<ModifiedDocumentType, string> = {
@@ -36,4 +40,5 @@ export const MODIFICATION_LABELS: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.Updated]: 'Updated',
   [ModifiedDocumentType.UpdatedPath]: 'Updated path',
   [ModifiedDocumentType.Deleted]: 'Deleted',
+  [ModifiedDocumentType.UpdatedByReference]: 'Updated by reference',
 }

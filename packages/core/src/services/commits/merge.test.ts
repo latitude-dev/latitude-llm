@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi, type TestContext } from 'vitest'
 
 import { database } from '../../client'
 import { ModifiedDocumentType, Providers } from '@latitude-data/constants'
@@ -11,6 +11,8 @@ import {
   destroyDocument,
 } from '../documents'
 import { mergeCommit } from './merge'
+import { getCommitChanges } from './getChanges'
+import { DocumentVersionsRepository } from '../../repositories'
 import * as publisherModule from '../../events/publisher'
 import { waitForTransactionCallbacks } from '../../tests/helpers'
 
@@ -479,6 +481,53 @@ describe('mergeCommit', () => {
       expect(result.ok).toBe(true)
     })
 
+    it('reports a referencing parent as Updated (not UpdatedByReference) in the published event', async (ctx) => {
+      const { project, user, documents, providers } =
+        await ctx.factories.createProject({
+          providers: [{ type: Providers.OpenAI, name: 'openai' }],
+          documents: {
+            child: ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: 'CHILD_V1',
+            }),
+            parent: ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: '<prompt path="child" />\nPARENT',
+            }),
+          },
+        })
+
+      const { commit } = await ctx.factories.createDraft({ project, user })
+      await updateDocument({
+        commit,
+        document: documents.find((d) => d.path === 'child')!,
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'CHILD_V2',
+        }),
+      }).then((r) => r.unwrap())
+
+      vi.mocked(publisherModule.publisher.publishLater).mockClear()
+      await mergeCommit(commit).then((r) => r.unwrap())
+      await waitForTransactionCallbacks()
+
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const commitPublishedCall = calls.find(
+        (call) => call[0].type === 'commitPublished',
+      )
+      expect(commitPublishedCall).toBeDefined()
+      const changedDocs = commitPublishedCall![0].data.changedDocuments
+      // The parent is reported, but coalesced to Updated for the public event.
+      expect(changedDocs).toContainEqual({
+        path: 'parent',
+        changeType: ModifiedDocumentType.Updated,
+      })
+      expect(changedDocs).toContainEqual({
+        path: 'child',
+        changeType: ModifiedDocumentType.Updated,
+      })
+    })
+
     it('publishes commitMerged event alongside commitPublished', async (ctx) => {
       const { project, workspace, user, providers } =
         await ctx.factories.createProject()
@@ -512,5 +561,252 @@ describe('mergeCommit', () => {
       expect(commitPublishedCall![0].data.workspaceId).toBe(workspace.id)
       expect(commitPublishedCall![0].data.userEmail).toBe(user.email)
     })
+  })
+})
+
+describe('reference-only parent documents across parallel versions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(publisherModule.publisher.publishLater).mockResolvedValue(
+      undefined,
+    )
+  })
+
+  // A parent prompt references a child via `<prompt path="..." />`. Editing the
+  // child in a draft marks the parent as changed (its resolved content changes),
+  // but the parent's OWN content must keep tracking Live until the draft is
+  // actually merged. Otherwise the change list snapshots the parent into the
+  // draft, and publishing the draft reverts any parallel change made to the
+  // parent in the meantime.
+
+  async function setupParentChild(ctx: TestContext) {
+    return ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        child: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'CHILD_V1',
+        }),
+        parent: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: '<prompt path="child" />\nPARENT_V1',
+        }),
+      },
+    })
+  }
+
+  it('does not revert a parallel Live change to the parent when publishing a draft that only changed the child', async (ctx) => {
+    const { project, user, workspace, documents } = await setupParentChild(ctx)
+    const docsScope = new DocumentVersionsRepository(workspace.id)
+    const child = documents.find((d) => d.path === 'child')!
+    const parent = documents.find((d) => d.path === 'parent')!
+
+    // Draft D: edit the child only
+    const { commit: draftD } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
+    await updateDocument({
+      commit: draftD,
+      document: child,
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'CHILD_V2',
+      }),
+    }).then((r) => r.unwrap())
+
+    // Listing the draft changes is what (today) snapshots the parent into the
+    // draft as a frozen copy of its current content.
+    await getCommitChanges({ workspace, commit: draftD }).then((r) =>
+      r.unwrap(),
+    )
+
+    // A parallel version is published to Live that changes the parent's OWN
+    // content.
+    const { commit: draftP } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
+    await updateDocument({
+      commit: draftP,
+      document: parent,
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: '<prompt path="child" />\nPARENT_V2',
+      }),
+    }).then((r) => r.unwrap())
+    await mergeCommit(draftP).then((r) => r.unwrap())
+
+    // Now publish draft D
+    const mergedD = await mergeCommit(draftD).then((r) => r.unwrap())
+
+    const docsAtMergedD = await docsScope
+      .getDocumentsAtCommit(mergedD)
+      .then((r) => r.unwrap())
+    const mergedParent = docsAtMergedD.find((d) => d.path === 'parent')!
+    const mergedChild = docsAtMergedD.find((d) => d.path === 'child')!
+
+    // The parallel parent change must survive — it must NOT be reverted to V1.
+    expect(mergedParent.content).toContain('PARENT_V2')
+    expect(mergedParent.content).not.toContain('PARENT_V1')
+    // The child change from draft D is applied.
+    expect(mergedChild.content).toContain('CHILD_V2')
+    // The parent's resolved content reflects the new child.
+    expect(mergedParent.resolvedContent).toContain('CHILD_V2')
+  })
+
+  it('resolves the parent against current Live content inside a draft that only changed the child (no frozen snapshot)', async (ctx) => {
+    const { project, user, workspace, documents } = await setupParentChild(ctx)
+    const docsScope = new DocumentVersionsRepository(workspace.id)
+    const child = documents.find((d) => d.path === 'child')!
+    const parent = documents.find((d) => d.path === 'parent')!
+
+    const { commit: draftD } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
+    await updateDocument({
+      commit: draftD,
+      document: child,
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'CHILD_V2',
+      }),
+    }).then((r) => r.unwrap())
+
+    // Snapshot trigger (change list)
+    await getCommitChanges({ workspace, commit: draftD }).then((r) =>
+      r.unwrap(),
+    )
+
+    // Parallel Live change to the parent's own content
+    const { commit: draftP } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
+    await updateDocument({
+      commit: draftP,
+      document: parent,
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: '<prompt path="child" />\nPARENT_V2',
+      }),
+    }).then((r) => r.unwrap())
+    await mergeCommit(draftP).then((r) => r.unwrap())
+
+    // Inside draft D (still unpublished), the parent must reflect the new Live
+    // content, not a frozen V1 snapshot.
+    const docsAtDraftD = await docsScope
+      .getDocumentsAtCommit(draftD)
+      .then((r) => r.unwrap())
+    const draftParent = docsAtDraftD.find((d) => d.path === 'parent')!
+
+    expect(draftParent.content).toContain('PARENT_V2')
+    expect(draftParent.content).not.toContain('PARENT_V1')
+  })
+
+  it('does not revert a parallel Live change to a transitive (grandparent) reference', async (ctx) => {
+    const { project, user, workspace, documents } =
+      await ctx.factories.createProject({
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          child: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'CHILD_V1',
+          }),
+          parent: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: '<prompt path="child" />\nPARENT_V1',
+          }),
+          grandparent: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: '<prompt path="parent" />\nGRANDPARENT_V1',
+          }),
+        },
+      })
+    const docsScope = new DocumentVersionsRepository(workspace.id)
+    const child = documents.find((d) => d.path === 'child')!
+    const grandparent = documents.find((d) => d.path === 'grandparent')!
+
+    // Draft D: edit the child only
+    const { commit: draftD } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
+    await updateDocument({
+      commit: draftD,
+      document: child,
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'CHILD_V2',
+      }),
+    }).then((r) => r.unwrap())
+
+    // Snapshot trigger — freezes both parent and grandparent into the draft
+    await getCommitChanges({ workspace, commit: draftD }).then((r) =>
+      r.unwrap(),
+    )
+
+    // Parallel Live change to the grandparent's own content
+    const { commit: draftP } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
+    await updateDocument({
+      commit: draftP,
+      document: grandparent,
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: '<prompt path="parent" />\nGRANDPARENT_V2',
+      }),
+    }).then((r) => r.unwrap())
+    await mergeCommit(draftP).then((r) => r.unwrap())
+
+    const mergedD = await mergeCommit(draftD).then((r) => r.unwrap())
+
+    const docsAtMergedD = await docsScope
+      .getDocumentsAtCommit(mergedD)
+      .then((r) => r.unwrap())
+    const mergedGrandparent = docsAtMergedD.find(
+      (d) => d.path === 'grandparent',
+    )!
+
+    expect(mergedGrandparent.content).toContain('GRANDPARENT_V2')
+    expect(mergedGrandparent.content).not.toContain('GRANDPARENT_V1')
+    expect(mergedGrandparent.resolvedContent).toContain('CHILD_V2')
+  })
+
+  it('still records the referencing parent as a change in the published version (history preserved)', async (ctx) => {
+    const { project, user, workspace, documents } = await setupParentChild(ctx)
+    const docsScope = new DocumentVersionsRepository(workspace.id)
+    const child = documents.find((d) => d.path === 'child')!
+
+    const { commit: draftD } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
+    await updateDocument({
+      commit: draftD,
+      document: child,
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'CHILD_V2',
+      }),
+    }).then((r) => r.unwrap())
+
+    const mergedD = await mergeCommit(draftD).then((r) => r.unwrap())
+
+    const changes = await docsScope
+      .listCommitChanges(mergedD)
+      .then((r) => r.unwrap())
+    const parentChange = changes.find((d) => d.path === 'parent')
+
+    // The parent must still appear as a change in the published version so the
+    // history reflects that its behaviour changed...
+    expect(parentChange).toBeDefined()
+    // ...with its resolved content reflecting the new child...
+    expect(parentChange!.resolvedContent).toContain('CHILD_V2')
+    // ...while its own content is unchanged.
+    expect(parentChange!.content).toContain('PARENT_V1')
   })
 })

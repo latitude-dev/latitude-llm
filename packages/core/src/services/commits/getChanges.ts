@@ -14,7 +14,7 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
-import { recomputeChanges } from '../documents'
+import { computeChanges } from '../documents'
 import { getCommitTriggerChanges } from '../documentTriggers/changes/getTriggerChanges'
 import { getCommitEvaluationChanges } from '../evaluationsV2/changes/getEvaluationChanges'
 
@@ -50,6 +50,11 @@ export function changesPresenter({
       if (previousDoc!.path !== changedDoc.path) {
         return ModifiedDocumentType.UpdatedPath
       }
+      // The document is in the changed set but its own content is unchanged:
+      // it changed only because a referenced prompt changed.
+      if (previousDoc!.content === changedDoc.content) {
+        return ModifiedDocumentType.UpdatedByReference
+      }
       return ModifiedDocumentType.Updated
     })()
 
@@ -66,7 +71,10 @@ async function getDraftChanges(
   { workspace, draft }: { workspace: Workspace; draft: Commit },
   transaction = new Transaction(),
 ): PromisedResult<ChangedDocument[]> {
-  const result = await recomputeChanges({ draft, workspace }, transaction)
+  // Compute changes in memory only. We deliberately do NOT persist here:
+  // snapshotting reference-only parents into the draft would stop them from
+  // inheriting later Live changes. Persisting happens at merge.
+  const result = await computeChanges({ draft, workspace }, transaction)
   if (result.error) return result
   const changes = result.value
 
