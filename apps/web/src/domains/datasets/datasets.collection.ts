@@ -2,8 +2,10 @@ import type { DatasetListSortBy } from "@domain/datasets"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useDeferredValue, useMemo } from "react"
-import type { DatasetRecord, DatasetRowRecord } from "./datasets.functions.ts"
-import { listDatasetsByProject, listRowsQuery } from "./datasets.functions.ts"
+import type { DatasetRecord, DatasetRowRecord, DatasetSearchRecord } from "./datasets.functions.ts"
+import { listDatasetsByProject, listRowsQuery, searchDatasetsOrgWide } from "./datasets.functions.ts"
+
+const ORG_SEARCH_LIMIT = 8
 
 const BATCH_SIZE = 50
 const ROWS_BATCH_SIZE = 50
@@ -109,6 +111,22 @@ export function useDatasetRowsInfiniteScroll({
   const total = paginatedData?.pages[0]?.total
 
   return { data, isLoading, infiniteScroll, total }
+}
+
+/**
+ * Org-wide dataset search for the Command Palette. Returns matching datasets across every project
+ * in the organization (each carrying its owning project's slug/name), not just the current one.
+ */
+export function useDatasetsSearch(searchQuery: string, { enabled = true }: { enabled?: boolean } = {}) {
+  const trimmed = searchQuery.trim()
+  const { data, isLoading } = useQuery({
+    queryKey: ["datasets", "orgSearch", trimmed],
+    queryFn: (): Promise<readonly DatasetSearchRecord[]> =>
+      searchDatasetsOrgWide({ data: { searchQuery: trimmed, limit: ORG_SEARCH_LIMIT } }),
+    staleTime: 30_000,
+    enabled: enabled && trimmed.length > 0,
+  })
+  return { data: data ?? [], isLoading }
 }
 
 export function useDatasetsList(projectId: string, { enabled = true }: { enabled?: boolean } = {}) {

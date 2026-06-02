@@ -25,6 +25,7 @@ export {
   type DatasetListPage,
   type DatasetListSortBy,
   DatasetRepository,
+  type DatasetSearchResult,
 } from "./ports/dataset-repository.ts"
 export { DatasetRowRepository, type DatasetRowRepositoryShape } from "./ports/dataset-row-repository.ts"
 export {
@@ -57,6 +58,7 @@ export {
   prepareDatasetExportUseCase,
 } from "./use-cases/prepare-dataset-export.ts"
 export { renameDataset } from "./use-cases/rename-dataset.ts"
+export { searchDatasets } from "./use-cases/search-datasets.ts"
 export { updateDatasetDetails } from "./use-cases/update-dataset-details.ts"
 export { updateRow } from "./use-cases/update-row.ts"
 export { buildValidRowId } from "./validate-row-id.ts"

@@ -14,6 +14,7 @@ import {
   listRows,
   parseDatasetCsv,
   prepareDatasetExportUseCase,
+  searchDatasets,
   type TraceSelection,
   type TraceSource,
   updateDatasetDetails,
@@ -194,6 +195,50 @@ export const listDatasetsByProject = createServerFn({ method: "GET" })
       return { datasets, hasMore: page.hasMore }
     }
     return { datasets, hasMore: page.hasMore, nextCursor: page.nextCursor }
+  })
+
+export interface DatasetSearchRecord {
+  readonly id: string
+  readonly projectId: string
+  readonly projectSlug: string
+  readonly projectName: string
+  readonly slug: string
+  readonly name: string
+}
+
+/**
+ * Org-wide dataset search for the Command Palette. Unlike {@link listDatasetsByProject}, this is
+ * not scoped to a single project — it returns matching datasets across every project in the
+ * caller's organization, each tagged with its owning project's slug/name.
+ */
+export const searchDatasetsOrgWide = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      searchQuery: z.string().max(500).optional(),
+      limit: z.number().int().min(1).max(25).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<readonly DatasetSearchRecord[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const results = await Effect.runPromise(
+      searchDatasets({
+        ...(data.searchQuery !== undefined ? { searchQuery: data.searchQuery } : {}),
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
+    )
+
+    return results.map(
+      (r): DatasetSearchRecord => ({
+        id: r.id,
+        projectId: r.projectId,
+        projectSlug: r.projectSlug,
+        projectName: r.projectName,
+        slug: r.slug,
+        name: r.name,
+      }),
+    )
   })
 
 export const getDatasetQuery = createServerFn({ method: "GET" })

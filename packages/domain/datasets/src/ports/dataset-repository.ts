@@ -24,6 +24,20 @@ export interface DatasetListPage {
   readonly nextCursor?: DatasetListCursor
 }
 
+/**
+ * Lightweight, org-wide dataset projection for the Command Palette search. Carries the owning
+ * project's slug/name so a cross-project result can be displayed and navigated to without a
+ * second lookup. Not the full {@link Dataset} — search only needs identity + display fields.
+ */
+export interface DatasetSearchResult {
+  readonly id: DatasetId
+  readonly projectId: ProjectId
+  readonly projectSlug: string
+  readonly projectName: string
+  readonly slug: string
+  readonly name: string
+}
+
 export class DatasetRepository extends Context.Service<
   DatasetRepository,
   {
@@ -51,6 +65,17 @@ export class DatasetRepository extends Context.Service<
       readonly projectId: ProjectId
       readonly options?: DatasetListOptions
     }): Effect.Effect<DatasetListPage, RepositoryError, SqlClient>
+
+    /**
+     * Org-wide name search across every project in the organization (RLS-scoped to the caller's
+     * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
+     * dataset name; omit it to list the most recent datasets. Soft-deleted datasets and datasets in
+     * soft-deleted projects are excluded.
+     */
+    searchOrgWide(args: {
+      readonly searchQuery?: string
+      readonly limit: number
+    }): Effect.Effect<readonly DatasetSearchResult[], RepositoryError, SqlClient>
 
     existsByNameInProject(args: {
       readonly projectId: ProjectId

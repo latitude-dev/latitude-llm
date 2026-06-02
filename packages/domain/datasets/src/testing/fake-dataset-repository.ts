@@ -141,6 +141,22 @@ export const createFakeDatasetRepository = (
         return page
       }),
 
+    searchOrgWide: (args) =>
+      Effect.sync(() => {
+        const q = args.searchQuery?.trim().toLowerCase()
+        const matched = [...datasets.values()].filter((d) => !d.deletedAt && (!q || d.name.toLowerCase().includes(q)))
+        const sorted = matched.sort((a, b) => cmpStrings(a.name, b.name) || cmpStrings(a.id, b.id))
+        return sorted.slice(0, args.limit).map((d) => ({
+          id: d.id,
+          projectId: d.projectId,
+          // Fakes have no `projects` table; synthesize stable project display fields from the id.
+          projectSlug: `project-${d.projectId}`,
+          projectName: `Project ${d.projectId}`,
+          slug: d.slug,
+          name: d.name,
+        }))
+      }),
+
     existsByNameInProject: (args) =>
       Effect.sync(() =>
         [...datasets.values()].some(
