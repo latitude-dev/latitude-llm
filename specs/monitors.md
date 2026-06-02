@@ -938,7 +938,7 @@ Mirrors `issues-empty-state.tsx`. In practice rarely seen post-backfill, since e
 | Last incident | yes | Empty when no incidents. Otherwise: warning badge "Closed Xh ago" if the latest incident has `endedAt != null`; destructive badge "Ongoing since Xh" if `endedAt = null`. Uses `relativeTime` from `@repo/utils`. |
 | Actions | no | A trailing 3-dots `optionsColumn` menu (the home for all monitor management): **Mute/Unmute** (behind `MonitorMuteConfirmModal`), and **Rename** / **Delete** (user monitors only — disabled for system; the rename modal + delete confirmation are wired in M5). |
 
-**Ordering.** Name / Status / Last incident are all sortable. **System monitors are always pinned to the top of the list** regardless of the active sort; within each group (system, then user) the default sort is **last incident descending**. (Sorting by last incident requires the list read to surface each monitor's latest-incident timestamp — see the Milestone UX task. The current `lastIncident` column is `null` until that lands.)
+**Ordering.** Name / Status / Last incident are all sortable, applied client-side over the loaded rows, with the selected sort persisted in the `monitorsSort` query param. The default is **last incident descending** (monitors with no incident sort last); `createdAt` desc then `id` are the fixed secondary/tertiary tiebreaks. **System monitors are not pinned** — they flow with the rest. The list read surfaces each monitor's latest-incident timestamp (`MonitorRepository.list` → `lastIncidentByMonitorId`), which both orders the page at the DB level and populates the `lastIncident` column. (Status sort ranks Live above Muted, so "desc" leads with live monitors.)
 
 The "Notifications" column from earlier drafts is gone — notifications are not per-monitor and there's nothing meaningful to surface here.
 
@@ -960,7 +960,7 @@ Columns:
 
 - **Start time** (sortable, default desc)
 - **End time** — warning badge "Closed Xh ago" or destructive badge "Ongoing since Xh"
-- **Source** — when `sourceId IS NULL`: "All issues" / "All saved searches" linking to the source dashboards. When set: the source name, linking to the source's dashboard with the id pre-selected (issue → issue detail; saved search → `/traces?savedSearch=<slug>` once the search bar is on the traces page).
+- **Source** — the resolved source name, deep-linked to its dashboard with the entity pre-selected: issue → `/projects/$projectSlug/issues?issueId=<id>`; saved search → `/projects/$projectSlug/search?savedSearch=<slug>` (moves to the traces page once the search bar lands there in M8). `alert_incidents.sourceId` is always set, so there's no "all" case here — that distinction lives on the alert, not the incident. Names are resolved server-side per page (`IssueRepository.findByIds` / `listSavedSearches`); a deleted source falls back to the raw, copyable id.
 - **Notified** — success badge "Notified" or muted badge "Muted". Derived from `EXISTS(notifications row with idempotency_key IN (...))` — see the data model section.
 
 ### Create monitor modal
@@ -1394,7 +1394,7 @@ Details-panel UI (`LAT-630/details-panel`):
 
 Scope is intentionally left open — the exact polish items are decided when the milestone starts, not prescribed here. Two items are pre-committed:
 
-- **Dashboard column sorting.** Make **Name / Status / Last incident** sortable, with **system monitors always pinned to the top** of the list and a default sort of **last incident descending** (within each group). This needs the monitors list read (`MonitorRepository.list` + `listMonitorsUseCase`) extended to surface and order by each monitor's latest-incident timestamp, and the `lastIncident` column populated from it — the one backend touch in this otherwise frontend milestone.
+- **Dashboard column sorting.** **Name / Status / Last incident** are sortable (sort persisted in the `monitorsSort` query param), default **last incident descending** with `createdAt`/`id` as deterministic tiebreaks and no-incident monitors last. System monitors flow with the rest (**not pinned**). Backed by the one backend touch: `MonitorRepository.list` + `listMonitorsUseCase` surface each monitor's latest-incident timestamp (`lastIncidentByMonitorId`) to both order the list and populate the `lastIncident` column.
 - **`monitors` seeder** (worth front-loading, since it enables the rest): `packages/platform/db-postgres/src/seeds/monitors/`, registered in `all.ts` next to the existing `alert-incidents` seeder, run by `pnpm seed`. It writes the M2/M3 schema directly — monitors + `monitor_alerts` + a spread of `alert_incidents` covering every visual state (open vs closed, muted vs live, notified vs not, each kind/severity, "all"-source vs named-source) — so the polish can exercise the whole frontend now, without waiting for M6/M7 to produce real incidents.
 
 ### Milestone 6 — Wire issue-event path to monitors (flag-gated)
@@ -1455,6 +1455,7 @@ Smaller than originally estimated because most of the heavy lifting has already 
 - [ ] Add `<SavedSearchSelector>` (a new component, dropdown listing project's saved searches with a filter input + "Save current search…" footer) immediately left of `<SearchInput>`. Add `<SaveOrUpdateSearchButton>` immediately right of `<SearchInput>` with the four-state behaviour described above.
 - [ ] "Create monitor" / "Edit monitor" entry-point inside each `<SavedSearchSelector>` row.
 - [ ] Delete `apps/web/src/routes/_authenticated/projects/$projectSlug/search/index.tsx`. Redirect stale links to `/` (defaulting to the `sessions` tab to match #3320's promotion). The shared `-components/` files (`save-search-modal`, `saved-searches-list`, `search-syntax-legend`) stay where they are — they're already imported from the parent directory.
+- [ ] Repoint the monitors deep-links that currently target the standalone `/search` route to the new `/` (traces tab) location with the saved search applied: the incidents-table **Source** cell (`monitor-incidents-table.tsx`, `savedSearch.*` sources → `?savedSearch=<slug>`) and the alert form's "Create a saved search" link (`saved-search-source-picker.tsx`). Both were written against `/search` during Milestone UX.
 - [ ] Backend tests: saved-search create/update without the dropped columns; OpenAPI snapshot updated.
 
 ### Milestone 9 — API endpoints + SDK + MCP regeneration

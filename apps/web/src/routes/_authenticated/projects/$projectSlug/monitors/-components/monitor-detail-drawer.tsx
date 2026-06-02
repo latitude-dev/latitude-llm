@@ -264,7 +264,7 @@ export function MonitorDetailDrawer({
               defaultOpen
               contentClassName="flex flex-col overflow-hidden pl-0 pt-0 max-h-none"
             >
-              <MonitorIncidentsTable monitorId={monitor.id} />
+              <MonitorIncidentsTable projectId={projectId} projectSlug={projectSlug} monitorId={monitor.id} />
             </DetailSection>
           </div>
         </div>

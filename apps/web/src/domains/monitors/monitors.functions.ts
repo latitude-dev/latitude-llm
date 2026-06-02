@@ -1,3 +1,4 @@
+import { IssueRepository } from "@domain/issues"
 import {
   createMonitorAlertUseCase,
   createMonitorUseCase,
@@ -24,6 +25,7 @@ import {
   alertIncidentKindSchema,
   alertIncidentSourceTypeSchema,
   alertSeveritySchema,
+  IssueId,
   MonitorAlertId,
   MonitorId,
   OrganizationId,
@@ -31,6 +33,7 @@ import {
 } from "@domain/shared"
 import {
   AlertIncidentRepositoryLive,
+  IssueRepositoryLive,
   MonitorRepositoryLive,
   NotificationRepositoryLive,
   SavedSearchRepositoryLive,
@@ -364,23 +367,30 @@ const incidentCursorSchema = z.object({ startedAt: z.iso.datetime(), id: z.strin
 export type MonitorIncidentsCursor = z.infer<typeof incidentCursorSchema>
 
 const listMonitorIncidentsInputSchema = z.object({
+  projectId: z.string(),
   monitorId: z.string(),
   limit: z.number().int().min(1).max(100).optional(),
   cursor: incidentCursorSchema.optional(),
 })
 
-const toMonitorIncidentRecord = (item: {
-  readonly incident: {
-    readonly id: string
-    readonly startedAt: Date
-    readonly endedAt: Date | null
-    readonly kind: string
-    readonly sourceType: string
-    readonly sourceId: string
-    readonly severity: string
-  }
-  readonly notified: boolean
-}) => ({
+const toMonitorIncidentRecord = (
+  item: {
+    readonly incident: {
+      readonly id: string
+      readonly startedAt: Date
+      readonly endedAt: Date | null
+      readonly kind: string
+      readonly sourceType: string
+      readonly sourceId: string
+      readonly severity: string
+    }
+    readonly notified: boolean
+  },
+  /** Resolved source display name, or `null` when the source was deleted. */
+  sourceName: string | null,
+  /** Saved-search slug for the traces deep-link; `null` for issue sources / unresolved. */
+  sourceSlug: string | null,
+) => ({
   id: item.incident.id,
   startedAt: item.incident.startedAt.toISOString(),
   endedAt: item.incident.endedAt?.toISOString() ?? null,
@@ -389,6 +399,8 @@ const toMonitorIncidentRecord = (item: {
   sourceId: item.incident.sourceId,
   severity: item.incident.severity,
   notified: item.notified,
+  sourceName,
+  sourceSlug,
 })
 
 export type MonitorIncidentRecord = ReturnType<typeof toMonitorIncidentRecord>
@@ -405,6 +417,7 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
     }> => {
       const { organizationId } = await requireSession()
       const orgId = OrganizationId(organizationId)
+      const projectId = ProjectId(data.projectId)
       const pgClient = getPostgresClient()
 
       const result = await Effect.runPromise(
@@ -421,8 +434,38 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
         ),
       )
 
+      // Resolve the source name (and saved-search slug) for the "Source" column,
+      // so it links to the issue / saved search instead of showing a raw id.
+      // Unresolved ids (deleted source) fall back to the id in the UI.
+      const issueIds = [
+        ...new Set(result.items.filter((i) => i.incident.sourceType === "issue").map((i) => i.incident.sourceId)),
+      ]
+      const issueNameById = new Map<string, string>()
+      if (issueIds.length > 0) {
+        const issues = await Effect.runPromise(
+          Effect.gen(function* () {
+            const repository = yield* IssueRepository
+            return yield* repository.findByIds({ projectId, issueIds: issueIds.map(IssueId) })
+          }).pipe(withPostgres(IssueRepositoryLive, pgClient, orgId), withTracing),
+        )
+        for (const issue of issues) issueNameById.set(issue.id, issue.name)
+      }
+
+      const savedSearchById = new Map<string, { readonly name: string; readonly slug: string }>()
+      if (result.items.some((i) => i.incident.sourceType === "savedSearch")) {
+        const page = await Effect.runPromise(
+          listSavedSearches({ projectId }).pipe(withPostgres(SavedSearchRepositoryLive, pgClient, orgId), withTracing),
+        )
+        for (const search of page.items) savedSearchById.set(search.id, { name: search.name, slug: search.slug })
+      }
+
       return {
-        items: result.items.map(toMonitorIncidentRecord),
+        items: result.items.map((item) => {
+          const { sourceType, sourceId } = item.incident
+          const saved = sourceType === "savedSearch" ? savedSearchById.get(sourceId) : undefined
+          const sourceName = sourceType === "issue" ? (issueNameById.get(sourceId) ?? null) : (saved?.name ?? null)
+          return toMonitorIncidentRecord(item, sourceName, saved?.slug ?? null)
+        }),
         nextCursor: result.nextCursor
           ? { startedAt: result.nextCursor.startedAt.toISOString(), id: result.nextCursor.id }
           : null,

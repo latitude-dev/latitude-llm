@@ -42,8 +42,8 @@ const getListMonitorsQueryKey = (projectId: string, limit: number, searchQuery: 
 
 const getMonitorQueryKey = (projectId: string, slug: string) => ["monitors", "get", projectId, slug] as const
 
-const getMonitorIncidentsQueryKey = (monitorId: string, limit: number) =>
-  ["monitors", "incidents", monitorId, limit] as const
+const getMonitorIncidentsQueryKey = (projectId: string, monitorId: string, limit: number) =>
+  ["monitors", "incidents", projectId, monitorId, limit] as const
 
 export function useMonitors(input: {
   readonly projectId: string
@@ -103,6 +103,7 @@ export function useMonitor(input: { readonly projectId: string; readonly slug: s
 
 /** @public Consumed by the M4 details panel incidents table; not yet wired in M2. */
 export function useMonitorIncidents(input: {
+  readonly projectId: string
   readonly monitorId: string
   readonly limit?: number
   readonly enabled?: boolean
@@ -110,10 +111,15 @@ export function useMonitorIncidents(input: {
   const limit = input.limit ?? DEFAULT_INCIDENTS_PAGE_SIZE
 
   const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useInfiniteQuery({
-    queryKey: getMonitorIncidentsQueryKey(input.monitorId, limit),
+    queryKey: getMonitorIncidentsQueryKey(input.projectId, input.monitorId, limit),
     queryFn: ({ pageParam }) =>
       listMonitorIncidents({
-        data: { monitorId: input.monitorId, limit, ...(pageParam ? { cursor: pageParam } : {}) },
+        data: {
+          projectId: input.projectId,
+          monitorId: input.monitorId,
+          limit,
+          ...(pageParam ? { cursor: pageParam } : {}),
+        },
       }),
     initialPageParam: null as MonitorIncidentsCursor | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
