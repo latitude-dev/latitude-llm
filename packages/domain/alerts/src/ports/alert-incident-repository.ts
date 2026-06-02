@@ -91,6 +91,15 @@ export interface AlertIncidentListPage {
   readonly hasMore: boolean
 }
 
+/** Aggregate incident stats for a monitor — total count plus the incident-history span. */
+export interface MonitorIncidentStats {
+  readonly total: number
+  /** Earliest incident `started_at`, or `null` when the monitor has no incidents. */
+  readonly firstStartedAt: Date | null
+  /** Latest incident `started_at`, or `null` when the monitor has no incidents. */
+  readonly lastStartedAt: Date | null
+}
+
 export interface AlertIncidentRepositoryShape {
   insert(incident: AlertIncident): Effect.Effect<void, RepositoryError, SqlClient>
   findById(id: AlertIncidentId): Effect.Effect<AlertIncident, NotFoundError | RepositoryError, SqlClient>
@@ -143,6 +152,13 @@ export interface AlertIncidentRepositoryShape {
   listByMonitorId(
     input: ListAlertIncidentsByMonitorIdInput,
   ): Effect.Effect<AlertIncidentListPage, RepositoryError, SqlClient>
+  /**
+   * Aggregate stats for a monitor's incidents — total count plus the earliest and
+   * latest `started_at`. Joins through `monitor_alerts` (soft-deleted alerts
+   * included), mirroring {@link listByMonitorId}; returns `0` / `null`s for a
+   * monitor with no incidents.
+   */
+  statsByMonitorId(monitorId: MonitorId): Effect.Effect<MonitorIncidentStats, RepositoryError, SqlClient>
   /** Incidents fired by one specific alert (`started_at DESC`, paginated) — direct `monitor_alert_id` lookup. */
   listByMonitorAlertId(
     input: ListAlertIncidentsByMonitorAlertIdInput,

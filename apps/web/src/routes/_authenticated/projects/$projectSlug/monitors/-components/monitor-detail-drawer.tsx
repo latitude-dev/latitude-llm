@@ -7,12 +7,14 @@ import {
   DetailSection,
   Icon,
   LatitudeLogo,
+  Skeleton,
   Status,
   type StatusProps,
   Text,
   Tooltip,
   useToast,
 } from "@repo/ui"
+import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import {
   ArrowDownIcon,
@@ -26,10 +28,11 @@ import {
   ShieldAlertIcon,
   XIcon,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
+import { useMonitorIncidentStats } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorAlertRecord, MonitorRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
 import { MonitorAlertDeleteConfirmModal } from "./monitor-alert-delete-confirm-modal.tsx"
 import { MonitorAlertEditModal } from "./monitor-alert-edit-modal.tsx"
@@ -47,6 +50,71 @@ const SEVERITY_LABEL: Record<MonitorAlertRecord["severity"], string> = {
   low: "Low",
   medium: "Medium",
   high: "High",
+}
+
+/** Stacked label + value, matching the issue detail panel's summary fields. */
+function SummaryField({ label, value }: { readonly label: string; readonly value: ReactNode }) {
+  return (
+    <div className="flex min-w-0 max-w-full flex-col gap-0.5">
+      <Text.H6 color="foregroundMuted">{label}</Text.H6>
+      {value}
+    </div>
+  )
+}
+
+const MINUTE_MS = 60_000
+const HOUR_MS = 60 * MINUTE_MS
+const DAY_MS = 24 * HOUR_MS
+const MONTH_MS = 30 * DAY_MS
+const YEAR_MS = 365 * DAY_MS
+
+// Compact elapsed wording, mirroring the issue panel's "Seen at" (e.g. `5h`, `10d`).
+function formatCompactElapsed(elapsedMs: number): string {
+  if (elapsedMs < HOUR_MS) return `${Math.max(1, Math.floor(elapsedMs / MINUTE_MS))}m`
+  if (elapsedMs < DAY_MS) return `${Math.max(1, Math.floor(elapsedMs / HOUR_MS))}h`
+  if (elapsedMs < MONTH_MS) return `${Math.max(1, Math.floor(elapsedMs / DAY_MS))}d`
+  if (elapsedMs < YEAR_MS) return `${Math.max(1, Math.floor(elapsedMs / MONTH_MS))}mo`
+  return `${Math.max(1, Math.floor(elapsedMs / YEAR_MS))}y`
+}
+
+const elapsedSince = (iso: string): number => Math.max(0, Date.now() - Date.parse(iso))
+
+/**
+ * "Last detected / first detected" rendered like the issue panel's "Seen at"
+ * (`5h ago / 10d old`, with tooltips). A real flex `div` so the `gap-*` spacing
+ * around the separator holds, and bare `<span>` tooltip triggers so Radix's hover
+ * handlers land on a real DOM node.
+ */
+function MonitorDetectedAtValue({
+  lastStartedAtIso,
+  firstStartedAtIso,
+}: {
+  readonly lastStartedAtIso: string
+  readonly firstStartedAtIso: string
+}) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-sm leading-5">
+      <Tooltip
+        asChild
+        trigger={<span className="break-words">{`${formatCompactElapsed(elapsedSince(lastStartedAtIso))} ago`}</span>}
+      >
+        <div className="flex flex-col gap-0.5">
+          <Text.H6 color="foregroundMuted">Last detected at</Text.H6>
+          <Text.H6B>{new Date(lastStartedAtIso).toLocaleString()}</Text.H6B>
+        </div>
+      </Tooltip>
+      <span className="shrink-0 text-muted-foreground">/</span>
+      <Tooltip
+        asChild
+        trigger={<span className="break-words">{`${formatCompactElapsed(elapsedSince(firstStartedAtIso))} old`}</span>}
+      >
+        <div className="flex flex-col gap-0.5">
+          <Text.H6 color="foregroundMuted">First detected at</Text.H6>
+          <Text.H6B>{new Date(firstStartedAtIso).toLocaleString()}</Text.H6B>
+        </div>
+      </Tooltip>
+    </div>
+  )
 }
 
 /** Icon + "System" badge, styled like a `TagBadge`, shown next to the slug. */
@@ -157,6 +225,10 @@ export function MonitorDetailDrawer({
   const [sensitivityAlert, setSensitivityAlert] = useState<MonitorAlertRecord | null>(null)
   const [alertToDelete, setAlertToDelete] = useState<MonitorAlertRecord | null>(null)
   const muted = monitor.mutedAt != null
+  const { data: incidentStats, isLoading: statsLoading } = useMonitorIncidentStats({
+    projectId,
+    monitorId: monitor.id,
+  })
 
   // Contribute mute/unmute + copy-link to the command palette while this monitor is open,
   // reusing the same confirm modal the toolbar button triggers (mirrors the issue lifecycle
@@ -267,13 +339,56 @@ export function MonitorDetailDrawer({
               {monitor.description ? <Text.H5 color="foregroundMuted">{monitor.description}</Text.H5> : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {monitor.system ? <SystemTag /> : null}
+              {monitor.system ? (
+                <Tooltip
+                  asChild
+                  side="bottom"
+                  trigger={
+                    <span className="inline-flex">
+                      <SystemTag />
+                    </span>
+                  }
+                >
+                  This monitor is managed by the system
+                </Tooltip>
+              ) : null}
               <CopyableText value={monitor.slug} size="sm" ellipsis tooltip="Copy monitor slug" />
-              {muted ? <Status variant="neutral" label="Muted" /> : null}
             </div>
           </div>
 
           <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
+            <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
+              <SummaryField
+                label="Status"
+                value={muted ? <Status variant="neutral" label="Muted" /> : <Status variant="success" label="Live" />}
+              />
+              <SummaryField
+                label="Detected at"
+                value={
+                  statsLoading ? (
+                    <Skeleton className="h-5 w-32" />
+                  ) : incidentStats?.lastStartedAtIso && incidentStats.firstStartedAtIso ? (
+                    <MonitorDetectedAtValue
+                      lastStartedAtIso={incidentStats.lastStartedAtIso}
+                      firstStartedAtIso={incidentStats.firstStartedAtIso}
+                    />
+                  ) : (
+                    <Text.H5 color="foregroundMuted">—</Text.H5>
+                  )
+                }
+              />
+              <SummaryField
+                label="Incidents"
+                value={
+                  statsLoading ? (
+                    <Skeleton className="h-5 w-12" />
+                  ) : (
+                    <Text.H5 color="foreground">{incidentStats ? formatCount(incidentStats.total) : "—"}</Text.H5>
+                  )
+                }
+              />
+            </div>
+
             <DetailSection icon={<Icon icon={MegaphoneIcon} size="sm" />} label="Alerts" defaultOpen>
               <div className="flex flex-col gap-2">
                 {monitor.alerts.map((alert) => (

@@ -83,6 +83,7 @@ function setup(opts: SetupOpts = {}) {
     listByProjectId: () => Effect.die("listByProjectId not used"),
     listOpenByKind: () => Effect.die("listOpenByKind not used"),
     listByMonitorId: () => Effect.die("listByMonitorId not used"),
+    statsByMonitorId: () => Effect.die("statsByMonitorId not used"),
     listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used"),
   }
 

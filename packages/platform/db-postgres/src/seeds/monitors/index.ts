@@ -92,6 +92,8 @@ const savedSearchId = (scope: SeedScope, key: string): string => scope.cuid(`sav
 //    expected) and both window units (minutes / hours)
 //  - every severity, a muted monitor, a multi-alert monitor, and an empty one
 //  - one high-volume alert (180 incidents) for the infinite-scroll table
+//  - a dormant monitor whose last incident closed >1 week ago (the muted
+//    "last incident" / stale-closed state)
 // `incidents`/`ongoing` drive incident generation; ongoing only applies to
 // sustained kinds (the rest collapse to closed point incidents).
 // ---------------------------------------------------------------------------
@@ -104,6 +106,12 @@ interface UserAlertSeed {
   readonly severity: AlertSeverity
   readonly incidents: number
   readonly ongoing: number
+  /**
+   * Days-ago of the most-recent *closed* incident; older ones walk further back.
+   * Defaults to 1. Set higher (e.g. 10) so a monitor's last incident lands in the
+   * "closed > 1 week ago" (muted) state.
+   */
+  readonly baseDaysAgo?: number
 }
 
 interface UserMonitorSeed {
@@ -273,6 +281,28 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
     ],
   },
   {
+    key: "checkout-latency-regression",
+    slug: "checkout-latency-regression",
+    name: "Checkout latency regression",
+    description:
+      "Resolved over a week ago — every incident is closed and stale, so it surfaces the muted 'last incident' state on the dashboard and an all-muted incidents table.",
+    muted: false,
+    createdDaysAgo: 45,
+    alerts: [
+      {
+        key: "checkout-latency-regression:threshold",
+        kind: "savedSearch.threshold",
+        savedSearchKey: "high-latency",
+        condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 50 } },
+        severity: "medium",
+        incidents: 20,
+        ongoing: 0,
+        // Most recent incident ~10 days ago → "closed > 1 week ago" (muted).
+        baseDaysAgo: 10,
+      },
+    ],
+  },
+  {
     key: "latency-canary",
     slug: "latency-canary",
     name: "Latency canary",
@@ -295,11 +325,11 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
 
 /**
  * Started-at for a closed/historical incident at index `i`. 12 incidents per
- * day, 2h apart, walking back day by day — descending and mostly-distinct so
- * the keyset `(started_at DESC, id DESC)` paginates cleanly.
+ * day, 2h apart, walking back day by day from `baseDaysAgo` — descending and
+ * mostly-distinct so the keyset `(started_at DESC, id DESC)` paginates cleanly.
  */
-const historicalStartedAt = (scope: SeedScope, i: number): Date =>
-  scope.dateDaysAgo(1 + Math.floor(i / 12), (i % 12) * 2, (i * 13) % 60)
+const historicalStartedAt = (scope: SeedScope, i: number, baseDaysAgo = 1): Date =>
+  scope.dateDaysAgo(baseDaysAgo + Math.floor(i / 12), (i % 12) * 2, (i * 13) % 60)
 
 interface GeneratedIncidents {
   readonly incidentRows: (typeof alertIncidents.$inferInsert)[]
@@ -324,7 +354,7 @@ const buildAlertIncidents = (input: {
     const isOngoing = sustained && i < alert.ongoing
     // Ongoing rows sit at the recent edge (so they sort to the top as
     // "Ongoing since …"); closed rows walk back through history.
-    const startedAt = isOngoing ? scope.dateDaysAgo(i, 8, 0) : historicalStartedAt(scope, i)
+    const startedAt = isOngoing ? scope.dateDaysAgo(i, 8, 0) : historicalStartedAt(scope, i, alert.baseDaysAgo)
     const endedAt = isOngoing ? null : sustained ? new Date(startedAt.getTime() + 2 * HOUR_MS) : startedAt
 
     incidentRows.push({

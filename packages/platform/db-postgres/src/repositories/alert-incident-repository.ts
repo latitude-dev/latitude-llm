@@ -6,7 +6,23 @@ import {
   alertIncidentSchema,
 } from "@domain/alerts"
 import { type AlertIncidentId, NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, desc, eq, getTableColumns, gte, inArray, isNull, lt, lte, or, type SQL } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  max,
+  min,
+  or,
+  type SQL,
+} from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
@@ -183,6 +199,32 @@ export const AlertIncidentRepositoryLive = Layer.effect(
               .limit(limit + 1),
           )
           return toKeysetPage(rows.map(toDomain), limit)
+        }),
+      statsByMonitorId: (monitorId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // Same join as listByMonitorId (no deleted_at filter on the alert).
+          const where = and(
+            eq(alertIncidents.organizationId, sqlClient.organizationId),
+            eq(monitorAlerts.monitorId, monitorId),
+          )
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                total: count(),
+                firstStartedAt: min(alertIncidents.startedAt),
+                lastStartedAt: max(alertIncidents.startedAt),
+              })
+              .from(alertIncidents)
+              .innerJoin(monitorAlerts, eq(monitorAlerts.id, alertIncidents.monitorAlertId))
+              .where(where),
+          )
+          const row = rows[0]
+          return {
+            total: row?.total ?? 0,
+            firstStartedAt: row?.firstStartedAt ? new Date(row.firstStartedAt) : null,
+            lastStartedAt: row?.lastStartedAt ? new Date(row.lastStartedAt) : null,
+          }
         }),
       listByMonitorAlertId: ({ monitorAlertId, limit, cursor }) =>
         Effect.gen(function* () {

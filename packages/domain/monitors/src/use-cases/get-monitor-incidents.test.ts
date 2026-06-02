@@ -67,6 +67,7 @@ const buildIncidentRepo = (page: {
   listByProjectId: () => Effect.die("listByProjectId not used"),
   listOpenByKind: () => Effect.die("listOpenByKind not used"),
   listByMonitorId: () => Effect.succeed(page),
+  statsByMonitorId: () => Effect.die("statsByMonitorId not used"),
   listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used"),
 })
 

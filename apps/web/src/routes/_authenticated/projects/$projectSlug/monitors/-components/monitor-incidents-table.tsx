@@ -6,6 +6,7 @@ import {
   type MonitorIncidentRecord,
   useMonitorIncidents,
 } from "../../../../../../domains/monitors/monitors.collection.ts"
+import { IncidentStatus } from "./incident-status.tsx"
 
 const SOURCE_LINK_CLASS = "truncate text-primary hover:underline underline-offset-2"
 
@@ -82,12 +83,7 @@ export function MonitorIncidentsTable({
         header: "Status",
         width: 200,
         minWidth: 150,
-        render: (incident) =>
-          incident.endedAt ? (
-            <Status variant="warning" label={`Closed ${relativeTime(new Date(incident.endedAt))}`} />
-          ) : (
-            <Status variant="destructive" label={`Ongoing since ${relativeTime(new Date(incident.startedAt))}`} />
-          ),
+        render: (incident) => <IncidentStatus startedAtIso={incident.startedAt} endedAtIso={incident.endedAt} />,
       },
       {
         key: "source",

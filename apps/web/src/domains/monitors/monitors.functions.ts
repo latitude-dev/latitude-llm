@@ -1,3 +1,4 @@
+import { AlertIncidentRepository } from "@domain/alerts"
 import { IssueRepository } from "@domain/issues"
 import {
   createMonitorAlertUseCase,
@@ -365,6 +366,37 @@ export const deleteMonitorAlert = createServerFn({ method: "POST" })
 /** Keyset cursor over `(startedAt, id)`; `startedAt` is an ISO string on the wire. */
 const incidentCursorSchema = z.object({ startedAt: z.iso.datetime(), id: z.string() })
 export type MonitorIncidentsCursor = z.infer<typeof incidentCursorSchema>
+
+const getMonitorIncidentStatsInputSchema = z.object({ monitorId: z.string() })
+
+/** Aggregate incident stats for the detail-drawer summary row: total + first/last detected (ISO). */
+export const getMonitorIncidentStats = createServerFn({ method: "GET" })
+  .inputValidator(getMonitorIncidentStatsInputSchema)
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      readonly total: number
+      readonly firstStartedAtIso: string | null
+      readonly lastStartedAtIso: string | null
+    }> => {
+      const { organizationId } = await requireSession()
+      const orgId = OrganizationId(organizationId)
+
+      const stats = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* AlertIncidentRepository
+          return yield* repository.statsByMonitorId(MonitorId(data.monitorId))
+        }).pipe(withPostgres(AlertIncidentRepositoryLive, getPostgresClient(), orgId), withTracing),
+      )
+
+      return {
+        total: stats.total,
+        firstStartedAtIso: stats.firstStartedAt?.toISOString() ?? null,
+        lastStartedAtIso: stats.lastStartedAt?.toISOString() ?? null,
+      }
+    },
+  )
 
 const listMonitorIncidentsInputSchema = z.object({
   projectId: z.string(),

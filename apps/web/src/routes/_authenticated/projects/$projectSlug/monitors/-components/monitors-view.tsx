@@ -1,4 +1,5 @@
 import {
+  Badge,
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableInfiniteScroll,
@@ -8,8 +9,8 @@ import {
   type SortDirection,
   Status,
   Text,
+  Tooltip,
 } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
 import { BellIcon, BellOffIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import type { MonitorListRowRecord, MonitorRecord } from "../../../../../../domains/monitors/monitors.collection.ts"
@@ -17,6 +18,7 @@ import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { IncidentStatus } from "./incident-status.tsx"
 import { MonitorDeleteConfirmModal } from "./monitor-delete-confirm-modal.tsx"
 import { MonitorMuteConfirmModal } from "./monitor-mute-confirm-modal.tsx"
 import { MonitorRenameModal } from "./monitor-rename-modal.tsx"
@@ -80,10 +82,35 @@ function LastIncidentCell({ summary }: { readonly summary: MonitorsTableRow["las
       </Text.H6>
     )
   }
-  if (summary.endedAtIso) {
-    return <Status variant="warning" label={`Closed ${relativeTime(new Date(summary.endedAtIso))}`} />
+  return <IncidentStatus startedAtIso={summary.startedAtIso} endedAtIso={summary.endedAtIso} />
+}
+
+/**
+ * The monitor's first humanized alert ("Alerts when …"), truncated, with a
+ * `+N` tag for the remaining alerts. The tag stays pinned (shrink-0) so it's
+ * always visible — the alert text is what gives up space when the cell is tight.
+ */
+function ConditionCell({ alerts }: { readonly alerts: MonitorRecord["alerts"] }) {
+  const [first, ...rest] = alerts
+  if (!first) {
+    return (
+      <Text.H6 color="foregroundMuted" noWrap>
+        —
+      </Text.H6>
+    )
   }
-  return <Status variant="destructive" label={`Ongoing since ${relativeTime(new Date(summary.startedAtIso))}`} />
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Text.H5 className="min-w-0" noWrap ellipsis>
+        {first.summary}
+      </Text.H5>
+      {rest.length > 0 ? (
+        <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more alerts`}>
+          +{rest.length}
+        </Badge>
+      ) : null}
+    </div>
+  )
 }
 
 export function MonitorsView({
@@ -114,20 +141,33 @@ export function MonitorsView({
   const columns: InfiniteTableColumn<MonitorsTableRow>[] = [
     {
       key: "name",
-      header: "Name",
+      header: "Monitor",
       sortKey: "name",
       width: 420,
       minWidth: 240,
+      maxWidth: 420,
       render: (row) => (
         <div className="flex min-w-0 items-center gap-2">
-          {row.monitor.system ? (
-            <span className="shrink-0">
-              <LatitudeLogo className="h-4 w-4" />
-            </span>
-          ) : null}
-          <Text.H5 className="min-w-0 flex-1" noWrap ellipsis>
+          <Text.H5 className="min-w-0" noWrap ellipsis>
             {row.monitor.name}
           </Text.H5>
+          {row.monitor.system ? (
+            <Tooltip
+              asChild
+              trigger={
+                <Badge
+                  variant="white"
+                  size="small"
+                  className="shrink-0"
+                  aria-label="This monitor is managed by the system"
+                >
+                  <LatitudeLogo className="h-3 w-3" />
+                </Badge>
+              }
+            >
+              This monitor is managed by the system
+            </Tooltip>
+          ) : null}
         </div>
       ),
     },
@@ -147,6 +187,14 @@ export function MonitorsView({
       width: 220,
       minWidth: 180,
       render: (row) => <LastIncidentCell summary={row.lastIncident} />,
+    },
+    {
+      key: "condition",
+      header: "Condition",
+      width: 340,
+      minWidth: 200,
+      maxWidth: 340,
+      render: (row) => <ConditionCell alerts={row.monitor.alerts} />,
     },
     optionsColumn<MonitorsTableRow>({
       getOptions: (row): MenuOption[] => {

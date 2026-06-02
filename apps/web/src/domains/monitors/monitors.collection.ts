@@ -9,6 +9,7 @@ import {
   deleteMonitor,
   deleteMonitorAlert,
   getMonitorBySlug,
+  getMonitorIncidentStats,
   listMonitorIncidents,
   listMonitors,
   type MonitorIncidentRecord,
@@ -44,6 +45,9 @@ const getMonitorQueryKey = (projectId: string, slug: string) => ["monitors", "ge
 
 const getMonitorIncidentsQueryKey = (projectId: string, monitorId: string, limit: number) =>
   ["monitors", "incidents", projectId, monitorId, limit] as const
+
+const getMonitorIncidentStatsQueryKey = (projectId: string, monitorId: string) =>
+  ["monitors", "incident-stats", projectId, monitorId] as const
 
 export function useMonitors(input: {
   readonly projectId: string
@@ -139,6 +143,27 @@ export function useMonitorIncidents(input: {
   )
 
   return { incidents, isLoading, infiniteScroll }
+}
+
+/** Aggregate incident stats for the detail-drawer summary row (total + first/last detected). */
+interface MonitorIncidentStats {
+  readonly total: number
+  readonly firstStartedAtIso: string | null
+  readonly lastStartedAtIso: string | null
+}
+
+/** Fetches a monitor's incident stats (count + history span) for the detail-drawer summary row. */
+export function useMonitorIncidentStats(input: {
+  readonly projectId: string
+  readonly monitorId: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: getMonitorIncidentStatsQueryKey(input.projectId, input.monitorId),
+    queryFn: (): Promise<MonitorIncidentStats> => getMonitorIncidentStats({ data: { monitorId: input.monitorId } }),
+    staleTime: MONITORS_QUERY_STALE_TIME_MS,
+    enabled: (input.enabled ?? true) && Boolean(input.monitorId),
+  })
 }
 
 /**

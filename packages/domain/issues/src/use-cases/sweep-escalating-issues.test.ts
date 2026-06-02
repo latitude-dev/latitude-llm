@@ -52,6 +52,7 @@ const provideRepository = (incidents: readonly AlertIncident[]): AlertIncidentRe
   listOpenByKind: (kind) =>
     kind === "issue.escalating" ? Effect.succeed(incidents) : Effect.die(`unexpected kind ${kind}`),
   listByMonitorId: () => Effect.die("listByMonitorId not used"),
+  statsByMonitorId: () => Effect.die("statsByMonitorId not used"),
   listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used"),
 })
 

@@ -25,6 +25,7 @@ export type {
   ListAlertIncidentsByMonitorAlertIdInput,
   ListAlertIncidentsByMonitorIdInput,
   ListAlertIncidentsByProjectInput,
+  MonitorIncidentStats,
   UpdateAlertIncidentExitDwellInput,
 } from "./ports/alert-incident-repository.ts"
 export { AlertIncidentRepository } from "./ports/alert-incident-repository.ts"
