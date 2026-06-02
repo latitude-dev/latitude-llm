@@ -211,6 +211,7 @@ export const getBetterAuth = () => {
             // same value so consent redirects use the same login URL.
             loginPage: `${webUrl}/login`,
             consentPage: `${webUrl}/auth/consent`,
+            defaultScope: "openid offline_access",
             requirePKCE: true,
             // RFC 7591 dynamic client registration. MCP clients (Claude Code,
             // Cursor, ...) hit `POST /api/auth/mcp/register` before any user
