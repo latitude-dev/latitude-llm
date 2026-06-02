@@ -1,10 +1,10 @@
 import { FULL_CHANGELOG_URL } from "@domain/changelog"
-import { cn, DotIndicator, Icon, Popover, PopoverContent, PopoverTrigger, Text } from "@repo/ui"
+import { cn, Icon, Popover, PopoverContent, PopoverTrigger, Text } from "@repo/ui"
 import { ExternalLink, Megaphone } from "lucide-react"
 import { useState } from "react"
 import { useChangelogEntries } from "../../../../domains/changelog/changelog.collection.ts"
 import type { ChangelogEntryRecord } from "../../../../domains/changelog/changelog.functions.ts"
-import { changelogEntryUrl, isRecentlyPublished } from "./changelog-utils.ts"
+import { changelogEntryUrl } from "./changelog-utils.ts"
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" })
 
@@ -97,14 +97,12 @@ function WhatsNewContent() {
 export function WhatsNewButton({ collapsed = false }: { collapsed?: boolean }) {
   const [open, setOpen] = useState(false)
   const { entries, isLoading } = useChangelogEntries()
-  const now = Date.now()
-  const hasRecentEntry = entries.some((entry) => isRecentlyPublished(entry, now))
 
   if (!isLoading && entries.length === 0) {
     return null
   }
 
-  const triggerClassName = cn("relative rounded-lg transition-colors hover:bg-muted", {
+  const triggerClassName = cn("rounded-lg transition-colors hover:bg-muted", {
     "flex h-10 w-10 items-center justify-center": collapsed,
     "flex w-full items-center gap-2 px-2 py-2 text-left": !collapsed,
   })
@@ -123,9 +121,6 @@ export function WhatsNewButton({ collapsed = false }: { collapsed?: boolean }) {
             <Text.H5M color="foregroundMuted" ellipsis className="min-w-0 flex-1">
               What's new
             </Text.H5M>
-          ) : null}
-          {hasRecentEntry ? (
-            <DotIndicator variant="primary" size="md" ping className={cn({ "absolute right-2 top-2": collapsed })} />
           ) : null}
         </button>
       </PopoverTrigger>
