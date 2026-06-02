@@ -29,6 +29,7 @@ import {
 } from '../../tests/factories'
 import { getCommitChanges, changesPresenter } from './getChanges'
 import { mergeCommit } from './merge'
+import { DocumentVersionsRepository } from '../../repositories'
 import { deleteDocumentTrigger } from '../documentTriggers/delete'
 
 let project: Project
@@ -114,6 +115,57 @@ describe('getCommitChanges', () => {
       ])
       expect(changes.documents.clean).toEqual(changes.documents.all)
       expect(changes.documents.errors).toEqual([])
+    })
+
+    it('reports a referencing parent as changed without persisting it into the draft', async () => {
+      // Make doc2 reference folder1/doc1 and publish, so the reference is live.
+      await updateDocument({
+        document: documents['doc2']!,
+        content: helpers.createPrompt({
+          provider: 'openai',
+          content: '<prompt path="folder1/doc1" />\nPARENT',
+        }),
+        commit: draftCommit,
+      }).then((r) => r.unwrap())
+      await mergeCommit(draftCommit).then((r) => r.unwrap())
+
+      // New draft: edit only the child.
+      const { commit: draft2 } = await createDraft({ project, user })
+      await updateDocument({
+        document: documents['folder1/doc1']!,
+        content: helpers.createPrompt({
+          provider: 'openai',
+          content: 'content1-v2',
+        }),
+        commit: draft2,
+      }).then((r) => r.unwrap())
+
+      const changes = await getCommitChanges({
+        commit: draft2,
+        workspace,
+      }).then((r) => r.unwrap())
+
+      // Both the edited child and the referencing parent are reported as changed.
+      expect(changes.documents.all).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: 'folder1/doc1',
+            changeType: ModifiedDocumentType.Updated,
+          }),
+          expect.objectContaining({
+            path: 'doc2',
+            changeType: ModifiedDocumentType.Updated,
+          }),
+        ]),
+      )
+
+      // ...but the parent is NOT snapshotted into the draft: only the authored
+      // child has a persisted row, so the parent keeps tracking Live.
+      const docsScope = new DocumentVersionsRepository(workspace.id)
+      const persisted = await docsScope
+        .listCommitChanges(draft2)
+        .then((r) => r.unwrap())
+      expect(persisted.map((d) => d.path)).toEqual(['folder1/doc1'])
     })
 
     it('shows created documents', async () => {

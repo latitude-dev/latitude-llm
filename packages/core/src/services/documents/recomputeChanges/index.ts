@@ -256,7 +256,8 @@ export async function computeChanges(
       { workspaceId: workspace.id },
       tx,
     )
-    if (agentToolsMapResult.error) return Result.error(agentToolsMapResult.error)
+    if (agentToolsMapResult.error)
+      return Result.error(agentToolsMapResult.error)
 
     const { documents: changedDocuments, errors } =
       await resolveDocumentChanges({

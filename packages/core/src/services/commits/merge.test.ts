@@ -555,7 +555,10 @@ describe('reference-only parent documents across parallel versions', () => {
     const parent = documents.find((d) => d.path === 'parent')!
 
     // Draft D: edit the child only
-    const { commit: draftD } = await ctx.factories.createDraft({ project, user })
+    const { commit: draftD } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
     await updateDocument({
       commit: draftD,
       document: child,
@@ -567,11 +570,16 @@ describe('reference-only parent documents across parallel versions', () => {
 
     // Listing the draft changes is what (today) snapshots the parent into the
     // draft as a frozen copy of its current content.
-    await getCommitChanges({ workspace, commit: draftD }).then((r) => r.unwrap())
+    await getCommitChanges({ workspace, commit: draftD }).then((r) =>
+      r.unwrap(),
+    )
 
     // A parallel version is published to Live that changes the parent's OWN
     // content.
-    const { commit: draftP } = await ctx.factories.createDraft({ project, user })
+    const { commit: draftP } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
     await updateDocument({
       commit: draftP,
       document: parent,
@@ -606,7 +614,10 @@ describe('reference-only parent documents across parallel versions', () => {
     const child = documents.find((d) => d.path === 'child')!
     const parent = documents.find((d) => d.path === 'parent')!
 
-    const { commit: draftD } = await ctx.factories.createDraft({ project, user })
+    const { commit: draftD } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
     await updateDocument({
       commit: draftD,
       document: child,
@@ -617,10 +628,15 @@ describe('reference-only parent documents across parallel versions', () => {
     }).then((r) => r.unwrap())
 
     // Snapshot trigger (change list)
-    await getCommitChanges({ workspace, commit: draftD }).then((r) => r.unwrap())
+    await getCommitChanges({ workspace, commit: draftD }).then((r) =>
+      r.unwrap(),
+    )
 
     // Parallel Live change to the parent's own content
-    const { commit: draftP } = await ctx.factories.createDraft({ project, user })
+    const { commit: draftP } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
     await updateDocument({
       commit: draftP,
       document: parent,
@@ -666,7 +682,10 @@ describe('reference-only parent documents across parallel versions', () => {
     const grandparent = documents.find((d) => d.path === 'grandparent')!
 
     // Draft D: edit the child only
-    const { commit: draftD } = await ctx.factories.createDraft({ project, user })
+    const { commit: draftD } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
     await updateDocument({
       commit: draftD,
       document: child,
@@ -677,10 +696,15 @@ describe('reference-only parent documents across parallel versions', () => {
     }).then((r) => r.unwrap())
 
     // Snapshot trigger — freezes both parent and grandparent into the draft
-    await getCommitChanges({ workspace, commit: draftD }).then((r) => r.unwrap())
+    await getCommitChanges({ workspace, commit: draftD }).then((r) =>
+      r.unwrap(),
+    )
 
     // Parallel Live change to the grandparent's own content
-    const { commit: draftP } = await ctx.factories.createDraft({ project, user })
+    const { commit: draftP } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
     await updateDocument({
       commit: draftP,
       document: grandparent,
@@ -710,7 +734,10 @@ describe('reference-only parent documents across parallel versions', () => {
     const docsScope = new DocumentVersionsRepository(workspace.id)
     const child = documents.find((d) => d.path === 'child')!
 
-    const { commit: draftD } = await ctx.factories.createDraft({ project, user })
+    const { commit: draftD } = await ctx.factories.createDraft({
+      project,
+      user,
+    })
     await updateDocument({
       commit: draftD,
       document: child,
