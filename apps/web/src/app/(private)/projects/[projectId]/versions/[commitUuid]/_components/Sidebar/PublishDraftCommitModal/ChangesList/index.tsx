@@ -227,6 +227,16 @@ export function ChangesList({
     })
   }, [isLoading, changes, documents])
 
+  // Deleted documents are absent from `documents` (it lists the commit's live
+  // documents), so they never appear in `documentsList`. Surface them as their
+  // own rows from the change set.
+  const deletedChanges = useMemo(() => {
+    if (isLoading) return []
+    return changes.documents.all.filter(
+      (cd) => !documentsList.some((d) => d.documentUuid === cd.documentUuid),
+    )
+  }, [isLoading, changes.documents.all, documentsList])
+
   if (isLoading) {
     return (
       <ul className='flex flex-col gap-1'>
@@ -250,6 +260,17 @@ export function ChangesList({
           onSelect={onSelect}
           projectId={projectId}
           commitUuid={commit?.uuid ?? ''}
+        />
+      ))}
+      {deletedChanges.map((change) => (
+        <ListItem
+          key={change.documentUuid}
+          icon='file'
+          label={change.path}
+          hasIssues={change.errors > 0}
+          changeType={change.changeType}
+          selected={selected?.documentUuid === change.documentUuid}
+          onSelect={() => onSelect(change)}
         />
       ))}
     </ul>
