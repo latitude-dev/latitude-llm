@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router"
-import { RadarIcon } from "lucide-react"
+import { BellRingIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMonitors } from "../../../domains/monitors/monitors.collection.ts"
@@ -35,7 +35,7 @@ export function useMonitorSearchCommands(query: string): readonly PaletteCommand
       return {
         id: `monitor-result:${monitor.id}`,
         title: monitor.name,
-        icon: RadarIcon,
+        icon: BellRingIcon,
         section: "search",
         ...(subtitle ? { subtitle } : {}),
         keywords: monitor.name,

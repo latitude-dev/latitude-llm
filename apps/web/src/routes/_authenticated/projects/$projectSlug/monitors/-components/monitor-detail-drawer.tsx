@@ -11,6 +11,7 @@ import {
   type StatusProps,
   Text,
   Tooltip,
+  useToast,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import {
@@ -18,13 +19,16 @@ import {
   ArrowUpIcon,
   BellIcon,
   BellOffIcon,
+  LinkIcon,
   MegaphoneIcon,
   PencilIcon,
   PlusIcon,
   ShieldAlertIcon,
   XIcon,
 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
+import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import type { MonitorAlertRecord, MonitorRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
 import { MonitorAlertDeleteConfirmModal } from "./monitor-alert-delete-confirm-modal.tsx"
@@ -146,12 +150,46 @@ export function MonitorDetailDrawer({
   readonly canNavigateNext: boolean
   readonly canNavigatePrev: boolean
 }) {
+  const { toast } = useToast()
   const [muteConfirmOpen, setMuteConfirmOpen] = useState(false)
   // `null` = closed; `{ alert: null }` = add; `{ alert }` = edit that alert.
   const [alertModal, setAlertModal] = useState<{ readonly alert: MonitorAlertRecord | null } | null>(null)
   const [sensitivityAlert, setSensitivityAlert] = useState<MonitorAlertRecord | null>(null)
   const [alertToDelete, setAlertToDelete] = useState<MonitorAlertRecord | null>(null)
   const muted = monitor.mutedAt != null
+
+  // Contribute mute/unmute + copy-link to the command palette while this monitor is open,
+  // reusing the same confirm modal the toolbar button triggers (mirrors the issue lifecycle
+  // actions).
+  const paletteCommands = useMemo<readonly PaletteCommand[]>(
+    () => [
+      {
+        id: `monitor:${monitor.id}:toggle-mute`,
+        title: muted ? "Unmute monitor" : "Mute monitor",
+        icon: muted ? BellIcon : BellOffIcon,
+        section: "context",
+        group: "Monitor",
+        keywords: muted ? "unmute monitor resume notifications bell" : "mute monitor silence notifications bell",
+        perform: () => setMuteConfirmOpen(true),
+      },
+      {
+        id: `monitor:${monitor.id}:copy-link`,
+        title: "Copy monitor link",
+        icon: LinkIcon,
+        section: "context",
+        group: "Monitor",
+        keywords: "copy link url share",
+        perform: () => {
+          void navigator.clipboard.writeText(
+            `${window.location.origin}/projects/${projectSlug}/monitors?monitorSlug=${monitor.slug}`,
+          )
+          toast({ description: "Monitor link copied to clipboard." })
+        },
+      },
+    ],
+    [monitor.id, monitor.slug, muted, projectSlug, toast],
+  )
+  useRegisterCommands(paletteCommands)
 
   // System monitors only expose the issue.escalating sensitivity (its own modal);
   // every other editable alert is a user saved-search alert (the alert-form modal).

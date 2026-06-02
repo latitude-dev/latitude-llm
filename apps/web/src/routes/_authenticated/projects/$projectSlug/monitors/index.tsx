@@ -2,6 +2,8 @@ import { Button, Icon, Input, Text, useValueWithDefault } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 import { BellPlusIcon, LockIcon, SearchIcon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
+import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
+import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useMonitors } from "../../../../../domains/monitors/monitors.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -81,6 +83,24 @@ function MonitorsPageContent() {
   })
   const sorting = useMemo(() => parseSorting(rawSorting), [rawSorting])
   const setSorting = useCallback((next: MonitorsTableSorting) => setRawSorting(serializeSorting(next)), [setRawSorting])
+
+  // Contribute "Create monitor" to the command palette while the Monitors page is mounted
+  // (so it's implicitly gated to this page and the monitors flag), reusing the create modal.
+  const paletteCommands = useMemo<readonly PaletteCommand[]>(
+    () => [
+      {
+        id: "monitor:create",
+        title: "Create monitor",
+        icon: BellPlusIcon,
+        section: "context",
+        group: "Monitors",
+        keywords: "create monitor new add alert",
+        perform: () => setCreateOpen(true),
+      },
+    ],
+    [],
+  )
+  useRegisterCommands(paletteCommands)
 
   useDebounce(
     () => {
