@@ -50,6 +50,11 @@ export function changesPresenter({
       if (previousDoc!.path !== changedDoc.path) {
         return ModifiedDocumentType.UpdatedPath
       }
+      // The document is in the changed set but its own content is unchanged:
+      // it changed only because a referenced prompt changed.
+      if (previousDoc!.content === changedDoc.content) {
+        return ModifiedDocumentType.UpdatedByReference
+      }
       return ModifiedDocumentType.Updated
     })()
 

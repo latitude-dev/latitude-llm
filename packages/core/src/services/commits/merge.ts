@@ -1,5 +1,6 @@
 import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 
+import { ModifiedDocumentType } from '@latitude-data/constants'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
@@ -220,7 +221,13 @@ export async function mergeCommit(
         errors: {},
       }).map((doc) => ({
         path: doc.path,
-        changeType: doc.changeType,
+        // The published-changes event is a public contract (webhooks). Collapse
+        // the UI-only `UpdatedByReference` back to `Updated` so consumers keep
+        // seeing the existing set of change types.
+        changeType:
+          doc.changeType === ModifiedDocumentType.UpdatedByReference
+            ? ModifiedDocumentType.Updated
+            : doc.changeType,
       }))
 
       const lastMergedCommit = await tx

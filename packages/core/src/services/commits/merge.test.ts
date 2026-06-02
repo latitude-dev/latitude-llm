@@ -481,6 +481,53 @@ describe('mergeCommit', () => {
       expect(result.ok).toBe(true)
     })
 
+    it('reports a referencing parent as Updated (not UpdatedByReference) in the published event', async (ctx) => {
+      const { project, user, documents, providers } =
+        await ctx.factories.createProject({
+          providers: [{ type: Providers.OpenAI, name: 'openai' }],
+          documents: {
+            child: ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: 'CHILD_V1',
+            }),
+            parent: ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: '<prompt path="child" />\nPARENT',
+            }),
+          },
+        })
+
+      const { commit } = await ctx.factories.createDraft({ project, user })
+      await updateDocument({
+        commit,
+        document: documents.find((d) => d.path === 'child')!,
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'CHILD_V2',
+        }),
+      }).then((r) => r.unwrap())
+
+      vi.mocked(publisherModule.publisher.publishLater).mockClear()
+      await mergeCommit(commit).then((r) => r.unwrap())
+      await waitForTransactionCallbacks()
+
+      const calls = vi.mocked(publisherModule.publisher.publishLater).mock.calls
+      const commitPublishedCall = calls.find(
+        (call) => call[0].type === 'commitPublished',
+      )
+      expect(commitPublishedCall).toBeDefined()
+      const changedDocs = commitPublishedCall![0].data.changedDocuments
+      // The parent is reported, but coalesced to Updated for the public event.
+      expect(changedDocs).toContainEqual({
+        path: 'parent',
+        changeType: ModifiedDocumentType.Updated,
+      })
+      expect(changedDocs).toContainEqual({
+        path: 'child',
+        changeType: ModifiedDocumentType.Updated,
+      })
+    })
+
     it('publishes commitMerged event alongside commitPublished', async (ctx) => {
       const { project, workspace, user, providers } =
         await ctx.factories.createProject()

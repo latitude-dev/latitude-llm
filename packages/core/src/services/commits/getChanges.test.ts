@@ -145,7 +145,8 @@ describe('getCommitChanges', () => {
         workspace,
       }).then((r) => r.unwrap())
 
-      // Both the edited child and the referencing parent are reported as changed.
+      // The edited child is a normal content Update; the referencing parent is
+      // reported as UpdatedByReference (its own content didn't change).
       expect(changes.documents.all).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -154,7 +155,7 @@ describe('getCommitChanges', () => {
           }),
           expect.objectContaining({
             path: 'doc2',
-            changeType: ModifiedDocumentType.Updated,
+            changeType: ModifiedDocumentType.UpdatedByReference,
           }),
         ]),
       )
