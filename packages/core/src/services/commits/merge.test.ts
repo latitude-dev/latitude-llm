@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi, type TestContext } from 'vitest'
 
 import { database } from '../../client'
 import { ModifiedDocumentType, Providers } from '@latitude-data/constants'
@@ -532,7 +532,7 @@ describe('reference-only parent documents across parallel versions', () => {
   // draft, and publishing the draft reverts any parallel change made to the
   // parent in the meantime.
 
-  async function setupParentChild(ctx: any) {
+  async function setupParentChild(ctx: TestContext) {
     return ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {

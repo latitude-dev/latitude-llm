@@ -12,7 +12,7 @@ import {
   UnprocessableEntityError,
 } from '../../lib/errors'
 import { commits } from '../../schema/models/commits'
-import { recomputeChanges } from '../documents'
+import { computeChanges, recomputeChanges } from '../documents'
 import { pingProjectUpdate } from '../projects'
 import { handleTriggerMerge } from '../documentTriggers/handleMerge'
 import {
@@ -27,8 +27,6 @@ import { captureException } from '../../utils/datadogCapture'
 
 type ValidationResult = {
   workspace: Workspace
-  changedDocuments: DocumentVersion[]
-  headDocuments: DocumentVersion[]
 }
 
 /**
@@ -115,7 +113,10 @@ export async function mergeCommit(
         return Result.error(new NotFoundError('Workspace not found'))
       }
 
-      const recomputedResults = await recomputeChanges(
+      // Validate against an in-memory computation only. The actual snapshot is
+      // materialized later, inside the locked phase, against the then-current
+      // head (see phase 3) so a parallel publish is never reverted.
+      const recomputedResults = await computeChanges(
         { draft: commit, workspace },
         transaction,
       )
@@ -174,14 +175,13 @@ export async function mergeCommit(
         )
       }
 
-      return Result.ok({ workspace, changedDocuments, headDocuments })
+      return Result.ok({ workspace })
     },
   )
 
   if (!Result.isOk(validationResult)) return validationResult
 
-  const { workspace, changedDocuments, headDocuments } =
-    validationResult.unwrap()
+  const { workspace } = validationResult.unwrap()
 
   // Phase 2: handle trigger merge outside of any active transaction
   const handleTriggerMergeResult = await handleTriggerMerge(
@@ -194,14 +194,8 @@ export async function mergeCommit(
 
   if (!Result.isOk(handleTriggerMergeResult)) return handleTriggerMergeResult
 
-  const documentChanges: CommitPublishedDocumentChange[] = changesPresenter({
-    currentCommitChanges: changedDocuments,
-    previousCommitDocuments: headDocuments,
-    errors: {},
-  }).map((doc) => ({
-    path: doc.path,
-    changeType: doc.changeType,
-  }))
+  // Computed inside the locked phase below from the freshly materialized state.
+  let documentChanges: CommitPublishedDocumentChange[] = []
 
   // Phase 3: finalize merge in a new short transaction
   return transaction.call<Commit>(
@@ -209,6 +203,25 @@ export async function mergeCommit(
       await tx.execute(
         sql`SELECT pg_advisory_xact_lock(${sql.raw(String(commit.projectId))})`,
       )
+
+      // Materialize the draft's changes against the current head while holding
+      // the project lock. Reference-only parents are snapshotted from the latest
+      // Live content, so a version published in parallel since validation is not
+      // reverted.
+      const recomputed = await recomputeChanges(
+        { draft: commit, workspace },
+        transaction,
+      )
+      if (recomputed.error) return recomputed
+
+      documentChanges = changesPresenter({
+        currentCommitChanges: recomputed.value.changedDocuments,
+        previousCommitDocuments: recomputed.value.headDocuments,
+        errors: {},
+      }).map((doc) => ({
+        path: doc.path,
+        changeType: doc.changeType,
+      }))
 
       const lastMergedCommit = await tx
         .select()
