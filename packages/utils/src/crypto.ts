@@ -36,6 +36,27 @@ export const hash = (value: unknown): Effect.Effect<string, CryptoError> =>
     catch: (cause) => new CryptoError({ operation: "hash", cause }),
   })
 
+export const randomHex = (byteLength: number): string => hexEncode(crypto.getRandomValues(new Uint8Array(byteLength)))
+
+export const hmacSha256Hex = (input: {
+  readonly key: string
+  readonly message: string
+}): Effect.Effect<string, CryptoError> =>
+  Effect.tryPromise({
+    try: async () => {
+      const cryptoKey = await crypto.subtle.importKey(
+        "raw",
+        encodeUtf8(input.key),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+      )
+      const signature = await crypto.subtle.sign("HMAC", cryptoKey, encodeUtf8(input.message))
+      return hexEncode(new Uint8Array(signature))
+    },
+    catch: (cause) => new CryptoError({ operation: "hmacSha256Hex", cause }),
+  })
+
 const ALGORITHM = "AES-GCM"
 const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16

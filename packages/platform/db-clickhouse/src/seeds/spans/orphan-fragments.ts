@@ -102,11 +102,11 @@ interface BuildSpansArgs {
   readonly spec: OrphanFragmentSpec
 }
 
-function buildOrphanFragmentTraceSpans({ scope, spec }: BuildSpansArgs): SpanRow[] {
-  const traceId = scope.traceHex(spec.traceKey)
-  const rootSpanId = scope.spanHex(`${spec.traceKey}-root`)
-  const middlewareSpanId = scope.spanHex(`${spec.traceKey}-mw`)
-  const llmSpanId = scope.spanHex(`${spec.traceKey}-llm`)
+async function buildOrphanFragmentTraceSpans({ scope, spec }: BuildSpansArgs): Promise<SpanRow[]> {
+  const traceId = await scope.traceHex(spec.traceKey)
+  const rootSpanId = await scope.spanHex(`${spec.traceKey}-root`)
+  const middlewareSpanId = await scope.spanHex(`${spec.traceKey}-mw`)
+  const llmSpanId = await scope.spanHex(`${spec.traceKey}-llm`)
 
   // Outer wrapper starts at the anchor; middleware and LLM nest inside it.
   // Durations chosen so end_time of children is strictly before parent's end.
@@ -273,8 +273,9 @@ function buildOrphanFragmentTraceSpans({ scope, spec }: BuildSpansArgs): SpanRow
   return [httpWrapper, middleware, llm]
 }
 
-function buildAllOrphanFragmentSpans(scope: SeedScope): SpanRow[] {
-  return ORPHAN_FRAGMENT_SPECS.flatMap((spec) => buildOrphanFragmentTraceSpans({ scope, spec }))
+async function buildAllOrphanFragmentSpans(scope: SeedScope): Promise<SpanRow[]> {
+  const spans = await Promise.all(ORPHAN_FRAGMENT_SPECS.map((spec) => buildOrphanFragmentTraceSpans({ scope, spec })))
+  return spans.flat()
 }
 
 const seedOrphanFragments: Seeder = {
@@ -282,13 +283,13 @@ const seedOrphanFragments: Seeder = {
   run: (ctx) =>
     Effect.gen(function* () {
       // Sentinel: the trace_id of the first deterministic mixed-binding trace.
-      const sentinel = ctx.scope.traceHex(ORPHAN_FRAGMENT_SPECS[0]!.traceKey)
+      const sentinel = yield* Effect.promise(() => ctx.scope.traceHex(ORPHAN_FRAGMENT_SPECS[0]!.traceKey))
       const present = yield* isSentinelPresent(ctx.client, "spans", "trace_id = {sentinel:String}", { sentinel })
       if (present) {
         if (!ctx.quiet) console.log("  -> spans/orphan-fragments: already seeded, skipping")
         return
       }
-      const spans = buildAllOrphanFragmentSpans(ctx.scope)
+      const spans = yield* Effect.promise(() => buildAllOrphanFragmentSpans(ctx.scope))
       yield* insertJsonEachRow(ctx.client, "spans", spans)
       if (!ctx.quiet) {
         console.log(

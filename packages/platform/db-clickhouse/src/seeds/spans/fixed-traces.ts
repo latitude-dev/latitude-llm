@@ -214,7 +214,7 @@ function createTau2ToolSpan(opts: {
   }
 }
 
-function createCompatibilityChatSpan(opts: {
+async function createCompatibilityChatSpan(opts: {
   scope: SeedScope
   traceKey: string
   index: number
@@ -225,10 +225,10 @@ function createCompatibilityChatSpan(opts: {
   metadata: Record<string, string>
   serviceName?: string
   systemInstruction?: string
-}): SpanRow {
+}): Promise<SpanRow> {
   const start = opts.scope.dateDaysAgo(opts.daysAgo, 10 + opts.index, 0)
-  const traceId = opts.scope.traceHex(opts.traceKey, opts.index)
-  const spanId = opts.scope.spanHex(opts.traceKey, opts.index)
+  const traceId = await opts.scope.traceHex(opts.traceKey, opts.index)
+  const spanId = await opts.scope.spanHex(opts.traceKey, opts.index)
   const inputMessages: Tau2Message[] = [{ role: "user", parts: [{ type: "text", content: opts.userPrompt }] }]
   const outputMessages: Tau2Message[] = [
     { role: "assistant", parts: [{ type: "text", content: opts.assistantResponse }] },
@@ -293,7 +293,7 @@ function createCompatibilityChatSpan(opts: {
   }
 }
 
-export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
+export async function buildCompatibilitySupportSpans(scope: SeedScope): Promise<SpanRow[]> {
   const specs = [
     {
       traceKey: "lifecycle",
@@ -357,16 +357,16 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
     },
   ] as const
 
-  return specs.map((spec) => createCompatibilityChatSpan({ scope, ...spec }))
+  return Promise.all(specs.map((spec) => createCompatibilityChatSpan({ scope, ...spec })))
 }
 
-function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
+async function buildTau2TrajectorySpans(scope: SeedScope): Promise<SpanRow[]> {
   const spans: SpanRow[] = []
 
-  TAU2_SEED_TRAJECTORIES.forEach((trajectory, trajectoryIndex) => {
+  for (const [trajectoryIndex, trajectory] of TAU2_SEED_TRAJECTORIES.entries()) {
     const messages: readonly Tau2SeedTrajectoryMessage[] = trajectory.messages
-    const traceId = scope.traceHex("tau2-trajectory", trajectoryIndex)
-    const rootSpanId = scope.spanHex("tau2-trajectory-root", trajectoryIndex)
+    const traceId = await scope.traceHex("tau2-trajectory", trajectoryIndex)
+    const rootSpanId = await scope.spanHex("tau2-trajectory-root", trajectoryIndex)
     const serviceName = `tau2-${trajectory.domain}-support-agent`
     const tags = ["support", "tau2-bench", trajectory.domain, trajectory.outcome]
     const metadata = {
@@ -472,7 +472,7 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
           createTau2LlmSpan({
             scope,
             traceId,
-            spanId: scope.spanHex("tau2-trajectory", trajectoryIndex * 1000 + spanIndex++),
+            spanId: await scope.spanHex("tau2-trajectory", trajectoryIndex * 1000 + spanIndex++),
             parentSpanId: rootSpanId,
             startTime: cursor,
             durationMs,
@@ -496,7 +496,7 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
         createTau2ToolSpan({
           scope,
           traceId,
-          spanId: scope.spanHex("tau2-trajectory", trajectoryIndex * 1000 + spanIndex++),
+          spanId: await scope.spanHex("tau2-trajectory", trajectoryIndex * 1000 + spanIndex++),
           parentSpanId: rootSpanId,
           startTime: cursor,
           durationMs: 180,
@@ -528,13 +528,13 @@ function buildTau2TrajectorySpans(scope: SeedScope): SpanRow[] {
     root.input_messages = JSON.stringify(rootInputMessages)
     root.output_messages = JSON.stringify(rootOutputMessages)
     root.end_time = formatClickHouseTimestamp(new Date(cursor.getTime() + 50))
-  })
+  }
 
   return spans
 }
 
-function buildAllFixedSpans(scope: SeedScope): SpanRow[] {
-  return [...buildTau2TrajectorySpans(scope), ...buildCompatibilitySupportSpans(scope)]
+async function buildAllFixedSpans(scope: SeedScope): Promise<SpanRow[]> {
+  return [...(await buildTau2TrajectorySpans(scope)), ...(await buildCompatibilitySupportSpans(scope))]
 }
 
 const seedFixedTraces: Seeder = {
@@ -543,13 +543,13 @@ const seedFixedTraces: Seeder = {
     Effect.gen(function* () {
       // Sentinel: the first deterministic tau2 trace_id. Present iff this
       // seeder has run before against the current scope.
-      const sentinel = ctx.scope.traceHex("tau2-trajectory", 0)
+      const sentinel = yield* Effect.promise(() => ctx.scope.traceHex("tau2-trajectory", 0))
       const present = yield* isSentinelPresent(ctx.client, "spans", "trace_id = {sentinel:String}", { sentinel })
       if (present) {
         if (!ctx.quiet) console.log("  -> spans/fixed-traces: already seeded, skipping")
         return
       }
-      const allFixedSpans = buildAllFixedSpans(ctx.scope)
+      const allFixedSpans = yield* Effect.promise(() => buildAllFixedSpans(ctx.scope))
       yield* insertJsonEachRow(ctx.client, "spans", allFixedSpans)
       if (!ctx.quiet) console.log(`  -> spans/fixed-traces: ${allFixedSpans.length} deterministic tau2 spans`)
     }),

@@ -131,7 +131,7 @@ const seedIncidentNotifications: Seeder = {
             const idempotencyKey = buildIdempotencyKey({ kind: "incident.event", payload })
             for (const member of orgMembers) {
               rows.push({
-                id: NotificationId(ctx.scope.cuid(`notification:${incident.id}:${member.userId}:event`)),
+                id: NotificationId(await ctx.scope.cuid(`notification:${incident.id}:${member.userId}:event`)),
                 organizationId: incident.organizationId,
                 userId: member.userId,
                 kind: "incident.event",
@@ -159,7 +159,7 @@ const seedIncidentNotifications: Seeder = {
           const openedKey = buildIdempotencyKey({ kind: "incident.opened", payload: openedPayload })
           for (const member of orgMembers) {
             rows.push({
-              id: NotificationId(ctx.scope.cuid(`notification:${incident.id}:${member.userId}:opened`)),
+              id: NotificationId(await ctx.scope.cuid(`notification:${incident.id}:${member.userId}:opened`)),
               organizationId: incident.organizationId,
               userId: member.userId,
               kind: "incident.opened",
@@ -186,7 +186,7 @@ const seedIncidentNotifications: Seeder = {
             const closedKey = buildIdempotencyKey({ kind: "incident.closed", payload: closedPayload })
             for (const member of orgMembers) {
               rows.push({
-                id: NotificationId(ctx.scope.cuid(`notification:${incident.id}:${member.userId}:closed`)),
+                id: NotificationId(await ctx.scope.cuid(`notification:${incident.id}:${member.userId}:closed`)),
                 organizationId: incident.organizationId,
                 userId: member.userId,
                 kind: "incident.closed",

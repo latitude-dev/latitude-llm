@@ -15,16 +15,16 @@ type SimulationRow = typeof simulations.$inferInsert
  * seeder forward (the demo project's `evaluation:warranty-active`
  * resolves to the same fresh id on both sides of the link).
  */
-const buildSimulationRows = (scope: SeedScope) => {
+const buildSimulationRows = async (scope: SeedScope) => {
   const simulationDate = (daysAgo: number, hour: number, minute = 0): Date => scope.dateDaysAgo(daysAgo, hour, minute)
   return [
     {
-      id: SimulationId(scope.cuid("simulation:warranty")),
+      id: SimulationId(await scope.cuid("simulation:warranty")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       name: "Acme Assist Warranty Regression",
-      dataset: scope.cuid("dataset:warranty"),
-      evaluations: [scope.cuid("evaluation:warranty-active"), scope.cuid("evaluation:warranty-archived")],
+      dataset: await scope.cuid("dataset:warranty"),
+      evaluations: [await scope.cuid("evaluation:warranty-active"), await scope.cuid("evaluation:warranty-archived")],
       passed: true,
       errored: false,
       metadata: {
@@ -40,12 +40,12 @@ const buildSimulationRows = (scope: SeedScope) => {
       updatedAt: simulationDate(6, 9, 6),
     },
     {
-      id: SimulationId(scope.cuid("simulation:combination")),
+      id: SimulationId(await scope.cuid("simulation:combination")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       name: "Acme Assist Combination Safety Regression",
-      dataset: scope.cuid("dataset:combination"),
-      evaluations: [scope.cuid("evaluation:combination")],
+      dataset: await scope.cuid("dataset:combination"),
+      evaluations: [await scope.cuid("evaluation:combination")],
       passed: true,
       errored: false,
       metadata: {
@@ -61,12 +61,12 @@ const buildSimulationRows = (scope: SeedScope) => {
       updatedAt: simulationDate(4, 13, 24),
     },
     {
-      id: SimulationId(scope.cuid("simulation:errored")),
+      id: SimulationId(await scope.cuid("simulation:errored")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       name: "Acme Assist Logistics Loader Smoke Test",
       dataset: SIMULATION_DATASET_CUSTOM_SENTINEL,
-      evaluations: [scope.cuid("evaluation:combination")],
+      evaluations: [await scope.cuid("evaluation:combination")],
       passed: false,
       errored: true,
       metadata: {
@@ -90,7 +90,7 @@ const seedSimulations: Seeder = {
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
-        const simulationRows = buildSimulationRows(ctx.scope)
+        const simulationRows = await buildSimulationRows(ctx.scope)
         for (const row of simulationRows) {
           const { id, ...set } = row
           await ctx.db.insert(simulations).values(row).onConflictDoUpdate({

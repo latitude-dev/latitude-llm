@@ -19,7 +19,7 @@ const require = createRequire(import.meta.url)
 
 const EMBEDDING_BATCH_SIZE = 64
 
-type IssueLinkedScoreSeedRow = ReturnType<typeof buildIssueLinkedScoreSeedRows>[number]
+type IssueLinkedScoreSeedRow = Awaited<ReturnType<typeof buildIssueLinkedScoreSeedRows>>[number]
 type EmbeddedIssueLinkedScoreSeedRow = IssueLinkedScoreSeedRow & {
   readonly embedding: readonly number[]
 }
@@ -35,12 +35,12 @@ const NAMED_ISSUE_KEYS = [
   "flagger",
 ] as const
 
-export const fixtureScopedId = (index: number, scope: SeedScope): string =>
+export const fixtureScopedId = (index: number, scope: SeedScope): Promise<string> =>
   index < NAMED_ISSUE_KEYS.length
     ? scope.cuid(`issue:${NAMED_ISSUE_KEYS[index]}`)
     : scope.cuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}`)
 
-const fixtureScopedUuid = (index: number, scope: SeedScope): string =>
+const fixtureScopedUuid = (index: number, scope: SeedScope): Promise<string> =>
   index < NAMED_ISSUE_KEYS.length
     ? scope.uuid(`issue:${NAMED_ISSUE_KEYS[index]}:uuid`)
     : scope.uuid(`issue:extra:${index - NAMED_ISSUE_KEYS.length}:uuid`)
@@ -273,7 +273,7 @@ const seedIssues: Seeder = {
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
-        const issueLinkedScoreSeedRows = buildIssueLinkedScoreSeedRows(ctx.scope)
+        const issueLinkedScoreSeedRows = await buildIssueLinkedScoreSeedRows(ctx.scope)
 
         const issueScoresByIssueId = new Map<string, IssueLinkedScoreSeedRow[]>()
         for (const row of issueLinkedScoreSeedRows) {
@@ -293,36 +293,38 @@ const seedIssues: Seeder = {
         const voyageApiKey = Effect.runSync(parseEnvOptional("LAT_VOYAGE_API_KEY", "string"))
         const embeddingsByScoreId =
           voyageApiKey === undefined ? null : await embedIssueFeedbacks(issueLinkedScoreSeedRows, voyageApiKey)
-        const issueRows = SEED_ISSUE_FIXTURES.map((issue, index) => {
-          const issueId = fixtureScopedId(index, ctx.scope)
-          const issueUuid = fixtureScopedUuid(index, ctx.scope)
-          const issueScores = issueScoresByIssueId.get(issueId) ?? []
-          const embeddedIssueScores =
-            embeddingsByScoreId === null
-              ? null
-              : issueScores.map((row) => {
-                  const embedding = embeddingsByScoreId.get(row.id)
-                  if (!embedding) {
-                    throw new Error(`Missing seeded issue embedding for score ${row.id}`)
-                  }
+        const issueRows = await Promise.all(
+          SEED_ISSUE_FIXTURES.map(async (issue, index) => {
+            const issueId = await fixtureScopedId(index, ctx.scope)
+            const issueUuid = await fixtureScopedUuid(index, ctx.scope)
+            const issueScores = issueScoresByIssueId.get(issueId) ?? []
+            const embeddedIssueScores =
+              embeddingsByScoreId === null
+                ? null
+                : issueScores.map((row) => {
+                    const embedding = embeddingsByScoreId.get(row.id)
+                    if (!embedding) {
+                      throw new Error(`Missing seeded issue embedding for score ${row.id}`)
+                    }
 
-                  return {
-                    ...row,
-                    embedding,
-                  } satisfies EmbeddedIssueLinkedScoreSeedRow
-                })
+                    return {
+                      ...row,
+                      embedding,
+                    } satisfies EmbeddedIssueLinkedScoreSeedRow
+                  })
 
-          return buildIssueRow({
-            scope: ctx.scope,
-            issue,
-            issueId,
-            issueUuid,
-            organizationId: ctx.scope.organizationId,
-            projectId: ctx.scope.projectId,
-            issueScores,
-            embeddedIssueScores,
-          })
-        })
+            return buildIssueRow({
+              scope: ctx.scope,
+              issue,
+              issueId,
+              issueUuid,
+              organizationId: ctx.scope.organizationId,
+              projectId: ctx.scope.projectId,
+              issueScores,
+              embeddedIssueScores,
+            })
+          }),
+        )
 
         for (const row of issueRows) {
           const { id, ...set } = row

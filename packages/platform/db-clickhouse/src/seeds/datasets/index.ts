@@ -7,10 +7,10 @@ import type { Seeder } from "../types.ts"
 
 const XACT_ID = 1
 
-function buildDatasetRows(scope: SeedScope) {
+async function buildDatasetRows(scope: SeedScope) {
   const orgId = scope.organizationId
-  const warrantyDatasetId = DatasetId(scope.cuid("dataset:warranty"))
-  const combinationDatasetId = DatasetId(scope.cuid("dataset:combination"))
+  const warrantyDatasetId = DatasetId(await scope.cuid("dataset:warranty"))
+  const combinationDatasetId = DatasetId(await scope.cuid("dataset:combination"))
 
   return [
     ...WARRANTY_DATASET_ROWS.map((row, i) => ({
@@ -39,7 +39,7 @@ const seedDatasetRows: Seeder = {
   run: (ctx) =>
     Effect.gen(function* () {
       // Sentinel: the first deterministic warranty row id.
-      const sentinel = DatasetId(ctx.scope.cuid("dataset:warranty"))
+      const sentinel = DatasetId(yield* Effect.promise(() => ctx.scope.cuid("dataset:warranty")))
       const present = yield* isSentinelPresent(
         ctx.client,
         "dataset_rows",
@@ -50,7 +50,8 @@ const seedDatasetRows: Seeder = {
         if (!ctx.quiet) console.log("  -> datasets/issue-guardrail-dataset-rows: already seeded, skipping")
         return
       }
-      yield* insertJsonEachRow(ctx.client, "dataset_rows", buildDatasetRows(ctx.scope))
+      const rows = yield* Effect.promise(() => buildDatasetRows(ctx.scope))
+      yield* insertJsonEachRow(ctx.client, "dataset_rows", rows)
     }),
 }
 

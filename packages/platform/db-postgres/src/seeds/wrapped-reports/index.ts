@@ -207,8 +207,8 @@ const seedWrappedReports: Seeder = {
         const now = ctx.scope.dateDaysAgo(0, 9, 0)
 
         for (let i = 0; i < REPORT_COUNT; i++) {
-          const reportId = WrappedReportId(ctx.scope.cuid(`wr:report:${i}`))
-          const projectId = ctx.scope.cuid(`wr:proj:${i}`)
+          const reportId = WrappedReportId(await ctx.scope.cuid(`wr:report:${i}`))
+          const projectId = await ctx.scope.cuid(`wr:proj:${i}`)
           const orgId = SEED_ORG_ID
 
           const report = buildReport(i, projectId, orgId)

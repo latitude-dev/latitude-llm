@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto"
 import {
   OrganizationId,
   type OrganizationId as OrganizationIdType,
@@ -6,6 +5,7 @@ import {
   type UserId as UserIdType,
 } from "@domain/shared"
 import { createLogger } from "@repo/observability"
+import { randomHex } from "@repo/utils"
 import { z } from "zod"
 
 /**
@@ -81,7 +81,7 @@ export const generateSlackOAuthState = async (input: {
   readonly userId: UserIdType
   readonly returnTo?: string | null
 }): Promise<string> => {
-  const state = randomBytes(STATE_BYTES).toString("hex")
+  const state = randomHex(STATE_BYTES)
   const validatedReturnTo = input.returnTo == null ? null : validateReturnTo(input.returnTo)
   const payload = JSON.stringify({
     organizationId: input.organizationId,

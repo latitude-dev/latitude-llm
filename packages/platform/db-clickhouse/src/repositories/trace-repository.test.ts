@@ -40,8 +40,8 @@ const BASELINE_TEST_TAG = "baseline-missing-values"
 // (~6 spans). They never query the ~hundreds of tau2 trajectory spans, so
 // inserting the full fixed-trace set per test was pure overhead. Same on
 // the score side: only lifecycle analytics are queried, not tau2 issues.
-const BASELINE_SPANS: readonly SpanRow[] = buildCompatibilitySupportSpans(bootstrapSeedScope)
-const BASELINE_SCORES = buildLifecycleAnalyticsRows(bootstrapSeedScope)
+let BASELINE_SPANS: readonly SpanRow[] = []
+let BASELINE_SCORES: Awaited<ReturnType<typeof buildLifecycleAnalyticsRows>> = []
 
 function toClickHouseDateTime(value: Date): string {
   return value.toISOString().replace("T", " ").replace("Z", "")
@@ -126,6 +126,8 @@ describe("TraceRepository", () => {
   let repo: TraceRepositoryShape
 
   beforeAll(async () => {
+    BASELINE_SPANS = await buildCompatibilitySupportSpans(bootstrapSeedScope)
+    BASELINE_SCORES = await buildLifecycleAnalyticsRows(bootstrapSeedScope)
     const combinedLayer = TraceRepositoryLive.pipe(Layer.provideMerge(mockAILayer))
     repo = await Effect.runPromise(
       Effect.gen(function* () {

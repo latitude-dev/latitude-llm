@@ -103,13 +103,13 @@ const seedAlertIncidents: Seeder = {
         const fixtureScopedIssueIds = new Map<string, string>()
         for (const [index, fixture] of SEED_ISSUE_FIXTURES.entries()) {
           const issueKey = fixtureScopedKey(index)
-          const issueId = fixtureScopedId(index, ctx.scope)
+          const issueId = await fixtureScopedId(index, ctx.scope)
           fixtureScopedIssueIds.set(fixture.id, issueId)
           const fixtureDates = issueFixtureDates(ctx.scope, fixture)
 
           rows.push(
             buildIncidentRow({
-              id: ctx.scope.cuid(`alert-incident:${issueKey}:issue.new`),
+              id: await ctx.scope.cuid(`alert-incident:${issueKey}:issue.new`),
               organizationId: ctx.scope.organizationId,
               projectId: ctx.scope.projectId,
               sourceId: issueId,
@@ -134,12 +134,12 @@ const seedAlertIncidents: Seeder = {
         }
 
         for (let index = 0; index < SEED_ISSUE_FIXTURES.length; index++) {
-          const issueId = fixtureScopedId(index, ctx.scope)
+          const issueId = await fixtureScopedId(index, ctx.scope)
           if (!escalatingIssueIds.has(issueId)) continue
           const issueKey = fixtureScopedKey(index)
           rows.push(
             buildIncidentRow({
-              id: ctx.scope.cuid(`alert-incident:${issueKey}:issue.escalating`),
+              id: await ctx.scope.cuid(`alert-incident:${issueKey}:issue.escalating`),
               organizationId: ctx.scope.organizationId,
               projectId: ctx.scope.projectId,
               sourceId: issueId,
@@ -163,7 +163,7 @@ const seedAlertIncidents: Seeder = {
           const issueKey = fixtureIndex === -1 ? fixtureIssueId : fixtureScopedKey(fixtureIndex)
           rows.push(
             buildIncidentRow({
-              id: ctx.scope.cuid(`alert-incident:${issueKey}:issue.regressed`),
+              id: await ctx.scope.cuid(`alert-incident:${issueKey}:issue.regressed`),
               organizationId: ctx.scope.organizationId,
               projectId: ctx.scope.projectId,
               sourceId: scopedIssueId,

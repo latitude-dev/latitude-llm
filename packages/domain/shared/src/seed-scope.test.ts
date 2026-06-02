@@ -11,48 +11,48 @@ const baseInput = {
 }
 
 describe("createSeedScope — derivation", () => {
-  it("produces a 24-char CUID-shaped id from cuid()", () => {
+  it("produces a 24-char CUID-shaped id from cuid()", async () => {
     const scope = createSeedScope(baseInput)
-    const id = scope.cuid("dataset:warranty")
+    const id = await scope.cuid("dataset:warranty")
     expect(id).toHaveLength(CUID_LENGTH)
     expect(id).toMatch(/^[a-f0-9]+$/) // hex is a strict subset of cuid alphabet
   })
 
-  it("produces a UUID v4-shaped string from uuid()", () => {
+  it("produces a UUID v4-shaped string from uuid()", async () => {
     const scope = createSeedScope(baseInput)
-    const id = scope.uuid("issue:warranty-fab")
+    const id = await scope.uuid("issue:warranty-fab")
     expect(id).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/)
   })
 
-  it("produces a 32-char hex string from traceHex()", () => {
+  it("produces a 32-char hex string from traceHex()", async () => {
     const scope = createSeedScope(baseInput)
-    expect(scope.traceHex("annotation", 0)).toMatch(/^[a-f0-9]{32}$/)
+    expect(await scope.traceHex("annotation", 0)).toMatch(/^[a-f0-9]{32}$/)
   })
 
-  it("produces a 16-char hex string from spanHex()", () => {
+  it("produces a 16-char hex string from spanHex()", async () => {
     const scope = createSeedScope(baseInput)
-    expect(scope.spanHex("annotation", 0)).toMatch(/^[a-f0-9]{16}$/)
+    expect(await scope.spanHex("annotation", 0)).toMatch(/^[a-f0-9]{16}$/)
   })
 
-  it("is deterministic for the same (projectId, key)", () => {
+  it("is deterministic for the same (projectId, key)", async () => {
     const a = createSeedScope(baseInput)
     const b = createSeedScope(baseInput)
-    expect(a.cuid("dataset:warranty")).toBe(b.cuid("dataset:warranty"))
-    expect(a.traceHex("annotation", 5)).toBe(b.traceHex("annotation", 5))
+    expect(await a.cuid("dataset:warranty")).toBe(await b.cuid("dataset:warranty"))
+    expect(await a.traceHex("annotation", 5)).toBe(await b.traceHex("annotation", 5))
   })
 
-  it("produces distinct ids for distinct projectIds", () => {
+  it("produces distinct ids for distinct projectIds", async () => {
     // Critical for the demo flow: two demo projects under the same org must
     // not collide on trace/span/entity ids in ClickHouse / Postgres.
     const projectA = createSeedScope({ ...baseInput, projectId: ProjectId("project-a") })
     const projectB = createSeedScope({ ...baseInput, projectId: ProjectId("project-b") })
-    expect(projectA.cuid("dataset:warranty")).not.toBe(projectB.cuid("dataset:warranty"))
-    expect(projectA.traceHex("annotation", 0)).not.toBe(projectB.traceHex("annotation", 0))
+    expect(await projectA.cuid("dataset:warranty")).not.toBe(await projectB.cuid("dataset:warranty"))
+    expect(await projectA.traceHex("annotation", 0)).not.toBe(await projectB.traceHex("annotation", 0))
   })
 
-  it("produces distinct ids for distinct indices on the same key", () => {
+  it("produces distinct ids for distinct indices on the same key", async () => {
     const scope = createSeedScope(baseInput)
-    const ids = Array.from({ length: 16 }, (_, i) => scope.traceHex("annotation", i))
+    const ids = await Promise.all(Array.from({ length: 16 }, (_, i) => scope.traceHex("annotation", i)))
     expect(new Set(ids).size).toBe(16)
   })
 })
@@ -78,17 +78,17 @@ describe("createSeedScope — date helpers", () => {
 })
 
 describe("createSeedScope — overrides", () => {
-  it("returns the override value when defined", () => {
+  it("returns the override value when defined", async () => {
     const scope = createSeedScope({
       ...baseInput,
       overrides: {
         cuid: (key) => (key === "dataset:warranty" ? "literal-id-from-bootstrap" : undefined),
       },
     })
-    expect(scope.cuid("dataset:warranty")).toBe("literal-id-from-bootstrap")
+    expect(await scope.cuid("dataset:warranty")).toBe("literal-id-from-bootstrap")
   })
 
-  it("falls through to derivation when the override returns undefined", () => {
+  it("falls through to derivation when the override returns undefined", async () => {
     // Crucial for forward-compatibility: the bootstrap override map only
     // covers fixture keys that exist today. A new fixture key the seed
     // bodies introduce later must produce a deterministic project-scoped
@@ -99,12 +99,12 @@ describe("createSeedScope — overrides", () => {
         cuid: (key) => (key === "dataset:warranty" ? "literal-id-from-bootstrap" : undefined),
       },
     })
-    const fallback = scope.cuid("dataset:future-fixture")
+    const fallback = await scope.cuid("dataset:future-fixture")
     expect(fallback).toHaveLength(CUID_LENGTH)
     expect(fallback).not.toBe("literal-id-from-bootstrap")
   })
 
-  it("applies the override per-method independently", () => {
+  it("applies the override per-method independently", async () => {
     const scope = createSeedScope({
       ...baseInput,
       overrides: {
@@ -113,8 +113,8 @@ describe("createSeedScope — overrides", () => {
       },
     })
     // traceHex override hit
-    expect(scope.traceHex("annotation", 0)).toBe(`00000000${"0".repeat(24)}`)
+    expect(await scope.traceHex("annotation", 0)).toBe(`00000000${"0".repeat(24)}`)
     // spanHex falls through (no override defined)
-    expect(scope.spanHex("annotation", 0)).toMatch(/^[a-f0-9]{16}$/)
+    expect(await scope.spanHex("annotation", 0)).toMatch(/^[a-f0-9]{16}$/)
   })
 })

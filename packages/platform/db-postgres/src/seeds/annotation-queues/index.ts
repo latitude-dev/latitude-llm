@@ -39,13 +39,13 @@ function pickAssignee(scope: SeedScope, index: number): string {
   return list[index % list.length]!
 }
 
-function buildQueueRows(scope: SeedScope) {
+async function buildQueueRows(scope: SeedScope) {
   const queueDate = (daysAgo: number, hour: number, minute = 0): Date => scope.dateDaysAgo(daysAgo, hour, minute)
   const assignee = (index: number) => pickAssignee(scope, index)
 
   return [
     {
-      id: AnnotationQueueId(scope.cuid("queue:warranty")),
+      id: AnnotationQueueId(await scope.cuid("queue:warranty")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       system: false,
@@ -66,7 +66,7 @@ function buildQueueRows(scope: SeedScope) {
       updatedAt: queueDate(12, 8),
     },
     {
-      id: AnnotationQueueId(scope.cuid("queue:combination")),
+      id: AnnotationQueueId(await scope.cuid("queue:combination")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       system: false,
@@ -87,7 +87,7 @@ function buildQueueRows(scope: SeedScope) {
       updatedAt: queueDate(7, 8),
     },
     {
-      id: AnnotationQueueId(scope.cuid("queue:logistics")),
+      id: AnnotationQueueId(await scope.cuid("queue:logistics")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       system: false,
@@ -107,7 +107,7 @@ function buildQueueRows(scope: SeedScope) {
       updatedAt: queueDate(3, 8, 15),
     },
     {
-      id: AnnotationQueueId(scope.cuid("queue:live")),
+      id: AnnotationQueueId(await scope.cuid("queue:live")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       system: false,
@@ -130,7 +130,7 @@ function buildQueueRows(scope: SeedScope) {
       updatedAt: queueDate(4, 10),
     },
     {
-      id: AnnotationQueueId(scope.cuid("queue:kitchen-sink")),
+      id: AnnotationQueueId(await scope.cuid("queue:kitchen-sink")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       system: false,
@@ -152,24 +152,24 @@ function buildQueueRows(scope: SeedScope) {
   ] satisfies AnnotationQueueRow[]
 }
 
-function buildQueueItemRows(scope: SeedScope) {
+async function buildQueueItemRows(scope: SeedScope) {
   const queueDate = (daysAgo: number, hour: number, minute = 0): Date => scope.dateDaysAgo(daysAgo, hour, minute)
   const assignee = (index: number) => pickAssignee(scope, index)
-  const queueWarrantyId = AnnotationQueueId(scope.cuid("queue:warranty"))
-  const queueCombinationId = AnnotationQueueId(scope.cuid("queue:combination"))
-  const queueLogisticsId = AnnotationQueueId(scope.cuid("queue:logistics"))
-  const queueLiveId = AnnotationQueueId(scope.cuid("queue:live"))
-  const queueKitchenSinkId = AnnotationQueueId(scope.cuid("queue:kitchen-sink"))
+  const queueWarrantyId = AnnotationQueueId(await scope.cuid("queue:warranty"))
+  const queueCombinationId = AnnotationQueueId(await scope.cuid("queue:combination"))
+  const queueLogisticsId = AnnotationQueueId(await scope.cuid("queue:logistics"))
+  const queueLiveId = AnnotationQueueId(await scope.cuid("queue:live"))
+  const queueKitchenSinkId = AnnotationQueueId(await scope.cuid("queue:kitchen-sink"))
 
-  const annotationDemoTraceId = scope.traceHex("annotation-demo", 0)
+  const annotationDemoTraceId = await scope.traceHex("annotation-demo", 0)
 
   return [
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:warranty:pending")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:warranty:pending")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueWarrantyId,
-      traceId: scope.traceHex("annotation", 2),
+      traceId: await scope.traceHex("annotation", 2),
       traceCreatedAt: queueDate(13, 8),
       completedAt: null,
       completedBy: null,
@@ -178,11 +178,11 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(12, 9),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:warranty:completed-a")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:warranty:completed-a")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueWarrantyId,
-      traceId: scope.traceHex("annotation", 0),
+      traceId: await scope.traceHex("annotation", 0),
       traceCreatedAt: queueDate(13, 7),
       completedAt: queueDate(12, 11, 15),
       completedBy: assignee(0),
@@ -191,11 +191,11 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(12, 11, 15),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:warranty:completed-b")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:warranty:completed-b")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueWarrantyId,
-      traceId: scope.traceHex("annotation", 8),
+      traceId: await scope.traceHex("annotation", 8),
       traceCreatedAt: queueDate(13, 6),
       completedAt: queueDate(12, 12, 5),
       completedBy: assignee(1),
@@ -204,11 +204,11 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(12, 12, 5),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:combination:pending")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:combination:pending")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueCombinationId,
-      traceId: scope.traceHex("annotation", 18),
+      traceId: await scope.traceHex("annotation", 18),
       traceCreatedAt: queueDate(8, 8),
       completedAt: null,
       completedBy: null,
@@ -217,11 +217,11 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(7, 9),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:combination:completed-a")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:combination:completed-a")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueCombinationId,
-      traceId: scope.traceHex("annotation", 16),
+      traceId: await scope.traceHex("annotation", 16),
       traceCreatedAt: queueDate(8, 7),
       completedAt: queueDate(7, 11, 40),
       completedBy: assignee(0),
@@ -230,11 +230,11 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(7, 11, 40),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:combination:completed-b")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:combination:completed-b")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueCombinationId,
-      traceId: scope.traceHex("annotation", 28),
+      traceId: await scope.traceHex("annotation", 28),
       traceCreatedAt: queueDate(8, 6),
       completedAt: queueDate(7, 12, 10),
       completedBy: assignee(0),
@@ -243,11 +243,11 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(7, 12, 10),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:logistics:pending")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:logistics:pending")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueLogisticsId,
-      traceId: scope.traceHex("annotation", 40),
+      traceId: await scope.traceHex("annotation", 40),
       traceCreatedAt: queueDate(4, 8),
       completedAt: null,
       completedBy: null,
@@ -256,11 +256,11 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(3, 9, 20),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:logistics:completed-a")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:logistics:completed-a")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueLogisticsId,
-      traceId: scope.traceHex("annotation", 38),
+      traceId: await scope.traceHex("annotation", 38),
       traceCreatedAt: queueDate(4, 7),
       completedAt: queueDate(3, 10, 35),
       completedBy: assignee(0),
@@ -269,11 +269,11 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(3, 10, 35),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:logistics:completed-b")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:logistics:completed-b")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueLogisticsId,
-      traceId: scope.traceHex("annotation", 43),
+      traceId: await scope.traceHex("annotation", 43),
       traceCreatedAt: queueDate(4, 6),
       completedAt: queueDate(3, 11),
       completedBy: assignee(0),
@@ -282,11 +282,11 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(3, 11),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:live:pending")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:live:pending")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueLiveId,
-      traceId: scope.traceHex("annotation", 16),
+      traceId: await scope.traceHex("annotation", 16),
       traceCreatedAt: queueDate(5, 8),
       completedAt: null,
       completedBy: null,
@@ -295,7 +295,7 @@ function buildQueueItemRows(scope: SeedScope) {
       updatedAt: queueDate(4, 10, 15),
     },
     {
-      id: AnnotationQueueItemId(scope.cuid("queue-item:kitchen-sink")),
+      id: AnnotationQueueItemId(await scope.cuid("queue-item:kitchen-sink")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
       queueId: queueKitchenSinkId,
@@ -315,8 +315,8 @@ const seedAnnotationQueues: Seeder = {
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
-        const queueRows = buildQueueRows(ctx.scope)
-        const queueItemRows = buildQueueItemRows(ctx.scope)
+        const queueRows = await buildQueueRows(ctx.scope)
+        const queueItemRows = await buildQueueItemRows(ctx.scope)
 
         const staleQueues = await ctx.db
           .select({ id: annotationQueues.id })

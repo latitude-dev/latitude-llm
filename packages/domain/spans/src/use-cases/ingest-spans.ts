@@ -10,7 +10,7 @@ import {
   StorageDisk,
   type StorageError,
 } from "@domain/shared"
-import { base64Encode } from "@repo/utils"
+import { base64Encode, type CryptoError } from "@repo/utils"
 import { Effect } from "effect"
 import { SpanDecodingError } from "../errors.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
@@ -91,7 +91,7 @@ export const ingestSpansUseCase = (
   input: IngestSpansInput,
 ): Effect.Effect<
   IngestSpansResult,
-  StorageError | QueuePublishError | RepositoryError | SpanDecodingError,
+  CryptoError | StorageError | QueuePublishError | RepositoryError | SpanDecodingError,
   StorageDisk | QueuePublisher | ProjectRepository | SqlClient
 > =>
   Effect.gen(function* () {
@@ -151,7 +151,7 @@ export const ingestSpansUseCase = (
     const sampling = samplingProject?.settings?.sampling
     if (sampling?.enabled && (sampling.rate ?? 1) < 1) {
       const samplingKey = extractSamplingKey(decoded)
-      if (samplingKey && !deterministicSample(samplingKey, sampling.rate ?? 1)) {
+      if (samplingKey && !(yield* deterministicSample(samplingKey, sampling.rate ?? 1))) {
         yield* Effect.annotateCurrentSpan("sampling.dropped", true)
         yield* Effect.annotateCurrentSpan("sampling.rate", sampling.rate ?? 1)
         // Sampled-out: don't store, don't enqueue. Spans still count as accepted in the OTLP

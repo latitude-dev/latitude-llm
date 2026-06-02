@@ -1,5 +1,5 @@
-import crypto from "node:crypto"
 import { parseEnvOptional } from "@platform/env"
+import { hmacSha256Hex } from "@repo/utils"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
@@ -53,7 +53,7 @@ export const getSupportUserIdentity = createServerFn({ method: "GET" }).handler(
     // email (see backoffice/-components/account-actions/change-email.tsx),
     // and using email as user_id would split a single account into separate
     // Intercom contacts on every rename.
-    const userHash = crypto.createHmac("sha256", secretKey).update(user.id).digest("hex")
+    const userHash = await Effect.runPromise(hmacSha256Hex({ key: secretKey, message: user.id }))
 
     return {
       appId,

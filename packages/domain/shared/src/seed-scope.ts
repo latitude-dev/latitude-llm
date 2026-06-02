@@ -1,4 +1,5 @@
-import { createHash } from "node:crypto"
+import { hash } from "@repo/utils"
+import { Effect } from "effect"
 import { type ApiKeyId, CUID_LENGTH, type OrganizationId, type ProjectId } from "./id.ts"
 
 /**
@@ -45,13 +46,13 @@ export interface SeedScope {
   readonly apiKeyId: ApiKeyId
 
   /** 24-char CUID-shaped id, stable per `(projectId, key)`. */
-  cuid(key: string): string
+  cuid(key: string): Promise<string>
   /** UUID-v4-shaped string, stable per `(projectId, key)`. */
-  uuid(key: string): string
+  uuid(key: string): Promise<string>
   /** 32-char hex trace id. `index` defaults to `0` for one-off keys. */
-  traceHex(key: string, index?: number): string
+  traceHex(key: string, index?: number): Promise<string>
   /** 16-char hex span id. */
-  spanHex(key: string, index?: number): string
+  spanHex(key: string, index?: number): Promise<string>
   /**
    * Date `daysAgo` before the scope's `timelineAnchor`, at `hour:minute` UTC.
    * Capped to wall-clock "now" so a future-skewed anchor never produces a
@@ -89,17 +90,17 @@ export interface CreateSeedScopeInput {
 
 const FIELD_SEPARATOR = "\x00"
 
-const sha256 = (parts: readonly (string | number)[]): Buffer =>
-  createHash("sha256").update(parts.map(String).join(FIELD_SEPARATOR)).digest()
+const sha256Hex = (parts: readonly (string | number)[]): Promise<string> =>
+  Effect.runPromise(hash(parts.map(String).join(FIELD_SEPARATOR)))
 
-const deriveCuid = (projectId: string, key: string): string =>
-  sha256(["cuid", projectId, key]).toString("hex").slice(0, CUID_LENGTH)
+const deriveCuid = async (projectId: string, key: string): Promise<string> =>
+  (await sha256Hex(["cuid", projectId, key])).slice(0, CUID_LENGTH)
 
-const deriveUuid = (projectId: string, key: string): string => {
+const deriveUuid = async (projectId: string, key: string): Promise<string> => {
   // Layout-compliant v4: `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` where `y` ∈
   // {8,9,a,b}. We don't strictly need RFC compliance for seed fixtures, but
   // matching the v4 shape avoids tripping consumers that validate UUIDs.
-  const hex = sha256(["uuid", projectId, key]).toString("hex")
+  const hex = await sha256Hex(["uuid", projectId, key])
   const variantNibble = (Number.parseInt(hex.slice(16, 17), 16) & 0x3) | 0x8
   return [
     hex.slice(0, 8),
@@ -113,11 +114,11 @@ const deriveUuid = (projectId: string, key: string): string => {
 const TRACE_HEX_LENGTH = 32
 const SPAN_HEX_LENGTH = 16
 
-const deriveTraceHex = (projectId: string, key: string, index: number): string =>
-  sha256(["trace", projectId, key, index]).toString("hex").slice(0, TRACE_HEX_LENGTH)
+const deriveTraceHex = async (projectId: string, key: string, index: number): Promise<string> =>
+  (await sha256Hex(["trace", projectId, key, index])).slice(0, TRACE_HEX_LENGTH)
 
-const deriveSpanHex = (projectId: string, key: string, index: number): string =>
-  sha256(["span", projectId, key, index]).toString("hex").slice(0, SPAN_HEX_LENGTH)
+const deriveSpanHex = async (projectId: string, key: string, index: number): Promise<string> =>
+  (await sha256Hex(["span", projectId, key, index])).slice(0, SPAN_HEX_LENGTH)
 
 /**
  * Cap computed dates to wall-clock "now" so a future-skewed anchor (or a
@@ -157,10 +158,11 @@ export const createSeedScope = (input: CreateSeedScopeInput): SeedScope => {
     timelineAnchor,
     queueAssigneeUserIds,
     apiKeyId,
-    cuid: (key) => overrides?.cuid?.(key) ?? deriveCuid(projectId, key),
-    uuid: (key) => overrides?.uuid?.(key) ?? deriveUuid(projectId, key),
-    traceHex: (key, index = 0) => overrides?.traceHex?.(key, index) ?? deriveTraceHex(projectId, key, index),
-    spanHex: (key, index = 0) => overrides?.spanHex?.(key, index) ?? deriveSpanHex(projectId, key, index),
+    cuid: async (key) => overrides?.cuid?.(key) ?? (await deriveCuid(projectId, key)),
+    uuid: async (key) => overrides?.uuid?.(key) ?? (await deriveUuid(projectId, key)),
+    traceHex: async (key, index = 0) =>
+      overrides?.traceHex?.(key, index) ?? (await deriveTraceHex(projectId, key, index)),
+    spanHex: async (key, index = 0) => overrides?.spanHex?.(key, index) ?? (await deriveSpanHex(projectId, key, index)),
     dateDaysAgo: (daysAgo, hour = 12, minute = 0) => deriveDateDaysAgo(timelineAnchor, daysAgo, hour, minute),
     timestampDaysAgo: (daysAgo, hour = 12, minute = 0) => deriveTimestampDaysAgo(timelineAnchor, daysAgo, hour, minute),
   }

@@ -13,11 +13,11 @@ import { type SeedContext, SeedError, type Seeder } from "../types.ts"
  * descriptions) is identical across projects — only the row identity
  * shifts with the scope.
  */
-const seededDatasets = (scope: SeedScope) =>
+const seededDatasets = async (scope: SeedScope) =>
   [
     {
-      id: DatasetId(scope.cuid("dataset:warranty")),
-      versionId: DatasetVersionId(scope.cuid("dataset:warranty:version")),
+      id: DatasetId(await scope.cuid("dataset:warranty")),
+      versionId: DatasetVersionId(await scope.cuid("dataset:warranty:version")),
       slug: "warranty-coverage-guardrails",
       name: "Warranty Coverage Guardrails",
       description:
@@ -26,8 +26,8 @@ const seededDatasets = (scope: SeedScope) =>
       rowsInserted: WARRANTY_DATASET_ROWS.length,
     },
     {
-      id: DatasetId(scope.cuid("dataset:combination")),
-      versionId: DatasetVersionId(scope.cuid("dataset:combination:version")),
+      id: DatasetId(await scope.cuid("dataset:combination")),
+      versionId: DatasetVersionId(await scope.cuid("dataset:combination:version")),
       slug: "dangerous-combination-guardrails",
       name: "Dangerous Combination Guardrails",
       description:
@@ -42,7 +42,7 @@ const seedDatasets: Seeder = {
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
-        for (const dataset of seededDatasets(ctx.scope)) {
+        for (const dataset of await seededDatasets(ctx.scope)) {
           await ctx.db
             .insert(datasets)
             .values({

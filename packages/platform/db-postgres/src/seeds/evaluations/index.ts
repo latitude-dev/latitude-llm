@@ -183,14 +183,14 @@ const accessAlignment: EvaluationAlignment = {
   },
 }
 
-const buildEvaluationRows = (scope: SeedScope) => {
+const buildEvaluationRows = async (scope: SeedScope) => {
   const at = (daysAgo: number, hour: number, minute = 0) => scope.dateDaysAgo(daysAgo, hour, minute)
   return [
     {
-      id: EvaluationId(scope.cuid("evaluation:warranty-active")),
+      id: EvaluationId(await scope.cuid("evaluation:warranty-active")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:warranty-fab")),
+      issueId: IssueId(await scope.cuid("issue:warranty-fab")),
       name: "Warranty Coverage Fabrication Monitor",
       description:
         "Detects when the support agent invents warranty coverage, waivers, or reimbursement promises for " +
@@ -205,10 +205,10 @@ const buildEvaluationRows = (scope: SeedScope) => {
       updatedAt: at(3, 16, 0),
     },
     {
-      id: EvaluationId(scope.cuid("evaluation:warranty-archived")),
+      id: EvaluationId(await scope.cuid("evaluation:warranty-archived")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:warranty-fab")),
+      issueId: IssueId(await scope.cuid("issue:warranty-fab")),
       name: "Terrain Warranty Promise Detector",
       description:
         "Earlier, narrower monitor that focused on guaranteed coverage for cliff and canyon incidents. It is " +
@@ -223,10 +223,10 @@ const buildEvaluationRows = (scope: SeedScope) => {
       updatedAt: at(46, 9, 0),
     },
     {
-      id: EvaluationId(scope.cuid("evaluation:combination")),
+      id: EvaluationId(await scope.cuid("evaluation:combination")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:combination")),
+      issueId: IssueId(await scope.cuid("issue:combination")),
       name: "Dangerous Combination Guardrail Monitor",
       description:
         "Detects when the support agent recommends unsafe product combinations or fabricates authorization for " +
@@ -241,10 +241,10 @@ const buildEvaluationRows = (scope: SeedScope) => {
       updatedAt: at(5, 11, 30),
     },
     {
-      id: EvaluationId(scope.cuid("evaluation:returns")),
+      id: EvaluationId(await scope.cuid("evaluation:returns")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:returns")),
+      issueId: IssueId(await scope.cuid("issue:returns")),
       name: "Instant Returns Eligibility Monitor",
       description:
         "Detects when the support agent promises refunds, pickups, or fee waivers that still require inspection, " +
@@ -259,10 +259,10 @@ const buildEvaluationRows = (scope: SeedScope) => {
       updatedAt: at(17, 15, 10),
     },
     {
-      id: EvaluationId(scope.cuid("evaluation:access")),
+      id: EvaluationId(await scope.cuid("evaluation:access")),
       organizationId: scope.organizationId,
       projectId: scope.projectId,
-      issueId: IssueId(scope.cuid("issue:access")),
+      issueId: IssueId(await scope.cuid("issue:access")),
       name: "Account Recovery Verification Monitor",
       description:
         "Detects when the support agent weakens account-recovery verification by exposing sensitive data, disabling MFA, " +
@@ -284,7 +284,7 @@ const seedEvaluations: Seeder = {
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
-        const evaluationRows = buildEvaluationRows(ctx.scope)
+        const evaluationRows = await buildEvaluationRows(ctx.scope)
         for (const row of evaluationRows) {
           const { id, ...set } = row
           await ctx.db.insert(evaluations).values(row).onConflictDoUpdate({
