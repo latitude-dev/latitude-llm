@@ -34,9 +34,6 @@ const KIND_TOP_SYMBOL: Record<AlertIncidentKind, TopSymbol> = {
   "savedSearch.escalating": { shape: "rect", size: 7 },
 }
 
-/** Canonical kind labels live in `@domain/shared`; re-exported so chart markers stay in sync with the monitor UI. */
-export const KIND_LABELS = ALERT_INCIDENT_KIND_LABEL
-
 export const SEVERITY_LABELS: Record<AlertSeverity, string> = {
   low: "Low",
   medium: "Medium",
@@ -237,5 +234,5 @@ export function buildIncidentMarkers({
 }
 
 export function formatIncidentKindLabel(kind: AlertIncidentKind): string {
-  return KIND_LABELS[kind]
+  return ALERT_INCIDENT_KIND_LABEL[kind]
 }
