@@ -454,6 +454,16 @@ export function CommitChangesList({
     })
   }, [isLoading, changes, documents])
 
+  // Deleted documents are absent from `documents` (it lists the commit's live
+  // documents), so they never appear in `documentsList`. Surface them as their
+  // own rows from the change set.
+  const deletedChanges = useMemo(() => {
+    if (isLoading) return []
+    return changes.documents.all.filter(
+      (cd) => !documentsList.some((d) => d.documentUuid === cd.documentUuid),
+    )
+  }, [isLoading, changes.documents.all, documentsList])
+
   if (!commit) {
     return (
       <div className='w-full h-full flex flex-col items-center justify-center '>
@@ -475,22 +485,41 @@ export function CommitChangesList({
             </li>
           ))
         ) : changes.anyChanges ? (
-          documentsList.map((d) => (
-            <li key={d.documentUuid}>
-              <DocumentChangeList
-                document={d}
-                changes={changes}
+          <>
+            {documentsList.map((d) => (
+              <li key={d.documentUuid}>
+                <DocumentChangeList
+                  document={d}
+                  changes={changes}
+                  project={project}
+                  commit={commit}
+                  selectedDocumentUuid={selectedDocumentUuid}
+                  selectDocumentUuid={selectDocumentUuid}
+                  currentDocumentUuid={currentDocumentUuid}
+                  isCurrentDraft={
+                    !commit.mergedAt && commit.id === currentCommit.id
+                  }
+                />
+              </li>
+            ))}
+            {deletedChanges.map((change) => (
+              <Change
+                key={change.documentUuid}
                 project={project}
                 commit={commit}
-                selectedDocumentUuid={selectedDocumentUuid}
-                selectDocumentUuid={selectDocumentUuid}
-                currentDocumentUuid={currentDocumentUuid}
+                change={change}
+                isSelected={selectedDocumentUuid === change.documentUuid}
+                onSelect={() => selectDocumentUuid(change.documentUuid)}
+                isDimmed={
+                  currentDocumentUuid !== undefined &&
+                  currentDocumentUuid !== change.documentUuid
+                }
                 isCurrentDraft={
                   !commit.mergedAt && commit.id === currentCommit.id
                 }
               />
-            </li>
-          ))
+            ))}
+          </>
         ) : (
           <div className='w-full h-full flex flex-col items-center justify-center p-4'>
             <Text.H5 color='foregroundMuted'>
