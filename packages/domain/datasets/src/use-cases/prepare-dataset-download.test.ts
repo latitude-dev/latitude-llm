@@ -24,6 +24,7 @@ const buildRow = (i: number): DatasetRow => ({
   datasetId,
   input: `input ${i}`,
   output: `output ${i}`,
+  expectedOutput: "",
   metadata: "",
   createdAt: new Date(0),
   version: 1,

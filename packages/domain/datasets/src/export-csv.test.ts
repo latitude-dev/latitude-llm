@@ -6,6 +6,7 @@ function row(overrides: Partial<DatasetRow> & Pick<DatasetRow, "input" | "output
   return {
     rowId: "row-1" as DatasetRow["rowId"],
     datasetId: "ds-1" as DatasetRow["datasetId"],
+    expectedOutput: "",
     createdAt: new Date(),
     version: 1,
     ...overrides,
@@ -14,12 +15,13 @@ function row(overrides: Partial<DatasetRow> & Pick<DatasetRow, "input" | "output
 
 describe("export-csv", () => {
   describe("csvExportHeader", () => {
-    it("returns header line with input, output, metadata columns", () => {
+    it("returns header line with expected_output, input, output, metadata columns", () => {
       const header = csvExportHeader()
       expect(header).toContain("input")
       expect(header).toContain("output")
+      expect(header).toContain("expected_output")
       expect(header).toContain("metadata")
-      expect(header.trim().split(",").length).toBe(3)
+      expect(header.trim().split(",").length).toBe(4)
     })
   })
 
@@ -30,13 +32,14 @@ describe("export-csv", () => {
 
     it("serializes rows to CSV lines without a header row", () => {
       const rows: DatasetRow[] = [
-        row({ input: "prompt", output: "answer", metadata: "{}" }),
+        row({ input: "prompt", output: "answer", expectedOutput: "golden", metadata: "{}" }),
         row({ input: "a,b", output: "x\ny", metadata: "" }),
       ]
       const fragment = rowsToCsvFragment(rows)
       expect(fragment).not.toContain(csvExportHeader())
       expect(fragment).toContain("prompt")
       expect(fragment).toContain("answer")
+      expect(fragment).toContain("golden")
       expect(fragment).toContain("a,b")
       expect(fragment).toContain("x\ny")
     })

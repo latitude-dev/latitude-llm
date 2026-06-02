@@ -1,7 +1,7 @@
-import { Button, CopyableText, DropdownMenu, Input, Modal, Text, Textarea, useToast } from "@repo/ui"
+import { Button, CopyableText, DropdownMenu, Icon, Input, Modal, Text, Textarea, Tooltip, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { useNavigate } from "@tanstack/react-router"
-import { Loader2, Trash2 } from "lucide-react"
+import { Info, Loader2, Trash2 } from "lucide-react"
 import { useCallback, useState } from "react"
 import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 import { deleteDatasetFunction, updateDataset } from "../../../../../../domains/datasets/datasets.functions.ts"
@@ -124,15 +124,38 @@ function DatasetEditModal({
   )
 }
 
-export function DatasetNameEdit({
-  dataset,
-  onSuccess,
-  onDownload,
-}: {
-  dataset: DatasetRecord
-  onSuccess?: () => void
-  onDownload?: () => void
-}) {
+export function DatasetTitleBlock({ dataset }: { dataset: DatasetRecord }) {
+  return (
+    <div className="flex flex-col gap-2 min-w-0">
+      <Text.H3M className="min-w-0">{dataset.name}</Text.H3M>
+      <div className="flex flex-row items-center gap-2 min-w-0">
+        <div className="flex min-w-0 max-w-max shrink-0">
+          <CopyableText value={dataset.slug} size="sm" tooltip="Copy dataset slug" />
+        </div>
+        {dataset.description ? (
+          <Tooltip
+            asChild
+            side="bottom"
+            align="start"
+            trigger={
+              <button
+                type="button"
+                aria-label="Dataset description"
+                className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <Icon icon={Info} size="sm" />
+              </button>
+            }
+          >
+            <div className="max-w-xs whitespace-normal text-left">{dataset.description}</div>
+          </Tooltip>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+export function DatasetActionsMenu({ dataset, onSuccess }: { dataset: DatasetRecord; onSuccess?: () => void }) {
   const projectId = dataset.projectId
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -168,46 +191,26 @@ export function DatasetNameEdit({
 
   return (
     <>
-      <div className="flex flex-col gap-1 min-w-0 flex-1">
-        <div className="flex flex-row items-center gap-2 min-w-0">
-          <Text.H3M className="min-w-0 flex-1 truncate">{dataset.name}</Text.H3M>
-          <div className="flex min-w-0 max-w-max shrink-0">
-            <CopyableText value={dataset.slug} size="sm" tooltip="Copy dataset slug" />
-          </div>
-          <DropdownMenu
-            align="end"
-            triggerButtonProps={{
-              variant: "ghost",
-              "aria-label": "Dataset actions",
-              className: "shrink-0",
-            }}
-            options={[
-              {
-                label: "Edit",
-                onClick: openEdit,
-              },
-              ...(onDownload
-                ? [
-                    {
-                      label: "Export rows",
-                      onClick: onDownload,
-                    },
-                  ]
-                : []),
-              {
-                label: "Remove",
-                type: "destructive" as const,
-                onClick: () => setDeleteOpen(true),
-              },
-            ]}
-          />
-        </div>
-        {dataset.description ? (
-          <Text.H5 color="foregroundMuted" className="line-clamp-2">
-            {dataset.description}
-          </Text.H5>
-        ) : null}
-      </div>
+      <DropdownMenu
+        align="end"
+        triggerButtonProps={{
+          variant: "outline",
+          size: "icon",
+          "aria-label": "Dataset actions",
+          className: "shrink-0",
+        }}
+        options={[
+          {
+            label: "Edit details",
+            onClick: openEdit,
+          },
+          {
+            label: "Remove dataset",
+            type: "destructive" as const,
+            onClick: () => setDeleteOpen(true),
+          },
+        ]}
+      />
 
       <DatasetEditModal
         dataset={dataset}
@@ -228,7 +231,7 @@ export function DatasetNameEdit({
               Cancel
             </Button>
             <Button variant="destructive" onClick={() => void confirmDelete()} disabled={deleting}>
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {deleting ? <Icon icon={Loader2} size="sm" className="animate-spin" /> : <Icon icon={Trash2} size="sm" />}
               Remove dataset
             </Button>
           </div>

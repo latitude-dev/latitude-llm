@@ -20,7 +20,7 @@ export function RowDetailDrawer({
 }: {
   readonly row: DatasetRowRecord
   readonly onClose: () => void
-  readonly onSave?: (data: { input: string; output: string; metadata: string }) => void
+  readonly onSave?: (data: { input: string; output: string; expectedOutput: string; metadata: string }) => void
   readonly saving?: boolean
   readonly isDraft?: boolean
   readonly canNavigatePrev?: boolean

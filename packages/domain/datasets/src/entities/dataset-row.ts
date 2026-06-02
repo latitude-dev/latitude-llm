@@ -22,6 +22,7 @@ const datasetRowSchema = z.object({
   datasetId: datasetIdSchema,
   input: rowFieldValueSchema,
   output: rowFieldValueSchema,
+  expectedOutput: rowFieldValueSchema,
   metadata: rowFieldValueSchema,
   createdAt: z.date(),
   version: z.number().int().nonnegative(),

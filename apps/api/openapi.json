@@ -4067,6 +4067,18 @@
             ],
             "description": "Free-form cell value. Either a plain string or an arbitrary JSON object."
           },
+          "expectedOutput": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            ],
+            "description": "The correct answer for this row. Curators fill this in by hand; it is not derived from `output`."
+          },
           "metadata": {
             "anyOf": [
               {
@@ -4094,6 +4106,7 @@
           "datasetId",
           "input",
           "output",
+          "expectedOutput",
           "metadata",
           "createdAt",
           "version"
@@ -4180,6 +4193,27 @@
                     }
                   ],
                   "description": "Row output cell."
+                },
+                "expectedOutput": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Correct answer for this row. Filled in by curators; usually distinct from `output`."
                 },
                 "metadata": {
                   "anyOf": [

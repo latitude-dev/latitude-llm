@@ -408,6 +408,9 @@ const InsertRowBodySchema = z
             .describe("Optional client-supplied row id. Generated when omitted."),
           input: InsertRowCellSchema.describe("Row input cell."),
           output: InsertRowCellSchema.optional().describe("Row output cell."),
+          expectedOutput: InsertRowCellSchema.optional().describe(
+            "Correct answer for this row. Filled in by curators; usually distinct from `output`.",
+          ),
           metadata: InsertRowCellSchema.optional().describe("Row metadata cell."),
         }),
       )
@@ -603,6 +606,7 @@ const insertDatasetRowsEndpoint = datasetEndpoint({
             ...(r.id !== undefined ? { id: DatasetRowId(r.id) } : {}),
             input: r.input,
             ...(r.output !== undefined ? { output: r.output } : {}),
+            ...(r.expectedOutput !== undefined ? { expectedOutput: r.expectedOutput } : {}),
             ...(r.metadata !== undefined ? { metadata: r.metadata } : {}),
           })),
           source: "api",

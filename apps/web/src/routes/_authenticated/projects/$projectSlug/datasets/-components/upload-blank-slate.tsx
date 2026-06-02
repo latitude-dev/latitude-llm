@@ -6,7 +6,7 @@ import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import type { ParsedCsv } from "./csv-import-view.tsx"
 import { createDraftRowRecord } from "./dataset-draft-row.ts"
-import { DatasetNameEdit } from "./dataset-name-edit.tsx"
+import { DatasetActionsMenu, DatasetTitleBlock } from "./dataset-name-edit.tsx"
 import { RowDetailPanel, type RowDetailPanelSaveRef } from "./row-detail-panel.tsx"
 
 export function UploadBlankSlate({
@@ -16,7 +16,7 @@ export function UploadBlankSlate({
 }: {
   dataset: DatasetRecord
   onParsed: (csv: ParsedCsv) => void
-  onInsertFirstRow: (data: { input: string; output: string; metadata: string }) => Promise<void>
+  onInsertFirstRow: (data: { input: string; output: string; expectedOutput: string; metadata: string }) => Promise<void>
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const addRowPanelSaveRef = useRef<RowDetailPanelSaveRef | null>(null)
@@ -32,7 +32,7 @@ export function UploadBlankSlate({
   }, [dataset.id])
 
   const handleSaveNewRow = useCallback(
-    async (data: { input: string; output: string; metadata: string }) => {
+    async (data: { input: string; output: string; expectedOutput: string; metadata: string }) => {
       setAddRowSaving(true)
       try {
         await onInsertFirstRow(data)
@@ -88,9 +88,12 @@ export function UploadBlankSlate({
       <Layout>
         <Layout.Content>
           <Layout.Actions>
-            <Layout.ActionsRow>
+            <Layout.ActionsRow className="items-start gap-6">
+              <Layout.ActionRowItem className="flex-1 min-w-0 items-start">
+                <DatasetTitleBlock dataset={dataset} />
+              </Layout.ActionRowItem>
               <Layout.ActionRowItem>
-                <DatasetNameEdit dataset={dataset} />
+                <DatasetActionsMenu dataset={dataset} />
               </Layout.ActionRowItem>
             </Layout.ActionsRow>
           </Layout.Actions>

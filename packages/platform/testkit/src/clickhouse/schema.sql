@@ -37,6 +37,7 @@ CREATE TABLE dataset_rows
     `_object_delete` Bool DEFAULT false,
     `input` String DEFAULT '' CODEC(ZSTD(3)),
     `output` String DEFAULT '' CODEC(ZSTD(3)),
+    `expected_output` String DEFAULT '' CODEC(ZSTD(3)),
     `metadata` String DEFAULT '' CODEC(ZSTD(3)),
     INDEX idx_row_id row_id TYPE bloom_filter GRANULARITY 1
 )

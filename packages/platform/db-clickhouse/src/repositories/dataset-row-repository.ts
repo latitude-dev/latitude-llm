@@ -16,6 +16,7 @@ type DatasetRowCH = {
   row_id: string
   input: string
   output: string
+  expected_output: string
   metadata: string
   created_at: string
   latest_xact_id: string
@@ -26,6 +27,7 @@ const toDomainRow = (row: DatasetRowCH, datasetId: string): DatasetRow => ({
   datasetId: DatasetId(datasetId),
   input: safeParseJson(row.input, { fallback: "string" }),
   output: safeParseJson(row.output, { fallback: "string" }),
+  expectedOutput: safeParseJson(row.expected_output, { fallback: "string" }),
   metadata: safeParseJson(row.metadata, { fallback: "string" }),
   createdAt: parseCHDate(row.created_at),
   version: Number(row.latest_xact_id),
@@ -33,7 +35,7 @@ const toDomainRow = (row: DatasetRowCH, datasetId: string): DatasetRow => ({
 
 const buildSearchClause = (search: string | undefined) =>
   search
-    ? "AND (positionCaseInsensitive(input, {search:String}) > 0 OR positionCaseInsensitive(output, {search:String}) > 0)"
+    ? "AND (positionCaseInsensitive(input, {search:String}) > 0 OR positionCaseInsensitive(output, {search:String}) > 0 OR positionCaseInsensitive(expected_output, {search:String}) > 0)"
     : ""
 
 const buildVersionClause = (version: number | undefined) =>
@@ -67,6 +69,7 @@ const buildListDataQueryOffset = (versionClause: string, searchClause: string, s
     row_id,
     argMax(input, xact_id) AS input,
     argMax(output, xact_id) AS output,
+    argMax(expected_output, xact_id) AS expected_output,
     argMax(metadata, xact_id) AS metadata,
     min(created_at) AS created_at,
     max(xact_id) AS latest_xact_id
@@ -94,6 +97,7 @@ const buildListDataQueryKeyset = (versionClause: string, searchClause: string, s
     row_id,
     argMax(input, xact_id) AS input,
     argMax(output, xact_id) AS output,
+    argMax(expected_output, xact_id) AS expected_output,
     argMax(metadata, xact_id) AS metadata,
     min(created_at) AS created_at,
     max(xact_id) AS latest_xact_id
@@ -115,7 +119,8 @@ const buildListCountQuery = (versionClause: string, searchClause: string) => `
     SELECT
       row_id,
       argMax(input, xact_id) AS input,
-      argMax(output, xact_id) AS output
+      argMax(output, xact_id) AS output,
+      argMax(expected_output, xact_id) AS expected_output
     FROM dataset_rows
     WHERE organization_id = {organizationId:String}
       AND dataset_id = {datasetId:String}
@@ -177,6 +182,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
               xact_id: args.version,
               input: serializeField(row.input),
               output: serializeField(row.output),
+              expected_output: serializeField(row.expectedOutput),
               metadata: serializeField(row.metadata),
             }))
 
@@ -361,6 +367,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
                 row_id,
                 argMax(input, xact_id) AS input,
                 argMax(output, xact_id) AS output,
+                argMax(expected_output, xact_id) AS expected_output,
                 argMax(metadata, xact_id) AS metadata,
                 min(created_at) AS created_at,
                 max(xact_id) AS latest_xact_id
@@ -401,6 +408,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
                   xact_id: args.version,
                   input: serializeField(args.input),
                   output: serializeField(args.output),
+                  expected_output: serializeField(args.expectedOutput),
                   metadata: serializeField(args.metadata),
                 },
               ],
@@ -421,6 +429,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
               xact_id: args.version,
               input: "",
               output: "",
+              expected_output: "",
               metadata: "",
               _object_delete: true,
             }))
@@ -475,6 +484,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
               xact_id: args.version,
               input: "",
               output: "",
+              expected_output: "",
               metadata: "",
               _object_delete: true,
             }))

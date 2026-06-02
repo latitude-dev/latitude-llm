@@ -8109,6 +8109,21 @@
                   ],
                   "description": "Free-form cell value. Either a plain string or an arbitrary JSON object."
                 },
+                "expectedOutput": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  ],
+                  "description": "The correct answer for this row. Curators fill this in by hand; it is not derived from `output`."
+                },
                 "metadata": {
                   "anyOf": [
                     {
@@ -8140,6 +8155,7 @@
                 "datasetId",
                 "input",
                 "output",
+                "expectedOutput",
                 "metadata",
                 "createdAt",
                 "version"
@@ -8226,6 +8242,30 @@
                 },
                 "output": {
                   "description": "Row output cell.",
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "expectedOutput": {
+                  "description": "Correct answer for this row. Filled in by curators; usually distinct from `output`.",
                   "anyOf": [
                     {
                       "type": "string"

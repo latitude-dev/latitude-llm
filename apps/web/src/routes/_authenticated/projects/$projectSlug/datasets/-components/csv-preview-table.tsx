@@ -22,7 +22,8 @@ export function CsvPreviewTable({ csvRows, totalRows, mapping, options }: CsvPre
     return slice.map((row) => applyMapping(row, mapping, options))
   }, [csvRows, mapping, options])
 
-  const hasMappedColumns = mapping.input.length + mapping.output.length + mapping.metadata.length > 0
+  const hasMappedColumns =
+    mapping.input.length + mapping.output.length + mapping.expectedOutput.length + mapping.metadata.length > 0
 
   if (!hasMappedColumns) {
     return (
@@ -45,6 +46,11 @@ export function CsvPreviewTable({ csvRows, totalRows, mapping, options }: CsvPre
               <TableHead>
                 <Text.H6 color="foregroundMuted">#</Text.H6>
               </TableHead>
+              {mapping.expectedOutput.length > 0 && (
+                <TableHead>
+                  <ColumnBadge label="Expected output" color="violet" />
+                </TableHead>
+              )}
               {mapping.input.length > 0 && (
                 <TableHead>
                   <ColumnBadge label="Input" color="blue" />
@@ -68,6 +74,11 @@ export function CsvPreviewTable({ csvRows, totalRows, mapping, options }: CsvPre
                 <TableCell>
                   <Text.H6 color="foregroundMuted">{i + 1}</Text.H6>
                 </TableCell>
+                {mapping.expectedOutput.length > 0 && (
+                  <TableCell>
+                    <JsonCell value={row.expectedOutput} />
+                  </TableCell>
+                )}
                 {mapping.input.length > 0 && (
                   <TableCell>
                     <JsonCell value={row.input} />
@@ -108,10 +119,11 @@ function PreviewHeader({ totalRows }: { totalRows: number }) {
   )
 }
 
-function ColumnBadge({ label, color }: { label: string; color: "blue" | "green" | "amber" }) {
+function ColumnBadge({ label, color }: { label: string; color: "blue" | "green" | "violet" | "amber" }) {
   const colors = {
     blue: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
     green: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    violet: "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200",
     amber: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
   }
   return <span className={`inline-flex rounded px-2 py-0.5 text-xs font-semibold ${colors[color]}`}>{label}</span>

@@ -23,6 +23,7 @@ export function CsvImportView({ title, subtitle, parsedCsv, onCancel, onSave }: 
   const [mapping, setMapping] = useState<ColumnMapping>(() => ({
     input: [...parsedCsv.headers],
     output: [],
+    expectedOutput: [],
     metadata: [],
   }))
   const [options, setOptions] = useState<CsvTransformOptions>({
