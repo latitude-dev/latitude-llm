@@ -1,10 +1,10 @@
 /**
- * Tag-scoped cohort percentile baselines, shared by traces and sessions.
+ * Project-wide cohort percentile baselines, shared by traces and sessions.
  *
- * A "cohort" is the set of traces (or sessions) that share an exact tag
- * combination. For each numeric metric we compute p50/p90/p95/p99 across the
- * cohort and expose them as a baseline that the UI compares a single item's
- * value against (the trace/session outlier badge).
+ * A "cohort" is every trace (or session) in the project. For each numeric
+ * metric we compute p50/p90/p95/p99 across the cohort and expose them as a
+ * baseline that the UI compares a single item's value against (the
+ * trace/session outlier badge).
  *
  * Percentiles are gated by sample count: a p99 derived from 20 samples is
  * noise, so we null it out below the gate. The badge UI treats `null` as

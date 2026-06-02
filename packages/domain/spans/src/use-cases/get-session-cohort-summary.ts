@@ -32,6 +32,15 @@ const parseCachedSummary = (json: string): CohortSummary | null => {
   }
 }
 
+/**
+ * Loads the project-wide cohort baseline used to render outlier badges.
+ *
+ * The repository's `excludeSessionId` param is intentionally not threaded
+ * through: the badge is meant to compare against a stable project-wide
+ * reference, so the row being viewed is included in its own baseline. A
+ * future "compare this session to everything else" view could surface the
+ * port-level support if needed.
+ */
 export const getSessionCohortSummaryUseCase = Effect.fn("spans.getSessionCohortSummary")(function* (
   input: GetSessionCohortSummaryInput,
 ) {
