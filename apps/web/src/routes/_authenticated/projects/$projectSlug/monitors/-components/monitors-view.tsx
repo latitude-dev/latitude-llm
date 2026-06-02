@@ -143,9 +143,9 @@ export function MonitorsView({
       key: "name",
       header: "Monitor",
       sortKey: "name",
-      width: 420,
-      minWidth: 240,
-      maxWidth: 420,
+      width: 315,
+      minWidth: 180,
+      maxWidth: 315,
       render: (row) => (
         <div className="flex min-w-0 items-center gap-2">
           <Text.H5 className="min-w-0" noWrap ellipsis>
@@ -175,8 +175,8 @@ export function MonitorsView({
       key: "status",
       header: "Status",
       sortKey: "status",
-      width: 110,
-      minWidth: 110,
+      width: 80,
+      minWidth: 80,
       render: (row) =>
         row.monitor.mutedAt ? <Status variant="neutral" label="Muted" /> : <Status variant="success" label="Live" />,
     },
@@ -184,8 +184,8 @@ export function MonitorsView({
       key: "lastIncident",
       header: "Last incident",
       sortKey: "lastIncident",
-      width: 220,
-      minWidth: 180,
+      width: 187,
+      minWidth: 153,
       render: (row) => <LastIncidentCell summary={row.lastIncident} />,
     },
     {
