@@ -99,7 +99,8 @@ const buildIssueWithAssignedScore = ({
   // "is the issue regressed" a stored fact (and gives the regression event
   // idempotency for free — a subsequent score in the same cycle won't see
   // resolvedAt != null and won't re-emit).
-  const isRegression = issue.resolvedAt !== null && score.createdAt.getTime() > issue.resolvedAt.getTime()
+  const isRegression =
+    issue.ignoredAt === null && issue.resolvedAt !== null && score.createdAt.getTime() > issue.resolvedAt.getTime()
 
   return {
     updatedIssue: {

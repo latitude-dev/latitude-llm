@@ -98,7 +98,7 @@ const provideTestLayers = (params: {
   readonly dwellWrites?: UpdateAlertIncidentExitDwellInput[]
   readonly projectSettings?: ProjectSettings | null
 }) => {
-  const { repository: issueRepository } = createFakeIssueRepository([params.issue], undefined, {
+  const { repository: issueRepository, issues } = createFakeIssueRepository([params.issue], undefined, {
     lifecycle: new Map([[params.issue.id, { isEscalating: params.isEscalating ?? false, isRegressed: false }]]),
   })
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
@@ -123,6 +123,7 @@ const provideTestLayers = (params: {
 
   return {
     dwellWrites,
+    issues,
     apply: <A, E>(
       effect: Effect.Effect<
         A,
@@ -180,6 +181,51 @@ describe("checkIssueEscalationUseCase", () => {
     })
     const escalated = events[0]?.payload as { entrySignals: EntrySignalsSnapshot | null }
     expect(escalated.entrySignals).toMatchObject({ entryCount24h: 600, kShort: 3, kLong: 2 })
+  })
+
+  it("clears resolvedAt when a resolved issue enters escalation", async () => {
+    const resolvedAt = new Date("2026-05-01T10:00:00.000Z")
+    const issue = makeIssue({
+      createdAt: new Date("2026-04-01T10:00:00.000Z"),
+      resolvedAt,
+    })
+    const events: OutboxWriteEvent[] = []
+    const { apply, issues } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 25, recent6h: 150, recent24h: 600 }),
+      events,
+    })
+
+    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+
+    expect(result.transition).toBe("entered")
+    expect(issues.get(issue.id)?.resolvedAt).toBeNull()
+    expect(issues.get(issue.id)?.updatedAt.getTime()).toBeGreaterThan(resolvedAt.getTime())
+    expect(events).toHaveLength(1)
+    expect(events[0]?.eventName).toBe("IssueEscalated")
+  })
+
+  it("does not transition ignored issues into escalation", async () => {
+    const ignoredAt = new Date("2026-05-01T10:00:00.000Z")
+    const issue = makeIssue({
+      createdAt: new Date("2026-04-01T10:00:00.000Z"),
+      ignoredAt,
+    })
+    const events: OutboxWriteEvent[] = []
+    const { apply, issues } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 100, recent6h: 600, recent24h: 2400 }),
+      events,
+    })
+
+    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+
+    expect(result.transition).toBe("none")
+    expect(result.currentlyEscalating).toBe(false)
+    expect(issues.get(issue.id)?.ignoredAt?.getTime()).toBe(ignoredAt.getTime())
+    expect(events).toHaveLength(0)
   })
 
   it("does not emit IssueEscalated while the issue is still new", async () => {
