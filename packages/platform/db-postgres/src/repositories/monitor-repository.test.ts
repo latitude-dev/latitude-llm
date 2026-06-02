@@ -460,6 +460,160 @@ describe("MonitorRepositoryLive", () => {
     })
   })
 
+  describe("resetSystemMonitors", () => {
+    const makeSystemMonitor = (
+      target: ProjectId,
+      slug: string,
+      name: string,
+      alert: { kind: MonitorAlert["kind"]; severity: AlertSeverity; condition: AlertIncidentCondition | null },
+    ): Monitor => {
+      const monitorId = MonitorId(generateId())
+      const now = new Date("2026-06-01T10:00:00.000Z")
+      return {
+        id: monitorId,
+        organizationId,
+        projectId: target,
+        slug,
+        name,
+        description: `${name} description`,
+        system: true,
+        alerts: [
+          {
+            id: MonitorAlertId(generateId()),
+            monitorId,
+            kind: alert.kind,
+            source: { type: "issue", id: null },
+            condition: alert.condition,
+            severity: alert.severity,
+            createdAt: now,
+          },
+        ],
+        mutedAt: null,
+        deletedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      }
+    }
+
+    const systemMonitors = (target: ProjectId = projectId): Monitor[] => [
+      makeSystemMonitor(target, "issue-discovered", "Issue discovered", {
+        kind: "issue.new",
+        severity: "medium",
+        condition: null,
+      }),
+      makeSystemMonitor(target, "issue-escalating", "Issue escalating", {
+        kind: "issue.escalating",
+        severity: "high",
+        condition: { kind: "issue.escalating", sensitivity: 3 },
+      }),
+    ]
+
+    const reset = (monitors: readonly Monitor[]) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.resetSystemMonitors(monitors)
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+    const list = (target: ProjectId = projectId) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.list({ projectId: target, limit: 50, offset: 0 })
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+    it("inserts the monitors with their alerts on a fresh project", async () => {
+      const result = await reset(systemMonitors())
+      expect(result.map((m) => m.slug)).toEqual(["issue-discovered", "issue-escalating"])
+
+      const page = await list()
+      expect(page.totalCount).toBe(2)
+      const bySlug = new Map(page.items.map((m) => [m.slug, m]))
+      expect(bySlug.get("issue-escalating")?.alerts[0]).toMatchObject({
+        kind: "issue.escalating",
+        condition: { kind: "issue.escalating", sensitivity: 3 },
+      })
+    })
+
+    it("overwrites name/description and resets alert condition values on existing system monitors", async () => {
+      await reset(systemMonitors())
+
+      // Drift the live state: rename the monitor and slacken the escalation sensitivity.
+      const before = await list()
+      const escalating = before.items.find((m) => m.slug === "issue-escalating")
+      await database.db
+        .update(monitorsTable)
+        .set({ name: "Renamed by user", description: "Edited" })
+        .where(eq(monitorsTable.id, escalating?.id ?? ""))
+      await database.db
+        .update(monitorAlertsTable)
+        .set({ condition: { kind: "issue.escalating", sensitivity: 10 } })
+        .where(eq(monitorAlertsTable.monitorId, escalating?.id ?? ""))
+
+      const result = await reset(systemMonitors())
+      expect(result.length).toBe(2)
+
+      const after = await list()
+      expect(after.totalCount).toBe(2)
+      const resetEscalating = after.items.find((m) => m.slug === "issue-escalating")
+      expect(resetEscalating?.id).toBe(escalating?.id) // upsert keeps the existing row
+      expect(resetEscalating?.name).toBe("Issue escalating")
+      expect(resetEscalating?.description).toBe("Issue escalating description")
+      expect(resetEscalating?.alerts.length).toBe(1) // old alert soft-deleted, fresh one inserted
+      expect(resetEscalating?.alerts[0]).toMatchObject({ condition: { kind: "issue.escalating", sensitivity: 3 } })
+    })
+
+    it("preserves the mute state of an existing system monitor", async () => {
+      await reset(systemMonitors())
+      const before = await list()
+      const discovered = before.items.find((m) => m.slug === "issue-discovered")
+      const mutedAt = new Date("2026-06-01T12:00:00.000Z")
+      await database.db
+        .update(monitorsTable)
+        .set({ mutedAt })
+        .where(eq(monitorsTable.id, discovered?.id ?? ""))
+
+      await reset(systemMonitors())
+
+      const after = await list()
+      const resetDiscovered = after.items.find((m) => m.slug === "issue-discovered")
+      expect(resetDiscovered?.mutedAt).toEqual(mutedAt)
+    })
+
+    it("skips a slug already held by a user-created monitor", async () => {
+      const userMonitorId = generateId()
+      await database.db
+        .insert(monitorsTable)
+        .values(
+          makeMonitorRow({ id: userMonitorId, slug: "issue-discovered", name: "My custom monitor", system: false }),
+        )
+
+      const result = await reset(systemMonitors())
+      expect(result.map((m) => m.slug)).toEqual(["issue-escalating"])
+
+      const page = await list()
+      const discovered = page.items.find((m) => m.slug === "issue-discovered")
+      expect(discovered?.id).toBe(userMonitorId)
+      expect(discovered?.name).toBe("My custom monitor")
+      expect(discovered?.system).toBe(false)
+    })
+
+    it("only touches the target project, leaving same-slug monitors on other projects alone", async () => {
+      await reset(systemMonitors(otherProjectId))
+      const otherBefore = await list(otherProjectId)
+      const otherDiscovered = otherBefore.items.find((m) => m.slug === "issue-discovered")
+
+      await reset(systemMonitors(projectId))
+
+      const target = await list(projectId)
+      expect(target.totalCount).toBe(2)
+      const other = await list(otherProjectId)
+      expect(other.items.find((m) => m.slug === "issue-discovered")?.id).toBe(otherDiscovered?.id)
+    })
+  })
+
   describe("mutations", () => {
     const exec = <A, E>(use: (repo: MonitorRepositoryShape) => Effect.Effect<A, E, SqlClient>) =>
       Effect.runPromise(

@@ -11,6 +11,7 @@ import {
   type ListOrganizationsByUsageOutput,
   listOrganizationsByUsageUseCase,
   ORGANIZATION_USAGE_MAX_LIMIT,
+  resetSystemMonitorsUseCase,
   upsertBillingOverrideUseCase,
 } from "@domain/admin"
 import { WorkflowStarter } from "@domain/queue"
@@ -22,6 +23,7 @@ import {
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
   invalidateEffectivePlanCache,
+  MonitorRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
   resolveEffectivePlanCached,
@@ -416,4 +418,29 @@ export const adminCreateDemoProject = createServerFn({ method: "POST" })
       projectSlug: result.projectSlug,
       queueAssigneeUserId: result.queueAssigneeUserId,
     }
+  })
+
+interface AdminResetSystemMonitorsResultDto {
+  readonly projectsCount: number
+  readonly monitorsReset: number
+}
+
+export const adminResetSystemMonitorsInputSchema = z.object({
+  organizationId: z.string().min(1).max(256),
+})
+
+export const adminResetSystemMonitors = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(adminResetSystemMonitorsInputSchema)
+  .handler(async ({ data }): Promise<AdminResetSystemMonitorsResultDto> => {
+    const client = getAdminPostgresClient()
+
+    const result = await Effect.runPromise(
+      resetSystemMonitorsUseCase({ organizationId: OrganizationId(data.organizationId) }).pipe(
+        withPostgres(Layer.mergeAll(AdminOrganizationRepositoryLive, MonitorRepositoryLive), client),
+        withTracing,
+      ),
+    )
+
+    return { projectsCount: result.projectsCount, monitorsReset: result.monitorsReset }
   })

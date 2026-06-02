@@ -221,6 +221,59 @@ export const MonitorRepositoryLive = Layer.effect(
             return inserted
           })
         }),
+      resetSystemMonitors: (monitorsToReset) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // Filters by the entity's projectId (NOT sqlClient.organizationId): this
+          // runs from the admin/"system" RLS-off context. One transaction.
+          return yield* sqlClient.query(async (db) => {
+            const now = new Date()
+            const reset: Monitor[] = []
+            for (const monitor of monitorsToReset) {
+              const existing = await db
+                .select({ id: monitors.id, system: monitors.system })
+                .from(monitors)
+                .where(
+                  and(
+                    eq(monitors.projectId, monitor.projectId),
+                    eq(monitors.slug, monitor.slug),
+                    isNull(monitors.deletedAt),
+                  ),
+                )
+                .limit(1)
+              const existingRow = existing[0]
+              // Don't clobber a user monitor that happens to hold a system slug.
+              if (existingRow && !existingRow.system) continue
+
+              const effectiveId = existingRow?.id ?? monitor.id
+              if (existingRow) {
+                await db
+                  .update(monitors)
+                  .set({ name: monitor.name, description: monitor.description, updatedAt: now })
+                  .where(eq(monitors.id, effectiveId))
+              } else {
+                await db.insert(monitors).values(toMonitorRow(monitor))
+              }
+
+              // Reset alerts: soft-delete the live ones (keeps the incident→alert
+              // join resolvable) and insert fresh from the definition.
+              await db
+                .update(monitorAlerts)
+                .set({ deletedAt: now })
+                .where(and(eq(monitorAlerts.monitorId, effectiveId), isNull(monitorAlerts.deletedAt)))
+              if (monitor.alerts.length > 0) {
+                await db.insert(monitorAlerts).values(
+                  monitor.alerts.map((alert) => ({
+                    ...toMonitorAlertRow(alert, monitor.organizationId),
+                    monitorId: effectiveId,
+                  })),
+                )
+              }
+              reset.push(monitor)
+            }
+            return reset
+          })
+        }),
       setMuted: ({ id, mutedAt }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

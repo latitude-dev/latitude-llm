@@ -60,6 +60,29 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         }
         return inserted
       }),
+    resetSystemMonitors: (toReset) =>
+      Effect.sync(() => {
+        const reset: Monitor[] = []
+        for (const monitor of toReset) {
+          const existing = monitors.find(
+            (m) => m.projectId === monitor.projectId && m.slug === monitor.slug && isLive(m),
+          )
+          if (existing && !existing.system) continue
+          if (existing) {
+            replace(existing.id, {
+              ...existing,
+              name: monitor.name,
+              description: monitor.description,
+              alerts: monitor.alerts.map((alert) => ({ ...alert, monitorId: existing.id })),
+              updatedAt: new Date(),
+            })
+          } else {
+            monitors.push(monitor)
+          }
+          reset.push(monitor)
+        }
+        return reset
+      }),
     setMuted: ({ id, mutedAt }) =>
       Effect.suspend(() => {
         const monitor = liveById(id)

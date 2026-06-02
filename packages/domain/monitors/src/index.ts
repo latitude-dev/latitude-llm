@@ -39,7 +39,7 @@ export type {
   ProvisionSystemMonitorsError,
   ProvisionSystemMonitorsInput,
 } from "./use-cases/provision-system-monitors.ts"
-export { provisionSystemMonitorsUseCase } from "./use-cases/provision-system-monitors.ts"
+export { buildSystemMonitors, provisionSystemMonitorsUseCase } from "./use-cases/provision-system-monitors.ts"
 export type { UpdateMonitorError, UpdateMonitorInput } from "./use-cases/update-monitor.ts"
 export { updateMonitorUseCase } from "./use-cases/update-monitor.ts"
 export type { UpdateMonitorAlertError, UpdateMonitorAlertInput } from "./use-cases/update-monitor-alert.ts"

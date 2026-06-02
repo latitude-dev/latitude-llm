@@ -923,6 +923,9 @@ importers:
       '@domain/feature-flags':
         specifier: workspace:*
         version: link:../feature-flags
+      '@domain/monitors':
+        specifier: workspace:*
+        version: link:../monitors
       '@domain/projects':
         specifier: workspace:*
         version: link:../projects
