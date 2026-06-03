@@ -63,7 +63,7 @@ const flaggerOutputSchema = z
   .object({
     matched: z.boolean().optional().default(false),
     feedback: z.string().min(1).nullable().optional(),
-    messageIndex: z.number().int().optional(),
+    messageIndex: z.string().regex(/^\d+$/).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.matched && !value.feedback?.trim()) {
@@ -994,8 +994,8 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
 
     expect(result).toEqual({ matched: false })
     expect(calls.generate).toHaveLength(1)
-    expect(calls.generate[0].system).toContain("messageIndex")
-    expect(calls.generate[0].system).toContain("non-negative integer no larger than 10000")
+    expect(calls.generate[0].system).toContain("messageIndex must be exactly one quoted integer string")
+    expect(calls.generate[0].system).toContain("never output it as a JSON number")
   })
 
   it("recovers to matched=false when the SDK cause has no AI_NoObjectGeneratedError name but the message indicates a schema mismatch", async () => {
@@ -1021,6 +1021,54 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
           new AIError({
             message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No object generated: response did not match schema.`,
             cause: new Error("No object generated: response did not match schema."),
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      runFlaggerUseCase({ ...INPUT, flaggerSlug: "laziness" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(TraceRepository, repository),
+            Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(INPUT.organizationId) })),
+            Layer.succeed(FlaggerRepository, defaultFlaggerRepo),
+            aiLayer,
+            defaultCacheLayer,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("recovers to matched=false when the SDK reports no output generated", async () => {
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () =>
+        Effect.succeed(
+          makeTraceDetail([
+            {
+              role: "user",
+              parts: [{ type: "text", content: "Please do the task." }],
+            },
+            {
+              role: "assistant",
+              parts: [{ type: "text", content: "I'll look into that." }],
+            },
+          ]),
+        ),
+    })
+
+    const sdkError = new Error("No output generated.")
+    sdkError.name = "AI_NoOutputGeneratedError"
+
+    const { layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No output generated.`,
+            cause: sdkError,
           }),
         ),
     })
@@ -1086,7 +1134,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
     expect(calls.generate[0].prompt).toContain("CANDIDATE STAGES")
   })
 
-  it("instructs flaggers to keep messageIndex bounded and integer-shaped", async () => {
+  it("instructs flaggers to emit messageIndex as exactly one quoted integer string", async () => {
     const { repository } = createFakeTraceRepository({
       findByTraceId: () =>
         Effect.succeed(
@@ -1120,8 +1168,8 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       ),
     )
 
-    expect(calls.generate[0].system).toContain("messageIndex")
-    expect(calls.generate[0].system).toContain("non-negative integer no larger than 10000")
+    expect(calls.generate[0].system).toContain("messageIndex must be exactly one quoted integer string")
+    expect(calls.generate[0].system).toContain("never output it as a JSON number")
   })
 
   it("uses flagger-specific prompt for NSFW with suspicious snippets", async () => {
@@ -1184,8 +1232,12 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
   it("schema: matched=true requires positive feedback", () => {
     expect(() => flaggerOutputSchema.parse({ matched: true })).toThrow()
 
-    const parsed = flaggerOutputSchema.parse({ matched: true, feedback: "Assistant refused a harmless request." })
-    expect(parsed).toEqual({ matched: true, feedback: "Assistant refused a harmless request." })
+    const parsed = flaggerOutputSchema.parse({
+      matched: true,
+      feedback: "Assistant refused a harmless request.",
+      messageIndex: "2",
+    })
+    expect(parsed).toEqual({ matched: true, feedback: "Assistant refused a harmless request.", messageIndex: "2" })
   })
 
   it("schema: matched=false rejects annotation feedback", () => {

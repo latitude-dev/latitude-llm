@@ -71,50 +71,42 @@ const FLAGGER_MESSAGE_INDEX_MAX = 10_000
 const isValidMessageIndex = (value: number | undefined): value is number =>
   value !== undefined && Number.isInteger(value) && value >= 0 && value <= FLAGGER_MESSAGE_INDEX_MAX
 
-const baseFlaggerOutputSchema = z.object({
+const providerFlaggerOutputSchema = z.object({
   matched: z.boolean().optional().default(false),
   feedback: z.string().min(1).nullable().optional(),
-  // Keep provider-facing schema broad: Bedrock rejects integer schemas with
-  // minimum/maximum constraints, so exact bounds are enforced after parsing below.
-  messageIndex: z.number().optional(),
+  // Ask providers for a string instead of a JSON number. Claude/Bedrock can
+  // otherwise produce runaway decimal literals for this field under structured
+  // generation, which makes the whole object fail to materialize.
+  messageIndex: z.string().regex(/^\d+$/).optional(),
 })
 
-const flaggerOutputSchema = baseFlaggerOutputSchema
-  .superRefine((value, ctx) => {
-    const feedback = value.feedback?.trim()
+const flaggerOutputSchema = providerFlaggerOutputSchema.superRefine((value, ctx) => {
+  const feedback = value.feedback?.trim()
 
-    if (value.matched) {
-      if (!feedback) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["feedback"],
-          message: "matched=true requires positive annotation feedback",
-        })
-        return
-      }
-    } else if (feedback) {
+  if (value.matched) {
+    if (!feedback) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["feedback"],
-        message: "matched=false must not include annotation feedback",
+        message: "matched=true requires positive annotation feedback",
       })
+      return
     }
-  })
-  .transform((value) => {
-    const messageIndex = value.messageIndex
-    return {
-      matched: value.matched,
-      ...(value.matched && value.feedback ? { feedback: value.feedback.trim() } : {}),
-      ...(value.matched && isValidMessageIndex(messageIndex) ? { messageIndex } : {}),
-    }
-  })
+  } else if (feedback) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["feedback"],
+      message: "matched=false must not include annotation feedback",
+    })
+  }
+})
 
 const FLAGGER_OUTPUT_CONTRACT = `
 Structured output contract:
 - Set matched=false when the trace does not belong to this flagger; in that case feedback must be null or omitted.
 - Set matched=true only when the trace belongs to this flagger; in that case feedback is required.
 - For matched=true, feedback must be the final human-readable annotation: one or two short sentences describing the issue and concrete evidence.
-- Include messageIndex only when one transcript line is clearly the best evidence; it must be a non-negative integer no larger than ${FLAGGER_MESSAGE_INDEX_MAX}.
+- Include messageIndex only when one transcript line is clearly the best evidence. messageIndex must be exactly one quoted integer string like "0" or "12"; never output it as a JSON number, decimal, exponent, comma-separated list, range, or unquoted value.
 `.trim()
 
 // Whether a strategy classifies only the evaluated agent's own assistant
@@ -557,10 +549,22 @@ const buildAnnotationReviewPrompt = (
   ].join("\n")
 }
 
+const parseMessageIndex = (value: string | undefined): number | undefined => {
+  if (value === undefined || !/^\d+$/.test(value)) return undefined
+  const parsed = Number.parseInt(value, 10)
+  return isValidMessageIndex(parsed) ? parsed : undefined
+}
+
 const parseFlaggerOutput = (input: unknown): RunFlaggerResult => {
   const parsed = flaggerOutputSchema.safeParse(input)
   if (!parsed.success) return { matched: false }
-  return parsed.data
+
+  const messageIndex = parseMessageIndex(parsed.data.messageIndex)
+  return {
+    matched: parsed.data.matched,
+    ...(parsed.data.matched && parsed.data.feedback ? { feedback: parsed.data.feedback.trim() } : {}),
+    ...(parsed.data.matched && messageIndex !== undefined ? { messageIndex } : {}),
+  }
 }
 
 const loadTraceDetail = (input: RunFlaggerInput) =>
@@ -574,14 +578,14 @@ const loadTraceDetail = (input: RunFlaggerInput) =>
     })
   })
 
-// The Vercel AI SDK raises a `NoObjectGeneratedError` (name `AI_NoObjectGeneratedError`)
-// when the model returns output that does not match the requested schema. The flagger
-// treats this as a "no match" signal instead of propagating the failure — the model
-// effectively failed to classify, which for a triage flagger is indistinguishable
-// from matched=false.
+// The Vercel AI SDK raises `NoObjectGeneratedError` / `NoOutputGeneratedError`
+// when the model returns output that does not materialize as the requested schema.
+// The flagger treats this as a "no match" signal instead of propagating the failure
+// — the model effectively failed to classify, which for a triage flagger is
+// indistinguishable from matched=false.
 const isSchemaMismatchCause = (cause: unknown): boolean => {
   if (!(cause instanceof Error)) return false
-  if (cause.name === "AI_NoObjectGeneratedError") return true
+  if (cause.name === "AI_NoObjectGeneratedError" || cause.name === "AI_NoOutputGeneratedError") return true
   return typeof cause.message === "string" && cause.message.includes("response did not match schema")
 }
 
@@ -627,7 +631,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
       maxTokens: FLAGGER_MAX_TOKENS,
       system: classificationSystemPrompt,
       prompt: classificationPrompt,
-      schema: baseFlaggerOutputSchema,
+      schema: providerFlaggerOutputSchema,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
         // If the trace we are classifying is itself flagger-generated, mark this
