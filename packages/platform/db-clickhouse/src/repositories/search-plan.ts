@@ -30,6 +30,22 @@ import { Effect, Option } from "effect"
  */
 const SEMANTIC_SCAN_LIMIT = 30_000
 
+/**
+ * Hard cap on the per-trace candidate set returned to the application by
+ * `fetchSearchCandidates` (session-level search). Semantic plans already
+ * enforce `SEMANTIC_SCAN_LIMIT` server-side, but the lexical and hybrid
+ * shapes have no inherent bound — a broad phrase on an XL project could
+ * match hundreds of thousands of trace documents. Without this cap those
+ * rows stream into the Node worker as a single result set and then ship
+ * straight back to ClickHouse as a query parameter, which (a) risks OOMing
+ * the worker and (b) inflates the rollup query payload past anything the
+ * PREWHERE win can recoup.
+ *
+ * 50k is generous: well above realistic ranked-search recall and small
+ * enough that `Array(FixedString(32))` serialization stays under ~2 MB.
+ */
+export const MAX_SEARCH_CANDIDATES = 50_000
+
 function escapeLikePattern(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
 }

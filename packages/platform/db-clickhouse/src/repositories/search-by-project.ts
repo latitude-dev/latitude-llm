@@ -26,14 +26,18 @@ import { Effect } from "effect"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
-import { planSearch } from "./search-plan.ts"
+import { MAX_SEARCH_CANDIDATES, planSearch, type SearchPlan } from "./search-plan.ts"
 
 /**
  * Session-level search read path. The trace-level `search-plan.ts` provides
- * `(trace_id, relevance_score)` candidates; here we wrap that subquery in a
- * `search_results → trace_rollup → session_rollup` CTE chain (spec §4.3) so
- * results collapse to one row per session with the matching-trace metadata
- * the UI needs ("N matching turns", drill-in on `bestTraceId`, etc.).
+ * `(trace_id, relevance_score)` candidates; we materialize that subquery
+ * via `fetchSearchCandidates` in its own roundtrip, then feed the candidate
+ * trace_ids and scores as parameter-bound arrays into a
+ * `trace_rollup → session_rollup` query so results collapse to one row per
+ * session with the matching-trace metadata the UI needs ("N matching
+ * turns", drill-in on `bestTraceId`, etc.). The split keeps the `traces`
+ * read on ClickHouse's PREWHERE-friendly path — see LAT-649 for the cliff
+ * the previous single-statement JOIN form hit on XL projects.
  *
  * The functions in this file are pure read-side: they own the search SQL and
  * the per-session row → domain mapping, but defer to a `fetchFullSessions`
@@ -198,10 +202,69 @@ const buildSearchFilters = (filters: FilterSet | undefined) => {
   return { telemetryParams: telemetry.params, traceScoreWhere, scoreParams, finalHaving }
 }
 
+type SearchCandidate = { trace_id: string; relevance_score: number }
+
 /**
- * The `trace_rollup` CTE body shared by the list and count queries. Reads
- * from `traces ⨝ search_results` and finalizes the same aggregate columns
- * `SESSION_FIELD_REGISTRY` references so the per-trace `HAVING` resolves.
+ * Run `plan.subquery` on its own roundtrip to materialize the candidate
+ * `(trace_id, relevance_score)` set in the application. The session rollup
+ * then receives those trace_ids as a parameter-bound array, so ClickHouse
+ * keeps the `traces` read on the PREWHERE-friendly path and never falls off
+ * the "read all AggregateFunction columns" cliff that the JOIN form hits
+ * once the candidate set is more than a few hundred rows (LAT-649).
+ *
+ * The inner `GROUP BY trace_id` collapses duplicate rows that lexical plans
+ * can surface before `trace_search_documents` (a `ReplacingMergeTree`) has
+ * merged. The outer `LIMIT {candidateCap:UInt32}` caps how many candidates
+ * the application materializes, protecting the Node worker from broad
+ * lexical phrases on XL projects — semantic plans already cap server-side
+ * via `SEMANTIC_SCAN_LIMIT`, lexical/hybrid plans don't.
+ */
+const fetchSearchCandidates = ({
+  organizationId,
+  projectId,
+  plan,
+}: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly plan: SearchPlan
+}): Effect.Effect<readonly SearchCandidate[], RepositoryError, ChSqlClient> =>
+  Effect.gen(function* () {
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+    return yield* chSqlClient
+      .query(async (client) => {
+        const result = await client.query({
+          query: `SELECT trace_id, max(relevance_score) AS relevance_score
+                  FROM (${plan.subquery})
+                  GROUP BY trace_id
+                  LIMIT {candidateCap:UInt32}`,
+          query_params: {
+            organizationId: organizationId as string,
+            projectId: projectId as string,
+            candidateCap: MAX_SEARCH_CANDIDATES,
+            ...plan.params,
+          },
+          format: "JSONEachRow",
+        })
+        return result.json<SearchCandidate>()
+      })
+      .pipe(Effect.mapError((error) => toRepositoryError(error, "fetchSearchCandidates")))
+  })
+
+/**
+ * The `trace_rollup` CTE body shared by the list and count queries.
+ * Filters `traces` by the candidate `trace_id` set (parameter-bound array)
+ * and finalizes the same aggregate columns `SESSION_FIELD_REGISTRY`
+ * references so the per-trace `HAVING` resolves. `relevance_score` flows in
+ * via the `scoreByTrace` Map declared in the outer WITH clause — see
+ * `fetchSearchCandidates` for why this isn't a join.
+ *
+ * **Coupling**: this string is not standalone. Any query that embeds it
+ * MUST declare the following alias earlier in the same `WITH`:
+ *   `mapFromArrays({traceIds:Array(FixedString(32))},
+ *                  {relevanceScores:Array(Float64)}) AS scoreByTrace`
+ * Otherwise the `scoreByTrace[t.trace_id]` lookup will fail at ClickHouse
+ * parse time with no TypeScript warning.
+ *
  * Mirrors `trace-repository.ts:LIST_SELECT`. (Filter on `traceCount` is a
  * session-level concept and isn't supported in search mode; tracked as
  * follow-up.)
@@ -238,11 +301,11 @@ const TRACE_ROLLUP_BODY = `
     )                                              AS time_to_first_token_ns,
     min(t.min_start_time)                          AS start_time,
     max(t.max_end_time)                            AS end_time,
-    search_results.relevance_score                 AS relevance_score
+    max(scoreByTrace[t.trace_id])                  AS relevance_score
   FROM traces t
-  INNER JOIN search_results ON t.trace_id = search_results.trace_id
   WHERE t.organization_id = {organizationId:String}
     AND t.project_id = {projectId:String}
+    AND t.trace_id IN ({traceIds:Array(FixedString(32))})
 `
 
 interface ListSearchInput {
@@ -273,6 +336,13 @@ export const listSessionsBySearchQuery = ({
     const plan = yield* planSearch(parsed)
     const { telemetryParams, traceScoreWhere, scoreParams, finalHaving } = buildSearchFilters(filters)
 
+    const candidates = yield* fetchSearchCandidates({ organizationId, projectId, plan })
+    if (candidates.length === 0) {
+      return { items: [], hasMore: false, searchMatches: {} } satisfies SessionListPage
+    }
+    const traceIds = candidates.map((c) => normalizeCHString(c.trace_id))
+    const relevanceScores = candidates.map((c) => Number(c.relevance_score))
+
     const axis = sortBy ? SEARCH_SORT_AXES[sortBy] : undefined
     const primaryExpr = axis ? axis.expr : "best_score"
     const primaryChType = axis ? axis.chType : "Float64"
@@ -289,14 +359,15 @@ export const listSessionsBySearchQuery = ({
     const rows = yield* chSqlClient
       .query(async (client) => {
         const result = await client.query({
-          query: `WITH search_results AS (
-                    SELECT trace_id, relevance_score FROM (${plan.subquery})
-                  ),
-                  trace_rollup AS (${TRACE_ROLLUP_BODY}
+          query: `WITH
+                    mapFromArrays(
+                      {traceIds:Array(FixedString(32))},
+                      {relevanceScores:Array(Float64)}
+                    ) AS scoreByTrace,
+                    trace_rollup AS (${TRACE_ROLLUP_BODY}
                     ${traceScoreWhere}
                     GROUP BY
-                      t.organization_id, t.project_id, t.trace_id,
-                      search_results.relevance_score
+                      t.organization_id, t.project_id, t.trace_id
                     ${finalHaving}
                   )
                   SELECT
@@ -338,11 +409,12 @@ export const listSessionsBySearchQuery = ({
           query_params: {
             organizationId: organizationId as string,
             projectId: projectId as string,
+            traceIds,
+            relevanceScores,
             limit: limit + 1,
             matchingTracesCap: SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW,
             ...telemetryParams,
             ...scoreParams,
-            ...plan.params,
             ...(cursor
               ? {
                   cursorSortValue: cursor.sortValue,
@@ -417,17 +489,25 @@ export const countSessionsBySearchQuery = ({
     const plan = yield* planSearch(parsed)
     const { telemetryParams, traceScoreWhere, scoreParams, finalHaving } = buildSearchFilters(filters)
 
+    const candidates = yield* fetchSearchCandidates({ organizationId, projectId, plan })
+    if (candidates.length === 0) {
+      return { totalCount: 0, matchingTraceCount: 0 } satisfies SessionCountResult
+    }
+    const traceIds = candidates.map((c) => normalizeCHString(c.trace_id))
+    const relevanceScores = candidates.map((c) => Number(c.relevance_score))
+
     return yield* chSqlClient
       .query(async (client) => {
         const result = await client.query({
-          query: `WITH search_results AS (
-                    SELECT trace_id, relevance_score FROM (${plan.subquery})
-                  ),
-                  trace_rollup AS (${TRACE_ROLLUP_BODY}
+          query: `WITH
+                    mapFromArrays(
+                      {traceIds:Array(FixedString(32))},
+                      {relevanceScores:Array(Float64)}
+                    ) AS scoreByTrace,
+                    trace_rollup AS (${TRACE_ROLLUP_BODY}
                     ${traceScoreWhere}
                     GROUP BY
-                      t.organization_id, t.project_id, t.trace_id,
-                      search_results.relevance_score
+                      t.organization_id, t.project_id, t.trace_id
                     ${finalHaving}
                   ),
                   session_rollup AS (
@@ -444,9 +524,10 @@ export const countSessionsBySearchQuery = ({
           query_params: {
             organizationId: organizationId as string,
             projectId: projectId as string,
+            traceIds,
+            relevanceScores,
             ...telemetryParams,
             ...scoreParams,
-            ...plan.params,
           },
           format: "JSONEachRow",
         })
