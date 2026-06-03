@@ -1,7 +1,14 @@
 import { IssueRepository } from "@domain/issues"
 import { ALERT_INCIDENT_KIND_LABEL, IssueId } from "@domain/shared"
 import { Effect } from "effect"
-import { actionsLink, contextLine, projectOrOrgContext, sectionMarkdown, severityColor } from "./blocks.ts"
+import {
+  actionsLink,
+  contextLine,
+  monitorAttributionBlocks,
+  projectOrOrgContext,
+  sectionMarkdown,
+  severityColor,
+} from "./blocks.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
 export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> = (payload, ctx) =>
@@ -29,6 +36,14 @@ export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> 
         sectionMarkdown(issueName ? `A new <${issueUrl}|issue> has been detected.` : `A new issue has been detected.`),
         ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`\`\`\`\n${payload.sampleExcerpt.text}\n\`\`\``)] : []),
         ...(tags.length > 0 ? [sectionMarkdown(tags.map((t) => `\`${t}\``).join("  "))] : []),
+        ...monitorAttributionBlocks({
+          webAppUrl: ctx.webAppUrl,
+          projectSlug: ctx.project?.slug,
+          monitorName: payload.monitorName,
+          monitorSlug: payload.monitorSlug,
+          incidentKind: payload.incidentKind,
+          condition: payload.condition,
+        }),
         contextLine(
           `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
         ),

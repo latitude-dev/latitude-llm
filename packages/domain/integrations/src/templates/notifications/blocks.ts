@@ -1,3 +1,5 @@
+import { formatHumanReadableAlert } from "@domain/monitors"
+import type { AlertIncidentCondition, AlertIncidentKind } from "@domain/shared"
 import type { ActionsBlock, HeaderBlock, KnownBlock, SectionBlock } from "@slack/web-api"
 
 export const header = (text: string): HeaderBlock => ({
@@ -31,6 +33,34 @@ export const projectOrOrgContext = (
   organization: { readonly name: string },
   project: { readonly name: string } | null,
 ): string => (project ? `Project *${project.name}* · ${organization.name}` : `Org *${organization.name}*`)
+
+/**
+ * "Created by monitor X" context line (+ humanised alert rule) for monitor-owned
+ * incidents — the Slack equivalent of the email/in-app attribution. Returns `[]`
+ * for legacy incidents (no `monitorName`), so their messages are unchanged. The
+ * name deep-links to the monitor panel when the project slug + monitor slug
+ * resolve; otherwise it renders bold text.
+ */
+export const monitorAttributionBlocks = (input: {
+  readonly webAppUrl: string
+  readonly projectSlug: string | undefined
+  readonly monitorName: string | undefined
+  readonly monitorSlug: string | undefined
+  readonly incidentKind: AlertIncidentKind
+  readonly condition: AlertIncidentCondition | null | undefined
+}): KnownBlock[] => {
+  if (!input.monitorName) return []
+  const url =
+    input.projectSlug && input.monitorSlug
+      ? `${input.webAppUrl.replace(/\/$/, "")}/projects/${input.projectSlug}/monitors?monitorSlug=${encodeURIComponent(input.monitorSlug)}`
+      : null
+  const name = url ? `<${url}|${input.monitorName}>` : `*${input.monitorName}*`
+  const blocks: KnownBlock[] = [contextLine(`Created by monitor ${name}`)]
+  if (input.condition) {
+    blocks.push(contextLine(formatHumanReadableAlert({ kind: input.incidentKind, condition: input.condition })))
+  }
+  return blocks
+}
 
 /**
  * Returns a Slack `image` block that renders the incident trend chart.

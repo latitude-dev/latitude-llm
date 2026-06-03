@@ -1,7 +1,15 @@
 import { IssueRepository } from "@domain/issues"
 import { IssueId } from "@domain/shared"
 import { Effect } from "effect"
-import { actionsLink, COLORS, contextLine, projectOrOrgContext, sectionMarkdown, trendChartBlock } from "./blocks.ts"
+import {
+  actionsLink,
+  COLORS,
+  contextLine,
+  monitorAttributionBlocks,
+  projectOrOrgContext,
+  sectionMarkdown,
+  trendChartBlock,
+} from "./blocks.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
 export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"> = (payload, ctx) =>
@@ -28,6 +36,14 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
         ...(issueName ? [sectionMarkdown(`*<${issueUrl}|${issueName}>*`)] : []),
         sectionMarkdown(`Elevated for *${duration}*.`),
         ...(chart ? [chart] : []),
+        ...monitorAttributionBlocks({
+          webAppUrl: ctx.webAppUrl,
+          projectSlug: ctx.project?.slug,
+          monitorName: payload.monitorName,
+          monitorSlug: payload.monitorSlug,
+          incidentKind: payload.incidentKind,
+          condition: payload.condition,
+        }),
         contextLine(
           `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
         ),

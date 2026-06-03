@@ -1288,6 +1288,9 @@ importers:
       '@domain/issues':
         specifier: workspace:*
         version: link:../issues
+      '@domain/monitors':
+        specifier: workspace:*
+        version: link:../monitors
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications

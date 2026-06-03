@@ -4,6 +4,7 @@ import { Effect } from "effect"
 import {
   actionsLink,
   contextLine,
+  monitorAttributionBlocks,
   projectOrOrgContext,
   sectionMarkdown,
   severityColor,
@@ -41,6 +42,14 @@ export const incidentOpenedRenderer: SlackNotificationRenderer<"incident.opened"
         ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`\`\`\`\n${payload.sampleExcerpt.text}\n\`\`\``)] : []),
         ...(chart ? [chart] : []),
         ...(tags.length > 0 ? [sectionMarkdown(tags.map((t) => `\`${t}\``).join("  "))] : []),
+        ...monitorAttributionBlocks({
+          webAppUrl: ctx.webAppUrl,
+          projectSlug: ctx.project?.slug,
+          monitorName: payload.monitorName,
+          monitorSlug: payload.monitorSlug,
+          incidentKind: payload.incidentKind,
+          condition: payload.condition,
+        }),
         contextLine(
           `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
         ),
