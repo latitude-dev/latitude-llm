@@ -30,11 +30,14 @@ function findHighlightNode(container: HTMLElement, messageIndex: number, startOf
   return best?.node ?? null
 }
 
-/**
- * Scrolls to the first resolvable search hit once per (traceId, searchQuery).
- * MutationObserver retries on DOM mutations so we survive MarkdownContent's
- * own collapsed-middle auto-expand without rAF chains.
- */
+function centerVertically(container: HTMLElement, target: Element) {
+  const containerRect = container.getBoundingClientRect()
+  const targetRect = target.getBoundingClientRect()
+  const targetTopWithinContent = targetRect.top - containerRect.top + container.scrollTop
+  const top = targetTopWithinContent - container.clientHeight / 2 + targetRect.height / 2
+  container.scrollTo({ top: Math.max(0, top), behavior: "smooth" })
+}
+
 export function useScrollToFirstHighlight({
   scrollRef,
   traceId,
@@ -63,7 +66,7 @@ export function useScrollToFirstHighlight({
       for (const h of hits) {
         const target = findHighlightNode(container, h.messageIndex, h.startOffset)
         if (target) {
-          target.scrollIntoView({ block: "center", behavior: "smooth" })
+          centerVertically(container, target)
           lastScrolledKey.current = key
           return true
         }
