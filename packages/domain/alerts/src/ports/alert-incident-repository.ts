@@ -61,13 +61,7 @@ export interface ListAlertIncidentsByProjectInput {
   readonly severities?: readonly AlertSeverity[]
 }
 
-/**
- * Keyset cursor over `(ended_at, id)` for the `ended_at DESC NULLS FIRST, id DESC`
- * monitor-incident lists — ongoing incidents (null `ended_at`) lead, then the
- * most-recently-resolved. Incidents are append-heavy and potentially large, so
- * we page by cursor rather than offset (no scan-and-discard, no shift when new
- * incidents arrive at the top). `endedAt` is `null` while paging the ongoing block.
- */
+/** Keyset cursor; `endedAt` is `null` while paging the ongoing (`ended_at NULL`) block. */
 export interface AlertIncidentCursor {
   readonly endedAt: Date | null
   readonly id: AlertIncidentId
@@ -92,12 +86,9 @@ export interface AlertIncidentListPage {
   readonly hasMore: boolean
 }
 
-/** Aggregate incident stats for a monitor — total count plus the incident-history span. */
 export interface MonitorIncidentStats {
   readonly total: number
-  /** Earliest incident `started_at`, or `null` when the monitor has no incidents. */
   readonly firstStartedAt: Date | null
-  /** Latest incident `started_at`, or `null` when the monitor has no incidents. */
   readonly lastStartedAt: Date | null
 }
 
@@ -145,21 +136,13 @@ export interface AlertIncidentRepositoryShape {
    */
   listOpenByKind(kind: AlertIncidentKind): Effect.Effect<readonly AlertIncident[], RepositoryError, SqlClient>
   /**
-   * Incidents owned by a monitor (`ended_at DESC NULLS FIRST, id DESC`,
-   * paginated — ongoing incidents first, then most-recently-resolved). The
-   * monitor isn't stored on the incident, so this joins through `monitor_alerts`,
-   * including soft-deleted alerts — an incident keeps showing after its alert
-   * is removed.
+   * Incidents owned by a monitor (`ended_at DESC NULLS FIRST, id DESC`, paginated). Joins
+   * through `monitor_alerts` incl. soft-deleted, so an incident keeps showing after its alert is removed.
    */
   listByMonitorId(
     input: ListAlertIncidentsByMonitorIdInput,
   ): Effect.Effect<AlertIncidentListPage, RepositoryError, SqlClient>
-  /**
-   * Aggregate stats for a monitor's incidents — total count plus the earliest and
-   * latest `started_at`. Joins through `monitor_alerts` (soft-deleted alerts
-   * included), mirroring {@link listByMonitorId}; returns `0` / `null`s for a
-   * monitor with no incidents.
-   */
+  /** Joins through `monitor_alerts` incl. soft-deleted; `0` / `null`s when the monitor has no incidents. */
   statsByMonitorId(monitorId: MonitorId): Effect.Effect<MonitorIncidentStats, RepositoryError, SqlClient>
   /** Incidents fired by one specific alert (`ended_at DESC NULLS FIRST, id DESC`, paginated) — direct `monitor_alert_id` lookup. */
   listByMonitorAlertId(

@@ -77,13 +77,9 @@ const NS_PER_DAY = 24 * NS_PER_HOUR
 const NS_PER_YEAR = 365 * NS_PER_DAY
 
 /**
- * Format a nanosecond duration into a compact human-readable string, spanning
- * sub-microsecond latencies up to multi-year spans.
- *
- * Below a minute, a single unit keeps fractional precision (good for trace/span
- * latencies): `500_000` -> `"500.0µs"`, `12_300_000` -> `"12.3ms"`, `1_500_000_000` -> `"1.50s"`.
- * From a minute up, the two most-significant non-zero whole units are shown:
- * `90e9` -> `"1m 30s"`, `7_500e9` -> `"2h 5m"`, `108_000e9` -> `"1d 6h"`, `NS_PER_YEAR` -> `"1y"`.
+ * Format a nanosecond duration. Below a minute, one unit with fractional precision
+ * (`1_500_000_000` -> `"1.50s"`); from a minute up, the two most-significant non-zero
+ * whole units (`90e9` -> `"1m 30s"`).
  */
 export function formatDuration(ns: number): string {
   if (ns < NS_PER_MILLISECOND) return `${(ns / NS_PER_MICROSECOND).toFixed(1)}µs`

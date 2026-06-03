@@ -42,11 +42,8 @@ export const contentSeeders: readonly Seeder[] = [
   // the bell instead of leaving it empty. Must run after
   // alertIncidentSeeders.
   ...notificationSeeders,
-  // Monitors dashboard fixtures: saved searches, system + user monitors, and a
-  // spread of saved-search incidents (including one high-volume alert for the
-  // infinite-scroll table). Backfills the issue incidents above onto the system
-  // monitors. Runs after notificationSeeders so it fully controls which of its
-  // own incidents read as "Notified" vs "Muted".
+  // Must run after notificationSeeders so it fully controls which of its own
+  // incidents read as "Notified" vs "Muted".
   ...monitorSeeders,
 ]
 

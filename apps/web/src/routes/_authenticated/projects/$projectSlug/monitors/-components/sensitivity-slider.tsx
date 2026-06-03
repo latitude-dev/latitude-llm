@@ -4,12 +4,7 @@ const SENSITIVITY_MIN = 1
 const SENSITIVITY_MAX = 6
 export const SENSITIVITY_DEFAULT = 3
 
-/**
- * Controlled 1–6 sensitivity slider, shared by the system `issue.escalating`
- * control and the saved-search `expected`-threshold form. The selected value
- * sits centered above a full-width track, with `Sensitive`/`Quiet` end anchors
- * below. `onChange` fires on every drag tick; pass `onCommit` to persist only on release.
- */
+/** `onChange` fires on every drag tick; pass `onCommit` to persist only on release. */
 export function SensitivitySlider({
   value,
   onChange,
@@ -23,8 +18,7 @@ export function SensitivitySlider({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      {/* Equal-width thirds so the value is centered on the track regardless of
-          the side labels' differing widths (justify-between would offset it). */}
+      {/* Equal-width thirds keep the value centered; justify-between would offset it. */}
       <div className="flex items-center">
         <Text.H6 color="foregroundMuted" noWrap className="flex-1">
           Sensitive

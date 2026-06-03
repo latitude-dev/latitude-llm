@@ -17,7 +17,6 @@ export interface ListMonitorsInput {
 
 export interface ListMonitorsResult {
   readonly items: readonly Monitor[]
-  /** Latest incident per monitor id; see {@link MonitorLastIncident}. */
   readonly lastIncidentByMonitorId: ReadonlyMap<string, MonitorLastIncident>
   readonly totalCount: number
   readonly hasMore: boolean

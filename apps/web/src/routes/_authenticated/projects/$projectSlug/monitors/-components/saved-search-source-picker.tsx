@@ -3,13 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { ZoomInIcon } from "lucide-react"
 import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 
-/**
- * Searchable saved-search picker for an alert's source. There is **no "All
- * saved searches" option** — the user must pick a concrete saved search. The
- * dropdown carries a "Create a new saved search" footer that navigates to the
- * search page; it stays visible when the project has no saved searches or the
- * filter matches none, so no separate empty state is needed.
- */
+/** Saved-search picker for an alert's source: no "All" option, the user must pick a concrete saved search. */
 export function SavedSearchSourcePicker({
   projectId,
   projectSlug,

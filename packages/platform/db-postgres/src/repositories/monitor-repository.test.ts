@@ -149,10 +149,7 @@ describe("MonitorRepositoryLive", () => {
       const olderAlertId = generateId()
 
       await database.db.insert(monitorsTable).values([
-        // System monitor with no incident — flows with the other no-incident
-        // monitors, ordered by createdAt (this one defaults to 2026-05-29).
         makeMonitorRow({ id: systemId, slug: "issue-discovered", name: "Issue discovered", system: true }),
-        // No incident but newest by createdAt → leads the no-incident tail.
         makeMonitorRow({
           id: noIncidentId,
           slug: "no-incident",
@@ -183,8 +180,6 @@ describe("MonitorRepositoryLive", () => {
       const olderStartedAt = new Date("2026-05-20T09:00:00.000Z")
       const olderEndedAt = new Date("2026-05-20T11:00:00.000Z")
       await database.db.insert(alertIncidentsTable).values([
-        // Recent monitor: an older closed incident plus a newer ongoing one — the
-        // ongoing one must win and surface its null endedAt.
         {
           id: AlertIncidentId(generateId()),
           organizationId: organizationId as string,

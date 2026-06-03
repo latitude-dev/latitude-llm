@@ -25,11 +25,6 @@ import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 const HOUR_MS = 60 * 60 * 1000
 
-// ---------------------------------------------------------------------------
-// Saved searches — the sources the user-monitor alerts watch + the incident
-// `sourceId`s. Slugs/ids are scope-derived so re-running upserts in place.
-// ---------------------------------------------------------------------------
-
 interface SavedSearchSeed {
   readonly key: string
   readonly slug: string
@@ -85,19 +80,6 @@ const SAVED_SEARCHES: readonly SavedSearchSeed[] = [
 
 const savedSearchId = (scope: SeedScope, key: string): string => scope.cuid(`saved-search:${key}`)
 
-// ---------------------------------------------------------------------------
-// User monitors + their saved-search alerts. The shape deliberately spans:
-//  - every user-creatable kind (match / threshold / escalating)
-//  - every threshold mode (absolute / multiplier-average / multiplier-period /
-//    expected) and both window units (minutes / hours)
-//  - every severity, a muted monitor, a multi-alert monitor, and an empty one
-//  - one high-volume alert (180 incidents) for the infinite-scroll table
-//  - a dormant monitor whose last incident closed >1 week ago (the muted
-//    "last incident" / stale-closed state)
-// `incidents`/`ongoing` drive incident generation; ongoing only applies to
-// sustained kinds (the rest collapse to closed point incidents).
-// ---------------------------------------------------------------------------
-
 interface UserAlertSeed {
   readonly key: string
   readonly kind: AlertIncidentKind
@@ -106,11 +88,7 @@ interface UserAlertSeed {
   readonly severity: AlertSeverity
   readonly incidents: number
   readonly ongoing: number
-  /**
-   * Days-ago of the most-recent *closed* incident; older ones walk further back.
-   * Defaults to 1. Set higher (e.g. 10) so a monitor's last incident lands in the
-   * "closed > 1 week ago" (muted) state.
-   */
+  /** Days-ago of the most-recent closed incident (older ones walk back from it). Defaults to 1. */
   readonly baseDaysAgo?: number
 }
 
@@ -297,7 +275,6 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
         severity: "medium",
         incidents: 20,
         ongoing: 0,
-        // Most recent incident ~10 days ago → "closed > 1 week ago" (muted).
         baseDaysAgo: 10,
       },
     ],
@@ -323,11 +300,7 @@ const USER_MONITORS: readonly UserMonitorSeed[] = [
   },
 ] as const
 
-/**
- * Started-at for a closed/historical incident at index `i`. 12 incidents per
- * day, 2h apart, walking back day by day from `baseDaysAgo` — descending and
- * mostly-distinct so the keyset `(started_at DESC, id DESC)` paginates cleanly.
- */
+/** Descending, mostly-distinct started-at for incident `i` so the keyset `(started_at DESC, id DESC)` paginates cleanly. */
 const historicalStartedAt = (scope: SeedScope, i: number, baseDaysAgo = 1): Date =>
   scope.dateDaysAgo(baseDaysAgo + Math.floor(i / 12), (i % 12) * 2, (i * 13) % 60)
 
@@ -352,8 +325,7 @@ const buildAlertIncidents = (input: {
   for (let i = 0; i < alert.incidents; i++) {
     const id = AlertIncidentId(scope.cuid(`monitor-incident:${alert.key}:${i}`))
     const isOngoing = sustained && i < alert.ongoing
-    // Ongoing rows sit at the recent edge (so they sort to the top as
-    // "Ongoing since …"); closed rows walk back through history.
+    // Ongoing rows sit at the recent edge so they sort to the top.
     const startedAt = isOngoing ? scope.dateDaysAgo(i, 8, 0) : historicalStartedAt(scope, i, alert.baseDaysAgo)
     const endedAt = isOngoing ? null : sustained ? new Date(startedAt.getTime() + 2 * HOUR_MS) : startedAt
 
@@ -371,11 +343,7 @@ const buildAlertIncidents = (input: {
       condition: alert.condition,
     })
 
-    // "Notified" badge is derived from a notification row existing for the
-    // incident (org-scoped). A muted monitor short-circuits the producer, so
-    // its incidents get none → all show "Muted". For live monitors notify
-    // every 3rd incident for a realistic mixed column. The marker rows are
-    // written to a non-primary member so the default owner's bell stays clean.
+    // Muted monitors get no notification row, so their incidents all show "Muted". Markers go to a non-primary member so the owner's bell stays clean.
     if (!muted && i % 3 === 0) {
       const payload: IncidentEventPayload = {
         alertIncidentId: id,
@@ -402,13 +370,7 @@ const buildAlertIncidents = (input: {
   return { incidentRows, notificationRows }
 }
 
-/**
- * Ensure the three system monitors exist for the project and return a
- * `kind → monitor_alert_id` map for the issue-incident backfill. Re-uses any
- * already-provisioned system monitor/alert ids (matched by slug + kind) so the
- * seeder is safe whether or not provisioning/backfill ran first; only missing
- * rows are inserted (with deterministic, scope-derived ids).
- */
+/** Reuses already-provisioned system monitor/alert ids (matched by slug + kind), inserting only what's missing, so it's safe whether or not provisioning ran first. */
 const ensureSystemMonitors = async (ctx: SeedContext): Promise<Map<AlertIncidentKind, string>> => {
   const { scope } = ctx
   const existingMonitors = await ctx.db
@@ -496,7 +458,6 @@ const seedMonitors: Seeder = {
         }
         const ownerUserId = scope.queueAssigneeUserIds[0] ?? notifyUserId
 
-        // 1. Saved searches the user-monitor alerts watch.
         for (const search of SAVED_SEARCHES) {
           const row: typeof savedSearches.$inferInsert = {
             id: savedSearchId(scope, search.key),
@@ -514,9 +475,7 @@ const seedMonitors: Seeder = {
           await ctx.db.insert(savedSearches).values(row).onConflictDoUpdate({ target: savedSearches.id, set })
         }
 
-        // 2. System monitors (issue.*) — provision-if-missing, then backfill the
-        //    existing issue incidents onto their alerts so the system monitor
-        //    panels show live data (mirrors what the M6 issue-event path does).
+        // Backfill existing issue incidents onto the system-monitor alerts so their panels show live data.
         const systemAlertIdByKind = await ensureSystemMonitors(ctx)
         let backfilled = 0
         for (const definition of SYSTEM_MONITOR_DEFINITIONS) {
@@ -544,7 +503,6 @@ const seedMonitors: Seeder = {
           }
         }
 
-        // 3. User monitors + alerts + their incident spread.
         const incidentRows: (typeof alertIncidents.$inferInsert)[] = []
         const notificationRows: (typeof notifications.$inferInsert)[] = []
         let alertCount = 0

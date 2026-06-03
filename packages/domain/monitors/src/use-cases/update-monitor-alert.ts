@@ -27,7 +27,7 @@ const conditionMatchesKind = (condition: AlertIncidentCondition | null, kind: Al
 export interface UpdateMonitorAlertInput {
   readonly monitorId: MonitorId
   readonly alertId: MonitorAlertId
-  /** Omitted fields keep their current value. The caller must supply a `condition` (and `source`) appropriate for `kind`. */
+  /** Omitted fields keep their current value; a supplied `kind` requires a matching `source`/`condition`. */
   readonly kind?: AlertIncidentKind
   readonly source?: { readonly type: AlertIncidentSourceType; readonly id: string | null }
   readonly condition?: AlertIncidentCondition | null
@@ -43,16 +43,9 @@ export type UpdateMonitorAlertError =
   | ValidationError
 
 /**
- * Updates a single existing alert's `kind` / `source` / `condition` / `severity`
- * in place. On a user monitor `kind` may change (to another user-creatable kind);
- * the caller supplies the matching `source` / `condition` for the target kind
- * (the form resets the condition values, since each kind accepts a different
- * shape). `source.type` is always fixed by the (target) kind.
- *
- * System monitors are structurally locked: only an existing alert's
- * configurable condition values may change — any `kind` / `source` / `severity`
- * change, or setting a condition on a no-condition kind, is rejected. This is
- * the only alert mutation system monitors permit.
+ * Updates an alert in place. On a user monitor `kind` may change to another user-creatable kind
+ * (`source.type` stays fixed by the target kind). System monitors only allow condition-value
+ * changes: any `kind`/`source`/`severity` change, or a condition on a no-condition kind, is rejected.
  */
 export const updateMonitorAlertUseCase = (
   input: UpdateMonitorAlertInput,
@@ -74,7 +67,6 @@ export const updateMonitorAlertUseCase = (
         const nextSeverity = input.severity ?? alert.severity
         const kindChanged = input.kind !== undefined && input.kind !== alert.kind
 
-        // `source.type` and the condition shape are fixed by the (target) kind.
         if (nextSource.type !== ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]) {
           return yield* new ValidationError({
             field: "source",

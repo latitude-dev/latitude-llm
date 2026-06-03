@@ -29,15 +29,7 @@ import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
 import { monitorAlerts } from "../schema/monitor-alerts.ts"
 
-/**
- * Keyset predicate for the `ended_at DESC NULLS FIRST, id DESC` order: rows
- * strictly after `cursor`. A null `endedAt` cursor means we're still inside the
- * ongoing (null `ended_at`) block, so the next page is the remaining ongoing
- * rows (smaller id) plus every closed row. A non-null cursor is past the ongoing
- * block: closed rows compare on `ended_at` then `id` (null `ended_at` rows are
- * excluded by SQL's three-valued logic on `<`/`=`). `undefined` cursor → no
- * predicate (first page).
- */
+/** Keyset predicate for `ended_at DESC NULLS FIRST, id DESC`: a null `endedAt` cursor is still inside the ongoing block (remaining ongoing rows + all closed rows); a non-null cursor compares closed rows on `(ended_at, id)`. */
 const afterCursor = (cursor: AlertIncidentCursor | undefined): SQL | undefined => {
   if (!cursor) return undefined
   if (cursor.endedAt === null) {
@@ -204,8 +196,7 @@ export const AlertIncidentRepositoryLive = Layer.effect(
               .from(alertIncidents)
               .innerJoin(monitorAlerts, eq(monitorAlerts.id, alertIncidents.monitorAlertId))
               .where(where)
-              // ended_at DESC defaults to NULLS FIRST in Postgres, so ongoing
-              // incidents lead; id DESC breaks ties (incl. among ongoing rows).
+              // ended_at DESC defaults to NULLS FIRST in Postgres, so ongoing incidents lead.
               .orderBy(desc(alertIncidents.endedAt), desc(alertIncidents.id))
               .limit(limit + 1),
           )
@@ -214,7 +205,7 @@ export const AlertIncidentRepositoryLive = Layer.effect(
       statsByMonitorId: (monitorId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          // Same join as listByMonitorId (no deleted_at filter on the alert).
+          // No deleted_at filter: soft-deleted alerts still count toward history.
           const where = and(
             eq(alertIncidents.organizationId, sqlClient.organizationId),
             eq(monitorAlerts.monitorId, monitorId),

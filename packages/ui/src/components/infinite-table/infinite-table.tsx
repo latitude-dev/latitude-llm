@@ -283,8 +283,7 @@ export function InfiniteTable<T>({
                     data-index={virtualRow.index}
                   >
                     <tr style={{ opacity: 1 - skeletonIndex / SKELETON_ROW_COUNT }}>
-                      {/* Background + radius on the cell (not the row) so the bar is rounded
-                          like loaded rows — a table-row box can't clip its own corners. */}
+                      {/* Background+radius on the <td>, not the <tr>: a row box can't clip its corners. */}
                       <td colSpan={colCount} className="h-9 rounded-lg bg-secondary" />
                     </tr>
                   </tbody>

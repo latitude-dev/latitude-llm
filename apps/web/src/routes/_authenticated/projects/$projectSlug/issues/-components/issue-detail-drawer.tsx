@@ -61,10 +61,7 @@ function SeenAtSummaryValue({
 }) {
   const { lastSeenLabel, firstSeenLabel } = formatSeenAgeParts(lastSeenAtIso, firstSeenAtIso)
 
-  // Mirrors the table's "Seen at" cell: a real flex `div` (not `Text`, which forces
-  // `display:inline` and so collapses the `gap-*` spacing around the separator) sized at h5
-  // (`text-sm leading-5`). The tooltip triggers stay bare `<span>`s so Radix's injected hover
-  // handlers land on a real DOM node — `Text` would drop them.
+  // Flex `div` not `Text`: `Text`'s `display:inline` collapses the `gap-*` around the separator. Bare `<span>` triggers so Radix's hover handlers land on a real DOM node.
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-sm leading-5">
       <Tooltip asChild trigger={<span className="break-words">{lastSeenLabel}</span>}>

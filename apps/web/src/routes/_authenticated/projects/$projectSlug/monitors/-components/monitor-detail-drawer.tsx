@@ -52,7 +52,6 @@ const SEVERITY_LABEL: Record<MonitorAlertRecord["severity"], string> = {
   high: "High",
 }
 
-/** Stacked label + value, matching the issue detail panel's summary fields. */
 function SummaryField({ label, value }: { readonly label: string; readonly value: ReactNode }) {
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-0.5">
@@ -68,7 +67,6 @@ const DAY_MS = 24 * HOUR_MS
 const MONTH_MS = 30 * DAY_MS
 const YEAR_MS = 365 * DAY_MS
 
-// Compact elapsed wording, mirroring the issue panel's "Seen at" (e.g. `5h`, `10d`).
 function formatCompactElapsed(elapsedMs: number): string {
   if (elapsedMs < HOUR_MS) return `${Math.max(1, Math.floor(elapsedMs / MINUTE_MS))}m`
   if (elapsedMs < DAY_MS) return `${Math.max(1, Math.floor(elapsedMs / HOUR_MS))}h`
@@ -79,12 +77,7 @@ function formatCompactElapsed(elapsedMs: number): string {
 
 const elapsedSince = (iso: string): number => Math.max(0, Date.now() - Date.parse(iso))
 
-/**
- * "Last detected / first detected" rendered like the issue panel's "Seen at"
- * (`5h ago / 10d old`, with tooltips). A real flex `div` so the `gap-*` spacing
- * around the separator holds, and bare `<span>` tooltip triggers so Radix's hover
- * handlers land on a real DOM node.
- */
+// Flex `div` so the `gap-*` around the separator holds; bare `<span>` triggers so Radix's hover handlers land on a real DOM node.
 function MonitorDetectedAtValue({
   lastStartedAtIso,
   firstStartedAtIso,
@@ -138,9 +131,7 @@ function AlertCard({
   readonly onEdit: () => void
   readonly onDelete: () => void
 }) {
-  // Every user-monitor alert is fully editable — kind, source, severity, and the
-  // threshold/window for the complex kinds. The one editable system value is the
-  // issue.escalating sensitivity — both open an edit modal (the parent routes by kind).
+  // System monitors only allow editing the issue.escalating sensitivity; user alerts are fully editable.
   const canEdit = !monitor.system || alert.kind === "issue.escalating"
   // The delete control shows on every user-monitor alert, but a monitor must keep
   // at least one — so it's disabled (with a hint) when this is the only alert.
@@ -160,16 +151,13 @@ function AlertCard({
     </Button>
   )
 
-  // Compact pencil tucked next to the kind/severity status — mirrors the
-  // issue-evaluation sampling/scope edit affordance (muted xs icon + tooltip).
   const editButton = (
     <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onEdit} aria-label="Edit alert">
       <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
     </Button>
   )
 
-  // The ghost icon buttons add their own height; trim the top padding so the
-  // row sits more balanced when they're present.
+  // Ghost icon buttons add their own height; trim top padding when present so the row stays balanced.
   const hasActions = canEdit || deletable
 
   return (
@@ -206,12 +194,7 @@ function AlertCard({
   )
 }
 
-/**
- * Loading state for the detail panel, shown while the monitor list resolves on a
- * deep link (the panel mounts off the loaded list, so without this it would pop
- * in). Mirrors {@link MonitorDetailDrawer}'s layout — real section headers with
- * skeleton bodies — like the issue detail panel's loading state.
- */
+/** Shown while the monitor list resolves on a deep link, before the panel can mount off it. */
 export function MonitorDetailDrawerSkeleton({ onClose }: { readonly onClose: () => void }) {
   return (
     <DetailDrawer
@@ -299,9 +282,7 @@ export function MonitorDetailDrawer({
     monitorId: monitor.id,
   })
 
-  // Contribute mute/unmute + copy-link to the command palette while this monitor is open,
-  // reusing the same confirm modal the toolbar button triggers (mirrors the issue lifecycle
-  // actions).
+  // Registered only while this monitor is open, scoping these palette commands to it.
   const paletteCommands = useMemo<readonly PaletteCommand[]>(
     () => [
       {

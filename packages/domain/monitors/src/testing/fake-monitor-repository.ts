@@ -48,8 +48,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
             return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
           })
         const items = all.slice(offset, offset + limit)
-        // The fake doesn't model incidents — callers that need last-incident
-        // data exercise the live repo. Keep the ordering by (system, createdAt).
+        // The fake doesn't model incidents; last-incident behavior is covered by the live repo.
         return {
           items,
           lastIncidentByMonitorId: new Map(),

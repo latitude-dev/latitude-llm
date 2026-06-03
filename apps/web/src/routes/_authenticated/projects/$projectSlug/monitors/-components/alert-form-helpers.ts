@@ -52,15 +52,10 @@ export const emptyAlertDraft = (overrides?: Partial<AlertDraft>): AlertDraft => 
   ...overrides,
 })
 
-/**
- * Switch a draft's kind, resetting every threshold/window field to its default —
- * each kind accepts a different condition shape, so carrying the old values over
- * would surface stale config. The watched source and severity are preserved.
- */
+/** Switch kind, resetting threshold/window fields (each kind has a different condition shape) but keeping source/severity. */
 export const draftWithKind = (draft: AlertDraft, kind: UserAlertKind): AlertDraft =>
   emptyAlertDraft({ kind, sourceId: draft.sourceId, severity: draft.severity })
 
-/** Validation errors for one alert card, grouped by the logical field they sit under. */
 export interface AlertFieldErrors {
   readonly source?: readonly string[]
   readonly threshold?: readonly string[]
@@ -70,13 +65,7 @@ export interface AlertFieldErrors {
 export const hasAlertFieldErrors = (errors: AlertFieldErrors): boolean =>
   Boolean(errors.source?.length || errors.threshold?.length || errors.window?.length)
 
-/**
- * Project a server Zod field-error map (`path.join(".") -> messages`, from
- * `extractFieldErrors`) onto one alert's logical fields, so the message lands
- * under the control the user got wrong instead of in a raw toast. `index` picks
- * the alert in the create modal's `alerts.N.…` payload; pass `null` for the
- * single-alert add/edit modal, whose paths start at `source` / `condition`.
- */
+/** Project a server Zod field-error map onto one alert's fields; pass `index` for the create modal's `alerts.N.…` paths, `null` for the single-alert modal. */
 export const alertFieldErrorsFrom = (
   fieldErrors: Record<string, string[]> | null,
   index: number | null,

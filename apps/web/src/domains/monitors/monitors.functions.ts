@@ -112,13 +112,11 @@ const toMonitorRecordResolved = async (orgId: OrganizationId, monitor: Monitor):
   return toMonitorRecord(monitor, names)
 }
 
-/** Latest-incident summary for the dashboard "Last incident" column; ISO strings on the wire. */
 export interface MonitorLastIncidentRecord {
   readonly startedAtIso: string
   readonly endedAtIso: string | null
 }
 
-/** One dashboard list row: the monitor record plus its latest-incident summary (sortable client-side). */
 export interface MonitorListRowRecord {
   readonly monitor: MonitorRecord
   readonly lastIncident: MonitorLastIncidentRecord | null
@@ -365,13 +363,12 @@ export const deleteMonitorAlert = createServerFn({ method: "POST" })
     return toMonitorRecordResolved(orgId, monitor)
   })
 
-/** Keyset cursor over `(endedAt, id)`; `endedAt` is an ISO string on the wire, `null` while paging ongoing incidents. */
+/** Keyset cursor over `(endedAt, id)`; `endedAt` is `null` while paging ongoing incidents. */
 const incidentCursorSchema = z.object({ endedAt: z.iso.datetime().nullable(), id: z.string() })
 export type MonitorIncidentsCursor = z.infer<typeof incidentCursorSchema>
 
 const getMonitorIncidentStatsInputSchema = z.object({ monitorId: z.string() })
 
-/** Aggregate incident stats for the detail-drawer summary row: total + first/last detected (ISO). */
 export const getMonitorIncidentStats = createServerFn({ method: "GET" })
   .inputValidator(getMonitorIncidentStatsInputSchema)
   .handler(
@@ -420,9 +417,7 @@ const toMonitorIncidentRecord = (
     }
     readonly notified: boolean
   },
-  /** Resolved source display name, or `null` when the source was deleted. */
   sourceName: string | null,
-  /** Saved-search slug for the traces deep-link; `null` for issue sources / unresolved. */
   sourceSlug: string | null,
 ) => ({
   id: item.incident.id,
@@ -473,9 +468,7 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
         ),
       )
 
-      // Resolve the source name (and saved-search slug) for the "Source" column,
-      // so it links to the issue / saved search instead of showing a raw id.
-      // Unresolved ids (deleted source) fall back to the id in the UI.
+      // Resolve source names/slugs for the "Source" column; unresolved ids fall back to the id in the UI.
       const issueIds = [
         ...new Set(result.items.filter((i) => i.incident.sourceType === "issue").map((i) => i.incident.sourceId)),
       ]

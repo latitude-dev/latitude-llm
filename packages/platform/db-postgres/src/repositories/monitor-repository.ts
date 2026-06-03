@@ -156,9 +156,6 @@ export const MonitorRepositoryLive = Layer.effect(
           )
 
           const [rows, totals] = yield* sqlClient.query(async (db) => {
-            // Per-monitor latest-incident start, resolved through monitor_alerts
-            // (soft-deleted alerts included, like the incidents panel join). Used
-            // only to order the page; RLS org-scopes the aggregate.
             const lastIncident = db
               .select({
                 monitorId: monitorAlerts.monitorId,
@@ -174,9 +171,6 @@ export const MonitorRepositoryLive = Layer.effect(
               .from(monitors)
               .leftJoin(lastIncident, eq(lastIncident.monitorId, monitors.id))
               .where(where)
-              // Most-recently active first (no-incident monitors last); system
-              // monitors flow with the rest. createdAt desc + id are the fixed
-              // secondary/tertiary tiebreaks so the order is fully deterministic.
               .orderBy(sql`${lastIncident.lastStartedAt} desc nulls last`, desc(monitors.createdAt), asc(monitors.id))
               .limit(limit)
               .offset(offset)
@@ -191,10 +185,7 @@ export const MonitorRepositoryLive = Layer.effect(
 
           const ids = rows.map((r) => r.id)
 
-          // Latest incident (start + end) per monitor on this page, for the
-          // dashboard "Last incident" column. Ordered so the first row seen per
-          // monitor is the most recent, then deduped in JS (DISTINCT ON isn't
-          // ergonomic through the query builder).
+          // Ordered so the first row per monitor is the latest; deduped in JS (DISTINCT ON isn't ergonomic via the query builder).
           const incidentRows = yield* sqlClient.query((db) =>
             db
               .select({
@@ -421,8 +412,7 @@ export const MonitorRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const { organizationId } = sqlClient
-          // `sourceType` stays put — it's fixed by `kind`, and the only mutable
-          // kinds (saved-search) all share the `savedSearch` source type.
+          // `sourceType` is omitted: the only mutable (saved-search) kinds all share the `savedSearch` source type.
           const updated = yield* sqlClient.query((db) =>
             db
               .update(monitorAlerts)

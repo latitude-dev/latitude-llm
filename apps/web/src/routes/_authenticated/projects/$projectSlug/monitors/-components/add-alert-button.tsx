@@ -1,11 +1,6 @@
 import { Icon, Text } from "@repo/ui"
 import { PlusIcon } from "lucide-react"
 
-/**
- * Dashed full-width "add a slot" card, shared by the monitor detail drawer and
- * the create-monitor modal. Mirrors the AlertCard shape so it reads as an empty
- * slot inviting a new alert.
- */
 export function AddAlertButton({ onClick }: { readonly onClick: () => void }) {
   return (
     <button

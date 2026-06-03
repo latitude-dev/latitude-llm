@@ -3,11 +3,6 @@ import { relativeTime } from "@repo/utils"
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
-/**
- * Incident lifecycle badge, shared by the dashboard "Last incident" column and the
- * detail-drawer incidents table: ongoing (destructive), closed within the last week
- * (warning), or closed more than a week ago (muted/neutral) — stale closures fade out.
- */
 export function IncidentStatus({
   startedAtIso,
   endedAtIso,

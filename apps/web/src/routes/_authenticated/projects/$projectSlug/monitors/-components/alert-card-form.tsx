@@ -37,8 +37,6 @@ const KIND_HELP: Record<UserAlertKind, string> = {
   "savedSearch.escalating": "Alerts when matching traces stays elevated for a sustained window",
 }
 
-// Kind picker tabs. No "Search" prefix — every user alert watches a saved search,
-// so the qualifier is redundant.
 const KIND_TABS: readonly TabOption<UserAlertKind>[] = [
   { id: "savedSearch.match", label: "Match", icon: <Icon icon={EqualApproximately} size="sm" /> },
   { id: "savedSearch.threshold", label: "Threshold", icon: <Icon icon={LineDotRightHorizontal} size="sm" /> },
@@ -204,13 +202,7 @@ function ThresholdWindowForm({
   )
 }
 
-/**
- * Controlled editor for a single saved-search alert, shared verbatim by the
- * create modal and the edit modal. The kind is a left-aligned tab strip (its
- * description sits just below); switching it resets the threshold/window fields
- * (each kind takes a different condition shape). `onRemove`, when set, shows a
- * remove (X) control on the right of the tab row.
- */
+/** Controlled editor for a single saved-search alert; switching the kind resets the threshold/window fields. */
 export function AlertCardForm({
   value,
   onChange,

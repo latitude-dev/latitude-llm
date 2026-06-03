@@ -162,9 +162,7 @@ describe("AlertIncidentRepositoryLive.listByMonitorId", () => {
         makeAlertRow({ id: alertB1, monitorId: monitorIdB }),
       ])
 
-    // Ongoing (null ended_at) sorts first; among closed rows, most-recently-
-    // resolved leads. startedAt deliberately disagrees with endedAt order to
-    // prove the sort keys off ended_at, not started_at.
+    // startedAt deliberately disagrees with endedAt order to prove the sort keys off ended_at.
     const ongoing = makeRow({
       id: AlertIncidentId("1".repeat(24)),
       sourceId: "1".repeat(24),
@@ -366,14 +364,13 @@ describe("AlertIncidentRepositoryLive.statsByMonitorId", () => {
         monitorAlertId: alertA1,
         startedAt: new Date("2026-05-07T12:00:00.000Z"),
       }),
-      // Earliest, fired by the soft-deleted alert — still counts toward the monitor's history.
+      // Soft-deleted alert's incident still counts toward history.
       makeRow({
         id: AlertIncidentId("3".repeat(24)),
         sourceId: "3".repeat(24),
         monitorAlertId: alertA2Deleted,
         startedAt: new Date("2026-05-07T09:00:00.000Z"),
       }),
-      // Other monitor + a source-only incident with no alert — both excluded.
       makeRow({
         id: AlertIncidentId("4".repeat(24)),
         sourceId: "4".repeat(24),

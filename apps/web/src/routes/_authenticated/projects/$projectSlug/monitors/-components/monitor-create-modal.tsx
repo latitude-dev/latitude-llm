@@ -70,8 +70,7 @@ export function MonitorCreateModal({
       onClose()
       onCreated(monitor.slug)
     } catch (error) {
-      // Surface Zod field errors under the offending control; fall back to a
-      // toast for non-field (logic) errors.
+      // Surface Zod field errors under the offending control; toast non-field errors.
       const fieldErrors = extractFieldErrors(error)
       const nameErr = fieldErrors?.name?.[0]
       const perAlert = alerts.map((_, i) => alertFieldErrorsFrom(fieldErrors, i))

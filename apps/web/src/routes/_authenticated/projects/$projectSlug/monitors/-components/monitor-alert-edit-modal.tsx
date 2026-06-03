@@ -15,12 +15,7 @@ import {
   recordToAlertDraft,
 } from "./alert-form-helpers.ts"
 
-/**
- * Add a new saved-search alert (`alert == null`) or edit an existing one
- * (`alert` set) — including its kind, which resets the condition fields when
- * changed. Reuses {@link AlertCardForm}, the same editor the create modal uses.
- * Mounted only while open. Saves through `createMonitorAlert` / `updateMonitorAlert`.
- */
+/** Add a new saved-search alert (`alert == null`) or edit an existing one (`alert` set). */
 export function MonitorAlertEditModal({
   projectId,
   projectSlug,
@@ -67,8 +62,7 @@ export function MonitorAlertEditModal({
       toast({ description: isEdit ? "Alert updated." : "Alert added." })
       onClose()
     } catch (error) {
-      // Surface Zod field errors under the offending control; fall back to a
-      // toast for non-field (logic) errors.
+      // Surface Zod field errors under the offending control; toast non-field errors.
       const fieldErrors = alertFieldErrorsFrom(extractFieldErrors(error), null)
       if (hasAlertFieldErrors(fieldErrors)) {
         setErrors(fieldErrors)

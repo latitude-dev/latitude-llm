@@ -30,7 +30,6 @@ export interface MonitorsTableSorting {
   readonly column: MonitorsSortColumn
   readonly direction: SortDirection
 }
-/** Default dashboard sort: most-recently-active monitors first. */
 export const DEFAULT_MONITORS_SORTING: MonitorsTableSorting = { column: "lastIncident", direction: "desc" }
 
 const lastIncidentMs = (row: MonitorsTableRow): number | null =>
@@ -54,12 +53,7 @@ const comparePrimary = (
   return dir * (at - bt)
 }
 
-/**
- * Sort the loaded rows for the dashboard table by the chosen column/direction
- * (system monitors flow with the rest). Monitors with no incident sort last
- * under the "last incident" column; `createdAt` desc then `id` are the fixed
- * secondary/tertiary tiebreaks, so the order is always deterministic.
- */
+/** Fixed `createdAt` desc then `id` tiebreaks keep the order deterministic. */
 export function sortMonitorRows(
   rows: readonly MonitorsTableRow[],
   sorting: MonitorsTableSorting,
@@ -85,11 +79,6 @@ function LastIncidentCell({ summary }: { readonly summary: MonitorsTableRow["las
   return <IncidentStatus startedAtIso={summary.startedAtIso} endedAtIso={summary.endedAtIso} />
 }
 
-/**
- * The monitor's first humanized alert ("Alerts when …"), truncated, with a
- * `+N` tag for the remaining alerts. The tag stays pinned (shrink-0) so it's
- * always visible — the alert text is what gives up space when the cell is tight.
- */
 function ConditionCell({ alerts }: { readonly alerts: MonitorRecord["alerts"] }) {
   const [first, ...rest] = alerts
   if (!first) {

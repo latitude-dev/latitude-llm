@@ -8,11 +8,7 @@ import {
 } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { IncidentStatus } from "./incident-status.tsx"
 
-/**
- * The incident's source as plain text (the whole row is the link, so the name
- * itself isn't a separate anchor). Falls back to the raw id (copyable) when the
- * source was deleted and its name couldn't be resolved.
- */
+/** Falls back to a copyable raw id when the source was deleted and its name is unresolved. */
 function SourceCell({ incident }: { readonly incident: MonitorIncidentRecord }) {
   if (!incident.sourceName) {
     return <CopyableText value={incident.sourceId} size="sm" ellipsis tooltip="Copy source id" />
@@ -24,11 +20,7 @@ function SourceCell({ incident }: { readonly incident: MonitorIncidentRecord }) 
   )
 }
 
-/**
- * How long the incident lasted, as days/hours/minutes/seconds. Ongoing incidents
- * (no close) run up to now; closed incidents use their span. Blank only for a
- * point-in-time incident, which closes the instant it opens (`endedAt === startedAt`).
- */
+/** Ongoing incidents run up to now; blank for a point-in-time incident (`endedAt === startedAt`). */
 function DurationCell({ incident }: { readonly incident: MonitorIncidentRecord }) {
   const endMs = incident.endedAt ? Date.parse(incident.endedAt) : Date.now()
   const elapsedMs = endMs - Date.parse(incident.startedAt)
@@ -46,9 +38,7 @@ const INCIDENT_COLUMNS: InfiniteTableColumn<MonitorIncidentRecord>[] = [
   {
     key: "status",
     header: "Status",
-    // Fixed order — ongoing first, then most-recently-closed (see backend keyset).
-    // `sortKey` + `defaultSorting` (and no `onSortChange`) render a static down
-    // arrow so the user knows the order without it being interactive.
+    // `sortKey` + `defaultSorting` with no `onSortChange` renders a static (non-interactive) arrow.
     sortKey: "status",
     width: 200,
     minWidth: 150,
@@ -82,11 +72,6 @@ const INCIDENT_DEFAULT_SORTING = { column: "status", direction: "desc" } as cons
 
 const INCIDENT_TABLE_CLASS = "max-h-[min(28rem,50vh)]"
 
-/**
- * Loading state for the incidents table: the same columns/header fed an empty,
- * `isLoading` InfiniteTable, so it renders the shared table skeleton rows. Used
- * by the detail-drawer skeleton instead of hand-rolled placeholder rows.
- */
 export function MonitorIncidentsTableSkeleton() {
   return (
     <InfiniteTable<MonitorIncidentRecord>
@@ -112,8 +97,7 @@ export function MonitorIncidentsTable({
 }) {
   const { incidents, isLoading, infiniteScroll } = useMonitorIncidents({ projectId, monitorId })
 
-  // The whole row links to the incident's source (issue / saved search). Rows
-  // whose source was deleted (or can't be deep-linked) aren't navigable.
+  // Rows whose source was deleted (or can't be deep-linked) return null and aren't navigable.
   const renderRowLink = useCallback(
     (incident: MonitorIncidentRecord, props: { className: string }): ReactNode => {
       if (incident.sourceType === "issue" && incident.sourceName) {

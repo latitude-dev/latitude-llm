@@ -145,14 +145,12 @@ export function useMonitorIncidents(input: {
   return { incidents, isLoading, infiniteScroll }
 }
 
-/** Aggregate incident stats for the detail-drawer summary row (total + first/last detected). */
 interface MonitorIncidentStats {
   readonly total: number
   readonly firstStartedAtIso: string | null
   readonly lastStartedAtIso: string | null
 }
 
-/** Fetches a monitor's incident stats (count + history span) for the detail-drawer summary row. */
 export function useMonitorIncidentStats(input: {
   readonly projectId: string
   readonly monitorId: string

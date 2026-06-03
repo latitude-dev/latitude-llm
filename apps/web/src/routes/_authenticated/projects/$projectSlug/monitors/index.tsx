@@ -84,8 +84,7 @@ function MonitorsPageContent() {
   const sorting = useMemo(() => parseSorting(rawSorting), [rawSorting])
   const setSorting = useCallback((next: MonitorsTableSorting) => setRawSorting(serializeSorting(next)), [setRawSorting])
 
-  // Contribute "Create monitor" to the command palette while the Monitors page is mounted
-  // (so it's implicitly gated to this page and the monitors flag), reusing the create modal.
+  // Registered only while this page is mounted, so it's implicitly gated to the monitors flag.
   const paletteCommands = useMemo<readonly PaletteCommand[]>(
     () => [
       {
@@ -118,8 +117,6 @@ function MonitorsPageContent() {
     ...(searchQuery ? { searchQuery } : {}),
   })
 
-  // Interactive sorting is applied client-side over the loaded rows; the drawer
-  // nav order below follows the same sorted order.
   const sortedRows = useMemo(() => sortMonitorRows(rows, sorting), [rows, sorting])
   const monitors = useMemo(() => sortedRows.map((row) => row.monitor), [sortedRows])
 
@@ -204,8 +201,7 @@ function MonitorsPageContent() {
           />
         </Layout.Aside>
       ) : monitorSlug && isLoading ? (
-        // Deep link / refresh: the panel mounts off the loaded list, so show a
-        // skeleton until the list resolves and the monitor becomes available.
+        // Deep link / refresh: skeleton until the list resolves and the monitor is found.
         <Layout.Aside>
           <MonitorDetailDrawerSkeleton onClose={() => setMonitorSlug("")} />
         </Layout.Aside>
