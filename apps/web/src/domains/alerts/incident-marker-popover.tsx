@@ -122,15 +122,15 @@ export function IncidentMarkerPopover({
                     <Text.H6 color="foregroundMuted">·</Text.H6>
                     <Text.H6 color="foregroundMuted">{SEVERITY_LABELS[incident.severity]}</Text.H6>
                   </div>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Text.H6 color="foregroundMuted" noWrap className="shrink-0">
-                      {formatTiming(incident)}
-                    </Text.H6>
+                  <div className="flex min-w-0 flex-col">
                     {incident.issueName ? (
                       <Text.H6 color="foreground" className="min-w-0 truncate">
                         {incident.issueName}
                       </Text.H6>
                     ) : null}
+                    <Text.H6 color="foregroundMuted" noWrap>
+                      {formatTiming(incident)}
+                    </Text.H6>
                   </div>
                 </div>
                 <ChevronRightIcon className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />

@@ -15,7 +15,7 @@ export function MonitorAttribution({ payload }: { readonly payload: IncidentPayl
     : null
   return (
     <div className="flex flex-col gap-0.5 pt-1">
-      <Text.H6 color="foregroundMuted">Created by monitor {payload.monitorName}</Text.H6>
+      <Text.H6 color="foregroundMuted">Created by monitor <b>{payload.monitorName}</b></Text.H6>
       {summary ? <Text.H6 color="foregroundMuted">{summary}</Text.H6> : null}
     </div>
   )
