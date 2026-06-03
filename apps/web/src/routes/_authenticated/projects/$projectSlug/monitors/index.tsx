@@ -12,7 +12,7 @@ import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { MonitorCreateModal } from "./-components/monitor-create-modal.tsx"
-import { MonitorDetailDrawer } from "./-components/monitor-detail-drawer.tsx"
+import { MonitorDetailDrawer, MonitorDetailDrawerSkeleton } from "./-components/monitor-detail-drawer.tsx"
 import { MonitorsEmptyState } from "./-components/monitors-empty-state.tsx"
 import {
   DEFAULT_MONITORS_SORTING,
@@ -202,6 +202,12 @@ function MonitorsPageContent() {
             canNavigateNext={nextMonitor !== undefined}
             canNavigatePrev={prevMonitor !== undefined}
           />
+        </Layout.Aside>
+      ) : monitorSlug && isLoading ? (
+        // Deep link / refresh: the panel mounts off the loaded list, so show a
+        // skeleton until the list resolves and the monitor becomes available.
+        <Layout.Aside>
+          <MonitorDetailDrawerSkeleton onClose={() => setMonitorSlug("")} />
         </Layout.Aside>
       ) : null}
     </Layout>

@@ -36,7 +36,7 @@ import type { MonitorAlertRecord, MonitorRecord } from "../../../../../../domain
 import { AddAlertButton } from "./add-alert-button.tsx"
 import { MonitorAlertDeleteConfirmModal } from "./monitor-alert-delete-confirm-modal.tsx"
 import { MonitorAlertEditModal } from "./monitor-alert-edit-modal.tsx"
-import { MonitorIncidentsTable } from "./monitor-incidents-table.tsx"
+import { MonitorIncidentsTable, MonitorIncidentsTableSkeleton } from "./monitor-incidents-table.tsx"
 import { MonitorMuteConfirmModal } from "./monitor-mute-confirm-modal.tsx"
 import { MonitorSensitivityEditModal } from "./monitor-sensitivity-edit-modal.tsx"
 
@@ -204,6 +204,68 @@ function AlertCard({
       </div>
       <Text.H5>{alert.summary}</Text.H5>
     </div>
+  )
+}
+
+/**
+ * Loading state for the detail panel, shown while the monitor list resolves on a
+ * deep link (the panel mounts off the loaded list, so without this it would pop
+ * in). Mirrors {@link MonitorDetailDrawer}'s layout — real section headers with
+ * skeleton bodies — like the issue detail panel's loading state.
+ */
+export function MonitorDetailDrawerSkeleton({ onClose }: { readonly onClose: () => void }) {
+  return (
+    <DetailDrawer
+      storeKey="monitor-detail-drawer-width"
+      onClose={onClose}
+      closeLabel={
+        <>
+          Close <HotkeyBadge hotkey="Escape" />
+        </>
+      }
+      rightActions={<Skeleton className="h-9 w-20" />}
+    >
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex shrink-0 flex-col gap-3 border-b px-6 py-4">
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-7 w-56" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+          <Skeleton className="h-5 w-40" />
+        </div>
+
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
+          <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
+            <SummaryField label="Status" value={<Skeleton className="h-5 w-16" />} />
+            <SummaryField label="Detected at" value={<Skeleton className="h-5 w-32" />} />
+            <SummaryField label="Incidents" value={<Skeleton className="h-5 w-10" />} />
+          </div>
+
+          <DetailSection icon={<Icon icon={MegaphoneIcon} size="sm" />} label="Alerts" defaultOpen>
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 2 }, (_, i) => (
+                <div
+                  key={`alert-skeleton-${i}`}
+                  className="flex flex-col gap-2 rounded-lg border border-border px-3 pb-3 pt-3"
+                >
+                  <Skeleton className="h-5 w-44" />
+                  <Skeleton className="h-5 w-full" />
+                </div>
+              ))}
+            </div>
+          </DetailSection>
+
+          <DetailSection
+            icon={<Icon icon={ShieldAlertIcon} size="sm" />}
+            label="Incidents"
+            defaultOpen
+            contentClassName="flex flex-col overflow-hidden pl-0 pt-0 max-h-none"
+          >
+            <MonitorIncidentsTableSkeleton />
+          </DetailSection>
+        </div>
+      </div>
+    </DetailDrawer>
   )
 }
 
