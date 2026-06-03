@@ -13,7 +13,10 @@ import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon } from "lucide-react"
 import { useMemo } from "react"
 import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
+import { useSpansBySessionCollection } from "../../../../../../domains/spans/spans.collection.ts"
 import { SessionOutlierBadge, type SessionOutlierMetric } from "../session-outlier-badge.tsx"
+import { DurationBar } from "../trace-detail-drawer/duration-bar.tsx"
+import { computeSessionDurationBreakdown } from "../trace-detail-drawer/duration-composition.ts"
 import { UsageSummary } from "../trace-detail-drawer/tabs/spans-tab/span-detail/usage-summary.tsx"
 
 // Sessions only expose percentile filters for duration/TTFT/cost
@@ -70,12 +73,19 @@ export function MetadataTab({
     />
   )
 
-  const durationValue = (
-    <span className="flex items-center gap-1">
-      {renderBadge("durationNs", session.durationNs)}
-      {session.durationNs > 0 ? formatDuration(session.durationNs) : "-"}
-    </span>
-  )
+  // Spans across every trace in the session, fetched in one query. The breakdown
+  // is computed per trace and summed, so between-trace gaps never count as idle.
+  const { data: spans, isLoading: isSpansLoading } = useSpansBySessionCollection({
+    projectId: session.projectId,
+    sessionId: session.sessionId,
+    traceIds: session.traceIds,
+    startTimeFrom: session.startTime,
+    startTimeTo: session.endTime,
+  })
+  const durationBreakdown = useMemo(() => computeSessionDurationBreakdown(spans ?? []), [spans])
+  const fallbackDurationMs = session.durationNs / 1_000_000
+  const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
+  const durationBadge = renderBadge("durationNs", session.durationNs)
 
   const ttftValue = (
     <span className="flex items-center gap-1">
@@ -94,10 +104,6 @@ export function MetadataTab({
           {
             label: "Start Time",
             value: relativeTime(new Date(session.startTime)),
-          },
-          {
-            label: "Duration",
-            value: durationValue,
           },
           {
             label: "TTFT",
@@ -135,7 +141,16 @@ export function MetadataTab({
         </div>
       )}
 
-      <UsageSummary data={session} costBadges={costBadgesNode} />
+      {/* ── Duration composition + usage (tokens + cost) ── */}
+      <div className="flex flex-col gap-2">
+        <DurationBar
+          segments={durationBreakdown.segments}
+          wallClockMs={durationWallClockMs}
+          badges={durationBadge}
+          isLoading={isSpansLoading}
+        />
+        <UsageSummary data={session} costBadges={costBadgesNode} />
+      </div>
 
       <div className="flex flex-col gap-1">
         <Text.H6 color="foregroundMuted">Tags</Text.H6>

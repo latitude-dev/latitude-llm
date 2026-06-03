@@ -34,6 +34,7 @@ import type { PaletteCommand } from "../../../../../components/command-palette/t
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useAnnotationsByTrace } from "../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../domains/annotations/annotations.functions.ts"
+import { useSpansByTraceCollection } from "../../../../../domains/spans/spans.collection.ts"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -245,6 +246,14 @@ export function TraceDetailBody({
   )
   const isRecordLoading = !trace && !traceDetail
   const traceRecord: TraceRecord | undefined = traceDetail ?? trace
+  // Span list for the Trace tab's duration composition. The Spans tab fetches
+  // with the same key, so the cached collection dedupes both into one fetch.
+  const { data: spans, isLoading: isSpansLoading } = useSpansByTraceCollection({
+    projectId,
+    traceId,
+    startTimeFrom: traceRecord?.startTime,
+    startTimeTo: traceRecord?.endTime,
+  })
   const spansTabSuffix = useMemo(() => getSpansTabSuffix(traceRecord?.spanCount), [traceRecord?.spanCount])
   const tabsWithCounts = useMemo<TabOption<TabId>[]>(
     () =>
@@ -457,6 +466,8 @@ export function TraceDetailBody({
             projectId={projectId}
             traceRecord={traceRecord}
             traceDetail={traceDetail}
+            spans={spans}
+            isSpansLoading={isSpansLoading}
             isRecordLoading={isRecordLoading}
             isDetailLoading={isDetailLoading}
             filters={filters}

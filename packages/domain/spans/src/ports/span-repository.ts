@@ -39,6 +39,19 @@ export interface SpanRepositoryShape {
     readonly startTimeTo?: Date
   }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
 
+  /**
+   * Spans across a set of traces (e.g. every trace in a session). Filters on
+   * `trace_id IN (...)` rather than `session_id` so it also covers orphan
+   * single-trace sessions, whose spans carry no `session_id`.
+   */
+  listByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+    readonly startTimeFrom?: Date
+    readonly startTimeTo?: Date
+  }): Effect.Effect<readonly Span[], RepositoryError, ChSqlClient>
+
   listByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

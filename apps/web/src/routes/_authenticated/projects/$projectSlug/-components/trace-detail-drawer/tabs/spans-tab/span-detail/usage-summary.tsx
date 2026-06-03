@@ -2,6 +2,7 @@ import { SegmentBar, type SegmentBarItem, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
 import type React from "react"
 import { useMemo } from "react"
+import { SegmentBreakdownRows } from "../../../segment-breakdown-rows.tsx"
 
 export interface UsageData {
   readonly tokensInput: number
@@ -68,45 +69,6 @@ export function buildCostSegments(data: UsageData): SegmentBarItem[] {
   return segments
 }
 
-function BreakdownRows({
-  segments,
-  formatValue,
-  footer,
-}: {
-  readonly segments: readonly SegmentBarItem[]
-  readonly formatValue: (value: number) => string
-  readonly footer?: string
-}) {
-  const total = segments.reduce((sum, s) => sum + s.value, 0)
-
-  return (
-    <div className="flex flex-col gap-1.5 min-w-[160px]">
-      {segments.map((s) => (
-        <div key={s.label} className="flex flex-row items-center justify-between gap-4">
-          <div className="flex flex-row items-center gap-1.5">
-            <div className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
-            <Text.H6 color="foregroundMuted">{s.label}</Text.H6>
-          </div>
-          <Text.H6 color="foreground">{formatValue(s.value)}</Text.H6>
-        </div>
-      ))}
-
-      <hr className="border-t border-border" />
-
-      <div className="flex flex-row items-center justify-between gap-4">
-        <Text.H6 color="foregroundMuted">Total</Text.H6>
-        <Text.H6 color="foreground">{formatValue(total)}</Text.H6>
-      </div>
-
-      {footer && (
-        <Text.H6 color="foregroundMuted" italic>
-          {footer}
-        </Text.H6>
-      )}
-    </div>
-  )
-}
-
 function UsageRow({
   label,
   formattedTotal,
@@ -138,7 +100,7 @@ function UsageRow({
         }
         asChild
       >
-        <BreakdownRows segments={segments} formatValue={formatValue} {...(footer ? { footer } : {})} />
+        <SegmentBreakdownRows segments={segments} formatValue={formatValue} {...(footer ? { footer } : {})} />
       </Tooltip>
 
       <div className="flex items-center gap-2 self-center">

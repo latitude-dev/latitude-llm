@@ -21,6 +21,7 @@ export function SpansTab({
   readonly onSelectSpan: (spanId: string) => void
   readonly isActive: boolean
 }) {
+  // Shares the cached spans collection with the Trace tab's fetch (same key → one fetch).
   const { data: spans, isLoading } = useSpansByTraceCollection({ projectId, traceId, startTimeFrom, startTimeTo })
   const [isMinimized, setIsMinimized] = useState(() => selectedSpanId !== "")
   const treeContainerRef = useRef<HTMLDivElement | null>(null)

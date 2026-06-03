@@ -404,6 +404,57 @@ export const SpanRepositoryLive = Layer.effect(
           )
       })
 
+    const listByTraceIds: SpanRepositoryShape["listByTraceIds"] = ({
+      organizationId,
+      projectId,
+      traceIds,
+      startTimeFrom,
+      startTimeTo,
+    }) =>
+      Effect.gen(function* () {
+        if (traceIds.length === 0) return []
+        const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+        const startFromClause = startTimeFrom
+          ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
+          : ""
+        const startToClause = startTimeTo
+          ? "AND start_time <= parseDateTime64BestEffort({startTimeTo:String}, 9, 'UTC')"
+          : ""
+        return yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              // Same `LIMIT 1 BY span_id` dedupe as listByTraceId; filters on a
+              // set of trace ids so a whole session can be fetched in one query.
+              query: `SELECT ${LIST_COLUMNS}
+                    FROM (
+                      SELECT ${LIST_COLUMNS}
+                      FROM spans
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id IN ({traceIds:Array(String)})
+                        ${startFromClause}
+                        ${startToClause}
+                      ORDER BY span_id, ingested_at DESC
+                      LIMIT 1 BY span_id
+                    )
+                    ORDER BY start_time ASC`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceIds: Array.from(traceIds) as string[],
+                ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
+                ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<SpanListRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainSpan)),
+            Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
+          )
+      })
+
     return {
       // TODO(repositories): rename insert -> save to keep repository write
       // verbs consistent across append-only and upsert-backed stores.
@@ -428,6 +479,8 @@ export const SpanRepositoryLive = Layer.effect(
         }),
 
       listByTraceId,
+
+      listByTraceIds,
 
       listByProjectId,
 

@@ -13,8 +13,11 @@ import {
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon } from "lucide-react"
 import { useMemo } from "react"
+import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 import { TraceOutlierBadge, type TraceOutlierMetric } from "../../trace-outlier-badge.tsx"
+import { DurationBar } from "../duration-bar.tsx"
+import { computeDurationBreakdown } from "../duration-composition.ts"
 import { UsageSummary } from "./spans-tab/span-detail/usage-summary.tsx"
 
 function JsonBlock({ value }: { readonly value: unknown }) {
@@ -34,6 +37,8 @@ export function TraceTab({
   projectId,
   traceRecord,
   traceDetail,
+  spans,
+  isSpansLoading,
   isRecordLoading,
   isDetailLoading,
   filters,
@@ -44,6 +49,8 @@ export function TraceTab({
   readonly projectId: string
   readonly traceRecord: TraceRecord | undefined
   readonly traceDetail: TraceDetailRecord | null | undefined
+  readonly spans: readonly SpanRecord[] | undefined
+  readonly isSpansLoading: boolean
   readonly isRecordLoading: boolean
   readonly isDetailLoading: boolean
   readonly filters?: FilterSet | undefined
@@ -77,12 +84,13 @@ export function TraceTab({
       />
     ) : null
 
-  const durationValue = traceRecord ? (
-    <span className="flex items-center gap-1">
-      {renderBadge("durationNs", traceRecord.durationNs)}
-      {traceRecord.durationNs > 0 ? formatDuration(traceRecord.durationNs) : "-"}
-    </span>
-  ) : undefined
+  // Duration composition from the span list (leaf intervals partitioned by
+  // category). Falls back to the trace record's wall-clock total (ns → ms) until
+  // spans load or when none are available, so the total always renders.
+  const durationBreakdown = useMemo(() => computeDurationBreakdown(spans ?? []), [spans])
+  const fallbackDurationMs = traceRecord ? traceRecord.durationNs / 1_000_000 : 0
+  const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs
+  const durationBadge = traceRecord ? renderBadge("durationNs", traceRecord.durationNs) : undefined
 
   const ttftValue = traceRecord ? (
     <span className="flex items-center gap-1">
@@ -101,11 +109,6 @@ export function TraceTab({
           {
             label: "Start Time",
             value: traceRecord ? relativeTime(new Date(traceRecord.startTime)) : undefined,
-            isLoading: isRecordLoading,
-          },
-          {
-            label: "Duration",
-            value: durationValue,
             isLoading: isRecordLoading,
           },
           {
@@ -148,8 +151,22 @@ export function TraceTab({
         </div>
       )}
 
-      {/* ── Usage: tokens + cost ── */}
-      {traceRecord && <UsageSummary data={traceRecord} costBadges={costBadgesNode} />}
+      {/* ── Duration composition + usage (tokens + cost) ── */}
+      {isRecordLoading ? (
+        <Skeleton className="h-8 w-full" />
+      ) : (
+        traceRecord && (
+          <div className="flex flex-col gap-2">
+            <DurationBar
+              segments={durationBreakdown.segments}
+              wallClockMs={durationWallClockMs}
+              badges={durationBadge}
+              isLoading={isSpansLoading}
+            />
+            <UsageSummary data={traceRecord} costBadges={costBadgesNode} />
+          </div>
+        )
+      )}
 
       {/* ── Tags ── */}
       <div className="flex flex-col gap-1">

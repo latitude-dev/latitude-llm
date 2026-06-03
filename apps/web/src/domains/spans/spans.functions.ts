@@ -170,6 +170,33 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     return spans.map(serializeSpan)
   })
 
+export const listSpansBySession = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      traceIds: z.array(z.string()),
+      startTimeFrom: dateTimeParamSchema.optional(),
+      startTimeTo: dateTimeParamSchema.optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<SpanRecord[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const spans = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SpanRepository
+        return yield* repo.listByTraceIds({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          traceIds: data.traceIds.map((id) => TraceId(id)),
+          ...(data.startTimeFrom ? { startTimeFrom: data.startTimeFrom } : {}),
+          ...(data.startTimeTo ? { startTimeTo: data.startTimeTo } : {}),
+        })
+      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+    return spans.map(serializeSpan)
+  })
+
 export const mapConversationToSpans = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
   .handler(
