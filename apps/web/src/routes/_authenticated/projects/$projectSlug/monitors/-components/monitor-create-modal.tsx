@@ -1,5 +1,4 @@
-import { Button, CloseTrigger, Icon, Input, Modal, Text, Textarea, useToast } from "@repo/ui"
-import { Trash2Icon } from "lucide-react"
+import { Button, CloseTrigger, Input, Modal, Text, Textarea, useToast } from "@repo/ui"
 import { useState } from "react"
 import { useCreateMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -107,19 +106,12 @@ export function MonitorCreateModal({
             // The card list is controlled (state lifted here), so positional keys are safe;
             // drafts have no stable id until the monitor is created.
             <div key={index} className="flex flex-col gap-2 rounded-lg border border-border p-3">
-              {alerts.length > 1 ? (
-                <div className="flex justify-end">
-                  <Button variant="ghost" size="sm" onClick={() => removeAlert(index)}>
-                    <Icon icon={Trash2Icon} size="sm" />
-                    Remove
-                  </Button>
-                </div>
-              ) : null}
               <AlertCardForm
                 value={alert}
                 onChange={(next) => updateAlert(index, next)}
                 projectId={projectId}
                 projectSlug={projectSlug}
+                {...(alerts.length > 1 ? { onRemove: () => removeAlert(index) } : {})}
               />
             </div>
           ))}

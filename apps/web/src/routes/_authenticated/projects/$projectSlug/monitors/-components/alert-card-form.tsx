@@ -1,7 +1,15 @@
-import { ALERT_SEVERITIES, type AlertSeverity, DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
-import { Icon, Input, Select, Text } from "@repo/ui"
-import { SparklesIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import { type AlertSeverity, DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
+import { Button, Icon, Input, Select, type TabOption, Tabs, Text } from "@repo/ui"
+import {
+  CircleArrowDown,
+  CircleArrowUp,
+  CircleMinus,
+  EqualApproximately,
+  LineDotRightHorizontal,
+  SparklesIcon,
+  TrendingUp,
+  XIcon,
+} from "lucide-react"
 import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 import {
   type AlertDraft,
@@ -10,40 +18,37 @@ import {
   draftWithKind,
   type LookbackUnit,
   previewAlertSentence,
-  USER_ALERT_KIND_LABEL,
-  USER_ALERT_KINDS,
   type UserAlertKind,
   type WindowUnit,
 } from "./alert-form-helpers.ts"
-import { HelpTooltip } from "./help-tooltip.tsx"
 import { SavedSearchSourcePicker } from "./saved-search-source-picker.tsx"
 
 // Sensitivity is an integer 1–6 (shared with the seasonal escalation detector).
 const SENSITIVITY_MIN = 1
 const SENSITIVITY_MAX = 6
 const EXPECTED_EXPLANATION =
-  "'Expected' is a smart baseline Latitude learns from your history — the normal shape of your traffic for each time of day and day of week, so a quiet Sunday night and a busy Monday morning each get their own 'normal'. You don't pick a comparison window, just how sensitive to be (1–6, lower = more sensitive). It's the same engine behind automatic issue-escalation."
+  "The system will learn the patterns and seasonality from your trace history to find anomalies"
 
 // Field help copy — written so a non-engineer can predict what each control does.
 const KIND_HELP: Record<UserAlertKind, string> = {
-  "savedSearch.match":
-    "Alerts each time a new matching trace is detected (throttled to at most one alert every 5 minutes).",
-  "savedSearch.threshold":
-    "Alerts once matching traces reach a threshold — a fixed count, or a multiple of a baseline.",
-  "savedSearch.escalating":
-    "Alerts when matching traffic stays elevated for a sustained window, filtering out short spikes.",
+  "savedSearch.match": "Alerts each time a new matching trace is detected",
+  "savedSearch.threshold": "Alerts once matching traces reach a threshold",
+  "savedSearch.escalating": "Alerts when matching traces stays elevated for a sustained window",
 }
-const COMPARISON_HELP =
-  "'times' compares against a fixed number. 'times more than' compares against a baseline — a recent average, the equivalent previous window, or the dynamically-learned expected level."
-const BASELINE_HELP =
-  "What to compare current activity against. 'The average of the last …' uses your typical rate over a recent window (robust to one-off past spikes). 'The previous …' compares against the equally-long window just before now — better when traffic has daily or weekly cycles. 'Expected' is a smart baseline learned automatically from your history (per time-of-day × day-of-week) — the same engine behind automatic issue-escalation; you pick no window, only a sensitivity."
-const WINDOW_HELP =
-  "How long the condition must hold continuously before firing — and how long it must stop holding before the incident closes. Short windows catch quick spikes; long windows ignore transient noise. Minimum 5 minutes."
 
-const SEVERITY_OPTIONS = ALERT_SEVERITIES.map((severity) => ({
-  label: severity[0].toUpperCase() + severity.slice(1),
-  value: severity,
-}))
+// Kind picker tabs. No "Search" prefix — every user alert watches a saved search,
+// so the qualifier is redundant.
+const KIND_TABS: readonly TabOption<UserAlertKind>[] = [
+  { id: "savedSearch.match", label: "Match", icon: <Icon icon={EqualApproximately} size="sm" /> },
+  { id: "savedSearch.threshold", label: "Threshold", icon: <Icon icon={LineDotRightHorizontal} size="sm" /> },
+  { id: "savedSearch.escalating", label: "Escalating", icon: <Icon icon={TrendingUp} size="sm" /> },
+]
+
+const SEVERITY_TABS: readonly TabOption<AlertSeverity>[] = [
+  { id: "low", label: "Low", icon: <Icon icon={CircleArrowDown} size="sm" /> },
+  { id: "medium", label: "Medium", icon: <Icon icon={CircleMinus} size="sm" /> },
+  { id: "high", label: "High", icon: <Icon icon={CircleArrowUp} size="sm" /> },
+]
 
 const COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
   { label: "times", value: "times" },
@@ -66,15 +71,6 @@ const WINDOW_UNIT_OPTIONS: { label: string; value: WindowUnit }[] = [
   { label: "hours", value: "hours" },
   { label: "days", value: "days" },
 ]
-
-function FieldLabel({ children, help }: { readonly children: ReactNode; readonly help: ReactNode }) {
-  return (
-    <div className="flex items-center gap-1">
-      <Text.H6M>{children}</Text.H6M>
-      <HelpTooltip>{help}</HelpTooltip>
-    </div>
-  )
-}
 
 function ThresholdWindowForm({
   value,
@@ -99,11 +95,11 @@ function ThresholdWindowForm({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/40 p-3">
-      <div className="flex flex-col gap-1.5">
-        <FieldLabel help={COMPARISON_HELP}>Threshold</FieldLabel>
-        <div className="flex flex-wrap items-center gap-2">
-          <Text.H6 color="foregroundMuted">Alert when traces are detected</Text.H6>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col">
+        <Text.H5M>Threshold</Text.H5M>
+        <div className="flex flex-wrap items-center gap-2 -mt-1">
+          <Text.H5 color="foregroundMuted">Alert when traces are detected</Text.H5>
           <Input
             type="number"
             min={expected ? SENSITIVITY_MIN : 1}
@@ -111,7 +107,7 @@ function ThresholdWindowForm({
             step={relative && !expected ? 0.1 : 1}
             value={value.amount}
             onChange={(event) => onChange({ amount: Number(event.target.value) })}
-            className="w-20"
+            className="w-20 h-9"
             {...(disabled ? { disabled: true } : {})}
           />
           <Select<ComparisonMode>
@@ -139,7 +135,7 @@ function ThresholdWindowForm({
               step={1}
               value={value.lookbackAmount}
               onChange={(event) => onChange({ lookbackAmount: Number(event.target.value) })}
-              className="w-20"
+              className="w-20 h-9"
               {...(disabled ? { disabled: true } : {})}
             />
           ) : null}
@@ -153,10 +149,9 @@ function ThresholdWindowForm({
               {...(disabled ? { disabled: true } : {})}
             />
           ) : null}
-          {relative ? <HelpTooltip>{BASELINE_HELP}</HelpTooltip> : null}
         </div>
         {expected ? (
-          <div className="flex items-start gap-2 rounded-md bg-muted/60 p-2">
+          <div className="rounded-lg bg-muted/80 px-3 py-2 flex justify-start items-start gap-2 mt-3">
             <Icon icon={SparklesIcon} size="sm" color="foregroundMuted" className="shrink-0" />
             <Text.H6 color="foregroundMuted">{EXPECTED_EXPLANATION}</Text.H6>
           </div>
@@ -164,16 +159,16 @@ function ThresholdWindowForm({
       </div>
 
       {value.kind === "savedSearch.escalating" ? (
-        <div className="flex flex-col gap-1.5">
-          <FieldLabel help={WINDOW_HELP}>Window</FieldLabel>
-          <div className="flex flex-wrap items-center gap-2">
-            <Text.H6 color="foregroundMuted">sustained for at least</Text.H6>
+        <div className="flex flex-col">
+          <Text.H5M>Window</Text.H5M>
+          <div className="flex flex-wrap items-center gap-2 -mt-1">
+            <Text.H5 color="foregroundMuted">Sustained for at least</Text.H5>
             <Input
               type="number"
               min={1}
               value={value.windowAmount}
               onChange={(event) => onChange({ windowAmount: Number(event.target.value) })}
-              className="w-20"
+              className="w-20 h-9"
               {...(disabled ? { disabled: true } : {})}
             />
             <Select<WindowUnit>
@@ -193,8 +188,10 @@ function ThresholdWindowForm({
 
 /**
  * Controlled editor for a single saved-search alert, shared verbatim by the
- * create modal and the edit modal. Switching the kind resets the threshold/window
- * fields (each kind takes a different condition shape).
+ * create modal and the edit modal. The kind is a left-aligned tab strip (its
+ * description sits just below); switching it resets the threshold/window fields
+ * (each kind takes a different condition shape). `onRemove`, when set, shows a
+ * remove (X) control on the right of the tab row.
  */
 export function AlertCardForm({
   value,
@@ -202,12 +199,14 @@ export function AlertCardForm({
   projectId,
   projectSlug,
   disabled,
+  onRemove,
 }: {
   readonly value: AlertDraft
   readonly onChange: (next: AlertDraft) => void
   readonly projectId: string
   readonly projectSlug: string
   readonly disabled?: boolean
+  readonly onRemove?: () => void
 }) {
   const { data: savedSearches } = useSavedSearchesList(projectId)
   const savedSearchName = value.sourceId
@@ -216,17 +215,29 @@ export function AlertCardForm({
 
   const set = (patch: Partial<AlertDraft>) => onChange({ ...value, ...patch })
 
+  const removeButton = (
+    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onRemove} aria-label="Remove alert">
+      <Icon icon={XIcon} size="sm" color="foregroundMuted" />
+    </Button>
+  )
+
   return (
-    <div className="flex flex-col gap-3">
-      <Select<UserAlertKind>
-        name="kind"
-        label="Alert type"
-        info={KIND_HELP[value.kind]}
-        options={USER_ALERT_KINDS.map((kind) => ({ label: USER_ALERT_KIND_LABEL[kind], value: kind }))}
-        value={value.kind}
-        onChange={(kind) => onChange(draftWithKind(value, kind))}
-        {...(disabled ? { disabled: true } : {})}
-      />
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <Tabs<UserAlertKind>
+            variant="secondary"
+            size="sm"
+            options={KIND_TABS}
+            active={value.kind}
+            onSelect={(kind) => {
+              if (!disabled) onChange(draftWithKind(value, kind))
+            }}
+          />
+          {onRemove ? removeButton : null}
+        </div>
+        <Text.H6 color="foregroundMuted">{KIND_HELP[value.kind]}</Text.H6>
+      </div>
 
       <SavedSearchSourcePicker
         projectId={projectId}
@@ -240,18 +251,19 @@ export function AlertCardForm({
         <ThresholdWindowForm value={value} onChange={set} {...(disabled ? { disabled: true } : {})} />
       ) : null}
 
-      <Select<AlertSeverity>
-        name="severity"
-        label="Severity"
-        options={SEVERITY_OPTIONS}
-        value={value.severity}
-        onChange={(severity) => set({ severity })}
-        {...(disabled ? { disabled: true } : {})}
-      />
-
-      <div className="rounded-md bg-muted/60 px-3 py-2">
+      <div className="rounded-lg bg-muted/80 px-3 py-2 flex justify-start items-center">
         <Text.H6 color="foregroundMuted">{previewAlertSentence(value, savedSearchName)}</Text.H6>
       </div>
+
+      <Tabs<AlertSeverity>
+        variant="secondary"
+        size="sm"
+        options={SEVERITY_TABS}
+        active={value.severity}
+        onSelect={(severity) => {
+          if (!disabled) set({ severity })
+        }}
+      />
     </div>
   )
 }

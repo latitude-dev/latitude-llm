@@ -18,18 +18,6 @@ export type WindowUnit = "minutes" | "hours" | "days"
 export type BaselineKind = "average" | "period" | "expected"
 export type LookbackUnit = "hours" | "days"
 
-export const USER_ALERT_KINDS: readonly UserAlertKind[] = [
-  "savedSearch.match",
-  "savedSearch.threshold",
-  "savedSearch.escalating",
-]
-
-export const USER_ALERT_KIND_LABEL: Record<UserAlertKind, string> = {
-  "savedSearch.match": "Search match",
-  "savedSearch.threshold": "Search threshold",
-  "savedSearch.escalating": "Search escalating",
-}
-
 /**
  * Flat, UI-only working state for one alert card. Captures every control so
  * switching modes keeps sensible values; `draftTo*` collapse it back onto the
