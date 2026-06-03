@@ -64,6 +64,14 @@ export const emptyAlertDraft = (overrides?: Partial<AlertDraft>): AlertDraft => 
   ...overrides,
 })
 
+/**
+ * Switch a draft's kind, resetting every threshold/window field to its default —
+ * each kind accepts a different condition shape, so carrying the old values over
+ * would surface stale config. The watched source and severity are preserved.
+ */
+export const draftWithKind = (draft: AlertDraft, kind: UserAlertKind): AlertDraft =>
+  emptyAlertDraft({ kind, sourceId: draft.sourceId, severity: draft.severity })
+
 const lookbackToDuration = (amount: number, unit: LookbackUnit): AlertDuration =>
   unit === "hours" ? { unit: "hours", hours: amount } : { unit: "days", days: amount }
 

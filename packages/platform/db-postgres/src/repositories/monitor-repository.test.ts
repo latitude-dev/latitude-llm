@@ -784,7 +784,7 @@ describe("MonitorRepositoryLive", () => {
       expect(row).toMatchObject({ name: "New name", slug: "new-name", description: "Desc" })
     })
 
-    it("updateAlert replaces an alert's source, condition and severity", async () => {
+    it("updateAlert replaces an alert's kind, source, condition and severity", async () => {
       const id = generateId()
       const alert = generateId()
       await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
@@ -803,17 +803,27 @@ describe("MonitorRepositoryLive", () => {
       await exec((r) =>
         r.updateAlert({
           alertId: MonitorAlertId(alert),
+          kind: "savedSearch.escalating",
           sourceId: "t".repeat(24),
-          condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 250 } },
+          condition: {
+            kind: "savedSearch.escalating",
+            threshold: { mode: "absolute", count: 250 },
+            window: { minutes: 5 },
+          },
           severity: "high",
         }),
       )
 
       const [row] = await database.db.select().from(monitorAlertsTable).where(eq(monitorAlertsTable.id, alert))
       expect(row).toMatchObject({
+        kind: "savedSearch.escalating",
         sourceId: "t".repeat(24),
         severity: "high",
-        condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 250 } },
+        condition: {
+          kind: "savedSearch.escalating",
+          threshold: { mode: "absolute", count: 250 },
+          window: { minutes: 5 },
+        },
       })
     })
 
@@ -821,6 +831,7 @@ describe("MonitorRepositoryLive", () => {
       const exit = await execExit((r) =>
         r.updateAlert({
           alertId: MonitorAlertId(generateId()),
+          kind: "issue.escalating",
           sourceId: null,
           condition: { kind: "issue.escalating", sensitivity: 4 },
           severity: "high",

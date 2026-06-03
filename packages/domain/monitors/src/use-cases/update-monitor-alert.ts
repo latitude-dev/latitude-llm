@@ -9,6 +9,7 @@ import {
   type NotFoundError,
   type RepositoryError,
   SqlClient,
+  USER_CREATABLE_ALERT_KINDS,
   ValidationError,
 } from "@domain/shared"
 import { Effect } from "effect"
@@ -16,6 +17,7 @@ import type { Monitor } from "../entities/monitor.ts"
 import { AlertConditionMismatchError, MonitorAlertNotFoundError, SystemMonitorForbiddenError } from "../errors.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 
+const USER_CREATABLE = new Set<AlertIncidentKind>(USER_CREATABLE_ALERT_KINDS)
 /** Kinds that carry no `condition` (nothing to configure). Their condition stays `null`. */
 const KINDS_WITHOUT_CONDITION = new Set<AlertIncidentKind>(["issue.new", "issue.regressed", "savedSearch.match"])
 
@@ -25,7 +27,8 @@ const conditionMatchesKind = (condition: AlertIncidentCondition | null, kind: Al
 export interface UpdateMonitorAlertInput {
   readonly monitorId: MonitorId
   readonly alertId: MonitorAlertId
-  /** `kind` is immutable and intentionally absent. Omitted fields keep their current value. */
+  /** Omitted fields keep their current value. The caller must supply a `condition` (and `source`) appropriate for `kind`. */
+  readonly kind?: AlertIncidentKind
   readonly source?: { readonly type: AlertIncidentSourceType; readonly id: string | null }
   readonly condition?: AlertIncidentCondition | null
   readonly severity?: AlertSeverity
@@ -40,14 +43,16 @@ export type UpdateMonitorAlertError =
   | ValidationError
 
 /**
- * Updates a single existing alert's `source` / `condition` / `severity` in
- * place. `kind` is immutable (and so is `source.type`, which `kind` fixes).
- * The resulting `condition` must be appropriate for the alert's kind.
+ * Updates a single existing alert's `kind` / `source` / `condition` / `severity`
+ * in place. On a user monitor `kind` may change (to another user-creatable kind);
+ * the caller supplies the matching `source` / `condition` for the target kind
+ * (the form resets the condition values, since each kind accepts a different
+ * shape). `source.type` is always fixed by the (target) kind.
  *
  * System monitors are structurally locked: only an existing alert's
- * configurable condition values may change — any `source` / `severity` change,
- * or setting a condition on a no-condition kind, is rejected. This is the only
- * alert mutation system monitors permit.
+ * configurable condition values may change — any `kind` / `source` / `severity`
+ * change, or setting a condition on a no-condition kind, is rejected. This is
+ * the only alert mutation system monitors permit.
  */
 export const updateMonitorAlertUseCase = (
   input: UpdateMonitorAlertInput,
@@ -63,20 +68,22 @@ export const updateMonitorAlertUseCase = (
           return yield* new MonitorAlertNotFoundError({ monitorId: input.monitorId, alertId: input.alertId })
         }
 
+        const nextKind = input.kind ?? alert.kind
         const nextSource = input.source ?? alert.source
         const nextCondition = input.condition !== undefined ? input.condition : alert.condition
         const nextSeverity = input.severity ?? alert.severity
+        const kindChanged = input.kind !== undefined && input.kind !== alert.kind
 
-        // `source.type` is fixed by the (immutable) kind.
-        if (nextSource.type !== ALERT_INCIDENT_KIND_SOURCE_TYPE[alert.kind]) {
+        // `source.type` and the condition shape are fixed by the (target) kind.
+        if (nextSource.type !== ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]) {
           return yield* new ValidationError({
             field: "source",
-            message: `Source type must be "${ALERT_INCIDENT_KIND_SOURCE_TYPE[alert.kind]}" for ${alert.kind}`,
+            message: `Source type must be "${ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]}" for ${nextKind}`,
           })
         }
-        if (!conditionMatchesKind(nextCondition, alert.kind)) {
+        if (!conditionMatchesKind(nextCondition, nextKind)) {
           return yield* new AlertConditionMismatchError({
-            message: `Condition does not match alert kind "${alert.kind}"`,
+            message: `Condition does not match alert kind "${nextKind}"`,
           })
         }
 
@@ -86,13 +93,17 @@ export const updateMonitorAlertUseCase = (
             (input.source.type !== alert.source.type || input.source.id !== alert.source.id)
           const severityChanged = input.severity !== undefined && input.severity !== alert.severity
           const conditionOnNonConfigurable = input.condition !== undefined && alert.condition === null
-          if (sourceChanged || severityChanged || conditionOnNonConfigurable) {
+          if (kindChanged || sourceChanged || severityChanged || conditionOnNonConfigurable) {
             return yield* new SystemMonitorForbiddenError({ monitorId: input.monitorId, operation: "restructured" })
           }
+        } else if (kindChanged && !USER_CREATABLE.has(nextKind)) {
+          // Only saved-search kinds are user-owned; `issue.*` are system-only.
+          return yield* new ValidationError({ field: "kind", message: `Alerts of kind "${nextKind}" cannot be set` })
         }
 
         yield* repository.updateAlert({
           alertId: input.alertId,
+          kind: nextKind,
           sourceId: nextSource.id,
           condition: nextCondition,
           severity: nextSeverity,
@@ -101,7 +112,7 @@ export const updateMonitorAlertUseCase = (
           ...monitor,
           alerts: monitor.alerts.map((candidate) =>
             candidate.id === input.alertId
-              ? { ...candidate, source: nextSource, condition: nextCondition, severity: nextSeverity }
+              ? { ...candidate, kind: nextKind, source: nextSource, condition: nextCondition, severity: nextSeverity }
               : candidate,
           ),
         }

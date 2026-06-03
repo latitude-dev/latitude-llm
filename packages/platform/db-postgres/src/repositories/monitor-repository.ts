@@ -417,14 +417,16 @@ export const MonitorRepositoryLive = Layer.effect(
           )
           if (updated.length === 0) return yield* new NotFoundError({ entity: "Monitor", id })
         }),
-      updateAlert: ({ alertId, sourceId, condition, severity }) =>
+      updateAlert: ({ alertId, kind, sourceId, condition, severity }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const { organizationId } = sqlClient
+          // `sourceType` stays put — it's fixed by `kind`, and the only mutable
+          // kinds (saved-search) all share the `savedSearch` source type.
           const updated = yield* sqlClient.query((db) =>
             db
               .update(monitorAlerts)
-              .set({ sourceId, condition, severity, updatedAt: new Date() })
+              .set({ kind, sourceId, condition, severity, updatedAt: new Date() })
               .where(
                 and(
                   eq(monitorAlerts.organizationId, organizationId),

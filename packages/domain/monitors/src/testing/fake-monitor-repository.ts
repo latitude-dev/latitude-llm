@@ -134,14 +134,16 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         replace(id, { ...monitor, name, slug, description, updatedAt: new Date() })
         return Effect.void
       }),
-    updateAlert: ({ alertId, sourceId, condition, severity }) =>
+    updateAlert: ({ alertId, kind, sourceId, condition, severity }) =>
       Effect.suspend(() => {
         const monitor = monitors.find((m) => isLive(m) && m.alerts.some((alert) => alert.id === alertId))
         if (!monitor) return Effect.fail(new NotFoundError({ entity: "MonitorAlert", id: alertId }))
         replace(monitor.id, {
           ...monitor,
           alerts: monitor.alerts.map((alert) =>
-            alert.id === alertId ? { ...alert, source: { ...alert.source, id: sourceId }, condition, severity } : alert,
+            alert.id === alertId
+              ? { ...alert, kind, source: { ...alert.source, id: sourceId }, condition, severity }
+              : alert,
           ),
         })
         return Effect.void

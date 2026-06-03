@@ -93,6 +93,68 @@ describe("updateMonitorAlertUseCase", () => {
     expect(monitors[0]?.alerts[0]).toMatchObject({ source: { id: "t".repeat(24) }, severity: "high" })
   })
 
+  it("lets a user monitor change a saved-search alert's kind, resetting its condition", async () => {
+    const monitor = makeMonitor({
+      alerts: [
+        makeAlert({
+          kind: "savedSearch.threshold",
+          source: { type: "savedSearch", id: "s".repeat(24) },
+          condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 100 } },
+          severity: "medium",
+        }),
+      ],
+    })
+    const { repo, monitors } = createFakeMonitorRepository([monitor])
+    const nextCondition = {
+      kind: "savedSearch.escalating" as const,
+      threshold: { mode: "absolute" as const, count: 100 },
+      window: { minutes: 5 },
+    }
+    const result = await run(
+      updateMonitorAlertUseCase({
+        monitorId,
+        alertId,
+        kind: "savedSearch.escalating",
+        source: { type: "savedSearch", id: "s".repeat(24) },
+        condition: nextCondition,
+        severity: "medium",
+      }),
+      repo,
+    )
+    expect(result.alerts[0]?.kind).toBe("savedSearch.escalating")
+    expect(result.alerts[0]?.condition).toEqual(nextCondition)
+    expect(monitors[0]?.alerts[0]?.kind).toBe("savedSearch.escalating")
+  })
+
+  it("rejects changing the kind of a system monitor's alert", async () => {
+    const { repo, monitors } = createFakeMonitorRepository([escalatingMonitor(true)])
+    const error = await runError(
+      updateMonitorAlertUseCase({ monitorId, alertId, kind: "issue.new", condition: null }),
+      repo,
+    )
+    expect(error._tag).toBe("SystemMonitorForbiddenError")
+    expect(monitors[0]?.alerts[0]?.kind).toBe("issue.escalating")
+  })
+
+  it("rejects changing a user alert to a system-only (issue) kind", async () => {
+    const monitor = makeMonitor({
+      alerts: [makeAlert({ kind: "savedSearch.match", source: { type: "savedSearch", id: "s".repeat(24) } })],
+    })
+    const { repo, monitors } = createFakeMonitorRepository([monitor])
+    const error = await runError(
+      updateMonitorAlertUseCase({
+        monitorId,
+        alertId,
+        kind: "issue.escalating",
+        source: { type: "issue", id: null },
+        condition: { kind: "issue.escalating", sensitivity: 3 },
+      }),
+      repo,
+    )
+    expect(error._tag).toBe("ValidationError")
+    expect(monitors[0]?.alerts[0]?.kind).toBe("savedSearch.match")
+  })
+
   it("rejects a condition whose kind does not match the alert", async () => {
     const { repo, monitors } = createFakeMonitorRepository([escalatingMonitor(false)])
     const error = await runError(

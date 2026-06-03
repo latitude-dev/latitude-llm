@@ -1,5 +1,6 @@
 import type {
   AlertIncidentCondition,
+  AlertIncidentKind,
   AlertSeverity,
   MonitorAlertId,
   MonitorId,
@@ -86,9 +87,10 @@ export interface MonitorRepositoryShape {
     readonly slug: string
     readonly description: string
   }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
-  /** Update a live alert's `source.id` / `condition` / `severity` in place (kind + source type are fixed). */
+  /** Update a live alert's `kind` / `source.id` / `condition` / `severity` in place (source type stays fixed by kind). */
   updateAlert(input: {
     readonly alertId: MonitorAlertId
+    readonly kind: AlertIncidentKind
     readonly sourceId: string | null
     readonly condition: AlertIncidentCondition | null
     readonly severity: AlertSeverity

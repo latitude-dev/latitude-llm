@@ -13,9 +13,10 @@ import {
 } from "./alert-form-helpers.ts"
 
 /**
- * Add a new saved-search alert (`alert == null`) or edit an existing one's
- * configurable values (`alert` set; kind is locked). Mounted only while open.
- * Saves through `createMonitorAlert` / `updateMonitorAlert`.
+ * Add a new saved-search alert (`alert == null`) or edit an existing one
+ * (`alert` set) — including its kind, which resets the condition fields when
+ * changed. Reuses {@link AlertCardForm}, the same editor the create modal uses.
+ * Mounted only while open. Saves through `createMonitorAlert` / `updateMonitorAlert`.
  */
 export function MonitorAlertEditModal({
   projectId,
@@ -46,6 +47,7 @@ export function MonitorAlertEditModal({
         await editAlert.mutateAsync({
           monitorId,
           alertId: alert.id,
+          kind: draft.kind,
           source: { type: "savedSearch", id: draft.sourceId },
           condition: draftToCondition(draft),
           severity: draft.severity,
@@ -69,6 +71,7 @@ export function MonitorAlertEditModal({
         if (!next) onClose()
       }}
       title={isEdit ? "Edit alert" : "Add alert"}
+      description="Alerts define the conditions that should be met for monitors to open incidents"
       footer={
         <>
           <CloseTrigger />
@@ -78,13 +81,7 @@ export function MonitorAlertEditModal({
         </>
       }
     >
-      <AlertCardForm
-        value={draft}
-        onChange={setDraft}
-        projectId={projectId}
-        projectSlug={projectSlug}
-        {...(isEdit ? { lockKind: true } : {})}
-      />
+      <AlertCardForm value={draft} onChange={setDraft} projectId={projectId} projectSlug={projectSlug} />
     </Modal>
   )
 }

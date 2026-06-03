@@ -138,10 +138,9 @@ function AlertCard({
   readonly onEdit: () => void
   readonly onDelete: () => void
 }) {
-  // Every user-monitor alert is editable (its source + severity, plus the
-  // threshold/window for the two complex kinds); only `kind` is immutable. The
-  // one editable system value is the issue.escalating sensitivity — both open an
-  // edit modal (the parent routes by kind).
+  // Every user-monitor alert is fully editable — kind, source, severity, and the
+  // threshold/window for the complex kinds. The one editable system value is the
+  // issue.escalating sensitivity — both open an edit modal (the parent routes by kind).
   const canEdit = !monitor.system || alert.kind === "issue.escalating"
   // The delete control shows on every user-monitor alert, but a monitor must keep
   // at least one — so it's disabled (with a hint) when this is the only alert.

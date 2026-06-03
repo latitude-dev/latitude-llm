@@ -263,6 +263,7 @@ export function useMonitorAlertActions(projectId: string) {
     mutationFn: (input: {
       readonly monitorId: string
       readonly alertId: string
+      readonly kind?: AlertIncidentKind
       readonly source?: { readonly type: AlertIncidentSourceType; readonly id: string | null }
       readonly condition?: AlertIncidentCondition | null
       readonly severity?: AlertSeverity

@@ -7,6 +7,7 @@ import {
   type AlertDraft,
   type BaselineKind,
   type ComparisonMode,
+  draftWithKind,
   type LookbackUnit,
   previewAlertSentence,
   USER_ALERT_KIND_LABEL,
@@ -191,9 +192,9 @@ function ThresholdWindowForm({
 }
 
 /**
- * Controlled editor for a single saved-search alert, shared by the create modal
- * and the details-panel Alerts section. `lockKind` disables the kind dropdown
- * for in-place panel edits (kind is immutable once an alert exists).
+ * Controlled editor for a single saved-search alert, shared verbatim by the
+ * create modal and the edit modal. Switching the kind resets the threshold/window
+ * fields (each kind takes a different condition shape).
  */
 export function AlertCardForm({
   value,
@@ -201,14 +202,12 @@ export function AlertCardForm({
   projectId,
   projectSlug,
   disabled,
-  lockKind,
 }: {
   readonly value: AlertDraft
   readonly onChange: (next: AlertDraft) => void
   readonly projectId: string
   readonly projectSlug: string
   readonly disabled?: boolean
-  readonly lockKind?: boolean
 }) {
   const { data: savedSearches } = useSavedSearchesList(projectId)
   const savedSearchName = value.sourceId
@@ -225,8 +224,8 @@ export function AlertCardForm({
         info={KIND_HELP[value.kind]}
         options={USER_ALERT_KINDS.map((kind) => ({ label: USER_ALERT_KIND_LABEL[kind], value: kind }))}
         value={value.kind}
-        onChange={(kind) => set({ kind })}
-        {...(disabled || lockKind ? { disabled: true } : {})}
+        onChange={(kind) => onChange(draftWithKind(value, kind))}
+        {...(disabled ? { disabled: true } : {})}
       />
 
       <SavedSearchSourcePicker

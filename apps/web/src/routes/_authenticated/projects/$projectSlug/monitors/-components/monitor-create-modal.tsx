@@ -70,7 +70,7 @@ export function MonitorCreateModal({
         if (!next) onClose()
       }}
       title="New monitor"
-      description="Monitors watch your saved searches and raise incidents when an alert's condition is met."
+      description="Monitors watch your issues and searches and open incidents when their alert conditions are met"
       footer={
         <>
           <CloseTrigger />
@@ -85,7 +85,7 @@ export function MonitorCreateModal({
           required
           autoFocus
           label="Name"
-          placeholder="e.g. 5xx spikes"
+          placeholder="Tool error spikes"
           value={name}
           onChange={(event) => {
             setName(event.target.value)
@@ -95,14 +95,14 @@ export function MonitorCreateModal({
         />
         <Textarea
           label="Description"
-          placeholder="Optional — what this monitor is for"
+          placeholder="What is this monitor for?"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           minRows={2}
         />
 
         <div className="flex flex-col gap-3">
-          <Text.H6M>Alerts</Text.H6M>
+          <Text.H5M>Alerts</Text.H5M>
           {alerts.map((alert, index) => (
             // The card list is controlled (state lifted here), so positional keys are safe;
             // drafts have no stable id until the monitor is created.

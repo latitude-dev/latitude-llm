@@ -325,6 +325,7 @@ export const createMonitorAlert = createServerFn({ method: "POST" })
 const updateMonitorAlertInputSchema = z.object({
   monitorId: z.string(),
   alertId: z.string(),
+  kind: alertIncidentKindSchema.optional(),
   source: monitorAlertSourceSchema.optional(),
   condition: alertIncidentConditionSchema.nullish(),
   severity: alertSeveritySchema.optional(),
@@ -340,6 +341,7 @@ export const updateMonitorAlert = createServerFn({ method: "POST" })
       updateMonitorAlertUseCase({
         monitorId: MonitorId(data.monitorId),
         alertId: MonitorAlertId(data.alertId),
+        ...(data.kind !== undefined ? { kind: data.kind } : {}),
         ...(data.source !== undefined ? { source: { type: data.source.type, id: data.source.id } } : {}),
         ...(data.condition !== undefined ? { condition: data.condition } : {}),
         ...(data.severity !== undefined ? { severity: data.severity } : {}),
