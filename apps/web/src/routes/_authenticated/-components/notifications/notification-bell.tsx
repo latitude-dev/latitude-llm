@@ -2,7 +2,7 @@ import { Button, Icon, Popover, PopoverContent, PopoverTrigger, Skeleton, Text }
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Bell } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
-import { hasFeatureFlag } from "../../../../domains/feature-flags/feature-flags.functions.ts"
+import { useHasFeatureFlag } from "../../../../domains/feature-flags/feature-flags.collection.ts"
 import {
   getUnreadNotificationCount,
   listNotifications,
@@ -19,10 +19,7 @@ function formatBadgeCount(count: number): string {
 }
 
 export function NotificationBell() {
-  const { data: enabled = false } = useQuery({
-    queryKey: ["feature-flag", "notifications"],
-    queryFn: () => hasFeatureFlag({ data: { identifier: "notifications" } }),
-  })
+  const enabled = useHasFeatureFlag("notifications")
 
   if (!enabled) return null
   return <NotificationBellEnabled />

@@ -11,10 +11,9 @@ export interface IncidentMonitorInfo {
 
 export interface IncidentMonitorReaderShape {
   /**
-   * Resolve the owning monitor for a `monitor_alert_id`, including soft-deleted
-   * alerts (history stays attributable after alert removal). `null` when the
-   * alert can't be resolved. Owned here rather than re-using `MonitorRepository`
-   * because `@domain/monitors` already depends on `@domain/notifications`.
+   * Resolve the owning monitor for a `monitor_alert_id` (incl. soft-deleted alerts);
+   * `null` if unresolved. Owned here, not on `MonitorRepository`, to avoid the
+   * `@domain/monitors` → `@domain/notifications` cycle.
    */
   findByAlertId(monitorAlertId: string): Effect.Effect<IncidentMonitorInfo | null, RepositoryError, SqlClient>
 }

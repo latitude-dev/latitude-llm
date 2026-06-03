@@ -5,10 +5,8 @@ import { Text } from "@repo/ui"
 type IncidentPayload = IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload
 
 /**
- * "Created by monitor X" line (+ humanised alert rule) on monitor-owned
- * incidents. Plain text rather than a link: the surrounding card already links
- * to the incident source, and nesting an anchor inside it is invalid. Renders
- * nothing on legacy incidents (no `monitorName`).
+ * "Created by monitor X" line (+ humanised rule). Plain text, not a link — the card
+ * already links to the source and nesting anchors is invalid. Nothing on legacy incidents.
  */
 export function MonitorAttribution({ payload }: { readonly payload: IncidentPayload }) {
   if (!payload.monitorName) return null

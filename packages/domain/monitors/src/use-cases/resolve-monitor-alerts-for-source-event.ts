@@ -15,12 +15,7 @@ export interface ResolveMonitorAlertsForSourceEventInput {
   readonly sourceId: string
 }
 
-/**
- * Active monitor alerts a single source event fires. The caller writes one
- * incident per returned alert (each carrying its own `monitorAlertId` +
- * `condition` snapshot). The source type is derived from the kind, so callers
- * only pass the event's kind + source id.
- */
+/** Active monitor alerts a source event fires (one incident per returned alert). Source type is derived from the kind. */
 export const resolveMonitorAlertsForSourceEventUseCase = (
   input: ResolveMonitorAlertsForSourceEventInput,
 ): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient | MonitorRepository> =>

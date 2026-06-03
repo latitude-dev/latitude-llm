@@ -22,10 +22,8 @@ export interface CheckIssueEscalationInput {
   readonly projectId: string
   readonly issueId: string
   /**
-   * Flag-on override: the escalation sensitivity read off the project's system
-   * "Issue escalating" monitor alert (resolved by the caller, since
-   * `@domain/issues` can't depend on `@domain/monitors`). When omitted, falls
-   * back to `projects.settings.escalation.sensitivity` — the legacy flag-off path.
+   * Flag-on override resolved by the caller (`@domain/issues` can't import
+   * `@domain/monitors`): the system monitor's sensitivity. Omitted → project settings.
    */
   readonly escalationSensitivity?: number
 }
@@ -35,11 +33,9 @@ const BACKTRACK_WINDOW_MS = 24 * 60 * 60 * 1000
 const BACKTRACK_BUCKET_SECONDS = 60 * 60
 
 /**
- * The seasonal detector flags an escalation only after the band has been
- * crossed for a while, so the event time is late. Walk the trend window's
- * occurrence counts against the per-bucket seasonal threshold (same `kShort`)
- * and return the first bucket that cleared it — that bucket's start is the real
- * escalation start. No crossing in the window → the event time (`now`).
+ * The detector flags late (the band must hold a while), so backtrack: return the
+ * first bucket whose count cleared the seasonal threshold (same `kShort`). No
+ * crossing in the window → the event time (`now`).
  */
 const backtrackEscalationStart = (input: {
   readonly organizationId: OrganizationId
@@ -175,8 +171,7 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
       return { transition: "none", currentlyEscalating: wasEscalating } satisfies CheckIssueEscalationResult
     }
 
-    // Flag-on: caller-supplied sensitivity from the system monitor's alert.
-    // Flag-off (override omitted): the legacy project-settings value.
+    // Flag-on override (system monitor) → else project settings → default.
     const kShort =
       input.escalationSensitivity ?? projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
 
@@ -192,9 +187,7 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
     })
 
     if (decision.transition === "enter") {
-      // Backtrack `startedAt` to the first bucket that crossed the seasonal band
-      // — the escalation began earlier than the detector flagged it. The worker
-      // forwards `escalatedAt` as `occurredAt`, which stamps the incident's start.
+      // Backtrack the start; the worker forwards `escalatedAt` as the incident's `occurredAt`.
       const startedAt = yield* backtrackEscalationStart({
         organizationId: OrganizationId(input.organizationId),
         projectId: ProjectId(input.projectId),

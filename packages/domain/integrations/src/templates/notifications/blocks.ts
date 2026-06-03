@@ -34,13 +34,7 @@ export const projectOrOrgContext = (
   project: { readonly name: string } | null,
 ): string => (project ? `Project *${project.name}* · ${organization.name}` : `Org *${organization.name}*`)
 
-/**
- * "Created by monitor X" context line (+ humanised alert rule) for monitor-owned
- * incidents — the Slack equivalent of the email/in-app attribution. Returns `[]`
- * for legacy incidents (no `monitorName`), so their messages are unchanged. The
- * name deep-links to the monitor panel when the project slug + monitor slug
- * resolve; otherwise it renders bold text.
- */
+/** "Created by monitor X" context line (+ humanised rule); `[]` on legacy incidents. Deep-links when the slug resolves, else bold text. */
 export const monitorAttributionBlocks = (input: {
   readonly webAppUrl: string
   readonly projectSlug: string | undefined

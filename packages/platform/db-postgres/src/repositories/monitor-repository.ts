@@ -432,8 +432,7 @@ export const MonitorRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const { organizationId } = sqlClient
-          // Join through monitors to scope by project; both `deleted_at` filters
-          // keep deleted monitors / soft-deleted alerts out of the firing set.
+          // Project-scoped via monitors; both `deleted_at` filters exclude deleted monitors / soft-deleted alerts.
           const rows = yield* sqlClient.query((db) =>
             db
               .select(getTableColumns(monitorAlerts))

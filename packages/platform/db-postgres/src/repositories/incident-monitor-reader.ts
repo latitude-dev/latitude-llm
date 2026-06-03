@@ -6,12 +6,7 @@ import type { Operator } from "../client.ts"
 import { monitorAlerts } from "../schema/monitor-alerts.ts"
 import { monitors } from "../schema/monitors.ts"
 
-/**
- * Implements the `@domain/notifications` mute-gate reader by joining
- * `monitor_alerts` → `monitors`. No `deleted_at` filter on the alert: an
- * incident's `monitor_alert_id` must resolve even after the alert (or its
- * monitor) is soft-deleted, so history stays attributable.
- */
+/** Joins `monitor_alerts` → `monitors`. No `deleted_at` filter — the alert must resolve even after soft-delete so history stays attributable. */
 export const IncidentMonitorReaderLive = Layer.effect(
   IncidentMonitorReader,
   Effect.succeed(

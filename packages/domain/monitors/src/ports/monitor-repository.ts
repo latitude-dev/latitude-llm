@@ -92,10 +92,9 @@ export interface MonitorRepositoryShape {
     readonly severity: AlertSeverity
   }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
   /**
-   * Active alerts a source event fires: same `kind` + `sourceType`, with
-   * `source.id` either null ("all of this type") or equal to `sourceId`.
-   * Joins through `monitors` to scope by project; excludes soft-deleted
-   * alerts and deleted monitors. Backs the issue-event fan-out.
+   * Active alerts a source event fires: same `kind`/`sourceType`, `source.id`
+   * null ("all") or `= sourceId`. Project-scoped via `monitors`; excludes
+   * soft-deleted alerts + deleted monitors.
    */
   listActiveAlertsForSourceEvent(input: {
     readonly projectId: ProjectId

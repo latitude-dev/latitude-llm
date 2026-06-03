@@ -54,11 +54,8 @@ const createIncidentFor = (
         })
       : []
 
-    // Flag on with matching alerts → one incident per alert (each carrying its
-    // own monitorAlertId + condition snapshot). Flag off — or flag on but no
-    // monitor matched (e.g. a project provisioned before system monitors
-    // existed) — writes a single legacy incident with monitorAlertId = null,
-    // so pre-monitors behaviour is preserved.
+    // One incident per matching alert. No match (flag off, or a project predating
+    // system monitors) falls back to a single legacy incident, preserving old behaviour.
     const targets =
       alerts.length > 0
         ? alerts.map((alert) => ({ monitorAlertId: alert.id, condition: alert.condition }))

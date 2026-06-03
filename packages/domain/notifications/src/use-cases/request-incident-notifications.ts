@@ -325,8 +325,7 @@ const buildPayload = (input: {
     incidentKind: incident.kind,
     severity: incident.severity,
   } as const
-  // Monitor attribution + condition snapshot, spread into every variant.
-  // Empty for legacy incidents so their templates fall back to today's copy.
+  // Monitor attribution + condition, spread into every variant; empty on legacy incidents.
   const attribution = {
     ...(monitor ? { monitorId: monitor.monitorId, monitorName: monitor.name, monitorSlug: monitor.slug } : {}),
     ...(incident.condition !== null ? { condition: incident.condition } : {}),
@@ -391,10 +390,8 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     const incidentRepo = yield* AlertIncidentRepository
     const incident = yield* incidentRepo.findById(AlertIncidentId(input.alertIncidentId))
 
-    // Mute gate: a monitor-owned incident resolves its monitor (incl. soft-deleted
-    // alerts) once — a muted monitor short-circuits before the project-level kind
-    // gate, and the resolved identity feeds the payload's "Created by monitor X"
-    // attribution. Legacy incidents (monitorAlertId === null) skip this entirely.
+    // Mute gate: resolve the owning monitor once. A muted monitor short-circuits
+    // before the project-level kind gate; the identity also feeds payload attribution.
     const monitorReader = yield* IncidentMonitorReader
     const monitor =
       incident.monitorAlertId !== null ? yield* monitorReader.findByAlertId(incident.monitorAlertId) : null
@@ -413,9 +410,8 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       return { status: "skipped", reason: "kind-disabled" } as const
     }
 
-    // Prefer the sensitivity snapshotted on the incident's condition (monitor-owned
-    // escalating incidents) so the email's threshold line matches what tripped it;
-    // fall back to project settings on the legacy path.
+    // Prefer the sensitivity snapshotted on the incident's condition (so the chart's
+    // threshold line matches what tripped it); fall back to project settings.
     const snapshotSensitivity =
       incident.condition?.kind === "issue.escalating" ? incident.condition.sensitivity : undefined
     const kShort = snapshotSensitivity ?? projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K

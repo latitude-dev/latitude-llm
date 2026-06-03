@@ -1,34 +1,10 @@
-import {
-  type FeatureFlagId,
-  FeatureFlagRepository,
-  featureFlagIdentifierSchema,
-  hasFeatureFlagUseCase,
-} from "@domain/feature-flags"
+import { type FeatureFlagId, FeatureFlagRepository } from "@domain/feature-flags"
 import { FeatureFlagRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
-import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
-
-export const hasFeatureFlagInputSchema = z.object({
-  identifier: featureFlagIdentifierSchema,
-})
-
-export const hasFeatureFlag = createServerFn({ method: "GET" })
-  .inputValidator(hasFeatureFlagInputSchema)
-  .handler(async ({ data }): Promise<boolean> => {
-    const { organizationId } = await requireSession()
-    const client = getPostgresClient()
-
-    return await Effect.runPromise(
-      hasFeatureFlagUseCase({ identifier: data.identifier }).pipe(
-        withPostgres(FeatureFlagRepositoryLive, client, organizationId),
-        withTracing,
-      ),
-    )
-  })
 
 export const listEnabledFeatureFlagIdentifiers = createServerFn({ method: "GET" }).handler(
   async (): Promise<FeatureFlagId[]> => {

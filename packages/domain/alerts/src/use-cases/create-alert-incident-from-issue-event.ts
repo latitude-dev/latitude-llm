@@ -32,9 +32,7 @@ export interface CreateAlertIncidentFromIssueEventInput {
    * before the seasonal detector started snapshotting.
    */
   readonly entrySignals?: EntrySignalsSnapshot | null
-  /** The firing monitor alert when this incident belongs to a monitor; `null` on the legacy/flag-off path. */
   readonly monitorAlertId?: MonitorAlertId | null
-  /** Snapshot of the firing alert's condition, frozen on the row; `null` for no-condition kinds and legacy rows. */
   readonly condition?: AlertIncidentCondition | null
 }
 

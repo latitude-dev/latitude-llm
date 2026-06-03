@@ -135,10 +135,8 @@ export const createIssuesWorker = async ({
     // plus cold-start recovery for already-stuck rows).
     checkEscalation: (payload) =>
       Effect.gen(function* () {
-        // Flag-on: read the escalation sensitivity off the project's system
-        // "Issue escalating" monitor alert (source.id = null matches any issue),
-        // relocating the knob from project settings onto the monitor. Flag-off
-        // leaves it undefined so the use-case reads project settings.
+        // Flag-on: read sensitivity off the system "Issue escalating" monitor alert
+        // (relocated from project settings). Flag-off leaves it to the use-case.
         const monitorsEnabled = yield* hasFeatureFlagUseCase({ identifier: "monitors" })
         let escalationSensitivity: number | undefined
         if (monitorsEnabled) {

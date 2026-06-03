@@ -16,11 +16,7 @@ export interface MonitorAttributionInfo {
   readonly conditionSummary?: string
 }
 
-/**
- * "Created by monitor X" line (+ humanised alert rule) under the heading.
- * Renders nothing for legacy incidents that have no owning monitor, so their
- * email copy is unchanged.
- */
+/** "Created by monitor X" line (+ humanised rule); renders nothing for legacy incidents. */
 export function MonitorAttribution({ monitor }: { readonly monitor: MonitorAttributionInfo | undefined }) {
   if (!monitor) return null
   return (
