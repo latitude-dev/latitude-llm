@@ -50,7 +50,7 @@ export function MonitorSensitivityEditModal({
         if (!next) onClose()
       }}
       title="Edit sensitivity"
-      description="How far above the learned-normal an issue must be detected to escalate."
+      description="Controls how the monitor flags escalating issues. Lower values trigger sooner but produce more false positives, higher values wait for stronger signal"
       footer={
         <>
           <CloseTrigger />

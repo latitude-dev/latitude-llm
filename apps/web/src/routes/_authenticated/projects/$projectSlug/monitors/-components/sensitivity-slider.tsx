@@ -1,16 +1,14 @@
 import { Slider, Text } from "@repo/ui"
-import { HelpTooltip } from "./help-tooltip.tsx"
 
 const SENSITIVITY_MIN = 1
 const SENSITIVITY_MAX = 6
 export const SENSITIVITY_DEFAULT = 3
-const SENSITIVITY_HELP =
-  "How far above the learned normal counts as a spike. Lower = more sensitive (alerts on smaller deviations, noisier); higher = quieter."
 
 /**
  * Controlled 1–6 sensitivity slider, shared by the system `issue.escalating`
- * control and the saved-search `expected`-threshold form. `onChange` fires on
- * every drag tick; pass `onCommit` to persist only on release.
+ * control and the saved-search `expected`-threshold form. The selected value
+ * sits centered above a full-width track, with `Sensitive`/`Quiet` end anchors
+ * below. `onChange` fires on every drag tick; pass `onCommit` to persist only on release.
  */
 export function SensitivitySlider({
   value,
@@ -25,29 +23,29 @@ export function SensitivitySlider({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1">
-        <Text.H6M>Sensitivity</Text.H6M>
-        <HelpTooltip>{SENSITIVITY_HELP}</HelpTooltip>
-        <Text.H6 color="foregroundMuted">{value}</Text.H6>
-      </div>
-      <div className="flex items-center gap-3">
-        <Text.H6 color="foregroundMuted" noWrap>
+      {/* Equal-width thirds so the value is centered on the track regardless of
+          the side labels' differing widths (justify-between would offset it). */}
+      <div className="flex items-center">
+        <Text.H6 color="foregroundMuted" noWrap className="flex-1">
           Sensitive
         </Text.H6>
-        <Slider
-          className="max-w-56"
-          min={SENSITIVITY_MIN}
-          max={SENSITIVITY_MAX}
-          step={1}
-          value={[value]}
-          {...(disabled ? { disabled: true } : {})}
-          onValueChange={([next]) => onChange(next ?? value)}
-          {...(onCommit ? { onValueCommit: ([next]: number[]) => onCommit(next ?? value) } : {})}
-        />
-        <Text.H6 color="foregroundMuted" noWrap>
+        <Text.H5 display="block" align="center" className="flex-1">
+          {value}
+        </Text.H5>
+        <Text.H6 color="foregroundMuted" noWrap align="right" className="flex-1">
           Quiet
         </Text.H6>
       </div>
+      <Slider
+        className="w-full"
+        min={SENSITIVITY_MIN}
+        max={SENSITIVITY_MAX}
+        step={1}
+        value={[value]}
+        {...(disabled ? { disabled: true } : {})}
+        onValueChange={([next]) => onChange(next ?? value)}
+        {...(onCommit ? { onValueCommit: ([next]: number[]) => onCommit(next ?? value) } : {})}
+      />
     </div>
   )
 }
