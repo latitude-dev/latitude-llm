@@ -55,6 +55,16 @@ function ProjectIssuesSettingsPage() {
     queryFn: () => hasFeatureFlag({ data: { identifier: "notifications" } }),
   })
 
+  // TODO: Remove this after releasing monitors for everybody. When the `monitors`
+  // flag is on, the system monitors own incident notifications (mute) and the
+  // escalation sensitivity (per-monitor), so the legacy toggles + sensitivity
+  // control below are hidden. The form fields + read-paths stay until the
+  // post-rollout cleanup.
+  const { data: monitorsEnabled = false } = useQuery({
+    queryKey: ["feature-flag", "monitors"],
+    queryFn: () => hasFeatureFlag({ data: { identifier: "monitors" } }),
+  })
+
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
     [projectSlug],
@@ -156,7 +166,7 @@ function ProjectIssuesSettingsPage() {
             onCheckedChange={(checked) => void handleKeepMonitoringChange(checked)}
           />
         </div>
-        {notificationsEnabled ? (
+        {notificationsEnabled && !monitorsEnabled ? (
           <>
             {ALERT_NOTIFICATION_TOGGLES.map((toggle) => {
               const inputId = `alert-notification-${toggle.kind}`

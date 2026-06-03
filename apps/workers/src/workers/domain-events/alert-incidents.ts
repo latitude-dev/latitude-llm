@@ -4,9 +4,17 @@ import {
   createAlertIncidentFromIssueEventUseCase,
   type EntrySignalsSnapshot,
 } from "@domain/alerts"
+import { hasFeatureFlagUseCase } from "@domain/feature-flags"
+import { resolveMonitorAlertsForSourceEventUseCase } from "@domain/monitors"
 import type { QueueConsumer } from "@domain/queue"
-import { OrganizationId } from "@domain/shared"
-import { AlertIncidentRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { OrganizationId, ProjectId } from "@domain/shared"
+import {
+  AlertIncidentRepositoryLive,
+  FeatureFlagRepositoryLive,
+  MonitorRepositoryLive,
+  OutboxEventWriterLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getPostgresClient } from "../../clients.ts"
@@ -17,7 +25,12 @@ interface AlertIncidentsDeps {
   consumer: QueueConsumer
 }
 
-const repoLayer = Layer.mergeAll(AlertIncidentRepositoryLive, OutboxEventWriterLive)
+const repoLayer = Layer.mergeAll(
+  AlertIncidentRepositoryLive,
+  FeatureFlagRepositoryLive,
+  MonitorRepositoryLive,
+  OutboxEventWriterLive,
+)
 
 const createIncidentFor = (
   kind: AlertIncidentKind,
@@ -31,20 +44,45 @@ const createIncidentFor = (
 ) => {
   const pgClient = getPostgresClient()
 
-  return createAlertIncidentFromIssueEventUseCase({
-    kind,
-    organizationId: payload.organizationId,
-    projectId: payload.projectId,
-    issueId: payload.issueId,
-    occurredAt: payload.occurredAt,
-    entrySignals: payload.entrySignals ?? null,
+  return Effect.gen(function* () {
+    const monitorsEnabled = yield* hasFeatureFlagUseCase({ identifier: "monitors" })
+    const alerts = monitorsEnabled
+      ? yield* resolveMonitorAlertsForSourceEventUseCase({
+          projectId: ProjectId(payload.projectId),
+          kind,
+          sourceId: payload.issueId,
+        })
+      : []
+
+    // Flag on with matching alerts → one incident per alert (each carrying its
+    // own monitorAlertId + condition snapshot). Flag off — or flag on but no
+    // monitor matched (e.g. a project provisioned before system monitors
+    // existed) — writes a single legacy incident with monitorAlertId = null,
+    // so pre-monitors behaviour is preserved.
+    const targets =
+      alerts.length > 0
+        ? alerts.map((alert) => ({ monitorAlertId: alert.id, condition: alert.condition }))
+        : [{ monitorAlertId: null, condition: null }]
+
+    for (const target of targets) {
+      const incident = yield* createAlertIncidentFromIssueEventUseCase({
+        kind,
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        issueId: payload.issueId,
+        occurredAt: payload.occurredAt,
+        entrySignals: payload.entrySignals ?? null,
+        monitorAlertId: target.monitorAlertId,
+        condition: target.condition,
+      })
+      yield* Effect.sync(() =>
+        logger.info(
+          `alert_incident created kind=${incident.kind} issueId=${payload.issueId} id=${incident.id} monitorAlertId=${target.monitorAlertId ?? "none"}`,
+        ),
+      )
+    }
   }).pipe(
     withPostgres(repoLayer, pgClient, OrganizationId(payload.organizationId)),
-    Effect.tap((incident) =>
-      Effect.sync(() =>
-        logger.info(`alert_incident created kind=${incident.kind} issueId=${payload.issueId} id=${incident.id}`),
-      ),
-    ),
     Effect.tapError((error) =>
       Effect.sync(() => logger.error(`alert_incident creation failed kind=${kind} issueId=${payload.issueId}`, error)),
     ),

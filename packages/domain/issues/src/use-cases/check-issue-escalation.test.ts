@@ -77,6 +77,8 @@ const makeOpenIncident = (overrides: Partial<AlertIncident> = {}): AlertIncident
   createdAt: new Date("2026-05-07T10:00:00.000Z"),
   entrySignals: null,
   exitEligibleSince: null,
+  monitorAlertId: null,
+  condition: null,
   ...overrides,
 })
 
@@ -97,12 +99,19 @@ const provideTestLayers = (params: {
   readonly openIncident?: AlertIncident | null
   readonly dwellWrites?: UpdateAlertIncidentExitDwellInput[]
   readonly projectSettings?: ProjectSettings | null
+  /** Per-bucket occurrence counts + seasonal thresholds for the `startedAt` backtrack on the enter transition. */
+  readonly occurrenceBuckets?: readonly { bucket: string; count: number }[]
+  readonly thresholdBuckets?: readonly { bucket: string; thresholdCount: number }[]
+  readonly escalationSensitivity?: number
 }) => {
   const { repository: issueRepository, issues } = createFakeIssueRepository([params.issue], undefined, {
     lifecycle: new Map([[params.issue.id, { isEscalating: params.isEscalating ?? false, isRegressed: false }]]),
   })
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
     escalationSignalsByIssues: () => Effect.succeed([params.signals]),
+    histogramByIssues: () => Effect.succeed(params.occurrenceBuckets ?? []),
+    escalationThresholdHistogramByIssues: () =>
+      Effect.succeed([{ issueId: IssueId(issueId), buckets: params.thresholdBuckets ?? [] }]),
   })
 
   const dwellWrites = params.dwellWrites ?? []
@@ -205,6 +214,79 @@ describe("checkIssueEscalationUseCase", () => {
     expect(issues.get(issue.id)?.updatedAt.getTime()).toBeGreaterThan(resolvedAt.getTime())
     expect(events).toHaveLength(1)
     expect(events[0]?.eventName).toBe("IssueEscalated")
+  })
+
+  it("backtracks escalatedAt to the first bucket that crossed the seasonal threshold", async () => {
+    const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const events: OutboxWriteEvent[] = []
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 25, recent6h: 150, recent24h: 600 }),
+      events,
+      occurrenceBuckets: [
+        { bucket: "2026-05-07T07:00:00.000Z", count: 2 }, // below threshold
+        { bucket: "2026-05-07T08:00:00.000Z", count: 9 }, // first crossing
+        { bucket: "2026-05-07T09:00:00.000Z", count: 12 },
+      ],
+      thresholdBuckets: [
+        { bucket: "2026-05-07T07:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T08:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T09:00:00.000Z", thresholdCount: 5 },
+      ],
+    })
+
+    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+
+    expect(result.transition).toBe("entered")
+    const payload = events[0]?.payload as { escalatedAt: string }
+    expect(payload.escalatedAt).toBe("2026-05-07T08:00:00.000Z")
+  })
+
+  it("falls back to the event time when no bucket crossed the threshold", async () => {
+    const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const events: OutboxWriteEvent[] = []
+    const before = Date.now()
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      signals: makeSignals({ recent1h: 25, recent6h: 150, recent24h: 600 }),
+      events,
+      occurrenceBuckets: [
+        { bucket: "2026-05-07T08:00:00.000Z", count: 2 },
+        { bucket: "2026-05-07T09:00:00.000Z", count: 3 },
+      ],
+      thresholdBuckets: [
+        { bucket: "2026-05-07T08:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T09:00:00.000Z", thresholdCount: 5 },
+      ],
+    })
+
+    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+
+    expect(result.transition).toBe("entered")
+    const payload = events[0]?.payload as { escalatedAt: string }
+    // No crossing → the detection time (now), well after the historical buckets.
+    expect(new Date(payload.escalatedAt).getTime()).toBeGreaterThanOrEqual(before)
+  })
+
+  it("uses the supplied escalationSensitivity (system-monitor override) for the entry snapshot", async () => {
+    const issue = makeIssue({ createdAt: new Date("2026-04-01T10:00:00.000Z") })
+    const events: OutboxWriteEvent[] = []
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: false,
+      // Strong, mature signal so it clears the band even at the wider k=5 sensitivity.
+      signals: makeSignals({ recent1h: 100, recent6h: 600, recent24h: 2000, samplesCount: 50 }),
+      events,
+    })
+
+    await Effect.runPromise(
+      apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId, escalationSensitivity: 5 })),
+    )
+
+    const escalated = events[0]?.payload as { entrySignals: EntrySignalsSnapshot | null }
+    expect(escalated.entrySignals).toMatchObject({ kShort: 5, kLong: 4 })
   })
 
   it("does not transition ignored issues into escalation", async () => {

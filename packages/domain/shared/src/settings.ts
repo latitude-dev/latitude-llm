@@ -54,6 +54,11 @@ export type NotificationsSetting = z.infer<typeof notificationsSettingSchema>
  * more easily); higher = quieter. Optional; the detector falls back to
  * `DEFAULT_ESCALATION_SENSITIVITY_K` when missing. Affects detector
  * behaviour regardless of notification state.
+ *
+ * TODO: Remove this after releasing monitors for everybody — the sensitivity
+ * knob is relocated onto the system "Issue escalating" monitor's alert
+ * condition. The flag-on detector path reads it from there; this field is the
+ * flag-off fallback and is cleaned up post-rollout.
  */
 export const escalationSettingSchema = z.object({
   sensitivity: z.number().int().min(1).max(6).optional(),

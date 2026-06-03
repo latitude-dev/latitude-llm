@@ -5,6 +5,7 @@ import { BaseNotification } from "../../base-notification.tsx"
 import { useIssueUrl, useLiveIssueSummary } from "./-incident-helpers.ts"
 import type { IncidentRendererProps } from "./index.tsx"
 import { IssueSummaryCard } from "./issue-summary-card.tsx"
+import { MonitorAttribution } from "./monitor-attribution.tsx"
 
 type EscalatingTrend = IncidentRendererProps<"opened" | "closed">["payload"]["trend"]
 
@@ -37,6 +38,7 @@ export function IssueEscalatingNotification({
     >
       {live?.name ? <IssueSummaryCard name={live.name} states={states} /> : null}
       <EscalatingTrend trend={payload.trend} states={states} />
+      <MonitorAttribution payload={payload} />
     </BaseNotification>
   )
 }

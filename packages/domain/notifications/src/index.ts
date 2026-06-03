@@ -42,6 +42,8 @@ export type { ResolveRecipientsInput } from "./helpers/resolve-recipients.ts"
 export { resolveRecipients } from "./helpers/resolve-recipients.ts"
 
 // Ports
+export type { IncidentMonitorInfo, IncidentMonitorReaderShape } from "./ports/incident-monitor-reader.ts"
+export { IncidentMonitorReader } from "./ports/incident-monitor-reader.ts"
 export type {
   GetUnreadNotificationCountInput as RepositoryGetUnreadNotificationCountInput,
   ListNotificationsInput as RepositoryListNotificationsInput,

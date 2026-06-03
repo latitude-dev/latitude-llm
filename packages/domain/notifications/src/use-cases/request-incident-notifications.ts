@@ -32,6 +32,7 @@ import type {
 } from "../entities/notification.ts"
 import { buildIdempotencyKey } from "../helpers/idempotency-key.ts"
 import { resolveRecipients } from "../helpers/resolve-recipients.ts"
+import { type IncidentMonitorInfo, IncidentMonitorReader } from "../ports/incident-monitor-reader.ts"
 
 /**
  * Hint from the originating outbox event. The producer derives the
@@ -63,7 +64,7 @@ export interface IncidentNotificationRequest {
 }
 
 export type RequestIncidentNotificationsResult =
-  | { readonly status: "skipped"; readonly reason: "kind-disabled" | "no-recipients" }
+  | { readonly status: "skipped"; readonly reason: "kind-disabled" | "no-recipients" | "monitor-muted" }
   | { readonly status: "ok"; readonly requests: readonly IncidentNotificationRequest[] }
 
 export type RequestIncidentNotificationsError = RepositoryError | NotFoundError
@@ -314,8 +315,9 @@ const buildPayload = (input: {
   readonly trend: IncidentTrend | null
   readonly tags: readonly string[] | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
+  readonly monitor: IncidentMonitorInfo | null
 }): IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload => {
-  const { incident, kind, trend, tags, sampleExcerpt } = input
+  const { incident, kind, trend, tags, sampleExcerpt, monitor } = input
   const base = {
     alertIncidentId: incident.id,
     sourceType: incident.sourceType,
@@ -323,6 +325,12 @@ const buildPayload = (input: {
     incidentKind: incident.kind,
     severity: incident.severity,
   } as const
+  // Monitor attribution + condition snapshot, spread into every variant.
+  // Empty for legacy incidents so their templates fall back to today's copy.
+  const attribution = {
+    ...(monitor ? { monitorId: monitor.monitorId, monitorName: monitor.name, monitorSlug: monitor.slug } : {}),
+    ...(incident.condition !== null ? { condition: incident.condition } : {}),
+  }
 
   const mutableTags = tags ? [...tags] : undefined
   if (kind === "incident.event") {
@@ -332,6 +340,7 @@ const buildPayload = (input: {
       sourceId: base.sourceId,
       incidentKind: base.incidentKind,
       severity: base.severity,
+      ...attribution,
       ...(mutableTags ? { tags: mutableTags } : {}),
       ...(sampleExcerpt ? { sampleExcerpt } : {}),
     }
@@ -346,6 +355,7 @@ const buildPayload = (input: {
       sourceId: base.sourceId,
       incidentKind: base.incidentKind,
       severity: base.severity,
+      ...attribution,
       trend,
       ...(mutableTags ? { tags: mutableTags } : {}),
       ...(breach ? { breach } : {}),
@@ -381,6 +391,18 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     const incidentRepo = yield* AlertIncidentRepository
     const incident = yield* incidentRepo.findById(AlertIncidentId(input.alertIncidentId))
 
+    // Mute gate: a monitor-owned incident resolves its monitor (incl. soft-deleted
+    // alerts) once — a muted monitor short-circuits before the project-level kind
+    // gate, and the resolved identity feeds the payload's "Created by monitor X"
+    // attribution. Legacy incidents (monitorAlertId === null) skip this entirely.
+    const monitorReader = yield* IncidentMonitorReader
+    const monitor =
+      incident.monitorAlertId !== null ? yield* monitorReader.findByAlertId(incident.monitorAlertId) : null
+    if (monitor !== null && monitor.mutedAt !== null) {
+      yield* Effect.annotateCurrentSpan("skipped", "monitor-muted")
+      return { status: "skipped", reason: "monitor-muted" } as const
+    }
+
     const notificationKind = resolveKind(incident, input.transition)
     yield* Effect.annotateCurrentSpan("kind", notificationKind)
 
@@ -391,7 +413,12 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       return { status: "skipped", reason: "kind-disabled" } as const
     }
 
-    const kShort = projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
+    // Prefer the sensitivity snapshotted on the incident's condition (monitor-owned
+    // escalating incidents) so the email's threshold line matches what tripped it;
+    // fall back to project settings on the legacy path.
+    const snapshotSensitivity =
+      incident.condition?.kind === "issue.escalating" ? incident.condition.sensitivity : undefined
+    const kShort = snapshotSensitivity ?? projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
     // Snapshot trend + tags + sample-excerpt in parallel. Closed kind
     // skips both: the recovery email focuses on the descent, not the
     // source context. Event + opened both get the excerpt so the
@@ -415,7 +442,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       return { status: "skipped", reason: "no-recipients" } as const
     }
 
-    const payload = buildPayload({ incident, kind: notificationKind, trend, tags, sampleExcerpt })
+    const payload = buildPayload({ incident, kind: notificationKind, trend, tags, sampleExcerpt, monitor })
     // Per-kind switch preserves the discriminated-union narrowing
     // `buildIdempotencyKey`'s input requires. A widening cast would
     // silently lose exhaustiveness if a future kind keys off a
@@ -449,6 +476,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     | ChSqlClient
     | AlertIncidentRepository
     | EvaluationRepository
+    | IncidentMonitorReader
     | MembershipRepository
     | ScoreAnalyticsRepository
     | ScoreRepository

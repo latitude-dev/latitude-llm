@@ -5,11 +5,13 @@ import {
   type AlertIncidentKind,
   type AlertIncidentSourceType,
   type AlertSeverity,
+  alertIncidentConditionSchema,
   alertIncidentIdSchema,
   alertIncidentKindSchema,
   alertIncidentSourceTypeSchema,
   alertSeveritySchema,
   cuidSchema,
+  monitorAlertIdSchema,
   organizationIdSchema,
   projectIdSchema,
   SEVERITY_FOR_KIND,
@@ -76,6 +78,13 @@ export const alertIncidentSchema = z.object({
   createdAt: z.date(),
   entrySignals: entrySignalsSnapshotSchema.nullable(),
   exitEligibleSince: z.date().nullable(),
+  // The firing monitor alert; `null` on legacy / flag-off incidents. The owning
+  // monitor is recovered by joining through `monitor_alerts` (the join survives
+  // alert soft-deletion). `default(null)` keeps pre-monitors `.parse` callers valid.
+  monitorAlertId: monitorAlertIdSchema.nullable().default(null),
+  // The firing alert's condition, frozen at open time so monitor edits mid-incident
+  // don't shift the close-side or notification copy. `null` for no-condition kinds.
+  condition: alertIncidentConditionSchema.nullable().default(null),
 })
 
 export type AlertIncident = z.infer<typeof alertIncidentSchema>

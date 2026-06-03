@@ -14,6 +14,8 @@ import {
   formatScope,
   IssueIdFooter,
   IssueTimestamp,
+  MonitorAttribution,
+  type MonitorAttributionInfo,
   SampleExcerptCard,
   SectionHeader,
   SeverityBadge,
@@ -44,6 +46,7 @@ interface IncidentEventEmailProps {
   readonly projectName: string | undefined
   readonly tags: readonly string[] | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
+  readonly monitor: MonitorAttributionInfo | undefined
   readonly webAppUrl: string
 }
 
@@ -59,6 +62,7 @@ export function IncidentEventEmail({
   projectName,
   tags,
   sampleExcerpt,
+  monitor,
   webAppUrl,
 }: IncidentEventEmailProps) {
   const heading = ALERT_INCIDENT_KIND_LABEL[incidentKind]
@@ -81,6 +85,8 @@ export function IncidentEventEmail({
         {heading}
       </EmailText>
       <EmailText variant="body">{subtitle}</EmailText>
+
+      <MonitorAttribution monitor={monitor} />
 
       <SectionHeader label="Issue" />
 
@@ -123,6 +129,10 @@ IncidentEventEmail.PreviewProps = {
     text: "Reviewer flagged a tool-call loop after the third retry — model kept invoking `search` with the same query.",
     truncated: false,
     author: { kind: "user", name: "Anna Bosch", imageUrl: null },
+  },
+  monitor: {
+    name: "Issue discovered",
+    url: "https://console.latitude.so/projects/sample-project/monitors?monitorSlug=issue-discovered",
   },
   webAppUrl: "http://localhost:3000",
 } satisfies IncidentEventEmailProps

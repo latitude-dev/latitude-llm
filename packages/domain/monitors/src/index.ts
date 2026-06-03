@@ -6,7 +6,11 @@ export {
   MonitorAlertNotFoundError,
   SystemMonitorForbiddenError,
 } from "./errors.ts"
-export { formatHumanReadableAlert, type HumanReadableAlertContext } from "./helpers.ts"
+export {
+  formatHumanReadableAlert,
+  type HumanReadableAlertContext,
+  type HumanReadableAlertInput,
+} from "./helpers.ts"
 export type {
   ListMonitorsRepositoryInput,
   MonitorLastIncident,
@@ -53,6 +57,8 @@ export type {
   ProvisionSystemMonitorsInput,
 } from "./use-cases/provision-system-monitors.ts"
 export { buildSystemMonitors, provisionSystemMonitorsUseCase } from "./use-cases/provision-system-monitors.ts"
+export type { ResolveMonitorAlertsForSourceEventInput } from "./use-cases/resolve-monitor-alerts-for-source-event.ts"
+export { resolveMonitorAlertsForSourceEventUseCase } from "./use-cases/resolve-monitor-alerts-for-source-event.ts"
 export type { UpdateMonitorError, UpdateMonitorInput } from "./use-cases/update-monitor.ts"
 export { updateMonitorUseCase } from "./use-cases/update-monitor.ts"
 export type { UpdateMonitorAlertError, UpdateMonitorAlertInput } from "./use-cases/update-monitor-alert.ts"

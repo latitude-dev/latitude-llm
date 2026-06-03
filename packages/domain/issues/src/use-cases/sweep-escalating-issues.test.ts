@@ -24,6 +24,8 @@ const makeIncident = (idx: number, overrides: Partial<AlertIncident> = {}): Aler
   createdAt: new Date("2026-05-07T10:00:00.000Z"),
   entrySignals: null,
   exitEligibleSince: null,
+  monitorAlertId: null,
+  condition: null,
   ...overrides,
 })
 

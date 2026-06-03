@@ -62,6 +62,8 @@ const toInsertRow = (incident: AlertIncident): typeof alertIncidents.$inferInser
   createdAt: incident.createdAt,
   entrySignals: incident.entrySignals,
   exitEligibleSince: incident.exitEligibleSince,
+  monitorAlertId: incident.monitorAlertId,
+  condition: incident.condition,
 })
 
 const toDomain = (row: typeof alertIncidents.$inferSelect): AlertIncident => alertIncidentSchema.parse(row)

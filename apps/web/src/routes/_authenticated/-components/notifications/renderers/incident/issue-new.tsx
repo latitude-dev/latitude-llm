@@ -3,6 +3,7 @@ import { BaseNotification } from "../../base-notification.tsx"
 import { useIssueUrl, useLiveIssueSummary } from "./-incident-helpers.ts"
 import type { IncidentRendererProps } from "./index.tsx"
 import { IssueSummaryCard } from "./issue-summary-card.tsx"
+import { MonitorAttribution } from "./monitor-attribution.tsx"
 
 export function IssueNewNotification({ notification, payload }: IncidentRendererProps<"event">) {
   const seenAt = notification.seenAt ? new Date(notification.seenAt) : undefined
@@ -25,6 +26,7 @@ export function IssueNewNotification({ notification, payload }: IncidentRenderer
       url={url}
     >
       {live?.name ? <IssueSummaryCard name={live.name} states={states} /> : null}
+      <MonitorAttribution payload={payload} />
     </BaseNotification>
   )
 }

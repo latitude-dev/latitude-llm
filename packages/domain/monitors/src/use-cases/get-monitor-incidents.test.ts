@@ -37,6 +37,8 @@ const makeIncident = (overrides: Partial<AlertIncident> & { id: AlertIncident["i
   createdAt: overrides.createdAt ?? new Date("2026-05-29T10:00:00.000Z"),
   entrySignals: null,
   exitEligibleSince: null,
+  monitorAlertId: overrides.monitorAlertId ?? null,
+  condition: overrides.condition ?? null,
 })
 
 const makeNotification = (

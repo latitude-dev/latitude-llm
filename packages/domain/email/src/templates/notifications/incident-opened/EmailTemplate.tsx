@@ -16,6 +16,8 @@ import {
   IncidentTrendChartImage,
   IssueIdFooter,
   IssueTimestamp,
+  MonitorAttribution,
+  type MonitorAttributionInfo,
   SampleExcerptCard,
   SectionHeader,
   SeverityBadge,
@@ -35,6 +37,7 @@ interface IncidentOpenedEmailProps {
   readonly tags: readonly string[] | undefined
   readonly breach: IncidentBreach | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
+  readonly monitor: MonitorAttributionInfo | undefined
   readonly webAppUrl: string
 }
 
@@ -63,6 +66,7 @@ export function IncidentOpenedEmail({
   tags,
   breach,
   sampleExcerpt,
+  monitor,
   webAppUrl,
 }: IncidentOpenedEmailProps) {
   const issueRef = issueName ?? "an issue"
@@ -86,6 +90,8 @@ export function IncidentOpenedEmail({
       <EmailText variant="body">
         We notified everyone watching this project — an ongoing issue is being detected more than expected.
       </EmailText>
+
+      <MonitorAttribution monitor={monitor} />
 
       <SectionHeader label="Issue" />
 
@@ -137,6 +143,11 @@ IncidentOpenedEmail.PreviewProps = {
     text: "Response mentioned the customer's competitor when summarising the warranty terms.",
     truncated: false,
     author: { kind: "evaluation", name: "warranty-judge" },
+  },
+  monitor: {
+    name: "Issue escalating",
+    url: "https://console.latitude.so/projects/sample-project/monitors?monitorSlug=issue-escalating",
+    conditionSummary: "Alerts when an ongoing issue is being detected more than expected.",
   },
   webAppUrl: "http://localhost:3000",
 } satisfies IncidentOpenedEmailProps

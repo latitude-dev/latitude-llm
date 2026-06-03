@@ -1,10 +1,69 @@
+import { formatHumanReadableAlert } from "@domain/monitors"
 import type { IncidentSampleAuthor, IncidentSampleExcerpt } from "@domain/notifications"
-import type { AlertSeverity } from "@domain/shared"
-import { Img, Section, Text } from "@react-email/components"
+import type { AlertIncidentCondition, AlertIncidentKind, AlertSeverity } from "@domain/shared"
+import { Img, Link, Section, Text } from "@react-email/components"
 import type { CSSProperties, ReactNode } from "react"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
+
+/** Monitor attribution shown on monitor-owned incidents. `undefined` on legacy incidents → renders nothing. */
+export interface MonitorAttributionInfo {
+  readonly name: string
+  /** Deep link to the monitor's details panel; omitted when the project can't be resolved. */
+  readonly url?: string
+  /** Humanised alert rule (`formatHumanReadableAlert`); omitted for no-condition kinds. */
+  readonly conditionSummary?: string
+}
+
+/**
+ * "Created by monitor X" line (+ humanised alert rule) under the heading.
+ * Renders nothing for legacy incidents that have no owning monitor, so their
+ * email copy is unchanged.
+ */
+export function MonitorAttribution({ monitor }: { readonly monitor: MonitorAttributionInfo | undefined }) {
+  if (!monitor) return null
+  return (
+    <Section style={{ marginTop: 8 }}>
+      <Text style={{ margin: 0, color: "#64748B", fontSize: 13 }}>
+        Created by monitor{" "}
+        {monitor.url ? (
+          <Link href={monitor.url} style={{ color: "#2563EB", fontWeight: 600 }}>
+            {monitor.name}
+          </Link>
+        ) : (
+          <span style={{ color: "#0F172A", fontWeight: 600 }}>{monitor.name}</span>
+        )}
+      </Text>
+      {monitor.conditionSummary ? (
+        <Text style={{ margin: "4px 0 0 0", color: "#64748B", fontSize: 12 }}>{monitor.conditionSummary}</Text>
+      ) : null}
+    </Section>
+  )
+}
+
+/** Build the monitor attribution props from an incident payload + render context. `undefined` for legacy incidents. */
+export function buildMonitorAttribution(input: {
+  readonly webAppUrl: string
+  readonly projectSlug: string | undefined
+  readonly monitorName: string | undefined
+  readonly monitorSlug: string | undefined
+  readonly incidentKind: AlertIncidentKind
+  readonly condition: AlertIncidentCondition | null | undefined
+}): MonitorAttributionInfo | undefined {
+  if (!input.monitorName) return undefined
+  return {
+    name: input.monitorName,
+    ...(input.projectSlug && input.monitorSlug
+      ? {
+          url: `${input.webAppUrl}/projects/${input.projectSlug}/monitors?monitorSlug=${encodeURIComponent(input.monitorSlug)}`,
+        }
+      : {}),
+    ...(input.condition
+      ? { conditionSummary: formatHumanReadableAlert({ kind: input.incidentKind, condition: input.condition }) }
+      : {}),
+  }
+}
 
 /**
  * Small all-caps eyebrow label + thin divider that visually separates

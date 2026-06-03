@@ -6,6 +6,7 @@ import { Effect } from "effect"
 import React from "react"
 import { buildChartUrl } from "../../../helpers/chart-url.ts"
 import { renderEmail } from "../../../utils/render.ts"
+import { buildMonitorAttribution } from "../-incident-components.tsx"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { IncidentClosedEmail } from "./EmailTemplate.tsx"
 
@@ -37,6 +38,14 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
       notificationId: ctx.notificationId,
       webAppUrl: ctx.webAppUrl,
     })
+    const monitor = buildMonitorAttribution({
+      webAppUrl: ctx.webAppUrl,
+      projectSlug: ctx.project?.slug,
+      monitorName: payload.monitorName,
+      monitorSlug: payload.monitorSlug,
+      incidentKind: payload.incidentKind,
+      condition: payload.condition,
+    })
 
     const html = yield* Effect.tryPromise({
       try: () =>
@@ -52,6 +61,7 @@ export const incidentClosedRenderer: NotificationEmailRenderer<"incident.closed"
             organizationName={ctx.organization.name}
             projectName={ctx.project?.name}
             recovery={payload.recovery}
+            monitor={monitor}
             webAppUrl={ctx.webAppUrl}
           />,
         ),

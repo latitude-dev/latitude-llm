@@ -1,5 +1,14 @@
 import { OutboxEventWriter } from "@domain/events"
-import { AlertIncidentId, generateId, OrganizationId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
+import {
+  type AlertIncidentCondition,
+  AlertIncidentId,
+  generateId,
+  type MonitorAlertId,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  SqlClient,
+} from "@domain/shared"
 import { Effect } from "effect"
 import {
   type AlertIncident,
@@ -23,6 +32,10 @@ export interface CreateAlertIncidentFromIssueEventInput {
    * before the seasonal detector started snapshotting.
    */
   readonly entrySignals?: EntrySignalsSnapshot | null
+  /** The firing monitor alert when this incident belongs to a monitor; `null` on the legacy/flag-off path. */
+  readonly monitorAlertId?: MonitorAlertId | null
+  /** Snapshot of the firing alert's condition, frozen on the row; `null` for no-condition kinds and legacy rows. */
+  readonly condition?: AlertIncidentCondition | null
 }
 
 export type CreateAlertIncidentFromIssueEventError = RepositoryError
@@ -60,6 +73,8 @@ export const createAlertIncidentFromIssueEventUseCase = (input: CreateAlertIncid
           createdAt: now,
           entrySignals: input.entrySignals ?? null,
           exitEligibleSince: null,
+          monitorAlertId: input.monitorAlertId ?? null,
+          condition: input.condition ?? null,
         }
 
         yield* alertIncidentRepository.insert(incident)

@@ -960,4 +960,99 @@ describe("MonitorRepositoryLive", () => {
       expect(Exit.isFailure(exit)).toBe(true)
     })
   })
+
+  describe("listActiveAlertsForSourceEvent", () => {
+    const issueId = "i".repeat(24)
+
+    const resolve = (input: { kind: MonitorAlert["kind"]; sourceId: string }) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.listActiveAlertsForSourceEvent({
+            projectId,
+            kind: input.kind,
+            sourceType: "issue",
+            sourceId: input.sourceId,
+          })
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+    it("matches a live all-source issue alert, scoped to the project", async () => {
+      const here = generateId()
+      await database.db
+        .insert(monitorsTable)
+        .values(makeMonitorRow({ id: here, slug: "here", name: "Here", system: true }))
+      await database.db
+        .insert(monitorAlertsTable)
+        .values(
+          makeAlertRow({ id: generateId(), monitorId: here, kind: "issue.new", sourceType: "issue", sourceId: null }),
+        )
+
+      // Same org, different project — must not match.
+      const elsewhere = generateId()
+      await database.db
+        .insert(monitorsTable)
+        .values(
+          makeMonitorRow({ id: elsewhere, slug: "elsewhere", name: "Elsewhere", projectId: otherProjectId as string }),
+        )
+      await database.db.insert(monitorAlertsTable).values(
+        makeAlertRow({
+          id: generateId(),
+          monitorId: elsewhere,
+          kind: "issue.new",
+          sourceType: "issue",
+          sourceId: null,
+        }),
+      )
+
+      const result = await resolve({ kind: "issue.new", sourceId: issueId })
+      expect(result).toHaveLength(1)
+      expect(result[0]?.kind).toBe("issue.new")
+      expect(result[0]?.source).toEqual({ type: "issue", id: null })
+    })
+
+    it("excludes soft-deleted alerts and deleted monitors", async () => {
+      const live = generateId()
+      await database.db.insert(monitorsTable).values(makeMonitorRow({ id: live, slug: "live", name: "Live" }))
+      await database.db.insert(monitorAlertsTable).values(
+        makeAlertRow({
+          id: generateId(),
+          monitorId: live,
+          kind: "issue.new",
+          sourceType: "issue",
+          sourceId: null,
+          deletedAt: new Date(),
+        }),
+      )
+
+      const gone = generateId()
+      await database.db
+        .insert(monitorsTable)
+        .values(makeMonitorRow({ id: gone, slug: "gone", name: "Gone", deletedAt: new Date() }))
+      await database.db
+        .insert(monitorAlertsTable)
+        .values(
+          makeAlertRow({ id: generateId(), monitorId: gone, kind: "issue.new", sourceType: "issue", sourceId: null }),
+        )
+
+      expect(await resolve({ kind: "issue.new", sourceId: issueId })).toEqual([])
+    })
+
+    it("matches a named-source alert only for its own source id", async () => {
+      const monitor = generateId()
+      await database.db.insert(monitorsTable).values(makeMonitorRow({ id: monitor, slug: "scoped", name: "Scoped" }))
+      await database.db.insert(monitorAlertsTable).values(
+        makeAlertRow({
+          id: generateId(),
+          monitorId: monitor,
+          kind: "issue.new",
+          sourceType: "issue",
+          sourceId: issueId,
+        }),
+      )
+
+      expect(await resolve({ kind: "issue.new", sourceId: issueId })).toHaveLength(1)
+      expect(await resolve({ kind: "issue.new", sourceId: "z".repeat(24) })).toEqual([])
+    })
+  })
 })

@@ -18,6 +18,7 @@ import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@
 import {
   AlertIncidentId,
   ChSqlClient,
+  MonitorAlertId,
   NotFoundError,
   OrganizationId,
   type ProjectId,
@@ -33,6 +34,8 @@ import { createFakeUserRepository } from "@domain/users/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { IncidentEventPayload, IncidentOpenedPayload } from "../entities/notification.ts"
+import { type IncidentMonitorInfo, IncidentMonitorReader } from "../ports/incident-monitor-reader.ts"
+import { createFakeIncidentMonitorReader } from "../testing/fake-incident-monitor-reader.ts"
 import { requestIncidentNotificationsUseCase } from "./request-incident-notifications.ts"
 
 const cuid = (seed: string) => seed.padEnd(24, "0")
@@ -50,6 +53,8 @@ interface SetupOpts {
   readonly users?: Iterable<User>
   /** Pre-seeded evaluations keyed by id; the producer fetches the evaluation via EvaluationRepository. */
   readonly evaluations?: Iterable<Evaluation>
+  /** Monitor resolved for `incident.monitorAlertId` by the mute-gate reader. Omit for legacy incidents. */
+  readonly monitor?: IncidentMonitorInfo
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -192,9 +197,14 @@ function setup(opts: SetupOpts = {}) {
     softDeleteByIssueId: () => Effect.die("not used"),
   })
 
+  const monitorSeed = new Map<string, IncidentMonitorInfo>()
+  if (incident.monitorAlertId !== null && opts.monitor) monitorSeed.set(incident.monitorAlertId, opts.monitor)
+  const { reader: monitorReader } = createFakeIncidentMonitorReader(monitorSeed)
+
   const layer = Layer.mergeAll(
     Layer.succeed(AlertIncidentRepository, incidentRepo),
     Layer.succeed(EvaluationRepository, evaluationRepository),
+    Layer.succeed(IncidentMonitorReader, monitorReader),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ScoreAnalyticsRepository, analytics),
     Layer.succeed(ScoreRepository, scoreRepository),
@@ -777,5 +787,97 @@ describe("requestIncidentNotificationsUseCase", () => {
     const payload = result.requests[0]?.payload
     if (!payload || !("recovery" in payload)) throw new Error("expected recovery on closed payload")
     expect(payload.recovery.durationMs).toBe(32 * 60 * 1000)
+  })
+
+  it("short-circuits with monitor-muted when the owning monitor is muted", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.new", startedAt, endedAt: startedAt, monitorAlertId: MonitorAlertId(cuid("ma")) },
+      monitor: { monitorId: cuid("mon"), slug: "issue-discovered", name: "Issue discovered", mutedAt: new Date() },
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("skipped")
+    if (result.status !== "skipped") throw new Error("unreachable")
+    expect(result.reason).toBe("monitor-muted")
+  })
+
+  it("populates monitor attribution on the payload for a live (unmuted) monitor", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.new", startedAt, endedAt: startedAt, monitorAlertId: MonitorAlertId(cuid("ma")) },
+      monitor: { monitorId: cuid("mon"), slug: "issue-discovered", name: "Issue discovered", mutedAt: null },
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload as {
+      monitorId?: string
+      monitorName?: string
+      monitorSlug?: string
+    }
+    expect(payload.monitorId).toBe(cuid("mon"))
+    expect(payload.monitorName).toBe("Issue discovered")
+    expect(payload.monitorSlug).toBe("issue-discovered")
+  })
+
+  it("snapshots the alert condition onto the payload for an escalating monitor incident", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: {
+        kind: "issue.escalating",
+        severity: "high",
+        startedAt,
+        endedAt: null,
+        monitorAlertId: MonitorAlertId(cuid("ma")),
+        condition: { kind: "issue.escalating", sensitivity: 4 },
+      },
+      monitor: { monitorId: cuid("mon"), slug: "issue-escalating", name: "Issue escalating", mutedAt: null },
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    const payload = result.requests[0]?.payload as { monitorName?: string; condition?: unknown }
+    expect(payload.monitorName).toBe("Issue escalating")
+    expect(payload.condition).toEqual({ kind: "issue.escalating", sensitivity: 4 })
+  })
+
+  it("leaves monitor attribution absent on legacy (non-monitor) incidents", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.new", startedAt, endedAt: startedAt },
+      memberUserIds: [cuid("ua")],
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.payload).not.toHaveProperty("monitorId")
+    expect(result.requests[0]?.payload).not.toHaveProperty("condition")
   })
 })

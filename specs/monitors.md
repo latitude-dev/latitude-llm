@@ -628,7 +628,7 @@ If a single issue event matches multiple monitors (the common case is "the all-i
 
 Today `createAlertIncidentFromIssueEventUseCase` sets `startedAt = occurredAt` (the escalation event time) for all kinds. For `issue.escalating`, this is late: the seasonal detector flags an escalation only after the band has been crossed for a while, so the "real" start is meaningfully earlier. We backtrack `startedAt` to the **first bucket in the trend window where the occurrence count crossed the seasonal threshold**.
 
-Note: the `entrySignals` snapshot holds only scalar stats (expected / σ / thresholds / entry-time 24h count), **not** a timestamped timeline, so the backtrack cannot read buckets from it. Instead it reuses the analytics queries that already back the issue trend chart — `ScoreAnalyticsRepository.trendByIssue` (per-bucket occurrence counts) and `escalationThresholdHistogramByIssues` (per-bucket seasonal threshold) — and walks the two series in lockstep to find the first bucket where `count ≥ threshold`; that bucket's start becomes `startedAt`.
+Note: the `entrySignals` snapshot holds only scalar stats (expected / σ / thresholds / entry-time 24h count), **not** a timestamped timeline, so the backtrack cannot read buckets from it. Instead it reuses the analytics queries that already back the issue trend chart — `ScoreAnalyticsRepository.histogramByIssues` (per-bucket occurrence counts over a bounded window) and `escalationThresholdHistogramByIssues` (per-bucket seasonal threshold, same `kShort`) — and walks the two series in lockstep over a 24h window of 1h buckets to find the first bucket where `count ≥ threshold`; that bucket's start becomes `startedAt`.
 
 The natural home for this is the producer side (`checkIssueEscalationUseCase`, which already has `ScoreAnalyticsRepository` + `ChSqlClient`): it resolves the backtracked timestamp and forwards it on the `IssueEscalated` event, which the alert-incidents worker passes through as `occurredAt`. Because it changes the existing **non-flag-gated** escalation path, it lands in **M6** alongside the rest of the issue-event work, not in M3.
 
@@ -896,8 +896,10 @@ const incidentBasePayloadShape = {
   sourceId: cuidSchema,
   incidentKind: alertIncidentKindSchema,
   severity: alertSeveritySchema,
-  /** NEW */
+  /** NEW: monitor attribution, resolved at produce time via `IncidentMonitorReader`. */
   monitorId: cuidSchema.optional(),
+  monitorName: z.string().optional(),
+  monitorSlug: z.string().optional(),
   /** NEW: snapshot from alert_incidents.condition. */
   condition: alertIncidentConditionSchema.nullable().optional(),
 }
@@ -905,7 +907,7 @@ const incidentBasePayloadShape = {
 
 Templates use the new fields conditionally:
 
-- When `monitorId` is set, the existing email and in-app templates show a "Created by monitor <name>" line that links to the monitor details panel. (The producer step resolves the monitor's name into the payload at request time; no extra round-trip from the renderer.)
+- When `monitorName` is set, the email + in-app templates show a "Created by monitor <name>" line; the email deep-links to the monitor details panel via `monitorSlug` (the in-app card already links to the incident source, so it renders the name as text). The producer resolves name + slug into the payload at request time, so no extra round-trip from the renderer.
 - When `condition` is set, the templates show a humanised summary of the alert: "Alert: when matches > 100 in 5 minutes". Driven by the shared `formatHumanReadableAlert` helper.
 
 For incidents that were created on the legacy path (no monitor), both fields are absent and the templates fall back to today's copy.
@@ -1398,20 +1400,22 @@ Scope is intentionally left open — the exact polish items are decided when the
 
 **Goal:** With the `monitors` flag enabled for an org, every issue event creates one incident per matching alert; the existing notifications pipeline routes through the mute gate. Flag off = unchanged behaviour. After this milestone, the Incidents section of a flag-on org's system monitors shows live data.
 
-- [ ] `resolveMonitorAlertsForSourceEvent({ orgId, projectId, kind, sourceId })` in `@domain/monitors` — returns the matching active `monitor_alerts`.
-- [ ] Modify `apps/workers/src/workers/domain-events/alert-incidents.ts`:
+- [x] `resolveMonitorAlertsForSourceEventUseCase({ projectId, kind, sourceId })` in `@domain/monitors` — derives the source type from the kind and returns the matching active `monitor_alerts` (repo method `listActiveAlertsForSourceEvent`, joining through `monitors` to scope by project, excluding soft-deleted alerts/monitors).
+- [x] Modify `apps/workers/src/workers/domain-events/alert-incidents.ts`:
   - Flag on: call resolver; for each matching alert, call `createAlertIncidentFromIssueEventUseCase` once with `monitorAlertId` and `condition` (snapshot) populated.
-  - Flag off: existing behaviour, `monitorAlertId = null`.
-- [ ] Extend `createAlertIncidentFromIssueEventUseCase` to accept optional `monitorAlertId` and `condition` (snapshot).
-- [ ] Add `findByAlertId` (or equivalent) to `MonitorRepository` — resolves the owning monitor from a `monitor_alert_id`, including soft-deleted alerts, for the mute gate.
-- [ ] Extend `incidentBasePayloadShape` in `@domain/notifications` with optional `monitorId` (resolved at produce time) and `condition`. Update the producer step (`request-incident-notifications`) to populate them onto the payload when the source incident has a `monitorAlertId`.
-- [ ] **Mute gate** in `request-incident-notifications`: when `incident.monitorAlertId IS NOT NULL`, resolve its monitor (via the alert join); if muted, short-circuit with `skipped: "monitor-muted"`.
-- [ ] Update the existing email + in-app templates to conditionally render a "Created by monitor X" line and a humanised condition line when present.
-- [ ] **Escalation sensitivity sourcing**: on the flag-on path, the `issue.escalating` detector (`check-issue-escalation` in `@domain/issues`) resolves the project's system "Issue escalating" monitor alert and reads `condition.sensitivity` instead of `projects.settings.escalation.sensitivity`. Flag-off keeps reading project settings. Annotate `projects.settings.escalation.sensitivity` (and its read sites + the `/settings/issues` sensitivity control) with `// TODO: Remove this after releasing monitors for everybody`.
-- [ ] **`issue.escalating` `startedAt` backtracking** (moved from M3 — applies to all orgs, flag-independent): in `checkIssueEscalationUseCase`, on the `enter` transition, reuse `ScoreAnalyticsRepository.trendByIssue` + `escalationThresholdHistogramByIssues` to find the first trend bucket where `count ≥ threshold` and forward that timestamp on the `IssueEscalated` event; the alert-incidents worker passes it through as `occurredAt` so `createAlertIncidentFromIssueEventUseCase` stamps the backtracked `startedAt`. Other kinds unchanged. See the "`startedAt` backtracking" architecture note. Backend tests: backtracking against representative trend windows (first-crossing earlier than now; no-crossing fallback to event time).
-- [ ] Hide the three issue-notification checkboxes **and the escalation-sensitivity control** on `/settings/issues` when the `monitors` flag is on (replaced by the system monitors). Leave the form fields and their read-paths in place — final cleanup happens in the post-rollout PR.
-- [ ] TODO comments per spec at every legacy site.
-- [ ] Backend tests: flag-on multi-monitor fan-out, flag-off parity, mute short-circuit (verify project-level per-kind gate is skipped but user-per-group prefs still apply), payload extension, template conditional rendering.
+  - Flag off — or flag on with **no** matching alert (a project provisioned before system monitors): a single legacy incident with `monitorAlertId = null`, preserving pre-monitors behaviour.
+- [x] Extend `createAlertIncidentFromIssueEventUseCase` to accept optional `monitorAlertId` and `condition` (snapshot). Both surfaced on the `AlertIncident` entity (`.default(null)` so legacy `.parse` callers keep working) + persisted by the repo mapper.
+- [x] Mute-gate reader for the owning monitor (incl. soft-deleted alerts). **Not** `MonitorRepository.findByAlertId` — `@domain/monitors` already depends on `@domain/notifications`, so the gate uses a new `IncidentMonitorReader` port **owned by `@domain/notifications`** (`{ monitorId, slug, name, mutedAt }`), implemented in `db-postgres`, avoiding the cycle.
+- [x] Extend `incidentBasePayloadShape` in `@domain/notifications` with optional `monitorId` + `monitorName` + `monitorSlug` (name/slug added so the "Created by monitor X" line deep-links without a renderer round-trip) and `condition`. The producer (`request-incident-notifications`) populates them via the reader when the incident has a `monitorAlertId`.
+- [x] **Mute gate** in `request-incident-notifications`: when `incident.monitorAlertId IS NOT NULL`, resolve its monitor via the reader; if muted, short-circuit with `skipped: "monitor-muted"` (before the project-level kind gate).
+- [x] Email (`incident-event` / `-opened` / `-closed`) + in-app renderers conditionally render a "Created by monitor X" line (+ humanised `formatHumanReadableAlert` condition line) when present; legacy incidents fall back to today's copy. In-app renders the line as text (the card already links to the source).
+- [x] **Escalation sensitivity sourcing**: on the flag-on path the **worker** resolves the project's system "Issue escalating" monitor alert (via the resolver) and passes its `condition.sensitivity` into `checkIssueEscalationUseCase` as an override (`@domain/issues` can't import `@domain/monitors` — same cycle). Flag-off leaves it unset → the use-case reads `projects.settings.escalation.sensitivity`. `request-incident-notifications` reads the sensitivity off the incident's own condition snapshot for the email chart. Annotated `escalationSettingSchema`, the web read site, and the `/settings/issues` control with the TODO-remove-after-monitors note.
+- [x] **`issue.escalating` `startedAt` backtracking** (applies to all orgs, flag-independent): in `checkIssueEscalationUseCase`, on the `enter` transition, walk `histogramByIssues` + `escalationThresholdHistogramByIssues` (same `kShort`) over a 24h/1h-bucket window to find the first bucket where `count ≥ threshold` and forward that timestamp as `escalatedAt`; the worker passes it through as `occurredAt` so the incident's `startedAt` is backtracked. No crossing → event time. Backend tests cover both.
+- [x] Hide the three issue-notification checkboxes **and the escalation-sensitivity control** on `/settings/issues` when the `monitors` flag is on (`notificationsEnabled && !monitorsEnabled`). Form fields + read-paths stay; cleanup is the post-rollout PR.
+- [x] TODO comments at the legacy sites (`escalationSettingSchema`, the web kShort read, the `/settings/issues` control).
+- [x] Backend tests: resolver (all-source / named-source / kind / project / soft-delete / fan-out), `IncidentMonitorReader` (incl. soft-deleted + RLS), mute short-circuit + payload attribution + condition snapshot, `createAlertIncident` stamping, backtracking (first-crossing + no-crossing fallback), sensitivity override.
+
+> **As-built note.** The two `@domain/*` cycle constraints (monitors→notifications, monitors→…→issues) shaped two deviations from the literal task list above: the mute gate uses a notifications-owned `IncidentMonitorReader` port (not `MonitorRepository.findByAlertId`), and the flag-on escalation sensitivity is resolved in the worker and passed into `checkIssueEscalationUseCase` (not read inside `@domain/issues`). The payload also carries `monitorName`/`monitorSlug` (not just `monitorId`) so templates render the deep-linked attribution with no extra round-trip. The worker fan-out falls back to a single legacy incident when the flag is on but no monitor matched, so issue-event behaviour never regresses.
 
 ### Milestone 7 — Saved-search firing pipeline
 

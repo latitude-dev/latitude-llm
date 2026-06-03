@@ -1,3 +1,4 @@
+import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import {
   checkIssueEscalationUseCase,
   type DiscoverIssueResult,
@@ -6,6 +7,7 @@ import {
   removeScoreFromIssueUseCase,
   sweepEscalatingIssuesUseCase,
 } from "@domain/issues"
+import { resolveMonitorAlertsForSourceEventUseCase } from "@domain/monitors"
 import {
   type QueueConsumer,
   QueuePublisher,
@@ -14,7 +16,7 @@ import {
   type WorkflowStarterShape,
 } from "@domain/queue"
 import type { ScoreSource } from "@domain/scores"
-import { OrganizationId } from "@domain/shared"
+import { OrganizationId, ProjectId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
@@ -24,7 +26,9 @@ import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-click
 import {
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
+  FeatureFlagRepositoryLive,
   IssueRepositoryLive,
+  MonitorRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
   ScoreRepositoryLive,
@@ -130,9 +134,36 @@ export const createIssuesWorker = async ({
     // hourly `sweepEscalating` cron below (exit detection on quiet issues
     // plus cold-start recovery for already-stuck rows).
     checkEscalation: (payload) =>
-      checkIssueEscalationUseCase(payload).pipe(
+      Effect.gen(function* () {
+        // Flag-on: read the escalation sensitivity off the project's system
+        // "Issue escalating" monitor alert (source.id = null matches any issue),
+        // relocating the knob from project settings onto the monitor. Flag-off
+        // leaves it undefined so the use-case reads project settings.
+        const monitorsEnabled = yield* hasFeatureFlagUseCase({ identifier: "monitors" })
+        let escalationSensitivity: number | undefined
+        if (monitorsEnabled) {
+          const alerts = yield* resolveMonitorAlertsForSourceEventUseCase({
+            projectId: ProjectId(payload.projectId),
+            kind: "issue.escalating",
+            sourceId: payload.issueId,
+          })
+          const condition = alerts[0]?.condition
+          if (condition?.kind === "issue.escalating") escalationSensitivity = condition.sensitivity
+        }
+        return yield* checkIssueEscalationUseCase({
+          ...payload,
+          ...(escalationSensitivity !== undefined ? { escalationSensitivity } : {}),
+        })
+      }).pipe(
         withPostgres(
-          Layer.mergeAll(IssueRepositoryLive, OutboxEventWriterLive, AlertIncidentRepositoryLive, SettingsReaderLive),
+          Layer.mergeAll(
+            IssueRepositoryLive,
+            OutboxEventWriterLive,
+            AlertIncidentRepositoryLive,
+            SettingsReaderLive,
+            FeatureFlagRepositoryLive,
+            MonitorRepositoryLive,
+          ),
           pgClient,
           OrganizationId(payload.organizationId),
         ),

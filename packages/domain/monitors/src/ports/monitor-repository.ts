@@ -1,6 +1,7 @@
 import type {
   AlertIncidentCondition,
   AlertIncidentKind,
+  AlertIncidentSourceType,
   AlertSeverity,
   MonitorAlertId,
   MonitorId,
@@ -90,6 +91,18 @@ export interface MonitorRepositoryShape {
     readonly condition: AlertIncidentCondition | null
     readonly severity: AlertSeverity
   }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
+  /**
+   * Active alerts a source event fires: same `kind` + `sourceType`, with
+   * `source.id` either null ("all of this type") or equal to `sourceId`.
+   * Joins through `monitors` to scope by project; excludes soft-deleted
+   * alerts and deleted monitors. Backs the issue-event fan-out.
+   */
+  listActiveAlertsForSourceEvent(input: {
+    readonly projectId: ProjectId
+    readonly kind: AlertIncidentKind
+    readonly sourceType: AlertIncidentSourceType
+    readonly sourceId: string
+  }): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
   /** Count live monitors in a project holding `slug`, excluding `excludeId` — backs slug regeneration. */
   countActiveBySlug(input: {
     readonly projectId: ProjectId

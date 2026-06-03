@@ -5,6 +5,7 @@ import { Effect } from "effect"
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
 import React from "react"
 import { renderEmail } from "../../../utils/render.ts"
+import { buildMonitorAttribution } from "../-incident-components.tsx"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { IncidentEventEmail } from "./EmailTemplate.tsx"
 
@@ -32,6 +33,14 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
     const issueRef = issue?.name ?? "an issue"
     const issueUrl = buildSourceUrl(ctx, payload)
     const heading = ALERT_INCIDENT_KIND_LABEL[payload.incidentKind] ?? "Incident"
+    const monitor = buildMonitorAttribution({
+      webAppUrl: ctx.webAppUrl,
+      projectSlug: ctx.project?.slug,
+      monitorName: payload.monitorName,
+      monitorSlug: payload.monitorSlug,
+      incidentKind: payload.incidentKind,
+      condition: payload.condition,
+    })
 
     const html = yield* Effect.tryPromise({
       try: () =>
@@ -48,6 +57,7 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
             projectName={ctx.project?.name}
             tags={payload.tags}
             sampleExcerpt={payload.sampleExcerpt}
+            monitor={monitor}
             webAppUrl={ctx.webAppUrl}
           />,
         ),

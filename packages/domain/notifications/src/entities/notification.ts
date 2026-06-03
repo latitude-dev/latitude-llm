@@ -1,4 +1,5 @@
 import {
+  alertIncidentConditionSchema,
   alertIncidentKindSchema,
   alertIncidentSourceTypeSchema,
   alertSeveritySchema,
@@ -50,6 +51,15 @@ const incidentBasePayloadShape = {
   sourceId: cuidSchema,
   incidentKind: alertIncidentKindSchema,
   severity: alertSeveritySchema,
+  // Monitor attribution, populated by the producer when the incident belongs to
+  // a monitor (`monitor_alert_id` set). `name`/`slug` are resolved into the
+  // payload at request time so templates render a "Created by monitor X" line
+  // (linked via slug) with no renderer round-trip. Absent on legacy incidents.
+  monitorId: cuidSchema.optional(),
+  monitorName: z.string().optional(),
+  monitorSlug: z.string().optional(),
+  /** Snapshot of the firing alert's condition, for the humanised alert summary. `null` for no-condition kinds. */
+  condition: alertIncidentConditionSchema.nullable().optional(),
 }
 
 /**

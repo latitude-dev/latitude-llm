@@ -13,6 +13,7 @@
   "dependencies": {
     "@domain/feature-flags": "workspace:*",
     "@domain/issues": "workspace:*",
+    "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",

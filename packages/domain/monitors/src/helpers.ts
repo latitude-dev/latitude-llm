@@ -6,6 +6,9 @@ export interface HumanReadableAlertContext {
   readonly savedSearchName?: string
 }
 
+/** The slice of an alert the formatter reads. Notification templates pass just these two from the incident payload. */
+export type HumanReadableAlertInput = Pick<MonitorAlert, "kind" | "condition">
+
 const formatDuration = (duration: AlertDuration): string => {
   if (duration.unit === "hours") {
     if (duration.hours === 1) return "the last hour"
@@ -67,7 +70,7 @@ const savedSearchTraceSubject = (context?: HumanReadableAlertContext): string =>
   context?.savedSearchName ? `traces matching '${context.savedSearchName}'` : "matching traces"
 
 /** Renders an alert as one complete sentence. Shared by the form preview, panel, and notification templates. */
-export function formatHumanReadableAlert(alert: MonitorAlert, context?: HumanReadableAlertContext): string {
+export function formatHumanReadableAlert(alert: HumanReadableAlertInput, context?: HumanReadableAlertContext): string {
   if (alert.kind === "issue.new" || alert.kind === "issue.regressed" || alert.kind === "issue.escalating") {
     return issueSentenceForKind[alert.kind]
   }

@@ -1,5 +1,5 @@
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
-import { OrganizationId, SqlClient } from "@domain/shared"
+import { MonitorAlertId, OrganizationId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -131,5 +131,38 @@ describe("createAlertIncidentFromIssueEventUseCase", () => {
     expect(inserted[0]?.kind).toBe("issue.escalating")
     expect(inserted[0]?.startedAt).toEqual(occurredAt)
     expect(inserted[0]?.endedAt).toBeNull()
+  })
+
+  it("defaults monitorAlertId and condition to null on the legacy/flag-off path", async () => {
+    const { inserted, layer } = createTestLayers()
+    await Effect.runPromise(
+      createAlertIncidentFromIssueEventUseCase({
+        kind: "issue.new",
+        organizationId: cuid("o"),
+        projectId: cuid("p"),
+        issueId: cuid("i"),
+        occurredAt: new Date("2026-05-06T10:00:00Z"),
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(inserted[0]?.monitorAlertId).toBeNull()
+    expect(inserted[0]?.condition).toBeNull()
+  })
+
+  it("stamps monitorAlertId and the condition snapshot on the monitor-owned path", async () => {
+    const { inserted, layer } = createTestLayers()
+    const monitorAlertId = MonitorAlertId(cuid("ma"))
+    await Effect.runPromise(
+      createAlertIncidentFromIssueEventUseCase({
+        kind: "issue.escalating",
+        organizationId: cuid("o"),
+        projectId: cuid("p"),
+        issueId: cuid("i"),
+        occurredAt: new Date("2026-05-06T12:00:00Z"),
+        monitorAlertId,
+        condition: { kind: "issue.escalating", sensitivity: 4 },
+      }).pipe(Effect.provide(layer)),
+    )
+    expect(inserted[0]?.monitorAlertId).toBe(monitorAlertId)
+    expect(inserted[0]?.condition).toEqual({ kind: "issue.escalating", sensitivity: 4 })
   })
 })

@@ -452,6 +452,8 @@ export const getIssueDetail = createServerFn({ method: "GET" })
         // `escalation.sensitivity` is the user-facing `k_short` knob on the
         // seasonal detector — read raw here (not via `resolveSettings`) since
         // the cascade only surfaces `keepMonitoring` today.
+        // TODO: Remove this after releasing monitors for everybody — the knob
+        // moves onto the system "Issue escalating" monitor's alert condition.
         const projectSettings = yield* settingsReader.getProjectSettings(projectId)
         const kShort = projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
 

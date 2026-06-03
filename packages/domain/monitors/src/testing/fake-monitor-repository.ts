@@ -147,6 +147,18 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
         })
         return Effect.void
       }),
+    listActiveAlertsForSourceEvent: ({ projectId, kind, sourceType, sourceId }) =>
+      Effect.sync(() =>
+        monitors
+          .filter((m) => m.projectId === projectId && isLive(m))
+          .flatMap((m) => m.alerts)
+          .filter(
+            (alert) =>
+              alert.kind === kind &&
+              alert.source.type === sourceType &&
+              (alert.source.id === null || alert.source.id === sourceId),
+          ),
+      ),
     countActiveBySlug: ({ projectId, slug, excludeId }) =>
       Effect.sync(
         () =>

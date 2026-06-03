@@ -16,6 +16,8 @@ import {
   IncidentTrendChartImage,
   IssueIdFooter,
   IssueTimestamp,
+  MonitorAttribution,
+  type MonitorAttributionInfo,
   SectionHeader,
   SeverityBadge,
 } from "../-incident-components.tsx"
@@ -31,6 +33,7 @@ interface IncidentClosedEmailProps {
   readonly organizationName: string
   readonly projectName: string | undefined
   readonly recovery: IncidentRecovery
+  readonly monitor: MonitorAttributionInfo | undefined
   readonly webAppUrl: string
 }
 
@@ -45,6 +48,7 @@ export function IncidentClosedEmail({
   organizationName,
   projectName,
   recovery,
+  monitor,
   webAppUrl,
 }: IncidentClosedEmailProps) {
   const issueRef = issueName ?? "an issue"
@@ -67,6 +71,8 @@ export function IncidentClosedEmail({
       <EmailText variant="body">
         We notified everyone watching this project — the occurrence rate has returned to baseline.
       </EmailText>
+
+      <MonitorAttribution monitor={monitor} />
 
       <SectionHeader label="Issue" />
 
@@ -109,5 +115,10 @@ IncidentClosedEmail.PreviewProps = {
   organizationName: "Acme Inc.",
   projectName: "Support agent",
   recovery: { durationMs: 32 * 60 * 1000 },
+  monitor: {
+    name: "Issue escalating",
+    url: "https://console.latitude.so/projects/sample-project/monitors?monitorSlug=issue-escalating",
+    conditionSummary: "Alerts when an ongoing issue is being detected more than expected.",
+  },
   webAppUrl: "http://localhost:3000",
 } satisfies IncidentClosedEmailProps
