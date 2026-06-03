@@ -2,13 +2,16 @@ import { Button, CloseTrigger, Modal, useToast } from "@repo/ui"
 import { useState } from "react"
 import { useMonitorAlertActions } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorAlertRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
-import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { extractFieldErrors, toUserMessage } from "../../../../../../lib/errors.ts"
 import { AlertCardForm } from "./alert-card-form.tsx"
 import {
   type AlertDraft,
+  type AlertFieldErrors,
+  alertFieldErrorsFrom,
   draftToAlertDraft,
   draftToCondition,
   emptyAlertDraft,
+  hasAlertFieldErrors,
   recordToAlertDraft,
 } from "./alert-form-helpers.ts"
 
@@ -35,11 +38,17 @@ export function MonitorAlertEditModal({
   const { addAlert, editAlert } = useMonitorAlertActions(projectId)
   const isEdit = alert !== null
   const [draft, setDraft] = useState<AlertDraft>(() => (alert ? recordToAlertDraft(alert) : emptyAlertDraft()))
+  const [errors, setErrors] = useState<AlertFieldErrors>({})
   const pending = addAlert.isPending || editAlert.isPending
+
+  const onChange = (next: AlertDraft) => {
+    setDraft(next)
+    setErrors({})
+  }
 
   const onSubmit = async () => {
     if (draft.sourceId === null) {
-      toast({ variant: "destructive", description: "Select a saved search for this alert." })
+      setErrors({ source: ["Select a saved search"] })
       return
     }
     try {
@@ -58,6 +67,13 @@ export function MonitorAlertEditModal({
       toast({ description: isEdit ? "Alert updated." : "Alert added." })
       onClose()
     } catch (error) {
+      // Surface Zod field errors under the offending control; fall back to a
+      // toast for non-field (logic) errors.
+      const fieldErrors = alertFieldErrorsFrom(extractFieldErrors(error), null)
+      if (hasAlertFieldErrors(fieldErrors)) {
+        setErrors(fieldErrors)
+        return
+      }
       toast({ variant: "destructive", description: toUserMessage(error) })
     }
   }
@@ -81,7 +97,13 @@ export function MonitorAlertEditModal({
         </>
       }
     >
-      <AlertCardForm value={draft} onChange={setDraft} projectId={projectId} projectSlug={projectSlug} />
+      <AlertCardForm
+        value={draft}
+        onChange={onChange}
+        projectId={projectId}
+        projectSlug={projectSlug}
+        errors={errors}
+      />
     </Modal>
   )
 }

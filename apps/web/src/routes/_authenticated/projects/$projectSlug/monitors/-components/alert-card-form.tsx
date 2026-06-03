@@ -13,6 +13,7 @@ import {
 import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 import {
   type AlertDraft,
+  type AlertFieldErrors,
   type BaselineKind,
   type ComparisonMode,
   draftWithKind,
@@ -72,14 +73,29 @@ const WINDOW_UNIT_OPTIONS: { label: string; value: WindowUnit }[] = [
   { label: "days", value: "days" },
 ]
 
+function FieldErrors({ errors }: { readonly errors?: readonly string[] | undefined }) {
+  if (!errors?.length) return null
+  return (
+    <div className="mt-1 flex flex-col gap-1" role="alert">
+      {errors.map((error) => (
+        <Text.H6 key={error} color="destructive">
+          {error}
+        </Text.H6>
+      ))}
+    </div>
+  )
+}
+
 function ThresholdWindowForm({
   value,
   onChange,
   disabled,
+  errors,
 }: {
   readonly value: AlertDraft
   readonly onChange: (patch: Partial<AlertDraft>) => void
   readonly disabled?: boolean
+  readonly errors?: AlertFieldErrors | undefined
 }) {
   const relative = value.comparison === "timesMoreThan"
   const expected = relative && value.baselineKind === "expected"
@@ -150,6 +166,7 @@ function ThresholdWindowForm({
             />
           ) : null}
         </div>
+        <FieldErrors errors={errors?.threshold} />
         {expected ? (
           <div className="rounded-lg bg-muted/80 px-3 py-2 flex justify-start items-start gap-2 mt-3">
             <Icon icon={SparklesIcon} size="sm" color="foregroundMuted" className="shrink-0" />
@@ -180,6 +197,7 @@ function ThresholdWindowForm({
               {...(disabled ? { disabled: true } : {})}
             />
           </div>
+          <FieldErrors errors={errors?.window} />
         </div>
       ) : null}
     </div>
@@ -200,6 +218,7 @@ export function AlertCardForm({
   projectSlug,
   disabled,
   onRemove,
+  errors,
 }: {
   readonly value: AlertDraft
   readonly onChange: (next: AlertDraft) => void
@@ -207,6 +226,7 @@ export function AlertCardForm({
   readonly projectSlug: string
   readonly disabled?: boolean
   readonly onRemove?: () => void
+  readonly errors?: AlertFieldErrors
 }) {
   const { data: savedSearches } = useSavedSearchesList(projectId)
   const savedSearchName = value.sourceId
@@ -245,10 +265,11 @@ export function AlertCardForm({
         value={value.sourceId}
         onChange={(sourceId) => set({ sourceId })}
         {...(disabled ? { disabled: true } : {})}
+        {...(errors?.source ? { errors: [...errors.source] } : {})}
       />
 
       {value.kind !== "savedSearch.match" ? (
-        <ThresholdWindowForm value={value} onChange={set} {...(disabled ? { disabled: true } : {})} />
+        <ThresholdWindowForm value={value} onChange={set} errors={errors} {...(disabled ? { disabled: true } : {})} />
       ) : null}
 
       <div className="rounded-lg bg-muted/80 px-3 py-2 flex justify-start items-center">

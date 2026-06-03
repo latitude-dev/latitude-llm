@@ -60,6 +60,46 @@ export const emptyAlertDraft = (overrides?: Partial<AlertDraft>): AlertDraft => 
 export const draftWithKind = (draft: AlertDraft, kind: UserAlertKind): AlertDraft =>
   emptyAlertDraft({ kind, sourceId: draft.sourceId, severity: draft.severity })
 
+/** Validation errors for one alert card, grouped by the logical field they sit under. */
+export interface AlertFieldErrors {
+  readonly source?: readonly string[]
+  readonly threshold?: readonly string[]
+  readonly window?: readonly string[]
+}
+
+export const hasAlertFieldErrors = (errors: AlertFieldErrors): boolean =>
+  Boolean(errors.source?.length || errors.threshold?.length || errors.window?.length)
+
+/**
+ * Project a server Zod field-error map (`path.join(".") -> messages`, from
+ * `extractFieldErrors`) onto one alert's logical fields, so the message lands
+ * under the control the user got wrong instead of in a raw toast. `index` picks
+ * the alert in the create modal's `alerts.N.…` payload; pass `null` for the
+ * single-alert add/edit modal, whose paths start at `source` / `condition`.
+ */
+export const alertFieldErrorsFrom = (
+  fieldErrors: Record<string, string[]> | null,
+  index: number | null,
+): AlertFieldErrors => {
+  if (!fieldErrors) return {}
+  const prefix = index === null ? "" : `alerts.${index}.`
+  const source: string[] = []
+  const threshold: string[] = []
+  const window: string[] = []
+  for (const [path, messages] of Object.entries(fieldErrors)) {
+    if (prefix && !path.startsWith(prefix)) continue
+    const rel = path.slice(prefix.length)
+    if (rel.startsWith("source")) source.push(...messages)
+    else if (rel.startsWith("condition.window")) window.push(...messages)
+    else if (rel.startsWith("condition.threshold")) threshold.push(...messages)
+  }
+  return {
+    ...(source.length ? { source } : {}),
+    ...(threshold.length ? { threshold } : {}),
+    ...(window.length ? { window } : {}),
+  }
+}
+
 const lookbackToDuration = (amount: number, unit: LookbackUnit): AlertDuration =>
   unit === "hours" ? { unit: "hours", hours: amount } : { unit: "days", days: amount }
 
