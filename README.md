@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="docs/assets/readme/readme-banner.png?raw=true" alt="Latitude — issue detection for AI agents" width="100%" />
+</p>
+
+<p align="center">
   <sub><b>New:</b> <a href="https://docs.latitude.so/getting-started/mcp">Latitude MCP server: connect your AI agent to Latitude →</a></sub>
 </p>
 
