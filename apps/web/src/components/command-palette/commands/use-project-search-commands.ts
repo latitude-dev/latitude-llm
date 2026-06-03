@@ -9,7 +9,7 @@ import { useCurrentProject } from "./use-current-project.ts"
 interface ProjectSearchCommands {
   readonly datasets: readonly PaletteCommand[]
   readonly savedSearches: readonly PaletteCommand[]
-  /** A single "Search traces for …" action that hands the query off to the Search page. */
+  /** A single "Search traces for … in <project>" action that hands the query off to the Search page. */
   readonly tracesFallback: readonly PaletteCommand[]
 }
 
@@ -19,8 +19,9 @@ const EMPTY: ProjectSearchCommands = { datasets: [], savedSearches: [], tracesFa
  * Entity results for the palette. Datasets and saved searches are searched org-wide (across every
  * project, each result tagged with its owning project) so they surface regardless of which
  * project — if any — the user is currently viewing, and selecting one navigates into that result's
- * project. The "Search traces for …" fallback stays project-scoped: it opens the current project's
- * Search page and so only renders while inside a project. Lists are only fetched while searching.
+ * project. The "Search traces for … in <project>" fallback stays project-scoped: it opens the
+ * current project's Search page (and names it, so the narrower scope is explicit), so it only
+ * renders while inside a project. Lists are only fetched while searching.
  */
 export function useProjectSearchCommands(query: string): ProjectSearchCommands {
   const navigate = useNavigate()
@@ -63,7 +64,7 @@ export function useProjectSearchCommands(query: string): ProjectSearchCommands {
       ? [
           {
             id: "search-traces",
-            title: `Search traces for "${trimmed}"`,
+            title: `Search traces for "${trimmed}" in ${project.name}`,
             icon: SearchIcon,
             section: "search",
             keywords: "search traces",

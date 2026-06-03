@@ -5,6 +5,7 @@ const PROJECT_ROUTE_ID = "/_authenticated/projects/$projectSlug"
 interface CurrentProject {
   readonly id: string
   readonly slug: string
+  readonly name: string
 }
 
 /**
