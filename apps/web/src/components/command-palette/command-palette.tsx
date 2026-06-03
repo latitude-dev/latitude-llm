@@ -19,7 +19,7 @@ import { useIssueSearchCommands } from "./commands/use-issue-search-commands.ts"
 import { useMonitorSearchCommands } from "./commands/use-monitor-search-commands.ts"
 import { useNavigationCommands } from "./commands/use-navigation-commands.ts"
 import { useProjectCommands } from "./commands/use-project-commands.tsx"
-import { useProjectSearchCommands } from "./commands/use-project-search-commands.ts"
+import { useProjectSearchCommands } from "./commands/use-project-search-commands.tsx"
 import { COMMAND_SECTION_LABELS, COMMAND_SECTION_ORDER, type PaletteCommand, type ParentCommand } from "./types.ts"
 
 /**
@@ -235,7 +235,7 @@ export function CommandPalette() {
                 {command.leading ?? <Icon icon={command.icon} size="sm" color="foregroundMuted" />}
                 <span className="flex min-w-0 flex-1 items-center gap-2">
                   <Text.H5 ellipsis noWrap>
-                    {command.title}
+                    {command.titleNode ?? command.title}
                   </Text.H5>
                   {command.subtitle ? (
                     <Text.H6 color="foregroundMuted" ellipsis noWrap>

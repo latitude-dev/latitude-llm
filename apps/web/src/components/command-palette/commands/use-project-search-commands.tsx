@@ -64,7 +64,18 @@ export function useProjectSearchCommands(query: string): ProjectSearchCommands {
       ? [
           {
             id: "search-traces",
+            // Plain-text title kept for the matcher / a11y; `titleNode` is what renders. The
+            // scaffolding ("Search traces for" / "in") is muted while the two dynamic values — the
+            // query and the destination project — are emphasized, so they read first.
             title: `Search traces for "${trimmed}" in ${project.name}`,
+            titleNode: (
+              <span className="truncate">
+                <span className="text-muted-foreground">Search traces for </span>
+                <span className="font-medium text-foreground">"{trimmed}"</span>
+                <span className="text-muted-foreground"> in </span>
+                <span className="font-medium text-foreground">{project.name}</span>
+              </span>
+            ),
             icon: SearchIcon,
             section: "search",
             keywords: "search traces",

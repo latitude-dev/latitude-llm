@@ -11,6 +11,12 @@ interface BasePaletteCommand {
   /** Globally unique id (also used as cmdk's item value). */
   readonly id: string
   readonly title: string
+  /**
+   * Optional rich rendering of the title. When set, this is rendered instead of the plain `title`
+   * string (e.g. to emphasize a query and mute surrounding scaffolding). `title` is still required
+   * — it remains the value used by the text matcher and any plain-text contexts.
+   */
+  readonly titleNode?: ReactNode
   readonly icon: LucideIcon
   readonly section: CommandSection
   /** Sub-heading for contextual commands (e.g. "Issue", "Trace"). */
