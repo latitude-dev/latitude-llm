@@ -154,7 +154,7 @@ describe("AlertIncidentRepositoryLive.listByMonitorId", () => {
     await closeInMemoryPostgres(database)
   })
 
-  it("joins through monitor_alerts, ordered by startedAt desc", async () => {
+  it("joins through monitor_alerts, ordered by endedAt desc (ongoing first)", async () => {
     await database.db
       .insert(monitorAlertsTable)
       .values([
@@ -162,30 +162,42 @@ describe("AlertIncidentRepositoryLive.listByMonitorId", () => {
         makeAlertRow({ id: alertB1, monitorId: monitorIdB }),
       ])
 
-    const newer = makeRow({
+    // Ongoing (null ended_at) sorts first; among closed rows, most-recently-
+    // resolved leads. startedAt deliberately disagrees with endedAt order to
+    // prove the sort keys off ended_at, not started_at.
+    const ongoing = makeRow({
       id: AlertIncidentId("1".repeat(24)),
       sourceId: "1".repeat(24),
       monitorAlertId: alertA1,
-      startedAt: new Date("2026-05-07T11:00:00.000Z"),
+      startedAt: new Date("2026-05-07T08:00:00.000Z"),
+      endedAt: null,
     })
-    const older = makeRow({
+    const closedRecent = makeRow({
       id: AlertIncidentId("2".repeat(24)),
       sourceId: "2".repeat(24),
       monitorAlertId: alertA1,
-      startedAt: new Date("2026-05-07T10:00:00.000Z"),
+      startedAt: new Date("2026-05-07T11:00:00.000Z"),
+      endedAt: new Date("2026-05-07T12:00:00.000Z"),
     })
-    const otherMonitor = makeRow({
+    const closedOld = makeRow({
       id: AlertIncidentId("3".repeat(24)),
       sourceId: "3".repeat(24),
-      monitorAlertId: alertB1,
-      startedAt: new Date("2026-05-07T12:00:00.000Z"),
+      monitorAlertId: alertA1,
+      startedAt: new Date("2026-05-07T09:00:00.000Z"),
+      endedAt: new Date("2026-05-07T10:00:00.000Z"),
     })
-    const noMonitor = makeRow({
+    const otherMonitor = makeRow({
       id: AlertIncidentId("4".repeat(24)),
       sourceId: "4".repeat(24),
+      monitorAlertId: alertB1,
+      startedAt: new Date("2026-05-07T13:00:00.000Z"),
+    })
+    const noMonitor = makeRow({
+      id: AlertIncidentId("5".repeat(24)),
+      sourceId: "5".repeat(24),
     })
 
-    await database.db.insert(alertIncidentsTable).values([newer, older, otherMonitor, noMonitor])
+    await database.db.insert(alertIncidentsTable).values([ongoing, closedRecent, closedOld, otherMonitor, noMonitor])
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -194,7 +206,7 @@ describe("AlertIncidentRepositoryLive.listByMonitorId", () => {
       }).pipe(makeRlsProvider(database, organizationId)),
     )
 
-    expect(result.items.map((r: AlertIncident) => r.id)).toEqual([newer.id, older.id])
+    expect(result.items.map((r: AlertIncident) => r.id)).toEqual([ongoing.id, closedRecent.id, closedOld.id])
     expect(result.hasMore).toBe(false)
     expect(result.nextCursor).toBeNull()
   })
@@ -420,18 +432,20 @@ describe("AlertIncidentRepositoryLive.listByMonitorAlertId", () => {
     await closeInMemoryPostgres(database)
   })
 
-  it("returns only the given alert's incidents, ordered by startedAt desc", async () => {
+  it("returns only the given alert's incidents, ordered by endedAt desc", async () => {
     const newer = makeRow({
       id: AlertIncidentId("1".repeat(24)),
       sourceId: "1".repeat(24),
       monitorAlertId: alertA,
       startedAt: new Date("2026-05-07T11:00:00.000Z"),
+      endedAt: new Date("2026-05-07T12:00:00.000Z"),
     })
     const older = makeRow({
       id: AlertIncidentId("2".repeat(24)),
       sourceId: "2".repeat(24),
       monitorAlertId: alertA,
       startedAt: new Date("2026-05-07T10:00:00.000Z"),
+      endedAt: new Date("2026-05-07T11:00:00.000Z"),
     })
     const otherAlert = makeRow({
       id: AlertIncidentId("3".repeat(24)),

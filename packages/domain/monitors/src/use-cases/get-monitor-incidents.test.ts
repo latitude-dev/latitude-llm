@@ -56,7 +56,7 @@ const makeNotification = (
 
 const buildIncidentRepo = (page: {
   items: readonly AlertIncident[]
-  nextCursor: { startedAt: Date; id: AlertIncident["id"] } | null
+  nextCursor: { endedAt: Date | null; id: AlertIncident["id"] } | null
   hasMore: boolean
 }): AlertIncidentRepositoryShape => ({
   insert: () => Effect.die("insert not used"),

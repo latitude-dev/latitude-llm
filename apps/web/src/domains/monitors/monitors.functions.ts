@@ -363,8 +363,8 @@ export const deleteMonitorAlert = createServerFn({ method: "POST" })
     return toMonitorRecordResolved(orgId, monitor)
   })
 
-/** Keyset cursor over `(startedAt, id)`; `startedAt` is an ISO string on the wire. */
-const incidentCursorSchema = z.object({ startedAt: z.iso.datetime(), id: z.string() })
+/** Keyset cursor over `(endedAt, id)`; `endedAt` is an ISO string on the wire, `null` while paging ongoing incidents. */
+const incidentCursorSchema = z.object({ endedAt: z.iso.datetime().nullable(), id: z.string() })
 export type MonitorIncidentsCursor = z.infer<typeof incidentCursorSchema>
 
 const getMonitorIncidentStatsInputSchema = z.object({ monitorId: z.string() })
@@ -458,7 +458,12 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
           monitorId: MonitorId(data.monitorId),
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
           ...(data.cursor
-            ? { cursor: { startedAt: new Date(data.cursor.startedAt), id: AlertIncidentId(data.cursor.id) } }
+            ? {
+                cursor: {
+                  endedAt: data.cursor.endedAt ? new Date(data.cursor.endedAt) : null,
+                  id: AlertIncidentId(data.cursor.id),
+                },
+              }
             : {}),
         }).pipe(
           withPostgres(Layer.mergeAll(AlertIncidentRepositoryLive, NotificationRepositoryLive), pgClient, orgId),
@@ -499,7 +504,7 @@ export const listMonitorIncidents = createServerFn({ method: "GET" })
           return toMonitorIncidentRecord(item, sourceName, saved?.slug ?? null)
         }),
         nextCursor: result.nextCursor
-          ? { startedAt: result.nextCursor.startedAt.toISOString(), id: result.nextCursor.id }
+          ? { endedAt: result.nextCursor.endedAt?.toISOString() ?? null, id: result.nextCursor.id }
           : null,
         hasMore: result.hasMore,
       }

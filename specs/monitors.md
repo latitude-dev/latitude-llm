@@ -1317,7 +1317,7 @@ The first milestones prioritise **visible progress**: M1 ships the sidebar entry
   - `src/use-cases/get-monitor-incidents.ts` — proxy to `alert-incidents` `listByMonitorId` (joins through `monitor_alerts`), with the "notified" derivation (batched idempotency-key lookup against `notifications`).
   - `src/helpers.ts` — `formatHumanReadableAlert`.
 - [x] Implement `MonitorRepositoryLive` in `packages/platform/db-postgres/src/repositories/monitor-repository.ts` (active-alert reads filter `deleted_at IS NULL`).
-- [x] Extend `AlertIncidentRepository`: `listByMonitorId` (joins through `monitor_alerts`, includes soft-deleted alerts) + `listByMonitorAlertId` (direct lookup), both **keyset-paginated** over `(started_at, id)`. Add `findExistingIdempotencyKeys` to `NotificationRepository` for the "notified" derivation.
+- [x] Extend `AlertIncidentRepository`: `listByMonitorId` (joins through `monitor_alerts`, includes soft-deleted alerts) + `listByMonitorAlertId` (direct lookup), both **keyset-paginated** over `(ended_at, id)` ordered `ended_at DESC NULLS FIRST, id DESC` (ongoing incidents first, then most-recently-resolved). Add `findExistingIdempotencyKeys` to `NotificationRepository` for the "notified" derivation.
 - [x] Web side: `apps/web/src/domains/monitors/monitors.functions.ts` + `monitors.collection.ts`. `useMonitors` (offset infinite) and `useMonitorIncidents` (cursor infinite) are `useInfiniteQuery` exposing an `InfiniteTableInfiniteScroll` handle; the dashboard `InfiniteTable` is wired to it. Columns render correctly against empty data.
 - [x] Backend tests: schema constraints (incl. slug-reuse after soft-delete), RLS, repository (incl. soft-deleted-alert join + exclusion), use-cases, formatter.
 

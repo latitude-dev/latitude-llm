@@ -15,6 +15,7 @@ import {
   getTableColumns,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lt,
   lte,
@@ -29,23 +30,31 @@ import { alertIncidents } from "../schema/alert-incidents.ts"
 import { monitorAlerts } from "../schema/monitor-alerts.ts"
 
 /**
- * Keyset predicate for the `(started_at DESC, id DESC)` order: rows strictly
- * after `cursor`. `undefined` cursor → no predicate (first page).
+ * Keyset predicate for the `ended_at DESC NULLS FIRST, id DESC` order: rows
+ * strictly after `cursor`. A null `endedAt` cursor means we're still inside the
+ * ongoing (null `ended_at`) block, so the next page is the remaining ongoing
+ * rows (smaller id) plus every closed row. A non-null cursor is past the ongoing
+ * block: closed rows compare on `ended_at` then `id` (null `ended_at` rows are
+ * excluded by SQL's three-valued logic on `<`/`=`). `undefined` cursor → no
+ * predicate (first page).
  */
-const afterCursor = (cursor: AlertIncidentCursor | undefined): SQL | undefined =>
-  cursor
-    ? or(
-        lt(alertIncidents.startedAt, cursor.startedAt),
-        and(eq(alertIncidents.startedAt, cursor.startedAt), lt(alertIncidents.id, cursor.id)),
-      )
-    : undefined
+const afterCursor = (cursor: AlertIncidentCursor | undefined): SQL | undefined => {
+  if (!cursor) return undefined
+  if (cursor.endedAt === null) {
+    return or(and(isNull(alertIncidents.endedAt), lt(alertIncidents.id, cursor.id)), isNotNull(alertIncidents.endedAt))
+  }
+  return or(
+    lt(alertIncidents.endedAt, cursor.endedAt),
+    and(eq(alertIncidents.endedAt, cursor.endedAt), lt(alertIncidents.id, cursor.id)),
+  )
+}
 
 /** Trim the `limit + 1` probe row, deriving `hasMore` + `nextCursor` from the last kept incident. */
 const toKeysetPage = (rows: readonly AlertIncident[], limit: number): AlertIncidentListPage => {
   const hasMore = rows.length > limit
   const items = hasMore ? rows.slice(0, limit) : rows
   const last = items[items.length - 1]
-  return { items, hasMore, nextCursor: hasMore && last ? { startedAt: last.startedAt, id: last.id } : null }
+  return { items, hasMore, nextCursor: hasMore && last ? { endedAt: last.endedAt, id: last.id } : null }
 }
 
 const toInsertRow = (incident: AlertIncident): typeof alertIncidents.$inferInsert => ({
@@ -195,7 +204,9 @@ export const AlertIncidentRepositoryLive = Layer.effect(
               .from(alertIncidents)
               .innerJoin(monitorAlerts, eq(monitorAlerts.id, alertIncidents.monitorAlertId))
               .where(where)
-              .orderBy(desc(alertIncidents.startedAt), desc(alertIncidents.id))
+              // ended_at DESC defaults to NULLS FIRST in Postgres, so ongoing
+              // incidents lead; id DESC breaks ties (incl. among ongoing rows).
+              .orderBy(desc(alertIncidents.endedAt), desc(alertIncidents.id))
               .limit(limit + 1),
           )
           return toKeysetPage(rows.map(toDomain), limit)
@@ -239,7 +250,7 @@ export const AlertIncidentRepositoryLive = Layer.effect(
               .select()
               .from(alertIncidents)
               .where(where)
-              .orderBy(desc(alertIncidents.startedAt), desc(alertIncidents.id))
+              .orderBy(desc(alertIncidents.endedAt), desc(alertIncidents.id))
               .limit(limit + 1),
           )
           return toKeysetPage(rows.map(toDomain), limit)

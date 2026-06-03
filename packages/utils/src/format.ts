@@ -68,15 +68,40 @@ export function formatBytes(bytes: number): string {
   return `${value.toFixed(1).replace(/\.0$/, "")} ${BYTE_UNITS[unitIndex]}`
 }
 
+const NS_PER_MICROSECOND = 1_000
+const NS_PER_MILLISECOND = 1_000_000
+const NS_PER_SECOND = 1_000_000_000
+const NS_PER_MINUTE = 60 * NS_PER_SECOND
+const NS_PER_HOUR = 60 * NS_PER_MINUTE
+const NS_PER_DAY = 24 * NS_PER_HOUR
+const NS_PER_YEAR = 365 * NS_PER_DAY
+
 /**
- * Format a nanosecond duration into a human-readable string.
+ * Format a nanosecond duration into a compact human-readable string, spanning
+ * sub-microsecond latencies up to multi-year spans.
  *
- * Examples: `500_000` -> `"500.0µs"`, `12_300_000` -> `"12.3ms"`, `1_500_000_000` -> `"1.50s"`
+ * Below a minute, a single unit keeps fractional precision (good for trace/span
+ * latencies): `500_000` -> `"500.0µs"`, `12_300_000` -> `"12.3ms"`, `1_500_000_000` -> `"1.50s"`.
+ * From a minute up, the two most-significant non-zero whole units are shown:
+ * `90e9` -> `"1m 30s"`, `7_500e9` -> `"2h 5m"`, `108_000e9` -> `"1d 6h"`, `NS_PER_YEAR` -> `"1y"`.
  */
 export function formatDuration(ns: number): string {
-  if (ns < 1_000_000) return `${(ns / 1_000).toFixed(1)}µs`
-  if (ns < 1_000_000_000) return `${(ns / 1_000_000).toFixed(1)}ms`
-  return `${(ns / 1_000_000_000).toFixed(2)}s`
+  if (ns < NS_PER_MILLISECOND) return `${(ns / NS_PER_MICROSECOND).toFixed(1)}µs`
+  if (ns < NS_PER_SECOND) return `${(ns / NS_PER_MILLISECOND).toFixed(1)}ms`
+  if (ns < NS_PER_MINUTE) return `${(ns / NS_PER_SECOND).toFixed(2)}s`
+  const years = Math.floor(ns / NS_PER_YEAR)
+  const days = Math.floor((ns % NS_PER_YEAR) / NS_PER_DAY)
+  const hours = Math.floor((ns % NS_PER_DAY) / NS_PER_HOUR)
+  const minutes = Math.floor((ns % NS_PER_HOUR) / NS_PER_MINUTE)
+  const seconds = Math.floor((ns % NS_PER_MINUTE) / NS_PER_SECOND)
+  const parts = [
+    years > 0 ? `${years}y` : null,
+    days > 0 ? `${days}d` : null,
+    hours > 0 ? `${hours}h` : null,
+    minutes > 0 ? `${minutes}m` : null,
+    seconds > 0 ? `${seconds}s` : null,
+  ].filter((part): part is string => part !== null)
+  return parts.slice(0, 2).join(" ")
 }
 
 export function safeParseJson(

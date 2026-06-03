@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { formatBytes, formatCount, formatPrice, isBlankCHString, normalizeCHString, parseCHDate } from "./format.ts"
+import {
+  formatBytes,
+  formatCount,
+  formatDuration,
+  formatPrice,
+  isBlankCHString,
+  normalizeCHString,
+  parseCHDate,
+} from "./format.ts"
 
 describe("formatBytes", () => {
   it("formats whole bytes without decimals", () => {
@@ -106,5 +114,38 @@ describe("formatPrice", () => {
     expect(formatPrice(0.0000075)).toBe("$0.0000075")
     expect(formatPrice(0.0001)).toBe("$0.0001")
     expect(formatPrice(0.0009)).toBe("$0.0009")
+  })
+})
+
+describe("formatDuration", () => {
+  const SECOND = 1_000_000_000
+  const MINUTE = 60 * SECOND
+  const HOUR = 60 * MINUTE
+  const DAY = 24 * HOUR
+  const YEAR = 365 * DAY
+
+  it("keeps fractional precision below a minute (µs/ms/s)", () => {
+    expect(formatDuration(500_000)).toBe("500.0µs")
+    expect(formatDuration(12_300_000)).toBe("12.3ms")
+    expect(formatDuration(1_500_000_000)).toBe("1.50s")
+    expect(formatDuration(45 * SECOND)).toBe("45.00s")
+  })
+
+  it("formats single whole units from a minute up", () => {
+    expect(formatDuration(1 * MINUTE)).toBe("1m")
+    expect(formatDuration(1 * HOUR)).toBe("1h")
+    expect(formatDuration(1 * DAY)).toBe("1d")
+    expect(formatDuration(1 * YEAR)).toBe("1y")
+  })
+
+  it("keeps the two most-significant non-zero units", () => {
+    expect(formatDuration(1 * MINUTE + 30 * SECOND)).toBe("1m 30s")
+    expect(formatDuration(2 * HOUR + 5 * MINUTE)).toBe("2h 5m")
+    expect(formatDuration(1 * DAY + 6 * HOUR)).toBe("1d 6h")
+    expect(formatDuration(1 * YEAR + 2 * DAY)).toBe("1y 2d")
+  })
+
+  it("drops units beyond the top two", () => {
+    expect(formatDuration(1 * DAY + 1 * HOUR + 1 * MINUTE + 1 * SECOND)).toBe("1d 1h")
   })
 })
