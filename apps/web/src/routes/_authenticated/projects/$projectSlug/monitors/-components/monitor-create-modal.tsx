@@ -1,8 +1,9 @@
 import { Button, CloseTrigger, Icon, Input, Modal, Text, Textarea, useToast } from "@repo/ui"
-import { PlusIcon, Trash2Icon } from "lucide-react"
+import { Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import { useCreateMonitor } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import { AddAlertButton } from "./add-alert-button.tsx"
 import { AlertCardForm } from "./alert-card-form.tsx"
 import { type AlertDraft, draftToAlertDraft, emptyAlertDraft } from "./alert-form-helpers.ts"
 
@@ -122,12 +123,7 @@ export function MonitorCreateModal({
               />
             </div>
           ))}
-          <div>
-            <Button variant="outline" size="sm" onClick={addAlert}>
-              <Icon icon={PlusIcon} size="sm" />
-              Add alert
-            </Button>
-          </div>
+          <AddAlertButton onClick={addAlert} />
         </div>
       </div>
     </Modal>

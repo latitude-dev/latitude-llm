@@ -24,7 +24,6 @@ import {
   LinkIcon,
   MegaphoneIcon,
   PencilIcon,
-  PlusIcon,
   ShieldAlertIcon,
   XIcon,
 } from "lucide-react"
@@ -34,6 +33,7 @@ import type { PaletteCommand } from "../../../../../../components/command-palett
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useMonitorIncidentStats } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorAlertRecord, MonitorRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
+import { AddAlertButton } from "./add-alert-button.tsx"
 import { MonitorAlertDeleteConfirmModal } from "./monitor-alert-delete-confirm-modal.tsx"
 import { MonitorAlertEditModal } from "./monitor-alert-edit-modal.tsx"
 import { MonitorIncidentsTable } from "./monitor-incidents-table.tsx"
@@ -161,38 +161,46 @@ function AlertCard({
     </Button>
   )
 
-  // The ghost icon buttons add their own height on the right; trim the top
-  // padding so the row sits more balanced when they're present.
+  // Compact pencil tucked next to the kind/severity status — mirrors the
+  // issue-evaluation sampling/scope edit affordance (muted xs icon + tooltip).
+  const editButton = (
+    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onEdit} aria-label="Edit alert">
+      <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
+    </Button>
+  )
+
+  // The ghost icon buttons add their own height; trim the top padding so the
+  // row sits more balanced when they're present.
   const hasActions = canEdit || deletable
 
   return (
     <div
-      className={cn("flex flex-col gap-2 rounded-lg border border-border px-3 pb-3", {
+      className={cn("flex flex-col gap-2 rounded-lg border border-border pb-3 pl-3 pr-2", {
         "pt-2": hasActions,
         "pt-3": !hasActions,
       })}
     >
       <div className="flex items-center justify-between gap-2">
-        <Status
-          variant={SEVERITY_VARIANT[alert.severity]}
-          label={`${ALERT_INCIDENT_KIND_LABEL[alert.kind]} · ${SEVERITY_LABEL[alert.severity]}`}
-        />
-        <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Status
+            variant={SEVERITY_VARIANT[alert.severity]}
+            label={`${ALERT_INCIDENT_KIND_LABEL[alert.kind]} · ${SEVERITY_LABEL[alert.severity]}`}
+          />
           {canEdit ? (
-            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onEdit} aria-label="Edit alert">
-              <Icon icon={PencilIcon} size="sm" />
-            </Button>
-          ) : null}
-          {deletable ? (
-            isLastAlert ? (
-              <Tooltip asChild side="bottom" trigger={<span className="inline-flex">{deleteButton}</span>}>
-                A monitor must keep at least one alert — delete the monitor instead.
-              </Tooltip>
-            ) : (
-              deleteButton
-            )
+            <Tooltip asChild side="bottom" trigger={<span className="inline-flex shrink-0">{editButton}</span>}>
+              Click to edit this alert
+            </Tooltip>
           ) : null}
         </div>
+        {deletable ? (
+          isLastAlert ? (
+            <Tooltip asChild side="bottom" trigger={<span className="inline-flex">{deleteButton}</span>}>
+              A monitor must have at least one alert
+            </Tooltip>
+          ) : (
+            deleteButton
+          )
+        ) : null}
       </div>
       <Text.H5>{alert.summary}</Text.H5>
     </div>
@@ -400,14 +408,7 @@ export function MonitorDetailDrawer({
                     onDelete={() => setAlertToDelete(alert)}
                   />
                 ))}
-                {!monitor.system ? (
-                  <div>
-                    <Button variant="outline" size="sm" onClick={() => setAlertModal({ alert: null })}>
-                      <Icon icon={PlusIcon} size="sm" />
-                      Add alert
-                    </Button>
-                  </div>
-                ) : null}
+                {!monitor.system ? <AddAlertButton onClick={() => setAlertModal({ alert: null })} /> : null}
               </div>
             </DetailSection>
 

@@ -1,4 +1,4 @@
-import { Button, Modal, Text, useToast } from "@repo/ui"
+import { Button, Modal, useToast } from "@repo/ui"
 import { useMonitorAlertActions } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorAlertRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -39,7 +39,8 @@ export function MonitorAlertDeleteConfirmModal({
       onOpenChange={(next) => {
         if (!next) onClose()
       }}
-      title="Delete alert"
+      title="Remove alert"
+      description="The monitor will stop firing on this condition. Existing incidents will stay in your history"
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="outline" disabled={removeAlert.isPending} onClick={onClose}>
@@ -51,14 +52,10 @@ export function MonitorAlertDeleteConfirmModal({
             isLoading={removeAlert.isPending}
             onClick={() => void onConfirm()}
           >
-            Delete
+            Remove
           </Button>
         </div>
       }
-    >
-      <Text.H5 color="foregroundMuted">
-        Delete this alert? The monitor stops firing on it. Existing incidents stay in your history.
-      </Text.H5>
-    </Modal>
+    />
   )
 }
