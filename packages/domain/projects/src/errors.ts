@@ -13,6 +13,16 @@ export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNam
   }
 }
 
+export class InvalidProjectSlugError extends Data.TaggedError("InvalidProjectSlugError")<{
+  readonly slug?: string
+  readonly reason?: string
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.reason ?? "Invalid project slug"
+  }
+}
+
 export class ProjectNotFoundError extends Data.TaggedError("ProjectNotFoundError")<{
   readonly id: ProjectId
   readonly organizationId: OrganizationId

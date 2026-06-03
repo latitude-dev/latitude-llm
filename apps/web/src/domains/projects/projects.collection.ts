@@ -39,6 +39,7 @@ const projectsCollection = createCollection(
             data: {
               id: mutation.key,
               name: mutation.modified.name,
+              slug: mutation.modified.slug,
               settings: mutation.modified.settings,
             },
           }),

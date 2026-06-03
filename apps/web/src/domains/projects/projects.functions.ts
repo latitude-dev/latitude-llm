@@ -22,7 +22,9 @@ const LAST_PROJECT_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
  * Used by `/_authenticated/` and by `/_authenticated/settings/$section` to
  * land users on a project-scoped page without needing a slug in the URL.
  */
-export const resolveDefaultProjectSlug = createServerFn({ method: "GET" }).handler(async (): Promise<string | null> => {
+export const resolveDefaultProjectSlug = createServerFn({
+  method: "GET",
+}).handler(async (): Promise<string | null> => {
   const cookieSlug = getCookies()[LAST_PROJECT_COOKIE_NAME]
   const { organizationId } = await requireSession()
   const client = getPostgresClient()
@@ -121,6 +123,7 @@ export const updateProject = createServerFn({ method: "POST" })
     z.object({
       id: z.string(),
       name: z.string().min(1, { message: "Name is required" }).optional(),
+      slug: z.string().min(1, { message: "Slug is required" }).optional(),
       settings: projectSettingsSchema.optional(),
     }),
   )
@@ -129,12 +132,22 @@ export const updateProject = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const project = await Effect.runPromise(
-      updateProjectUseCase({ id: ProjectId(data.id), name: data.name, settings: data.settings }).pipe(
+      updateProjectUseCase({
+        id: ProjectId(data.id),
+        name: data.name,
+        slug: data.slug,
+        settings: data.settings,
+      }).pipe(
+        Effect.catchTag("InvalidProjectSlugError", (e) =>
+          Effect.fail(new Error(JSON.stringify([{ path: ["slug"], message: e.reason ?? "Invalid project slug" }]))),
+        ),
+        Effect.catchTag("InvalidProjectNameError", (e) =>
+          Effect.fail(new Error(JSON.stringify([{ path: ["name"], message: e.reason ?? "Invalid project name" }]))),
+        ),
         withPostgres(ProjectRepositoryLive, client, organizationId),
         withTracing,
       ),
     )
-
     return toRecord(project)
   })
 

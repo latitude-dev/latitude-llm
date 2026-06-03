@@ -1,6 +1,5 @@
 import {
   type ConflictError,
-  generateSlug,
   type NotFoundError,
   type ProjectId,
   type ProjectSettings,
@@ -11,12 +10,13 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import type { Project } from "../entities/project.ts"
-import { InvalidProjectNameError, ProjectNotFoundError } from "../errors.ts"
+import { InvalidProjectNameError, InvalidProjectSlugError, ProjectNotFoundError } from "../errors.ts"
 import { ProjectRepository } from "../ports/project-repository.ts"
 
 export interface UpdateProjectInput {
   readonly id: ProjectId
   readonly name?: string | undefined
+  readonly slug?: string | undefined
   readonly settings?: ProjectSettings | undefined
 }
 
@@ -27,6 +27,7 @@ export type UpdateProjectError =
   | NotFoundError
   | ProjectNotFoundError
   | InvalidProjectNameError
+  | InvalidProjectSlugError
 
 export const updateProjectUseCase = Effect.fn("projects.updateProject")(function* (input: UpdateProjectInput) {
   yield* Effect.annotateCurrentSpan("project.id", input.id)
@@ -45,7 +46,6 @@ export const updateProjectUseCase = Effect.fn("projects.updateProject")(function
         )
 
       let nextName = existingProject.name
-      let nextSlug = existingProject.slug
 
       if (input.name !== undefined) {
         const trimmedName = input.name.trim()
@@ -72,25 +72,30 @@ export const updateProjectUseCase = Effect.fn("projects.updateProject")(function
               reason: "Project name already exists in this organization",
             })
           }
-
-          // Slug regenerates only when the name change actually affects the
-          // slug form (cosmetic edits like capitalization keep the URL
-          // stable). `toSlug` is bounded by SLUG_MAX_LENGTH so the comparison
-          // doesn't false-mismatch for long names whose stored slug was
-          // already capped.
-          if (toSlug(trimmedName) !== existingProject.slug) {
-            nextSlug = yield* generateSlug({
-              name: trimmedName,
-              count: (slug) => repo.countBySlug(slug, existingProject.id),
-            }).pipe(
-              Effect.catchTag("InvalidSlugInputError", (error) =>
-                Effect.fail(new InvalidProjectNameError({ name: trimmedName, reason: error.reason })),
-              ),
-            )
-          }
         }
 
         nextName = trimmedName
+      }
+
+      let nextSlug = existingProject.slug
+      if (input.slug !== undefined) {
+        const desiredSlug = toSlug(input.slug)
+        if (!desiredSlug) {
+          return yield* new InvalidProjectSlugError({
+            slug: input.slug,
+            reason: "Slug must contain at least one URL-safe character",
+          })
+        }
+        if (desiredSlug !== existingProject.slug) {
+          const collisions = yield* repo.countBySlug(desiredSlug, existingProject.id)
+          if (collisions > 0) {
+            return yield* new InvalidProjectSlugError({
+              slug: desiredSlug,
+              reason: "Another project already uses this slug",
+            })
+          }
+          nextSlug = desiredSlug
+        }
       }
 
       const now = new Date()

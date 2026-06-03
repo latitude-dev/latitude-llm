@@ -9,7 +9,7 @@ export interface Project {
     organizationId: string;
     /** Human-readable name. */
     name: string;
-    /** URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug form. */
+    /** URL-safe slug. Set from `name` at creation; renaming never changes it. It can only be changed from the dashboard, not via the API. */
     slug: string;
     settings?: LatitudeApi.ProjectSettings | undefined;
     /** ISO-8601 timestamp of the first ingested trace. `null` until the first trace lands. */

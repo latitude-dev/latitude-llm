@@ -9,9 +9,10 @@ export {
 export {
   InvalidProjectNameError,
   InvalidProjectNameError as UpdateInvalidProjectNameError,
+  InvalidProjectSlugError,
   ProjectNotFoundError,
 } from "./errors.ts"
-export { ProjectRepository } from "./ports/project-repository.ts"
+export { ProjectRepository, type ProjectRepositoryShape } from "./ports/project-repository.ts"
 export {
   type CreateProjectError,
   type CreateProjectInput,

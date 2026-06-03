@@ -7,7 +7,7 @@ import type * as LatitudeApi from "../../../../index.js";
  *     {}
  */
 export interface UpdateProjectBody {
-    /** New human-readable name. Triggers slug regeneration when the change affects the slug form (cosmetic edits like capitalization keep the URL stable). */
+    /** New human-readable name. Renaming never changes the slug. */
     name?: string;
     settings?: LatitudeApi.ProjectSettings;
     /** Enable or disable specific flaggers for the project. Keys are flagger slugs; values are the new `enabled` state. Omitted slugs are left untouched. */

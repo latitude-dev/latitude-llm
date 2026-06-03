@@ -119,7 +119,7 @@ const ResponseSchema = z
     slug: z
       .string()
       .describe(
-        "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug form.",
+        "URL-safe slug. Set from `name` at creation; renaming never changes it. It can only be changed from the dashboard, not via the API.",
       ),
     settings: ProjectSettingsSchema.nullable().describe(
       "Per-project settings overrides. `null` means inherit from the organization.",
@@ -148,13 +148,7 @@ const CreateRequestSchema = z
 
 const UpdateRequestSchema = z
   .object({
-    name: z
-      .string()
-      .min(1)
-      .optional()
-      .describe(
-        "New human-readable name. Triggers slug regeneration when the change affects the slug form (cosmetic edits like capitalization keep the URL stable).",
-      ),
+    name: z.string().min(1).optional().describe("New human-readable name. Renaming never changes the slug."),
     settings: ProjectSettingsSchema.optional().describe(
       "Replace the project's settings overrides. Omit to leave settings untouched. To clear overrides entirely, edit via the web UI.",
     ),
@@ -281,7 +275,7 @@ const updateProject = projectEndpoint({
     ...projectsFernGroup("update"),
     summary: "Update project",
     description:
-      "Updates a project's name and/or settings. Renaming may regenerate the slug — clients should re-read the response or rely on the `id` for stable references.",
+      "Updates a project's name and/or settings. Renaming never changes the slug, and the slug cannot be changed via the API (only from the dashboard). Use `id` or `slug` as stable references.",
     security: PROTECTED_SECURITY,
     request: {
       params: ProjectParamsSchema,

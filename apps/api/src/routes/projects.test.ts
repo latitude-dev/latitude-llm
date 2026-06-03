@@ -108,7 +108,7 @@ describe("Projects Routes Integration", () => {
     expect(body.items.find((p) => p.id === live.id)).toBeUndefined()
   })
 
-  it<ApiTestContext>("PATCH /v1/projects/:projectSlug updates settings and regenerates slug on rename", async ({
+  it<ApiTestContext>("PATCH /v1/projects/:projectSlug updates settings and keeps the slug stable on rename", async ({
     app,
     database,
   }) => {
@@ -126,8 +126,7 @@ describe("Projects Routes Integration", () => {
     expect(response.status).toBe(200)
     const body = (await response.json()) as ProjectRow
     expect(body.name).toBe("Completely Different")
-    expect(body.slug).not.toBe(project.slug)
-    expect(body.slug).toContain("completely-different")
+    expect(body.slug).toBe(project.slug)
     expect(body.settings).toEqual({ keepMonitoring: true })
   })
 

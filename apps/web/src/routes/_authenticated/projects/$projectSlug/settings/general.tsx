@@ -1,3 +1,4 @@
+import { toSlug } from "@domain/shared"
 import {
   Button,
   DotIndicator,
@@ -12,6 +13,7 @@ import {
   useToast,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
+import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useBlocker, useRouter } from "@tanstack/react-router"
 import { useRef, useState } from "react"
 import {
@@ -21,6 +23,7 @@ import {
 } from "../../../../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../../../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../../../../lib/errors.ts"
+import { createFormSubmitHandler, fieldErrorsAsStrings } from "../../../../../lib/form-server-action.ts"
 import { useRouteProject } from "../-route-data.ts"
 import { SettingsPage } from "./-components/settings-page.tsx"
 
@@ -85,7 +88,10 @@ function ProjectGeneralSettingsPage() {
       if (samplingIsDirty) {
         patch.settings = {
           ...currentProject.settings,
-          sampling: { enabled: view.samplingEnabled, rate: view.samplingRate / 100 },
+          sampling: {
+            enabled: view.samplingEnabled,
+            rate: view.samplingRate / 100,
+          },
         }
       }
       const transaction = updateProjectMutation(currentProject.id, patch)
@@ -178,7 +184,11 @@ function ProjectGeneralSettingsPage() {
         onEnabledChange={(checked) => setField("samplingEnabled", checked)}
         onRateChange={(percent) => setField("samplingRate", percent)}
       />
-      <DeleteProjectSection projectId={currentProject.id} projectName={currentProject.name} />
+      <DangerZoneSection
+        projectId={currentProject.id}
+        projectName={currentProject.name}
+        currentSlug={currentProject.slug}
+      />
     </SettingsPage>
   )
 }
@@ -247,22 +257,201 @@ function TraceSamplingSection({
   )
 }
 
-function DeleteProjectSection({ projectId, projectName }: { projectId: string; projectName: string }) {
-  const [open, setOpen] = useState(false)
+function DangerZoneSection({
+  projectId,
+  projectName,
+  currentSlug,
+}: {
+  projectId: string
+  projectName: string
+  currentSlug: string
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false)
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+    <div className="flex flex-col gap-6 rounded-lg border border-destructive/30 bg-destructive/5 p-6">
       <Text.H4 weight="bold" color="destructive">
-        Delete Project
+        Danger zone
       </Text.H4>
-      <Text.H5 color="destructive">
-        Permanently delete this project and all of its data. This action cannot be undone.
-      </Text.H5>
-      <div>
-        <DeleteProjectConfirmModal open={open} setOpen={setOpen} projectId={projectId} projectName={projectName} />
-        <Button variant="destructive" onClick={() => setOpen(true)}>
-          Delete Project
-        </Button>
+
+      <ChangeSlugForm projectId={projectId} currentSlug={currentSlug} />
+
+      <div className="h-px bg-destructive/30" />
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <Text.H5 weight="semibold">Delete project</Text.H5>
+          <Text.H6 color="foregroundMuted">
+            Permanently delete this project and all of its data. This action cannot be undone.
+          </Text.H6>
+        </div>
+        <div className="self-start">
+          <DeleteProjectConfirmModal
+            open={deleteOpen}
+            setOpen={setDeleteOpen}
+            projectId={projectId}
+            projectName={projectName}
+          />
+          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+            Delete project
+          </Button>
+        </div>
       </div>
+    </div>
+  )
+}
+
+function ChangeSlugForm({ projectId, currentSlug }: { projectId: string; currentSlug: string }) {
+  const { toast } = useToast()
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [confirmText, setConfirmText] = useState("")
+
+  const isConfirmed = confirmText.trim().toLowerCase() === currentSlug
+
+  const form = useForm({
+    defaultValues: { slug: currentSlug },
+    onSubmit: createFormSubmitHandler(
+      async ({ slug }: { slug: string }) => {
+        const normalized = toSlug(slug)
+        await updateProjectMutation(projectId, { slug: normalized }).isPersisted.promise
+        return normalized
+      },
+      {
+        resetOnSuccess: false,
+        onSuccess: async (normalized) => {
+          setOpen(false)
+          setConfirmText("")
+          toast({ description: `Project slug changed to "${normalized}".` })
+          window.history.pushState(null, "", `/projects/${normalized}/settings/general`)
+          await router.invalidate()
+        },
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
+  })
+
+  const closeAndReset = () => {
+    setOpen(false)
+    setConfirmText("")
+    form.reset()
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <Text.H5 weight="semibold">Project slug</Text.H5>
+        <Text.H6 color="foregroundMuted">
+          The slug is part of your telemetry destination. Changing it breaks ingestion until you point your
+          instrumentation at the new slug.
+        </Text.H6>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          setOpen(true)
+        }}
+        className="flex w-full flex-col gap-3 @[800px]:max-w-md"
+      >
+        <form.Field name="slug">
+          {(field) => (
+            <Input
+              type="text"
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              errors={fieldErrorsAsStrings(field.state.meta.errors)}
+              placeholder={currentSlug}
+              aria-label="Project slug"
+            />
+          )}
+        </form.Field>
+        <form.Subscribe selector={(s) => [s.values.slug, s.isSubmitting] as const}>
+          {([slugValue, isSubmitting]) => {
+            const normalized = toSlug(slugValue)
+            const canOpen = normalized.length > 0 && normalized !== currentSlug
+            return (
+              <div className="self-start">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={!canOpen || isSubmitting}
+                  onClick={() => setOpen(true)}
+                >
+                  Change slug
+                </Button>
+              </div>
+            )
+          }}
+        </form.Subscribe>
+      </form>
+
+      <Modal
+        dismissible
+        open={open}
+        onOpenChange={(v) => {
+          if (!v) closeAndReset()
+          else setOpen(v)
+        }}
+        title="⚠️ Change project slug"
+        description={`Changing the slug from "${currentSlug}" breaks ingestion until your app points at the new slug. Existing traces stay under the project; only newly ingested traces are affected.`}
+        footer={
+          <form.Subscribe selector={(s) => [s.values.slug, s.isSubmitting] as const}>
+            {([slugValue, isSubmitting]) => {
+              const normalized = toSlug(slugValue)
+              const canApply = !isSubmitting && normalized.length > 0 && normalized !== currentSlug && isConfirmed
+              return (
+                <>
+                  <Button type="button" variant="outline" onClick={closeAndReset} disabled={isSubmitting}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    form="change-slug-form"
+                    variant="destructive"
+                    disabled={!canApply}
+                    isLoading={isSubmitting}
+                  >
+                    Change slug
+                  </Button>
+                </>
+              )
+            }}
+          </form.Subscribe>
+        }
+      >
+        <form
+          id="change-slug-form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void form.handleSubmit()
+          }}
+        >
+          <FormWrapper>
+            <form.Field name="slug">
+              {(field) => (
+                <Input
+                  type="text"
+                  label="New slug"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  errors={fieldErrorsAsStrings(field.state.meta.errors)}
+                  placeholder={currentSlug}
+                  aria-label="New project slug"
+                />
+              )}
+            </form.Field>
+            <Input
+              type="text"
+              label={`Type the current slug "${currentSlug}" to confirm`}
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={currentSlug}
+              aria-label="Confirm current slug"
+            />
+          </FormWrapper>
+        </form>
+      </Modal>
     </div>
   )
 }
