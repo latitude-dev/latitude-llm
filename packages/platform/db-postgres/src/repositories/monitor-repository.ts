@@ -14,6 +14,7 @@ import { alertIncidents } from "../schema/alert-incidents.ts"
 import { monitorAlerts } from "../schema/monitor-alerts.ts"
 import { monitors } from "../schema/monitors.ts"
 import { projects } from "../schema/projects.ts"
+import { nameMatchScore } from "./org-search.ts"
 
 const toMonitorAlert = (row: typeof monitorAlerts.$inferSelect): MonitorAlert => ({
   id: row.id as MonitorAlert["id"],
@@ -244,6 +245,16 @@ export const MonitorRepositoryLive = Layer.effect(
             isNull(projects.deletedAt),
             trimmed ? ilike(monitors.name, `%${trimmed}%`) : undefined,
           )
+          // Best name match first (exact > prefix > substring), then system monitors, then newest.
+          // With no query every row scores equally, so it falls back to system-first then newest.
+          const orderBy = trimmed
+            ? [
+                desc(nameMatchScore(monitors.name, trimmed)),
+                desc(monitors.system),
+                desc(monitors.createdAt),
+                asc(monitors.id),
+              ]
+            : [desc(monitors.system), desc(monitors.createdAt), asc(monitors.id)]
 
           const rows = yield* sqlClient.query((db) =>
             db
@@ -260,8 +271,7 @@ export const MonitorRepositoryLive = Layer.effect(
               .from(monitors)
               .innerJoin(projects, eq(projects.id, monitors.projectId))
               .where(where)
-              // System monitors land at the top, otherwise newest first.
-              .orderBy(desc(monitors.system), desc(monitors.createdAt), asc(monitors.id))
+              .orderBy(...orderBy)
               .limit(limit),
           )
 

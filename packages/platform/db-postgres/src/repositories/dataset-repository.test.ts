@@ -464,4 +464,49 @@ describe("DatasetRepositoryLive searchOrgWide", () => {
     )
     expect(results).toHaveLength(1)
   })
+
+  it("orders by name-match quality: exact, then prefix, then substring", async () => {
+    const t = new Date("2025-02-02T12:00:00.000Z")
+    await pg.db.insert(datasets).values([
+      // Inserted substring-first to prove ordering isn't just insertion/recency order.
+      {
+        id: makeId("dsm3"),
+        organizationId: SEARCH_ORG_ID,
+        projectId: SEARCH_PROJECT_A,
+        slug: "my-zebra-log",
+        name: "My Zebra Log",
+        currentVersion: 0,
+        createdAt: t,
+        updatedAt: t,
+      },
+      {
+        id: makeId("dsm2"),
+        organizationId: SEARCH_ORG_ID,
+        projectId: SEARCH_PROJECT_A,
+        slug: "zebra-report",
+        name: "Zebra Report",
+        currentVersion: 0,
+        createdAt: t,
+        updatedAt: t,
+      },
+      {
+        id: makeId("dsm1"),
+        organizationId: SEARCH_ORG_ID,
+        projectId: SEARCH_PROJECT_A,
+        slug: "zebra",
+        name: "Zebra",
+        currentVersion: 0,
+        createdAt: t,
+        updatedAt: t,
+      },
+    ])
+
+    const results = await runSearch(
+      Effect.gen(function* () {
+        const repo = yield* DatasetRepository
+        return yield* repo.searchOrgWide({ searchQuery: "zebra", limit: 25 })
+      }),
+    )
+    expect(results.map((r) => r.name)).toEqual(["Zebra", "Zebra Report", "My Zebra Log"])
+  })
 })

@@ -1149,4 +1149,33 @@ describe("MonitorRepositoryLive searchOrgWide", () => {
     const results = await search({ searchQuery: "error", limit: 1 })
     expect(results).toHaveLength(1)
   })
+
+  it("orders by name-match quality first, then system monitors as a tiebreak", async () => {
+    const t = new Date("2026-05-30T12:00:00.000Z")
+    const mk = (id: string, slug: string, name: string, system: boolean): typeof monitorsTable.$inferInsert => ({
+      id: monId(id),
+      organizationId: searchOrgId,
+      projectId: projA,
+      slug,
+      name,
+      description: "",
+      system,
+      mutedAt: null,
+      deletedAt: null,
+      createdAt: t,
+      updatedAt: t,
+    })
+    // Exact match must lead even though it's non-system; among the two equal-score prefix matches,
+    // the system monitor wins the tiebreak.
+    await database.db
+      .insert(monitorsTable)
+      .values([
+        mk("mzm3", "zebra-user", "Zebra User", false),
+        mk("mzm2", "zebra-system", "Zebra System", true),
+        mk("mzm1", "zebra", "Zebra", false),
+      ])
+
+    const results = await search({ searchQuery: "zebra", limit: 25 })
+    expect(results.map((r) => r.name)).toEqual(["Zebra", "Zebra System", "Zebra User"])
+  })
 })

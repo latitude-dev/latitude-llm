@@ -540,4 +540,37 @@ describe("SavedSearchRepositoryLive searchOrgWide", () => {
     )
     expect(results).toHaveLength(1)
   })
+
+  it("orders by name-match quality: exact, then prefix, then substring", async () => {
+    const t = new Date("2025-03-02T12:00:00.000Z")
+    const mk = (id: string, slug: string, name: string) => ({
+      id: ssId(id),
+      organizationId: SS_ORG_ID,
+      projectId: SS_PROJECT_A,
+      slug,
+      name,
+      query: "x",
+      filterSet: {},
+      assignedUserId: null,
+      createdByUserId: CREATOR_USER_ID,
+      createdAt: t,
+      updatedAt: t,
+    })
+    // Inserted substring-first to prove ordering isn't just insertion/recency order.
+    await pg.db
+      .insert(savedSearches)
+      .values([
+        mk("ssm3", "my-zebra-log", "My Zebra Log"),
+        mk("ssm2", "zebra-report", "Zebra Report"),
+        mk("ssm1", "zebra", "Zebra"),
+      ])
+
+    const results = await runSearch(
+      Effect.gen(function* () {
+        const repo = yield* SavedSearchRepository
+        return yield* repo.searchOrgWide({ searchQuery: "zebra", limit: 25 })
+      }),
+    )
+    expect(results.map((r) => r.name)).toEqual(["Zebra", "Zebra Report", "My Zebra Log"])
+  })
 })

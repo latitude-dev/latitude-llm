@@ -68,7 +68,8 @@ export interface SavedSearchRepositoryShape {
   /**
    * Org-wide name search across every project in the organization (RLS-scoped to the caller's
    * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
-   * saved-search name; omit it to list the most recent. Soft-deleted saved searches and saved
+   * saved-search name, ordered by match quality (exact > prefix > substring) then most recent; omit
+   * it to list the most recent. Soft-deleted saved searches and saved
    * searches in soft-deleted projects are excluded.
    */
   searchOrgWide(args: {

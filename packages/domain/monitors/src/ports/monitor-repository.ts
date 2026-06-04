@@ -65,7 +65,8 @@ export interface MonitorRepositoryShape {
   /**
    * Org-wide name search across every project in the organization (RLS-scoped to the caller's
    * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
-   * monitor name; omit it to list the most recent. Soft-deleted monitors and monitors in
+   * monitor name, ordered by match quality (exact > prefix > substring), then system monitors, then
+   * most recent; omit it to list system monitors first, then the most recent. Soft-deleted monitors and monitors in
    * soft-deleted projects are excluded.
    */
   searchOrgWide(input: {

@@ -82,10 +82,13 @@ export const createFakeSavedSearchRepository = (seed: readonly SavedSearch[] = [
     searchOrgWide: ({ searchQuery, limit }) =>
       Effect.sync(() => {
         const q = searchQuery?.trim().toLowerCase()
+        // Best name match first then newest, mirroring the live repo's ordering.
+        const score = (name: string) =>
+          !q ? 1 : name.toLowerCase() === q ? 3 : name.toLowerCase().startsWith(q) ? 2 : 1
         return [...rows.values()]
           .filter(isLive)
           .filter((row) => (q ? row.name.toLowerCase().includes(q) : true))
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .sort((a, b) => score(b.name) - score(a.name) || b.createdAt.getTime() - a.createdAt.getTime())
           .slice(0, limit)
           .map((row) => ({
             id: row.id,

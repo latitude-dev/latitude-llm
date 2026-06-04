@@ -145,8 +145,14 @@ export const createFakeDatasetRepository = (
       Effect.sync(() => {
         const q = args.searchQuery?.trim().toLowerCase()
         const matched = [...datasets.values()].filter((d) => !d.deletedAt && (!q || d.name.toLowerCase().includes(q)))
-        // Newest-first, mirroring the live repo's `desc(createdAt), desc(id)` ordering.
-        const sorted = matched.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || cmpStrings(b.id, a.id))
+        // Best name match first then newest, mirroring the live repo's `nameMatchScore desc,
+        // createdAt desc, id desc` ordering.
+        const score = (name: string) =>
+          !q ? 1 : name.toLowerCase() === q ? 3 : name.toLowerCase().startsWith(q) ? 2 : 1
+        const sorted = matched.sort(
+          (a, b) =>
+            score(b.name) - score(a.name) || b.createdAt.getTime() - a.createdAt.getTime() || cmpStrings(b.id, a.id),
+        )
         return sorted.slice(0, args.limit).map((d) => ({
           id: d.id,
           projectId: d.projectId,

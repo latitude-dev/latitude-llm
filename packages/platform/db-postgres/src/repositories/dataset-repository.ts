@@ -15,6 +15,7 @@ import type { Operator } from "../client.ts"
 import { datasets } from "../schema/datasets.ts"
 import { datasetVersions } from "../schema/datasetVersions.ts"
 import { projects } from "../schema/projects.ts"
+import { nameMatchScore } from "./org-search.ts"
 
 const toDomainDataset = (row: typeof datasets.$inferSelect, latestVersionId?: string | null): Dataset => ({
   id: DatasetId(row.id),
@@ -224,6 +225,9 @@ export const DatasetRepositoryLive = Layer.effect(
             isNull(projects.deletedAt),
             ...(trimmed ? [ilike(datasets.name, `%${trimmed}%`)] : []),
           )
+          const orderBy = trimmed
+            ? [desc(nameMatchScore(datasets.name, trimmed)), desc(datasets.createdAt), desc(datasets.id)]
+            : [desc(datasets.createdAt), desc(datasets.id)]
 
           const rows = yield* sqlClient.query((db) =>
             db
@@ -238,9 +242,9 @@ export const DatasetRepositoryLive = Layer.effect(
               .from(datasets)
               .innerJoin(projects, eq(projects.id, datasets.projectId))
               .where(where)
-              // Newest-first, matching the "most recent" contract and the other org-wide searches
-              // (saved searches / monitors).
-              .orderBy(desc(datasets.createdAt), desc(datasets.id))
+              // Best name match first (exact > prefix > substring), then most recent. With no
+              // query every row scores equally, so it falls back to newest-first.
+              .orderBy(...orderBy)
               .limit(args.limit),
           )
 

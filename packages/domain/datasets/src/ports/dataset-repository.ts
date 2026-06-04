@@ -69,7 +69,8 @@ export class DatasetRepository extends Context.Service<
     /**
      * Org-wide name search across every project in the organization (RLS-scoped to the caller's
      * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
-     * dataset name; omit it to list the most recent datasets. Soft-deleted datasets and datasets in
+     * dataset name, ordered by match quality (exact > prefix > substring) then most recent; omit it
+     * to list the most recent datasets. Soft-deleted datasets and datasets in
      * soft-deleted projects are excluded.
      */
     searchOrgWide(args: {
