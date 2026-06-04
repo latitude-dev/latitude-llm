@@ -21,7 +21,12 @@
       "ignoreDependencies": ["@temporalio/worker", "voyageai"]
     },
     "apps/web": {
-      "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
+      "entry": [
+        "src/router.tsx",
+        "src/start.ts",
+        "src/routes/**/*.tsx",
+        "src/domains/sandbox/sandbox-lifecycle.functions.ts"
+      ],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignore": [
         "src/domains/feature-flags/feature-flags.collection.ts"

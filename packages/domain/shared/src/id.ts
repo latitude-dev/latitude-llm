@@ -30,6 +30,8 @@ export type UserId = Id<"UserId">
 export type OrganizationId = Id<"OrganizationId">
 export type MembershipId = Id<"MembershipId">
 export type InvitationId = Id<"InvitationId">
+// Test Mode sandbox-attributes row id (1:1 with a sandbox organization)
+export type SandboxId = Id<"SandboxId">
 
 // Project-related IDs
 export type ProjectId = Id<"ProjectId">
@@ -82,6 +84,7 @@ export const SessionId = (value: string): SessionId => value as SessionId
 export const OrganizationId = (value: string): OrganizationId => value as OrganizationId
 export const MembershipId = (value: string): MembershipId => value as MembershipId
 export const InvitationId = (value: string): InvitationId => value as InvitationId
+export const SandboxId = (value: string): SandboxId => value as SandboxId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
 export const OrganizationFeatureFlagId = (value: string): OrganizationFeatureFlagId =>
@@ -117,6 +120,7 @@ export const userIdSchema = cuidSchema.transform(UserId)
 export const organizationIdSchema = cuidSchema.transform(OrganizationId)
 export const membershipIdSchema = cuidSchema.transform(MembershipId)
 export const invitationIdSchema = cuidSchema.transform(InvitationId)
+export const sandboxIdSchema = cuidSchema.transform(SandboxId)
 export const projectIdSchema = cuidSchema.transform(ProjectId)
 export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
 export const organizationFeatureFlagIdSchema = cuidSchema.transform(OrganizationFeatureFlagId)

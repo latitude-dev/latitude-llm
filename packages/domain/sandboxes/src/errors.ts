@@ -1,12 +1,5 @@
 import { Data } from "effect"
 
-/**
- * Ingestion refused because the sandbox is archived (asleep). Mirrors billing's
- * `NoCreditsRemainingError` (402): a loud, pre-persist 4xx. 403 — and crucially
- * *not* 429 — so OTLP exporters treat it as non-retryable and drop the batch
- * instead of retry-looping. The `kind` surfaced at the HTTP boundary is
- * `"SandboxArchived"`.
- */
 export class SandboxArchivedError extends Data.TaggedError("SandboxArchivedError")<{
   readonly organizationId: string
 }> {
@@ -14,14 +7,40 @@ export class SandboxArchivedError extends Data.TaggedError("SandboxArchivedError
   readonly httpMessage = "Sandbox is archived (asleep). Reactivate it to resume ingestion."
 }
 
-/**
- * Ingestion refused because the sandbox exceeded its per-period span quota.
- * Same loud-refuse path as {@link SandboxArchivedError}; `kind` is
- * `"SandboxQuotaExceeded"`.
- */
 export class SandboxQuotaExceededError extends Data.TaggedError("SandboxQuotaExceededError")<{
   readonly organizationId: string
 }> {
   readonly httpStatus = 403
   readonly httpMessage = "Sandbox span quota exceeded for the current period."
+}
+
+export class NotSandboxError extends Data.TaggedError("NotSandboxError")<{
+  readonly organizationId: string
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "This organization is not a sandbox."
+}
+
+export class SandboxAccessDeniedError extends Data.TaggedError("SandboxAccessDeniedError")<{
+  readonly organizationId: string
+  readonly userId: string
+}> {
+  readonly httpStatus = 403
+  readonly httpMessage = "You must be a member of the parent organization to manage its sandboxes."
+}
+export class SandboxNotFoundError extends Data.TaggedError("SandboxNotFoundError")<{
+  readonly organizationId: string
+}> {
+  readonly httpStatus = 404
+  readonly httpMessage = "Sandbox not found"
+}
+
+export class SandboxActiveCapReachedError extends Data.TaggedError("SandboxActiveCapReachedError")<{
+  readonly cap: number
+  readonly planSlug: string
+}> {
+  readonly httpStatus = 403
+  get httpMessage() {
+    return `Active sandbox limit reached (${this.cap}). Archive or delete a sandbox before adding another.`
+  }
 }

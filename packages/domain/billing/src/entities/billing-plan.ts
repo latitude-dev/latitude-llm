@@ -14,6 +14,7 @@ export const billingPlanSchema = z.object({
   // (which, like `includedCredits`, simply won't round-trip through the JSON
   // plan cache — re-resolved on miss).
   spanQuotaPerPeriod: z.number(),
+  sandboxActiveCap: z.number().int().nonnegative(),
 })
 
 export type BillingPlan = z.infer<typeof billingPlanSchema>

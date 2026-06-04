@@ -21,6 +21,13 @@ export const ACTION_CREDITS: Record<ChargeableAction, number> = {
   "eval-generation": 1000,
 } as const
 
+/**
+ * Test Mode active-sandbox cap for Enterprise. A finite "high number" rather
+ * than `Infinity` so it round-trips through the integer plan schema; no real
+ * org approaches it, so it acts as effectively unbounded.
+ */
+export const ENTERPRISE_SANDBOX_ACTIVE_CAP = 1000
+
 export const FREE_PLAN_CONFIG = {
   slug: "free" as const,
   selfServe: false,
@@ -32,6 +39,7 @@ export const FREE_PLAN_CONFIG = {
   // Per-period sandbox span ceiling (Test Mode abuse guard, not billed). Read
   // through `resolveEffectivePlan`; enforced as a loud ingest refusal.
   spanQuotaPerPeriod: 100_000,
+  sandboxActiveCap: 1,
 } as const
 
 export const PRO_PLAN_CONFIG = {
@@ -45,6 +53,7 @@ export const PRO_PLAN_CONFIG = {
   overageCreditsPerUnit: 10_000,
   overagePriceCentsPerUnit: 2000,
   spanQuotaPerPeriod: 1_000_000,
+  sandboxActiveCap: 15,
 } as const
 
 /** Upper bound for `billing_usage_periods.included_credits` (Postgres `integer`). */
@@ -59,6 +68,7 @@ export const ENTERPRISE_PLAN_CONFIG = {
   hardCapped: false,
   priceCents: null as null,
   spanQuotaPerPeriod: Number.POSITIVE_INFINITY,
+  sandboxActiveCap: ENTERPRISE_SANDBOX_ACTIVE_CAP,
 } as const
 
 export type PlanConfig = {
@@ -70,6 +80,8 @@ export type PlanConfig = {
   hardCapped: boolean
   priceCents: number | null
   spanQuotaPerPeriod: number
+  /** Max number of *active* sandboxes an org on this plan may have. */
+  sandboxActiveCap: number
 }
 
 export const PLAN_CONFIGS: Record<PlanSlug, PlanConfig> = {

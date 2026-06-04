@@ -1,24 +1,50 @@
-import { organizationIdSchema } from "@domain/shared"
+import {
+  generateId,
+  type OrganizationId,
+  organizationIdSchema,
+  type SandboxId,
+  sandboxIdSchema,
+  type UserId,
+  userIdSchema,
+} from "@domain/shared"
 import { z } from "zod"
 
 export const sandboxStatusSchema = z.enum(["active", "archived"])
 export type SandboxStatus = z.infer<typeof sandboxStatusSchema>
 
-/**
- * Sandbox attributes (Test Mode) — the 1:1 row that hangs off a sandbox
- * organization (an `organizations` row with `parent_org_id IS NOT NULL`).
- * Carries the sleep/wake lifecycle (`status`, `lastActivityAt`) and creator
- * attribution. The row's presence is itself the operational signal that an org
- * is a sandbox.
- */
 export const sandboxSchema = z.object({
-  id: z.string(),
+  id: sandboxIdSchema,
   organizationId: organizationIdSchema,
   status: sandboxStatusSchema,
   lastActivityAt: z.date(),
-  createdByUserId: z.string(),
+  createdByUserId: userIdSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
 })
 
 export type Sandbox = z.infer<typeof sandboxSchema>
+
+/**
+ * Factory for a freshly-created sandbox attributes row — starts `active` with
+ * `lastActivityAt` stamped now.
+ */
+export const createSandbox = (params: {
+  id?: SandboxId | undefined
+  organizationId: OrganizationId
+  createdByUserId: UserId
+  status?: SandboxStatus
+  lastActivityAt?: Date
+  createdAt?: Date
+  updatedAt?: Date
+}): Sandbox => {
+  const now = new Date()
+  return sandboxSchema.parse({
+    id: params.id ?? generateId<"SandboxId">(),
+    organizationId: params.organizationId,
+    status: params.status ?? "active",
+    lastActivityAt: params.lastActivityAt ?? now,
+    createdByUserId: params.createdByUserId,
+    createdAt: params.createdAt ?? now,
+    updatedAt: params.updatedAt ?? now,
+  })
+}

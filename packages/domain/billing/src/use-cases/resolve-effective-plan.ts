@@ -34,6 +34,7 @@ const buildResolvedPlan = (input: {
   priceCents: input.priceCents,
   spendingLimitCents: input.slug === "pro" ? input.spendingLimitCents : null,
   spanQuotaPerPeriod: input.spanQuotaPerPeriod,
+  sandboxActiveCap: PLAN_CONFIGS[input.slug].sandboxActiveCap,
 })
 
 const resolveOverridePlan = (input: {
@@ -146,6 +147,7 @@ export interface EffectivePlanResolution {
     readonly priceCents: number | null
     readonly spendingLimitCents: number | null
     readonly spanQuotaPerPeriod: number
+    readonly sandboxActiveCap: number
   }
   readonly source: "override" | "subscription" | "free-fallback"
   readonly periodStart: Date
@@ -164,7 +166,11 @@ export const resolveEffectivePlan = Effect.fn("billing.resolveEffectivePlan")(fu
   const spendingLimitCents = settings.billing?.spendingLimitCents ?? null
 
   if (override) {
-    return resolveOverridePlan({ organizationId, override, spendingLimitCents })
+    return resolveOverridePlan({
+      organizationId,
+      override,
+      spendingLimitCents,
+    })
   }
 
   const subLookup = yield* StripeSubscriptionLookup

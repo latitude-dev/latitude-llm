@@ -157,11 +157,11 @@ const runUseCase = (
   )
 
 const makeSandbox = (status: Sandbox["status"]): Sandbox => ({
-  id: generateId(),
+  id: generateId<"SandboxId">(),
   organizationId: ORGANIZATION_ID,
   status,
   lastActivityAt: new Date("2026-01-01T00:00:00Z"),
-  createdByUserId: generateId(),
+  createdByUserId: generateId<"UserId">(),
   createdAt: new Date("2026-01-01T00:00:00Z"),
   updatedAt: new Date("2026-01-01T00:00:00Z"),
 })

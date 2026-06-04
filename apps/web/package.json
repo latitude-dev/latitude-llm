@@ -36,6 +36,7 @@
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",
+    "@domain/sandboxes": "workspace:*",
     "@domain/saved-searches": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
