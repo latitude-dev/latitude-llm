@@ -87,6 +87,9 @@ Lifecycle side effects:
 - manual resolve opens a confirmation modal with a keep-monitoring toggle
 - that toggle defaults from `keepMonitoring`, after project settings fall back to organization settings when project-level `keepMonitoring` is unset, and can be overridden for the specific resolve action
 - the confirmed toggle state decides whether linked evaluations stay active or archive
+- resolving or ignoring an issue closes any open `issue.escalating` incident immediately (emits `IssueEscalationEnded` with reason `resolved`/`ignored`). Ignored and resolved issues no longer drive lifecycle/alerting transitions, so the stale escalation is cleared. This close is silent — unlike an organic de-escalation it does not send a recovery notification
+
+The `escalating` state is backed by an open `issue.escalating` row in `alert_incidents`, not recomputed from the occurrence aggregate. A seasonal detector opens/closes that row; closes fire on the absolute-rate backstop, a band-shape + dwell recovery, or a 72h hard timeout. Issues with no seasonal history (e.g. a normally-silent issue hit by a one-off burst) use the same band-shape + dwell exit on the close side, so they de-escalate shortly after going quiet rather than waiting on the 72h ceiling.
 
 Important state timestamps:
 
