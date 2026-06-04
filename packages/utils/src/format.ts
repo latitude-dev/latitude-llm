@@ -107,12 +107,7 @@ export function safeParseJson(
   if (value === "") return fallback === "string" ? "" : {}
 
   try {
-    return (JSON.parse(value || "{}") ?? {}) as
-      | string
-      | number
-      | boolean
-      | Record<string, unknown>
-      | unknown[]
+    return (JSON.parse(value || "{}") ?? {}) as string | number | boolean | Record<string, unknown> | unknown[]
   } catch {
     return fallback === "string" ? value : {}
   }

@@ -3,13 +3,7 @@ import { cuidSchema } from "@domain/shared"
 import { z } from "@hono/zod-openapi"
 
 const RowFieldValueSchema = z
-  .union([
-    z.string(),
-    z.number(),
-    z.boolean(),
-    z.array(z.unknown()),
-    z.record(z.string(), z.unknown()),
-  ])
+  .union([z.string(), z.number(), z.boolean(), z.array(z.unknown()), z.record(z.string(), z.unknown())])
   .describe("Free-form cell value: any JSON scalar, array, or object.")
 
 export const DatasetRowSchema = z
