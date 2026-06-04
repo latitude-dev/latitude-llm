@@ -1,7 +1,7 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
-import { CodeBlock, Icon, Text, useMountEffect } from "@repo/ui"
+import { Button, CopyableText, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
 import { useQueryClient } from "@tanstack/react-query"
-import { CheckIcon, ChevronDownIcon, ChevronRightIcon, Loader2Icon } from "lucide-react"
+import { ArrowRightIcon, CheckIcon, Loader2Icon, TelescopeIcon, XIcon } from "lucide-react"
 import { useMemo, useRef, useState } from "react"
 import { useApiKeysCollection } from "../../../../../domains/api-keys/api-keys.collection.ts"
 import type { ProjectRecord } from "../../../../../domains/projects/projects.functions.ts"
@@ -15,15 +15,15 @@ function stackChoiceFromOnboardingType(onboardingType: ProjectRecord["settings"]
 }
 
 /**
- * Onboarding-style empty state for a project that has never received a trace.
- * Mirrors the onboarding telemetry step: it shows install/connect instructions
- * and polls for the first trace, transitioning into the populated table the
- * moment one arrives.
+ * Empty state for a project that has never received a trace. Keeps the surface
+ * calm: a faint skeleton of the trace list signals "your traces show up here",
+ * while a compact card surfaces the two essentials (slug + API key) and a CTA
+ * that opens the full install instructions in a side sheet. Meanwhile it polls
+ * for the first trace and transitions into the populated table once one lands.
  *
- * When the organization already has other connected projects, it leads with a
- * lighter "point some traffic to this project's slug" experience — that user
- * almost certainly already has instrumentation and just needs to target a new
- * slug — with the full setup tucked behind a disclosure.
+ * When the organization already has other connected projects, the copy leads
+ * with "point some traffic to this slug" (that user already has instrumentation
+ * and just needs to retarget it); otherwise it frames a first-time setup.
  */
 export function TracesEmptyOnboarding({
   project,
@@ -36,7 +36,7 @@ export function TracesEmptyOnboarding({
   const stackChoice = stackChoiceFromOnboardingType(project.settings.onboardingType)
 
   const [traceReceived, setTraceReceived] = useState(false)
-  const [showFullSetup, setShowFullSetup] = useState(false)
+  const [setupOpen, setSetupOpen] = useState(false)
   const pollTimeoutRef = useRef<number | undefined>(undefined)
   const transitionTimeoutRef = useRef<number | undefined>(undefined)
   const projectIdRef = useRef(project.id)
@@ -88,31 +88,109 @@ export function TracesEmptyOnboarding({
   })
 
   return (
-    <div className="h-full w-full overflow-y-auto overscroll-y-contain p-8 [scrollbar-gutter:stable]">
-      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-6">
-        <div className="flex flex-col gap-3">
-          <Text.H2 weight="medium">
-            {traceReceived ? "Trace received. Loading…" : "Connect this project to start receiving traces"}
-          </Text.H2>
-          <Text.H4 color="foregroundMuted">
-            {orgHasConnectedProjects
-              ? "Your organization is already sending traces to Latitude. Point some of your traffic to this project's slug, or set it up from scratch below."
-              : "Traces capture every LLM call your application makes. Follow the steps below to start streaming them into this project."}
-          </Text.H4>
-          <TraceWaitingIndicator traceReceived={traceReceived} />
-        </div>
-
-        {orgHasConnectedProjects ? (
-          <AdditionalProjectInstructions
-            project={project}
-            stackChoice={stackChoice}
-            showFullSetup={showFullSetup}
-            onToggleFullSetup={() => setShowFullSetup((open) => !open)}
-          />
-        ) : (
-          <TelemetryInstructions stackChoice={stackChoice} projectSlug={project.slug} />
-        )}
+    <div className="relative h-full w-full overflow-hidden">
+      <TracesSkeletonBackdrop />
+      <div className="absolute inset-0 flex items-center justify-center overflow-y-auto p-8">
+        <ConnectCard
+          project={project}
+          orgHasConnectedProjects={orgHasConnectedProjects}
+          traceReceived={traceReceived}
+          onOpenSetup={() => setSetupOpen(true)}
+        />
       </div>
+      <TracesSetupSheet
+        open={setupOpen}
+        onClose={() => setSetupOpen(false)}
+        stackChoice={stackChoice}
+        projectSlug={project.slug}
+      />
+    </div>
+  )
+}
+
+/** Decorative, non-interactive ghost of the trace list — "traces appear here". */
+function TracesSkeletonBackdrop() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden p-4 opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent)]"
+    >
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div
+            key={`skeleton-row-${i}`}
+            className="flex flex-row items-center gap-4 rounded-lg border border-border/50 px-4 py-3"
+          >
+            <Skeleton className="h-2.5 w-2.5 rounded-full" />
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-44" />
+            <div className="ml-auto flex flex-row items-center gap-4">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-3 w-12" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ConnectCard({
+  project,
+  orgHasConnectedProjects,
+  traceReceived,
+  onOpenSetup,
+}: {
+  readonly project: ProjectRecord
+  readonly orgHasConnectedProjects: boolean
+  readonly traceReceived: boolean
+  readonly onOpenSetup: () => void
+}) {
+  const { data: apiKeysList } = useApiKeysCollection()
+  const defaultApiKeyToken = useMemo(() => {
+    const keys = apiKeysList ?? []
+    return keys.find((k) => k.name === DEFAULT_API_KEY_NAME)?.token ?? null
+  }, [apiKeysList])
+
+  const headline = orgHasConnectedProjects ? "Send traces to this project" : "Waiting for your first trace"
+  const subcopy = orgHasConnectedProjects
+    ? "Your organization already sends traces to Latitude. Point some of your traffic to this project's slug — or set it up from scratch."
+    : "This is where your traces will appear. Instrument your app with Latitude to start streaming them in."
+  const ctaLabel = orgHasConnectedProjects ? "Full setup instructions" : "Set up tracing"
+
+  return (
+    <div className="flex w-full max-w-md flex-col gap-5 rounded-xl border border-border bg-background p-6 shadow-lg">
+      <div className="flex flex-col gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+          <Icon icon={TelescopeIcon} color="foregroundMuted" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Text.H4 weight="medium">{headline}</Text.H4>
+          <Text.H5 color="foregroundMuted">{subcopy}</Text.H5>
+        </div>
+      </div>
+
+      <TraceWaitingIndicator traceReceived={traceReceived} />
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <Text.H6 color="foregroundMuted">Project slug</Text.H6>
+          <CopyableText value={project.slug} size="sm" ellipsis tooltip="Copy project slug" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Text.H6 color="foregroundMuted">API key</Text.H6>
+          {defaultApiKeyToken ? (
+            <CopyableText value={defaultApiKeyToken} size="sm" ellipsis tooltip="Copy API key" />
+          ) : (
+            <Text.H6 color="foregroundMuted">Use any key from Settings → API Keys.</Text.H6>
+          )}
+        </div>
+      </div>
+
+      <Button className="w-full justify-center" onClick={onOpenSetup}>
+        {ctaLabel}
+        <Icon icon={ArrowRightIcon} size="sm" />
+      </Button>
     </div>
   )
 }
@@ -132,71 +210,31 @@ function TraceWaitingIndicator({ traceReceived }: { readonly traceReceived: bool
   )
 }
 
-/**
- * Slug-forward variant for projects in an org that already has traces flowing.
- * Leads with the project slug + default key (the only things that change when
- * retargeting existing instrumentation), with full setup behind a disclosure.
- */
-function AdditionalProjectInstructions({
-  project,
+/** Side sheet holding the full install instructions, opened from the connect card. */
+function TracesSetupSheet({
+  open,
+  onClose,
   stackChoice,
-  showFullSetup,
-  onToggleFullSetup,
+  projectSlug,
 }: {
-  readonly project: ProjectRecord
+  readonly open: boolean
+  readonly onClose: () => void
   readonly stackChoice: StackChoice
-  readonly showFullSetup: boolean
-  readonly onToggleFullSetup: () => void
+  readonly projectSlug: string
 }) {
-  const { data: apiKeysList } = useApiKeysCollection()
-  const defaultApiKeyToken = useMemo(() => {
-    const keys = apiKeysList ?? []
-    return keys.find((k) => k.name === DEFAULT_API_KEY_NAME)?.token ?? null
-  }, [apiKeysList])
-
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4">
-        <div className="flex flex-col gap-1">
-          <Text.H5M>Send traces to this project</Text.H5M>
-          <Text.H5 color="foregroundMuted">
-            Set the project to this slug (or send the <code className="text-xs">X-Latitude-Project</code> header with
-            it) on the traffic you want to land here. Keep using your existing Latitude API key.
-          </Text.H5>
+    <Sheet open={open} onClose={onClose} closeAriaLabel="Close setup panel">
+      <div className="flex h-full w-screen max-w-[600px] flex-col bg-background">
+        <div className="flex shrink-0 flex-row items-center justify-between border-b border-border px-6 py-4">
+          <Text.H4 weight="medium">Set up tracing</Text.H4>
+          <Button variant="outline" className="h-8 w-8 p-0" onClick={onClose}>
+            <Icon icon={XIcon} size="sm" />
+          </Button>
         </div>
-
-        <div className="flex flex-col gap-2">
-          <Text.H5M>Project slug</Text.H5M>
-          <CodeBlock value={project.slug} copyable />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Text.H5M>Latitude API key</Text.H5M>
-          {defaultApiKeyToken ? (
-            <CodeBlock value={defaultApiKeyToken} copyable />
-          ) : (
-            <Text.H5 color="foregroundMuted">
-              Use any Latitude API key from Settings → API Keys (the same one your other projects already use).
-            </Text.H5>
-          )}
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
+          <TelemetryInstructions stackChoice={stackChoice} projectSlug={projectSlug} />
         </div>
       </div>
-
-      <div className="flex flex-col gap-3">
-        <button
-          type="button"
-          onClick={onToggleFullSetup}
-          className="flex w-fit cursor-pointer flex-row items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <Icon icon={showFullSetup ? ChevronDownIcon : ChevronRightIcon} size="sm" />
-          <Text.H5>First time setting up? Full installation instructions</Text.H5>
-        </button>
-        {showFullSetup ? (
-          <div className="flex flex-col gap-6">
-            <TelemetryInstructions stackChoice={stackChoice} projectSlug={project.slug} />
-          </div>
-        ) : null}
-      </div>
-    </div>
+    </Sheet>
   )
 }
