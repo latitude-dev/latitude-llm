@@ -2,9 +2,7 @@ import { defineConfig } from "tsdown"
 
 export default defineConfig([
   {
-    // Thin entry-point that checks the Node.js version before loading index.ts.
-    // Carries the shebang; index.ts is imported dynamically so the version check
-    // runs before any module with Node 20+ APIs is evaluated.
+    // Bin entry: version-checks before dynamically loading index.ts.
     entry: ["src/entry.ts"],
     format: ["esm"],
     dts: false,

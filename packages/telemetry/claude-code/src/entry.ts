@@ -11,4 +11,9 @@ if (error) {
   process.exit(0) // fail-open — do not block Claude Code
 }
 
-await import("./index.js")
+try {
+  await import("./index.js")
+} catch (err) {
+  process.stderr.write(`[latitude-claude-code] failed to load: ${String(err)}\n`)
+  process.exit(0)
+}

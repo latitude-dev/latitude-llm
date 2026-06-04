@@ -498,7 +498,7 @@ function setSystemdBunOptions(): void {
 
 function writeEnvironmentDConf(): void {
   mkdirSync(dirname(ENVIRONMENT_D_CONF_PATH), { recursive: true })
-  writeFileSync(ENVIRONMENT_D_CONF_PATH, `BUN_OPTIONS=--preload=${INTERCEPT_INSTALL_PATH}\n`, "utf-8")
+  writeFileSync(ENVIRONMENT_D_CONF_PATH, `BUN_OPTIONS="--preload=${INTERCEPT_INSTALL_PATH}"\n`, "utf-8")
 }
 
 function readSystemdBunOptions(): string | undefined {
