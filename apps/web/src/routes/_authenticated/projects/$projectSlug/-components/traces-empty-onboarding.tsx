@@ -96,6 +96,13 @@ export function TracesEmptyOnboarding({
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background"
       />
+      {/* Layer 2b: radial scrim — solid background behind the content that
+          dissolves into the skeleton with no edge, so it grounds the content
+          without reading as a card or modal. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-background [-webkit-mask-image:radial-gradient(ellipse_70%_55%_at_50%_50%,black_35%,transparent_72%)] [mask-image:radial-gradient(ellipse_70%_55%_at_50%_50%,black_35%,transparent_72%)]"
+      />
       {/* Layer 3: the actual centered content. */}
       <div className="absolute inset-0 flex items-center justify-center overflow-y-auto p-8">
         <ConnectCard
@@ -187,25 +194,24 @@ function ConnectCard({
   const ctaLabel = orgHasConnectedProjects ? "Full setup instructions" : "Set up tracing"
 
   return (
-    <div className="flex w-full max-w-md flex-col gap-5 rounded-xl border border-border bg-background p-6 shadow-lg">
-      <div className="flex flex-col gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-          <Icon icon={TelescopeIcon} color="foregroundMuted" />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Text.H4 weight="medium">{headline}</Text.H4>
-          <Text.H5 color="foregroundMuted">{subcopy}</Text.H5>
-        </div>
+    <div className="flex w-full max-w-md flex-col items-start gap-5">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+        <Icon icon={TelescopeIcon} size="lg" color="foregroundMuted" />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Text.H3 weight="medium">{headline}</Text.H3>
+        <Text.H5 color="foregroundMuted">{subcopy}</Text.H5>
       </div>
 
       <TraceWaitingIndicator traceReceived={traceReceived} />
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-col items-start gap-2">
+        <div className="flex flex-row items-center gap-2">
           <Text.H6 color="foregroundMuted">Project slug</Text.H6>
           <CopyableText value={project.slug} size="sm" ellipsis tooltip="Copy project slug" />
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-row items-center gap-2">
           <Text.H6 color="foregroundMuted">API key</Text.H6>
           {defaultApiKeyToken ? (
             <CopyableText value={defaultApiKeyToken} size="sm" ellipsis tooltip="Copy API key" />
@@ -215,7 +221,7 @@ function ConnectCard({
         </div>
       </div>
 
-      <Button className="w-full justify-center" onClick={onOpenSetup}>
+      <Button onClick={onOpenSetup}>
         {ctaLabel}
         <Icon icon={ArrowRightIcon} size="sm" />
       </Button>
