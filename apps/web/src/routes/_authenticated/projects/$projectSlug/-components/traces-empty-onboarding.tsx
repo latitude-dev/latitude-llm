@@ -1,5 +1,5 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
-import { Button, CopyableText, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
+import { Button, CopyableText, HistogramSkeleton, Icon, Sheet, Skeleton, Text, useMountEffect } from "@repo/ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { ArrowRightIcon, CheckIcon, Loader2Icon, TelescopeIcon, XIcon } from "lucide-react"
 import { useMemo, useRef, useState } from "react"
@@ -89,7 +89,14 @@ export function TracesEmptyOnboarding({
 
   return (
     <div className="relative h-full w-full overflow-hidden">
+      {/* Layer 1: a full skeleton of the page, rendered at normal strength. */}
       <TracesSkeletonBackdrop />
+      {/* Layer 2: gradient that fades the skeleton into the page background. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background"
+      />
+      {/* Layer 3: the actual centered content. */}
       <div className="absolute inset-0 flex items-center justify-center overflow-y-auto p-8">
         <ConnectCard
           project={project}
@@ -108,28 +115,49 @@ export function TracesEmptyOnboarding({
   )
 }
 
-/** Decorative, non-interactive ghost of the trace list — "traces appear here". */
+/**
+ * Decorative, non-interactive skeleton of the real Traces page — the aggregations
+ * panel (metric tiles + histogram) on top, the trace list below — so the user sees
+ * the shape of what will appear here. Rendered at normal strength; the gradient
+ * layer above handles fading it into the background.
+ */
 function TracesSkeletonBackdrop() {
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 overflow-hidden p-4 opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent)]"
-    >
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: 8 }, (_, i) => (
-          <div
-            key={`skeleton-row-${i}`}
-            className="flex flex-row items-center gap-4 rounded-lg border border-border/50 px-4 py-3"
-          >
-            <Skeleton className="h-2.5 w-2.5 rounded-full" />
-            <Skeleton className="h-3 w-28" />
-            <Skeleton className="h-3 w-44" />
-            <div className="ml-auto flex flex-row items-center gap-4">
-              <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-3 w-12" />
-            </div>
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="flex flex-col gap-4 p-6">
+        {/* Aggregations panel: metric tiles + histogram. */}
+        <div className="flex flex-col gap-3 rounded-lg bg-secondary p-2">
+          <div className="flex flex-row gap-2 overflow-hidden">
+            {Array.from({ length: 7 }, (_, i) => (
+              <div
+                key={`metric-tile-${i}`}
+                className="flex basis-[176px] min-w-[176px] shrink-0 flex-col gap-2 rounded-md p-2"
+              >
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+            ))}
           </div>
-        ))}
+          <HistogramSkeleton />
+        </div>
+
+        {/* Trace list rows. */}
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 8 }, (_, i) => (
+            <div
+              key={`trace-row-${i}`}
+              className="flex flex-row items-center gap-4 rounded-lg border border-border/50 px-4 py-3"
+            >
+              <Skeleton className="h-2.5 w-2.5 rounded-full" />
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-3 w-44" />
+              <div className="ml-auto flex flex-row items-center gap-4">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
