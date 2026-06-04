@@ -288,6 +288,44 @@ describe("DatasetRowClickHouseRepository", () => {
       expect(row.input).toEqual({ code: "yellow72", nested: { a: 1 } })
       expect(row.output).toEqual({ answer: 42 })
     })
+
+    it("preserves JSON arrays through round-trip", async () => {
+      const rowId = DatasetRowId("json-arr-1")
+      const conversation = [
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "hello" },
+      ]
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [{ id: rowId, input: conversation, output: ["a", "b"] }],
+        }),
+      )
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toEqual(conversation)
+      expect(row.output).toEqual(["a", "b"])
+    })
+
+    it("preserves scalar number and boolean values through round-trip", async () => {
+      const rowId = DatasetRowId("json-scalar-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [{ id: rowId, input: 42, output: true }],
+        }),
+      )
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toBe(42)
+      expect(row.output).toBe(true)
+    })
   })
 
   describe("findById", () => {

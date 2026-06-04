@@ -4049,11 +4049,21 @@
                 "type": "string"
               },
               {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              },
+              {
                 "type": "object",
                 "additionalProperties": {}
               }
             ],
-            "description": "Free-form cell value. Either a plain string or an arbitrary JSON object."
+            "description": "Free-form cell value: any JSON scalar, array, or object."
           },
           "output": {
             "anyOf": [
@@ -4061,16 +4071,36 @@
                 "type": "string"
               },
               {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              },
+              {
                 "type": "object",
                 "additionalProperties": {}
               }
             ],
-            "description": "Free-form cell value. Either a plain string or an arbitrary JSON object."
+            "description": "Free-form cell value: any JSON scalar, array, or object."
           },
           "expectedOutput": {
             "anyOf": [
               {
                 "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
               },
               {
                 "type": "object",
@@ -4085,11 +4115,21 @@
                 "type": "string"
               },
               {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {}
+              },
+              {
                 "type": "object",
                 "additionalProperties": {}
               }
             ],
-            "description": "Free-form cell value. Either a plain string or an arbitrary JSON object."
+            "description": "Free-form cell value: any JSON scalar, array, or object."
           },
           "createdAt": {
             "type": "string",

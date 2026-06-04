@@ -103,11 +103,16 @@ export function formatDuration(ns: number): string {
 export function safeParseJson(
   value: string,
   { fallback = "object" }: { fallback?: "object" | "string" } = {},
-): string | Record<string, unknown> {
+): string | number | boolean | Record<string, unknown> | unknown[] {
   if (value === "") return fallback === "string" ? "" : {}
 
   try {
-    return (JSON.parse(value || "{}") ?? {}) as Record<string, unknown>
+    return (JSON.parse(value || "{}") ?? {}) as
+      | string
+      | number
+      | boolean
+      | Record<string, unknown>
+      | unknown[]
   } catch {
     return fallback === "string" ? value : {}
   }
