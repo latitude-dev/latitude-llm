@@ -15,6 +15,8 @@ interface PostHogIdentityProps {
   readonly userName?: string | null | undefined
   readonly organizationId: string
   readonly organizationName?: string | null | undefined
+  readonly organizationSlug?: string | null | undefined
+  readonly organizationPlan?: string | null | undefined
   readonly excludeFromAnalytics: boolean
 }
 
@@ -24,6 +26,8 @@ export function PostHogIdentity({
   userName,
   organizationId,
   organizationName,
+  organizationSlug,
+  organizationPlan,
   excludeFromAnalytics,
 }: PostHogIdentityProps) {
   useEffect(() => {
@@ -35,9 +39,22 @@ export function PostHogIdentity({
       },
       organizationId,
       organizationName,
+      organizationSlug,
+      organizationPlan,
       excludeFromAnalytics,
     })
-  }, [userId, userEmail, userName, organizationId, organizationName, excludeFromAnalytics])
+    // `organizationPlan` resolves asynchronously from the billing query; when it
+    // arrives the effect re-runs and group() is updated (idempotent).
+  }, [
+    userId,
+    userEmail,
+    userName,
+    organizationId,
+    organizationName,
+    organizationSlug,
+    organizationPlan,
+    excludeFromAnalytics,
+  ])
 
   return null
 }

@@ -105,6 +105,8 @@ interface SyncSessionInput {
   readonly user: IdentifyUserInput
   readonly organizationId: string
   readonly organizationName?: string | null | undefined
+  readonly organizationSlug?: string | null | undefined
+  readonly organizationPlan?: string | null | undefined
   readonly excludeFromAnalytics: boolean
 }
 
@@ -113,8 +115,15 @@ interface SyncSessionInput {
  *
  * When the session is internal (staff email or impersonation), opt out of
  * capturing so no events, recordings, or person records are created. When
- * it's a real customer session, opt in, handle user-change resets, and
- * call identify + group.
+ * it's a real customer session, set identity + super properties + the active
+ * org group, then opt in.
+ *
+ * Ordering matters: `opt_in_capturing()` fires the session's first `$pageview`,
+ * so identify/register/group MUST run first. Otherwise that pageview (and any
+ * autocapture before group() resolves) lands with `organizationId = None` and
+ * no `$group_0`, which makes org-based retention / funnels / breakdowns read as
+ * zero. `register()` is the belt-and-suspenders that keeps `organizationId` on
+ * events even if they fire before `group()` takes effect.
  */
 export const syncPostHogSession = async (input: SyncSessionInput): Promise<void> => {
   if (input.excludeFromAnalytics) {
@@ -122,29 +131,40 @@ export const syncPostHogSession = async (input: SyncSessionInput): Promise<void>
     return
   }
 
-  await setPostHogCaptureEnabled(true)
+  const posthog = await loadInstance()
+  if (!posthog) return
 
   const previousUserId = getLastIdentifiedUserId()
   const userChanged = !!(previousUserId && previousUserId !== input.user.id)
   setLastIdentifiedUserId(input.user.id)
 
-  const posthog = await loadInstance()
-  if (!posthog) return
-
+  // reset() clears distinct_id, super properties, and groups — so it must run
+  // before we re-establish them below.
   if (userChanged) {
     posthog.reset()
   }
 
+  // Super property: attaches organizationId to every subsequent event,
+  // including ones captured before group() is wired up.
+  posthog.register({ organizationId: input.organizationId })
+
   posthog.identify(input.user.id, {
     email: input.user.email,
+    organizationId: input.organizationId,
     ...(input.user.name ? { name: input.user.name } : {}),
   })
 
-  posthog.group(
-    "organization",
-    input.organizationId,
-    input.organizationName ? { name: input.organizationName } : undefined,
-  )
+  // Group properties power org-named cells in group-aggregated insights and
+  // plan/slug breakdowns. Only send keys we actually have.
+  const orgProps: Record<string, string> = {}
+  if (input.organizationName) orgProps.name = input.organizationName
+  if (input.organizationSlug) orgProps.slug = input.organizationSlug
+  if (input.organizationPlan) orgProps.plan = input.organizationPlan
+  posthog.group("organization", input.organizationId, Object.keys(orgProps).length > 0 ? orgProps : undefined)
+
+  // Opt in last so the implicit first pageview inherits identity + super
+  // properties + the org group set above.
+  posthog.opt_in_capturing()
 }
 
 /**

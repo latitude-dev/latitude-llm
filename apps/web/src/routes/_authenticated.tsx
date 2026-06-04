@@ -358,6 +358,13 @@ function AuthenticatedLayout() {
   })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
+  // Shares the query key with BillingCreditCounter so this is deduped, not a
+  // second request. Used to tag the PostHog org group with its plan.
+  const { data: billingOverview } = useQuery({
+    queryKey: ["billing", "overview", organizationId],
+    queryFn: () => getBillingOverview(),
+    staleTime: 30_000,
+  })
 
   return (
     <IntercomProvider identity={supportIdentity} floatingButton="none">
@@ -370,6 +377,8 @@ function AuthenticatedLayout() {
             userName={user.name}
             organizationId={organizationId}
             organizationName={org?.name}
+            organizationSlug={org?.slug}
+            organizationPlan={billingOverview?.planSlug}
             excludeFromAnalytics={isLatitudeStaffEmail(user.email) || impersonatedBy != null}
           />
           {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}

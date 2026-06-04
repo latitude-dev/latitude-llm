@@ -1,8 +1,15 @@
 import { OutboxEventWriter } from "@domain/events"
+import { MembershipRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
-import { OutboxEventWriterLive, type PostgresClient, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  MembershipRepositoryLive,
+  OutboxEventWriterLive,
+  type PostgresClient,
+  ProjectRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect, Layer } from "effect"
 import { getPostgresClient } from "../clients.ts"
@@ -61,6 +68,20 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
 
         if (project.firstTraceAt) return
 
+        // Resolve the org owner so the milestone is attributed to a real user
+        // in analytics (see FirstTraceReceived payload docs — keeps it an
+        // identified PostHog event so `$group_0` materializes). Best-effort:
+        // a lookup failure falls back to no actor rather than dropping the
+        // event. Prefer the owner, else the earliest member. This only runs on
+        // the first trace per project (the fast-path return above gates it).
+        const membershipRepo = yield* MembershipRepository
+        const memberships = yield* membershipRepo
+          .listByOrganizationId(OrganizationId(payload.organizationId))
+          .pipe(Effect.orElseSucceed(() => []))
+        const owner =
+          memberships.find((m) => m.role === "owner") ??
+          [...memberships].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0]
+
         // Emit the milestone event. The fast-path check above + BullMQ's
         // per-projectId dedupeKey means this runs at most once per project
         // in practice (the dedupe TTL collapses concurrent spans).
@@ -74,6 +95,7 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
             organizationId: payload.organizationId,
             projectId: payload.projectId,
             traceId: payload.traceId,
+            ...(owner ? { actorUserId: owner.userId } : {}),
             ...(project.settings?.onboardingType ? { onboardingType: project.settings.onboardingType } : {}),
           },
         })
@@ -97,7 +119,7 @@ export const createProjectsWorker = ({ consumer, postgresClient }: ProjectsDeps)
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive),
+          Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive, MembershipRepositoryLive),
           pgClient,
           OrganizationId(payload.organizationId),
         ),
