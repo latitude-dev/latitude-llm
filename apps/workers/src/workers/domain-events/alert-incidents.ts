@@ -95,7 +95,7 @@ const closeIncidentFor = (
     readonly projectId: string
     readonly issueId: string
     readonly endedAt: Date
-    readonly reason?: "threshold" | "absolute-rate-drop" | "timeout"
+    readonly reason?: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
   },
 ) => {
   const pgClient = getPostgresClient()

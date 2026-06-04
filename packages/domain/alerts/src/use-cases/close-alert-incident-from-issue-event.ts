@@ -13,11 +13,11 @@ export interface CloseAlertIncidentFromIssueEventInput {
   /**
    * Forwarded to the `IncidentClosed` outbox event so downstream consumers
    * (notifications copy, dashboards) can tell whether the band exit, the
-   * absolute-rate backstop, or the 72h timeout closed the incident. Optional
-   * because legacy `IssueEscalationEnded` events emitted before the seasonal
-   * detector landed don't carry a reason.
+   * absolute-rate backstop, the 72h timeout, or a manual resolve/ignore
+   * closed the incident. Optional because legacy `IssueEscalationEnded`
+   * events emitted before the seasonal detector landed don't carry a reason.
    */
-  readonly reason?: "threshold" | "absolute-rate-drop" | "timeout"
+  readonly reason?: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
 }
 
 export type CloseAlertIncidentFromIssueEventError = RepositoryError

@@ -235,7 +235,7 @@ const _registry = {
       readonly projectId: string
       readonly issueId: string
       readonly endedAt: string
-      readonly reason: "threshold" | "absolute-rate-drop" | "timeout"
+      readonly reason: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
     }
   }>(),
 

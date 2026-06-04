@@ -121,6 +121,10 @@ export interface EventPayloads {
    *     the seasonal baseline caught up — wouldn't close on `threshold` alone).
    *   - `timeout`: the 72h hard ceiling kicked in (backstop against
    *     ghost incidents that never recover their snapshot conditions).
+   *   - `resolved` / `ignored`: the user manually resolved or ignored the
+   *     issue, so the open escalation is stale and closed directly. Emitted
+   *     by `applyIssueLifecycleCommandUseCase` (not the detector); these
+   *     close silently — see the notification gate in `domain-events.ts`.
    *
    * Drives the `issue.escalating` incident's close transition — the
    * alert-incidents worker sets `ended_at` on the open row, which is what
@@ -131,7 +135,7 @@ export interface EventPayloads {
     readonly projectId: string
     readonly issueId: string
     readonly endedAt: string
-    readonly reason: "threshold" | "absolute-rate-drop" | "timeout"
+    readonly reason: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
   }
   /**
    * Emitted by the alert-incidents worker after an `alert_incidents` row is
@@ -165,7 +169,7 @@ export interface EventPayloads {
     readonly kind: AlertIncidentKind
     readonly sourceType: AlertIncidentSourceType
     readonly sourceId: string
-    readonly reason?: "threshold" | "absolute-rate-drop" | "timeout"
+    readonly reason?: "threshold" | "absolute-rate-drop" | "timeout" | "resolved" | "ignored"
   }
   AnnotationDeleted: {
     readonly organizationId: string

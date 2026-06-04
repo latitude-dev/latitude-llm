@@ -181,7 +181,15 @@ export interface SeasonalEscalationDecisionInput {
 
 export type SeasonalEscalationTransition = "enter" | "exit" | "none"
 
-export type SeasonalEscalationExitReason = "threshold" | "absolute-rate-drop" | "timeout"
+export type SeasonalEscalationExitReason =
+  | "threshold"
+  | "absolute-rate-drop"
+  | "timeout"
+  // Manual lifecycle closes: the user resolved or ignored the issue, so the
+  // open escalation is stale and gets closed directly (no organic recovery).
+  // These are emitted by `applyIssueLifecycleCommandUseCase`, not the detector.
+  | "resolved"
+  | "ignored"
 
 export interface SeasonalEscalationDecision {
   readonly transition: SeasonalEscalationTransition
