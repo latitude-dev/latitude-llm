@@ -9,9 +9,10 @@ import { CodeBlockControls } from "../../code-block/code-block-controls.tsx"
 import { type HighlightRange, TextSelectionContext } from "../text-selection.tsx"
 import { CodeBlockShell } from "./code-block-shell.tsx"
 import { JsonContent } from "./json-content.tsx"
+import { remarkCodeContentPositions } from "./remark-code-content-positions.ts"
 import { sourceMappedTextPlugin } from "./source-mapped-text-plugin.ts"
 
-const remarkPlugins = [remarkGfm, remarkEmoji, remarkBreaks] as const
+const remarkPlugins = [remarkGfm, remarkEmoji, remarkBreaks, remarkCodeContentPositions] as const
 
 // `rehype-highlight` only tokenizes `<code>` elements that carry a
 // `language-*` class (i.e. fences with an explicit language); it leaves
