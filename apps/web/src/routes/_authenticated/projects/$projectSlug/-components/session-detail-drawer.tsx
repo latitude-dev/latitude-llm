@@ -52,7 +52,7 @@ export function SessionDetailDrawer({
     projectId,
     sessionId,
   })
-  const { traces } = useSessionTraces({ projectId, sessionId })
+  const { traces } = useSessionTraces({ projectId, sessionId, traceIds: session?.traceIds ?? [] })
 
   // The session search returns hits from the trace search index, which can
   // reference traces that have no row in the `sessions` table. Two cases

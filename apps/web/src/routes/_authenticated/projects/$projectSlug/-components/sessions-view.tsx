@@ -69,29 +69,26 @@ function useExpandedSessionTraces(
   expandedIds: ReadonlySet<string>,
   sessions: readonly SessionRecord[],
 ) {
-  const expandedSessionIds = useMemo(
-    () => sessions.filter((s) => expandedIds.has(s.sessionId)).map((s) => s.sessionId),
-    [sessions, expandedIds],
-  )
+  const expandedSessions = useMemo(() => sessions.filter((s) => expandedIds.has(s.sessionId)), [sessions, expandedIds])
 
   // Shared cache with the session panel's `useSessionTraces` — same key, same
-  // query function, same limit. With the panel open on an expanded row the
-  // ClickHouse query runs once and both surfaces read from it.
+  // query function. With the panel open on an expanded row the ClickHouse query
+  // runs once and both surfaces read from it.
   const results = useQueries({
-    queries: expandedSessionIds.map((sessionId) => sessionTracesQueryOptions(projectId, sessionId)),
+    queries: expandedSessions.map((s) => sessionTracesQueryOptions(projectId, s.sessionId, s.traceIds)),
   })
 
   return useMemo(() => {
     const traceMap = new Map<string, { data: readonly TraceRecord[]; isLoading: boolean }>()
     for (let i = 0; i < results.length; i++) {
       const r = results[i]
-      const sessionId = expandedSessionIds[i]
-      if (!r || !sessionId) continue
+      const session = expandedSessions[i]
+      if (!r || !session) continue
       const isLoading = r.isPending || (r.isFetching && r.data === undefined)
-      traceMap.set(sessionId, { data: r.data ?? [], isLoading })
+      traceMap.set(session.sessionId, { data: r.data ?? [], isLoading })
     }
     return traceMap
-  }, [results, expandedSessionIds])
+  }, [results, expandedSessions])
 }
 
 interface SessionsViewProps {
