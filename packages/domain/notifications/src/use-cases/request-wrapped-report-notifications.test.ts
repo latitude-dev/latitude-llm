@@ -26,6 +26,7 @@ function setup(memberUserIds: readonly string[] = [cuid("ua"), cuid("ub")]) {
 
   const memberships = MembershipRepository.of({
     findById: () => Effect.die("not used"),
+    findFirstOwner: () => Effect.die("not used"),
     listByOrganizationId: () =>
       Effect.succeed(
         members.map(

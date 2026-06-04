@@ -106,6 +106,7 @@ function setup(opts: SetupOpts = {}) {
 
   const memberships = MembershipRepository.of({
     findById: () => Effect.die("not used"),
+    findFirstOwner: () => Effect.die("not used"),
     listByOrganizationId: () =>
       Effect.succeed(
         members.map(
