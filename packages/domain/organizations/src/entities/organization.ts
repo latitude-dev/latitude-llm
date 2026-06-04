@@ -57,7 +57,9 @@ export const createOrganization = (params: {
 /**
  * Whether this org is a Test Mode sandbox (sibling tenant of a live parent).
  *
- * @knipignore — consumed by sandbox use-cases landing in later Test Mode PRs
- * (AGE-103+); this PR only seats the schema + predicate.
+ * Type predicate so callers can use the narrowed `parentOrgId` without a
+ * redundant null check (the sandbox middleware relies on this).
  */
-export const isSandbox = (org: Pick<Organization, "parentOrgId">): boolean => org.parentOrgId !== null
+export const isSandbox = <T extends Pick<Organization, "parentOrgId">>(
+  org: T,
+): org is T & { readonly parentOrgId: OrganizationId } => org.parentOrgId !== null

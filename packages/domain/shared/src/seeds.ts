@@ -334,3 +334,50 @@ export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
 export const SEED_LATITUDE_TELEMETRY_PROJECT_ID = ProjectId("rvknrpb3afjbcb7gzw3wlbvf")
 export const SEED_LATITUDE_TELEMETRY_PROJECT_NAME = "Latitude Telemetry"
 export const SEED_LATITUDE_TELEMETRY_PROJECT_SLUG = "latitude-telemetry"
+
+// ---------------------------------------------------------------------------
+// Test Mode — second org (empty-sandbox state) and Acme sandboxes
+// ---------------------------------------------------------------------------
+
+/**
+ * Second top-level org with no sandboxes. Exercises the "create your first
+ * sandbox" empty state distinct from Acme (which has two sandboxes seeded
+ * below) so Wave 2 UI work can demo both branches against `pnpm db:seed`.
+ */
+export const SEED_BETA_ORG_ID = OrganizationId("bet4c00rg1seed00000000ab")
+export const SEED_BETA_ORG_NAME = "Beta Co."
+export const SEED_BETA_ORG_SLUG = "beta"
+
+export const SEED_BETA_OWNER_USER_ID = UserId("bet4ownr0user000000000ab")
+export const SEED_BETA_OWNER_EMAIL = "owner@beta.com"
+export const SEED_BETA_OWNER_MEMBERSHIP_ID = MembershipId("bet4ownr0memb000000000ab")
+
+export const SEED_BETA_MEMBER_USER_ID = UserId("bet4mbr10user000000000ab")
+export const SEED_BETA_MEMBER_EMAIL = "alex@beta.com"
+export const SEED_BETA_MEMBER_MEMBERSHIP_ID = MembershipId("bet4mbr10memb000000000ab")
+
+export const SEED_BETA_PROJECT_ID = ProjectId("bet4pr0j0default00000ab1")
+export const SEED_BETA_PROJECT_NAME = "Support Agent"
+export const SEED_BETA_PROJECT_SLUG = "default-project"
+
+/**
+ * Acme sandbox #1 — `active`. Has one linked sandbox project pointing at
+ * Acme's default project by stable id.
+ */
+export const SEED_ACME_SANDBOX_ACTIVE_ORG_ID = OrganizationId("acmesbx1act000000000000a")
+export const SEED_ACME_SANDBOX_ACTIVE_NAME = "Dev sandbox"
+export const SEED_ACME_SANDBOX_ACTIVE_SLUG = "acme-dev-sandbox"
+/** PK of the 1:1 sandbox-attrs row keyed to `SEED_ACME_SANDBOX_ACTIVE_ORG_ID`. */
+export const SEED_ACME_SANDBOX_ACTIVE_ATTRS_ID = "acmesbx1act0attrs00000a1"
+/** Sandbox project under the active sandbox, linked to `SEED_PROJECT_ID`. */
+export const SEED_ACME_SANDBOX_ACTIVE_PROJECT_ID = ProjectId("acmesbx1act0proj000000a1")
+
+/**
+ * Acme sandbox #2 — `archived`. Idle past the 7-day threshold; surfaces the
+ * "asleep / reactivate" branch in the UI.
+ */
+export const SEED_ACME_SANDBOX_ARCHIVED_ORG_ID = OrganizationId("acmesbx2arc000000000000a")
+export const SEED_ACME_SANDBOX_ARCHIVED_NAME = "Old sandbox"
+export const SEED_ACME_SANDBOX_ARCHIVED_SLUG = "acme-old-sandbox"
+export const SEED_ACME_SANDBOX_ARCHIVED_ATTRS_ID = "acmesbx2arc0attrs00000a2"
+export const SEED_ACME_SANDBOX_ARCHIVED_PROJECT_ID = ProjectId("acmesbx2arc0proj000000a2")

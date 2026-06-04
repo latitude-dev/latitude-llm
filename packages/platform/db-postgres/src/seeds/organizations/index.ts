@@ -28,6 +28,7 @@ import {
 import { Effect } from "effect"
 import { users as usersTable } from "../../schema/better-auth.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
+import { sandboxOrganizationSeeders } from "./sandboxes.ts"
 
 const seedUsers: Seeder = {
   name: "organizations/users",
@@ -161,4 +162,12 @@ const seedMemberships: Seeder = {
     }),
 }
 
-export const organizationSeeders: readonly Seeder[] = [seedUsers, seedOrganizations, seedMemberships]
+export const organizationSeeders: readonly Seeder[] = [
+  seedUsers,
+  seedOrganizations,
+  seedMemberships,
+  // Test Mode fixtures: second top-level org (empty-sandbox state) + two
+  // sandboxes (active, archived) under Acme so Wave 2 UI demos against
+  // real data on a fresh `pnpm db:seed`. See AGE-126.
+  ...sandboxOrganizationSeeders,
+]

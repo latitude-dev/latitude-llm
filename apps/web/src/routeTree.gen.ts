@@ -30,6 +30,8 @@ import { Route as AuthConsentRouteImport } from './routes/auth/consent'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as Char91DotwellKnownChar93OpenidConfigurationRouteImport } from './routes/[.well-known]/openid-configuration'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
+import { Route as SandboxSandboxOrgIdRouteRouteImport } from './routes/sandbox/$sandboxOrgId/route'
+import { Route as SandboxSandboxOrgIdIndexRouteImport } from './routes/sandbox/$sandboxOrgId/index'
 import { Route as BackofficeOrganizationsIndexRouteImport } from './routes/backoffice/organizations/index'
 import { Route as BackofficeFeatureFlagsIndexRouteImport } from './routes/backoffice/feature-flags/index'
 import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
@@ -173,6 +175,18 @@ const Char91DotwellKnownChar93OauthAuthorizationServerRoute =
     id: '/.well-known/oauth-authorization-server',
     path: '/.well-known/oauth-authorization-server',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const SandboxSandboxOrgIdRouteRoute =
+  SandboxSandboxOrgIdRouteRouteImport.update({
+    id: '/sandbox/$sandboxOrgId',
+    path: '/sandbox/$sandboxOrgId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SandboxSandboxOrgIdIndexRoute =
+  SandboxSandboxOrgIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => SandboxSandboxOrgIdRouteRoute,
   } as any)
 const BackofficeOrganizationsIndexRoute =
   BackofficeOrganizationsIndexRouteImport.update({
@@ -396,6 +410,7 @@ export interface FileRoutesByFullPath {
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdRouteRouteWithChildren
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
   '/.well-known/openid-configuration': typeof Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren
   '/api/health': typeof ApiHealthRoute
@@ -425,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
+  '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
@@ -481,6 +497,7 @@ export interface FileRoutesByTo {
   '/api/observability-test': typeof ApiObservabilityTestIndexRoute
   '/backoffice/feature-flags': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations': typeof BackofficeOrganizationsIndexRoute
+  '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdIndexRoute
   '/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
   '/api/auth/mcp/authorize': typeof ApiAuthMcpAuthorizeRoute
@@ -511,6 +528,7 @@ export interface FileRoutesById {
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/sandbox/$sandboxOrgId': typeof SandboxSandboxOrgIdRouteRouteWithChildren
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
   '/.well-known/openid-configuration': typeof Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren
   '/api/health': typeof ApiHealthRoute
@@ -541,6 +559,7 @@ export interface FileRoutesById {
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/backoffice/feature-flags/': typeof BackofficeFeatureFlagsIndexRoute
   '/backoffice/organizations/': typeof BackofficeOrganizationsIndexRoute
+  '/sandbox/$sandboxOrgId/': typeof SandboxSandboxOrgIdIndexRoute
   '/_authenticated/projects/$projectSlug/onboarding': typeof AuthenticatedProjectsProjectSlugOnboardingRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteWithChildren
   '/api/auth/$provider/start': typeof ApiAuthProviderStartRoute
@@ -573,6 +592,7 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/'
     | '/login'
+    | '/sandbox/$sandboxOrgId'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/openid-configuration'
     | '/api/health'
@@ -602,6 +622,7 @@ export interface FileRouteTypes {
     | '/api/observability-test/'
     | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
+    | '/sandbox/$sandboxOrgId/'
     | '/projects/$projectSlug/onboarding'
     | '/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
@@ -658,6 +679,7 @@ export interface FileRouteTypes {
     | '/api/observability-test'
     | '/backoffice/feature-flags'
     | '/backoffice/organizations'
+    | '/sandbox/$sandboxOrgId'
     | '/projects/$projectSlug/onboarding'
     | '/api/auth/$provider/start'
     | '/api/auth/mcp/authorize'
@@ -687,6 +709,7 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/_authenticated'
     | '/login'
+    | '/sandbox/$sandboxOrgId'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/openid-configuration'
     | '/api/health'
@@ -717,6 +740,7 @@ export interface FileRouteTypes {
     | '/api/observability-test/'
     | '/backoffice/feature-flags/'
     | '/backoffice/organizations/'
+    | '/sandbox/$sandboxOrgId/'
     | '/_authenticated/projects/$projectSlug/onboarding'
     | '/_authenticated/projects/$projectSlug/settings'
     | '/api/auth/$provider/start'
@@ -748,6 +772,7 @@ export interface RootRouteChildren {
   DesignSystemRouteRoute: typeof DesignSystemRouteRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  SandboxSandboxOrgIdRouteRoute: typeof SandboxSandboxOrgIdRouteRouteWithChildren
   Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
   Char91DotwellKnownChar93OpenidConfigurationRoute: typeof Char91DotwellKnownChar93OpenidConfigurationRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
@@ -915,6 +940,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/.well-known/oauth-authorization-server'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/sandbox/$sandboxOrgId': {
+      id: '/sandbox/$sandboxOrgId'
+      path: '/sandbox/$sandboxOrgId'
+      fullPath: '/sandbox/$sandboxOrgId'
+      preLoaderRoute: typeof SandboxSandboxOrgIdRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sandbox/$sandboxOrgId/': {
+      id: '/sandbox/$sandboxOrgId/'
+      path: '/'
+      fullPath: '/sandbox/$sandboxOrgId/'
+      preLoaderRoute: typeof SandboxSandboxOrgIdIndexRouteImport
+      parentRoute: typeof SandboxSandboxOrgIdRouteRoute
     }
     '/backoffice/organizations/': {
       id: '/backoffice/organizations/'
@@ -1317,6 +1356,20 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface SandboxSandboxOrgIdRouteRouteChildren {
+  SandboxSandboxOrgIdIndexRoute: typeof SandboxSandboxOrgIdIndexRoute
+}
+
+const SandboxSandboxOrgIdRouteRouteChildren: SandboxSandboxOrgIdRouteRouteChildren =
+  {
+    SandboxSandboxOrgIdIndexRoute: SandboxSandboxOrgIdIndexRoute,
+  }
+
+const SandboxSandboxOrgIdRouteRouteWithChildren =
+  SandboxSandboxOrgIdRouteRoute._addFileChildren(
+    SandboxSandboxOrgIdRouteRouteChildren,
+  )
+
 interface Char91DotwellKnownChar93OauthAuthorizationServerRouteChildren {
   Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
 }
@@ -1376,6 +1429,7 @@ const rootRouteChildren: RootRouteChildren = {
   DesignSystemRouteRoute: DesignSystemRouteRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  SandboxSandboxOrgIdRouteRoute: SandboxSandboxOrgIdRouteRouteWithChildren,
   Char91DotwellKnownChar93OauthAuthorizationServerRoute:
     Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren,
   Char91DotwellKnownChar93OpenidConfigurationRoute:
