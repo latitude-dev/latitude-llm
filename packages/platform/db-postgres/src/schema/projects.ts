@@ -19,6 +19,7 @@ export const projects = latitudeSchema.table(
     firstTraceAt: tzTimestamp("first_trace_at"),
     deletedAt: tzTimestamp("deleted_at"),
     lastEditedAt: tzTimestamp("last_edited_at").notNull().defaultNow(),
+    linkedProjectId: cuid("linked_project_id", { default: false }),
     ...timestamps(),
   },
   (t) => [
@@ -29,5 +30,6 @@ export const projects = latitudeSchema.table(
     // backfills any duplicates with `-{6-char-id}` suffixes before adding
     // this constraint.
     unique("projects_unique_slug_per_organization_idx").on(t.organizationId, t.slug, t.deletedAt).nullsNotDistinct(),
+    index("projects_linked_project_id_idx").on(t.linkedProjectId),
   ],
 )

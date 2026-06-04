@@ -20,6 +20,7 @@ const toDomainOrganization = (row: typeof organizations.$inferSelect) => ({
   logo: row.logo,
   metadata: row.metadata,
   settings: (row.settings as OrganizationSettings | null) ?? null,
+  parentOrgId: row.parentOrgId ? OrganizationId(row.parentOrgId) : null,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
@@ -31,6 +32,7 @@ const toOrganizationInsertRow = (org: {
   logo: string | null
   metadata: string | null
   settings: OrganizationSettings | null
+  parentOrgId: string | null
 }) => ({
   id: org.id,
   name: org.name,
@@ -38,6 +40,7 @@ const toOrganizationInsertRow = (org: {
   logo: org.logo,
   metadata: org.metadata,
   settings: org.settings,
+  parentOrgId: org.parentOrgId,
 })
 
 /**
@@ -87,6 +90,7 @@ export const OrganizationRepositoryLive = Layer.effect(
         logo: string | null
         metadata: string | null
         settings: OrganizationSettings | null
+        parentOrgId: string | null
       }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -104,6 +108,7 @@ export const OrganizationRepositoryLive = Layer.effect(
                   logo: row.logo,
                   metadata: row.metadata,
                   settings: row.settings,
+                  parentOrgId: row.parentOrgId,
                   updatedAt: new Date(),
                 },
               }),

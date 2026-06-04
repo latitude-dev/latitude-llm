@@ -126,17 +126,22 @@ export const verifications = latitudeSchema.table(
   (t) => [index("verifications_identifier_idx").on(t.identifier)],
 )
 
-export const organizations = latitudeSchema.table("organizations", {
-  id: cuid("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  logo: text("logo"),
-  metadata: text("metadata"),
-  stripeCustomerId: text("stripe_customer_id"),
-  /** App extension (not in BA reference). */
-  settings: jsonb("settings").$type<OrganizationSettings>(),
-  ...timestamps(),
-})
+export const organizations = latitudeSchema.table(
+  "organizations",
+  {
+    id: cuid("id").primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    logo: text("logo"),
+    metadata: text("metadata"),
+    stripeCustomerId: text("stripe_customer_id"),
+    /** App extension (not in BA reference). */
+    settings: jsonb("settings").$type<OrganizationSettings>(),
+    parentOrgId: cuid("parent_org_id", { default: false }),
+    ...timestamps(),
+  },
+  (t) => [index("organizations_parent_org_id_idx").on(t.parentOrgId)],
+)
 
 export const members = latitudeSchema.table(
   "members",

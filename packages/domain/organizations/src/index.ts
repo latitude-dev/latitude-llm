@@ -16,6 +16,7 @@ export {
 } from "./entities/membership.ts"
 export {
   createOrganization,
+  isSandbox,
   type Organization,
   organizationSchema,
 } from "./entities/organization.ts"

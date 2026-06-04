@@ -68,6 +68,7 @@ function setup(opts: { readonly project?: Project | null | typeof DEFAULT_PROJEC
     logo: null,
     metadata: null,
     settings: null,
+    parentOrgId: null,
     createdAt: new Date("2026-05-01T00:00:00Z"),
     updatedAt: new Date("2026-05-01T00:00:00Z"),
   }

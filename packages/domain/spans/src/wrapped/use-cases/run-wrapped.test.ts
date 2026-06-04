@@ -64,9 +64,6 @@ const makeProject = (): Project => ({
 const makeReader = (overrides?: Partial<ClaudeCodeSpanReaderShape>): ClaudeCodeSpanReaderShape => ({
   listProjectsWithSpansInWindow: () => Effect.succeed([]),
   countSessionsForProjectInWindow: () => Effect.succeed(0),
-  // The Wrapped build path exercises all of these on the happy path. They
-  // return empty / zeroed defaults so the resulting Report is schema-valid
-  // but doesn't drive any specific assertion.
   getTotalsForProject: () =>
     Effect.succeed({
       sessions: 0,
@@ -82,8 +79,19 @@ const makeReader = (overrides?: Partial<ClaudeCodeSpanReaderShape>): ClaudeCodeS
       gitWriteOps: 0,
       tokensTotal: 0,
     }),
-  getSessionDurationStats: () => Effect.succeed({ totalDurationMs: 0, longestDurationMs: 0, longestWorkspace: null }),
-  getLocStats: () => Effect.succeed({ writeLines: 0, editAdded: 0, editRemoved: 0, readLines: 0 }),
+  getSessionDurationStats: () =>
+    Effect.succeed({
+      totalDurationMs: 0,
+      longestDurationMs: 0,
+      longestWorkspace: null,
+    }),
+  getLocStats: () =>
+    Effect.succeed({
+      writeLines: 0,
+      editAdded: 0,
+      editRemoved: 0,
+      readLines: 0,
+    }),
   getBiggestWrite: () => Effect.succeed(null),
   getToolMix: () => Effect.succeed([]),
   getTopFiles: () => Effect.succeed([]),
@@ -113,6 +121,7 @@ const makeOrganization = (): Organization => ({
   logo: null,
   metadata: null,
   settings: null,
+  parentOrgId: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
@@ -296,7 +305,11 @@ describe("runWrappedUseCase", () => {
   it("uses the org owner's name for the persisted ownerName (web greeting + email greeting)", async () => {
     harness = setupHarness({
       members: [
-        { ...makeMember("a", "owner@test.com", true), role: "owner", name: "Alex Owner" },
+        {
+          ...makeMember("a", "owner@test.com", true),
+          role: "owner",
+          name: "Alex Owner",
+        },
         makeMember("b", "bob@test.com", true),
       ],
       sessions: 5,
@@ -315,7 +328,11 @@ describe("runWrappedUseCase", () => {
     // back to the org name on the public report's greeting.
     harness = setupHarness({
       members: [
-        { ...makeMember("a", "owner@test.com", false), role: "owner", name: "Alex Owner" },
+        {
+          ...makeMember("a", "owner@test.com", false),
+          role: "owner",
+          name: "Alex Owner",
+        },
         makeMember("b", "bob@test.com", true),
       ],
       sessions: 5,
