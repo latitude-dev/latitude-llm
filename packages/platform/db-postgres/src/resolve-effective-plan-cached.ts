@@ -1,4 +1,10 @@
-import { billingPlanSchema, type EffectivePlanResolution, resolveEffectivePlan } from "@domain/billing"
+import {
+  billingPlanSchema,
+  type EffectivePlanResolution,
+  resolveEffectivePlan,
+  SANDBOX_SPAN_RETENTION_DAYS,
+} from "@domain/billing"
+import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import { CacheStore, type OrganizationId, organizationIdSchema } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -39,6 +45,25 @@ const resolveCacheTtlSeconds = (plan: EffectivePlanResolution, now: Date): numbe
   return Math.min(BILLING_EFFECTIVE_PLAN_CACHE_TTL_SECONDS, secondsUntilPeriodEnd)
 }
 
+const applySandboxRetention = Effect.fn("billing.applySandboxRetention")(function* (
+  resolution: EffectivePlanResolution,
+) {
+  const orgRepo = yield* OrganizationRepository
+  // A missing org (deleted mid-request) just means "not a sandbox"; a RepositoryError (DB down)
+  // must propagate rather than silently downgrade a sandbox to live retention.
+  const org = yield* orgRepo
+    .findById(resolution.organizationId)
+    .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+  if (!org || !isSandbox(org)) {
+    return resolution
+  }
+
+  return {
+    ...resolution,
+    plan: { ...resolution.plan, retentionDays: SANDBOX_SPAN_RETENTION_DAYS },
+  }
+})
+
 export const resolveEffectivePlanCached = Effect.fn("billing.resolveEffectivePlanCached")(function* (
   organizationId: OrganizationId,
 ) {
@@ -55,7 +80,7 @@ export const resolveEffectivePlanCached = Effect.fn("billing.resolveEffectivePla
   }
 
   yield* Effect.annotateCurrentSpan("cache.hit", false)
-  const resolved = yield* resolveEffectivePlan(organizationId)
+  const resolved = yield* applySandboxRetention(yield* resolveEffectivePlan(organizationId))
   const ttlSeconds = resolveCacheTtlSeconds(resolved, new Date())
 
   if (ttlSeconds > 0) {

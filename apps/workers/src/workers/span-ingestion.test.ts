@@ -5,6 +5,7 @@ import { generateId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { queryClickhouse } from "@platform/db-clickhouse"
 import { eq } from "@platform/db-postgres"
+import { organizations } from "@platform/db-postgres/schema/better-auth"
 import { billingUsageEvents, billingUsagePeriods } from "@platform/db-postgres/schema/billing"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
@@ -424,6 +425,83 @@ describe("createSpanIngestionWorker", () => {
         traceIds: ["11111111111111111111111111111111"],
       },
     })
+  })
+
+  it("stamps the short sandbox retention on spans for sandbox orgs", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const organizationId = generateId()
+    const fileKey = `span-ingestion/${organizationId}-sandbox.json`
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+
+    // A non-null parent makes this a Test Mode sandbox; the parent row need not exist (no FK).
+    await pg.db.insert(organizations).values({
+      id: organizationId,
+      name: "Sandbox Org",
+      slug: `sandbox-${organizationId}`,
+      parentOrgId: generateId(),
+    })
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+
+    await dispatchValidIngest(consumer, fileKey, organizationId, generateId())
+
+    const rows = await Effect.runPromise(
+      queryClickhouse<{ retention_days: number }>(
+        ch.client,
+        "SELECT retention_days FROM spans WHERE organization_id = {organizationId:String}",
+        { organizationId },
+      ),
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(Number(rows[0]?.retention_days)).toBe(7)
+  })
+
+  it("stamps the plan retention on spans for live orgs", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+    const organizationId = generateId()
+    const fileKey = `span-ingestion/${organizationId}-live.json`
+    disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
+
+    // Live org (no parent) with no subscription/override resolves to the free plan (30-day retention).
+    await pg.db.insert(organizations).values({
+      id: organizationId,
+      name: "Live Org",
+      slug: `live-${organizationId}`,
+    })
+
+    createSpanIngestionWorker({
+      consumer,
+      eventsPublisher: pub,
+      clickhouseClient: ch.client,
+      disk,
+      postgresClient: pg.appPostgresClient,
+      redisClient: testRedisClient,
+    })
+
+    await dispatchValidIngest(consumer, fileKey, organizationId, generateId())
+
+    const rows = await Effect.runPromise(
+      queryClickhouse<{ retention_days: number }>(
+        ch.client,
+        "SELECT retention_days FROM spans WHERE organization_id = {organizationId:String}",
+        { organizationId },
+      ),
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(Number(rows[0]?.retention_days)).toBe(30)
   })
 
   it("records trace usage only once across repeated ingest requests for the same trace", async () => {

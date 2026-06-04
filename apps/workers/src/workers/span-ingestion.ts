@@ -8,6 +8,7 @@ import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
 import {
   BillingOverrideRepositoryLive,
+  OrganizationRepositoryLive,
   resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -39,10 +40,11 @@ export const createSpanIngestionWorker = ({
   const chClient = clickhouseClient
   const rdClient = redisClient
 
-  const billingPlanLayers = Layer.mergeAll(
+  const postgresLayers = Layer.mergeAll(
     BillingOverrideRepositoryLive,
     SettingsReaderLive,
     StripeSubscriptionLookupLive,
+    OrganizationRepositoryLive,
   )
 
   const processSpans = processIngestedSpansUseCase({ eventsPublisher })
@@ -99,7 +101,7 @@ export const createSpanIngestionWorker = ({
             Effect.sync(() => logger.warn("Dropping invalid span payload", error)),
           ),
           Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
-          withPostgres(billingPlanLayers, postgresClient, OrganizationId(organizationId)),
+          withPostgres(postgresLayers, postgresClient, OrganizationId(organizationId)),
           withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
           withTracing,
           Effect.provide(StorageDiskLive(disk)),

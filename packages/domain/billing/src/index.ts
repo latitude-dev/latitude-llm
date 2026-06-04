@@ -21,6 +21,7 @@ export {
   type PlanSlug,
   PRO_PLAN_CONFIG,
   persistedIncludedCreditsForPlan,
+  SANDBOX_SPAN_RETENTION_DAYS,
   SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME,
   SELF_SERVE_PLAN_SLUGS,
 } from "./constants.ts"

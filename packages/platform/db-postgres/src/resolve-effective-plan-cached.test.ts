@@ -1,3 +1,4 @@
+import { SANDBOX_SPAN_RETENTION_DAYS } from "@domain/billing"
 import { CacheStore, generateId, OrganizationId } from "@domain/shared"
 import { resolveEffectivePlanCached } from "@platform/db-postgres"
 import { organizations, subscriptions } from "@platform/db-postgres/schema/better-auth"
@@ -6,6 +7,7 @@ import { eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { BillingOverrideRepositoryLive } from "./repositories/billing-override-repository.ts"
+import { OrganizationRepositoryLive } from "./repositories/organization-repository.ts"
 import { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
 import { StripeSubscriptionLookupLive } from "./repositories/stripe-subscription-lookup.ts"
 import { setupTestPostgres } from "./test/in-memory-postgres.ts"
@@ -13,7 +15,18 @@ import { withPostgres } from "./with-postgres.ts"
 
 const pg = setupTestPostgres()
 
-const billingLayers = Layer.mergeAll(BillingOverrideRepositoryLive, SettingsReaderLive, StripeSubscriptionLookupLive)
+const billingLayers = Layer.mergeAll(
+  BillingOverrideRepositoryLive,
+  SettingsReaderLive,
+  StripeSubscriptionLookupLive,
+  OrganizationRepositoryLive,
+)
+
+const nullCache = Layer.succeed(CacheStore, {
+  get: () => Effect.succeed(null),
+  set: () => Effect.void,
+  delete: () => Effect.void,
+})
 
 describe("resolveEffectivePlanCached", () => {
   beforeEach(() => {
@@ -110,5 +123,32 @@ describe("resolveEffectivePlanCached", () => {
     expect(result.source).toBe("free-fallback")
     expect(result.periodEnd).toEqual(new Date("2026-10-01T00:00:00.000Z"))
     expect(cachedTtlSeconds).toBe(30)
+    // Live orgs keep their plan retention (free fallback = 30 days); only sandboxes are clamped.
+    expect(result.plan.retentionDays).toBe(30)
+  })
+
+  it("clamps retention to the sandbox value for sandbox orgs", async () => {
+    vi.setSystemTime(new Date("2026-09-15T12:00:00.000Z"))
+    const sandboxOrgId = generateId()
+
+    await pg.db.insert(organizations).values({
+      id: sandboxOrgId,
+      name: "Sandbox Org",
+      slug: `sandbox-${sandboxOrgId}`,
+      // A non-null parent makes this a Test Mode sandbox; the parent row need not exist (no FK).
+      parentOrgId: generateId(),
+    })
+
+    const resolved = await Effect.runPromise(
+      resolveEffectivePlanCached(OrganizationId(sandboxOrgId)).pipe(
+        withPostgres(billingLayers, pg.appPostgresClient, OrganizationId(sandboxOrgId)),
+        Effect.provide(nullCache),
+        withTracing,
+      ),
+    )
+
+    // Resolves the org's own (free-fallback) plan, but retention is clamped to the sandbox value.
+    expect(resolved.source).toBe("free-fallback")
+    expect(resolved.plan.retentionDays).toBe(SANDBOX_SPAN_RETENTION_DAYS)
   })
 })

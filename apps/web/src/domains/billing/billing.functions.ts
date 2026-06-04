@@ -77,6 +77,7 @@ export const getBillingOverview = createServerFn({ method: "GET" }).handler(asyn
     BillingUsagePeriodRepositoryLive,
     SettingsReaderLive,
     StripeSubscriptionLookupLive,
+    OrganizationRepositoryLive,
   )
 
   return await Effect.runPromise(
@@ -99,6 +100,7 @@ export const getFreshBillingOverview = createServerFn({ method: "GET" }).handler
       BillingUsagePeriodRepositoryLive,
       SettingsReaderLive,
       StripeSubscriptionLookupLive,
+      OrganizationRepositoryLive,
     )
 
     return await Effect.runPromise(

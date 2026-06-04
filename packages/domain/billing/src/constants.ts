@@ -72,6 +72,8 @@ export const PLAN_CONFIGS: Record<PlanSlug, PlanConfig> = {
   enterprise: ENTERPRISE_PLAN_CONFIG,
 } as const
 
+export const SANDBOX_SPAN_RETENTION_DAYS = 7
+
 export const SELF_SERVE_PLAN_SLUG_TO_STRIPE_PLAN_NAME: Record<string, PlanSlug> = {
   pro: "pro",
 } as const
