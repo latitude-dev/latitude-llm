@@ -17,7 +17,7 @@ function visitCode(node: any, callback: (node: any) => void): void {
 }
 
 export function remarkCodeContentPositions() {
-  return function (tree: any, file: any) {
+  return (tree: any, file: any) => {
     const source: string = String(file)
     if (!source) return
 
