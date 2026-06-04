@@ -25,6 +25,8 @@ const REQUESTS_DIR = join(STATE_DIR, "requests")
 const STATE_FILE = join(STATE_DIR, "state.json")
 const PLIST_PATH = join(homedir(), "Library", "LaunchAgents", "so.latitude.claude-code-telemetry.plist")
 const PLIST_LABEL = "so.latitude.claude-code-telemetry"
+// Linux: systemd user environment drop-in; mirrors the macOS plist for persistence.
+const ENVIRONMENT_D_CONF_PATH = join(homedir(), ".config", "environment.d", "latitude-telemetry.conf")
 const DEFAULT_HOOK_COMMAND = "npx -y @latitude-data/claude-code-telemetry"
 const DOCS_URL = "https://docs.latitude.so/telemetry/claude-code"
 
@@ -72,6 +74,7 @@ interface InstallFlags {
   project?: string | undefined
   environment?: EnvironmentConfig | undefined
   noLaunchctl?: boolean
+  noSystemd?: boolean
   noPrompt?: boolean
 }
 
@@ -136,19 +139,44 @@ async function runInteractiveInstall(flags: InstallFlags): Promise<void> {
     useLaunchctl = answer === true
   }
 
-  await applyChanges({ apiKey, project, envConfig, useLaunchctl, existing, interactive: true })
+  let useSystemd = false
+  if (process.platform === "linux" && !flags.noSystemd && isSystemctlAvailable()) {
+    log.info(
+      [
+        "On Linux, settings.json env vars only reach hook subprocesses — not the",
+        "main claude binary launched by VS Code or a desktop launcher.",
+        "Wiring BUN_OPTIONS via systemd --user covers GUI apps and persists across reboots.",
+        `Writes to: ${ENVIRONMENT_D_CONF_PATH}`,
+      ].join("\n"),
+    )
+    const answer = await confirm({
+      message: "Set up systemd user environment? (recommended)",
+      initialValue: true,
+    })
+    if (isCancel(answer)) return onCancel()
+    useSystemd = answer === true
+  }
 
-  note(
-    [
-      "Quit claude fully and relaunch for the preload to attach.",
-      "",
+  await applyChanges({ apiKey, project, envConfig, useLaunchctl, useSystemd, existing, interactive: true })
+
+  const nextStepLines = ["Quit claude fully and relaunch for the preload to attach.", ""]
+  if (process.platform === "darwin") {
+    nextStepLines.push(
       `${pc.dim("  Terminal       ")}close and reopen your terminal`,
       `${pc.dim("  Claude Desktop ")}⌘Q, then relaunch from Dock / Finder`,
+    )
+  } else if (useSystemd) {
+    nextStepLines.push(
+      `${pc.dim("  VS Code        ")}close and reopen VS Code`,
+      `${pc.dim("  Terminal       ")}close and reopen your terminal`,
       "",
-      `View your traces at  ${pc.cyan(urls.projectView(project))}`,
-    ].join("\n"),
-    "Next step",
-  )
+      "The systemd user environment persists across reboots.",
+    )
+  } else {
+    nextStepLines.push(`${pc.dim("  Terminal       ")}close and reopen your terminal`)
+  }
+  nextStepLines.push("", `View your traces at  ${pc.cyan(urls.projectView(project))}`)
+  note(nextStepLines.join("\n"), "Next step")
 
   outro(pc.green("Installed."))
 }
@@ -205,12 +233,13 @@ interface ApplyArgs {
   project: string
   envConfig: EnvironmentConfig
   useLaunchctl: boolean
+  useSystemd: boolean
   existing: ClaudeSettings
   interactive: boolean
 }
 
 async function applyChanges(args: ApplyArgs): Promise<void> {
-  const { apiKey, project, envConfig, useLaunchctl, existing, interactive } = args
+  const { apiKey, project, envConfig, useLaunchctl, useSystemd, existing, interactive } = args
 
   let next = existing
   if (apiKey) next = setEnv(next, "LATITUDE_API_KEY", apiKey)
@@ -221,7 +250,10 @@ async function applyChanges(args: ApplyArgs): Promise<void> {
   if (envConfig.name === "production") next = removeEnv(next, "LATITUDE_BASE_URL")
   else next = setEnv(next, "LATITUDE_BASE_URL", envConfig.ingest)
 
-  if (useLaunchctl) next = removeEnv(next, "BUN_OPTIONS")
+  // When using an OS-level env mechanism (launchctl on macOS, systemd on Linux)
+  // the BUN_OPTIONS value reaches the main claude binary directly, so we don't
+  // need it in settings.json (which only reaches hook subprocesses).
+  if (useLaunchctl || useSystemd) next = removeEnv(next, "BUN_OPTIONS")
   else next = setEnv(next, "BUN_OPTIONS", `--preload=${INTERCEPT_INSTALL_PATH}`)
 
   const hookAlreadyThere = hasLatitudeStopHook(next)
@@ -251,6 +283,13 @@ async function applyChanges(args: ApplyArgs): Promise<void> {
     setLaunchctlBunOptions()
     writePlist()
     step.stop(`launchctl env set (persisted via ${PLIST_PATH})`)
+  }
+
+  if (useSystemd) {
+    step.start("Setting BUN_OPTIONS via systemd --user + writing environment.d conf")
+    setSystemdBunOptions()
+    writeEnvironmentDConf()
+    step.stop(`systemd user env set (persisted via ${ENVIRONMENT_D_CONF_PATH})`)
   }
 }
 
@@ -298,9 +337,10 @@ async function runFlagDrivenInstall(flags: InstallFlags): Promise<void> {
 
   const envConfig = flags.environment ?? PRODUCTION_ENV
   const useLaunchctl = process.platform === "darwin" && !flags.noLaunchctl
+  const useSystemd = process.platform === "linux" && !flags.noSystemd && isSystemctlAvailable()
 
   process.stdout.write(`Installing Latitude Claude Code telemetry (${envConfig.label})…\n`)
-  await applyChanges({ apiKey, project, envConfig, useLaunchctl, existing, interactive: false })
+  await applyChanges({ apiKey, project, envConfig, useLaunchctl, useSystemd, existing, interactive: false })
   process.stdout.write(`\nInstalled. Quit claude and relaunch (new terminal, or ⌘Q + relaunch Claude Desktop).\n`)
 }
 
@@ -437,6 +477,40 @@ function writePlist(): void {
   }
 }
 
+function isSystemctlAvailable(): boolean {
+  const res = spawnSync("systemctl", ["--user", "--version"], { stdio: "ignore" })
+  return res.status === 0
+}
+
+function setSystemdBunOptions(): void {
+  const value = `--preload=${INTERCEPT_INSTALL_PATH}`
+  const res = spawnSync("systemctl", ["--user", "set-environment", `BUN_OPTIONS=${value}`], { encoding: "utf-8" })
+  if (res.status !== 0) {
+    const details = [res.stderr, res.stdout]
+      .filter((s) => s && s.trim().length > 0)
+      .join(" ")
+      .trim()
+    process.stderr.write(
+      `[latitude-claude-code] systemctl set-environment failed (exit ${res.status})${details ? `: ${details}` : ""}. Continuing.\n`,
+    )
+  }
+}
+
+function writeEnvironmentDConf(): void {
+  mkdirSync(dirname(ENVIRONMENT_D_CONF_PATH), { recursive: true })
+  writeFileSync(ENVIRONMENT_D_CONF_PATH, `BUN_OPTIONS=--preload=${INTERCEPT_INSTALL_PATH}\n`, "utf-8")
+}
+
+function readSystemdBunOptions(): string | undefined {
+  if (process.platform !== "linux") return undefined
+  const res = spawnSync("systemctl", ["--user", "show-environment"], { encoding: "utf-8" })
+  if (res.status !== 0) return undefined
+  for (const line of (res.stdout ?? "").split("\n")) {
+    if (line.startsWith("BUN_OPTIONS=")) return line.slice("BUN_OPTIONS=".length).trim()
+  }
+  return undefined
+}
+
 function printMinimalInstallInstructions(): void {
   process.stdout.write(
     [
@@ -506,6 +580,28 @@ function buildUninstallPlan(): UninstallPlan {
       spawnSync("launchctl", ["unload", PLIST_PATH], { stdio: "ignore" })
       try {
         unlinkSync(PLIST_PATH)
+      } catch {
+        // already gone
+      }
+    })
+  }
+
+  // Linux: systemd user environment
+  const currentSystemd = readSystemdBunOptions()
+  if (currentSystemd?.includes(INTERCEPT_INSTALL_PATH)) {
+    description.push(`systemd user: unset-environment BUN_OPTIONS (currently: ${currentSystemd})`)
+    steps.push(() => {
+      spawnSync("systemctl", ["--user", "unset-environment", "BUN_OPTIONS"], { stdio: "ignore" })
+    })
+  } else if (currentSystemd) {
+    description.push(`systemd user BUN_OPTIONS is set to something else (${currentSystemd}); leaving it alone`)
+  }
+
+  if (existsSync(ENVIRONMENT_D_CONF_PATH)) {
+    description.push(`${ENVIRONMENT_D_CONF_PATH}: remove`)
+    steps.push(() => {
+      try {
+        unlinkSync(ENVIRONMENT_D_CONF_PATH)
       } catch {
         // already gone
       }
@@ -585,6 +681,7 @@ export function normalizeInstallFlags(flags: Record<string, string | boolean>): 
 
   const result: InstallFlags = {
     noLaunchctl: flags["no-launchctl"] === true || flags.no_launchctl === true,
+    noSystemd: flags["no-systemd"] === true || flags.no_systemd === true,
     noPrompt: flags["no-prompt"] === true || flags.no_prompt === true || flags.yes === true,
   }
   const apiKey = str(flags["api-key"] ?? flags.api_key)
