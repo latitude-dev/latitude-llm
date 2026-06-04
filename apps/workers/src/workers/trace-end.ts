@@ -8,7 +8,7 @@ import {
   listAllActiveEvaluations,
   orchestrateTraceEndLiveEvaluationExecutesUseCase,
 } from "@domain/evaluations"
-import { SAVED_SEARCH_MONITORS_THROTTLE_MS } from "@domain/monitors"
+import { SAVED_SEARCH_MONITORS_THROTTLE_MS, savedSearchMonitorsCheckDedupeKey } from "@domain/monitors"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import {
@@ -240,7 +240,10 @@ export const runTraceEndJob =
           "checkSavedSearchMonitors",
           { organizationId: payload.organizationId, projectId: payload.projectId },
           {
-            dedupeKey: `org:${payload.organizationId}:monitors:check-saved-search:${payload.projectId}`,
+            dedupeKey: savedSearchMonitorsCheckDedupeKey({
+              organizationId: payload.organizationId,
+              projectId: payload.projectId,
+            }),
             throttleMs: SAVED_SEARCH_MONITORS_THROTTLE_MS,
           },
         )

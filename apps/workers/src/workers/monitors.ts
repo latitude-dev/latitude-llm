@@ -2,6 +2,8 @@ import { hasFeatureFlagUseCase } from "@domain/feature-flags"
 import {
   cascadeSourceDeletionUseCase,
   checkSavedSearchMonitorsUseCase,
+  SAVED_SEARCH_MONITORS_THROTTLE_MS,
+  savedSearchMonitorsCheckDedupeKey,
   sweepSavedSearchMonitorsUseCase,
 } from "@domain/monitors"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
@@ -84,9 +86,11 @@ export const createMonitorsWorker = ({
       ),
     sweepSavedSearchMonitors: () =>
       sweepSavedSearchMonitorsUseCase({
+        // Same throttled key as trace-end so both triggers coalesce into one check per project.
         publish: (target) =>
           publisher.publish("monitors", "checkSavedSearchMonitors", target, {
-            dedupeKey: `monitors:check-saved-search-sweep:${target.organizationId}:${target.projectId}`,
+            dedupeKey: savedSearchMonitorsCheckDedupeKey(target),
+            throttleMs: SAVED_SEARCH_MONITORS_THROTTLE_MS,
           }),
       }).pipe(
         withPostgres(MonitorRepositoryLive, adminPgClient),

@@ -31,6 +31,66 @@ const toError = (value: unknown): Error => (value instanceof Error ? value : new
  */
 const toSafeJobId = (dedupeKey: string): string => base64urlEncode(dedupeKey)
 
+/**
+ * Translate {@link PublishOptions} into BullMQ job options. Pure + exported so the
+ * mapping (especially the jobId-vs-deduplication split) can be unit-tested without Redis.
+ * Throws on mutually-exclusive or incomplete coalescing options.
+ */
+export const buildBullMqJobOptions = (label: string, options?: PublishOptions): Record<string, unknown> => {
+  const coalescingOptions = [options?.debounceMs, options?.throttleMs, options?.latestThrottleMs].filter(
+    (value) => value !== undefined,
+  )
+  if (coalescingOptions.length > 1) {
+    throw new Error(`${label}: debounceMs, throttleMs and latestThrottleMs are mutually exclusive`)
+  }
+  if ((options?.throttleMs !== undefined || options?.latestThrottleMs !== undefined) && !options.dedupeKey) {
+    throw new Error(`${label}: throttleMs and latestThrottleMs require a dedupeKey`)
+  }
+
+  const bullmqOptions: Record<string, unknown> = {}
+  // Delayed coalescing options map to BullMQ's `delay` + `deduplication`,
+  // but the dedup flags differ by semantic:
+  //   - debounce: `extend: true, replace: true` — each publish within the TTL
+  //     pushes the fire time forward and overwrites the payload. Fires after
+  //     `debounceMs` of quiet.
+  //   - throttle: `extend: false, replace: false` — the first publish wins.
+  //     Subsequent publishes within the TTL are dropped by BullMQ. Fires
+  //     exactly `throttleMs` after the first publish.
+  //   - latest-throttle: `extend: false, replace: true` — the first publish
+  //     sets the fire time, later publishes update the payload only.
+  const delayMs = options?.debounceMs ?? options?.throttleMs ?? options?.latestThrottleMs
+  // Custom jobId is for bare-dedupeKey idempotency only. Coalescing relies on the
+  // TTL-based `deduplication` marker instead — a jobId would be retained by
+  // removeOnComplete and shadow later publishes, so a recurring throttle/debounce would
+  // fire once and go dormant.
+  if (options?.dedupeKey && delayMs === undefined) {
+    bullmqOptions.jobId = toSafeJobId(options.dedupeKey)
+  }
+  if (delayMs !== undefined) {
+    bullmqOptions.delay = delayMs
+    if (options?.dedupeKey) {
+      const extendsWindow = options.debounceMs !== undefined
+      const replacesPayload = options.throttleMs === undefined
+      bullmqOptions.deduplication = {
+        id: options.dedupeKey,
+        ttl: delayMs,
+        extend: extendsWindow,
+        replace: replacesPayload,
+      }
+    }
+  }
+  if (options?.attempts !== undefined && options.attempts > 0) {
+    bullmqOptions.attempts = options.attempts
+  }
+  if (options?.backoff) {
+    bullmqOptions.backoff = {
+      type: options.backoff.type,
+      delay: options.backoff.delayMs,
+    }
+  }
+  return bullmqOptions
+}
+
 const incidentToLogFields = (incident: BullMqWorkerIncident) => {
   if (incident.kind === "worker_error") {
     return {
@@ -111,55 +171,7 @@ export const createBullMqQueuePublisher = (
       ) =>
         Effect.tryPromise({
           try: async () => {
-            const coalescingOptions = [options?.debounceMs, options?.throttleMs, options?.latestThrottleMs].filter(
-              (value) => value !== undefined,
-            )
-            if (coalescingOptions.length > 1) {
-              throw new Error(
-                `publish(${queue}, ${String(task)}): debounceMs, throttleMs and latestThrottleMs are mutually exclusive`,
-              )
-            }
-            if ((options?.throttleMs !== undefined || options?.latestThrottleMs !== undefined) && !options.dedupeKey) {
-              throw new Error(`publish(${queue}, ${String(task)}): throttleMs and latestThrottleMs require a dedupeKey`)
-            }
-
-            const bullmqOptions: Record<string, unknown> = {}
-            if (options?.dedupeKey) {
-              bullmqOptions.jobId = toSafeJobId(options.dedupeKey)
-            }
-            // Delayed coalescing options map to BullMQ's `delay` + `deduplication`,
-            // but the dedup flags differ by semantic:
-            //   - debounce: `extend: true, replace: true` — each publish within the TTL
-            //     pushes the fire time forward and overwrites the payload. Fires after
-            //     `debounceMs` of quiet.
-            //   - throttle: `extend: false, replace: false` — the first publish wins.
-            //     Subsequent publishes within the TTL are dropped by BullMQ. Fires
-            //     exactly `throttleMs` after the first publish.
-            //   - latest-throttle: `extend: false, replace: true` — the first publish
-            //     sets the fire time, later publishes update the payload only.
-            const delayMs = options?.debounceMs ?? options?.throttleMs ?? options?.latestThrottleMs
-            if (delayMs !== undefined) {
-              bullmqOptions.delay = delayMs
-              if (options?.dedupeKey) {
-                const extendsWindow = options.debounceMs !== undefined
-                const replacesPayload = options.throttleMs === undefined
-                bullmqOptions.deduplication = {
-                  id: options.dedupeKey,
-                  ttl: delayMs,
-                  extend: extendsWindow,
-                  replace: replacesPayload,
-                }
-              }
-            }
-            if (options?.attempts !== undefined && options.attempts > 0) {
-              bullmqOptions.attempts = options.attempts
-            }
-            if (options?.backoff) {
-              bullmqOptions.backoff = {
-                type: options.backoff.type,
-                delay: options.backoff.delayMs,
-              }
-            }
+            const bullmqOptions = buildBullMqJobOptions(`publish(${queue}, ${String(task)})`, options)
             const readyQueue = await getReadyQueue(queue)
             await readyQueue.add(task, { payload } satisfies BullMqJobData, bullmqOptions)
           },

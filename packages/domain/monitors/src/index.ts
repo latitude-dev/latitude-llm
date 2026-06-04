@@ -3,6 +3,7 @@ export {
   SAVED_SEARCH_MONITORS_SWEEPER_KEY,
   SAVED_SEARCH_MONITORS_SWEEPER_PATTERN,
   SAVED_SEARCH_MONITORS_THROTTLE_MS,
+  savedSearchMonitorsCheckDedupeKey,
 } from "./constants.ts"
 export type { Monitor, MonitorAlert } from "./entities/monitor.ts"
 export { monitorAlertSchema, monitorSchema } from "./entities/monitor.ts"
