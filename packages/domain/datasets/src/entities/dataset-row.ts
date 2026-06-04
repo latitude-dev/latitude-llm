@@ -1,9 +1,7 @@
 import { datasetIdSchema, datasetRowIdSchema } from "@domain/shared"
 import { z } from "zod"
 
-// Any JSON value a cell can round-trip through ClickHouse via safeParseJson.
-// `null` is intentionally absent: serializeField stores it as "" and it reads
-// back as an empty string, so a stored cell never surfaces as null.
+// Any JSON value a cell round-trips as. No null: it's stored as "" and reads back as "".
 const rowFieldValueSchema: z.ZodType<string | number | boolean | Record<string, unknown> | unknown[]> = z.union([
   z.string(),
   z.number(),
@@ -14,7 +12,7 @@ const rowFieldValueSchema: z.ZodType<string | number | boolean | Record<string, 
 
 export type RowFieldValue = z.infer<typeof rowFieldValueSchema>
 
-// Insert accepts the same shapes as read, plus null (coerced to "" on storage).
+// Read shapes plus null (coerced to "" on storage).
 const insertRowFieldValueSchema: z.ZodType<RowFieldValue | null> = z.union([rowFieldValueSchema, z.null()])
 
 export type InsertRowFieldValue = z.infer<typeof insertRowFieldValueSchema>

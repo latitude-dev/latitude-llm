@@ -3,11 +3,8 @@ import { DatasetId, DatasetRowId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { DatasetRowSchema, toDatasetRowResponse } from "./dataset-row.ts"
 
-// The MCP server validates a tool's `structuredContent` against the
-// `outputSchema` it derives from this exact schema (see mcp/server.ts).
-// A cell can round-trip out of ClickHouse as any JSON value safeParseJson
-// emits, so the schema must accept all of them or the MCP call fails with
-// `-32602 Output validation error`.
+// MCP validates structuredContent against this schema (see mcp/server.ts), so it
+// must accept every JSON value a cell can round-trip as, or the call fails -32602.
 const baseRow: Omit<DatasetRow, "input" | "output"> = {
   rowId: DatasetRowId("row-1"),
   datasetId: DatasetId("cm000000000000000000ds01"),

@@ -6,8 +6,7 @@ import { parseCHDate, safeParseJson, safeStringifyJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 const serializeField = (value: unknown): string => {
-  // Collapse empty plain objects to "" — but NOT empty arrays, which must
-  // round-trip back as [] rather than an empty string.
+  // Collapse empty plain objects to "", but not empty arrays (must round-trip as []).
   if (
     value !== null &&
     typeof value === "object" &&

@@ -362,8 +362,7 @@ const deleteDatasetEndpoint = datasetEndpoint({
 
 // ─── Rows ────────────────────────────────────────────────────────────────────
 
-// Mirrors the read-side RowFieldValue (string | number | boolean | array |
-// object) plus null, so anything the API accepts on insert can also be read back.
+// Mirrors the read-side RowFieldValue, plus null (coerced to "" on storage).
 const InsertRowCellSchema = z.union([
   z.string(),
   z.number(),
