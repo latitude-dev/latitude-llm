@@ -42,6 +42,7 @@ import {
   parseFilters,
   serializeFilters,
 } from "./-components/trace-page-state.ts"
+import { TracesEmptyOnboarding } from "./-components/traces-empty-onboarding.tsx"
 import { TracesEmptyState } from "./-components/traces-empty-state.tsx"
 import { TracesView } from "./-components/traces-view.tsx"
 import { useRouteProject } from "./-route-data.ts"
@@ -60,6 +61,7 @@ function ProjectPage() {
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
     [projectSlug],
   )
+  const { data: allProjects = [] } = useProjectsCollection()
   const currentProject = project ?? routeProject
   const [activeTab, setActiveTab] = useParamState("tab", "sessions", {
     validate: (v): v is "traces" | "sessions" => v === "traces" || v === "sessions",
@@ -299,7 +301,12 @@ function ProjectPage() {
   ])
 
   const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters
-  const showEmptyState = !isTracesCountLoading && hasNoTraces
+  // `firstTraceAt` is the canonical "this project has ever received a trace"
+  // signal (set once by the checkFirstTrace worker). A null value means the
+  // project is genuinely unconnected — distinct from a connected project whose
+  // traces aged out, or an empty filtered result.
+  const isConnected = currentProject.firstTraceAt != null
+  const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
 
   if (isTracesCountLoading && !hasActiveFilters) {
     return (
@@ -309,7 +316,17 @@ function ProjectPage() {
     )
   }
 
-  if (showEmptyState) {
+  // Never connected + nothing to show → onboarding-style connect experience.
+  if (!isConnected && hasNoTraces) {
+    return (
+      <Layout>
+        <TracesEmptyOnboarding project={currentProject} orgHasConnectedProjects={orgHasConnectedProjects} />
+      </Layout>
+    )
+  }
+
+  // Connected before, but currently empty (e.g. retention) → minimal placeholder.
+  if (isConnected && hasNoTraces) {
     return (
       <Layout>
         <TracesEmptyState />
