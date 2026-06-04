@@ -10,7 +10,8 @@ import {
   createFakeStripeSubscriptionLookup,
   seedBillingUsagePeriod,
 } from "@domain/billing/testing"
-import { createProject, ProjectRepository } from "@domain/projects"
+import { OutboxEventWriter } from "@domain/events"
+import { createProject, type Project, ProjectRepository } from "@domain/projects"
 import type { QueuePublisherShape } from "@domain/queue"
 import { QueuePublishError, QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
@@ -101,25 +102,47 @@ const makeProject = (slug: string, id: string, settings: ProjectSettings = {}) =
     lastEditedAt: new Date("2026-01-01T00:00:00Z"),
   })
 
+// In-memory project repository: spans ingestion now provisions a project when a
+// slug doesn't resolve, so the fake must support findBySlug + save + countBySlug
+// (not just lookup). Seed it from `resolutions` and inspect `rows` for creates.
 const makeProjectRepository = (
-  resolutions: Record<string, string | null>,
+  resolutions: Record<string, string | null> = { primary: PRIMARY_PROJECT_ID },
   settingsBySlug: Record<string, ProjectSettings> = {},
-) =>
-  ProjectRepository.of({
+) => {
+  const rows = new Map<string, Project>()
+  for (const [slug, id] of Object.entries(resolutions)) {
+    if (id) rows.set(id, makeProject(slug, id, settingsBySlug[slug] ?? {}))
+  }
+  const isLive = (p: Project | undefined): p is Project => p !== undefined && p.deletedAt === null
+
+  const repository = ProjectRepository.of({
     findById: () => Effect.die("not used"),
-    findBySlug: (slug: string) => {
-      const id = resolutions[slug]
-      if (!id) return Effect.fail(new NotFoundError({ entity: "Project", id: slug }))
-      return Effect.succeed(makeProject(slug, id, settingsBySlug[slug] ?? {}))
-    },
+    findBySlug: (slug: string) =>
+      Effect.gen(function* () {
+        for (const row of rows.values()) {
+          if (isLive(row) && row.slug === slug) return row
+        }
+        return yield* new NotFoundError({ entity: "Project", id: slug })
+      }),
     list: () => Effect.die("not used"),
     listIncludingDeleted: () => Effect.die("not used"),
-    save: () => Effect.die("not used"),
+    save: (project: Project) =>
+      Effect.sync(() => {
+        rows.set(project.id, project)
+      }),
     softDelete: () => Effect.die("not used"),
     hardDelete: () => Effect.die("not used"),
     existsByName: () => Effect.die("not used"),
-    countBySlug: () => Effect.die("not used"),
+    countBySlug: (slug: string, excludeProjectId?: string) =>
+      Effect.sync(
+        () => [...rows.values()].filter((r) => isLive(r) && r.slug === slug && r.id !== excludeProjectId).length,
+      ),
   })
+
+  return { repository, rows }
+}
+
+const fakeOutbox = Layer.succeed(OutboxEventWriter, { write: () => Effect.void })
 
 const makeInput = (payload: Uint8Array, opts: { defaultProjectSlug?: string } = {}) => ({
   organizationId: ORGANIZATION_ID,
@@ -141,8 +164,9 @@ const runUseCase = (
       Layer.mergeAll(
         Layer.succeed(StorageDisk, diskPort),
         Layer.succeed(QueuePublisher, publisher),
-        Layer.succeed(ProjectRepository, makeProjectRepository(resolutions, settingsBySlug)),
+        Layer.succeed(ProjectRepository, makeProjectRepository(resolutions, settingsBySlug).repository),
         Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
+        fakeOutbox,
       ),
     ),
   )
@@ -159,7 +183,8 @@ const createBillingLayer = () => {
       Layer.succeed(BillingUsagePeriodRepository, billingPeriods),
       Layer.succeed(StripeSubscriptionLookup, stripeSubscriptions),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
-      Layer.succeed(ProjectRepository, makeProjectRepository({ primary: PRIMARY_PROJECT_ID })),
+      Layer.succeed(ProjectRepository, makeProjectRepository({ primary: PRIMARY_PROJECT_ID }).repository),
+      fakeOutbox,
       Layer.succeed(SettingsReader, {
         getOrganizationSettings: () => Effect.succeed(null),
         getProjectSettings: () => Effect.die("ingestSpansWithBillingUseCase tests do not read project settings"),
@@ -288,9 +313,10 @@ describe("ingestSpansUseCase project scoping", () => {
     expect(published).toHaveLength(0)
   })
 
-  it("rejects spans whose latitude.project slug isn't in the org and keeps the rest", async () => {
+  it("auto-creates a project for an unrecognized slug and accepts its spans", async () => {
     const { disk } = createFakeStorageDisk()
     const { publisher, published } = createFakeQueuePublisher()
+    const { repository, rows } = makeProjectRepository({ primary: PRIMARY_PROJECT_ID })
 
     const twoSpans = new TextEncoder().encode(
       JSON.stringify({
@@ -312,10 +338,10 @@ describe("ingestSpansUseCase project scoping", () => {
                   {
                     traceId: "0af7651916cd43dd8448eb211c80319c",
                     spanId: "0000000000000002",
-                    name: "reject",
+                    name: "new-project",
                     startTimeUnixNano: "1710590400000000000",
                     endTimeUnixNano: "1710590401000000000",
-                    attributes: [{ key: "latitude.project", value: { stringValue: "other-org-project" } }],
+                    attributes: [{ key: "latitude.project", value: { stringValue: "freshly-seen" } }],
                     status: { code: 1 },
                   },
                 ],
@@ -327,13 +353,28 @@ describe("ingestSpansUseCase project scoping", () => {
     )
 
     const result = await Effect.runPromise(
-      runUseCase(makeInput(twoSpans), disk, publisher, { primary: PRIMARY_PROJECT_ID }),
+      ingestSpansUseCase(makeInput(twoSpans)).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(StorageDisk, disk),
+            Layer.succeed(QueuePublisher, publisher),
+            Layer.succeed(ProjectRepository, repository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
+            fakeOutbox,
+          ),
+        ),
+      ),
     )
 
-    expect(result).toEqual({ totalSpans: 2, acceptedSpans: 1, rejectedSpans: 1 })
+    expect(result).toEqual({ totalSpans: 2, acceptedSpans: 2, rejectedSpans: 0 })
     expect(published).toHaveLength(1)
     const payload = published[0]?.payload as { projectIdBySlug: Record<string, string> }
-    expect(payload.projectIdBySlug).toEqual({ primary: PRIMARY_PROJECT_ID })
+    expect(payload.projectIdBySlug.primary).toBe(PRIMARY_PROJECT_ID)
+    expect(payload.projectIdBySlug["freshly-seen"]).toBeDefined()
+
+    const created = [...rows.values()].find((p) => p.slug === "freshly-seen")
+    expect(created).toBeDefined()
+    expect(created?.name).toBe("freshly-seen")
   })
 
   it("resolves each unique slug exactly once even across many spans", async () => {
@@ -362,6 +403,7 @@ describe("ingestSpansUseCase project scoping", () => {
           countBySlug: () => Effect.die("not used"),
         }),
       ),
+      fakeOutbox,
     )
 
     const manySpans = new TextEncoder().encode(
@@ -392,6 +434,91 @@ describe("ingestSpansUseCase project scoping", () => {
     await Effect.runPromise(ingestSpansUseCase(makeInput(manySpans)).pipe(Effect.provide(layer)))
 
     expect(findBySlugCalls).toBe(2)
+  })
+
+  it("reuses the auto-created project on a later export with the same slug", async () => {
+    const { repository, rows } = makeProjectRepository({})
+    const layerFor = (diskPort: StorageDiskPort, publisher: QueuePublisherShape) =>
+      Layer.mergeAll(
+        Layer.succeed(StorageDisk, diskPort),
+        Layer.succeed(QueuePublisher, publisher),
+        Layer.succeed(ProjectRepository, repository),
+        Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
+        fakeOutbox,
+      )
+
+    const first = createFakeQueuePublisher()
+    await Effect.runPromise(
+      ingestSpansUseCase(makeInput(buildOtlpJson("fresh"))).pipe(
+        Effect.provide(layerFor(createFakeStorageDisk().disk, first.publisher)),
+      ),
+    )
+    expect(rows.size).toBe(1)
+
+    const second = createFakeQueuePublisher()
+    const result = await Effect.runPromise(
+      ingestSpansUseCase(makeInput(buildOtlpJson("fresh"))).pipe(
+        Effect.provide(layerFor(createFakeStorageDisk().disk, second.publisher)),
+      ),
+    )
+
+    expect(result).toEqual({ totalSpans: 1, acceptedSpans: 1, rejectedSpans: 0 })
+    expect(rows.size).toBe(1)
+  })
+
+  it("rejects a span whose slug normalizes to empty without creating a project", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+    const { repository, rows } = makeProjectRepository({})
+
+    const result = await Effect.runPromise(
+      ingestSpansUseCase(makeInput(buildOtlpJson("###"))).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            Layer.succeed(StorageDisk, disk),
+            Layer.succeed(QueuePublisher, publisher),
+            Layer.succeed(ProjectRepository, repository),
+            Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
+            fakeOutbox,
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({ totalSpans: 1, acceptedSpans: 0, rejectedSpans: 1 })
+    expect(published).toHaveLength(0)
+    expect(rows.size).toBe(0)
+  })
+
+  it("creates an independent project per organization for the same slug", async () => {
+    const idFor = async (
+      rows: Map<string, Project>,
+      repository: ReturnType<typeof makeProjectRepository>["repository"],
+    ) => {
+      await Effect.runPromise(
+        ingestSpansUseCase(makeInput(buildOtlpJson("shared-slug"))).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(StorageDisk, createFakeStorageDisk().disk),
+              Layer.succeed(QueuePublisher, createFakeQueuePublisher().publisher),
+              Layer.succeed(ProjectRepository, repository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
+              fakeOutbox,
+            ),
+          ),
+        ),
+      )
+      return [...rows.values()].find((p) => p.slug === "shared-slug")?.id
+    }
+
+    const orgA = makeProjectRepository({})
+    const orgB = makeProjectRepository({})
+    const idA = await idFor(orgA.rows, orgA.repository)
+    const idB = await idFor(orgB.rows, orgB.repository)
+
+    expect(idA).toBeDefined()
+    expect(idB).toBeDefined()
+    expect(idA).not.toBe(idB)
   })
 })
 

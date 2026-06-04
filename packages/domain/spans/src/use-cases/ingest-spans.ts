@@ -1,4 +1,5 @@
-import { type Project, ProjectRepository } from "@domain/projects"
+import type { OutboxEventWriter } from "@domain/events"
+import { findOrCreateProjectBySlugUseCase, type Project, type ProjectRepository } from "@domain/projects"
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
 import {
@@ -81,18 +82,27 @@ function inspectPayload(request: OtlpExportTraceServiceRequest): PayloadInspecti
   return { totalSpans, spanSlugs, uniqueSlugs }
 }
 
-const resolveProject = (slug: string): Effect.Effect<Project | null, RepositoryError, ProjectRepository | SqlClient> =>
-  Effect.gen(function* () {
-    const repo = yield* ProjectRepository
-    return yield* repo.findBySlug(slug).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-  })
+// Resolve the project for a slug, provisioning one on first sight. A slug that
+// can't be turned into a usable project (empty/invalid) resolves to `null` so
+// the span is rejected gracefully, exactly as an unresolved slug was before —
+// only genuine infrastructure failures (RepositoryError) abort the batch.
+const resolveProject = (
+  slug: string,
+): Effect.Effect<Project | null, RepositoryError, ProjectRepository | SqlClient | OutboxEventWriter> =>
+  findOrCreateProjectBySlugUseCase({ slug }).pipe(
+    Effect.catchTags({
+      NotFoundError: () => Effect.succeed(null),
+      InvalidProjectNameError: () => Effect.succeed(null),
+      InvalidProjectSlugError: () => Effect.succeed(null),
+    }),
+  )
 
 export const ingestSpansUseCase = (
   input: IngestSpansInput,
 ): Effect.Effect<
   IngestSpansResult,
   StorageError | QueuePublishError | RepositoryError | SpanDecodingError,
-  StorageDisk | QueuePublisher | ProjectRepository | SqlClient
+  StorageDisk | QueuePublisher | ProjectRepository | SqlClient | OutboxEventWriter
 > =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)

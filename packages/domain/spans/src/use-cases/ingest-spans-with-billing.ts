@@ -3,6 +3,7 @@ import {
   type NoCreditsRemainingError,
   type UnknownStripePlanError,
 } from "@domain/billing"
+import type { OutboxEventWriter } from "@domain/events"
 import type { ProjectRepository } from "@domain/projects"
 import type { QueuePublishError, QueuePublisher } from "@domain/queue"
 import type { RepositoryError, SettingsReader, SqlClient, StorageDisk, StorageError } from "@domain/shared"
@@ -25,5 +26,5 @@ export const ingestSpansWithBillingUseCase = Effect.fn("spans.ingestSpansWithBil
   | SpanDecodingError
   | StorageError
   | UnknownStripePlanError,
-  ProjectRepository | QueuePublisher | StorageDisk | SettingsReader | SqlClient
+  ProjectRepository | QueuePublisher | StorageDisk | SettingsReader | SqlClient | OutboxEventWriter
 >

@@ -4,6 +4,7 @@ import { ingestSpansWithBillingUseCase } from "@domain/spans"
 import {
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  OutboxEventWriterLive,
   ProjectRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -27,6 +28,7 @@ interface TracesRouteContext {
 const traceIngestionBillingLayers = Layer.mergeAll(
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
+  OutboxEventWriterLive,
   ProjectRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,

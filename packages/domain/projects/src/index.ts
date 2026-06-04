@@ -18,6 +18,10 @@ export {
   type CreateProjectInput,
   createProjectUseCase,
 } from "./use-cases/create-project.ts"
+export {
+  type FindOrCreateProjectBySlugInput,
+  findOrCreateProjectBySlugUseCase,
+} from "./use-cases/find-or-create-project-by-slug.ts"
 
 export {
   type ListAllProjectsInput,
