@@ -182,7 +182,7 @@ export function SessionSlot({
             tooltip="Copy session ID"
           />
         </div>
-        <Tabs options={tabs} active={effectiveActiveTab} onSelect={selectTab} />
+        <Tabs options={tabs} active={effectiveActiveTab} onSelect={selectTab} wrap />
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

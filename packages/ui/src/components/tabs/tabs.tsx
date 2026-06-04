@@ -15,6 +15,13 @@ const tabsListVariants = cva("relative flex flex-row", {
       md: "gap-2",
       sm: "gap-1",
     },
+    // Lets tabs flow onto a second row instead of overflowing a narrow
+    // container (e.g. the session detail drawer). The sliding indicator already
+    // tracks the active tab's x/y, so it animates to the wrapped row correctly.
+    wrap: {
+      true: "flex-wrap",
+      false: "",
+    },
   },
   compoundVariants: [
     { variant: "bordered", size: "md", className: "rounded-lg p-1" },
@@ -23,6 +30,7 @@ const tabsListVariants = cva("relative flex flex-row", {
   defaultVariants: {
     variant: "secondary",
     size: "md",
+    wrap: false,
   },
 })
 
@@ -241,6 +249,7 @@ export function Tabs<T extends string>({
   hideLabels = false,
   variant = "secondary",
   size = "md",
+  wrap = false,
 }: TabsProps<T>) {
   const resolvedVariant = variant ?? "secondary"
   const resolvedSize = size ?? "md"
@@ -284,7 +293,7 @@ export function Tabs<T extends string>({
 
   return (
     <div
-      className={cn(tabsListVariants({ variant: resolvedVariant, size: resolvedSize }))}
+      className={cn(tabsListVariants({ variant: resolvedVariant, size: resolvedSize, wrap }))}
       role="tablist"
       onKeyDown={onKeyDown}
       ref={listRef}
