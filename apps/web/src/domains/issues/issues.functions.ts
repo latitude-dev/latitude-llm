@@ -33,6 +33,7 @@ import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } fro
 import {
   EvaluationRepositoryLive,
   IssueRepositoryLive,
+  OutboxEventWriterLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
   withPostgres,
@@ -619,7 +620,7 @@ export const applyIssueLifecycleAction = createServerFn({ method: "POST" })
         keepMonitoring: data.keepMonitoring,
       }).pipe(
         withPostgres(
-          Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive, SettingsReaderLive),
+          Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive, SettingsReaderLive),
           pgClient,
           orgId,
         ),
@@ -745,7 +746,7 @@ export const applyBulkIssueLifecycleAction = createServerFn({ method: "POST" })
         keepMonitoring: data.keepMonitoring,
       }).pipe(
         withPostgres(
-          Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive, SettingsReaderLive),
+          Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive, OutboxEventWriterLive, SettingsReaderLive),
           pgClient,
           orgId,
         ),

@@ -1,4 +1,5 @@
 import { EvaluationRepository } from "@domain/evaluations"
+import { OutboxEventWriter } from "@domain/events"
 import {
   BadRequestError,
   type ConcurrentSqlTransactionError,
@@ -145,13 +146,7 @@ const shouldSoftDeleteLinkedEvaluations = (input: {
   return input.command === "resolve" && input.keepMonitoring === false
 }
 
-export const applyIssueLifecycleCommandUseCase = (
-  input: ApplyIssueLifecycleCommandInput,
-): Effect.Effect<
-  ApplyIssueLifecycleCommandResult,
-  ApplyIssueLifecycleCommandError,
-  EvaluationRepository | IssueRepository | SettingsReader | SqlClient
-> =>
+export const applyIssueLifecycleCommandUseCase = (input: ApplyIssueLifecycleCommandInput) =>
   Effect.gen(function* () {
     const parsed = applyIssueLifecycleCommandInputSchema.parse(input)
     yield* Effect.annotateCurrentSpan("projectId", String(parsed.projectId))
@@ -168,6 +163,7 @@ export const applyIssueLifecycleCommandUseCase = (
       Effect.gen(function* () {
         const issueRepository = yield* IssueRepository
         const evaluationRepository = yield* EvaluationRepository
+        const outboxEventWriter = yield* OutboxEventWriter
         const items: IssueLifecycleCommandItem[] = []
 
         for (const issueId of issueIds) {
@@ -197,6 +193,29 @@ export const applyIssueLifecycleCommandUseCase = (
                 issueId,
               })
             }
+
+            // Resolving or ignoring an issue makes any open `issue.escalating`
+            // incident stale — ignored/resolved issues no longer drive lifecycle
+            // or alerting transitions. Emit `IssueEscalationEnded` so the
+            // alert-incidents worker closes the open row (idempotent no-op when
+            // none is open). The `resolved`/`ignored` reason flows through to
+            // `IncidentClosed`, where the notification fan-out is suppressed —
+            // a manual close shouldn't fire a recovery notification.
+            if (parsed.command === "resolve" || parsed.command === "ignore") {
+              yield* outboxEventWriter.write({
+                eventName: "IssueEscalationEnded",
+                aggregateType: "issue",
+                aggregateId: nextIssue.id,
+                organizationId: nextIssue.organizationId,
+                payload: {
+                  organizationId: nextIssue.organizationId,
+                  projectId: nextIssue.projectId,
+                  issueId: nextIssue.id,
+                  endedAt: now.toISOString(),
+                  reason: parsed.command === "resolve" ? "resolved" : "ignored",
+                },
+              })
+            }
           }
 
           items.push(toLifecycleCommandItem(nextIssue, changed))
@@ -209,4 +228,8 @@ export const applyIssueLifecycleCommandUseCase = (
         } satisfies ApplyIssueLifecycleCommandResult
       }),
     )
-  }).pipe(Effect.withSpan("issues.applyIssueLifecycleCommand"))
+  }).pipe(Effect.withSpan("issues.applyIssueLifecycleCommand")) as Effect.Effect<
+    ApplyIssueLifecycleCommandResult,
+    ApplyIssueLifecycleCommandError,
+    EvaluationRepository | IssueRepository | OutboxEventWriter | SettingsReader | SqlClient
+  >

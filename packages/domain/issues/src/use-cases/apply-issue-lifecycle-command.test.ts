@@ -4,6 +4,7 @@ import {
   EvaluationRepository,
   emptyEvaluationAlignment,
 } from "@domain/evaluations"
+import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { EvaluationId, IssueId, OrganizationId, SettingsReader, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -154,6 +155,9 @@ const makeProvider = (input: {
   readonly evaluationRepository: ReturnType<typeof createFakeEvaluationRepository>["repository"]
   readonly organizationKeepMonitoring?: boolean
   readonly projectKeepMonitoring?: boolean
+  // Optional sink that captures every outbox event the use-case writes, so
+  // tests can assert on the emitted `IssueEscalationEnded` events.
+  readonly events?: OutboxWriteEvent[]
 }) => {
   const settingsReaderInput: {
     organizationKeepMonitoring?: boolean
@@ -168,11 +172,19 @@ const makeProvider = (input: {
     settingsReaderInput.projectKeepMonitoring = input.projectKeepMonitoring
   }
 
+  const events = input.events ?? []
+
   return Layer.mergeAll(
     Layer.succeed(IssueRepository, input.issueRepository),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
     makeSettingsReader(settingsReaderInput),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
+    Layer.succeed(OutboxEventWriter, {
+      write: (event: OutboxWriteEvent) =>
+        Effect.sync(() => {
+          events.push(event)
+        }),
+    }),
   )
 }
 
@@ -380,5 +392,140 @@ describe("applyIssueLifecycleCommandUseCase", () => {
     ).rejects.toMatchObject({
       _tag: "BadRequestError",
     })
+  })
+
+  it("emits IssueEscalationEnded with reason='resolved' when resolving changes the issue", async () => {
+    const now = new Date("2026-04-14T09:00:00.000Z")
+    const issue = makeIssue()
+    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { repository: evaluationRepository } = createFakeEvaluationRepository()
+    const events: OutboxWriteEvent[] = []
+
+    await Effect.runPromise(
+      applyIssueLifecycleCommandUseCase({
+        projectId,
+        issueIds: [issue.id],
+        command: "resolve",
+        keepMonitoring: true,
+        now,
+      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+    )
+
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({
+      eventName: "IssueEscalationEnded",
+      aggregateType: "issue",
+      aggregateId: issue.id,
+      organizationId,
+      payload: {
+        organizationId,
+        projectId,
+        issueId: issue.id,
+        endedAt: now.toISOString(),
+        reason: "resolved",
+      },
+    })
+  })
+
+  it("emits IssueEscalationEnded with reason='ignored' when ignoring changes the issue", async () => {
+    const now = new Date("2026-04-14T10:00:00.000Z")
+    const issue = makeIssue()
+    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { repository: evaluationRepository } = createFakeEvaluationRepository()
+    const events: OutboxWriteEvent[] = []
+
+    await Effect.runPromise(
+      applyIssueLifecycleCommandUseCase({
+        projectId,
+        issueIds: [issue.id],
+        command: "ignore",
+        now,
+      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+    )
+
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({
+      eventName: "IssueEscalationEnded",
+      payload: { issueId: issue.id, reason: "ignored" },
+    })
+  })
+
+  it("emits no event when the lifecycle command is a no-op (already resolved)", async () => {
+    const issue = makeIssue({ resolvedAt: new Date("2026-04-01T00:00:00.000Z") })
+    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { repository: evaluationRepository } = createFakeEvaluationRepository()
+    const events: OutboxWriteEvent[] = []
+
+    await Effect.runPromise(
+      applyIssueLifecycleCommandUseCase({
+        projectId,
+        issueIds: [issue.id],
+        command: "resolve",
+        keepMonitoring: true,
+      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+    )
+
+    expect(events).toEqual([])
+  })
+
+  it("emits no escalation-ended event for unresolve / unignore", async () => {
+    const now = new Date("2026-04-15T09:00:00.000Z")
+    const issue = makeIssue({
+      resolvedAt: new Date("2026-04-01T00:00:00.000Z"),
+      ignoredAt: new Date("2026-04-02T00:00:00.000Z"),
+    })
+    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { repository: evaluationRepository } = createFakeEvaluationRepository()
+    const events: OutboxWriteEvent[] = []
+
+    await Effect.runPromise(
+      applyIssueLifecycleCommandUseCase({
+        projectId,
+        issueIds: [issue.id],
+        command: "unresolve",
+        now,
+      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+    )
+    await Effect.runPromise(
+      applyIssueLifecycleCommandUseCase({
+        projectId,
+        issueIds: [issue.id],
+        command: "unignore",
+        now,
+      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+    )
+
+    expect(events).toEqual([])
+  })
+
+  it("emits one escalation-ended event per changed issue on a bulk resolve", async () => {
+    const now = new Date("2026-04-16T09:00:00.000Z")
+    const firstIssue = makeIssue({ id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa") })
+    // Already resolved → no-op → no event.
+    const secondIssue = makeIssue({
+      id: IssueId("bbbbbbbbbbbbbbbbbbbbbbbb"),
+      resolvedAt: new Date("2026-04-01T00:00:00.000Z"),
+    })
+    const thirdIssue = makeIssue({ id: IssueId("cccccccccccccccccccccccc") })
+    const { repository: issueRepository } = createFakeIssueRepository([firstIssue, secondIssue, thirdIssue])
+    const { repository: evaluationRepository } = createFakeEvaluationRepository()
+    const events: OutboxWriteEvent[] = []
+
+    await Effect.runPromise(
+      applyIssueLifecycleCommandUseCase({
+        projectId,
+        issueIds: [firstIssue.id, secondIssue.id, thirdIssue.id],
+        command: "resolve",
+        keepMonitoring: true,
+        now,
+      }).pipe(Effect.provide(makeProvider({ issueRepository, evaluationRepository, events }))),
+    )
+
+    expect(events).toHaveLength(2)
+    expect(events.map((event) => (event.payload as { issueId: string }).issueId)).toEqual([
+      firstIssue.id,
+      thirdIssue.id,
+    ])
+    expect(events.every((event) => event.eventName === "IssueEscalationEnded")).toBe(true)
   })
 })

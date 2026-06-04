@@ -201,16 +201,22 @@ export const createDomainEventsWorker = ({
       ),
 
     IncidentClosed: (event) =>
-      pub.publish(
-        "notifications",
-        "request-incident-notifications",
-        {
-          organizationId: event.payload.organizationId,
-          alertIncidentId: event.payload.alertIncidentId,
-          transition: "closed",
-        },
-        { dedupeKey: `notifications:request-incident-closed:${event.payload.alertIncidentId}` },
-      ),
+      // Manual lifecycle closes (the user resolved or ignored the issue) close
+      // the escalation silently — the recovery notification is meant for
+      // organic recovery, not a deliberate user action. Organic exits
+      // (threshold/absolute-rate-drop/timeout) still notify.
+      event.payload.reason === "resolved" || event.payload.reason === "ignored"
+        ? Effect.void
+        : pub.publish(
+            "notifications",
+            "request-incident-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              alertIncidentId: event.payload.alertIncidentId,
+              transition: "closed",
+            },
+            { dedupeKey: `notifications:request-incident-closed:${event.payload.alertIncidentId}` },
+          ),
 
     AnnotationDeleted: (event) => {
       const { organizationId, projectId, scoreId, issueId, draftedAt, feedback, source, createdAt } = event.payload

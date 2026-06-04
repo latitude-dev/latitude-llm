@@ -286,6 +286,46 @@ describe("domain-events dispatcher", () => {
     expect(job?.options?.dedupeKey).toBe("notifications:request-incident-closed:ai-1")
   })
 
+  it("still notifies on an organic IncidentClosed (reason=threshold)", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("IncidentClosed", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      alertIncidentId: "ai-1",
+      kind: "issue.escalating",
+      sourceType: "issue",
+      sourceId: "issue-1",
+      reason: "threshold",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(1)
+    expect(published[0]?.task).toBe("request-incident-notifications")
+  })
+
+  it.each([
+    "resolved",
+    "ignored",
+  ] as const)("suppresses the recovery notification on a manual IncidentClosed (reason=%s)", async (reason) => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("IncidentClosed", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      alertIncidentId: "ai-1",
+      kind: "issue.escalating",
+      sourceType: "issue",
+      sourceId: "issue-1",
+      reason,
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toEqual([])
+  })
+
   it("routes ProjectDeleted to notifications:delete-by-project for cascade cleanup", async () => {
     const { consumer, published } = setupDispatcher()
 

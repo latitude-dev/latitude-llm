@@ -193,7 +193,13 @@ const buildLifecycleEndpoint = ({
           })
         }).pipe(
           withPostgres(
-            Layer.mergeAll(ProjectRepositoryLive, IssueRepositoryLive, EvaluationRepositoryLive, SettingsReaderLive),
+            Layer.mergeAll(
+              ProjectRepositoryLive,
+              IssueRepositoryLive,
+              EvaluationRepositoryLive,
+              OutboxEventWriterLive,
+              SettingsReaderLive,
+            ),
             c.var.postgresClient,
             organizationId,
           ),
