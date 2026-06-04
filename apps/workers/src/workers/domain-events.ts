@@ -188,6 +188,19 @@ export const createDomainEventsWorker = ({
         dedupeKey: `alert-incidents:issue.escalation-ended:${event.payload.issueId}:${event.payload.endedAt}`,
       }),
 
+    SavedSearchDeleted: (event) =>
+      pub.publish(
+        "monitors",
+        "onSourceDeleted",
+        {
+          organizationId: event.payload.organizationId,
+          projectId: event.payload.projectId,
+          sourceType: "savedSearch",
+          sourceId: event.payload.searchId,
+        },
+        { dedupeKey: `monitors:on-source-deleted:savedSearch:${event.payload.searchId}` },
+      ),
+
     IncidentCreated: (event) =>
       pub.publish(
         "notifications",

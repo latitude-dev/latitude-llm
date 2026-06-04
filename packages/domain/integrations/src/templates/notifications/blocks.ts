@@ -34,6 +34,16 @@ export const projectOrOrgContext = (
   project: { readonly name: string } | null,
 ): string => (project ? `Project *${project.name}* · ${organization.name}` : `Org *${organization.name}*`)
 
+/** `/projects/<slug>/monitors?monitorSlug=<slug>` deep link; `null` when either slug is missing. */
+export const monitorDeepLink = (input: {
+  readonly webAppUrl: string
+  readonly projectSlug: string | undefined
+  readonly monitorSlug: string | undefined
+}): string | null => {
+  if (!input.projectSlug || !input.monitorSlug) return null
+  return `${input.webAppUrl.replace(/\/$/, "")}/projects/${input.projectSlug}/monitors?monitorSlug=${encodeURIComponent(input.monitorSlug)}`
+}
+
 /** "Created by monitor X" context line (+ humanised rule); `[]` on legacy incidents. Deep-links when the slug resolves, else bold text. */
 export const monitorAttributionBlocks = (input: {
   readonly webAppUrl: string
@@ -44,10 +54,7 @@ export const monitorAttributionBlocks = (input: {
   readonly condition: AlertIncidentCondition | null | undefined
 }): KnownBlock[] => {
   if (!input.monitorName) return []
-  const url =
-    input.projectSlug && input.monitorSlug
-      ? `${input.webAppUrl.replace(/\/$/, "")}/projects/${input.projectSlug}/monitors?monitorSlug=${encodeURIComponent(input.monitorSlug)}`
-      : null
+  const url = monitorDeepLink(input)
   const name = url ? `<${url}|${input.monitorName}>` : `*${input.monitorName}*`
   const blocks: KnownBlock[] = [contextLine(`Created by monitor ${name}`)]
   if (input.condition) {

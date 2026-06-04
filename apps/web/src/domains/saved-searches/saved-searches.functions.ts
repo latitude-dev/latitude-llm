@@ -191,7 +191,7 @@ export const deleteSavedSearchFn = createServerFn({ method: "POST" })
 
     await Effect.runPromise(
       deleteSavedSearch({ savedSearchId: SavedSearchId(data.id) }).pipe(
-        withPostgres(SavedSearchRepositoryLive, getPostgresClient(), orgId),
+        withPostgres(Layer.mergeAll(SavedSearchRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
         withTracing,
       ),
     )

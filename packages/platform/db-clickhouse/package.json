@@ -32,6 +32,7 @@
     "@domain/ai": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/monitors": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/taxonomy": "workspace:*",

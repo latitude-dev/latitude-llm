@@ -19,6 +19,7 @@ import {
   IssueRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
+  SavedSearchRepositoryLive,
   SlackDeliveryRepositoryLive,
   SlackIntegrationRepositoryLive,
   withPostgres,
@@ -60,6 +61,7 @@ const buildSlackRefresherLayer = () => {
 
 const repoLayer = Layer.mergeAll(
   IssueRepositoryLive,
+  SavedSearchRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
   SlackIntegrationRepositoryLive,

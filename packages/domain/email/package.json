@@ -15,6 +15,7 @@
     "@domain/issues": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",
+    "@domain/saved-searches": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@react-email/components": "1.0.12",

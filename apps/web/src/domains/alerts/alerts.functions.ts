@@ -6,8 +6,17 @@ import {
   type AlertSeverity,
 } from "@domain/alerts"
 import { IssueRepository, type IssueWithLifecycle } from "@domain/issues"
-import { IssueId, OrganizationId, ProjectId } from "@domain/shared"
-import { AlertIncidentRepositoryLive, IssueRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { formatHumanReadableAlert } from "@domain/monitors"
+import { type IncidentMonitorInfo, IncidentMonitorReader } from "@domain/notifications"
+import { SavedSearchRepository } from "@domain/saved-searches"
+import { IssueId, OrganizationId, ProjectId, SavedSearchId } from "@domain/shared"
+import {
+  AlertIncidentRepositoryLive,
+  IncidentMonitorReaderLive,
+  IssueRepositoryLive,
+  SavedSearchRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -34,9 +43,21 @@ export interface AlertIncidentRecord {
   readonly endedAt: string | null
   /** Resolved name of the issue tied to the incident; `null` if not found (e.g., deleted). */
   readonly issueName: string | null
+  /** Resolved name of the saved search tied to the incident (the source); `null` on issue rows or when deleted. */
+  readonly savedSearchName: string | null
+  /** Owning monitor name + slug for the attribution line + deep link; `null` on legacy or issue rows. */
+  readonly monitorName: string | null
+  readonly monitorSlug: string | null
+  /** Humanised firing condition; `null` for no-condition kinds. Drives the saved-search subtitle. */
+  readonly conditionSummary: string | null
 }
 
-const toRecord = (incident: AlertIncident, issue: IssueWithLifecycle | undefined): AlertIncidentRecord => ({
+const toRecord = (
+  incident: AlertIncident,
+  issue: IssueWithLifecycle | undefined,
+  savedSearchName: string | undefined,
+  monitor: IncidentMonitorInfo | undefined,
+): AlertIncidentRecord => ({
   id: incident.id,
   projectId: incident.projectId,
   kind: incident.kind,
@@ -46,6 +67,12 @@ const toRecord = (incident: AlertIncident, issue: IssueWithLifecycle | undefined
   startedAt: incident.startedAt.toISOString(),
   endedAt: incident.endedAt?.toISOString() ?? null,
   issueName: issue?.name ?? null,
+  savedSearchName: savedSearchName ?? null,
+  monitorName: monitor?.name ?? null,
+  monitorSlug: monitor?.slug ?? null,
+  conditionSummary: incident.condition
+    ? formatHumanReadableAlert({ kind: incident.kind, condition: incident.condition })
+    : null,
 })
 
 /**
@@ -68,6 +95,8 @@ export const listProjectAlertIncidentsInRange = createServerFn({
       Effect.gen(function* () {
         const incidentRepo = yield* AlertIncidentRepository
         const issueRepo = yield* IssueRepository
+        const savedSearchRepo = yield* SavedSearchRepository
+        const monitorReader = yield* IncidentMonitorReader
 
         const incidents = yield* incidentRepo.listByProjectId({
           organizationId: orgId,
@@ -88,9 +117,47 @@ export const listProjectAlertIncidentsInRange = createServerFn({
             : ([] as readonly IssueWithLifecycle[])
         const issueById = new Map(issues.map((issue) => [issue.id, issue] as const))
 
-        return incidents.map((incident) => toRecord(incident, issueById.get(IssueId(incident.sourceId))))
+        // Saved-search names are the source label for `savedSearch.*` rows (mirrors the issue name).
+        const savedSearchIds = Array.from(
+          new Set(incidents.filter((i) => i.sourceType === "savedSearch").map((i) => i.sourceId)),
+        )
+        const savedSearchNameById = new Map<string, string>()
+        for (const id of savedSearchIds) {
+          const found = yield* savedSearchRepo.findById(SavedSearchId(id)).pipe(
+            Effect.map((s) => s.name),
+            Effect.catchTag("SavedSearchNotFoundError", () => Effect.succeed(null)),
+          )
+          if (found !== null) savedSearchNameById.set(id, found)
+        }
+
+        const monitorAlertIds = Array.from(
+          new Set(incidents.filter((i) => i.monitorAlertId !== null).map((i) => i.monitorAlertId as string)),
+        )
+        const monitorByAlertId = new Map<string, IncidentMonitorInfo>()
+        for (const alertId of monitorAlertIds) {
+          const info = yield* monitorReader.findByAlertId(alertId)
+          if (info) monitorByAlertId.set(alertId, info)
+        }
+
+        return incidents.map((incident) =>
+          toRecord(
+            incident,
+            issueById.get(IssueId(incident.sourceId)),
+            savedSearchNameById.get(incident.sourceId),
+            incident.monitorAlertId ? monitorByAlertId.get(incident.monitorAlertId) : undefined,
+          ),
+        )
       }).pipe(
-        withPostgres(Layer.mergeAll(AlertIncidentRepositoryLive, IssueRepositoryLive), pgClient, orgId),
+        withPostgres(
+          Layer.mergeAll(
+            AlertIncidentRepositoryLive,
+            IssueRepositoryLive,
+            SavedSearchRepositoryLive,
+            IncidentMonitorReaderLive,
+          ),
+          pgClient,
+          orgId,
+        ),
         withTracing,
       ),
     )

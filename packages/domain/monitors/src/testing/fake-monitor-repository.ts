@@ -189,6 +189,49 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
               (alert.source.id === null || alert.source.id === sourceId),
           ),
       ),
+    // Lock is a Postgres-transaction concern; the in-memory fake has nothing to lock.
+    lockAlertForUpdate: () => Effect.void,
+    listActiveSavedSearchAlerts: (projectId) =>
+      Effect.sync(() =>
+        monitors
+          .filter((m) => m.projectId === projectId && isLive(m))
+          .flatMap((m) => m.alerts)
+          .filter((alert) => alert.source.type === "savedSearch"),
+      ),
+    listProjectsWithActiveSavedSearchAlerts: () =>
+      Effect.sync(() => {
+        const seen = new Map<string, { organizationId: Monitor["organizationId"]; projectId: Monitor["projectId"] }>()
+        for (const monitor of monitors) {
+          if (!isLive(monitor)) continue
+          if (!monitor.alerts.some((alert) => alert.source.type === "savedSearch")) continue
+          seen.set(`${monitor.organizationId}:${monitor.projectId}`, {
+            organizationId: monitor.organizationId,
+            projectId: monitor.projectId,
+          })
+        }
+        return [...seen.values()]
+      }),
+    cascadeSourceDeletion: ({ sourceType, sourceId }) =>
+      Effect.sync(() => {
+        let deletedAlertCount = 0
+        let deletedMonitorCount = 0
+        const now = new Date()
+        for (const monitor of monitors) {
+          if (!isLive(monitor)) continue
+          const remaining = monitor.alerts.filter(
+            (alert) => !(alert.source.type === sourceType && alert.source.id === sourceId),
+          )
+          if (remaining.length === monitor.alerts.length) continue
+          deletedAlertCount += monitor.alerts.length - remaining.length
+          if (remaining.length === 0) {
+            replace(monitor.id, { ...monitor, alerts: remaining, deletedAt: now, updatedAt: now })
+            deletedMonitorCount += 1
+          } else {
+            replace(monitor.id, { ...monitor, alerts: remaining, updatedAt: now })
+          }
+        }
+        return { deletedAlertCount, deletedMonitorCount }
+      }),
     countActiveBySlug: ({ projectId, slug, excludeId }) =>
       Effect.sync(
         () =>

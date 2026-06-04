@@ -1,6 +1,7 @@
 import type { FeatureFlagRepository } from "@domain/feature-flags"
 import type { IssueRepository } from "@domain/issues"
 import type { NOTIFICATION_KIND_META, NotificationKind, RenderNotificationEmailError } from "@domain/notifications"
+import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { SqlClient } from "@domain/shared"
 import type { WrappedReportRepository } from "@domain/spans"
 import type { Effect } from "effect"
@@ -54,9 +55,9 @@ export interface NotificationEmailRenderContext {
  * `never` and stay as trivial `Effect.tryPromise(() => template(...))`.
  */
 export type RenderDepsByKind = {
-  readonly "incident.event": IssueRepository | SqlClient
-  readonly "incident.opened": IssueRepository | SqlClient
-  readonly "incident.closed": IssueRepository | SqlClient
+  readonly "incident.event": IssueRepository | SavedSearchRepository | SqlClient
+  readonly "incident.opened": IssueRepository | SavedSearchRepository | SqlClient
+  readonly "incident.closed": IssueRepository | SavedSearchRepository | SqlClient
   readonly "wrapped.report": WrappedReportRepository | FeatureFlagRepository | SqlClient
   readonly "custom.message": never
 }

@@ -37,7 +37,7 @@ export function IssueEscalatingNotification({
       url={url}
     >
       {live?.name ? <IssueSummaryCard name={live.name} states={states} /> : null}
-      <EscalatingTrend trend={payload.trend} states={states} />
+      {payload.trend ? <EscalatingTrend trend={payload.trend} states={states} /> : null}
       <MonitorAttribution payload={payload} />
     </BaseNotification>
   )
@@ -49,7 +49,13 @@ export function IssueEscalatingNotification({
  * incident transition, so the bell and the email render from one
  * source of truth.
  */
-function EscalatingTrend({ trend, states }: { readonly trend: EscalatingTrend; readonly states: readonly string[] }) {
+function EscalatingTrend({
+  trend,
+  states,
+}: {
+  readonly trend: NonNullable<EscalatingTrend>
+  readonly states: readonly string[]
+}) {
   const buckets = trend.points.map((point) => ({ bucket: point.t, count: point.count }))
   const escalationThresholds = trend.points
     .filter((point): point is typeof point & { threshold: number } => point.threshold !== null)

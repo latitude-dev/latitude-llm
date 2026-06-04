@@ -6,12 +6,24 @@ import type {
   MonitorAlertId,
   MonitorId,
   NotFoundError,
+  OrganizationId,
   ProjectId,
   RepositoryError,
   SqlClient,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Monitor, MonitorAlert } from "../entities/monitor.ts"
+
+/** An (org, project) pair holding at least one active saved-search alert — the sweep's fan-out unit. */
+export interface ProjectWithActiveSavedSearchAlerts {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+}
+
+export interface CascadeSourceDeletionResult {
+  readonly deletedAlertCount: number
+  readonly deletedMonitorCount: number
+}
 
 export interface ListMonitorsRepositoryInput {
   readonly projectId: ProjectId
@@ -97,14 +109,14 @@ export interface MonitorRepositoryShape {
   create(monitor: Monitor): Effect.Effect<void, RepositoryError, SqlClient>
   /** Insert a single new alert (org resolved from the client). Used to add an alert to a live monitor. */
   insertAlert(alert: MonitorAlert): Effect.Effect<void, RepositoryError, SqlClient>
-  /** Soft-delete a single live alert. Fails `NotFoundError` if it isn't a live alert. */
+  /** Soft-delete a single live alert + silently close its open incidents (no event). Fails `NotFoundError` if it isn't a live alert. */
   softDeleteAlert(alertId: MonitorAlertId): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
   /** Set or clear `mutedAt` on a live monitor. Fails `NotFoundError` if it doesn't exist. */
   setMuted(input: {
     readonly id: MonitorId
     readonly mutedAt: Date | null
   }): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
-  /** Soft-delete a live monitor and cascade `deletedAt` to its live alerts (so firing stops; incident history stays joinable). */
+  /** Soft-delete a live monitor, cascade `deletedAt` to its live alerts (firing stops; history stays joinable), and silently close those alerts' open incidents. */
   softDelete(id: MonitorId): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
   /** Update a live monitor's name/slug/description. Caller resolves the slug. */
   updateMetadata(input: {
@@ -132,6 +144,27 @@ export interface MonitorRepositoryShape {
     readonly sourceType: AlertIncidentSourceType
     readonly sourceId: string
   }): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
+  /** `FOR UPDATE` lock on a `monitor_alerts` row inside the caller's transaction — serialises the one-time-threshold read-then-insert against retries. No-ops if the row is gone. */
+  lockAlertForUpdate(alertId: MonitorAlertId): Effect.Effect<void, RepositoryError, SqlClient>
+  /** Active saved-search alerts in a project (live alert + monitor). Org-scoped — the firing orchestrator resolves + evaluates each. */
+  listActiveSavedSearchAlerts(projectId: ProjectId): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
+  /** Distinct `(org, project)` pairs with ≥1 active saved-search alert. **Cross-org** (admin client) — backs the 5-minute sweep's per-project fan-out. */
+  listProjectsWithActiveSavedSearchAlerts(): Effect.Effect<
+    readonly ProjectWithActiveSavedSearchAlerts[],
+    RepositoryError,
+    SqlClient
+  >
+  /**
+   * Source-deletion cascade: soft-delete every live alert watching
+   * `(sourceType, sourceId)` in the current org, silently close those alerts'
+   * open incidents, then soft-delete any monitor left with no active alerts (so
+   * firing stops while incident history stays joinable through the soft-deleted
+   * alert). One transaction.
+   */
+  cascadeSourceDeletion(input: {
+    readonly sourceType: AlertIncidentSourceType
+    readonly sourceId: string
+  }): Effect.Effect<CascadeSourceDeletionResult, RepositoryError, SqlClient>
   /** Count live monitors in a project holding `slug`, excluding `excludeId` — backs slug regeneration. */
   countActiveBySlug(input: {
     readonly projectId: ProjectId

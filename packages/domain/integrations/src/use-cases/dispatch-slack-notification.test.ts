@@ -1,4 +1,5 @@
 import { IssueRepository } from "@domain/issues"
+import { SavedSearchRepository } from "@domain/saved-searches"
 import { OrganizationId, ProjectId, SlackIntegrationId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -18,6 +19,11 @@ const NoopIssueRepository = Layer.succeed(IssueRepository, {
   hardDelete: () => Effect.die(new Error("not expected")),
   existsByName: () => Effect.die(new Error("not expected")),
   countBySlug: () => Effect.die(new Error("not expected")),
+} as never)
+
+// Same rationale as NoopIssueRepository: custom.message never resolves a source name.
+const NoopSavedSearchRepository = Layer.succeed(SavedSearchRepository, {
+  findById: () => Effect.die(new Error("SavedSearchRepository.findById not expected in this test")),
 } as never)
 
 const ORG = OrganizationId("o".repeat(24))
@@ -73,7 +79,12 @@ describe("dispatchSlackNotificationUseCase", () => {
         idempotencyKey: "custom.message:abc",
         context: ctx,
         messenger,
-      }).pipe(Effect.provide(layer), Effect.provide(NoopIssueRepository), Effect.provide(NoopSqlClient)),
+      }).pipe(
+        Effect.provide(layer),
+        Effect.provide(NoopIssueRepository),
+        Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopSqlClient),
+      ),
     )
 
     expect(outcome.status).toBe("delivered")
@@ -94,7 +105,12 @@ describe("dispatchSlackNotificationUseCase", () => {
         idempotencyKey: "custom.message:abc",
         context: ctx,
         messenger,
-      }).pipe(Effect.provide(layer), Effect.provide(NoopIssueRepository), Effect.provide(NoopSqlClient)),
+      }).pipe(
+        Effect.provide(layer),
+        Effect.provide(NoopIssueRepository),
+        Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopSqlClient),
+      ),
     )
 
     expect(outcome.status).toBe("skipped-already-delivered")
@@ -115,7 +131,12 @@ describe("dispatchSlackNotificationUseCase", () => {
         idempotencyKey: "custom.message:xyz",
         context: ctx,
         messenger,
-      }).pipe(Effect.provide(layer), Effect.provide(NoopIssueRepository), Effect.provide(NoopSqlClient)),
+      }).pipe(
+        Effect.provide(layer),
+        Effect.provide(NoopIssueRepository),
+        Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopSqlClient),
+      ),
     )
 
     expect(result._tag).toBe("Failure")

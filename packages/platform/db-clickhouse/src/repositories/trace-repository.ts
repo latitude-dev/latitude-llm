@@ -45,7 +45,7 @@ import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { isActiveSearch, planSearch } from "./search-plan.ts"
 
-const LIST_SELECT = `
+export const LIST_SELECT = `
   organization_id,
   project_id,
   trace_id,
@@ -314,7 +314,7 @@ const SORT_COLUMNS: Record<string, SortColumn> = {
   spans: { expr: "span_count", chType: "UInt64", rowKey: "span_count" },
 }
 
-function buildTraceFilterClauses(
+export function buildTraceFilterClauses(
   filters: FilterSet | undefined,
   options?: {
     readonly paramPrefix?: string

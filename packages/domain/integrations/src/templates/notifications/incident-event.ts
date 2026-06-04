@@ -1,52 +1,68 @@
-import { IssueRepository } from "@domain/issues"
-import { ALERT_INCIDENT_KIND_LABEL, IssueId } from "@domain/shared"
+import { ALERT_INCIDENT_KIND_LABEL } from "@domain/shared"
 import { Effect } from "effect"
 import {
   actionsLink,
   contextLine,
   monitorAttributionBlocks,
+  monitorDeepLink,
   projectOrOrgContext,
   sectionMarkdown,
   severityColor,
 } from "./blocks.ts"
+import { resolveSourceName } from "./source-name.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
 export const incidentEventRenderer: SlackNotificationRenderer<"incident.event"> = (payload, ctx) =>
   Effect.gen(function* () {
     const name = ALERT_INCIDENT_KIND_LABEL[payload.incidentKind] ?? "Incident"
     const color = severityColor(payload.severity)
+    const isSavedSearch = payload.sourceType === "savedSearch"
     const issueUrl = ctx.project
       ? `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${payload.sourceId}`
       : ctx.webAppUrl
+    const monitorUrl =
+      monitorDeepLink({ webAppUrl: ctx.webAppUrl, projectSlug: ctx.project?.slug, monitorSlug: payload.monitorSlug }) ??
+      ctx.webAppUrl
 
-    const issues = yield* IssueRepository
-    const issueName = yield* issues.findById(IssueId(payload.sourceId)).pipe(
-      Effect.map((i) => i.name),
-      Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
-      Effect.catchTag("RepositoryError", () => Effect.succeed(null)),
+    const sourceName = yield* resolveSourceName(payload)
+
+    const attribution = monitorAttributionBlocks({
+      webAppUrl: ctx.webAppUrl,
+      projectSlug: ctx.project?.slug,
+      monitorName: payload.monitorName,
+      monitorSlug: payload.monitorSlug,
+      incidentKind: payload.incidentKind,
+      condition: payload.condition,
+    })
+    const context = contextLine(
+      `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
     )
 
-    const tags = payload.tags ?? []
+    if (isSavedSearch) {
+      const searchRef = sourceName ?? "a saved search"
+      return {
+        text: `${name} in ${ctx.project?.name ?? ctx.organization.name}: ${searchRef}`,
+        color,
+        blocks: [
+          sectionMarkdown(`A saved search fired an alert: *${searchRef}*.`),
+          ...attribution,
+          context,
+          actionsLink("View monitor", monitorUrl),
+        ],
+      }
+    }
 
+    const tags = payload.tags ?? []
     return {
-      text: `${name} in ${ctx.project?.name ?? ctx.organization.name}${issueName ? `: ${issueName}` : ""}`,
+      text: `${name} in ${ctx.project?.name ?? ctx.organization.name}${sourceName ? `: ${sourceName}` : ""}`,
       color,
       blocks: [
-        ...(issueName ? [sectionMarkdown(`*<${issueUrl}|${issueName}>*`)] : []),
-        sectionMarkdown(issueName ? `A new <${issueUrl}|issue> has been detected.` : `A new issue has been detected.`),
+        ...(sourceName ? [sectionMarkdown(`*<${issueUrl}|${sourceName}>*`)] : []),
+        sectionMarkdown(sourceName ? `A new <${issueUrl}|issue> has been detected.` : `A new issue has been detected.`),
         ...(payload.sampleExcerpt?.text ? [sectionMarkdown(`\`\`\`\n${payload.sampleExcerpt.text}\n\`\`\``)] : []),
         ...(tags.length > 0 ? [sectionMarkdown(tags.map((t) => `\`${t}\``).join("  "))] : []),
-        ...monitorAttributionBlocks({
-          webAppUrl: ctx.webAppUrl,
-          projectSlug: ctx.project?.slug,
-          monitorName: payload.monitorName,
-          monitorSlug: payload.monitorSlug,
-          incidentKind: payload.incidentKind,
-          condition: payload.condition,
-        }),
-        contextLine(
-          `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
-        ),
+        ...attribution,
+        context,
         actionsLink("View issue", issueUrl),
       ],
     }

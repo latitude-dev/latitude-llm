@@ -16,6 +16,7 @@ export { AdminProjectMetricsRepositoryLive } from "./repositories/admin-project-
 export { BehaviorObservationRepositoryLive } from "./repositories/behavior-observation-repository.ts"
 export { ClaudeCodeSpanReaderLive } from "./repositories/claude-code-span-reader.ts"
 export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.ts"
+export { SavedSearchMatchReaderLive } from "./repositories/saved-search-match-reader.ts"
 export { ScoreAnalyticsRepositoryLive } from "./repositories/score-analytics-repository.ts"
 export { SessionRepositoryLive } from "./repositories/session-repository.ts"
 export { SpanRepositoryLive } from "./repositories/span-repository.ts"

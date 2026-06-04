@@ -8,6 +8,7 @@ import {
   listAllActiveEvaluations,
   orchestrateTraceEndLiveEvaluationExecutesUseCase,
 } from "@domain/evaluations"
+import { SAVED_SEARCH_MONITORS_THROTTLE_MS } from "@domain/monitors"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import {
@@ -231,6 +232,26 @@ export const runTraceEndJob =
         startTime: traceDetail.startTime.toISOString(),
         rootSpanName: traceDetail.rootSpanName,
       })
+
+      // Saved-search firing check, throttled to one run per project per 5 min.
+      yield* publisher
+        .publish(
+          "monitors",
+          "checkSavedSearchMonitors",
+          { organizationId: payload.organizationId, projectId: payload.projectId },
+          {
+            dedupeKey: `org:${payload.organizationId}:monitors:check-saved-search:${payload.projectId}`,
+            throttleMs: SAVED_SEARCH_MONITORS_THROTTLE_MS,
+          },
+        )
+        .pipe(
+          Effect.catch((error) =>
+            Effect.logError("Failed to enqueue saved-search monitors check", {
+              ...buildRunLogContext(payload),
+              error,
+            }),
+          ),
+        )
 
       const canonicalSessionId =
         traceDetail.sessionId && traceDetail.sessionId.length > 0 ? traceDetail.sessionId : traceDetail.traceId

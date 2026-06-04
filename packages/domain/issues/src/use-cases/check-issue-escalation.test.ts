@@ -129,6 +129,9 @@ const provideTestLayers = (params: {
       Effect.sync(() => {
         dwellWrites.push(input)
       }),
+    findOpenByMonitorAlertId: () => Effect.die("findOpenByMonitorAlertId not used"),
+    existsByMonitorAlertId: () => Effect.die("existsByMonitorAlertId not used"),
+    setEndedAt: () => Effect.die("setEndedAt not used"),
   }
 
   return {

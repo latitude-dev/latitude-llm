@@ -1,3 +1,6 @@
+// Re-exported so `@domain/monitors` can size its saved-search seasonal window
+// to the same history as the issue detector without depending on `@domain/scores`.
+export { SEASONAL_HISTORY_WEEKS } from "@domain/scores"
 export {
   CENTROID_EMBEDDING_DIMENSIONS,
   CENTROID_EMBEDDING_MODEL,
@@ -72,6 +75,7 @@ export {
   type SeasonalEscalationDecisionInput,
   type SeasonalEscalationExitReason,
   type SeasonalEscalationTransition,
+  seasonalAnomalyThreshold,
   type UpdateIssueCentroidInput,
   updateIssueCentroid,
 } from "./helpers.ts"

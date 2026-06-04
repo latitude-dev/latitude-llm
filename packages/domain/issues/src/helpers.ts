@@ -130,6 +130,14 @@ export const isIssueNew = (firstSeenAt: Date, now: Date = new Date()): boolean =
 const sigmaEffective = (observed: number, expected: number): number =>
   Math.max(observed, Math.sqrt(Math.max(0, expected)), 1.0)
 
+/**
+ * Seasonal anomaly threshold for a window: `expected + k · σ_effective`. Shared
+ * with `@domain/monitors`' saved-search `expected` mode so both compute the same
+ * band. `k` is the caller's resolved σ-multiplier (sensitivity, sample-adjusted).
+ */
+export const seasonalAnomalyThreshold = (expected: number, stddev: number, k: number): number =>
+  expected + k * sigmaEffective(stddev, expected)
+
 const snapshotFromSignals = (
   signals: IssueEscalationSignals,
   kShort: number,
@@ -273,8 +281,8 @@ export const evaluateSeasonalEscalation = (input: SeasonalEscalationDecisionInpu
   const sigma6hPerHour = sigmaEffective(signals.stddev6hPerHour, signals.expected6hPerHour)
   const recent6hPerHour = signals.recent6h / 6
 
-  const entryBand1h = signals.expected1h + kAdj * sigma1h
-  const entryBand6hPerHour = signals.expected6hPerHour + kLong * sigma6hPerHour
+  const entryBand1h = seasonalAnomalyThreshold(signals.expected1h, signals.stddev1h, kAdj)
+  const entryBand6hPerHour = seasonalAnomalyThreshold(signals.expected6hPerHour, signals.stddev6hPerHour, kLong)
   const exitBand1h = signals.expected1h + ESCALATION_EXIT_THRESHOLD_FACTOR * kAdj * sigma1h
   const exitBand6hPerHour = signals.expected6hPerHour + ESCALATION_EXIT_THRESHOLD_FACTOR * kLong * sigma6hPerHour
 

@@ -19,6 +19,7 @@
     "@domain/issues": "workspace:*",
     "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",
+    "@domain/saved-searches": "workspace:*",
     "@domain/shared": "workspace:*",
     "@slack/web-api": "7.10.0",
     "effect": "catalog:",

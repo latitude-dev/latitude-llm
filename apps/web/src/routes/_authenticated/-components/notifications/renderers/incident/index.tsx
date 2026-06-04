@@ -13,12 +13,13 @@ import { BaseNotification } from "../../base-notification.tsx"
 import { IssueEscalatingNotification } from "./issue-escalating.tsx"
 import { IssueNewNotification } from "./issue-new.tsx"
 import { IssueRegressedNotification } from "./issue-regressed.tsx"
+import { SavedSearchIncidentNotification } from "./saved-search.tsx"
 
 /**
  * Notification kinds map 1:1 to lifecycle events:
- * - `incident.event`  → one-shot (issue.new, issue.regressed)
- * - `incident.opened` → sustained start (issue.escalating)
- * - `incident.closed` → sustained close (issue.escalating)
+ * - `incident.event`  → one-shot (issue.new, issue.regressed, savedSearch.match, savedSearch.threshold)
+ * - `incident.opened` → sustained start (issue.escalating, savedSearch.escalating)
+ * - `incident.closed` → sustained close (issue.escalating, savedSearch.escalating)
  */
 export type IncidentEvent = "event" | "opened" | "closed"
 
@@ -44,26 +45,36 @@ const renderEvent = (notification: NotificationRecord, payload: IncidentEventPay
       return <IssueNewNotification notification={notification} payload={payload} event="event" />
     case "issue.regressed":
       return <IssueRegressedNotification notification={notification} payload={payload} event="event" />
+    case "savedSearch.match":
+    case "savedSearch.threshold":
+      return <SavedSearchIncidentNotification notification={notification} payload={payload} event="event" />
     case "issue.escalating":
-      // Sustained kind shouldn't land as incident.event; defensive fallback.
+    case "savedSearch.escalating":
+      // Sustained kinds shouldn't land as incident.event; defensive fallback.
       return <Unsupported notification={notification} />
   }
 }
 
 const renderOpened = (notification: NotificationRecord, payload: IncidentOpenedPayload) => {
-  if (payload.incidentKind !== "issue.escalating") {
-    // Eventful kinds shouldn't land as opened; defensive fallback.
-    return <Unsupported notification={notification} />
+  if (payload.incidentKind === "issue.escalating") {
+    return <IssueEscalatingNotification notification={notification} payload={payload} event="opened" />
   }
-  return <IssueEscalatingNotification notification={notification} payload={payload} event="opened" />
+  if (payload.incidentKind === "savedSearch.escalating") {
+    return <SavedSearchIncidentNotification notification={notification} payload={payload} event="opened" />
+  }
+  // Eventful kinds shouldn't land as opened; defensive fallback.
+  return <Unsupported notification={notification} />
 }
 
 const renderClosed = (notification: NotificationRecord, payload: IncidentClosedPayload) => {
-  if (payload.incidentKind !== "issue.escalating") {
-    // Eventful kinds shouldn't land as closed; defensive fallback.
-    return <Unsupported notification={notification} />
+  if (payload.incidentKind === "issue.escalating") {
+    return <IssueEscalatingNotification notification={notification} payload={payload} event="closed" />
   }
-  return <IssueEscalatingNotification notification={notification} payload={payload} event="closed" />
+  if (payload.incidentKind === "savedSearch.escalating") {
+    return <SavedSearchIncidentNotification notification={notification} payload={payload} event="closed" />
+  }
+  // Eventful kinds shouldn't land as closed; defensive fallback.
+  return <Unsupported notification={notification} />
 }
 
 export function IncidentNotification({ notification }: { readonly notification: NotificationRecord }) {

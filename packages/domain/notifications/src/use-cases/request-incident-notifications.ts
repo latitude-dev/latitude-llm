@@ -1,4 +1,4 @@
-import { type AlertIncident, AlertIncidentRepository } from "@domain/alerts"
+import { type AlertIncident, AlertIncidentRepository, isIssueEscalationEntrySignals } from "@domain/alerts"
 import { EvaluationRepository } from "@domain/evaluations"
 import { DEFAULT_ESCALATION_SENSITIVITY_K } from "@domain/issues"
 import type { MembershipRepository } from "@domain/organizations"
@@ -289,7 +289,9 @@ const snapshotSampleExcerpt = (incident: AlertIncident) =>
  * "climbed to" copy.
  */
 const buildBreach = (incident: AlertIncident, trend: IncidentTrend | null): IncidentBreach | undefined => {
-  if (incident.entrySignals === null || trend === null) return undefined
+  // Seasonal breach scalars only exist on `issue.escalating` snapshots; saved-search
+  // incidents carry a frozen-threshold snapshot instead and have no such copy.
+  if (trend === null || !isIssueEscalationEntrySignals(incident.entrySignals)) return undefined
   const peakCount = trend.points.reduce((m, p) => (p.count > m ? p.count : m), 0)
   const bucketHours = trend.bucketDurationMs / (60 * 60 * 1000)
   const triggerRate = bucketHours > 0 ? peakCount / bucketHours : 0
@@ -344,8 +346,8 @@ const buildPayload = (input: {
       ...(sampleExcerpt ? { sampleExcerpt } : {}),
     }
   }
-  // Sustained kinds must carry the trend snapshot (caller guarantees it).
-  if (trend === null) throw new Error(`Missing trend snapshot for ${kind}`)
+  // Sustained kinds carry an issue trend snapshot when the source is an issue;
+  // saved-search incidents omit it (no issue analytics).
   if (kind === "incident.opened") {
     const breach = buildBreach(incident, trend)
     return {
@@ -355,7 +357,7 @@ const buildPayload = (input: {
       incidentKind: base.incidentKind,
       severity: base.severity,
       ...attribution,
-      trend,
+      ...(trend ? { trend } : {}),
       ...(mutableTags ? { tags: mutableTags } : {}),
       ...(breach ? { breach } : {}),
       ...(sampleExcerpt ? { sampleExcerpt } : {}),
@@ -367,7 +369,8 @@ const buildPayload = (input: {
     sourceId: base.sourceId,
     incidentKind: base.incidentKind,
     severity: base.severity,
-    trend,
+    ...attribution,
+    ...(trend ? { trend } : {}),
     recovery: buildRecovery(incident),
   }
 }
@@ -415,15 +418,17 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     const snapshotSensitivity =
       incident.condition?.kind === "issue.escalating" ? incident.condition.sensitivity : undefined
     const kShort = snapshotSensitivity ?? projectSettings?.escalation?.sensitivity ?? DEFAULT_ESCALATION_SENSITIVITY_K
-    // Snapshot trend + tags + sample-excerpt in parallel. Closed kind
-    // skips both: the recovery email focuses on the descent, not the
-    // source context. Event + opened both get the excerpt so the
-    // recipient sees what triggered the alert without clicking through.
+    // Trend / tags / sample-excerpt are all issue-analytics keyed on the issue id,
+    // so they only apply to `issue`-sourced incidents. Saved-search incidents skip
+    // them (the templates render from the kind + monitor attribution + condition).
+    // Closed kind also skips tags/excerpt: the recovery copy focuses on the descent.
+    const isIssueSource = incident.sourceType === "issue"
+    const wantsSourceContext = isIssueSource && notificationKind !== "incident.closed"
     const [trend, tags, sampleExcerpt] = yield* Effect.all(
       [
-        snapshotTrend({ incident, kind: notificationKind, kShort }),
-        notificationKind === "incident.closed" ? Effect.succeed(undefined) : snapshotTags(incident),
-        notificationKind === "incident.closed" ? Effect.succeed(undefined) : snapshotSampleExcerpt(incident),
+        isIssueSource ? snapshotTrend({ incident, kind: notificationKind, kShort }) : Effect.succeed(null),
+        wantsSourceContext ? snapshotTags(incident) : Effect.succeed(undefined),
+        wantsSourceContext ? snapshotSampleExcerpt(incident) : Effect.succeed(undefined),
       ],
       { concurrency: "unbounded" },
     )

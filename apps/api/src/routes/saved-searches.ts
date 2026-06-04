@@ -314,7 +314,7 @@ const deleteSavedSearchEndpoint = savedSearchEndpoint({
         yield* deleteSavedSearch({ savedSearchId: current.id })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive),
+          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive, OutboxEventWriterLive),
           c.var.postgresClient,
           organizationId,
         ),

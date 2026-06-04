@@ -1,5 +1,3 @@
-import { IssueRepository } from "@domain/issues"
-import { IssueId } from "@domain/shared"
 import { Effect } from "effect"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -7,10 +5,11 @@ import React from "react"
 import { buildChartUrl } from "../../../helpers/chart-url.ts"
 import { renderEmail } from "../../../utils/render.ts"
 import { buildMonitorAttribution } from "../-incident-components.tsx"
+import { resolveIncidentSource } from "../-incident-source.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { IncidentOpenedEmail } from "./EmailTemplate.tsx"
 
-const buildSourceUrl = (
+const buildIssueUrl = (
   ctx: NotificationEmailRenderContext,
   payload: Parameters<NotificationEmailRenderer<"incident.opened">>[0],
 ): string | undefined => {
@@ -20,19 +19,10 @@ const buildSourceUrl = (
 
 export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"> = (payload, ctx) =>
   Effect.gen(function* () {
-    const issues = yield* IssueRepository
-    const issue = yield* issues.findById(IssueId(payload.sourceId)).pipe(
-      Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
-      Effect.catchTag("RepositoryError", (cause) =>
-        Effect.fail({
-          _tag: "RenderNotificationEmailError" as const,
-          message: "Failed to load incident source issue",
-          cause,
-        }),
-      ),
-    )
-    const issueRef = issue?.name ?? "an issue"
-    const issueUrl = buildSourceUrl(ctx, payload)
+    const isSavedSearch = payload.sourceType === "savedSearch"
+    const source = yield* resolveIncidentSource(payload)
+    const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "an issue")
+    const issueUrl = isSavedSearch ? undefined : buildIssueUrl(ctx, payload)
 
     const chartUrl = buildChartUrl({
       notificationId: ctx.notificationId,
@@ -46,15 +36,18 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
       incidentKind: payload.incidentKind,
       condition: payload.condition,
     })
+    const ctaUrl = isSavedSearch ? monitor?.url : issueUrl
+    const subject = `Escalating: ${sourceName}`
 
     const html = yield* Effect.tryPromise({
       try: () =>
         renderEmail(
           <IncidentOpenedEmail
+            incidentKind={payload.incidentKind}
             severity={payload.severity}
-            issueId={payload.sourceId}
-            issueName={issue?.name ?? undefined}
-            issueDescription={issue?.description ?? undefined}
+            sourceId={payload.sourceId}
+            sourceName={sourceName}
+            description={source.description ?? undefined}
             issueUrl={issueUrl}
             chartUrl={chartUrl}
             notificationCreatedAt={ctx.notificationCreatedAt}
@@ -76,8 +69,8 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
 
     return {
       html,
-      subject: `Escalating: ${issueRef}`,
-      text: `Escalating issue: ${issueRef}.${issueUrl ? `\n\n${issueUrl}` : ""}\n\n— Latitude`,
+      subject,
+      text: `${subject}.${ctaUrl ? `\n\n${ctaUrl}` : ""}\n\n— Latitude`,
     }
   })
 

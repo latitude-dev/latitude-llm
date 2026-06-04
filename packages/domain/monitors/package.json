@@ -18,7 +18,11 @@
   },
   "dependencies": {
     "@domain/alerts": "workspace:*",
+    "@domain/events": "workspace:*",
+    "@domain/issues": "workspace:*",
     "@domain/notifications": "workspace:*",
+    "@domain/queue": "workspace:*",
+    "@domain/saved-searches": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"

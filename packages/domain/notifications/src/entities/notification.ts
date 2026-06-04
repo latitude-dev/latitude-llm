@@ -151,7 +151,8 @@ export type IncidentEventPayload = z.infer<typeof incidentEventPayloadSchema>
  */
 export const incidentOpenedPayloadSchema = z.object({
   ...incidentBasePayloadShape,
-  trend: incidentTrendSchema,
+  // Issue trend snapshot — absent for non-issue sources (e.g. `savedSearch.escalating`).
+  trend: incidentTrendSchema.optional(),
   tags: incidentTagsSchema.optional(),
   /**
    * Optional: legacy escalating incidents opened before
@@ -178,7 +179,8 @@ export type IncidentOpenedPayload = z.infer<typeof incidentOpenedPayloadSchema>
  */
 export const incidentClosedPayloadSchema = z.object({
   ...incidentBasePayloadShape,
-  trend: incidentTrendSchema,
+  // Issue trend snapshot — absent for non-issue sources (e.g. `savedSearch.escalating`).
+  trend: incidentTrendSchema.optional(),
   recovery: incidentRecoverySchema,
 })
 export type IncidentClosedPayload = z.infer<typeof incidentClosedPayloadSchema>

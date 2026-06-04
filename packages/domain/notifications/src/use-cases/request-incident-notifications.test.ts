@@ -90,6 +90,9 @@ function setup(opts: SetupOpts = {}) {
     listByMonitorId: () => Effect.die("listByMonitorId not used"),
     statsByMonitorId: () => Effect.die("statsByMonitorId not used"),
     listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used"),
+    findOpenByMonitorAlertId: () => Effect.die("findOpenByMonitorAlertId not used"),
+    existsByMonitorAlertId: () => Effect.die("existsByMonitorAlertId not used"),
+    setEndedAt: () => Effect.die("setEndedAt not used"),
   }
 
   const members: MemberWithUser[] = (opts.memberUserIds ?? [cuid("u1"), cuid("u2")]).map((uid, i) => ({
@@ -260,7 +263,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(result.requests[0]?.kind).toBe("incident.opened")
     expect(result.requests[0]?.idempotencyKey).toBe(`incident.opened:${incidentId}`)
     const payload = result.requests[0]?.payload
-    if (!payload || !("trend" in payload)) throw new Error("expected trend on opened payload")
+    if (!payload || !("trend" in payload) || !payload.trend) throw new Error("expected trend on opened payload")
     expect(payload.trend.bucketDurationMs).toBe(10 * 60 * 1000)
     // NaN thresholds round-trip through the producer as null.
     expect(payload.trend.points.some((p) => p.threshold === null)).toBe(true)
@@ -289,7 +292,7 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(result.requests[0]?.kind).toBe("incident.closed")
     expect(result.requests[0]?.idempotencyKey).toBe(`incident.closed:${incidentId}`)
     const payload = result.requests[0]?.payload
-    if (!payload || !("trend" in payload)) throw new Error("expected trend on closed payload")
+    if (!payload || !("trend" in payload) || !payload.trend) throw new Error("expected trend on closed payload")
     expect(payload.trend.points.length).toBeGreaterThan(0)
   })
 

@@ -465,3 +465,103 @@ describe("AlertIncidentRepositoryLive.listByMonitorAlertId", () => {
     expect(result.nextCursor).toBeNull()
   })
 })
+
+describe("AlertIncidentRepositoryLive monitor-alert lookups (saved-search firing)", () => {
+  let database: InMemoryPostgres
+  const alertA = MonitorAlertId("1a".padEnd(24, "0"))
+  const alertB = MonitorAlertId("1b".padEnd(24, "0"))
+
+  beforeAll(async () => {
+    database = await createInMemoryPostgres()
+  })
+
+  beforeEach(async () => {
+    await database.db.delete(alertIncidentsTable)
+  })
+
+  afterAll(async () => {
+    await closeInMemoryPostgres(database)
+  })
+
+  it("findOpenByMonitorAlertId returns the open incident and null when only closed rows exist", async () => {
+    const open = makeRow({
+      id: AlertIncidentId("1".repeat(24)),
+      sourceId: "1".repeat(24),
+      monitorAlertId: alertA,
+      endedAt: null,
+    })
+    const closed = makeRow({
+      id: AlertIncidentId("2".repeat(24)),
+      sourceId: "2".repeat(24),
+      monitorAlertId: alertB,
+      endedAt: new Date("2026-05-07T12:00:00.000Z"),
+    })
+    // Another org's open row for the same alert id must stay invisible under RLS.
+    const otherOrg = makeRow({
+      id: AlertIncidentId("3".repeat(24)),
+      sourceId: "3".repeat(24),
+      organizationId: otherOrganizationId,
+      monitorAlertId: alertA,
+      endedAt: null,
+    })
+    await database.db.insert(alertIncidentsTable).values([open, closed, otherOrg])
+
+    const found = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* AlertIncidentRepository
+        return yield* repository.findOpenByMonitorAlertId(alertA)
+      }).pipe(makeRlsProvider(database, organizationId)),
+    )
+    expect(found?.id).toEqual(open.id)
+
+    const none = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* AlertIncidentRepository
+        return yield* repository.findOpenByMonitorAlertId(alertB)
+      }).pipe(makeRlsProvider(database, organizationId)),
+    )
+    expect(none).toBeNull()
+  })
+
+  it("existsByMonitorAlertId is true for any prior incident (open or closed)", async () => {
+    await database.db.insert(alertIncidentsTable).values([
+      makeRow({
+        id: AlertIncidentId("1".repeat(24)),
+        sourceId: "1".repeat(24),
+        monitorAlertId: alertA,
+        endedAt: new Date("2026-05-07T12:00:00.000Z"),
+      }),
+    ])
+
+    const [spent, fresh] = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* AlertIncidentRepository
+        return [
+          yield* repository.existsByMonitorAlertId(alertA),
+          yield* repository.existsByMonitorAlertId(alertB),
+        ] as const
+      }).pipe(makeRlsProvider(database, organizationId)),
+    )
+    expect(spent).toBe(true)
+    expect(fresh).toBe(false)
+  })
+
+  it("setEndedAt closes a specific incident by id", async () => {
+    const open = makeRow({
+      id: AlertIncidentId("1".repeat(24)),
+      sourceId: "1".repeat(24),
+      monitorAlertId: alertA,
+      endedAt: null,
+    })
+    await database.db.insert(alertIncidentsTable).values([open])
+
+    const stillOpen = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* AlertIncidentRepository
+        yield* repository.setEndedAt({ id: open.id as AlertIncidentId, endedAt: new Date("2026-05-07T13:00:00.000Z") })
+        return yield* repository.findOpenByMonitorAlertId(alertA)
+      }).pipe(makeRlsProvider(database, organizationId)),
+    )
+    expect(stillOpen).toBeNull()
+  })
+})

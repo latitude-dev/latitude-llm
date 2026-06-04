@@ -6,7 +6,14 @@ import {
   type MonitorSearchResult,
   monitorSchema,
 } from "@domain/monitors"
-import { type MonitorId, NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  type MonitorId,
+  NotFoundError,
+  type OrganizationId,
+  type ProjectId,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
 import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, isNull, max, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -70,6 +77,30 @@ const toMonitorAlertRow = (
   severity: alert.severity,
   createdAt: alert.createdAt,
 })
+
+/**
+ * Silent-close (no `IncidentClosed` event) every open incident fired by the given
+ * alerts, in the caller's soft-delete transaction — otherwise a removed alert's
+ * sustained incident would linger "ongoing" forever (the firing scan skips it).
+ */
+const closeOpenIncidentsForAlerts = async (
+  db: Operator,
+  organizationId: Monitor["organizationId"],
+  alertIds: readonly string[],
+  now: Date,
+): Promise<void> => {
+  if (alertIds.length === 0) return
+  await db
+    .update(alertIncidents)
+    .set({ endedAt: now })
+    .where(
+      and(
+        eq(alertIncidents.organizationId, organizationId),
+        inArray(alertIncidents.monitorAlertId, alertIds),
+        isNull(alertIncidents.endedAt),
+      ),
+    )
+}
 
 const groupAlertsByMonitorId = (
   rows: readonly (typeof monitorAlerts.$inferSelect)[],
@@ -397,10 +428,11 @@ export const MonitorRepositoryLive = Layer.effect(
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const { organizationId } = sqlClient
-          const updated = yield* sqlClient.query((db) =>
-            db
+          const updated = yield* sqlClient.query(async (db) => {
+            const now = new Date()
+            const rows = await db
               .update(monitorAlerts)
-              .set({ deletedAt: new Date() })
+              .set({ deletedAt: now })
               .where(
                 and(
                   eq(monitorAlerts.organizationId, organizationId),
@@ -408,8 +440,10 @@ export const MonitorRepositoryLive = Layer.effect(
                   isNull(monitorAlerts.deletedAt),
                 ),
               )
-              .returning({ id: monitorAlerts.id }),
-          )
+              .returning({ id: monitorAlerts.id })
+            if (rows.length > 0) await closeOpenIncidentsForAlerts(db, organizationId, [alertId], now)
+            return rows
+          })
           if (updated.length === 0) return yield* new NotFoundError({ entity: "MonitorAlert", id: alertId })
         }),
       setMuted: ({ id, mutedAt }) =>
@@ -440,7 +474,7 @@ export const MonitorRepositoryLive = Layer.effect(
               .where(and(eq(monitors.organizationId, organizationId), eq(monitors.id, id), isNull(monitors.deletedAt)))
               .returning({ id: monitors.id })
             if (rows.length > 0) {
-              await db
+              const cascadedAlerts = await db
                 .update(monitorAlerts)
                 .set({ deletedAt: now })
                 .where(
@@ -450,6 +484,13 @@ export const MonitorRepositoryLive = Layer.effect(
                     isNull(monitorAlerts.deletedAt),
                   ),
                 )
+                .returning({ id: monitorAlerts.id })
+              await closeOpenIncidentsForAlerts(
+                db,
+                organizationId,
+                cascadedAlerts.map((alert) => alert.id),
+                now,
+              )
             }
             return rows
           })
@@ -511,6 +552,121 @@ export const MonitorRepositoryLive = Layer.effect(
               ),
           )
           return rows.map(toMonitorAlert)
+        }),
+      lockAlertForUpdate: (alertId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // FOR UPDATE on the alert row so the one-time-threshold read-then-insert
+          // is serialised against a concurrent worker tick. No row → no lock taken
+          // (the caller already loaded the alert; absence is handled there).
+          yield* sqlClient.query((db) =>
+            db
+              .select({ id: monitorAlerts.id })
+              .from(monitorAlerts)
+              .where(and(eq(monitorAlerts.organizationId, sqlClient.organizationId), eq(monitorAlerts.id, alertId)))
+              .for("update"),
+          )
+        }),
+      listActiveSavedSearchAlerts: (projectId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // `source_type = 'savedSearch'` already selects exactly the savedSearch.* kinds.
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select(getTableColumns(monitorAlerts))
+              .from(monitorAlerts)
+              .innerJoin(monitors, eq(monitors.id, monitorAlerts.monitorId))
+              .where(
+                and(
+                  eq(monitorAlerts.organizationId, sqlClient.organizationId),
+                  eq(monitors.projectId, projectId),
+                  eq(monitorAlerts.sourceType, "savedSearch"),
+                  isNull(monitorAlerts.deletedAt),
+                  isNull(monitors.deletedAt),
+                ),
+              ),
+          )
+          return rows.map(toMonitorAlert)
+        }),
+      listProjectsWithActiveSavedSearchAlerts: () =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // No org filter — cross-org sweep on the admin client.
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .selectDistinct({ organizationId: monitorAlerts.organizationId, projectId: monitors.projectId })
+              .from(monitorAlerts)
+              .innerJoin(monitors, eq(monitors.id, monitorAlerts.monitorId))
+              .where(
+                and(
+                  eq(monitorAlerts.sourceType, "savedSearch"),
+                  isNull(monitorAlerts.deletedAt),
+                  isNull(monitors.deletedAt),
+                ),
+              ),
+          )
+          return rows.map((row) => ({
+            organizationId: row.organizationId as OrganizationId,
+            projectId: row.projectId as ProjectId,
+          }))
+        }),
+      cascadeSourceDeletion: ({ sourceType, sourceId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient.transaction(
+            Effect.gen(function* () {
+              const now = new Date()
+              const deleted = yield* sqlClient.query((db) =>
+                db
+                  .update(monitorAlerts)
+                  .set({ deletedAt: now, updatedAt: now })
+                  .where(
+                    and(
+                      eq(monitorAlerts.organizationId, sqlClient.organizationId),
+                      eq(monitorAlerts.sourceType, sourceType),
+                      eq(monitorAlerts.sourceId, sourceId),
+                      isNull(monitorAlerts.deletedAt),
+                    ),
+                  )
+                  .returning({ id: monitorAlerts.id, monitorId: monitorAlerts.monitorId }),
+              )
+
+              yield* sqlClient.query((db) =>
+                closeOpenIncidentsForAlerts(
+                  db,
+                  sqlClient.organizationId,
+                  deleted.map((alert) => alert.id),
+                  now,
+                ),
+              )
+
+              let deletedMonitorCount = 0
+              for (const monitorId of new Set(deleted.map((row) => row.monitorId))) {
+                const remaining = yield* sqlClient.query((db) =>
+                  db
+                    .select({ value: count() })
+                    .from(monitorAlerts)
+                    .where(and(eq(monitorAlerts.monitorId, monitorId), isNull(monitorAlerts.deletedAt))),
+                )
+                if (Number(remaining[0]?.value ?? 0) > 0) continue
+                yield* sqlClient.query((db) =>
+                  db
+                    .update(monitors)
+                    .set({ deletedAt: now, updatedAt: now })
+                    .where(
+                      and(
+                        eq(monitors.id, monitorId),
+                        eq(monitors.organizationId, sqlClient.organizationId),
+                        isNull(monitors.deletedAt),
+                      ),
+                    ),
+                )
+                deletedMonitorCount += 1
+              }
+
+              return { deletedAlertCount: deleted.length, deletedMonitorCount }
+            }),
+          )
         }),
       countActiveBySlug: ({ projectId, slug, excludeId }) =>
         Effect.gen(function* () {

@@ -1,5 +1,5 @@
 import type { IncidentRecovery } from "@domain/notifications"
-import type { AlertSeverity } from "@domain/shared"
+import { ALERT_INCIDENT_KIND_SOURCE_TYPE, type AlertIncidentKind, type AlertSeverity } from "@domain/shared"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -23,10 +23,11 @@ import {
 } from "../-incident-components.tsx"
 
 interface IncidentClosedEmailProps {
+  readonly incidentKind: AlertIncidentKind
   readonly severity: AlertSeverity
-  readonly issueId: string
-  readonly issueName: string | undefined
-  readonly issueDescription: string | undefined
+  readonly sourceId: string
+  readonly sourceName: string
+  readonly description: string | undefined
   readonly issueUrl: string | undefined
   readonly chartUrl: string
   readonly notificationCreatedAt: Date
@@ -38,10 +39,11 @@ interface IncidentClosedEmailProps {
 }
 
 export function IncidentClosedEmail({
+  incidentKind,
   severity,
-  issueId,
-  issueName,
-  issueDescription,
+  sourceId,
+  sourceName,
+  description,
   issueUrl,
   chartUrl,
   notificationCreatedAt,
@@ -51,9 +53,17 @@ export function IncidentClosedEmail({
   monitor,
   webAppUrl,
 }: IncidentClosedEmailProps) {
-  const issueRef = issueName ?? "an issue"
+  const isSavedSearch = ALERT_INCIDENT_KIND_SOURCE_TYPE[incidentKind] === "savedSearch"
+  const heading = "Resolved escalation"
+  const subtitle = isSavedSearch
+    ? "We notified everyone watching this project — matching traces have returned below the threshold."
+    : "We notified everyone watching this project — the occurrence rate has returned to baseline."
   const scope = formatScope(organizationName, projectName)
   const duration = humanizeDurationMs(recovery.durationMs)
+  const recoveryLine = isSavedSearch
+    ? `Elevated for ${duration} — no further action needed unless matching traces climb again.`
+    : `Elevated for ${duration} — no further action needed unless the issue regresses again.`
+  const ctaHref = isSavedSearch ? monitor?.url : issueUrl
 
   const metadataRows = [
     { label: "Project", value: scope },
@@ -62,24 +72,21 @@ export function IncidentClosedEmail({
 
   return (
     <ContainerLayout
-      previewText={`Resolved: escalation on ${issueRef}`}
+      previewText={`Resolved: escalation on ${sourceName}`}
       footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        Resolved escalation
+        {heading}
       </EmailText>
-      <EmailText variant="body">
-        We notified everyone watching this project — the occurrence rate has returned to baseline.
-      </EmailText>
+      <EmailText variant="body">{subtitle}</EmailText>
 
       <MonitorAttribution monitor={monitor} />
 
-      <SectionHeader label="Issue" />
-
-      <EmailText variant="heading">{issueRef}</EmailText>
-      {issueDescription ? (
+      <SectionHeader label={isSavedSearch ? "Saved search" : "Issue"} />
+      <EmailText variant="heading">{sourceName}</EmailText>
+      {description ? (
         <EmailText variant="bodySmall" className="text-muted-foreground">
-          {issueDescription}
+          {description}
         </EmailText>
       ) : null}
 
@@ -89,15 +96,18 @@ export function IncidentClosedEmail({
 
       <SectionHeader label="Recovery" />
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
-        {`Elevated for ${duration} — no further action needed unless the issue regresses again.`}
+        {recoveryLine}
       </EmailText>
-      <IncidentTrendChartImage src={chartUrl} />
+      {isSavedSearch ? null : (
+        <>
+          <IncidentTrendChartImage src={chartUrl} />
+          <IssueIdFooter issueId={sourceId} />
+        </>
+      )}
 
-      <IssueIdFooter issueId={issueId} />
-
-      {issueUrl ? (
+      {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={issueUrl} label="View issue" />
+          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View issue"} />
         </Section>
       ) : null}
     </ContainerLayout>
@@ -105,10 +115,11 @@ export function IncidentClosedEmail({
 }
 
 IncidentClosedEmail.PreviewProps = {
+  incidentKind: "issue.escalating",
   severity: "high",
-  issueId: "dds0rt8sqgpuku4u4wabze9r",
-  issueName: "Token leakage in responses",
-  issueDescription: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
+  sourceId: "dds0rt8sqgpuku4u4wabze9r",
+  sourceName: "Token leakage in responses",
+  description: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
   issueUrl: "https://console.latitude.so/projects/sample-project/issues?issueId=preview-issue",
   chartUrl: "https://placehold.co/600x200/dbe5ff/3b5bff?text=Trend+chart",
   notificationCreatedAt: new Date("2026-03-18T10:37:00Z"),

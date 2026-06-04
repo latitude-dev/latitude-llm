@@ -35,6 +35,11 @@ export interface UpdateAlertIncidentExitDwellInput {
   readonly exitEligibleSince: Date | null
 }
 
+export interface SetAlertIncidentEndedAtInput {
+  readonly id: AlertIncidentId
+  readonly endedAt: Date
+}
+
 export interface ListAlertIncidentsByProjectInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
@@ -115,6 +120,14 @@ export interface AlertIncidentRepositoryShape {
    * because the dwell can advance many times without the incident closing.
    */
   updateExitDwell(input: UpdateAlertIncidentExitDwellInput): Effect.Effect<void, RepositoryError, SqlClient>
+  /** The open incident fired by `monitorAlertId` (org scope), or `null`. Saved-search machines track lifecycle per firing alert, not per `(source, kind)`. */
+  findOpenByMonitorAlertId(
+    monitorAlertId: MonitorAlertId,
+  ): Effect.Effect<AlertIncident | null, RepositoryError, SqlClient>
+  /** Whether `monitorAlertId` has ever fired (org scope). Backs the absolute-threshold one-time short-circuit. */
+  existsByMonitorAlertId(monitorAlertId: MonitorAlertId): Effect.Effect<boolean, RepositoryError, SqlClient>
+  /** Set `ended_at` on one incident by id (org scope) — the saved-search machines already hold the row; close events (if any) are emitted by the caller. */
+  setEndedAt(input: SetAlertIncidentEndedAtInput): Effect.Effect<void, RepositoryError, SqlClient>
   /**
    * Returns every incident in the project whose lifetime overlaps the optional `[from, to]`
    * window, ordered ascending by `started_at`. Uses the

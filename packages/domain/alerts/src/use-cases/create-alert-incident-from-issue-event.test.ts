@@ -29,6 +29,9 @@ function createTestLayers() {
       listByMonitorId: () => Effect.die("listByMonitorId not used in this test"),
       statsByMonitorId: () => Effect.die("statsByMonitorId not used in this test"),
       listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used in this test"),
+      findOpenByMonitorAlertId: () => Effect.die("findOpenByMonitorAlertId not used in this test"),
+      existsByMonitorAlertId: () => Effect.die("existsByMonitorAlertId not used in this test"),
+      setEndedAt: () => Effect.die("setEndedAt not used in this test"),
     }),
   )
 

@@ -1,4 +1,4 @@
-import { CopyableText, InfiniteTable, type InfiniteTableColumn, Status, Text } from "@repo/ui"
+import { InfiniteTable, type InfiniteTableColumn, Status, Text } from "@repo/ui"
 import { formatDuration } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { type ReactNode, useCallback } from "react"
@@ -8,10 +8,20 @@ import {
 } from "../../../../../../domains/monitors/monitors.collection.ts"
 import { IncidentStatus } from "./incident-status.tsx"
 
-/** Falls back to a copyable raw id when the source was deleted and its name is unresolved. */
+/** Human-readable, lowercased source-type labels for the deleted-source fallback. */
+const SOURCE_TYPE_LABEL: Record<MonitorIncidentRecord["sourceType"], string> = {
+  issue: "issue",
+  savedSearch: "saved search",
+}
+
+/** Shows the resolved source name, or an italic "Deleted <type>" once the source is gone. */
 function SourceCell({ incident }: { readonly incident: MonitorIncidentRecord }) {
   if (!incident.sourceName) {
-    return <CopyableText value={incident.sourceId} size="sm" ellipsis tooltip="Copy source id" />
+    return (
+      <Text.H6 color="foregroundMuted" noWrap ellipsis className="italic">
+        Deleted {SOURCE_TYPE_LABEL[incident.sourceType]}
+      </Text.H6>
+    )
   }
   return (
     <Text.H6 noWrap ellipsis>

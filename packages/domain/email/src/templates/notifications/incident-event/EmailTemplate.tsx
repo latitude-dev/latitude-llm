@@ -1,5 +1,10 @@
 import type { IncidentSampleExcerpt } from "@domain/notifications"
-import { ALERT_INCIDENT_KIND_LABEL, type AlertIncidentKind, type AlertSeverity } from "@domain/shared"
+import {
+  ALERT_INCIDENT_KIND_LABEL,
+  ALERT_INCIDENT_KIND_SOURCE_TYPE,
+  type AlertIncidentKind,
+  type AlertSeverity,
+} from "@domain/shared"
 import { Section } from "@react-email/components"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
 // biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
@@ -37,9 +42,12 @@ const ALERT_KIND_TO_SUBTITLE: Record<AlertIncidentKind, string> = {
 interface IncidentEventEmailProps {
   readonly incidentKind: AlertIncidentKind
   readonly severity: AlertSeverity
-  readonly issueId: string
-  readonly issueName: string | undefined
-  readonly issueDescription: string | undefined
+  /** Source entity id — issue id or saved search id. Surfaced in the footer for issues only. */
+  readonly sourceId: string
+  /** Live-resolved source display name (issue title or saved search name). */
+  readonly sourceName: string
+  /** Issue description; absent for saved-search sources. */
+  readonly description: string | undefined
   readonly issueUrl: string | undefined
   readonly notificationCreatedAt: Date
   readonly organizationName: string
@@ -53,9 +61,9 @@ interface IncidentEventEmailProps {
 export function IncidentEventEmail({
   incidentKind,
   severity,
-  issueId,
-  issueName,
-  issueDescription,
+  sourceId,
+  sourceName,
+  description,
   issueUrl,
   notificationCreatedAt,
   organizationName,
@@ -67,8 +75,9 @@ export function IncidentEventEmail({
 }: IncidentEventEmailProps) {
   const heading = ALERT_INCIDENT_KIND_LABEL[incidentKind]
   const subtitle = ALERT_KIND_TO_SUBTITLE[incidentKind]
-  const issueRef = issueName ?? "an issue"
+  const isSavedSearch = ALERT_INCIDENT_KIND_SOURCE_TYPE[incidentKind] === "savedSearch"
   const scope = formatScope(organizationName, projectName)
+  const ctaHref = isSavedSearch ? monitor?.url : issueUrl
 
   const metadataRows = [
     { label: "Project", value: scope },
@@ -78,7 +87,7 @@ export function IncidentEventEmail({
 
   return (
     <ContainerLayout
-      previewText={`${heading}: ${issueRef}`}
+      previewText={`${heading}: ${sourceName}`}
       footer={<EmailFooter unsubscribe={{ webAppUrl, group: "incidents" }} />}
     >
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
@@ -88,12 +97,11 @@ export function IncidentEventEmail({
 
       <MonitorAttribution monitor={monitor} />
 
-      <SectionHeader label="Issue" />
-
-      <EmailText variant="heading">{issueRef}</EmailText>
-      {issueDescription ? (
+      <SectionHeader label={isSavedSearch ? "Saved search" : "Issue"} />
+      <EmailText variant="heading">{sourceName}</EmailText>
+      {description ? (
         <EmailText variant="bodySmall" className="text-muted-foreground">
-          {issueDescription}
+          {description}
         </EmailText>
       ) : null}
 
@@ -103,11 +111,11 @@ export function IncidentEventEmail({
 
       {sampleExcerpt ? <SampleExcerptCard excerpt={sampleExcerpt} /> : null}
 
-      <IssueIdFooter issueId={issueId} />
+      {isSavedSearch ? null : <IssueIdFooter issueId={sourceId} />}
 
-      {issueUrl ? (
+      {ctaHref ? (
         <Section className={emailDesignTokens.spacing.buttonTop}>
-          <EmailButton href={issueUrl} label="View issue" />
+          <EmailButton href={ctaHref} label={isSavedSearch ? "View monitor" : "View issue"} />
         </Section>
       ) : null}
     </ContainerLayout>
@@ -117,9 +125,9 @@ export function IncidentEventEmail({
 IncidentEventEmail.PreviewProps = {
   incidentKind: "issue.new",
   severity: "medium",
-  issueId: "dds0rt8sqgpuku4u4wabze9r",
-  issueName: "Token leakage in responses",
-  issueDescription: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
+  sourceId: "dds0rt8sqgpuku4u4wabze9r",
+  sourceName: "Token leakage in responses",
+  description: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
   issueUrl: "https://console.latitude.so/projects/sample-project/issues?issueId=preview-issue",
   notificationCreatedAt: new Date("2026-03-18T10:05:00Z"),
   organizationName: "Acme Inc.",

@@ -275,6 +275,31 @@ const _registry = {
     }
   }>(),
 
+  monitors: payloads<{
+    /**
+     * Run the saved-search firing pipeline for one project. Published throttled
+     * (per project) on trace-end and fanned out by the 5-minute sweep. The
+     * handler lists active saved-search alerts and runs each one's state machine.
+     */
+    checkSavedSearchMonitors: {
+      readonly organizationId: string
+      readonly projectId: string
+    }
+    /** Fired by the 5-minute cron — fans out one `checkSavedSearchMonitors` per project with active alerts. */
+    sweepSavedSearchMonitors: Record<string, never>
+    /**
+     * Source-deletion cascade. Fired by the domain-events router on
+     * `SavedSearchDeleted`. Soft-deletes alerts watching the source and prunes
+     * now-empty monitors.
+     */
+    onSourceDeleted: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly sourceType: "savedSearch" | "issue"
+      readonly sourceId: string
+    }
+  }>(),
+
   evaluations: payloads<{
     automaticRefreshAlignment: {
       readonly organizationId: string

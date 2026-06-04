@@ -1,5 +1,6 @@
 import type { IssueRepository } from "@domain/issues"
 import type { NOTIFICATION_KIND_META, NotificationKind } from "@domain/notifications"
+import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { NotificationId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import type { KnownBlock } from "@slack/web-api"
 import { Data, type Effect } from "effect"
@@ -71,13 +72,13 @@ export class RenderSlackError extends Data.TaggedError("RenderSlackError")<{
 
 /**
  * Per-kind Effect service requirements for rendering. Incident kinds
- * look up the issue name from `IssueRepository`; other kinds need
- * nothing beyond the payload + context.
+ * look up the source name (issue or saved search) from its repository;
+ * other kinds need nothing beyond the payload + context.
  */
 export type SlackRenderDepsByKind = {
-  readonly "incident.event": IssueRepository | SqlClient
-  readonly "incident.opened": IssueRepository | SqlClient
-  readonly "incident.closed": IssueRepository | SqlClient
+  readonly "incident.event": IssueRepository | SavedSearchRepository | SqlClient
+  readonly "incident.opened": IssueRepository | SavedSearchRepository | SqlClient
+  readonly "incident.closed": IssueRepository | SavedSearchRepository | SqlClient
   readonly "wrapped.report": never
   readonly "custom.message": never
 }
@@ -85,8 +86,8 @@ export type SlackRenderDepsByKind = {
 export type SlackRenderDepsFor<K extends NotificationKind> = SlackRenderDepsByKind[K]
 
 /**
- * Per-kind renderer signature. Incident kinds have `R = IssueRepository | SqlClient`
- * so they can look up the issue display name. Other kinds use `R = never`.
+ * Per-kind renderer signature. Incident kinds carry the source repositories on `R`
+ * so they can look up the source display name. Other kinds use `R = never`.
  */
 export type SlackNotificationRenderer<K extends NotificationKind> = (
   payload: z.infer<(typeof NOTIFICATION_KIND_META)[K]["payload"]>,

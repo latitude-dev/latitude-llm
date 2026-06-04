@@ -1,4 +1,4 @@
-import type { AlertIncidentKind, AlertIncidentSourceType, AlertSeverity, EntrySignalsSnapshot } from "@domain/alerts"
+import type { AlertIncidentKind, AlertIncidentSourceType, AlertSeverity, IncidentEntrySignals } from "@domain/alerts"
 import type { AlertIncidentCondition } from "@domain/shared"
 import { sql } from "drizzle-orm"
 import { index, jsonb, varchar } from "drizzle-orm/pg-core"
@@ -17,10 +17,9 @@ export const alertIncidents = latitudeSchema.table(
     startedAt: tzTimestamp("started_at").notNull(),
     endedAt: tzTimestamp("ended_at"),
     createdAt: tzTimestamp("created_at").defaultNow().notNull(),
-    // Frozen at entry for `issue.escalating` incidents so the close-side detector
-    // can compare against the conditions that tripped open. `NULL` for legacy rows
-    // and for kinds that don't escalate (`issue.new`, `issue.regressed`).
-    entrySignals: jsonb("entry_signals").$type<EntrySignalsSnapshot>(),
+    // Entry snapshot for sustained incidents (seasonal for `issue.escalating`,
+    // frozen threshold for `savedSearch.escalating`); `NULL` otherwise. Narrowed per-kind on read.
+    entrySignals: jsonb("entry_signals").$type<IncidentEntrySignals>(),
     // Marks when the band-shape exit condition first started holding. Cleared
     // back to NULL whenever it fails again. Once `now - exitEligibleSince` clears
     // the dwell threshold, the incident is closed.

@@ -83,10 +83,14 @@ export const Route = createFileRoute("/api/notifications/$nid/incident-trend.png
         const parsed = schema.safeParse(loaded.payload)
         if (!parsed.success) return respondTransparent()
 
+        // No trend snapshot → nothing to chart (e.g. saved-search incidents carry no issue trend).
+        const trend = parsed.data.trend
+        if (!trend) return respondTransparent()
+
         const breach = "breach" in parsed.data ? parsed.data.breach : undefined
         try {
           const png = await renderIncidentTrendPng({
-            trend: parsed.data.trend,
+            trend,
             ...(breach ? { breach } : {}),
           })
           return respondPng(png)

@@ -263,6 +263,15 @@ export interface EventPayloads {
     readonly name: string
   }
   /**
+   * Fired when a saved search is (soft-)deleted. Drives the monitors source
+   * cascade: alerts watching it are soft-deleted and now-empty monitors pruned.
+   */
+  SavedSearchDeleted: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly searchId: string
+  }
+  /**
    * Fired the first time an issue is monitored: a brand-new evaluation
    * generation job has been kicked off (no existing evaluation existed for
    * the issue).

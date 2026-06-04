@@ -56,6 +56,9 @@ const provideRepository = (incidents: readonly AlertIncident[]): AlertIncidentRe
   listByMonitorId: () => Effect.die("listByMonitorId not used"),
   statsByMonitorId: () => Effect.die("statsByMonitorId not used"),
   listByMonitorAlertId: () => Effect.die("listByMonitorAlertId not used"),
+  findOpenByMonitorAlertId: () => Effect.die("findOpenByMonitorAlertId not used"),
+  existsByMonitorAlertId: () => Effect.die("existsByMonitorAlertId not used"),
+  setEndedAt: () => Effect.die("setEndedAt not used"),
 })
 
 const runSweep = (

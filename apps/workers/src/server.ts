@@ -2,6 +2,7 @@ import { createBullBoard } from "@bull-board/api"
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { HonoAdapter } from "@bull-board/hono"
 import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/issues"
+import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
 import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
@@ -52,6 +53,7 @@ import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createExportsWorker } from "./workers/exports.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
+import { createMonitorsWorker } from "./workers/monitors.ts"
 import { createNotificationEmailerWorker } from "./workers/notification-emailer.ts"
 import { createNotificationSlackWorker } from "./workers/notification-slack.ts"
 import { createNotificationsWorker } from "./workers/notifications.ts"
@@ -194,6 +196,7 @@ const bootstrap = async () => {
     })
     createExportsWorker(ctx)
     await createIssuesWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
+    createMonitorsWorker({ ...ctx, adminPostgresClient: getAdminPostgresClient() })
     createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
@@ -255,6 +258,20 @@ const bootstrap = async () => {
           "sweepEscalating",
           {},
           { key: ESCALATION_SWEEPER_KEY, pattern: ESCALATION_SWEEPER_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    // 5-minute saved-search firing sweep. Opens incidents in low-traffic orgs
+    // (where trace-end doesn't keep re-triggering the throttled check) and lets
+    // sustained incidents close once their dwell elapses on quiet traffic.
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "monitors",
+          "sweepSavedSearchMonitors",
+          {},
+          { key: SAVED_SEARCH_MONITORS_SWEEPER_KEY, pattern: SAVED_SEARCH_MONITORS_SWEEPER_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

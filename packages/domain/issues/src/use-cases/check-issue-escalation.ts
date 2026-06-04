@@ -1,4 +1,4 @@
-import { AlertIncidentRepository } from "@domain/alerts"
+import { AlertIncidentRepository, isIssueEscalationEntrySignals } from "@domain/alerts"
 import { OutboxEventWriter } from "@domain/events"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
@@ -180,7 +180,9 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
       kShort,
       isNew: isIssueNew(issueWithLifecycle.createdAt, now),
       wasEscalating,
-      entrySignals: openIncident?.entrySignals ?? null,
+      // Narrow the now-polymorphic snapshot to the seasonal shape.
+      entrySignals:
+        openIncident && isIssueEscalationEntrySignals(openIncident.entrySignals) ? openIncident.entrySignals : null,
       startedAt: openIncident?.startedAt ?? null,
       exitEligibleSince: openIncident?.exitEligibleSince ?? null,
       now,

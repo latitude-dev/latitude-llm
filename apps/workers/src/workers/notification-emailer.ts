@@ -18,6 +18,7 @@ import {
   NotificationRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
+  SavedSearchRepositoryLive,
   UserRepositoryLive,
   WrappedReportRepositoryLive,
   withPostgres,
@@ -53,7 +54,12 @@ const repoLayer = Layer.mergeAll(
  * into the use case's signature. Add to this when a new kind needs a
  * new repo for server-side rendering.
  */
-const rendererLayer = Layer.mergeAll(IssueRepositoryLive, WrappedReportRepositoryLive, FeatureFlagRepositoryLive)
+const rendererLayer = Layer.mergeAll(
+  IssueRepositoryLive,
+  SavedSearchRepositoryLive,
+  WrappedReportRepositoryLive,
+  FeatureFlagRepositoryLive,
+)
 
 const resolveWebAppUrl = (): string => {
   const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))

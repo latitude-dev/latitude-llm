@@ -6,10 +6,10 @@ import type { AlertIncidentRecord } from "./alerts.functions.ts"
 import { formatIncidentKindLabel, INCIDENT_SEVERITY_COLOR, SEVERITY_LABELS } from "./incident-markers.ts"
 
 /**
- * Popover anchored at a chart-bucket point, listing every incident touching that bucket. Each
- * row links to the issue detail drawer via `?issueId=…` on `/projects/$projectSlug/issues`.
- * The popover is consumer-owned — the chart surfaces the bucket anchor; this component
- * renders the list and the navigation links.
+ * Popover anchored at a chart-bucket point, listing every incident touching that bucket. Issue
+ * rows link to the issue drawer (`?issueId=…`); saved-search rows link to their monitor
+ * (`?monitorSlug=…`). The popover is consumer-owned — the chart surfaces the bucket anchor; this
+ * component renders the list and the navigation links.
  *
  * `preserveSearchParams=true` is for the issues analytics panel (popover is on the issues page
  * itself), where lifecycle, time filter and sort search params should survive the row-click
@@ -47,6 +47,101 @@ function formatTiming(incident: AlertIncidentRecord): string {
     return `${formatTimeShort(incident.startedAt)} → ${formatTimeShort(incident.endedAt)}`
   }
   return formatTimeShort(incident.startedAt)
+}
+
+const ROW_CLASS = "flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent focus-visible:bg-accent outline-none"
+
+/**
+ * One incident row. Issue incidents link to the issue drawer; saved-search incidents link to their
+ * monitor (and fall back to a non-interactive row when the monitor alert was deleted). The primary
+ * label is the issue name for issues and the saved search name for saved searches, followed (saved
+ * search only) by the humanised condition and the "Created by monitor X" attribution.
+ */
+function IncidentRow({
+  incident,
+  projectSlug,
+  preserveSearchParams,
+  onNavigate,
+}: {
+  readonly incident: AlertIncidentRecord
+  readonly projectSlug: string
+  readonly preserveSearchParams: boolean
+  readonly onNavigate: () => void
+}) {
+  const isSavedSearch = incident.sourceType === "savedSearch"
+  const primaryLabel = isSavedSearch ? incident.savedSearchName : incident.issueName
+  const navigable = !isSavedSearch || Boolean(incident.monitorSlug)
+
+  const body = (
+    <>
+      <span
+        aria-hidden
+        className="mt-1 inline-block size-2 shrink-0 rounded-full"
+        style={{ background: INCIDENT_SEVERITY_COLOR[incident.severity] }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <Text.H6M color="foreground">{formatIncidentKindLabel(incident.kind)}</Text.H6M>
+          <Text.H6 color="foregroundMuted">·</Text.H6>
+          <Text.H6 color="foregroundMuted">{SEVERITY_LABELS[incident.severity]}</Text.H6>
+        </div>
+        <div className="flex min-w-0 flex-col">
+          {primaryLabel ? (
+            <Text.H6 color="foreground" className="min-w-0 truncate">
+              {primaryLabel}
+            </Text.H6>
+          ) : null}
+          {isSavedSearch && incident.conditionSummary ? (
+            <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
+              {incident.conditionSummary}
+            </Text.H6>
+          ) : null}
+          {isSavedSearch && incident.monitorName ? (
+            <Text.H6 color="foregroundMuted" className="min-w-0 truncate">
+              Created by monitor <b>{incident.monitorName}</b>
+            </Text.H6>
+          ) : null}
+          <Text.H6 color="foregroundMuted" noWrap>
+            {formatTiming(incident)}
+          </Text.H6>
+        </div>
+      </div>
+      {navigable ? <ChevronRightIcon className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden /> : null}
+    </>
+  )
+
+  if (isSavedSearch) {
+    if (!incident.monitorSlug) {
+      return <div className="flex items-start gap-2 px-2 py-1.5">{body}</div>
+    }
+    return (
+      <Link
+        to="/projects/$projectSlug/monitors"
+        params={{ projectSlug }}
+        search={{ monitorSlug: incident.monitorSlug }}
+        onClick={onNavigate}
+        className={ROW_CLASS}
+      >
+        {body}
+      </Link>
+    )
+  }
+
+  return (
+    <Link
+      to="/projects/$projectSlug/issues"
+      params={{ projectSlug }}
+      search={
+        preserveSearchParams
+          ? (prev: Record<string, unknown>) => ({ ...prev, issueId: incident.sourceId })
+          : { issueId: incident.sourceId }
+      }
+      onClick={onNavigate}
+      className={ROW_CLASS}
+    >
+      {body}
+    </Link>
+  )
 }
 
 export function IncidentMarkerPopover({
@@ -100,41 +195,12 @@ export function IncidentMarkerPopover({
         <ul className="flex flex-col">
           {incidents.map((incident) => (
             <li key={incident.id}>
-              <Link
-                to="/projects/$projectSlug/issues"
-                params={{ projectSlug }}
-                search={
-                  preserveSearchParams
-                    ? (prev: Record<string, unknown>) => ({ ...prev, issueId: incident.sourceId })
-                    : { issueId: incident.sourceId }
-                }
-                onClick={() => onOpenChange(false)}
-                className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent focus-visible:bg-accent outline-none"
-              >
-                <span
-                  aria-hidden
-                  className="mt-1 inline-block size-2 shrink-0 rounded-full"
-                  style={{ background: INCIDENT_SEVERITY_COLOR[incident.severity] }}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <Text.H6M color="foreground">{formatIncidentKindLabel(incident.kind)}</Text.H6M>
-                    <Text.H6 color="foregroundMuted">·</Text.H6>
-                    <Text.H6 color="foregroundMuted">{SEVERITY_LABELS[incident.severity]}</Text.H6>
-                  </div>
-                  <div className="flex min-w-0 flex-col">
-                    {incident.issueName ? (
-                      <Text.H6 color="foreground" className="min-w-0 truncate">
-                        {incident.issueName}
-                      </Text.H6>
-                    ) : null}
-                    <Text.H6 color="foregroundMuted" noWrap>
-                      {formatTiming(incident)}
-                    </Text.H6>
-                  </div>
-                </div>
-                <ChevronRightIcon className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-              </Link>
+              <IncidentRow
+                incident={incident}
+                projectSlug={projectSlug}
+                preserveSearchParams={preserveSearchParams}
+                onNavigate={() => onOpenChange(false)}
+              />
             </li>
           ))}
         </ul>

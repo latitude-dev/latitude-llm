@@ -147,6 +147,52 @@ export const AlertIncidentRepositoryLive = Layer.effect(
               .where(and(eq(alertIncidents.id, id), eq(alertIncidents.organizationId, sqlClient.organizationId))),
           )
         }),
+      findOpenByMonitorAlertId: (monitorAlertId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select()
+              .from(alertIncidents)
+              .where(
+                and(
+                  eq(alertIncidents.organizationId, sqlClient.organizationId),
+                  eq(alertIncidents.monitorAlertId, monitorAlertId),
+                  isNull(alertIncidents.endedAt),
+                ),
+              )
+              .limit(1),
+          )
+          const row = rows[0]
+          return row ? toDomain(row) : null
+        }),
+      existsByMonitorAlertId: (monitorAlertId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({ id: alertIncidents.id })
+              .from(alertIncidents)
+              .where(
+                and(
+                  eq(alertIncidents.organizationId, sqlClient.organizationId),
+                  eq(alertIncidents.monitorAlertId, monitorAlertId),
+                ),
+              )
+              .limit(1),
+          )
+          return rows.length > 0
+        }),
+      setEndedAt: ({ id, endedAt }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          yield* sqlClient.query((db) =>
+            db
+              .update(alertIncidents)
+              .set({ endedAt })
+              .where(and(eq(alertIncidents.id, id), eq(alertIncidents.organizationId, sqlClient.organizationId))),
+          )
+        }),
       listByProjectId: ({ organizationId, projectId, from, to, sourceTypes, sourceId, kinds, severities }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

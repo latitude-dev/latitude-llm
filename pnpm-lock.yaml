@@ -1136,6 +1136,9 @@ importers:
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications
+      '@domain/saved-searches':
+        specifier: workspace:*
+        version: link:../saved-searches
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -1294,6 +1297,9 @@ importers:
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications
+      '@domain/saved-searches':
+        specifier: workspace:*
+        version: link:../saved-searches
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -1392,9 +1398,21 @@ importers:
       '@domain/alerts':
         specifier: workspace:*
         version: link:../alerts
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../issues
       '@domain/notifications':
         specifier: workspace:*
         version: link:../notifications
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../queue
+      '@domain/saved-searches':
+        specifier: workspace:*
+        version: link:../saved-searches
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -1915,6 +1933,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../../domain/events
+      '@domain/monitors':
+        specifier: workspace:*
+        version: link:../../domain/monitors
       '@domain/scores':
         specifier: workspace:*
         version: link:../../domain/scores

@@ -5,6 +5,7 @@ import {
   type AlertIncidentKind,
   type AlertIncidentSourceType,
   type AlertSeverity,
+  alertBaselineSchema,
   alertIncidentConditionSchema,
   alertIncidentIdSchema,
   alertIncidentKindSchema,
@@ -65,6 +66,32 @@ export const entrySignalsSnapshotSchema = z.object({
 
 export type EntrySignalsSnapshot = z.infer<typeof entrySignalsSnapshotSchema>
 
+/**
+ * Entry snapshot for a `savedSearch.escalating` incident: the threshold frozen at
+ * open time so the close-side compares against it rather than re-resolving a
+ * drifting baseline. `baselineCount` + `baseline` are multiplier-mode only.
+ */
+export const savedSearchEntrySignalsSchema = z.object({
+  evaluatedThreshold: z.number(),
+  baselineCount: z.number().optional(),
+  baseline: alertBaselineSchema.optional(),
+})
+
+export type SavedSearchEntrySignals = z.infer<typeof savedSearchEntrySignalsSchema>
+
+/** Polymorphic `entrySignals` (issue seasonal | saved-search frozen threshold), narrowed per-kind at the read site — the two shapes share no key. */
+export const incidentEntrySignalsSchema = z.union([entrySignalsSnapshotSchema, savedSearchEntrySignalsSchema])
+
+export type IncidentEntrySignals = z.infer<typeof incidentEntrySignalsSchema>
+
+/** Narrow a stored snapshot to the issue-escalation shape — the only consumer of the seasonal scalars. */
+export const isIssueEscalationEntrySignals = (signals: IncidentEntrySignals | null): signals is EntrySignalsSnapshot =>
+  signals !== null && "expected1h" in signals
+
+/** Narrow a stored snapshot to the saved-search shape — the sustained close-side reads its frozen threshold. */
+export const isSavedSearchEntrySignals = (signals: IncidentEntrySignals | null): signals is SavedSearchEntrySignals =>
+  signals !== null && "evaluatedThreshold" in signals
+
 export const alertIncidentSchema = z.object({
   id: alertIncidentIdSchema,
   organizationId: organizationIdSchema,
@@ -76,7 +103,7 @@ export const alertIncidentSchema = z.object({
   startedAt: z.date(),
   endedAt: z.date().nullable(),
   createdAt: z.date(),
-  entrySignals: entrySignalsSnapshotSchema.nullable(),
+  entrySignals: incidentEntrySignalsSchema.nullable(),
   exitEligibleSince: z.date().nullable(),
   // Firing monitor alert; `null` on legacy/flag-off rows. `.default(null)` keeps pre-monitors `.parse` callers valid.
   monitorAlertId: monitorAlertIdSchema.nullable().default(null),

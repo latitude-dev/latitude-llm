@@ -1419,26 +1419,40 @@ Scope is intentionally left open — the exact polish items are decided when the
 
 ### Milestone 7 — Saved-search firing pipeline
 
-> Branch: `LAT-630/saved-search-firing` · Estimated size: ~2,800 lines
+> Branch: `LAT-630/saved-search-firing` · One PR (per the milestone-per-PR convention) · ~3,500 lines incl. tests.
 
 **Goal:** With the flag on, a monitor with a `savedSearch.*` alert fires incidents that land in the details panel and route through the notifications pipeline (subject to mute). Three distinct state machines (threshold one-time, escalating sustained, match) on top of one shared pure evaluator. No new columns on `alert_incidents` — the schema additions in M2 cover everything.
 
-- [ ] New worker file `apps/workers/src/workers/monitors.ts`:
-  - `checkSavedSearchMonitorsTask` — orchestrator handler, called by both trigger paths.
-  - Sweep cron registration: 5-minute interval, scans active alerts + open sustained incidents.
-- [ ] Trace-end hook: publish `monitors:checkSavedSearchMonitors` with the queue's `throttleMs: 5 * 60 * 1000` option (per-org throttle key).
-- [ ] `evaluateSavedSearchAlert` in `@domain/monitors` — pure evaluator returning `{ isMet, count, threshold, firstMatchInWindow, baselineCount? }`. Drives all state machines across all three threshold modes (absolute, multiplier, expected). Reuses the trace repo's count + match primitives.
-- [ ] **`expected`-mode threshold**: wire the seasonal detector (`evaluateSeasonalEscalation` from `@domain/issues`) for saved searches — feed it the saved-search match counts (per day-of-week × hour-of-day grid) instead of issue occurrences, tuned by `condition.threshold.sensitivity`. Finalise here how the user-facing "N times more than expected" amount maps onto the detector's σ-multiplier. Works for both threshold (5-min current window) and escalating (sustained `window`). Snapshot the seasonal signals onto `entrySignals` exactly as `issue.escalating` does.
-- [ ] Three state-machine use-cases:
-  - `runSavedSearchThresholdAlert` — handles all modes:
-    - Absolute: one-time. Short-circuits on any prior incident for the monitor alert. Read-then-insert wrapped in a transaction with `SELECT … FOR UPDATE` on the `monitor_alerts` row.
-    - Multiplier / expected: rearming. Reuses `alert_incidents` rows as state — opens with `endedAt = null` on the rising edge (emits `IncidentCreated`); silently closes (`endedAt = now`, no event emit) when the condition stops holding. Single point-in-time notification per rising edge.
-  - `runSavedSearchEscalatingAlert` — sustained, mirrors `issue.escalating`'s open/exit-eligible/reset/close transitions. Snapshots `entrySignals` at the open transition (`{ evaluatedThreshold, baselineCount?, baseline? }` for multiplier; the frozen seasonal signals for expected — baseline frozen at entry either way).
-  - `runSavedSearchMatchAlert` — literal throttle. If `evaluateSavedSearchAlert` reports `count > 0`, insert one point-in-time incident with `startedAt = endedAt = firstMatchInWindow`. No prior-incident check, no new state on `monitor_alerts`. The queue's `throttleMs` is the rate-limiter.
-- [ ] All three writers stamp `monitor_alert_id`, `condition` snapshot, and `severity` on the new `alert_incidents` row; `startedAt` is backtracked to the first matching trace in the look-back window.
-- [ ] `monitors:onSourceDeleted` task — wired from saved-search delete and issue delete events; **soft-deletes** matching `monitor_alerts` (`deleted_at = now()`); soft-deletes the monitor if its active alert list becomes empty.
-- [ ] No abstraction over issue.escalating and saved-search kinds at the use-case level — parallel implementations sharing only the storage shape and trigger plumbing. The one deliberate share is the detector: `evaluateSeasonalEscalation` stays owned by `@domain/issues` and is imported by `@domain/monitors`'s `evaluateSavedSearchAlert` for the `expected` mode (fed saved-search counts instead of issue occurrences).
-- [ ] Backend tests: each state machine and each threshold mode (absolute, multiplier, **expected**) independently; backtracked `startedAt`; multiplier/expected baseline frozen at entry; `isMet` flapping during dwell resets `exitEligibleSince`; threshold short-circuit after prior fire; sweep cron closes incidents in low-traffic orgs.
+**Domain core:**
+
+- [x] `evaluateSavedSearchAlert` in `@domain/monitors` — pure evaluator (modulo the `SavedSearchMatchReader` IO) returning `{ isMet, count, threshold, firstMatchInWindow, baselineCount? }`. Handles all three threshold modes (absolute, multiplier, expected) across `savedSearch.match` / `.threshold` / `.escalating`. Multiplier guards against a zero baseline (`count > 0` required). Current window: 5 min (match / threshold-multiplier), cumulative since the alert (threshold-absolute), or the user `window` (escalating).
+- [x] **`SavedSearchMatchReader`** port (`@domain/monitors`) + `SavedSearchMatchReaderLive` (`@platform/db-clickhouse`) — `countMatches` / `firstMatchAt` over `[from, to)`, reusing the trace count machinery (`LIST_SELECT` + `buildTraceFilterClauses` + `planSearch`) with the window applied as a `HAVING` on the aggregated `start_time`. A dedicated reader port (not a `TraceRepository` widening) keeps the firing concern off the broadly-stubbed trace port — mirrors M6's `IncidentMonitorReader`.
+- [x] Three state-machine use-cases (`runSavedSearchThresholdAlert` / `runSavedSearchEscalatingAlert` / `runSavedSearchMatchAlert`), keyed on **`monitor_alert_id`** (one saved search can back several alerts):
+  - Threshold absolute: one-time; `existsByMonitorAlertId` short-circuit + `MonitorRepository.lockAlertForUpdate` (`FOR UPDATE`) inside one transaction.
+  - Threshold multiplier: rearm via the incident row — opens with `endedAt = null` (one `IncidentCreated`), silently closes (no event) when it drops. Re-evaluated fresh each tick (it's point-in-time; `entrySignals` stays `null`).
+  - Escalating: sustained open/exit-eligible/reset/close; freezes the threshold into `entrySignals` at open and compares the live count against the **frozen** value (never re-resolving `factor × baseline` or the seasonal band).
+  - Match: point-in-time at the first match; no prior-incident check, no new state.
+- [x] Writers stamp `monitor_alert_id`, `condition` snapshot, `severity`; `startedAt` backtracked to `firstMatchInWindow`. Shared `saved-search-incident-writer.ts` does insert + `IncidentCreated`; sustained close emits `IncidentClosed`.
+- [x] `AlertIncidentRepository` lookups: `findOpenByMonitorAlertId`, `existsByMonitorAlertId`, `setEndedAt`; `MonitorRepository.lockAlertForUpdate`.
+- [x] **`entrySignals` polymorphism** — widened the entity column to `issue (seasonal) | savedSearch ({ evaluatedThreshold, baselineCount?, baseline? })`, narrowed per-kind at the read sites (`isIssueEscalationEntrySignals` / `isSavedSearchEntrySignals`).
+
+**`expected`-mode threshold:**
+
+- [x] The seasonally-learned band, reusing the issue detector's threshold math. The evaluator samples the **same-time-of-week** window across the last `SEASONAL_HISTORY_WEEKS` (4) weeks via `countMatches`, computes `expected`/`stddev`/`samplesCount`, then applies `seasonalAnomalyThreshold(expected, stddev, kAdj)` — **extracted from and shared with `@domain/issues`** (the one deliberate cross-domain detector share). `threshold = expected + kAdj·σ`; `isMet = count > threshold` (strict, mirroring the detector entry). Works for threshold (5-min window) and escalating (the `window`); the frozen threshold is snapshotted into `entrySignals` so the close-side compares against the entry band.
+  > **As-built:** the spec originally said "feed saved-search counts into `evaluateSeasonalEscalation`." That function is issue-shaped (dual 1h/6h windows with an AND), so instead the shared piece is the σ-band **threshold formula** (`seasonalAnomalyThreshold`), applied to a single current window aligned to its time-of-week across prior weeks — no new ClickHouse query needed (the existing windowed `countMatches` covers it; the `±hour` pooling grid the issue path uses over `scores_hourly_buckets` is not replicated). The user-facing "N times more than expected" amount maps to the detector's `sensitivity` (σ-multiplier `k`, default 3).
+
+**Pipeline & wiring:**
+
+- [x] New worker file `apps/workers/src/workers/monitors.ts`:
+  - `checkSavedSearchMonitors` — orchestrator handler (org+project scoped, flag-gated): lists active saved-search alerts, resolves each saved search, dispatches to the right state machine. Per-alert failures isolated + tallied so one bad alert can't trigger a retry that re-fires `match` incidents.
+  - `sweepSavedSearchMonitors` — 5-minute cron; fans out one `checkSavedSearchMonitors` per (org, project) holding an active saved-search alert (cross-org via the admin client). Opens incidents in low-traffic orgs and lets sustained ones close on quiet traffic.
+  - `onSourceDeleted` — the source cascade.
+- [x] Trace-end hook: publish `monitors:checkSavedSearchMonitors` with the queue's `throttleMs: 5 * 60 * 1000` option (org-prefixed per-project dedupe key).
+- [x] `monitors:onSourceDeleted` task — wired from a new `SavedSearchDeleted` domain event (emitted by `deleteSavedSearch`, routed in `domain-events.ts`); **soft-deletes** matching `monitor_alerts` (`deleted_at = now()`) and soft-deletes the monitor if its active alert list becomes empty. (Issue-delete needs no cascade: issue alerts are system-only with `source.id = null`.)
+- [x] **Any** alert soft-delete — manual (`deleteMonitorAlert`), monitor-cascade (`deleteMonitor`), or source-cascade (above) — **silently closes that alert's open incidents** in the same repo transaction (`ended_at = now()`, no `IncidentClosed` event, since the alert is gone). Without this a sustained incident would render "ongoing" forever (the firing scan skips soft-deleted alerts, so it'd never re-evaluate to close). Point-in-time incidents already have `ended_at`, so only sustained / rearm-open rows are touched.
+- [x] Backend tests: evaluator (absolute / multiplier average + period normalisation / match / zero-baseline / **expected** cold-start + history), each state machine (short-circuit, rearm, silent close, dwell open/eligible/cancel/close, frozen-threshold comparison, expected-escalating freeze, backtracked `startedAt`), orchestrator dispatch + skip-deleted-source, sweep fan-out + failure tally, source cascade; repo lookups + new `MonitorRepository` reads (PGlite); the windowed reader (chdb).
+
+> **As-built deviations from the original task list:** (1) absolute-threshold "cumulative since creation" anchors on **`alert.createdAt`**, not `monitor.createdAt` — makes "remove and re-add to re-arm" reset the count; (2) match counting goes through a dedicated `SavedSearchMatchReader`, not `TraceRepository` (avoids touching its ~17 stubs); (3) the `monitors` queue carries three tasks (`checkSavedSearchMonitors` / `sweepSavedSearchMonitors` / `onSourceDeleted`); the orchestrator gates on the `monitors` flag in the worker, not the use-case.
 
 ### Milestone 8 — Fold `/search` into the `/` page tabs, retire the standalone route
 
