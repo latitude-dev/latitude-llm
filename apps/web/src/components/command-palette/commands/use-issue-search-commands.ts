@@ -5,6 +5,7 @@ import { useIssuesOrgSearch } from "../../../domains/issues/issues.collection.ts
 import type { OrgIssueSearchRecord } from "../../../domains/issues/issues.functions.ts"
 import { useDebounce } from "../../../lib/hooks/useDebounce.ts"
 import type { PaletteCommand } from "../types.ts"
+import { useCurrentProject } from "./use-current-project.ts"
 
 const RESULT_LIMIT = 10
 const SEMANTIC_DEBOUNCE_MS = 250
@@ -25,18 +26,24 @@ export function useIssueSearchCommands(query: string): {
   readonly isLoading: boolean
 } {
   const navigate = useNavigate()
+  const project = useCurrentProject()
 
   const liveQuery = query.trim()
   const [debouncedQuery, setDebouncedQuery] = useState("")
   useDebounce(() => setDebouncedQuery(query.trim()), SEMANTIC_DEBOUNCE_MS, [query])
 
   // Lexical tier — instant, fires on every keystroke.
-  const { data: lexicalIssues } = useIssuesOrgSearch(liveQuery, { semantic: false, enabled: liveQuery.length > 0 })
+  const { data: lexicalIssues } = useIssuesOrgSearch(liveQuery, {
+    semantic: false,
+    enabled: liveQuery.length > 0,
+    preferProjectId: project?.id,
+  })
 
   // Semantic tier — debounced; embeds the query server-side.
   const { data: semanticIssues, isLoading: semanticLoading } = useIssuesOrgSearch(debouncedQuery, {
     semantic: true,
     enabled: debouncedQuery.length > 0,
+    preferProjectId: project?.id,
   })
 
   const commands = useMemo<readonly PaletteCommand[]>(() => {

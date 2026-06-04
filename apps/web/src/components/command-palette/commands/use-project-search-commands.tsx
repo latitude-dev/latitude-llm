@@ -30,8 +30,8 @@ export function useProjectSearchCommands(query: string): ProjectSearchCommands {
   const trimmed = query.trim()
   const hasQuery = trimmed.length > 0
 
-  const { data: datasets } = useDatasetsSearch(trimmed, { enabled: hasQuery })
-  const { data: savedSearches } = useSavedSearchesSearch(trimmed, { enabled: hasQuery })
+  const { data: datasets } = useDatasetsSearch(trimmed, { enabled: hasQuery, preferProjectId: project?.id })
+  const { data: savedSearches } = useSavedSearchesSearch(trimmed, { enabled: hasQuery, preferProjectId: project?.id })
 
   return useMemo<ProjectSearchCommands>(() => {
     if (!hasQuery) return EMPTY

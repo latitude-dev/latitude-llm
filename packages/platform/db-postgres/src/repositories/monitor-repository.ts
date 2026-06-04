@@ -14,7 +14,7 @@ import { alertIncidents } from "../schema/alert-incidents.ts"
 import { monitorAlerts } from "../schema/monitor-alerts.ts"
 import { monitors } from "../schema/monitors.ts"
 import { projects } from "../schema/projects.ts"
-import { nameMatchScore } from "./org-search.ts"
+import { nameMatchScore, preferProjectFirst } from "./org-search.ts"
 
 const toMonitorAlert = (row: typeof monitorAlerts.$inferSelect): MonitorAlert => ({
   id: row.id as MonitorAlert["id"],
@@ -234,7 +234,7 @@ export const MonitorRepositoryLive = Layer.effect(
             offset,
           }
         }),
-      searchOrgWide: ({ searchQuery, limit }) =>
+      searchOrgWide: ({ searchQuery, preferProjectId, limit }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const { organizationId } = sqlClient
@@ -245,16 +245,19 @@ export const MonitorRepositoryLive = Layer.effect(
             isNull(projects.deletedAt),
             trimmed ? ilike(monitors.name, `%${trimmed}%`) : undefined,
           )
-          // Best name match first (exact > prefix > substring), then system monitors, then newest.
-          // With no query every row scores equally, so it falls back to system-first then newest.
-          const orderBy = trimmed
-            ? [
-                desc(nameMatchScore(monitors.name, trimmed)),
-                desc(monitors.system),
-                desc(monitors.createdAt),
-                asc(monitors.id),
-              ]
-            : [desc(monitors.system), desc(monitors.createdAt), asc(monitors.id)]
+          // Preferred project first, then best name match (exact > prefix > substring), then system
+          // monitors, then newest. With no query the score is uniform → system-first then newest.
+          const orderBy = [
+            ...preferProjectFirst(monitors.projectId, preferProjectId),
+            ...(trimmed
+              ? [
+                  desc(nameMatchScore(monitors.name, trimmed)),
+                  desc(monitors.system),
+                  desc(monitors.createdAt),
+                  asc(monitors.id),
+                ]
+              : [desc(monitors.system), desc(monitors.createdAt), asc(monitors.id)]),
+          ]
 
           const rows = yield* sqlClient.query((db) =>
             db

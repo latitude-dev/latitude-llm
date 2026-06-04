@@ -1,4 +1,4 @@
-import type { OrganizationId, RepositoryError, SqlClient } from "@domain/shared"
+import type { OrganizationId, ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { deriveIssueLifecycleStates } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
@@ -21,6 +21,8 @@ export interface SearchOrgIssuesInput {
   readonly query: string
   /** When provided, the semantic tier runs in addition to the lexical tier. */
   readonly normalizedEmbedding?: readonly number[]
+  /** The palette's current project, when any — its issues rank first within each tier. */
+  readonly preferProjectId?: ProjectId
   readonly limit?: number
   readonly now?: Date
 }
@@ -40,9 +42,15 @@ export const searchOrgIssuesUseCase = (
     const now = input.now ?? new Date()
     const limit = input.limit ?? DEFAULT_SEARCH_LIMIT
 
-    const lexical = yield* repo.searchOrgWide({ query: input.query, limit })
+    const prefer = input.preferProjectId !== undefined ? { preferProjectId: input.preferProjectId } : {}
+    const lexical = yield* repo.searchOrgWide({ query: input.query, limit, ...prefer })
     const semantic = input.normalizedEmbedding
-      ? yield* repo.searchOrgWide({ query: input.query, normalizedEmbedding: input.normalizedEmbedding, limit })
+      ? yield* repo.searchOrgWide({
+          query: input.query,
+          normalizedEmbedding: input.normalizedEmbedding,
+          limit,
+          ...prefer,
+        })
       : []
 
     // Lexical (exact/keyword) hits rank first, then semantic hits not already shown; dedupe by id.

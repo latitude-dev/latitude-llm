@@ -58,16 +58,18 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           offset,
         }
       }),
-    searchOrgWide: ({ searchQuery, limit }) =>
+    searchOrgWide: ({ searchQuery, preferProjectId, limit }) =>
       Effect.sync(() => {
         const query = searchQuery?.trim().toLowerCase()
-        // Best name match first, then system monitors, then newest — mirroring the live repo.
+        // Preferred project first, then best name match, then system monitors, then newest.
+        const prefer = (projectId: string) => (preferProjectId && projectId === preferProjectId ? 1 : 0)
         const score = (name: string) =>
           !query ? 1 : name.toLowerCase() === query ? 3 : name.toLowerCase().startsWith(query) ? 2 : 1
         return monitors
           .filter(isLive)
           .filter((m) => (query ? m.name.toLowerCase().includes(query) : true))
           .sort((a, b) => {
+            if (prefer(a.projectId) !== prefer(b.projectId)) return prefer(b.projectId) - prefer(a.projectId)
             if (score(a.name) !== score(b.name)) return score(b.name) - score(a.name)
             if (a.system !== b.system) return a.system ? -1 : 1
             if (a.createdAt.getTime() !== b.createdAt.getTime()) return b.createdAt.getTime() - a.createdAt.getTime()

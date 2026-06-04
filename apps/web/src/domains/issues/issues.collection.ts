@@ -215,16 +215,28 @@ const ORG_SEARCH_LIMIT = 10
  * Org-wide issue search for the Command Palette. One tier per call: pass `semantic: false` for the
  * instant lexical tier and `semantic: true` for the debounced semantic tier. Results span every
  * project in the organization, each carrying its owning project's slug/name and derived states.
+ * `preferProjectId` (the current project, when inside one) ranks that project's issues first.
  */
 export function useIssuesOrgSearch(
   searchQuery: string,
-  { semantic = false, enabled = true }: { readonly semantic?: boolean; readonly enabled?: boolean } = {},
+  {
+    semantic = false,
+    enabled = true,
+    preferProjectId,
+  }: { readonly semantic?: boolean; readonly enabled?: boolean; readonly preferProjectId?: string | undefined } = {},
 ) {
   const trimmed = searchQuery.trim()
   const { data, isLoading } = useQuery({
-    queryKey: ["issues", "orgSearch", trimmed, semantic],
+    queryKey: ["issues", "orgSearch", trimmed, semantic, preferProjectId ?? null],
     queryFn: (): Promise<readonly OrgIssueSearchRecord[]> =>
-      searchOrgIssues({ data: { searchQuery: trimmed, semantic, limit: ORG_SEARCH_LIMIT } }),
+      searchOrgIssues({
+        data: {
+          searchQuery: trimmed,
+          semantic,
+          limit: ORG_SEARCH_LIMIT,
+          ...(preferProjectId ? { preferProjectId } : {}),
+        },
+      }),
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
     enabled: enabled && trimmed.length > 0,
   })

@@ -70,10 +70,12 @@ export interface SavedSearchRepositoryShape {
    * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
    * saved-search name, ordered by match quality (exact > prefix > substring) then most recent; omit
    * it to list the most recent. Soft-deleted saved searches and saved
-   * searches in soft-deleted projects are excluded.
+   * searches in soft-deleted projects are excluded. When `preferProjectId` is set, that project's
+   * saved searches are ranked first (the palette passes the current project so local results lead).
    */
   searchOrgWide(args: {
     readonly searchQuery?: string
+    readonly preferProjectId?: ProjectId
     readonly limit: number
   }): Effect.Effect<readonly SavedSearchSearchResult[], RepositoryError, SqlClient>
   update(

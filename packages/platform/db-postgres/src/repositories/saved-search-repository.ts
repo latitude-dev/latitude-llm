@@ -19,7 +19,7 @@ import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { projects } from "../schema/projects.ts"
 import { savedSearches } from "../schema/saved-searches.ts"
-import { nameMatchScore } from "./org-search.ts"
+import { nameMatchScore, preferProjectFirst } from "./org-search.ts"
 
 const isUniqueViolation = (cause: unknown): boolean => {
   let current: unknown = cause
@@ -172,11 +172,18 @@ export const SavedSearchRepositoryLive = Layer.effect(
             isNull(projects.deletedAt),
             ...(trimmed ? [ilike(savedSearches.name, `%${trimmed}%`)] : []),
           )
-          // Best name match first (exact > prefix > substring), then most recent. With no query
-          // every row scores equally, so it falls back to newest-first.
-          const orderBy = trimmed
-            ? [desc(nameMatchScore(savedSearches.name, trimmed)), desc(savedSearches.createdAt), desc(savedSearches.id)]
-            : [desc(savedSearches.createdAt), desc(savedSearches.id)]
+          // Preferred project first, then best name match (exact > prefix > substring), then most
+          // recent. With no query the score is uniform, so it falls back to newest-first.
+          const orderBy = [
+            ...preferProjectFirst(savedSearches.projectId, args.preferProjectId),
+            ...(trimmed
+              ? [
+                  desc(nameMatchScore(savedSearches.name, trimmed)),
+                  desc(savedSearches.createdAt),
+                  desc(savedSearches.id),
+                ]
+              : [desc(savedSearches.createdAt), desc(savedSearches.id)]),
+          ]
 
           const rows = yield* sqlClient.query((db) =>
             db

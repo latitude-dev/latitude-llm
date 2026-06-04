@@ -100,13 +100,23 @@ export function useMonitors(input: {
 /**
  * Org-wide monitor search for the Command Palette. Returns matching monitors across every project
  * in the organization (each carrying its owning project's slug/name plus system/muted status).
+ * `preferProjectId` (the current project, when inside one) ranks that project's monitors first.
  */
-export function useMonitorsSearch(searchQuery: string, { enabled = true }: { enabled?: boolean } = {}) {
+export function useMonitorsSearch(
+  searchQuery: string,
+  { enabled = true, preferProjectId }: { enabled?: boolean; preferProjectId?: string | undefined } = {},
+) {
   const trimmed = searchQuery.trim()
   const { data, isLoading } = useQuery({
-    queryKey: ["monitors", "orgSearch", trimmed],
+    queryKey: ["monitors", "orgSearch", trimmed, preferProjectId ?? null],
     queryFn: (): Promise<readonly MonitorSearchRecord[]> =>
-      searchMonitorsOrgWide({ data: { searchQuery: trimmed, limit: ORG_SEARCH_LIMIT } }),
+      searchMonitorsOrgWide({
+        data: {
+          searchQuery: trimmed,
+          limit: ORG_SEARCH_LIMIT,
+          ...(preferProjectId ? { preferProjectId } : {}),
+        },
+      }),
     staleTime: MONITORS_QUERY_STALE_TIME_MS,
     enabled: enabled && trimmed.length > 0,
   })

@@ -67,10 +67,12 @@ export interface MonitorRepositoryShape {
    * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
    * monitor name, ordered by match quality (exact > prefix > substring), then system monitors, then
    * most recent; omit it to list system monitors first, then the most recent. Soft-deleted monitors and monitors in
-   * soft-deleted projects are excluded.
+   * soft-deleted projects are excluded. When `preferProjectId` is set, that project's monitors are
+   * ranked first (the palette passes the current project so local results lead).
    */
   searchOrgWide(input: {
     readonly searchQuery?: string
+    readonly preferProjectId?: ProjectId
     readonly limit: number
   }): Effect.Effect<readonly MonitorSearchResult[], RepositoryError, SqlClient>
   /**

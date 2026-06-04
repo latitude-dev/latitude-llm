@@ -377,6 +377,7 @@ export const searchOrgIssues = createServerFn({ method: "GET" })
     z.object({
       searchQuery: z.string().min(1).max(500),
       semantic: z.boolean().optional(),
+      preferProjectId: z.string().optional(),
       limit: z.number().int().min(1).max(25).optional(),
     }),
   )
@@ -402,6 +403,7 @@ export const searchOrgIssues = createServerFn({ method: "GET" })
           organizationId: orgId,
           query: data.searchQuery,
           ...(search ? { normalizedEmbedding: search.normalizedEmbedding } : {}),
+          ...(data.preferProjectId !== undefined ? { preferProjectId: ProjectId(data.preferProjectId) } : {}),
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
         })
       }).pipe(withPostgres(IssueRepositoryLive, pgClient, orgId), withAi(AIEmbedLive, redisClient), withTracing),

@@ -509,4 +509,25 @@ describe("DatasetRepositoryLive searchOrgWide", () => {
     )
     expect(results.map((r) => r.name)).toEqual(["Zebra", "Zebra Report", "My Zebra Log"])
   })
+
+  it("ranks the preferred project's datasets first", async () => {
+    // "Customer Reviews" (project A) and "Customer Orders" (project B) score equally for "customer".
+    const withoutPreference = await runSearch(
+      Effect.gen(function* () {
+        const repo = yield* DatasetRepository
+        return yield* repo.searchOrgWide({ searchQuery: "customer", limit: 25 })
+      }),
+    )
+    expect(withoutPreference.map((r) => r.name).sort()).toEqual(["Customer Orders", "Customer Reviews"])
+
+    const preferB = await runSearch(
+      Effect.gen(function* () {
+        const repo = yield* DatasetRepository
+        return yield* repo.searchOrgWide({ searchQuery: "customer", preferProjectId: SEARCH_PROJECT_B, limit: 25 })
+      }),
+    )
+    // Project B's dataset now leads, even though match quality/recency are equal.
+    expect(preferB[0]?.name).toBe("Customer Orders")
+    expect(preferB[0]?.projectId).toBe(SEARCH_PROJECT_B)
+  })
 })

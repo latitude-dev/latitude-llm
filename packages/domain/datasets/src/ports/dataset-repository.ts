@@ -71,10 +71,12 @@ export class DatasetRepository extends Context.Service<
      * org). Powers the Command Palette. `searchQuery` is a case-insensitive substring match on the
      * dataset name, ordered by match quality (exact > prefix > substring) then most recent; omit it
      * to list the most recent datasets. Soft-deleted datasets and datasets in
-     * soft-deleted projects are excluded.
+     * soft-deleted projects are excluded. When `preferProjectId` is set, datasets in that project
+     * are ranked ahead of the rest (the palette passes the current project so local results lead).
      */
     searchOrgWide(args: {
       readonly searchQuery?: string
+      readonly preferProjectId?: ProjectId
       readonly limit: number
     }): Effect.Effect<readonly DatasetSearchResult[], RepositoryError, SqlClient>
 

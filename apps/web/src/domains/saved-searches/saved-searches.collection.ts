@@ -33,13 +33,23 @@ export function useSavedSearchesList(projectId: string, { enabled = true }: { en
 /**
  * Org-wide saved-search search for the Command Palette. Returns matching saved searches across
  * every project in the organization (each carrying its owning project's slug/name).
+ * `preferProjectId` (the current project, when inside one) ranks that project's saved searches first.
  */
-export function useSavedSearchesSearch(searchQuery: string, { enabled = true }: { enabled?: boolean } = {}) {
+export function useSavedSearchesSearch(
+  searchQuery: string,
+  { enabled = true, preferProjectId }: { enabled?: boolean; preferProjectId?: string | undefined } = {},
+) {
   const trimmed = searchQuery.trim()
   const { data, isLoading } = useQuery({
-    queryKey: ["savedSearches", "orgSearch", trimmed],
+    queryKey: ["savedSearches", "orgSearch", trimmed, preferProjectId ?? null],
     queryFn: (): Promise<readonly SavedSearchSearchRecord[]> =>
-      searchSavedSearchesOrgWide({ data: { searchQuery: trimmed, limit: ORG_SEARCH_LIMIT } }),
+      searchSavedSearchesOrgWide({
+        data: {
+          searchQuery: trimmed,
+          limit: ORG_SEARCH_LIMIT,
+          ...(preferProjectId ? { preferProjectId } : {}),
+        },
+      }),
     staleTime: 30_000,
     enabled: enabled && trimmed.length > 0,
   })

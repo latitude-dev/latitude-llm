@@ -15,7 +15,7 @@ import type { Operator } from "../client.ts"
 import { datasets } from "../schema/datasets.ts"
 import { datasetVersions } from "../schema/datasetVersions.ts"
 import { projects } from "../schema/projects.ts"
-import { nameMatchScore } from "./org-search.ts"
+import { nameMatchScore, preferProjectFirst } from "./org-search.ts"
 
 const toDomainDataset = (row: typeof datasets.$inferSelect, latestVersionId?: string | null): Dataset => ({
   id: DatasetId(row.id),
@@ -225,9 +225,12 @@ export const DatasetRepositoryLive = Layer.effect(
             isNull(projects.deletedAt),
             ...(trimmed ? [ilike(datasets.name, `%${trimmed}%`)] : []),
           )
-          const orderBy = trimmed
-            ? [desc(nameMatchScore(datasets.name, trimmed)), desc(datasets.createdAt), desc(datasets.id)]
-            : [desc(datasets.createdAt), desc(datasets.id)]
+          const orderBy = [
+            ...preferProjectFirst(datasets.projectId, args.preferProjectId),
+            ...(trimmed
+              ? [desc(nameMatchScore(datasets.name, trimmed)), desc(datasets.createdAt), desc(datasets.id)]
+              : [desc(datasets.createdAt), desc(datasets.id)]),
+          ]
 
           const rows = yield* sqlClient.query((db) =>
             db

@@ -116,13 +116,23 @@ export function useDatasetRowsInfiniteScroll({
 /**
  * Org-wide dataset search for the Command Palette. Returns matching datasets across every project
  * in the organization (each carrying its owning project's slug/name), not just the current one.
+ * `preferProjectId` (the current project, when inside one) ranks that project's datasets first.
  */
-export function useDatasetsSearch(searchQuery: string, { enabled = true }: { enabled?: boolean } = {}) {
+export function useDatasetsSearch(
+  searchQuery: string,
+  { enabled = true, preferProjectId }: { enabled?: boolean; preferProjectId?: string | undefined } = {},
+) {
   const trimmed = searchQuery.trim()
   const { data, isLoading } = useQuery({
-    queryKey: ["datasets", "orgSearch", trimmed],
+    queryKey: ["datasets", "orgSearch", trimmed, preferProjectId ?? null],
     queryFn: (): Promise<readonly DatasetSearchRecord[]> =>
-      searchDatasetsOrgWide({ data: { searchQuery: trimmed, limit: ORG_SEARCH_LIMIT } }),
+      searchDatasetsOrgWide({
+        data: {
+          searchQuery: trimmed,
+          limit: ORG_SEARCH_LIMIT,
+          ...(preferProjectId ? { preferProjectId } : {}),
+        },
+      }),
     staleTime: 30_000,
     enabled: enabled && trimmed.length > 0,
   })

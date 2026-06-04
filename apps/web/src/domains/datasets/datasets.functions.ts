@@ -215,6 +215,7 @@ export const searchDatasetsOrgWide = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       searchQuery: z.string().max(500).optional(),
+      preferProjectId: z.string().optional(),
       limit: z.number().int().min(1).max(25).optional(),
     }),
   )
@@ -225,6 +226,7 @@ export const searchDatasetsOrgWide = createServerFn({ method: "GET" })
     const results = await Effect.runPromise(
       searchDatasets({
         ...(data.searchQuery !== undefined ? { searchQuery: data.searchQuery } : {}),
+        ...(data.preferProjectId !== undefined ? { preferProjectId: ProjectId(data.preferProjectId) } : {}),
         ...(data.limit !== undefined ? { limit: data.limit } : {}),
       }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId), withTracing),
     )

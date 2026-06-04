@@ -23,6 +23,7 @@ import { alertIncidents } from "../schema/alert-incidents.ts"
 import { issues } from "../schema/issues.ts"
 import { projects } from "../schema/projects.ts"
 import { scores } from "../schema/scores.ts"
+import { preferProjectFirst } from "./org-search.ts"
 
 // Lifecycle flags derived from `alert_incidents` are joined onto every
 // non-locking issue read. The two EXISTS subqueries are the system of record
@@ -338,10 +339,13 @@ const issueRepositoryCoreLive = Layer.effect(
           }))
         }),
 
-      searchOrgWide: ({ query, normalizedEmbedding, limit }) =>
+      searchOrgWide: ({ query, normalizedEmbedding, preferProjectId, limit }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const lexicalQuery = sql`websearch_to_tsquery('english', ${query})`
+          // Current project first *within* the tier, so a local lexical hit still beats a remote
+          // semantic one (the tiers are merged lexical-first by the caller).
+          const projectFirst = preferProjectFirst(issues.projectId, preferProjectId)
 
           // Lexical tier: GIN-backed full-text match OR a literal name substring. No embedding
           // round-trip, so this is the instant, index-backed path.
@@ -364,7 +368,7 @@ const issueRepositoryCoreLive = Layer.effect(
                     or(sql`${issues.searchDocument} @@ ${lexicalQuery}`, ilike(issues.name, `%${query}%`)),
                   ),
                 )
-                .orderBy(desc(lexicalScore), desc(issues.updatedAt), asc(issues.id))
+                .orderBy(...projectFirst, desc(lexicalScore), desc(issues.updatedAt), asc(issues.id))
                 .limit(limit),
             )
             return rows.map(toOrgIssueSearchHit)
@@ -403,7 +407,7 @@ const issueRepositoryCoreLive = Layer.effect(
                   sql`(${score} >= ${ISSUE_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
               )
-              .orderBy(desc(score), desc(vectorScore), desc(issues.updatedAt), asc(issues.id))
+              .orderBy(...projectFirst, desc(score), desc(vectorScore), desc(issues.updatedAt), asc(issues.id))
               .limit(limit),
           )
           return rows.map(toOrgIssueSearchHit)

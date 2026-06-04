@@ -1119,7 +1119,11 @@ describe("MonitorRepositoryLive searchOrgWide", () => {
     await closeInMemoryPostgres(database)
   })
 
-  const search = (args: { readonly searchQuery?: string; readonly limit: number }) =>
+  const search = (args: {
+    readonly searchQuery?: string
+    readonly preferProjectId?: ProjectId
+    readonly limit: number
+  }) =>
     Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* MonitorRepository
@@ -1177,5 +1181,13 @@ describe("MonitorRepositoryLive searchOrgWide", () => {
 
     const results = await search({ searchQuery: "zebra", limit: 25 })
     expect(results.map((r) => r.name)).toEqual(["Zebra", "Zebra System", "Zebra User"])
+  })
+
+  it("ranks the preferred project's monitors first, ahead of match quality", async () => {
+    // For "error": "Error Rate" (project B) is a prefix match (higher score) than the substring
+    // "Payment Errors" (project A). Preferring project A floats it above the better match.
+    const preferA = await search({ searchQuery: "error", preferProjectId: projA, limit: 25 })
+    expect(preferA[0]?.name).toBe("Payment Errors")
+    expect(preferA[0]?.projectId).toBe(projA)
   })
 })

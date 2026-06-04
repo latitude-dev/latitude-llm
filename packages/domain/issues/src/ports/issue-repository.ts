@@ -80,10 +80,14 @@ export interface IssueRepositoryShape {
    *
    * Each hit carries lifecycle flags and the owning project's slug/name. Issues in soft-deleted
    * projects are excluded. The caller merges the two tiers (lexical first) and caps the result.
+   * When `preferProjectId` is set, that project's issues rank first *within each tier* (so a
+   * current-project lexical hit still beats an other-project semantic hit) — the palette passes the
+   * current project so local results lead.
    */
   searchOrgWide(input: {
     readonly query: string
     readonly normalizedEmbedding?: readonly number[]
+    readonly preferProjectId?: ProjectId
     readonly limit: number
   }): Effect.Effect<readonly OrgIssueSearchHit[], RepositoryError, SqlClient>
   /**

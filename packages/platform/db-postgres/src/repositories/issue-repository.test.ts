@@ -698,6 +698,7 @@ describe("IssueRepositoryLive searchOrgWide", () => {
   const search = (input: {
     readonly query: string
     readonly normalizedEmbedding?: readonly number[]
+    readonly preferProjectId?: ProjectId
     readonly limit: number
   }) =>
     Effect.runPromise(
@@ -770,6 +771,14 @@ describe("IssueRepositoryLive searchOrgWide", () => {
     it("respects the limit", async () => {
       const results = await search({ query: "timeout", limit: 1 })
       expect(results).toHaveLength(1)
+    })
+
+    it("ranks the preferred project's issues first within the tier", async () => {
+      const results = await search({ query: "timeout", preferProjectId: projB, limit: 25 })
+      const names = results.map((r) => r.issue.name)
+      // "Checkout timeout" lives in project B; preferring B floats it ahead of project A's match.
+      expect(names.indexOf("Checkout timeout")).toBeLessThan(names.indexOf("Payment timeout errors"))
+      expect(results[0]?.issue.projectId).toBe(projB)
     })
   })
 
