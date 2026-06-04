@@ -4198,14 +4198,18 @@
                       "type": "string"
                     },
                     {
-                      "type": "object",
-                      "additionalProperties": {}
-                    },
-                    {
                       "type": "number"
                     },
                     {
                       "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {}
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": {}
                     },
                     {
                       "type": "null"
@@ -4219,14 +4223,18 @@
                       "type": "string"
                     },
                     {
-                      "type": "object",
-                      "additionalProperties": {}
-                    },
-                    {
                       "type": "number"
                     },
                     {
                       "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {}
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": {}
                     },
                     {
                       "type": "null"
@@ -4240,14 +4248,18 @@
                       "type": "string"
                     },
                     {
-                      "type": "object",
-                      "additionalProperties": {}
-                    },
-                    {
                       "type": "number"
                     },
                     {
                       "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {}
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": {}
                     },
                     {
                       "type": "null"
@@ -4261,14 +4273,18 @@
                       "type": "string"
                     },
                     {
-                      "type": "object",
-                      "additionalProperties": {}
-                    },
-                    {
                       "type": "number"
                     },
                     {
                       "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {}
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": {}
                     },
                     {
                       "type": "null"

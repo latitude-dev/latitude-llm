@@ -362,7 +362,16 @@ const deleteDatasetEndpoint = datasetEndpoint({
 
 // ─── Rows ────────────────────────────────────────────────────────────────────
 
-const InsertRowCellSchema = z.union([z.string(), z.record(z.string(), z.unknown()), z.number(), z.boolean(), z.null()])
+// Mirrors the read-side RowFieldValue (string | number | boolean | array |
+// object) plus null, so anything the API accepts on insert can also be read back.
+const InsertRowCellSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.array(z.unknown()),
+  z.record(z.string(), z.unknown()),
+  z.null(),
+])
 
 const PaginatedDatasetRowsSchema = Paginated(DatasetRowSchema, "PaginatedDatasetRows")
 

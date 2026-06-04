@@ -310,6 +310,23 @@ describe("DatasetRowClickHouseRepository", () => {
       expect(row.output).toEqual(["a", "b"])
     })
 
+    it("preserves empty arrays through round-trip without collapsing to ''", async () => {
+      const rowId = DatasetRowId("json-empty-arr-1")
+
+      await runCh(
+        repo.insertBatch({
+          datasetId: DATASET_ID,
+          version: 1,
+          rows: [{ id: rowId, input: [], output: { key: "value" } }],
+        }),
+      )
+
+      const row = await runCh(repo.findById({ datasetId: DATASET_ID, rowId }))
+
+      expect(row.input).toEqual([])
+      expect(row.output).toEqual({ key: "value" })
+    })
+
     it("preserves scalar number and boolean values through round-trip", async () => {
       const rowId = DatasetRowId("json-scalar-1")
 

@@ -8262,17 +8262,21 @@
                       "type": "string"
                     },
                     {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {}
+                    },
+                    {
                       "type": "object",
                       "propertyNames": {
                         "type": "string"
                       },
                       "additionalProperties": {}
-                    },
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "boolean"
                     },
                     {
                       "type": "null"
@@ -8287,17 +8291,21 @@
                       "type": "string"
                     },
                     {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {}
+                    },
+                    {
                       "type": "object",
                       "propertyNames": {
                         "type": "string"
                       },
                       "additionalProperties": {}
-                    },
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "boolean"
                     },
                     {
                       "type": "null"
@@ -8311,17 +8319,21 @@
                       "type": "string"
                     },
                     {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {}
+                    },
+                    {
                       "type": "object",
                       "propertyNames": {
                         "type": "string"
                       },
                       "additionalProperties": {}
-                    },
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "boolean"
                     },
                     {
                       "type": "null"
@@ -8335,17 +8347,21 @@
                       "type": "string"
                     },
                     {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {}
+                    },
+                    {
                       "type": "object",
                       "propertyNames": {
                         "type": "string"
                       },
                       "additionalProperties": {}
-                    },
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "boolean"
                     },
                     {
                       "type": "null"

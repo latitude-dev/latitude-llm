@@ -32,19 +32,19 @@ export namespace InsertDatasetRowsBody {
             /**
              * Row input cell.
              */
-            export type Input = string | Record<string, unknown> | number | boolean;
+            export type Input = string | number | boolean | unknown[] | Record<string, unknown>;
             /**
              * Row output cell.
              */
-            export type Output = string | Record<string, unknown> | number | boolean;
+            export type Output = string | number | boolean | unknown[] | Record<string, unknown>;
             /**
              * Correct answer for this row. Filled in by curators; usually distinct from `output`.
              */
-            export type ExpectedOutput = string | Record<string, unknown> | number | boolean;
+            export type ExpectedOutput = string | number | boolean | unknown[] | Record<string, unknown>;
             /**
              * Row metadata cell.
              */
-            export type Metadata = string | Record<string, unknown> | number | boolean;
+            export type Metadata = string | number | boolean | unknown[] | Record<string, unknown>;
         }
     }
 }

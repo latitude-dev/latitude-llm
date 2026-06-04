@@ -5,13 +5,13 @@ export interface DatasetRow {
     rowId: string;
     /** Dataset this row belongs to. */
     datasetId: string;
-    /** Free-form cell value. Either a plain string or an arbitrary JSON object. */
+    /** Free-form cell value: any JSON scalar, array, or object. */
     input: DatasetRow.Input;
-    /** Free-form cell value. Either a plain string or an arbitrary JSON object. */
+    /** Free-form cell value: any JSON scalar, array, or object. */
     output: DatasetRow.Output;
     /** The correct answer for this row. Curators fill this in by hand; it is not derived from `output`. */
     expectedOutput: DatasetRow.ExpectedOutput;
-    /** Free-form cell value. Either a plain string or an arbitrary JSON object. */
+    /** Free-form cell value: any JSON scalar, array, or object. */
     metadata: DatasetRow.Metadata;
     /** ISO-8601 timestamp at which the row was inserted. */
     createdAt: string;
@@ -21,19 +21,19 @@ export interface DatasetRow {
 
 export namespace DatasetRow {
     /**
-     * Free-form cell value. Either a plain string or an arbitrary JSON object.
+     * Free-form cell value: any JSON scalar, array, or object.
      */
-    export type Input = string | Record<string, unknown>;
+    export type Input = string | number | boolean | unknown[] | Record<string, unknown>;
     /**
-     * Free-form cell value. Either a plain string or an arbitrary JSON object.
+     * Free-form cell value: any JSON scalar, array, or object.
      */
-    export type Output = string | Record<string, unknown>;
+    export type Output = string | number | boolean | unknown[] | Record<string, unknown>;
     /**
      * The correct answer for this row. Curators fill this in by hand; it is not derived from `output`.
      */
-    export type ExpectedOutput = string | Record<string, unknown>;
+    export type ExpectedOutput = string | number | boolean | unknown[] | Record<string, unknown>;
     /**
-     * Free-form cell value. Either a plain string or an arbitrary JSON object.
+     * Free-form cell value: any JSON scalar, array, or object.
      */
-    export type Metadata = string | Record<string, unknown>;
+    export type Metadata = string | number | boolean | unknown[] | Record<string, unknown>;
 }
