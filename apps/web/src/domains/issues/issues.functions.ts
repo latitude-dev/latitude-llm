@@ -3,9 +3,11 @@ import { exportSelectionSchema } from "@domain/exports"
 import {
   type ApplyIssueLifecycleCommandResult,
   applyIssueLifecycleCommandUseCase,
+  buildHistogramBucketScaffold,
   DEFAULT_ESCALATION_SENSITIVITY_K,
   deriveIssueLifecycleStates,
   embedIssueSearchQueryUseCase,
+  fillBuckets,
   getEscalationOccurrenceThreshold,
   type Issue,
   type IssueListItem,
@@ -21,12 +23,7 @@ import {
   searchOrgIssuesUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
 } from "@domain/issues"
-import {
-  type IssueEscalationThresholdBucket,
-  type IssueOccurrenceBucket,
-  ScoreAnalyticsRepository,
-  ScoreRepository,
-} from "@domain/scores"
+import { type IssueEscalationThresholdBucket, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, resolveSettings, SettingsReader } from "@domain/shared"
 import type { TraceDetail } from "@domain/spans"
 import { withAi } from "@platform/ai"
@@ -162,39 +159,7 @@ const issueTracesCountInputSchema = z.object({
 const toUtcDayEnd = (value: Date): Date =>
   new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 23, 59, 59, 999))
 
-/**
- * Sub-day-aware scaffold producing ISO-8601 UTC bucket-start timestamps. Used by the issue
- * detail trend (12h buckets) — the wider per-bucket precision lets incident overlays land in
- * the right half-day rather than collapsing to the calendar date.
- */
-const buildHistogramBucketScaffold = (input: {
-  readonly from: Date
-  readonly to: Date
-  readonly bucketSeconds: number
-}): readonly string[] => {
-  const widthMs = input.bucketSeconds * 1000
-  if (widthMs <= 0) return []
-  const startMs = Math.floor(input.from.getTime() / widthMs) * widthMs
-  const endMs = input.to.getTime()
-  const out: string[] = []
-  for (let cursor = startMs; cursor <= endMs; cursor += widthMs) {
-    out.push(new Date(cursor).toISOString())
-  }
-  return out
-}
-
 const ISSUE_DETAIL_TREND_BUCKET_SECONDS = 12 * 60 * 60 // 12h
-
-const fillBuckets = (input: {
-  readonly scaffold: readonly string[]
-  readonly buckets: readonly IssueOccurrenceBucket[]
-}): readonly { readonly bucket: string; readonly count: number }[] => {
-  const countsByBucket = new Map(input.buckets.map((bucket) => [bucket.bucket, bucket.count] as const))
-  return input.scaffold.map((bucket) => ({
-    bucket,
-    count: countsByBucket.get(bucket) ?? 0,
-  }))
-}
 
 const toIssueDetailRecord = (input: {
   readonly issue: Issue

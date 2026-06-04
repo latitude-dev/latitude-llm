@@ -25,6 +25,7 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { type IssueSource, IssueState } from "../entities/issue.ts"
 import { deriveIssueLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
+import { buildHistogramBucketScaffold, fillBuckets } from "../histogram-buckets.ts"
 import { IssueRepository, type IssueSearchCandidate, type IssueWithLifecycle } from "../ports/issue-repository.ts"
 
 export const issuesLifecycleGroupSchema = z.enum(["active", "archived"])
@@ -253,40 +254,6 @@ const buildBucketScaffold = (input: { readonly from: Date; readonly to: Date }):
   }
 
   return buckets
-}
-
-/**
- * Sub-day-aware scaffold aligned to UTC bucket boundaries. Emits ISO-8601 UTC timestamps
- * (`YYYY-MM-DDTHH:MM:SS.000Z`) — same shape the CH layer returns for the analytics histogram.
- * The scaffold starts at `floor(from / bucketWidth) * bucketWidth` and steps by `bucketSeconds`
- * up to and including the bucket containing `to`.
- */
-const buildHistogramBucketScaffold = (input: {
-  readonly from: Date
-  readonly to: Date
-  readonly bucketSeconds: number
-}): readonly string[] => {
-  const widthMs = input.bucketSeconds * 1000
-  if (widthMs <= 0) return []
-  const startMs = Math.floor(input.from.getTime() / widthMs) * widthMs
-  const endMs = input.to.getTime()
-  const out: string[] = []
-  for (let cursor = startMs; cursor <= endMs; cursor += widthMs) {
-    out.push(new Date(cursor).toISOString())
-  }
-  return out
-}
-
-const fillBuckets = (input: {
-  readonly scaffold: readonly string[]
-  readonly buckets: readonly IssueOccurrenceBucket[]
-}): readonly IssueOccurrenceBucket[] => {
-  const countsByBucket = new Map(input.buckets.map((bucket) => [bucket.bucket, bucket.count] as const))
-
-  return input.scaffold.map((bucket) => ({
-    bucket,
-    count: countsByBucket.get(bucket) ?? 0,
-  }))
 }
 
 const matchesLifecycleGroup = (

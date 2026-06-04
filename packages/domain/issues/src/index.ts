@@ -79,6 +79,7 @@ export {
   type UpdateIssueCentroidInput,
   updateIssueCentroid,
 } from "./helpers.ts"
+export { buildHistogramBucketScaffold, fillBuckets } from "./histogram-buckets.ts"
 export { type IssueDiscoveryLockInput, issueDiscoveryLockKey, withIssueDiscoveryLock } from "./locks.ts"
 export {
   type IssueLifecycleFlags,

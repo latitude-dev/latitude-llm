@@ -17,6 +17,18 @@ export const INCIDENT_SEVERITY_COLOR: Record<AlertSeverity, string> = {
   high: "hsl(0 84% 60%)",
 }
 
+/**
+ * Concrete hex equivalents of {@link INCIDENT_SEVERITY_COLOR}, for renderers that can't rely on
+ * CSS `hsl()` parsing. usvg (the SVG parser behind the server-side Resvg incident-trend PNG)
+ * does not reliably parse the space-separated `hsl(H S% L%)` syntax used above, so the hand-built
+ * SVG markup references these instead. Values are the same Tailwind-500 colors (blue/amber/red).
+ */
+export const INCIDENT_SEVERITY_HEX: Record<AlertSeverity, string> = {
+  low: "#3b82f6",
+  medium: "#f59e0b",
+  high: "#ef4444",
+}
+
 type TopSymbol = NonNullable<BarChartOverlayLine["topSymbol"]>
 
 // Markers are paint-only — interactivity lives at the bucket level via the histogram's hover

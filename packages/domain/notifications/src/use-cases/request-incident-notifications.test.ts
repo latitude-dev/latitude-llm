@@ -138,15 +138,17 @@ function setup(opts: SetupOpts = {}) {
     getProjectSettings: (_pid: ProjectId) => Effect.succeed(opts.projectSettings ?? null),
   })
 
+  // Keys are UTC-aligned to the 12h trend grid and fall inside the snapshot's 14d window
+  // (anchored at the incident's 2026-05-07 start) so they zip against the bucket scaffold.
   const occurrenceBuckets = opts.occurrenceBuckets ?? [
-    { bucket: "2026-05-07T07:10:00.000Z", count: 1 },
-    { bucket: "2026-05-07T08:10:00.000Z", count: 4 },
-    { bucket: "2026-05-07T09:10:00.000Z", count: 9 },
+    { bucket: "2026-05-06T00:00:00.000Z", count: 1 },
+    { bucket: "2026-05-06T12:00:00.000Z", count: 4 },
+    { bucket: "2026-05-07T00:00:00.000Z", count: 9 },
   ]
   const thresholdBuckets = opts.thresholdBuckets ?? [
-    { bucket: "2026-05-07T07:10:00.000Z", thresholdCount: 5 },
-    { bucket: "2026-05-07T08:10:00.000Z", thresholdCount: Number.NaN },
-    { bucket: "2026-05-07T09:10:00.000Z", thresholdCount: 7 },
+    { bucket: "2026-05-06T00:00:00.000Z", thresholdCount: 5 },
+    { bucket: "2026-05-06T12:00:00.000Z", thresholdCount: Number.NaN },
+    { bucket: "2026-05-07T00:00:00.000Z", thresholdCount: 7 },
   ]
 
   // Stub only the methods the producer calls; the rest stay as the
@@ -264,10 +266,17 @@ describe("requestIncidentNotificationsUseCase", () => {
     expect(result.requests[0]?.idempotencyKey).toBe(`incident.opened:${incidentId}`)
     const payload = result.requests[0]?.payload
     if (!payload || !("trend" in payload) || !payload.trend) throw new Error("expected trend on opened payload")
-    expect(payload.trend.bucketDurationMs).toBe(10 * 60 * 1000)
+    // 12h buckets over a 14-day window — matches the in-app issue-detail drawer grid.
+    expect(payload.trend.bucketDurationMs).toBe(12 * 60 * 60 * 1000)
+    // 14 days of UTC-aligned 12h buckets = 28 points.
+    expect(payload.trend.points).toHaveLength(28)
     // NaN thresholds round-trip through the producer as null.
     expect(payload.trend.points.some((p) => p.threshold === null)).toBe(true)
     expect(payload.trend.points.some((p) => typeof p.threshold === "number")).toBe(true)
+    // The triggering incident is snapshotted as a marker for the chart's band + start dot.
+    expect(payload.trend.marker?.severity).toBe("high")
+    expect(payload.trend.marker?.startedAt).toBe(startedAt.toISOString())
+    expect(payload.trend.marker?.endedAt).toBeNull()
   })
 
   it("derives incident.closed regardless of endedAt shape when transition='closed'", async () => {
@@ -665,7 +674,8 @@ describe("requestIncidentNotificationsUseCase", () => {
     if (!payload || !("breach" in payload)) throw new Error("expected breach on opened payload")
     expect(payload.breach?.baselineRate).toBe(4.2)
     expect(payload.breach?.threshold).toBe(7.5)
-    // triggerRate is derived from peak trend count × per-hour scale; verify it's a positive number.
+    // triggerRate is the fine-grained recent peak/hour (decoupled from the 12h display trend);
+    // verify it's a positive number.
     expect(payload.breach?.triggerRate).toBeGreaterThan(0)
   })
 

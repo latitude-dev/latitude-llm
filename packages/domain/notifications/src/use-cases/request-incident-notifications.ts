@@ -1,6 +1,6 @@
 import { type AlertIncident, AlertIncidentRepository, isIssueEscalationEntrySignals } from "@domain/alerts"
 import { EvaluationRepository } from "@domain/evaluations"
-import { DEFAULT_ESCALATION_SENSITIVITY_K } from "@domain/issues"
+import { buildHistogramBucketScaffold, DEFAULT_ESCALATION_SENSITIVITY_K, fillBuckets } from "@domain/issues"
 import type { MembershipRepository } from "@domain/organizations"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import {
@@ -70,15 +70,27 @@ export type RequestIncidentNotificationsResult =
 export type RequestIncidentNotificationsError = RepositoryError | NotFoundError
 
 /**
- * Window/bucket size used for the trend snapshot on sustained kinds.
- * 18 buckets × 10 min = 3h, sized to fit comfortably in an email-width
- * chart and a bell sparkline while keeping enough resolution to read
- * the climb (opened) or descent (closed). Hourly seasonal-grid projection
- * still works at 10-min buckets — each bucket's threshold is roughly the
- * 1h figure pro-rated, computed inside the analytics repo.
+ * Window/bucket size for the trend snapshot on sustained kinds. 14 days of UTC-aligned 12h
+ * buckets (~28 points) — identical to the in-app issue-detail drawer (`getIssueDetail`) so the
+ * Slack/email chart shows the same data at the same granularity instead of a divergent 3h zoom.
+ * The window is frozen at incident time (the PNG is immutable/cached), UTC-day-aligned the same
+ * way the drawer aligns to "now".
  */
-const TREND_BUCKET_SECONDS = 600
-const TREND_WINDOW_MS = 3 * 60 * 60 * 1000
+const TREND_BUCKET_SECONDS = 12 * 60 * 60
+const TREND_LOOKBACK_DAYS = 14
+
+/**
+ * Separate fine-grained window used ONLY to derive the breach "rate climbed to X/hr" copy. The
+ * 12h display buckets above are too coarse to read an hourly peak from, so the rate is computed
+ * from a short recent window at 10-min resolution (the historical behaviour) — independent of the
+ * widened display trend.
+ */
+const RATE_PEAK_WINDOW_MS = 3 * 60 * 60 * 1000
+const RATE_PEAK_BUCKET_SECONDS = 600
+
+/** End-of-UTC-day for the anchor, matching the drawer's `toUtcDayEnd` window alignment. */
+const toUtcDayEnd = (value: Date): Date =>
+  new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 23, 59, 59, 999))
 
 /** Cap on sample-excerpt text length; truncated longer feedback gets `truncated: true`. */
 const SAMPLE_EXCERPT_MAX_CHARS = 200
@@ -99,9 +111,11 @@ const resolveKind = (incident: AlertIncident, transition: IncidentTransition): I
 }
 
 /**
- * Snapshot a 3h trend window ending at the relevant transition timestamp.
- * Returns `null` for `incident.event` (one-shot kinds have nothing to
- * trend at notification time) and for missing analytics data.
+ * Snapshot the 14d/12h trend window for sustained kinds, frozen at the relevant transition
+ * timestamp and UTC-day-aligned exactly like the issue-detail drawer. Zero-fills the window so
+ * empty buckets render as gaps, zips in the per-bucket seasonal threshold, and carries the
+ * triggering incident as a `marker` for the chart's severity band + start dot. Returns `null`
+ * for `incident.event` (one-shot kinds have nothing to trend at notification time).
  */
 const snapshotTrend = (input: {
   readonly incident: AlertIncident
@@ -112,12 +126,13 @@ const snapshotTrend = (input: {
     const { incident, kind, kShort } = input
     if (kind === "incident.event") return null
 
-    const anchorMs =
-      kind === "incident.closed" && incident.endedAt !== null
-        ? incident.endedAt.getTime()
-        : incident.startedAt.getTime()
-    const to = new Date(anchorMs)
-    const from = new Date(anchorMs - TREND_WINDOW_MS)
+    const anchor = kind === "incident.closed" && incident.endedAt !== null ? incident.endedAt : incident.startedAt
+    const to = toUtcDayEnd(anchor)
+    const from = new Date(to)
+    from.setUTCDate(from.getUTCDate() - (TREND_LOOKBACK_DAYS - 1))
+    from.setUTCHours(0, 0, 0, 0)
+
+    const scaffold = buildHistogramBucketScaffold({ from, to, bucketSeconds: TREND_BUCKET_SECONDS })
 
     const analytics = yield* ScoreAnalyticsRepository
     const [counts, thresholds] = yield* Effect.all([
@@ -149,13 +164,41 @@ const snapshotTrend = (input: {
       thresholdByBucket.set(entry.bucket, Number.isFinite(entry.thresholdCount) ? entry.thresholdCount : null)
     }
 
-    const points: IncidentTrend["points"] = counts.map((bucket) => ({
+    const points: IncidentTrend["points"] = fillBuckets({ scaffold, buckets: counts }).map((bucket) => ({
       t: bucket.bucket,
       count: bucket.count,
       threshold: thresholdByBucket.get(bucket.bucket) ?? null,
     }))
 
-    return { bucketDurationMs: TREND_BUCKET_SECONDS * 1000, points } as const
+    const marker: IncidentTrend["marker"] = {
+      startedAt: incident.startedAt.toISOString(),
+      endedAt: incident.endedAt !== null ? incident.endedAt.toISOString() : null,
+      severity: incident.severity,
+    }
+
+    return { bucketDurationMs: TREND_BUCKET_SECONDS * 1000, points, marker } as const
+  })
+
+/**
+ * Peak occurrences/hour over a short recent window at 10-min resolution, used solely for the
+ * breach "rate climbed to X/hr" copy (the 12h display trend is too coarse to read an hourly rate
+ * from). Anchored at incident open. Returns `0` when there's no data in the window.
+ */
+const snapshotTriggerRatePerHour = (incident: AlertIncident) =>
+  Effect.gen(function* () {
+    const to = incident.startedAt
+    const from = new Date(to.getTime() - RATE_PEAK_WINDOW_MS)
+    const analytics = yield* ScoreAnalyticsRepository
+    const counts = yield* analytics.histogramByIssues({
+      organizationId: incident.organizationId,
+      projectId: incident.projectId,
+      issueIds: [IssueId(incident.sourceId)],
+      timeRange: { from, to },
+      bucketSeconds: RATE_PEAK_BUCKET_SECONDS,
+    })
+    const peakCount = counts.reduce((max, bucket) => (bucket.count > max ? bucket.count : max), 0)
+    const bucketHours = RATE_PEAK_BUCKET_SECONDS / (60 * 60)
+    return bucketHours > 0 ? peakCount / bucketHours : 0
   })
 
 /**
@@ -282,21 +325,17 @@ const snapshotSampleExcerpt = (incident: AlertIncident) =>
  * `undefined` for legacy escalating incidents that don't have
  * `entrySignals` — those predate the seasonal detector's snapshot.
  *
- * `triggerRate` is derived from the snapshotted trend: the peak
- * per-bucket count converted to per-hour. The exact instantaneous rate
- * that tripped entry isn't preserved on the incident row, but the trend
- * peak is the rate the user would see in the chart and matches the
- * "climbed to" copy.
+ * `triggerRate` is the recent fine-grained peak/hour from
+ * {@link snapshotTriggerRatePerHour} (the display trend is now 12h-bucketed and too coarse for
+ * an hourly rate). The exact instantaneous rate that tripped entry isn't preserved on the
+ * incident row, but this peak is the "climbed to" figure the copy describes.
  */
-const buildBreach = (incident: AlertIncident, trend: IncidentTrend | null): IncidentBreach | undefined => {
+const buildBreach = (incident: AlertIncident, triggerRatePerHour: number | null): IncidentBreach | undefined => {
   // Seasonal breach scalars only exist on `issue.escalating` snapshots; saved-search
   // incidents carry a frozen-threshold snapshot instead and have no such copy.
-  if (trend === null || !isIssueEscalationEntrySignals(incident.entrySignals)) return undefined
-  const peakCount = trend.points.reduce((m, p) => (p.count > m ? p.count : m), 0)
-  const bucketHours = trend.bucketDurationMs / (60 * 60 * 1000)
-  const triggerRate = bucketHours > 0 ? peakCount / bucketHours : 0
+  if (!isIssueEscalationEntrySignals(incident.entrySignals)) return undefined
   return {
-    triggerRate,
+    triggerRate: triggerRatePerHour ?? 0,
     baselineRate: incident.entrySignals.expected1h,
     threshold: incident.entrySignals.entryThreshold1h,
   }
@@ -315,11 +354,12 @@ const buildPayload = (input: {
   readonly incident: AlertIncident
   readonly kind: IncidentNotificationKind
   readonly trend: IncidentTrend | null
+  readonly triggerRatePerHour: number | null
   readonly tags: readonly string[] | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
   readonly monitor: IncidentMonitorInfo | null
 }): IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload => {
-  const { incident, kind, trend, tags, sampleExcerpt, monitor } = input
+  const { incident, kind, trend, triggerRatePerHour, tags, sampleExcerpt, monitor } = input
   const base = {
     alertIncidentId: incident.id,
     sourceType: incident.sourceType,
@@ -349,7 +389,7 @@ const buildPayload = (input: {
   // Sustained kinds carry an issue trend snapshot when the source is an issue;
   // saved-search incidents omit it (no issue analytics).
   if (kind === "incident.opened") {
-    const breach = buildBreach(incident, trend)
+    const breach = buildBreach(incident, triggerRatePerHour)
     return {
       alertIncidentId: base.alertIncidentId,
       sourceType: base.sourceType,
@@ -424,9 +464,13 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     // Closed kind also skips tags/excerpt: the recovery copy focuses on the descent.
     const isIssueSource = incident.sourceType === "issue"
     const wantsSourceContext = isIssueSource && notificationKind !== "incident.closed"
-    const [trend, tags, sampleExcerpt] = yield* Effect.all(
+    const [trend, triggerRatePerHour, tags, sampleExcerpt] = yield* Effect.all(
       [
         isIssueSource ? snapshotTrend({ incident, kind: notificationKind, kShort }) : Effect.succeed(null),
+        // Only the opened-side breach copy needs the fine-grained hourly rate (issue sources only).
+        isIssueSource && notificationKind === "incident.opened"
+          ? snapshotTriggerRatePerHour(incident)
+          : Effect.succeed(null),
         wantsSourceContext ? snapshotTags(incident) : Effect.succeed(undefined),
         wantsSourceContext ? snapshotSampleExcerpt(incident) : Effect.succeed(undefined),
       ],
@@ -443,7 +487,15 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       return { status: "skipped", reason: "no-recipients" } as const
     }
 
-    const payload = buildPayload({ incident, kind: notificationKind, trend, tags, sampleExcerpt, monitor })
+    const payload = buildPayload({
+      incident,
+      kind: notificationKind,
+      trend,
+      triggerRatePerHour,
+      tags,
+      sampleExcerpt,
+      monitor,
+    })
     // Per-kind switch preserves the discriminated-union narrowing
     // `buildIdempotencyKey`'s input requires. A widening cast would
     // silently lose exhaustiveness if a future kind keys off a

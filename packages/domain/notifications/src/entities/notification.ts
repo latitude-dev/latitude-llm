@@ -26,14 +26,30 @@ export const incidentTrendPointSchema = z.object({
 })
 
 /**
- * Bucketed trend window snapshotted at incident-transition time. Window is
- * 3h ending at `startedAt` (`incident.opened`) or `endedAt`
- * (`incident.closed`); bucket size is currently 10 min (18 buckets), bumped
- * via `bucketDurationMs` so consumers don't hardcode it.
+ * The triggering incident, snapshotted onto the trend so the chart can draw a severity band
+ * (the incident's active span) and a start dot — mirroring the in-app issue-detail drawer. The
+ * window/anchor live on the trend itself; this just carries the incident's own timestamps and
+ * severity. Optional so payloads written before this field still parse.
+ */
+const incidentTrendMarkerSchema = z.object({
+  startedAt: z.iso.datetime(),
+  /** `null` while the incident is still open (e.g. `incident.opened`). */
+  endedAt: z.iso.datetime().nullable(),
+  severity: alertSeveritySchema,
+})
+export type IncidentTrendMarker = z.infer<typeof incidentTrendMarkerSchema>
+
+/**
+ * Bucketed trend window snapshotted at incident-transition time, frozen so the immutable PNG
+ * matches what the issue-detail drawer showed at that moment. Window is 14 days of UTC-aligned
+ * 12h buckets (~28 points) anchored at `startedAt` (`incident.opened`) or `endedAt`
+ * (`incident.closed`) — the same range + granularity the drawer renders. `bucketDurationMs` is
+ * carried so consumers don't hardcode it (older payloads still carry their 10-min value).
  */
 export const incidentTrendSchema = z.object({
   bucketDurationMs: z.number().int().positive(),
   points: z.array(incidentTrendPointSchema).max(64),
+  marker: incidentTrendMarkerSchema.optional(),
 })
 export type IncidentTrend = z.infer<typeof incidentTrendSchema>
 

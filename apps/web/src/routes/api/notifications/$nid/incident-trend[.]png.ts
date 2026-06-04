@@ -87,12 +87,8 @@ export const Route = createFileRoute("/api/notifications/$nid/incident-trend.png
         const trend = parsed.data.trend
         if (!trend) return respondTransparent()
 
-        const breach = "breach" in parsed.data ? parsed.data.breach : undefined
         try {
-          const png = await renderIncidentTrendPng({
-            trend,
-            ...(breach ? { breach } : {}),
-          })
+          const png = await renderIncidentTrendPng({ trend })
           return respondPng(png)
         } catch (cause) {
           logger.error(`charts.incident-trend: render failed for ${params.nid}`, cause)

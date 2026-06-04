@@ -11,6 +11,10 @@
  * doesn't hang an inbound chart request indefinitely — the caller
  * catches the throw and degrades to the 1×1 transparent PNG fallback.
  */
+import { writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+
 const FONT_URL = "https://cdn.jsdelivr.net/npm/@expo-google-fonts/source-serif-pro@0.2.3/SourceSerifPro_400Regular.ttf"
 const FONT_FETCH_TIMEOUT_MS = 5_000
 
@@ -23,7 +27,7 @@ const fetchFont = async (): Promise<ArrayBuffer> => {
   return res.arrayBuffer()
 }
 
-export const getChartFont = async (): Promise<ArrayBuffer> => {
+const getChartFont = async (): Promise<ArrayBuffer> => {
   if (cached) return cached
   if (!inFlight) {
     inFlight = fetchFont()
@@ -36,4 +40,29 @@ export const getChartFont = async (): Promise<ArrayBuffer> => {
       })
   }
   return inFlight
+}
+
+/**
+ * Path to the chart font on disk, for Resvg's `font.fontFiles` option (resvg-js 2.6.2 has no
+ * in-memory `fontBuffers`, so the buffer is materialised to a temp file once and the path is
+ * cached). The hand-built incident-trend SVG uses Resvg to lay out `<text>` axis labels, which
+ * needs a real font file — unlike the prior Satori path that vectorised glyphs in-process.
+ */
+let fontFilePromise: Promise<string> | null = null
+
+export const getChartFontFile = async (): Promise<string> => {
+  if (!fontFilePromise) {
+    fontFilePromise = (async () => {
+      const buffer = await getChartFont()
+      const filePath = join(tmpdir(), "latitude-incident-trend-source-serif-pro-400.ttf")
+      await writeFile(filePath, Buffer.from(buffer))
+      return filePath
+    })().catch((error) => {
+      // Reset so a transient fs/CDN failure can be retried on the next render instead of
+      // poisoning the cache permanently.
+      fontFilePromise = null
+      throw error
+    })
+  }
+  return fontFilePromise
 }

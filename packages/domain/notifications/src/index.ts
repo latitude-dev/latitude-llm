@@ -10,6 +10,7 @@ export type {
   IncidentSampleAuthor,
   IncidentSampleExcerpt,
   IncidentTrend,
+  IncidentTrendMarker,
   Notification,
   NotificationKind,
   WrappedReportPayload,

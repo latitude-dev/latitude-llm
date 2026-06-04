@@ -9,14 +9,18 @@ import {
   INCIDENT_SEVERITY_COLOR,
 } from "../../../../../../domains/alerts/incident-markers.ts"
 import {
+  buildSmoothThresholdPath,
+  buildThresholdSegments,
+  computeTrendMaxCount,
+  toVisibleHeightPercent,
+} from "../../../../../../domains/issues/trend-chart/trend-geometry.ts"
+import {
   formatHistogramBucketDayLabel,
   formatHistogramBucketLabel,
   formatHistogramBucketTooltipLabel,
 } from "./issue-formatters.ts"
 
 const DEFAULT_MAX_VISIBLE_BUCKET_LABELS = 6
-const MIN_VISIBLE_BAR_HEIGHT_PERCENT = 12
-const MAX_VISIBLE_BAR_HEIGHT_PERCENT = 88
 const MINI_HISTOGRAM_GUIDE_LINE_COUNT = 5
 const MINI_HISTOGRAM_TOP_INSET_PX = 6
 const REGRESSED_BAR_CLASSES = "bg-rose-700 dark:bg-rose-400"
@@ -62,40 +66,6 @@ function resolveBarClasses(input: {
   return DEFAULT_ROW_BAR_CLASSES
 }
 
-/**
- * Build a single SVG `<path>` `d` attribute that smoothly connects the given points using a
- * Catmull-Rom spline expressed as cubic Bezier segments. Endpoints duplicate themselves as
- * virtual neighbours so the curve doesn't accelerate at the boundary. Coordinates are emitted
- * with 3 decimals — enough for sub-pixel placement when the SVG scales to its container.
- */
-function buildSmoothThresholdPath(points: readonly { readonly x: number; readonly y: number }[]): string {
-  if (points.length === 0) return ""
-  const first = points[0]
-  if (!first) return ""
-  if (points.length === 1) {
-    // Single point inside an otherwise-broken segment: draw a tiny horizontal dash so the
-    // datum is still visible (otherwise an isolated bucket would render as nothing).
-    return `M ${(first.x - 0.3).toFixed(3)} ${first.y.toFixed(3)} L ${(first.x + 0.3).toFixed(3)} ${first.y.toFixed(3)}`
-  }
-
-  const parts: string[] = [`M ${first.x.toFixed(3)} ${first.y.toFixed(3)}`]
-  for (let i = 0; i < points.length - 1; i++) {
-    const p1 = points[i]
-    const p2 = points[i + 1]
-    if (!p1 || !p2) continue
-    const p0 = points[i - 1] ?? p1
-    const p3 = points[i + 2] ?? p2
-    const cp1x = p1.x + (p2.x - p0.x) / 6
-    const cp1y = p1.y + (p2.y - p0.y) / 6
-    const cp2x = p2.x - (p3.x - p1.x) / 6
-    const cp2y = p2.y - (p3.y - p1.y) / 6
-    parts.push(
-      `C ${cp1x.toFixed(3)} ${cp1y.toFixed(3)}, ${cp2x.toFixed(3)} ${cp2y.toFixed(3)}, ${p2.x.toFixed(3)} ${p2.y.toFixed(3)}`,
-    )
-  }
-  return parts.join(" ")
-}
-
 function getVisibleBucketLabelIndices(totalBuckets: number, maxVisibleBucketLabels: number): ReadonlySet<number> {
   if (totalBuckets <= 0) {
     return new Set()
@@ -109,14 +79,6 @@ function getVisibleBucketLabelIndices(totalBuckets: number, maxVisibleBucketLabe
   return new Set(
     Array.from({ length: labelCount }, (_, index) => Math.round((index * (totalBuckets - 1)) / (labelCount - 1))),
   )
-}
-
-function toVisibleHeightPercent(count: number, maxCount: number): number {
-  if (count === 0) {
-    return 0
-  }
-
-  return Math.max(MIN_VISIBLE_BAR_HEIGHT_PERCENT, (count / maxCount) * MAX_VISIBLE_BAR_HEIGHT_PERCENT)
 }
 
 interface IncidentBucketInfo {
@@ -340,33 +302,20 @@ export function IssueTrendBar({
     [chartBuckets.length, maxVisibleBucketLabels],
   )
 
-  // Threshold values participate in the scale so the dashed line never clips off the top.
-  const maxCount = useMemo(
-    () => Math.max(...chartBuckets.map((bucket) => Math.max(bucket.count, bucket.thresholdCount ?? 0)), 1),
+  // Shared shape `{ count, threshold }` consumed by the geometry helpers (the renderer side uses
+  // the same helpers against the notification payload), so bars + the dashed curve stay in sync.
+  const trendPoints = useMemo(
+    () => chartBuckets.map((bucket) => ({ count: bucket.count, threshold: bucket.thresholdCount })),
     [chartBuckets],
   )
 
-  // Group consecutive buckets that carry a threshold into smoothable segments. A null
-  // breaks the line — that span had no contributing prior history, so any "expected" value
-  // would be misleading. SVG coordinates use the chart-wide viewBox set on the overlay below:
-  // x = bucket center (i + 0.5) in 0..N space, y = 100 − heightPercent in 0..100 space.
-  const thresholdSegments = useMemo<{ readonly x: number; readonly y: number }[][]>(() => {
-    const segments: { x: number; y: number }[][] = []
-    let active: { x: number; y: number }[] = []
-    chartBuckets.forEach((bucket, index) => {
-      if (bucket.thresholdCount === null) {
-        if (active.length > 0) {
-          segments.push(active)
-          active = []
-        }
-        return
-      }
-      const heightPercent = toVisibleHeightPercent(bucket.thresholdCount, maxCount)
-      active.push({ x: index + 0.5, y: 100 - heightPercent })
-    })
-    if (active.length > 0) segments.push(active)
-    return segments
-  }, [chartBuckets, maxCount])
+  // Threshold values participate in the scale so the dashed line never clips off the top.
+  const maxCount = useMemo(() => computeTrendMaxCount(trendPoints), [trendPoints])
+
+  // Group consecutive buckets that carry a threshold into smoothable segments (the helper breaks
+  // the line across `null` thresholds). Coordinates use the chart-wide viewBox set on the overlay
+  // below: x = bucket center (i + 0.5) in 0..N space, y = 100 − heightPercent in 0..100 space.
+  const thresholdSegments = useMemo(() => buildThresholdSegments(trendPoints, maxCount), [trendPoints, maxCount])
 
   if (isLoading) {
     return <ChartSkeleton minHeight={height} className="border-0 bg-transparent p-0" />
