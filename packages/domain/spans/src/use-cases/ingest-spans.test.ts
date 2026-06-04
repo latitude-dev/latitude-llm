@@ -15,6 +15,14 @@ import type { QueuePublisherShape } from "@domain/queue"
 import { QueuePublishError, QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import {
+  type Sandbox,
+  SandboxArchivedError,
+  SandboxQuotaExceededError,
+  SandboxRepository,
+  SandboxSignals,
+} from "@domain/sandboxes"
+import { createFakeSandboxRepository, createFakeSandboxSignals } from "@domain/sandboxes/testing"
+import {
   generateId,
   NotFoundError,
   OrganizationId,
@@ -29,7 +37,7 @@ import { createFakeSqlClient, createFakeStorageDisk } from "@domain/shared/testi
 import { base64Decode } from "@repo/utils"
 import { Effect, Layer, Result } from "effect"
 import { describe, expect, it } from "vitest"
-import { ingestSpansUseCase } from "./ingest-spans.ts"
+import { decodeOtlpRequest, ingestSpansUseCase } from "./ingest-spans.ts"
 import { ingestSpansWithBillingUseCase } from "./ingest-spans-with-billing.ts"
 
 // Branded IDs are CUID2s — 24 characters exactly.
@@ -121,9 +129,10 @@ const makeProjectRepository = (
     countBySlug: () => Effect.die("not used"),
   })
 
-const makeInput = (payload: Uint8Array, opts: { defaultProjectSlug?: string } = {}) => ({
+const makeInput = (payload: Uint8Array, opts: { defaultProjectSlug?: string; isSandbox?: boolean } = {}) => ({
   organizationId: ORGANIZATION_ID,
   apiKeyId: "key-1",
+  isSandbox: opts.isSandbox ?? false,
   payload,
   contentType: "application/json",
   ...(opts.defaultProjectSlug ? { defaultProjectSlug: opts.defaultProjectSlug } : {}),
@@ -136,7 +145,7 @@ const runUseCase = (
   resolutions: Record<string, string | null> = { primary: PRIMARY_PROJECT_ID },
   settingsBySlug: Record<string, ProjectSettings> = {},
 ) =>
-  ingestSpansUseCase(input).pipe(
+  ingestSpansUseCase({ ...input, decoded: decodeOtlpRequest(input.payload, input.contentType) }).pipe(
     Effect.provide(
       Layer.mergeAll(
         Layer.succeed(StorageDisk, diskPort),
@@ -147,19 +156,37 @@ const runUseCase = (
     ),
   )
 
-const createBillingLayer = () => {
+const makeSandbox = (status: Sandbox["status"]): Sandbox => ({
+  id: generateId(),
+  organizationId: ORGANIZATION_ID,
+  status,
+  lastActivityAt: new Date("2026-01-01T00:00:00Z"),
+  createdByUserId: generateId(),
+  createdAt: new Date("2026-01-01T00:00:00Z"),
+  updatedAt: new Date("2026-01-01T00:00:00Z"),
+})
+
+const createBillingLayer = (
+  opts: { sandbox?: Sandbox | null; signalsOverrides?: Parameters<typeof createFakeSandboxSignals>[0] } = {},
+) => {
   const { repository: billingOverrides } = createFakeBillingOverrideRepository()
   const { repository: billingPeriods } = createFakeBillingUsagePeriodRepository()
   const { service: stripeSubscriptions } = createFakeStripeSubscriptionLookup()
+  const sandboxRepo = createFakeSandboxRepository({ findOptional: () => Effect.succeed(opts.sandbox ?? null) })
+  const sandboxSignals = createFakeSandboxSignals(opts.signalsOverrides)
 
   return {
     billingPeriods,
+    sandboxRepo,
+    sandboxSignals,
     layer: Layer.mergeAll(
       Layer.succeed(BillingOverrideRepository, billingOverrides),
       Layer.succeed(BillingUsagePeriodRepository, billingPeriods),
       Layer.succeed(StripeSubscriptionLookup, stripeSubscriptions),
       Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID })),
       Layer.succeed(ProjectRepository, makeProjectRepository({ primary: PRIMARY_PROJECT_ID })),
+      Layer.succeed(SandboxRepository, sandboxRepo.repository),
+      Layer.succeed(SandboxSignals, sandboxSignals.signals),
       Layer.succeed(SettingsReader, {
         getOrganizationSettings: () => Effect.succeed(null),
         getProjectSettings: () => Effect.die("ingestSpansWithBillingUseCase tests do not read project settings"),
@@ -389,7 +416,13 @@ describe("ingestSpansUseCase project scoping", () => {
       }),
     )
 
-    await Effect.runPromise(ingestSpansUseCase(makeInput(manySpans)).pipe(Effect.provide(layer)))
+    const manySpansInput = makeInput(manySpans)
+    await Effect.runPromise(
+      ingestSpansUseCase({
+        ...manySpansInput,
+        decoded: decodeOtlpRequest(manySpansInput.payload, manySpansInput.contentType),
+      }).pipe(Effect.provide(layer)),
+    )
 
     expect(findBySlugCalls).toBe(2)
   })
@@ -660,5 +693,143 @@ describe("ingestSpansWithBillingUseCase", () => {
       expect(result.failure).toBeInstanceOf(NoCreditsRemainingError)
     }
     expect(published).toHaveLength(0)
+  })
+})
+
+describe("ingestSpansWithBillingUseCase sandbox path", () => {
+  const seedExhaustedFreePeriod = (billingPeriods: ReturnType<typeof createBillingLayer>["billingPeriods"]) =>
+    Effect.runPromise(
+      billingPeriods
+        .upsert(
+          seedBillingUsagePeriod({
+            organizationId: ORGANIZATION_ID,
+            planSlug: "free",
+            periodStart: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)),
+            periodEnd: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)),
+            includedCredits: 20_000,
+            consumedCredits: 20_000,
+          }),
+        )
+        .pipe(Effect.provideService(SqlClient, createFakeSqlClient({ organizationId: ORGANIZATION_ID }))),
+    )
+
+  it("active sandbox: no billing, quota incremented, activity stamped, liveness pulsed, enqueued with isSandbox", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+    const { billingPeriods, sandboxRepo, sandboxSignals, layer } = createBillingLayer({
+      sandbox: makeSandbox("active"),
+    })
+    // Exhaust the free credits: a live org would be refused here. The sandbox is
+    // never billed, so this must be ignored.
+    await seedExhaustedFreePeriod(billingPeriods)
+
+    await Effect.runPromise(
+      ingestSpansWithBillingUseCase(
+        makeInput(buildOtlpJson(), { defaultProjectSlug: "primary", isSandbox: true }),
+      ).pipe(
+        Effect.provide(
+          Layer.mergeAll(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher), layer),
+        ),
+      ),
+    )
+
+    expect(published).toHaveLength(1)
+    expect((published[0]?.payload as { isSandbox: boolean }).isSandbox).toBe(true)
+    expect(sandboxSignals.state.quotaIncrements).toEqual([{ organizationId: ORGANIZATION_ID, spanCount: 1 }])
+    expect(sandboxRepo.stampCount).toBe(1)
+    expect(sandboxSignals.state.rejected).toHaveLength(0)
+    // Earliest signal: a pre-persist liveness pulse for the arriving trace.
+    expect(sandboxSignals.state.published).toEqual([
+      {
+        kind: "liveness",
+        organizationId: ORGANIZATION_ID,
+        traceId: "0af7651916cd43dd8448eb211c80319c",
+        sessionId: "",
+      },
+    ])
+  })
+
+  it("archived sandbox: refuses with SandboxArchived before persist and records the marker", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+    const { sandboxSignals, layer } = createBillingLayer({ sandbox: makeSandbox("archived") })
+
+    const result = await Effect.runPromise(
+      Effect.result(
+        ingestSpansWithBillingUseCase(
+          makeInput(buildOtlpJson(), { defaultProjectSlug: "primary", isSandbox: true }),
+        ).pipe(
+          Effect.provide(
+            Layer.mergeAll(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher), layer),
+          ),
+        ),
+      ),
+    )
+
+    expect(Result.isFailure(result)).toBe(true)
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(SandboxArchivedError)
+    }
+    expect(published).toHaveLength(0)
+    expect(sandboxSignals.state.quotaIncrements).toHaveLength(0)
+    expect(sandboxSignals.state.published).toHaveLength(0)
+    expect(sandboxSignals.state.rejected).toEqual([
+      { organizationId: ORGANIZATION_ID, marker: { kind: "SandboxArchived", at: expect.any(String), spansDropped: 1 } },
+    ])
+  })
+
+  it("over-quota sandbox: refuses with SandboxQuotaExceeded and records the marker", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+    const { sandboxSignals, layer } = createBillingLayer({
+      sandbox: makeSandbox("active"),
+      // Force the running total past any plan ceiling.
+      signalsOverrides: { incrementSpanQuota: () => Effect.succeed(Number.MAX_SAFE_INTEGER) },
+    })
+
+    const result = await Effect.runPromise(
+      Effect.result(
+        ingestSpansWithBillingUseCase(
+          makeInput(buildOtlpJson(), { defaultProjectSlug: "primary", isSandbox: true }),
+        ).pipe(
+          Effect.provide(
+            Layer.mergeAll(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher), layer),
+          ),
+        ),
+      ),
+    )
+
+    expect(Result.isFailure(result)).toBe(true)
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(SandboxQuotaExceededError)
+    }
+    expect(published).toHaveLength(0)
+    expect(sandboxSignals.state.published).toHaveLength(0)
+    expect(sandboxSignals.state.rejected).toEqual([
+      {
+        organizationId: ORGANIZATION_ID,
+        marker: { kind: "SandboxQuotaExceeded", at: expect.any(String), spansDropped: 1 },
+      },
+    ])
+  })
+
+  it("live org: billing checked, enqueued without the sandbox bit, quota untouched", async () => {
+    const { disk } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+    const { sandboxSignals, sandboxRepo, layer } = createBillingLayer({ sandbox: null })
+
+    await Effect.runPromise(
+      ingestSpansWithBillingUseCase(makeInput(buildOtlpJson(), { defaultProjectSlug: "primary" })).pipe(
+        Effect.provide(
+          Layer.mergeAll(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher), layer),
+        ),
+      ),
+    )
+
+    expect(published).toHaveLength(1)
+    expect((published[0]?.payload as { isSandbox: boolean }).isSandbox).toBe(false)
+    expect(sandboxSignals.state.quotaIncrements).toHaveLength(0)
+    expect(sandboxSignals.state.published).toHaveLength(0)
+    expect(sandboxRepo.stampCount).toBe(0)
   })
 })

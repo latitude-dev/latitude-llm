@@ -10,6 +10,10 @@ export const billingPlanSchema = z.object({
   hardCapped: z.boolean(),
   priceCents: z.number().int().nonnegative().nullable(),
   spendingLimitCents: z.number().int().positive().nullable(),
+  // Per-period sandbox span ceiling. `Number.POSITIVE_INFINITY` for enterprise
+  // (which, like `includedCredits`, simply won't round-trip through the JSON
+  // plan cache — re-resolved on miss).
+  spanQuotaPerPeriod: z.number(),
 })
 
 export type BillingPlan = z.infer<typeof billingPlanSchema>

@@ -157,7 +157,7 @@ export { getTraceAnalyticsUseCase } from "./use-cases/get-trace-analytics.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
 export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
 export { getTraceSearchHighlightsUseCase } from "./use-cases/get-trace-search-highlights.ts"
-export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
+export type { IngestSpansInput, IngestSpansResult } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
 export { ingestSpansWithBillingUseCase } from "./use-cases/ingest-spans-with-billing.ts"
 export type {

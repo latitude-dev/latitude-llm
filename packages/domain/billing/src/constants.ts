@@ -29,6 +29,9 @@ export const FREE_PLAN_CONFIG = {
   overageAllowed: false,
   hardCapped: true,
   priceCents: 0,
+  // Per-period sandbox span ceiling (Test Mode abuse guard, not billed). Read
+  // through `resolveEffectivePlan`; enforced as a loud ingest refusal.
+  spanQuotaPerPeriod: 100_000,
 } as const
 
 export const PRO_PLAN_CONFIG = {
@@ -41,6 +44,7 @@ export const PRO_PLAN_CONFIG = {
   priceCents: 9900,
   overageCreditsPerUnit: 10_000,
   overagePriceCentsPerUnit: 2000,
+  spanQuotaPerPeriod: 1_000_000,
 } as const
 
 /** Upper bound for `billing_usage_periods.included_credits` (Postgres `integer`). */
@@ -54,6 +58,7 @@ export const ENTERPRISE_PLAN_CONFIG = {
   overageAllowed: true,
   hardCapped: false,
   priceCents: null as null,
+  spanQuotaPerPeriod: Number.POSITIVE_INFINITY,
 } as const
 
 export type PlanConfig = {
@@ -64,6 +69,7 @@ export type PlanConfig = {
   overageAllowed: boolean
   hardCapped: boolean
   priceCents: number | null
+  spanQuotaPerPeriod: number
 }
 
 export const PLAN_CONFIGS: Record<PlanSlug, PlanConfig> = {

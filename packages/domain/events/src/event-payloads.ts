@@ -29,6 +29,12 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly traceIds: readonly string[]
+    /**
+     * Resolved once at the top of ingest (`parent_org_id != null`). Consumers
+     * branch on it: the LLM fan-out (flaggers, evaluations, issue-clustering)
+     * does not run for sandbox events. Absent on legacy/replayed events ⇒ live.
+     */
+    readonly isSandbox?: boolean
     readonly billing?: {
       readonly planSlug: "free" | "pro" | "enterprise"
       readonly planSource: "override" | "subscription" | "free-fallback"

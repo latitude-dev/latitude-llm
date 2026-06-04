@@ -399,6 +399,45 @@ describe("billing runtime integration", () => {
     expect(period?.overageCredits).toBe(0)
   })
 
+  it("does not record usage for sandbox traces", async () => {
+    const consumer = new TestQueueConsumer()
+    const organizationId = generateId()
+    const projectId = generateId()
+
+    await pg.db.insert(organizations).values({
+      id: organizationId,
+      name: "Sandbox Billing Skip Org",
+      slug: `sandbox-billing-skip-${organizationId}`,
+    })
+
+    createBillingWorker({ consumer, postgresClient: pg.appPostgresClient })
+
+    await consumer.dispatchTask("billing", "recordTraceUsageBatch", {
+      organizationId,
+      projectId,
+      traceIds: ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"],
+      planSlug: "free" as const,
+      planSource: "free-fallback" as const,
+      periodStart: new Date("2026-04-01T00:00:00.000Z").toISOString(),
+      periodEnd: new Date("2026-05-01T00:00:00.000Z").toISOString(),
+      includedCredits: PLAN_CONFIGS.free.includedCredits,
+      overageAllowed: false,
+      isSandbox: true,
+    })
+
+    const events = await pg.db
+      .select()
+      .from(billingUsageEvents)
+      .where(eq(billingUsageEvents.organizationId, organizationId))
+    const periods = await pg.db
+      .select()
+      .from(billingUsagePeriods)
+      .where(eq(billingUsagePeriods.organizationId, organizationId))
+
+    expect(events).toHaveLength(0)
+    expect(periods).toHaveLength(0)
+  })
+
   it("micro-batches trace usage jobs for the same organization period", async () => {
     const consumer = new TestQueueConsumer()
     const organizationId = generateId()

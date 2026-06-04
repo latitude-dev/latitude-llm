@@ -78,6 +78,7 @@ export const createDomainEventsWorker = ({
 
     TracesIngested: (event) => {
       const [firstTraceId] = event.payload.traceIds
+      const isSandbox = event.payload.isSandbox ?? false
       return Effect.all(
         [
           ...event.payload.traceIds.map((traceId) =>
@@ -88,6 +89,7 @@ export const createDomainEventsWorker = ({
                 organizationId: event.payload.organizationId,
                 projectId: event.payload.projectId,
                 traceId,
+                isSandbox,
               },
               {
                 dedupeKey: buildTraceIngestedDedupeKey("trace-end:run", {
@@ -99,6 +101,9 @@ export const createDomainEventsWorker = ({
               },
             ),
           ),
+          // Not gated on `isSandbox`: first-trace detection is onboarding/marketing
+          // telemetry, not LLM work. Outbound marketing/notification suppression for
+          // sandbox orgs is AGE-113's concern (handled downstream), not this PR's.
           ...(firstTraceId
             ? [
                 pub.publish(
@@ -109,7 +114,9 @@ export const createDomainEventsWorker = ({
                     projectId: event.payload.projectId,
                     traceId: firstTraceId,
                   },
-                  { dedupeKey: `projects:first-trace:${event.payload.projectId}` },
+                  {
+                    dedupeKey: `projects:first-trace:${event.payload.projectId}`,
+                  },
                 ),
               ]
             : []),
@@ -128,6 +135,7 @@ export const createDomainEventsWorker = ({
                     periodEnd: event.payload.billing.periodEnd,
                     includedCredits: event.payload.billing.includedCredits,
                     overageAllowed: event.payload.billing.overageAllowed,
+                    isSandbox,
                   },
                   {
                     attempts: 10,
@@ -198,7 +206,9 @@ export const createDomainEventsWorker = ({
           sourceType: "savedSearch",
           sourceId: event.payload.searchId,
         },
-        { dedupeKey: `monitors:on-source-deleted:savedSearch:${event.payload.searchId}` },
+        {
+          dedupeKey: `monitors:on-source-deleted:savedSearch:${event.payload.searchId}`,
+        },
       ),
 
     IncidentCreated: (event) =>
@@ -210,7 +220,9 @@ export const createDomainEventsWorker = ({
           alertIncidentId: event.payload.alertIncidentId,
           transition: "created",
         },
-        { dedupeKey: `notifications:request-incident-created:${event.payload.alertIncidentId}` },
+        {
+          dedupeKey: `notifications:request-incident-created:${event.payload.alertIncidentId}`,
+        },
       ),
 
     IncidentClosed: (event) =>
@@ -228,7 +240,9 @@ export const createDomainEventsWorker = ({
               alertIncidentId: event.payload.alertIncidentId,
               transition: "closed",
             },
-            { dedupeKey: `notifications:request-incident-closed:${event.payload.alertIncidentId}` },
+            {
+              dedupeKey: `notifications:request-incident-closed:${event.payload.alertIncidentId}`,
+            },
           ),
 
     AnnotationDeleted: (event) => {
@@ -245,7 +259,16 @@ export const createDomainEventsWorker = ({
           pub.publish(
             "issues",
             "removeScore",
-            { organizationId, projectId, scoreId, issueId, draftedAt, feedback, source, createdAt },
+            {
+              organizationId,
+              projectId,
+              scoreId,
+              issueId,
+              draftedAt,
+              feedback,
+              source,
+              createdAt,
+            },
             { dedupeKey: `issues:remove-score:${scoreId}` },
           ),
         ],
@@ -270,15 +293,22 @@ export const createDomainEventsWorker = ({
         "marketing-contacts",
         "register-user",
         { userId: event.payload.userId },
-        { dedupeKey: `marketing-contacts:register-user:${event.payload.userId}` },
+        {
+          dedupeKey: `marketing-contacts:register-user:${event.payload.userId}`,
+        },
       ),
 
     UserOnboardingCompleted: (event) =>
       pub.publish(
         "marketing-contacts",
         "update-onboarding",
-        { userId: event.payload.userId, stackChoice: event.payload.stackChoice },
-        { dedupeKey: `marketing-contacts:update-onboarding:${event.payload.userId}` },
+        {
+          userId: event.payload.userId,
+          stackChoice: event.payload.stackChoice,
+        },
+        {
+          dedupeKey: `marketing-contacts:update-onboarding:${event.payload.userId}`,
+        },
       ),
 
     BillingUsagePeriodUpdated: (event) => {
@@ -322,7 +352,9 @@ export const createDomainEventsWorker = ({
         "marketing-contacts",
         "mark-telemetry-enabled",
         { organizationId: event.payload.organizationId },
-        { dedupeKey: `marketing-contacts:mark-telemetry-enabled:${event.payload.organizationId}` },
+        {
+          dedupeKey: `marketing-contacts:mark-telemetry-enabled:${event.payload.organizationId}`,
+        },
       ),
 
     MemberInvited: () => Effect.void,
@@ -336,8 +368,13 @@ export const createDomainEventsWorker = ({
       pub.publish(
         "notifications",
         "delete-by-project",
-        { organizationId: event.payload.organizationId, projectId: event.payload.projectId },
-        { dedupeKey: `notifications:delete-by-project:${event.payload.projectId}` },
+        {
+          organizationId: event.payload.organizationId,
+          projectId: event.payload.projectId,
+        },
+        {
+          dedupeKey: `notifications:delete-by-project:${event.payload.projectId}`,
+        },
       ),
     FlaggerToggled: () => Effect.void,
     SavedSearchCreated: () => Effect.void,
@@ -405,7 +442,9 @@ export const createDomainEventsWorker = ({
           ),
         )
 
-      return Effect.all([primary, analytics], { concurrency: "unbounded" }).pipe(Effect.asVoid, withTracing)
+      return Effect.all([primary, analytics], {
+        concurrency: "unbounded",
+      }).pipe(Effect.asVoid, withTracing)
     },
   })
 }

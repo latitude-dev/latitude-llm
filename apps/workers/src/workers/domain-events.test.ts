@@ -113,12 +113,43 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-abc",
+      isSandbox: false,
     })
     expect(traceEnd?.options).toEqual({
       dedupeKey: "trace-end:run:org-1:proj-1:trace-abc",
       debounceMs: TRACE_END_DEBOUNCE_MS,
     })
     expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
+  })
+
+  it("dispatches the full fan-out and carries the sandbox bit into the task payloads", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    // The dispatcher does NOT gatekeep: it fans out unconditionally and stamps
+    // `isSandbox` onto each task payload. The leaf workers (trace-end, billing)
+    // own the skip — see their own tests.
+    const envelope = makeEnvelope("TracesIngested", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceIds: ["trace-abc"],
+      isSandbox: true,
+      billing: {
+        planSlug: "free",
+        planSource: "free-fallback",
+        periodStart: "2026-06-01T00:00:00.000Z",
+        periodEnd: "2026-07-01T00:00:00.000Z",
+        includedCredits: 20_000,
+        overageAllowed: false,
+      },
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    const traceEnd = published.find((p) => p.queue === "trace-end")
+    const billing = published.find((p) => p.queue === "billing")
+    expect((traceEnd?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
+    expect((billing?.payload as { isSandbox?: boolean }).isSandbox).toBe(true)
+    expect(published.map((p) => `${p.queue}:${p.task}`)).toContain("projects:checkFirstTrace")
   })
 
   it("routes TracesIngested billing snapshots to billing:recordTraceUsageBatch", async () => {

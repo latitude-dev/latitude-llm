@@ -51,6 +51,7 @@ export { NotificationRepositoryLive } from "./repositories/notification-reposito
 export { OAuthKeyRepositoryLive } from "./repositories/oauth-key-repository.ts"
 export { OrganizationRepositoryLive } from "./repositories/organization-repository.ts"
 export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
+export { SandboxRepositoryLive } from "./repositories/sandbox-repository.ts"
 export { SavedSearchRepositoryLive } from "./repositories/saved-search-repository.ts"
 export { ScoreRepositoryLive } from "./repositories/score-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"

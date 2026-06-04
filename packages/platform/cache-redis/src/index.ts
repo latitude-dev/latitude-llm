@@ -3,6 +3,7 @@ export { RedisCacheStoreLive } from "./ai-cache.ts"
 export { RedisBillingSpendReservationLive } from "./billing-spend-reservation.ts"
 export { RedisDistributedLockRepositoryLive } from "./distributed-lock.ts"
 export { EmbedBudgetResolverLive } from "./embed-budget-resolver.ts"
+export { SandboxSignalsLive } from "./sandbox-signals.ts"
 export { RedisSlackRefreshLockRepositoryLive } from "./slack-refresh-lock.ts"
 export { TraceSearchBudgetLive } from "./trace-search-budget.ts"
 

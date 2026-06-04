@@ -1,7 +1,9 @@
 import { ApiKeyCacheInvalidator, ApiKeyRepository } from "@domain/api-keys"
+import { isSandbox, OrganizationRepository } from "@domain/organizations"
+import { OrganizationId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient } from "@platform/db-postgres"
-import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { hash } from "@repo/utils"
 import { Effect, Layer, Option } from "effect"
 
@@ -57,7 +59,7 @@ export const ApiKeyCacheInvalidatorLive = (redis: RedisClient) =>
       }).pipe(Effect.orDie),
   })
 
-export type ApiKeyAuthResult = { organizationId: string; keyId: string }
+export type ApiKeyAuthResult = { organizationId: string; keyId: string; isSandbox: boolean }
 
 const isCachedApiKeyResult = (value: unknown): value is ApiKeyAuthResult | null => {
   if (value === null) {
@@ -68,11 +70,13 @@ const isCachedApiKeyResult = (value: unknown): value is ApiKeyAuthResult | null 
     return false
   }
 
-  if (!("organizationId" in value) || !("keyId" in value)) {
+  if (!("organizationId" in value) || !("keyId" in value) || !("isSandbox" in value)) {
     return false
   }
 
-  return typeof value.organizationId === "string" && typeof value.keyId === "string"
+  return (
+    typeof value.organizationId === "string" && typeof value.keyId === "string" && typeof value.isSandbox === "boolean"
+  )
 }
 
 const getCachedApiKey = (
@@ -154,14 +158,18 @@ export const validateApiKey = (
 
     const apiKey = apiKeyOption.value
 
+    const organizationRepository = yield* OrganizationRepository
+    const organization = yield* Effect.option(organizationRepository.findById(OrganizationId(apiKey.organizationId)))
+
     const result: ApiKeyAuthResult = {
       organizationId: apiKey.organizationId,
       keyId: apiKey.id,
+      isSandbox: Option.isSome(organization) ? isSandbox(organization.value) : false,
     }
 
     yield* cacheApiKeyResult(redis, tokenHash, result, VALID_KEY_TTL_SECONDS)
     onKeyValidated?.(apiKey.id)
     yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
     return result
-  }).pipe(withPostgres(ApiKeyRepositoryLive, adminClient), Effect.orDie)
+  }).pipe(withPostgres(Layer.mergeAll(ApiKeyRepositoryLive, OrganizationRepositoryLive), adminClient), Effect.orDie)
 }

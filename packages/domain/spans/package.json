@@ -30,6 +30,7 @@
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",
+    "@domain/sandboxes": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:",
     "protobufjs": "catalog:",

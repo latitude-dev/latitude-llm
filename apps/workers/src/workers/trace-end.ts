@@ -47,6 +47,7 @@ interface TraceEndPayload {
   readonly organizationId: string
   readonly projectId: string
   readonly traceId: string
+  readonly isSandbox?: boolean
 }
 
 type TraceEndLogger = Pick<ReturnType<typeof createLogger>, "info" | "error">
@@ -90,7 +91,7 @@ type TraceEndRunSummary = {
 type TraceEndRunResult =
   | {
       readonly action: "skipped"
-      readonly reason: "trace-not-found"
+      readonly reason: "trace-not-found" | "sandbox"
       readonly traceId: string
     }
   | {
@@ -110,6 +111,10 @@ export const runTraceEndJob =
   ({ publisher, postgresClient, clickhouseClient, redisClient }: RunTraceEndDeps) =>
   (payload: TraceEndPayload) =>
     Effect.gen(function* () {
+      if (payload.isSandbox) {
+        return { action: "skipped", reason: "sandbox", traceId: payload.traceId } satisfies TraceEndRunResult
+      }
+
       const loaded = yield* loadTraceForTraceEndUseCase(payload)
 
       if (loaded.kind === "skipped") {
@@ -231,6 +236,7 @@ export const runTraceEndJob =
         traceId: payload.traceId,
         startTime: traceDetail.startTime.toISOString(),
         rootSpanName: traceDetail.rootSpanName,
+        isSandbox: payload.isSandbox ?? false,
       })
 
       // Saved-search firing check, throttled to one run per project per 5 min.

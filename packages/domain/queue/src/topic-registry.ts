@@ -51,19 +51,9 @@ const _registry = {
       readonly organizationId: string
       readonly apiKeyId: string
       readonly ingestedAt: string
-      /**
-       * `projectId` to apply to spans that carry no `latitude.project` attribute on the span or
-       * its OTEL resource. Resolved from the `X-Latitude-Project` header by the ingest route;
-       * `null` when no header was sent (in which case those spans are dropped here).
-       */
       readonly defaultProjectId: string | null
-      /**
-       * Pre-resolved slug → `projectId` map for every distinct `latitude.project` attribute
-       * value seen in the batch (and the header default, if set). The request handler does the
-       * DB lookups once per batch and counts rejected spans for the OTLP `partial_success`
-       * response; the worker uses this map and avoids re-querying Postgres.
-       */
       readonly projectIdBySlug: Readonly<Record<string, string>>
+      readonly isSandbox?: boolean
     }
   }>(),
 
@@ -349,6 +339,7 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
+      readonly isSandbox?: boolean
     }
   }>(),
 
@@ -449,6 +440,7 @@ const _registry = {
       readonly traceId: string
       readonly startTime: string
       readonly rootSpanName: string
+      readonly isSandbox?: boolean
     }
   }>(),
 
@@ -497,6 +489,7 @@ const _registry = {
       readonly periodEnd: string
       readonly includedCredits: number
       readonly overageAllowed: boolean
+      readonly isSandbox?: boolean
     }
   }>(),
 

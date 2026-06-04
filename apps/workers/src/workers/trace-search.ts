@@ -50,6 +50,7 @@ interface RefreshTracePayload {
   readonly traceId: string
   readonly startTime: string
   readonly rootSpanName: string
+  readonly isSandbox?: boolean
 }
 
 export const resolveTraceSearchRetentionDays = (organizationId: string) =>
@@ -105,8 +106,10 @@ export const prioritizeChunksForEmbedding = (chunks: readonly TraceSearchChunk[]
  *  4. For each chunk above the min-length floor, dedup-by-hash → budget-gate →
  *     embed → upsert one row per chunk.
  */
-const processRefreshTrace = (payload: RefreshTracePayload) =>
+export const processRefreshTrace = (payload: RefreshTracePayload) =>
   Effect.gen(function* () {
+    if (payload.isSandbox) return
+
     const traceRepo = yield* TraceRepository
     const traceSearchRepo = yield* TraceSearchRepository
 

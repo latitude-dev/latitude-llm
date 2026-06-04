@@ -38,6 +38,7 @@ interface RecordTraceUsageBatchPayload {
   readonly periodEnd: string
   readonly includedCredits: number
   readonly overageAllowed: boolean
+  readonly isSandbox?: boolean
 }
 
 interface RecordBillableActionPayload {
@@ -222,23 +223,25 @@ export const createBillingWorker = ({ consumer, postgresClient }: BillingDeps) =
         ),
 
       recordTraceUsageBatch: (payload: RecordTraceUsageBatchPayload) =>
-        Effect.tryPromise({
-          try: () => traceUsageBatcher.enqueue(payload),
-          catch: (cause) => cause,
-        }).pipe(
-          withTracing,
-          Effect.tapError((error) =>
-            Effect.sync(() =>
-              logger.error("Billing trace usage batch failed", {
-                organizationId: payload.organizationId,
-                projectId: payload.projectId,
-                traceCount: payload.traceIds.length,
-                error,
-              }),
+        payload.isSandbox
+          ? Effect.void
+          : Effect.tryPromise({
+              try: () => traceUsageBatcher.enqueue(payload),
+              catch: (cause) => cause,
+            }).pipe(
+              withTracing,
+              Effect.tapError((error) =>
+                Effect.sync(() =>
+                  logger.error("Billing trace usage batch failed", {
+                    organizationId: payload.organizationId,
+                    projectId: payload.projectId,
+                    traceCount: payload.traceIds.length,
+                    error,
+                  }),
+                ),
+              ),
+              Effect.asVoid,
             ),
-          ),
-          Effect.asVoid,
-        ),
     },
     { concurrency: 50 },
   )

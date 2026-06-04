@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@domain/api-keys": "workspace:*",
+    "@domain/organizations": "workspace:*",
+    "@domain/shared": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@repo/utils": "workspace:*",

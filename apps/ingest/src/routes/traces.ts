@@ -1,10 +1,13 @@
 import { NoCreditsRemainingError } from "@domain/billing"
+import { SandboxArchivedError, SandboxQuotaExceededError } from "@domain/sandboxes"
 import { OrganizationId } from "@domain/shared"
 import { ingestSpansWithBillingUseCase } from "@domain/spans"
+import { SandboxSignalsLive } from "@platform/cache-redis"
 import {
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
   ProjectRepositoryLive,
+  SandboxRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
@@ -28,6 +31,7 @@ const traceIngestionBillingLayers = Layer.mergeAll(
   BillingOverrideRepositoryLive,
   BillingUsagePeriodRepositoryLive,
   ProjectRepositoryLive,
+  SandboxRepositoryLive,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
 )
@@ -69,6 +73,7 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
 
     const organization = OrganizationId(c.get("organizationId"))
     const apiKeyId = c.get("apiKeyId")
+    const isSandbox = c.get("isSandbox")
     const defaultProjectSlug = c.get("defaultProjectSlug")
 
     const disk = getStorageDisk()
@@ -77,12 +82,15 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     const ingestionEffect = ingestSpansWithBillingUseCase({
       organizationId: organization,
       apiKeyId,
+      isSandbox,
       payload: new Uint8Array(body),
       contentType,
       ...(defaultProjectSlug ? { defaultProjectSlug } : {}),
     }).pipe(
       withPostgres(traceIngestionBillingLayers, postgresClient, organization),
-      Effect.provide(Layer.mergeAll(StorageDiskLive(disk), QueuePublisherLive(publisher))),
+      Effect.provide(
+        Layer.mergeAll(StorageDiskLive(disk), QueuePublisherLive(publisher), SandboxSignalsLive(getRedisClient())),
+      ),
       withTracing,
     )
 
@@ -93,6 +101,14 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
       if (Option.isSome(failure) && failure.value instanceof NoCreditsRemainingError) {
         const err = failure.value
         return c.json({ error: err.httpMessage, kind: "NoCreditsRemaining" }, err.httpStatus)
+      }
+      if (Option.isSome(failure) && failure.value instanceof SandboxArchivedError) {
+        const err = failure.value
+        return c.json({ error: err.httpMessage, kind: "SandboxArchived" }, err.httpStatus)
+      }
+      if (Option.isSome(failure) && failure.value instanceof SandboxQuotaExceededError) {
+        const err = failure.value
+        return c.json({ error: err.httpMessage, kind: "SandboxQuotaExceeded" }, err.httpStatus)
       }
       if (Option.isSome(failure) && (failure.value as { _tag?: string })._tag === "SpanDecodingError") {
         const err = failure.value as { httpMessage?: string }

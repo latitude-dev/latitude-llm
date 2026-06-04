@@ -37,7 +37,7 @@ vi.mock("../clients.ts", () => ({
   getRedisClient: vi.fn(() => ({})),
 }))
 
-import { prioritizeChunksForEmbedding, resolveTraceSearchRetentionDays } from "./trace-search.ts"
+import { prioritizeChunksForEmbedding, processRefreshTrace, resolveTraceSearchRetentionDays } from "./trace-search.ts"
 
 describe("prioritizeChunksForEmbedding", () => {
   it("prioritizes tail chunks first and skips chunks below the embedding floor", () => {
@@ -76,5 +76,28 @@ describe("resolveTraceSearchRetentionDays", () => {
     )
 
     expect(retentionDays).toBe(30)
+  })
+})
+
+describe("runTraceSearchRefresh sandbox gate", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("skips embedding/Weaviate work for sandbox traces — no plan lookup, no repos", async () => {
+    const result = await Effect.runPromise(
+      processRefreshTrace({
+        organizationId: "o".repeat(24),
+        projectId: "p".repeat(24),
+        traceId: "t".repeat(32),
+        startTime: "2026-04-16T12:00:00.000Z",
+        rootSpanName: "qa",
+        isSandbox: true,
+      }) as unknown as Effect.Effect<void>,
+    )
+
+    expect(result).toBeUndefined()
+    // The gate returns before resolving retention (the first thing the real path does).
+    expect(resolveEffectivePlanCachedMock).not.toHaveBeenCalled()
   })
 })

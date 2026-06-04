@@ -47,6 +47,7 @@
     "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
+    "@domain/sandboxes": "workspace:*",
     "@domain/saved-searches": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/integrations": "workspace:*",

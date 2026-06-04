@@ -15,6 +15,7 @@
     "@domain/api-keys": "workspace:*",
     "@domain/billing": "workspace:*",
     "@domain/queue": "workspace:*",
+    "@domain/sandboxes": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@hono/node-server": "catalog:",

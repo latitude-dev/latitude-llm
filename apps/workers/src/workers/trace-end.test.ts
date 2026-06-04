@@ -328,6 +328,28 @@ describe("runTraceEndJob", () => {
     })
     expect(published).toEqual([])
   })
+
+  it("skips all LLM work for sandbox traces (before loading the trace)", async () => {
+    const { publisher, published } = createFakeQueuePublisher()
+    const redisClient = createFakeRedisClient()
+
+    const result = await Effect.runPromise(
+      runTraceEndJob({
+        publisher,
+        postgresClient: pg.appPostgresClient,
+        clickhouseClient: ch.client,
+        redisClient,
+      })({
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID,
+        traceId: TRACE_ID,
+        isSandbox: true,
+      }),
+    )
+
+    expect(result).toEqual({ action: "skipped", reason: "sandbox", traceId: TRACE_ID })
+    expect(published).toEqual([])
+  })
 })
 
 describe("runTraceEndJob", () => {

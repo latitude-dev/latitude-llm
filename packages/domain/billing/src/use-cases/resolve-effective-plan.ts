@@ -24,6 +24,7 @@ const buildResolvedPlan = (input: {
   readonly hardCapped: boolean
   readonly priceCents: number | null
   readonly spendingLimitCents: number | null
+  readonly spanQuotaPerPeriod: number
 }): EffectivePlanResolution["plan"] => ({
   slug: input.slug,
   includedCredits: input.includedCredits,
@@ -32,6 +33,7 @@ const buildResolvedPlan = (input: {
   hardCapped: input.hardCapped,
   priceCents: input.priceCents,
   spendingLimitCents: input.slug === "pro" ? input.spendingLimitCents : null,
+  spanQuotaPerPeriod: input.spanQuotaPerPeriod,
 })
 
 const resolveOverridePlan = (input: {
@@ -52,6 +54,7 @@ const resolveOverridePlan = (input: {
       hardCapped: plan.hardCapped,
       priceCents: plan.priceCents,
       spendingLimitCents: input.spendingLimitCents,
+      spanQuotaPerPeriod: plan.spanQuotaPerPeriod,
     }),
     source: "override",
     periodStart: currentMonth.start,
@@ -99,6 +102,7 @@ const resolveSubscriptionPlan = Effect.fn("billing.resolveSubscriptionPlan")(fun
       hardCapped: plan.hardCapped,
       priceCents: plan.priceCents,
       spendingLimitCents: input.spendingLimitCents,
+      spanQuotaPerPeriod: plan.spanQuotaPerPeriod,
     }),
     source: "subscription",
     periodStart: subscription.periodStart ?? new Date(),
@@ -123,6 +127,7 @@ const resolveFreeFallbackPlan = (input: {
       hardCapped: freePlan.hardCapped,
       priceCents: freePlan.priceCents,
       spendingLimitCents: input.spendingLimitCents,
+      spanQuotaPerPeriod: freePlan.spanQuotaPerPeriod,
     }),
     source: "free-fallback",
     periodStart: currentMonth.start,
@@ -140,6 +145,7 @@ export interface EffectivePlanResolution {
     readonly hardCapped: boolean
     readonly priceCents: number | null
     readonly spendingLimitCents: number | null
+    readonly spanQuotaPerPeriod: number
   }
   readonly source: "override" | "subscription" | "free-fallback"
   readonly periodStart: Date

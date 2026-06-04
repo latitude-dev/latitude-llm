@@ -14,6 +14,8 @@ import { base64Encode } from "@repo/utils"
 import { Effect } from "effect"
 import { SpanDecodingError } from "../errors.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
+import { sessionIdCandidates } from "../otlp/resolvers/identity.ts"
+import { first } from "../otlp/resolvers/utils.ts"
 import { resolveSpanProjectSlug } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
 import { deterministicSample } from "../sampling/deterministic-sampler.ts"
@@ -26,11 +28,7 @@ export interface IngestSpansInput {
   readonly apiKeyId: string
   readonly payload: Uint8Array
   readonly contentType: string
-  /**
-   * Project slug from the `X-Latitude-Project` header. Used as the fallback for spans that
-   * carry no `latitude.project` attribute on the span or its OTEL resource. Optional — when
-   * absent, spans without a per-span / resource attribute are rejected.
-   */
+  readonly isSandbox: boolean
   readonly defaultProjectSlug?: string
 }
 
@@ -44,7 +42,13 @@ export interface IngestSpansResult {
   readonly rejectedSpans: number
 }
 
-function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceServiceRequest | null {
+/**
+ * Decode an OTLP payload (protobuf or JSON) to a request, or `null` if it can't be
+ * parsed. The single decode site for the hot path: `ingestSpansWithBillingUseCase`
+ * decodes once here and hands the result to both the sandbox guard and
+ * `ingestSpansUseCase` — the use case itself never decodes.
+ */
+export function decodeOtlpRequest(value: Uint8Array, contentType: string): OtlpExportTraceServiceRequest | null {
   try {
     if (contentType.includes("application/x-protobuf")) {
       return decodeOtlpProtobuf(value)
@@ -81,14 +85,60 @@ function inspectPayload(request: OtlpExportTraceServiceRequest): PayloadInspecti
   return { totalSpans, spanSlugs, uniqueSlugs }
 }
 
+/** Earliest id-only view of a trace, for the pre-persist sandbox liveness pulse. */
+interface OtlpTraceSignal {
+  readonly traceId: string
+  readonly sessionId: string
+}
+
+interface OtlpSandboxInspection {
+  readonly totalSpans: number
+  /** One entry per distinct trace in the batch (first span wins for `sessionId`). */
+  readonly traceSignals: readonly OtlpTraceSignal[]
+}
+
+export const inspectOtlpForSandbox = (decoded: OtlpExportTraceServiceRequest | null): OtlpSandboxInspection => {
+  if (!decoded) return { totalSpans: 0, traceSignals: [] }
+
+  let totalSpans = 0
+  const sessionByTrace = new Map<string, string>()
+  for (const resourceSpans of decoded.resourceSpans ?? []) {
+    for (const scopeSpans of resourceSpans.scopeSpans ?? []) {
+      for (const span of scopeSpans.spans ?? []) {
+        totalSpans++
+        const traceId = span.traceId
+        if (traceId && !sessionByTrace.has(traceId)) {
+          sessionByTrace.set(traceId, first(sessionIdCandidates, span.attributes ?? []) ?? "")
+        }
+      }
+    }
+  }
+
+  return {
+    totalSpans,
+    traceSignals: [...sessionByTrace].map(([traceId, sessionId]) => ({
+      traceId,
+      sessionId,
+    })),
+  }
+}
+
 const resolveProject = (slug: string): Effect.Effect<Project | null, RepositoryError, ProjectRepository | SqlClient> =>
   Effect.gen(function* () {
     const repo = yield* ProjectRepository
     return yield* repo.findBySlug(slug).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
   })
 
+interface IngestSpansUseCaseInput extends IngestSpansInput {
+  /**
+   * The OTLP request decoded once by `ingestSpansWithBillingUseCase`. The use case
+   * never decodes itself — `null` means the payload was undecodable.
+   */
+  readonly decoded: OtlpExportTraceServiceRequest | null
+}
+
 export const ingestSpansUseCase = (
-  input: IngestSpansInput,
+  input: IngestSpansUseCaseInput,
 ): Effect.Effect<
   IngestSpansResult,
   StorageError | QueuePublishError | RepositoryError | SpanDecodingError,
@@ -97,9 +147,11 @@ export const ingestSpansUseCase = (
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
 
-    const decoded = decodeRequest(input.payload, input.contentType)
+    const decoded = input.decoded
     if (!decoded) {
-      return yield* new SpanDecodingError({ reason: "failed to decode OTLP message" })
+      return yield* new SpanDecodingError({
+        reason: "failed to decode OTLP message",
+      })
     }
 
     const { totalSpans, spanSlugs, uniqueSlugs } = inspectPayload(decoded)
@@ -203,6 +255,7 @@ export const ingestSpansUseCase = (
       ingestedAt: new Date().toISOString(),
       defaultProjectId,
       projectIdBySlug,
+      isSandbox: input.isSandbox ?? false,
     })
 
     return { totalSpans, acceptedSpans, rejectedSpans }

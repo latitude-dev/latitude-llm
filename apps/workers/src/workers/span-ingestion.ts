@@ -2,7 +2,7 @@ import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
 import { OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { processIngestedSpansUseCase } from "@domain/spans"
-import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
+import { RedisCacheStoreLive, type RedisClient, SandboxSignalsLive } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
@@ -63,6 +63,7 @@ export const createSpanIngestionWorker = ({
         const legacy = wire as unknown as { projectId?: string }
         const defaultProjectId = wire.defaultProjectId ?? legacy.projectId ?? null
         const projectIdBySlug = wire.projectIdBySlug ?? {}
+        const isSandbox = wire.isSandbox ?? false
 
         const processEffect = Effect.gen(function* () {
           const orgPlan = yield* resolveEffectivePlanCached(OrganizationId(organizationId)).pipe(
@@ -78,7 +79,11 @@ export const createSpanIngestionWorker = ({
             fileKey: wire.fileKey,
             defaultProjectId,
             projectIdBySlug,
+            isSandbox,
             ...(orgPlan ? { retentionDays: orgPlan.plan.retentionDays } : {}),
+            // Emit the full event (plan snapshot + the `isSandbox` bit). Whether to
+            // bill is the consumer's call — `domain-events` skips the billing fan-out
+            // for sandbox events. See the `TracesIngested` handler there.
             ...(orgPlan
               ? {
                   traceUsage: {
@@ -104,6 +109,7 @@ export const createSpanIngestionWorker = ({
           withTracing,
           Effect.provide(StorageDiskLive(disk)),
           Effect.provide(RedisCacheStoreLive(rdClient)),
+          Effect.provide(SandboxSignalsLive(rdClient)),
         )
 
         return processEffect

@@ -65,7 +65,7 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateApiKey (integration, Node 25+)",
       }),
     )
 
-    expect(result).toEqual({ organizationId: apiKey.organizationId, keyId: apiKey.id })
+    expect(result).toEqual({ organizationId: apiKey.organizationId, keyId: apiKey.id, isSandbox: false })
     expect(touched).toEqual([apiKey.id])
   })
 
@@ -96,6 +96,6 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateApiKey (integration, Node 25+)",
       }),
     )
 
-    expect(result).toEqual({ organizationId: apiKey.organizationId, keyId: apiKey.id })
+    expect(result).toEqual({ organizationId: apiKey.organizationId, keyId: apiKey.id, isSandbox: false })
   })
 })

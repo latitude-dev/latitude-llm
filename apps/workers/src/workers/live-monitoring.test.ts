@@ -274,6 +274,7 @@ describe("live monitoring integration", () => {
           organizationId: ORGANIZATION_ID,
           projectId: PROJECT_ID,
           traceId: TRACE_ID,
+          isSandbox: false,
         },
         options: {
           dedupeKey: `trace-end:run:${ORGANIZATION_ID}:${PROJECT_ID}:${TRACE_ID}`,
@@ -357,6 +358,7 @@ describe("live monitoring integration", () => {
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
         traceId: TRACE_ID,
+        isSandbox: false,
       },
       options: {
         dedupeKey: `trace-end:run:${ORGANIZATION_ID}:${PROJECT_ID}:${TRACE_ID}`,
