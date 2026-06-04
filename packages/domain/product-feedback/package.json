@@ -16,6 +16,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/shared": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

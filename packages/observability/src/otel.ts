@@ -36,7 +36,6 @@ export const startTracing = async ({
   }
 
   const apiKey = Effect.runSync(parseEnv("LAT_LATITUDE_TELEMETRY_API_KEY", "string", ""))
-  const projectSlug = Effect.runSync(parseEnv("LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", "string", ""))
   const latitudeIngestBase = Effect.runSync(
     parseEnv("LAT_LATITUDE_TELEMETRY_INGEST_URL", "string", "https://ingest.latitude.so"),
   )
@@ -51,17 +50,20 @@ export const startTracing = async ({
 
   const isLatitudeTelemetryEnabled = false
 
-  if (isLatitudeTelemetryEnabled && apiKey !== "" && projectSlug !== "") {
+  if (isLatitudeTelemetryEnabled && apiKey !== "") {
     const latitudeIngestTracesUrl = `${latitudeIngestBase.replace(/\/$/, "")}/v1/traces`
+    // No default project: each internal AI feature routes its own spans via the
+    // `latitude.project` attribute (set on `capture`) to its per-feature project
+    // (`LATITUDE_TELEMETRY_PROJECT_SLUGS`). A span with no project would be rejected
+    // at ingest, which is the intended loud failure for an unrouted generation.
     spanProcessors.push(
-      new LatitudeSpanProcessor(apiKey, projectSlug, {
+      new LatitudeSpanProcessor(apiKey, undefined, {
         serviceName,
         exporter: new OTLPTraceExporter({
           url: latitudeIngestTracesUrl,
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
-            "X-Latitude-Project": projectSlug,
           },
           timeoutMillis: 30_000,
         }),

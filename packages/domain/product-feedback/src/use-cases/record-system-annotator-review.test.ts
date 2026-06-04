@@ -1,3 +1,4 @@
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { ProductFeedbackRequestError, ProductFeedbackTransportError } from "../errors.ts"
@@ -27,6 +28,7 @@ describe("recordSystemAnnotatorReviewUseCase", () => {
 
     expect(writes).toHaveLength(1)
     expect(writes[0]).toEqual({
+      projectSlug: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
       upstreamScoreId: UPSTREAM_SCORE_ID,
       passed: true,
       value: 1,
@@ -89,6 +91,7 @@ describe("recordSystemAnnotatorReviewUseCase", () => {
     })
 
     expect(writes[0]).toEqual({
+      projectSlug: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
       upstreamScoreId: UPSTREAM_SCORE_ID,
       passed: false,
       value: 0,
