@@ -15,9 +15,10 @@ export type HastNode = {
 
 // Tracks position within a code block whose text nodes lack remark positions.
 interface CodeContext {
-  // Absolute offset of the code content start in the full part text.
-  absoluteStart: number
-  // Mutable char counter shared across all recursive visits into this code block.
+  // Slice-relative offset of the code content start (indexOf on the slice
+  // ReactMarkdown received, so NOT a full-part offset when sliceSourceStart > 0).
+  sliceStart: number
+  // Shared mutable counter; mutations propagate across nested span visits.
   charOffset: { value: number }
 }
 
@@ -43,16 +44,15 @@ export function sourceMappedTextPlugin(highlights: readonly HighlightRange[], sl
         const children = node.children
         if (!children || children.length === 0) return
 
-        // If this is a <code> element that remarkCodeContentPositions annotated
-        // with content-position data, create a code context so that text nodes
-        // inside (possibly tokenised by rehype-highlight into <span> elements)
-        // can be mapped back to source offsets via character counting.
+        // For <code> elements annotated by remarkCodeContentPositions, set up a
+        // code context so nested text nodes (possibly tokenised by rehype-highlight)
+        // get source offsets via character counting instead of remark positions.
         let childCodeCtx: CodeContext | undefined = codeCtx
         if (!codeCtx && node.tagName === "code") {
           const rawStart = node.properties?.["data-code-content-start"]
-          const absStart = rawStart != null ? Number(rawStart) : NaN
-          if (!Number.isNaN(absStart)) {
-            childCodeCtx = { absoluteStart: absStart, charOffset: { value: 0 } }
+          const sliceStart = rawStart != null ? Number(rawStart) : NaN
+          if (!Number.isNaN(sliceStart)) {
+            childCodeCtx = { sliceStart, charOffset: { value: 0 } }
           }
         }
 
@@ -69,13 +69,8 @@ export function sourceMappedTextPlugin(highlights: readonly HighlightRange[], sl
           const value = child.value ?? ""
 
           if (childCodeCtx) {
-            // Inside a code block: derive source position via character counting.
-            // charOffset is a shared mutable object so mutations are visible to
-            // the caller's loop even when the text node lives inside a nested
-            // <span> (e.g. after rehype-highlight tokenisation).
             if (value.length > 0) {
-              const absStart = childCodeCtx.absoluteStart + childCodeCtx.charOffset.value
-              const sliceRelStart = absStart - sliceSourceStart
+              const sliceRelStart = childCodeCtx.sliceStart + childCodeCtx.charOffset.value
               const sliceRelEnd = sliceRelStart + value.length
               childCodeCtx.charOffset.value += value.length
 
@@ -94,7 +89,6 @@ export function sourceMappedTextPlugin(highlights: readonly HighlightRange[], sl
                 })
               }
             }
-            // Empty text nodes inside code blocks carry no content; drop them.
             continue
           }
 

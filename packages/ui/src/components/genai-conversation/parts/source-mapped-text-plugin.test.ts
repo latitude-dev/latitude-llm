@@ -546,6 +546,106 @@ describe("search highlight types", () => {
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Code-fence path — data-code-content-start character counting
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Builds a <code> element that carries content-position data, with optional
+// nested token spans (as rehype-highlight would produce).
+function codeElement(contentStart: number, ...tokenTexts: string[]): HastNode {
+  const spans: HastNode[] = tokenTexts.map((t) => ({
+    type: "element",
+    tagName: "span",
+    children: [{ type: "text", value: t }],
+  }))
+  return {
+    type: "element",
+    tagName: "code",
+    properties: { "data-code-content-start": contentStart },
+    children: spans,
+  }
+}
+
+describe("code-fence path (data-code-content-start)", () => {
+  it("assigns data-source-* to a single text span inside a code element", () => {
+    // Code content "const x = 1;" starts at slice offset 6.
+    const tree = rootWith(codeElement(6, "const x = 1;"))
+    run(tree)
+    const [code] = children(tree)
+    const [span] = code?.children ?? []
+    const [inner] = span?.children ?? []
+    expect(inner?.tagName).toBe("span")
+    expect(props(inner)["data-source-start"]).toBe("6")
+    expect(props(inner)["data-source-end"]).toBe("18")
+  })
+
+  it("accumulates charOffset across multiple token spans", () => {
+    // "const" (5) + " " (1) + "x" (1) = total 7 chars; starts at slice offset 6.
+    const tree = rootWith(codeElement(6, "const", " ", "x"))
+    run(tree)
+    const [code] = children(tree)
+    const spans = code?.children ?? []
+    expect(props(spans[0]?.children?.[0])["data-source-start"]).toBe("6")
+    expect(props(spans[0]?.children?.[0])["data-source-end"]).toBe("11")
+    expect(props(spans[1]?.children?.[0])["data-source-start"]).toBe("11")
+    expect(props(spans[1]?.children?.[0])["data-source-end"]).toBe("12")
+    expect(props(spans[2]?.children?.[0])["data-source-start"]).toBe("12")
+    expect(props(spans[2]?.children?.[0])["data-source-end"]).toBe("13")
+  })
+
+  it("applies highlights that fall within the code content", () => {
+    // Content starts at slice offset 6; highlight covers "const" (6-11).
+    const h: HighlightRange = { messageIndex: 0, partIndex: 0, startOffset: 6, endOffset: 11, type: "search-literal" }
+    const tree = rootWith(codeElement(6, "const x = 1;"))
+    run(tree, [h])
+    const [code] = children(tree)
+    const [span] = code?.children ?? []
+    const innerSpans = span?.children ?? []
+    expect(innerSpans[0]?.children?.[0]?.value).toBe("const")
+    expect(props(innerSpans[0])["data-search-match"]).toBe("literal")
+    expect(innerSpans[1]?.children?.[0]?.value).toBe(" x = 1;")
+    expect(props(innerSpans[1])["data-search-match"]).toBeUndefined()
+  })
+
+  it("emits full-part-text coordinates when sliceSourceStart > 0", () => {
+    // The middle slice starts at full-part offset 6000.
+    // Remark found the code content at slice offset 50 (i.e., full offset 6050).
+    const h: HighlightRange = {
+      messageIndex: 0,
+      partIndex: 0,
+      startOffset: 6050,
+      endOffset: 6055,
+      type: "annotation",
+      passed: true,
+    }
+    const tree = rootWith(codeElement(50, "const x = 1;"))
+    run(tree, [h], 6000)
+    const [code] = children(tree)
+    const [span] = code?.children ?? []
+    const innerSpans = span?.children ?? []
+    // "const" is highlighted (full offsets 6050-6055)
+    expect(innerSpans[0]?.children?.[0]?.value).toBe("const")
+    expect(props(innerSpans[0])["data-source-start"]).toBe("6050")
+    expect(props(innerSpans[0])["data-source-end"]).toBe("6055")
+    expect(props(innerSpans[0])["data-annotated-text"]).toBe(true)
+    // " x = 1;" is not highlighted; full offsets start at 6055
+    expect(props(innerSpans[1])["data-source-start"]).toBe("6055")
+    expect(props(innerSpans[1])["data-annotated-text"]).toBeUndefined()
+  })
+
+  it("falls back to no-op when data-code-content-start is absent", () => {
+    // A <code> element without the attribute: text nodes have no positions
+    // and should pass through unchanged (existing behaviour).
+    const textChild: HastNode = { type: "text", value: "no position" }
+    const code: HastNode = { type: "element", tagName: "code", children: [textChild] }
+    const tree = rootWith(code)
+    run(tree)
+    const [codeOut] = children(tree)
+    // Text node passed through; no span wrapper
+    expect(codeOut?.children?.[0]).toBe(textChild)
+  })
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Null / undefined safety
 // ──────────────────────────────────────────────────────────────────────────────
 
