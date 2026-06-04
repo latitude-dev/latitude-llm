@@ -1,0 +1,81 @@
+name: Update PyPI downloads badge
+
+# Sums last-month downloads across all published latitude PyPI packages and
+# writes the total into .github/badges/pypi-downloads.json, which the README's
+# shields "endpoint" badge reads. Reading a static file we control (rather than
+# shields hitting pypistats live on every render) avoids the intermittent
+# "rate limited by upstream service" message on the badge.
+
+on:
+  schedule:
+    - cron: "23 6 * * *" # daily at 06:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pypi-downloads-badge
+  cancel-in-progress: false
+
+jobs:
+  update-badge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute total monthly PyPI downloads
+        run: |
+          set -uo pipefail
+
+          # Add new published latitude PyPI packages here as they ship.
+          PACKAGES=(
+            "latitude-telemetry"
+          )
+
+          total=0
+          for pkg in "${PACKAGES[@]}"; do
+            # pypistats rate-limits; be gentle and tolerate transient failures.
+            dl=$(curl -fsSL "https://pypistats.org/api/packages/${pkg}/recent" 2>/dev/null | jq -r '.data.last_month // 0')
+            dl=${dl:-0}
+            echo "  ${pkg}: ${dl}"
+            total=$((total + dl))
+            sleep 2
+          done
+          echo "Total last-month downloads: ${total}"
+
+          # Don't overwrite a good value with 0 if every request failed/throttled.
+          if [ "$total" -eq 0 ]; then
+            echo "Total is 0 (likely upstream throttling); keeping existing badge."
+            exit 0
+          fi
+
+          # Format as a human-readable message.
+          if [ "$total" -ge 1000000 ]; then
+            msg=$(awk "BEGIN { printf \"%.1fM/month\", ${total}/1000000 }")
+          elif [ "$total" -ge 1000 ]; then
+            msg=$(awk "BEGIN { printf \"%.0fk/month\", ${total}/1000 }")
+          else
+            msg="${total}/month"
+          fi
+
+          mkdir -p .github/badges
+          jq -n --arg msg "$msg" \
+            '{schemaVersion: 1, label: "pypi latitude", message: $msg, color: "blue"}' \
+            > .github/badges/pypi-downloads.json
+
+          echo "Wrote badge:"
+          cat .github/badges/pypi-downloads.json
+
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .github/badges/pypi-downloads.json; then
+            echo "Badge unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/badges/pypi-downloads.json
+          git commit -m "chore: update PyPI downloads badge [skip ci]"
+          git push
