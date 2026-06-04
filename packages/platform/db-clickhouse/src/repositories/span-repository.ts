@@ -404,15 +404,14 @@ export const SpanRepositoryLive = Layer.effect(
           )
       })
 
-    const listByTraceIds: SpanRepositoryShape["listByTraceIds"] = ({
+    const listBySessionId: SpanRepositoryShape["listBySessionId"] = ({
       organizationId,
       projectId,
-      traceIds,
+      sessionId,
       startTimeFrom,
       startTimeTo,
     }) =>
       Effect.gen(function* () {
-        if (traceIds.length === 0) return []
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
         const startFromClause = startTimeFrom
           ? "AND start_time >= parseDateTime64BestEffort({startTimeFrom:String}, 9, 'UTC')"
@@ -423,15 +422,17 @@ export const SpanRepositoryLive = Layer.effect(
         return yield* chSqlClient
           .query(async (client) => {
             const result = await client.query({
-              // Same `LIMIT 1 BY span_id` dedupe as listByTraceId; filters on a
-              // set of trace ids so a whole session can be fetched in one query.
+              // Session membership mirrors the sessions_mv grouping key exactly:
+              // conversation-id sessions match on session_id, orphan single-trace
+              // sessions (empty session_id) match on toString(trace_id). Same
+              // `LIMIT 1 BY span_id` dedupe as listByTraceId.
               query: `SELECT ${LIST_COLUMNS}
                     FROM (
                       SELECT ${LIST_COLUMNS}
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
-                        AND trace_id IN ({traceIds:Array(String)})
+                        AND coalesce(nullIf(session_id, ''), toString(trace_id)) = {sessionId:String}
                         ${startFromClause}
                         ${startToClause}
                       ORDER BY span_id, ingested_at DESC
@@ -441,7 +442,7 @@ export const SpanRepositoryLive = Layer.effect(
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                traceIds: Array.from(traceIds) as string[],
+                sessionId: sessionId as string,
                 ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
                 ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
               },
@@ -451,7 +452,7 @@ export const SpanRepositoryLive = Layer.effect(
           })
           .pipe(
             Effect.map((rows) => rows.map(toDomainSpan)),
-            Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
+            Effect.mapError((error) => toRepositoryError(error, "listBySessionId")),
           )
       })
 
@@ -480,7 +481,7 @@ export const SpanRepositoryLive = Layer.effect(
 
       listByTraceId,
 
-      listByTraceIds,
+      listBySessionId,
 
       listByProjectId,
 

@@ -84,9 +84,7 @@ export function TraceTab({
       />
     ) : null
 
-  // Duration composition from the span list (leaf intervals partitioned by
-  // category). Falls back to the trace record's wall-clock total (ns → ms) until
-  // spans load or when none are available, so the total always renders.
+  // Falls back to the record total until spans load, so the duration always renders.
   const durationBreakdown = useMemo(() => computeDurationBreakdown(spans ?? []), [spans])
   const fallbackDurationMs = traceRecord ? traceRecord.durationNs / 1_000_000 : 0
   const durationWallClockMs = durationBreakdown.wallClockMs > 0 ? durationBreakdown.wallClockMs : fallbackDurationMs

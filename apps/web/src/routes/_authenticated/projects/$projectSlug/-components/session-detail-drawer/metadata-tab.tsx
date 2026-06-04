@@ -73,12 +73,9 @@ export function MetadataTab({
     />
   )
 
-  // Spans across every trace in the session, fetched in one query. The breakdown
-  // is computed per trace and summed, so between-trace gaps never count as idle.
   const { data: spans, isLoading: isSpansLoading } = useSpansBySessionCollection({
     projectId: session.projectId,
     sessionId: session.sessionId,
-    traceIds: session.traceIds,
     startTimeFrom: session.startTime,
     startTimeTo: session.endTime,
   })
@@ -141,7 +138,6 @@ export function MetadataTab({
         </div>
       )}
 
-      {/* ── Duration composition + usage (tokens + cost) ── */}
       <div className="flex flex-col gap-2">
         <DurationBar
           segments={durationBreakdown.segments}

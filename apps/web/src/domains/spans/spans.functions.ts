@@ -1,4 +1,4 @@
-import { OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
 import { buildConversationSpanMaps, SpanRepository, TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
@@ -174,7 +174,7 @@ export const listSpansBySession = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
       projectId: z.string(),
-      traceIds: z.array(z.string()),
+      sessionId: z.string(),
       startTimeFrom: dateTimeParamSchema.optional(),
       startTimeTo: dateTimeParamSchema.optional(),
     }),
@@ -185,10 +185,10 @@ export const listSpansBySession = createServerFn({ method: "GET" })
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
-        return yield* repo.listByTraceIds({
+        return yield* repo.listBySessionId({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
-          traceIds: data.traceIds.map((id) => TraceId(id)),
+          sessionId: SessionId(data.sessionId),
           ...(data.startTimeFrom ? { startTimeFrom: data.startTimeFrom } : {}),
           ...(data.startTimeTo ? { startTimeTo: data.startTimeTo } : {}),
         })

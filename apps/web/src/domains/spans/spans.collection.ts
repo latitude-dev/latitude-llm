@@ -62,7 +62,6 @@ export const useSpansByTraceCollection = ({
 const makeSpansBySessionCollection = (
   projectId: string,
   sessionId: string,
-  traceIds: readonly string[],
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
 ) =>
@@ -70,8 +69,7 @@ const makeSpansBySessionCollection = (
     queryCollectionOptions({
       queryClient,
       queryKey: ["spans", "session", projectId, sessionId, startTimeFrom, startTimeTo],
-      queryFn: () =>
-        listSpansBySession({ data: { projectId, traceIds: Array.from(traceIds), startTimeFrom, startTimeTo } }),
+      queryFn: () => listSpansBySession({ data: { projectId, sessionId, startTimeFrom, startTimeTo } }),
       getKey: (item: SpanRecord): string => `${item.traceId}-${item.spanId}`,
     }),
   )
@@ -82,19 +80,12 @@ const sessionCollectionsCache: Record<string, SpansBySessionCollection> = {}
 const getSpansBySessionCollection = (
   projectId: string,
   sessionId: string,
-  traceIds: readonly string[],
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
 ): SpansBySessionCollection => {
   const cacheKey = `${projectId}:${sessionId}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
   if (!sessionCollectionsCache[cacheKey]) {
-    sessionCollectionsCache[cacheKey] = makeSpansBySessionCollection(
-      projectId,
-      sessionId,
-      traceIds,
-      startTimeFrom,
-      startTimeTo,
-    )
+    sessionCollectionsCache[cacheKey] = makeSpansBySessionCollection(projectId, sessionId, startTimeFrom, startTimeTo)
   }
   return sessionCollectionsCache[cacheKey]
 }
@@ -102,17 +93,15 @@ const getSpansBySessionCollection = (
 export const useSpansBySessionCollection = ({
   projectId,
   sessionId,
-  traceIds,
   startTimeFrom,
   startTimeTo,
 }: {
   readonly projectId: string
   readonly sessionId: string
-  readonly traceIds: readonly string[]
   readonly startTimeFrom?: string | undefined
   readonly startTimeTo?: string | undefined
 }) => {
-  const collection = getSpansBySessionCollection(projectId, sessionId, traceIds, startTimeFrom, startTimeTo)
+  const collection = getSpansBySessionCollection(projectId, sessionId, startTimeFrom, startTimeTo)
   return useLiveQuery((q) => q.from({ span: collection }))
 }
 
