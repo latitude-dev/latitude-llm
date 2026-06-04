@@ -219,7 +219,8 @@ export const MonitorRepositoryLive = Layer.effect(
 
           const ids = rows.map((r) => r.id)
 
-          // Ordered so the first row per monitor is the latest; deduped in JS (DISTINCT ON isn't ergonomic via the query builder).
+          // Ongoing-first (ended_at DESC NULLS FIRST), matching the incidents table, so the
+          // first row per monitor is the displayed "last incident"; deduped in JS.
           const incidentRows = yield* sqlClient.query((db) =>
             db
               .select({
@@ -230,7 +231,7 @@ export const MonitorRepositoryLive = Layer.effect(
               .from(alertIncidents)
               .innerJoin(monitorAlerts, eq(monitorAlerts.id, alertIncidents.monitorAlertId))
               .where(and(eq(alertIncidents.organizationId, organizationId), inArray(monitorAlerts.monitorId, ids)))
-              .orderBy(asc(monitorAlerts.monitorId), desc(alertIncidents.startedAt), desc(alertIncidents.id)),
+              .orderBy(asc(monitorAlerts.monitorId), desc(alertIncidents.endedAt), desc(alertIncidents.id)),
           )
           const lastIncidentByMonitorId = new Map<string, MonitorLastIncident>()
           for (const row of incidentRows) {

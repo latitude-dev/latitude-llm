@@ -19,7 +19,6 @@ import {
   isNull,
   lt,
   lte,
-  max,
   min,
   or,
   type SQL,
@@ -258,22 +257,31 @@ export const AlertIncidentRepositoryLive = Layer.effect(
             eq(alertIncidents.organizationId, sqlClient.organizationId),
             eq(monitorAlerts.monitorId, monitorId),
           )
-          const rows = yield* sqlClient.query((db) =>
-            db
-              .select({
-                total: count(),
-                firstStartedAt: min(alertIncidents.startedAt),
-                lastStartedAt: max(alertIncidents.startedAt),
-              })
+          const [aggRows, lastRows] = yield* sqlClient.query((db) => {
+            const aggPromise = db
+              .select({ total: count(), firstStartedAt: min(alertIncidents.startedAt) })
               .from(alertIncidents)
               .innerJoin(monitorAlerts, eq(monitorAlerts.id, alertIncidents.monitorAlertId))
-              .where(where),
-          )
-          const row = rows[0]
+              .where(where)
+            // The "last incident" is the same ongoing-first row as `listByMonitorId`, not
+            // the latest-started one. We surface both ends: `ended_at` is "last detected at"
+            // (the close time), `started_at` is the fallback while it's still ongoing.
+            const lastPromise = db
+              .select({ startedAt: alertIncidents.startedAt, endedAt: alertIncidents.endedAt })
+              .from(alertIncidents)
+              .innerJoin(monitorAlerts, eq(monitorAlerts.id, alertIncidents.monitorAlertId))
+              .where(where)
+              .orderBy(desc(alertIncidents.endedAt), desc(alertIncidents.id))
+              .limit(1)
+            return Promise.all([aggPromise, lastPromise])
+          })
+          const agg = aggRows[0]
+          const last = lastRows[0]
           return {
-            total: row?.total ?? 0,
-            firstStartedAt: row?.firstStartedAt ? new Date(row.firstStartedAt) : null,
-            lastStartedAt: row?.lastStartedAt ? new Date(row.lastStartedAt) : null,
+            total: agg?.total ?? 0,
+            firstStartedAt: agg?.firstStartedAt ? new Date(agg.firstStartedAt) : null,
+            lastStartedAt: last?.startedAt ? new Date(last.startedAt) : null,
+            lastEndedAt: last?.endedAt ? new Date(last.endedAt) : null,
           }
         }),
       listByMonitorAlertId: ({ monitorAlertId, limit, cursor }) =>

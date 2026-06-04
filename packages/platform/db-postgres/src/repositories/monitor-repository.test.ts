@@ -217,6 +217,20 @@ describe("MonitorRepositoryLive", () => {
           endedAt: olderEndedAt,
           monitorAlertId: olderAlertId,
         },
+        {
+          // Closed but started AFTER the ongoing one — the ongoing incident still wins the
+          // "last incident" pick (ended_at DESC NULLS FIRST), not the latest-started.
+          id: AlertIncidentId(generateId()),
+          organizationId: organizationId as string,
+          projectId: projectId as string,
+          sourceType: "savedSearch",
+          sourceId: "s".repeat(24),
+          kind: "savedSearch.match",
+          severity: "medium",
+          startedAt: new Date("2026-06-02T09:00:00.000Z"),
+          endedAt: new Date("2026-06-02T09:30:00.000Z"),
+          monitorAlertId: recentAlertId,
+        },
       ])
 
       const result = await Effect.runPromise(

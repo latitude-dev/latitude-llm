@@ -342,7 +342,7 @@ describe("AlertIncidentRepositoryLive.statsByMonitorId", () => {
     await closeInMemoryPostgres(database)
   })
 
-  it("aggregates total + earliest/latest startedAt across the monitor's alerts (soft-deleted included)", async () => {
+  it("aggregates total + first startedAt, and picks the ongoing incident as last (soft-deleted included)", async () => {
     await database.db
       .insert(monitorAlertsTable)
       .values([
@@ -352,17 +352,20 @@ describe("AlertIncidentRepositoryLive.statsByMonitorId", () => {
       ])
 
     await database.db.insert(alertIncidentsTable).values([
+      // Ongoing — wins `lastStartedAt` even though a closed incident started later.
       makeRow({
         id: AlertIncidentId("1".repeat(24)),
         sourceId: "1".repeat(24),
         monitorAlertId: alertA1,
         startedAt: new Date("2026-05-07T10:00:00.000Z"),
+        endedAt: null,
       }),
       makeRow({
         id: AlertIncidentId("2".repeat(24)),
         sourceId: "2".repeat(24),
         monitorAlertId: alertA1,
         startedAt: new Date("2026-05-07T12:00:00.000Z"),
+        endedAt: new Date("2026-05-07T12:30:00.000Z"),
       }),
       // Soft-deleted alert's incident still counts toward history.
       makeRow({
@@ -370,6 +373,7 @@ describe("AlertIncidentRepositoryLive.statsByMonitorId", () => {
         sourceId: "3".repeat(24),
         monitorAlertId: alertA2Deleted,
         startedAt: new Date("2026-05-07T09:00:00.000Z"),
+        endedAt: new Date("2026-05-07T09:30:00.000Z"),
       }),
       makeRow({
         id: AlertIncidentId("4".repeat(24)),
@@ -393,7 +397,42 @@ describe("AlertIncidentRepositoryLive.statsByMonitorId", () => {
 
     expect(result.total).toBe(3)
     expect(result.firstStartedAt?.toISOString()).toBe("2026-05-07T09:00:00.000Z")
-    expect(result.lastStartedAt?.toISOString()).toBe("2026-05-07T12:00:00.000Z")
+    // Last incident is ongoing, so "last detected at" has no close time and falls back to its start.
+    expect(result.lastStartedAt?.toISOString()).toBe("2026-05-07T10:00:00.000Z")
+    expect(result.lastEndedAt).toBeNull()
+  })
+
+  it("uses the latest-ended incident's endedAt as lastEndedAt when none are ongoing", async () => {
+    await database.db.insert(monitorAlertsTable).values([makeAlertRow({ id: alertA1, monitorId: monitorIdA })])
+    await database.db.insert(alertIncidentsTable).values([
+      makeRow({
+        id: AlertIncidentId("1".repeat(24)),
+        sourceId: "1".repeat(24),
+        monitorAlertId: alertA1,
+        startedAt: new Date("2026-05-07T10:00:00.000Z"),
+        endedAt: new Date("2026-05-07T10:30:00.000Z"),
+      }),
+      // Latest close — wins the pick even though it started earlier.
+      makeRow({
+        id: AlertIncidentId("2".repeat(24)),
+        sourceId: "2".repeat(24),
+        monitorAlertId: alertA1,
+        startedAt: new Date("2026-05-07T09:00:00.000Z"),
+        endedAt: new Date("2026-05-07T11:00:00.000Z"),
+      }),
+    ])
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* AlertIncidentRepository
+        return yield* repository.statsByMonitorId(monitorIdA)
+      }).pipe(makeRlsProvider(database, organizationId)),
+    )
+
+    expect(result.total).toBe(2)
+    expect(result.firstStartedAt?.toISOString()).toBe("2026-05-07T09:00:00.000Z")
+    expect(result.lastStartedAt?.toISOString()).toBe("2026-05-07T09:00:00.000Z")
+    expect(result.lastEndedAt?.toISOString()).toBe("2026-05-07T11:00:00.000Z")
   })
 
   it("returns zero/null for a monitor with no incidents", async () => {
@@ -409,6 +448,7 @@ describe("AlertIncidentRepositoryLive.statsByMonitorId", () => {
     expect(result.total).toBe(0)
     expect(result.firstStartedAt).toBeNull()
     expect(result.lastStartedAt).toBeNull()
+    expect(result.lastEndedAt).toBeNull()
   })
 })
 

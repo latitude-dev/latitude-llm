@@ -79,21 +79,21 @@ const elapsedSince = (iso: string): number => Math.max(0, Date.now() - Date.pars
 
 // Flex `div` so the `gap-*` around the separator holds; bare `<span>` triggers so Radix's hover handlers land on a real DOM node.
 function MonitorDetectedAtValue({
-  lastStartedAtIso,
+  lastDetectedAtIso,
   firstStartedAtIso,
 }: {
-  readonly lastStartedAtIso: string
+  readonly lastDetectedAtIso: string
   readonly firstStartedAtIso: string
 }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-sm leading-5">
       <Tooltip
         asChild
-        trigger={<span className="break-words">{`${formatCompactElapsed(elapsedSince(lastStartedAtIso))} ago`}</span>}
+        trigger={<span className="break-words">{`${formatCompactElapsed(elapsedSince(lastDetectedAtIso))} ago`}</span>}
       >
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="foregroundMuted">Last detected at</Text.H6>
-          <Text.H6B>{new Date(lastStartedAtIso).toLocaleString()}</Text.H6B>
+          <Text.H6B>{new Date(lastDetectedAtIso).toLocaleString()}</Text.H6B>
         </div>
       </Tooltip>
       <span className="shrink-0 text-muted-foreground">/</span>
@@ -419,7 +419,9 @@ export function MonitorDetailDrawer({
                     <Skeleton className="h-5 w-32" />
                   ) : incidentStats?.lastStartedAtIso && incidentStats.firstStartedAtIso ? (
                     <MonitorDetectedAtValue
-                      lastStartedAtIso={incidentStats.lastStartedAtIso}
+                      // "Last detected at" is the last incident's close time, falling back to its
+                      // start while it's still ongoing.
+                      lastDetectedAtIso={incidentStats.lastEndedAtIso ?? incidentStats.lastStartedAtIso}
                       firstStartedAtIso={incidentStats.firstStartedAtIso}
                     />
                   ) : (

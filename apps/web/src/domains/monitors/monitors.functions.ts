@@ -430,6 +430,7 @@ export const getMonitorIncidentStats = createServerFn({ method: "GET" })
       readonly total: number
       readonly firstStartedAtIso: string | null
       readonly lastStartedAtIso: string | null
+      readonly lastEndedAtIso: string | null
     }> => {
       const { organizationId } = await requireSession()
       const orgId = OrganizationId(organizationId)
@@ -445,6 +446,7 @@ export const getMonitorIncidentStats = createServerFn({ method: "GET" })
         total: stats.total,
         firstStartedAtIso: stats.firstStartedAt?.toISOString() ?? null,
         lastStartedAtIso: stats.lastStartedAt?.toISOString() ?? null,
+        lastEndedAtIso: stats.lastEndedAt?.toISOString() ?? null,
       }
     },
   )

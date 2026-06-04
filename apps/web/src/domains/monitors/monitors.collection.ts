@@ -178,6 +178,7 @@ interface MonitorIncidentStats {
   readonly total: number
   readonly firstStartedAtIso: string | null
   readonly lastStartedAtIso: string | null
+  readonly lastEndedAtIso: string | null
 }
 
 export function useMonitorIncidentStats(input: {
