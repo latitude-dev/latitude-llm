@@ -601,4 +601,143 @@ describe("evaluateSeasonalEscalation", () => {
     expect(noisy.transition).toBe("enter")
     expect(quiet.transition).toBe("none")
   })
+
+  // Cold-start (samplesCount === 0) active-incident exits. With no seasonal
+  // history kAdj=kShort+1=4, σ_eff floors at 1.0 → exitBand1h = 0.7·4·1 = 2.8
+  // and exitBand6hPerHour = 0.7·3·1 = 2.1. The burst tail keeps recent24h
+  // elevated, so the absolute-rate backstop hasn't tripped yet — the
+  // band-shape exit is what closes these.
+  it("cold-start: starts the band-shape dwell once the 1h/6h windows go quiet", () => {
+    const decision = evaluateSeasonalEscalation({
+      // recent1h/recent6h quiet (< exit bands); recent24h still high so the
+      // backstop (200 < 240·0.5=120) does NOT fire.
+      signals: baseSignals({
+        recent1h: 0,
+        recent6h: 0,
+        recent24h: 200,
+        samplesCount: 0,
+        expected1h: 0,
+        expected6hPerHour: 0,
+        stddev1h: 0,
+        stddev6hPerHour: 0,
+      }),
+      kShort: 3,
+      isNew: false,
+      wasEscalating: true,
+      entrySignals: makeSnapshot({ entryCount24h: 240 }),
+      startedAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: null,
+      now,
+    })
+
+    expect(decision.transition).toBe("none")
+    expect(decision.nextExitEligibleSince).toEqual(now)
+  })
+
+  it("cold-start: closes via threshold once the band-shape dwell is met", () => {
+    const dwellStart = new Date(now.getTime() - ESCALATION_EXIT_DWELL_MS)
+    const decision = evaluateSeasonalEscalation({
+      signals: baseSignals({
+        recent1h: 0,
+        recent6h: 0,
+        recent24h: 200,
+        samplesCount: 0,
+        expected1h: 0,
+        expected6hPerHour: 0,
+        stddev1h: 0,
+        stddev6hPerHour: 0,
+      }),
+      kShort: 3,
+      isNew: false,
+      wasEscalating: true,
+      entrySignals: makeSnapshot({ entryCount24h: 240 }),
+      startedAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: dwellStart,
+      now,
+    })
+
+    expect(decision.transition).toBe("exit")
+    expect(decision.reason).toBe("threshold")
+  })
+
+  it("cold-start: starts the band-shape dwell even without an entry snapshot", () => {
+    // The stuck-incident case: no seasonal history AND no entry snapshot
+    // (legacy / cold-start entry), so the backstop can't fire. Previously the
+    // only exit was the 72h timeout; now the band-shape dwell starts.
+    const decision = evaluateSeasonalEscalation({
+      signals: baseSignals({
+        recent1h: 0,
+        recent6h: 0,
+        recent24h: 0,
+        samplesCount: 0,
+        expected1h: 0,
+        expected6hPerHour: 0,
+        stddev1h: 0,
+        stddev6hPerHour: 0,
+      }),
+      kShort: 3,
+      isNew: false,
+      wasEscalating: true,
+      entrySignals: null,
+      startedAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: null,
+      now,
+    })
+
+    expect(decision.transition).toBe("none")
+    expect(decision.nextExitEligibleSince).toEqual(now)
+  })
+
+  it("cold-start: keeps escalating (clears dwell) while the rate is still elevated", () => {
+    // recent1h=10 > exitBand1h=2.8 → shape doesn't hold.
+    const decision = evaluateSeasonalEscalation({
+      signals: baseSignals({
+        recent1h: 10,
+        recent6h: 60,
+        recent24h: 200,
+        samplesCount: 0,
+        expected1h: 0,
+        expected6hPerHour: 0,
+        stddev1h: 0,
+        stddev6hPerHour: 0,
+      }),
+      kShort: 3,
+      isNew: false,
+      wasEscalating: true,
+      entrySignals: makeSnapshot({ entryCount24h: 240 }),
+      startedAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: new Date(now.getTime() - 10 * 60 * 1000),
+      now,
+    })
+
+    expect(decision.transition).toBe("none")
+    expect(decision.nextExitEligibleSince).toBeNull()
+  })
+
+  it("cold-start: the absolute-rate backstop still takes priority over the band-shape exit", () => {
+    // recent24h=50 < 240·0.5=120 → backstop trips even though the band shape
+    // also holds. Reason must be the backstop, not threshold.
+    const decision = evaluateSeasonalEscalation({
+      signals: baseSignals({
+        recent1h: 0,
+        recent6h: 0,
+        recent24h: 50,
+        samplesCount: 0,
+        expected1h: 0,
+        expected6hPerHour: 0,
+        stddev1h: 0,
+        stddev6hPerHour: 0,
+      }),
+      kShort: 3,
+      isNew: false,
+      wasEscalating: true,
+      entrySignals: makeSnapshot({ entryCount24h: 240 }),
+      startedAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: null,
+      now,
+    })
+
+    expect(decision.transition).toBe("exit")
+    expect(decision.reason).toBe("absolute-rate-drop")
+  })
 })

@@ -225,8 +225,13 @@ export interface SeasonalEscalationDecision {
  * Below `MIN_SEASONAL_SAMPLES` of contributing prior weeks, `k` is inflated
  * by +1 (wider band where we have less evidence). At zero prior weeks the
  * detector falls back to the floor used pre-rewrite — same `ESCALATION_MIN_OCCURRENCES_THRESHOLD`
- * gate as before. The 7-day issue-age guard makes the zero-history case
- * rare in practice.
+ * gate as before — but for ENTRY only. The EXIT path is unified across all
+ * sample counts: `sigmaEffective` floors σ at 1.0, so the exit band is a
+ * small positive number even with zero seasonal history, and a cold-start
+ * incident de-escalates via band-shape + dwell ~one dwell after it goes quiet
+ * instead of hanging until the 72h timeout (the absolute-rate backstop is the
+ * only other cold-start exit, and it needs a non-null entry snapshot). The
+ * 7-day issue-age guard makes the zero-history case rare in practice.
  */
 export const evaluateSeasonalEscalation = (input: SeasonalEscalationDecisionInput): SeasonalEscalationDecision => {
   const { signals, kShort, isNew, wasEscalating, entrySignals, startedAt, exitEligibleSince, now } = input
@@ -245,35 +250,11 @@ export const evaluateSeasonalEscalation = (input: SeasonalEscalationDecisionInpu
     return { transition: "exit", reason: "timeout", nextExitEligibleSince: null }
   }
 
-  // Deep cold start — no seasonal history at all. Fall back to the
-  // pre-rewrite floor formula.
-  if (signals.samplesCount === 0) {
-    if (!wasEscalating) {
-      const floor1h = ESCALATION_MIN_OCCURRENCES_THRESHOLD / 6
-      if (signals.recent6h >= ESCALATION_MIN_OCCURRENCES_THRESHOLD && signals.recent1h >= floor1h) {
-        // The snapshot has nothing useful to record (no expected/sigma to
-        // freeze) — emit zeros so the column type stays satisfied; the
-        // backstop will simply not fire for these incidents.
-        return {
-          transition: "enter",
-          entrySignalsSnapshot: snapshotFromSignals(signals, kShort, Math.max(1, kShort - 1), 0, 0),
-          nextExitEligibleSince: null,
-        }
-      }
-      return { transition: "none", nextExitEligibleSince: null }
-    }
-    // Active incident with no seasonal context — absolute-rate backstop only.
-    if (
-      entrySignals !== null &&
-      signals.recent24h < entrySignals.entryCount24h * ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR
-    ) {
-      return { transition: "exit", reason: "absolute-rate-drop", nextExitEligibleSince: null }
-    }
-    return { transition: "none", nextExitEligibleSince: exitEligibleSince }
-  }
-
-  // Normal seasonal path. Inflate `k` when the seasonal sample is thin so
-  // the band widens to account for noisy sigma estimates.
+  // Band geometry. `k` is inflated by +1 below `MIN_SEASONAL_SAMPLES`
+  // contributing prior weeks (including the zero-history cold-start case) so
+  // the band widens where the σ estimate is noisy. `sigmaEffective` floors σ
+  // at 1.0, which is what keeps these bands — and so the band-shape exit
+  // below — well-defined even when expected/stddev are zero.
   const kAdj = signals.samplesCount < MIN_SEASONAL_SAMPLES ? kShort + 1 : kShort
   const kLong = Math.max(1, kAdj - 1)
 
@@ -287,6 +268,25 @@ export const evaluateSeasonalEscalation = (input: SeasonalEscalationDecisionInpu
   const exitBand6hPerHour = signals.expected6hPerHour + ESCALATION_EXIT_THRESHOLD_FACTOR * kLong * sigma6hPerHour
 
   if (!wasEscalating) {
+    // Entry. Cold start (no seasonal history) can't trust the bands to size an
+    // entry, so it falls back to the pre-rewrite absolute floor; the seasonal
+    // path uses the multi-window band test.
+    if (signals.samplesCount === 0) {
+      const floor1h = ESCALATION_MIN_OCCURRENCES_THRESHOLD / 6
+      if (signals.recent6h >= ESCALATION_MIN_OCCURRENCES_THRESHOLD && signals.recent1h >= floor1h) {
+        // No real expected/sigma to freeze — record kShort/kLong + zero
+        // thresholds so the snapshot type stays satisfied. `entryCount24h`
+        // is still captured (from `recent24h`), so the absolute-rate backstop
+        // remains usable on the close side.
+        return {
+          transition: "enter",
+          entrySignalsSnapshot: snapshotFromSignals(signals, kShort, Math.max(1, kShort - 1), 0, 0),
+          nextExitEligibleSince: null,
+        }
+      }
+      return { transition: "none", nextExitEligibleSince: null }
+    }
+
     // Multi-window AND: short window proves "now", long window proves "sustained".
     // Both must clear their bands so the short window doesn't trip on a single noisy minute.
     if (signals.recent1h > entryBand1h && recent6hPerHour > entryBand6hPerHour) {
@@ -299,14 +299,21 @@ export const evaluateSeasonalEscalation = (input: SeasonalEscalationDecisionInpu
     return { transition: "none", nextExitEligibleSince: null }
   }
 
-  // wasEscalating === true: try backstop before the band-shape exit. The
-  // backstop catches the "rate has clearly dropped, bands don't matter"
-  // case that the band-shape exit can miss when the seasonal baseline
-  // climbs to meet a declining-but-still-elevated rate.
+  // wasEscalating === true. Exit pipeline — applies to every open incident
+  // regardless of seasonal history (cold-start included). Priority order:
+  //
+  //   1. Absolute-rate backstop: the 24h rate has clearly dropped vs. entry,
+  //      so close regardless of band shape. Catches the case where the
+  //      seasonal baseline climbed to meet a declining-but-still-elevated
+  //      rate. Needs the entry snapshot; skipped when it's null.
   if (entrySignals !== null && signals.recent24h < entrySignals.entryCount24h * ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR) {
     return { transition: "exit", reason: "absolute-rate-drop", nextExitEligibleSince: null }
   }
 
+  //   2. Band-shape + dwell: both windows below the (σ-floored) exit band for
+  //      the full dwell. For a cold-start incident the σ floor keeps the exit
+  //      band a small positive number, so once it goes quiet this fires ~one
+  //      dwell later instead of leaving it stuck until the 72h timeout.
   const exitShapeHolds = signals.recent1h < exitBand1h && recent6hPerHour < exitBand6hPerHour
   if (!exitShapeHolds) {
     return { transition: "none", nextExitEligibleSince: null }
