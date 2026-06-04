@@ -1,4 +1,4 @@
-import { OrganizationRepository } from "@domain/organizations"
+import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import type { NotFoundError, NotificationId, RepositoryError, SqlClient } from "@domain/shared"
 import { UserRepository } from "@domain/users"
@@ -134,6 +134,18 @@ export const sendNotificationEmailUseCase =
 
       const notification: Notification = yield* notifications.findById(input.notificationId)
 
+      if (notification.emailedAt !== null) {
+        yield* Effect.annotateCurrentSpan("skipped", "already-emailed")
+        return { sent: false as const }
+      }
+
+      const organizationEntity = yield* organizations.findById(notification.organizationId)
+
+      if (isSandbox(organizationEntity)) {
+        yield* Effect.annotateCurrentSpan("skipped", "sandbox")
+        return { sent: false as const }
+      }
+
       // Claim. If the row is already stamped, somebody else already (or
       // is about to) send the email and we exit.
       const claimed = yield* notifications.markEmailed(notification.id)
@@ -144,9 +156,6 @@ export const sendNotificationEmailUseCase =
 
       const user = yield* users.findById(notification.userId)
 
-      // Organization snapshot. Required (every notification has an org)
-      // — fail loud if the row disappears between create and send.
-      const organizationEntity = yield* organizations.findById(notification.organizationId)
       const organization: NotificationEmailOrganization = {
         id: organizationEntity.id,
         name: organizationEntity.name,
@@ -156,7 +165,13 @@ export const sendNotificationEmailUseCase =
       // deletion between request and send doesn't break the email.
       const project: NotificationEmailProject | null = notification.projectId
         ? yield* projects.findById(notification.projectId).pipe(
-            Effect.map((p): NotificationEmailProject => ({ id: p.id, name: p.name, slug: p.slug })),
+            Effect.map(
+              (p): NotificationEmailProject => ({
+                id: p.id,
+                name: p.name,
+                slug: p.slug,
+              }),
+            ),
             Effect.catchTag("NotFoundError", () => Effect.succeed<NotificationEmailProject | null>(null)),
           )
         : null

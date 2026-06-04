@@ -20,7 +20,9 @@ const cuid = (seed: string) => seed.padEnd(24, "0")
 
 const DEFAULT_PROJECT_SENTINEL = Symbol("default-project")
 
-function setup(opts: { readonly project?: Project | null | typeof DEFAULT_PROJECT_SENTINEL } = {}) {
+function setup(
+  opts: { readonly project?: Project | null | typeof DEFAULT_PROJECT_SENTINEL; readonly sandbox?: boolean } = {},
+) {
   const orgId = OrganizationId(cuid("o"))
   const userId = UserId(cuid("u"))
   const projectIdValue = ProjectId(cuid("p"))
@@ -68,7 +70,7 @@ function setup(opts: { readonly project?: Project | null | typeof DEFAULT_PROJEC
     logo: null,
     metadata: null,
     settings: null,
-    parentOrgId: null,
+    parentOrgId: opts.sandbox ? OrganizationId(cuid("parent")) : null,
     createdAt: new Date("2026-05-01T00:00:00Z"),
     updatedAt: new Date("2026-05-01T00:00:00Z"),
   }
@@ -220,6 +222,27 @@ describe("sendNotificationEmailUseCase", () => {
 
     expect(result.sent).toBe(true)
     expect(ctx.renderedCalls[0]?.project).toBeNull()
+  })
+
+  it("short-circuits for a sandbox org — no claim, no render, no send", async () => {
+    const ctx = setup({ sandbox: true })
+    const stored = makeStoredNotification({ organizationId: ctx.orgId, userId: ctx.userId })
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* NotificationRepository
+        yield* repo.insertIfAbsent(stored)
+      }).pipe(Effect.provide(ctx.layer)),
+    )
+
+    const send = sendNotificationEmailUseCase({ renderEmail: ctx.renderEmail, sendEmail: ctx.sendEmail })
+    const result = await Effect.runPromise(send({ notificationId: stored.id }).pipe(Effect.provide(ctx.layer)))
+
+    expect(result.sent).toBe(false)
+    expect(ctx.sentMessages).toHaveLength(0)
+    expect(ctx.renderedCalls).toHaveLength(0)
+    // In-app row is untouched: the guard short-circuits before the claim,
+    // so emailed_at stays null (the notification still surfaces in-app).
+    expect(ctx.rows.find((r) => r.id === stored.id)?.emailedAt).toBeNull()
   })
 
   it("fails with NotFoundError when the row is missing", async () => {

@@ -355,6 +355,26 @@ export function buildCompatibilitySupportSpans(scope: SeedScope): SpanRow[] {
       tags: ["support", "annotation", "tau2-retail"],
       metadata: { seed: "tau2-compatibility", story: "annotation-ui-polish" },
     },
+    {
+      traceKey: "code-block-demo",
+      index: 0,
+      daysAgo: 1,
+      userPrompt: "How do I fetch a trace with the Latitude Node SDK?",
+      assistantResponse:
+        "Set your API key in the `Authorization` header, then call the SDK. Here's a minimal example:\n\n" +
+        "```ts\n" +
+        'import { Latitude } from "@latitude-data/sdk"\n\n' +
+        "const sdk = new Latitude(process.env.LATITUDE_API_KEY!)\n" +
+        'const trace = await sdk.traces.get("trace-id")\n' +
+        "console.log(trace.spans.length)\n" +
+        "```\n\n" +
+        "Keep the key in an environment variable — never hard-code it.",
+      tags: ["support", "developer", "code-example"],
+      metadata: { seed: "tau2-compatibility", story: "code-block-rendering" },
+      serviceName: "developer-support-agent",
+      systemInstruction:
+        "You are a developer support AI agent. Help users integrate the Latitude SDK and API, and include short, correct code examples when useful.",
+    },
   ] as const
 
   return specs.map((spec) => createCompatibilityChatSpan({ scope, ...spec }))

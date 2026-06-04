@@ -1,7 +1,8 @@
 import type { IssueRepository } from "@domain/issues"
 import { NOTIFICATION_KIND_META, type NotificationKind } from "@domain/notifications"
+import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import type { SavedSearchRepository } from "@domain/saved-searches"
-import type { RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
+import type { NotFoundError, RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { SlackDeliveryRepository } from "../ports/slack-delivery-repository.ts"
 import { NOTIFICATION_SLACK_RENDERERS } from "../templates/notifications/registry.ts"
@@ -37,6 +38,7 @@ export class SlackMessengerError extends Data.TaggedError("SlackMessengerError")
 export type DispatchSlackOutcome =
   | { readonly status: "delivered"; readonly messageTs: string }
   | { readonly status: "skipped-already-delivered" }
+  | { readonly status: "skipped-sandbox" }
 
 export interface DispatchSlackNotificationInput {
   readonly integrationId: SlackIntegrationId
@@ -49,7 +51,7 @@ export interface DispatchSlackNotificationInput {
   readonly messenger: SlackMessenger
 }
 
-export type DispatchSlackNotificationError = SlackMessengerError | RenderSlackError | RepositoryError
+export type DispatchSlackNotificationError = SlackMessengerError | RenderSlackError | RepositoryError | NotFoundError
 
 /**
  * Claim-then-render-then-post-then-stamp. Idempotency comes from the
@@ -69,9 +71,15 @@ export const dispatchSlackNotificationUseCase = (
 ): Effect.Effect<
   DispatchSlackOutcome,
   DispatchSlackNotificationError,
-  SqlClient | SlackDeliveryRepository | IssueRepository | SavedSearchRepository
+  SqlClient | SlackDeliveryRepository | IssueRepository | SavedSearchRepository | OrganizationRepository
 > =>
   Effect.gen(function* () {
+    const organizations = yield* OrganizationRepository
+    const organization = yield* organizations.findById(input.context.organization.id)
+    if (isSandbox(organization)) {
+      return { status: "skipped-sandbox" as const }
+    }
+
     const deliveryRepo = yield* SlackDeliveryRepository
     const claim = yield* deliveryRepo.claim({
       integrationId: input.integrationId,
@@ -87,7 +95,11 @@ export const dispatchSlackNotificationUseCase = (
     const parsed = payloadSchema.safeParse(input.payload)
     if (!parsed.success) {
       return yield* Effect.fail(
-        new RenderSlackError({ kind: input.kind, reason: "invalid-payload", cause: parsed.error }),
+        new RenderSlackError({
+          kind: input.kind,
+          reason: "invalid-payload",
+          cause: parsed.error,
+        }),
       )
     }
 

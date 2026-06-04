@@ -18,7 +18,9 @@ beforeEach(() => {
 
 describe("sessionTracesQueryOptions queryFn", () => {
   it("fetches a single-trace session by a one-element `traceId in` filter", async () => {
-    listTracesByProject.mockResolvedValueOnce({ traces: [trace("t1", "2024-01-01T00:00:00Z")] })
+    listTracesByProject.mockResolvedValueOnce({
+      traces: [trace("t1", "2024-01-01T00:00:00Z")],
+    })
 
     const result = await sessionTracesQueryOptions("p1", "t1", ["t1"]).queryFn()
 
@@ -42,8 +44,8 @@ describe("sessionTracesQueryOptions queryFn", () => {
     await sessionTracesQueryOptions("p1", "s1", ids).queryFn()
 
     expect(listTracesByProject).toHaveBeenCalledTimes(2)
-    const firstChunk = listTracesByProject.mock.calls[0]![0].data.filters.traceId[0].value
-    const secondChunk = listTracesByProject.mock.calls[1]![0].data.filters.traceId[0].value
+    const firstChunk = listTracesByProject.mock.calls[0]?.[0]?.data.filters.traceId[0].value
+    const secondChunk = listTracesByProject.mock.calls[1]?.[0]?.data.filters.traceId[0].value
     expect(firstChunk).toHaveLength(100)
     expect(secondChunk).toHaveLength(50)
   })
@@ -57,10 +59,9 @@ describe("sessionTracesQueryOptions queryFn", () => {
 
   it("merges chunks and sorts by startTime then traceId", async () => {
     const ids = Array.from({ length: 101 }, (_, i) => `t${i}`)
-    // Second chunk's trace is chronologically earlier than the first chunk's.
-    listTracesByProject
-      .mockResolvedValueOnce({ traces: [trace("t0", "2024-01-02T00:00:00Z")] })
-      .mockResolvedValueOnce({ traces: [trace("t100", "2024-01-01T00:00:00Z")] })
+    listTracesByProject.mockResolvedValueOnce({ traces: [trace("t0", "2024-01-02T00:00:00Z")] }).mockResolvedValueOnce({
+      traces: [trace("t100", "2024-01-01T00:00:00Z")],
+    })
 
     const result = await sessionTracesQueryOptions("p1", "s1", ids).queryFn()
 

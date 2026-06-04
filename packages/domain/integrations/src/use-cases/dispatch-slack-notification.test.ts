@@ -1,6 +1,14 @@
 import { IssueRepository } from "@domain/issues"
+import { type Organization, OrganizationRepository } from "@domain/organizations"
 import { SavedSearchRepository } from "@domain/saved-searches"
-import { OrganizationId, ProjectId, SlackIntegrationId, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  SlackIntegrationId,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { InMemorySlackDeliveryRepositoryLive } from "../testing/in-memory-slack-delivery-repository.ts"
@@ -29,6 +37,35 @@ const NoopSavedSearchRepository = Layer.succeed(SavedSearchRepository, {
 const ORG = OrganizationId("o".repeat(24))
 const PROJECT = ProjectId("p".repeat(24))
 const INTEGRATION = SlackIntegrationId("i".repeat(24))
+
+// Org-repo layer for the test-mode guard the use case now resolves up
+// front. `parentOrgId` decides sandbox-ness: null = live, set = sandbox.
+const orgRepoLayer = (parentOrgId: OrganizationId | null) =>
+  Layer.succeed(
+    OrganizationRepository,
+    OrganizationRepository.of({
+      findById: (id) =>
+        id === ORG
+          ? Effect.succeed({
+              id: ORG,
+              name: "Acme",
+              slug: "acme",
+              logo: null,
+              metadata: null,
+              settings: null,
+              parentOrgId,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            } satisfies Organization)
+          : Effect.fail(new NotFoundError({ entity: "Organization", id })),
+      listByUserId: () => Effect.die("not used"),
+      save: () => Effect.die("not used"),
+      delete: () => Effect.die("not used"),
+      countBySlug: () => Effect.die("not used"),
+    }),
+  )
+
+const LiveOrg = orgRepoLayer(null)
 
 const ctx = {
   webAppUrl: "https://app.example.com",
@@ -84,6 +121,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         Effect.provide(NoopIssueRepository),
         Effect.provide(NoopSavedSearchRepository),
         Effect.provide(NoopSqlClient),
+        Effect.provide(LiveOrg),
       ),
     )
 
@@ -110,10 +148,39 @@ describe("dispatchSlackNotificationUseCase", () => {
         Effect.provide(NoopIssueRepository),
         Effect.provide(NoopSavedSearchRepository),
         Effect.provide(NoopSqlClient),
+        Effect.provide(LiveOrg),
       ),
     )
 
     expect(outcome.status).toBe("skipped-already-delivered")
+    expect(messenger.calls).toHaveLength(0)
+  })
+
+  it("short-circuits for a sandbox org — no claim, no post", async () => {
+    const messenger = fakeMessenger()
+    const layer = InMemorySlackDeliveryRepositoryLive()
+    const sandboxOrg = orgRepoLayer(OrganizationId("parent".padEnd(24, "0")))
+
+    const outcome = await Effect.runPromise(
+      dispatchSlackNotificationUseCase({
+        integrationId: INTEGRATION,
+        botToken: "xoxb-test",
+        channelId: "C123",
+        kind: "custom.message",
+        payload: customMessagePayload,
+        idempotencyKey: "custom.message:sandbox",
+        context: ctx,
+        messenger,
+      }).pipe(
+        Effect.provide(layer),
+        Effect.provide(NoopIssueRepository),
+        Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopSqlClient),
+        Effect.provide(sandboxOrg),
+      ),
+    )
+
+    expect(outcome.status).toBe("skipped-sandbox")
     expect(messenger.calls).toHaveLength(0)
   })
 
@@ -136,6 +203,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         Effect.provide(NoopIssueRepository),
         Effect.provide(NoopSavedSearchRepository),
         Effect.provide(NoopSqlClient),
+        Effect.provide(LiveOrg),
       ),
     )
 
