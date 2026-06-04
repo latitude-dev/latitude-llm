@@ -4,6 +4,7 @@ Thanks for taking the time to contribute! ❤️
 
 The best ways to contribute:
 
+- Pick up a [good first issue](https://github.com/latitude-dev/latitude-llm/contribute) (curated, newcomer-friendly tasks)
 - Open and vote on [Issues](https://github.com/latitude-dev/latitude-llm/issues)
 - Improve the [docs](https://docs.latitude.so)
 - Open a pull request

@@ -132,6 +132,8 @@ Latitude is licensed under the [MIT License](LICENSE).
 
 Contributions are welcome. Read the [Contributing Guide](CONTRIBUTING.md) to get started, then join the [Slack community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw), open an [issue](https://github.com/latitude-dev/latitude-llm/issues/new), or submit a pull request.
 
+**New to the project?** [Good first issues](https://github.com/latitude-dev/latitude-llm/contribute) are a friendly place to start.
+
 ## 🧑‍💻 Thanks to all of our contributors
 
 <a href="https://github.com/latitude-dev/latitude-llm/graphs/contributors">
