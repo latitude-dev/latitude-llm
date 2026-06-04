@@ -238,7 +238,9 @@ export const DatasetRepositoryLive = Layer.effect(
               .from(datasets)
               .innerJoin(projects, eq(projects.id, datasets.projectId))
               .where(where)
-              .orderBy(asc(datasets.name), asc(datasets.id))
+              // Newest-first, matching the "most recent" contract and the other org-wide searches
+              // (saved searches / monitors).
+              .orderBy(desc(datasets.createdAt), desc(datasets.id))
               .limit(args.limit),
           )
 
