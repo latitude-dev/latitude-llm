@@ -159,6 +159,45 @@ describe("posthog-analytics worker", () => {
     expect(posthog.groupIdentifies).toHaveLength(0)
   })
 
+  it("attributes FirstTraceReceived to the org owner so it stays identified", async () => {
+    const consumer = new TestQueueConsumer()
+    const posthog = createFakePostHog()
+    createPostHogAnalyticsWorker({ consumer, posthog, resolveOwnerUserId: async () => "owner-user-1" })
+
+    await consumer.dispatch("track", {
+      eventName: "FirstTraceReceived",
+      organizationId: "org-1",
+      payload: { organizationId: "org-1", projectId: "p-1", traceId: "t-1" },
+      occurredAt: "2026-04-13T12:00:00.000Z",
+    })
+
+    expect(posthog.captures).toHaveLength(1)
+    expect(posthog.captures[0]).toMatchObject({
+      distinctId: "owner-user-1",
+      event: "FirstTraceReceived",
+      groups: { organization: "org-1" },
+    })
+    // Identified (no anonymous flag) is what lets PostHog materialize $group_0.
+    expect(posthog.captures[0]?.properties?.$process_person_profile).toBeUndefined()
+    expect(posthog.captures[0]?.properties?.actorUserId).toBe("owner-user-1")
+  })
+
+  it("falls back to an org-scoped anonymous FirstTraceReceived when there is no owner", async () => {
+    const consumer = new TestQueueConsumer()
+    const posthog = createFakePostHog()
+    createPostHogAnalyticsWorker({ consumer, posthog, resolveOwnerUserId: async () => null })
+
+    await consumer.dispatch("track", {
+      eventName: "FirstTraceReceived",
+      organizationId: "org-1",
+      payload: { organizationId: "org-1", projectId: "p-1", traceId: "t-1" },
+      occurredAt: "2026-04-13T12:00:00.000Z",
+    })
+
+    expect(posthog.captures[0]?.distinctId).toBe("org_org-1")
+    expect(posthog.captures[0]?.properties?.$process_person_profile).toBe(false)
+  })
+
   it("swallows capture failures so the queue is not poisoned", async () => {
     const consumer = new TestQueueConsumer()
     const posthog = createFakePostHog({ captureFails: true })

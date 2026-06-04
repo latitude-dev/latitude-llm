@@ -18,6 +18,13 @@ export const createFakeMembershipRepository = (overrides?: Partial<MembershipRep
     listByOrganizationId: (organizationId) =>
       Effect.succeed([...memberships.values()].filter((m) => m.organizationId === organizationId)),
 
+    findFirstOwner: (organizationId) =>
+      Effect.succeed(
+        [...memberships.values()]
+          .filter((m) => m.organizationId === organizationId && m.role === "owner")
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0] ?? null,
+      ),
+
     listByUserId: (userId) => Effect.succeed([...memberships.values()].filter((m) => m.userId === userId)),
 
     findByOrganizationAndUser: (organizationId, userId) => {

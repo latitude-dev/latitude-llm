@@ -298,15 +298,6 @@ export interface EventPayloads {
     readonly projectId: string
     readonly traceId: string
     readonly onboardingType?: "prod-traces" | "code-agents"
-    /**
-     * The org owner's user id, resolved when the milestone is emitted. There is
-     * no acting user on trace ingestion (it runs off an API key), but analytics
-     * attributes the event to the owner so it stays an IDENTIFIED PostHog event
-     * — anonymous events don't get a materialized `$group_0`, which org-level
-     * retention / funnels join on. Falling back to no actor keeps the event
-     * org-scoped (and anonymous) rather than failing.
-     */
-    readonly actorUserId?: string
   }
   BillingUsagePeriodUpdated: {
     readonly organizationId: string

@@ -27,6 +27,21 @@ export const MembershipRepositoryLive = Layer.effect(
           .pipe(Effect.map((rows) => rows.map(toDomainMembership)))
       })
 
+    const findFirstOwner = (organizationId: OrganizationId) =>
+      Effect.gen(function* () {
+        const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+        return yield* sqlClient
+          .query((db) =>
+            db
+              .select()
+              .from(members)
+              .where(and(eq(members.organizationId, organizationId), eq(members.role, "owner")))
+              .orderBy(members.createdAt)
+              .limit(1),
+          )
+          .pipe(Effect.map((rows) => (rows[0] ? toDomainMembership(rows[0]) : null)))
+      })
+
     const listByUserId = (userId: string) =>
       Effect.gen(function* () {
         const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -122,6 +137,8 @@ export const MembershipRepositoryLive = Layer.effect(
         }),
 
       listByOrganizationId,
+
+      findFirstOwner,
 
       listByUserId,
 

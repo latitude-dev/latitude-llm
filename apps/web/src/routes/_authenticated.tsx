@@ -67,11 +67,25 @@ export const Route = createFileRoute("/_authenticated")({
 
     const supportIdentity = await getSupportUserIdentity()
 
+    // Plan tags the PostHog org group. Resolve it server-side here (rather than
+    // a client billing query) and skip it for sessions we don't track anyway
+    // (staff / impersonation), which never read it.
+    const excludeFromAnalytics = isLatitudeStaffEmail(session.user.email) || impersonatedBy != null
+    let organizationPlan: string | null = null
+    if (!excludeFromAnalytics) {
+      try {
+        organizationPlan = (await getBillingOverview()).planSlug
+      } catch {
+        organizationPlan = null
+      }
+    }
+
     return {
       user: session.user,
       organizationId,
       impersonatedBy,
       supportIdentity,
+      organizationPlan,
     }
   },
   component: AuthenticatedLayout,
@@ -356,19 +370,9 @@ function AuthenticatedLayout() {
     // `routeId` is the stable file-route id from `createFileRoute(...)`.
     select: (s) => s.matches.some((m) => m.routeId === projectOnboardingRouteId),
   })
+  const organizationPlan = Route.useLoaderData({ select: (data) => data.organizationPlan })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
-  const excludeFromAnalytics = isLatitudeStaffEmail(user.email) || impersonatedBy != null
-  // Only used to tag the PostHog org group with its plan, so skip it for
-  // excluded sessions (staff / impersonation) where we opt out of capturing
-  // anyway. Shares BillingCreditCounter's query key, so when the header is
-  // mounted this dedupes rather than firing a second request.
-  const { data: billingOverview } = useQuery({
-    queryKey: ["billing", "overview", organizationId],
-    queryFn: () => getBillingOverview(),
-    staleTime: 30_000,
-    enabled: !excludeFromAnalytics,
-  })
 
   return (
     <IntercomProvider identity={supportIdentity} floatingButton="none">
@@ -382,8 +386,8 @@ function AuthenticatedLayout() {
             organizationId={organizationId}
             organizationName={org?.name}
             organizationSlug={org?.slug}
-            organizationPlan={billingOverview?.planSlug}
-            excludeFromAnalytics={excludeFromAnalytics}
+            organizationPlan={organizationPlan}
+            excludeFromAnalytics={isLatitudeStaffEmail(user.email) || impersonatedBy != null}
           />
           {impersonatedBy && <ImpersonationBanner impersonatedUserEmail={user.email} />}
           {isProjectOnboarding ? null : <NavHeader />}

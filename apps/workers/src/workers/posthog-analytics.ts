@@ -1,9 +1,12 @@
 import { stackChoiceToOnboardingType } from "@domain/marketing"
+import { MembershipRepository } from "@domain/organizations"
 import type { QueueConsumer } from "@domain/queue"
+import { OrganizationId } from "@domain/shared"
 import { mapEventToPostHog, mapOrganizationGroupIdentify, type PostHogClientShape } from "@platform/analytics-posthog"
+import { MembershipRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
-import { getPostHogClient } from "../clients.ts"
+import { getPostgresClient, getPostHogClient } from "../clients.ts"
 
 const logger = createLogger("posthog-analytics")
 
@@ -11,14 +14,39 @@ class PostHogCaptureError extends Data.TaggedError("PostHogCaptureError")<{
   readonly cause: unknown
 }> {}
 
+/**
+ * Resolves the org owner's user id so owner-less system events
+ * (`FirstTraceReceived`, fired off API-key ingestion) can be attributed to a
+ * real user. That keeps them IDENTIFIED in PostHog — anonymous events don't get
+ * a materialized `$group_0`, which org-level retention / funnels join on.
+ *
+ * Best-effort: a failure (or no owner) resolves to `null`, leaving the event
+ * org-scoped. The lookup lives here, not in the ingest hot path that emits the
+ * event, so other consumers don't pay for it.
+ */
+const resolveOrgOwnerUserId = (organizationId: string): Promise<string | null> =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const repo = yield* MembershipRepository
+      const owner = yield* repo.findFirstOwner(OrganizationId(organizationId))
+      return owner?.userId ?? null
+    }).pipe(
+      withPostgres(MembershipRepositoryLive, getPostgresClient(), OrganizationId(organizationId)),
+      Effect.orElseSucceed(() => null),
+    ),
+  )
+
 interface PostHogAnalyticsDeps {
   consumer: QueueConsumer
   /** Injected in tests; defaults to the memoized workers client. */
   posthog?: PostHogClientShape
+  /** Injected in tests; defaults to a Membership lookup against Postgres. */
+  resolveOwnerUserId?: (organizationId: string) => Promise<string | null>
 }
 
-export const createPostHogAnalyticsWorker = ({ consumer, posthog }: PostHogAnalyticsDeps) => {
+export const createPostHogAnalyticsWorker = ({ consumer, posthog, resolveOwnerUserId }: PostHogAnalyticsDeps) => {
   const client = posthog ?? getPostHogClient()
+  const resolveOwner = resolveOwnerUserId ?? resolveOrgOwnerUserId
 
   consumer.subscribe("posthog-analytics", {
     track: (payload) =>
@@ -40,7 +68,18 @@ export const createPostHogAnalyticsWorker = ({ consumer, posthog }: PostHogAnaly
             return
           }
 
-          const mapped = mapEventToPostHog(payload)
+          // FirstTraceReceived has no acting user (API-key ingestion). Attribute
+          // it to the org owner so PostHog keeps it identified and materializes
+          // `$group_0`. Falls back to org-scoped/anonymous when there's no owner.
+          let input = payload
+          if (payload.eventName === "FirstTraceReceived") {
+            const ownerUserId = await resolveOwner(payload.organizationId)
+            if (ownerUserId) {
+              input = { ...payload, payload: { ...payload.payload, actorUserId: ownerUserId } }
+            }
+          }
+
+          const mapped = mapEventToPostHog(input)
           // Defense-in-depth: if the upstream whitelist filter regresses and an
           // untracked event reaches us, skip rather than emit garbage.
           if (!mapped) return

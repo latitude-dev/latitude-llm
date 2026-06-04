@@ -20,6 +20,13 @@ export class MembershipRepository extends Context.Service<
   {
     findById: (id: MembershipId) => Effect.Effect<Membership, NotFoundError | RepositoryError, SqlClient>
     listByOrganizationId: (organizationId: OrganizationId) => Effect.Effect<Membership[], RepositoryError, SqlClient>
+    /**
+     * The organization's owner membership, or `null` when none exists. When an
+     * org somehow has multiple owners, returns the earliest by `createdAt`.
+     */
+    findFirstOwner: (
+      organizationId: OrganizationId,
+    ) => Effect.Effect<Membership | null, RepositoryError, SqlClient>
     listByUserId: (userId: string) => Effect.Effect<Membership[], RepositoryError, SqlClient>
     findByOrganizationAndUser: (
       organizationId: OrganizationId,
