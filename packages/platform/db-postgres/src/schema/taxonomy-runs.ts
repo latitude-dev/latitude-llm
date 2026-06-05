@@ -1,4 +1,4 @@
-import type { TaxonomyDimension, TaxonomyRunStatus, TaxonomyRunTrigger } from "@domain/taxonomy"
+import type { TaxonomyRunStatus, TaxonomyRunTrigger } from "@domain/taxonomy"
 import { index, integer, text, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, tzTimestamp } from "../schemaHelpers.ts"
 
@@ -9,7 +9,6 @@ export const taxonomyRuns = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
-    dimension: varchar("dimension", { length: 32 }).$type<TaxonomyDimension>().notNull(),
     trigger: varchar("trigger", { length: 16 }).$type<TaxonomyRunTrigger>().notNull(),
     status: varchar("status", { length: 16 }).$type<TaxonomyRunStatus>().notNull(),
     startedAt: tzTimestamp("started_at").notNull(),
@@ -23,6 +22,6 @@ export const taxonomyRuns = latitudeSchema.table(
   },
   (t) => [
     organizationRLSPolicy("taxonomy_runs"),
-    index("taxonomy_runs_project_started_idx").on(t.organizationId, t.projectId, t.dimension, t.startedAt),
+    index("taxonomy_runs_project_started_idx").on(t.organizationId, t.projectId, t.startedAt),
   ],
 )

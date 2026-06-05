@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "30d6e3cb-eb2f-4905-9f1d-6fe2ab03cb83",
+  "id": "900f79b5-ea96-47d2-9575-f3482bec6571",
   "prevIds": [
     "289e1d94-24a0-45e9-b715-8354b45965b4"
   ],
@@ -5683,19 +5683,6 @@
       "table": "taxonomy_cluster_lineage"
     },
     {
-      "type": "varchar(32)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "dimension",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_cluster_lineage"
-    },
-    {
       "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
@@ -5808,19 +5795,6 @@
       "generated": null,
       "identity": null,
       "name": "project_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_clusters"
-    },
-    {
-      "type": "varchar(32)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "dimension",
       "entityType": "columns",
       "schema": "latitude",
       "table": "taxonomy_clusters"
@@ -6084,19 +6058,6 @@
       "generated": null,
       "identity": null,
       "name": "project_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_runs"
-    },
-    {
-      "type": "varchar(32)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "dimension",
       "entityType": "columns",
       "schema": "latitude",
       "table": "taxonomy_runs"
@@ -8597,13 +8558,6 @@
           "opclass": null
         },
         {
-          "value": "dimension",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
           "value": "created_at",
           "isExpression": false,
           "asc": true,
@@ -8633,13 +8587,6 @@
         },
         {
           "value": "project_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "dimension",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -8703,13 +8650,6 @@
         },
         {
           "value": "project_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "dimension",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,

@@ -1,5 +1,5 @@
 import { NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { type TaxonomyRun, TaxonomyRunRepository, taxonomyRunSchema } from "@domain/taxonomy"
+import { TaxonomyDimension, type TaxonomyRun, TaxonomyRunRepository, taxonomyRunSchema } from "@domain/taxonomy"
 import { and, desc, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -10,7 +10,7 @@ const toDomainRun = (row: typeof taxonomyRuns.$inferSelect): TaxonomyRun =>
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
-    dimension: row.dimension,
+    dimension: TaxonomyDimension.Topic,
     trigger: row.trigger,
     status: row.status,
     startedAt: row.startedAt,
@@ -27,7 +27,6 @@ const toInsertRow = (run: TaxonomyRun): typeof taxonomyRuns.$inferInsert => ({
   id: run.id,
   organizationId: run.organizationId,
   projectId: run.projectId,
-  dimension: run.dimension,
   trigger: run.trigger,
   status: run.status,
   startedAt: run.startedAt,
@@ -64,27 +63,21 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
             )
         }),
 
-      findLatestByProject: ({ projectId, dimension }) =>
+      findLatestByProject: ({ projectId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
             db
               .select()
               .from(taxonomyRuns)
-              .where(
-                and(
-                  eq(taxonomyRuns.organizationId, organizationId),
-                  eq(taxonomyRuns.projectId, projectId),
-                  eq(taxonomyRuns.dimension, dimension),
-                ),
-              )
+              .where(and(eq(taxonomyRuns.organizationId, organizationId), eq(taxonomyRuns.projectId, projectId)))
               .orderBy(desc(taxonomyRuns.startedAt))
               .limit(1),
           )
           return rows[0] ? toDomainRun(rows[0]) : null
         }),
 
-      listRunning: ({ projectId, dimension }) =>
+      listRunning: ({ projectId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -95,7 +88,6 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyRuns.organizationId, organizationId),
                   eq(taxonomyRuns.projectId, projectId),
-                  eq(taxonomyRuns.dimension, dimension),
                   eq(taxonomyRuns.status, "running"),
                 ),
               )
@@ -104,7 +96,7 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
           return rows.map(toDomainRun)
         }),
 
-      listRecentCompleted: ({ projectId, dimension, limit }) =>
+      listRecentCompleted: ({ projectId, limit }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -115,7 +107,6 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyRuns.organizationId, organizationId),
                   eq(taxonomyRuns.projectId, projectId),
-                  eq(taxonomyRuns.dimension, dimension),
                   eq(taxonomyRuns.status, "completed"),
                 ),
               )
@@ -144,7 +135,6 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
                 target: taxonomyRuns.id,
                 set: {
                   projectId: row.projectId,
-                  dimension: row.dimension,
                   trigger: row.trigger,
                   status: row.status,
                   startedAt: row.startedAt,

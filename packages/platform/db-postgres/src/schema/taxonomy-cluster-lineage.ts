@@ -1,4 +1,4 @@
-import type { TaxonomyDimension, TaxonomyLineageTransitionType } from "@domain/taxonomy"
+import type { TaxonomyLineageTransitionType } from "@domain/taxonomy"
 import { sql } from "drizzle-orm"
 import { doublePrecision, index, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, tzTimestamp } from "../schemaHelpers.ts"
@@ -14,7 +14,6 @@ export const taxonomyClusterLineage = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
-    dimension: varchar("dimension", { length: 32 }).$type<TaxonomyDimension>().notNull(),
     runId: cuid("run_id").notNull(),
     transitionType: varchar("transition_type", { length: 16 }).$type<TaxonomyLineageTransitionType>().notNull(),
     /** Native Postgres `varchar[]`; no separate join table per the no-FK rule. */
@@ -25,6 +24,6 @@ export const taxonomyClusterLineage = latitudeSchema.table(
   },
   (t) => [
     organizationRLSPolicy("taxonomy_cluster_lineage"),
-    index("taxonomy_cluster_lineage_project_created_idx").on(t.organizationId, t.projectId, t.dimension, t.createdAt),
+    index("taxonomy_cluster_lineage_project_created_idx").on(t.organizationId, t.projectId, t.createdAt),
   ],
 )

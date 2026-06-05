@@ -4,7 +4,6 @@ import {
   TAXONOMY_EMBEDDING_DIMENSIONS,
   type TaxonomyCentroid,
   type TaxonomyClusterState,
-  type TaxonomyDimension,
 } from "@domain/taxonomy"
 import { sql } from "drizzle-orm"
 import { bigint, customType, doublePrecision, index, jsonb, varchar, vector } from "drizzle-orm/pg-core"
@@ -30,7 +29,6 @@ export const taxonomyClusters = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
-    dimension: varchar("dimension", { length: 32 }).$type<TaxonomyDimension>().notNull(),
     parentClusterId: cuid("parent_cluster_id", { default: false }),
     depth: bigint("depth", { mode: "number" }).notNull().default(0),
     path: varchar("path", { length: 256 }).notNull().default(""),
@@ -57,13 +55,7 @@ export const taxonomyClusters = latitudeSchema.table(
   },
   (t) => [
     organizationRLSPolicy("taxonomy_clusters"),
-    index("taxonomy_clusters_project_state_idx").on(
-      t.organizationId,
-      t.projectId,
-      t.dimension,
-      t.state,
-      t.lastObservedAt,
-    ),
+    index("taxonomy_clusters_project_state_idx").on(t.organizationId, t.projectId, t.state, t.lastObservedAt),
     index("taxonomy_clusters_search_document_idx").using("gin", t.searchDocument),
   ],
 )

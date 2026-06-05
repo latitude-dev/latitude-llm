@@ -7,6 +7,7 @@ import {
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
   type TaxonomyCluster,
   TaxonomyClusterRepository,
+  TaxonomyDimension,
   taxonomyClusterSchema,
 } from "@domain/taxonomy"
 import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, like, or, sql } from "drizzle-orm"
@@ -19,7 +20,7 @@ const toDomainCluster = (row: typeof taxonomyClusters.$inferSelect): TaxonomyClu
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
-    dimension: row.dimension,
+    dimension: TaxonomyDimension.Topic,
     parentClusterId: row.parentClusterId,
     depth: row.depth,
     path: row.path,
@@ -98,7 +99,6 @@ const toInsertRow = (
   id: cluster.id,
   organizationId: cluster.organizationId,
   projectId: cluster.projectId,
-  dimension: cluster.dimension,
   parentClusterId: cluster.parentClusterId,
   depth: cluster.depth,
   path: cluster.path,
@@ -154,7 +154,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map(toDomainCluster)
         }),
 
-      listActiveByProject: ({ projectId, dimension, parentClusterId }) =>
+      listActiveByProject: ({ projectId, parentClusterId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -165,7 +165,6 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
-                  eq(taxonomyClusters.dimension, dimension),
                   eq(taxonomyClusters.state, "active"),
                   ...(parentClusterId === undefined
                     ? []
@@ -198,7 +197,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map((row) => TaxonomyClusterId(row.id))
         }),
 
-      listNearestActive: ({ projectId, dimension, queryVector, k, parentClusterId }) =>
+      listNearestActive: ({ projectId, queryVector, k, parentClusterId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const vector = yield* toVectorLiteral(queryVector, "TaxonomyClusterRepository.listNearestActive")
@@ -212,7 +211,6 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
-                  eq(taxonomyClusters.dimension, dimension),
                   eq(taxonomyClusters.state, "active"),
                   isNotNull(taxonomyClusters.centroidEmbedding),
                   ...(parentClusterId === undefined
@@ -229,7 +227,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map((row) => ({ cluster: toDomainCluster(row), cosine: row.cosine }))
         }),
 
-      hybridSearch: ({ projectId, dimension, query, normalizedEmbedding, state, limit, offset }) =>
+      hybridSearch: ({ projectId, query, normalizedEmbedding, state, limit, offset }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const vector = yield* toVectorLiteral(normalizedEmbedding, "TaxonomyClusterRepository.hybridSearch")
@@ -244,7 +242,6 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           const conditions = [
             eq(taxonomyClusters.organizationId, sqlClient.organizationId),
             eq(taxonomyClusters.projectId, projectId),
-            eq(taxonomyClusters.dimension, dimension),
             eq(taxonomyClusters.state, state ?? "active"),
             isNotNull(taxonomyClusters.centroidEmbedding),
             or(gte(score, TAXONOMY_SEARCH_MIN_SCORE), gte(vectorScore, TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY)),
@@ -268,13 +265,12 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map((row) => ({ ...row, clusterId: TaxonomyClusterId(row.clusterId) }))
         }),
 
-      list: ({ projectId, dimension, state, sort, limit, offset }) =>
+      list: ({ projectId, state, sort, limit, offset }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const conditions = [
             eq(taxonomyClusters.organizationId, sqlClient.organizationId),
             eq(taxonomyClusters.projectId, projectId),
-            eq(taxonomyClusters.dimension, dimension),
           ]
           if (state) conditions.push(eq(taxonomyClusters.state, state))
 
@@ -325,7 +321,6 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                 target: taxonomyClusters.id,
                 set: {
                   projectId: row.projectId,
-                  dimension: row.dimension,
                   parentClusterId: row.parentClusterId,
                   depth: row.depth,
                   path: row.path,
