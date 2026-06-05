@@ -2,8 +2,8 @@ import type { ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import {
   type ClusteringCalibration,
-  type SessionCalibration,
   clusteringCalibrationSchema,
+  type SessionCalibration,
   sessionCalibrationSchema,
 } from "../entities/calibration.ts"
 import { CalibrationProfileRepository } from "../ports/calibration-profile-repository.ts"

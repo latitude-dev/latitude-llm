@@ -1,11 +1,7 @@
 import { AI } from "@domain/ai"
 import { generateId, type OrganizationId, type ProjectId, TraceId } from "@domain/shared"
 import { SessionRepository, TraceRepository } from "@domain/spans"
-import {
-  CalibrationProfileRepository,
-  type SessionCalibration,
-  sessionCalibrationSchema,
-} from "@domain/taxonomy"
+import { CalibrationProfileRepository, type SessionCalibration, sessionCalibrationSchema } from "@domain/taxonomy"
 import { Effect } from "effect"
 import { z } from "zod"
 import { embedAnchorText, MOMENT_LABEL_ANCHORS, RITUAL_CONTRAST_ANCHORS, RITUAL_POSITIVE_ANCHORS } from "../anchors.ts"

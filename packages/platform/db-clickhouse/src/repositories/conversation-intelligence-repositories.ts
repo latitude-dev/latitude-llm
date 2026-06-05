@@ -2,11 +2,11 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import {
   type SessionAnalysis,
   SessionAnalysisRepository,
-  sessionAnalysisSchema,
-  type SessionSemanticMoment,
-  SessionSemanticMomentRepository,
   type SessionMomentLabel,
   SessionMomentLabelRepository,
+  type SessionSemanticMoment,
+  SessionSemanticMomentRepository,
+  sessionAnalysisSchema,
   sessionMomentLabelSchema,
   sessionSemanticMomentSchema,
 } from "@domain/conversation-intelligence"
@@ -274,9 +274,7 @@ export const SessionAnalysisRepositoryLive = Layer.effect(
               const row = rows[0]
               return row ? toDomainAnalysis(row) : null
             })
-            .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "SessionAnalysisRepository.findLatest")),
-            )
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionAnalysisRepository.findLatest")))
         }),
       upsert: (analysis) =>
         Effect.gen(function* () {
@@ -311,9 +309,7 @@ export const SessionSemanticMomentRepositoryLive = Layer.effect(
                 format: "JSONEachRow",
               })
             })
-            .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "SessionSemanticMomentRepository.upsertMany")),
-            )
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionSemanticMomentRepository.upsertMany")))
         }),
       listBySession: ({ organizationId, projectId, sessionId }) =>
         Effect.gen(function* () {
@@ -332,11 +328,7 @@ export const SessionSemanticMomentRepositoryLive = Layer.effect(
               })
               return ((await result.json()) as SemanticMomentRow[]).map(toDomainSemanticMoment)
             })
-            .pipe(
-              Effect.mapError((error) =>
-                toRepositoryError(error, "SessionSemanticMomentRepository.listBySession"),
-              ),
-            )
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionSemanticMomentRepository.listBySession")))
         }),
       listByTrace: ({ organizationId, projectId, traceId }) =>
         Effect.gen(function* () {
@@ -355,9 +347,7 @@ export const SessionSemanticMomentRepositoryLive = Layer.effect(
               })
               return ((await result.json()) as SemanticMomentRow[]).map(toDomainSemanticMoment)
             })
-            .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "SessionSemanticMomentRepository.listByTrace")),
-            )
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionSemanticMomentRepository.listByTrace")))
         }),
     }
   }),
@@ -398,9 +388,7 @@ export const SessionMomentLabelRepositoryLive = Layer.effect(
               })
               return ((await result.json()) as MomentLabelRow[]).map(toDomainMomentLabel)
             })
-            .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "SessionMomentLabelRepository.listBySession")),
-            )
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionMomentLabelRepository.listBySession")))
         }),
       listByMoment: ({ organizationId, projectId, sessionId, momentId }) =>
         Effect.gen(function* () {
@@ -425,9 +413,7 @@ export const SessionMomentLabelRepositoryLive = Layer.effect(
               })
               return ((await result.json()) as MomentLabelRow[]).map(toDomainMomentLabel)
             })
-            .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "SessionMomentLabelRepository.listByMoment")),
-            )
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionMomentLabelRepository.listByMoment")))
         }),
     }
   }),

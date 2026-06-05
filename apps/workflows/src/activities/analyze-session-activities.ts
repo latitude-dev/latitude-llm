@@ -17,8 +17,8 @@ import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import {
   SessionAnalysisRepositoryLive,
-  SessionRepositoryLive,
   SessionMomentLabelRepositoryLive,
+  SessionRepositoryLive,
   SessionSemanticMomentRepositoryLive,
   TaxonomyObservationRepositoryLive,
   TraceRepositoryLive,
@@ -328,8 +328,7 @@ export const detectAnalyzeSessionLabelsActivity = (
     }).pipe(withAnalyzeSessionAi, withTracing),
   )
 
-export const persistAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) =>
-  analyzeSessionActivity(input)
+export const persistAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) => analyzeSessionActivity(input)
 
 export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
   const startedAt = Date.now()

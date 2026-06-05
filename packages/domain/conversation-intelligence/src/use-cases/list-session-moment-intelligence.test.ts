@@ -3,8 +3,8 @@ import { createFakeChSqlClient } from "@domain/shared/testing"
 import { TaxonomyObservationRepository, type TaxonomyObservationRepositoryShape } from "@domain/taxonomy"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
 import type { SessionAnalysis } from "../entities/session-analysis.ts"
+import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
 import { SessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
 import { SessionMomentLabelRepository } from "../ports/session-moment-label-repository.ts"
 import { SessionSemanticMomentRepository } from "../ports/session-semantic-moment-repository.ts"
@@ -65,20 +65,12 @@ const run = (analyses: readonly SessionAnalysis[], moments: readonly SessionSema
   Effect.runPromise(
     listSessionMomentIntelligenceUseCase({ organizationId, projectId, sessionId }).pipe(
       Effect.provide(
-        Layer.succeed(
-          SessionAnalysisRepository,
-          createFakeSessionAnalysisRepository(analyses).repository,
-        ),
+        Layer.succeed(SessionAnalysisRepository, createFakeSessionAnalysisRepository(analyses).repository),
       ),
       Effect.provide(
-        Layer.succeed(
-          SessionSemanticMomentRepository,
-          createFakeSessionSemanticMomentRepository(moments).repository,
-        ),
+        Layer.succeed(SessionSemanticMomentRepository, createFakeSessionSemanticMomentRepository(moments).repository),
       ),
-      Effect.provide(
-        Layer.succeed(SessionMomentLabelRepository, createFakeSessionMomentLabelRepository().repository),
-      ),
+      Effect.provide(Layer.succeed(SessionMomentLabelRepository, createFakeSessionMomentLabelRepository().repository)),
       Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       Effect.provide(
         Layer.succeed(TaxonomyObservationRepository, {

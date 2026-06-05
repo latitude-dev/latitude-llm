@@ -82,7 +82,10 @@ export const getClusterSessionIntelligenceUseCase = (input: GetClusterSessionInt
         analysisCoverage: aggregate.sourceAnalysisCoverage,
         resolutionRate: rate(countOf(aggregate.momentKindDistribution, "resolution"), eligibleSessionDenominator),
         escalationRate: rate(countOf(aggregate.momentKindDistribution, "escalation"), eligibleSessionDenominator),
-        frustrationRate: rate(countOf(aggregate.momentKindDistribution, "user_frustration"), eligibleSessionDenominator),
+        frustrationRate: rate(
+          countOf(aggregate.momentKindDistribution, "user_frustration"),
+          eligibleSessionDenominator,
+        ),
       },
     } satisfies GetClusterSessionIntelligenceResult
   }).pipe(Effect.withSpan("taxonomy.getClusterSessionIntelligence"))

@@ -3,9 +3,7 @@ import { Context, type Effect } from "effect"
 import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
 
 export interface SessionSemanticMomentRepositoryShape {
-  readonly upsertMany: (
-    moments: readonly SessionSemanticMoment[],
-  ) => Effect.Effect<void, RepositoryError, ChSqlClient>
+  readonly upsertMany: (moments: readonly SessionSemanticMoment[]) => Effect.Effect<void, RepositoryError, ChSqlClient>
   readonly listBySession: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

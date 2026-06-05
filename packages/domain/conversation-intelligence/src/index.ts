@@ -23,23 +23,6 @@ export {
   SEMANTIC_MOMENT_SEGMENTATION_METHODS,
 } from "./constants.ts"
 export {
-  type MomentLabelActor,
-  type MomentLabelKind,
-  type MomentLabelKind as MomentKind,
-  momentLabelActorSchema,
-  momentLabelKindSchema,
-  type SessionMomentLabel,
-  sessionMomentLabelSchema,
-} from "./entities/session-moment-label.ts"
-export {
-  type SessionSemanticMoment,
-  sessionSemanticMomentSchema,
-  SemanticMomentBoundaryReason,
-  SemanticMomentSegmentationMethod,
-  semanticMomentBoundaryReasonSchema,
-  semanticMomentSegmentationMethodSchema,
-} from "./entities/session-semantic-moment.ts"
-export {
   type AnalysisLens,
   type AnalysisStatus,
   analysisLensSchema,
@@ -50,6 +33,23 @@ export {
   sessionAnalysisSchema,
 } from "./entities/session-analysis.ts"
 export {
+  type MomentLabelActor,
+  type MomentLabelKind,
+  type MomentLabelKind as MomentKind,
+  momentLabelActorSchema,
+  momentLabelKindSchema,
+  type SessionMomentLabel,
+  sessionMomentLabelSchema,
+} from "./entities/session-moment-label.ts"
+export {
+  SemanticMomentBoundaryReason,
+  SemanticMomentSegmentationMethod,
+  type SessionSemanticMoment,
+  semanticMomentBoundaryReasonSchema,
+  semanticMomentSegmentationMethodSchema,
+  sessionSemanticMomentSchema,
+} from "./entities/session-semantic-moment.ts"
+export {
   documentFromMessages,
   type NormalizedMessage,
   normalizeMessages,
@@ -58,6 +58,10 @@ export {
   textOf,
 } from "./normalization.ts"
 export {
+  SessionAnalysisRepository,
+  type SessionAnalysisRepositoryShape,
+} from "./ports/session-analysis-repository.ts"
+export {
   SessionMomentLabelRepository,
   type SessionMomentLabelRepositoryShape,
 } from "./ports/session-moment-label-repository.ts"
@@ -65,10 +69,6 @@ export {
   SessionSemanticMomentRepository,
   type SessionSemanticMomentRepositoryShape,
 } from "./ports/session-semantic-moment-repository.ts"
-export {
-  SessionAnalysisRepository,
-  type SessionAnalysisRepositoryShape,
-} from "./ports/session-analysis-repository.ts"
 export {
   computeSessionContinuityThreshold,
   cosineSimilarity,

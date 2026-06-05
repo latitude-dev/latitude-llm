@@ -7,9 +7,9 @@ import {
 } from "../constants.ts"
 import { sessionMomentLabelSchema } from "./session-moment-label.ts"
 import {
-  sessionSemanticMomentSchema,
   SemanticMomentBoundaryReason,
   SemanticMomentSegmentationMethod,
+  sessionSemanticMomentSchema,
 } from "./session-semantic-moment.ts"
 
 const now = new Date("2026-01-01T00:00:00.000Z")

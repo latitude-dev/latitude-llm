@@ -1,11 +1,11 @@
 import type { OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import { Effect } from "effect"
-import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
 import type { SessionAnalysis } from "../entities/session-analysis.ts"
 import type { SessionMomentLabel } from "../entities/session-moment-label.ts"
+import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
+import type { SessionAnalysisRepositoryShape } from "../ports/session-analysis-repository.ts"
 import type { SessionMomentLabelRepositoryShape } from "../ports/session-moment-label-repository.ts"
 import type { SessionSemanticMomentRepositoryShape } from "../ports/session-semantic-moment-repository.ts"
-import type { SessionAnalysisRepositoryShape } from "../ports/session-analysis-repository.ts"
 
 const analysisKey = (organizationId: OrganizationId, projectId: ProjectId, sessionId: SessionId) =>
   `${organizationId}|${projectId}|${sessionId}`
