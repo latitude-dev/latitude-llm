@@ -1,5 +1,25 @@
-import type { MarketingAttribution } from "@domain/events"
 import { z } from "zod"
+
+/**
+ * PostHog property names spread verbatim onto the server-side `UserSignedUp`
+ * capture by the analytics worker. `$session_id` links that event to the browser
+ * session (unlocks `$entry_current_url`); UTM / click ids are the fallback when
+ * the session can't be linked (e.g. a cross-device magic-link click).
+ */
+export type MarketingAttribution = {
+  readonly $session_id?: string
+  readonly $referrer?: string
+  readonly utm_source?: string
+  readonly utm_medium?: string
+  readonly utm_campaign?: string
+  readonly utm_term?: string
+  readonly utm_content?: string
+  readonly gclid?: string
+  readonly fbclid?: string
+  readonly ttclid?: string
+  readonly li_fat_id?: string
+  readonly msclkid?: string
+}
 
 /** Raw signup attribution captured in the browser; stored transiently in the cache.
  * The HTTP boundary (web `sendMagicLink`) validates with this same schema. */

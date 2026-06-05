@@ -1,7 +1,6 @@
-import type { MarketingAttribution } from "@domain/events"
 import { CacheStore } from "@domain/shared"
 import { Effect } from "effect"
-import { signupAttributionCacheKey } from "../signup-attribution.ts"
+import { type MarketingAttribution, signupAttributionCacheKey } from "../signup-attribution.ts"
 
 export interface ConsumeSignupAttributionInput {
   readonly email: string

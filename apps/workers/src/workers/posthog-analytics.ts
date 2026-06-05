@@ -1,12 +1,13 @@
-import { stackChoiceToOnboardingType } from "@domain/marketing"
+import { consumeSignupAttribution, type MarketingAttribution, stackChoiceToOnboardingType } from "@domain/marketing"
 import { MembershipRepository } from "@domain/organizations"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import { mapEventToPostHog, mapOrganizationGroupIdentify, type PostHogClientShape } from "@platform/analytics-posthog"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { MembershipRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { Data, Effect } from "effect"
-import { getPostgresClient, getPostHogClient } from "../clients.ts"
+import { getPostgresClient, getPostHogClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("posthog-analytics")
 
@@ -36,17 +37,35 @@ const resolveOrgOwnerUserId = (organizationId: string): Promise<string | null> =
     ),
   )
 
+/**
+ * Reads the browser attribution stashed at magic-link request time (keyed by
+ * email) so it can ride onto the `UserSignedUp` capture. Best-effort: any failure
+ * resolves to `{}` so attribution never blocks the capture itself.
+ */
+const consumeSignupAttributionDefault = (email: string): Promise<MarketingAttribution> =>
+  Effect.runPromise(
+    consumeSignupAttribution({ email }).pipe(Effect.provide(RedisCacheStoreLive(getRedisClient()))),
+  ).catch(() => ({}))
+
 interface PostHogAnalyticsDeps {
   consumer: QueueConsumer
   /** Injected in tests; defaults to the memoized workers client. */
   posthog?: PostHogClientShape
   /** Injected in tests; defaults to a Membership lookup against Postgres. */
   resolveOwnerUserId?: (organizationId: string) => Promise<string | null>
+  /** Injected in tests; defaults to reading the Redis-stashed signup attribution. */
+  consumeAttribution?: (email: string) => Promise<MarketingAttribution>
 }
 
-export const createPostHogAnalyticsWorker = ({ consumer, posthog, resolveOwnerUserId }: PostHogAnalyticsDeps) => {
+export const createPostHogAnalyticsWorker = ({
+  consumer,
+  posthog,
+  resolveOwnerUserId,
+  consumeAttribution,
+}: PostHogAnalyticsDeps) => {
   const client = posthog ?? getPostHogClient()
   const resolveOwner = resolveOwnerUserId ?? resolveOrgOwnerUserId
+  const consumeSignupAttr = consumeAttribution ?? consumeSignupAttributionDefault
 
   consumer.subscribe("posthog-analytics", {
     track: (payload) =>
@@ -76,6 +95,18 @@ export const createPostHogAnalyticsWorker = ({ consumer, posthog, resolveOwnerUs
             const ownerUserId = await resolveOwner(payload.organizationId)
             if (ownerUserId) {
               input = { ...payload, payload: { ...payload.payload, actorUserId: ownerUserId } }
+            }
+          }
+
+          // UserSignedUp carries no browser context (it's emitted server-side).
+          // The login flow stashes the PostHog session + referrer/UTM in Redis
+          // keyed by email; merge it onto the payload so `$session_id` links this
+          // capture to the browser session (→ `$entry_current_url`).
+          if (payload.eventName === "UserSignedUp") {
+            const { email } = payload.payload as { readonly userId: string; readonly email: string }
+            const attribution = await consumeSignupAttr(email)
+            if (Object.keys(attribution).length > 0) {
+              input = { ...payload, payload: { ...payload.payload, ...attribution } }
             }
           }
 

@@ -1,6 +1,4 @@
 import { PRO_PLAN_CONFIG, SELF_SERVE_PLAN_SLUGS } from "@domain/billing"
-import type { MarketingAttribution } from "@domain/events"
-import { consumeSignupAttribution } from "@domain/marketing"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import { generateId, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { createRedisClient, createRedisConnection, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
@@ -231,20 +229,6 @@ export const getBetterAuth = () => {
         }),
       ],
       onUserCreated: async (user) => {
-        // Attribution stashed by `sendMagicLink` (keyed by email — signup is
-        // passwordless, so the account is created in a later request). Spread into
-        // the payload; the worker forwards it to PostHog.
-        let attribution: MarketingAttribution = {}
-        try {
-          attribution = await Effect.runPromise(
-            consumeSignupAttribution({ email: user.email }).pipe(
-              Effect.provide(RedisCacheStoreLive(getRedisClient())),
-              withTracing,
-            ),
-          )
-        } catch {
-          // Never block signup on attribution.
-        }
         await Effect.runPromise(
           outboxWriter
             .write({
@@ -252,7 +236,7 @@ export const getBetterAuth = () => {
               aggregateType: "user",
               aggregateId: user.id,
               organizationId: "system",
-              payload: { userId: user.id, email: user.email, ...attribution },
+              payload: { userId: user.id, email: user.email },
             })
             .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )

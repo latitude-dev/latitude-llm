@@ -20,6 +20,7 @@ export {
   marketingUserGroupSchema,
 } from "./ports/marketing-contacts.ts"
 export {
+  type MarketingAttribution,
   SIGNUP_ATTRIBUTION_TTL_SECONDS,
   type SignupAttributionInput,
   signupAttributionCacheKey,

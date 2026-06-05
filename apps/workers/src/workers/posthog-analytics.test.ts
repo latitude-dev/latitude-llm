@@ -96,7 +96,7 @@ describe("posthog-analytics worker", () => {
   it("personIdentifies the user on UserSignedUp so email is set immediately", async () => {
     const consumer = new TestQueueConsumer()
     const posthog = createFakePostHog()
-    createPostHogAnalyticsWorker({ consumer, posthog })
+    createPostHogAnalyticsWorker({ consumer, posthog, consumeAttribution: async () => ({}) })
 
     await consumer.dispatch("track", {
       eventName: "UserSignedUp",
@@ -109,6 +109,34 @@ describe("posthog-analytics worker", () => {
     expect(posthog.personIdentifies[0]).toEqual({
       distinctId: "user-1",
       properties: { email: "new@example.com" },
+    })
+  })
+
+  it("merges stashed signup attribution onto the UserSignedUp capture", async () => {
+    const consumer = new TestQueueConsumer()
+    const posthog = createFakePostHog()
+    createPostHogAnalyticsWorker({
+      consumer,
+      posthog,
+      consumeAttribution: async (email) => {
+        expect(email).toBe("new@example.com")
+        return { $session_id: "sess_1", utm_source: "google" }
+      },
+    })
+
+    await consumer.dispatch("track", {
+      eventName: "UserSignedUp",
+      organizationId: "system",
+      payload: { userId: "user-1", email: "new@example.com" },
+      occurredAt: "2026-04-13T12:00:00.000Z",
+    })
+
+    expect(posthog.captures).toHaveLength(1)
+    expect(posthog.captures[0]?.properties).toMatchObject({
+      userId: "user-1",
+      email: "new@example.com",
+      $session_id: "sess_1",
+      utm_source: "google",
     })
   })
 
