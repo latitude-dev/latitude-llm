@@ -1,3 +1,4 @@
+import type { MomentKind } from "@domain/conversation-intelligence"
 import type { FilterSet } from "@domain/shared"
 import { CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
@@ -49,6 +50,8 @@ export function SessionSlot({
   searchQuery,
   filters,
   onFiltersChange,
+  focusMomentKind,
+  focusMomentId,
 }: {
   readonly projectId: string
   readonly session: SessionDetailRecord
@@ -62,6 +65,10 @@ export function SessionSlot({
   readonly searchQuery?: string
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
+  /** Scrolls the Conversation tab to the first moment carrying this label kind. */
+  readonly focusMomentKind?: MomentKind | undefined
+  /** Scrolls the Conversation tab to this semantic moment (no label required). */
+  readonly focusMomentId?: string | undefined
 }) {
   const traceIds = session.traceIds
 
@@ -197,8 +204,11 @@ export function SessionSlot({
           <div className={effectiveActiveTab === "conversation" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
             <ConversationTab
               projectId={projectId}
+              sessionId={session.sessionId}
               latestTraceId={latestTraceId}
               isActive={effectiveActiveTab === "conversation"}
+              focusMomentKind={focusMomentKind}
+              focusMomentId={focusMomentId}
               {...(searchQuery ? { searchQuery } : {})}
             />
           </div>

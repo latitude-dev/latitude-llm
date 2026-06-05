@@ -1,18 +1,25 @@
+import { MOMENT_KINDS } from "@domain/conversation-intelligence"
 import type { FilterCondition, FilterSet } from "@domain/shared"
 import { Button, Icon, Input, Switch, Tabs, Text, Tooltip } from "@repo/ui"
 import { ChevronDown, ChevronUp, InfoIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import {
+  getMultiSelectFieldsForMode,
   getTextFieldsForMode,
-  MULTI_SELECT_FIELDS,
   NUMBER_RANGE_FIELDS,
   type PercentileFieldName,
   STATUS_FIELDS,
 } from "../../../../../components/filters-builder/constants.ts"
 import { MetadataFilter } from "../../../../../components/filters-builder/metadata-filter/metadata-filter.tsx"
-import { type FilterMode, MultiSelectFilter } from "../../../../../components/filters-builder/multi-select-filter.tsx"
+import {
+  type FilterMode,
+  MultiSelectFilter,
+  type StaticFilterItem,
+} from "../../../../../components/filters-builder/multi-select-filter.tsx"
 import { PercentileFilter } from "../../../../../components/filters-builder/percentile-filter.tsx"
 import { StatusFilter, type StatusFilterValue } from "../../../../../components/filters-builder/status-filter.tsx"
+import type { DistinctColumn } from "../../../../../components/filters-builder/types.ts"
+import { useTopicFilterOptions } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 
@@ -398,7 +405,30 @@ function NumberFilterSection({
   )
 }
 
+const humanizeKind = (kind: string) => kind.replaceAll("_", " ").replace(/^./, (char) => char.toUpperCase())
+
+const MOMENT_FILTER_ITEMS: readonly StaticFilterItem[] = MOMENT_KINDS.map((kind) => ({
+  value: kind,
+  label: humanizeKind(kind),
+}))
+
 export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onClose }: FiltersSidebarProps) {
+  // Topic options come from the taxonomy tree, parents before children;
+  // depth renders as an indent marker so the hierarchy stays readable.
+  const { data: topicOptions = [] } = useTopicFilterOptions(projectId, mode === "sessions")
+  const topicFilterItems = useMemo(
+    (): readonly StaticFilterItem[] =>
+      topicOptions.map((topic) => ({
+        value: topic.id,
+        label: topic.depth > 0 ? `${"\u2014 ".repeat(topic.depth)}${topic.name}` : topic.name,
+      })),
+    [topicOptions],
+  )
+  const staticItemsByField: Readonly<Record<string, readonly StaticFilterItem[]>> = useMemo(
+    () => ({ moments: MOMENT_FILTER_ITEMS, topics: topicFilterItems }),
+    [topicFilterItems],
+  )
+
   const setField = useCallback(
     (field: string, conditions: FilterCondition[]) => {
       onFiltersChange(setFieldConditions(filters, field, conditions))
@@ -521,16 +551,18 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
           )
         })}
 
-        {MULTI_SELECT_FIELDS.map(({ label, field }) => {
+        {getMultiSelectFieldsForMode(mode).map(({ label, field }) => {
           const selectedValues = getInValues(filters, field)
+          const staticItems = staticItemsByField[field]
           return (
             <CollapsibleSection key={field} label={label} defaultOpen={selectedValues.length > 0}>
               <MultiSelectFilter
                 mode={mode}
                 projectId={projectId}
-                column={field}
+                column={field as DistinctColumn}
                 selected={selectedValues}
                 onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
+                {...(staticItems ? { staticItems } : {})}
               />
             </CollapsibleSection>
           )

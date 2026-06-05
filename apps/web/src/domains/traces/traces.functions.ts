@@ -1,3 +1,4 @@
+import { listSessionMomentIntelligenceUseCase } from "@domain/conversation-intelligence"
 import { exportSelectionSchema } from "@domain/exports"
 import {
   filterSetSchema,
@@ -26,7 +27,15 @@ import {
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
-import { TraceRepositoryLive, TraceSearchRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  ConversationMomentLabelRepositoryLive,
+  ConversationSemanticMomentRepositoryLive,
+  ConversationSessionAnalysisRepositoryLive,
+  TaxonomyObservationRepositoryLive,
+  TraceRepositoryLive,
+  TraceSearchRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -98,6 +107,36 @@ export const toTraceRecord = (trace: Trace): TraceRecord => ({
   rootSpanId: trace.rootSpanId,
   rootSpanName: trace.rootSpanName,
 })
+
+export interface SessionMomentIntelligenceRecord {
+  readonly moment: {
+    readonly momentId: string
+    readonly analysisHash: string
+    readonly firstMessageIndex: number
+    readonly lastMessageIndex: number
+    readonly boundaryReason: string
+    readonly coherenceScore: number
+    readonly segmentationMethod: string
+    readonly segmentationVersion: string
+  }
+  readonly labels: readonly {
+    readonly labelId: string
+    readonly kind: string
+    readonly actor: string
+    readonly firstMessageIndex: number
+    readonly lastMessageIndex: number
+    readonly summary: string
+    readonly evidence: string
+    readonly confidence: number
+  }[]
+  readonly taxonomyObservations: readonly {
+    readonly observationId: string
+    readonly dimension: string
+    readonly assignedClusterId: string | null
+    readonly assignmentConfidence: number
+    readonly assignmentMethod: string
+  }[]
+}
 
 export interface TraceDetailRecord extends TraceRecord {
   readonly systemInstructions: GenAISystem
@@ -381,6 +420,64 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
         withAi(AIEmbedLive, getRedisClient()),
         withTracing,
         Effect.orElseSucceed((): TraceSearchHighlightsResult => ({ highlights: [], firstMatchIndex: -1 })),
+      ),
+    )
+  })
+
+export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), analysisHash: z.string().optional() }))
+  .handler(async ({ data }): Promise<readonly SessionMomentIntelligenceRecord[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    return Effect.runPromise(
+      listSessionMomentIntelligenceUseCase({
+        organizationId,
+        projectId: data.projectId,
+        sessionId: data.sessionId,
+        ...(data.analysisHash ? { analysisHash: data.analysisHash } : {}),
+      }).pipe(
+        Effect.map((result) =>
+          result.moments.map((row) => ({
+            moment: {
+              momentId: row.moment.momentId,
+              analysisHash: row.moment.analysisHash,
+              firstMessageIndex: row.moment.firstMessageIndex,
+              lastMessageIndex: row.moment.lastMessageIndex,
+              boundaryReason: row.moment.boundaryReason,
+              coherenceScore: row.moment.coherenceScore,
+              segmentationMethod: row.moment.segmentationMethod,
+              segmentationVersion: row.moment.segmentationVersion,
+            },
+            labels: row.labels.map((label) => ({
+              labelId: label.labelId,
+              kind: label.kind,
+              actor: label.actor,
+              firstMessageIndex: label.firstMessageIndex,
+              lastMessageIndex: label.lastMessageIndex,
+              summary: label.summary,
+              evidence: label.evidence,
+              confidence: label.confidence,
+            })),
+            taxonomyObservations: row.taxonomyObservations.map((observation) => ({
+              observationId: observation.observationId,
+              dimension: observation.dimension,
+              assignedClusterId: observation.assignedClusterId,
+              assignmentConfidence: observation.assignmentConfidence,
+              assignmentMethod: observation.assignmentMethod,
+            })),
+          })),
+        ),
+        withClickHouse(
+          Layer.mergeAll(
+            ConversationSemanticMomentRepositoryLive,
+            ConversationMomentLabelRepositoryLive,
+            ConversationSessionAnalysisRepositoryLive,
+            TaxonomyObservationRepositoryLive,
+          ),
+          getClickhouseClient(),
+          orgId,
+        ),
+        withTracing,
       ),
     )
   })

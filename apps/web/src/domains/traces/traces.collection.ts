@@ -12,6 +12,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { useMemo } from "react"
 import {
   countTracesByProject,
+  getSessionMomentIntelligence,
   getTraceCohortSummary,
   getTraceDetail,
   getTraceDistinctValues,
@@ -20,11 +21,14 @@ import {
   getTraceSearchHighlights,
   getTraceTimeHistogramByProject,
   listTracesByProject,
+  type SessionMomentIntelligenceRecord,
   type TraceDetailRecord,
   type TraceRecord,
 } from "./traces.functions.ts"
 
 const traceDetailQueryKey = (projectId: string, traceId: string) => ["traceDetail", projectId, traceId] as const
+const sessionMomentIntelligenceQueryKey = (projectId: string, sessionId: string) =>
+  ["sessionMomentIntelligence", projectId, sessionId] as const
 
 const BATCH_SIZE = 50
 
@@ -264,6 +268,23 @@ export function useTraceDetail({
       return result as TraceDetailRecord | null
     },
     enabled: enabled && projectId.length > 0 && traceId.length > 0,
+  })
+}
+
+export function useSessionMomentIntelligence({
+  projectId,
+  sessionId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly sessionId: string | null | undefined
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: sessionMomentIntelligenceQueryKey(projectId, sessionId ?? ""),
+    queryFn: async (): Promise<readonly SessionMomentIntelligenceRecord[]> =>
+      getSessionMomentIntelligence({ data: { projectId, sessionId: sessionId ?? "" } }),
+    enabled: enabled && projectId.length > 0 && Boolean(sessionId),
   })
 }
 
