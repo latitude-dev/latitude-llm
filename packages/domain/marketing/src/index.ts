@@ -20,10 +20,25 @@ export {
   marketingUserGroupSchema,
 } from "./ports/marketing-contacts.ts"
 export {
+  SIGNUP_ATTRIBUTION_TTL_SECONDS,
+  type SignupAttributionInput,
+  signupAttributionCacheKey,
+  signupAttributionInputSchema,
+  toMarketingAttribution,
+} from "./signup-attribution.ts"
+export {
+  type ConsumeSignupAttributionInput,
+  consumeSignupAttribution,
+} from "./use-cases/consume-signup-attribution.ts"
+export {
   type MarkContactTelemetryEnabledInput,
   markContactTelemetryEnabled,
 } from "./use-cases/mark-contact-telemetry-enabled.ts"
 export { type RegisterContactInput, registerContact } from "./use-cases/register-contact.ts"
+export {
+  type StashSignupAttributionInput,
+  stashSignupAttribution,
+} from "./use-cases/stash-signup-attribution.ts"
 export {
   type UpdateContactOnboardingInput,
   updateContactOnboarding,

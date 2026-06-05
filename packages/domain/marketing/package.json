@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
+    "@domain/events": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/users": "workspace:*",

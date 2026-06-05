@@ -1,5 +1,6 @@
 import { PRO_PLAN_CONFIG, SELF_SERVE_PLAN_SLUGS } from "@domain/billing"
 import type { MarketingAttribution } from "@domain/events"
+import { consumeSignupAttribution } from "@domain/marketing"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import { generateId, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { createRedisClient, createRedisConnection, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
@@ -26,11 +27,6 @@ import { withTracing } from "@repo/observability"
 import { mcp } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
-import {
-  type SignupAttributionInput,
-  signupAttributionKey,
-  toMarketingAttribution,
-} from "../lib/analytics/signup-attribution.ts"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
@@ -240,15 +236,12 @@ export const getBetterAuth = () => {
         // the payload; the worker forwards it to PostHog.
         let attribution: MarketingAttribution = {}
         try {
-          const redis = getRedisClient()
-          const key = signupAttributionKey(user.email)
-          const raw = await redis.get(key)
-          if (raw) {
-            // Parse/map before deleting: a parse failure then leaves the key for
-            // a retry (and it self-expires via TTL anyway).
-            attribution = toMarketingAttribution(JSON.parse(raw) as SignupAttributionInput)
-            await redis.del(key)
-          }
+          attribution = await Effect.runPromise(
+            consumeSignupAttribution({ email: user.email }).pipe(
+              Effect.provide(RedisCacheStoreLive(getRedisClient())),
+              withTracing,
+            ),
+          )
         } catch {
           // Never block signup on attribution.
         }

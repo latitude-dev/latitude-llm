@@ -1,11 +1,12 @@
+import { signupAttributionInputSchema, stashSignupAttribution } from "@domain/marketing"
 import { InvitationRepository } from "@domain/organizations"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { InvitationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
 import z from "zod"
-import { SIGNUP_ATTRIBUTION_TTL_SECONDS, signupAttributionKey } from "../../lib/analytics/signup-attribution.ts"
 import { getAdminPostgresClient, getBetterAuth, getRedisClient } from "../../server/clients.ts"
 
 const sendMagicLinkInputSchema = z.object({
@@ -14,13 +15,7 @@ const sendMagicLinkInputSchema = z.object({
   newUserCallbackURL: z.string().optional(),
   captchaToken: z.string().optional(),
   // Browser-captured attribution; stashed by email for `onUserCreated`. Best-effort.
-  attribution: z
-    .object({
-      sessionId: z.string().optional(),
-      referrer: z.string().optional(),
-      trackingParams: z.record(z.string(), z.string()).optional(),
-    })
-    .optional(),
+  attribution: signupAttributionInputSchema.optional(),
 })
 
 export const sendMagicLink = createServerFn({ method: "POST" })
@@ -32,19 +27,13 @@ export const sendMagicLink = createServerFn({ method: "POST" })
       headers.set("x-captcha-response", data.captchaToken)
     }
 
-    const attribution = data.attribution
-    const hasAttribution =
-      !!attribution &&
-      (!!attribution.sessionId ||
-        !!attribution.referrer ||
-        (!!attribution.trackingParams && Object.keys(attribution.trackingParams).length > 0))
-    if (hasAttribution) {
+    if (data.attribution) {
       try {
-        await getRedisClient().set(
-          signupAttributionKey(data.email),
-          JSON.stringify(attribution),
-          "EX",
-          SIGNUP_ATTRIBUTION_TTL_SECONDS,
+        await Effect.runPromise(
+          stashSignupAttribution({ email: data.email, attribution: data.attribution }).pipe(
+            Effect.provide(RedisCacheStoreLive(getRedisClient())),
+            withTracing,
+          ),
         )
       } catch {
         // Never block the magic link on attribution.
