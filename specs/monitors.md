@@ -1477,13 +1477,13 @@ Smaller than originally estimated because most of the heavy lifting has already 
 
 **Goal:** All thirteen monitor endpoints live. SDK regenerated and bumped.
 
-- [ ] `apps/api/src/routes/monitors.ts` — thirteen endpoints on the `defineApiEndpoint<OrganizationScopedEnv>` factory (incl. `createMonitorAlert` / `updateMonitorAlert` / `deleteMonitorAlert`).
-- [ ] `apps/api/src/openapi/entities/monitor.ts` — `MonitorSchema` + `toMonitorResponse(monitor)` mapper. Rich `.describe(...)` on every field so SDK and MCP tools carry useful docs.
-- [ ] Register routes in `apps/api/src/routes/index.ts` at `/v1/projects/:projectSlug/monitors`.
-- [ ] Reuse domain Zod schemas for input validation.
-- [ ] `pnpm openapi:emit && pnpm mcp:emit && pnpm --filter @latitude-data/sdk generate`. Commit the generated files in the same PR.
-- [ ] Bump SDK version in `packages/sdk/package.json` and add a CHANGELOG entry under `packages/sdk/CHANGELOG.md`.
-- [ ] Backend tests for the thirteen endpoints: schema validation, auth/scope, response shape, error cases (delete on system monitor, kind not in allowlist, mismatched kind/source.type, `updateMonitorAlert` rejecting kind/source change on system but allowing a kind change on a user monitor, create/delete alert on system rejected, system `updateMonitor`/`deleteMonitor` rejection, system `updateMonitorAlert` condition edit allowed).
+- [x] `apps/api/src/routes/monitors.ts` — thirteen endpoints on the `defineApiEndpoint<OrganizationScopedEnv>` factory (incl. `createMonitorAlert` / `updateMonitorAlert` / `deleteMonitorAlert`). All reuse the `@domain/monitors` use-cases; tagged `["Monitors"]` under the `monitors` Fern SDK group, all `low` rate-limit tier. Monitor-level mutations return the full `Monitor`; alert reads (`listMonitorAlerts` / `getMonitorAlert`) project from it. `list` / `listIncidents` are cursor-paginated (opaque base64url offset / `(endedAt, id)` keyset).
+- [x] `apps/api/src/openapi/entities/monitor.ts` — `MonitorSchema` + `MonitorAlertSchema` + `MonitorIncidentSchema` + the `AlertCondition` family (`AlertCondition` / `AlertCountThreshold` / `AlertBaseline` / `AlertDuration`) as named components, plus `toMonitorResponse` / `toMonitorAlertResponse` / `toMonitorIncidentResponse` mappers and the cursor codecs. Rich `.describe(...)` on every field. (`incident.ts` refactored to export `incidentFields` so `MonitorIncident` reuses them + adds `notified`.)
+- [x] Register routes in `apps/api/src/routes/index.ts` at `/v1/projects/:projectSlug/monitors` (mounted last to minimise path-ordering churn in the regenerated manifests).
+- [x] Reuse domain Zod schemas for input validation (request bodies mirror the `@domain/shared` condition union; the validated condition is cast back to `AlertIncidentCondition` at the boundary).
+- [x] `pnpm openapi:emit && pnpm mcp:emit && pnpm generate:sdk`. Generated `apps/api/openapi.json` (+15 components, +13 ops), `apps/api/mcp.json` (71 tools), and `packages/sdk/typescript/src` committed in the same PR. Required adding `@domain/monitors` + `@domain/notifications` to `apps/api/package.json`.
+- [x] Bumped SDK version to `6.0.0-alpha.6` in `packages/sdk/typescript/package.json` + CHANGELOG entry under `packages/sdk/typescript/CHANGELOG.md`.
+- [x] Backend tests (`apps/api/src/routes/monitors.test.ts`, 13 cases): auth/scope (401), empty page, create + response shape, empty-alert-list 400, system-only kind 400, threshold-missing-condition 400, get/404, rename, alert list/get/404, alert add + last-alert-delete 400, mute/unmute, empty incidents page, and the system-monitor matrix (delete/edit/add-alert/severity-change → 403; condition edit + mute → 200).
 
 ### Milestone 10 — User-facing documentation
 

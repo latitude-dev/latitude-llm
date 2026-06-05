@@ -7,6 +7,7 @@ import { DatasetsClient } from "./api/resources/datasets/client/Client.js";
 import { IncidentsClient } from "./api/resources/incidents/client/Client.js";
 import { IssuesClient } from "./api/resources/issues/client/Client.js";
 import { MembersClient } from "./api/resources/members/client/Client.js";
+import { MonitorsClient } from "./api/resources/monitors/client/Client.js";
 import { OauthKeysClient } from "./api/resources/oauthKeys/client/Client.js";
 import { ProjectsClient } from "./api/resources/projects/client/Client.js";
 import { SavedSearchesClient } from "./api/resources/savedSearches/client/Client.js";
@@ -36,6 +37,7 @@ export class LatitudeApiClient {
     protected _oauthKeys: OauthKeysClient | undefined;
     protected _account: AccountClient | undefined;
     protected _members: MembersClient | undefined;
+    protected _monitors: MonitorsClient | undefined;
 
     constructor(options: LatitudeApiClient.Options) {
         this._options = normalizeClientOptionsWithAuth(options);
@@ -87,6 +89,10 @@ export class LatitudeApiClient {
 
     public get members(): MembersClient {
         return (this._members ??= new MembersClient(this._options));
+    }
+
+    public get monitors(): MonitorsClient {
+        return (this._monitors ??= new MonitorsClient(this._options));
     }
 
     /**

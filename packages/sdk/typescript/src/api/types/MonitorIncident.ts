@@ -2,7 +2,7 @@
 
 import type * as LatitudeApi from "../index.js";
 
-export interface Incident {
+export interface MonitorIncident {
     /** Stable incident identifier. */
     id: string;
     /** Organization that owns this incident. */
@@ -10,13 +10,13 @@ export interface Incident {
     /** Project this incident belongs to. */
     projectId: string;
     /** Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search. */
-    sourceType: Incident.SourceType;
+    sourceType: MonitorIncident.SourceType;
     /** Id of the entity that triggered the incident (matches `sourceType`). */
     sourceId: string;
     /** Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window. */
-    kind: Incident.Kind;
+    kind: MonitorIncident.Kind;
     /** Severity bucket assigned to the incident: `low`, `medium`, or `high`. */
-    severity: Incident.Severity;
+    severity: MonitorIncident.Severity;
     /** ISO-8601 timestamp at which the incident opened. */
     startedAt: string;
     /** ISO-8601 timestamp at which the incident closed, or `null` if still open. */
@@ -26,9 +26,11 @@ export interface Incident {
     /** Id of the monitor alert that opened this incident, or `null` for incidents not attributed to a monitor (legacy issue-event incidents). */
     monitorAlertId?: string | undefined;
     condition?: LatitudeApi.AlertCondition | undefined;
+    /** `true` when this incident triggered at least one notification; `false` when the monitor was muted or notifications were disabled. */
+    notified: boolean;
 }
 
-export namespace Incident {
+export namespace MonitorIncident {
     /** Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search. */
     export const SourceType = {
         Issue: "issue",

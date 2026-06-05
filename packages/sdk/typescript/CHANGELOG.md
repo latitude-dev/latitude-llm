@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-alpha.6] - 2026-06-05
+
+### Added
+
+- **`client.monitors`** — `list`, `create`, `get`, `update`, `delete`, `listAlerts`, `createAlert`, `getAlert`, `updateAlert`, `deleteAlert`, `listIncidents`, `mute`, `unmute`. A monitor groups one or more saved-search alerts. The three issue-lifecycle monitors are auto-provisioned (`system: true`) and reject `delete` / `update` / adding or removing alerts — only `mute` / `unmute` and editing an existing alert's condition values are allowed. `list` and `listIncidents` are cursor-paginated; `listIncidents` items carry a `notified` flag.
+- New shared types: `Monitor`, `MonitorAlert`, `MonitorAlertSource`, `AlertCondition`, `AlertCountThreshold`, `AlertBaseline`, `AlertDuration`, `MonitorIncident`, `PaginatedMonitors`, `PaginatedMonitorIncidents`, and the request bodies `CreateMonitorBody`, `CreateMonitorAlertBody`, `UpdateMonitorBody`, `UpdateMonitorAlertBody`.
+
+### Changed
+
+- **`Incident`** gained `monitorAlertId` (the firing monitor alert, or `null` for unattributed incidents) and `condition` (the firing alert's `AlertCondition` snapshot, or `null` for no-parameter kinds). Both fields are additive and appear on every `client.incidents.list` item and on `client.monitors.listIncidents` items.
+
 ## [6.0.0-alpha.5] - 2026-06-04
 
 ### Removed

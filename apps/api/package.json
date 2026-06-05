@@ -24,6 +24,7 @@
     "@domain/exports": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",
+    "@domain/monitors": "workspace:*",
     "@domain/oauth-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",

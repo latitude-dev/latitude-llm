@@ -14,6 +14,8 @@ export * as issues from "./issues/index.js";
 export * from "./issues/types/index.js";
 export * from "./members/client/requests/index.js";
 export * as members from "./members/index.js";
+export * from "./monitors/client/requests/index.js";
+export * as monitors from "./monitors/index.js";
 export * as oauthKeys from "./oauthKeys/index.js";
 export * from "./projects/client/requests/index.js";
 export * as projects from "./projects/index.js";

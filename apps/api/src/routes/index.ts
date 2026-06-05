@@ -13,6 +13,7 @@ import { registerHealthRoute } from "./health.ts"
 import { createIncidentsRoutes, incidentsPath } from "./incidents.ts"
 import { createIssuesRoutes, issuesPath } from "./issues.ts"
 import { createMembersRoutes, membersPath } from "./members.ts"
+import { createMonitorsRoutes, monitorsPath } from "./monitors.ts"
 import { createOAuthKeysRoutes, oauthKeysPath } from "./oauth-keys.ts"
 import { createProjectsRoutes, projectsPath } from "./projects.ts"
 import { createSavedSearchesRoutes, savedSearchesPath } from "./saved-searches.ts"
@@ -64,6 +65,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route(oauthKeysPath, createOAuthKeysRoutes())
   routes.route(accountPath, createAccountRoutes())
   routes.route(membersPath, createMembersRoutes())
+  routes.route(monitorsPath, createMonitorsRoutes())
 
   registerMcpRoute({ app, routes })
 
