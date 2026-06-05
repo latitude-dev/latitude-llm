@@ -13,8 +13,10 @@ import type { AlertIncidentKind, AlertIncidentSourceType } from "@domain/shared"
  * `UserSignedUp` event. `$session_id` links the server event to the browser
  * session (unlocks `$entry_current_url`); UTM/click ids are the fallback.
  */
-// `type` not `interface`: keeps the implicit index signature so the `UserSignedUp`
-// intersection stays assignable to the worker's `Record<string, unknown>` constraint.
+// `type` not `interface`: TS gives an object *type alias* an implicit index signature
+// but not an interface (TS#15300), so the `UserSignedUp` intersection stays assignable
+// to the worker's `Record<string, unknown>` constraint. As an interface, apps/workers
+// fails to typecheck.
 export type MarketingAttribution = {
   readonly $session_id?: string
   readonly $referrer?: string

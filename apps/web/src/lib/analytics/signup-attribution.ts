@@ -6,8 +6,8 @@ import type { MarketingAttribution } from "@domain/events"
 // Pre-org scope, so the `org:` key convention doesn't apply.
 export const signupAttributionKey = (email: string): string => `signup-attr:${email.toLowerCase()}`
 
-// Must comfortably outlast the magic-link click window.
-export const SIGNUP_ATTRIBUTION_TTL_SECONDS = 60 * 30
+// Comfortably outlasts the 1h magic-link window (create-better-auth.ts `expiresIn: 3600`).
+export const SIGNUP_ATTRIBUTION_TTL_SECONDS = 60 * 120
 
 /** Raw attribution captured in the browser and stored verbatim as JSON in Redis. */
 export interface SignupAttributionInput {

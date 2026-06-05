@@ -244,8 +244,10 @@ export const getBetterAuth = () => {
           const key = signupAttributionKey(user.email)
           const raw = await redis.get(key)
           if (raw) {
-            await redis.del(key)
+            // Parse/map before deleting: a parse failure then leaves the key for
+            // a retry (and it self-expires via TTL anyway).
             attribution = toMarketingAttribution(JSON.parse(raw) as SignupAttributionInput)
+            await redis.del(key)
           }
         } catch {
           // Never block signup on attribution.
