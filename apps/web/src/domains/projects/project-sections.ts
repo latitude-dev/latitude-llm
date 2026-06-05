@@ -3,6 +3,7 @@ import {
   Building2,
   CreditCard,
   DatabaseIcon,
+  Fingerprint,
   Key,
   type LucideIcon,
   Package,
@@ -25,7 +26,7 @@ import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
  * the optional `flag` field and resolved by the `useVisible*` hooks below.
  */
 
-type SectionFlag = "monitors" | "slack"
+type SectionFlag = "monitors" | "slack" | "sso"
 
 interface ProjectSection {
   readonly key: string
@@ -133,6 +134,13 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         path: (slug) => `/projects/${slug}/settings/integrations`,
         flag: "slack",
       },
+      {
+        key: "sso",
+        label: "Single sign-on",
+        icon: Fingerprint,
+        path: (slug) => `/projects/${slug}/settings/sso`,
+        flag: "sso",
+      },
     ],
   },
   {
@@ -147,7 +155,8 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
 function useSectionFlags(): Record<SectionFlag, boolean> {
   const monitors = useHasFeatureFlag("monitors")
   const slack = useHasFeatureFlag("slack")
-  return useMemo(() => ({ monitors, slack }), [monitors, slack])
+  const sso = useHasFeatureFlag("sso")
+  return useMemo(() => ({ monitors, slack, sso }), [monitors, slack, sso])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */
