@@ -61,6 +61,7 @@ export {
   SlackIntegrationRepositoryLive,
   softRevokeSlackIntegrationAcrossOrgs,
 } from "./repositories/slack-integration-repository.ts"
+export { SsoProviderRepositoryLive } from "./repositories/sso-provider-repository.ts"
 export { StripeBillingProviderLive } from "./repositories/stripe-billing-provider.ts"
 export { StripeSubscriptionLookupLive } from "./repositories/stripe-subscription-lookup.ts"
 export { TaxonomyClusterRepositoryLive } from "./repositories/taxonomy-cluster-repository.ts"
