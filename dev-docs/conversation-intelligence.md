@@ -1,6 +1,6 @@
 # Conversation Intelligence
 
-Conversation intelligence turns raw session telemetry into semantic structure: **session analyses**, **semantic moments**, **moment labels** (signals like escalation or frustration), and **taxonomy observations** that feed the topic tree documented in [`./taxonomy.md`](./taxonomy.md). It is the session-analysis half of the behaviours product; the clustering half lives in the taxonomy domain.
+Conversation intelligence turns raw session telemetry into semantic structure: **session analyses**, **session semantic moments**, **session moment labels** (signals like escalation or frustration), and **sampled taxonomy observations** that feed the topic tree documented in [`./taxonomy.md`](./taxonomy.md). It is the session-analysis half of the behaviours product; the clustering half lives in the taxonomy domain.
 
 Domain code: `packages/domain/conversation-intelligence`. ClickHouse adapters: `packages/platform/db-clickhouse/src/repositories/conversation-intelligence-repositories.ts`. Orchestration: `apps/workflows/src/workflows/analyze-session-workflow.ts` + `apps/workflows/src/activities/analyze-session-activities.ts`, started from the trace-end boundary (see [`./spans.md`](./spans.md)) with the deterministic workflow id `org:${organizationId}:conversation-intelligence:analyzeSession:${projectId}:${sessionId}`.
 
@@ -31,7 +31,7 @@ semantic segmentation ──► semantic moments (full-exchange minimum unit)
         deepest-fit tree routing (routeToDeepestClusterUseCase, @domain/taxonomy)
                  │
                  ▼
-persist: observations (CH, first) ──► centroid increments (PG, retry-gated)
+persist: sampled observations (CH, first) ──► centroid increments (PG, retry-gated)
          ──► analysis gate row + moments + labels (CH, last)
 ```
 
@@ -60,9 +60,9 @@ Labels are **behavioral signals, not topics**. They feed the Signals columns, th
 
 ### Topic projection and routing
 
-Each moment emits at most one taxonomy observation in the single `topic` dimension: the moment's text is embedded (`moment_text_embedding` is the only projection method) and routed into the cluster tree with `routeToDeepestClusterUseCase` (deepest-fit descent — see taxonomy doc). Moments too similar to **ritual anchors** (greetings, thanks, sign-offs) are suppressed and never become observations; the ritual gate is calibrated like label gates.
+Each moment may emit one taxonomy observation: the moment's text is embedded (`moment_text_embedding` is the only projection method) and routed into the cluster tree with `routeToDeepestClusterUseCase` (deepest-fit descent — see taxonomy doc). Moments too similar to **ritual anchors** (greetings, thanks, sign-offs) are suppressed and never become observations; the ritual gate is calibrated like label gates.
 
-Observations that clear no cluster gate persist as `noise` carrying their rejected top similarity — those confidences feed clustering calibration, and gardening later sweeps them into births or reassignments.
+Taxonomy observations are a representative clustering sample, not the complete semantic-moment fact table. The analyzer always persists the full `session_semantic_moments` and `session_moment_labels` outputs, but `taxonomy_observations` is capped per project (`TAXONOMY_OBSERVATION_SAMPLE_MAX`) and has an additional noise cap (`TAXONOMY_NOISE_SAMPLE_MAX`). Once either cap is reached, the analyzer skips new taxonomy observation rows while still storing the complete session moment and label data. Observations that clear no cluster gate persist as `noise` only while the noise sample has room; accepted noise rows carry their rejected top similarity, feed clustering calibration, and are later swept by gardening into births or reassignments.
 
 ## Data model (ClickHouse)
 
@@ -73,7 +73,7 @@ All four tables are `ReplacingMergeTree(indexed_at)` partitioned by month, sorte
 | `session_analyses` | `session_id` | One row per session: `analysis_hash`, status, lens, trace ids |
 | `session_semantic_moments` | `session_id, analysis_hash, moment_id` | Segmentation output: message index range, boundary reason, coherence |
 | `session_moment_labels` | `session_id, analysis_hash, label_id` | Signal kind, confidence, evidence, message range, `moment_id` |
-| `taxonomy_observations` | `dimension, observation_id` | Topic projections: embedding, `assigned_cluster_id`, assignment method/confidence, `analysis_hash` |
+| `taxonomy_observations` | `assigned_cluster_id, start_time, observation_id` | Sampled topic projections: embedding, `assigned_cluster_id`, assignment method/confidence, `analysis_hash` |
 
 ### Analysis generations and the pinning rule
 
@@ -97,10 +97,10 @@ Unpinned reads return the union of all generations — duplicated moments, stale
 The analyzer is a retried Temporal activity, so every write is either idempotent or retry-gated:
 
 - All ids are content hashes embedding the generation hash — re-running identical content reproduces identical rows, which ReplacingMergeTree dedups.
-- **Centroid increments are not idempotent** (Postgres `observationCount + 1`, EMA add). The observation rows act as applied-markers: they are written to ClickHouse *first*, and a retry skips the increment for any `observation_id` that already existed (`TaxonomyObservationRepository.filterExistingIds`). A crash between the two loses at most one increment — gardening self-corrects — instead of double-counting forever.
+- **Centroid increments are not idempotent** (Postgres `observationCount + 1`, EMA add). Accepted observation rows act as applied-markers: they are written to ClickHouse *first*, and a retry skips the increment for any `observation_id` that already existed (`TaxonomyObservationRepository.filterExistingIds`). A crash between the two loses at most one increment — gardening self-corrects — instead of double-counting forever.
 - The hash-current skip (`analysisStatus !== "failed"` guard) makes unchanged sessions free.
 
-## Calibration (`calibrate-conversation-thresholds.ts`)
+## Calibration (`calibrate-session-thresholds.ts`)
 
 Stored in Postgres `latitude.calibration_profiles` (`scope = "conversation"`), refreshed by the gardening workflow past its TTL, and deleted on QA resets so fresh corpora recalibrate with current code:
 
