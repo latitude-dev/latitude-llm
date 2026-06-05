@@ -16,10 +16,10 @@ import { IssueRegressedNotification } from "./issue-regressed.tsx"
 import { SavedSearchIncidentNotification } from "./saved-search.tsx"
 
 /**
- * Notification kinds map 1:1 to lifecycle events:
- * - `incident.event`  → one-shot (issue.new, issue.regressed, savedSearch.match, savedSearch.threshold)
- * - `incident.opened` → sustained start (issue.escalating, savedSearch.escalating)
- * - `incident.closed` → sustained close (issue.escalating, savedSearch.escalating)
+ * Notification kinds map to lifecycle events:
+ * - `incident.event`  → one-shot (issue.new, issue.regressed, savedSearch.match, and savedSearch.threshold in `absolute` mode — a point-in-time breach)
+ * - `incident.opened` → sustained start (issue.escalating, savedSearch.escalating, and savedSearch.threshold in `multiplier`/`expected` mode — these open with `endedAt = null` and close later)
+ * - `incident.closed` → sustained close (issue.escalating, savedSearch.escalating, savedSearch.threshold multiplier/expected)
  */
 export type IncidentEvent = "event" | "opened" | "closed"
 
@@ -59,7 +59,9 @@ const renderOpened = (notification: NotificationRecord, payload: IncidentOpenedP
   if (payload.incidentKind === "issue.escalating") {
     return <IssueEscalatingNotification notification={notification} payload={payload} event="opened" />
   }
-  if (payload.incidentKind === "savedSearch.escalating") {
+  // savedSearch.threshold in `multiplier`/`expected` mode is sustained (opens with `endedAt = null`),
+  // so it lands here alongside savedSearch.escalating. (`absolute` mode is one-shot → incident.event.)
+  if (payload.incidentKind === "savedSearch.escalating" || payload.incidentKind === "savedSearch.threshold") {
     return <SavedSearchIncidentNotification notification={notification} payload={payload} event="opened" />
   }
   // Eventful kinds shouldn't land as opened; defensive fallback.
@@ -70,7 +72,8 @@ const renderClosed = (notification: NotificationRecord, payload: IncidentClosedP
   if (payload.incidentKind === "issue.escalating") {
     return <IssueEscalatingNotification notification={notification} payload={payload} event="closed" />
   }
-  if (payload.incidentKind === "savedSearch.escalating") {
+  // savedSearch.threshold in `multiplier`/`expected` mode is sustained, so its close lands here too.
+  if (payload.incidentKind === "savedSearch.escalating" || payload.incidentKind === "savedSearch.threshold") {
     return <SavedSearchIncidentNotification notification={notification} payload={payload} event="closed" />
   }
   // Eventful kinds shouldn't land as closed; defensive fallback.
