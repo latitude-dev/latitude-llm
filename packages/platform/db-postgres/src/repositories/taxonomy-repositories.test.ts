@@ -2,15 +2,12 @@ import {
   NotFoundError,
   OrganizationId,
   ProjectId,
-  TaxonomyCategoryId,
   TaxonomyClusterId,
   TaxonomyLineageId,
   TaxonomyRunId,
 } from "@domain/shared"
 import {
   createTaxonomyCentroid,
-  type TaxonomyCategory,
-  TaxonomyCategoryRepository,
   type TaxonomyCluster,
   type TaxonomyClusterLineage,
   TaxonomyClusterRepository,
@@ -21,13 +18,11 @@ import {
 } from "@domain/taxonomy"
 import { Effect, Layer } from "effect"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import { taxonomyCategories } from "../schema/taxonomy-categories.ts"
 import { taxonomyClusterLineage } from "../schema/taxonomy-cluster-lineage.ts"
 import { taxonomyClusters } from "../schema/taxonomy-clusters.ts"
 import { taxonomyRuns } from "../schema/taxonomy-runs.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
-import { TaxonomyCategoryRepositoryLive } from "./taxonomy-category-repository.ts"
 import { TaxonomyClusterRepositoryLive } from "./taxonomy-cluster-repository.ts"
 import { TaxonomyLineageRepositoryLive } from "./taxonomy-lineage-repository.ts"
 import { TaxonomyRunRepositoryLive } from "./taxonomy-run-repository.ts"
@@ -61,7 +56,11 @@ const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster 
   id: TaxonomyClusterId("c".repeat(24)),
   organizationId,
   projectId,
-  parentCategoryId: null,
+  dimension: "topic",
+  parentClusterId: null,
+  depth: 0,
+  path: "",
+  splitLinkThreshold: null,
   name: "User requested cancellation",
   description: "The user asks to cancel an account or subscription.",
   centroid: centroidFrom(vector({ 0: 1 })),
@@ -76,26 +75,11 @@ const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster 
   ...overrides,
 })
 
-const makeCategory = (overrides: Partial<TaxonomyCategory> = {}): TaxonomyCategory => ({
-  id: TaxonomyCategoryId("a".repeat(24)),
-  organizationId,
-  projectId,
-  name: "Billing",
-  description: "Billing and subscription behavior.",
-  centroidEmbedding: vector({ 0: 1 }),
-  clusterCount: 1,
-  observationCount: 3,
-  state: "active",
-  clusteredAt: now,
-  createdAt: now,
-  updatedAt: now,
-  ...overrides,
-})
-
 const makeRun = (overrides: Partial<TaxonomyRun> = {}): TaxonomyRun => ({
   id: TaxonomyRunId("r".repeat(24)),
   organizationId,
   projectId,
+  dimension: "topic",
   trigger: "manual",
   status: "running",
   startedAt: now,
@@ -105,7 +89,6 @@ const makeRun = (overrides: Partial<TaxonomyRun> = {}): TaxonomyRun => ({
   clustersBorn: 0,
   clustersMerged: 0,
   clustersDeprecated: 0,
-  categoriesRebuilt: 0,
   error: null,
   ...overrides,
 })
@@ -114,6 +97,7 @@ const makeLineage = (overrides: Partial<TaxonomyClusterLineage> = {}): TaxonomyC
   id: TaxonomyLineageId("l".repeat(24)),
   organizationId,
   projectId,
+  dimension: "topic",
   runId: TaxonomyRunId("r".repeat(24)),
   transitionType: "birth",
   fromClusterIds: [],
@@ -125,7 +109,6 @@ const makeLineage = (overrides: Partial<TaxonomyClusterLineage> = {}): TaxonomyC
 
 const repositories = Layer.mergeAll(
   TaxonomyClusterRepositoryLive,
-  TaxonomyCategoryRepositoryLive,
   TaxonomyLineageRepositoryLive,
   TaxonomyRunRepositoryLive,
 )
@@ -144,7 +127,6 @@ describe("taxonomy Postgres repositories", () => {
     await database.db.delete(taxonomyClusterLineage)
     await database.db.delete(taxonomyRuns)
     await database.db.delete(taxonomyClusters)
-    await database.db.delete(taxonomyCategories)
   })
 
   afterAll(async () => {
@@ -183,8 +165,6 @@ describe("taxonomy Postgres repositories", () => {
       centroid: centroidFrom(vector({ 1: 1 })),
       observationCount: 1,
     })
-    const categoryId = TaxonomyCategoryId("a".repeat(24))
-
     await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* TaxonomyClusterRepository
@@ -193,17 +173,25 @@ describe("taxonomy Postgres repositories", () => {
 
         const nearest = yield* repository.listNearestActive({
           projectId,
+          dimension: "topic",
           queryVector: vector({ 0: 1 }),
           k: 2,
         })
         expect(nearest.map((match) => match.cluster.id)).toEqual([first.id, second.id])
         expect(nearest[0]?.cosine).toBeGreaterThan(0.99)
 
-        const page = yield* repository.list({ projectId, state: "active", limit: 10, offset: 0 })
+        const page = yield* repository.list({
+          projectId,
+          dimension: "topic",
+          state: "active",
+          limit: 10,
+          offset: 0,
+        })
         expect(page.items.map((cluster) => cluster.id)).toEqual([first.id, second.id])
 
         const search = yield* repository.hybridSearch({
           projectId,
+          dimension: "topic",
           query: "cancellation",
           normalizedEmbedding: vector({ 0: 1 }),
           state: "active",
@@ -212,56 +200,11 @@ describe("taxonomy Postgres repositories", () => {
         })
         expect(search[0]?.clusterId).toBe(first.id)
 
-        yield* repository.bulkUpdateParentCategory({
-          projectId,
-          assignments: [{ clusterId: first.id, parentCategoryId: categoryId }],
-        })
-        expect((yield* repository.findById(first.id)).parentCategoryId).toBe(categoryId)
-
-        yield* repository.incrementObservationCount({
-          clusterId: first.id,
-          delta: 2,
-          lastObservedAt: new Date("2026-05-25T00:00:00.000Z"),
-        })
-        expect((yield* repository.findById(first.id)).observationCount).toBe(5)
-
         yield* repository.markMerged({ clusterId: second.id, mergedIntoClusterId: first.id, timestamp: now })
         expect((yield* repository.findById(second.id)).mergedIntoClusterId).toBe(first.id)
 
         yield* repository.markDeprecated({ clusterId: first.id, timestamp: now })
         expect((yield* repository.findById(first.id)).state).toBe("deprecated")
-      }).pipe(provideRepos(database)),
-    )
-  })
-
-  it("saves categories and finds the closest active category by vector", async () => {
-    const billing = makeCategory()
-    const product = makeCategory({
-      id: TaxonomyCategoryId("b".repeat(24)),
-      name: "Product feedback",
-      centroidEmbedding: vector({ 1: 1 }),
-      observationCount: 1,
-    })
-
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const repository = yield* TaxonomyCategoryRepository
-        yield* repository.save(billing)
-        yield* repository.save(product)
-
-        const best = yield* repository.findBestMatchByVector({
-          projectId,
-          queryVector: vector({ 0: 1 }),
-        })
-        expect(best?.category.id).toBe(billing.id)
-        expect(best?.cosine).toBeGreaterThan(0.99)
-
-        expect(
-          (yield* repository.listByProject({ projectId, state: "active" })).map((category) => category.id),
-        ).toEqual([billing.id, product.id])
-
-        yield* repository.markDeprecated({ categoryId: product.id, timestamp: now })
-        expect((yield* repository.findById(product.id)).state).toBe("deprecated")
       }).pipe(provideRepos(database)),
     )
   })
@@ -285,13 +228,13 @@ describe("taxonomy Postgres repositories", () => {
         yield* runs.insert(run)
         yield* runs.save(laterRun)
         expect((yield* runs.findById(run.id)).status).toBe("running")
-        expect((yield* runs.findLatestByProject({ projectId }))?.id).toBe(laterRun.id)
-        expect((yield* runs.listRunning({ projectId })).map((item) => item.id)).toEqual([run.id])
+        expect((yield* runs.findLatestByProject({ projectId, dimension: "topic" }))?.id).toBe(laterRun.id)
+        expect((yield* runs.listRunning({ projectId, dimension: "topic" })).map((item) => item.id)).toEqual([run.id])
 
         yield* lineageRepository.appendMany([lineage])
-        expect((yield* lineageRepository.listRecent({ projectId, limit: 10 })).map((row) => row.id)).toEqual([
-          lineage.id,
-        ])
+        expect(
+          (yield* lineageRepository.listRecent({ projectId, dimension: "topic", limit: 10 })).map((row) => row.id),
+        ).toEqual([lineage.id])
       }).pipe(provideRepos(database)),
     )
   })

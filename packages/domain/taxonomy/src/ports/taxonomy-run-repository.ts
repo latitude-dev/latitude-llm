@@ -1,5 +1,6 @@
 import type { NotFoundError, ProjectId, RepositoryError, SqlClient, TaxonomyRunId } from "@domain/shared"
 import { Context, type Effect } from "effect"
+import type { TaxonomyDimension } from "../entities/dimension.ts"
 import type { TaxonomyRun } from "../entities/lineage.ts"
 
 export interface TaxonomyRunRepositoryShape {
@@ -7,6 +8,7 @@ export interface TaxonomyRunRepositoryShape {
   /** Most recent run per project, regardless of status. */
   findLatestByProject(input: {
     readonly projectId: ProjectId
+    readonly dimension: TaxonomyDimension
   }): Effect.Effect<TaxonomyRun | null, RepositoryError, SqlClient>
   /**
    * Currently-running rows for the project. The gardening eligibility gate
@@ -14,9 +16,11 @@ export interface TaxonomyRunRepositoryShape {
    */
   listRunning(input: {
     readonly projectId: ProjectId
+    readonly dimension: TaxonomyDimension
   }): Effect.Effect<readonly TaxonomyRun[], RepositoryError, SqlClient>
   listRecentCompleted(input: {
     readonly projectId: ProjectId
+    readonly dimension: TaxonomyDimension
     readonly limit: number
   }): Effect.Effect<readonly TaxonomyRun[], RepositoryError, SqlClient>
   insert(run: TaxonomyRun): Effect.Effect<void, RepositoryError, SqlClient>

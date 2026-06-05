@@ -2115,4 +2115,156 @@ describe("SessionRepository", () => {
     // import noise minimal without producing an unused-warning.
     void buildAlignedAt
   })
+
+  describe("conversation-intelligence filters (moments/topics)", () => {
+    const HASH_CURRENT = "a".repeat(64)
+    const HASH_STALE = "b".repeat(64)
+    const CLUSTER_ID = "c".repeat(24)
+    const startTime = new Date("2026-05-24T10:00:00.000Z")
+
+    const analysisRow = (sessionId: string, hash: string, indexedAt: string) => ({
+      organization_id: ORG_ID as string,
+      project_id: PROJECT_ID as string,
+      session_id: sessionId,
+      start_time: "2026-05-24 10:00:00.000000000",
+      end_time: "2026-05-24 10:05:00.000000000",
+      trace_ids: [],
+      analysis_hash: hash,
+      interaction_kind: "user_conversation",
+      analysis_lens: "conversation",
+      analysis_status: "analyzed",
+      detector_version: "v1",
+      indexed_at: indexedAt,
+    })
+
+    const labelRow = (sessionId: string, hash: string, kind: string) => ({
+      organization_id: ORG_ID as string,
+      project_id: PROJECT_ID as string,
+      session_id: sessionId,
+      analysis_hash: hash,
+      label_id: `${sessionId}-${kind}`,
+      moment_id: `${sessionId}-moment`,
+      kind,
+      actor: "user",
+      first_message_index: 0,
+      last_message_index: 1,
+      evidence: "quote",
+      detector_version: "v1",
+      indexed_at: "2026-05-24 10:06:00.000",
+    })
+
+    const observationRow = (sessionId: string, hash: string, clusterId: string) => ({
+      organization_id: ORG_ID as string,
+      project_id: PROJECT_ID as string,
+      observation_id: `${sessionId.slice(0, 12)}`.padEnd(24, "x"),
+      session_id: sessionId,
+      analysis_hash: hash,
+      moment_id: `${sessionId}-moment`,
+      dimension: "topic",
+      projection_method: "moment_text_embedding",
+      projection_hash: "d".repeat(64),
+      projection_metadata: "{}",
+      embedding: [1, 0, 0],
+      start_time: "2026-05-24 10:00:30.000000000",
+      end_time: "2026-05-24 10:01:00.000000000",
+      assigned_cluster_id: clusterId,
+      assignment_confidence: 0.9,
+      assignment_method: "centroid_online",
+      reassignment_run_id: "",
+      indexed_at: "2026-05-24 10:06:00.000000000",
+    })
+
+    // The testkit truncates every table in beforeEach, so fixtures seed
+    // inside each test via this helper (same pattern as the span tests).
+    const seedCiFixtures = async () => {
+      // Two sessions: ci-escalated has an escalation label and a topic
+      // observation under its CURRENT analysis; ci-plain has a label only
+      // under a STALE generation (its current analysis has none).
+      await insertSpans([
+        makeSpanRow({ traceId: "a1".repeat(16), spanId: "a".repeat(16), sessionId: "ci-escalated", startTime }),
+        makeSpanRow({ traceId: "b1".repeat(16), spanId: "b".repeat(16), sessionId: "ci-plain", startTime }),
+      ])
+      await ch.client.insert({
+        table: "conversation_session_analyses",
+        values: [
+          analysisRow("ci-escalated", HASH_CURRENT, "2026-05-24 10:06:00.000"),
+          analysisRow("ci-plain", HASH_STALE, "2026-05-24 10:06:00.000"),
+          analysisRow("ci-plain", HASH_CURRENT, "2026-05-24 10:07:00.000"),
+        ],
+        format: "JSONEachRow",
+      })
+      await ch.client.insert({
+        table: "conversation_moment_labels",
+        values: [
+          labelRow("ci-escalated", HASH_CURRENT, "escalation"),
+          // Stale-generation label: must NOT match after pinning.
+          labelRow("ci-plain", HASH_STALE, "escalation"),
+        ],
+        format: "JSONEachRow",
+      })
+      await ch.client.insert({
+        table: "taxonomy_observations",
+        values: [observationRow("ci-escalated", HASH_CURRENT, CLUSTER_ID)],
+        format: "JSONEachRow",
+      })
+    }
+
+    const listWith = (filters: Record<string, unknown>) =>
+      repo.listByProjectId({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        options: { limit: 50, filters: filters as never },
+      })
+
+    it("moments filter matches only sessions whose CURRENT analysis carries the kind", async () => {
+      await seedCiFixtures()
+      const page = await Effect.runPromise(
+        listWith({ moments: [{ op: "in", value: ["escalation"] }] }).pipe(
+          Effect.provide(Layer.mergeAll(mockAILayer, ChSqlClientLive(ch.client, ORG_ID))),
+        ),
+      )
+      const ids = page.items.map((session) => session.sessionId as string)
+      expect(ids).toContain("ci-escalated")
+      // ci-plain's escalation label belongs to a superseded generation.
+      expect(ids).not.toContain("ci-plain")
+    })
+
+    it("topics filter matches sessions with observations in the selected clusters", async () => {
+      await seedCiFixtures()
+      const page = await Effect.runPromise(
+        listWith({ topics: [{ op: "in", value: [CLUSTER_ID] }] }).pipe(
+          Effect.provide(Layer.mergeAll(mockAILayer, ChSqlClientLive(ch.client, ORG_ID))),
+        ),
+      )
+      const ids = page.items.map((session) => session.sessionId as string)
+      expect(ids).toContain("ci-escalated")
+      expect(ids).not.toContain("ci-plain")
+    })
+
+    it("a no-match sentinel topic id matches zero sessions instead of dropping the filter", async () => {
+      await seedCiFixtures()
+      const page = await Effect.runPromise(
+        listWith({ topics: [{ op: "in", value: ["__no_matching_topic__"] }] }).pipe(
+          Effect.provide(Layer.mergeAll(mockAILayer, ChSqlClientLive(ch.client, ORG_ID))),
+        ),
+      )
+      const ids = page.items.map((session) => session.sessionId as string)
+      expect(ids).not.toContain("ci-escalated")
+      expect(ids).not.toContain("ci-plain")
+    })
+
+    it("count agrees with the filtered list", async () => {
+      await seedCiFixtures()
+      const count = await Effect.runPromise(
+        repo
+          .countByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            filters: { moments: [{ op: "in", value: ["escalation"] }] } as never,
+          })
+          .pipe(Effect.provide(Layer.mergeAll(mockAILayer, ChSqlClientLive(ch.client, ORG_ID)))),
+      )
+      expect(count.totalCount).toBe(1)
+    })
+  })
 })

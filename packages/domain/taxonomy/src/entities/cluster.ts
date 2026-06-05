@@ -1,10 +1,11 @@
-import { cuidSchema, taxonomyCategoryIdSchema, taxonomyClusterIdSchema } from "@domain/shared"
+import { cuidSchema, taxonomyClusterIdSchema } from "@domain/shared"
 import { z } from "zod"
 import {
   TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH,
   TAXONOMY_CLUSTER_NAME_MAX_LENGTH,
   TAXONOMY_CLUSTER_STATES,
 } from "../constants.ts"
+import { taxonomyDimensionSchema } from "./dimension.ts"
 
 // ---------------------------------------------------------------------------
 // TaxonomyClusterState
@@ -45,7 +46,20 @@ export const taxonomyClusterSchema = z.object({
   id: taxonomyClusterIdSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
-  parentCategoryId: taxonomyCategoryIdSchema.nullable(), // null while uncategorized
+  dimension: taxonomyDimensionSchema,
+  /** Tree parent. Null = root node (the coarsest density level). */
+  parentClusterId: taxonomyClusterIdSchema.nullable(),
+  /** 0 = root; each level clusters at a tighter density than its parent. */
+  depth: z.number().int().nonnegative(),
+  /** Ancestor id chain like "rootId/parentId/" (empty for roots). Subtree
+   * queries are a prefix match and a node may never appear in its own path. */
+  path: z.string(),
+  /**
+   * The link density this node's children were split at; null until the node
+   * recurses. Child-level merge floors and descent gates read it so every
+   * decision at that level uses the density that created it.
+   */
+  splitLinkThreshold: z.number().min(0).max(1).nullable(),
   name: z.string().min(1).max(TAXONOMY_CLUSTER_NAME_MAX_LENGTH),
   description: z.string().max(TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH), // empty allowed for "Pending" naming
   centroid: taxonomyCentroidSchema,

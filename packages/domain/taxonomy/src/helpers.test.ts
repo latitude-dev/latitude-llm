@@ -2,16 +2,15 @@ import { describe, expect, it } from "vitest"
 import { TAXONOMY_CENTROID_HALF_LIFE_SECONDS, TAXONOMY_EMBEDDING_DIMENSIONS } from "./constants.ts"
 import type { TaxonomyCentroid } from "./entities/cluster.ts"
 import {
-  agglomerativeCluster,
   clamp,
   cosineSimilarity,
   cosineSimilarityNormalized,
   createTaxonomyCentroid,
+  diameterBoundedGreedyClusters,
   farthestPointSample,
   meanNormalized,
   normalizeTaxonomyCentroid,
   normalizeTaxonomyEmbedding,
-  singleLinkageClusters,
   softmax,
   updateTaxonomyCentroid,
 } from "./helpers.ts"
@@ -167,17 +166,28 @@ describe("cosine + softmax", () => {
   })
 })
 
-describe("singleLinkageClusters", () => {
-  it("groups embeddings that share a high-cosine edge into one component", () => {
+describe("diameterBoundedGreedyClusters", () => {
+  it("splits chained components into tight centroid neighborhoods", () => {
+    const points = [normalize([1, 0]), normalize([0.7, 0.7]), normalize([0, 1])]
+    const candidates = diameterBoundedGreedyClusters({
+      embeddings: points,
+      connectivityThreshold: 0.65,
+      minMembers: 2,
+      maxDiameter: 0.2,
+    })
+    expect(candidates).toEqual([])
+  })
+
+  it("keeps repeated semantic neighborhoods birthable even when nearby variants exist", () => {
     const points = [
       normalize([1, 0, 0]),
-      normalize([0.99, 0.05, 0]),
-      normalize([0.98, -0.05, 0]),
-      normalize([0, 1, 0]), // far cluster
-      normalize([0.02, 0.99, 0]),
-      normalize([0.03, 0.97, 0]),
+      normalize([0.99, 0.04, 0]),
+      normalize([0.98, -0.04, 0]),
+      normalize([0, 1, 0]),
+      normalize([0.04, 0.99, 0]),
+      normalize([-0.04, 0.98, 0]),
     ]
-    const candidates = singleLinkageClusters({
+    const candidates = diameterBoundedGreedyClusters({
       embeddings: points,
       connectivityThreshold: 0.95,
       minMembers: 2,
@@ -187,64 +197,6 @@ describe("singleLinkageClusters", () => {
     const memberSets = candidates.map((c) => c.members.slice().sort((a, b) => a - b))
     expect(memberSets).toContainEqual([0, 1, 2])
     expect(memberSets).toContainEqual([3, 4, 5])
-  })
-
-  it("rejects candidates below the min-members floor", () => {
-    const points = [normalize([1, 0]), normalize([0.99, 0.01])]
-    const candidates = singleLinkageClusters({
-      embeddings: points,
-      connectivityThreshold: 0.9,
-      minMembers: 3,
-      maxDiameter: 0.5,
-    })
-    expect(candidates).toEqual([])
-  })
-
-  it("rejects candidates whose diameter exceeds the cap (chain cut)", () => {
-    // A chain a-b-c where a..c are far apart but each adjacent pair is close.
-    const points = [normalize([1, 0]), normalize([0.7, 0.7]), normalize([0, 1])]
-    const candidates = singleLinkageClusters({
-      embeddings: points,
-      connectivityThreshold: 0.65,
-      minMembers: 2,
-      maxDiameter: 0.2, // a..c cosine distance is ~1; should be rejected
-    })
-    expect(candidates).toEqual([])
-  })
-
-  it("returns no candidates for empty input", () => {
-    expect(
-      singleLinkageClusters({ embeddings: [], connectivityThreshold: 0.8, minMembers: 1, maxDiameter: 0.5 }),
-    ).toEqual([])
-  })
-})
-
-describe("agglomerativeCluster", () => {
-  it("rolls clearly-separable input into the requested k components", () => {
-    const vectors = [
-      normalize([1, 0, 0]),
-      normalize([0.95, 0.1, 0]),
-      normalize([0, 1, 0]),
-      normalize([0.05, 0.99, 0]),
-      normalize([0, 0, 1]),
-      normalize([0.05, 0.05, 0.97]),
-    ]
-    const { assignments, clusters } = agglomerativeCluster({ vectors, k: 3 })
-    expect(clusters).toHaveLength(3)
-    expect(assignments[0]).toBe(assignments[1])
-    expect(assignments[2]).toBe(assignments[3])
-    expect(assignments[4]).toBe(assignments[5])
-    expect(new Set(assignments).size).toBe(3)
-  })
-
-  it("returns one cluster per input when k >= n", () => {
-    const vectors = [normalize([1, 0]), normalize([0, 1])]
-    const { clusters } = agglomerativeCluster({ vectors, k: 5 })
-    expect(clusters).toHaveLength(2)
-  })
-
-  it("handles empty input", () => {
-    expect(agglomerativeCluster({ vectors: [], k: 3 })).toEqual({ assignments: [], clusters: [] })
   })
 })
 

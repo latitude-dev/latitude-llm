@@ -10,6 +10,7 @@ const toDomainRun = (row: typeof taxonomyRuns.$inferSelect): TaxonomyRun =>
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
+    dimension: row.dimension,
     trigger: row.trigger,
     status: row.status,
     startedAt: row.startedAt,
@@ -19,7 +20,6 @@ const toDomainRun = (row: typeof taxonomyRuns.$inferSelect): TaxonomyRun =>
     clustersBorn: row.clustersBorn,
     clustersMerged: row.clustersMerged,
     clustersDeprecated: row.clustersDeprecated,
-    categoriesRebuilt: row.categoriesRebuilt,
     error: row.error,
   })
 
@@ -27,6 +27,7 @@ const toInsertRow = (run: TaxonomyRun): typeof taxonomyRuns.$inferInsert => ({
   id: run.id,
   organizationId: run.organizationId,
   projectId: run.projectId,
+  dimension: run.dimension,
   trigger: run.trigger,
   status: run.status,
   startedAt: run.startedAt,
@@ -36,7 +37,6 @@ const toInsertRow = (run: TaxonomyRun): typeof taxonomyRuns.$inferInsert => ({
   clustersBorn: run.clustersBorn,
   clustersMerged: run.clustersMerged,
   clustersDeprecated: run.clustersDeprecated,
-  categoriesRebuilt: run.categoriesRebuilt,
   error: run.error,
 })
 
@@ -64,21 +64,7 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
             )
         }),
 
-      findLatestByProject: ({ projectId }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const rows = yield* sqlClient.query((db, organizationId) =>
-            db
-              .select()
-              .from(taxonomyRuns)
-              .where(and(eq(taxonomyRuns.organizationId, organizationId), eq(taxonomyRuns.projectId, projectId)))
-              .orderBy(desc(taxonomyRuns.startedAt))
-              .limit(1),
-          )
-          return rows[0] ? toDomainRun(rows[0]) : null
-        }),
-
-      listRunning: ({ projectId }) =>
+      findLatestByProject: ({ projectId, dimension }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -89,6 +75,27 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyRuns.organizationId, organizationId),
                   eq(taxonomyRuns.projectId, projectId),
+                  eq(taxonomyRuns.dimension, dimension),
+                ),
+              )
+              .orderBy(desc(taxonomyRuns.startedAt))
+              .limit(1),
+          )
+          return rows[0] ? toDomainRun(rows[0]) : null
+        }),
+
+      listRunning: ({ projectId, dimension }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select()
+              .from(taxonomyRuns)
+              .where(
+                and(
+                  eq(taxonomyRuns.organizationId, organizationId),
+                  eq(taxonomyRuns.projectId, projectId),
+                  eq(taxonomyRuns.dimension, dimension),
                   eq(taxonomyRuns.status, "running"),
                 ),
               )
@@ -97,7 +104,7 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
           return rows.map(toDomainRun)
         }),
 
-      listRecentCompleted: ({ projectId, limit }) =>
+      listRecentCompleted: ({ projectId, dimension, limit }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -108,6 +115,7 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
                 and(
                   eq(taxonomyRuns.organizationId, organizationId),
                   eq(taxonomyRuns.projectId, projectId),
+                  eq(taxonomyRuns.dimension, dimension),
                   eq(taxonomyRuns.status, "completed"),
                 ),
               )
@@ -136,6 +144,7 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
                 target: taxonomyRuns.id,
                 set: {
                   projectId: row.projectId,
+                  dimension: row.dimension,
                   trigger: row.trigger,
                   status: row.status,
                   startedAt: row.startedAt,
@@ -145,7 +154,6 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
                   clustersBorn: row.clustersBorn,
                   clustersMerged: row.clustersMerged,
                   clustersDeprecated: row.clustersDeprecated,
-                  categoriesRebuilt: row.categoriesRebuilt,
                   error: row.error,
                 },
               }),

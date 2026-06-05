@@ -1,0 +1,285 @@
+import { Effect } from "effect"
+import type { TaxonomyMomentObservation } from "../entities/observation.ts"
+import type { TaxonomyObservationRepositoryShape } from "../ports/taxonomy-observation-repository.ts"
+
+const observationKey = (organizationId: string, projectId: string, dimension: string, observationId: string): string =>
+  `${organizationId}|${projectId}|${dimension}|${observationId}`
+
+export const createFakeTaxonomyObservationRepository = (
+  seed: readonly TaxonomyMomentObservation[] = [],
+  overrides?: Partial<TaxonomyObservationRepositoryShape>,
+) => {
+  const rows = new Map<string, TaxonomyMomentObservation>(
+    seed.map(
+      (observation) =>
+        [
+          observationKey(
+            observation.organizationId,
+            observation.projectId,
+            observation.dimension,
+            observation.observationId,
+          ),
+          observation,
+        ] as const,
+    ),
+  )
+
+  // ReplacingMergeTree(indexed_at) semantics: the row with the highest
+  // version wins regardless of write order; an equal version is a TIE the
+  // real table resolves arbitrarily — the fake keeps the existing row so
+  // version-tie bugs surface as stale reads instead of passing silently.
+  const setVersioned = (key: string, observation: TaxonomyMomentObservation) => {
+    const existing = rows.get(key)
+    if (existing && existing.indexedAt.getTime() >= observation.indexedAt.getTime()) return
+    rows.set(key, observation)
+  }
+
+  const repository: TaxonomyObservationRepositoryShape = {
+    upsert: (observation) =>
+      Effect.sync(() => {
+        setVersioned(
+          observationKey(
+            observation.organizationId,
+            observation.projectId,
+            observation.dimension,
+            observation.observationId,
+          ),
+          observation,
+        )
+      }),
+
+    upsertMany: (observations) =>
+      Effect.sync(() => {
+        for (const observation of observations) {
+          setVersioned(
+            observationKey(
+              observation.organizationId,
+              observation.projectId,
+              observation.dimension,
+              observation.observationId,
+            ),
+            observation,
+          )
+        }
+      }),
+
+    reassignMany: (inputs) =>
+      Effect.sync(() => {
+        for (const {
+          observation,
+          assignedClusterId,
+          assignmentMethod,
+          assignmentConfidence,
+          reassignmentRunId,
+          indexedAt,
+        } of inputs) {
+          setVersioned(
+            observationKey(
+              observation.organizationId,
+              observation.projectId,
+              observation.dimension,
+              observation.observationId,
+            ),
+            {
+              ...observation,
+              assignedClusterId,
+              assignmentMethod,
+              assignmentConfidence,
+              reassignmentRunId,
+              indexedAt,
+            },
+          )
+        }
+      }),
+
+    filterExistingIds: ({ organizationId, projectId, observationIds }) =>
+      Effect.sync(() => {
+        const requested = new Set(observationIds)
+        return [...rows.values()]
+          .filter(
+            (row) =>
+              row.organizationId === organizationId && row.projectId === projectId && requested.has(row.observationId),
+          )
+          .map((row) => row.observationId)
+      }),
+
+    listNoise: ({ organizationId, projectId, dimension, since, limit }) =>
+      Effect.sync(() => {
+        const filtered = [...rows.values()]
+          .filter(
+            (observation) =>
+              observation.organizationId === organizationId &&
+              observation.projectId === projectId &&
+              observation.dimension === dimension &&
+              observation.assignedClusterId === null &&
+              observation.embedding.length > 0 &&
+              observation.startTime >= since,
+          )
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+        return typeof limit === "number" ? filtered.slice(0, limit) : filtered
+      }),
+
+    listByCluster: ({ organizationId, projectId, dimension, clusterId, limit, beforeStartTime, beforeObservationId }) =>
+      Effect.sync(() =>
+        [...rows.values()]
+          .filter((observation) => {
+            if (
+              observation.organizationId !== organizationId ||
+              observation.projectId !== projectId ||
+              observation.dimension !== dimension ||
+              observation.assignedClusterId !== clusterId
+            ) {
+              return false
+            }
+            if (!beforeStartTime) return true
+            if (observation.startTime < beforeStartTime) return true
+            return beforeObservationId
+              ? observation.startTime.getTime() === beforeStartTime.getTime() &&
+                  observation.observationId > beforeObservationId
+              : false
+          })
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+          .slice(0, limit),
+      ),
+
+    listAllByCluster: ({ organizationId, projectId, dimension, clusterId, limit }) =>
+      Effect.sync(() =>
+        [...rows.values()]
+          .filter(
+            (observation) =>
+              observation.organizationId === organizationId &&
+              observation.projectId === projectId &&
+              observation.dimension === dimension &&
+              observation.assignedClusterId === clusterId,
+          )
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+          .slice(0, limit),
+      ),
+
+    listBySession: ({ organizationId, projectId, sessionId, analysisHash }) =>
+      Effect.sync(() =>
+        [...rows.values()]
+          .filter(
+            (observation) =>
+              observation.organizationId === organizationId &&
+              observation.projectId === projectId &&
+              observation.sessionId === sessionId &&
+              (analysisHash === undefined || observation.analysisHash === analysisHash),
+          )
+          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime() || a.dimension.localeCompare(b.dimension)),
+      ),
+
+    sampleEmbeddings: ({ organizationId, projectId, dimension, limit }) =>
+      Effect.sync(() =>
+        [...rows.values()]
+          .filter(
+            (observation) =>
+              observation.organizationId === organizationId &&
+              observation.projectId === projectId &&
+              observation.dimension === dimension &&
+              observation.embedding.length > 0,
+          )
+          .slice(0, limit)
+          .map((observation) => observation.embedding),
+      ),
+
+    sampleAssignmentScores: ({ organizationId, projectId, dimension, limit }) =>
+      Effect.sync(() =>
+        [...rows.values()]
+          .filter(
+            (observation) =>
+              observation.organizationId === organizationId &&
+              observation.projectId === projectId &&
+              observation.dimension === dimension,
+          )
+          .slice(0, limit)
+          .map((observation) => ({
+            assigned: observation.assignedClusterId !== null,
+            confidence: observation.assignmentConfidence,
+          })),
+      ),
+
+    getCounts: ({ organizationId, projectId, dimension, since }) =>
+      Effect.sync(() => {
+        let total = 0
+        let assigned = 0
+        let noise = 0
+        for (const observation of rows.values()) {
+          if (
+            observation.organizationId !== organizationId ||
+            observation.projectId !== projectId ||
+            observation.dimension !== dimension ||
+            observation.startTime < since
+          ) {
+            continue
+          }
+          total++
+          if (observation.assignedClusterId === null) noise++
+          else assigned++
+        }
+        return { total, assigned, noise }
+      }),
+
+    getTopClustersByOccurrence: ({ organizationId, projectId, dimension, since, limit }) =>
+      Effect.sync(() => {
+        const counts = new Map<string, number>()
+        for (const observation of rows.values()) {
+          if (
+            observation.organizationId !== organizationId ||
+            observation.projectId !== projectId ||
+            observation.dimension !== dimension ||
+            observation.startTime < since ||
+            observation.assignedClusterId === null
+          ) {
+            continue
+          }
+          const clusterId = observation.assignedClusterId
+          counts.set(clusterId, (counts.get(clusterId) ?? 0) + 1)
+        }
+        return [...counts.entries()]
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, limit)
+          .map(([clusterId, count]) => ({ clusterId: clusterId as never, count }))
+      }),
+
+    getClusterTrendCounts: ({
+      organizationId,
+      projectId,
+      dimension,
+      clusterIds,
+      currentSince,
+      baselineSince,
+      baselineDays,
+    }) =>
+      Effect.sync(() =>
+        clusterIds.map((clusterId) => {
+          let currentCount = 0
+          let baselineCount = 0
+          for (const observation of rows.values()) {
+            if (
+              observation.organizationId !== organizationId ||
+              observation.projectId !== projectId ||
+              observation.dimension !== dimension ||
+              observation.assignedClusterId !== clusterId ||
+              observation.startTime < baselineSince
+            ) {
+              continue
+            }
+            if (observation.startTime >= currentSince) currentCount++
+            else baselineCount++
+          }
+          return { clusterId, currentCount, baselineCount, baselineDays }
+        }),
+      ),
+
+    ...overrides,
+  }
+
+  return { repository, rows }
+}
