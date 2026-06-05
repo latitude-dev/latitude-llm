@@ -37,14 +37,22 @@ const toSafeJobId = (dedupeKey: string): string => base64urlEncode(dedupeKey)
  * Throws on mutually-exclusive or incomplete coalescing options.
  */
 export const buildBullMqJobOptions = (label: string, options?: PublishOptions): Record<string, unknown> => {
-  const coalescingOptions = [options?.debounceMs, options?.throttleMs, options?.latestThrottleMs].filter(
-    (value) => value !== undefined,
-  )
+  const coalescingOptions = [
+    options?.debounceMs,
+    options?.throttleMs,
+    options?.latestThrottleMs,
+    options?.leadingThrottleMs,
+  ].filter((value) => value !== undefined)
   if (coalescingOptions.length > 1) {
-    throw new Error(`${label}: debounceMs, throttleMs and latestThrottleMs are mutually exclusive`)
+    throw new Error(`${label}: debounceMs, throttleMs, latestThrottleMs and leadingThrottleMs are mutually exclusive`)
   }
-  if ((options?.throttleMs !== undefined || options?.latestThrottleMs !== undefined) && !options.dedupeKey) {
-    throw new Error(`${label}: throttleMs and latestThrottleMs require a dedupeKey`)
+  if (
+    (options?.throttleMs !== undefined ||
+      options?.latestThrottleMs !== undefined ||
+      options?.leadingThrottleMs !== undefined) &&
+    !options.dedupeKey
+  ) {
+    throw new Error(`${label}: throttleMs, latestThrottleMs and leadingThrottleMs require a dedupeKey`)
   }
 
   const bullmqOptions: Record<string, unknown> = {}
@@ -58,12 +66,17 @@ export const buildBullMqJobOptions = (label: string, options?: PublishOptions): 
   //     exactly `throttleMs` after the first publish.
   //   - latest-throttle: `extend: false, replace: true` — the first publish
   //     sets the fire time, later publishes update the payload only.
+  //   - leading-throttle: same flags as throttle (`extend: false, replace: false`)
+  //     but with NO delay — the first publish fires immediately and the TTL
+  //     marker drops re-adds for the window. The run lands at the *start* of the
+  //     window, so a trailing-window evaluation still covers the triggering activity.
   const delayMs = options?.debounceMs ?? options?.throttleMs ?? options?.latestThrottleMs
+  const isCoalescing = delayMs !== undefined || options?.leadingThrottleMs !== undefined
   // Custom jobId is for bare-dedupeKey idempotency only. Coalescing relies on the
   // TTL-based `deduplication` marker instead — a jobId would be retained by
   // removeOnComplete and shadow later publishes, so a recurring throttle/debounce would
   // fire once and go dormant.
-  if (options?.dedupeKey && delayMs === undefined) {
+  if (options?.dedupeKey && !isCoalescing) {
     bullmqOptions.jobId = toSafeJobId(options.dedupeKey)
   }
   if (delayMs !== undefined) {
@@ -77,6 +90,13 @@ export const buildBullMqJobOptions = (label: string, options?: PublishOptions): 
         extend: extendsWindow,
         replace: replacesPayload,
       }
+    }
+  } else if (options?.leadingThrottleMs !== undefined && options?.dedupeKey) {
+    bullmqOptions.deduplication = {
+      id: options.dedupeKey,
+      ttl: options.leadingThrottleMs,
+      extend: false,
+      replace: false,
     }
   }
   if (options?.attempts !== undefined && options.attempts > 0) {

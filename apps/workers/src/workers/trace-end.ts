@@ -234,6 +234,8 @@ export const runTraceEndJob =
       })
 
       // Saved-search firing check, throttled to one run per project per 5 min.
+      // Leading-edge: runs immediately so its trailing evaluation window covers
+      // the traces that triggered it, instead of sliding 5 min past them.
       yield* publisher
         .publish(
           "monitors",
@@ -244,7 +246,7 @@ export const runTraceEndJob =
               organizationId: payload.organizationId,
               projectId: payload.projectId,
             }),
-            throttleMs: SAVED_SEARCH_MONITORS_THROTTLE_MS,
+            leadingThrottleMs: SAVED_SEARCH_MONITORS_THROTTLE_MS,
           },
         )
         .pipe(

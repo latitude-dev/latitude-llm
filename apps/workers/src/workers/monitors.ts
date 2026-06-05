@@ -86,11 +86,11 @@ export const createMonitorsWorker = ({
       ),
     sweepSavedSearchMonitors: () =>
       sweepSavedSearchMonitorsUseCase({
-        // Same throttled key as trace-end so both triggers coalesce into one check per project.
+        // Same leading-edge throttle + key as trace-end so both triggers coalesce into one check per project.
         publish: (target) =>
           publisher.publish("monitors", "checkSavedSearchMonitors", target, {
             dedupeKey: savedSearchMonitorsCheckDedupeKey(target),
-            throttleMs: SAVED_SEARCH_MONITORS_THROTTLE_MS,
+            leadingThrottleMs: SAVED_SEARCH_MONITORS_THROTTLE_MS,
           }),
       }).pipe(
         withPostgres(MonitorRepositoryLive, adminPgClient),

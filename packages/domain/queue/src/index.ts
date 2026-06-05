@@ -89,7 +89,7 @@ export interface PublishOptions {
    * of quiet on this `dedupeKey`. Appropriate when you want to wait for a
    * stream of events to settle (e.g. `trace-end:run` after `TracesIngested`).
    *
-   * Mutually exclusive with `throttleMs` and `latestThrottleMs`.
+   * Mutually exclusive with `throttleMs`, `latestThrottleMs` and `leadingThrottleMs`.
    */
   readonly debounceMs?: number
   /**
@@ -101,7 +101,7 @@ export interface PublishOptions {
    * when you want a predictable "at most once per N" cadence even under a
    * constant flow of publishes (e.g. annotation-driven alignment refresh).
    *
-   * Requires `dedupeKey`. Mutually exclusive with `debounceMs` and `latestThrottleMs`.
+   * Requires `dedupeKey`. Mutually exclusive with `debounceMs`, `latestThrottleMs` and `leadingThrottleMs`.
    */
   readonly throttleMs?: number
   /**
@@ -111,9 +111,25 @@ export interface PublishOptions {
    * upper bound of `latestThrottleMs` on fire latency from the first publish,
    * while using the latest payload seen in that window.
    *
-   * Requires `dedupeKey`. Mutually exclusive with `debounceMs` and `throttleMs`.
+   * Requires `dedupeKey`. Mutually exclusive with `debounceMs`, `throttleMs` and `leadingThrottleMs`.
    */
   readonly latestThrottleMs?: number
+  /**
+   * Leading-edge throttle window in ms. The first publish fires the task
+   * *immediately* (no delay), then suppresses subsequent publishes for
+   * `leadingThrottleMs` per `dedupeKey` (clock not extended, payload not
+   * replaced). Same "at most once per N" rate as `throttleMs`, but the run
+   * happens at the *start* of the window instead of the end.
+   *
+   * Use this when the task evaluates a trailing time window ending at run
+   * time: with `throttleMs` the `throttleMs` delay slides that window past
+   * the very activity that triggered the publish, so a discrete burst can be
+   * missed (the saved-search monitor firing check). Firing on the leading
+   * edge keeps the triggering activity inside the evaluated window.
+   *
+   * Requires `dedupeKey`. Mutually exclusive with `debounceMs`, `throttleMs` and `latestThrottleMs`.
+   */
+  readonly leadingThrottleMs?: number
   /**
    * Total attempts BullMQ should make before the job is considered failed
    * (inclusive of the first try). Set alongside `backoff` to get bounded

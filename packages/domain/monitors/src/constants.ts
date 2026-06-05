@@ -5,7 +5,12 @@
  */
 export const SAVED_SEARCH_CURRENT_WINDOW_MS = 5 * 60 * 1000
 
-/** Trace-end throttle for the per-project `checkSavedSearchMonitors` publish: at most one run per 5 min per project. */
+/**
+ * Leading-edge throttle window for the per-project `checkSavedSearchMonitors` publish:
+ * the first publish runs immediately, then at most one run per 5 min per project. Leading
+ * (not trailing) so the check's trailing evaluation window still covers the traces that
+ * triggered it — a `throttleMs` delay would slide that window 5 min past the burst.
+ */
 export const SAVED_SEARCH_MONITORS_THROTTLE_MS = 5 * 60 * 1000
 
 /** Per-project `checkSavedSearchMonitors` dedupe key, shared by trace-end + the sweep so the two triggers coalesce into one throttled check stream. */

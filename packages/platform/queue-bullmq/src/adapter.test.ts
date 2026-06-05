@@ -45,6 +45,21 @@ describe("buildBullMqJobOptions", () => {
     expect(opts.deduplication).toEqual({ id: "k", ttl: 2_000, extend: false, replace: true })
   })
 
+  // Leading-edge throttle: fire immediately (no delay), then drop re-adds for the window.
+  // The TTL marker rate-limits like throttle, but the run lands at the start of the window
+  // so a trailing-window evaluation still covers the activity that triggered it.
+  it("does NOT set a custom jobId or delay for a leading-throttle publish; drops re-adds via deduplication", () => {
+    const opts = buildBullMqJobOptions(LABEL, { dedupeKey: "org:1:monitors:check:proj-2", leadingThrottleMs: 300_000 })
+    expect(opts.jobId).toBeUndefined()
+    expect(opts.delay).toBeUndefined()
+    expect(opts.deduplication).toEqual({
+      id: "org:1:monitors:check:proj-2",
+      ttl: 300_000,
+      extend: false,
+      replace: false,
+    })
+  })
+
   it("maps attempts + exponential backoff", () => {
     const opts = buildBullMqJobOptions(LABEL, { attempts: 3, backoff: { type: "exponential", delayMs: 1_000 } })
     expect(opts.attempts).toBe(3)
@@ -55,10 +70,14 @@ describe("buildBullMqJobOptions", () => {
     expect(() => buildBullMqJobOptions(LABEL, { dedupeKey: "k", throttleMs: 1, debounceMs: 1 })).toThrow(
       /mutually exclusive/,
     )
+    expect(() => buildBullMqJobOptions(LABEL, { dedupeKey: "k", leadingThrottleMs: 1, throttleMs: 1 })).toThrow(
+      /mutually exclusive/,
+    )
   })
 
-  it("requires a dedupeKey for throttle / latest-throttle", () => {
+  it("requires a dedupeKey for throttle / latest-throttle / leading-throttle", () => {
     expect(() => buildBullMqJobOptions(LABEL, { throttleMs: 1 })).toThrow(/require a dedupeKey/)
     expect(() => buildBullMqJobOptions(LABEL, { latestThrottleMs: 1 })).toThrow(/require a dedupeKey/)
+    expect(() => buildBullMqJobOptions(LABEL, { leadingThrottleMs: 1 })).toThrow(/require a dedupeKey/)
   })
 })
