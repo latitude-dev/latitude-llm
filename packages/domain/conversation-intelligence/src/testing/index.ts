@@ -1,21 +1,21 @@
 import type { OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import { Effect } from "effect"
-import type { ConversationMomentLabel } from "../entities/moment-label.ts"
-import type { ConversationSemanticMoment } from "../entities/semantic-moment.ts"
-import type { ConversationSessionAnalysis } from "../entities/session-analysis.ts"
-import type { ConversationMomentLabelRepositoryShape } from "../ports/moment-label-repository.ts"
-import type { ConversationSemanticMomentRepositoryShape } from "../ports/semantic-moment-repository.ts"
-import type { ConversationSessionAnalysisRepositoryShape } from "../ports/session-analysis-repository.ts"
+import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
+import type { SessionAnalysis } from "../entities/session-analysis.ts"
+import type { SessionMomentLabel } from "../entities/session-moment-label.ts"
+import type { SessionMomentLabelRepositoryShape } from "../ports/session-moment-label-repository.ts"
+import type { SessionSemanticMomentRepositoryShape } from "../ports/session-semantic-moment-repository.ts"
+import type { SessionAnalysisRepositoryShape } from "../ports/session-analysis-repository.ts"
 
 const analysisKey = (organizationId: OrganizationId, projectId: ProjectId, sessionId: SessionId) =>
   `${organizationId}|${projectId}|${sessionId}`
 
-export const createFakeConversationSessionAnalysisRepository = (
-  seed: readonly ConversationSessionAnalysis[] = [],
-  overrides?: Partial<ConversationSessionAnalysisRepositoryShape>,
+export const createFakeSessionAnalysisRepository = (
+  seed: readonly SessionAnalysis[] = [],
+  overrides?: Partial<SessionAnalysisRepositoryShape>,
 ) => {
   const rows = new Map(seed.map((row) => [analysisKey(row.organizationId, row.projectId, row.sessionId), row] as const))
-  const repository: ConversationSessionAnalysisRepositoryShape = {
+  const repository: SessionAnalysisRepositoryShape = {
     findLatest: ({ organizationId, projectId, sessionId }) =>
       Effect.sync(() => rows.get(analysisKey(organizationId, projectId, sessionId)) ?? null),
     upsert: (analysis) =>
@@ -27,9 +27,9 @@ export const createFakeConversationSessionAnalysisRepository = (
   return { repository, rows }
 }
 
-export const createFakeConversationSemanticMomentRepository = (seed: readonly ConversationSemanticMoment[] = []) => {
-  const rows: ConversationSemanticMoment[] = [...seed]
-  const repository: ConversationSemanticMomentRepositoryShape = {
+export const createFakeSessionSemanticMomentRepository = (seed: readonly SessionSemanticMoment[] = []) => {
+  const rows: SessionSemanticMoment[] = [...seed]
+  const repository: SessionSemanticMomentRepositoryShape = {
     upsertMany: (moments) =>
       Effect.sync(() => {
         rows.push(...moments)
@@ -54,9 +54,9 @@ export const createFakeConversationSemanticMomentRepository = (seed: readonly Co
   return { repository, rows }
 }
 
-export const createFakeConversationMomentLabelRepository = (seed: readonly ConversationMomentLabel[] = []) => {
-  const rows: ConversationMomentLabel[] = [...seed]
-  const repository: ConversationMomentLabelRepositoryShape = {
+export const createFakeSessionMomentLabelRepository = (seed: readonly SessionMomentLabel[] = []) => {
+  const rows: SessionMomentLabel[] = [...seed]
+  const repository: SessionMomentLabelRepositoryShape = {
     upsertMany: (labels) =>
       Effect.sync(() => {
         rows.push(...labels)

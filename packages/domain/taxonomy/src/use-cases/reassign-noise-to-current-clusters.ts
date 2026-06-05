@@ -1,6 +1,10 @@
 import { applyDecay, type OrganizationId, type ProjectId, TaxonomyClusterId, type TaxonomyRunId } from "@domain/shared"
 import { Effect } from "effect"
-import { TAXONOMY_CLUSTER_LOCK_TTL_SECONDS, TAXONOMY_NOISE_LOOKBACK_DAYS } from "../constants.ts"
+import {
+  TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+  TAXONOMY_NOISE_LOOKBACK_DAYS,
+  TAXONOMY_NOISE_SAMPLE_MAX,
+} from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import { normalizeTaxonomyEmbedding } from "../helpers.ts"
@@ -83,8 +87,8 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
     const noise = yield* observations.listNoise({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension,
       since,
+      limit: TAXONOMY_NOISE_SAMPLE_MAX,
     })
     if (noise.length === 0) {
       return { noiseScanned: 0, observationsReassigned: 0 } satisfies ReassignNoiseToCurrentClustersResult

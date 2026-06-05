@@ -160,7 +160,6 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
     const trendCounts = yield* observationRepository.getClusterTrendCounts({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension,
       clusterIds: displayable.map((cluster) => cluster.id),
       currentSince: new Date(now.getTime() - TREND_CURRENT_DAYS * MS_PER_DAY),
       baselineSince: new Date(now.getTime() - trendWindowDays * MS_PER_DAY),

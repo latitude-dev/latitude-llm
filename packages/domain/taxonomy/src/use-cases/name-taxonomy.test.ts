@@ -57,7 +57,6 @@ const observation = (overrides: Partial<TaxonomyMomentObservation> = {}): Taxono
   sessionId: SessionId("session-1"),
   analysisHash: "a".repeat(64),
   momentId: "f".repeat(64),
-  dimension: "topic",
   projectionMethod: TaxonomyProjectionMethod.MomentTextEmbedding,
   projectionHash: "b".repeat(64),
   projectionMetadata: {},

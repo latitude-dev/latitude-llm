@@ -11,7 +11,7 @@ export type AnalysisLens = z.infer<typeof analysisLensSchema>
 export const analysisStatusSchema = z.enum(ANALYSIS_STATUSES)
 export type AnalysisStatus = z.infer<typeof analysisStatusSchema>
 
-export const conversationSessionAnalysisSchema = z.object({
+export const sessionAnalysisSchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
   sessionId: sessionIdSchema,
@@ -28,4 +28,4 @@ export const conversationSessionAnalysisSchema = z.object({
   indexedAt: z.date(),
 })
 
-export type ConversationSessionAnalysis = z.infer<typeof conversationSessionAnalysisSchema>
+export type SessionAnalysis = z.infer<typeof sessionAnalysisSchema>

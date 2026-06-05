@@ -8,7 +8,7 @@ export type MomentLabelKind = z.infer<typeof momentLabelKindSchema>
 export const momentLabelActorSchema = z.enum(MOMENT_ACTORS)
 export type MomentLabelActor = z.infer<typeof momentLabelActorSchema>
 
-export const conversationMomentLabelSchema = z.object({
+export const sessionMomentLabelSchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
   sessionId: sessionIdSchema,
@@ -27,4 +27,4 @@ export const conversationMomentLabelSchema = z.object({
   indexedAt: z.date(),
 })
 
-export type ConversationMomentLabel = z.infer<typeof conversationMomentLabelSchema>
+export type SessionMomentLabel = z.infer<typeof sessionMomentLabelSchema>

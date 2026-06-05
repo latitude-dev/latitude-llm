@@ -1,7 +1,6 @@
 import { cuidSchema, sessionIdSchema, taxonomyClusterIdSchema, taxonomyRunIdSchema } from "@domain/shared"
 import { z } from "zod"
 import { TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS, TAXONOMY_PROJECTION_METHODS } from "../constants.ts"
-import { taxonomyDimensionSchema } from "./dimension.ts"
 
 export const taxonomyObservationAssignmentMethodSchema = z.enum(TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS)
 export type TaxonomyObservationAssignmentMethod = z.infer<typeof taxonomyObservationAssignmentMethodSchema>
@@ -23,9 +22,9 @@ export const TaxonomyObservationAssignmentMethod = {
 /**
  * Canonical taxonomy observation for the session-moment redesign.
  *
- * Observations are produced from semantic moments and scoped to one taxonomy
- * dimension, so a single session may emit multiple observations across
- * `user_intent` and `agent_behavior`.
+ * Observations are produced from semantic moments as a representative sample
+ * for clustering. The full semantic-moment and moment-label tables remain the
+ * source of truth for complete per-session moment intelligence.
  */
 export const taxonomyMomentObservationSchema = z.object({
   organizationId: cuidSchema,
@@ -34,7 +33,6 @@ export const taxonomyMomentObservationSchema = z.object({
   sessionId: sessionIdSchema,
   analysisHash: z.string().length(64),
   momentId: z.string().min(1),
-  dimension: taxonomyDimensionSchema,
   projectionMethod: taxonomyProjectionMethodSchema,
   projectionHash: z.string().length(64),
   projectionMetadata: z.record(z.string(), z.unknown()),

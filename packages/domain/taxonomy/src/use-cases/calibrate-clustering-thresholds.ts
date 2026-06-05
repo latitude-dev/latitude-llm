@@ -80,7 +80,6 @@ const auditClusterPurity = (input: {
       const members = yield* observations.listByCluster({
         organizationId: input.organizationId,
         projectId: input.projectId,
-        dimension: input.dimension,
         clusterId: cluster.id,
         limit: TAXONOMY_CALIBRATION_PURITY_MEMBERS,
       })
@@ -124,13 +123,11 @@ export const calibrateClusteringThresholdsUseCase = (input: CalibrateClusteringT
     const embeddings = yield* observations.sampleEmbeddings({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension,
       limit: TAXONOMY_CALIBRATION_EMBEDDING_SAMPLE,
     })
     const scores = yield* observations.sampleAssignmentScores({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension,
       limit: TAXONOMY_CALIBRATION_SCORE_SAMPLE,
     })
 

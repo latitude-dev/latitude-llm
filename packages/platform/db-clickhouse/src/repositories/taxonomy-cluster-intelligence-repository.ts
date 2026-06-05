@@ -18,7 +18,7 @@ type AggregateRow = {
   readonly source_observation_count: number
   readonly source_session_count: number
   readonly source_analysis_count: number
-  readonly conversation_eligible_session_count: number
+  readonly eligible_session_count: number
   readonly skipped_count: number
   readonly failed_count: number
 }
@@ -55,11 +55,11 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                           count() AS source_observation_count,
                           uniqExact(o.session_id) AS source_session_count,
                           uniqExactIf(o.session_id, a.analysis_status != '') AS source_analysis_count,
-                          uniqExactIf(o.session_id, a.analysis_lens = 'conversation') AS conversation_eligible_session_count,
+                          uniqExactIf(o.session_id, a.analysis_lens = 'conversation') AS eligible_session_count,
                           uniqExactIf(o.session_id, startsWith(a.analysis_status, 'skipped')) AS skipped_count,
                           uniqExactIf(o.session_id, a.analysis_status = 'failed') AS failed_count
                         FROM taxonomy_observations AS o FINAL
-                        LEFT JOIN conversation_session_analyses AS a FINAL
+                        LEFT JOIN session_analyses AS a FINAL
                           ON o.organization_id = a.organization_id
                          AND o.project_id = a.project_id
                          AND o.session_id = a.session_id
@@ -76,18 +76,18 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                 source_observation_count: 0,
                 source_session_count: 0,
                 source_analysis_count: 0,
-                conversation_eligible_session_count: 0,
+                eligible_session_count: 0,
                 skipped_count: 0,
                 failed_count: 0,
               }
               const momentResult = await client.query({
                 query: `SELECT m.kind AS key, uniqExact(m.session_id) AS count
                         FROM taxonomy_observations AS o FINAL
-                        INNER JOIN conversation_session_analyses AS a FINAL
+                        INNER JOIN session_analyses AS a FINAL
                           ON o.organization_id = a.organization_id
                          AND o.project_id = a.project_id
                          AND o.session_id = a.session_id
-                        INNER JOIN conversation_moment_labels AS m FINAL
+                        INNER JOIN session_moment_labels AS m FINAL
                           ON a.organization_id = m.organization_id
                          AND a.project_id = m.project_id
                          AND a.session_id = m.session_id
@@ -112,7 +112,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                     ? 0
                     : aggregate.source_analysis_count / aggregate.source_session_count,
                 momentKindDistribution: distributionFromRows((await momentResult.json()) as DistributionRow[]),
-                conversationEligibleSessionCount: aggregate.conversation_eligible_session_count,
+                eligibleSessionCount: aggregate.eligible_session_count,
                 skippedCount: aggregate.skipped_count,
                 failedCount: aggregate.failed_count,
               } satisfies ClusterAnalysisAggregate

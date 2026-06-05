@@ -8,7 +8,6 @@ import {
 } from "@domain/shared"
 import {
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
-  TaxonomyDimension,
   type TaxonomyMomentObservation,
   TaxonomyObservationRepository,
   TaxonomyProjectionMethod,
@@ -35,7 +34,6 @@ const makeObservation = (overrides: Partial<TaxonomyMomentObservation> = {}): Ta
   sessionId,
   analysisHash: "a".repeat(64),
   momentId: "moment-1",
-  dimension: TaxonomyDimension.Topic,
   projectionMethod: TaxonomyProjectionMethod.MomentTextEmbedding,
   projectionHash: "d".repeat(64),
   projectionMetadata: { turnIndexes: [0, 2] },
@@ -73,7 +71,6 @@ describe("TaxonomyObservationRepositoryLive", () => {
 
     expect(rows).toHaveLength(1)
     expect(rows[0]?.momentId).toBe("moment-1")
-    expect(rows[0]?.dimension).toBe(TaxonomyDimension.Topic)
     expect(rows[0]?.projectionMetadata).toEqual({ turnIndexes: [0, 2] })
   })
 
@@ -105,7 +102,6 @@ describe("TaxonomyObservationRepositoryLive", () => {
         return yield* repo.getCounts({
           organizationId,
           projectId: countsProjectId,
-          dimension: TaxonomyDimension.Topic,
           since: new Date("2026-05-23T00:00:00.000Z"),
         })
       }),
@@ -134,7 +130,6 @@ describe("TaxonomyObservationRepositoryLive", () => {
         return yield* repo.listByCluster({
           organizationId,
           projectId,
-          dimension: TaxonomyDimension.Topic,
           clusterId,
           limit: 10,
         })

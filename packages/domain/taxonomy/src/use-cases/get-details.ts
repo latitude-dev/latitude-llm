@@ -33,7 +33,6 @@ export const getClusterDetailsUseCase = (input: GetClusterDetailsInput) =>
     const recentObservations = yield* observations.listByCluster({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension: cluster.dimension,
       clusterId: input.clusterId,
       limit: clampLimit(input.sampleSize, 5, 20),
     })

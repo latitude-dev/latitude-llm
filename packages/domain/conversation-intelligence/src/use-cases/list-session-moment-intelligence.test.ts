@@ -3,15 +3,15 @@ import { createFakeChSqlClient } from "@domain/shared/testing"
 import { TaxonomyObservationRepository, type TaxonomyObservationRepositoryShape } from "@domain/taxonomy"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { ConversationSemanticMoment } from "../entities/semantic-moment.ts"
-import type { ConversationSessionAnalysis } from "../entities/session-analysis.ts"
-import { ConversationMomentLabelRepository } from "../ports/moment-label-repository.ts"
-import { ConversationSemanticMomentRepository } from "../ports/semantic-moment-repository.ts"
-import { ConversationSessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
+import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
+import type { SessionAnalysis } from "../entities/session-analysis.ts"
+import { SessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
+import { SessionMomentLabelRepository } from "../ports/session-moment-label-repository.ts"
+import { SessionSemanticMomentRepository } from "../ports/session-semantic-moment-repository.ts"
 import {
-  createFakeConversationMomentLabelRepository,
-  createFakeConversationSemanticMomentRepository,
-  createFakeConversationSessionAnalysisRepository,
+  createFakeSessionAnalysisRepository,
+  createFakeSessionMomentLabelRepository,
+  createFakeSessionSemanticMomentRepository,
 } from "../testing/index.ts"
 import { listSessionMomentIntelligenceUseCase } from "./list-session-moment-intelligence.ts"
 
@@ -23,7 +23,7 @@ const now = new Date("2026-06-01T12:00:00.000Z")
 const CURRENT_HASH = "a".repeat(64)
 const STALE_HASH = "b".repeat(64)
 
-const makeAnalysis = (overrides: Partial<ConversationSessionAnalysis> = {}): ConversationSessionAnalysis => ({
+const makeAnalysis = (overrides: Partial<SessionAnalysis> = {}): SessionAnalysis => ({
   organizationId,
   projectId,
   sessionId,
@@ -41,7 +41,7 @@ const makeAnalysis = (overrides: Partial<ConversationSessionAnalysis> = {}): Con
   ...overrides,
 })
 
-const makeMoment = (analysisHash: string, momentId: string): ConversationSemanticMoment => ({
+const makeMoment = (analysisHash: string, momentId: string): SessionSemanticMoment => ({
   organizationId,
   projectId,
   sessionId,
@@ -61,23 +61,23 @@ const makeMoment = (analysisHash: string, momentId: string): ConversationSemanti
   indexedAt: now,
 })
 
-const run = (analyses: readonly ConversationSessionAnalysis[], moments: readonly ConversationSemanticMoment[]) =>
+const run = (analyses: readonly SessionAnalysis[], moments: readonly SessionSemanticMoment[]) =>
   Effect.runPromise(
     listSessionMomentIntelligenceUseCase({ organizationId, projectId, sessionId }).pipe(
       Effect.provide(
         Layer.succeed(
-          ConversationSessionAnalysisRepository,
-          createFakeConversationSessionAnalysisRepository(analyses).repository,
+          SessionAnalysisRepository,
+          createFakeSessionAnalysisRepository(analyses).repository,
         ),
       ),
       Effect.provide(
         Layer.succeed(
-          ConversationSemanticMomentRepository,
-          createFakeConversationSemanticMomentRepository(moments).repository,
+          SessionSemanticMomentRepository,
+          createFakeSessionSemanticMomentRepository(moments).repository,
         ),
       ),
       Effect.provide(
-        Layer.succeed(ConversationMomentLabelRepository, createFakeConversationMomentLabelRepository().repository),
+        Layer.succeed(SessionMomentLabelRepository, createFakeSessionMomentLabelRepository().repository),
       ),
       Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       Effect.provide(

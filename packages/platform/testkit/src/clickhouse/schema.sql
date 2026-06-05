@@ -26,7 +26,7 @@ PRIMARY KEY (organization_id, project_id, session_id)
 ORDER BY (organization_id, project_id, session_id)
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE conversation_session_analyses
+CREATE TABLE session_analyses
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
     `project_id` LowCardinality(String) CODEC(ZSTD(1)),
@@ -51,7 +51,7 @@ PRIMARY KEY (organization_id, project_id, session_id)
 ORDER BY (organization_id, project_id, session_id)
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE conversation_semantic_moments
+CREATE TABLE session_semantic_moments
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
     `project_id` LowCardinality(String) CODEC(ZSTD(1)),
@@ -77,7 +77,7 @@ PRIMARY KEY (organization_id, project_id, session_id, analysis_hash, moment_id)
 ORDER BY (organization_id, project_id, session_id, analysis_hash, moment_id)
 SETTINGS index_granularity = 8192;
 
-CREATE TABLE conversation_moment_labels
+CREATE TABLE session_moment_labels
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
     `project_id` LowCardinality(String) CODEC(ZSTD(1)),
@@ -586,4 +586,3 @@ GROUP BY
     organization_id,
     project_id,
     trace_id;
-

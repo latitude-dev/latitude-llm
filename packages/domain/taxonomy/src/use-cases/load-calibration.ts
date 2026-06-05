@@ -2,9 +2,9 @@ import type { ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import {
   type ClusteringCalibration,
-  type ConversationCalibration,
+  type SessionCalibration,
   clusteringCalibrationSchema,
-  conversationCalibrationSchema,
+  sessionCalibrationSchema,
 } from "../entities/calibration.ts"
 import { CalibrationProfileRepository } from "../ports/calibration-profile-repository.ts"
 
@@ -22,11 +22,11 @@ export const loadClusteringCalibration = (input: { readonly projectId: ProjectId
     return parsed.success ? (parsed.data satisfies ClusteringCalibration) : null
   })
 
-export const loadConversationCalibration = (input: { readonly projectId: ProjectId }) =>
+export const loadSessionCalibration = (input: { readonly projectId: ProjectId }) =>
   Effect.gen(function* () {
     const profiles = yield* CalibrationProfileRepository
     const profile = yield* profiles.findByProject({ projectId: input.projectId, scope: "conversation" })
     if (profile === null) return null
-    const parsed = conversationCalibrationSchema.safeParse(profile.payload)
-    return parsed.success ? (parsed.data satisfies ConversationCalibration) : null
+    const parsed = sessionCalibrationSchema.safeParse(profile.payload)
+    return parsed.success ? (parsed.data satisfies SessionCalibration) : null
   })

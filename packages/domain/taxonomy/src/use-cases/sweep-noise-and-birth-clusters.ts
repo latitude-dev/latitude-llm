@@ -19,6 +19,7 @@ import {
   TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO,
   TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
+  TAXONOMY_NOISE_SAMPLE_MAX,
   TAXONOMY_TREE_ROOT_CAP,
   TAXONOMY_TREE_ROOT_LINK_THRESHOLD,
 } from "../constants.ts"
@@ -122,8 +123,8 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
     const noise = yield* observations.listNoise({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension,
       since: lookbackStart(now),
+      limit: TAXONOMY_NOISE_SAMPLE_MAX,
     })
 
     if (noise.length < TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS) {

@@ -21,7 +21,7 @@ export const SemanticMomentSegmentationMethod = {
   EmbeddingContinuity: "embedding_continuity",
 } as const satisfies Record<string, SemanticMomentSegmentationMethod>
 
-export const conversationSemanticMomentSchema = z.object({
+export const sessionSemanticMomentSchema = z.object({
   organizationId: organizationIdSchema,
   projectId: projectIdSchema,
   sessionId: sessionIdSchema,
@@ -41,4 +41,4 @@ export const conversationSemanticMomentSchema = z.object({
   indexedAt: z.date(),
 })
 
-export type ConversationSemanticMoment = z.infer<typeof conversationSemanticMomentSchema>
+export type SessionSemanticMoment = z.infer<typeof sessionSemanticMomentSchema>

@@ -15,7 +15,6 @@ import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { TAXONOMY_EMBEDDING_DIMENSIONS, TAXONOMY_MAX_ACTIVE_CLUSTERS } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
-import { TaxonomyDimension } from "../entities/dimension.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { createTaxonomyCentroid, updateTaxonomyCentroid } from "../helpers.ts"
 import { CalibrationProfileRepository } from "../ports/calibration-profile-repository.ts"
@@ -53,7 +52,6 @@ const makeObservation = (index: number, embedding = vector({ 0: 1 })): TaxonomyM
   sessionId: SessionId(`session-${index}`),
   analysisHash: String(index).repeat(64).slice(0, 64),
   momentId: `moment-${index}`,
-  dimension: TaxonomyDimension.Topic,
   projectionMethod: "moment_text_embedding",
   projectionHash: String(index).repeat(64).slice(0, 64),
   projectionMetadata: { summary: `Observation ${index}` },
@@ -455,14 +453,12 @@ describe("gardening use-cases", () => {
     )
 
     expect(result).toEqual({ noiseScanned: 2, observationsReassigned: 1 })
-    expect(
-      observations.rows.get(`${organizationId}|${projectId}|${matching.dimension}|${matching.observationId}`)
-        ?.assignmentMethod,
-    ).toBe("gardening_reassign")
-    expect(
-      observations.rows.get(`${organizationId}|${projectId}|${unrelated.dimension}|${unrelated.observationId}`)
-        ?.assignmentMethod,
-    ).toBe("noise")
+    expect(observations.rows.get(`${organizationId}|${projectId}|${matching.observationId}`)?.assignmentMethod).toBe(
+      "gardening_reassign",
+    )
+    expect(observations.rows.get(`${organizationId}|${projectId}|${unrelated.observationId}`)?.assignmentMethod).toBe(
+      "noise",
+    )
     expect(clusters.clusters.get("c".repeat(24) as TaxonomyCluster["id"])?.observationCount).toBe(11)
   })
 

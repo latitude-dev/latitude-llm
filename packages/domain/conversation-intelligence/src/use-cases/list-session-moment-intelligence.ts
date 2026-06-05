@@ -1,11 +1,11 @@
 import { OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import { type TaxonomyMomentObservation, TaxonomyObservationRepository } from "@domain/taxonomy"
 import { Effect } from "effect"
-import type { ConversationMomentLabel } from "../entities/moment-label.ts"
-import type { ConversationSemanticMoment } from "../entities/semantic-moment.ts"
-import { ConversationMomentLabelRepository } from "../ports/moment-label-repository.ts"
-import { ConversationSemanticMomentRepository } from "../ports/semantic-moment-repository.ts"
-import { ConversationSessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
+import type { SessionMomentLabel } from "../entities/session-moment-label.ts"
+import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
+import { SessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
+import { SessionMomentLabelRepository } from "../ports/session-moment-label-repository.ts"
+import { SessionSemanticMomentRepository } from "../ports/session-semantic-moment-repository.ts"
 
 export interface ListSessionMomentIntelligenceInput {
   readonly organizationId: string
@@ -15,8 +15,8 @@ export interface ListSessionMomentIntelligenceInput {
 }
 
 export interface SessionMomentIntelligenceRow {
-  readonly moment: ConversationSemanticMoment
-  readonly labels: readonly ConversationMomentLabel[]
+  readonly moment: SessionSemanticMoment
+  readonly labels: readonly SessionMomentLabel[]
   readonly taxonomyObservations: readonly TaxonomyMomentObservation[]
 }
 
@@ -32,10 +32,10 @@ export const listSessionMomentIntelligenceUseCase = (input: ListSessionMomentInt
     const organizationId = OrganizationId(input.organizationId)
     const projectId = ProjectId(input.projectId)
     const sessionId = SessionId(input.sessionId)
-    const semanticMoments = yield* ConversationSemanticMomentRepository
-    const labels = yield* ConversationMomentLabelRepository
+    const semanticMoments = yield* SessionSemanticMomentRepository
+    const labels = yield* SessionMomentLabelRepository
     const taxonomyObservations = yield* TaxonomyObservationRepository
-    const analyses = yield* ConversationSessionAnalysisRepository
+    const analyses = yield* SessionAnalysisRepository
 
     // Moments/labels are keyed by analysis_hash and superseded generations
     // are never deleted, so an unscoped read returns the union of every
@@ -64,7 +64,7 @@ export const listSessionMomentIntelligenceUseCase = (input: ListSessionMomentInt
     ])
 
     const filteredMoments = analysisHash ? moments.filter((moment) => moment.analysisHash === analysisHash) : moments
-    const labelsByMoment = new Map<string, ConversationMomentLabel[]>()
+    const labelsByMoment = new Map<string, SessionMomentLabel[]>()
     for (const label of sessionLabels) {
       if (analysisHash && label.analysisHash !== analysisHash) continue
       labelsByMoment.set(label.momentId, [...(labelsByMoment.get(label.momentId) ?? []), label])

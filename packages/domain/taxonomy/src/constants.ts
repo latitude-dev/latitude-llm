@@ -173,6 +173,8 @@ export const TAXONOMY_MERGE_JUDGE_THRESHOLD = 0.86
 
 /** Concurrent LLM merge-judge calls per gardening run. */
 export const TAXONOMY_MERGE_JUDGE_CONCURRENCY = 4
+export const TAXONOMY_MERGE_NEAREST_NEIGHBORS = 10
+export const TAXONOMY_MERGE_CANDIDATES_PER_PARENT = 100
 
 /**
  * Cluster judges (merge dedup, purity audit) run on Haiku: short structured
@@ -228,6 +230,14 @@ export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 90
+
+/**
+ * Taxonomy observations are a representative clustering sample, not the full
+ * semantic-moment fact table. Semantic moments and moment labels stay complete;
+ * gardening is bounded by these caps.
+ */
+export const TAXONOMY_OBSERVATION_SAMPLE_MAX = 100_000
+export const TAXONOMY_NOISE_SAMPLE_MAX = 20_000
 
 // ---------------------------------------------------------------------------
 // Lock TTLs (Redis SET NX EX)

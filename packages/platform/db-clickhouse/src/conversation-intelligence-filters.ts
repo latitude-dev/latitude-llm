@@ -41,7 +41,7 @@ const latestAnalysisSemijoin = (
   withRangeStart: boolean,
 ): string => `(${alias}.session_id, ${alias}.analysis_hash) IN (
           SELECT session_id, argMax(analysis_hash, indexed_at)
-          FROM conversation_session_analyses
+          FROM session_analyses
           WHERE organization_id = {organizationId:String}
             AND project_id = {projectId:String}${withRangeStart ? "\n            AND start_time >= {ciRangeStart:DateTime64(9, 'UTC')}" : ""}
           GROUP BY session_id
@@ -68,7 +68,7 @@ const buildTopicClustersSubquery = (withRangeStart: boolean): string => `session
  */
 const buildMomentKindsSubquery = (withRangeStart: boolean): string => `session_id IN (
       SELECT m.session_id
-      FROM conversation_moment_labels AS m FINAL
+      FROM session_moment_labels AS m FINAL
       WHERE m.organization_id = {organizationId:String}
         AND m.project_id = {projectId:String}
         AND m.kind IN {momentKinds:Array(String)}${withRangeStart ? "\n        AND m.indexed_at >= {ciRangeStart:DateTime64(9, 'UTC')}" : ""}

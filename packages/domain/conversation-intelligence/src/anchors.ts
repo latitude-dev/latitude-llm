@@ -4,7 +4,7 @@ import {
   CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
   CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
 } from "./constants.ts"
-import type { MomentLabelKind as MomentKind } from "./entities/moment-label.ts"
+import type { MomentLabelKind as MomentKind } from "./entities/session-moment-label.ts"
 
 interface MomentLabelAnchorConfig {
   readonly kind: MomentKind

@@ -1,7 +1,7 @@
 export {
   type AnalyzeSessionActivityInput,
   type AnalyzeSessionActivityResult,
-  analyzeSessionConversationActivity,
+  analyzeSessionActivity,
   checkAnalyzeSessionEligibilityActivity,
   detectAnalyzeSessionLabelsActivity,
   embedAnalyzeSessionTurnsActivity,

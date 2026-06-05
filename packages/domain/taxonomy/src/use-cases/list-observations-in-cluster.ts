@@ -48,7 +48,6 @@ export const listObservationsInClusterUseCase = (input: ListTaxonomyObservations
       organizationId: input.organizationId,
       projectId: input.projectId,
       clusterId: input.clusterId,
-      dimension: "topic",
       limit: limit + 1,
       ...(cursor === undefined ? {} : cursor),
     })

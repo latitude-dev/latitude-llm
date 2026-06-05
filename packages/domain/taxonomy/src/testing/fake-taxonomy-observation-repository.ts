@@ -2,8 +2,8 @@ import { Effect } from "effect"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import type { TaxonomyObservationRepositoryShape } from "../ports/taxonomy-observation-repository.ts"
 
-const observationKey = (organizationId: string, projectId: string, dimension: string, observationId: string): string =>
-  `${organizationId}|${projectId}|${dimension}|${observationId}`
+const observationKey = (organizationId: string, projectId: string, observationId: string): string =>
+  `${organizationId}|${projectId}|${observationId}`
 
 export const createFakeTaxonomyObservationRepository = (
   seed: readonly TaxonomyMomentObservation[] = [],
@@ -13,12 +13,7 @@ export const createFakeTaxonomyObservationRepository = (
     seed.map(
       (observation) =>
         [
-          observationKey(
-            observation.organizationId,
-            observation.projectId,
-            observation.dimension,
-            observation.observationId,
-          ),
+          observationKey(observation.organizationId, observation.projectId, observation.observationId),
           observation,
         ] as const,
     ),
@@ -38,12 +33,7 @@ export const createFakeTaxonomyObservationRepository = (
     upsert: (observation) =>
       Effect.sync(() => {
         setVersioned(
-          observationKey(
-            observation.organizationId,
-            observation.projectId,
-            observation.dimension,
-            observation.observationId,
-          ),
+          observationKey(observation.organizationId, observation.projectId, observation.observationId),
           observation,
         )
       }),
@@ -52,12 +42,7 @@ export const createFakeTaxonomyObservationRepository = (
       Effect.sync(() => {
         for (const observation of observations) {
           setVersioned(
-            observationKey(
-              observation.organizationId,
-              observation.projectId,
-              observation.dimension,
-              observation.observationId,
-            ),
+            observationKey(observation.organizationId, observation.projectId, observation.observationId),
             observation,
           )
         }
@@ -73,22 +58,14 @@ export const createFakeTaxonomyObservationRepository = (
           reassignmentRunId,
           indexedAt,
         } of inputs) {
-          setVersioned(
-            observationKey(
-              observation.organizationId,
-              observation.projectId,
-              observation.dimension,
-              observation.observationId,
-            ),
-            {
-              ...observation,
-              assignedClusterId,
-              assignmentMethod,
-              assignmentConfidence,
-              reassignmentRunId,
-              indexedAt,
-            },
-          )
+          setVersioned(observationKey(observation.organizationId, observation.projectId, observation.observationId), {
+            ...observation,
+            assignedClusterId,
+            assignmentMethod,
+            assignmentConfidence,
+            reassignmentRunId,
+            indexedAt,
+          })
         }
       }),
 
@@ -103,14 +80,13 @@ export const createFakeTaxonomyObservationRepository = (
           .map((row) => row.observationId)
       }),
 
-    listNoise: ({ organizationId, projectId, dimension, since, limit }) =>
+    listNoise: ({ organizationId, projectId, since, limit }) =>
       Effect.sync(() => {
         const filtered = [...rows.values()]
           .filter(
             (observation) =>
               observation.organizationId === organizationId &&
               observation.projectId === projectId &&
-              observation.dimension === dimension &&
               observation.assignedClusterId === null &&
               observation.embedding.length > 0 &&
               observation.startTime >= since,
@@ -121,14 +97,13 @@ export const createFakeTaxonomyObservationRepository = (
         return typeof limit === "number" ? filtered.slice(0, limit) : filtered
       }),
 
-    listByCluster: ({ organizationId, projectId, dimension, clusterId, limit, beforeStartTime, beforeObservationId }) =>
+    listByCluster: ({ organizationId, projectId, clusterId, limit, beforeStartTime, beforeObservationId }) =>
       Effect.sync(() =>
         [...rows.values()]
           .filter((observation) => {
             if (
               observation.organizationId !== organizationId ||
               observation.projectId !== projectId ||
-              observation.dimension !== dimension ||
               observation.assignedClusterId !== clusterId
             ) {
               return false
@@ -146,14 +121,13 @@ export const createFakeTaxonomyObservationRepository = (
           .slice(0, limit),
       ),
 
-    listAllByCluster: ({ organizationId, projectId, dimension, clusterId, limit }) =>
+    listAllByCluster: ({ organizationId, projectId, clusterId, limit }) =>
       Effect.sync(() =>
         [...rows.values()]
           .filter(
             (observation) =>
               observation.organizationId === organizationId &&
               observation.projectId === projectId &&
-              observation.dimension === dimension &&
               observation.assignedClusterId === clusterId,
           )
           .sort(
@@ -172,32 +146,28 @@ export const createFakeTaxonomyObservationRepository = (
               observation.sessionId === sessionId &&
               (analysisHash === undefined || observation.analysisHash === analysisHash),
           )
-          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime() || a.dimension.localeCompare(b.dimension)),
+          .sort(
+            (a, b) => a.startTime.getTime() - b.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          ),
       ),
 
-    sampleEmbeddings: ({ organizationId, projectId, dimension, limit }) =>
+    sampleEmbeddings: ({ organizationId, projectId, limit }) =>
       Effect.sync(() =>
         [...rows.values()]
           .filter(
             (observation) =>
               observation.organizationId === organizationId &&
               observation.projectId === projectId &&
-              observation.dimension === dimension &&
               observation.embedding.length > 0,
           )
           .slice(0, limit)
           .map((observation) => observation.embedding),
       ),
 
-    sampleAssignmentScores: ({ organizationId, projectId, dimension, limit }) =>
+    sampleAssignmentScores: ({ organizationId, projectId, limit }) =>
       Effect.sync(() =>
         [...rows.values()]
-          .filter(
-            (observation) =>
-              observation.organizationId === organizationId &&
-              observation.projectId === projectId &&
-              observation.dimension === dimension,
-          )
+          .filter((observation) => observation.organizationId === organizationId && observation.projectId === projectId)
           .slice(0, limit)
           .map((observation) => ({
             assigned: observation.assignedClusterId !== null,
@@ -205,7 +175,7 @@ export const createFakeTaxonomyObservationRepository = (
           })),
       ),
 
-    getCounts: ({ organizationId, projectId, dimension, since }) =>
+    getCounts: ({ organizationId, projectId, since }) =>
       Effect.sync(() => {
         let total = 0
         let assigned = 0
@@ -214,7 +184,6 @@ export const createFakeTaxonomyObservationRepository = (
           if (
             observation.organizationId !== organizationId ||
             observation.projectId !== projectId ||
-            observation.dimension !== dimension ||
             observation.startTime < since
           ) {
             continue
@@ -226,14 +195,13 @@ export const createFakeTaxonomyObservationRepository = (
         return { total, assigned, noise }
       }),
 
-    getTopClustersByOccurrence: ({ organizationId, projectId, dimension, since, limit }) =>
+    getTopClustersByOccurrence: ({ organizationId, projectId, since, limit }) =>
       Effect.sync(() => {
         const counts = new Map<string, number>()
         for (const observation of rows.values()) {
           if (
             observation.organizationId !== organizationId ||
             observation.projectId !== projectId ||
-            observation.dimension !== dimension ||
             observation.startTime < since ||
             observation.assignedClusterId === null
           ) {
@@ -248,15 +216,7 @@ export const createFakeTaxonomyObservationRepository = (
           .map(([clusterId, count]) => ({ clusterId: clusterId as never, count }))
       }),
 
-    getClusterTrendCounts: ({
-      organizationId,
-      projectId,
-      dimension,
-      clusterIds,
-      currentSince,
-      baselineSince,
-      baselineDays,
-    }) =>
+    getClusterTrendCounts: ({ organizationId, projectId, clusterIds, currentSince, baselineSince, baselineDays }) =>
       Effect.sync(() =>
         clusterIds.map((clusterId) => {
           let currentCount = 0
@@ -265,7 +225,6 @@ export const createFakeTaxonomyObservationRepository = (
             if (
               observation.organizationId !== organizationId ||
               observation.projectId !== projectId ||
-              observation.dimension !== dimension ||
               observation.assignedClusterId !== clusterId ||
               observation.startTime < baselineSince
             ) {

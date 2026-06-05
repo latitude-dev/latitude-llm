@@ -5,12 +5,12 @@ import {
   CONVERSATION_MOMENT_CONTINUITY_MIN_THRESHOLD,
   CONVERSATION_MOMENT_SEGMENTATION_VERSION,
 } from "../constants.ts"
-import { conversationMomentLabelSchema } from "./moment-label.ts"
+import { sessionMomentLabelSchema } from "./session-moment-label.ts"
 import {
-  conversationSemanticMomentSchema,
+  sessionSemanticMomentSchema,
   SemanticMomentBoundaryReason,
   SemanticMomentSegmentationMethod,
-} from "./semantic-moment.ts"
+} from "./session-semantic-moment.ts"
 
 const now = new Date("2026-01-01T00:00:00.000Z")
 
@@ -45,14 +45,14 @@ describe("semantic moments", () => {
   })
 
   it("validates embedding-derived semantic moments", () => {
-    const parsed = conversationSemanticMomentSchema.parse(baseSemanticMoment)
+    const parsed = sessionSemanticMomentSchema.parse(baseSemanticMoment)
 
     expect(parsed.momentId).toBe("moment-1")
     expect(parsed.boundaryReason).toBe(SemanticMomentBoundaryReason.SemanticDrift)
   })
 
   it("validates detected labels anchored to semantic moments", () => {
-    const parsed = conversationMomentLabelSchema.parse({
+    const parsed = sessionMomentLabelSchema.parse({
       organizationId: baseSemanticMoment.organizationId,
       projectId: baseSemanticMoment.projectId,
       sessionId: baseSemanticMoment.sessionId,

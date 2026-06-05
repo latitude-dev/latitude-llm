@@ -3,8 +3,8 @@ import { generateId, type OrganizationId, type ProjectId, TraceId } from "@domai
 import { SessionRepository, TraceRepository } from "@domain/spans"
 import {
   CalibrationProfileRepository,
-  type ConversationCalibration,
-  conversationCalibrationSchema,
+  type SessionCalibration,
+  sessionCalibrationSchema,
 } from "@domain/taxonomy"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -30,15 +30,15 @@ import {
 import { normalizeMessages } from "../normalization.ts"
 import { cosineSimilarity, type SemanticSegmentationTurn } from "../semantic-segmentation.ts"
 
-export interface CalibrateConversationThresholdsInput {
+export interface CalibrateSessionThresholdsInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly sampleSize?: number
   readonly now?: Date
 }
 
-export interface CalibrateConversationThresholdsResult {
-  readonly calibration: ConversationCalibration
+export interface CalibrateSessionThresholdsResult {
+  readonly calibration: SessionCalibration
   readonly sampleSize: number
   readonly metrics: Readonly<Record<string, number>>
 }
@@ -162,7 +162,7 @@ const deriveAnchorGate = (input: {
  * distributions. Turn embeddings are Redis-cached from regular analysis, so
  * a calibration pass costs almost nothing beyond reads.
  */
-export const calibrateConversationThresholdsUseCase = (input: CalibrateConversationThresholdsInput) =>
+export const calibrateSessionThresholdsUseCase = (input: CalibrateSessionThresholdsInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("conversationIntelligence.projectId", input.projectId)
     const now = input.now ?? new Date()
@@ -318,11 +318,11 @@ export const calibrateConversationThresholdsUseCase = (input: CalibrateConversat
       ),
     }
 
-    const calibration = conversationCalibrationSchema.parse({
+    const calibration = sessionCalibrationSchema.parse({
       labelAnchors,
       ritual,
       continuity,
-    } satisfies ConversationCalibration)
+    } satisfies SessionCalibration)
 
     // Simulated outcome coverage at the derived gates — the loss-function
     // metric the thresholds are tuned against.
@@ -353,5 +353,5 @@ export const calibrateConversationThresholdsUseCase = (input: CalibrateConversat
       updatedAt: now,
     })
 
-    return { calibration, sampleSize: sampled.length, metrics } satisfies CalibrateConversationThresholdsResult
-  }).pipe(Effect.withSpan("conversationIntelligence.calibrateConversationThresholds"))
+    return { calibration, sampleSize: sampled.length, metrics } satisfies CalibrateSessionThresholdsResult
+  }).pipe(Effect.withSpan("conversationIntelligence.calibrateSessionThresholds"))

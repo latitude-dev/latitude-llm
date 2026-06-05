@@ -2160,7 +2160,6 @@ describe("SessionRepository", () => {
       session_id: sessionId,
       analysis_hash: hash,
       moment_id: `${sessionId}-moment`,
-      dimension: "topic",
       projection_method: "moment_text_embedding",
       projection_hash: "d".repeat(64),
       projection_metadata: "{}",
@@ -2185,7 +2184,7 @@ describe("SessionRepository", () => {
         makeSpanRow({ traceId: "b1".repeat(16), spanId: "b".repeat(16), sessionId: "ci-plain", startTime }),
       ])
       await ch.client.insert({
-        table: "conversation_session_analyses",
+        table: "session_analyses",
         values: [
           analysisRow("ci-escalated", HASH_CURRENT, "2026-05-24 10:06:00.000"),
           analysisRow("ci-plain", HASH_STALE, "2026-05-24 10:06:00.000"),
@@ -2194,7 +2193,7 @@ describe("SessionRepository", () => {
         format: "JSONEachRow",
       })
       await ch.client.insert({
-        table: "conversation_moment_labels",
+        table: "session_moment_labels",
         values: [
           labelRow("ci-escalated", HASH_CURRENT, "escalation"),
           // Stale-generation label: must NOT match after pinning.

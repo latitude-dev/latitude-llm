@@ -8,7 +8,7 @@ import { z } from "zod"
  * derived from each project's own score distributions and stored here, with
  * global constants as the fallback when no profile exists yet.
  *
- * `payload` is scope-specific: parse with `conversationCalibrationSchema` or
+ * `payload` is scope-specific: parse with `sessionCalibrationSchema` or
  * `clusteringCalibrationSchema` according to `scope`.
  */
 export const CALIBRATION_SCOPES = ["conversation", "clustering"] as const
@@ -25,7 +25,7 @@ export const anchorCalibrationSchema = z.object({
 })
 export type AnchorCalibration = z.infer<typeof anchorCalibrationSchema>
 
-export const conversationCalibrationSchema = z.object({
+export const sessionCalibrationSchema = z.object({
   /** Per moment-label kind anchor gates. */
   labelAnchors: z.record(z.string(), anchorCalibrationSchema),
   /** Ritual suppression gate for taxonomy observation emission. */
@@ -37,7 +37,7 @@ export const conversationCalibrationSchema = z.object({
     max: z.number().min(0).max(1),
   }),
 })
-export type ConversationCalibration = z.infer<typeof conversationCalibrationSchema>
+export type SessionCalibration = z.infer<typeof sessionCalibrationSchema>
 
 export const clusteringCalibrationSchema = z.object({
   birthLinkThreshold: z.number().min(0).max(1),
@@ -49,7 +49,7 @@ export const clusteringCalibrationSchema = z.object({
 })
 export type ClusteringCalibration = z.infer<typeof clusteringCalibrationSchema>
 
-export const calibrationPayloadSchema = z.union([conversationCalibrationSchema, clusteringCalibrationSchema])
+export const calibrationPayloadSchema = z.union([sessionCalibrationSchema, clusteringCalibrationSchema])
 export type CalibrationPayload = z.infer<typeof calibrationPayloadSchema>
 
 export const calibrationProfileSchema = z.object({

@@ -7,7 +7,7 @@ export interface ClusterAnalysisAggregate {
   readonly sourceAnalysisCount: number
   readonly sourceAnalysisCoverage: number
   readonly momentKindDistribution: Readonly<Record<string, number>>
-  readonly conversationEligibleSessionCount: number
+  readonly eligibleSessionCount: number
   readonly skippedCount: number
   readonly failedCount: number
 }

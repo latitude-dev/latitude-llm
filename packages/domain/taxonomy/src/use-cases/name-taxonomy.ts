@@ -97,7 +97,6 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
     const rows = yield* observations.listAllByCluster({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension: cluster.dimension,
       clusterId: input.clusterId,
       limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
     })

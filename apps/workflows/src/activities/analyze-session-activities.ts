@@ -1,11 +1,11 @@
 import { AI } from "@domain/ai"
 import {
-  analyzeSessionConversationUseCase,
+  analyzeSessionUseCase,
   CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
   CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
   CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
   CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH,
-  ConversationSessionAnalysisRepository,
+  SessionAnalysisRepository,
   segmentSemanticMoments,
 } from "@domain/conversation-intelligence"
 import { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
@@ -16,10 +16,10 @@ import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import {
-  ConversationMomentLabelRepositoryLive,
-  ConversationSemanticMomentRepositoryLive,
-  ConversationSessionAnalysisRepositoryLive,
+  SessionAnalysisRepositoryLive,
   SessionRepositoryLive,
+  SessionMomentLabelRepositoryLive,
+  SessionSemanticMomentRepositoryLive,
   TaxonomyObservationRepositoryLive,
   TraceRepositoryLive,
   withClickHouse,
@@ -42,7 +42,7 @@ export interface AnalyzeSessionActivityInput {
   readonly debounceMs?: number
 }
 
-export type AnalyzeSessionActivityResult = Awaited<ReturnType<typeof analyzeSessionConversationActivity>>
+export type AnalyzeSessionActivityResult = Awaited<ReturnType<typeof analyzeSessionActivity>>
 
 interface AnalyzeSessionMessage {
   readonly index: number
@@ -153,9 +153,9 @@ const withAnalyzeSessionClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
       Layer.mergeAll(
         SessionRepositoryLive,
         TraceRepositoryLive,
-        ConversationSessionAnalysisRepositoryLive,
-        ConversationSemanticMomentRepositoryLive,
-        ConversationMomentLabelRepositoryLive,
+        SessionAnalysisRepositoryLive,
+        SessionSemanticMomentRepositoryLive,
+        SessionMomentLabelRepositoryLive,
         TaxonomyObservationRepositoryLive,
       ),
       getClickhouseClient(),
@@ -200,7 +200,7 @@ export const hashAnalyzeSessionActivity = (input: AnalyzeSessionHashActivityInpu
       const messages = normalizeMessages(input.rawMessages)
       const document = documentFromMessages(messages)
       const analysisHash = yield* hash(`${CONVERSATION_INTELLIGENCE_DETECTOR_VERSION}\0${sessionId}\0${document}`)
-      const analyses = yield* ConversationSessionAnalysisRepository
+      const analyses = yield* SessionAnalysisRepository
       const latest = yield* analyses.findLatest({ organizationId, projectId, sessionId })
       return {
         analysisHash,
@@ -329,19 +329,19 @@ export const detectAnalyzeSessionLabelsActivity = (
   )
 
 export const persistAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) =>
-  analyzeSessionConversationActivity(input)
+  analyzeSessionActivity(input)
 
-export const analyzeSessionConversationActivity = (input: AnalyzeSessionActivityInput) => {
+export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
   const startedAt = Date.now()
   return Effect.runPromise(
-    analyzeSessionConversationUseCase(input).pipe(
+    analyzeSessionUseCase(input).pipe(
       withClickHouse(
         Layer.mergeAll(
           SessionRepositoryLive,
           TraceRepositoryLive,
-          ConversationSessionAnalysisRepositoryLive,
-          ConversationSemanticMomentRepositoryLive,
-          ConversationMomentLabelRepositoryLive,
+          SessionAnalysisRepositoryLive,
+          SessionSemanticMomentRepositoryLive,
+          SessionMomentLabelRepositoryLive,
           TaxonomyObservationRepositoryLive,
         ),
         getClickhouseClient(),

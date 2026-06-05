@@ -5,8 +5,10 @@ import {
   type AnchorCalibration,
   assignObservationToClusterUseCase,
   loadClusteringCalibration,
-  loadConversationCalibration,
+  loadSessionCalibration,
   routeToDeepestClusterUseCase,
+  TAXONOMY_NOISE_SAMPLE_MAX,
+  TAXONOMY_OBSERVATION_SAMPLE_MAX,
   type TaxonomyMomentObservation,
   TaxonomyObservationAssignmentMethod,
   TaxonomyObservationRepository,
@@ -32,21 +34,21 @@ import {
   CONVERSATION_MOMENT_SEGMENTATION_VERSION,
   MOMENT_KINDS,
 } from "../constants.ts"
-import type { ConversationMomentLabel, MomentLabelKind as MomentKind } from "../entities/moment-label.ts"
-import type { ConversationSemanticMoment } from "../entities/semantic-moment.ts"
-import type { AnalysisLens, ConversationSessionAnalysis, InteractionKind } from "../entities/session-analysis.ts"
+import type { AnalysisLens, InteractionKind, SessionAnalysis } from "../entities/session-analysis.ts"
+import type { MomentLabelKind as MomentKind, SessionMomentLabel } from "../entities/session-moment-label.ts"
+import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
 import {
   documentFromMessages,
   type NormalizedMessage,
   normalizeMessages,
   stripToolTelemetry,
 } from "../normalization.ts"
-import { ConversationMomentLabelRepository } from "../ports/moment-label-repository.ts"
-import { ConversationSemanticMomentRepository } from "../ports/semantic-moment-repository.ts"
-import { ConversationSessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
+import { SessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
+import { SessionMomentLabelRepository } from "../ports/session-moment-label-repository.ts"
+import { SessionSemanticMomentRepository } from "../ports/session-semantic-moment-repository.ts"
 import { type SemanticSegmentationTurn, segmentSemanticMoments } from "../semantic-segmentation.ts"
 
-export interface AnalyzeSessionConversationInput {
+export interface AnalyzeSessionInput {
   readonly organizationId: string
   readonly projectId: string
   readonly sessionId: string
@@ -55,11 +57,11 @@ export interface AnalyzeSessionConversationInput {
   readonly retentionDays?: number
 }
 
-export type AnalyzeSessionConversationResult =
+export type AnalyzeSessionResult =
   | { readonly action: "skipped"; readonly reason: "session-not-found" | "hash-current" }
   | {
       readonly action: "recorded"
-      readonly status: ConversationSessionAnalysis["analysisStatus"]
+      readonly status: SessionAnalysis["analysisStatus"]
       readonly momentCount: number
     }
 
@@ -74,6 +76,9 @@ const extractionMomentSchema = z.object({
 })
 
 const TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH = 2_000
+
+const retentionWindowStart = (now: Date, retentionDays: number): Date =>
+  new Date(now.getTime() - retentionDays * 24 * 60 * 60_000)
 
 const middleTruncate = (value: string, maxLength: number): string => {
   if (value.length <= maxLength) return value
@@ -229,7 +234,7 @@ interface DetectedMoment {
   readonly kind: MomentKind
   readonly firstMessageIndex: number
   readonly lastMessageIndex: number
-  readonly actor: ConversationMomentLabel["actor"]
+  readonly actor: SessionMomentLabel["actor"]
   readonly summary: string
   readonly evidence: string
   readonly confidence: number
@@ -323,7 +328,7 @@ const detectEmbeddingAnchorMoments = (input: {
     return labels
   })
 
-export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversationInput) =>
+export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("conversationIntelligence.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("conversationIntelligence.sessionId", input.sessionId)
@@ -332,9 +337,9 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
     const sessionId = SessionId(input.sessionId)
     const sessions = yield* SessionRepository
     const traces = yield* TraceRepository
-    const analyses = yield* ConversationSessionAnalysisRepository
-    const semanticMoments = yield* ConversationSemanticMomentRepository
-    const momentLabels = yield* ConversationMomentLabelRepository
+    const analyses = yield* SessionAnalysisRepository
+    const semanticMoments = yield* SessionSemanticMomentRepository
+    const momentLabels = yield* SessionMomentLabelRepository
     const taxonomyObservations = yield* TaxonomyObservationRepository
     const session = yield* sessions
       .findBySessionId({ organizationId, projectId, sessionId })
@@ -358,7 +363,7 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
         retentionDays: input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
         indexedAt,
       })
-      return { action: "recorded", status: "failed", momentCount: 0 } satisfies AnalyzeSessionConversationResult
+      return { action: "recorded", status: "failed", momentCount: 0 } satisfies AnalyzeSessionResult
     }
 
     const traceIds = session.traceIds.filter((traceId) => traceId.length === 32).map(TraceId)
@@ -375,7 +380,7 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
     const analysisHash = yield* hash(`${CONVERSATION_INTELLIGENCE_DETECTOR_VERSION}\0${session.sessionId}\0${document}`)
     const latest = yield* analyses.findLatest({ organizationId, projectId, sessionId })
     if (latest?.analysisHash === analysisHash && latest.analysisStatus !== "failed") {
-      return { action: "skipped", reason: "hash-current" } satisfies AnalyzeSessionConversationResult
+      return { action: "skipped", reason: "hash-current" } satisfies AnalyzeSessionResult
     }
 
     const indexedAt = new Date()
@@ -396,11 +401,11 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
       detectorVersion: CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
       retentionDays,
       indexedAt,
-    } satisfies Omit<ConversationSessionAnalysis, "analysisStatus">
+    } satisfies Omit<SessionAnalysis, "analysisStatus">
 
     if (normalizedMessages.length === 0 || document.length === 0) {
       yield* analyses.upsert({ ...baseAnalysis, analysisStatus: "skipped_empty", statusReason: "No semantic messages" })
-      return { action: "recorded", status: "skipped_empty", momentCount: 0 } satisfies AnalyzeSessionConversationResult
+      return { action: "recorded", status: "skipped_empty", momentCount: 0 } satisfies AnalyzeSessionResult
     }
     if (document.length < CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH) {
       yield* analyses.upsert({
@@ -412,7 +417,7 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
         action: "recorded",
         status: "skipped_too_short",
         momentCount: 0,
-      } satisfies AnalyzeSessionConversationResult
+      } satisfies AnalyzeSessionResult
     }
     if (classification.analysisLens === "telemetry_only") {
       yield* analyses.upsert({
@@ -424,15 +429,15 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
         action: "recorded",
         status: "skipped_non_conversation",
         momentCount: 0,
-      } satisfies AnalyzeSessionConversationResult
+      } satisfies AnalyzeSessionResult
     }
 
-    const conversationCalibration = yield* loadConversationCalibration({ projectId })
+    const sessionCalibration = yield* loadSessionCalibration({ projectId })
     const clusteringCalibration = yield* loadClusteringCalibration({ projectId })
     const embeddedTurns = yield* embedTurns(normalizedMessages)
     const semanticSegments = segmentSemanticMoments({
       turns: embeddedTurns,
-      ...(conversationCalibration ? { continuityClamps: conversationCalibration.continuity } : {}),
+      ...(sessionCalibration ? { continuityClamps: sessionCalibration.continuity } : {}),
     })
     const ai = yield* AI
 
@@ -440,7 +445,7 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
       messages: normalizedMessages,
       turns: embeddedTurns,
       segments: semanticSegments,
-      labelGates: conversationCalibration?.labelAnchors ?? null,
+      labelGates: sessionCalibration?.labelAnchors ?? null,
     })
     const rawMoments = anchorDetected
     const validatedMoments = (yield* Effect.forEach(rawMoments, (raw) =>
@@ -457,7 +462,7 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
       }),
     )).flatMap((moment): DetectedMoment[] => (moment === null ? [] : [moment as DetectedMoment]))
 
-    const semanticMomentRows = yield* Effect.forEach(semanticSegments, (segment, index) =>
+    const semanticMomentRows = yield* Effect.forEach(semanticSegments, (segment) =>
       Effect.gen(function* () {
         const momentId = yield* hash(`${analysisHash}\0semantic\0${segment.firstTurnIndex}\0${segment.lastTurnIndex}`)
         return {
@@ -488,7 +493,7 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
           segmentationVersion: CONVERSATION_MOMENT_SEGMENTATION_VERSION,
           retentionDays,
           indexedAt,
-        } satisfies ConversationSemanticMoment
+        } satisfies SessionSemanticMoment
       }),
     )
     const labelRows = yield* Effect.forEach(validatedMoments, (moment) =>
@@ -532,9 +537,9 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
               detectorVersion: moment.detectorVersion,
               retentionDays,
               indexedAt,
-            } satisfies ConversationMomentLabel)
+            } satisfies SessionMomentLabel)
       }),
-    ).pipe(Effect.map((labels) => labels.filter((label): label is ConversationMomentLabel => label !== null)))
+    ).pipe(Effect.map((labels) => labels.filter((label): label is SessionMomentLabel => label !== null)))
 
     const ritualAnchors = {
       positive: yield* Effect.forEach(RITUAL_POSITIVE_ANCHORS, embedAnchorText),
@@ -570,8 +575,7 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
               inputType: "document",
             })
             if (embeddingResult.embedding.length === 0) return null
-            if (isRitualProjection(embeddingResult.embedding, ritualAnchors, conversationCalibration?.ritual))
-              return null
+            if (isRitualProjection(embeddingResult.embedding, ritualAnchors, sessionCalibration?.ritual)) return null
             const projectionHash = yield* hash(
               `${analysisHash}\0${semanticMoment.momentId}\0${entry.dimension}\0${entry.text}`,
             )
@@ -598,7 +602,6 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
               sessionId,
               analysisHash,
               momentId: semanticMoment.momentId,
-              dimension: entry.dimension,
               projectionMethod: entry.projectionMethod,
               projectionHash,
               projectionMetadata: {
@@ -629,16 +632,33 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
     // retry skips the increment for any id that already existed, and a crash
     // between the two at worst loses one increment (gardening self-corrects)
     // instead of double-counting it.
+    const observationCounts = yield* taxonomyObservations.getCounts({
+      organizationId,
+      projectId,
+      since: retentionWindowStart(indexedAt, retentionDays),
+    })
+    let acceptedTotal = observationCounts.total
+    let acceptedNoise = observationCounts.noise
+    const sampledTaxonomyObservationRows = taxonomyObservationRows.filter((row) => {
+      if (acceptedTotal >= TAXONOMY_OBSERVATION_SAMPLE_MAX) return false
+      if (row.assignmentMethod === TaxonomyObservationAssignmentMethod.Noise) {
+        if (acceptedNoise >= TAXONOMY_NOISE_SAMPLE_MAX) return false
+        acceptedNoise += 1
+      }
+      acceptedTotal += 1
+      return true
+    })
+
     const alreadyApplied = new Set(
       yield* taxonomyObservations.filterExistingIds({
         organizationId,
         projectId,
-        observationIds: taxonomyObservationRows.map((row) => row.observationId),
+        observationIds: sampledTaxonomyObservationRows.map((row) => row.observationId),
       }),
     )
-    yield* taxonomyObservations.upsertMany(taxonomyObservationRows)
+    yield* taxonomyObservations.upsertMany(sampledTaxonomyObservationRows)
     yield* Effect.forEach(
-      taxonomyObservationRows.filter(
+      sampledTaxonomyObservationRows.filter(
         (row) =>
           row.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
           row.assignedClusterId !== null &&
@@ -655,7 +675,7 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
         }),
     )
 
-    const analysis: ConversationSessionAnalysis = {
+    const analysis: SessionAnalysis = {
       ...baseAnalysis,
       analysisStatus: "analyzed",
     }
@@ -666,11 +686,11 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
       action: "recorded",
       status: "analyzed",
       momentCount: validatedMoments.length,
-    } satisfies AnalyzeSessionConversationResult
+    } satisfies AnalyzeSessionResult
   }).pipe(
     Effect.catch((error: unknown) =>
       Effect.gen(function* () {
-        const analyses = yield* ConversationSessionAnalysisRepository
+        const analyses = yield* SessionAnalysisRepository
         const organizationId = OrganizationId(input.organizationId)
         const projectId = ProjectId(input.projectId)
         const sessionId = SessionId(input.sessionId)
@@ -692,8 +712,8 @@ export const analyzeSessionConversationUseCase = (input: AnalyzeSessionConversat
           retentionDays: input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
           indexedAt,
         })
-        return { action: "recorded", status: "failed", momentCount: 0 } satisfies AnalyzeSessionConversationResult
+        return { action: "recorded", status: "failed", momentCount: 0 } satisfies AnalyzeSessionResult
       }),
     ),
-    Effect.withSpan("conversationIntelligence.analyzeSessionConversation"),
+    Effect.withSpan("conversationIntelligence.analyzeSession"),
   )

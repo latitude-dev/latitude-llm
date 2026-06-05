@@ -145,7 +145,6 @@ export const recurseTreeClustersUseCase = (input: RecurseTreeClustersInput) =>
       const members = yield* observations.listAllByCluster({
         organizationId: input.organizationId,
         projectId: input.projectId,
-        dimension,
         clusterId: node.id,
         limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
       })

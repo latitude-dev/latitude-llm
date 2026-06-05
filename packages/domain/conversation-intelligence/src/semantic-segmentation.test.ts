@@ -4,7 +4,7 @@ import {
   CONVERSATION_MOMENT_CONTINUITY_MAX_THRESHOLD,
   CONVERSATION_MOMENT_CONTINUITY_MIN_THRESHOLD,
 } from "./constants.ts"
-import { SemanticMomentBoundaryReason } from "./entities/semantic-moment.ts"
+import { SemanticMomentBoundaryReason } from "./entities/session-semantic-moment.ts"
 import {
   computeSessionContinuityThreshold,
   type SemanticSegmentationTurn,

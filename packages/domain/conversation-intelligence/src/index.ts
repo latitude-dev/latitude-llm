@@ -23,31 +23,31 @@ export {
   SEMANTIC_MOMENT_SEGMENTATION_METHODS,
 } from "./constants.ts"
 export {
-  type ConversationMomentLabel,
-  conversationMomentLabelSchema,
   type MomentLabelActor,
   type MomentLabelKind,
   type MomentLabelKind as MomentKind,
   momentLabelActorSchema,
   momentLabelKindSchema,
-} from "./entities/moment-label.ts"
+  type SessionMomentLabel,
+  sessionMomentLabelSchema,
+} from "./entities/session-moment-label.ts"
 export {
-  type ConversationSemanticMoment,
-  conversationSemanticMomentSchema,
+  type SessionSemanticMoment,
+  sessionSemanticMomentSchema,
   SemanticMomentBoundaryReason,
   SemanticMomentSegmentationMethod,
   semanticMomentBoundaryReasonSchema,
   semanticMomentSegmentationMethodSchema,
-} from "./entities/semantic-moment.ts"
+} from "./entities/session-semantic-moment.ts"
 export {
   type AnalysisLens,
   type AnalysisStatus,
   analysisLensSchema,
   analysisStatusSchema,
-  type ConversationSessionAnalysis,
-  conversationSessionAnalysisSchema,
   type InteractionKind,
   interactionKindSchema,
+  type SessionAnalysis,
+  sessionAnalysisSchema,
 } from "./entities/session-analysis.ts"
 export {
   documentFromMessages,
@@ -58,16 +58,16 @@ export {
   textOf,
 } from "./normalization.ts"
 export {
-  ConversationMomentLabelRepository,
-  type ConversationMomentLabelRepositoryShape,
-} from "./ports/moment-label-repository.ts"
+  SessionMomentLabelRepository,
+  type SessionMomentLabelRepositoryShape,
+} from "./ports/session-moment-label-repository.ts"
 export {
-  ConversationSemanticMomentRepository,
-  type ConversationSemanticMomentRepositoryShape,
-} from "./ports/semantic-moment-repository.ts"
+  SessionSemanticMomentRepository,
+  type SessionSemanticMomentRepositoryShape,
+} from "./ports/session-semantic-moment-repository.ts"
 export {
-  ConversationSessionAnalysisRepository,
-  type ConversationSessionAnalysisRepositoryShape,
+  SessionAnalysisRepository,
+  type SessionAnalysisRepositoryShape,
 } from "./ports/session-analysis-repository.ts"
 export {
   computeSessionContinuityThreshold,
@@ -77,15 +77,15 @@ export {
   segmentSemanticMoments,
 } from "./semantic-segmentation.ts"
 export {
-  type AnalyzeSessionConversationInput,
-  type AnalyzeSessionConversationResult,
-  analyzeSessionConversationUseCase,
-} from "./use-cases/analyze-session-conversation.ts"
+  type AnalyzeSessionInput,
+  type AnalyzeSessionResult,
+  analyzeSessionUseCase,
+} from "./use-cases/analyze-session.ts"
 export {
-  type CalibrateConversationThresholdsInput,
-  type CalibrateConversationThresholdsResult,
-  calibrateConversationThresholdsUseCase,
-} from "./use-cases/calibrate-conversation-thresholds.ts"
+  type CalibrateSessionThresholdsInput,
+  type CalibrateSessionThresholdsResult,
+  calibrateSessionThresholdsUseCase,
+} from "./use-cases/calibrate-session-thresholds.ts"
 export {
   type ListSessionMomentIntelligenceInput,
   type ListSessionMomentIntelligenceResult,

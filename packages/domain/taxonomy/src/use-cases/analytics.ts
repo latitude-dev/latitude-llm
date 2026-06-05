@@ -118,7 +118,6 @@ export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
     const topOccurrences = yield* observations.getTopClustersByOccurrence({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension: "topic",
       since,
       limit: 5,
     })
@@ -127,7 +126,6 @@ export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
     const trendCounts = yield* observations.getClusterTrendCounts({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension: "topic",
       clusterIds: topClusterIds,
       currentSince: new Date(now.getTime() - TAXONOMY_TREND_CURRENT_DAYS * TAXONOMY_TREND_MS_PER_DAY),
       baselineSince: new Date(
@@ -151,7 +149,6 @@ export const getTaxonomyAnalyticsUseCase = (input: GetTaxonomyAnalyticsInput) =>
     const counts = yield* observations.getCounts({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension: "topic",
       since,
     })
     return {

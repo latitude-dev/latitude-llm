@@ -8,13 +8,11 @@ import type {
   TaxonomyRunId,
 } from "@domain/shared"
 import { Context, type Effect } from "effect"
-import type { TaxonomyDimension } from "../entities/dimension.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 
 export interface ListTaxonomyNoiseInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly dimension: TaxonomyDimension
   readonly since: Date
   readonly limit?: number
 }
@@ -22,7 +20,6 @@ export interface ListTaxonomyNoiseInput {
 export interface ListTaxonomyObservationClusterInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly dimension: TaxonomyDimension
   readonly clusterId: TaxonomyClusterId
   readonly limit: number
   readonly beforeStartTime?: Date
@@ -83,7 +80,6 @@ export interface TaxonomyObservationRepositoryShape {
   readonly listAllByCluster: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly dimension: TaxonomyDimension
     readonly clusterId: TaxonomyClusterId
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
@@ -96,21 +92,18 @@ export interface TaxonomyObservationRepositoryShape {
   readonly getCounts: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly dimension: TaxonomyDimension
     readonly since: Date
   }) => Effect.Effect<TaxonomyObservationCounts, RepositoryError, ChSqlClient>
   /** Pseudo-random sample of observation embeddings for threshold calibration. */
   readonly sampleEmbeddings: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly dimension: TaxonomyDimension
     readonly limit: number
   }) => Effect.Effect<readonly (readonly number[])[], RepositoryError, ChSqlClient>
   /** Assignment confidences (assigned and noise) for gate calibration. */
   readonly sampleAssignmentScores: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly dimension: TaxonomyDimension
     readonly limit: number
   }) => Effect.Effect<
     readonly { readonly assigned: boolean; readonly confidence: number }[],
@@ -120,14 +113,12 @@ export interface TaxonomyObservationRepositoryShape {
   readonly getTopClustersByOccurrence: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly dimension: TaxonomyDimension
     readonly since: Date
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyObservationClusterOccurrence[], RepositoryError, ChSqlClient>
   readonly getClusterTrendCounts: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly dimension: TaxonomyDimension
     readonly clusterIds: readonly TaxonomyClusterId[]
     readonly currentSince: Date
     readonly baselineSince: Date

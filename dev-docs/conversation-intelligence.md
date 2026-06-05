@@ -12,7 +12,7 @@ The corollary: every fixed similarity threshold is wrong on some corpus. All emb
 
 ## Pipeline
 
-One session analysis runs as a single Temporal activity wrapping `analyzeSessionConversationUseCase`:
+One session analysis runs as a single Temporal activity wrapping `analyzeSessionUseCase`:
 
 ```
 SessionRepository/TraceRepository ──► turn extraction (tool telemetry stripped)
@@ -70,9 +70,9 @@ All four tables are `ReplacingMergeTree(indexed_at)` partitioned by month, sorte
 
 | Table | Key (after org/project) | Holds |
 |---|---|---|
-| `conversation_session_analyses` | `session_id` | One row per session: `analysis_hash`, status, lens, trace ids |
-| `conversation_semantic_moments` | `session_id, analysis_hash, moment_id` | Segmentation output: message index range, boundary reason, coherence |
-| `conversation_moment_labels` | `session_id, analysis_hash, label_id` | Signal kind, confidence, evidence, message range, `moment_id` |
+| `session_analyses` | `session_id` | One row per session: `analysis_hash`, status, lens, trace ids |
+| `session_semantic_moments` | `session_id, analysis_hash, moment_id` | Segmentation output: message index range, boundary reason, coherence |
+| `session_moment_labels` | `session_id, analysis_hash, label_id` | Signal kind, confidence, evidence, message range, `moment_id` |
 | `taxonomy_observations` | `dimension, observation_id` | Topic projections: embedding, `assigned_cluster_id`, assignment method/confidence, `analysis_hash` |
 
 ### Analysis generations and the pinning rule
@@ -84,7 +84,7 @@ All four tables are `ReplacingMergeTree(indexed_at)` partitioned by month, sorte
 ```sql
 AND (x.session_id, x.analysis_hash) IN (
   SELECT session_id, argMax(analysis_hash, indexed_at)
-  FROM conversation_session_analyses
+  FROM session_analyses
   WHERE organization_id = {org} AND project_id = {project}
   GROUP BY session_id
 )

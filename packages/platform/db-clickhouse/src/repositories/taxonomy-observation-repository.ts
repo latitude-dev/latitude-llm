@@ -32,7 +32,6 @@ type TaxonomyObservationRow = {
   readonly session_id: string
   readonly analysis_hash: string
   readonly moment_id: string
-  readonly dimension: string
   readonly projection_method: string
   readonly projection_hash: string
   readonly projection_metadata: string
@@ -54,7 +53,6 @@ const selectColumns = `
   session_id,
   analysis_hash,
   moment_id,
-  dimension,
   projection_method,
   projection_hash,
   projection_metadata,
@@ -76,7 +74,6 @@ const toInsertRow = (observation: TaxonomyMomentObservation) => ({
   session_id: observation.sessionId as string,
   analysis_hash: observation.analysisHash,
   moment_id: observation.momentId,
-  dimension: observation.dimension,
   projection_method: observation.projectionMethod,
   projection_hash: observation.projectionHash,
   projection_metadata: JSON.stringify(observation.projectionMetadata),
@@ -99,7 +96,6 @@ const toDomainObservation = (row: TaxonomyObservationRow): TaxonomyMomentObserva
     sessionId: SessionId(row.session_id),
     analysisHash: row.analysis_hash,
     momentId: row.moment_id,
-    dimension: row.dimension,
     projectionMethod: row.projection_method,
     projectionHash: row.projection_hash,
     projectionMetadata: parseMetadata(row.projection_metadata),
@@ -195,7 +191,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             )
         }),
 
-      listNoise: ({ organizationId, projectId, dimension, since, limit }) =>
+      listNoise: ({ organizationId, projectId, since, limit }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -205,7 +201,6 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND dimension = {dimension:String}
                           AND assigned_cluster_id = ''
                           AND length(embedding) > 0
                           AND start_time >= {since:DateTime64(9, 'UTC')}
@@ -214,7 +209,6 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  dimension,
                   since: toClickhouseDateTime(since),
                   limit: limit ?? 10_000,
                 },
@@ -226,15 +220,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.listNoise")))
         }),
 
-      listByCluster: ({
-        organizationId,
-        projectId,
-        dimension,
-        clusterId,
-        limit,
-        beforeStartTime,
-        beforeObservationId,
-      }) =>
+      listByCluster: ({ organizationId, projectId, clusterId, limit, beforeStartTime, beforeObservationId }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const beforeClause = beforeStartTime
@@ -247,7 +233,6 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND dimension = {dimension:String}
                           AND assigned_cluster_id = {clusterId:String}
                           ${beforeClause}
                         ORDER BY start_time DESC, observation_id ASC
@@ -255,7 +240,6 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  dimension,
                   clusterId: clusterId as string,
                   limit,
                   ...(beforeStartTime
@@ -273,7 +257,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.listByCluster")))
         }),
 
-      listAllByCluster: ({ organizationId, projectId, dimension, clusterId, limit }) =>
+      listAllByCluster: ({ organizationId, projectId, clusterId, limit }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -283,14 +267,12 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND dimension = {dimension:String}
                           AND assigned_cluster_id = {clusterId:String}
                         ORDER BY start_time DESC, observation_id ASC
                         LIMIT {limit:UInt32}`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  dimension,
                   clusterId: clusterId as string,
                   limit,
                 },
@@ -317,7 +299,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                           AND project_id = {projectId:String}
                           AND session_id = {sessionId:String}
                           ${hashClause}
-                        ORDER BY start_time ASC, dimension ASC, observation_id ASC`,
+                        ORDER BY start_time ASC, observation_id ASC`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
@@ -332,7 +314,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.listBySession")))
         }),
 
-      sampleEmbeddings: ({ organizationId, projectId, dimension, limit }) =>
+      sampleEmbeddings: ({ organizationId, projectId, limit }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -342,14 +324,12 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND dimension = {dimension:String}
                           AND length(embedding) > 0
                         ORDER BY cityHash64(observation_id)
                         LIMIT {limit:UInt32}`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  dimension,
                   limit,
                 },
                 format: "JSONEachRow",
@@ -362,7 +342,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             )
         }),
 
-      sampleAssignmentScores: ({ organizationId, projectId, dimension, limit }) =>
+      sampleAssignmentScores: ({ organizationId, projectId, limit }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -372,13 +352,11 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND dimension = {dimension:String}
                         ORDER BY cityHash64(observation_id)
                         LIMIT {limit:UInt32}`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  dimension,
                   limit,
                 },
                 format: "JSONEachRow",
@@ -393,7 +371,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             )
         }),
 
-      getCounts: ({ organizationId, projectId, dimension, since }) =>
+      getCounts: ({ organizationId, projectId, since }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -406,12 +384,10 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND dimension = {dimension:String}
                           AND start_time >= {since:DateTime64(9, 'UTC')}`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  dimension,
                   since: toClickhouseDateTime(since),
                 },
                 format: "JSONEachRow",
@@ -430,7 +406,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.getCounts")))
         }),
 
-      getTopClustersByOccurrence: ({ organizationId, projectId, dimension, since, limit }) =>
+      getTopClustersByOccurrence: ({ organizationId, projectId, since, limit }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
@@ -440,7 +416,6 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND dimension = {dimension:String}
                           AND start_time >= {since:DateTime64(9, 'UTC')}
                           AND assigned_cluster_id != ''
                         GROUP BY assigned_cluster_id
@@ -449,7 +424,6 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  dimension,
                   since: toClickhouseDateTime(since),
                   limit,
                 },
@@ -465,15 +439,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             )
         }),
 
-      getClusterTrendCounts: ({
-        organizationId,
-        projectId,
-        dimension,
-        clusterIds,
-        currentSince,
-        baselineSince,
-        baselineDays,
-      }) =>
+      getClusterTrendCounts: ({ organizationId, projectId, clusterIds, currentSince, baselineSince, baselineDays }) =>
         Effect.gen(function* () {
           if (clusterIds.length === 0) return []
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -487,14 +453,12 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND dimension = {dimension:String}
                           AND assigned_cluster_id IN {clusterIds:Array(String)}
                           AND start_time >= {baselineSince:DateTime64(9, 'UTC')}
                         GROUP BY assigned_cluster_id`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
-                  dimension,
                   clusterIds: clusterIds as readonly string[],
                   currentSince: toClickhouseDateTime(currentSince),
                   baselineSince: toClickhouseDateTime(baselineSince),

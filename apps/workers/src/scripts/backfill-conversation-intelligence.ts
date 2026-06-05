@@ -93,10 +93,10 @@ async function resetProjectConversationIntelligence(project: ProjectRow) {
   const clickhouse = getClickhouseClient()
   const params = { organizationId: project.organization_id, projectId: project.project_id }
   for (const table of [
-    "conversation_moment_labels",
-    "conversation_semantic_moments",
+    "session_moment_labels",
+    "session_semantic_moments",
     "taxonomy_observations",
-    "conversation_session_analyses",
+    "session_analyses",
   ] as const) {
     await clickhouse.command({
       query: `ALTER TABLE ${table} DELETE WHERE organization_id = {organizationId:String} AND project_id = {projectId:String}`,
@@ -195,7 +195,7 @@ async function waitForTerminalAnalyses(project: ProjectRow, expected: number) {
   while (Date.now() - startedAt < 20 * 60_000) {
     const rows = await clickhouse.query({
       query: `SELECT count() AS total
-              FROM conversation_session_analyses FINAL
+              FROM session_analyses FINAL
               WHERE organization_id = {organizationId:String}
                 AND project_id = {projectId:String}`,
       query_params: { organizationId: project.organization_id, projectId: project.project_id },

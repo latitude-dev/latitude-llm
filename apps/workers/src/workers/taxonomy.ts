@@ -82,7 +82,7 @@ export const runGardenSweepJob = (payload: GardenSweepPayload, deps: TaxonomySwe
       yield* Effect.gen(function* () {
         const counts = yield* Effect.gen(function* () {
           const repo = yield* TaxonomyObservationRepository
-          return yield* repo.getCounts({ organizationId, projectId, dimension: "topic", since })
+          return yield* repo.getCounts({ organizationId, projectId, since })
         }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, deps.clickhouseClient, organizationId))
         if (counts.total < TAXONOMY_GARDENING_MIN_OBSERVATIONS) return
 

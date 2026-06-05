@@ -18,20 +18,21 @@ import {
   type CalibrationProfileRepositoryShape,
   TaxonomyClusterRepository,
   type TaxonomyClusterRepositoryShape,
+  type TaxonomyMomentObservation,
   TaxonomyObservationRepository,
   type TaxonomyObservationRepositoryShape,
 } from "@domain/taxonomy"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { ConversationMomentLabelRepository } from "../ports/moment-label-repository.ts"
-import { ConversationSemanticMomentRepository } from "../ports/semantic-moment-repository.ts"
-import { ConversationSessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
+import { SessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
+import { SessionMomentLabelRepository } from "../ports/session-moment-label-repository.ts"
+import { SessionSemanticMomentRepository } from "../ports/session-semantic-moment-repository.ts"
 import {
-  createFakeConversationMomentLabelRepository,
-  createFakeConversationSemanticMomentRepository,
-  createFakeConversationSessionAnalysisRepository,
+  createFakeSessionAnalysisRepository,
+  createFakeSessionMomentLabelRepository,
+  createFakeSessionSemanticMomentRepository,
 } from "../testing/index.ts"
-import { analyzeSessionConversationUseCase } from "./analyze-session-conversation.ts"
+import { analyzeSessionUseCase } from "./analyze-session.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -99,6 +100,7 @@ const createFakeTaxonomyObservationRepository = () => {
         rows.push(...observations)
       }),
     filterExistingIds: () => Effect.succeed([]),
+    getCounts: () => Effect.succeed({ total: 0, assigned: 0, noise: 0 }),
   }
   return { repository: repository as TaxonomyObservationRepositoryShape, rows }
 }
@@ -116,11 +118,11 @@ const runUseCase = (input: {
   readonly session: SessionDetail
   readonly trace?: TraceDetail
   readonly ai?: AIShape
-  readonly seedAnalyses?: readonly import("../entities/session-analysis.ts").ConversationSessionAnalysis[]
+  readonly seedAnalyses?: readonly import("../entities/session-analysis.ts").SessionAnalysis[]
 }) => {
-  const analyses = createFakeConversationSessionAnalysisRepository(input.seedAnalyses ?? [])
-  const semanticMoments = createFakeConversationSemanticMomentRepository()
-  const momentLabels = createFakeConversationMomentLabelRepository()
+  const analyses = createFakeSessionAnalysisRepository(input.seedAnalyses ?? [])
+  const semanticMoments = createFakeSessionSemanticMomentRepository()
+  const momentLabels = createFakeSessionMomentLabelRepository()
   const taxonomyObservations = createFakeTaxonomyObservationRepository()
   const taxonomyClusters = createFakeTaxonomyClusterRepository()
   const taxonomyLocks = createFakeDistributedLockRepository()
@@ -134,7 +136,7 @@ const runUseCase = (input: {
       rerank: () => Effect.die("rerank not used"),
     } satisfies AIShape)
 
-  const effect = analyzeSessionConversationUseCase({
+  const effect = analyzeSessionUseCase({
     organizationId,
     projectId,
     sessionId,
@@ -143,9 +145,9 @@ const runUseCase = (input: {
   }).pipe(
     Effect.provide(Layer.succeed(SessionRepository, sessions.repository)),
     Effect.provide(Layer.succeed(TraceRepository, traces.repository)),
-    Effect.provide(Layer.succeed(ConversationSessionAnalysisRepository, analyses.repository)),
-    Effect.provide(Layer.succeed(ConversationSemanticMomentRepository, semanticMoments.repository)),
-    Effect.provide(Layer.succeed(ConversationMomentLabelRepository, momentLabels.repository)),
+    Effect.provide(Layer.succeed(SessionAnalysisRepository, analyses.repository)),
+    Effect.provide(Layer.succeed(SessionSemanticMomentRepository, semanticMoments.repository)),
+    Effect.provide(Layer.succeed(SessionMomentLabelRepository, momentLabels.repository)),
     Effect.provide(Layer.succeed(TaxonomyObservationRepository, taxonomyObservations.repository)),
     Effect.provide(Layer.succeed(TaxonomyClusterRepository, taxonomyClusters.repository)),
     Effect.provide(Layer.succeed(CalibrationProfileRepository, fakeCalibrationProfileRepository)),
@@ -159,7 +161,7 @@ const runUseCase = (input: {
   return { effect, analyses, semanticMoments, momentLabels, taxonomyObservations }
 }
 
-describe("analyzeSessionConversationUseCase", () => {
+describe("analyzeSessionUseCase", () => {
   it("analyzes user conversations and persists generated analysis", async () => {
     const { effect, analyses, semanticMoments, taxonomyObservations } = runUseCase({
       session: makeSession(),
@@ -174,7 +176,7 @@ describe("analyzeSessionConversationUseCase", () => {
     expect(analysis?.analysisLens).toBe("conversation")
     expect(analysis?.analysisStatus).toBe("analyzed")
     expect(semanticMoments.rows).toHaveLength(1)
-    expect(taxonomyObservations.rows.map((row) => (row as { dimension: string }).dimension)).toEqual(["topic"])
+    expect(taxonomyObservations.rows).toHaveLength(1)
   })
 
   it("persists deterministic taxonomy observation summaries", async () => {
@@ -188,13 +190,8 @@ describe("analyzeSessionConversationUseCase", () => {
 
     await Effect.runPromise(effect)
 
-    const metadataByDimension = new Map(
-      taxonomyObservations.rows.map((row) => {
-        const typed = row as { readonly dimension: string; readonly projectionMetadata: Record<string, unknown> }
-        return [typed.dimension, typed.projectionMetadata] as const
-      }),
-    )
-    const topicSummary = metadataByDimension.get("topic")?.summary
+    const [observation] = taxonomyObservations.rows as TaxonomyMomentObservation[]
+    const topicSummary = observation?.projectionMetadata.summary
 
     expect(topicSummary).toEqual(
       "user: Please check roaming for my account\n\nassistant: I checked the account and reset the roaming profile",
@@ -284,9 +281,9 @@ describe("analyzeSessionConversationUseCase", () => {
   })
 
   it("records a failed coverage row when the session is not found", async () => {
-    const analyses = createFakeConversationSessionAnalysisRepository()
-    const semanticMoments = createFakeConversationSemanticMomentRepository()
-    const momentLabels = createFakeConversationMomentLabelRepository()
+    const analyses = createFakeSessionAnalysisRepository()
+    const semanticMoments = createFakeSessionSemanticMomentRepository()
+    const momentLabels = createFakeSessionMomentLabelRepository()
     const taxonomyObservations = createFakeTaxonomyObservationRepository()
     const taxonomyClusters = createFakeTaxonomyClusterRepository()
     const taxonomyLocks = createFakeDistributedLockRepository()
@@ -294,7 +291,7 @@ describe("analyzeSessionConversationUseCase", () => {
     const traces = createFakeTraceRepository()
 
     const result = await Effect.runPromise(
-      analyzeSessionConversationUseCase({
+      analyzeSessionUseCase({
         organizationId,
         projectId,
         sessionId,
@@ -303,9 +300,9 @@ describe("analyzeSessionConversationUseCase", () => {
       }).pipe(
         Effect.provide(Layer.succeed(SessionRepository, sessions.repository)),
         Effect.provide(Layer.succeed(TraceRepository, traces.repository)),
-        Effect.provide(Layer.succeed(ConversationSessionAnalysisRepository, analyses.repository)),
-        Effect.provide(Layer.succeed(ConversationSemanticMomentRepository, semanticMoments.repository)),
-        Effect.provide(Layer.succeed(ConversationMomentLabelRepository, momentLabels.repository)),
+        Effect.provide(Layer.succeed(SessionAnalysisRepository, analyses.repository)),
+        Effect.provide(Layer.succeed(SessionSemanticMomentRepository, semanticMoments.repository)),
+        Effect.provide(Layer.succeed(SessionMomentLabelRepository, momentLabels.repository)),
         Effect.provide(Layer.succeed(TaxonomyObservationRepository, taxonomyObservations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, taxonomyClusters.repository)),
         Effect.provide(Layer.succeed(CalibrationProfileRepository, fakeCalibrationProfileRepository)),

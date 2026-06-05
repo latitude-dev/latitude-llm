@@ -4,7 +4,7 @@ const { mockActivities, childExecutions } = vi.hoisted(() => {
   const mockActivities = {
     calibrateGardenTaxonomyActivity: vi.fn(async () => ({
       clusteringCalibrated: false,
-      conversationCalibrated: false,
+      sessionCalibrated: false,
     })),
     startGardenTaxonomyRunActivity: vi.fn(async (input: Record<string, unknown>) => ({
       ...input,

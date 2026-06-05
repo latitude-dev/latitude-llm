@@ -13,7 +13,6 @@ import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testi
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
-import { TaxonomyDimension } from "../entities/dimension.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { createTaxonomyCentroid, updateTaxonomyCentroid } from "../helpers.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
@@ -61,7 +60,6 @@ const makeObservation = (index: number, clusterId = TaxonomyClusterId("k".repeat
   sessionId: SessionId(`session-${index}`),
   analysisHash: String(index).repeat(64).slice(0, 64),
   momentId: `moment-${index}`,
-  dimension: TaxonomyDimension.Topic,
   projectionMethod: "moment_text_embedding",
   projectionHash: String(index).repeat(64).slice(0, 64),
   projectionMetadata: { summary: `Observation ${index}` },

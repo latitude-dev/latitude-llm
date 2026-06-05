@@ -7,7 +7,7 @@ import type {
 import { TaxonomyClusterIntelligenceRepository } from "../ports/taxonomy-cluster-intelligence-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 
-export interface GetClusterConversationIntelligenceInput {
+export interface GetClusterSessionIntelligenceInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly clusterId: TaxonomyClusterId
@@ -15,7 +15,7 @@ export interface GetClusterConversationIntelligenceInput {
   readonly sourceWindowDays?: number
 }
 
-export interface GetClusterConversationIntelligenceResult {
+export interface GetClusterSessionIntelligenceResult {
   readonly aggregate: ClusterAnalysisAggregate
   readonly representativeExamples: readonly ClusterRepresentativeExample[]
   readonly topMoments: readonly { readonly kind: string; readonly count: number }[]
@@ -31,7 +31,7 @@ const DEFAULT_SOURCE_WINDOW_DAYS = 30
 const rate = (count: number, denominator: number): number => (denominator <= 0 ? 0 : count / denominator)
 const countOf = (distribution: Readonly<Record<string, number>>, key: string): number => distribution[key] ?? 0
 
-export const getClusterConversationIntelligenceUseCase = (input: GetClusterConversationIntelligenceInput) =>
+export const getClusterSessionIntelligenceUseCase = (input: GetClusterSessionIntelligenceInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
@@ -62,9 +62,9 @@ export const getClusterConversationIntelligenceUseCase = (input: GetClusterConve
       sourceWindowEnd,
       limit: 10,
     })
-    const conversationDenominator = aggregate.conversationEligibleSessionCount
+    const eligibleSessionDenominator = aggregate.eligibleSessionCount
     const queryLatencyMs = Date.now() - queryStartedAt
-    yield* Effect.logDebug("Loaded cluster conversation intelligence", {
+    yield* Effect.logDebug("Loaded cluster session intelligence", {
       projectId: input.projectId,
       clusterId: input.clusterId,
       queryLatencyMs,
@@ -80,9 +80,9 @@ export const getClusterConversationIntelligenceUseCase = (input: GetClusterConve
       topMoments,
       rates: {
         analysisCoverage: aggregate.sourceAnalysisCoverage,
-        resolutionRate: rate(countOf(aggregate.momentKindDistribution, "resolution"), conversationDenominator),
-        escalationRate: rate(countOf(aggregate.momentKindDistribution, "escalation"), conversationDenominator),
-        frustrationRate: rate(countOf(aggregate.momentKindDistribution, "user_frustration"), conversationDenominator),
+        resolutionRate: rate(countOf(aggregate.momentKindDistribution, "resolution"), eligibleSessionDenominator),
+        escalationRate: rate(countOf(aggregate.momentKindDistribution, "escalation"), eligibleSessionDenominator),
+        frustrationRate: rate(countOf(aggregate.momentKindDistribution, "user_frustration"), eligibleSessionDenominator),
       },
-    } satisfies GetClusterConversationIntelligenceResult
-  }).pipe(Effect.withSpan("taxonomy.getClusterConversationIntelligence"))
+    } satisfies GetClusterSessionIntelligenceResult
+  }).pipe(Effect.withSpan("taxonomy.getClusterSessionIntelligence"))

@@ -32,6 +32,8 @@ export {
   TAXONOMY_GARDENING_THROTTLE_MS,
   TAXONOMY_LINEAGE_TRANSITION_TYPES,
   TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
+  TAXONOMY_MERGE_CANDIDATES_PER_PARENT,
+  TAXONOMY_MERGE_NEAREST_NEIGHBORS,
   TAXONOMY_MERGE_THRESHOLD,
   TAXONOMY_NAMING_MODEL,
   TAXONOMY_NAMING_REFRESH_OBSERVATIONS,
@@ -40,9 +42,11 @@ export {
   TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO,
   TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
+  TAXONOMY_NOISE_SAMPLE_MAX,
   TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS,
   TAXONOMY_OBSERVATION_DEBOUNCE_MS,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
+  TAXONOMY_OBSERVATION_SAMPLE_MAX,
   TAXONOMY_OBSERVATION_WEIGHT_SCHEME,
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_PROJECTION_METHODS,
@@ -60,12 +64,12 @@ export {
   type CalibrationProfile,
   type CalibrationScope,
   type ClusteringCalibration,
-  type ConversationCalibration,
   calibrationPayloadSchema,
   calibrationProfileSchema,
   calibrationScopeSchema,
   clusteringCalibrationSchema,
-  conversationCalibrationSchema,
+  type SessionCalibration,
+  sessionCalibrationSchema,
 } from "./entities/calibration.ts"
 export {
   type TaxonomyCentroid,
@@ -209,10 +213,10 @@ export {
 export { type EmitLineageInput, emitLineageUseCase } from "./use-cases/emit-lineage.ts"
 export { type FindNearestClustersInput, findNearestClustersUseCase } from "./use-cases/find-nearest-clusters.ts"
 export {
-  type GetClusterConversationIntelligenceInput,
-  type GetClusterConversationIntelligenceResult,
-  getClusterConversationIntelligenceUseCase,
-} from "./use-cases/get-cluster-conversation-intelligence.ts"
+  type GetClusterSessionIntelligenceInput,
+  type GetClusterSessionIntelligenceResult,
+  getClusterSessionIntelligenceUseCase,
+} from "./use-cases/get-cluster-session-intelligence.ts"
 export {
   type GetClusterDetailsInput,
   type GetClusterDetailsResult,
@@ -238,7 +242,7 @@ export {
   listProjectBehavioursUseCase,
   type ProjectBehaviourNode,
 } from "./use-cases/list-project-behaviours.ts"
-export { loadClusteringCalibration, loadConversationCalibration } from "./use-cases/load-calibration.ts"
+export { loadClusteringCalibration, loadSessionCalibration } from "./use-cases/load-calibration.ts"
 export {
   type MergeNearDuplicateClustersInput,
   type MergeNearDuplicateClustersResult,

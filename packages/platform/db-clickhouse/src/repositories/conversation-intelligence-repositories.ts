@@ -1,14 +1,14 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import {
-  type ConversationMomentLabel,
-  ConversationMomentLabelRepository,
-  type ConversationSemanticMoment,
-  ConversationSemanticMomentRepository,
-  type ConversationSessionAnalysis,
-  ConversationSessionAnalysisRepository,
-  conversationMomentLabelSchema,
-  conversationSemanticMomentSchema,
-  conversationSessionAnalysisSchema,
+  type SessionAnalysis,
+  SessionAnalysisRepository,
+  sessionAnalysisSchema,
+  type SessionSemanticMoment,
+  SessionSemanticMomentRepository,
+  type SessionMomentLabel,
+  SessionMomentLabelRepository,
+  sessionMomentLabelSchema,
+  sessionSemanticMomentSchema,
 } from "@domain/conversation-intelligence"
 import {
   ChSqlClient,
@@ -136,7 +136,7 @@ const momentLabelColumns = `
   indexed_at
 `
 
-const toAnalysisInsertRow = (analysis: ConversationSessionAnalysis) => ({
+const toAnalysisInsertRow = (analysis: SessionAnalysis) => ({
   organization_id: analysis.organizationId as string,
   project_id: analysis.projectId as string,
   session_id: analysis.sessionId as string,
@@ -153,7 +153,7 @@ const toAnalysisInsertRow = (analysis: ConversationSessionAnalysis) => ({
   indexed_at: toClickhouseDateTime(analysis.indexedAt),
 })
 
-const toSemanticMomentInsertRow = (moment: ConversationSemanticMoment) => ({
+const toSemanticMomentInsertRow = (moment: SessionSemanticMoment) => ({
   organization_id: moment.organizationId as string,
   project_id: moment.projectId as string,
   session_id: moment.sessionId as string,
@@ -173,7 +173,7 @@ const toSemanticMomentInsertRow = (moment: ConversationSemanticMoment) => ({
   indexed_at: toClickhouseDateTime(moment.indexedAt),
 })
 
-const toMomentLabelInsertRow = (label: ConversationMomentLabel) => ({
+const toMomentLabelInsertRow = (label: SessionMomentLabel) => ({
   organization_id: label.organizationId as string,
   project_id: label.projectId as string,
   session_id: label.sessionId as string,
@@ -192,8 +192,8 @@ const toMomentLabelInsertRow = (label: ConversationMomentLabel) => ({
   indexed_at: toClickhouseDateTime(label.indexedAt),
 })
 
-const toDomainAnalysis = (row: AnalysisRow): ConversationSessionAnalysis =>
-  conversationSessionAnalysisSchema.parse({
+const toDomainAnalysis = (row: AnalysisRow): SessionAnalysis =>
+  sessionAnalysisSchema.parse({
     organizationId: OrganizationId(row.organization_id),
     projectId: ProjectId(row.project_id),
     sessionId: SessionId(row.session_id),
@@ -210,8 +210,8 @@ const toDomainAnalysis = (row: AnalysisRow): ConversationSessionAnalysis =>
     indexedAt: parseClickhouseDate(row.indexed_at),
   })
 
-const toDomainSemanticMoment = (row: SemanticMomentRow): ConversationSemanticMoment =>
-  conversationSemanticMomentSchema.parse({
+const toDomainSemanticMoment = (row: SemanticMomentRow): SessionSemanticMoment =>
+  sessionSemanticMomentSchema.parse({
     organizationId: OrganizationId(row.organization_id),
     projectId: ProjectId(row.project_id),
     sessionId: SessionId(row.session_id),
@@ -231,8 +231,8 @@ const toDomainSemanticMoment = (row: SemanticMomentRow): ConversationSemanticMom
     indexedAt: parseClickhouseDate(row.indexed_at),
   })
 
-const toDomainMomentLabel = (row: MomentLabelRow): ConversationMomentLabel =>
-  conversationMomentLabelSchema.parse({
+const toDomainMomentLabel = (row: MomentLabelRow): SessionMomentLabel =>
+  sessionMomentLabelSchema.parse({
     organizationId: OrganizationId(row.organization_id),
     projectId: ProjectId(row.project_id),
     sessionId: SessionId(row.session_id),
@@ -251,8 +251,8 @@ const toDomainMomentLabel = (row: MomentLabelRow): ConversationMomentLabel =>
     indexedAt: parseClickhouseDate(row.indexed_at),
   })
 
-export const ConversationSessionAnalysisRepositoryLive = Layer.effect(
-  ConversationSessionAnalysisRepository,
+export const SessionAnalysisRepositoryLive = Layer.effect(
+  SessionAnalysisRepository,
   Effect.gen(function* () {
     return {
       findLatest: ({ organizationId, projectId, sessionId }) =>
@@ -262,7 +262,7 @@ export const ConversationSessionAnalysisRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT ${analysisColumns}
-                        FROM conversation_session_analyses FINAL
+                        FROM session_analyses FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND session_id = {sessionId:String}
@@ -275,7 +275,7 @@ export const ConversationSessionAnalysisRepositoryLive = Layer.effect(
               return row ? toDomainAnalysis(row) : null
             })
             .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "ConversationSessionAnalysisRepository.findLatest")),
+              Effect.mapError((error) => toRepositoryError(error, "SessionAnalysisRepository.findLatest")),
             )
         }),
       upsert: (analysis) =>
@@ -284,19 +284,19 @@ export const ConversationSessionAnalysisRepositoryLive = Layer.effect(
           yield* chSqlClient
             .query(async (client) => {
               await client.insert({
-                table: "conversation_session_analyses",
+                table: "session_analyses",
                 values: [toAnalysisInsertRow(analysis)],
                 format: "JSONEachRow",
               })
             })
-            .pipe(Effect.mapError((error) => toRepositoryError(error, "ConversationSessionAnalysisRepository.upsert")))
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionAnalysisRepository.upsert")))
         }),
     }
   }),
 )
 
-export const ConversationSemanticMomentRepositoryLive = Layer.effect(
-  ConversationSemanticMomentRepository,
+export const SessionSemanticMomentRepositoryLive = Layer.effect(
+  SessionSemanticMomentRepository,
   Effect.gen(function* () {
     return {
       upsertMany: (moments) =>
@@ -306,13 +306,13 @@ export const ConversationSemanticMomentRepositoryLive = Layer.effect(
           yield* chSqlClient
             .query(async (client) => {
               await client.insert({
-                table: "conversation_semantic_moments",
+                table: "session_semantic_moments",
                 values: moments.map(toSemanticMomentInsertRow),
                 format: "JSONEachRow",
               })
             })
             .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "ConversationSemanticMomentRepository.upsertMany")),
+              Effect.mapError((error) => toRepositoryError(error, "SessionSemanticMomentRepository.upsertMany")),
             )
         }),
       listBySession: ({ organizationId, projectId, sessionId }) =>
@@ -322,7 +322,7 @@ export const ConversationSemanticMomentRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT ${semanticMomentColumns}
-                        FROM conversation_semantic_moments FINAL
+                        FROM session_semantic_moments FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND session_id = {sessionId:String}
@@ -334,7 +334,7 @@ export const ConversationSemanticMomentRepositoryLive = Layer.effect(
             })
             .pipe(
               Effect.mapError((error) =>
-                toRepositoryError(error, "ConversationSemanticMomentRepository.listBySession"),
+                toRepositoryError(error, "SessionSemanticMomentRepository.listBySession"),
               ),
             )
         }),
@@ -345,7 +345,7 @@ export const ConversationSemanticMomentRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT ${semanticMomentColumns}
-                        FROM conversation_semantic_moments FINAL
+                        FROM session_semantic_moments FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND trace_id = {traceId:FixedString(32)}
@@ -356,15 +356,15 @@ export const ConversationSemanticMomentRepositoryLive = Layer.effect(
               return ((await result.json()) as SemanticMomentRow[]).map(toDomainSemanticMoment)
             })
             .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "ConversationSemanticMomentRepository.listByTrace")),
+              Effect.mapError((error) => toRepositoryError(error, "SessionSemanticMomentRepository.listByTrace")),
             )
         }),
     }
   }),
 )
 
-export const ConversationMomentLabelRepositoryLive = Layer.effect(
-  ConversationMomentLabelRepository,
+export const SessionMomentLabelRepositoryLive = Layer.effect(
+  SessionMomentLabelRepository,
   Effect.gen(function* () {
     return {
       upsertMany: (labels) =>
@@ -374,12 +374,12 @@ export const ConversationMomentLabelRepositoryLive = Layer.effect(
           yield* chSqlClient
             .query(async (client) => {
               await client.insert({
-                table: "conversation_moment_labels",
+                table: "session_moment_labels",
                 values: labels.map(toMomentLabelInsertRow),
                 format: "JSONEachRow",
               })
             })
-            .pipe(Effect.mapError((error) => toRepositoryError(error, "ConversationMomentLabelRepository.upsertMany")))
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "SessionMomentLabelRepository.upsertMany")))
         }),
       listBySession: ({ organizationId, projectId, sessionId }) =>
         Effect.gen(function* () {
@@ -388,7 +388,7 @@ export const ConversationMomentLabelRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT ${momentLabelColumns}
-                        FROM conversation_moment_labels FINAL
+                        FROM session_moment_labels FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND session_id = {sessionId:String}
@@ -399,7 +399,7 @@ export const ConversationMomentLabelRepositoryLive = Layer.effect(
               return ((await result.json()) as MomentLabelRow[]).map(toDomainMomentLabel)
             })
             .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "ConversationMomentLabelRepository.listBySession")),
+              Effect.mapError((error) => toRepositoryError(error, "SessionMomentLabelRepository.listBySession")),
             )
         }),
       listByMoment: ({ organizationId, projectId, sessionId, momentId }) =>
@@ -409,7 +409,7 @@ export const ConversationMomentLabelRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT ${momentLabelColumns}
-                        FROM conversation_moment_labels FINAL
+                        FROM session_moment_labels FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND session_id = {sessionId:String}
@@ -426,7 +426,7 @@ export const ConversationMomentLabelRepositoryLive = Layer.effect(
               return ((await result.json()) as MomentLabelRow[]).map(toDomainMomentLabel)
             })
             .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "ConversationMomentLabelRepository.listByMoment")),
+              Effect.mapError((error) => toRepositoryError(error, "SessionMomentLabelRepository.listByMoment")),
             )
         }),
     }

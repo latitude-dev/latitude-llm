@@ -1,7 +1,7 @@
 -- +goose NO TRANSACTION
 -- +goose Up
 
-CREATE TABLE IF NOT EXISTS conversation_session_analyses ON CLUSTER default
+CREATE TABLE IF NOT EXISTS session_analyses ON CLUSTER default
 (
     organization_id        LowCardinality(String) CODEC(ZSTD(1)),
     project_id             LowCardinality(String) CODEC(ZSTD(1)),
@@ -26,7 +26,7 @@ PRIMARY KEY (organization_id, project_id, session_id)
 ORDER BY (organization_id, project_id, session_id)
 TTL toDateTime(start_time) + toIntervalDay(retention_days + 30) DELETE;
 
-CREATE TABLE IF NOT EXISTS conversation_semantic_moments ON CLUSTER default
+CREATE TABLE IF NOT EXISTS session_semantic_moments ON CLUSTER default
 (
     organization_id       LowCardinality(String) CODEC(ZSTD(1)),
     project_id            LowCardinality(String) CODEC(ZSTD(1)),
@@ -52,7 +52,7 @@ PRIMARY KEY (organization_id, project_id, session_id, analysis_hash, moment_id)
 ORDER BY (organization_id, project_id, session_id, analysis_hash, moment_id)
 TTL toDateTime(start_time) + toIntervalDay(retention_days + 30) DELETE;
 
-CREATE TABLE IF NOT EXISTS conversation_moment_labels ON CLUSTER default
+CREATE TABLE IF NOT EXISTS session_moment_labels ON CLUSTER default
 (
     organization_id       LowCardinality(String) CODEC(ZSTD(1)),
     project_id            LowCardinality(String) CODEC(ZSTD(1)),
@@ -85,7 +85,6 @@ CREATE TABLE IF NOT EXISTS taxonomy_observations ON CLUSTER default
     session_id                String                 CODEC(ZSTD(1)),
     analysis_hash             FixedString(64)        CODEC(ZSTD(1)),
     moment_id                 String                 CODEC(ZSTD(1)),
-    dimension                 LowCardinality(String) CODEC(ZSTD(1)),
     projection_method         LowCardinality(String) CODEC(ZSTD(1)),
     projection_hash           FixedString(64)        CODEC(ZSTD(1)),
     projection_metadata       String                 DEFAULT '{}' CODEC(ZSTD(3)),
@@ -97,17 +96,20 @@ CREATE TABLE IF NOT EXISTS taxonomy_observations ON CLUSTER default
     start_time                DateTime64(9, 'UTC')   CODEC(Delta(8), ZSTD(1)),
     end_time                  DateTime64(9, 'UTC')   CODEC(Delta(8), ZSTD(1)),
     retention_days            UInt16                 DEFAULT 90 CODEC(T64, ZSTD(1)),
-    indexed_at                DateTime64(3, 'UTC')   DEFAULT now64(3) CODEC(Delta(8), LZ4)
+    indexed_at                DateTime64(3, 'UTC')   DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    INDEX idx_taxonomy_observations_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_taxonomy_observations_analysis_hash analysis_hash TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_taxonomy_observations_observation_id observation_id TYPE bloom_filter(0.01) GRANULARITY 4
 )
 ENGINE = ReplicatedReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, dimension, observation_id)
-ORDER BY (organization_id, project_id, dimension, observation_id)
+PRIMARY KEY (organization_id, project_id, assigned_cluster_id, start_time)
+ORDER BY (organization_id, project_id, assigned_cluster_id, start_time, observation_id)
 TTL toDateTime(start_time) + toIntervalDay(retention_days + 30) DELETE;
 
 -- +goose Down
 
 DROP TABLE IF EXISTS taxonomy_observations ON CLUSTER default;
-DROP TABLE IF EXISTS conversation_moment_labels ON CLUSTER default;
-DROP TABLE IF EXISTS conversation_semantic_moments ON CLUSTER default;
-DROP TABLE IF EXISTS conversation_session_analyses ON CLUSTER default;
+DROP TABLE IF EXISTS session_moment_labels ON CLUSTER default;
+DROP TABLE IF EXISTS session_semantic_moments ON CLUSTER default;
+DROP TABLE IF EXISTS session_analyses ON CLUSTER default;

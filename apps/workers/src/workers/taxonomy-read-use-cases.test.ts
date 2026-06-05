@@ -91,7 +91,6 @@ const observation = (index: number): TaxonomyMomentObservation => ({
   sessionId: SessionId(`read-session-${index}`),
   analysisHash: String(index).repeat(64).slice(0, 64),
   momentId: `moment-${index}`,
-  dimension: "topic",
   projectionMethod: "moment_text_embedding",
   projectionHash: String(index).repeat(64).slice(0, 64),
   projectionMetadata: { summary: `Cancellation observation ${index}` },

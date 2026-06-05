@@ -6,11 +6,13 @@ import {
   TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
   TAXONOMY_JUDGE_MODEL,
   TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
+  TAXONOMY_MERGE_CANDIDATES_PER_PARENT,
   TAXONOMY_MERGE_COMPONENT_MIN_SIMILARITY,
   TAXONOMY_MERGE_JUDGE_CONCURRENCY,
   TAXONOMY_MERGE_JUDGE_THRESHOLD,
   TAXONOMY_MERGE_NAME_NOMINATION_JACCARD,
   TAXONOMY_MERGE_NAME_NOMINATION_MIN_SIMILARITY,
+  TAXONOMY_MERGE_NEAREST_NEIGHBORS,
   TAXONOMY_MERGE_THRESHOLD,
   TAXONOMY_NAMING_TIMEOUT_MS,
   TAXONOMY_TREE_ROOT_LINK_THRESHOLD,
@@ -78,8 +80,9 @@ const candidateMergePairs = (
   similarityFloor: number,
 ): readonly MergeCandidatePair[] => {
   const vectors = clusters.map((cluster) => normalizeTaxonomyCentroid(cluster.centroid))
-  const pairs: MergeCandidatePair[] = []
+  const pairsByKey = new Map<string, MergeCandidatePair>()
   for (let i = 0; i < clusters.length; i++) {
+    const nearest: MergeCandidatePair[] = []
     for (let j = i + 1; j < clusters.length; j++) {
       const leftVector = vectors[i]
       const rightVector = vectors[j]
@@ -96,10 +99,16 @@ const candidateMergePairs = (
         isDisplayableTaxonomyName(left.name) &&
         isDisplayableTaxonomyName(right.name) &&
         namesOverlap(left.name, right.name)
-      if (similarityNominated || nameNominated) pairs.push({ left, right, similarity })
+      if (similarityNominated || nameNominated) nearest.push({ left, right, similarity })
+    }
+    for (const pair of nearest.sort((a, b) => b.similarity - a.similarity).slice(0, TAXONOMY_MERGE_NEAREST_NEIGHBORS)) {
+      const key = [pair.left.id, pair.right.id].sort().join(":")
+      pairsByKey.set(key, pair)
     }
   }
-  return pairs
+  return [...pairsByKey.values()]
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, TAXONOMY_MERGE_CANDIDATES_PER_PARENT)
 }
 
 const mergeJudgeSchema = z.object({ sameBehavior: z.boolean() })
@@ -283,8 +292,9 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
       // reassignment, subtree re-pathing) could outlive the TTL and silently
       // reopen the lost-update races the locks exist to prevent.
       for (const loser of losers) {
-        // (1) Loser lock: fresh read + state check + markMerged. Closes the
-        // resurrect-on-stale-save race with live assignment.
+        // (1) Loser lock: fresh read + state check. The loser is marked merged
+        // only after its sampled observations are reassigned below; otherwise a
+        // capped rewrite could strand rows on an inactive cluster.
         const freshLoser = yield* withTaxonomyClusterLock(
           {
             organizationId: input.organizationId,
@@ -294,21 +304,21 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
           Effect.gen(function* () {
             const row = yield* clusters.findById(loser.id)
             if (row.state !== "active") return null
-            yield* clusters.markMerged({ clusterId: loser.id, mergedIntoClusterId: survivor.id, timestamp: now })
             return row
           }),
         )
         if (freshLoser === null) continue
 
-        // (2) Unlocked heavy work: the loser is already marked merged, so no
-        // live writer targets it; observation rows version by indexed_at.
+        // (2) Unlocked heavy work: observation rows version by indexed_at. If
+        // this hits the hard cap, leave the loser active and skip the merge;
+        // sampled taxonomy observations should normally keep this bounded.
         const loserObservations = yield* observations.listAllByCluster({
           organizationId: input.organizationId,
           projectId: input.projectId,
-          dimension: freshLoser.dimension,
           clusterId: freshLoser.id,
           limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
         })
+        if (loserObservations.length >= TAXONOMY_LIST_ALL_BY_CLUSTER_MAX) continue
         yield* observations.reassignMany(
           loserObservations.map((observation) => ({
             observation,
@@ -321,6 +331,19 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
             reassignmentRunId: input.runId,
             indexedAt: now,
           })),
+        )
+
+        yield* withTaxonomyClusterLock(
+          {
+            organizationId: input.organizationId,
+            clusterId: freshLoser.id,
+            ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+          },
+          Effect.gen(function* () {
+            const row = yield* clusters.findById(freshLoser.id)
+            if (row.state !== "active") return
+            yield* clusters.markMerged({ clusterId: freshLoser.id, mergedIntoClusterId: survivor.id, timestamp: now })
+          }),
         )
 
         // (3) Survivor adopts the loser's subtree. Sibling merges keep

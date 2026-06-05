@@ -1,7 +1,4 @@
-import {
-  CONVERSATION_CALIBRATION_TTL_MS,
-  calibrateConversationThresholdsUseCase,
-} from "@domain/conversation-intelligence"
+import { CONVERSATION_CALIBRATION_TTL_MS, calibrateSessionThresholdsUseCase } from "@domain/conversation-intelligence"
 import { OrganizationId, ProjectId, TaxonomyClusterId, TaxonomyRunId } from "@domain/shared"
 import {
   CalibrationProfileRepository,
@@ -229,7 +226,6 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
       const counts = yield* observations.getCounts({
         organizationId: run.organizationId,
         projectId: run.projectId,
-        dimension: run.dimension,
         since: gardeningLookbackStart(now),
       })
       return { ...step, observationsScanned: counts.total } satisfies GardenTaxonomyStartResult
@@ -453,13 +449,13 @@ export { errorMessage as gardenTaxonomyErrorMessage }
 
 export interface GardenTaxonomyCalibrationResult {
   readonly clusteringCalibrated: boolean
-  readonly conversationCalibrated: boolean
+  readonly sessionCalibrated: boolean
 }
 
 /**
  * Refreshes the project's calibrated thresholds before gardening when stale.
  * Clustering calibration reads stored embeddings/confidences (cheap);
- * conversation calibration re-embeds a session sample (Redis-cached from
+ * session calibration re-embeds a session sample (Redis-cached from
  * regular analysis, so still cheap).
  */
 export const calibrateGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
@@ -480,17 +476,16 @@ export const calibrateGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) 
         yield* calibrateClusteringThresholdsUseCase({ organizationId, projectId, dimension: input.dimension, now })
       }
 
-      const conversationProfile = yield* profiles.findByProject({ projectId, scope: "conversation" })
-      const conversationStale =
-        conversationProfile === null ||
-        now.getTime() - conversationProfile.computedAt.getTime() > CONVERSATION_CALIBRATION_TTL_MS
-      if (conversationStale) {
-        yield* calibrateConversationThresholdsUseCase({ organizationId, projectId, now })
+      const sessionProfile = yield* profiles.findByProject({ projectId, scope: "conversation" })
+      const sessionStale =
+        sessionProfile === null || now.getTime() - sessionProfile.computedAt.getTime() > CONVERSATION_CALIBRATION_TTL_MS
+      if (sessionStale) {
+        yield* calibrateSessionThresholdsUseCase({ organizationId, projectId, now })
       }
 
       return {
         clusteringCalibrated: clusteringStale,
-        conversationCalibrated: conversationStale,
+        sessionCalibrated: sessionStale,
       } satisfies GardenTaxonomyCalibrationResult
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
