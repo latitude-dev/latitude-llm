@@ -25,7 +25,7 @@ The `packages/domain/issues` package is the **reference implementation** for how
 
 ## Shared centroid model
 
-Issues and live taxonomy both use `@domain/shared/centroid` for decayed weighted centroid math. Each domain owns its business-specific contribution weights and lifecycle, but the core invariant is shared: persisted centroids are running decayed sums, and normalized vectors are derived for pgvector search rather than treated as the canonical state. See [`./taxonomy.md`](./taxonomy.md) for the session-behavior clustering use of the same primitive.
+Issues and live taxonomy both use `@domain/shared/centroid` for decayed weighted centroid math. Each domain owns its business-specific contribution weights and lifecycle, but the core invariant is shared: persisted centroids are running decayed sums, and normalized vectors are derived for pgvector search rather than treated as the canonical state. See [`./taxonomy.md`](./taxonomy.md) for the topic-cluster-tree use of the same primitive.
 
 ## Storage Split
 
