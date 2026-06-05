@@ -22,7 +22,7 @@ function extractException(eventsJson: string): ExceptionInfo | undefined {
   const events = safeParseJson(eventsJson)
   if (!Array.isArray(events)) return undefined
 
-  for (const event of events) {
+  for (const event of events as Array<{ name?: unknown; attributes?: unknown }>) {
     if (event?.name !== "exception" || !event.attributes) continue
     const attrs = event.attributes as Array<{ key: string; value?: { stringValue?: string } }>
     const info: ExceptionInfo = {}
