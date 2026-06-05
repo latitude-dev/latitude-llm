@@ -1,4 +1,4 @@
-import { ProjectId, SavedSearchId, SqlClient, UserId } from "@domain/shared"
+import { ProjectId, SavedSearchId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -9,7 +9,6 @@ import { searchSavedSearches } from "./search-saved-searches.ts"
 
 const PROJECT_A = ProjectId("a".repeat(24))
 const PROJECT_B = ProjectId("b".repeat(24))
-const CREATED_BY = UserId("u".repeat(24))
 
 const makeRow = (
   overrides: Partial<SavedSearch> & Pick<SavedSearch, "id" | "slug" | "name" | "createdAt">,
@@ -18,8 +17,6 @@ const makeRow = (
   projectId: PROJECT_A,
   query: "x",
   filterSet: {},
-  assignedUserId: null,
-  createdByUserId: CREATED_BY,
   deletedAt: null,
   updatedAt: overrides.createdAt,
   ...overrides,

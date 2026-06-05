@@ -3,12 +3,14 @@ import { Button, Icon, type InfiniteTableSorting, type SortDirection, Tabs, Tool
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
-import { DatabaseIcon, DownloadIcon, FilterIcon, FilterXIcon, MessagesSquareIcon, TextIcon } from "lucide-react"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { DatabaseIcon, DownloadIcon, FilterIcon, FilterXIcon, MessagesSquareIcon, TextIcon, XIcon } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRegisterCommands } from "../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
+import { useSavedSearchBySlug } from "../../../../domains/saved-searches/saved-searches.collection.ts"
+import type { SavedSearchRecord } from "../../../../domains/saved-searches/saved-searches.functions.ts"
 import { withSessionDefaults } from "../../../../domains/sessions/sessions.collection.ts"
 import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../domains/traces/traces.functions.ts"
@@ -26,6 +28,10 @@ import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-
 import { ColumnsSelector } from "./-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "./-components/export-confirmation-modal.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./-components/project-traces-table.tsx"
+import { SaveOrUpdateSearchButton } from "./-components/save-or-update-search-button.tsx"
+import { SaveSearchModal } from "./-components/save-search-modal.tsx"
+import { SavedSearchSelector } from "./-components/saved-search-selector.tsx"
+import { SearchInput } from "./-components/search-input.tsx"
 import { SessionDetailDrawer } from "./-components/session-detail-drawer.tsx"
 import {
   DEFAULT_SESSION_SORTING,
@@ -71,6 +77,29 @@ function ProjectPage() {
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
+  const [query, setQuery] = useParamState("query", "")
+  const [savedSearchSlug, setSavedSearchSlug] = useParamState("savedSearch", "")
+  const [saveModalOpen, setSaveModalOpen] = useState(false)
+  const hasSearchQuery = query.length > 0
+  const { data: loadedSavedSearch } = useSavedSearchBySlug(currentProject.id, savedSearchSlug || null)
+
+  // Hydrate a slug-only `?savedSearch=` deep-link (the monitor incidents table and the command
+  // palette can't carry the filter state) with the saved search's query + filters, once per slug.
+  // We materialize into the URL — rather than deriving during render — so edit / drift / clear
+  // semantics read off the URL like every other entry path; a link that already carries
+  // query/filters (the dropdown selection) is left untouched.
+  // TODO(frontend-use-effect-policy): syncing async-loaded server data into URL state can't run
+  // during render (navigation is a side effect) and the record isn't available at mount.
+  const hydratedSavedSearchSlugRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!loadedSavedSearch) return
+    if (hydratedSavedSearchSlugRef.current === loadedSavedSearch.slug) return
+    hydratedSavedSearchSlugRef.current = loadedSavedSearch.slug
+    if (query.length > 0 || rawFilters.length > 0) return
+    if (loadedSavedSearch.query) setQuery(loadedSavedSearch.query)
+    const serialized = serializeFilters(loadedSavedSearch.filterSet)
+    if (serialized) setRawFilters(serialized)
+  }, [loadedSavedSearch, query, rawFilters, setQuery, setRawFilters])
 
   // Contribute page-level Traces actions (tab switch + filters) to the command palette.
   const paletteCommands = useMemo<readonly PaletteCommand[]>(() => {
@@ -157,7 +186,7 @@ function ProjectPage() {
     // layouts don't drop the unknown `startTime` id and stick `lastActivity`
     // at the end — they pick up the new default order instead.
     storageKey: "projects.sessions.columns.v3",
-    columns: getSessionColumnOptions(false),
+    columns: getSessionColumnOptions(hasSearchQuery),
   })
   const hasActiveFilters = Object.keys(filters).length > 0
   const timeFrom = getTimeFilterValue(filters, "gte")
@@ -172,6 +201,7 @@ function ProjectPage() {
   const { totalCount: totalTraceCount, isLoading: isTracesCountLoading } = useTracesCount({
     projectId: currentProject.id,
     filters: effectiveFilters,
+    ...(hasSearchQuery ? { searchQuery: query } : {}),
   })
 
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
@@ -203,8 +233,11 @@ function ProjectPage() {
     })
   }, [])
 
-  const clearFilters = () => {
+  // "Clear all" resets the whole search bar: filters, query, and the selected saved search.
+  const clearAll = () => {
     setRawFilters("")
+    setQuery("")
+    setSavedSearchSlug("")
   }
 
   const closeTraceDrawer = useCallback(() => {
@@ -237,6 +270,27 @@ function ProjectPage() {
     setSelectedSpanId("")
   }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId])
 
+  // Submitting a new query invalidates any open drawer context against the new result set.
+  // The `savedSearch` slug is intentionally kept so the Save button can surface drift.
+  const handleSubmitQuery = useCallback(
+    (next: string) => {
+      if (next !== query) closeSessionPanel()
+      setQuery(next)
+    },
+    [query, setQuery, closeSessionPanel],
+  )
+
+  // Selecting a saved search snaps the active query + filters to the stored state.
+  const applySavedSearch = useCallback(
+    (record: SavedSearchRecord) => {
+      setSavedSearchSlug(record.slug)
+      setQuery(record.query ?? "")
+      setRawFilters(serializeFilters(record.filterSet) ?? "")
+      closeSessionPanel()
+    },
+    [setSavedSearchSlug, setQuery, setRawFilters, closeSessionPanel],
+  )
+
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
 
   const handleExportTraces = useCallback(async () => {
@@ -249,6 +303,7 @@ function ProjectPage() {
           projectId: currentProject.id,
           selection: bulkSelection,
           filters: effectiveFilters,
+          ...(hasSearchQuery ? { searchQuery: query } : {}),
         },
       })
       toast({
@@ -265,7 +320,7 @@ function ProjectPage() {
     } finally {
       setExporting(false)
     }
-  }, [bulkSelection, clearSelections, currentProject.id, effectiveFilters])
+  }, [bulkSelection, clearSelections, currentProject.id, effectiveFilters, hasSearchQuery, query])
 
   // Compute next/prev trace callbacks from the loaded list
   const navigateTrace = useCallback(
@@ -300,7 +355,7 @@ function ProjectPage() {
     },
   ])
 
-  const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters
+  const hasNoTraces = totalTraceCount === 0 && !hasActiveFilters && !hasSearchQuery
   // `firstTraceAt` is the canonical "this project has ever received a trace"
   // signal (set once by the checkFirstTrace worker). A null value means the
   // project is genuinely unconnected — distinct from a connected project whose
@@ -308,7 +363,7 @@ function ProjectPage() {
   const isConnected = currentProject.firstTraceAt != null
   const orgHasConnectedProjects = allProjects.some((p) => p.id !== currentProject.id && p.firstTraceAt != null)
 
-  if (isTracesCountLoading && !hasActiveFilters) {
+  if (isTracesCountLoading && !hasActiveFilters && !hasSearchQuery) {
     return (
       <Layout>
         <TracesEmptyState isLoading />
@@ -393,8 +448,9 @@ function ProjectPage() {
             >
               Toggle filters <HotkeyBadge hotkey="F" />
             </Tooltip>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
+            {(hasActiveFilters || hasSearchQuery) && (
+              <Button variant="ghost" size="sm" onClick={clearAll}>
+                <Icon icon={XIcon} size="sm" />
                 Clear all
               </Button>
             )}
@@ -441,6 +497,31 @@ function ProjectPage() {
             />
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
+        <Layout.ActionsRow className="justify-stretch">
+          <div className="flex w-full items-center gap-2">
+            {/* Dropdown + input read as one control: a single rounded-lg border wraps both,
+                with the dropdown flush on the left (square divider, no inner rounding). */}
+            <div className="group/searchbar flex h-8 min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-input transition-colors focus-within:ring-1 focus-within:ring-ring">
+              <SavedSearchSelector
+                projectId={currentProject.id}
+                projectSlug={projectSlug}
+                selectedSlug={savedSearchSlug}
+                onSelect={applySavedSearch}
+                onSelectedSlugChange={setSavedSearchSlug}
+                onSaveCurrent={() => setSaveModalOpen(true)}
+                canSaveCurrent={hasSearchQuery || hasActiveFilters}
+              />
+              <SearchInput key={query} initialValue={query} onSubmit={handleSubmitQuery} />
+            </div>
+            <SaveOrUpdateSearchButton
+              projectId={currentProject.id}
+              query={query}
+              filters={filters}
+              loadedSavedSearch={loadedSavedSearch}
+              onRequestSave={() => setSaveModalOpen(true)}
+            />
+          </div>
+        </Layout.ActionsRow>
       </Layout.Actions>
 
       {selectedCount > 0 && (
@@ -467,7 +548,11 @@ function ProjectPage() {
       </div>
 
       {activeTab === "traces" ? (
-        <TracesView {...sharedViewProps} visibleColumnIds={traceColumnSettings.visibleColumnIds} />
+        <TracesView
+          {...sharedViewProps}
+          visibleColumnIds={traceColumnSettings.visibleColumnIds}
+          {...(hasSearchQuery ? { searchQuery: query } : {})}
+        />
       ) : (
         <SessionsView
           projectId={currentProject.id}
@@ -485,7 +570,8 @@ function ProjectPage() {
           onOpenSession={onOpenSession}
           onCloseSession={closeSessionPanel}
           visibleColumnIds={sessionColumnSettings.visibleColumnIds}
-          isSearching={false}
+          isSearching={hasSearchQuery}
+          {...(hasSearchQuery ? { searchQuery: query } : {})}
         />
       )}
 
@@ -502,6 +588,7 @@ function ProjectPage() {
             onPrevTrace={onPrevTrace}
             canNavigateNext={canNavigateNext}
             canNavigatePrev={canNavigatePrev}
+            {...(hasSearchQuery ? { searchQuery: query } : {})}
           />
         </Layout.Aside>
       ) : null}
@@ -515,6 +602,7 @@ function ProjectPage() {
             onClose={closeSessionPanel}
             filters={filters}
             onFiltersChange={onFiltersChange}
+            {...(hasSearchQuery ? { searchQuery: query } : {})}
           />
         </Layout.Aside>
       ) : null}
@@ -537,9 +625,25 @@ function ProjectPage() {
             selectedCount={selectedCount}
             onSuccess={clearSelections}
             filters={effectiveFilters}
+            {...(hasSearchQuery ? { searchQuery: query } : {})}
           />
         </>
       )}
+
+      {saveModalOpen ? (
+        <SaveSearchModal
+          mode="create"
+          open={saveModalOpen}
+          onClose={() => setSaveModalOpen(false)}
+          projectId={currentProject.id}
+          query={query || null}
+          filterSet={filters}
+          onCreated={(record) => {
+            setSavedSearchSlug(record.slug)
+            setSaveModalOpen(false)
+          }}
+        />
+      ) : null}
     </Layout>
   )
 }

@@ -14,6 +14,4 @@ export interface CreateSavedSearchBody {
     /** Free-text semantic query. `null` (default) when the search is filter-only. At least one of `query` or `filters` must be set. */
     query?: string;
     filters?: LatitudeApi.FilterSet;
-    /** User to assign the search to. `null` (default) leaves the search unassigned. */
-    assignedUserId?: string;
 }

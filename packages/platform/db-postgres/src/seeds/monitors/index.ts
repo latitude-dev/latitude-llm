@@ -456,7 +456,6 @@ const seedMonitors: Seeder = {
         if (!notifyUserId) {
           throw new Error("monitors seeder requires at least one org member to attribute notifications to")
         }
-        const ownerUserId = scope.queueAssigneeUserIds[0] ?? notifyUserId
 
         for (const search of SAVED_SEARCHES) {
           const row: typeof savedSearches.$inferInsert = {
@@ -467,8 +466,6 @@ const seedMonitors: Seeder = {
             name: search.name,
             query: search.query,
             filterSet: search.filterSet,
-            assignedUserId: null,
-            createdByUserId: ownerUserId,
             deletedAt: null,
           }
           const { id, ...set } = row

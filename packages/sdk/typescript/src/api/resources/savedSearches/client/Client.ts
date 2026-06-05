@@ -107,7 +107,7 @@ export class SavedSearchesClient {
     }
 
     /**
-     * Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only — the authenticated user becomes the search's `createdByUserId`.
+     * Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateSavedSearchBody} request
@@ -456,99 +456,6 @@ export class SavedSearchesClient {
             _response.rawResponse,
             "PATCH",
             "/v1/projects/{projectSlug}/searches/{searchSlug}",
-        );
-    }
-
-    /**
-     * Assigns the saved search to a user, or clears the current assignment when `userId` is `null`. The assignee must be a member of the requesting organization — otherwise the request is rejected with 400.
-     *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {string} searchSlug - Saved-search slug (human-readable identifier within the project).
-     * @param {LatitudeApi.AssignSavedSearchBody} request
-     * @param {SavedSearchesClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
-     *
-     * @example
-     *     await client.savedSearches.assign("projectSlug", "searchSlug")
-     */
-    public assign(
-        projectSlug: string,
-        searchSlug: string,
-        request: LatitudeApi.AssignSavedSearchBody = {},
-        requestOptions?: SavedSearchesClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.SavedSearch> {
-        return core.HttpResponsePromise.fromPromise(this.__assign(projectSlug, searchSlug, request, requestOptions));
-    }
-
-    private async __assign(
-        projectSlug: string,
-        searchSlug: string,
-        request: LatitudeApi.AssignSavedSearchBody = {},
-        requestOptions?: SavedSearchesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.SavedSearch>> {
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
-                `v1/projects/${core.url.encodePathParam(projectSlug)}/searches/${core.url.encodePathParam(searchSlug)}/assign`,
-            ),
-            method: "POST",
-            headers: _headers,
-            contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
-            requestType: "json",
-            body: request,
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as LatitudeApi.SavedSearch, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.LatitudeApiError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "POST",
-            "/v1/projects/{projectSlug}/searches/{searchSlug}/assign",
         );
     }
 

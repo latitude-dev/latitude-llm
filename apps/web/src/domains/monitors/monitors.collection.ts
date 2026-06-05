@@ -12,6 +12,7 @@ import {
   getMonitorIncidentStats,
   listMonitorIncidents,
   listMonitors,
+  listSavedSearchMonitorSlugs,
   type MonitorIncidentRecord,
   type MonitorIncidentsCursor,
   type MonitorListRowRecord,
@@ -132,6 +133,22 @@ export function useMonitor(input: { readonly projectId: string; readonly slug: s
     staleTime: MONITORS_QUERY_STALE_TIME_MS,
     enabled: (input.enabled ?? true) && Boolean(input.slug),
   })
+}
+
+const EMPTY_SAVED_SEARCH_MONITOR_SLUGS: Record<string, string> = {}
+
+/**
+ * Batched `savedSearchId -> monitorSlug` map (earliest-created live, unmuted monitor per saved
+ * search) for the saved-search dropdown's "View monitor" deep-link. One call per project.
+ */
+export function useSavedSearchMonitorSlugs(projectId: string, { enabled = true }: { enabled?: boolean } = {}) {
+  const { data } = useQuery({
+    queryKey: ["monitors", "savedSearchSlugs", projectId] as const,
+    queryFn: () => listSavedSearchMonitorSlugs({ data: { projectId } }),
+    staleTime: MONITORS_QUERY_STALE_TIME_MS,
+    enabled: enabled && projectId.length > 0,
+  })
+  return data ?? EMPTY_SAVED_SEARCH_MONITOR_SLUGS
 }
 
 /** @public Consumed by the M4 details panel incidents table; not yet wired in M2. */

@@ -1,4 +1,4 @@
-import { ProjectId, SavedSearchId, SqlClient, UserId } from "@domain/shared"
+import { ProjectId, SavedSearchId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -9,7 +9,6 @@ import { createFakeSavedSearchRepository } from "../testing/fake-saved-search-re
 import { getSavedSearchBySlug } from "./get-saved-search-by-slug.ts"
 
 const PROJECT_ID = ProjectId("p".repeat(24))
-const CREATED_BY = UserId("u".repeat(24))
 
 const seed: SavedSearch = {
   id: SavedSearchId("1".repeat(24)),
@@ -19,8 +18,6 @@ const seed: SavedSearch = {
   name: "Errors",
   query: "x",
   filterSet: {},
-  assignedUserId: null,
-  createdByUserId: CREATED_BY,
   deletedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),

@@ -12,6 +12,4 @@ export interface UpdateSavedSearchBody {
     /** Replace the free-text query. Pass `null` to clear it. */
     query?: string;
     filters?: LatitudeApi.FilterSet;
-    /** Replace the assignee. Pass `null` to clear it. Use the dedicated `/assign` endpoint to validate membership. */
-    assignedUserId?: string;
 }

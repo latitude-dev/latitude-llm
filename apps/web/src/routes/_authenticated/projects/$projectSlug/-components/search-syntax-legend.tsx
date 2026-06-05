@@ -11,8 +11,9 @@ type Entry = {
 const ENTRIES: readonly Entry[] = [
   {
     label: "Semantic",
-    example: "checkout error",
-    description: "Plain words search by meaning. Results don't need to contain the exact text.",
+    pillClassName: "border",
+    example: "Checkout error",
+    description: "Use plain words to search by meaning. Results may not contain the exact text.",
   },
   {
     label: "Literal",
@@ -23,8 +24,8 @@ const ENTRIES: readonly Entry[] = [
   {
     label: "Phrase",
     pillClassName: "border-phrase/30 bg-phrase/10 text-phrase-foreground",
-    example: "`refund payment failed`",
-    description: "Wrap in backticks to match these words in this order. Capitalization is ignored.",
+    example: "`Refund payment failed`",
+    description: "Wrap in backticks to match these words in order. Capitalization is ignored.",
   },
 ]
 

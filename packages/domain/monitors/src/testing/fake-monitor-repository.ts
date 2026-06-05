@@ -198,6 +198,21 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           .flatMap((m) => m.alerts)
           .filter((alert) => alert.source.type === "savedSearch"),
       ),
+    listSavedSearchMonitorSlugs: (projectId) =>
+      Effect.sync(() => {
+        const earliest = new Map<string, Monitor>()
+        for (const monitor of monitors) {
+          if (monitor.projectId !== projectId || !isLive(monitor) || monitor.mutedAt !== null) continue
+          for (const alert of monitor.alerts) {
+            if (alert.source.type !== "savedSearch" || !alert.source.id) continue
+            const current = earliest.get(alert.source.id)
+            if (!current || monitor.createdAt.getTime() < current.createdAt.getTime()) {
+              earliest.set(alert.source.id, monitor)
+            }
+          }
+        }
+        return [...earliest.entries()].map(([savedSearchId, monitor]) => ({ savedSearchId, monitorSlug: monitor.slug }))
+      }),
     listProjectsWithActiveSavedSearchAlerts: () =>
       Effect.sync(() => {
         const seen = new Map<string, { organizationId: Monitor["organizationId"]; projectId: Monitor["projectId"] }>()

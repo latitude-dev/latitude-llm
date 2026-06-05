@@ -1,4 +1,4 @@
-import { type FilterSet, generateSlug, type SavedSearchId, toSlug, type UserId } from "@domain/shared"
+import { type FilterSet, generateSlug, type SavedSearchId, toSlug } from "@domain/shared"
 import { Effect } from "effect"
 import { SAVED_SEARCH_NAME_MAX_LENGTH } from "../constants.ts"
 import { isEmptySearch } from "../entities/saved-search.ts"
@@ -10,7 +10,6 @@ export interface UpdateSavedSearchInput {
   readonly name?: string
   readonly query?: string | null
   readonly filterSet?: FilterSet
-  readonly assignedUserId?: UserId | null
 }
 
 export const updateSavedSearch = Effect.fn("savedSearches.updateSavedSearch")(function* (
@@ -74,8 +73,5 @@ export const updateSavedSearch = Effect.fn("savedSearches.updateSavedSearch")(fu
     ...(nextSlug !== undefined ? { slug: nextSlug } : {}),
     ...(queryChanged ? { query: nextQuery } : {}),
     ...(input.filterSet !== undefined ? { filterSet: input.filterSet } : {}),
-    ...(input.assignedUserId !== undefined && input.assignedUserId !== current.assignedUserId
-      ? { assignedUserId: input.assignedUserId }
-      : {}),
   })
 })

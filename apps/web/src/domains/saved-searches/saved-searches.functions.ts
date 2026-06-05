@@ -26,8 +26,6 @@ export interface SavedSearchRecord {
   readonly name: string
   readonly query: string | null
   readonly filterSet: SavedSearch["filterSet"]
-  readonly assignedUserId: string | null
-  readonly createdByUserId: string
   readonly createdAt: string
   readonly updatedAt: string
 }
@@ -40,8 +38,6 @@ const toRecord = (s: SavedSearch): SavedSearchRecord => ({
   name: s.name,
   query: s.query,
   filterSet: s.filterSet,
-  assignedUserId: s.assignedUserId,
-  createdByUserId: s.createdByUserId,
   createdAt: s.createdAt.toISOString(),
   updatedAt: s.updatedAt.toISOString(),
 })
@@ -162,7 +158,6 @@ export const updateSavedSearchFn = createServerFn({ method: "POST" })
       name: nameSchema.optional(),
       query: querySchema.optional(),
       filterSet: filterSetSchema.optional(),
-      assignedUserId: z.string().nullable().optional(),
     }),
   )
   .handler(async ({ data }): Promise<SavedSearchRecord> => {
@@ -175,9 +170,6 @@ export const updateSavedSearchFn = createServerFn({ method: "POST" })
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.query !== undefined ? { query: data.query } : {}),
         ...(data.filterSet !== undefined ? { filterSet: data.filterSet } : {}),
-        ...(data.assignedUserId !== undefined
-          ? { assignedUserId: data.assignedUserId === null ? null : UserId(data.assignedUserId) }
-          : {}),
       }).pipe(withPostgres(SavedSearchRepositoryLive, getPostgresClient(), orgId), withTracing),
     )
     return toRecord(updated)

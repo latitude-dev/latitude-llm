@@ -26,6 +26,7 @@ export type {
   MonitorRepositoryShape,
   MonitorSearchResult,
   ProjectWithActiveSavedSearchAlerts,
+  SavedSearchMonitorSlug,
 } from "./ports/monitor-repository.ts"
 export { MonitorRepository } from "./ports/monitor-repository.ts"
 export type {
@@ -79,6 +80,7 @@ export {
   listMonitorsUseCase,
   MAX_MONITORS_PAGE_SIZE,
 } from "./use-cases/list-monitors.ts"
+export { listSavedSearchMonitorSlugsUseCase } from "./use-cases/list-saved-search-monitor-slugs.ts"
 export type { SetMonitorMuteError, SetMonitorMuteInput } from "./use-cases/mute-monitor.ts"
 export { muteMonitorUseCase, unmuteMonitorUseCase } from "./use-cases/mute-monitor.ts"
 export type {

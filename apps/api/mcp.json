@@ -4322,25 +4322,6 @@
                   },
                   "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
                 },
-                "assignedUserId": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "minLength": 24,
-                      "maxLength": 24
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "description": "User this search is assigned to, if any. `null` when the search is unassigned."
-                },
-                "createdByUserId": {
-                  "type": "string",
-                  "minLength": 24,
-                  "maxLength": 24,
-                  "description": "User who created the saved search."
-                },
                 "deletedAt": {
                   "anyOf": [
                     {
@@ -4369,8 +4350,6 @@
                 "name",
                 "query",
                 "filters",
-                "assignedUserId",
-                "createdByUserId",
                 "deletedAt",
                 "createdAt",
                 "updatedAt"
@@ -4531,25 +4510,6 @@
             },
             "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
           },
-          "assignedUserId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 24,
-                "maxLength": 24
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
-          },
-          "createdByUserId": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "User who created the saved search."
-          },
           "deletedAt": {
             "anyOf": [
               {
@@ -4578,8 +4538,6 @@
           "name",
           "query",
           "filters",
-          "assignedUserId",
-          "createdByUserId",
           "deletedAt",
           "createdAt",
           "updatedAt"
@@ -4590,7 +4548,7 @@
     {
       "name": "createSavedSearch",
       "title": "Create saved search",
-      "description": "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only — the authenticated user becomes the search's `createdByUserId`.",
+      "description": "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -4682,28 +4640,13 @@
                 "additionalProperties": false
               }
             }
-          },
-          "assignedUserId": {
-            "default": null,
-            "description": "User to assign the search to. `null` (default) leaves the search unassigned.",
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 24,
-                "maxLength": 24
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "required": [
           "projectSlug",
           "name",
           "query",
-          "filters",
-          "assignedUserId"
+          "filters"
         ],
         "additionalProperties": false
       },
@@ -4812,25 +4755,6 @@
             },
             "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
           },
-          "assignedUserId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 24,
-                "maxLength": 24
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
-          },
-          "createdByUserId": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "User who created the saved search."
-          },
           "deletedAt": {
             "anyOf": [
               {
@@ -4859,8 +4783,6 @@
           "name",
           "query",
           "filters",
-          "assignedUserId",
-          "createdByUserId",
           "deletedAt",
           "createdAt",
           "updatedAt"
@@ -4965,19 +4887,6 @@
                 "additionalProperties": false
               }
             }
-          },
-          "assignedUserId": {
-            "description": "Replace the assignee. Pass `null` to clear it. Use the dedicated `/assign` endpoint to validate membership.",
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 24,
-                "maxLength": 24
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "required": [
@@ -5091,25 +5000,6 @@
             },
             "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
           },
-          "assignedUserId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 24,
-                "maxLength": 24
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
-          },
-          "createdByUserId": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "User who created the saved search."
-          },
           "deletedAt": {
             "anyOf": [
               {
@@ -5138,8 +5028,6 @@
           "name",
           "query",
           "filters",
-          "assignedUserId",
-          "createdByUserId",
           "deletedAt",
           "createdAt",
           "updatedAt"
@@ -5167,204 +5055,6 @@
         "required": [
           "projectSlug",
           "searchSlug"
-        ],
-        "additionalProperties": false
-      }
-    },
-    {
-      "name": "assignSavedSearch",
-      "title": "Assign saved search",
-      "description": "Assigns the saved search to a user, or clears the current assignment when `userId` is `null`. The assignee must be a member of the requesting organization — otherwise the request is rejected with 400.",
-      "inputSchema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "projectSlug": {
-            "type": "string",
-            "description": "Project slug (human-readable identifier)"
-          },
-          "searchSlug": {
-            "type": "string",
-            "description": "Saved-search slug (human-readable identifier within the project)."
-          },
-          "userId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 24,
-                "maxLength": 24
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "User to assign the search to, or `null` to clear the current assignment."
-          }
-        },
-        "required": [
-          "projectSlug",
-          "searchSlug",
-          "userId"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "Stable saved-search identifier."
-          },
-          "organizationId": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "Organization that owns this saved search."
-          },
-          "projectId": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "Project this saved search belongs to."
-          },
-          "slug": {
-            "type": "string",
-            "description": "URL-safe slug derived from `name`. Regenerated when the name changes in a way that affects the slug."
-          },
-          "name": {
-            "type": "string",
-            "description": "Human-readable name."
-          },
-          "query": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Free-text semantic query applied alongside `filters`. `null` when the search is filter-only. At least one of `query` or `filters` must be set."
-          },
-          "filters": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
-            },
-            "additionalProperties": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "op": {
-                    "type": "string",
-                    "enum": [
-                      "eq",
-                      "neq",
-                      "gt",
-                      "gte",
-                      "lt",
-                      "lte",
-                      "in",
-                      "notIn",
-                      "contains",
-                      "notContains",
-                      "gtePercentile"
-                    ],
-                    "description": "Comparison operator applied to the field's value (e.g. `eq`, `neq`, `in`). The full operator list lives in the API reference."
-                  },
-                  "value": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "boolean"
-                      },
-                      {
-                        "type": "array",
-                        "items": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ]
-                        }
-                      }
-                    ],
-                    "description": "Right-hand value compared against the field. Arrays are required for `in` / `notIn`-style operators."
-                  }
-                },
-                "required": [
-                  "op",
-                  "value"
-                ],
-                "additionalProperties": false
-              }
-            },
-            "description": "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set."
-          },
-          "assignedUserId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 24,
-                "maxLength": 24
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
-          },
-          "createdByUserId": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "User who created the saved search."
-          },
-          "deletedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "ISO-8601 timestamp at which the search was deleted. `null` while active."
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "ISO-8601 timestamp of creation."
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "ISO-8601 timestamp of the last update."
-          }
-        },
-        "required": [
-          "id",
-          "organizationId",
-          "projectId",
-          "slug",
-          "name",
-          "query",
-          "filters",
-          "assignedUserId",
-          "createdByUserId",
-          "deletedAt",
-          "createdAt",
-          "updatedAt"
         ],
         "additionalProperties": false
       }

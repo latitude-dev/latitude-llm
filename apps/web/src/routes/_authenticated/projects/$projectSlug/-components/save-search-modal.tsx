@@ -1,5 +1,5 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, CloseTrigger, FormWrapper, Input, Modal, Text, useToast } from "@repo/ui"
+import { Button, CloseTrigger, FormWrapper, Input, Modal, useToast } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import {
   useCreateSavedSearch,
@@ -25,6 +25,8 @@ interface CreateProps extends BaseProps {
 interface RenameProps extends BaseProps {
   readonly mode: "rename"
   readonly savedSearch: SavedSearchRecord
+  /** Receives the updated record (slug may have changed) so callers can re-point a `savedSearch` URL param. */
+  readonly onRenamed?: (record: SavedSearchRecord) => void
 }
 
 export type SaveSearchModalProps = CreateProps | RenameProps
@@ -60,7 +62,7 @@ function CreateModal({ open, onClose, projectId, query, filterSet, onCreated }: 
       dismissible
       onOpenChange={onClose}
       title="Save search"
-      description="Save the current query and filters so you can return to them later."
+      description="Save the current query and filters so you can return to them later"
       footer={
         <>
           <CloseTrigger />
@@ -87,7 +89,7 @@ function CreateModal({ open, onClose, projectId, query, filterSet, onCreated }: 
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 errors={fieldErrorsAsStrings(field.state.meta.errors)}
-                placeholder="Failed payments last week"
+                placeholder="Failed payments"
               />
             )}
           </form.Field>
@@ -97,7 +99,7 @@ function CreateModal({ open, onClose, projectId, query, filterSet, onCreated }: 
   )
 }
 
-function RenameModal({ open, onClose, projectId, savedSearch }: RenameProps) {
+function RenameModal({ open, onClose, projectId, savedSearch, onRenamed }: RenameProps) {
   const { toast } = useToast()
   const updateMutation = useUpdateSavedSearch(projectId)
 
@@ -110,8 +112,9 @@ function RenameModal({ open, onClose, projectId, savedSearch }: RenameProps) {
         return updateMutation.mutateAsync({ id: savedSearch.id, name: next })
       },
       {
-        onSuccess: () => {
+        onSuccess: (record) => {
           toast({ title: "Saved search renamed" })
+          onRenamed?.(record)
           onClose()
         },
         onError: (error) => {
@@ -127,6 +130,7 @@ function RenameModal({ open, onClose, projectId, savedSearch }: RenameProps) {
       dismissible
       onOpenChange={onClose}
       title="Rename saved search"
+      description="Change the name of this saved search"
       footer={
         <>
           <CloseTrigger />
@@ -156,7 +160,6 @@ function RenameModal({ open, onClose, projectId, savedSearch }: RenameProps) {
               />
             )}
           </form.Field>
-          <Text.H6 color="foregroundMuted">Renaming changes the saved search's URL slug.</Text.H6>
         </FormWrapper>
       </form>
     </Modal>

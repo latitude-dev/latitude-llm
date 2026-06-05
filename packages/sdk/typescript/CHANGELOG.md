@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-alpha.5] - 2026-06-04
+
+### Removed
+
+- **`client.savedSearches.assign(...)`** and the `POST /v1/projects/{projectSlug}/searches/{searchSlug}/assign` endpoint — saved searches no longer carry an assignee.
+- **`SavedSearch.assignedUserId` and `SavedSearch.createdByUserId`** — dropped from the saved-search payload. `assignedUserId` is also removed from `CreateSavedSearchBody` and `UpdateSavedSearchBody`.
+
 ## [6.0.0-alpha.4] - 2026-06-02
 
 ### Added

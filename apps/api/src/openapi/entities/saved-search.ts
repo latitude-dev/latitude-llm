@@ -20,10 +20,6 @@ const savedSearchFields = {
   filters: FilterSetSchema.describe(
     "Structured filter set applied alongside `query`. Empty object means filter-free. At least one of `query` or `filters` must be set.",
   ),
-  assignedUserId: cuidSchema
-    .nullable()
-    .describe("User this search is assigned to, if any. `null` when the search is unassigned."),
-  createdByUserId: cuidSchema.describe("User who created the saved search."),
   deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the search was deleted. `null` while active."),
   createdAt: z.string().describe("ISO-8601 timestamp of creation."),
   updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
@@ -39,8 +35,6 @@ export const toSavedSearchResponse = (search: SavedSearch) => ({
   name: search.name,
   query: search.query,
   filters: search.filterSet,
-  assignedUserId: search.assignedUserId as string | null,
-  createdByUserId: search.createdByUserId as string,
   deletedAt: search.deletedAt ? search.deletedAt.toISOString() : null,
   createdAt: search.createdAt.toISOString(),
   updatedAt: search.updatedAt.toISOString(),

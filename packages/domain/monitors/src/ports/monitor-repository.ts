@@ -65,6 +65,12 @@ export interface MonitorSearchResult {
   readonly mutedAt: Date | null
 }
 
+/** The earliest-created live, unmuted monitor watching a given saved search — backs the saved-search dropdown's "View monitor" deep-link. */
+export interface SavedSearchMonitorSlug {
+  readonly savedSearchId: string
+  readonly monitorSlug: string
+}
+
 export interface MonitorRepositoryShape {
   findById(id: MonitorId): Effect.Effect<Monitor, NotFoundError | RepositoryError, SqlClient>
   /** Point-lookup by `(projectId, slug)` over non-deleted rows. */
@@ -148,6 +154,14 @@ export interface MonitorRepositoryShape {
   lockAlertForUpdate(alertId: MonitorAlertId): Effect.Effect<void, RepositoryError, SqlClient>
   /** Active saved-search alerts in a project (live alert + monitor). Org-scoped — the firing orchestrator resolves + evaluates each. */
   listActiveSavedSearchAlerts(projectId: ProjectId): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
+  /**
+   * For every saved search watched by a live, unmuted monitor in the project, the slug of the
+   * earliest-created such monitor (`DISTINCT ON (source_id)`, ordered by monitor `createdAt`/`id`).
+   * Batched — one call covers all the project's saved searches.
+   */
+  listSavedSearchMonitorSlugs(
+    projectId: ProjectId,
+  ): Effect.Effect<readonly SavedSearchMonitorSlug[], RepositoryError, SqlClient>
   /** Distinct `(org, project)` pairs with ≥1 active saved-search alert. **Cross-org** (admin client) — backs the 5-minute sweep's per-project fan-out. */
   listProjectsWithActiveSavedSearchAlerts(): Effect.Effect<
     readonly ProjectWithActiveSavedSearchAlerts[],

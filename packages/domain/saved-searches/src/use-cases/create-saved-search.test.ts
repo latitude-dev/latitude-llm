@@ -42,7 +42,6 @@ describe("createSavedSearch", () => {
     expect(result.slug).toBe("failed-payments")
     expect(result.name).toBe("Failed Payments")
     expect(result.query).toBe("failed payments")
-    expect(result.assignedUserId).toBeNull()
   })
 
   it("appends a random suffix on slug collision", async () => {

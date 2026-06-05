@@ -8,7 +8,6 @@ import {
   Package,
   Plug,
   ScanSearch,
-  SearchIcon,
   SettingsIcon,
   ShieldAlertIcon,
   TextAlignStartIcon,
@@ -37,13 +36,6 @@ interface ProjectSection {
 }
 
 const PROJECT_SECTIONS: readonly ProjectSection[] = [
-  {
-    key: "search",
-    label: "Search",
-    icon: SearchIcon,
-    path: (slug) => `/projects/${slug}/search`,
-    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/search`),
-  },
   {
     key: "traces",
     label: "Traces",

@@ -55,7 +55,6 @@ import { Route as ApiAuthProviderStartRouteImport } from './routes/api/auth/$pro
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
 import { Route as AuthenticatedProjectsProjectSlugOnboardingRouteImport } from './routes/_authenticated/projects/$projectSlug/onboarding'
 import { Route as AuthenticatedProjectsProjectSlugSettingsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/index'
-import { Route as AuthenticatedProjectsProjectSlugSearchIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/search/index'
 import { Route as AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/monitors/index'
 import { Route as AuthenticatedProjectsProjectSlugIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/index'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/index'
@@ -320,12 +319,6 @@ const AuthenticatedProjectsProjectSlugSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSearchIndexRoute =
-  AuthenticatedProjectsProjectSlugSearchIndexRouteImport.update({
-    id: '/search/',
-    path: '/search/',
-    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
-  } as any)
 const AuthenticatedProjectsProjectSlugMonitorsIndexRoute =
   AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport.update({
     id: '/monitors/',
@@ -463,7 +456,6 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
   '/projects/$projectSlug/monitors/': typeof AuthenticatedProjectsProjectSlugMonitorsIndexRoute
-  '/projects/$projectSlug/search/': typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
   '/projects/$projectSlug/settings/': typeof AuthenticatedProjectsProjectSlugSettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -519,7 +511,6 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/datasets': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
   '/projects/$projectSlug/monitors': typeof AuthenticatedProjectsProjectSlugMonitorsIndexRoute
-  '/projects/$projectSlug/search': typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -582,7 +573,6 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/_authenticated/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
   '/_authenticated/projects/$projectSlug/monitors/': typeof AuthenticatedProjectsProjectSlugMonitorsIndexRoute
-  '/_authenticated/projects/$projectSlug/search/': typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
   '/_authenticated/projects/$projectSlug/settings/': typeof AuthenticatedProjectsProjectSlugSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -645,7 +635,6 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/datasets/'
     | '/projects/$projectSlug/issues/'
     | '/projects/$projectSlug/monitors/'
-    | '/projects/$projectSlug/search/'
     | '/projects/$projectSlug/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -701,7 +690,6 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/datasets'
     | '/projects/$projectSlug/issues'
     | '/projects/$projectSlug/monitors'
-    | '/projects/$projectSlug/search'
     | '/projects/$projectSlug/settings'
   id:
     | '__root__'
@@ -763,7 +751,6 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/datasets/'
     | '/_authenticated/projects/$projectSlug/issues/'
     | '/_authenticated/projects/$projectSlug/monitors/'
-    | '/_authenticated/projects/$projectSlug/search/'
     | '/_authenticated/projects/$projectSlug/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -1116,13 +1103,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
     }
-    '/_authenticated/projects/$projectSlug/search/': {
-      id: '/_authenticated/projects/$projectSlug/search/'
-      path: '/search'
-      fullPath: '/projects/$projectSlug/search/'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSearchIndexRouteImport
-      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
-    }
     '/_authenticated/projects/$projectSlug/monitors/': {
       id: '/_authenticated/projects/$projectSlug/monitors/'
       path: '/monitors'
@@ -1311,7 +1291,6 @@ interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugDatasetsIndexRoute: typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   AuthenticatedProjectsProjectSlugIssuesIndexRoute: typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
   AuthenticatedProjectsProjectSlugMonitorsIndexRoute: typeof AuthenticatedProjectsProjectSlugMonitorsIndexRoute
-  AuthenticatedProjectsProjectSlugSearchIndexRoute: typeof AuthenticatedProjectsProjectSlugSearchIndexRoute
 }
 
 const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjectSlugRouteChildren =
@@ -1330,8 +1309,6 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
       AuthenticatedProjectsProjectSlugIssuesIndexRoute,
     AuthenticatedProjectsProjectSlugMonitorsIndexRoute:
       AuthenticatedProjectsProjectSlugMonitorsIndexRoute,
-    AuthenticatedProjectsProjectSlugSearchIndexRoute:
-      AuthenticatedProjectsProjectSlugSearchIndexRoute,
   }
 
 const AuthenticatedProjectsProjectSlugRouteWithChildren =

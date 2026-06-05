@@ -1,4 +1,4 @@
-import type { FilterSet, ProjectId, RepositoryError, SavedSearchId, SqlClient, UserId } from "@domain/shared"
+import type { FilterSet, ProjectId, RepositoryError, SavedSearchId, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { SavedSearch } from "../entities/saved-search.ts"
 import type { DuplicateSavedSearchSlugError, SavedSearchNotFoundError } from "../errors.ts"
@@ -28,8 +28,6 @@ export interface CreateSavedSearchRepoInput {
   readonly name: string
   readonly query: string | null
   readonly filterSet: FilterSet
-  readonly assignedUserId: UserId | null
-  readonly createdByUserId: UserId
 }
 
 export interface UpdateSavedSearchRepoInput {
@@ -40,12 +38,10 @@ export interface UpdateSavedSearchRepoInput {
   readonly name?: string
   readonly query?: string | null
   readonly filterSet?: FilterSet
-  readonly assignedUserId?: UserId | null
 }
 
 export interface ListSavedSearchesRepoInput {
   readonly projectId: ProjectId
-  readonly assignedUserId?: UserId
 }
 
 export interface CountBySlugRepoInput {

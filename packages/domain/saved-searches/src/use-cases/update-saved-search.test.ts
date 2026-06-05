@@ -1,4 +1,4 @@
-import { ProjectId, SavedSearchId, SqlClient, UserId } from "@domain/shared"
+import { ProjectId, SavedSearchId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -9,16 +9,12 @@ import { createFakeSavedSearchRepository } from "../testing/fake-saved-search-re
 import { updateSavedSearch } from "./update-saved-search.ts"
 
 const PROJECT_ID = ProjectId("p".repeat(24))
-const CREATED_BY = UserId("u".repeat(24))
-const ASSIGNEE = UserId("a".repeat(24))
 
 const baseRow = (overrides: Partial<SavedSearch> & Pick<SavedSearch, "id" | "slug" | "name">): SavedSearch => ({
   organizationId: "fake-org".padEnd(24, "0") as SavedSearch["organizationId"],
   projectId: PROJECT_ID,
   query: "fail",
   filterSet: {},
-  assignedUserId: null,
-  createdByUserId: CREATED_BY,
   deletedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -110,19 +106,6 @@ describe("updateSavedSearch", () => {
     await expect(
       Effect.runPromise(updateSavedSearch({ id, query: null, filterSet: {} }).pipe(Effect.provide(layer))),
     ).rejects.toBeInstanceOf(EmptySavedSearchError)
-  })
-
-  it("assigns and unassigns a user", async () => {
-    const id = SavedSearchId("1".repeat(24))
-    const layer = makeLayer([baseRow({ id, slug: "errors", name: "Errors" })])
-    const assigned = await Effect.runPromise(
-      updateSavedSearch({ id, assignedUserId: ASSIGNEE }).pipe(Effect.provide(layer)),
-    )
-    expect(assigned.assignedUserId).toBe(ASSIGNEE)
-    const unassigned = await Effect.runPromise(
-      updateSavedSearch({ id, assignedUserId: null }).pipe(Effect.provide(layer)),
-    )
-    expect(unassigned.assignedUserId).toBeNull()
   })
 
   it("rejects an empty name", async () => {

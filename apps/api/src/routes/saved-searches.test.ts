@@ -94,12 +94,10 @@ describe("Saved Searches Routes Integration", () => {
       slug: string
       name: string
       query: string | null
-      createdByUserId: string
     }
     expect(body.name).toBe("High-cost traces")
     expect(body.slug).toMatch(/^high-cost-traces/)
     expect(body.query).toBe("expensive")
-    expect(body.createdByUserId).toBe(tenant.userId)
   })
 
   it<ApiTestContext>("POST / rejects an empty search (no query, no filters) with 400", async ({ app, database }) => {
@@ -219,34 +217,6 @@ describe("Saved Searches Routes Integration", () => {
     expect(getRes.status).toBe(404)
   })
 
-  it<ApiTestContext>("POST /{searchSlug}/assign rejects an assignee that isn't an org member", async ({
-    app,
-    database,
-  }) => {
-    const tenant = await createOAuthTenantSetup(database)
-    const projectId = "3333333333333333aaaaaaaa"
-    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
-
-    const createRes = await app.fetch(
-      new Request(`http://localhost/v1/projects/${projectSlug}/searches`, {
-        method: "POST",
-        headers: { ...createOAuthAuthHeaders(tenant.oauthAccessToken), "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Assignable", query: "foo" }),
-      }),
-    )
-    const created = (await createRes.json()) as { slug: string }
-
-    const res = await app.fetch(
-      new Request(`http://localhost/v1/projects/${projectSlug}/searches/${created.slug}/assign`, {
-        method: "POST",
-        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: "x".repeat(24) }),
-      }),
-    )
-
-    expect(res.status).toBe(400)
-  })
-
   it<ApiTestContext>("GET /{searchSlug}/traces returns an empty paginated page when no traces match", async ({
     app,
     database,
@@ -316,47 +286,5 @@ describe("Saved Searches Routes Integration", () => {
     )
 
     expect(res.status).toBe(404)
-  })
-
-  it<ApiTestContext>("POST /{searchSlug}/assign assigns to a member and clears with null", async ({
-    app,
-    database,
-  }) => {
-    const tenant = await createOAuthTenantSetup(database)
-    const projectId = "4444444444444444aaaaaaaa"
-    const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
-
-    const createRes = await app.fetch(
-      new Request(`http://localhost/v1/projects/${projectSlug}/searches`, {
-        method: "POST",
-        headers: { ...createOAuthAuthHeaders(tenant.oauthAccessToken), "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Assign me", query: "foo" }),
-      }),
-    )
-    const created = (await createRes.json()) as { slug: string }
-
-    const assignRes = await app.fetch(
-      new Request(`http://localhost/v1/projects/${projectSlug}/searches/${created.slug}/assign`, {
-        method: "POST",
-        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: tenant.userId }),
-      }),
-    )
-
-    expect(assignRes.status).toBe(200)
-    const assignedBody = (await assignRes.json()) as { assignedUserId: string | null }
-    expect(assignedBody.assignedUserId).toBe(tenant.userId)
-
-    const clearRes = await app.fetch(
-      new Request(`http://localhost/v1/projects/${projectSlug}/searches/${created.slug}/assign`, {
-        method: "POST",
-        headers: { ...createApiKeyAuthHeaders(tenant.apiKeyToken), "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: null }),
-      }),
-    )
-
-    expect(clearRes.status).toBe(200)
-    const clearedBody = (await clearRes.json()) as { assignedUserId: string | null }
-    expect(clearedBody.assignedUserId).toBeNull()
   })
 })

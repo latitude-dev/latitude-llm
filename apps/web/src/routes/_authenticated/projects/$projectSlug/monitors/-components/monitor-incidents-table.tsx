@@ -124,7 +124,7 @@ export function MonitorIncidentsTable({
       if (incident.sourceType === "savedSearch" && incident.sourceSlug) {
         return (
           <Link
-            to="/projects/$projectSlug/search"
+            to="/projects/$projectSlug"
             params={{ projectSlug }}
             search={{ savedSearch: incident.sourceSlug }}
             aria-label={`Open saved search ${incident.sourceName ?? incident.sourceSlug}`}

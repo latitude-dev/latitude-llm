@@ -10,6 +10,7 @@ import {
   getMonitorIncidentsUseCase,
   type ListMonitorsResult,
   listMonitorsUseCase,
+  listSavedSearchMonitorSlugsUseCase,
   type Monitor,
   type MonitorAlert,
   type MonitorAlertInput,
@@ -172,6 +173,26 @@ export const listMonitors = createServerFn({ method: "GET" })
 
     const names = await resolveSavedSearchNames(orgId, ProjectId(data.projectId), result.items)
     return toListMonitorsResultRecord(result, names)
+  })
+
+/**
+ * Batched lookup powering the saved-search dropdown's "View monitor" deep-link: returns a map of
+ * `savedSearchId -> monitorSlug` (the earliest-created live, unmuted monitor watching each search).
+ */
+export const listSavedSearchMonitorSlugs = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string() }))
+  .handler(async ({ data }): Promise<Record<string, string>> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+
+    const rows = await Effect.runPromise(
+      listSavedSearchMonitorSlugsUseCase({ projectId: ProjectId(data.projectId) }).pipe(
+        withPostgres(MonitorRepositoryLive, pgClient, orgId),
+        withTracing,
+      ),
+    )
+    return Object.fromEntries(rows.map((row) => [row.savedSearchId, row.monitorSlug]))
   })
 
 export interface MonitorSearchRecord {

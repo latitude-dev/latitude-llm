@@ -1,6 +1,5 @@
 import { ProjectRepository } from "@domain/projects"
 import {
-  assignSavedSearchUseCase,
   createSavedSearch,
   deleteSavedSearch,
   getSavedSearchBySlug,
@@ -9,14 +8,13 @@ import {
   SAVED_SEARCH_QUERY_MAX_LENGTH,
   updateSavedSearch,
 } from "@domain/saved-searches"
-import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SavedSearchId, UserId } from "@domain/shared"
+import { BadRequestError, OrganizationId, ProjectId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
-  MembershipRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
   SavedSearchRepositoryLive,
@@ -72,10 +70,6 @@ const CreateRequestSchema = z
     filters: FilterSetSchema.default({}).describe(
       "Structured filter set. Defaults to `{}` (no filters). At least one of `query` or `filters` must be set.",
     ),
-    assignedUserId: cuidSchema
-      .nullable()
-      .default(null)
-      .describe("User to assign the search to. `null` (default) leaves the search unassigned."),
   })
   .openapi("CreateSavedSearchBody")
 
@@ -96,20 +90,8 @@ const UpdateRequestSchema = z
       .optional()
       .describe("Replace the free-text query. Pass `null` to clear it."),
     filters: FilterSetSchema.optional().describe("Replace the structured filter set."),
-    assignedUserId: cuidSchema
-      .nullable()
-      .optional()
-      .describe(
-        "Replace the assignee. Pass `null` to clear it. Use the dedicated `/assign` endpoint to validate membership.",
-      ),
   })
   .openapi("UpdateSavedSearchBody")
-
-const AssignRequestSchema = z
-  .object({
-    userId: cuidSchema.nullable().describe("User to assign the search to, or `null` to clear the current assignment."),
-  })
-  .openapi("AssignSavedSearchBody")
 
 const PaginatedSavedSearchesSchema = Paginated(SavedSearchSchema, "PaginatedSavedSearches")
 
@@ -203,7 +185,7 @@ const createSavedSearchEndpoint = savedSearchEndpoint({
     ...savedSearchesFernGroup("create"),
     summary: "Create saved search",
     description:
-      "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only — the authenticated user becomes the search's `createdByUserId`.",
+      "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateRequestSchema) },
     responses: openApiResponses({ status: 201, schema: SavedSearchSchema, description: "Saved search created" }),
@@ -224,7 +206,6 @@ const createSavedSearchEndpoint = savedSearchEndpoint({
           name: body.name,
           query: body.query,
           filterSet: body.filters,
-          assignedUserId: body.assignedUserId !== null ? UserId(body.assignedUserId) : null,
           createdByUserId,
         })
       }).pipe(
@@ -271,9 +252,6 @@ const updateSavedSearchEndpoint = savedSearchEndpoint({
           ...(body.name !== undefined ? { name: body.name } : {}),
           ...(body.query !== undefined ? { query: body.query } : {}),
           ...(body.filters !== undefined ? { filterSet: body.filters } : {}),
-          ...(body.assignedUserId !== undefined
-            ? { assignedUserId: body.assignedUserId !== null ? UserId(body.assignedUserId) : null }
-            : {}),
         })
       }).pipe(
         withPostgres(
@@ -323,50 +301,6 @@ const deleteSavedSearchEndpoint = savedSearchEndpoint({
     )
 
     return c.body(null, 204)
-  },
-})
-
-const assignSavedSearch = savedSearchEndpoint({
-  route: createRoute({
-    method: "post",
-    path: "/{searchSlug}/assign",
-    name: "assignSavedSearch",
-    tags: ["Saved Searches"],
-    ...savedSearchesFernGroup("assign"),
-    summary: "Assign saved search",
-    description:
-      "Assigns the saved search to a user, or clears the current assignment when `userId` is `null`. The assignee must be a member of the requesting organization — otherwise the request is rejected with 400.",
-    security: PROTECTED_SECURITY,
-    request: { params: SearchSlugParamsSchema, body: jsonBody(AssignRequestSchema) },
-    responses: openApiResponses({ status: 200, schema: SavedSearchSchema, description: "Updated saved search" }),
-  }),
-  handler: async (c) => {
-    const { projectSlug, searchSlug } = c.req.valid("param")
-    const { userId } = c.req.valid("json")
-    const organizationId = c.var.organization.id
-
-    const updated = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getSavedSearchBySlug({ projectId: project.id, slug: searchSlug })
-
-        return yield* assignSavedSearchUseCase({
-          organizationId: OrganizationId(organizationId as string),
-          savedSearchId: SavedSearchId(current.id as string),
-          assigneeUserId: userId !== null ? UserId(userId) : null,
-        })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, SavedSearchRepositoryLive, MembershipRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
-    )
-
-    return c.json(toSavedSearchResponse(updated), 200)
   },
 })
 
@@ -468,7 +402,6 @@ export const createSavedSearchesRoutes = () => {
   createSavedSearchEndpoint.mountHttp(app, createTierRateLimiter("low"))
   updateSavedSearchEndpoint.mountHttp(app, createTierRateLimiter("low"))
   deleteSavedSearchEndpoint.mountHttp(app, createTierRateLimiter("low"))
-  assignSavedSearch.mountHttp(app, createTierRateLimiter("low"))
   listSavedSearchTraces.mountHttp(app, createTierRateLimiter("medium"))
   return app
 }

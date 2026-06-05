@@ -340,7 +340,7 @@ export function TraceDetailBody({
         section: "context",
         group: "Trace",
         keywords: "open session view conversation",
-        perform: () => navigate({ to: `/projects/${projectSlug}/search`, search: { sessionId } }),
+        perform: () => navigate({ to: `/projects/${projectSlug}`, search: { sessionId, tab: "sessions" } }),
       })
     }
 

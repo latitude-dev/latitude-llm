@@ -11,12 +11,15 @@ import {
 } from "../dropdown-menu/primitives.tsx"
 import { Icon } from "../icons/icons.tsx"
 import { Text } from "../text/text.tsx"
+import { Tooltip } from "../tooltip/tooltip.tsx"
 
 export interface SplitButtonAction {
   /** Visible content for both the primary half (when this is `actions[0]`) and the dropdown row. */
   readonly content: ReactNode
   /** Optional leading icon rendered in front of `content`. */
   readonly icon?: ReactNode
+  /** Optional tooltip shown on hover. Only honored for the primary half (`actions[0]`). */
+  readonly tooltip?: ReactNode
   readonly onClick: () => void
   readonly disabled?: boolean
 }
@@ -56,19 +59,29 @@ export function SplitButton({
   const primaryDisabled = !!(disabled || primary.disabled)
   const hasExtras = extras.length > 0
 
+  const primaryButton = (
+    <Button
+      variant={variant}
+      size={size}
+      disabled={primaryDisabled}
+      {...(isLoading ? { isLoading: true } : {})}
+      onClick={primary.onClick}
+      className={cn({ "rounded-r-none": hasExtras })}
+    >
+      {primary.icon ?? null}
+      {primary.content}
+    </Button>
+  )
+
   return (
     <div ref={ref} className={cn("inline-flex items-stretch", className)}>
-      <Button
-        variant={variant}
-        size={size}
-        disabled={primaryDisabled}
-        {...(isLoading ? { isLoading: true } : {})}
-        onClick={primary.onClick}
-        className={cn({ "rounded-r-none": hasExtras })}
-      >
-        {primary.icon ?? null}
-        {primary.content}
-      </Button>
+      {primary.tooltip ? (
+        <Tooltip asChild trigger={primaryButton}>
+          {primary.tooltip}
+        </Tooltip>
+      ) : (
+        primaryButton
+      )}
       {hasExtras ? (
         <DropdownMenuRoot modal={false}>
           <DropdownMenuTrigger asChild {...(disabled ? { disabled: true } : {})}>
@@ -79,7 +92,7 @@ export function SplitButton({
               className="rounded-l-none border-l-0 px-1.5"
               aria-label={chevronAriaLabel}
             >
-              <Icon icon={ChevronDownIcon} size="xs" />
+              <Icon icon={ChevronDownIcon} size="sm" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuPortal>

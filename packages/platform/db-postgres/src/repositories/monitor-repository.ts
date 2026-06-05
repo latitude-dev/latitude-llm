@@ -14,7 +14,22 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
-import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, isNull, max, ne, or, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  max,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { alertIncidents } from "../schema/alert-incidents.ts"
@@ -588,6 +603,35 @@ export const MonitorRepositoryLive = Layer.effect(
               ),
           )
           return rows.map(toMonitorAlert)
+        }),
+      listSavedSearchMonitorSlugs: (projectId) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          // One row per saved search: the earliest-created live, unmuted monitor watching it.
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .selectDistinctOn([monitorAlerts.sourceId], {
+                savedSearchId: monitorAlerts.sourceId,
+                monitorSlug: monitors.slug,
+              })
+              .from(monitorAlerts)
+              .innerJoin(monitors, eq(monitors.id, monitorAlerts.monitorId))
+              .where(
+                and(
+                  eq(monitorAlerts.organizationId, sqlClient.organizationId),
+                  eq(monitors.projectId, projectId),
+                  eq(monitorAlerts.sourceType, "savedSearch"),
+                  isNotNull(monitorAlerts.sourceId),
+                  isNull(monitorAlerts.deletedAt),
+                  isNull(monitors.deletedAt),
+                  isNull(monitors.mutedAt),
+                ),
+              )
+              .orderBy(asc(monitorAlerts.sourceId), asc(monitors.createdAt), asc(monitors.id)),
+          )
+          return rows.flatMap((row) =>
+            row.savedSearchId ? [{ savedSearchId: row.savedSearchId, monitorSlug: row.monitorSlug }] : [],
+          )
         }),
       listProjectsWithActiveSavedSearchAlerts: () =>
         Effect.gen(function* () {

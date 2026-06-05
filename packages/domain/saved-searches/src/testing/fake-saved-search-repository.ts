@@ -38,8 +38,6 @@ export const createFakeSavedSearchRepository = (seed: readonly SavedSearch[] = [
           name: args.name,
           query: args.query,
           filterSet: args.filterSet,
-          assignedUserId: args.assignedUserId,
-          createdByUserId: args.createdByUserId,
           deletedAt: null,
           createdAt: now,
           updatedAt: now,
@@ -69,12 +67,11 @@ export const createFakeSavedSearchRepository = (seed: readonly SavedSearch[] = [
     countBySlug: ({ projectId, slug, excludeId }) =>
       Effect.sync(() => (collidesOnSlug(projectId, slug, excludeId) ? 1 : 0)),
 
-    listByProject: ({ projectId, assignedUserId }) =>
+    listByProject: ({ projectId }) =>
       Effect.sync(() => {
         const items = [...rows.values()]
           .filter(isLive)
           .filter((row) => row.projectId === projectId)
-          .filter((row) => (assignedUserId ? row.assignedUserId === assignedUserId : true))
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         return { items }
       }),
@@ -125,7 +122,6 @@ export const createFakeSavedSearchRepository = (seed: readonly SavedSearch[] = [
           ...(args.name !== undefined ? { name: args.name } : {}),
           ...(args.query !== undefined ? { query: args.query } : {}),
           ...(args.filterSet !== undefined ? { filterSet: args.filterSet } : {}),
-          ...(args.assignedUserId !== undefined ? { assignedUserId: args.assignedUserId } : {}),
           updatedAt: new Date(),
         }
         rows.set(args.id, next)

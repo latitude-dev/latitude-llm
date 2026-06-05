@@ -12,7 +12,6 @@ import {
   SavedSearchId,
   SqlClient,
   type SqlClientShape,
-  UserId,
 } from "@domain/shared"
 import { and, desc, eq, ilike, isNull, ne, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
@@ -47,8 +46,6 @@ const toSavedSearch = (row: typeof savedSearches.$inferSelect): SavedSearch => (
   name: row.name,
   query: row.query ?? null,
   filterSet: row.filterSet,
-  assignedUserId: row.assignedUserId ? UserId(row.assignedUserId) : null,
-  createdByUserId: UserId(row.createdByUserId),
   deletedAt: row.deletedAt ?? null,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
@@ -73,8 +70,6 @@ export const SavedSearchRepositoryLive = Layer.effect(
                   name: args.name,
                   query: args.query,
                   filterSet: args.filterSet,
-                  assignedUserId: args.assignedUserId,
-                  createdByUserId: args.createdByUserId,
                 })
                 .returning(),
             )
@@ -147,14 +142,13 @@ export const SavedSearchRepositoryLive = Layer.effect(
           return row?.count ?? 0
         }),
 
-      listByProject: ({ projectId, assignedUserId }) =>
+      listByProject: ({ projectId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const conditions = and(
             eq(savedSearches.organizationId, sqlClient.organizationId),
             eq(savedSearches.projectId, projectId),
             isNull(savedSearches.deletedAt),
-            ...(assignedUserId ? [eq(savedSearches.assignedUserId, assignedUserId)] : []),
           )
           const rows = yield* sqlClient.query((db) =>
             db.select().from(savedSearches).where(conditions).orderBy(desc(savedSearches.createdAt)),
@@ -222,7 +216,6 @@ export const SavedSearchRepositoryLive = Layer.effect(
           if (args.name !== undefined) setClause.name = args.name
           if (args.query !== undefined) setClause.query = args.query
           if (args.filterSet !== undefined) setClause.filterSet = args.filterSet
-          if (args.assignedUserId !== undefined) setClause.assignedUserId = args.assignedUserId
 
           if (Object.keys(setClause).length === 0) {
             const [row] = yield* sqlClient.query((db) =>

@@ -56,7 +56,7 @@ export function useProjectSearchCommands(query: string): ProjectSearchCommands {
         section: "search",
         subtitle: saved.projectName,
         keywords: `${saved.name} ${saved.projectName}`,
-        perform: () => navigate({ to: `/projects/${saved.projectSlug}/search`, search: { savedSearch: saved.slug } }),
+        perform: () => navigate({ to: `/projects/${saved.projectSlug}`, search: { savedSearch: saved.slug } }),
       }),
     )
 
@@ -79,7 +79,7 @@ export function useProjectSearchCommands(query: string): ProjectSearchCommands {
             icon: SearchIcon,
             section: "search",
             keywords: "search traces",
-            perform: () => navigate({ to: `/projects/${project.slug}/search`, search: { q: trimmed } }),
+            perform: () => navigate({ to: `/projects/${project.slug}`, search: { query: trimmed } }),
           },
         ]
       : []

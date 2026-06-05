@@ -4,7 +4,6 @@ import {
   projectIdSchema,
   SLUG_MAX_LENGTH,
   savedSearchIdSchema,
-  userIdSchema,
 } from "@domain/shared"
 import { z } from "zod"
 import { SAVED_SEARCH_NAME_MAX_LENGTH, SAVED_SEARCH_QUERY_MAX_LENGTH } from "../constants.ts"
@@ -27,8 +26,6 @@ export const savedSearchSchema = z
     name: z.string().min(1).max(SAVED_SEARCH_NAME_MAX_LENGTH),
     query: z.string().max(SAVED_SEARCH_QUERY_MAX_LENGTH).nullable(),
     filterSet: filterSetSchema,
-    assignedUserId: userIdSchema.nullable(),
-    createdByUserId: userIdSchema,
     deletedAt: z.date().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),

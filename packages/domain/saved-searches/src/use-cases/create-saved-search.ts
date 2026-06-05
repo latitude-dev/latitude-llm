@@ -19,7 +19,7 @@ export interface CreateSavedSearchInput {
   readonly name: string
   readonly query: string | null
   readonly filterSet: FilterSet
-  readonly assignedUserId?: UserId | null
+  /** The acting user. Not stored on the search — only stamped onto the `SavedSearchCreated` event. */
   readonly createdByUserId: UserId
 }
 
@@ -61,8 +61,6 @@ export const createSavedSearch = Effect.fn("savedSearches.createSavedSearch")(fu
         name: trimmedName,
         query: normalizedQuery,
         filterSet: input.filterSet,
-        assignedUserId: input.assignedUserId ?? null,
-        createdByUserId: input.createdByUserId,
       })
 
       const outboxEventWriter = yield* OutboxEventWriter
@@ -73,7 +71,7 @@ export const createSavedSearch = Effect.fn("savedSearches.createSavedSearch")(fu
         organizationId: created.organizationId,
         payload: {
           organizationId: created.organizationId,
-          actorUserId: created.createdByUserId,
+          actorUserId: input.createdByUserId,
           projectId: created.projectId,
           searchId: created.id,
           name: created.name,

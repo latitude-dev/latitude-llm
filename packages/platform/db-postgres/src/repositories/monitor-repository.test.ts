@@ -1173,6 +1173,44 @@ describe("MonitorRepositoryLive", () => {
       expect(onlyXRow[0]?.deletedAt).not.toBeNull()
       expect(mixedRow[0]?.deletedAt).toBeNull()
     })
+
+    it("listSavedSearchMonitorSlugs maps each search to the earliest-created live, unmuted monitor", async () => {
+      const older = generateId()
+      const newer = generateId()
+      const muted = generateId()
+      const deleted = generateId()
+      const searchZ = "z".repeat(24)
+      await database.db.insert(monitorsTable).values([
+        makeMonitorRow({ id: older, slug: "older", name: "Older", createdAt: new Date("2026-05-01T10:00:00.000Z") }),
+        makeMonitorRow({ id: newer, slug: "newer", name: "Newer", createdAt: new Date("2026-05-10T10:00:00.000Z") }),
+        makeMonitorRow({ id: muted, slug: "muted", name: "Muted", mutedAt: new Date() }),
+        // Deleted monitor created earliest of all — must still be ignored.
+        makeMonitorRow({
+          id: deleted,
+          slug: "deleted",
+          name: "Deleted",
+          createdAt: new Date("2026-04-01T10:00:00.000Z"),
+          deletedAt: new Date(),
+        }),
+      ])
+      await database.db.insert(monitorAlertsTable).values([
+        makeAlertRow({ id: "1".repeat(24), monitorId: older, sourceId: searchX }),
+        makeAlertRow({ id: "2".repeat(24), monitorId: newer, sourceId: searchX }),
+        makeAlertRow({ id: "3".repeat(24), monitorId: deleted, sourceId: searchX }),
+        // searchY is only watched by a muted monitor → excluded.
+        makeAlertRow({ id: "4".repeat(24), monitorId: muted, sourceId: searchY }),
+        // soft-deleted alert on a live monitor → its source (searchZ) excluded.
+        makeAlertRow({ id: "5".repeat(24), monitorId: older, sourceId: searchZ, deletedAt: new Date() }),
+      ])
+
+      const rows = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.listSavedSearchMonitorSlugs(projectId)
+        }).pipe(provideRls(database, organizationId)),
+      )
+      expect(rows).toEqual([{ savedSearchId: searchX, monitorSlug: "older" }])
+    })
   })
 
   describe("soft-delete silently closes open incidents", () => {

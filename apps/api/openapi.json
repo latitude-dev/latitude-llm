@@ -2785,21 +2785,6 @@
               }
             ]
           },
-          "assignedUserId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "User this search is assigned to, if any. `null` when the search is unassigned."
-          },
-          "createdByUserId": {
-            "type": "string",
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "User who created the saved search."
-          },
           "deletedAt": {
             "type": [
               "string",
@@ -2824,8 +2809,6 @@
           "name",
           "query",
           "filters",
-          "assignedUserId",
-          "createdByUserId",
           "deletedAt",
           "createdAt",
           "updatedAt"
@@ -2858,16 +2841,6 @@
                 "description": "Structured filter set. Defaults to `{}` (no filters). At least one of `query` or `filters` must be set."
               }
             ]
-          },
-          "assignedUserId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 24,
-            "maxLength": 24,
-            "default": null,
-            "description": "User to assign the search to. `null` (default) leaves the search unassigned."
           }
         },
         "required": [
@@ -2900,34 +2873,8 @@
                 "description": "Replace the structured filter set."
               }
             ]
-          },
-          "assignedUserId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "Replace the assignee. Pass `null` to clear it. Use the dedicated `/assign` endpoint to validate membership."
           }
         }
-      },
-      "AssignSavedSearchBody": {
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 24,
-            "maxLength": 24,
-            "description": "User to assign the search to, or `null` to clear the current assignment."
-          }
-        },
-        "required": [
-          "userId"
-        ]
       },
       "PaginatedIssues": {
         "type": "object",
@@ -6472,7 +6419,7 @@
         "x-fern-sdk-group-name": "savedSearches",
         "x-fern-sdk-method-name": "create",
         "summary": "Create saved search",
-        "description": "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only — the authenticated user becomes the search's `createdByUserId`.",
+        "description": "Creates a saved search within the project. At least one of `query` or `filters` must be set. The slug is derived from `name`. OAuth-authenticated only.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -6753,97 +6700,6 @@
         "responses": {
           "204": {
             "description": "Saved search deleted"
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/projects/{projectSlug}/searches/{searchSlug}/assign": {
-      "post": {
-        "tags": [
-          "Saved Searches"
-        ],
-        "x-fern-sdk-group-name": "savedSearches",
-        "x-fern-sdk-method-name": "assign",
-        "summary": "Assign saved search",
-        "description": "Assigns the saved search to a user, or clears the current assignment when `userId` is `null`. The assignee must be a member of the requesting organization — otherwise the request is rejected with 400.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "assignSavedSearch",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Saved-search slug (human-readable identifier within the project)."
-            },
-            "required": true,
-            "description": "Saved-search slug (human-readable identifier within the project).",
-            "name": "searchSlug",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssignSavedSearchBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Updated saved search",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SavedSearch"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
           },
           "401": {
             "description": "Unauthorized",

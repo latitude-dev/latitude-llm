@@ -50,8 +50,6 @@ const savedSearch = {
   name: "Errors",
   query: "boom",
   filterSet: {},
-  assignedUserId: null,
-  createdByUserId: "u".repeat(24) as never,
   deletedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),

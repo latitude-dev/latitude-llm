@@ -16,10 +16,6 @@ export interface SavedSearch {
     /** Free-text semantic query applied alongside `filters`. `null` when the search is filter-only. At least one of `query` or `filters` must be set. */
     query?: string | undefined;
     filters: LatitudeApi.FilterSet;
-    /** User this search is assigned to, if any. `null` when the search is unassigned. */
-    assignedUserId?: string | undefined;
-    /** User who created the saved search. */
-    createdByUserId: string;
     /** ISO-8601 timestamp at which the search was deleted. `null` while active. */
     deletedAt?: string | undefined;
     /** ISO-8601 timestamp of creation. */

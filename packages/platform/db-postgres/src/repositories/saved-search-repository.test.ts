@@ -1,5 +1,5 @@
 import { DuplicateSavedSearchSlugError, SavedSearchNotFoundError, SavedSearchRepository } from "@domain/saved-searches"
-import { OrganizationId, ProjectId, type SqlClient, UserId } from "@domain/shared"
+import { OrganizationId, ProjectId, type SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { projects } from "../schema/projects.ts"
@@ -12,8 +12,6 @@ const ORG_ID = OrganizationId("org-saved-search-test".padEnd(24, "x").slice(0, 2
 const OTHER_ORG_ID = OrganizationId("org-saved-search-othe".padEnd(24, "x").slice(0, 24))
 const PROJECT_ID = ProjectId("proj-saved-search-tes".padEnd(24, "x").slice(0, 24))
 const OTHER_PROJECT_ID = ProjectId("proj-saved-search-oth".padEnd(24, "x").slice(0, 24))
-const CREATOR_USER_ID = UserId("user-creator-test".padEnd(24, "x").slice(0, 24))
-const ASSIGNEE_USER_ID = UserId("user-assignee-test".padEnd(24, "x").slice(0, 24))
 
 const pg = setupTestPostgres()
 
@@ -38,8 +36,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Errors",
           query: "failed payments",
           filterSet: { status: [{ op: "eq", value: "error" }] },
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -47,8 +43,6 @@ describe("SavedSearchRepositoryLive", () => {
     expect(created.slug).toBe("errors")
     expect(created.name).toBe("Errors")
     expect(created.query).toBe("failed payments")
-    expect(created.assignedUserId).toBeNull()
-    expect(created.createdByUserId).toBe(CREATOR_USER_ID)
     expect(created.deletedAt).toBeNull()
 
     const fetched = await runWithLive(
@@ -71,8 +65,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Slow Signups",
           query: null,
           filterSet: { duration: [{ op: "gte", value: 1000 }] },
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -105,8 +97,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Errors",
           query: "fail",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -121,8 +111,6 @@ describe("SavedSearchRepositoryLive", () => {
             name: "Errors duplicate",
             query: "fail",
             filterSet: {},
-            assignedUserId: null,
-            createdByUserId: CREATOR_USER_ID,
           })
         }),
       ),
@@ -139,8 +127,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Errors",
           query: "fail",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
         yield* repo.create({
           projectId: OTHER_PROJECT_ID,
@@ -148,8 +134,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Errors",
           query: "fail",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -165,8 +149,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Errors",
           query: "fail",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -202,8 +184,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "First",
           query: "a",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
         yield* Effect.sleep("10 millis")
         yield* repo.create({
@@ -212,8 +192,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Second",
           query: "b",
           filterSet: {},
-          assignedUserId: ASSIGNEE_USER_ID,
-          createdByUserId: CREATOR_USER_ID,
         })
         yield* Effect.sleep("10 millis")
         yield* repo.create({
@@ -222,8 +200,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Third",
           query: "c",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -238,41 +214,7 @@ describe("SavedSearchRepositoryLive", () => {
     expect(page.items.map((row) => row.slug)).toEqual(["third", "second", "first"])
   })
 
-  it("filters listByProject by assignedUserId", async () => {
-    await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* SavedSearchRepository
-        yield* repo.create({
-          projectId: PROJECT_ID,
-          slug: "unassigned",
-          name: "Unassigned",
-          query: "a",
-          filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
-        })
-        yield* repo.create({
-          projectId: PROJECT_ID,
-          slug: "assigned",
-          name: "Assigned",
-          query: "b",
-          filterSet: {},
-          assignedUserId: ASSIGNEE_USER_ID,
-          createdByUserId: CREATOR_USER_ID,
-        })
-      }),
-    )
-
-    const page = await runWithLive(
-      Effect.gen(function* () {
-        const repo = yield* SavedSearchRepository
-        return yield* repo.listByProject({ projectId: PROJECT_ID, assignedUserId: ASSIGNEE_USER_ID })
-      }),
-    )
-    expect(page.items.map((row) => row.slug)).toEqual(["assigned"])
-  })
-
-  it("updates name, slug, query, filterSet, and assignment", async () => {
+  it("updates name, slug, query, and filterSet", async () => {
     const created = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* SavedSearchRepository
@@ -282,8 +224,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Errors",
           query: "fail",
           filterSet: { status: [{ op: "eq", value: "error" }] },
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -298,7 +238,6 @@ describe("SavedSearchRepositoryLive", () => {
           slug: "failures",
           query: "really failed",
           filterSet: { duration: [{ op: "gte", value: 1000 }] },
-          assignedUserId: ASSIGNEE_USER_ID,
         })
       }),
     )
@@ -307,7 +246,6 @@ describe("SavedSearchRepositoryLive", () => {
     expect(updated.slug).toBe("failures")
     expect(updated.query).toBe("really failed")
     expect(updated.filterSet).toEqual({ duration: [{ op: "gte", value: 1000 }] })
-    expect(updated.assignedUserId).toBe(ASSIGNEE_USER_ID)
   })
 
   it("returns DuplicateSavedSearchSlugError when update renames a row to an existing slug", async () => {
@@ -320,8 +258,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Existing",
           query: "a",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -335,8 +271,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Other",
           query: "b",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -365,8 +299,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "To delete",
           query: "x",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -398,8 +330,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Kept",
           query: "x",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -429,8 +359,6 @@ describe("SavedSearchRepositoryLive", () => {
           name: "Owned",
           query: "x",
           filterSet: {},
-          assignedUserId: null,
-          createdByUserId: CREATOR_USER_ID,
         })
       }),
     )
@@ -484,8 +412,6 @@ describe("SavedSearchRepositoryLive searchOrgWide", () => {
       name,
       query: "x",
       filterSet: {},
-      assignedUserId: null,
-      createdByUserId: CREATOR_USER_ID,
       createdAt: baseTime,
       updatedAt: baseTime,
       ...(extra.deletedAt ? { deletedAt: extra.deletedAt } : {}),
@@ -551,8 +477,6 @@ describe("SavedSearchRepositoryLive searchOrgWide", () => {
       name,
       query: "x",
       filterSet: {},
-      assignedUserId: null,
-      createdByUserId: CREATOR_USER_ID,
       createdAt: t,
       updatedAt: t,
     })
