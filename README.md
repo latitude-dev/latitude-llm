@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/latitude-dev/latitude-llm/blob/main/LICENSE"><img src="https://img.shields.io/github/license/latitude-dev/latitude-llm?color=blue" alt="License"></a>
+  <a href="https://github.com/latitude-dev/latitude-llm/blob/main/LICENSE"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/latitude-dev/latitude-llm/development/.github/badges/license.json" alt="License"></a>
   <a href="https://github.com/latitude-dev/latitude-llm/actions/workflows/deploy.yml"><img src="https://img.shields.io/github/actions/workflow/status/latitude-dev/latitude-llm/deploy.yml?branch=development&label=build" alt="Build"></a>
   <a href="https://github.com/latitude-dev/latitude-llm/graphs/commit-activity" target="_blank"><img alt="Commits last month" src="https://img.shields.io/github/commit-activity/m/latitude-dev/latitude-llm?labelColor=%20%2332b583&color=%20%2312b76a"></a>
   <a href="https://www.npmjs.com/org/latitude-data"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/latitude-dev/latitude-llm/development/.github/badges/npm-downloads.json&logo=npm&logoColor=white" alt="npm downloads"></a>
