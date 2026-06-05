@@ -49,12 +49,15 @@ export const clusteringCalibrationSchema = z.object({
 })
 export type ClusteringCalibration = z.infer<typeof clusteringCalibrationSchema>
 
+export const calibrationPayloadSchema = z.union([conversationCalibrationSchema, clusteringCalibrationSchema])
+export type CalibrationPayload = z.infer<typeof calibrationPayloadSchema>
+
 export const calibrationProfileSchema = z.object({
   id: cuidSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
   scope: calibrationScopeSchema,
-  payload: z.unknown(),
+  payload: calibrationPayloadSchema,
   /** Quality metrics observed at calibration time (coverage, purity, …). */
   metrics: z.record(z.string(), z.number()),
   sampleSize: z.number().int().nonnegative(),

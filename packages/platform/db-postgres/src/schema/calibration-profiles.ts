@@ -1,4 +1,4 @@
-import type { CalibrationScope } from "@domain/taxonomy"
+import type { CalibrationPayload, CalibrationProfile, CalibrationScope } from "@domain/taxonomy"
 import { integer, jsonb, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, tzTimestamp } from "../schemaHelpers.ts"
 
@@ -14,8 +14,8 @@ export const calibrationProfiles = latitudeSchema.table(
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
     scope: varchar("scope", { length: 32 }).$type<CalibrationScope>().notNull(),
-    payload: jsonb("payload").notNull(),
-    metrics: jsonb("metrics").notNull(),
+    payload: jsonb("payload").$type<CalibrationPayload>().notNull(),
+    metrics: jsonb("metrics").$type<CalibrationProfile["metrics"]>().notNull(),
     sampleSize: integer("sample_size").notNull().default(0),
     computedAt: tzTimestamp("computed_at").notNull(),
     createdAt: tzTimestamp("created_at").notNull(),
