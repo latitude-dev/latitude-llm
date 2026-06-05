@@ -23,10 +23,10 @@ export interface MonitorIncident {
     endedAt?: string | undefined;
     /** ISO-8601 timestamp at which the incident row was created. */
     createdAt: string;
-    /** Id of the monitor alert that opened this incident, or `null` for incidents not attributed to a monitor (legacy issue-event incidents). */
+    /** Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor. */
     monitorAlertId?: string | undefined;
     condition?: LatitudeApi.AlertCondition | undefined;
-    /** `true` when this incident triggered at least one notification; `false` when the monitor was muted or notifications were disabled. */
+    /** `true` when this incident triggered at least one notification. */
     notified: boolean;
 }
 

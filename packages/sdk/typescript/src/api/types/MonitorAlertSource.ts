@@ -4,14 +4,14 @@
  * The entity this alert watches.
  */
 export interface MonitorAlertSource {
-    /** Entity the alert watches: `savedSearch` for search alerts, `issue` for the system issue monitors. */
+    /** Entity the alert watches: `savedSearch` or `issue`. */
     type: MonitorAlertSource.Type;
-    /** Id of the watched entity — a saved search for `savedSearch` alerts. `null` means all entities of `type`, used by the system issue monitors. */
+    /** Id of the watched entity, or `null` to watch all entities of its `type`. */
     id?: string | undefined;
 }
 
 export namespace MonitorAlertSource {
-    /** Entity the alert watches: `savedSearch` for search alerts, `issue` for the system issue monitors. */
+    /** Entity the alert watches: `savedSearch` or `issue`. */
     export const Type = {
         Issue: "issue",
         SavedSearch: "savedSearch",

@@ -3818,7 +3818,7 @@
             ],
             "minLength": 24,
             "maxLength": 24,
-            "description": "Id of the monitor alert that opened this incident, or `null` for incidents not attributed to a monitor (legacy issue-event incidents)."
+            "description": "Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor."
           },
           "condition": {
             "$ref": "#/components/schemas/AlertCondition"
@@ -3919,7 +3919,7 @@
             "type": "null"
           }
         ],
-        "description": "The firing alert's condition, snapshotted when the incident opened. `null` for kinds with no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`) and for unattributed incidents."
+        "description": "The alert's configuration when the incident opened, or `null` for kinds with no parameters."
       },
       "AlertCountThreshold": {
         "oneOf": [
@@ -5373,7 +5373,7 @@
           },
           "slug": {
             "type": "string",
-            "description": "URL-safe slug derived from `name`, unique within the project among active monitors."
+            "description": "URL-safe slug derived from `name`. Unique within the project."
           },
           "name": {
             "type": "string",
@@ -5381,32 +5381,32 @@
           },
           "description": {
             "type": "string",
-            "description": "Free-form description. Empty string when unset."
+            "description": "Free-form description. Empty string when not set."
           },
           "system": {
             "type": "boolean",
-            "description": "`true` for the three auto-provisioned system monitors (issue discovered / regressed / escalating), which cannot be deleted or restructured — only muted, and their alerts' condition values tuned. `false` for monitors you create."
+            "description": "`true` for the auto-provisioned system monitors, which can't be deleted or edited; `false` otherwise."
           },
           "alerts": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MonitorAlert"
             },
-            "description": "The monitor's active firing rules. Always at least one."
+            "description": "The monitor's alerts. Always at least one."
           },
           "mutedAt": {
             "type": [
               "string",
               "null"
             ],
-            "description": "ISO-8601 timestamp at which the monitor was muted, or `null` when active. A muted monitor still records incidents but sends no notifications."
+            "description": "ISO-8601 timestamp at which the monitor was muted, or `null` when active."
           },
           "deletedAt": {
             "type": [
               "string",
               "null"
             ],
-            "description": "ISO-8601 timestamp at which the monitor was deleted, or `null` while active."
+            "description": "ISO-8601 timestamp at which the monitor was deleted, or `null`."
           },
           "createdAt": {
             "type": "string",
@@ -5457,7 +5457,7 @@
               "savedSearch.threshold",
               "savedSearch.escalating"
             ],
-            "description": "What the alert fires on. `savedSearch.match` opens an incident on each new matching trace; `savedSearch.threshold` when matches cross a count threshold; `savedSearch.escalating` when matches stay above the threshold for a sustained window. `issue.new` / `issue.regressed` / `issue.escalating` belong to the auto-provisioned system monitors."
+            "description": "What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."
           },
           "source": {
             "$ref": "#/components/schemas/MonitorAlertSource"
@@ -5468,7 +5468,7 @@
                 "$ref": "#/components/schemas/AlertCondition"
               },
               {
-                "description": "Kind-specific configuration. `null` for kinds with no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`)."
+                "description": "Kind-specific configuration, or `null` for kinds with no parameters."
               }
             ]
           },
@@ -5479,11 +5479,11 @@
               "medium",
               "high"
             ],
-            "description": "Severity assigned to incidents this alert opens: `low`, `medium`, or `high`."
+            "description": "Severity of incidents this alert opens: `low`, `medium`, or `high`."
           },
           "createdAt": {
             "type": "string",
-            "description": "ISO-8601 timestamp at which the alert was created."
+            "description": "ISO-8601 timestamp of creation."
           }
         },
         "required": [
@@ -5505,7 +5505,7 @@
               "issue",
               "savedSearch"
             ],
-            "description": "Entity the alert watches: `savedSearch` for search alerts, `issue` for the system issue monitors."
+            "description": "Entity the alert watches: `savedSearch` or `issue`."
           },
           "id": {
             "type": [
@@ -5514,7 +5514,7 @@
             ],
             "minLength": 24,
             "maxLength": 24,
-            "description": "Id of the watched entity — a saved search for `savedSearch` alerts. `null` means all entities of `type`, used by the system issue monitors."
+            "description": "Id of the watched entity, or `null` to watch all entities of its `type`."
           }
         },
         "required": [
@@ -5543,7 +5543,7 @@
               "$ref": "#/components/schemas/CreateMonitorAlertBody"
             },
             "minItems": 1,
-            "description": "Firing rules for the monitor. At least one; every entry must be a user-creatable saved-search alert."
+            "description": "The monitor's alerts. At least one."
           }
         },
         "required": [
@@ -5561,7 +5561,7 @@
               "savedSearch.threshold",
               "savedSearch.escalating"
             ],
-            "description": "What the alert fires on. `savedSearch.match` opens an incident on each new matching trace; `savedSearch.threshold` when matches cross a count threshold; `savedSearch.escalating` when matches stay above the threshold for a sustained window."
+            "description": "What the alert fires on. `savedSearch.threshold` and `savedSearch.escalating` need a matching `condition`."
           },
           "source": {
             "type": "object",
@@ -5572,7 +5572,7 @@
                   "issue",
                   "savedSearch"
                 ],
-                "description": "Must be `savedSearch` — every user-creatable alert watches a saved search."
+                "description": "Must be `savedSearch`."
               },
               "id": {
                 "type": "string",
@@ -5667,7 +5667,7 @@
                 "type": "null"
               }
             ],
-            "description": "Kind-specific configuration. Required for `savedSearch.threshold` / `savedSearch.escalating`; omit (or `null`) for `savedSearch.match`. The condition's `kind` must equal the alert's `kind`."
+            "description": "Kind-specific configuration. Required for `savedSearch.threshold` and `savedSearch.escalating`; omit for `savedSearch.match`."
           },
           "severity": {
             "type": "string",
@@ -5676,7 +5676,7 @@
               "medium",
               "high"
             ],
-            "description": "Severity for incidents this alert opens. Defaults to the kind's canonical severity when omitted."
+            "description": "Severity of incidents this alert opens. Defaults per kind when omitted."
           }
         },
         "required": [
@@ -5708,7 +5708,7 @@
             "items": {
               "$ref": "#/components/schemas/MonitorAlert"
             },
-            "description": "The monitor's active alerts."
+            "description": "The monitor's alerts."
           }
         },
         "required": [
@@ -5725,7 +5725,7 @@
               "savedSearch.threshold",
               "savedSearch.escalating"
             ],
-            "description": "New alert kind. Allowed only on monitors you own (system monitors keep their kind). When changed, supply the matching `condition`."
+            "description": "New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it."
           },
           "source": {
             "type": "object",
@@ -5831,7 +5831,7 @@
                 "type": "null"
               }
             ],
-            "description": "Replace the kind-specific configuration. On system monitors this is the only mutable field (e.g. issue-escalation `sensitivity`). The condition's `kind` must match the alert's kind."
+            "description": "Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`)."
           },
           "severity": {
             "type": "string",
@@ -5950,14 +5950,14 @@
             ],
             "minLength": 24,
             "maxLength": 24,
-            "description": "Id of the monitor alert that opened this incident, or `null` for incidents not attributed to a monitor (legacy issue-event incidents)."
+            "description": "Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor."
           },
           "condition": {
             "$ref": "#/components/schemas/AlertCondition"
           },
           "notified": {
             "type": "boolean",
-            "description": "`true` when this incident triggered at least one notification; `false` when the monitor was muted or notifications were disabled."
+            "description": "`true` when this incident triggered at least one notification."
           }
         },
         "required": [
@@ -10806,7 +10806,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "list",
         "summary": "List monitors",
-        "description": "Returns the project's monitors, system monitors first, then by most recent activity. Cursor-paginated.",
+        "description": "Returns the project's monitors, system monitors first, then by most recent activity.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -10850,10 +10850,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Case-insensitive name substring filter. Omit to list every monitor."
+              "description": "Filter by name (case-insensitive substring)."
             },
             "required": false,
-            "description": "Case-insensitive name substring filter. Omit to list every monitor.",
+            "description": "Filter by name (case-insensitive substring).",
             "name": "search",
             "in": "query"
           }
@@ -10908,7 +10908,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "create",
         "summary": "Create monitor",
-        "description": "Creates a monitor watching one or more saved searches. The slug is derived from `name`. Every alert must be a user-creatable saved-search alert with a `source.id`.",
+        "description": "Creates a monitor with one or more saved-search alerts. The slug is derived from `name`.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -10989,7 +10989,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "get",
         "summary": "Get monitor",
-        "description": "Returns a single monitor by slug, including its active alerts.",
+        "description": "Returns a single monitor by slug.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11068,7 +11068,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "update",
         "summary": "Update monitor",
-        "description": "Updates a monitor's name and/or description. Alerts are managed through the alert endpoints. System monitors cannot be edited.",
+        "description": "Updates a monitor's name and description. System monitors cannot be edited.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11231,7 +11231,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "listAlerts",
         "summary": "List monitor alerts",
-        "description": "Returns the monitor's active alerts. The same alerts are also embedded in the monitor payload.",
+        "description": "Returns the monitor's alerts.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11310,7 +11310,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "createAlert",
         "summary": "Create monitor alert",
-        "description": "Adds an alert to a monitor and returns the updated monitor. Only user-creatable saved-search alerts are allowed; system monitors cannot gain alerts.",
+        "description": "Adds a saved-search alert to a monitor and returns the updated monitor. System monitors cannot gain alerts.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11411,7 +11411,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "getAlert",
         "summary": "Get monitor alert",
-        "description": "Returns a single alert of the monitor by id.",
+        "description": "Returns a single monitor alert by id.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11500,7 +11500,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "updateAlert",
         "summary": "Update monitor alert",
-        "description": "Updates an alert in place and returns the updated monitor. On your own monitors the kind, source, condition, and severity may change; on system monitors only the condition values may change (e.g. issue-escalation sensitivity).",
+        "description": "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11609,7 +11609,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "deleteAlert",
         "summary": "Delete monitor alert",
-        "description": "Removes an alert from a monitor. A monitor must keep at least one alert, and system monitors' alerts cannot be removed.",
+        "description": "Removes an alert from a monitor. A monitor must keep at least one alert; system monitors' alerts cannot be removed.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11683,7 +11683,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "listIncidents",
         "summary": "List monitor incidents",
-        "description": "Returns the incidents opened by a monitor, most recent first. Cursor-paginated. Each item carries `notified`, indicating whether the incident triggered a notification.",
+        "description": "Returns the incidents opened by a monitor, most recent first. Each item's `notified` flag shows whether it triggered a notification.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11787,7 +11787,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "mute",
         "summary": "Mute monitor",
-        "description": "Mutes a monitor: it keeps recording incidents but sends no notifications. Allowed on both system and user monitors.",
+        "description": "Mutes a monitor so its incidents stop sending notifications. Allowed on all monitors.",
         "security": [
           {
             "ApiKeyAuth": []

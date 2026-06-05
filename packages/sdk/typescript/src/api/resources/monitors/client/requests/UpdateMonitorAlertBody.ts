@@ -7,18 +7,18 @@ import type * as LatitudeApi from "../../../../index.js";
  *     {}
  */
 export interface UpdateMonitorAlertBody {
-    /** New alert kind. Allowed only on monitors you own (system monitors keep their kind). When changed, supply the matching `condition`. */
+    /** New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it. */
     kind?: UpdateMonitorAlertBody.Kind;
     /** Replace the watched saved search. Not allowed on system monitors. */
     source?: UpdateMonitorAlertBody.Source;
-    /** Replace the kind-specific configuration. On system monitors this is the only mutable field (e.g. issue-escalation `sensitivity`). The condition's `kind` must match the alert's kind. */
+    /** Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`). */
     condition?: UpdateMonitorAlertBody.Condition;
     /** Replace the severity. Not allowed on system monitors. */
     severity?: UpdateMonitorAlertBody.Severity;
 }
 
 export namespace UpdateMonitorAlertBody {
-    /** New alert kind. Allowed only on monitors you own (system monitors keep their kind). When changed, supply the matching `condition`. */
+    /** New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it. */
     export const Kind = {
         SavedSearchMatch: "savedSearch.match",
         SavedSearchThreshold: "savedSearch.threshold",
@@ -46,7 +46,7 @@ export namespace UpdateMonitorAlertBody {
     }
 
     /**
-     * Replace the kind-specific configuration. On system monitors this is the only mutable field (e.g. issue-escalation `sensitivity`). The condition's `kind` must match the alert's kind.
+     * Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`).
      */
     export type Condition =
         | {

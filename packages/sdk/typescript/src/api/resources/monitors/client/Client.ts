@@ -23,7 +23,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Returns the project's monitors, system monitors first, then by most recent activity. Cursor-paginated.
+     * Returns the project's monitors, system monitors first, then by most recent activity.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.MonitorsListRequest} request
@@ -125,7 +125,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Creates a monitor watching one or more saved searches. The slug is derived from `name`. Every alert must be a user-creatable saved-search alert with a `source.id`.
+     * Creates a monitor with one or more saved-search alerts. The slug is derived from `name`.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateMonitorBody} request
@@ -224,7 +224,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Returns a single monitor by slug, including its active alerts.
+     * Returns a single monitor by slug.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
@@ -392,7 +392,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Updates a monitor's name and/or description. Alerts are managed through the alert endpoints. System monitors cannot be edited.
+     * Updates a monitor's name and description. System monitors cannot be edited.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
@@ -491,7 +491,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Returns the monitor's active alerts. The same alerts are also embedded in the monitor payload.
+     * Returns the monitor's alerts.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
@@ -578,7 +578,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Adds an alert to a monitor and returns the updated monitor. Only user-creatable saved-search alerts are allowed; system monitors cannot gain alerts.
+     * Adds a saved-search alert to a monitor and returns the updated monitor. System monitors cannot gain alerts.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
@@ -685,7 +685,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Returns a single alert of the monitor by id.
+     * Returns a single monitor alert by id.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
@@ -775,7 +775,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Removes an alert from a monitor. A monitor must keep at least one alert, and system monitors' alerts cannot be removed.
+     * Removes an alert from a monitor. A monitor must keep at least one alert; system monitors' alerts cannot be removed.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
@@ -861,7 +861,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Updates an alert in place and returns the updated monitor. On your own monitors the kind, source, condition, and severity may change; on system monitors only the condition values may change (e.g. issue-escalation sensitivity).
+     * Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
@@ -965,7 +965,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Returns the incidents opened by a monitor, most recent first. Cursor-paginated. Each item carries `notified`, indicating whether the incident triggered a notification.
+     * Returns the incidents opened by a monitor, most recent first. Each item's `notified` flag shows whether it triggered a notification.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
@@ -1073,7 +1073,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Mutes a monitor: it keeps recording incidents but sends no notifications. Allowed on both system and user monitors.
+     * Mutes a monitor so its incidents stop sending notifications. Allowed on all monitors.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).

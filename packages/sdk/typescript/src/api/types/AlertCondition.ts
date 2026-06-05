@@ -3,7 +3,7 @@
 import type * as LatitudeApi from "../index.js";
 
 /**
- * The firing alert's condition, snapshotted when the incident opened. `null` for kinds with no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`) and for unattributed incidents.
+ * The alert's configuration when the incident opened, or `null` for kinds with no parameters.
  */
 export type AlertCondition =
     | {

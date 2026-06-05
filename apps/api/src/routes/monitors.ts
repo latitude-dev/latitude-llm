@@ -73,10 +73,7 @@ const CreateMonitorBodySchema = z
   .object({
     name: z.string().min(1).max(NAME_MAX_LENGTH).describe("Human-readable name. Used to derive the slug."),
     description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("Optional free-form description."),
-    alerts: z
-      .array(CreateMonitorAlertBodySchema)
-      .min(1)
-      .describe("Firing rules for the monitor. At least one; every entry must be a user-creatable saved-search alert."),
+    alerts: z.array(CreateMonitorAlertBodySchema).min(1).describe("The monitor's alerts. At least one."),
   })
   .openapi("CreateMonitorBody")
 
@@ -98,7 +95,7 @@ const ListMonitorsQuerySchema = z.object({
     .optional()
     .describe("Opaque cursor returned in a previous response's `nextCursor`. Omit on the first page."),
   limit: z.coerce.number().int().min(1).max(100).default(50).describe("Page size. Defaults to 50; max 100."),
-  search: z.string().optional().describe("Case-insensitive name substring filter. Omit to list every monitor."),
+  search: z.string().optional().describe("Filter by name (case-insensitive substring)."),
 })
 
 const ListMonitorIncidentsQuerySchema = z.object({
@@ -112,7 +109,7 @@ const ListMonitorIncidentsQuerySchema = z.object({
 const PaginatedMonitorsSchema = Paginated(MonitorSchema, "PaginatedMonitors")
 const PaginatedMonitorIncidentsSchema = Paginated(MonitorIncidentSchema, "PaginatedMonitorIncidents")
 const MonitorAlertListSchema = z
-  .object({ items: z.array(MonitorAlertSchema).describe("The monitor's active alerts.") })
+  .object({ items: z.array(MonitorAlertSchema).describe("The monitor's alerts.") })
   .openapi("MonitorAlertList")
 
 /** The validated alert body is structurally identical to the domain input; the condition is cast back to its branded union. */
@@ -135,8 +132,7 @@ const listMonitors = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("list"),
     summary: "List monitors",
-    description:
-      "Returns the project's monitors, system monitors first, then by most recent activity. Cursor-paginated.",
+    description: "Returns the project's monitors, system monitors first, then by most recent activity.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, query: ListMonitorsQuerySchema },
     responses: openApiResponses({ status: 200, schema: PaginatedMonitorsSchema, description: "Page of monitors" }),
@@ -185,8 +181,7 @@ const createMonitor = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("create"),
     summary: "Create monitor",
-    description:
-      "Creates a monitor watching one or more saved searches. The slug is derived from `name`. Every alert must be a user-creatable saved-search alert with a `source.id`.",
+    description: "Creates a monitor with one or more saved-search alerts. The slug is derived from `name`.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateMonitorBodySchema) },
     responses: openApiResponses({ status: 201, schema: MonitorSchema, description: "Monitor created" }),
@@ -229,7 +224,7 @@ const getMonitor = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("get"),
     summary: "Get monitor",
-    description: "Returns a single monitor by slug, including its active alerts.",
+    description: "Returns a single monitor by slug.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Monitor" }),
@@ -265,8 +260,7 @@ const updateMonitor = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("update"),
     summary: "Update monitor",
-    description:
-      "Updates a monitor's name and/or description. Alerts are managed through the alert endpoints. System monitors cannot be edited.",
+    description: "Updates a monitor's name and description. System monitors cannot be edited.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema, body: jsonBody(UpdateMonitorBodySchema) },
     responses: openApiResponses({
@@ -350,7 +344,7 @@ const listMonitorAlerts = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("listAlerts"),
     summary: "List monitor alerts",
-    description: "Returns the monitor's active alerts. The same alerts are also embedded in the monitor payload.",
+    description: "Returns the monitor's alerts.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorAlertListSchema, description: "The monitor's alerts" }),
@@ -386,7 +380,7 @@ const getMonitorAlert = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("getAlert"),
     summary: "Get monitor alert",
-    description: "Returns a single alert of the monitor by id.",
+    description: "Returns a single monitor alert by id.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorAlertParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorAlertSchema, description: "Monitor alert" }),
@@ -426,7 +420,7 @@ const createMonitorAlert = monitorEndpoint({
     ...monitorsFernGroup("createAlert"),
     summary: "Create monitor alert",
     description:
-      "Adds an alert to a monitor and returns the updated monitor. Only user-creatable saved-search alerts are allowed; system monitors cannot gain alerts.",
+      "Adds a saved-search alert to a monitor and returns the updated monitor. System monitors cannot gain alerts.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema, body: jsonBody(CreateMonitorAlertBodySchema) },
     responses: openApiResponses({
@@ -470,7 +464,7 @@ const updateMonitorAlert = monitorEndpoint({
     ...monitorsFernGroup("updateAlert"),
     summary: "Update monitor alert",
     description:
-      "Updates an alert in place and returns the updated monitor. On your own monitors the kind, source, condition, and severity may change; on system monitors only the condition values may change (e.g. issue-escalation sensitivity).",
+      "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorAlertParamsSchema, body: jsonBody(UpdateMonitorAlertBodySchema) },
     responses: openApiResponses({
@@ -521,7 +515,7 @@ const deleteMonitorAlert = monitorEndpoint({
     ...monitorsFernGroup("deleteAlert"),
     summary: "Delete monitor alert",
     description:
-      "Removes an alert from a monitor. A monitor must keep at least one alert, and system monitors' alerts cannot be removed.",
+      "Removes an alert from a monitor. A monitor must keep at least one alert; system monitors' alerts cannot be removed.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorAlertParamsSchema },
     responses: openApiNoContentResponses({ description: "Alert deleted" }),
@@ -559,7 +553,7 @@ const listMonitorIncidents = monitorEndpoint({
     ...monitorsFernGroup("listIncidents"),
     summary: "List monitor incidents",
     description:
-      "Returns the incidents opened by a monitor, most recent first. Cursor-paginated. Each item carries `notified`, indicating whether the incident triggered a notification.",
+      "Returns the incidents opened by a monitor, most recent first. Each item's `notified` flag shows whether it triggered a notification.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema, query: ListMonitorIncidentsQuerySchema },
     responses: openApiResponses({
@@ -624,8 +618,7 @@ const muteMonitor = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("mute"),
     summary: "Mute monitor",
-    description:
-      "Mutes a monitor: it keeps recording incidents but sends no notifications. Allowed on both system and user monitors.",
+    description: "Mutes a monitor so its incidents stop sending notifications. Allowed on all monitors.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorSlugParamsSchema },
     responses: openApiResponses({ status: 200, schema: MonitorSchema, description: "Muted monitor" }),

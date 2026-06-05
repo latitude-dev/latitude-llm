@@ -20,6 +20,6 @@ export interface CreateMonitorBody {
     name: string;
     /** Optional free-form description. */
     description?: string;
-    /** Firing rules for the monitor. At least one; every entry must be a user-creatable saved-search alert. */
+    /** The monitor's alerts. At least one. */
     alerts: LatitudeApi.CreateMonitorAlertBody[];
 }

@@ -7,18 +7,18 @@ export interface MonitorAlert {
     id: string;
     /** Monitor that owns this alert. */
     monitorId: string;
-    /** What the alert fires on. `savedSearch.match` opens an incident on each new matching trace; `savedSearch.threshold` when matches cross a count threshold; `savedSearch.escalating` when matches stay above the threshold for a sustained window. `issue.new` / `issue.regressed` / `issue.escalating` belong to the auto-provisioned system monitors. */
+    /** What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only. */
     kind: MonitorAlert.Kind;
     source: LatitudeApi.MonitorAlertSource;
     condition?: LatitudeApi.AlertCondition | undefined;
-    /** Severity assigned to incidents this alert opens: `low`, `medium`, or `high`. */
+    /** Severity of incidents this alert opens: `low`, `medium`, or `high`. */
     severity: MonitorAlert.Severity;
-    /** ISO-8601 timestamp at which the alert was created. */
+    /** ISO-8601 timestamp of creation. */
     createdAt: string;
 }
 
 export namespace MonitorAlert {
-    /** What the alert fires on. `savedSearch.match` opens an incident on each new matching trace; `savedSearch.threshold` when matches cross a count threshold; `savedSearch.escalating` when matches stay above the threshold for a sustained window. `issue.new` / `issue.regressed` / `issue.escalating` belong to the auto-provisioned system monitors. */
+    /** What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only. */
     export const Kind = {
         IssueNew: "issue.new",
         IssueRegressed: "issue.regressed",
@@ -28,7 +28,7 @@ export namespace MonitorAlert {
         SavedSearchEscalating: "savedSearch.escalating",
     } as const;
     export type Kind = (typeof Kind)[keyof typeof Kind];
-    /** Severity assigned to incidents this alert opens: `low`, `medium`, or `high`. */
+    /** Severity of incidents this alert opens: `low`, `medium`, or `high`. */
     export const Severity = {
         Low: "low",
         Medium: "medium",

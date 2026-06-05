@@ -3,18 +3,18 @@
 import type * as LatitudeApi from "../index.js";
 
 export interface CreateMonitorAlertBody {
-    /** What the alert fires on. `savedSearch.match` opens an incident on each new matching trace; `savedSearch.threshold` when matches cross a count threshold; `savedSearch.escalating` when matches stay above the threshold for a sustained window. */
+    /** What the alert fires on. `savedSearch.threshold` and `savedSearch.escalating` need a matching `condition`. */
     kind: CreateMonitorAlertBody.Kind;
     /** The saved search this alert watches. */
     source: CreateMonitorAlertBody.Source;
-    /** Kind-specific configuration. Required for `savedSearch.threshold` / `savedSearch.escalating`; omit (or `null`) for `savedSearch.match`. The condition's `kind` must equal the alert's `kind`. */
+    /** Kind-specific configuration. Required for `savedSearch.threshold` and `savedSearch.escalating`; omit for `savedSearch.match`. */
     condition?: CreateMonitorAlertBody.Condition | undefined;
-    /** Severity for incidents this alert opens. Defaults to the kind's canonical severity when omitted. */
+    /** Severity of incidents this alert opens. Defaults per kind when omitted. */
     severity?: CreateMonitorAlertBody.Severity | undefined;
 }
 
 export namespace CreateMonitorAlertBody {
-    /** What the alert fires on. `savedSearch.match` opens an incident on each new matching trace; `savedSearch.threshold` when matches cross a count threshold; `savedSearch.escalating` when matches stay above the threshold for a sustained window. */
+    /** What the alert fires on. `savedSearch.threshold` and `savedSearch.escalating` need a matching `condition`. */
     export const Kind = {
         SavedSearchMatch: "savedSearch.match",
         SavedSearchThreshold: "savedSearch.threshold",
@@ -26,14 +26,14 @@ export namespace CreateMonitorAlertBody {
      * The saved search this alert watches.
      */
     export interface Source {
-        /** Must be `savedSearch` — every user-creatable alert watches a saved search. */
+        /** Must be `savedSearch`. */
         type: Source.Type;
         /** Id of the saved search this alert watches. */
         id: string;
     }
 
     export namespace Source {
-        /** Must be `savedSearch` — every user-creatable alert watches a saved search. */
+        /** Must be `savedSearch`. */
         export const Type = {
             Issue: "issue",
             SavedSearch: "savedSearch",
@@ -42,7 +42,7 @@ export namespace CreateMonitorAlertBody {
     }
 
     /**
-     * Kind-specific configuration. Required for `savedSearch.threshold` / `savedSearch.escalating`; omit (or `null`) for `savedSearch.match`. The condition's `kind` must equal the alert's `kind`.
+     * Kind-specific configuration. Required for `savedSearch.threshold` and `savedSearch.escalating`; omit for `savedSearch.match`.
      */
     export type Condition =
         | {
@@ -60,7 +60,7 @@ export namespace CreateMonitorAlertBody {
               kind: "issue.escalating";
               sensitivity?: number | undefined;
           };
-    /** Severity for incidents this alert opens. Defaults to the kind's canonical severity when omitted. */
+    /** Severity of incidents this alert opens. Defaults per kind when omitted. */
     export const Severity = {
         Low: "low",
         Medium: "medium",

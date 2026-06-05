@@ -126,11 +126,9 @@ export const incidentFields = {
   createdAt: z.string().describe("ISO-8601 timestamp at which the incident row was created."),
   monitorAlertId: cuidSchema
     .nullable()
-    .describe(
-      "Id of the monitor alert that opened this incident, or `null` for incidents not attributed to a monitor (legacy issue-event incidents).",
-    ),
+    .describe("Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor."),
   condition: AlertConditionSchema.nullable().describe(
-    "The firing alert's condition, snapshotted when the incident opened. `null` for kinds with no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`) and for unattributed incidents.",
+    "The alert's configuration when the incident opened, or `null` for kinds with no parameters.",
   ),
 } as const
 

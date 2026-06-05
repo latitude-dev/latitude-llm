@@ -9,14 +9,8 @@ import { AlertConditionSchema, incidentFields, toIncidentResponse } from "./inci
 
 const MonitorAlertSourceSchema = z
   .object({
-    type: z
-      .enum(ALERT_INCIDENT_SOURCE_TYPES)
-      .describe("Entity the alert watches: `savedSearch` for search alerts, `issue` for the system issue monitors."),
-    id: cuidSchema
-      .nullable()
-      .describe(
-        "Id of the watched entity — a saved search for `savedSearch` alerts. `null` means all entities of `type`, used by the system issue monitors.",
-      ),
+    type: z.enum(ALERT_INCIDENT_SOURCE_TYPES).describe("Entity the alert watches: `savedSearch` or `issue`."),
+    id: cuidSchema.nullable().describe("Id of the watched entity, or `null` to watch all entities of its `type`."),
   })
   .openapi("MonitorAlertSource")
 
@@ -25,17 +19,13 @@ const monitorAlertFields = {
   monitorId: cuidSchema.describe("Monitor that owns this alert."),
   kind: z
     .enum(ALERT_INCIDENT_KINDS)
-    .describe(
-      "What the alert fires on. `savedSearch.match` opens an incident on each new matching trace; `savedSearch.threshold` when matches cross a count threshold; `savedSearch.escalating` when matches stay above the threshold for a sustained window. `issue.new` / `issue.regressed` / `issue.escalating` belong to the auto-provisioned system monitors.",
-    ),
+    .describe("What the alert fires on. The `savedSearch.*` kinds watch a saved search; `issue.*` are system-only."),
   source: MonitorAlertSourceSchema.describe("The entity this alert watches."),
   condition: AlertConditionSchema.nullable().describe(
-    "Kind-specific configuration. `null` for kinds with no parameters (`issue.new`, `issue.regressed`, `savedSearch.match`).",
+    "Kind-specific configuration, or `null` for kinds with no parameters.",
   ),
-  severity: z
-    .enum(ALERT_SEVERITIES)
-    .describe("Severity assigned to incidents this alert opens: `low`, `medium`, or `high`."),
-  createdAt: z.string().describe("ISO-8601 timestamp at which the alert was created."),
+  severity: z.enum(ALERT_SEVERITIES).describe("Severity of incidents this alert opens: `low`, `medium`, or `high`."),
+  createdAt: z.string().describe("ISO-8601 timestamp of creation."),
 } as const
 
 export const MonitorAlertSchema = z.object(monitorAlertFields).openapi("MonitorAlert")
@@ -44,25 +34,15 @@ const monitorFields = {
   id: cuidSchema.describe("Stable monitor identifier."),
   organizationId: cuidSchema.describe("Organization that owns this monitor."),
   projectId: cuidSchema.describe("Project this monitor belongs to."),
-  slug: z.string().describe("URL-safe slug derived from `name`, unique within the project among active monitors."),
+  slug: z.string().describe("URL-safe slug derived from `name`. Unique within the project."),
   name: z.string().describe("Human-readable name."),
-  description: z.string().describe("Free-form description. Empty string when unset."),
+  description: z.string().describe("Free-form description. Empty string when not set."),
   system: z
     .boolean()
-    .describe(
-      "`true` for the three auto-provisioned system monitors (issue discovered / regressed / escalating), which cannot be deleted or restructured — only muted, and their alerts' condition values tuned. `false` for monitors you create.",
-    ),
-  alerts: z.array(MonitorAlertSchema).describe("The monitor's active firing rules. Always at least one."),
-  mutedAt: z
-    .string()
-    .nullable()
-    .describe(
-      "ISO-8601 timestamp at which the monitor was muted, or `null` when active. A muted monitor still records incidents but sends no notifications.",
-    ),
-  deletedAt: z
-    .string()
-    .nullable()
-    .describe("ISO-8601 timestamp at which the monitor was deleted, or `null` while active."),
+    .describe("`true` for the auto-provisioned system monitors, which can't be deleted or edited; `false` otherwise."),
+  alerts: z.array(MonitorAlertSchema).describe("The monitor's alerts. Always at least one."),
+  mutedAt: z.string().nullable().describe("ISO-8601 timestamp at which the monitor was muted, or `null` when active."),
+  deletedAt: z.string().nullable().describe("ISO-8601 timestamp at which the monitor was deleted, or `null`."),
   createdAt: z.string().describe("ISO-8601 timestamp of creation."),
   updatedAt: z.string().describe("ISO-8601 timestamp of the last update."),
 } as const
@@ -72,11 +52,7 @@ export const MonitorSchema = z.object(monitorFields).openapi("Monitor")
 export const MonitorIncidentSchema = z
   .object({
     ...incidentFields,
-    notified: z
-      .boolean()
-      .describe(
-        "`true` when this incident triggered at least one notification; `false` when the monitor was muted or notifications were disabled.",
-      ),
+    notified: z.boolean().describe("`true` when this incident triggered at least one notification."),
   })
   .openapi("MonitorIncident")
 
@@ -155,23 +131,21 @@ export const CreateMonitorAlertBodySchema = z
     kind: z
       .enum(["savedSearch.match", "savedSearch.threshold", "savedSearch.escalating"])
       .describe(
-        "What the alert fires on. `savedSearch.match` opens an incident on each new matching trace; `savedSearch.threshold` when matches cross a count threshold; `savedSearch.escalating` when matches stay above the threshold for a sustained window.",
+        "What the alert fires on. `savedSearch.threshold` and `savedSearch.escalating` need a matching `condition`.",
       ),
     source: z
       .object({
-        type: z
-          .enum(ALERT_INCIDENT_SOURCE_TYPES)
-          .describe("Must be `savedSearch` — every user-creatable alert watches a saved search."),
+        type: z.enum(ALERT_INCIDENT_SOURCE_TYPES).describe("Must be `savedSearch`."),
         id: cuidSchema.describe("Id of the saved search this alert watches."),
       })
       .describe("The saved search this alert watches."),
     condition: AlertConditionSchema.nullish().describe(
-      "Kind-specific configuration. Required for `savedSearch.threshold` / `savedSearch.escalating`; omit (or `null`) for `savedSearch.match`. The condition's `kind` must equal the alert's `kind`.",
+      "Kind-specific configuration. Required for `savedSearch.threshold` and `savedSearch.escalating`; omit for `savedSearch.match`.",
     ),
     severity: z
       .enum(ALERT_SEVERITIES)
       .optional()
-      .describe("Severity for incidents this alert opens. Defaults to the kind's canonical severity when omitted."),
+      .describe("Severity of incidents this alert opens. Defaults per kind when omitted."),
   })
   .openapi("CreateMonitorAlertBody")
 
@@ -180,9 +154,7 @@ export const UpdateMonitorAlertBodySchema = z
     kind: z
       .enum(["savedSearch.match", "savedSearch.threshold", "savedSearch.escalating"])
       .optional()
-      .describe(
-        "New alert kind. Allowed only on monitors you own (system monitors keep their kind). When changed, supply the matching `condition`.",
-      ),
+      .describe("New alert kind. Not allowed on system monitors. Supply the matching `condition` when you change it."),
     source: z
       .object({
         type: z.enum(ALERT_INCIDENT_SOURCE_TYPES).describe("Must be `savedSearch`."),
@@ -191,7 +163,7 @@ export const UpdateMonitorAlertBodySchema = z
       .optional()
       .describe("Replace the watched saved search. Not allowed on system monitors."),
     condition: AlertConditionSchema.nullish().describe(
-      "Replace the kind-specific configuration. On system monitors this is the only mutable field (e.g. issue-escalation `sensitivity`). The condition's `kind` must match the alert's kind.",
+      "Replace the alert's configuration. On system monitors this is the only editable field (e.g. issue-escalation `sensitivity`).",
     ),
     severity: z.enum(ALERT_SEVERITIES).optional().describe("Replace the severity. Not allowed on system monitors."),
   })

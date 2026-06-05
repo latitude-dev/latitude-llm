@@ -13,6 +13,6 @@ export interface MonitorsListRequest {
     cursor?: string;
     /** Page size. Defaults to 50; max 100. */
     limit?: number;
-    /** Case-insensitive name substring filter. Omit to list every monitor. */
+    /** Filter by name (case-insensitive substring). */
     search?: string;
 }

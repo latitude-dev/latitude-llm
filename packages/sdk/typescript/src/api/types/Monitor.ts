@@ -9,19 +9,19 @@ export interface Monitor {
     organizationId: string;
     /** Project this monitor belongs to. */
     projectId: string;
-    /** URL-safe slug derived from `name`, unique within the project among active monitors. */
+    /** URL-safe slug derived from `name`. Unique within the project. */
     slug: string;
     /** Human-readable name. */
     name: string;
-    /** Free-form description. Empty string when unset. */
+    /** Free-form description. Empty string when not set. */
     description: string;
-    /** `true` for the three auto-provisioned system monitors (issue discovered / regressed / escalating), which cannot be deleted or restructured — only muted, and their alerts' condition values tuned. `false` for monitors you create. */
+    /** `true` for the auto-provisioned system monitors, which can't be deleted or edited; `false` otherwise. */
     system: boolean;
-    /** The monitor's active firing rules. Always at least one. */
+    /** The monitor's alerts. Always at least one. */
     alerts: LatitudeApi.MonitorAlert[];
-    /** ISO-8601 timestamp at which the monitor was muted, or `null` when active. A muted monitor still records incidents but sends no notifications. */
+    /** ISO-8601 timestamp at which the monitor was muted, or `null` when active. */
     mutedAt?: string | undefined;
-    /** ISO-8601 timestamp at which the monitor was deleted, or `null` while active. */
+    /** ISO-8601 timestamp at which the monitor was deleted, or `null`. */
     deletedAt?: string | undefined;
     /** ISO-8601 timestamp of creation. */
     createdAt: string;

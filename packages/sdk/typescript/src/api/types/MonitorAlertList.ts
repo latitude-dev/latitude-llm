@@ -3,6 +3,6 @@
 import type * as LatitudeApi from "../index.js";
 
 export interface MonitorAlertList {
-    /** The monitor's active alerts. */
+    /** The monitor's alerts. */
     items: LatitudeApi.MonitorAlert[];
 }
