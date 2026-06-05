@@ -1,7 +1,9 @@
 import { signupAttributionInputSchema, stashSignupAttribution } from "@domain/marketing"
 import { InvitationRepository } from "@domain/organizations"
+import { ForbiddenError } from "@domain/shared"
+import { isSsoEnforcedForEmailUseCase } from "@domain/sso"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
-import { InvitationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { InvitationRepositoryLive, SsoProviderRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
@@ -21,6 +23,20 @@ const sendMagicLinkInputSchema = z.object({
 export const sendMagicLink = createServerFn({ method: "POST" })
   .inputValidator(sendMagicLinkInputSchema)
   .handler(async ({ data }) => {
+    // SSO enforcement: domains with a verified + enforced SSO provider must
+    // sign in through their IdP. The login page redirects those emails to
+    // `signIn.sso` before ever calling this fn — this server-side check stops
+    // direct calls from bypassing it. Pre-auth lookup → admin client.
+    const ssoEnforced = await Effect.runPromise(
+      isSsoEnforcedForEmailUseCase({ email: data.email }).pipe(
+        withPostgres(SsoProviderRepositoryLive, getAdminPostgresClient()),
+        withTracing,
+      ),
+    )
+    if (ssoEnforced) {
+      throw new ForbiddenError({ message: "Your organization requires SSO sign-in" })
+    }
+
     const requestHeaders = await getRequestHeaders()
     const headers = new Headers(requestHeaders)
     if (data.captchaToken) {

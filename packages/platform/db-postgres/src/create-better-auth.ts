@@ -5,6 +5,7 @@ import { generateId } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { APIError } from "better-auth/api"
 import { admin as adminPlugin, captcha, magicLink, organization as organizationPlugin } from "better-auth/plugins"
 import { Effect } from "effect"
 import Stripe from "stripe"
@@ -76,6 +77,13 @@ export interface BetterAuthConfig {
    * Used on staging to restrict access to internal users only.
    */
   readonly allowedEmailDomain?: string
+  /**
+   * SSO enforcement predicate: true when the email's domain has a verified
+   * SSO provider with `enforced = true`. Consulted on session creation for
+   * the magic-link and social sign-in paths (SSO callbacks are exempt) —
+   * see the `session.create.before` hook below.
+   */
+  readonly isSsoEnforcedForEmail?: (email: string) => Promise<boolean>
 }
 
 export interface StripePlanConfig {
@@ -199,6 +207,32 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
               userId: member.userId,
               role: member.role,
             })
+          },
+        },
+      },
+      session: {
+        create: {
+          /**
+           * SSO enforcement. Whitelist of enforced sign-in paths:
+           * - `/callback/:id` — social OAuth callback (Google/GitHub)
+           * - `/magic-link/verify` — covers links issued before enforcement
+           *   was switched on (issuance is already blocked in the web
+           *   `sendMagicLink` server fn)
+           * Everything else (SSO callbacks, admin impersonation, token
+           * flows) creates sessions untouched.
+           */
+          before: async (session, ctx) => {
+            if (!config.isSsoEnforcedForEmail || !ctx) return { data: session }
+
+            const path = ctx.path ?? ""
+            const isEnforcedPath = path === "/magic-link/verify" || path.startsWith("/callback")
+            if (!isEnforcedPath) return { data: session }
+
+            const user = await ctx.context.internalAdapter.findUserById(session.userId)
+            if (user && (await config.isSsoEnforcedForEmail(user.email))) {
+              throw new APIError("FORBIDDEN", { message: "Your organization requires SSO sign-in" })
+            }
+            return { data: session }
           },
         },
       },
