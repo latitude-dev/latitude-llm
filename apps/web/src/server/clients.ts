@@ -1,4 +1,5 @@
 import { PRO_PLAN_CONFIG, SELF_SERVE_PLAN_SLUGS } from "@domain/billing"
+import type { MarketingAttribution } from "@domain/events"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import { generateId, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { createRedisClient, createRedisConnection, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
@@ -25,6 +26,11 @@ import { withTracing } from "@repo/observability"
 import { mcp } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
+import {
+  type SignupAttributionInput,
+  signupAttributionKey,
+  toMarketingAttribution,
+} from "../lib/analytics/signup-attribution.ts"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
@@ -229,6 +235,21 @@ export const getBetterAuth = () => {
         }),
       ],
       onUserCreated: async (user) => {
+        // Attribution stashed by `sendMagicLink` (keyed by email — signup is
+        // passwordless, so the account is created in a later request). Spread into
+        // the payload; the worker forwards it to PostHog.
+        let attribution: MarketingAttribution = {}
+        try {
+          const redis = getRedisClient()
+          const key = signupAttributionKey(user.email)
+          const raw = await redis.get(key)
+          if (raw) {
+            await redis.del(key)
+            attribution = toMarketingAttribution(JSON.parse(raw) as SignupAttributionInput)
+          }
+        } catch {
+          // Never block signup on attribution.
+        }
         await Effect.runPromise(
           outboxWriter
             .write({
@@ -236,7 +257,7 @@ export const getBetterAuth = () => {
               aggregateType: "user",
               aggregateId: user.id,
               organizationId: "system",
-              payload: { userId: user.id, email: user.email },
+              payload: { userId: user.id, email: user.email, ...attribution },
             })
             .pipe(Effect.provide(SqlClientLive(getAdminPostgresClient())), withTracing),
         )

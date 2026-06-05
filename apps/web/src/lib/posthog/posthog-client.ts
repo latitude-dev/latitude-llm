@@ -85,6 +85,21 @@ export const initPostHog = async (): Promise<void> => {
   await loadInstance()
 }
 
+/**
+ * Current PostHog session id, or null if the SDK isn't loaded / has no session.
+ * Threaded onto the server-side `UserSignedUp` event as `$session_id` so PostHog
+ * links it to the browser session. Best-effort.
+ */
+export const getPostHogSessionId = async (): Promise<string | null> => {
+  const posthog = await loadInstance()
+  if (!posthog) return null
+  try {
+    return posthog.get_session_id() || null
+  } catch {
+    return null
+  }
+}
+
 const setPostHogCaptureEnabled = async (enabled: boolean): Promise<void> => {
   const posthog = await loadInstance()
   if (!posthog) return

@@ -10,6 +10,7 @@ import { appendTrackingParams, gtmHeadScripts, pickTrackingParams } from "../lib
 import { GtmNoScript, SignupCompleteWatcher } from "../lib/analytics/signup-complete-watcher.tsx"
 import { TURNSTILE_SITE_KEY, WEB_BASE_URL } from "../lib/auth-config.ts"
 import { toUserMessage } from "../lib/errors.ts"
+import { getPostHogSessionId } from "../lib/posthog/posthog-client.ts"
 
 const loginSearchParams = z.object({
   redirect: z.string().optional(),
@@ -57,6 +58,16 @@ function LoginPage() {
     const tracking = pickTrackingParams(window.location.search)
     const newUserCallbackURL = appendTrackingParams(redirectPath ?? "/welcome", { ...tracking, signup: "email" })
 
+    // Capture session + referrer/UTM now; the magic link is verified later
+    // (maybe cross-device) without this context. Server stashes it by email and
+    // attaches to `UserSignedUp` so PostHog links the event to this session.
+    const sessionId = await getPostHogSessionId()
+    const attribution = {
+      ...(sessionId ? { sessionId } : {}),
+      ...(window.document.referrer ? { referrer: window.document.referrer } : {}),
+      ...(Object.keys(tracking).length > 0 ? { trackingParams: tracking } : {}),
+    }
+
     try {
       await sendMagicLink({
         data: {
@@ -64,6 +75,7 @@ function LoginPage() {
           callbackURL,
           newUserCallbackURL,
           captchaToken: captchaTokenRef.current,
+          ...(Object.keys(attribution).length > 0 ? { attribution } : {}),
         },
       })
 

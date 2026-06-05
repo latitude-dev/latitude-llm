@@ -8,6 +8,28 @@ import type { AlertIncidentKind, AlertIncidentSourceType } from "@domain/shared"
  * Acceptable as pragmatic exceptions at the auth boundary, but do not use this
  * naming pattern for domain-owned aggregates.
  */
+/**
+ * Signup attribution captured in the browser, spread verbatim into the PostHog
+ * `UserSignedUp` event. `$session_id` links the server event to the browser
+ * session (unlocks `$entry_current_url`); UTM/click ids are the fallback.
+ */
+// `type` not `interface`: keeps the implicit index signature so the `UserSignedUp`
+// intersection stays assignable to the worker's `Record<string, unknown>` constraint.
+export type MarketingAttribution = {
+  readonly $session_id?: string
+  readonly $referrer?: string
+  readonly utm_source?: string
+  readonly utm_medium?: string
+  readonly utm_campaign?: string
+  readonly utm_term?: string
+  readonly utm_content?: string
+  readonly gclid?: string
+  readonly fbclid?: string
+  readonly ttclid?: string
+  readonly li_fat_id?: string
+  readonly msclkid?: string
+}
+
 export interface EventPayloads {
   MagicLinkEmailRequested: {
     readonly email: string
@@ -202,7 +224,7 @@ export interface EventPayloads {
   UserSignedUp: {
     readonly userId: string
     readonly email: string
-  }
+  } & MarketingAttribution
   /**
    * Emitted when a user finishes the project-onboarding form (role + stack
    * choice + free-text job title). Drives the Loops contact update so
