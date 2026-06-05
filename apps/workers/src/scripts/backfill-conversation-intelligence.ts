@@ -145,6 +145,26 @@ async function rebaseObservationsToNow(project: ProjectRow) {
   if (!cutoffRow) throw new Error("Failed to read ClickHouse server time for the observation rebase")
   await clickhouse.command({
     query: `INSERT INTO taxonomy_observations
+            (
+              organization_id,
+              project_id,
+              observation_id,
+              session_id,
+              analysis_hash,
+              moment_id,
+              projection_method,
+              projection_hash,
+              projection_metadata,
+              embedding,
+              assigned_cluster_id,
+              assignment_confidence,
+              assignment_method,
+              reassignment_run_id,
+              start_time,
+              end_time,
+              retention_days,
+              indexed_at
+            )
             SELECT
               organization_id,
               project_id,
@@ -152,7 +172,6 @@ async function rebaseObservationsToNow(project: ProjectRow) {
               session_id,
               analysis_hash,
               moment_id,
-              dimension,
               projection_method,
               projection_hash,
               projection_metadata,
