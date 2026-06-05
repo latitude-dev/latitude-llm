@@ -1,4 +1,5 @@
 import type { DBAdapter } from "@better-auth/core/db/adapter"
+import { sso } from "@better-auth/sso"
 import { type StripeOptions, type StripePlugin, stripe } from "@better-auth/stripe"
 import { generateId } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
@@ -18,6 +19,7 @@ import {
   oauthConsents,
   organizations,
   sessions,
+  ssoProviders,
   subscriptions,
   users,
   verifications,
@@ -128,6 +130,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       oauthApplications,
       oauthAccessTokens,
       oauthConsents,
+      ssoProviders,
     },
   }) as unknown as DBAdapter
 
@@ -137,6 +140,21 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     basePath,
     secret,
     trustedOrigins: config.trustedOrigins ?? [],
+    /**
+     * Enterprise SSO posture: provider registration and mutation are
+     * server-side only (web SSO settings server fns calling
+     * `auth.api.registerSSOProvider` & co. after feature-flag + owner/admin
+     * checks). `disabledPaths` only blocks the HTTP router (404) — direct
+     * `auth.api.*` calls are unaffected. Sign-in, ACS/callback, and SP
+     * metadata endpoints stay routable.
+     */
+    disabledPaths: [
+      "/sso/register",
+      "/sso/update-provider",
+      "/sso/delete-provider",
+      "/sso/request-domain-verification",
+      "/sso/verify-domain",
+    ],
     // The `users.role` column is surfaced on the session user by the
     // `admin` plugin installed below. The plugin declares it in its own
     // schema (`{ type: "string", required: false, input: false }`), so
@@ -277,6 +295,33 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         defaultRole: "user",
         adminRoles: ["admin"],
         impersonationSessionDuration: 60 * 60,
+      }),
+      /**
+       * Enterprise SSO (SAML 2.0 + OIDC). Providers are org-bound rows in
+       * `sso_providers` (see schema comment there for the RLS / admin-client
+       * read rules and the app-extended `enforced` column).
+       *
+       * - JIT-provisions users and org members (`defaultRole: "member"`)
+       *   into the provider's bound organization on first SSO sign-in.
+       * - `domainVerification` requires a DNS TXT proof before domain-matched
+       *   sign-ins activate for a provider.
+       * - IdP-initiated SAML is rejected (`allowIdpInitiated: false`):
+       *   unsolicited assertions are an audience-injection risk; every
+       *   sign-in must correlate to an SP-initiated AuthnRequest.
+       * - `requireTimestamps` enforces SAML2Int (Okta, Entra, OneLogin all
+       *   comply).
+       */
+      sso({
+        organizationProvisioning: {
+          disabled: false,
+          defaultRole: "member",
+        },
+        domainVerification: { enabled: true },
+        saml: {
+          enableInResponseToValidation: true,
+          allowIdpInitiated: false,
+          requireTimestamps: true,
+        },
       }),
       ...(config.captchaSecretKey
         ? [

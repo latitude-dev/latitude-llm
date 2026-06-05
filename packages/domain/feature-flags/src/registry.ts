@@ -47,6 +47,12 @@ export const FEATURE_FLAGS = {
     description:
       "Unified alerting surface (per-monitor lifecycle, with notification delivery routed through the existing org/project notification settings).",
   },
+  sso: {
+    emoji: "🔐",
+    name: "Enterprise SSO",
+    description:
+      "Lets org owners/admins configure SAML or OIDC single sign-on and (optionally) enforce it for their verified email domain.",
+  },
 } as const satisfies Record<string, { readonly emoji: string; readonly name: string; readonly description: string }>
 
 export type FeatureFlagId = keyof typeof FEATURE_FLAGS

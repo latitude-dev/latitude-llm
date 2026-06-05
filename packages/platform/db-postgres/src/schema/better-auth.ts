@@ -280,6 +280,56 @@ export const oauthConsents = latitudeSchema.table(
 )
 
 /**
+ * Better Auth `sso` plugin (`@better-auth/sso`) — per-organization enterprise
+ * SSO provider (SAML 2.0 or OIDC). Registered server-side via
+ * `auth.api.registerSSOProvider` from the web SSO settings server fns; bound
+ * to an organization at registration so SAML/OIDC sign-ins JIT-provision
+ * members into that org.
+ *
+ * App extensions on the BA reference:
+ * - `enforced` (NEW column, not in BA reference). When true (and the domain
+ *   is verified), users whose email domain matches this provider cannot sign
+ *   in via magic link or social — they are redirected to SSO. Enforcement is
+ *   keyed by verified email domain, not org membership, because the check
+ *   happens pre-auth where no org context exists.
+ *
+ * RLS is enabled and scoped by `organization_id`: the SSO settings page reads
+ * through the tenant-scoped connection and only sees the active org's
+ * provider. Login-time lookups by email domain happen unauthenticated and
+ * must use the admin Postgres connection (same pattern as
+ * `oauth_applications` token validation) — the admin role bypasses RLS.
+ *
+ * `oidc_config` / `saml_config` are BA-managed JSON-as-text blobs holding IdP
+ * certs, SP keys, and the OIDC client secret. Never select them into
+ * client-facing DTOs.
+ */
+export const ssoProviders = latitudeSchema.table(
+  "sso_providers",
+  {
+    id: cuid("id").primaryKey(),
+    issuer: text("issuer").notNull(),
+    oidcConfig: text("oidc_config"),
+    samlConfig: text("saml_config"),
+    userId: cuid("user_id", { default: false }).references(() => users.id, { onDelete: "cascade" }),
+    providerId: text("provider_id").notNull().unique(),
+    organizationId: cuid("organization_id", { default: false }).references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
+    domain: text("domain").notNull(),
+    domainVerified: boolean("domain_verified").notNull().default(false),
+    /** App extension (not in BA reference). */
+    enforced: boolean("enforced").notNull().default(false),
+    ...timestamps(),
+  },
+  (t) => [
+    organizationRLSPolicy("sso_providers"),
+    index("ssoProviders_organizationId_idx").on(t.organizationId),
+    index("ssoProviders_domain_idx").on(t.domain),
+    index("ssoProviders_userId_idx").on(t.userId),
+  ],
+)
+
+/**
  * Better Auth Stripe plugin — `reference_id` is org or user id.
  * Matches `better-auth.schema.reference.ts` (`pnpm run auth:generate-schema-reference`).
  */

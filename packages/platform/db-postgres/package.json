@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@better-auth/core": "catalog:",
+    "@better-auth/sso": "catalog:",
     "@better-auth/stripe": "catalog:",
     "@domain/admin": "workspace:*",
     "@domain/alerts": "workspace:*",
@@ -53,6 +54,7 @@
     "@domain/shared": "workspace:*",
     "@domain/simulations": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@domain/sso": "workspace:*",
     "@domain/taxonomy": "workspace:*",
     "@domain/users": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
