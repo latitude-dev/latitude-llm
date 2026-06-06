@@ -7,6 +7,7 @@ import type { BehaviourNodeRecord } from "../../../../../domains/taxonomy/taxono
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
+import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { BehaviourDetailDrawer, BehavioursView } from "./-components/behaviours-view.tsx"
 
@@ -33,11 +34,21 @@ function BehavioursPage() {
       value === "all" || value === "new_this_week" || value === "spiking" || value === "high_escalation",
   })
   const [activeBehaviourId, setActiveBehaviourId] = useParamState("behaviourId", "")
+  const [timeFrom, setTimeFrom] = useParamState("behaviourTimeFrom", "")
+  const [timeTo, setTimeTo] = useParamState("behaviourTimeTo", "")
+  const timeRange =
+    timeFrom || timeTo
+      ? {
+          ...(timeFrom ? { fromIso: timeFrom } : {}),
+          ...(timeTo ? { toIso: timeTo } : {}),
+        }
+      : undefined
   const { data, isLoading } = useProjectBehaviours({
     projectId: project.id,
     dimension: "topic",
     segment,
     sortBy: "category",
+    ...(timeRange ? { timeRange } : {}),
   })
   const topics = data?.topics ?? []
   const activeNode = useMemo(() => {
@@ -55,7 +66,7 @@ function BehavioursPage() {
     }
     return walk(topics, null)
   }, [activeBehaviourId, topics])
-  const hasNoBehaviours = !isLoading && topics.length === 0 && segment === "all"
+  const hasNoBehaviours = !isLoading && topics.length === 0 && segment === "all" && !timeRange
 
   if (hasNoBehaviours) {
     return (
@@ -78,9 +89,21 @@ function BehavioursPage() {
       <Layout.Content>
         <BehavioursView
           topics={topics}
+          projectId={project.id}
           isLoading={isLoading}
           segment={segment}
           activeBehaviourId={activeBehaviourId || undefined}
+          timeFilter={
+            <TimeFilterDropdown
+              {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
+              {...(timeTo ? { startTimeTo: timeTo } : {})}
+              onChange={(from, to) => {
+                setTimeFrom(from ?? "")
+                setTimeTo(to ?? "")
+              }}
+            />
+          }
+          timeRange={timeRange}
           onSegmentChange={setSegment}
           onActiveBehaviourChange={(behaviourId) => setActiveBehaviourId(behaviourId ?? "")}
         />
@@ -91,6 +114,7 @@ function BehavioursPage() {
             node={activeNode.node}
             parentName={activeNode.parent?.cluster.name ?? null}
             projectId={project.id}
+            timeRange={timeRange}
             onClose={() => setActiveBehaviourId("")}
           />
         </Layout.Aside>

@@ -20,6 +20,8 @@ export interface ListProjectBehavioursInput {
   readonly firstSeenWindowDays?: number
   readonly trendWindowDays?: number
   readonly minObservations?: number
+  readonly startTimeFrom?: Date
+  readonly startTimeTo?: Date
   readonly segment?: BehaviourSegment
   readonly sortBy?: BehaviourSortBy
   readonly limit?: number
@@ -34,7 +36,7 @@ export interface ProjectBehaviourNode {
   readonly firstSeenLabel: BehaviourFirstSeenLabel
   readonly trend: TaxonomyClusterTrendSummary
   readonly novelty: BehaviourNovelty
-  /** Directly-assigned observations plus every active descendant's. */
+  /** Sessions represented by this node's visible subtree; aggregate parents are not double-counted. */
   readonly subtreeObservationCount: number
   readonly children: readonly ProjectBehaviourNode[]
 }
@@ -157,6 +159,15 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
       childrenByParentId.set(cluster.parentClusterId, siblings)
     }
 
+    const assignmentCounts = yield* observationRepository.getClusterAssignmentCounts({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      clusterIds: displayable.map((cluster) => cluster.id),
+      ...(input.startTimeFrom ? { startTimeFrom: input.startTimeFrom } : {}),
+      ...(input.startTimeTo ? { startTimeTo: input.startTimeTo } : {}),
+    })
+    const directCountByClusterId = new Map(assignmentCounts.map((count) => [count.clusterId, count.count] as const))
+
     const trendCounts = yield* observationRepository.getClusterTrendCounts({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -190,8 +201,13 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
           baselineDays: Math.max(trendWindowDays - TREND_CURRENT_DAYS, 1),
         })
       const novelty = noveltyFor({ cluster, trend, firstSeenWindowStart, minObservations })
+      const directObservationCount = directCountByClusterId.get(cluster.id) ?? 0
+      const ownObservationCount =
+        children.length > 0
+          ? children.reduce((sum, child) => sum + child.subtreeObservationCount, 0)
+          : directObservationCount
       const ownVisible =
-        cluster.observationCount >= minObservations &&
+        ownObservationCount >= minObservations &&
         (segment === "all" ||
           (segment === "new_this_week" && novelty === "first_seen") ||
           (segment === "spiking" && novelty === "spiking"))
@@ -201,8 +217,11 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
         firstSeenLabel: firstSeenLabel(cluster.firstObservedAt, now, firstSeenWindowDays),
         trend,
         novelty,
-        subtreeObservationCount:
-          cluster.observationCount + children.reduce((sum, child) => sum + child.subtreeObservationCount, 0),
+        // UI session counts come from current observation assignments in the
+        // selected time range. Interior nodes are aggregates, so their count is
+        // the sum of visible descendants rather than their stored all-time
+        // Postgres counter.
+        subtreeObservationCount: ownObservationCount,
         children,
       }
     }

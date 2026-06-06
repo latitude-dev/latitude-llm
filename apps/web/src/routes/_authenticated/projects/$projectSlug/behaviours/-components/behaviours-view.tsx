@@ -9,7 +9,6 @@ import {
   InfiniteTable,
   type InfiniteTableColumn,
   Skeleton,
-  Switch,
   Tabs,
   TagList,
   Text,
@@ -28,6 +27,7 @@ import type {
   BehaviourNodeRecord,
   BehaviourSessionFilter,
   BehaviourSessionRecord,
+  BehaviourTimeRangeRecord,
 } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
 import {
   ListingLayout as Layout,
@@ -176,30 +176,30 @@ export function BehaviourDetailDrawer({
   node,
   parentName,
   projectId,
+  timeRange,
   onClose,
 }: {
   readonly node: BehaviourNodeRecord
   readonly parentName: string | null
   readonly projectId: string
+  readonly timeRange: BehaviourTimeRangeRecord | undefined
   readonly onClose: () => void
 }) {
   const cluster = node.cluster
   const [sessionFilter, setSessionFilter] = useState<BehaviourSessionFilter>("all")
-  const [histogramWindow, setHistogramWindow] = useState<"24h" | "7d">("24h")
   const [sessionOverlayId, setSessionOverlayId] = useState<string | null>(null)
   const [sessionOverlayMomentId, setSessionOverlayMomentId] = useState<string | null>(null)
   const [sessionPanelEntered, setSessionPanelEntered] = useState(false)
-  const { data: intelligence } = useClusterProfile(projectId, cluster.id)
+  const { data: intelligence } = useClusterProfile(projectId, cluster.id, timeRange)
   const {
     data: behaviourSessionsData,
     isLoading: behaviourSessionsLoading,
     fetchNextPage: fetchNextBehaviourSessionsPage,
     hasNextPage: hasNextBehaviourSessionsPage,
     isFetchingNextPage: isFetchingNextBehaviourSessionsPage,
-  } = useBehaviourSessions(projectId, cluster.id, sessionFilter)
+  } = useBehaviourSessions(projectId, cluster.id, sessionFilter, timeRange)
   const behaviourSessions = behaviourSessionsData?.pages.flatMap((page) => page.sessions) ?? []
-  const behaviourSessionHistogram24h = behaviourSessionsData?.pages[0]?.histogram24h ?? []
-  const behaviourSessionHistogram7d = behaviourSessionsData?.pages[0]?.histogram7d ?? []
+  const behaviourSessionHistogram = behaviourSessionsData?.pages[0]?.histogram ?? []
   const detectedSignals = intelligence?.topMoments ?? []
   const sessionFilterOptions = detectedSignals
     .filter((signal): signal is { readonly kind: MomentKind; readonly count: number } =>
@@ -213,10 +213,9 @@ export function BehaviourDetailDrawer({
     }))
   useEffect(() => {
     setSessionFilter("all")
-    setHistogramWindow("24h")
     setSessionOverlayId(null)
     setSessionPanelEntered(false)
-  }, [cluster.id])
+  }, [cluster.id, timeRange])
 
   const openSessionOverlay = (session: BehaviourSessionRecord) => {
     setSessionOverlayId(session.sessionId)
@@ -265,12 +264,7 @@ export function BehaviourDetailDrawer({
             </div>
             {intelligence ? (
               <div className="flex flex-col gap-4">
-                <BehaviourSessionsHistogram
-                  isLoading={behaviourSessionsLoading}
-                  window={histogramWindow}
-                  onWindowChange={setHistogramWindow}
-                  buckets={histogramWindow === "24h" ? behaviourSessionHistogram24h : behaviourSessionHistogram7d}
-                />
+                <BehaviourSessionsHistogram isLoading={behaviourSessionsLoading} buckets={behaviourSessionHistogram} />
                 {detectedSignals.length > 1 ? (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
                     <DetectedSignalsChart signals={detectedSignals} />
@@ -537,43 +531,33 @@ function DetectedSignalsChart({
   )
 }
 
-function formatSessionHistogramLabel(startTime: string, window: "24h" | "7d") {
+function formatSessionHistogramLabel(startTime: string) {
   const date = new Date(startTime)
-  if (window === "24h") {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }).replace(" ", " ")
-  }
   return date.toLocaleDateString([], { month: "short", day: "numeric" }).replace(" ", " ")
 }
 
-function formatSessionHistogramTooltip(startTime: string, count: number, window: "24h" | "7d") {
+function formatSessionHistogramTooltip(startTime: string, count: number) {
   const date = new Date(startTime)
-  const label =
-    window === "24h"
-      ? date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-      : date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })
+  const label = date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
   return `${label}<br/><b>${formatCount(count)}</b> sessions`
 }
 
 function BehaviourSessionsHistogram({
   isLoading,
-  window,
-  onWindowChange,
   buckets,
 }: {
   readonly isLoading: boolean
-  readonly window: "24h" | "7d"
-  readonly onWindowChange: (window: "24h" | "7d") => void
   readonly buckets: readonly { readonly startTime: string; readonly count: number }[]
 }) {
   const total = buckets.reduce((sum, bucket) => sum + bucket.count, 0)
   const data = useMemo(
     () =>
       buckets.map((bucket) => ({
-        category: formatSessionHistogramLabel(bucket.startTime, window),
+        category: formatSessionHistogramLabel(bucket.startTime),
         value: bucket.count,
         tooltipCategory: bucket.startTime,
       })),
-    [buckets, window],
+    [buckets],
   )
 
   return (
@@ -582,15 +566,6 @@ function BehaviourSessionsHistogram({
         <div className="flex flex-col gap-1">
           <Text.H6 color="foregroundMuted">Session activity</Text.H6>
           <Text.H5 className="tabular-nums">{formatCount(total)} sessions</Text.H5>
-        </div>
-        <div className="flex items-center gap-2">
-          <Text.H6 color={window === "24h" ? "foreground" : "foregroundMuted"}>24h</Text.H6>
-          <Switch
-            checked={window === "7d"}
-            onCheckedChange={(checked) => onWindowChange(checked ? "7d" : "24h")}
-            aria-label="Switch session histogram between last 24 hours and 7 days"
-          />
-          <Text.H6 color={window === "7d" ? "foreground" : "foregroundMuted"}>7d</Text.H6>
         </div>
       </div>
       {isLoading ? (
@@ -609,7 +584,7 @@ function BehaviourSessionsHistogram({
             showYAxis={false}
             xAxisLabelFontSize={10}
             ariaLabel="Behaviour sessions over time"
-            formatTooltip={(category, value) => formatSessionHistogramTooltip(category, value, window)}
+            formatTooltip={(category, value) => formatSessionHistogramTooltip(category, value)}
           />
         </div>
       )}
@@ -619,16 +594,22 @@ function BehaviourSessionsHistogram({
 
 export function BehavioursView({
   topics,
+  projectId,
   isLoading,
   segment,
   activeBehaviourId,
+  timeFilter,
+  timeRange,
   onSegmentChange,
   onActiveBehaviourChange,
 }: {
   readonly topics: readonly BehaviourNodeRecord[]
+  readonly projectId: string
   readonly isLoading: boolean
   readonly segment: BehaviourSegment
   readonly activeBehaviourId: string | undefined
+  readonly timeFilter: ReactNode
+  readonly timeRange: BehaviourTimeRangeRecord | undefined
   readonly onSegmentChange: (segment: BehaviourSegment) => void
   readonly onActiveBehaviourChange: (behaviourId: string | undefined) => void
 }) {
@@ -749,8 +730,6 @@ export function BehavioursView({
     [expandableKeys],
   )
 
-  const projectId = topics[0]?.cluster.projectId ?? ""
-
   const columns: InfiniteTableColumn<BehaviourTableRow>[] = [
     {
       key: "behaviour",
@@ -816,6 +795,7 @@ export function BehavioursView({
       <Layout.Actions>
         <Layout.ActionsRow>
           <Layout.ActionRowItem>
+            {timeFilter}
             <Tabs
               variant="bordered"
               size="sm"
@@ -846,6 +826,7 @@ export function BehavioursView({
                 projectId={projectId}
                 topics={topics}
                 selectedPath={dotChartPath}
+                timeRange={timeRange}
                 onSelectPath={handleDotChartPathChange}
               />
               <InfiniteTable

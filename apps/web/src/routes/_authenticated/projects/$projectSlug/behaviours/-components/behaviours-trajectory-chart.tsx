@@ -3,9 +3,12 @@ import { formatCount } from "@repo/utils"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useBehaviourTrajectory } from "../../../../../../domains/taxonomy/taxonomy.collection.ts"
-import type { BehaviourNodeRecord } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
+import type {
+  BehaviourNodeRecord,
+  BehaviourTimeRangeRecord,
+} from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
 
-type TrajectoryMetric = "frequency" | "escalation" | "resolution" | "churnRisk"
+type TrajectoryMetric = "frequency" | "escalation" | "resolution" | "churnRisk" | "wins"
 type TrajectoryAxis = "day" | "turn"
 
 const MAX_COLLAPSED_ROWS = 3
@@ -20,6 +23,7 @@ const metricOptions: ReadonlyArray<{ readonly id: TrajectoryMetric; readonly lab
   { id: "escalation", label: "Escalation" },
   { id: "resolution", label: "Resolution" },
   { id: "churnRisk", label: "Churn risk" },
+  { id: "wins", label: "Wins" },
 ]
 
 const rowColors = [
@@ -79,6 +83,7 @@ const coarsenTrajectoryRows = (
     escalation: number
     resolution: number
     churnRisk: number
+    wins: number
   }[],
   axis: TrajectoryAxis,
 ) => {
@@ -102,6 +107,7 @@ const coarsenTrajectoryRows = (
       escalation: number
       resolution: number
       churnRisk: number
+      wins: number
     }
   >()
   for (const row of rows) {
@@ -118,11 +124,13 @@ const coarsenTrajectoryRows = (
       escalation: 0,
       resolution: 0,
       churnRisk: 0,
+      wins: 0,
     }
     current.frequency += row.frequency
     current.escalation += row.escalation
     current.resolution += row.resolution
     current.churnRisk += row.churnRisk
+    current.wins += row.wins
     coarsened.set(key, current)
   }
   const buckets = [...new Set([...coarsened.values()].map((row) => row.bucket))].sort(
@@ -132,7 +140,7 @@ const coarsenTrajectoryRows = (
 }
 
 const metricValue = (
-  row: { frequency: number; escalation: number; resolution: number; churnRisk: number },
+  row: { frequency: number; escalation: number; resolution: number; churnRisk: number; wins: number },
   metric: TrajectoryMetric,
 ) => row[metric]
 
@@ -146,11 +154,13 @@ export function BehavioursTrajectoryChart({
   projectId,
   topics,
   selectedPath,
+  timeRange,
   onSelectPath,
 }: {
   readonly projectId: string
   readonly topics: readonly BehaviourNodeRecord[]
   readonly selectedPath: readonly string[]
+  readonly timeRange: BehaviourTimeRangeRecord | undefined
   readonly onSelectPath: (path: readonly string[]) => void
 }) {
   const [metric, setMetric] = useState<TrajectoryMetric>("frequency")
@@ -159,7 +169,7 @@ export function BehavioursTrajectoryChart({
   const visibleLevel = useMemo(() => resolveVisibleLevel(topics, selectedPath), [topics, selectedPath])
   const visibleNodes = showAll ? visibleLevel.nodes : visibleLevel.nodes.slice(0, MAX_COLLAPSED_ROWS)
   const visibleIds = visibleNodes.map((node) => node.cluster.id)
-  const { data, isLoading } = useBehaviourTrajectory(projectId, visibleIds, axis)
+  const { data, isLoading } = useBehaviourTrajectory(projectId, visibleIds, axis, timeRange)
   const rawRows = data?.rows ?? []
   const trajectory = useMemo(() => coarsenTrajectoryRows(rawRows, axis), [rawRows, axis])
   const rows = trajectory.rows
@@ -276,7 +286,9 @@ export function BehavioursTrajectoryChart({
                         <button
                           type="button"
                           aria-label={`${node.cluster.name}: ${formatCount(count)} ${metric} moments at ${bucketLabel(bucket, axis)}`}
-                          className={cn("absolute rounded-full hover:ring-2 hover:ring-primary/40")}
+                          className={cn(
+                            "absolute rounded-full animate-in fade-in-0 zoom-in-50 transition-all duration-300 ease-out hover:scale-110 hover:ring-2 hover:ring-primary/40 motion-reduce:animate-none motion-reduce:transition-none",
+                          )}
                           style={{
                             width: size,
                             height: size,
