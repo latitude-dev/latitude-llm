@@ -28,9 +28,9 @@ import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
-  ConversationMomentLabelRepositoryLive,
-  ConversationSemanticMomentRepositoryLive,
-  ConversationSessionAnalysisRepositoryLive,
+  SessionAnalysisRepositoryLive,
+  SessionMomentLabelRepositoryLive,
+  SessionSemanticMomentRepositoryLive,
   TaxonomyObservationRepositoryLive,
   TraceRepositoryLive,
   TraceSearchRepositoryLive,
@@ -131,7 +131,6 @@ export interface SessionMomentIntelligenceRecord {
   }[]
   readonly taxonomyObservations: readonly {
     readonly observationId: string
-    readonly dimension: string
     readonly assignedClusterId: string | null
     readonly assignmentConfidence: number
     readonly assignmentMethod: string
@@ -460,7 +459,6 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
             })),
             taxonomyObservations: row.taxonomyObservations.map((observation) => ({
               observationId: observation.observationId,
-              dimension: observation.dimension,
               assignedClusterId: observation.assignedClusterId,
               assignmentConfidence: observation.assignmentConfidence,
               assignmentMethod: observation.assignmentMethod,
@@ -469,9 +467,9 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
         ),
         withClickHouse(
           Layer.mergeAll(
-            ConversationSemanticMomentRepositoryLive,
-            ConversationMomentLabelRepositoryLive,
-            ConversationSessionAnalysisRepositoryLive,
+            SessionSemanticMomentRepositoryLive,
+            SessionMomentLabelRepositoryLive,
+            SessionAnalysisRepositoryLive,
             TaxonomyObservationRepositoryLive,
           ),
           getClickhouseClient(),

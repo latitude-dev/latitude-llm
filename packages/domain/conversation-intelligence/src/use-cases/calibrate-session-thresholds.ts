@@ -12,6 +12,8 @@ import {
   CONVERSATION_CALIBRATION_JUDGE_SAMPLE,
   CONVERSATION_CALIBRATION_LABEL_MARGIN_MAX,
   CONVERSATION_CALIBRATION_LABEL_MARGIN_MIN,
+  CONVERSATION_CALIBRATION_LABEL_MIN_ACCEPTED,
+  CONVERSATION_CALIBRATION_LABEL_MIN_JUDGED,
   CONVERSATION_CALIBRATION_LABEL_QUANTILE,
   CONVERSATION_CALIBRATION_LABEL_THRESHOLD_MAX,
   CONVERSATION_CALIBRATION_LABEL_THRESHOLD_MIN,
@@ -60,6 +62,12 @@ const OUTCOME_KINDS: readonly string[] = ["resolution", "escalation", "abandonme
 
 const judgeVerdictsSchema = z.object({ verdicts: z.array(z.boolean()) })
 
+const LABEL_CALIBRATION_DECISION_CODES = {
+  calibrated: 1,
+  defaultLowSupport: 2,
+  disabledLowPrecision: 3,
+} as const
+
 /**
  * Quantile gates fix the fire *rate*, not precision — a p95 threshold on a
  * rare event mass-fires on near-anchor lookalikes (QA: a calibrated 0.567
@@ -82,8 +90,14 @@ const refineGateWithJudge = (input: {
       .filter((sample) => sample.margin >= input.quantileGate.margin)
       .sort((a, b) => b.positive - a.positive)
       .slice(0, CONVERSATION_CALIBRATION_JUDGE_SAMPLE)
-    if (candidates.length < 3) {
-      return { threshold: Math.max(input.quantileGate.threshold, input.staticThreshold), judgedPrecision: null }
+    if (candidates.length < CONVERSATION_CALIBRATION_LABEL_MIN_JUDGED) {
+      return {
+        threshold: input.staticThreshold,
+        judgedPrecision: null,
+        judgedCount: candidates.length,
+        acceptedCount: 0,
+        decisionCode: LABEL_CALIBRATION_DECISION_CODES.defaultLowSupport,
+      }
     }
     const verdicts = yield* ai
       .generate({
@@ -97,8 +111,15 @@ const refineGateWithJudge = (input: {
       })
       .pipe(Effect.orElseSucceed(() => null))
     if (verdicts === null || verdicts.object.verdicts.length !== candidates.length) {
-      // Judge unavailable: keep the conservative static gate.
-      return { threshold: Math.max(input.quantileGate.threshold, input.staticThreshold), judgedPrecision: null }
+      // Judge unavailable: keep the stable static gate instead of disabling a
+      // possibly rare signal based on missing calibration evidence.
+      return {
+        threshold: input.staticThreshold,
+        judgedPrecision: null,
+        judgedCount: candidates.length,
+        acceptedCount: 0,
+        decisionCode: LABEL_CALIBRATION_DECISION_CODES.defaultLowSupport,
+      }
     }
     // Walk down by score; the gate lands on the lowest score where cumulative
     // judged precision stays above the target.
@@ -113,13 +134,28 @@ const refineGateWithJudge = (input: {
       }
     }
     const judgedPrecision = truesSeen / candidates.length
-    if (bestThreshold === null || truesSeen < 2) {
-      // The judge inspected this kind's best-scoring candidates and could not
-      // confirm a usable precision band — the anchor does not separate real
-      // events on this corpus, and every lower score is worse. Disable the
-      // kind for the project (gates re-open automatically once a future
-      // calibration verifies a band, e.g. after anchor improvements).
-      return { threshold: CONVERSATION_CALIBRATION_DISABLED_GATE, judgedPrecision }
+    if (truesSeen < CONVERSATION_CALIBRATION_LABEL_MIN_ACCEPTED) {
+      // Rare labels can have too few true positives in the calibration sample
+      // to estimate precision. Keep the stable static gate; do not disable a
+      // label just because the random sample had low support.
+      return {
+        threshold: input.staticThreshold,
+        judgedPrecision,
+        judgedCount: candidates.length,
+        acceptedCount: truesSeen,
+        decisionCode: LABEL_CALIBRATION_DECISION_CODES.defaultLowSupport,
+      }
+    }
+    if (bestThreshold === null) {
+      // Enough true positives exist, but no score band reaches the precision
+      // target. That is real evidence that this anchor is unsafe here.
+      return {
+        threshold: CONVERSATION_CALIBRATION_DISABLED_GATE,
+        judgedPrecision,
+        judgedCount: candidates.length,
+        acceptedCount: truesSeen,
+        decisionCode: LABEL_CALIBRATION_DECISION_CODES.disabledLowPrecision,
+      }
     }
     // Keep judge-refined gates inside the calibrated band the rest of the
     // pipeline assumes; a raw candidate cosine can land outside it.
@@ -130,6 +166,9 @@ const refineGateWithJudge = (input: {
         CONVERSATION_CALIBRATION_LABEL_THRESHOLD_MAX,
       ),
       judgedPrecision,
+      judgedCount: candidates.length,
+      acceptedCount: truesSeen,
+      decisionCode: LABEL_CALIBRATION_DECISION_CODES.calibrated,
     }
   })
 
@@ -268,7 +307,7 @@ export const calibrateSessionThresholdsUseCase = (input: CalibrateSessionThresho
     )
 
     const labelAnchors: Record<string, { threshold: number; margin: number }> = {}
-    const judgedPrecisions: Record<string, number> = {}
+    const labelCalibrationMetrics: Record<string, number> = {}
     for (const [kind, samples] of labelSamples) {
       const quantileGate = deriveAnchorGate({ samples, thresholdQuantile: CONVERSATION_CALIBRATION_LABEL_QUANTILE })
       const config = MOMENT_LABEL_ANCHORS.find((anchor) => anchor.kind === kind)
@@ -279,8 +318,19 @@ export const calibrateSessionThresholdsUseCase = (input: CalibrateSessionThresho
         quantileGate,
         staticThreshold: config?.threshold ?? quantileGate.threshold,
       })
-      labelAnchors[kind] = { threshold: refined.threshold, margin: quantileGate.margin }
-      if (refined.judgedPrecision !== null) judgedPrecisions[`judgedPrecision_${kind}`] = refined.judgedPrecision
+      labelAnchors[kind] = {
+        threshold: refined.threshold,
+        margin:
+          refined.decisionCode === LABEL_CALIBRATION_DECISION_CODES.defaultLowSupport
+            ? (config?.margin ?? quantileGate.margin)
+            : quantileGate.margin,
+      }
+      if (refined.judgedPrecision !== null) {
+        labelCalibrationMetrics[`judgedPrecision_${kind}`] = refined.judgedPrecision
+      }
+      labelCalibrationMetrics[`judgedCount_${kind}`] = refined.judgedCount
+      labelCalibrationMetrics[`judgedAccepted_${kind}`] = refined.acceptedCount
+      labelCalibrationMetrics[`labelDecision_${kind}`] = refined.decisionCode
     }
     const ritual = deriveAnchorGate({
       samples: ritualSamples,
@@ -333,7 +383,7 @@ export const calibrateSessionThresholdsUseCase = (input: CalibrateSessionThresho
     const metrics: Record<string, number> = {
       outcomeCoverage: sampled.length === 0 ? 0 : covered.size / sampled.length,
       adjacentSimilarityMedian: quantile(sortedAdjacent, 0.5),
-      ...judgedPrecisions,
+      ...labelCalibrationMetrics,
     }
 
     yield* profiles.save({

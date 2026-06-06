@@ -7,8 +7,7 @@ import {
   loadClusteringCalibration,
   loadSessionCalibration,
   routeToDeepestClusterUseCase,
-  TAXONOMY_NOISE_SAMPLE_MAX,
-  TAXONOMY_OBSERVATION_SAMPLE_MAX,
+  TAXONOMY_OBSERVATION_RETENTION_DAYS,
   type TaxonomyMomentObservation,
   TaxonomyObservationAssignmentMethod,
   TaxonomyObservationRepository,
@@ -76,9 +75,8 @@ const extractionMomentSchema = z.object({
 })
 
 const TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH = 2_000
-
-const retentionWindowStart = (now: Date, retentionDays: number): Date =>
-  new Date(now.getTime() - retentionDays * 24 * 60 * 60_000)
+const SESSION_INTENT_SNIPPET_MAX_LENGTH = 320
+const SESSION_INTENT_SNIPPET_COUNT = 4
 
 const middleTruncate = (value: string, maxLength: number): string => {
   if (value.length <= maxLength) return value
@@ -88,24 +86,97 @@ const middleTruncate = (value: string, maxLength: number): string => {
 }
 
 /**
- * Topic projection: the moment's full user+assistant exchange, tool telemetry
- * stripped. Embedding the whole exchange captures what the moment is about —
- * the unit the topic taxonomy clusters on.
+ * Topic projection: one user-intent vector per session. Behaviours and process
+ * details remain moment/facet evidence; the taxonomy clusters on what the user
+ * came to support for.
  */
-const momentProjectionText = (input: {
-  readonly turns: readonly SemanticSegmentationTurn[]
-  readonly turnIndexes: readonly number[]
-}): string | null => {
-  const indexes = new Set(input.turnIndexes)
-  const text = input.turns
-    .filter((turn) => indexes.has(turn.index) && (turn.role === "user" || turn.role === "assistant"))
-    .flatMap((turn) => {
-      const content = stripToolTelemetry(turn.content)
-      return content.length > 0 ? [`${turn.role}: ${content}`] : []
+const normalizeVector = (vector: readonly number[]): readonly number[] => {
+  const magnitude = vectorMagnitude(vector)
+  return magnitude === 0 ? vector : vector.map((value) => value / magnitude)
+}
+
+const saturatedLengthWeight = (content: string): number => Math.sqrt(Math.min(Math.max(content.length, 40), 300) / 300)
+
+/**
+ * Language- and domain-neutral turn weighting for session-intent projection.
+ *
+ * The taxonomy projection should not rely on support-specific keyword rules
+ * (email, order lookup, cancellation, etc.) or English phrase matching. Keep
+ * weighting structural: user role, non-empty content, coarse length, and a
+ * first-substantive boost. Short replies still contribute, but are naturally
+ * down-weighted instead of being classified by hardcoded text patterns.
+ */
+const turnIntentBaseWeight = (content: string): number => {
+  const stripped = stripToolTelemetry(content).trim()
+  if (stripped.length === 0) return 0
+  if (stripped.length < 12) return 0.2
+  if (stripped.length < 40) return 0.5
+  return 1
+}
+
+const buildSessionUserIntentProjection = (
+  turns: readonly SemanticSegmentationTurn[],
+): {
+  readonly embedding: readonly number[]
+  readonly summary: string
+  readonly sourceTurnIndexes: readonly number[]
+  readonly weightedTurnIndexes: readonly { readonly index: number; readonly weight: number }[]
+} | null => {
+  const weightedTurns: {
+    readonly turn: SemanticSegmentationTurn
+    readonly content: string
+    readonly weight: number
+    readonly normalizedEmbedding: readonly number[]
+  }[] = []
+  let boostedFirstSubstantive = false
+
+  for (const turn of turns) {
+    if (turn.role !== "user") continue
+    const content = stripToolTelemetry(turn.content).trim()
+    const base = turnIntentBaseWeight(content)
+    if (base === 0) continue
+    const firstIntentBoost = !boostedFirstSubstantive && base >= 1 ? 4 : 1
+    if (base >= 1) boostedFirstSubstantive = true
+    const weight = base * firstIntentBoost * saturatedLengthWeight(content)
+    if (weight <= 0) continue
+    weightedTurns.push({ turn, content, weight, normalizedEmbedding: normalizeVector(turn.embedding) })
+  }
+
+  if (weightedTurns.length === 0) return null
+  const dimensions = weightedTurns[0]?.normalizedEmbedding.length ?? 0
+  if (dimensions === 0) return null
+  const accumulator = Array.from({ length: dimensions }, () => 0)
+  let totalWeight = 0
+  for (const weighted of weightedTurns) {
+    totalWeight += weighted.weight
+    weighted.normalizedEmbedding.forEach((value, index) => {
+      accumulator[index] = (accumulator[index] ?? 0) + value * weighted.weight
     })
-    .join("\n\n")
-    .trim()
-  return text.length === 0 ? null : middleTruncate(text, TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH)
+  }
+  if (totalWeight === 0) return null
+  const embedding = normalizeVector(accumulator.map((value) => value / totalWeight))
+  if (embedding.length === 0 || vectorMagnitude(embedding) === 0) return null
+
+  const selectedIndexes = new Set(
+    [...weightedTurns]
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, SESSION_INTENT_SNIPPET_COUNT)
+      .map((weighted) => weighted.turn.index),
+  )
+  const selectedTurns = weightedTurns.filter((weighted) => selectedIndexes.has(weighted.turn.index))
+  const summary = middleTruncate(
+    selectedTurns
+      .map((weighted) => `user: ${middleTruncate(weighted.content, SESSION_INTENT_SNIPPET_MAX_LENGTH)}`)
+      .join("\n\n"),
+    TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH,
+  )
+
+  return {
+    embedding,
+    summary,
+    sourceTurnIndexes: selectedTurns.map((weighted) => weighted.turn.index),
+    weightedTurnIndexes: weightedTurns.map((weighted) => ({ index: weighted.turn.index, weight: weighted.weight })),
+  }
 }
 
 // Tool-role turns (tool results) are excluded from the semantic pipeline:
@@ -439,7 +510,6 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       turns: embeddedTurns,
       ...(sessionCalibration ? { continuityClamps: sessionCalibration.continuity } : {}),
     })
-    const ai = yield* AI
 
     const anchorDetected = yield* detectEmbeddingAnchorMoments({
       messages: normalizedMessages,
@@ -545,125 +615,90 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       positive: yield* Effect.forEach(RITUAL_POSITIVE_ANCHORS, embedAnchorText),
       contrast: yield* Effect.forEach(RITUAL_CONTRAST_ANCHORS, embedAnchorText),
     }
-    const taxonomyObservationRows = yield* Effect.forEach(semanticSegments, (segment, index) =>
-      Effect.gen(function* () {
-        const semanticMoment = semanticMomentRows[index]
-        if (!semanticMoment) return []
+    const taxonomyObservationRows = yield* Effect.gen(function* () {
+      const projection = buildSessionUserIntentProjection(embeddedTurns)
+      if (projection === null) return [] as TaxonomyMomentObservation[]
+      if (isRitualProjection(projection.embedding, ritualAnchors, sessionCalibration?.ritual)) {
+        return [] as TaxonomyMomentObservation[]
+      }
 
-        // One topic observation per moment: the full user+assistant exchange
-        // text. Role-filtered intent/behaviour projections clustered by topic
-        // anyway (topic vocabulary dominates raw-text embeddings), so the
-        // taxonomy now clusters topics explicitly; signals carry behaviour.
-        const projectionText = momentProjectionText({ turns: embeddedTurns, turnIndexes: segment.turnIndexes })
-        const projections =
-          projectionText === null
-            ? []
-            : [
-                {
-                  dimension: "topic" as const,
-                  projectionMethod: TaxonomyProjectionMethod.MomentTextEmbedding,
-                  text: projectionText,
-                },
-              ]
-
-        const observations = yield* Effect.forEach(projections, (entry) =>
-          Effect.gen(function* () {
-            const embeddingResult = yield* ai.embed({
-              text: entry.text,
-              model: CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
-              dimensions: CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
-              inputType: "document",
-            })
-            if (embeddingResult.embedding.length === 0) return null
-            if (isRitualProjection(embeddingResult.embedding, ritualAnchors, sessionCalibration?.ritual)) return null
-            const projectionHash = yield* hash(
-              `${analysisHash}\0${semanticMoment.momentId}\0${entry.dimension}\0${entry.text}`,
-            )
-            const observationId = (yield* hash(
-              `${analysisHash}\0${semanticMoment.momentId}\0${entry.dimension}\0observation`,
-            )).slice(0, 24)
-            const decision = yield* routeToDeepestClusterUseCase({
-              projectId,
-              dimension: entry.dimension,
-              queryVector: embeddingResult.embedding,
-              ...(clusteringCalibration === null
-                ? {}
-                : {
-                    gates: {
-                      absoluteThreshold: clusteringCalibration.assignAbsoluteThreshold,
-                      relativeMargin: clusteringCalibration.assignRelativeMargin,
-                    },
-                  }),
-            })
-            return {
-              organizationId,
-              projectId,
-              observationId,
-              sessionId,
-              analysisHash,
-              momentId: semanticMoment.momentId,
-              projectionMethod: entry.projectionMethod,
-              projectionHash,
-              projectionMetadata: {
-                sourceTurnIndexes: [...segment.turnIndexes],
-                summary: entry.text,
+      const dimension = "topic" as const
+      const sessionMomentId = (yield* hash(`${sessionId}\0session_topic`)).slice(0, 24)
+      const projectionHash = yield* hash(
+        `${analysisHash}\0${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.SessionUserIntentEmbedding}\0${projection.summary}`,
+      )
+      const observationId = (yield* hash(
+        `${organizationId}\0${projectId}\0${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.SessionUserIntentEmbedding}\0observation`,
+      )).slice(0, 24)
+      const decision = yield* routeToDeepestClusterUseCase({
+        projectId,
+        dimension,
+        queryVector: projection.embedding,
+        ...(clusteringCalibration === null
+          ? {}
+          : {
+              gates: {
+                absoluteThreshold: clusteringCalibration.assignAbsoluteThreshold,
+                relativeMargin: clusteringCalibration.assignRelativeMargin,
               },
-              embedding: [...embeddingResult.embedding],
-              assignedClusterId: decision.clusterId === null ? null : TaxonomyClusterId(decision.clusterId),
-              assignmentConfidence: decision.confidence,
-              assignmentMethod:
-                decision.method === "centroid_online"
-                  ? TaxonomyObservationAssignmentMethod.CentroidOnline
-                  : TaxonomyObservationAssignmentMethod.Noise,
-              reassignmentRunId: null,
-              startTime: semanticMoment.startTime,
-              endTime: semanticMoment.endTime,
-              retentionDays,
-              indexedAt,
-            } satisfies TaxonomyMomentObservation
-          }),
-        )
-        return observations.flatMap((observation) => (observation === null ? [] : [observation]))
-      }),
-    ).pipe(Effect.map((groups) => groups.flat() as TaxonomyMomentObservation[]))
+            }),
+      })
+
+      return [
+        {
+          organizationId,
+          projectId,
+          observationId,
+          sessionId,
+          analysisHash,
+          momentId: sessionMomentId,
+          projectionMethod: TaxonomyProjectionMethod.SessionUserIntentEmbedding,
+          projectionHash,
+          projectionMetadata: {
+            projectionKind: "session_user_intent",
+            sourceTurnIndexes: [...projection.sourceTurnIndexes],
+            weightedTurnIndexes: [...projection.weightedTurnIndexes],
+            summary: projection.summary,
+          },
+          embedding: [...projection.embedding],
+          assignedClusterId: decision.clusterId === null ? null : TaxonomyClusterId(decision.clusterId),
+          assignmentConfidence: decision.confidence,
+          assignmentMethod:
+            decision.method === "centroid_online"
+              ? TaxonomyObservationAssignmentMethod.CentroidOnline
+              : TaxonomyObservationAssignmentMethod.Noise,
+          reassignmentRunId: null,
+          startTime: session.startTime,
+          endTime: session.endTime,
+          retentionDays: TAXONOMY_OBSERVATION_RETENTION_DAYS,
+          indexedAt,
+        } satisfies TaxonomyMomentObservation,
+      ]
+    })
 
     // Centroid increments are not idempotent, but the activity retries are:
     // the observation rows act as applied-markers. They are written FIRST, a
     // retry skips the increment for any id that already existed, and a crash
     // between the two at worst loses one increment (gardening self-corrects)
     // instead of double-counting it.
-    const observationCounts = yield* taxonomyObservations.getCounts({
-      organizationId,
-      projectId,
-      since: retentionWindowStart(indexedAt, retentionDays),
-    })
-    let acceptedTotal = observationCounts.total
-    let acceptedNoise = observationCounts.noise
-    const sampledTaxonomyObservationRows = taxonomyObservationRows.filter((row) => {
-      if (acceptedTotal >= TAXONOMY_OBSERVATION_SAMPLE_MAX) return false
-      if (row.assignmentMethod === TaxonomyObservationAssignmentMethod.Noise) {
-        if (acceptedNoise >= TAXONOMY_NOISE_SAMPLE_MAX) return false
-        acceptedNoise += 1
-      }
-      acceptedTotal += 1
-      return true
-    })
-
-    const alreadyApplied = new Set(
-      yield* taxonomyObservations.filterExistingIds({
-        organizationId,
-        projectId,
-        observationIds: sampledTaxonomyObservationRows.map((row) => row.observationId),
-      }),
+    const previousObservations =
+      taxonomyObservationRows.length === 0
+        ? []
+        : yield* taxonomyObservations.listBySession({ organizationId, projectId, sessionId })
+    const previousObservationById = new Map(
+      previousObservations.map((observation) => [observation.observationId, observation] as const),
     )
-    yield* taxonomyObservations.upsertMany(sampledTaxonomyObservationRows)
+    yield* taxonomyObservations.upsertMany(taxonomyObservationRows)
     yield* Effect.forEach(
-      sampledTaxonomyObservationRows.filter(
-        (row) =>
-          row.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
-          row.assignedClusterId !== null &&
-          !alreadyApplied.has(row.observationId),
-      ),
+      taxonomyObservationRows.filter((row) => {
+        if (row.assignmentMethod !== TaxonomyObservationAssignmentMethod.CentroidOnline) return false
+        if (row.assignedClusterId === null) return false
+        const previous = previousObservationById.get(row.observationId)
+        return !(
+          previous?.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
+          previous.assignedClusterId === row.assignedClusterId
+        )
+      }),
       (row) =>
         assignObservationToClusterUseCase({
           organizationId,

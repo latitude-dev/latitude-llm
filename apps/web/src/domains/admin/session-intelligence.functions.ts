@@ -16,12 +16,12 @@ const BACKFILL_CONCURRENCY = 5
 /**
  * Exported for input-schema tests.
  */
-export const adminBackfillConversationIntelligenceInputSchema = z.object({
+export const adminBackfillSessionIntelligenceInputSchema = z.object({
   projectId: z.string().min(1).max(256),
-  confirmation: z.literal("reset conversation intelligence"),
+  confirmation: z.literal("reset session intelligence"),
 })
 
-interface AdminBackfillConversationIntelligenceResultDto {
+interface AdminBackfillSessionIntelligenceResultDto {
   reset: true
   sessionLimit: number
   sessionsFound: number
@@ -56,15 +56,15 @@ async function resetProjectTaxonomy({ organizationId, projectId }: ProjectResetT
   )
 }
 
-async function resetProjectConversationIntelligence({ organizationId, projectId }: ProjectResetTarget) {
+async function resetProjectSessionIntelligence({ organizationId, projectId }: ProjectResetTarget) {
   const clickhouse = getClickhouseClient()
   const queryParams = { organizationId, projectId }
 
   for (const table of [
-    "conversation_moment_labels",
-    "conversation_semantic_moments",
+    "session_moment_labels",
+    "session_semantic_moments",
     "taxonomy_observations",
-    "conversation_session_analyses",
+    "session_analyses",
   ] as const) {
     await clickhouse.command({
       query: `ALTER TABLE ${table} DELETE WHERE organization_id = {organizationId:String} AND project_id = {projectId:String}`,
@@ -76,8 +76,8 @@ async function resetProjectConversationIntelligence({ organizationId, projectId 
 }
 
 /**
- * Dangerous backoffice operation: reset all taxonomy + conversation
- * intelligence state for one project, then start AnalyzeSessionWorkflow for
+ * Dangerous backoffice operation: reset all taxonomy + session-intelligence
+ * state for one project, then start AnalyzeSessionWorkflow for
  * the project's most recent sessions.
  *
  * Guard: {@link adminMiddleware}. The project organization is loaded from the
@@ -85,10 +85,10 @@ async function resetProjectConversationIntelligence({ organizationId, projectId 
  * resets run through the admin client (RLS bypass) and ClickHouse resets are
  * explicitly scoped by organization + project.
  */
-export const adminBackfillConversationIntelligence = createServerFn({ method: "POST" })
+export const adminBackfillSessionIntelligence = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
-  .inputValidator(adminBackfillConversationIntelligenceInputSchema)
-  .handler(async ({ data }): Promise<AdminBackfillConversationIntelligenceResultDto> => {
+  .inputValidator(adminBackfillSessionIntelligenceInputSchema)
+  .handler(async ({ data }): Promise<AdminBackfillSessionIntelligenceResultDto> => {
     const project = await Effect.runPromise(
       getProjectDetailsUseCase({ projectId: ProjectId(data.projectId) }).pipe(
         withPostgres(AdminProjectRepositoryLive, getAdminPostgresClient()),
@@ -98,7 +98,7 @@ export const adminBackfillConversationIntelligence = createServerFn({ method: "P
 
     const target = { organizationId: project.organization.id, projectId: project.id }
 
-    await resetProjectConversationIntelligence(target)
+    await resetProjectSessionIntelligence(target)
     await resetProjectTaxonomy(target)
 
     const sessions = await Effect.runPromise(

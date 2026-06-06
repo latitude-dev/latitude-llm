@@ -13,8 +13,8 @@ import {
   PropertiesStrip,
 } from "../-components/dashboard/index.ts"
 import { useTrackRecentBackofficeView } from "../-lib/recently-viewed.ts"
-import { ConversationIntelligenceBackfillButton } from "./-components/conversation-intelligence-backfill-button.tsx"
 import { MetricsSection } from "./-components/metrics-section.tsx"
+import { SessionIntelligenceBackfillButton } from "./-components/session-intelligence-backfill-button.tsx"
 import { TaxonomySection } from "./-components/taxonomy-section.tsx"
 import { WrappedTriggerButton } from "./-components/wrapped-trigger-button.tsx"
 
@@ -141,9 +141,9 @@ function BackofficeProjectDetailPage() {
         />
         <ActionRow
           icon={BrainCircuitIcon}
-          title="Reset and backfill conversation intelligence"
-          description="Delete this project's existing taxonomy and conversation-intelligence rows, then start AnalyzeSessionWorkflow for the latest 1,500 sessions. Requires typed confirmation."
-          action={<ConversationIntelligenceBackfillButton projectId={project.id} projectName={project.name} />}
+          title="Reset and backfill session intelligence"
+          description="Delete this project's existing taxonomy and session-intelligence rows, then start AnalyzeSessionWorkflow for the latest 1,500 sessions. Requires typed confirmation."
+          action={<SessionIntelligenceBackfillButton projectId={project.id} projectName={project.name} />}
         />
       </ActionsSection>
 

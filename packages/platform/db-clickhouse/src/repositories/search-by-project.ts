@@ -23,10 +23,10 @@ import type {
 import { SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect } from "effect"
-import { buildConversationIntelligenceFilters } from "../conversation-intelligence-filters.ts"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
+import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
 import { MAX_SEARCH_CANDIDATES, planSearch, type SearchPlan } from "./search-plan.ts"
 
 /**
@@ -193,7 +193,7 @@ const buildSearchFilters = (filters: FilterSet | undefined) => {
   // would be silently skipped, making the search path disagree with the
   // metrics/histogram panels. They compile to session_id IN (...) clauses
   // that resolve against the rollup's session_id in the HAVING.
-  const ci = buildConversationIntelligenceFilters(filters)
+  const ci = buildSessionIntelligenceFilters(filters)
   const { telemetryFilters, scoreFilters } = splitScoreFilters(ci.rest)
   const telemetry = telemetryFilters
     ? buildClickHouseWhere(telemetryFilters, SESSION_FIELD_REGISTRY)

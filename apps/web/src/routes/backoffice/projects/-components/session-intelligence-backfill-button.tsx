@@ -1,20 +1,17 @@
 import { Alert, Button, CloseTrigger, Input, Modal, Text, useToast } from "@repo/ui"
 import { useRouter } from "@tanstack/react-router"
 import { useState } from "react"
-import { adminBackfillConversationIntelligence } from "../../../../domains/admin/conversation-intelligence.functions.ts"
+import { adminBackfillSessionIntelligence } from "../../../../domains/admin/session-intelligence.functions.ts"
 import { toUserMessage } from "../../../../lib/errors.ts"
 
-const CONFIRMATION_PHRASE = "reset conversation intelligence"
+const CONFIRMATION_PHRASE = "reset session intelligence"
 
-interface ConversationIntelligenceBackfillButtonProps {
+interface SessionIntelligenceBackfillButtonProps {
   readonly projectId: string
   readonly projectName: string
 }
 
-export function ConversationIntelligenceBackfillButton({
-  projectId,
-  projectName,
-}: ConversationIntelligenceBackfillButtonProps) {
+export function SessionIntelligenceBackfillButton({ projectId, projectName }: SessionIntelligenceBackfillButtonProps) {
   const { toast } = useToast()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -31,11 +28,11 @@ export function ConversationIntelligenceBackfillButton({
   const handleConfirm = async () => {
     setIsSubmitting(true)
     try {
-      const result = await adminBackfillConversationIntelligence({
+      const result = await adminBackfillSessionIntelligence({
         data: { projectId, confirmation: CONFIRMATION_PHRASE },
       })
       toast({
-        description: `Reset complete. Started ${result.workflowsStarted} conversation-intelligence workflows for ${projectName}${
+        description: `Reset complete. Started ${result.workflowsStarted} session-intelligence workflows for ${projectName}${
           result.workflowsAlreadyRunning > 0 ? ` (${result.workflowsAlreadyRunning} already running)` : ""
         }.`,
       })
@@ -66,10 +63,10 @@ export function ConversationIntelligenceBackfillButton({
       >
         <Modal.Content dismissible size="large">
           <Modal.Header
-            title="Reset and backfill conversation intelligence"
+            title="Reset and backfill session intelligence"
             description={
               <Text.H5 color="foregroundMuted">
-                This will rebuild conversation intelligence for{" "}
+                This will rebuild session intelligence for{" "}
                 <span className="font-medium text-foreground">{projectName}</span> from the latest 1,500 sessions.
               </Text.H5>
             }

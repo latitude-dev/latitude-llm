@@ -62,7 +62,7 @@ export const SEMANTIC_MOMENT_SEGMENTATION_METHODS = ["embedding_continuity"] as 
  * gates are derived per project from quantiles of the corpus's own anchor
  * score distribution, clamped to the bands below.
  */
-export const CONVERSATION_CALIBRATION_SESSION_SAMPLE = 80
+export const CONVERSATION_CALIBRATION_SESSION_SAMPLE = 500
 export const CONVERSATION_CALIBRATION_TTL_MS = 24 * 60 * 60_000
 /** Label gate = clamp(per-kind positive-score quantile, band). */
 export const CONVERSATION_CALIBRATION_LABEL_QUANTILE = 0.95
@@ -82,7 +82,11 @@ export const CONVERSATION_CALIBRATION_CONTINUITY_MAX_CEIL = 0.75
  * the walk never reached real-but-naturally-phrased positives and every kind
  * fell back to its static gate.
  */
-export const CONVERSATION_CALIBRATION_JUDGE_SAMPLE = 24
+export const CONVERSATION_CALIBRATION_JUDGE_SAMPLE = 48
+/** Minimum judged candidates before a rare label can be disabled. */
+export const CONVERSATION_CALIBRATION_LABEL_MIN_JUDGED = 12
+/** Minimum confirmed positives before low precision is treated as reliable instead of low support. */
+export const CONVERSATION_CALIBRATION_LABEL_MIN_ACCEPTED = 3
 /**
  * Judged precision the calibrated gate must maintain. 0.7 let through
  * user-visible mislabels (a clear return request labeled hesitation); labels

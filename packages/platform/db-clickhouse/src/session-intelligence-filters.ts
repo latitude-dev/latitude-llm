@@ -8,7 +8,7 @@ const TOPICS_FILTER_FIELD = "topics"
 /**
  * Pulls a multi-select `in` condition out of a FilterSet, returning the
  * remaining filters and the selected values. Used to peel the
- * conversation-intelligence fields (`moments`, `topics`) off before the
+ * session-intelligence fields (`moments`, `topics`) off before the
  * generic ClickHouse field registries see the set — those fields resolve via
  * dedicated subqueries, and unknown registry fields would be silently
  * skipped otherwise.
@@ -63,8 +63,8 @@ const buildTopicClustersSubquery = (withRangeStart: boolean): string => `session
     )`
 
 /**
- * "Moments" filters sessions by their detected conversation-moment labels
- * (any-of), pinned to each session's current analysis generation.
+ * "Moments" filters sessions by their detected moment labels (any-of),
+ * pinned to each session's current analysis generation.
  */
 const buildMomentKindsSubquery = (withRangeStart: boolean): string => `session_id IN (
       SELECT m.session_id
@@ -77,13 +77,13 @@ const buildMomentKindsSubquery = (withRangeStart: boolean): string => `session_i
     )`
 
 /**
- * Splits the conversation-intelligence filters off a session FilterSet and
+ * Splits the session-intelligence filters off a session FilterSet and
  * compiles them into `session_id IN (...)` clauses. Every session listing
  * path (plain list, count, metrics, histogram, AND text search) must apply
  * these — a path that forwards the raw FilterSet to a field registry will
  * silently drop them.
  */
-export function buildConversationIntelligenceFilters(filters: FilterSet | undefined): {
+export function buildSessionIntelligenceFilters(filters: FilterSet | undefined): {
   rest: FilterSet | undefined
   clauses: string[]
   params: Record<string, unknown>

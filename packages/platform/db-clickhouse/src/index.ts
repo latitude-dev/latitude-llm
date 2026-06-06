@@ -14,14 +14,14 @@ export { isScoreFilterKey, SCORE_FIELD_REGISTRY, SCORE_FILTER_KEYS } from "./reg
 export { AdminOrganizationUsageRepositoryLive } from "./repositories/admin-organization-usage-repository.ts"
 export { AdminProjectMetricsRepositoryLive } from "./repositories/admin-project-metrics-repository.ts"
 export { ClaudeCodeSpanReaderLive } from "./repositories/claude-code-span-reader.ts"
+export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.ts"
+export { SavedSearchMatchReaderLive } from "./repositories/saved-search-match-reader.ts"
+export { ScoreAnalyticsRepositoryLive } from "./repositories/score-analytics-repository.ts"
 export {
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
   SessionSemanticMomentRepositoryLive,
-} from "./repositories/conversation-intelligence-repositories.ts"
-export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.ts"
-export { SavedSearchMatchReaderLive } from "./repositories/saved-search-match-reader.ts"
-export { ScoreAnalyticsRepositoryLive } from "./repositories/score-analytics-repository.ts"
+} from "./repositories/session-intelligence-repositories.ts"
 export { SessionRepositoryLive } from "./repositories/session-repository.ts"
 export { SpanRepositoryLive } from "./repositories/span-repository.ts"
 export { TaxonomyClusterIntelligenceRepositoryLive } from "./repositories/taxonomy-cluster-intelligence-repository.ts"

@@ -3,11 +3,13 @@ import {
   ChSqlClient,
   DistributedLockRepository,
   ExternalUserId,
+  NotFoundError,
   OrganizationId,
   ProjectId,
   SessionId,
   SpanId,
   SqlClient,
+  TaxonomyClusterId,
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
@@ -16,11 +18,14 @@ import { createFakeSessionRepository, createFakeTraceRepository } from "@domain/
 import {
   CalibrationProfileRepository,
   type CalibrationProfileRepositoryShape,
+  TAXONOMY_OBSERVATION_RETENTION_DAYS,
+  type TaxonomyCluster,
   TaxonomyClusterRepository,
   type TaxonomyClusterRepositoryShape,
   type TaxonomyMomentObservation,
   TaxonomyObservationRepository,
   type TaxonomyObservationRepositoryShape,
+  TaxonomyProjectionMethod,
 } from "@domain/taxonomy"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -80,11 +85,32 @@ const makeSession = (overrides: Partial<SessionDetail> = {}): SessionDetail => (
   ...overrides,
 })
 
-const createFakeTaxonomyClusterRepository = () => {
+const createFakeTaxonomyClusterRepository = (seed: readonly TaxonomyCluster[] = []) => {
+  const clusters = new Map(seed.map((cluster) => [cluster.id, cluster] as const))
   const repository: Partial<TaxonomyClusterRepositoryShape> = {
-    listNearestActive: () => Effect.succeed([]),
+    findById: (id) =>
+      Effect.gen(function* () {
+        const cluster = clusters.get(id)
+        if (!cluster) return yield* new NotFoundError({ entity: "TaxonomyCluster", id })
+        return cluster
+      }),
+    listNearestActive: ({ projectId, parentClusterId }) =>
+      Effect.succeed(
+        [...clusters.values()]
+          .filter(
+            (cluster) =>
+              cluster.projectId === projectId &&
+              cluster.state === "active" &&
+              (parentClusterId === undefined || cluster.parentClusterId === parentClusterId),
+          )
+          .map((cluster) => ({ cluster, cosine: 1 })),
+      ),
+    save: (cluster) =>
+      Effect.sync(() => {
+        clusters.set(cluster.id, cluster)
+      }),
   }
-  return { repository: repository as TaxonomyClusterRepositoryShape }
+  return { repository: repository as TaxonomyClusterRepositoryShape, clusters }
 }
 
 const fakeCalibrationProfileRepository: CalibrationProfileRepositoryShape = {
@@ -92,18 +118,54 @@ const fakeCalibrationProfileRepository: CalibrationProfileRepositoryShape = {
   save: () => Effect.void,
 }
 
-const createFakeTaxonomyObservationRepository = () => {
-  const rows: unknown[] = []
+const createFakeTaxonomyObservationRepository = (seed: readonly TaxonomyMomentObservation[] = []) => {
+  const rows: TaxonomyMomentObservation[] = [...seed]
   const repository: Partial<TaxonomyObservationRepositoryShape> = {
     upsertMany: (observations) =>
       Effect.sync(() => {
         rows.push(...observations)
       }),
-    filterExistingIds: () => Effect.succeed([]),
-    getCounts: () => Effect.succeed({ total: 0, assigned: 0, noise: 0 }),
+    filterExistingIds: ({ observationIds }) =>
+      Effect.succeed(observationIds.filter((observationId) => rows.some((row) => row.observationId === observationId))),
+    listBySession: ({ organizationId, projectId, sessionId, analysisHash }) =>
+      Effect.sync(() => {
+        const latestById = new Map<string, TaxonomyMomentObservation>()
+        for (const row of rows) {
+          if (row.organizationId !== organizationId || row.projectId !== projectId || row.sessionId !== sessionId) {
+            continue
+          }
+          if (analysisHash && row.analysisHash !== analysisHash) continue
+          latestById.set(row.observationId, row)
+        }
+        return [...latestById.values()]
+      }),
+    getCounts: () => Effect.die("taxonomy ingestion must not check sample capacity"),
   }
   return { repository: repository as TaxonomyObservationRepositoryShape, rows }
 }
+
+const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster => ({
+  id: TaxonomyClusterId("c".repeat(24)),
+  organizationId,
+  projectId,
+  dimension: "topic",
+  parentClusterId: null,
+  depth: 0,
+  path: "",
+  splitLinkThreshold: null,
+  name: "Roaming support",
+  description: "Users need help with roaming.",
+  centroid: { base: [1, 0], mass: 1, model: "test", decay: 1, weights: { default: 1 } },
+  observationCount: 0,
+  state: "active",
+  mergedIntoClusterId: null,
+  firstObservedAt: now,
+  lastObservedAt: now,
+  clusteredAt: now,
+  createdAt: now,
+  updatedAt: now,
+  ...overrides,
+})
 
 const makeTrace = (messages = makeSession().lastInputMessages.concat(makeSession().outputMessages)): TraceDetail => ({
   ...makeSession(),
@@ -119,12 +181,14 @@ const runUseCase = (input: {
   readonly trace?: TraceDetail
   readonly ai?: AIShape
   readonly seedAnalyses?: readonly import("../entities/session-analysis.ts").SessionAnalysis[]
+  readonly seedClusters?: readonly TaxonomyCluster[]
+  readonly seedTaxonomyObservations?: readonly TaxonomyMomentObservation[]
 }) => {
   const analyses = createFakeSessionAnalysisRepository(input.seedAnalyses ?? [])
   const semanticMoments = createFakeSessionSemanticMomentRepository()
   const momentLabels = createFakeSessionMomentLabelRepository()
-  const taxonomyObservations = createFakeTaxonomyObservationRepository()
-  const taxonomyClusters = createFakeTaxonomyClusterRepository()
+  const taxonomyObservations = createFakeTaxonomyObservationRepository(input.seedTaxonomyObservations)
+  const taxonomyClusters = createFakeTaxonomyClusterRepository(input.seedClusters)
   const taxonomyLocks = createFakeDistributedLockRepository()
   const sessions = createFakeSessionRepository({ findBySessionId: () => Effect.succeed(input.session) })
   const traces = createFakeTraceRepository({ listByTraceIds: () => Effect.succeed(input.trace ? [input.trace] : []) })
@@ -158,7 +222,7 @@ const runUseCase = (input: {
     Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
   )
 
-  return { effect, analyses, semanticMoments, momentLabels, taxonomyObservations }
+  return { effect, analyses, semanticMoments, momentLabels, taxonomyObservations, taxonomyClusters }
 }
 
 describe("analyzeSessionUseCase", () => {
@@ -177,6 +241,9 @@ describe("analyzeSessionUseCase", () => {
     expect(analysis?.analysisStatus).toBe("analyzed")
     expect(semanticMoments.rows).toHaveLength(1)
     expect(taxonomyObservations.rows).toHaveLength(1)
+    expect((taxonomyObservations.rows[0] as TaxonomyMomentObservation | undefined)?.retentionDays).toBe(
+      TAXONOMY_OBSERVATION_RETENTION_DAYS,
+    )
   })
 
   it("persists deterministic taxonomy observation summaries", async () => {
@@ -186,6 +253,15 @@ describe("analyzeSessionUseCase", () => {
         message("user", "Please check roaming for my account"),
         message("assistant", "I checked the account and reset the roaming profile"),
       ]),
+      ai: {
+        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          if (input.text.startsWith("user:")) return Effect.succeed({ embedding: [1, 0] })
+          if (input.text.startsWith("assistant:")) return Effect.succeed({ embedding: [0, 1] })
+          return Effect.succeed({ embedding: [-1, 0] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
     })
 
     await Effect.runPromise(effect)
@@ -193,9 +269,52 @@ describe("analyzeSessionUseCase", () => {
     const [observation] = taxonomyObservations.rows as TaxonomyMomentObservation[]
     const topicSummary = observation?.projectionMetadata.summary
 
-    expect(topicSummary).toEqual(
-      "user: Please check roaming for my account\n\nassistant: I checked the account and reset the roaming profile",
-    )
+    expect(observation?.projectionMethod).toBe(TaxonomyProjectionMethod.SessionUserIntentEmbedding)
+    expect(observation?.projectionMetadata.projectionKind).toBe("session_user_intent")
+    expect(observation?.embedding).toEqual([1, 0])
+    expect(topicSummary).toEqual("user: Please check roaming for my account")
+  })
+
+  it("uses language-neutral user-turn weighting for taxonomy naming summaries", async () => {
+    const { effect, taxonomyObservations } = runUseCase({
+      session: makeSession(),
+      trace: makeTrace([
+        message("user", "Hola, necesito cambiar la chaqueta de mi pedido reciente por una talla más grande."),
+        message("assistant", "Puedo ayudarte con eso. ¿Qué talla quieres?"),
+        message("user", "Por favor cámbiala por una chaqueta polar roja grande."),
+      ]),
+    })
+
+    await Effect.runPromise(effect)
+
+    const [observation] = taxonomyObservations.rows as TaxonomyMomentObservation[]
+    const topicSummary = String(observation?.projectionMetadata.summary)
+
+    expect(topicSummary).toContain("cambiar la chaqueta")
+    expect(topicSummary).toContain("chaqueta polar roja grande")
+  })
+
+  it("applies centroid updates when a same-session observation changes from noise to assigned", async () => {
+    const first = runUseCase({ session: makeSession(), trace: makeTrace() })
+    await Effect.runPromise(first.effect)
+    const previous = first.taxonomyObservations.rows[0]
+    expect(previous?.assignmentMethod).toBe("noise")
+
+    const cluster = makeCluster()
+    const second = runUseCase({
+      session: makeSession(),
+      trace: makeTrace(),
+      seedClusters: [cluster],
+      seedTaxonomyObservations: previous ? [previous] : [],
+    })
+
+    await Effect.runPromise(second.effect)
+
+    const savedCluster = second.taxonomyClusters.clusters.get(cluster.id)
+    const latestObservation = second.taxonomyObservations.rows.at(-1)
+    expect(latestObservation?.observationId).toBe(previous?.observationId)
+    expect(latestObservation?.assignedClusterId).toBe(cluster.id)
+    expect(savedCluster?.observationCount).toBe(1)
   })
 
   it("skips sessions without both user and assistant messages without calling AI", async () => {
