@@ -1,4 +1,5 @@
 import { AI } from "@domain/ai"
+import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
@@ -21,11 +22,13 @@ import {
   BillingOverrideRepositoryLive,
   OrganizationRepositoryLive,
   type PostgresClient,
+  ProjectRepositoryLive,
   resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { parseEnvOptional } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 
@@ -98,6 +101,44 @@ export const prioritizeChunksForEmbedding = (chunks: readonly TraceSearchChunk[]
     .filter((chunk) => chunk.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
     .sort((a, b) => b.chunkIndex - a.chunkIndex)
 
+export const isConfiguredLatitudeTelemetryProjectSlug = (
+  projectSlug: string,
+  configuredProjectSlug: string | undefined,
+) => {
+  const normalizedConfiguredSlug = configuredProjectSlug?.trim()
+  return (
+    normalizedConfiguredSlug !== undefined &&
+    normalizedConfiguredSlug !== "" &&
+    projectSlug === normalizedConfiguredSlug
+  )
+}
+
+const isLatitudeTelemetryProject = (projectId: string) =>
+  Effect.gen(function* () {
+    const configuredProjectSlug = yield* parseEnvOptional("LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", "string").pipe(
+      Effect.tapError((error) =>
+        Effect.sync(() =>
+          logger.warn("Invalid Latitude telemetry project slug config; semantic indexing remains enabled", error),
+        ),
+      ),
+      Effect.orElseSucceed(() => undefined),
+    )
+
+    if (!configuredProjectSlug?.trim()) return false
+
+    const projectRepo = yield* ProjectRepository
+    const project = yield* projectRepo.findById(ProjectId(projectId)).pipe(
+      Effect.tapError((error) =>
+        Effect.sync(() =>
+          logger.warn(`Could not resolve project ${projectId}; semantic indexing remains enabled`, error),
+        ),
+      ),
+      Effect.orElseSucceed(() => undefined),
+    )
+
+    return project ? isConfiguredLatitudeTelemetryProjectSlug(project.slug, configuredProjectSlug) : false
+  })
+
 /**
  * Process a trace search refresh task:
  *  1. Load canonical conversation messages for the trace.
@@ -150,6 +191,11 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
     })
 
     logger.info(`Indexed lexical search document for trace ${traceId}`)
+
+    if (yield* isLatitudeTelemetryProject(projectId)) {
+      logger.info(`Trace ${traceId} belongs to the Latitude telemetry project; skipping semantic search embeddings`)
+      return
+    }
 
     // Chunk indices are assigned in chronological order, so processing them in
     // descending order prioritizes the tail when budget pressure means we may
@@ -267,6 +313,7 @@ export const runTraceSearchRefresh = (payload: RefreshTracePayload, deps: TraceS
     withPostgres(
       Layer.mergeAll(
         BillingOverrideRepositoryLive,
+        ProjectRepositoryLive,
         SettingsReaderLive,
         StripeSubscriptionLookupLive,
         OrganizationRepositoryLive,
