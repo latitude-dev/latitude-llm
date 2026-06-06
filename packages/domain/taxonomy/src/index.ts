@@ -27,6 +27,7 @@ export {
   TAXONOMY_GARDENING_CRON_PATTERN,
   TAXONOMY_GARDENING_MAX_RUNTIME_MS,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
+  TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
   TAXONOMY_GARDENING_STALE_GRACE_MS,
   TAXONOMY_GARDENING_SWEEP_BATCH,
   TAXONOMY_GARDENING_THROTTLE_MS,
@@ -42,11 +43,9 @@ export {
   TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO,
   TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
-  TAXONOMY_NOISE_SAMPLE_MAX,
   TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS,
   TAXONOMY_OBSERVATION_DEBOUNCE_MS,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
-  TAXONOMY_OBSERVATION_SAMPLE_MAX,
   TAXONOMY_OBSERVATION_WEIGHT_SCHEME,
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_PROJECTION_METHODS,
@@ -108,6 +107,7 @@ export {
   TaxonomyGardeningTimeoutError,
   TaxonomyGardenLockUnavailableError,
   TaxonomyObservationNotFoundError,
+  TaxonomyQualityGateError,
   TaxonomyRunNotFoundError,
 } from "./errors.ts"
 export {
@@ -160,6 +160,7 @@ export {
   type ListTaxonomyNoiseInput,
   type ListTaxonomyObservationClusterInput,
   type ReassignTaxonomyObservationInput,
+  type TaxonomyObservationClusterAssignmentCount,
   type TaxonomyObservationClusterOccurrence,
   type TaxonomyObservationClusterTrendCounts,
   type TaxonomyObservationCounts,
@@ -185,6 +186,11 @@ export {
   type TaxonomyClusterTrendSummary,
   type TopTaxonomyCluster,
 } from "./use-cases/analytics.ts"
+export {
+  type AssertTaxonomyQualityInput,
+  type AssertTaxonomyQualityResult,
+  assertTaxonomyQualityUseCase,
+} from "./use-cases/assert-taxonomy-quality.ts"
 export {
   type AssignObservationToClusterInput,
   assignObservationToClusterUseCase,
@@ -258,6 +264,11 @@ export {
   type ReassignNoiseToCurrentClustersResult,
   reassignNoiseToCurrentClustersUseCase,
 } from "./use-cases/reassign-noise-to-current-clusters.ts"
+export {
+  type ReconcileClusterCountsInput,
+  type ReconcileClusterCountsResult,
+  reconcileClusterCountsUseCase,
+} from "./use-cases/reconcile-cluster-counts.ts"
 export {
   type RecurseTreeClustersInput,
   type RecurseTreeClustersResult,

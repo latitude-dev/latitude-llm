@@ -15,6 +15,7 @@ import {
   TAXONOMY_MERGE_NEAREST_NEIGHBORS,
   TAXONOMY_MERGE_THRESHOLD,
   TAXONOMY_NAMING_TIMEOUT_MS,
+  TAXONOMY_TREE_MIN_CHILDREN,
   TAXONOMY_TREE_ROOT_LINK_THRESHOLD,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
@@ -232,6 +233,9 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
       projectId: input.projectId,
       dimension,
     })
+    const parentsWithChildren = new Set(
+      active.flatMap((cluster) => (cluster.parentClusterId ? [cluster.parentClusterId] : [])),
+    )
     // Sibling-only: merging across parents would give a cluster two
     // ancestries and break the tree. Pairs are nominated within each parent
     // group; cross-parent near-duplicates are a parent-level signal instead.
@@ -282,8 +286,15 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
 
     for (const component of components) {
       const survivor = chooseSurvivor(component)
+      const survivorChildren = active.filter((cluster) => cluster.parentClusterId === survivor.id)
       const losers = component.filter((cluster) => cluster.id !== survivor.id)
+      const componentParentId = survivor.parentClusterId ?? null
+      if (componentParentId !== null) {
+        const siblingCount = active.filter((cluster) => cluster.parentClusterId === componentParentId).length
+        if (siblingCount - losers.length < TAXONOMY_TREE_MIN_CHILDREN) continue
+      }
       const mergedLoserIds: TaxonomyCluster["id"][] = []
+      const mergeTargets = new Set<TaxonomyCluster["id"]>()
       let reassigned = 0
 
       // Lock sections are deliberately single-row and bounded: the Redis
@@ -308,6 +319,21 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
           }),
         )
         if (freshLoser === null) continue
+        if (survivorChildren.length > 0 && parentsWithChildren.has(freshLoser.id)) continue
+        const assignmentTarget =
+          survivorChildren.length === 0
+            ? survivor
+            : ([...survivorChildren].sort(
+                (a, b) =>
+                  cosineSimilarityNormalized(
+                    normalizeTaxonomyCentroid(b.centroid),
+                    normalizeTaxonomyCentroid(freshLoser.centroid),
+                  ) -
+                  cosineSimilarityNormalized(
+                    normalizeTaxonomyCentroid(a.centroid),
+                    normalizeTaxonomyCentroid(freshLoser.centroid),
+                  ),
+              )[0] ?? survivor)
 
         // (2) Unlocked heavy work: observation rows version by indexed_at. If
         // this hits the hard cap, leave the loser active and skip the merge;
@@ -322,10 +348,10 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
         yield* observations.reassignMany(
           loserObservations.map((observation) => ({
             observation,
-            assignedClusterId: survivor.id,
+            assignedClusterId: assignmentTarget.id,
             assignmentMethod: "gardening_reassign",
             assignmentConfidence: cosineSimilarityNormalized(
-              normalizeTaxonomyCentroid(survivor.centroid),
+              normalizeTaxonomyCentroid(assignmentTarget.centroid),
               normalizeTaxonomyCentroid(freshLoser.centroid),
             ),
             reassignmentRunId: input.runId,
@@ -342,7 +368,11 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
           Effect.gen(function* () {
             const row = yield* clusters.findById(freshLoser.id)
             if (row.state !== "active") return
-            yield* clusters.markMerged({ clusterId: freshLoser.id, mergedIntoClusterId: survivor.id, timestamp: now })
+            yield* clusters.markMerged({
+              clusterId: freshLoser.id,
+              mergedIntoClusterId: assignmentTarget.id,
+              timestamp: now,
+            })
           }),
         )
 
@@ -350,7 +380,7 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
         // depth, so only the path prefix and the direct children's parent
         // pointer change. Each descendant saves under its own lock — live
         // assignment increments descendant counters concurrently.
-        const freshSurvivorForPath = yield* clusters.findById(survivor.id)
+        const freshSurvivorForPath = yield* clusters.findById(assignmentTarget.id)
         const loserPrefix = `${freshLoser.path}${freshLoser.id}/`
         const survivorPrefix = `${freshSurvivorForPath.path}${freshSurvivorForPath.id}/`
         for (const descendant of active.filter((cluster) => cluster.path.startsWith(loserPrefix))) {
@@ -364,7 +394,7 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
               const fresh = yield* clusters.findById(descendant.id)
               yield* clusters.save({
                 ...fresh,
-                parentClusterId: fresh.parentClusterId === loser.id ? survivor.id : fresh.parentClusterId,
+                parentClusterId: fresh.parentClusterId === loser.id ? assignmentTarget.id : fresh.parentClusterId,
                 path: `${survivorPrefix}${fresh.path.slice(loserPrefix.length)}`,
                 updatedAt: now,
               })
@@ -372,35 +402,36 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
           )
         }
 
-        // (4) Survivor lock, briefly: fresh read + centroid merge + counters.
+        // (4) Target lock, briefly: fresh read + centroid merge + counters.
         yield* withTaxonomyClusterLock(
           {
             organizationId: input.organizationId,
-            clusterId: survivor.id,
+            clusterId: assignmentTarget.id,
             ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
           },
           Effect.gen(function* () {
-            const freshSurvivor = yield* clusters.findById(survivor.id)
+            const freshTarget = yield* clusters.findById(assignmentTarget.id)
             const mergedCentroid = mergeTaxonomyCentroids({
-              survivor: { ...freshSurvivor.centroid, clusteredAt: freshSurvivor.clusteredAt },
+              survivor: { ...freshTarget.centroid, clusteredAt: freshTarget.clusteredAt },
               loser: { ...freshLoser.centroid, clusteredAt: freshLoser.clusteredAt },
               timestamp: now,
             })
             yield* clusters.save({
-              ...freshSurvivor,
+              ...freshTarget,
               centroid: mergedCentroid,
               clusteredAt: mergedCentroid.clusteredAt,
-              observationCount: freshSurvivor.observationCount + freshLoser.observationCount,
+              observationCount: freshTarget.observationCount + freshLoser.observationCount,
               lastObservedAt:
-                freshLoser.lastObservedAt > freshSurvivor.lastObservedAt
+                freshLoser.lastObservedAt > freshTarget.lastObservedAt
                   ? freshLoser.lastObservedAt
-                  : freshSurvivor.lastObservedAt,
+                  : freshTarget.lastObservedAt,
               updatedAt: now,
             })
           }),
         )
 
         mergedLoserIds.push(freshLoser.id)
+        mergeTargets.add(assignmentTarget.id)
         reassigned += loserObservations.length
       }
 
@@ -417,7 +448,7 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
         // Only losers that actually merged this run: a loser skipped at the
         // state check (already merged/deprecated) must not appear in lineage.
         fromClusterIds: mergedLoserIds,
-        toClusterIds: [survivor.id],
+        toClusterIds: [...mergeTargets],
         similarity: minPairwiseSimilarity(component),
         createdAt: now,
       })

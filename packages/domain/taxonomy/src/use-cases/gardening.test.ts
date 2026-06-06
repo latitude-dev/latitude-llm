@@ -25,11 +25,13 @@ import { createFakeCalibrationProfileRepository } from "../testing/fake-calibrat
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyLineageRepository } from "../testing/fake-taxonomy-lineage-repository.ts"
 import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
+import { assertTaxonomyQualityUseCase } from "./assert-taxonomy-quality.ts"
 import { deprecateInactiveClustersUseCase } from "./deprecate-inactive-clusters.ts"
 import { emitLineageUseCase } from "./emit-lineage.ts"
 import { mergeNearDuplicateClustersUseCase } from "./merge-near-duplicate-clusters.ts"
 import { nameClusterUseCase } from "./name-taxonomy.ts"
 import { reassignNoiseToCurrentClustersUseCase } from "./reassign-noise-to-current-clusters.ts"
+import { reconcileClusterCountsUseCase } from "./reconcile-cluster-counts.ts"
 import { recurseTreeClustersUseCase } from "./recurse-tree-clusters.ts"
 import { computeBirthMinMembers, sweepNoiseAndBirthClustersUseCase } from "./sweep-noise-and-birth-clusters.ts"
 import { taxonomyGardenProjectDedupeKey, triggerProjectGardeningUseCase } from "./trigger-project-gardening.ts"
@@ -251,7 +253,7 @@ describe("gardening use-cases", () => {
     expect(merge?.toClusterIds).toEqual([survivor.id])
   })
 
-  it("merges root fragments at root density and re-parents the loser's subtree", async () => {
+  it("merges leaf root fragments at root density", async () => {
     // 0.80 cosine: above the coarse root link (0.70) that defines the level,
     // below the tight child-level floor (0.86) that used to gate nomination.
     const survivor = makeCluster({
@@ -269,26 +271,8 @@ describe("gardening use-cases", () => {
       centroid: centroidFrom(vector({ 0: 0.8, 1: 0.6 })),
       observationCount: 7,
     })
-    const child = makeCluster({
-      id: "e".repeat(24) as TaxonomyCluster["id"],
-      name: "Seat changes",
-      description: "Users change seats.",
-      parentClusterId: loser.id,
-      depth: 1,
-      path: `${loser.id}/`,
-      observationCount: 4,
-    })
-    const grandchild = makeCluster({
-      id: "f".repeat(24) as TaxonomyCluster["id"],
-      name: "Exit row seat changes",
-      description: "Users request exit row seats.",
-      parentClusterId: child.id,
-      depth: 2,
-      path: `${loser.id}/${child.id}/`,
-      observationCount: 2,
-    })
     const observations = createFakeTaxonomyObservationRepository([])
-    const clusters = createFakeTaxonomyClusterRepository([survivor, loser, child, grandchild])
+    const clusters = createFakeTaxonomyClusterRepository([survivor, loser])
 
     const result = await runUseCase(
       mergeNearDuplicateClustersUseCase({ organizationId, projectId, runId, now }),
@@ -298,10 +282,45 @@ describe("gardening use-cases", () => {
 
     expect(result.clustersMerged).toBe(1)
     expect(clusters.clusters.get(loser.id)?.state).toBe("merged")
-    expect(clusters.clusters.get(child.id)?.parentClusterId).toBe(survivor.id)
-    expect(clusters.clusters.get(child.id)?.path).toBe(`${survivor.id}/`)
-    expect(clusters.clusters.get(grandchild.id)?.parentClusterId).toBe(child.id)
-    expect(clusters.clusters.get(grandchild.id)?.path).toBe(`${survivor.id}/${child.id}/`)
+    expect(clusters.clusters.get(loser.id)?.mergedIntoClusterId).toBe(survivor.id)
+  })
+
+  it("merges aggregate-parent duplicates into the nearest child leaf", async () => {
+    const parent = makeCluster({
+      id: "c".repeat(24) as TaxonomyCluster["id"],
+      name: "Order management",
+      description: "Aggregate category for order conversations.",
+      observationCount: 100,
+    })
+    const child = makeCluster({
+      id: "e".repeat(24) as TaxonomyCluster["id"],
+      name: "Returns and exchanges",
+      description: "Users return or exchange items.",
+      parentClusterId: parent.id,
+      depth: 1,
+      path: `${parent.id}/`,
+      observationCount: 100,
+    })
+    const siblingRoot = makeCluster({
+      id: "d".repeat(24) as TaxonomyCluster["id"],
+      name: "Order returns",
+      description: "Users return orders.",
+      centroid: centroidFrom(vector({ 0: 0.99, 1: 0.01 })),
+      observationCount: 7,
+    })
+    const observations = createFakeTaxonomyObservationRepository([])
+    const clusters = createFakeTaxonomyClusterRepository([parent, child, siblingRoot])
+
+    const result = await runUseCase(
+      mergeNearDuplicateClustersUseCase({ organizationId, projectId, runId, now }),
+      observations,
+      clusters,
+    )
+
+    expect(result.clustersMerged).toBe(1)
+    expect(clusters.clusters.get(siblingRoot.id)?.state).toBe("merged")
+    expect(clusters.clusters.get(siblingRoot.id)?.mergedIntoClusterId).toBe(child.id)
+    expect(result.lineage[0]?.toClusterIds).toEqual([child.id])
   })
 
   it("merges the tight end of an approved chain instead of dropping the whole component", async () => {
@@ -438,6 +457,70 @@ describe("gardening use-cases", () => {
     expect(clusters.clusters.get(staleLowMass.id)?.state).toBe("deprecated")
     expect(clusters.clusters.get(staleHighMass.id)?.state).toBe("active")
     expect(clusters.clusters.get(recentlyObserved.id)?.state).toBe("active")
+  })
+
+  it("reconciles stale cluster counters from current observation assignments", async () => {
+    const survivor = makeCluster({ id: "s".repeat(24) as TaxonomyCluster["id"], observationCount: 999 })
+    const emptyLeaf = makeCluster({ id: "z".repeat(24) as TaxonomyCluster["id"], observationCount: 100 })
+    const child = makeCluster({
+      id: "h".repeat(24) as TaxonomyCluster["id"],
+      parentClusterId: survivor.id,
+      depth: 1,
+      path: `${survivor.id}/`,
+    })
+    const assigned = [0, 1, 2].map((index) => ({
+      ...makeObservation(index),
+      assignedClusterId: survivor.id,
+      assignmentMethod: "gardening_reassign" as const,
+    }))
+    const observations = createFakeTaxonomyObservationRepository(assigned)
+    const clusters = createFakeTaxonomyClusterRepository([survivor, emptyLeaf, child])
+
+    const result = await runUseCase(
+      reconcileClusterCountsUseCase({ organizationId, projectId, runId, now }),
+      observations,
+      clusters,
+    )
+
+    expect(result.clustersUpdated).toBe(2)
+    expect(result.clustersDeprecated).toBe(1)
+    expect(clusters.clusters.get(survivor.id)?.observationCount).toBe(3)
+    expect(clusters.clusters.get(emptyLeaf.id)?.state).toBe("deprecated")
+    expect(clusters.clusters.get(child.id)?.state).toBe("active")
+    expect(clusters.clusters.get(child.id)?.observationCount).toBe(3)
+  })
+
+  it("fails quality gates when aggregate parents still have direct assignments", async () => {
+    const parent = makeCluster({ id: "p".repeat(24) as TaxonomyCluster["id"], observationCount: 2 })
+    const child = makeCluster({
+      id: "h".repeat(24) as TaxonomyCluster["id"],
+      parentClusterId: parent.id,
+      depth: 1,
+      path: `${parent.id}/`,
+      observationCount: 2,
+    })
+    const observations = createFakeTaxonomyObservationRepository([
+      { ...makeObservation(40), assignedClusterId: parent.id, assignmentMethod: "gardening_reassign" },
+    ])
+    const clusters = createFakeTaxonomyClusterRepository([parent, child])
+
+    await expect(
+      runUseCase(assertTaxonomyQualityUseCase({ organizationId, projectId }), observations, clusters),
+    ).rejects.toMatchObject({
+      _tag: "TaxonomyQualityGateError",
+      findings: [`active parent cluster ${parent.id} has 1 direct current observations`],
+    })
+  })
+
+  it("fails quality gates for exact sibling duplicates", async () => {
+    const left = makeCluster({ id: "l".repeat(24) as TaxonomyCluster["id"], name: "Order Cancellation Requests" })
+    const right = makeCluster({ id: "m".repeat(24) as TaxonomyCluster["id"], name: "order cancellation requests" })
+    const observations = createFakeTaxonomyObservationRepository([])
+    const clusters = createFakeTaxonomyClusterRepository([left, right])
+
+    await expect(runUseCase(assertTaxonomyQualityUseCase({ projectId }), observations, clusters)).rejects.toMatchObject(
+      { _tag: "TaxonomyQualityGateError" },
+    )
   })
 
   it("reassigns recent noise to current clusters using the two-gate assignment", async () => {
@@ -587,7 +670,7 @@ describe("gardening use-cases", () => {
 })
 
 describe("recurseTreeClustersUseCase", () => {
-  it("splits a fat node into tighter-density children and keeps residue on the parent", async () => {
+  it("splits a fat node into tighter-density children and makes the parent aggregate-only", async () => {
     const node = makeCluster({ observationCount: 60 })
     const clusters = createFakeTaxonomyClusterRepository([node])
     const observations = createFakeTaxonomyObservationRepository(
@@ -615,7 +698,8 @@ describe("recurseTreeClustersUseCase", () => {
     expect(children.map((child) => child.depth)).toEqual([1, 1])
     expect(children.map((child) => child.path)).toEqual([`${node.id}/`, `${node.id}/`])
     expect(children.reduce((sum, child) => sum + child.observationCount, 0)).toBe(60)
-    expect(clusters.clusters.get(node.id)?.observationCount).toBe(0)
+    expect(clusters.clusters.get(node.id)?.observationCount).toBe(60)
+    expect([...observations.rows.values()].filter((row) => row.assignedClusterId === node.id)).toHaveLength(0)
     expect([...observations.rows.values()].filter((row) => row.assignmentMethod === "gardening_reassign")).toHaveLength(
       60,
     )

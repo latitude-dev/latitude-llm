@@ -55,7 +55,10 @@ export const routeToDeepestClusterUseCase = (input: RouteToDeepestClusterInput) 
               relativeMargin: baseGates.relativeMargin,
             }
       const levelDecision = decideClusterAssignment(nearest, levelGates)
-      if (levelDecision.method !== "centroid_online") break
+      if (levelDecision.method !== "centroid_online") {
+        if (parent !== null && nearest.length > 0) return decideClusterAssignment([], baseGates)
+        break
+      }
       decision = levelDecision
       const match = nearest.find((candidate) => candidate.cluster.id === levelDecision.clusterId)
       if (!match) break

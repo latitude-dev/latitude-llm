@@ -110,7 +110,6 @@ CREATE TABLE taxonomy_observations
     `session_id` String CODEC(ZSTD(1)),
     `analysis_hash` FixedString(64) CODEC(ZSTD(1)),
     `moment_id` String CODEC(ZSTD(1)),
-    `dimension` LowCardinality(String) CODEC(ZSTD(1)),
     `projection_method` LowCardinality(String) CODEC(ZSTD(1)),
     `projection_hash` FixedString(64) CODEC(ZSTD(1)),
     `projection_metadata` String DEFAULT '{}' CODEC(ZSTD(3)),
@@ -126,8 +125,8 @@ CREATE TABLE taxonomy_observations
 )
 ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, dimension, observation_id)
-ORDER BY (organization_id, project_id, dimension, observation_id)
+PRIMARY KEY (organization_id, project_id, observation_id)
+ORDER BY (organization_id, project_id, observation_id)
 SETTINGS index_granularity = 8192;
 
 CREATE TABLE dataset_rows

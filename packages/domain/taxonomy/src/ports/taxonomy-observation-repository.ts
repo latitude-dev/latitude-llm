@@ -53,6 +53,13 @@ export interface TaxonomyObservationClusterTrendCounts {
   readonly baselineDays: number
 }
 
+export interface TaxonomyObservationClusterAssignmentCount {
+  readonly clusterId: TaxonomyClusterId
+  readonly count: number
+  readonly firstObservedAt: Date
+  readonly lastObservedAt: Date
+}
+
 export interface TaxonomyObservationRepositoryShape {
   readonly upsert: (observation: TaxonomyMomentObservation) => Effect.Effect<void, RepositoryError, ChSqlClient>
   readonly upsertMany: (
@@ -116,6 +123,13 @@ export interface TaxonomyObservationRepositoryShape {
     readonly since: Date
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyObservationClusterOccurrence[], RepositoryError, ChSqlClient>
+  readonly getClusterAssignmentCounts: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly clusterIds: readonly TaxonomyClusterId[]
+    readonly startTimeFrom?: Date
+    readonly startTimeTo?: Date
+  }) => Effect.Effect<readonly TaxonomyObservationClusterAssignmentCount[], RepositoryError, ChSqlClient>
   readonly getClusterTrendCounts: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

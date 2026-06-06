@@ -48,6 +48,7 @@ export {
   seedDemoProjectTraceSearchActivity,
 } from "./seed-demo-project-activities.ts"
 export {
+  assertGardenTaxonomyQualityActivity,
   calibrateGardenTaxonomyActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
@@ -56,10 +57,12 @@ export {
   type GardenTaxonomyActivityInput,
   type GardenTaxonomyActivityResult,
   type GardenTaxonomyNamingPlanResult,
+  type GardenTaxonomyQualityResult,
   mergeGardenTaxonomyClustersActivity,
   nameGardenTaxonomyActivity,
   planGardenTaxonomyNamingActivity,
   reassignGardenTaxonomyNoiseActivity,
+  reconcileGardenTaxonomyCountsActivity,
   recurseGardenTaxonomyTreeActivity,
   startGardenTaxonomyRunActivity,
   sweepGardenTaxonomyNoiseActivity,

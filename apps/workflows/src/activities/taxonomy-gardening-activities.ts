@@ -1,6 +1,7 @@
 import { CONVERSATION_CALIBRATION_TTL_MS, calibrateSessionThresholdsUseCase } from "@domain/conversation-intelligence"
 import { OrganizationId, ProjectId, TaxonomyClusterId, TaxonomyRunId } from "@domain/shared"
 import {
+  assertTaxonomyQualityUseCase,
   CalibrationProfileRepository,
   calibrateClusteringThresholdsUseCase,
   deprecateInactiveClustersUseCase,
@@ -8,6 +9,7 @@ import {
   mergeNearDuplicateClustersUseCase,
   nameClusterUseCase,
   reassignNoiseToCurrentClustersUseCase,
+  reconcileClusterCountsUseCase,
   recurseTreeClustersUseCase,
   sweepNoiseAndBirthClustersUseCase,
   TAXONOMY_CALIBRATION_TTL_MS,
@@ -85,6 +87,11 @@ export interface GardenTaxonomyLineageResult {
 export interface GardenTaxonomyNamingPlanResult {
   readonly clusterIds: readonly string[]
   readonly clustersScanned: number
+}
+
+export interface GardenTaxonomyQualityResult {
+  readonly clustersScanned: number
+  readonly findings: readonly string[]
 }
 
 export type GardenTaxonomyActivityResult = TaxonomyRun
@@ -246,10 +253,11 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
  */
 const GARDEN_STAGE_OFFSET_MS = {
   sweep: 0,
-  merge: 1,
-  deprecate: 2,
-  reassign: 3,
-  recurse: 4,
+  reassign: 1,
+  recurse: 2,
+  merge: 3,
+  deprecate: 4,
+  reconcile: 5,
 } as const
 
 const stageNow = (now: string, stage: keyof typeof GARDEN_STAGE_OFFSET_MS): Date =>
@@ -333,6 +341,36 @@ export const recurseGardenTaxonomyTreeActivity = (input: GardenTaxonomyStepInput
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
       withTaxonomyAiAndRedis,
+    ),
+  )
+
+export const reconcileGardenTaxonomyCountsActivity = (input: GardenTaxonomyStepInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow reconcile counts",
+    input,
+    reconcileClusterCountsUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      runId: TaxonomyRunId(input.runId),
+      dimension: input.dimension,
+      now: stageNow(input.now, "reconcile"),
+    }).pipe(
+      (effect) => withTaxonomyPostgres(effect, input.organizationId),
+      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
+    ),
+  )
+
+export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow assert quality",
+    input,
+    assertTaxonomyQualityUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      dimension: input.dimension,
+    }).pipe(
+      (effect) => withTaxonomyPostgres(effect, input.organizationId),
+      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
     ),
   )
 

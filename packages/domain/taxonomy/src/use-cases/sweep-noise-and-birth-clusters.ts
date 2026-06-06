@@ -14,12 +14,12 @@ import {
   TAXONOMY_CALIBRATION_DIAMETER_MAX,
   TAXONOMY_CALIBRATION_DIAMETER_MIN,
   TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+  TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
   TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_CEILING,
   TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR,
   TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO,
   TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
-  TAXONOMY_NOISE_SAMPLE_MAX,
   TAXONOMY_TREE_ROOT_CAP,
   TAXONOMY_TREE_ROOT_LINK_THRESHOLD,
 } from "../constants.ts"
@@ -124,7 +124,7 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
       organizationId: input.organizationId,
       projectId: input.projectId,
       since: lookbackStart(now),
-      limit: TAXONOMY_NOISE_SAMPLE_MAX,
+      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
     })
 
     if (noise.length < TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS) {
@@ -160,7 +160,7 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
       TAXONOMY_CALIBRATION_DIAMETER_MAX,
     )
     const normalizedEmbeddings = noise.map((observation) => normalizeTaxonomyEmbedding(observation.embedding))
-    const minMembers = Math.round(computeBirthMinMembers(noise.length) * (1 + densityPressure))
+    const minMembers = Math.min(noise.length, Math.round(computeBirthMinMembers(noise.length) * (1 + densityPressure)))
     const candidates = diameterBoundedGreedyClusters({
       embeddings: normalizedEmbeddings,
       connectivityThreshold: birthLink + densityPressure * TAXONOMY_BIRTH_LINK_PRESSURE_RANGE,

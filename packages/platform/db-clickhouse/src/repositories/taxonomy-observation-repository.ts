@@ -10,6 +10,7 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import {
+  TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
   type TaxonomyMomentObservation,
   TaxonomyObservationRepository,
   taxonomyMomentObservationSchema,
@@ -66,6 +67,19 @@ const selectColumns = `
   retention_days,
   indexed_at
 `
+
+const latestProjectWindow = `
+  SELECT ${selectColumns}
+  FROM taxonomy_observations FINAL
+  WHERE organization_id = {organizationId:String}
+    AND project_id = {projectId:String}
+  ORDER BY start_time DESC, observation_id ASC
+  LIMIT {windowLimit:UInt32}
+`
+
+const latestProjectWindowParams = {
+  windowLimit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+}
 
 const toInsertRow = (observation: TaxonomyMomentObservation) => ({
   organization_id: observation.organizationId as string,
@@ -198,7 +212,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT ${selectColumns}
-                        FROM taxonomy_observations FINAL
+                        FROM (${latestProjectWindow})
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND assigned_cluster_id = ''
@@ -211,6 +225,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                   projectId: projectId as string,
                   since: toClickhouseDateTime(since),
                   limit: limit ?? 10_000,
+                  ...latestProjectWindowParams,
                 },
                 format: "JSONEachRow",
               })
@@ -230,7 +245,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT ${selectColumns}
-                        FROM taxonomy_observations FINAL
+                        FROM (${latestProjectWindow})
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND assigned_cluster_id = {clusterId:String}
@@ -248,6 +263,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                         beforeObservationId: beforeObservationId ?? "",
                       }
                     : {}),
+                  ...latestProjectWindowParams,
                 },
                 format: "JSONEachRow",
               })
@@ -264,7 +280,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT ${selectColumns}
-                        FROM taxonomy_observations FINAL
+                        FROM (${latestProjectWindow})
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND assigned_cluster_id = {clusterId:String}
@@ -275,6 +291,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                   projectId: projectId as string,
                   clusterId: clusterId as string,
                   limit,
+                  ...latestProjectWindowParams,
                 },
                 format: "JSONEachRow",
               })
@@ -321,7 +338,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT embedding
-                        FROM taxonomy_observations FINAL
+                        FROM (${latestProjectWindow})
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND length(embedding) > 0
@@ -331,6 +348,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   limit,
+                  ...latestProjectWindowParams,
                 },
                 format: "JSONEachRow",
               })
@@ -349,7 +367,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT assigned_cluster_id != '' AS assigned, assignment_confidence AS confidence
-                        FROM taxonomy_observations FINAL
+                        FROM (${latestProjectWindow})
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                         ORDER BY cityHash64(observation_id)
@@ -358,6 +376,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   limit,
+                  ...latestProjectWindowParams,
                 },
                 format: "JSONEachRow",
               })
@@ -413,7 +432,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .query(async (client) => {
               const result = await client.query({
                 query: `SELECT assigned_cluster_id AS cluster_id, count() AS count
-                        FROM taxonomy_observations FINAL
+                        FROM (${latestProjectWindow})
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND start_time >= {since:DateTime64(9, 'UTC')}
@@ -426,6 +445,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                   projectId: projectId as string,
                   since: toClickhouseDateTime(since),
                   limit,
+                  ...latestProjectWindowParams,
                 },
                 format: "JSONEachRow",
               })
@@ -435,6 +455,57 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(
               Effect.mapError((error) =>
                 toRepositoryError(error, "TaxonomyObservationRepository.getTopClustersByOccurrence"),
+              ),
+            )
+        }),
+
+      getClusterAssignmentCounts: ({ organizationId, projectId, clusterIds, startTimeFrom, startTimeTo }) =>
+        Effect.gen(function* () {
+          if (clusterIds.length === 0) return []
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const fromClause = startTimeFrom ? "AND start_time >= {startTimeFrom:DateTime64(9, 'UTC')}" : ""
+          const toClause = startTimeTo ? "AND start_time < {startTimeTo:DateTime64(9, 'UTC')}" : ""
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          assigned_cluster_id AS cluster_id,
+                          count() AS count,
+                          min(start_time) AS first_observed_at,
+                          max(start_time) AS last_observed_at
+                        FROM (${latestProjectWindow})
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND assigned_cluster_id IN {clusterIds:Array(String)}
+                          ${fromClause}
+                          ${toClause}
+                        GROUP BY assigned_cluster_id`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  clusterIds: clusterIds as readonly string[],
+                  ...(startTimeFrom ? { startTimeFrom: toClickhouseDateTime(startTimeFrom) } : {}),
+                  ...(startTimeTo ? { startTimeTo: toClickhouseDateTime(startTimeTo) } : {}),
+                  ...latestProjectWindowParams,
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<{
+                cluster_id: string
+                count: string | number
+                first_observed_at: string
+                last_observed_at: string
+              }>()
+              return rows.map((row) => ({
+                clusterId: TaxonomyClusterId(row.cluster_id),
+                count: Number(row.count),
+                firstObservedAt: parseClickhouseDate(row.first_observed_at),
+                lastObservedAt: parseClickhouseDate(row.last_observed_at),
+              }))
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyObservationRepository.getClusterAssignmentCounts"),
               ),
             )
         }),
@@ -450,7 +521,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                           assigned_cluster_id AS cluster_id,
                           countIf(start_time >= {currentSince:DateTime64(9, 'UTC')}) AS current_count,
                           countIf(start_time >= {baselineSince:DateTime64(9, 'UTC')} AND start_time < {currentSince:DateTime64(9, 'UTC')}) AS baseline_count
-                        FROM taxonomy_observations FINAL
+                        FROM (${latestProjectWindow})
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND assigned_cluster_id IN {clusterIds:Array(String)}
@@ -462,6 +533,7 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
                   clusterIds: clusterIds as readonly string[],
                   currentSince: toClickhouseDateTime(currentSince),
                   baselineSince: toClickhouseDateTime(baselineSince),
+                  ...latestProjectWindowParams,
                 },
                 format: "JSONEachRow",
               })

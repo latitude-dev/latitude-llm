@@ -99,12 +99,13 @@ CREATE TABLE IF NOT EXISTS taxonomy_observations
     indexed_at                DateTime64(3, 'UTC')   DEFAULT now64(3) CODEC(Delta(8), LZ4),
     INDEX idx_taxonomy_observations_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 4,
     INDEX idx_taxonomy_observations_analysis_hash analysis_hash TYPE bloom_filter(0.01) GRANULARITY 4,
-    INDEX idx_taxonomy_observations_observation_id observation_id TYPE bloom_filter(0.01) GRANULARITY 4
+    INDEX idx_taxonomy_observations_observation_id observation_id TYPE bloom_filter(0.01) GRANULARITY 4,
+    INDEX idx_taxonomy_observations_cluster_id assigned_cluster_id TYPE bloom_filter(0.01) GRANULARITY 4
 )
 ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, assigned_cluster_id, start_time)
-ORDER BY (organization_id, project_id, assigned_cluster_id, start_time, observation_id)
+PRIMARY KEY (organization_id, project_id, observation_id)
+ORDER BY (organization_id, project_id, observation_id)
 TTL toDateTime(start_time) + toIntervalDay(retention_days + 30) DELETE;
 
 -- +goose Down

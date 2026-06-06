@@ -13,6 +13,7 @@ import {
   TAXONOMY_TREE_CHILD_LINK_QUANTILE,
   TAXONOMY_TREE_CHILD_MIN_MEMBERS_RATIO,
   TAXONOMY_TREE_CHILDREN_CAP,
+  TAXONOMY_TREE_DEEP_MAX_CHILD_DOMINANCE,
   TAXONOMY_TREE_MAX_CHILD_DOMINANCE,
   TAXONOMY_TREE_MAX_DEPTH,
   TAXONOMY_TREE_MIN_CHILDREN,
@@ -50,6 +51,18 @@ export interface RecurseTreeClustersResult {
   readonly childrenBorn: number
   readonly observationsMoved: number
   readonly lineage: readonly TaxonomyClusterLineage[]
+}
+
+const meanNormalizedEmbedding = (embeddings: readonly (readonly number[])[]): readonly number[] => {
+  const dimensions = embeddings[0]?.length ?? 0
+  if (dimensions === 0) return []
+  const sum = Array.from({ length: dimensions }, () => 0)
+  for (const embedding of embeddings) {
+    for (let index = 0; index < dimensions; index++) {
+      sum[index] = (sum[index] ?? 0) + (embedding[index] ?? 0)
+    }
+  }
+  return normalizeTaxonomyEmbedding(sum)
 }
 
 const buildChild = (input: {
@@ -199,23 +212,61 @@ export const recurseTreeClustersUseCase = (input: RecurseTreeClustersInput) =>
         .slice(0, TAXONOMY_TREE_CHILDREN_CAP)
 
       // Rollback checks: the node must actually have internal structure.
+      // Root splits can be broad and imbalanced (retail vs flight vs mobile),
+      // while deeper splits need a stricter dominance cap so a child does not
+      // become a near-duplicate bucket for most of its parent.
       const covered = groups.reduce((sum, group) => sum + group.members.length, 0)
       const dominant = groups[0]?.members.length ?? 0
+      const maxChildDominance =
+        node.depth === 0 ? TAXONOMY_TREE_MAX_CHILD_DOMINANCE : TAXONOMY_TREE_DEEP_MAX_CHILD_DOMINANCE
       if (
         groups.length < TAXONOMY_TREE_MIN_CHILDREN ||
         covered / members.length < TAXONOMY_TREE_MIN_COVERAGE ||
-        (covered > 0 && dominant / covered > TAXONOMY_TREE_MAX_CHILD_DOMINANCE)
+        (covered > 0 && dominant / covered > maxChildDominance)
       ) {
         continue
       }
 
+      const assignedGroups = groups.map((group) => [...group.members])
+      const coveredIndexes = new Set(assignedGroups.flat())
+      const groupCentroids = assignedGroups.map((memberIndexes) =>
+        meanNormalizedEmbedding(
+          memberIndexes
+            .map((index) => normalized[index])
+            .filter((embedding): embedding is number[] => embedding !== undefined),
+        ),
+      )
+
+      // Interior nodes are aggregate categories, not competing assignment
+      // buckets. Once a split is accepted, every directly-assigned member must
+      // move to a child. Sparse residue is routed to the nearest accepted child
+      // instead of remaining on the parent and later re-splitting into semantic
+      // duplicates of the same broad topic.
+      for (let memberIndex = 0; memberIndex < members.length; memberIndex++) {
+        if (coveredIndexes.has(memberIndex)) continue
+        const embedding = normalized[memberIndex]
+        if (!embedding) continue
+        let bestGroup = 0
+        let bestSimilarity = Number.NEGATIVE_INFINITY
+        for (let groupIndex = 0; groupIndex < groupCentroids.length; groupIndex++) {
+          const centroid = groupCentroids[groupIndex]
+          if (!centroid || centroid.length === 0) continue
+          const similarity = cosineSimilarityNormalized(embedding, centroid)
+          if (similarity > bestSimilarity) {
+            bestSimilarity = similarity
+            bestGroup = groupIndex
+          }
+        }
+        assignedGroups[bestGroup]?.push(memberIndex)
+      }
+
       const childIds: TaxonomyCluster["id"][] = []
       let movedFromNode = 0
-      for (const group of groups) {
-        const memberObservations = group.members
+      for (const groupMembers of assignedGroups) {
+        const memberObservations = groupMembers
           .map((index) => members[index])
           .filter((member): member is (typeof members)[number] => member !== undefined)
-        const memberEmbeddings = group.members
+        const memberEmbeddings = groupMembers
           .map((index) => normalized[index])
           .filter((embedding): embedding is number[] => embedding !== undefined)
         const child = buildChild({
@@ -241,24 +292,21 @@ export const recurseTreeClustersUseCase = (input: RecurseTreeClustersInput) =>
       }
       observationsMoved += movedFromNode
 
-      // Parent keeps only the uncovered residue. The listed members are the
-      // source of truth — the stored counter can lag behind (e.g. absorbed
-      // groups); anything beyond the list cap stays counted on top. The split
-      // density is persisted so child-level merge floors and descent gates
-      // use the density that created this level. The centroid is deliberately
-      // NOT recomputed from the residue: an interior node represents its
-      // whole subtree for the first hop of deepest-fit descent, so it keeps
-      // the full-membership centroid. The save runs under the cluster lock
-      // against a fresh read — live assignment increments the same counter
-      // concurrently and must not be lost to this snapshot.
+      // Parent becomes an aggregate category: observations are assigned only
+      // to leaves. Keep the full-membership centroid for the first hop of
+      // deepest-fit descent and persist the split density so child-level merge
+      // floors/read gates use the density that created this level. Reconcile
+      // later rebuilds parent aggregate counts from descendant assignments.
+      // The save runs under the cluster lock against a fresh read — live
+      // assignment increments the same counter concurrently and must not be
+      // lost to this snapshot.
       yield* withTaxonomyClusterLock(
         { organizationId: input.organizationId, clusterId: node.id, ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS },
         Effect.gen(function* () {
           const fresh = yield* clusters.findById(node.id)
           yield* clusters.save({
             ...fresh,
-            observationCount:
-              Math.max(0, members.length - movedFromNode) + Math.max(0, fresh.observationCount - members.length),
+            observationCount: Math.max(movedFromNode, fresh.observationCount),
             splitLinkThreshold: childLink,
             updatedAt: now,
           })

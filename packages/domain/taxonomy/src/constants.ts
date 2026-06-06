@@ -16,12 +16,8 @@ export const TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH = 280
 export const TAXONOMY_PENDING_DISPLAY_NAME = "Pending"
 
 /**
- * Single clustering dimension. Earlier iterations clustered role-filtered
- * projections into separate user_intent / agent_behavior dimensions; QA showed
- * raw-text embeddings cluster by topic regardless of the role filter, so the
- * taxonomy now embraces that: moments cluster into topics, signals (moment
- * labels) carry the behavioural facet, and behaviour variants come from
- * within-topic sub-clustering (follow-up work).
+ * Single clustering dimension. Taxonomy observations are session-level topic
+ * projections; moment labels carry behavioural/process facets separately.
  */
 export const TAXONOMY_DIMENSIONS = ["topic"] as const
 
@@ -52,7 +48,7 @@ export const TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS = [
 export const TAXONOMY_EMBEDDING_MODEL = "voyage-4-large"
 export const TAXONOMY_EMBEDDING_DIMENSIONS = 2048
 
-export const TAXONOMY_PROJECTION_METHODS = ["moment_text_embedding"] as const
+export const TAXONOMY_PROJECTION_METHODS = ["moment_text_embedding", "session_user_intent_embedding"] as const
 
 // ---------------------------------------------------------------------------
 // Session document
@@ -99,13 +95,11 @@ export const TAXONOMY_GARDENING_MAX_RUNTIME_MS = 5 * 60_000
 export const TAXONOMY_GARDENING_STALE_GRACE_MS = 60_000
 export const TAXONOMY_GARDENING_SWEEP_BATCH = 25
 
-/**
- * Hard cap on `listAllByCluster` results. Merge needs every row to reassign;
- * naming/trends only need a sample. Pick generously for merge (50k clusters
- * × ~1k obs each is well past typical) and rely on callers to pass a smaller
- * value where a sample is enough.
- */
-export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 50_000
+/** Gardening works over the live taxonomy window: newest observations first. */
+export const TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX = 100_000
+
+/** Hard cap on per-cluster batch reads inside the live gardening window. */
+export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 100_000
 
 // ---------------------------------------------------------------------------
 // Births (noise sweep) + merge / death
@@ -229,15 +223,13 @@ export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 // Storage
 // ---------------------------------------------------------------------------
 
-export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 90
+/** Same TTL horizon as semantic-search embeddings. */
+export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
 
 /**
- * Taxonomy observations are a representative clustering sample, not the full
- * semantic-moment fact table. Semantic moments and moment labels stay complete;
- * gardening is bounded by these caps.
+ * Taxonomy observations are always ingested while retained. Gardening is the
+ * bounded part: every pass operates on the newest live observations only.
  */
-export const TAXONOMY_OBSERVATION_SAMPLE_MAX = 100_000
-export const TAXONOMY_NOISE_SAMPLE_MAX = 20_000
 
 // ---------------------------------------------------------------------------
 // Lock TTLs (Redis SET NX EX)
@@ -286,10 +278,15 @@ export const TAXONOMY_CALIBRATION_PURITY_MEMBERS = 6
 // Cluster tree (categories are depth-0 nodes; depth = clustering density)
 // ---------------------------------------------------------------------------
 
-/** Levels below root: 0 = root ("category"), 1 = topic, 2 = subtopic. */
+/**
+ * Levels below root. Until parent nodes become aggregate-only categories, keep
+ * online gardening to one child level; recursively splitting direct-assignment
+ * residue can create parent/child/grandchild duplicates where the deepest node
+ * simply absorbs the broad root's mass.
+ */
 export const TAXONOMY_TREE_MAX_DEPTH = 2
 /** Governor caps per level. */
-export const TAXONOMY_TREE_ROOT_CAP = 12
+export const TAXONOMY_TREE_ROOT_CAP = 6
 export const TAXONOMY_TREE_CHILDREN_CAP = 8
 /**
  * Root births cluster at a coarser density than the old flat threshold so
@@ -307,15 +304,21 @@ export const TAXONOMY_CALIBRATION_ROOT_LINK_MAX = 0.78
 export const TAXONOMY_TREE_RECURSE_SHARE = 0.12
 export const TAXONOMY_TREE_RECURSE_MIN_OBSERVATIONS = 60
 /** Bound recursion work per gardening run. */
-export const TAXONOMY_TREE_RECURSE_PER_RUN = 2
+export const TAXONOMY_TREE_RECURSE_PER_RUN = 3
 /**
  * Child birth density derives from the parent's own member-pairwise
  * similarity distribution (per-node density schedule), clamped below.
  */
 export const TAXONOMY_TREE_CHILD_LINK_QUANTILE = 0.7
 export const TAXONOMY_TREE_CHILD_LINK_MIN = 0.78
-export const TAXONOMY_TREE_CHILD_LINK_MAX = 0.92
-export const TAXONOMY_TREE_CHILD_MIN_MEMBERS_RATIO = 0.05
+/**
+ * Child splits should expose navigable subtopics under broad roots. A very
+ * high per-node quantile can overfit to boilerplate-similar support sessions
+ * and reject useful retail subtopic splits as tiny shards, so cap child-level
+ * density near the coarse topic boundary.
+ */
+export const TAXONOMY_TREE_CHILD_LINK_MAX = 0.8
+export const TAXONOMY_TREE_CHILD_MIN_MEMBERS_RATIO = 0.03
 /**
  * Recursion rollback: a split must produce at least two children covering a
  * meaningful share of members, and no child may dominate the covered mass —
@@ -325,3 +328,4 @@ export const TAXONOMY_TREE_CHILD_MIN_MEMBERS_RATIO = 0.05
 export const TAXONOMY_TREE_MIN_CHILDREN = 2
 export const TAXONOMY_TREE_MIN_COVERAGE = 0.3
 export const TAXONOMY_TREE_MAX_CHILD_DOMINANCE = 0.9
+export const TAXONOMY_TREE_DEEP_MAX_CHILD_DOMINANCE = 0.75
