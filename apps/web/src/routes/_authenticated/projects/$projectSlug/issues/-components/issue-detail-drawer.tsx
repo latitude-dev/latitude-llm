@@ -12,18 +12,21 @@ import {
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
+import { Link, useParams } from "@tanstack/react-router"
 import {
   ArrowDownIcon,
   ArrowDownRightIcon,
   ArrowUpIcon,
   CheckIcon,
   DatabaseIcon,
+  SquareArrowOutUpRightIcon,
   TextAlignStartIcon,
 } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
 import { useShowIncidentsOverlay } from "../../../../../../domains/alerts/use-show-incidents-overlay.ts"
+import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import {
   useIssueDetail,
   useIssueTracesCount,
@@ -419,6 +422,8 @@ export function IssueDetailDrawer({
   readonly canNavigatePrev: boolean
 }) {
   const [overlayActive, setOverlayActive] = useState(false)
+  const { projectSlug } = useParams({ strict: false })
+  const hasIssuePage = useHasFeatureFlag("issue-page")
 
   useHotkeys([
     {
@@ -444,6 +449,21 @@ export function IssueDetailDrawer({
       }
       actions={
         <>
+          {hasIssuePage && projectSlug ? (
+            <Tooltip
+              asChild
+              side="bottom"
+              trigger={
+                <Button asChild variant="ghost" className="w-8 h-8 p-0" aria-label="Open full page">
+                  <Link to="/projects/$projectSlug/issues/$issueId" params={{ projectSlug, issueId }}>
+                    <SquareArrowOutUpRightIcon className="w-4 h-4 text-muted-foreground" />
+                  </Link>
+                </Button>
+              }
+            >
+              Open full page
+            </Tooltip>
+          ) : null}
           <Tooltip
             asChild
             side="bottom"

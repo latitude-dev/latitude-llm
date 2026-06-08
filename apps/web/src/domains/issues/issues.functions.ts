@@ -13,6 +13,7 @@ import {
   type IssueListItem,
   IssueRepository,
   issueLifecycleCommandSchema,
+  issuePrioritySchema,
   issuesLifecycleGroupSchema,
   issuesSortDirectionSchema,
   issuesSortFieldSchema,
@@ -22,16 +23,18 @@ import {
   type OrgIssueSearchItem,
   searchOrgIssuesUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
+  updateIssueTriageUseCase,
 } from "@domain/issues"
 import { type IssueEscalationThresholdBucket, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, resolveSettings, SettingsReader } from "@domain/shared"
-import type { TraceDetail } from "@domain/spans"
+import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
   IssueRepositoryLive,
+  MembershipRepositoryLive,
   OutboxEventWriterLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
@@ -156,6 +159,19 @@ const issueTracesCountInputSchema = z.object({
   issueId: z.string(),
 })
 
+const issueImpactInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+})
+
+const updateIssueTriageInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+  // `undefined` (key omitted) leaves the field unchanged; `null` clears it; a value sets it.
+  assigneeId: z.string().nullable().optional(),
+  priority: issuePrioritySchema.nullable().optional(),
+})
+
 const toUtcDayEnd = (value: Date): Date =>
   new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 23, 59, 59, 999))
 
@@ -182,6 +198,8 @@ const toIssueDetailRecord = (input: {
   name: input.issue.name,
   description: input.issue.description,
   source: input.issue.source,
+  assigneeId: input.issue.assigneeId,
+  priority: input.issue.priority,
   states: input.states,
   createdAt: input.issue.createdAt.toISOString(),
   updatedAt: input.issue.updatedAt.toISOString(),
@@ -637,6 +655,93 @@ export const countIssueTraces = createServerFn({ method: "GET" })
         return { total }
       }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
+  })
+
+export interface IssueImpactRecord {
+  readonly occurrences: number
+  readonly affectedTraces: number
+  readonly affectedSessions: number
+  readonly affectedUsers: number
+  readonly costMicrocents: number
+  readonly tokens: number
+  readonly totalProjectTraces: number
+  /** Fraction of project traces affected by this issue, in `[0, 1]`. */
+  readonly affectedTracesPercent: number
+}
+
+export const getIssueImpact = createServerFn({ method: "GET" })
+  .inputValidator(issueImpactInputSchema)
+  .handler(async ({ data }): Promise<IssueImpactRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const chClient = getClickhouseClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        const traceRepository = yield* TraceRepository
+
+        const [impact, totalProjectTraces] = yield* Effect.all([
+          scoreAnalyticsRepository.aggregateImpactByIssue({ organizationId: orgId, projectId, issueId }),
+          traceRepository.countByProjectId({ organizationId: orgId, projectId }),
+        ])
+
+        const affectedTracesPercent =
+          totalProjectTraces === 0 ? 0 : Math.min(impact.affectedTraces / totalProjectTraces, 1)
+
+        return {
+          occurrences: impact.occurrences,
+          affectedTraces: impact.affectedTraces,
+          affectedSessions: impact.affectedSessions,
+          affectedUsers: impact.affectedUsers,
+          costMicrocents: impact.costMicrocents,
+          tokens: impact.tokens,
+          totalProjectTraces,
+          affectedTracesPercent,
+        } satisfies IssueImpactRecord
+      }).pipe(
+        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
+        withTracing,
+      ),
+    )
+  })
+
+export interface UpdateIssueTriageRecord {
+  readonly issueId: string
+  readonly assigneeId: string | null
+  readonly priority: z.infer<typeof issuePrioritySchema> | null
+  readonly updatedAt: string
+  readonly changed: boolean
+}
+
+export const updateIssueTriage = createServerFn({ method: "POST" })
+  .inputValidator(updateIssueTriageInputSchema)
+  .handler(async ({ data }): Promise<UpdateIssueTriageRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+
+    const result = await Effect.runPromise(
+      updateIssueTriageUseCase({
+        projectId: data.projectId,
+        issueId: IssueId(data.issueId),
+        ...(data.assigneeId !== undefined ? { assigneeId: data.assigneeId } : {}),
+        ...(data.priority !== undefined ? { priority: data.priority } : {}),
+      }).pipe(
+        withPostgres(Layer.mergeAll(IssueRepositoryLive, MembershipRepositoryLive), pgClient, orgId),
+        withTracing,
+      ),
+    )
+
+    return {
+      issueId: result.issueId,
+      assigneeId: result.assigneeId,
+      priority: result.priority,
+      updatedAt: result.updatedAt.toISOString(),
+      changed: result.changed,
+    }
   })
 
 export const applyIssueLifecycleAction = createServerFn({ method: "POST" })

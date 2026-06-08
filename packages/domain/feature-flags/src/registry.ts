@@ -38,6 +38,12 @@ export const FEATURE_FLAGS = {
     name: "Test Mode sandbox",
     description: "Enables the Live ⇄ Sandbox switcher and the sandbox namespace for isolated development traces.",
   },
+  "issue-page": {
+    emoji: "🔍",
+    name: "Issue detail page",
+    description:
+      "Enables the dedicated full-page issue view (impact, triage, analysis) and its 'Open full page' entry points.",
+  },
 } as const satisfies Record<
   string,
   {

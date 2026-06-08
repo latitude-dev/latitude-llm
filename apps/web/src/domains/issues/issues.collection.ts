@@ -1,23 +1,27 @@
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
-import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type {
   IssueDetailRecord,
+  IssueImpactRecord,
   IssueRecord,
   IssueSummaryRecord,
   IssuesListResultRecord,
   IssueTracePageRecord,
   IssueTraceRecord,
   OrgIssueSearchRecord,
+  UpdateIssueTriageRecord,
 } from "./issues.functions.ts"
 import {
   countIssueTraces,
   getIssue,
   getIssueDetail,
+  getIssueImpact,
   listIssues,
   listIssueTraces,
   searchOrgIssues,
+  updateIssueTriage,
 } from "./issues.functions.ts"
 
 const queryClient = getQueryClient()
@@ -80,6 +84,8 @@ const getIssuesOffsetQueryKey = (input: IssuesKeyInput, offset: number) =>
 const getIssueQueryKey = (projectId: string, issueId: string) => ["issue", projectId, issueId] as const
 
 const getIssueDetailQueryKey = (projectId: string, issueId: string) => ["issue-detail", projectId, issueId] as const
+
+const getIssueImpactQueryKey = (projectId: string, issueId: string) => ["issue-impact", projectId, issueId] as const
 
 const getIssueTracesQueryKey = (projectId: string, issueId: string) => ["issue-traces", projectId, issueId] as const
 
@@ -276,6 +282,46 @@ export function useIssue({
   })
 }
 
+export function useIssueImpact({
+  projectId,
+  issueId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly issueId: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: getIssueImpactQueryKey(projectId, issueId),
+    queryFn: (): Promise<IssueImpactRecord> => getIssueImpact({ data: { projectId, issueId } }),
+    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+  })
+}
+
+/**
+ * Mutation for the light-triage fields (assignee, priority). Omit a field to
+ * leave it unchanged; pass `null` to clear it. Invalidates the issue detail
+ * queries on success so the page/drawer reflect the new triage state.
+ */
+export function useUpdateIssueTriage(projectId: string, issueId: string) {
+  return useMutation({
+    mutationFn: (input: {
+      readonly assigneeId?: string | null
+      readonly priority?: UpdateIssueTriageRecord["priority"]
+    }): Promise<UpdateIssueTriageRecord> =>
+      updateIssueTriage({
+        data: {
+          projectId,
+          issueId,
+          ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
+          ...(input.priority !== undefined ? { priority: input.priority } : {}),
+        },
+      }),
+    onSuccess: () => invalidateIssueDetailQueries(projectId, issueId),
+  })
+}
+
 export function useIssueTracesInfiniteScroll({
   projectId,
   issueId,
@@ -374,6 +420,7 @@ const invalidateIssueDetailQueries = (projectId: string, issueId: string) =>
   Promise.all([
     queryClient.invalidateQueries({ queryKey: getIssueQueryKey(projectId, issueId) }),
     queryClient.invalidateQueries({ queryKey: getIssueDetailQueryKey(projectId, issueId) }),
+    queryClient.invalidateQueries({ queryKey: getIssueImpactQueryKey(projectId, issueId) }),
     queryClient.invalidateQueries({ queryKey: getIssueTracesQueryKey(projectId, issueId) }),
     queryClient.invalidateQueries({ queryKey: ["issue-traces-page", projectId, issueId] }),
     queryClient.invalidateQueries({ queryKey: getIssueTracesCountQueryKey(projectId, issueId) }),
