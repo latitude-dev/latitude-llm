@@ -72,9 +72,6 @@ const errorMessage = (error: unknown): string => {
 export const gardenTaxonomyWorkflow = async (
   input: GardenTaxonomyWorkflowInput,
 ): Promise<GardenTaxonomyWorkflowResult> => {
-  // The workflow id is fixed per project+dimension; the execution run id keeps
-  // each gardening execution's taxonomy run row distinct (stable across
-  // activity retries and replays within this execution).
   const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
   try {
     await calibrateGardenTaxonomyActivity(started)

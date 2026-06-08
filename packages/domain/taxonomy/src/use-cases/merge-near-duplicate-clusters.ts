@@ -130,12 +130,10 @@ const judgeSameBehavior = (pair: MergeCandidatePair) =>
     const result = yield* ai.generate({
       provider: TAXONOMY_JUDGE_MODEL.provider,
       model: TAXONOMY_JUDGE_MODEL.model,
-      system: `mergeJudge: decide whether two conversation topic clusters describe the same topic, such that keeping both adds no analytical value. Clusters describing the same task done via different methods, identifiers, or channels ARE the same topic (for example verifying an account with name+phone vs email vs name+ZIP are all one "account verification" topic). A cluster with far fewer conversations that sits inside the same domain as a much larger cluster is a fragment of that topic, not a separate topic — merge it. Only keep clusters separate when they capture different user goals (for example locating an order vs cancelling it). Return only schema-valid JSON.`,
+      system: `You are a merge judge: decide whether two conversation topic clusters describe the same topic, such that keeping both adds no analytical value. Clusters describing the same task done via different methods, identifiers, or channels ARE the same topic (for example verifying an account with name+phone vs email vs name+ZIP are all one "account verification" topic). A cluster with far fewer conversations that sits inside the same domain as a much larger cluster is a fragment of that topic, not a separate topic — merge it. Only keep clusters separate when they capture different user goals (for example locating an order vs cancelling it). Return only schema-valid JSON.`,
       prompt: `Cluster A (${pair.left.observationCount} conversations): ${pair.left.name}\n${pair.left.description}\n\nCluster B (${pair.right.observationCount} conversations): ${pair.right.name}\n${pair.right.description}\n\nReturn JSON exactly like {"sameBehavior":true} or {"sameBehavior":false}.`,
       schema: mergeJudgeSchema,
       temperature: 0,
-      // Reasoning models consume part of the budget thinking; a tight cap
-      // makes the call fail and the conservative fallback silently rejects.
       maxTokens: 1_000,
     })
     return result.object.sameBehavior
