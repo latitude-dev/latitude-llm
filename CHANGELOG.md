@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## v0.2.0 - 2026-06-08
+
+### Conversation intelligence
+
+- Added conversation intelligence: a backend pipeline that classifies conversations against a topic taxonomy (with bounded observation sampling and calibration profiles) plus in-product behaviours that surface the resulting signals in the web app (ref: #3422).
+
+### Test mode
+
+- Added the sandbox ingest pipeline for test-mode organizations: an LLM-off gate that skips trace-end fan-out, archived-sandbox ingest refusal (403), a per-period span quota, debounced last-activity stamping, and realtime id-only trace-upsert pulses; introduced the `@domain/sandboxes` package with Postgres/Redis adapters (ref: #3412).
+- Added sandbox lifecycle use-cases and an active-sandbox cap per organization (ref: #3411).
+- Shortened span retention for sandbox organizations to 7 days via a dedicated TTL rule, leaving live-org retention unchanged (ref: #3409).
+
+### Monitors
+
+- Reworked `savedSearch.escalating` alerts to open on a sustained, bucketed threshold (filtering one-shot spikes) and close dwell-free once activity subsides, removing the old close lag of roughly the window length (ref: #3459).
+- Backtraced the close timestamp (`ended_at`) on sustained incidents so it reflects when activity actually subsided (ref: #3467).
+- Polished saved-search UI: shorter literal/phrase search chips, clearer "Save search" / "Update search" button copy, and opening the Conversation tab (with match highlight) when a session or trace is opened from a dashboard search (ref: #3468).
+
+### Fixes
+
+- Fixed taxonomy embedding and ClickHouse inserts failing on text containing lone UTF-16 surrogates by sanitizing them first (ref: #3466).
+- Fixed a billing deadlock by ordering usage-event inserts by their conflict key (ref: #3463).
+- Made the in-app "what's new" changelog popover dismissable with a cleaner collapse button (ref: #3461).
+- Hid archived issues from command palette search results.
+
+### Models
+
+- Updated the bundled models.dev model catalog (ref: #3389).
+
 ## v0.1.51 - 2026-06-05
 
 ### Monitors and API
