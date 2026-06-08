@@ -88,8 +88,8 @@ export const runGardenSweepJob = (payload: GardenSweepPayload, deps: TaxonomySwe
 
         if (deps.workflowStarter) {
           yield* deps.workflowStarter.start(
-            "gardenProjectTaxonomyWorkflow",
-            { organizationId, projectId, trigger: "cron" },
+            "gardenTaxonomyWorkflow",
+            { organizationId, projectId, dimension: "topic", trigger: "cron" },
             { workflowId: taxonomyGardenProjectDedupeKey({ organizationId, projectId }) },
           )
         } else {
@@ -127,10 +127,11 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
     const workflowId = `org:${payload.organizationId}:taxonomy:garden:${payload.projectId}`
     return deps.workflowStarter
       .start(
-        "gardenProjectTaxonomyWorkflow",
+        "gardenTaxonomyWorkflow",
         {
           organizationId: payload.organizationId,
           projectId: payload.projectId,
+          dimension: "topic",
           trigger: payload.reason,
         },
         { workflowId },
@@ -138,7 +139,7 @@ export const runGardenProjectJob = (payload: GardenProjectPayload, deps: Taxonom
       .pipe(
         Effect.tap(() =>
           Effect.sync(() =>
-            logger.info("Started GardenProjectTaxonomyWorkflow", {
+            logger.info("Started GardenTaxonomyWorkflow", {
               metric: "taxonomy.gardenProject.workflowStart",
               organizationId: payload.organizationId,
               projectId: payload.projectId,

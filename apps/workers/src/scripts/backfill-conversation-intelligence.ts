@@ -27,7 +27,7 @@ Options:
   --concurrency <n>        Number of workflow starts to process in parallel (default: 2)
   --reset                  Clear existing conversation-intelligence rows for selected projects first
   --reset-taxonomy         Clear taxonomy graph rows for selected projects before processing
-  --garden-after           Wait for started analyses to finish, then run GardenProjectTaxonomyWorkflow
+  --garden-after           Wait for started analyses to finish, then run GardenTaxonomyWorkflow
   --rebase-observations-to-now
                            Rewrite observation timestamps into the current gardening lookback window before gardening
   --manual-reprocess       Use AnalyzeSessionWorkflow reason 'manual_reprocess' instead of 'backfill'

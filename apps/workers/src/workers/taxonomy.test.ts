@@ -413,8 +413,8 @@ describe("taxonomy gardening worker", () => {
 
     expect(started).toEqual([
       {
-        workflow: "gardenProjectTaxonomyWorkflow",
-        input: { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, trigger: "manual" },
+        workflow: "gardenTaxonomyWorkflow",
+        input: { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, dimension: "topic", trigger: "manual" },
         workflowId: `org:${ORGANIZATION_ID}:taxonomy:garden:${PROJECT_ID}`,
       },
     ])

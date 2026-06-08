@@ -1,7 +1,7 @@
 import { executeChild, patched, proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
-import { gardenProjectTaxonomyWorkflow } from "./taxonomy-gardening-workflow.ts"
+import { gardenTaxonomyWorkflow } from "./taxonomy-gardening-workflow.ts"
 
 /**
  * Seeds the base demo content and the derived read models that make the
@@ -83,8 +83,10 @@ export const seedDemoProjectWorkflow = async (input: SeedDemoProjectWorkflowInpu
     await seedDemoProjectTraceSearchActivity(input)
     // Gardening runs through the same Temporal workflow as production; the
     // legacy in-activity orchestrator is gone.
-    await executeChild(gardenProjectTaxonomyWorkflow, {
-      args: [{ organizationId: input.organizationId, projectId: input.projectId, trigger: "manual" }],
+    await executeChild(gardenTaxonomyWorkflow, {
+      args: [
+        { organizationId: input.organizationId, projectId: input.projectId, dimension: "topic", trigger: "manual" },
+      ],
       workflowId: `org:${input.organizationId}:taxonomy:garden:${input.projectId}:seed`,
     })
   }

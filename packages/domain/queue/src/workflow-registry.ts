@@ -63,11 +63,6 @@ const _registry = {
     readonly apiKeyId: string
     readonly timelineAnchorIso: string
   }>(),
-  gardenProjectTaxonomyWorkflow: input<{
-    readonly organizationId: string
-    readonly projectId: string
-    readonly trigger: "cron" | "manual" | "threshold"
-  }>(),
   gardenTaxonomyWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string

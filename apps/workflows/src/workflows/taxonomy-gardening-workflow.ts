@@ -1,20 +1,10 @@
 import type { TaxonomyClusterLineage } from "@domain/taxonomy"
-import { CancellationScope, executeChild, proxyActivities, workflowInfo } from "@temporalio/workflow"
+import { CancellationScope, proxyActivities, workflowInfo } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 export type GardenTaxonomyWorkflowInput = activities.GardenTaxonomyActivityInput
 export type GardenTaxonomyWorkflowResult = activities.GardenTaxonomyActivityResult
-
-export interface GardenProjectTaxonomyWorkflowInput {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly trigger: "cron" | "manual" | "threshold"
-}
-
-export type GardenProjectTaxonomyWorkflowResult = GardenTaxonomyWorkflowResult
-
-const TAXONOMY_DIMENSION = "topic" as const
 
 const {
   assertGardenTaxonomyQualityActivity,
@@ -132,14 +122,4 @@ export const gardenTaxonomyWorkflow = async (
     )
     throw error
   }
-}
-
-export const gardenProjectTaxonomyWorkflow = async (
-  input: GardenProjectTaxonomyWorkflowInput,
-): Promise<GardenProjectTaxonomyWorkflowResult> => {
-  const workflowId = `org:${input.organizationId}:taxonomy:garden:${input.projectId}:${TAXONOMY_DIMENSION}`
-  return executeChild(gardenTaxonomyWorkflow, {
-    args: [{ ...input, dimension: TAXONOMY_DIMENSION, workflowId }],
-    workflowId,
-  })
 }
