@@ -26,10 +26,12 @@ const { mockActivities, childExecutions } = vi.hoisted(() => {
       observationsMoved: 5,
       lineage: ["split"],
     })),
+    reconcileGardenTaxonomyCountsActivity: vi.fn(async () => ({ clustersDeprecated: 0, lineage: [] })),
     planGardenTaxonomyNamingActivity: vi.fn(async () => ({
       clusterIds: ["c".repeat(24)],
       clustersScanned: 1,
     })),
+    assertGardenTaxonomyQualityActivity: vi.fn(async () => ({ clustersScanned: 1, findings: [] })),
     nameGardenTaxonomyActivity: vi.fn(async () => ({ clustersNamed: 1, categoriesScanned: 1 })),
     nameTaxonomyClusterActivity: vi.fn(async () => ({ name: "Named cluster", description: "A named test cluster." })),
     emitGardenTaxonomyLineageActivity: vi.fn(async () => undefined),
@@ -82,7 +84,7 @@ describe("taxonomy gardening workflows", () => {
       workflowRunId: "test-workflow-run-id",
     })
     expect(mockActivities.planGardenTaxonomyNamingActivity).toHaveBeenCalledWith(
-      expect.objectContaining({ lineage: ["birth", "merge", "death", "split"] }),
+      expect.objectContaining({ lineage: ["birth", "split"] }),
     )
     expect(mockActivities.nameTaxonomyClusterActivity).toHaveBeenCalledWith({
       organizationId: "o".repeat(24),
@@ -92,10 +94,10 @@ describe("taxonomy gardening workflows", () => {
     expect(mockActivities.completeGardenTaxonomyRunActivity).toHaveBeenCalledWith(
       expect.objectContaining({
         observationsScanned: 7,
-        noiseScanned: 6,
-        clustersBorn: 3,
-        clustersMerged: 1,
-        clustersDeprecated: 1,
+        noiseScanned: 18,
+        clustersBorn: 9,
+        clustersMerged: 3,
+        clustersDeprecated: 3,
       }),
     )
     expect(result).toEqual(expect.objectContaining({ status: "completed" }))

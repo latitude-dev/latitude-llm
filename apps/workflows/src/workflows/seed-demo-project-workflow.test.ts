@@ -24,12 +24,12 @@ vi.mock("@temporalio/workflow", () => ({
   executeChild: async (_workflow: unknown, options: { args: unknown[]; workflowId: string }) => {
     callOrder.push("taxonomy")
     childExecutions.push({ args: options.args, workflowId: options.workflowId })
-    return { dimensions: [] }
+    return { status: "completed" }
   },
 }))
 
 vi.mock("./taxonomy-gardening-workflow.ts", () => ({
-  gardenProjectTaxonomyWorkflow: async () => ({ dimensions: [] }),
+  gardenProjectTaxonomyWorkflow: async () => ({ status: "completed" }),
 }))
 
 import { seedDemoProjectWorkflow } from "./seed-demo-project-workflow.ts"

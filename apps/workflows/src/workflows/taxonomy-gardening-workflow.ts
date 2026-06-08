@@ -12,9 +12,9 @@ export interface GardenProjectTaxonomyWorkflowInput {
   readonly trigger: "cron" | "manual" | "threshold"
 }
 
-export type GardenProjectTaxonomyWorkflowResult = readonly GardenTaxonomyWorkflowResult[]
+export type GardenProjectTaxonomyWorkflowResult = GardenTaxonomyWorkflowResult
 
-const TAXONOMY_DIMENSIONS = ["topic"] as const
+const TAXONOMY_DIMENSION = "topic" as const
 
 const {
   assertGardenTaxonomyQualityActivity,
@@ -136,13 +136,10 @@ export const gardenTaxonomyWorkflow = async (
 
 export const gardenProjectTaxonomyWorkflow = async (
   input: GardenProjectTaxonomyWorkflowInput,
-): Promise<GardenProjectTaxonomyWorkflowResult> =>
-  Promise.all(
-    TAXONOMY_DIMENSIONS.map((dimension) => {
-      const workflowId = `org:${input.organizationId}:taxonomy:garden:${input.projectId}:${dimension}`
-      return executeChild(gardenTaxonomyWorkflow, {
-        args: [{ ...input, dimension, workflowId }],
-        workflowId,
-      })
-    }),
-  )
+): Promise<GardenProjectTaxonomyWorkflowResult> => {
+  const workflowId = `org:${input.organizationId}:taxonomy:garden:${input.projectId}:${TAXONOMY_DIMENSION}`
+  return executeChild(gardenTaxonomyWorkflow, {
+    args: [{ ...input, dimension: TAXONOMY_DIMENSION, workflowId }],
+    workflowId,
+  })
+}
