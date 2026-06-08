@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { mockActivities } = vi.hoisted(() => {
+const { mockActivities, signalState } = vi.hoisted(() => {
   const mockActivities = {
     loadAnalyzeSessionActivity: vi.fn(),
     hashAnalyzeSessionActivity: vi.fn(),
@@ -10,15 +10,22 @@ const { mockActivities } = vi.hoisted(() => {
     detectAnalyzeSessionLabelsActivity: vi.fn(),
     persistAnalyzeSessionActivity: vi.fn(),
   }
-  return { mockActivities }
+  const signalState: { handler: ((input: { readonly debounceMs?: number }) => void) | undefined } = {
+    handler: undefined,
+  }
+  return { mockActivities, signalState }
 })
 
 vi.mock("@temporalio/workflow", () => ({
+  defineSignal: vi.fn((name: string) => ({ name })),
   proxyActivities: () => mockActivities,
+  setHandler: vi.fn((_signal, handler) => {
+    signalState.handler = handler
+  }),
   sleep: vi.fn(async () => undefined),
 }))
 
-import { sleep } from "@temporalio/workflow"
+import { setHandler, sleep } from "@temporalio/workflow"
 import { analyzeSessionWorkflow } from "./analyze-session-workflow.ts"
 
 const input = {
@@ -46,6 +53,7 @@ const activityOrder = () =>
 describe("analyzeSessionWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    signalState.handler = undefined
     mockActivities.loadAnalyzeSessionActivity.mockName("load").mockResolvedValue({ found: true, rawMessages: [] })
     mockActivities.hashAnalyzeSessionActivity.mockName("hash").mockResolvedValue({
       analysisHash: "h".repeat(64),
@@ -65,6 +73,12 @@ describe("analyzeSessionWorkflow", () => {
     mockActivities.persistAnalyzeSessionActivity
       .mockName("persist")
       .mockResolvedValue({ action: "recorded", status: "analyzed", momentCount: 0 })
+  })
+
+  it("registers the traceCompleted signal handler so signalWithStart does not break running workflows", async () => {
+    await analyzeSessionWorkflow(input)
+
+    expect(setHandler).toHaveBeenCalledWith({ name: "traceCompleted" }, expect.any(Function))
   })
 
   it("runs named idempotent analysis activities in order", async () => {
@@ -111,6 +125,23 @@ describe("analyzeSessionWorkflow", () => {
 
     expect(sleep).toHaveBeenCalledWith(123)
     expect(mockActivities.loadAnalyzeSessionActivity).toHaveBeenCalled()
+  })
+
+  it("runs another analysis pass when traceCompleted arrives during an in-flight pass", async () => {
+    mockActivities.persistAnalyzeSessionActivity.mockImplementationOnce(async () => {
+      signalState.handler?.({ debounceMs: 0 })
+      return { action: "recorded", status: "analyzed", momentCount: 0 }
+    })
+
+    await expect(analyzeSessionWorkflow(input)).resolves.toEqual({
+      action: "recorded",
+      status: "analyzed",
+      momentCount: 0,
+    })
+
+    expect(mockActivities.loadAnalyzeSessionActivity).toHaveBeenCalledTimes(2)
+    expect(mockActivities.hashAnalyzeSessionActivity).toHaveBeenCalledTimes(2)
+    expect(mockActivities.persistAnalyzeSessionActivity).toHaveBeenCalledTimes(2)
   })
 
   it("propagates failed activity errors", async () => {

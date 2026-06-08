@@ -128,6 +128,56 @@ describe("createWorkflowStarter", () => {
     )
   })
 
+  it("passes closed-id reuse policy when signalWithStart starts or signals an execution", async () => {
+    const signalWithStart = vi.fn(async () => ({ signaledRunId: "run-abc" }))
+    const client = {
+      workflow: {
+        signalWithStart,
+      },
+    } as unknown as Client
+
+    const starter = createWorkflowStarter(client, {
+      address: "127.0.0.1:7233",
+      namespace: "default",
+      taskQueue: "workflows",
+    })
+
+    await expect(
+      Effect.runPromise(
+        starter.signalWithStart(
+          "analyzeSessionWorkflow",
+          {
+            organizationId: "org-1",
+            projectId: "proj-1",
+            sessionId: "session-1",
+            triggeringTraceId: "trace-1",
+            triggeringStartTime: "2026-06-08T00:00:00.000Z",
+            reason: "trace_completed",
+            debounceMs: 1000,
+          },
+          {
+            workflowId: "org:org-1:conversation-intelligence:analyzeSession:proj-1:session-1",
+            signal: "traceCompleted",
+          },
+        ),
+      ),
+    ).resolves.toBeUndefined()
+    expect(signalWithStart).toHaveBeenCalledTimes(1)
+    expect(signalWithStart).toHaveBeenCalledWith(
+      "analyzeSessionWorkflow",
+      expect.objectContaining({
+        workflowId: "org:org-1:conversation-intelligence:analyzeSession:proj-1:session-1",
+        workflowIdReusePolicy: "ALLOW_DUPLICATE",
+        taskQueue: "workflows",
+        signal: "traceCompleted",
+      }),
+    )
+    expect(signalWithStart).toHaveBeenCalledWith(
+      "analyzeSessionWorkflow",
+      expect.not.objectContaining({ workflowIdConflictPolicy: expect.anything() }),
+    )
+  })
+
   it("resolves when the start call opens a fresh execution", async () => {
     const start = vi.fn(async () => ({ firstExecutionRunId: "run-abc" }))
     const client = {

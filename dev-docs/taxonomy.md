@@ -24,7 +24,7 @@ Observations are **not** pushed to the deepest leaves. A node holds *residue*: m
 
 `observation_count` in Postgres caches what ClickHouse `taxonomy_observations` knows. Three rules keep them honest:
 
-1. **Every path that moves CH rows must move the PG counter** under the per-cluster Redis lock with a fresh `findById` (sweep absorption, noise reassign, merges, live assignment).
+1. **Every path that moves CH rows must move the PG counter** under the per-cluster Redis lock with a fresh `findById` (sweep absorption, noise reassign, merges, live assignment, live re-analysis replace). The replace path (`replaceObservationInClusterUseCase`) is the exception that **does not** move the counter: re-analyzing an existing session reuses the stable observation id, so it removes the prior embedding from the centroid and adds the new one while leaving `observation_count` unchanged (see the CI doc's idempotency section).
 2. **Recursion computes residue from the live CH window**, not the stored counter — the counter can lag, and taxonomy formation deliberately ignores rows outside the newest-observation gardening window.
 3. **State-aware writes**: a cluster can merge or deprecate between routing and lock acquisition. Counter writers check `state` after the locked re-read; live assignment **redirects increments to `merged_into_cluster_id`** (bounded hops) instead of resurrecting a merged row.
 
@@ -59,6 +59,8 @@ Taxonomy observations are always ingested when the analyzer emits a taxonomy pro
 2. Gate with the fixed absolute threshold plus a softmax relative margin between top-1 and top-2 (`decideClusterAssignment`). The margin measures ambiguity *between* candidates — a lone child passes it trivially by design.
 3. While a level clears the gates, descend into the winner's children. Descent into a recursed node's children additionally requires `max(absoluteGate, parent.split_link_threshold)` — the global gate is tuned for root coarseness and would otherwise walk into a tight subtree on marginal similarity.
 4. The observation lands on the **deepest node that cleared**; stopping at an interior node leaves honest residue.
+
+The router only decides placement. Applying that placement to a cluster's centroid and counter goes through two locked use-cases: `assignObservationToClusterUseCase` for a new observation (+1, add to centroid, following `merged_into_cluster_id` redirects up to `MAX_MERGE_REDIRECTS`), and `replaceObservationInClusterUseCase` when a re-analyzed session keeps its existing cluster but its projection changed (remove the prior embedding, add the new, counter unchanged). Both no-op when the locked re-read finds the cluster non-`active`.
 
 Known imprecision sources, in priority order: ambiguous near-duplicate siblings parking observations one level up (mitigated by sibling merges), and greedy single-path descent (beam width 1 — an observation never recovers into a different root's subtree).
 

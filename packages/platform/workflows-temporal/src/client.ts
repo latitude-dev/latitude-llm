@@ -266,9 +266,12 @@ export function createWorkflowStarter(client: Client, config: TemporalConfig): W
         // delivers the signal to the existing run if one exists (the
         // `USE_EXISTING` semantic is implicit for this RPC) and otherwise
         // starts a new one. Workflow-internal handlers are responsible for
-        // coalescing/deduping rapid signals.
+        // coalescing/deduping rapid signals. Keep the closed-id reuse policy
+        // aligned with `start` so a completed workflow id can be analyzed
+        // again while preserving the implicit signal-existing-run behavior.
         const handle = await client.workflow.signalWithStart(workflow, {
           workflowId: options.workflowId,
+          workflowIdReusePolicy: "ALLOW_DUPLICATE",
           taskQueue: config.taskQueue,
           args: [input],
           signal: options.signal,

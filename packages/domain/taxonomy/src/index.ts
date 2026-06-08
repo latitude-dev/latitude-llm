@@ -175,6 +175,8 @@ export {
 export {
   type AssignObservationToClusterInput,
   assignObservationToClusterUseCase,
+  type ReplaceObservationInClusterInput,
+  replaceObservationInClusterUseCase,
 } from "./use-cases/assign-observation-to-cluster.ts"
 export {
   type ClusterAssignmentDecision,

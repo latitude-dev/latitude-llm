@@ -53,13 +53,16 @@ function BehavioursPageContent() {
   const [activeBehaviourId, setActiveBehaviourId] = useParamState("behaviourId", "")
   const [timeFrom, setTimeFrom] = useParamState("behaviourTimeFrom", "")
   const [timeTo, setTimeTo] = useParamState("behaviourTimeTo", "")
-  const timeRange =
-    timeFrom || timeTo
-      ? {
-          ...(timeFrom ? { fromIso: timeFrom } : {}),
-          ...(timeTo ? { toIso: timeTo } : {}),
-        }
-      : undefined
+  const timeRange = useMemo(
+    () =>
+      timeFrom || timeTo
+        ? {
+            ...(timeFrom ? { fromIso: timeFrom } : {}),
+            ...(timeTo ? { toIso: timeTo } : {}),
+          }
+        : undefined,
+    [timeFrom, timeTo],
+  )
   const { data, isLoading } = useProjectBehaviours({
     projectId: project.id,
     dimension: "topic",

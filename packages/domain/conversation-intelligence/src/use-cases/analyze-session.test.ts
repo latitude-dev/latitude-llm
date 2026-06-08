@@ -332,6 +332,35 @@ describe("analyzeSessionUseCase", () => {
     expect(savedCluster?.observationCount).toBe(1)
   })
 
+  it("replaces same-session taxonomy observations when the projection hash changes", async () => {
+    const cluster = makeCluster()
+    const first = runUseCase({ session: makeSession(), seedClusters: [cluster] })
+    await Effect.runPromise(first.effect)
+    const previous = first.taxonomyObservations.rows[0]
+    const firstCluster = first.taxonomyClusters.clusters.get(cluster.id)
+    expect(previous?.assignmentMethod).toBe("centroid_online")
+    expect(firstCluster?.observationCount).toBe(1)
+
+    const changedSession = makeSessionWithMessages([
+      message("user", "I need help with roaming data and an international eSIM activation"),
+      message("assistant", "I can help troubleshoot the roaming plan and eSIM activation settings"),
+    ])
+    const second = runUseCase({
+      session: changedSession,
+      seedClusters: firstCluster ? [firstCluster] : [cluster],
+      seedTaxonomyObservations: previous ? [previous] : [],
+    })
+
+    await Effect.runPromise(second.effect)
+
+    const savedCluster = second.taxonomyClusters.clusters.get(cluster.id)
+    const latestObservation = second.taxonomyObservations.rows.at(-1)
+    expect(latestObservation?.observationId).toBe(previous?.observationId)
+    expect(latestObservation?.assignedClusterId).toBe(cluster.id)
+    expect(latestObservation?.projectionHash).not.toBe(previous?.projectionHash)
+    expect(savedCluster?.observationCount).toBe(1)
+  })
+
   it("skips sessions without both user and assistant messages without calling AI", async () => {
     let generateCalls = 0
     const { effect, analyses } = runUseCase({

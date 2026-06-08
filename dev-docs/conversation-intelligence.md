@@ -4,6 +4,16 @@ Conversation intelligence turns raw session telemetry into semantic structure: *
 
 Domain code: `packages/domain/conversation-intelligence`. ClickHouse adapters: `packages/platform/db-clickhouse/src/repositories/conversation-intelligence-repositories.ts`. Orchestration: `apps/workflows/src/workflows/analyze-session-workflow.ts` + `apps/workflows/src/activities/analyze-session-activities.ts`, started from the trace-end boundary (see [`./spans.md`](./spans.md)) with the deterministic workflow id `org:${organizationId}:conversation-intelligence:analyzeSession:${projectId}:${sessionId}`.
 
+### Triggering, debounce, and re-analysis
+
+The trace-end boundary triggers analysis with **`signalWithStart`**, not a plain start: it targets the stable per-session workflow id, sends the `traceCompleted` signal, and uses `workflowIdReusePolicy: "ALLOW_DUPLICATE"` so a session whose previous analysis workflow already *completed* can be analyzed again when a later trace arrives. Because the workflow id is per session, every trace in a session converges on one workflow execution.
+
+The workflow registers a `traceCompleted` signal handler on entry (so a signal delivered to an already-running execution is handled, never rejected as unknown), then:
+
+1. Debounces (`CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS`) so a burst of trailing traces collapses into one analysis. Signals received *during* the initial debounce need no extra pass — the first load after the debounce already sees the latest session state, so the rerun flag is cleared once before the loop.
+2. Runs one analysis pass (`runAnalyzeSessionPass`: load → hash → eligibility → embed → segment → label → persist).
+3. If a `traceCompleted` signal arrived *during or after* a pass, runs one more deterministic pass; the next pass reloads the latest session state before hashing, so it picks up traces that landed mid-analysis. The loop exits when a pass completes with no pending rerun. Each pass is independently idempotent, so the loop is safe under Temporal retry/replay.
+
 ## Design stance: embeddings-only in the hot path
 
 Analyzing every session with an LLM is not economically viable at telemetry volume. Everything that runs per session — segmentation, labeling, topic projection, cluster routing — uses **embeddings and deterministic math** only. LLM calls are reserved for amortized naming/profile work, never per-session analysis or merge decisions.
@@ -72,11 +82,13 @@ All four tables are `ReplacingMergeTree(indexed_at)` partitioned by month, sorte
 | `session_analyses` | `session_id` | One row per session: `analysis_hash`, status, lens, trace ids |
 | `session_semantic_moments` | `session_id, analysis_hash, moment_id` | Segmentation output: message index range, boundary reason, coherence |
 | `session_moment_labels` | `session_id, analysis_hash, label_id` | Signal kind, confidence, evidence, message range, `moment_id` |
-| `taxonomy_observations` | `assigned_cluster_id, start_time, observation_id` | Sampled topic projections: embedding, `assigned_cluster_id`, assignment method/confidence, `analysis_hash` |
+| `taxonomy_observations` | `assigned_cluster_id, start_time, observation_id` | Topic projections: embedding, `assigned_cluster_id`, assignment method/confidence, `analysis_hash`, `projection_hash` |
 
 ### Analysis generations and the pinning rule
 
-`analysis_hash` is a content hash of the session's analyzable messages plus segmentation/anchor versioning. Re-analysis after a session grows produces a **new generation**: new hash, new moment/label/observation ids. Superseded generations are **never deleted** — the analyses table collapses to one row per session, but moments/labels/observations accumulate one set per generation.
+`analysis_hash` is a content hash of the session's analyzable messages plus segmentation/anchor versioning. Re-analysis after a session grows produces a **new generation** with a new hash. Moment and label ids hash the generation hash (`makeMomentId`, `labelId = hash(analysisHash\0label\0momentId)`), so each generation gets a fresh set and superseded moments/labels **accumulate** one set per generation — the analyses table itself collapses to one row per session.
+
+The **taxonomy observation id is the exception**: it hashes only `org\0project\0session\0dimension\0method`, *not* the generation hash, so it is **stable across generations**. Re-analysis therefore reuses the same `observation_id`, and the new row generally **replaces** the prior one in ClickHouse (ReplacingMergeTree) rather than accumulating. The row still carries `analysis_hash`, so pinning is still required: if a new generation routes the session to a *different* cluster, the sort key `(assigned_cluster_id, start_time, observation_id)` differs and a second row survives until compaction, and unpinned rate denominators would count both.
 
 **Every read must pin to the session's current generation.** The canonical, FINAL-free form:
 
@@ -95,8 +107,13 @@ Unpinned reads return the union of all generations — duplicated moments, stale
 
 The analyzer is a retried Temporal activity, so every write is either idempotent or retry-gated:
 
-- All ids are content hashes embedding the generation hash — re-running identical content reproduces identical rows, which ReplacingMergeTree dedups.
-- **Centroid increments are not idempotent** (Postgres `observationCount + 1`, EMA add). Accepted observation rows act as applied-markers: they are written to ClickHouse *first*, and a retry skips the increment for any `observation_id` that already existed (`TaxonomyObservationRepository.filterExistingIds`). A crash between the two loses at most one increment — gardening self-corrects — instead of double-counting forever.
+- Moment and label ids are content hashes embedding the generation hash — re-running identical content reproduces identical rows, which ReplacingMergeTree dedups.
+- **Centroid updates are not idempotent** (Postgres `observationCount ± 1`, decayed-weighted-sum add/remove). Before writing the new observation rows the analyzer snapshots the session's prior observations (`taxonomyObservations.listBySession`); because the observation id is stable across generations, each new row matches its predecessor. It then decides per row:
+  - **Identical retry** — same `assigned_cluster_id`, `analysis_hash`, *and* `projection_hash` as the snapshot → skip entirely. This is the at-most-once guard for activity retries.
+  - **Same cluster, changed projection** — the centroid would otherwise count the session twice. `replaceObservationInClusterUseCase` (`@domain/taxonomy`) **removes** the prior embedding's contribution and **adds** the new one under the per-cluster Redis lock with a fresh `findById`, leaving `observationCount` unchanged. This keeps the centroid tracking the latest generation of a re-analyzed session without inflating its count.
+  - **New or changed cluster** — `assignObservationToClusterUseCase` increments (+1) as a first observation.
+
+  The new observation rows are written to ClickHouse *first*, so a crash before the Postgres update at worst loses one increment (gardening self-corrects) instead of double-counting forever. `projection_hash` is `hash(analysisHash\0session\0dimension\0method\0projectionText)`.
 - The hash-current skip (`analysisStatus !== "failed"` guard) makes unchanged sessions free.
 
 ## Read paths

@@ -4,6 +4,7 @@ import { type SessionDetail, SessionRepository } from "@domain/spans"
 import {
   assignObservationToClusterUseCase,
   normalizeTaxonomyEmbedding,
+  replaceObservationInClusterUseCase,
   routeToDeepestClusterUseCase,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   type TaxonomyMomentObservation,
@@ -566,26 +567,43 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       previousObservations.map((observation) => [observation.observationId, observation] as const),
     )
     yield* taxonomyObservations.upsertMany(taxonomyObservationRows)
-    yield* Effect.forEach(
-      taxonomyObservationRows.filter((row) => {
-        if (row.assignmentMethod !== TaxonomyObservationAssignmentMethod.CentroidOnline) return false
-        if (row.assignedClusterId === null) return false
-        const previous = previousObservationById.get(row.observationId)
-        return !(
-          previous?.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
-          previous.assignedClusterId === row.assignedClusterId
-        )
-      }),
-      (row) =>
-        assignObservationToClusterUseCase({
+    yield* Effect.forEach(taxonomyObservationRows, (row) => {
+      if (row.assignmentMethod !== TaxonomyObservationAssignmentMethod.CentroidOnline) return Effect.void
+      if (row.assignedClusterId === null) return Effect.void
+
+      const previous = previousObservationById.get(row.observationId)
+      const isIdenticalRetry =
+        previous?.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
+        previous.assignedClusterId === row.assignedClusterId &&
+        previous.analysisHash === row.analysisHash &&
+        previous.projectionHash === row.projectionHash
+      if (isIdenticalRetry) return Effect.void
+
+      if (
+        previous?.assignmentMethod === TaxonomyObservationAssignmentMethod.CentroidOnline &&
+        previous.assignedClusterId === row.assignedClusterId
+      ) {
+        return replaceObservationInClusterUseCase({
           organizationId,
           projectId,
-          clusterId: row.assignedClusterId as NonNullable<typeof row.assignedClusterId>,
+          clusterId: row.assignedClusterId,
+          previousEmbedding: previous.embedding,
+          previousObservedAt: previous.startTime,
           embedding: row.embedding,
           observedAt: row.startTime,
           assignedAt: indexedAt,
-        }),
-    )
+        }).pipe(Effect.map(() => undefined))
+      }
+
+      return assignObservationToClusterUseCase({
+        organizationId,
+        projectId,
+        clusterId: row.assignedClusterId,
+        embedding: row.embedding,
+        observedAt: row.startTime,
+        assignedAt: indexedAt,
+      }).pipe(Effect.map(() => undefined))
+    })
 
     const analysis: SessionAnalysis = {
       ...baseAnalysis,
