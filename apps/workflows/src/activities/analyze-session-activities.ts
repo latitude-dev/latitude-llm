@@ -8,8 +8,8 @@ import {
   SessionAnalysisRepository,
   segmentSemanticMoments,
 } from "@domain/conversation-intelligence"
-import { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
-import { SessionRepository, TraceRepository } from "@domain/spans"
+import { OrganizationId, ProjectId, SessionId } from "@domain/shared"
+import { SessionRepository } from "@domain/spans"
 import type { TaxonomyDimension } from "@domain/taxonomy"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
@@ -21,10 +21,9 @@ import {
   SessionRepositoryLive,
   SessionSemanticMomentRepositoryLive,
   TaxonomyObservationRepositoryLive,
-  TraceRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import { CalibrationProfileRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { hash } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -48,6 +47,18 @@ interface AnalyzeSessionMessage {
   readonly index: number
   readonly role: "user" | "assistant" | "tool" | "system" | "unknown"
   readonly text: string
+}
+
+const sessionConversationMessages = (session: {
+  readonly systemInstructions: unknown
+  readonly lastInputMessages: readonly unknown[]
+  readonly outputMessages: readonly unknown[]
+}): readonly unknown[] => {
+  const systemMessage =
+    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
+      ? [{ role: "system", parts: session.systemInstructions }]
+      : []
+  return [...systemMessage, ...session.lastInputMessages, ...session.outputMessages]
 }
 
 export interface AnalyzeSessionLoadedActivityResult {
@@ -152,7 +163,6 @@ const withAnalyzeSessionClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
     withClickHouse(
       Layer.mergeAll(
         SessionRepositoryLive,
-        TraceRepositoryLive,
         SessionAnalysisRepositoryLive,
         SessionSemanticMomentRepositoryLive,
         SessionMomentLabelRepositoryLive,
@@ -173,20 +183,11 @@ export const loadAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) =
       const projectId = ProjectId(input.projectId)
       const sessionId = SessionId(input.sessionId)
       const sessions = yield* SessionRepository
-      const traces = yield* TraceRepository
       const session = yield* sessions
         .findBySessionId({ organizationId, projectId, sessionId })
         .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
       if (session === null) return { found: false, rawMessages: [] } satisfies AnalyzeSessionLoadedActivityResult
-      const traceIds = session.traceIds.filter((traceId) => traceId.length === 32).map(TraceId)
-      const traceDetails =
-        traceIds.length > 0 ? yield* traces.listByTraceIds({ organizationId, projectId, traceIds }) : []
-      const rawMessages =
-        traceDetails.length > 0
-          ? [...traceDetails]
-              .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-              .flatMap((trace) => trace.allMessages)
-          : [...session.lastInputMessages, ...session.outputMessages]
+      const rawMessages = sessionConversationMessages(session)
       return { found: true, rawMessages } satisfies AnalyzeSessionLoadedActivityResult
     }).pipe((effect) => withAnalyzeSessionClickHouse(effect, input.organizationId), withTracing),
   )
@@ -337,7 +338,6 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
       withClickHouse(
         Layer.mergeAll(
           SessionRepositoryLive,
-          TraceRepositoryLive,
           SessionAnalysisRepositoryLive,
           SessionSemanticMomentRepositoryLive,
           SessionMomentLabelRepositoryLive,
@@ -346,11 +346,7 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
-      withPostgres(
-        Layer.mergeAll(TaxonomyClusterRepositoryLive, CalibrationProfileRepositoryLive),
-        getPostgresClient(),
-        OrganizationId(input.organizationId),
-      ),
+      withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
       withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient()),
       Effect.tap((result) =>

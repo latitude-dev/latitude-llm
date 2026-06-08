@@ -86,18 +86,6 @@ describe("segmentSemanticMoments", () => {
     expect(segments[1]?.boundaryReason).toBe(SemanticMomentBoundaryReason.MaxLength)
   })
 
-  it("merges short acknowledgements instead of creating standalone moments", () => {
-    // Assistant responses always attach to the moment of the user turn they
-    // answer, so the dissimilar reply at index 1 stays with turn 0 and the
-    // bare "ok" plus follow-up reply extend the same exchange.
-    const segments = segmentSemanticMoments({
-      threshold: 0.95,
-      turns: [turn(0, [1, 0]), turn(1, [0, 1]), { ...turn(2, [1, 0]), content: "ok" }, turn(3, [0, 1])],
-    })
-
-    expect(segments.map((segment) => segment.turnIndexes)).toEqual([[0, 1, 2, 3]])
-  })
-
   it("keeps same-topic exchanges together across role boundaries", () => {
     const segments = segmentSemanticMoments({
       threshold: 0.8,

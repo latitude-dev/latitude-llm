@@ -275,7 +275,7 @@ describe("listProjectBehavioursUseCase", () => {
     const childId = TaxonomyClusterId("b".repeat(24))
     const leafRootId = TaxonomyClusterId("u".repeat(24))
     const clusters = createFakeTaxonomyClusterRepository([
-      makeCluster({ id: rootId, observationCount: 4 }),
+      makeCluster({ id: rootId, observationCount: 3 }),
       makeCluster({
         id: childId,
         parentClusterId: rootId,
@@ -290,7 +290,11 @@ describe("listProjectBehavioursUseCase", () => {
     ])
     const observations = createFakeTaxonomyObservationRepository([
       makeObservation(1, childId),
-      makeObservation(2, leafRootId),
+      makeObservation(2, childId),
+      makeObservation(3, childId),
+      makeObservation(4, leafRootId),
+      makeObservation(5, leafRootId),
+      makeObservation(6, leafRootId),
     ])
 
     const result = await Effect.runPromise(
@@ -305,8 +309,9 @@ describe("listProjectBehavioursUseCase", () => {
     // Topics sort by subtree volume; children nest under their parent node.
     expect(result.topics.map((topic) => topic.cluster.id)).toEqual([rootId, leafRootId])
     expect(result.topics[0]?.children.map((child) => child.cluster.id)).toEqual([childId])
-    // Subtree total: root residue plus descendant assignments.
-    expect(result.topics[0]?.subtreeObservationCount).toBe(7)
+    // Parent counters are aggregate subtree counters, so the UI must not add
+    // the parent value to its children and double-count the same sessions.
+    expect(result.topics[0]?.subtreeObservationCount).toBe(3)
     expect(result.topics[1]?.subtreeObservationCount).toBe(3)
   })
 

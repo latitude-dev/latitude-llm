@@ -1,7 +1,6 @@
 export {
   ANALYSIS_LENSES,
   ANALYSIS_STATUSES,
-  CONVERSATION_CALIBRATION_TTL_MS,
   CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS,
   CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
   CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
@@ -81,11 +80,6 @@ export {
   type AnalyzeSessionResult,
   analyzeSessionUseCase,
 } from "./use-cases/analyze-session.ts"
-export {
-  type CalibrateSessionThresholdsInput,
-  type CalibrateSessionThresholdsResult,
-  calibrateSessionThresholdsUseCase,
-} from "./use-cases/calibrate-session-thresholds.ts"
 export {
   type ListSessionMomentIntelligenceInput,
   type ListSessionMomentIntelligenceResult,

@@ -91,6 +91,7 @@ export function InfiniteTable<T>({
   getExpandedRows,
   isRowExpandable,
   onToggleExpand,
+  hideExpandedRowSeparator = false,
 }: InfiniteTableProps<T>) {
   const hasExpansion = !!expandedRowKeys && !!getExpandedRows
   const colCount = columns.length + (selection ? 1 : 0) + (hasExpansion ? 1 : 0)
@@ -147,8 +148,13 @@ export function InfiniteTable<T>({
 
   const activeRowIndex = useMemo(() => {
     if (activeRowKey == null || activeRowKey === "") return -1
-    return data.findIndex((row) => getRowKey(row) === activeRowKey)
-  }, [activeRowKey, data, getRowKey])
+
+    const directIndex = data.findIndex((row) => getRowKey(row) === activeRowKey)
+    if (directIndex >= 0) return directIndex
+
+    if (!getExpandedRows) return -1
+    return data.findIndex((row) => getExpandedRows(row).data.some((subRow) => getRowKey(subRow) === activeRowKey))
+  }, [activeRowKey, data, getExpandedRows, getRowKey])
 
   const { tableRef, layoutFixed } = useHeaderLayoutLock({
     columns,
@@ -395,11 +401,15 @@ export function InfiniteTable<T>({
                         />
                       )
                     })}
-                  {isExpanded && expanded && !expanded.isLoading && expanded.data.length > 0 && (
-                    <tr>
-                      <td colSpan={colCount} className="h-px p-0 border-t border-border pb-2" />
-                    </tr>
-                  )}
+                  {isExpanded &&
+                    expanded &&
+                    !expanded.isLoading &&
+                    expanded.data.length > 0 &&
+                    !hideExpandedRowSeparator && (
+                      <tr>
+                        <td colSpan={colCount} className="h-px p-0 border-t border-border pb-2" />
+                      </tr>
+                    )}
                 </tbody>
               )
             })}

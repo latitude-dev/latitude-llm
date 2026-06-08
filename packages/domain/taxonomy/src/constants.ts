@@ -16,12 +16,8 @@ export const TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH = 280
 export const TAXONOMY_PENDING_DISPLAY_NAME = "Pending"
 
 /**
- * Single clustering dimension. Earlier iterations clustered role-filtered
- * projections into separate user_intent / agent_behavior dimensions; QA showed
- * raw-text embeddings cluster by topic regardless of the role filter, so the
- * taxonomy now embraces that: moments cluster into topics, signals (moment
- * labels) carry the behavioural facet, and behaviour variants come from
- * within-topic sub-clustering (follow-up work).
+ * Single clustering dimension. Taxonomy observations are session-level topic
+ * projections; moment labels carry behavioural/process facets separately.
  */
 export const TAXONOMY_DIMENSIONS = ["topic"] as const
 
@@ -52,7 +48,7 @@ export const TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS = [
 export const TAXONOMY_EMBEDDING_MODEL = "voyage-4-large"
 export const TAXONOMY_EMBEDDING_DIMENSIONS = 2048
 
-export const TAXONOMY_PROJECTION_METHODS = ["moment_text_embedding"] as const
+export const TAXONOMY_PROJECTION_METHODS = ["moment_text_embedding", "session_user_intent_embedding"] as const
 
 // ---------------------------------------------------------------------------
 // Session document
@@ -99,13 +95,14 @@ export const TAXONOMY_GARDENING_MAX_RUNTIME_MS = 5 * 60_000
 export const TAXONOMY_GARDENING_STALE_GRACE_MS = 60_000
 export const TAXONOMY_GARDENING_SWEEP_BATCH = 25
 
-/**
- * Hard cap on `listAllByCluster` results. Merge needs every row to reassign;
- * naming/trends only need a sample. Pick generously for merge (50k clusters
- * × ~1k obs each is well past typical) and rely on callers to pass a smaller
- * value where a sample is enough.
- */
-export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 50_000
+/** Gardening works over the live taxonomy window: newest observations first. */
+export const TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX = 100_000
+
+/** Maximum in-memory proposal sample passed to clustering helpers. */
+export const TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX = 10_000
+
+/** Hard cap on per-cluster batch reads inside the live gardening window. */
+export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 100_000
 
 // ---------------------------------------------------------------------------
 // Births (noise sweep) + merge / death
@@ -118,7 +115,7 @@ export const TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS = 3
 /**
  * Two noise embeddings are connected when their cosine ≥ this.
  * Seeded-Acme Voyage tuning raised this from 0.78 to 0.82: the full 1,574
- * session corpus produced clearer small behavior births without the broad
+ * session corpus produced clearer topic births without the broad
  * chaining seen at looser thresholds.
  */
 export const TAXONOMY_BIRTH_LINK_THRESHOLD = 0.82
@@ -131,79 +128,16 @@ export const TAXONOMY_BIRTH_LINK_THRESHOLD = 0.82
 export const TAXONOMY_BIRTH_MAX_DIAMETER = 0.45
 
 export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR = 4
-export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO = 0.005
-export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_CEILING = 30
-
-/**
- * Maximum active clusters per dimension a project can hold. Beyond this the
- * taxonomy stops being navigable, so the noise sweep recalibrates birth
- * density as the count grows (see TAXONOMY_BIRTH_LINK_PRESSURE_RANGE) and
- * stops birthing entirely at the cap. Capacity frees up through merges and
- * deprecations.
- */
-export const TAXONOMY_MAX_ACTIVE_CLUSTERS = 40
-
-/**
- * How much the birth connectivity threshold tightens as the active cluster
- * count approaches TAXONOMY_MAX_ACTIVE_CLUSTERS: at zero clusters births use
- * TAXONOMY_BIRTH_LINK_THRESHOLD, at the cap they would need
- * TAXONOMY_BIRTH_LINK_THRESHOLD + this range (denser, tighter candidates).
- * The birth member floor scales up alongside it.
- */
-export const TAXONOMY_BIRTH_LINK_PRESSURE_RANGE = 0.06
+export const TAXONOMY_VISIBLE_BIRTH_MIN_OBSERVATION_RATIO = 0.05
 
 /** Re-absorb a candidate birth into an existing cluster instead of birthing. */
 export const TAXONOMY_ABSORPTION_THRESHOLD = 0.85
 
-/**
- * Pairwise merge threshold between two active clusters. Used as the
- * similarity-only fallback for candidate pairs the LLM judge cannot evaluate
- * (a member still carries the "Pending" birth placeholder name).
- */
+/** Pairwise centroid similarity threshold required to merge two active clusters. */
 export const TAXONOMY_MERGE_THRESHOLD = 0.88
 
-/**
- * Pairs at/above this centroid similarity become merge candidates evaluated
- * by the LLM merge judge. QA at 500 sessions showed cosine in the 0.86–0.92
- * band carries no merge signal on a dense support corpus: the worst wrong
- * pair (order lookup vs action approval) scored 0.919 while true duplicates
- * scored 0.885. Similarity only nominates candidates; the judge decides.
- */
-export const TAXONOMY_MERGE_JUDGE_THRESHOLD = 0.86
-
-/** Concurrent LLM merge-judge calls per gardening run. */
-export const TAXONOMY_MERGE_JUDGE_CONCURRENCY = 4
 export const TAXONOMY_MERGE_NEAREST_NEIGHBORS = 10
 export const TAXONOMY_MERGE_CANDIDATES_PER_PARENT = 100
-
-/**
- * Cluster judges (merge dedup, purity audit) run on Haiku: short structured
- * verdicts where a fast non-reasoning model is cheaper and avoids the
- * reasoning-budget truncation failures seen with reasoning models.
- */
-export const TAXONOMY_JUDGE_MODEL = {
-  provider: "amazon-bedrock",
-  model: "anthropic.claude-haiku-4-5-20251001-v1:0",
-} as const
-
-/**
- * Name-duplicate merge nomination: clusters whose *names* overlap heavily can
- * be the same topic even when their full-text centroids diverge (the naming
- * pass abstracts away context the embeddings keep — QA: "Account
- * Verification" vs "Account verification using name and zip code" sat at
- * 0.742 cosine). Pairs with name-token Jaccard at/above the threshold are
- * nominated to the judge when their centroids clear the (lower) floor.
- */
-export const TAXONOMY_MERGE_NAME_NOMINATION_JACCARD = 0.5
-export const TAXONOMY_MERGE_NAME_NOMINATION_MIN_SIMILARITY = 0.65
-
-/**
- * A merge component's minimum pairwise similarity must stay at/above this
- * floor. Births are diameter-bounded but transitive merge chains were not:
- * one QA run chained six distinct intents into a single cluster through
- * pairwise ~0.88 links. Components failing the floor are skipped this run.
- */
-export const TAXONOMY_MERGE_COMPONENT_MIN_SIMILARITY = 0.82
 
 export const TAXONOMY_DEAD_CLUSTER_MASS_FLOOR = 0.5
 export const TAXONOMY_DEAD_CLUSTER_INACTIVITY_DAYS = 30
@@ -229,15 +163,13 @@ export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 // Storage
 // ---------------------------------------------------------------------------
 
-export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 90
+/** Same TTL horizon as semantic-search embeddings. */
+export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
 
 /**
- * Taxonomy observations are a representative clustering sample, not the full
- * semantic-moment fact table. Semantic moments and moment labels stay complete;
- * gardening is bounded by these caps.
+ * Taxonomy observations are always ingested while retained. Gardening is the
+ * bounded part: every pass operates on the newest live observations only.
  */
-export const TAXONOMY_OBSERVATION_SAMPLE_MAX = 100_000
-export const TAXONOMY_NOISE_SAMPLE_MAX = 20_000
 
 // ---------------------------------------------------------------------------
 // Lock TTLs (Redis SET NX EX)
@@ -251,71 +183,39 @@ export const TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS = 2_000
 export const TAXONOMY_GARDEN_LOCK_TTL_SECONDS = Math.ceil(TAXONOMY_GARDENING_MAX_RUNTIME_MS / 1000) + 60
 
 // ---------------------------------------------------------------------------
-// Threshold calibration (clustering scope)
-// ---------------------------------------------------------------------------
-
-/**
- * Hand-picked similarity gates drift wrong across corpora (QA: every
- * misbehaving subsystem was the one still on hand-picked values). The
- * calibration pass derives gates from each project's own score distributions,
- * clamped to the guardrail bands below, and stores them in
- * `calibration_profiles`. Constants remain the fallback for uncalibrated
- * projects.
- */
-export const TAXONOMY_CALIBRATION_EMBEDDING_SAMPLE = 600
-export const TAXONOMY_CALIBRATION_SCORE_SAMPLE = 4_000
-/** Recompute when the stored profile is older than this. */
-export const TAXONOMY_CALIBRATION_TTL_MS = 24 * 60 * 60_000
-/** Birth link = clamp(pairwise-similarity quantile, band). */
-export const TAXONOMY_CALIBRATION_BIRTH_LINK_QUANTILE = 0.92
-export const TAXONOMY_CALIBRATION_BIRTH_LINK_MIN = 0.76
-export const TAXONOMY_CALIBRATION_BIRTH_LINK_MAX = 0.88
-/** Diameter scales off the link threshold: (1 - link) * factor, clamped. */
-export const TAXONOMY_CALIBRATION_DIAMETER_FACTOR = 2.5
-export const TAXONOMY_CALIBRATION_DIAMETER_MIN = 0.3
-export const TAXONOMY_CALIBRATION_DIAMETER_MAX = 0.6
-/** Assignment gate = clamp(p10 of assigned-observation confidences, band). */
-export const TAXONOMY_CALIBRATION_ASSIGN_QUANTILE = 0.1
-export const TAXONOMY_CALIBRATION_ASSIGN_MIN = 0.55
-export const TAXONOMY_CALIBRATION_ASSIGN_MAX = 0.75
-/** Purity audit: judged clusters per calibration and members sampled each. */
-export const TAXONOMY_CALIBRATION_PURITY_CLUSTERS = 6
-export const TAXONOMY_CALIBRATION_PURITY_MEMBERS = 6
-
-// ---------------------------------------------------------------------------
 // Cluster tree (categories are depth-0 nodes; depth = clustering density)
 // ---------------------------------------------------------------------------
 
-/** Levels below root: 0 = root ("category"), 1 = topic, 2 = subtopic. */
+/**
+ * Levels below root. Until parent nodes become aggregate-only categories, keep
+ * online gardening to one child level; recursively splitting direct-assignment
+ * residue can create parent/child/grandchild duplicates where the deepest node
+ * simply absorbs the broad root's mass.
+ */
 export const TAXONOMY_TREE_MAX_DEPTH = 2
-/** Governor caps per level. */
-export const TAXONOMY_TREE_ROOT_CAP = 12
+/** Maximum number of children a single recursion pass exposes under one node. */
 export const TAXONOMY_TREE_CHILDREN_CAP = 8
-/**
- * Root births cluster at a coarser density than the old flat threshold so
- * depth-0 nodes play the category role. Calibration may override via the
- * clustering profile's rootLinkThreshold.
- */
-export const TAXONOMY_TREE_ROOT_LINK_THRESHOLD = 0.7
-export const TAXONOMY_CALIBRATION_ROOT_LINK_QUANTILE = 0.85
-export const TAXONOMY_CALIBRATION_ROOT_LINK_MIN = 0.62
-export const TAXONOMY_CALIBRATION_ROOT_LINK_MAX = 0.78
-/**
- * A node recurses into children when its directly-assigned share of the
- * project's observations exceeds the navigability budget (and depth allows).
- */
-export const TAXONOMY_TREE_RECURSE_SHARE = 0.12
+/** A node recurses into children when it has enough directly assigned members. */
 export const TAXONOMY_TREE_RECURSE_MIN_OBSERVATIONS = 60
 /** Bound recursion work per gardening run. */
-export const TAXONOMY_TREE_RECURSE_PER_RUN = 2
+export const TAXONOMY_TREE_RECURSE_PER_RUN = 3
 /**
  * Child birth density derives from the parent's own member-pairwise
  * similarity distribution (per-node density schedule), clamped below.
  */
 export const TAXONOMY_TREE_CHILD_LINK_QUANTILE = 0.7
 export const TAXONOMY_TREE_CHILD_LINK_MIN = 0.78
-export const TAXONOMY_TREE_CHILD_LINK_MAX = 0.92
-export const TAXONOMY_TREE_CHILD_MIN_MEMBERS_RATIO = 0.05
+/**
+ * Child splits should expose navigable subtopics under broad roots. A very
+ * high per-node quantile can overfit to boilerplate-similar support sessions
+ * and reject useful retail subtopic splits as tiny shards, so cap child-level
+ * density near the coarse topic boundary.
+ */
+export const TAXONOMY_TREE_CHILD_LINK_MAX = 0.8
+/** Diameter scales off the link threshold: (1 - link) * factor, clamped. */
+export const TAXONOMY_TREE_CHILD_DIAMETER_FACTOR = 2.5
+export const TAXONOMY_TREE_CHILD_DIAMETER_MIN = 0.3
+export const TAXONOMY_TREE_CHILD_DIAMETER_MAX = 0.6
 /**
  * Recursion rollback: a split must produce at least two children covering a
  * meaningful share of members, and no child may dominate the covered mass —
@@ -325,3 +225,4 @@ export const TAXONOMY_TREE_CHILD_MIN_MEMBERS_RATIO = 0.05
 export const TAXONOMY_TREE_MIN_CHILDREN = 2
 export const TAXONOMY_TREE_MIN_COVERAGE = 0.3
 export const TAXONOMY_TREE_MAX_CHILD_DOMINANCE = 0.9
+export const TAXONOMY_TREE_DEEP_MAX_CHILD_DOMINANCE = 0.75

@@ -26,12 +26,7 @@ import {
   updateTaxonomyCentroid,
 } from "@domain/taxonomy"
 import { type ClickHouseClient, TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import {
-  CalibrationProfileRepositoryLive,
-  TaxonomyClusterRepositoryLive,
-  TaxonomyLineageRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect, Layer } from "effect"
 import { describe, expect, it, vi } from "vitest"
@@ -220,7 +215,7 @@ const gardenOnce = (runId: ReturnType<typeof TaxonomyRunId>) =>
       }
     }).pipe(
       withPostgres(
-        Layer.mergeAll(CalibrationProfileRepositoryLive, TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive),
+        Layer.mergeAll(TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive),
         pg.appPostgresClient,
         ORGANIZATION_ID,
       ),
@@ -413,8 +408,8 @@ describe("taxonomy gardening worker", () => {
 
     expect(started).toEqual([
       {
-        workflow: "gardenProjectTaxonomyWorkflow",
-        input: { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, trigger: "manual" },
+        workflow: "gardenTaxonomyWorkflow",
+        input: { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, dimension: "topic", trigger: "manual" },
         workflowId: `org:${ORGANIZATION_ID}:taxonomy:garden:${PROJECT_ID}`,
       },
     ])

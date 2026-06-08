@@ -1,22 +1,13 @@
-import { CancellationScope, executeChild, proxyActivities, workflowInfo } from "@temporalio/workflow"
+import type { TaxonomyClusterLineage } from "@domain/taxonomy"
+import { CancellationScope, proxyActivities, workflowInfo } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
 export type GardenTaxonomyWorkflowInput = activities.GardenTaxonomyActivityInput
 export type GardenTaxonomyWorkflowResult = activities.GardenTaxonomyActivityResult
 
-export interface GardenProjectTaxonomyWorkflowInput {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly trigger: "cron" | "manual" | "threshold"
-}
-
-export type GardenProjectTaxonomyWorkflowResult = readonly GardenTaxonomyWorkflowResult[]
-
-const TAXONOMY_DIMENSIONS = ["topic"] as const
-
 const {
-  calibrateGardenTaxonomyActivity,
+  assertGardenTaxonomyQualityActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,
@@ -25,6 +16,7 @@ const {
   planGardenTaxonomyNamingActivity,
   reassignGardenTaxonomyNoiseActivity,
   recurseGardenTaxonomyTreeActivity,
+  reconcileGardenTaxonomyCountsActivity,
   startGardenTaxonomyRunActivity,
   sweepGardenTaxonomyNoiseActivity,
 } = proxyActivities<typeof activities>({
@@ -46,6 +38,8 @@ const { nameTaxonomyClusterActivity } = proxyActivities<typeof activities>({
 })
 
 const NAMING_ACTIVITY_CONCURRENCY = 4
+const GARDENING_CONVERGENCE_MAX_ITERATIONS = 3
+const GARDENING_ITERATION_OFFSET_MS = 10
 
 const runInBatches = async <A, B>(
   items: readonly A[],
@@ -67,33 +61,78 @@ const errorMessage = (error: unknown): string => {
 export const gardenTaxonomyWorkflow = async (
   input: GardenTaxonomyWorkflowInput,
 ): Promise<GardenTaxonomyWorkflowResult> => {
-  // The workflow id is fixed per project+dimension; the execution run id keeps
-  // each gardening execution's taxonomy run row distinct (stable across
-  // activity retries and replays within this execution).
   const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
   try {
-    await calibrateGardenTaxonomyActivity(started)
-    const births = await sweepGardenTaxonomyNoiseActivity(started)
-    const merges = await mergeGardenTaxonomyClustersActivity(started)
-    const deaths = await deprecateGardenTaxonomyClustersActivity(started)
-    const reassign = await reassignGardenTaxonomyNoiseActivity(started)
-    const recursion = await recurseGardenTaxonomyTreeActivity(started)
-    const lineage = [...births.lineage, ...merges.lineage, ...deaths.lineage, ...recursion.lineage]
-    const namingPlan = await planGardenTaxonomyNamingActivity({ ...started, lineage })
-    await runInBatches(namingPlan.clusterIds, NAMING_ACTIVITY_CONCURRENCY, (clusterId) =>
-      nameTaxonomyClusterActivity({
-        organizationId: started.organizationId,
-        projectId: started.projectId,
-        clusterId,
-      }),
-    )
+    const lineage: TaxonomyClusterLineage[] = []
+    let noiseScanned = 0
+    let clustersBorn = 0
+    let clustersMerged = 0
+    let clustersDeprecated = 0
+
+    for (let iteration = 0; iteration < GARDENING_CONVERGENCE_MAX_ITERATIONS; iteration += 1) {
+      const step = {
+        ...started,
+        now: new Date(Date.parse(started.now) + iteration * GARDENING_ITERATION_OFFSET_MS).toISOString(),
+      }
+      const births = await sweepGardenTaxonomyNoiseActivity(step)
+      const reassign = await reassignGardenTaxonomyNoiseActivity(step)
+      const iterationLineage = [...births.lineage]
+      const namingPlan = await planGardenTaxonomyNamingActivity({ ...step, lineage: iterationLineage })
+      await runInBatches(namingPlan.clusterIds, NAMING_ACTIVITY_CONCURRENCY, (clusterId) =>
+        nameTaxonomyClusterActivity({
+          organizationId: started.organizationId,
+          projectId: started.projectId,
+          clusterId,
+        }),
+      )
+      const preSplitReconciliation = await reconcileGardenTaxonomyCountsActivity(step)
+      const splits = await recurseGardenTaxonomyTreeActivity(step)
+      const splitNamingPlan = await planGardenTaxonomyNamingActivity({ ...step, lineage: splits.lineage })
+      await runInBatches(splitNamingPlan.clusterIds, NAMING_ACTIVITY_CONCURRENCY, (clusterId) =>
+        nameTaxonomyClusterActivity({
+          organizationId: started.organizationId,
+          projectId: started.projectId,
+          clusterId,
+        }),
+      )
+      const merges = await mergeGardenTaxonomyClustersActivity(step)
+      const postMergeReconciliation = await reconcileGardenTaxonomyCountsActivity(step)
+      const deaths = await deprecateGardenTaxonomyClustersActivity(step)
+      lineage.push(
+        ...iterationLineage,
+        ...preSplitReconciliation.lineage,
+        ...splits.lineage,
+        ...merges.lineage,
+        ...postMergeReconciliation.lineage,
+        ...deaths.lineage,
+      )
+      noiseScanned += births.noiseScanned + reassign.noiseScanned
+      clustersBorn += births.clustersBorn + splits.childrenBorn
+      clustersMerged += merges.clustersMerged
+      clustersDeprecated +=
+        preSplitReconciliation.clustersDeprecated +
+        postMergeReconciliation.clustersDeprecated +
+        deaths.clustersDeprecated
+
+      if (
+        births.clustersBorn === 0 &&
+        splits.childrenBorn === 0 &&
+        merges.clustersMerged === 0 &&
+        preSplitReconciliation.clustersDeprecated === 0 &&
+        postMergeReconciliation.clustersDeprecated === 0
+      ) {
+        break
+      }
+    }
+
+    await assertGardenTaxonomyQualityActivity(started)
     await emitGardenTaxonomyLineageActivity({ ...started, lineage })
     return completeGardenTaxonomyRunActivity({
       ...started,
-      noiseScanned: births.noiseScanned + reassign.noiseScanned,
-      clustersBorn: births.clustersBorn + recursion.childrenBorn,
-      clustersMerged: merges.clustersMerged,
-      clustersDeprecated: deaths.clustersDeprecated,
+      noiseScanned,
+      clustersBorn,
+      clustersMerged,
+      clustersDeprecated,
     })
   } catch (error) {
     await CancellationScope.nonCancellable(() =>
@@ -102,16 +141,3 @@ export const gardenTaxonomyWorkflow = async (
     throw error
   }
 }
-
-export const gardenProjectTaxonomyWorkflow = async (
-  input: GardenProjectTaxonomyWorkflowInput,
-): Promise<GardenProjectTaxonomyWorkflowResult> =>
-  Promise.all(
-    TAXONOMY_DIMENSIONS.map((dimension) => {
-      const workflowId = `org:${input.organizationId}:taxonomy:garden:${input.projectId}:${dimension}`
-      return executeChild(gardenTaxonomyWorkflow, {
-        args: [{ ...input, dimension, workflowId }],
-        workflowId,
-      })
-    }),
-  )

@@ -69,16 +69,6 @@ const coherence = (embeddings: readonly (readonly number[])[], centroid: readonl
   return clamp(average, 0, 1)
 }
 
-const SHORT_ACKNOWLEDGEMENTS = new Set(["ok", "okay", "yes", "yeah", "yep", "no", "nope", "thanks", "thank you"])
-
-const isShortAcknowledgement = (turn: SemanticSegmentationTurn): boolean => {
-  const normalized = turn.content
-    .trim()
-    .toLowerCase()
-    .replace(/[.!?]+$/g, "")
-  return normalized.length <= 16 && SHORT_ACKNOWLEDGEMENTS.has(normalized)
-}
-
 interface ContinuityClamps {
   readonly min: number
   readonly default: number
@@ -133,22 +123,19 @@ export const segmentSemanticMoments = ({
     })
   }
 
-  for (const turn of eligibleTurns.slice(1)) {
+  for (let turnIndex = 1; turnIndex < eligibleTurns.length; turnIndex++) {
+    const turn = eligibleTurns[turnIndex] as SemanticSegmentationTurn
     const centroid = meanEmbedding(currentTurns.map((current) => current.embedding))
     const similarity = cosineSimilarity(turn.embedding, centroid)
     const maxLengthReached = currentTurns.length >= maxTurnsPerMoment
     // The smallest moment unit is a full exchange: boundaries are only
     // considered before a *user* turn, and never before the current moment
     // holds at least one user and one assistant turn — an assistant response
-    // always belongs to the moment of the user turn it answers. A bare
-    // acknowledgement ("ok", "thanks") never opens a moment of its own, but
-    // it must not glue the turn that FOLLOWS it onto the old moment — the
-    // next substantive user turn is judged on similarity like any other.
+    // always belongs to the moment of the user turn it answers.
     const hasCompleteExchange =
       currentTurns.some((current) => current.role === "user") &&
       currentTurns.some((current) => current.role === "assistant")
-    const attachToCurrent =
-      !maxLengthReached && (turn.role !== "user" || !hasCompleteExchange || isShortAcknowledgement(turn))
+    const attachToCurrent = !maxLengthReached && (turn.role !== "user" || !hasCompleteExchange)
 
     if (attachToCurrent || (similarity >= threshold && !maxLengthReached)) {
       currentTurns.push(turn)

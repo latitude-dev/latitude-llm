@@ -140,4 +140,45 @@ describe("TaxonomyObservationRepositoryLive", () => {
     expect(rows[0]?.assignmentMethod).toBe("gardening_reassign")
     expect(rows[0]?.reassignmentRunId).toBe(runId)
   })
+
+  it("treats reassignment as one current observation", async () => {
+    const observation = makeObservation({ observationId: "u".repeat(24), sessionId: SessionId("current-session") })
+
+    const result = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        yield* repo.upsert(observation)
+        yield* repo.reassignMany([
+          {
+            observation,
+            assignedClusterId: clusterId,
+            assignmentMethod: "gardening_reassign",
+            assignmentConfidence: 0.82,
+            reassignmentRunId: runId,
+            indexedAt: new Date("2026-05-24T12:02:00.000Z"),
+          },
+        ])
+        const counts = yield* repo.getCounts({
+          organizationId,
+          projectId,
+          since: new Date("2026-05-23T00:00:00.000Z"),
+        })
+        const noise = yield* repo.listNoise({
+          organizationId,
+          projectId,
+          since: new Date("2026-05-23T00:00:00.000Z"),
+        })
+        const assignments = yield* repo.getClusterAssignmentCounts({
+          organizationId,
+          projectId,
+          clusterIds: [clusterId],
+        })
+        return { counts, noise, assignments }
+      }),
+    )
+
+    expect(result.counts).toEqual({ total: 1, assigned: 1, noise: 0 })
+    expect(result.noise).toHaveLength(0)
+    expect(result.assignments).toMatchObject([{ clusterId, count: 1 }])
+  })
 })

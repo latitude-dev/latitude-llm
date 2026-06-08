@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { mockActivities, childExecutions } = vi.hoisted(() => {
+const { mockActivities } = vi.hoisted(() => {
   const mockActivities = {
-    calibrateGardenTaxonomyActivity: vi.fn(async () => ({
-      clusteringCalibrated: false,
-      sessionCalibrated: false,
-    })),
     startGardenTaxonomyRunActivity: vi.fn(async (input: Record<string, unknown>) => ({
       ...input,
       runId: "r".repeat(24),
@@ -26,10 +22,12 @@ const { mockActivities, childExecutions } = vi.hoisted(() => {
       observationsMoved: 5,
       lineage: ["split"],
     })),
+    reconcileGardenTaxonomyCountsActivity: vi.fn(async () => ({ clustersDeprecated: 0, lineage: [] })),
     planGardenTaxonomyNamingActivity: vi.fn(async () => ({
       clusterIds: ["c".repeat(24)],
       clustersScanned: 1,
     })),
+    assertGardenTaxonomyQualityActivity: vi.fn(async () => ({ clustersScanned: 1, findings: [] })),
     nameGardenTaxonomyActivity: vi.fn(async () => ({ clustersNamed: 1, categoriesScanned: 1 })),
     nameTaxonomyClusterActivity: vi.fn(async () => ({ name: "Named cluster", description: "A named test cluster." })),
     emitGardenTaxonomyLineageActivity: vi.fn(async () => undefined),
@@ -39,8 +37,7 @@ const { mockActivities, childExecutions } = vi.hoisted(() => {
     })),
     failGardenTaxonomyRunActivity: vi.fn(async (input: Record<string, unknown>) => ({ ...input, status: "failed" })),
   }
-  const childExecutions: Array<{ readonly args: unknown[]; readonly workflowId: string }> = []
-  return { mockActivities, childExecutions }
+  return { mockActivities }
 })
 
 vi.mock("@temporalio/workflow", () => ({
@@ -49,21 +46,13 @@ vi.mock("@temporalio/workflow", () => ({
   },
   proxyActivities: () => mockActivities,
   workflowInfo: () => ({ runId: "test-workflow-run-id" }),
-  executeChild: async (
-    workflow: (input: never) => Promise<unknown>,
-    options: { args: [never]; workflowId: string },
-  ) => {
-    childExecutions.push({ args: options.args, workflowId: options.workflowId })
-    return workflow(options.args[0])
-  },
 }))
 
-import { gardenProjectTaxonomyWorkflow, gardenTaxonomyWorkflow } from "./taxonomy-gardening-workflow.ts"
+import { gardenTaxonomyWorkflow } from "./taxonomy-gardening-workflow.ts"
 
 describe("taxonomy gardening workflows", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    childExecutions.length = 0
   })
 
   it("runs dimension gardening as ordered idempotent activities", async () => {
@@ -82,7 +71,10 @@ describe("taxonomy gardening workflows", () => {
       workflowRunId: "test-workflow-run-id",
     })
     expect(mockActivities.planGardenTaxonomyNamingActivity).toHaveBeenCalledWith(
-      expect.objectContaining({ lineage: ["birth", "merge", "death", "split"] }),
+      expect.objectContaining({ lineage: ["birth"] }),
+    )
+    expect(mockActivities.planGardenTaxonomyNamingActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ lineage: ["split"] }),
     )
     expect(mockActivities.nameTaxonomyClusterActivity).toHaveBeenCalledWith({
       organizationId: "o".repeat(24),
@@ -92,30 +84,13 @@ describe("taxonomy gardening workflows", () => {
     expect(mockActivities.completeGardenTaxonomyRunActivity).toHaveBeenCalledWith(
       expect.objectContaining({
         observationsScanned: 7,
-        noiseScanned: 6,
-        clustersBorn: 3,
-        clustersMerged: 1,
-        clustersDeprecated: 1,
+        noiseScanned: 18,
+        clustersBorn: 9,
+        clustersMerged: 3,
+        clustersDeprecated: 3,
       }),
     )
     expect(result).toEqual(expect.objectContaining({ status: "completed" }))
-  })
-
-  it("starts deterministic dimension child workflows for project gardening re-runs", async () => {
-    const input = {
-      organizationId: "o".repeat(24),
-      projectId: "p".repeat(24),
-      trigger: "cron" as const,
-    }
-
-    await gardenProjectTaxonomyWorkflow(input)
-    const firstRunWorkflowIds = childExecutions.map((execution) => execution.workflowId)
-    childExecutions.length = 0
-    await gardenProjectTaxonomyWorkflow(input)
-
-    expect(firstRunWorkflowIds).toEqual([`org:${"o".repeat(24)}:taxonomy:garden:${"p".repeat(24)}:topic`])
-    expect(childExecutions.map((execution) => execution.workflowId)).toEqual(firstRunWorkflowIds)
-    expect(mockActivities.startGardenTaxonomyRunActivity).toHaveBeenCalledTimes(2)
   })
 
   it("marks the run failed and propagates failed step activity so Temporal retry policy owns recovery", async () => {

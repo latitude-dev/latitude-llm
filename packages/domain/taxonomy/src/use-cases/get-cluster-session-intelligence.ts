@@ -13,6 +13,8 @@ export interface GetClusterSessionIntelligenceInput {
   readonly clusterId: TaxonomyClusterId
   readonly now?: Date
   readonly sourceWindowDays?: number
+  readonly sourceWindowStart?: Date
+  readonly sourceWindowEnd?: Date
 }
 
 export interface GetClusterSessionIntelligenceResult {
@@ -37,10 +39,10 @@ export const getClusterSessionIntelligenceUseCase = (input: GetClusterSessionInt
     yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
     const queryStartedAt = Date.now()
     const now = input.now ?? new Date()
-    const sourceWindowEnd = now
-    const sourceWindowStart = new Date(
-      now.getTime() - (input.sourceWindowDays ?? DEFAULT_SOURCE_WINDOW_DAYS) * 24 * 60 * 60_000,
-    )
+    const sourceWindowEnd = input.sourceWindowEnd ?? now
+    const sourceWindowStart =
+      input.sourceWindowStart ??
+      new Date(now.getTime() - (input.sourceWindowDays ?? DEFAULT_SOURCE_WINDOW_DAYS) * 24 * 60 * 60_000)
     const intelligence = yield* TaxonomyClusterIntelligenceRepository
     const clusters = yield* TaxonomyClusterRepository
     // A tree node's profile covers its whole subtree: interior nodes hold

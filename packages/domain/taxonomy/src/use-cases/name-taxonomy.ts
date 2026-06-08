@@ -105,8 +105,31 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
       const summary = readableObservationSummary(row.projectionMetadata.summary)
       return summary === null ? [] : [{ embedding: row.embedding, summary }]
     })
-    if (candidates.length === 0)
-      return { name: cluster.name, description: cluster.description } satisfies NameTaxonomyResult
+    if (candidates.length === 0) {
+      const children = (yield* clusters.listActiveByProject({
+        projectId: input.projectId,
+        dimension: cluster.dimension,
+      }))
+        .filter((candidate) => candidate.parentClusterId === cluster.id)
+        .filter((child) => child.name !== "Pending" && child.description.trim().length > 0)
+        .sort((a, b) => b.observationCount - a.observationCount)
+      if (children.length === 0) {
+        return { name: cluster.name, description: cluster.description } satisfies NameTaxonomyResult
+      }
+      const generated = yield* generateClusterName({
+        samples: children
+          .slice(0, sampleBudget(cluster.observationCount))
+          .map((child) => `${child.name}: ${child.description}`),
+      })
+      yield* clusters.save({
+        ...cluster,
+        name: generated.name,
+        description: generated.description,
+        clusteredAt: now,
+        updatedAt: now,
+      })
+      return generated satisfies NameTaxonomyResult
+    }
 
     const selected = farthestPointSample(
       candidates.map((row) => row.embedding),

@@ -24,12 +24,12 @@ vi.mock("@temporalio/workflow", () => ({
   executeChild: async (_workflow: unknown, options: { args: unknown[]; workflowId: string }) => {
     callOrder.push("taxonomy")
     childExecutions.push({ args: options.args, workflowId: options.workflowId })
-    return { dimensions: [] }
+    return { status: "completed" }
   },
 }))
 
 vi.mock("./taxonomy-gardening-workflow.ts", () => ({
-  gardenProjectTaxonomyWorkflow: async () => ({ dimensions: [] }),
+  gardenTaxonomyWorkflow: async () => ({ status: "completed" }),
 }))
 
 import { seedDemoProjectWorkflow } from "./seed-demo-project-workflow.ts"
@@ -65,7 +65,7 @@ describe("seedDemoProjectWorkflow", () => {
     expect(mockActivities.seedDemoProjectTraceSearchActivity).toHaveBeenCalledWith(baseInput)
     expect(childExecutions).toEqual([
       {
-        args: [{ organizationId: "org-1", projectId: "proj-demo", trigger: "manual" }],
+        args: [{ organizationId: "org-1", projectId: "proj-demo", dimension: "topic", trigger: "manual" }],
         workflowId: "org:org-1:taxonomy:garden:proj-demo:seed",
       },
     ])

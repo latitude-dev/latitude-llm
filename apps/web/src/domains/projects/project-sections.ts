@@ -11,6 +11,7 @@ import {
   SearchIcon,
   SettingsIcon,
   ShieldAlertIcon,
+  TagsIcon,
   TextAlignStartIcon,
   UserRound,
   Users,
@@ -25,7 +26,7 @@ import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
  * the optional `flag` field and resolved by the `useVisible*` hooks below.
  */
 
-type SectionFlag = "monitors" | "slack"
+type SectionFlag = "behaviours" | "monitors" | "slack"
 
 interface ProjectSection {
   readonly key: string
@@ -60,6 +61,14 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     icon: ShieldAlertIcon,
     path: (slug) => `/projects/${slug}/issues`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/issues`),
+  },
+  {
+    key: "behaviours",
+    label: "Behaviours",
+    icon: TagsIcon,
+    path: (slug) => `/projects/${slug}/behaviours`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
+    flag: "behaviours",
   },
   {
     key: "monitors",
@@ -145,9 +154,10 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
 
 /** Resolves every feature flag referenced by the section tables in one place. */
 function useSectionFlags(): Record<SectionFlag, boolean> {
+  const behaviours = useHasFeatureFlag("behaviours")
   const monitors = useHasFeatureFlag("monitors")
   const slack = useHasFeatureFlag("slack")
-  return useMemo(() => ({ monitors, slack }), [monitors, slack])
+  return useMemo(() => ({ behaviours, monitors, slack }), [behaviours, monitors, slack])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */

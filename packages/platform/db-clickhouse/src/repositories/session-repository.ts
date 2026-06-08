@@ -39,10 +39,10 @@ import {
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
-import { buildConversationIntelligenceFilters } from "../conversation-intelligence-filters.ts"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
+import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
 import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearchQuery } from "./search-by-project.ts"
 import { isActiveSearch } from "./search-plan.ts"
 
@@ -336,7 +336,7 @@ function buildSessionFilterClauses(filters: FilterSet | undefined): {
     return { havingClauses: [], whereClauses: [], params: {} }
   }
 
-  const ci = buildConversationIntelligenceFilters(filters)
+  const ci = buildSessionIntelligenceFilters(filters)
   const { telemetryFilters, scoreFilters } = splitScoreFilters(ci.rest)
 
   const telemetry = telemetryFilters

@@ -19,6 +19,11 @@ import type { DistinctColumn } from "./types.ts"
 
 export type FilterMode = "traces" | "sessions"
 
+export interface StaticFilterItem {
+  readonly value: string
+  readonly label: string
+}
+
 interface MultiSelectFilterProps {
   readonly projectId: string
   readonly column: DistinctColumn
@@ -28,6 +33,11 @@ interface MultiSelectFilterProps {
   readonly disabled?: boolean
   readonly placeholder?: string
   readonly portalContainer?: RefObject<HTMLElement | null>
+  /**
+   * Fixed option list (value + display label) for fields whose options are
+   * not distinct telemetry values — skips the distinct-values fetch.
+   */
+  readonly staticItems?: readonly StaticFilterItem[]
 }
 
 function useDistinctValues(
@@ -48,6 +58,7 @@ export function MultiSelectFilter({
   disabled,
   placeholder = "Search...",
   portalContainer,
+  staticItems,
 }: MultiSelectFilterProps) {
   const anchorRef = useRef<HTMLDivElement>(null)
   const [inputValue, setInputValue] = useState("")
@@ -58,14 +69,26 @@ export function MultiSelectFilter({
 
   useDebounce(() => setDebouncedSearch(inputValue), 300, [inputValue])
 
-  const { data: options = [], isFetching } = useDistinctValues(mode, {
+  const { data: fetchedOptions = [], isFetching } = useDistinctValues(mode, {
     projectId,
     column,
     ...(debouncedSearch ? { search: debouncedSearch } : {}),
     // Defer fetching until the popup is first opened so opening the filter
-    // modal doesn't fire one query per multi-select up front.
-    enabled: hasOpened,
+    // modal doesn't fire one query per multi-select up front. Static-item
+    // fields never fetch.
+    enabled: hasOpened && staticItems === undefined,
   })
+  const labelByValue = useMemo(
+    () => new Map((staticItems ?? []).map((item) => [item.value, item.label])),
+    [staticItems],
+  )
+  const options = useMemo(() => {
+    if (staticItems === undefined) return fetchedOptions
+    const query = debouncedSearch.trim().toLowerCase()
+    return staticItems
+      .filter((item) => query.length === 0 || item.label.toLowerCase().includes(query))
+      .map((item) => item.value)
+  }, [staticItems, fetchedOptions, debouncedSearch])
 
   // Cover both the "user typed, debounce hasn't fired yet" gap and the
   // in-flight fetch, so the indicator stays visible across the whole search.
@@ -103,7 +126,7 @@ export function MultiSelectFilter({
           {(values: string[]) => (
             <>
               {values.map((v) => (
-                <ComboboxChip key={v}>{v}</ComboboxChip>
+                <ComboboxChip key={v}>{labelByValue.get(v) ?? v}</ComboboxChip>
               ))}
               <ComboboxChipsInput placeholder={placeholder} />
             </>
@@ -121,7 +144,7 @@ export function MultiSelectFilter({
         <ComboboxList>
           {(value: string) => (
             <ComboboxItem key={value} value={value}>
-              <Text.H5>{value}</Text.H5>
+              <Text.H5>{labelByValue.get(value) ?? value}</Text.H5>
             </ComboboxItem>
           )}
         </ComboboxList>

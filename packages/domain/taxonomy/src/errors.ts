@@ -61,3 +61,11 @@ export class TaxonomyObservationNotFoundError extends Data.TaggedError("Taxonomy
   readonly httpStatus = 404
   readonly httpMessage = "Taxonomy observation not found"
 }
+
+export class TaxonomyQualityGateError extends Data.TaggedError("TaxonomyQualityGateError")<{
+  readonly projectId: string
+  readonly findings: readonly string[]
+}> {
+  readonly httpStatus = 500
+  readonly httpMessage = "Taxonomy quality gate failed"
+}

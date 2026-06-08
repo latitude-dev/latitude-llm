@@ -24,10 +24,11 @@ export interface RouteToDeepestClusterInput {
 /**
  * Deepest-fit tree routing: start at the roots and descend while a child
  * clears the gates; the observation lands on the deepest node that did.
- * Stopping at an interior node leaves it as that subtree's residue for
- * future recursion. Descent into a recursed node's children additionally
+ * If a child does not clear the gates, the observation stays on the matched
+ * parent as that subtree's residue for future recursion. Descent into a
+ * recursed node's children additionally
  * requires the density that node was split at — the global absolute gate is
- * calibrated for root-level coarseness and would otherwise descend into
+ * tuned for root-level coarseness and would otherwise descend into
  * tight children on marginal similarity.
  */
 export const routeToDeepestClusterUseCase = (input: RouteToDeepestClusterInput) =>
@@ -55,7 +56,9 @@ export const routeToDeepestClusterUseCase = (input: RouteToDeepestClusterInput) 
               relativeMargin: baseGates.relativeMargin,
             }
       const levelDecision = decideClusterAssignment(nearest, levelGates)
-      if (levelDecision.method !== "centroid_online") break
+      if (levelDecision.method !== "centroid_online") {
+        break
+      }
       decision = levelDecision
       const match = nearest.find((candidate) => candidate.cluster.id === levelDecision.clusterId)
       if (!match) break

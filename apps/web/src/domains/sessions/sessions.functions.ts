@@ -1,12 +1,14 @@
 import { deriveIssueLifecycleStates, IssueRepository } from "@domain/issues"
 import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
+  type FilterSet,
   filterSetSchema,
   OrganizationId,
   PERCENTILE_SESSION_FILTER_FIELDS,
   type PercentileSessionFilterField,
   ProjectId,
   SessionId,
+  TaxonomyClusterId,
   TraceId,
 } from "@domain/shared"
 import type {
@@ -25,6 +27,7 @@ import {
   SessionRepository,
   SpanRepository,
 } from "@domain/spans"
+import { TaxonomyClusterRepository } from "@domain/taxonomy"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
@@ -34,7 +37,7 @@ import {
   SpanRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import { IssueRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { IssueRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -120,6 +123,7 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<SessionListResult> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
+    const filters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
 
     const page = await Effect.runPromise(
       Effect.gen(function* () {
@@ -132,7 +136,7 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
             ...(data.cursor ? { cursor: data.cursor } : {}),
             ...(data.sortBy ? { sortBy: data.sortBy } : {}),
             ...(data.sortDirection ? { sortDirection: data.sortDirection } : {}),
-            ...(data.filters ? { filters: data.filters } : {}),
+            ...(filters ? { filters } : {}),
             ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
           },
         })
@@ -174,6 +178,7 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
     }> => {
       const { organizationId } = await requireSession()
       const orgId = OrganizationId(organizationId)
+      const filters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
 
       const result = await Effect.runPromise(
         Effect.gen(function* () {
@@ -181,7 +186,7 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
           return yield* repo.countByProjectId({
             organizationId: orgId,
             projectId: ProjectId(data.projectId),
-            ...(data.filters ? { filters: data.filters } : {}),
+            ...(filters ? { filters } : {}),
             ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
           })
         }).pipe(
@@ -197,6 +202,37 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
       }
     },
   )
+
+/**
+ * Selecting a topic means its whole subtree: tree nodes hold residue
+ * observations directly while descendants hold the rest, so the filter
+ * expands each selected node into its subtree ids before ClickHouse sees it.
+ */
+const expandTopicFilters = async (
+  orgId: OrganizationId,
+  projectId: ProjectId,
+  filters: FilterSet | undefined,
+): Promise<FilterSet | undefined> => {
+  const inCondition = filters?.topics?.find((condition) => condition.op === "in")
+  const selected = Array.isArray(inCondition?.value) ? inCondition.value.map(String) : []
+  if (!filters || selected.length === 0) return filters
+  const expanded = await Effect.runPromise(
+    Effect.gen(function* () {
+      const clusters = yield* TaxonomyClusterRepository
+      const ids = new Set<string>()
+      for (const id of selected) {
+        const subtree = yield* clusters.listSubtreeIds({ projectId, clusterId: TaxonomyClusterId(id) })
+        for (const subtreeId of subtree) ids.add(subtreeId)
+      }
+      return [...ids]
+    }).pipe(withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), orgId), withTracing),
+  )
+  // A selection that expands to nothing (e.g. a persisted filter pointing at
+  // a since-merged cluster) must match ZERO sessions — an empty in-list would
+  // collapse to "no filter" downstream and silently show the whole project.
+  const NO_MATCH_CLUSTER_ID = "__no_matching_topic__"
+  return { ...filters, topics: [{ op: "in", value: expanded.length > 0 ? expanded : [NO_MATCH_CLUSTER_ID] }] }
+}
 
 const sessionHistogramInputSchema = z.object({
   projectId: z.string(),
@@ -222,7 +258,8 @@ export const getSessionTimeHistogramByProject = createServerFn({ method: "GET" }
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
-    const mergedFilters = mergeTraceHistogramTimeFilters(data.filters, data.rangeStartIso, data.rangeEndIso)
+    const expandedFilters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
+    const mergedFilters = mergeTraceHistogramTimeFilters(expandedFilters, data.rangeStartIso, data.rangeEndIso)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -242,6 +279,7 @@ export const getSessionMetricsByProject = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<SessionMetrics | null> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
+    const filters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -249,7 +287,7 @@ export const getSessionMetricsByProject = createServerFn({ method: "GET" })
         return yield* repo.aggregateMetricsByProjectId({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
-          ...(data.filters ? { filters: data.filters } : {}),
+          ...(filters ? { filters } : {}),
         })
       }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )

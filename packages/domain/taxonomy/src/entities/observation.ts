@@ -10,6 +10,7 @@ export type TaxonomyProjectionMethod = z.infer<typeof taxonomyProjectionMethodSc
 
 export const TaxonomyProjectionMethod = {
   MomentTextEmbedding: "moment_text_embedding",
+  SessionUserIntentEmbedding: "session_user_intent_embedding",
 } as const satisfies Record<string, TaxonomyProjectionMethod>
 
 export const TaxonomyObservationAssignmentMethod = {
@@ -20,11 +21,11 @@ export const TaxonomyObservationAssignmentMethod = {
 } as const satisfies Record<string, TaxonomyObservationAssignmentMethod>
 
 /**
- * Canonical taxonomy observation for the session-moment redesign.
+ * Canonical taxonomy observation for topic clustering.
  *
- * Observations are produced from semantic moments as a representative sample
- * for clustering. The full semantic-moment and moment-label tables remain the
- * source of truth for complete per-session moment intelligence.
+ * The current topic projection is one session-level conversation embedding per
+ * analyzed session. Semantic moments and moment labels remain the source of
+ * truth for behavioural/process facets.
  */
 export const taxonomyMomentObservationSchema = z.object({
   organizationId: cuidSchema,

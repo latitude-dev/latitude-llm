@@ -48,7 +48,15 @@ export {
   seedDemoProjectTraceSearchActivity,
 } from "./seed-demo-project-activities.ts"
 export {
-  calibrateGardenTaxonomyActivity,
+  type BackfillSessionDescriptor,
+  listBackfillSessionsActivity,
+  resetSessionIntelligenceForProjectActivity,
+  resetTaxonomyForProjectActivity,
+  type SessionIntelligenceBackfillActivityInput,
+  waitForTaxonomyObservationStabilityActivity,
+} from "./session-intelligence-backfill-activities.ts"
+export {
+  assertGardenTaxonomyQualityActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,
@@ -56,10 +64,12 @@ export {
   type GardenTaxonomyActivityInput,
   type GardenTaxonomyActivityResult,
   type GardenTaxonomyNamingPlanResult,
+  type GardenTaxonomyQualityResult,
   mergeGardenTaxonomyClustersActivity,
   nameGardenTaxonomyActivity,
   planGardenTaxonomyNamingActivity,
   reassignGardenTaxonomyNoiseActivity,
+  reconcileGardenTaxonomyCountsActivity,
   recurseGardenTaxonomyTreeActivity,
   startGardenTaxonomyRunActivity,
   sweepGardenTaxonomyNoiseActivity,

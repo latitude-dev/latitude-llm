@@ -1,16 +1,14 @@
-import { CONVERSATION_CALIBRATION_TTL_MS, calibrateSessionThresholdsUseCase } from "@domain/conversation-intelligence"
 import { OrganizationId, ProjectId, TaxonomyClusterId, TaxonomyRunId } from "@domain/shared"
 import {
-  CalibrationProfileRepository,
-  calibrateClusteringThresholdsUseCase,
+  assertTaxonomyQualityUseCase,
   deprecateInactiveClustersUseCase,
   emitLineageUseCase,
   mergeNearDuplicateClustersUseCase,
   nameClusterUseCase,
   reassignNoiseToCurrentClustersUseCase,
+  reconcileClusterCountsUseCase,
   recurseTreeClustersUseCase,
   sweepNoiseAndBirthClustersUseCase,
-  TAXONOMY_CALIBRATION_TTL_MS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   type TaxonomyClusterLineage,
   TaxonomyClusterRepository,
@@ -23,14 +21,8 @@ import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisCacheStoreLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
+import { TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
-  SessionRepositoryLive,
-  TaxonomyObservationRepositoryLive,
-  TraceRepositoryLive,
-  withClickHouse,
-} from "@platform/db-clickhouse"
-import {
-  CalibrationProfileRepositoryLive,
   TaxonomyClusterRepositoryLive,
   TaxonomyLineageRepositoryLive,
   TaxonomyRunRepositoryLive,
@@ -87,6 +79,11 @@ export interface GardenTaxonomyNamingPlanResult {
   readonly clustersScanned: number
 }
 
+export interface GardenTaxonomyQualityResult {
+  readonly clustersScanned: number
+  readonly findings: readonly string[]
+}
+
 export type GardenTaxonomyActivityResult = TaxonomyRun
 
 const deterministicTaxonomyRunId = (input: GardenTaxonomyActivityInput) => {
@@ -132,12 +129,7 @@ const gardeningLookbackStart = (now: Date): Date =>
 const withTaxonomyPostgres = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
   effect.pipe(
     withPostgres(
-      Layer.mergeAll(
-        CalibrationProfileRepositoryLive,
-        TaxonomyClusterRepositoryLive,
-        TaxonomyLineageRepositoryLive,
-        TaxonomyRunRepositoryLive,
-      ),
+      Layer.mergeAll(TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive, TaxonomyRunRepositoryLive),
       getPostgresClient(),
       OrganizationId(organizationId),
     ),
@@ -236,25 +228,6 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
   )
 }
 
-/**
- * taxonomy_observations is ReplacingMergeTree(indexed_at). All gardening
- * steps share the run's `now`, so an observation moved by two steps in one
- * run (merge then recursion, reassign then recursion) would write two rows
- * with the SAME version — ClickHouse keeps an arbitrary one. Each step gets
- * a deterministic millisecond offset so later steps always win, and Temporal
- * retries reproduce the same timestamps.
- */
-const GARDEN_STAGE_OFFSET_MS = {
-  sweep: 0,
-  merge: 1,
-  deprecate: 2,
-  reassign: 3,
-  recurse: 4,
-} as const
-
-const stageNow = (now: string, stage: keyof typeof GARDEN_STAGE_OFFSET_MS): Date =>
-  new Date(Date.parse(now) + GARDEN_STAGE_OFFSET_MS[stage])
-
 export const sweepGardenTaxonomyNoiseActivity = (input: GardenTaxonomyStepInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow sweep noise",
@@ -264,7 +237,6 @@ export const sweepGardenTaxonomyNoiseActivity = (input: GardenTaxonomyStepInput)
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "sweep"),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
@@ -281,7 +253,6 @@ export const mergeGardenTaxonomyClustersActivity = (input: GardenTaxonomyStepInp
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "merge"),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
@@ -298,7 +269,6 @@ export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomySte
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "deprecate"),
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
 
@@ -311,7 +281,6 @@ export const reassignGardenTaxonomyNoiseActivity = (input: GardenTaxonomyStepInp
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "reassign"),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
@@ -328,11 +297,39 @@ export const recurseGardenTaxonomyTreeActivity = (input: GardenTaxonomyStepInput
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "recurse"),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
       withTaxonomyAiAndRedis,
+    ),
+  )
+
+export const reconcileGardenTaxonomyCountsActivity = (input: GardenTaxonomyStepInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow reconcile counts",
+    input,
+    reconcileClusterCountsUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      runId: TaxonomyRunId(input.runId),
+      dimension: input.dimension,
+    }).pipe(
+      (effect) => withTaxonomyPostgres(effect, input.organizationId),
+      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
+    ),
+  )
+
+export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow assert quality",
+    input,
+    assertTaxonomyQualityUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      dimension: input.dimension,
+    }).pipe(
+      (effect) => withTaxonomyPostgres(effect, input.organizationId),
+      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
     ),
   )
 
@@ -446,57 +443,3 @@ export const failGardenTaxonomyRunActivity = (input: GardenTaxonomyFailInput) =>
   )
 
 export { errorMessage as gardenTaxonomyErrorMessage }
-
-export interface GardenTaxonomyCalibrationResult {
-  readonly clusteringCalibrated: boolean
-  readonly sessionCalibrated: boolean
-}
-
-/**
- * Refreshes the project's calibrated thresholds before gardening when stale.
- * Clustering calibration reads stored embeddings/confidences (cheap);
- * session calibration re-embeds a session sample (Redis-cached from
- * regular analysis, so still cheap).
- */
-export const calibrateGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
-  runGardenStep(
-    "GardenTaxonomyWorkflow calibrate thresholds",
-    input,
-    Effect.gen(function* () {
-      const profiles = yield* CalibrationProfileRepository
-      const now = new Date(input.now)
-      const organizationId = OrganizationId(input.organizationId)
-      const projectId = ProjectId(input.projectId)
-
-      const clusteringProfile = yield* profiles.findByProject({ projectId, scope: "clustering" })
-      const clusteringStale =
-        clusteringProfile === null ||
-        now.getTime() - clusteringProfile.computedAt.getTime() > TAXONOMY_CALIBRATION_TTL_MS
-      if (clusteringStale) {
-        yield* calibrateClusteringThresholdsUseCase({ organizationId, projectId, dimension: input.dimension, now })
-      }
-
-      const sessionProfile = yield* profiles.findByProject({ projectId, scope: "conversation" })
-      const sessionStale =
-        sessionProfile === null || now.getTime() - sessionProfile.computedAt.getTime() > CONVERSATION_CALIBRATION_TTL_MS
-      if (sessionStale) {
-        yield* calibrateSessionThresholdsUseCase({ organizationId, projectId, now })
-      }
-
-      return {
-        clusteringCalibrated: clusteringStale,
-        sessionCalibrated: sessionStale,
-      } satisfies GardenTaxonomyCalibrationResult
-    }).pipe(
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) =>
-        effect.pipe(
-          withClickHouse(
-            Layer.mergeAll(TaxonomyObservationRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
-            getClickhouseClient(),
-            OrganizationId(input.organizationId),
-          ),
-        ),
-      withTaxonomyAiAndRedis,
-    ),
-  )

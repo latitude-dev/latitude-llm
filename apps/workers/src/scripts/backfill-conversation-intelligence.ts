@@ -27,7 +27,7 @@ Options:
   --concurrency <n>        Number of workflow starts to process in parallel (default: 2)
   --reset                  Clear existing conversation-intelligence rows for selected projects first
   --reset-taxonomy         Clear taxonomy graph rows for selected projects before processing
-  --garden-after           Wait for started analyses to finish, then run GardenProjectTaxonomyWorkflow
+  --garden-after           Wait for started analyses to finish, then run GardenTaxonomyWorkflow
   --rebase-observations-to-now
                            Rewrite observation timestamps into the current gardening lookback window before gardening
   --manual-reprocess       Use AnalyzeSessionWorkflow reason 'manual_reprocess' instead of 'backfill'
@@ -78,13 +78,6 @@ async function resetProjectTaxonomy(project: ProjectRow) {
   )
   await adminPostgres.pool.query(
     `DELETE FROM latitude.taxonomy_runs WHERE organization_id = $1 AND project_id = $2`,
-    params,
-  )
-  // Calibration is derived from the project's score distributions; a stale
-  // profile inside its TTL would silently survive the reset and skip
-  // recalibration on the next garden pass.
-  await adminPostgres.pool.query(
-    `DELETE FROM latitude.calibration_profiles WHERE organization_id = $1 AND project_id = $2 AND scope = 'clustering'`,
     params,
   )
 }
@@ -145,6 +138,26 @@ async function rebaseObservationsToNow(project: ProjectRow) {
   if (!cutoffRow) throw new Error("Failed to read ClickHouse server time for the observation rebase")
   await clickhouse.command({
     query: `INSERT INTO taxonomy_observations
+            (
+              organization_id,
+              project_id,
+              observation_id,
+              session_id,
+              analysis_hash,
+              moment_id,
+              projection_method,
+              projection_hash,
+              projection_metadata,
+              embedding,
+              assigned_cluster_id,
+              assignment_confidence,
+              assignment_method,
+              reassignment_run_id,
+              start_time,
+              end_time,
+              retention_days,
+              indexed_at
+            )
             SELECT
               organization_id,
               project_id,
@@ -152,7 +165,6 @@ async function rebaseObservationsToNow(project: ProjectRow) {
               session_id,
               analysis_hash,
               moment_id,
-              dimension,
               projection_method,
               projection_hash,
               projection_metadata,

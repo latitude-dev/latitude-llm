@@ -9,35 +9,27 @@ import {
 import { Effect } from "effect"
 import {
   TAXONOMY_ABSORPTION_THRESHOLD,
-  TAXONOMY_BIRTH_LINK_PRESSURE_RANGE,
-  TAXONOMY_CALIBRATION_DIAMETER_FACTOR,
-  TAXONOMY_CALIBRATION_DIAMETER_MAX,
-  TAXONOMY_CALIBRATION_DIAMETER_MIN,
-  TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
-  TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_CEILING,
+  TAXONOMY_BIRTH_LINK_THRESHOLD,
+  TAXONOMY_BIRTH_MAX_DIAMETER,
+  TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+  TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
   TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR,
-  TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO,
   TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
-  TAXONOMY_NOISE_SAMPLE_MAX,
-  TAXONOMY_TREE_ROOT_CAP,
-  TAXONOMY_TREE_ROOT_LINK_THRESHOLD,
+  TAXONOMY_VISIBLE_BIRTH_MIN_OBSERVATION_RATIO,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
 import {
-  clamp,
   createTaxonomyCentroid,
   diameterBoundedGreedyClusters,
   meanNormalized,
   normalizeTaxonomyEmbedding,
   updateTaxonomyCentroid,
 } from "../helpers.ts"
-import { withTaxonomyClusterLock } from "../locks.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
-import { loadClusteringCalibration } from "./load-calibration.ts"
 
 export interface SweepNoiseAndBirthClustersInput {
   readonly organizationId: OrganizationId
@@ -56,11 +48,10 @@ export interface SweepNoiseAndBirthClustersResult {
 
 const lookbackStart = (now: Date): Date => new Date(now.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
-export const computeBirthMinMembers = (noisePoolSize: number): number =>
-  clamp(
-    Math.round(noisePoolSize * TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO),
+const computeVisibleBirthMinMembers = (samplePoolSize: number): number =>
+  Math.max(
     TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR,
-    TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_CEILING,
+    Math.ceil(samplePoolSize * TAXONOMY_VISIBLE_BIRTH_MIN_OBSERVATION_RATIO),
   )
 
 const buildBornCluster = (input: {
@@ -124,7 +115,7 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
       organizationId: input.organizationId,
       projectId: input.projectId,
       since: lookbackStart(now),
-      limit: TAXONOMY_NOISE_SAMPLE_MAX,
+      limit: Math.min(TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX, TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX),
     })
 
     if (noise.length < TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS) {
@@ -136,36 +127,19 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
       } satisfies SweepNoiseAndBirthClustersResult
     }
 
-    // Noise births create ROOT nodes — the coarsest density level of the
-    // tree (the old "category" altitude). Children are grown by the recursion
-    // pass at tighter, per-node densities. Governor: as roots approach the
-    // root cap, births require denser candidates; at the cap only absorption
-    // into existing roots runs.
-    const rootClusters = yield* clusters.listActiveByProject({
+    const counts = yield* observations.getCounts({
+      organizationId: input.organizationId,
       projectId: input.projectId,
-      dimension,
-      parentClusterId: null,
+      since: lookbackStart(now),
     })
-    const headroom = Math.max(0, TAXONOMY_TREE_ROOT_CAP - rootClusters.length)
-    const densityPressure = Math.min(1, rootClusters.length / TAXONOMY_TREE_ROOT_CAP)
-
-    const calibration = yield* loadClusteringCalibration({ projectId: input.projectId })
-    const birthLink = calibration?.rootLinkThreshold ?? TAXONOMY_TREE_ROOT_LINK_THRESHOLD
-    // The diameter bound follows the link density actually used for root
-    // births; the calibrated birthMaxDiameter derives from the (tighter)
-    // legacy birth link and would quietly override the coarse root density.
-    const maxDiameter = clamp(
-      (1 - birthLink) * TAXONOMY_CALIBRATION_DIAMETER_FACTOR,
-      TAXONOMY_CALIBRATION_DIAMETER_MIN,
-      TAXONOMY_CALIBRATION_DIAMETER_MAX,
-    )
+    const observationSampleSize = Math.min(counts.total, TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX)
     const normalizedEmbeddings = noise.map((observation) => normalizeTaxonomyEmbedding(observation.embedding))
-    const minMembers = Math.round(computeBirthMinMembers(noise.length) * (1 + densityPressure))
+    const minMembers = computeVisibleBirthMinMembers(observationSampleSize)
     const candidates = diameterBoundedGreedyClusters({
       embeddings: normalizedEmbeddings,
-      connectivityThreshold: birthLink + densityPressure * TAXONOMY_BIRTH_LINK_PRESSURE_RANGE,
+      connectivityThreshold: TAXONOMY_BIRTH_LINK_THRESHOLD,
       minMembers,
-      maxDiameter,
+      maxDiameter: TAXONOMY_BIRTH_MAX_DIAMETER,
     })
 
     let clustersBorn = 0
@@ -211,34 +185,9 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
             indexedAt: now,
           })),
         )
-        // Keep the stored counter in step with the rows that now point at the
-        // absorbing root; a stale counter later corrupts recursion residue.
-        yield* withTaxonomyClusterLock(
-          {
-            organizationId: input.organizationId,
-            clusterId: absorbingCluster.id,
-            ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
-          },
-          Effect.gen(function* () {
-            const fresh = yield* clusters.findById(absorbingCluster.id)
-            const lastObservedAt = memberObservations.reduce(
-              (latest, observation) => (observation.startTime > latest ? observation.startTime : latest),
-              fresh.lastObservedAt,
-            )
-            yield* clusters.save({
-              ...fresh,
-              observationCount: fresh.observationCount + memberObservations.length,
-              lastObservedAt,
-              updatedAt: now,
-            })
-          }),
-        )
         observationsAbsorbed += memberObservations.length
         continue
       }
-
-      // Absorption above still runs at the cap; only new clusters are gated.
-      if (clustersBorn >= headroom) continue
 
       const bornCluster = buildBornCluster({
         organizationId: input.organizationId,

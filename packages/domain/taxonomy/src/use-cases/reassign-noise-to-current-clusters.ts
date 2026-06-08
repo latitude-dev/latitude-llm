@@ -2,8 +2,8 @@ import { applyDecay, type OrganizationId, type ProjectId, TaxonomyClusterId, typ
 import { Effect } from "effect"
 import {
   TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+  TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
-  TAXONOMY_NOISE_SAMPLE_MAX,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
@@ -14,7 +14,6 @@ import {
   type ReassignTaxonomyObservationInput,
   TaxonomyObservationRepository,
 } from "../ports/taxonomy-observation-repository.ts"
-import { loadClusteringCalibration } from "./load-calibration.ts"
 import { routeToDeepestClusterUseCase } from "./route-to-deepest-cluster.ts"
 
 export interface ReassignNoiseToCurrentClustersInput {
@@ -88,20 +87,11 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
       organizationId: input.organizationId,
       projectId: input.projectId,
       since,
-      limit: TAXONOMY_NOISE_SAMPLE_MAX,
+      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
     })
     if (noise.length === 0) {
       return { noiseScanned: 0, observationsReassigned: 0 } satisfies ReassignNoiseToCurrentClustersResult
     }
-
-    const calibration = yield* loadClusteringCalibration({ projectId: input.projectId })
-    const gates =
-      calibration === null
-        ? undefined
-        : {
-            absoluteThreshold: calibration.assignAbsoluteThreshold,
-            relativeMargin: calibration.assignRelativeMargin,
-          }
 
     const decisions = yield* Effect.forEach(
       noise,
@@ -113,7 +103,6 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
             projectId: input.projectId,
             dimension,
             queryVector: observation.embedding,
-            ...(gates === undefined ? {} : { gates }),
           })
           if (decision.method !== "centroid_online" || decision.clusterId === null) return null
           return { observation, normalized, decision }
