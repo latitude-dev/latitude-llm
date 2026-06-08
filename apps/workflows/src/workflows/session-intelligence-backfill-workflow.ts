@@ -59,7 +59,7 @@ export const backfillSessionIntelligenceWorkflow = async (
               reason: "backfill",
             },
           ],
-          workflowId: `org:${input.organizationId}:conversation-intelligence:analyzeSession:${input.projectId}:${session.sessionId}`,
+          workflowId: `org:${input.organizationId}:conversation-intelligence:backfillAnalyzeSession:${input.projectId}:${session.sessionId}`,
           workflowIdReusePolicy: "ALLOW_DUPLICATE",
         }),
       ),
