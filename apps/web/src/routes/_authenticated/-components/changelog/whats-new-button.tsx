@@ -1,6 +1,6 @@
 import { FULL_CHANGELOG_URL } from "@domain/changelog"
 import { cn, Icon, Popover, PopoverContent, PopoverTrigger, Text } from "@repo/ui"
-import { ExternalLink, Megaphone } from "lucide-react"
+import { ExternalLink, Megaphone, X } from "lucide-react"
 import { useState } from "react"
 import { useChangelogEntries } from "../../../../domains/changelog/changelog.collection.ts"
 import type { ChangelogEntryRecord } from "../../../../domains/changelog/changelog.functions.ts"
@@ -58,12 +58,18 @@ function ChangelogRow({
   )
 }
 
-function WhatsNewContent() {
+function WhatsNewContent({ onClose }: { onClose: () => void }) {
   const { entries } = useChangelogEntries()
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
 
   return (
     <div className="flex flex-col">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <Text.H5M color="foregroundMuted">What's new</Text.H5M>
+        <button type="button" aria-label="Close" onClick={onClose} className="rounded p-0.5 transition-colors hover:bg-muted">
+          <Icon icon={X} size="xs" color="foregroundMuted" />
+        </button>
+      </div>
       <ul className="flex max-h-80 flex-col gap-0.5 overflow-y-auto p-1" onMouseLeave={() => setActiveEntryId(null)}>
         {entries.map((entry) => (
           <ChangelogRow
@@ -130,7 +136,7 @@ export function WhatsNewButton({ collapsed = false }: { collapsed?: boolean }) {
         sideOffset={8}
         className="w-[320px] p-0"
       >
-        {open ? <WhatsNewContent /> : null}
+        {open ? <WhatsNewContent onClose={() => setOpen(false)} /> : null}
       </PopoverContent>
     </Popover>
   )
