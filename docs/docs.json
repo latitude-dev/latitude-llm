@@ -12,6 +12,11 @@
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
   },
+  "seo": {
+    "metatags": {
+      "robots": "noindex"
+    }
+  },
   "contextual": {
     "options": [
       "copy",
