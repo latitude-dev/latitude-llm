@@ -5,8 +5,6 @@ import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { ClaudeCodeSpanReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
 import {
-  AdminFeatureFlagRepositoryLive,
-  FeatureFlagRepositoryLive,
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
   ProjectRepositoryLive,
@@ -37,17 +35,10 @@ interface WrappedWorkerDeps {
   readonly consumer: QueueConsumer
   readonly publisher: QueuePublisherShape
   readonly postgresClient: PostgresClient
-  readonly adminPostgresClient: PostgresClient
   readonly clickhouseClient: ClickHouseClient
 }
 
-export const createWrappedWorker = ({
-  consumer,
-  publisher,
-  postgresClient,
-  adminPostgresClient,
-  clickhouseClient,
-}: WrappedWorkerDeps) => {
+export const createWrappedWorker = ({ consumer, publisher, postgresClient, clickhouseClient }: WrappedWorkerDeps) => {
   const webAppUrl = resolveWebAppUrl()
 
   consumer.subscribe("wrapped", {
@@ -73,15 +64,12 @@ export const createWrappedWorker = ({
               logger.info(`wrapped: fan-out completed for ${result.publishedCount} project(s)`)
             } else if (result.status === "no-activity") {
               logger.info("wrapped: no projects had activity in window")
-            } else {
-              logger.info("wrapped: no eligible projects after flag intersection")
             }
           }),
         ),
         Effect.tapError((error) => Effect.sync(() => logger.error("wrapped triggerWeeklyRun failed", error))),
-        // Admin postgres + ClickHouse — both default to the "system" org
-        // sentinel so RLS / org filters are bypassed for cross-org reads.
-        withPostgres(AdminFeatureFlagRepositoryLive, adminPostgresClient),
+        // ClickHouse defaults to the "system" org sentinel so org filters are
+        // bypassed for cross-org reads.
         withClickHouse(ClaudeCodeSpanReaderLive, clickhouseClient, OrganizationId("system")),
         withTracing,
         Effect.asVoid,
@@ -90,7 +78,7 @@ export const createWrappedWorker = ({
 
     /**
      * Per-project execution. Runs the use case under the org's SqlClient so
-     * row-level security correctly scopes feature-flag and project queries.
+     * row-level security correctly scopes project queries.
      *
      * Today `payload.type` is always `"claude_code"`; the
      * `runWrappedUseCase` is hardcoded to that path. When a second type
@@ -153,7 +141,6 @@ export const createWrappedWorker = ({
         Effect.tapError((error) => Effect.sync(() => logger.error(`wrapped runForProject ${projectId} failed`, error))),
         withPostgres(
           Layer.mergeAll(
-            FeatureFlagRepositoryLive,
             MembershipRepositoryLive,
             OrganizationRepositoryLive,
             ProjectRepositoryLive,

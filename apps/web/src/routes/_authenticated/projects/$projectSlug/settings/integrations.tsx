@@ -6,7 +6,6 @@ import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
 import { z } from "zod"
-import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import {
   disconnectSlackIntegration,
   getActiveSlackIntegration,
@@ -32,8 +31,6 @@ function IntegrationsSettingsPage() {
   const router = useRouter()
   const search = Route.useSearch()
 
-  const slackEnabled = useHasFeatureFlag("slack")
-
   useMountEffect(() => {
     if (search.installed === "ok") {
       toast({ description: "Slack connected" })
@@ -52,18 +49,6 @@ function IntegrationsSettingsPage() {
       void router.navigate({ to: Route.fullPath, search: {}, replace: true })
     }
   })
-
-  if (!slackEnabled) {
-    return (
-      <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">
-        <div className="rounded-lg border border-border bg-muted/30 p-6">
-          <Text.H5 color="foregroundMuted">
-            Integrations aren't enabled for your organization yet. Reach out to support to turn them on.
-          </Text.H5>
-        </div>
-      </SettingsPage>
-    )
-  }
 
   return (
     <SettingsPage title="Integrations" description="Connect Latitude to the tools your team already uses.">

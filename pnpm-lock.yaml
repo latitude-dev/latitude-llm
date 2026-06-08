@@ -622,9 +622,6 @@ importers:
       '@bull-board/hono':
         specifier: 'catalog:'
         version: 6.12.1(hono@4.12.16)
-      '@domain/admin':
-        specifier: workspace:*
-        version: link:../../packages/domain/admin
       '@domain/ai':
         specifier: workspace:*
         version: link:../../packages/domain/ai
@@ -1179,9 +1176,6 @@ importers:
 
   packages/domain/email:
     dependencies:
-      '@domain/feature-flags':
-        specifier: workspace:*
-        version: link:../feature-flags
       '@domain/issues':
         specifier: workspace:*
         version: link:../issues
@@ -1701,9 +1695,6 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../exports
-      '@domain/feature-flags':
-        specifier: workspace:*
-        version: link:../feature-flags
       '@domain/models':
         specifier: workspace:*
         version: link:../models

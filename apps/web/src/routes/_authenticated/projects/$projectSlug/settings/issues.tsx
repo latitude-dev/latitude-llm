@@ -49,8 +49,6 @@ function ProjectIssuesSettingsPage() {
   const [isSavingKeepMonitoring, setIsSavingKeepMonitoring] = useState(false)
   const [savingAlertKind, setSavingAlertKind] = useState<AlertIncidentKind | null>(null)
 
-  const notificationsEnabled = useHasFeatureFlag("notifications")
-
   // TODO: Remove after releasing monitors for everybody. With the flag on, the system
   // monitors own incident notifications + sensitivity, so the legacy controls are hidden.
   const monitorsEnabled = useHasFeatureFlag("monitors")
@@ -156,7 +154,7 @@ function ProjectIssuesSettingsPage() {
             onCheckedChange={(checked) => void handleKeepMonitoringChange(checked)}
           />
         </div>
-        {notificationsEnabled && !monitorsEnabled ? (
+        {!monitorsEnabled ? (
           <>
             {ALERT_NOTIFICATION_TOGGLES.map((toggle) => {
               const inputId = `alert-notification-${toggle.kind}`

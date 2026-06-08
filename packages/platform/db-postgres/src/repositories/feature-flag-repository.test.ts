@@ -29,7 +29,7 @@ describe("FeatureFlagRepositoryLive", () => {
     const enabled = await runWithLive(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        return yield* repo.isEnabledForOrganization("slack")
+        return yield* repo.isEnabledForOrganization("monitors")
       }),
     )
 
@@ -41,13 +41,13 @@ describe("FeatureFlagRepositoryLive", () => {
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
         const enabledRow = yield* repo.enableForOrganization({
-          identifier: "slack",
+          identifier: "monitors",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
-        const enabled = yield* repo.isEnabledForOrganization("slack")
+        const enabled = yield* repo.isEnabledForOrganization("monitors")
         const list = yield* repo.listEnabledForOrganization()
-        yield* repo.disableForOrganization("slack")
-        const disabled = yield* repo.isEnabledForOrganization("slack")
+        yield* repo.disableForOrganization("monitors")
+        const disabled = yield* repo.isEnabledForOrganization("monitors")
 
         return { enabledRow, enabled, list, disabled }
       }),
@@ -55,7 +55,7 @@ describe("FeatureFlagRepositoryLive", () => {
 
     expect(result.enabledRow.enabledByAdminUserId).toBe(ADMIN_USER_ID)
     expect(result.enabled).toBe(true)
-    expect(result.list.map((featureFlag) => featureFlag.identifier)).toEqual(["slack"])
+    expect(result.list.map((featureFlag) => featureFlag.identifier)).toEqual(["monitors"])
     expect(result.disabled).toBe(false)
   })
 
@@ -64,11 +64,11 @@ describe("FeatureFlagRepositoryLive", () => {
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
         const first = yield* repo.enableForOrganization({
-          identifier: "slack",
+          identifier: "monitors",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
         const second = yield* repo.enableForOrganization({
-          identifier: "slack",
+          identifier: "monitors",
           enabledByAdminUserId: ADMIN_USER_ID,
         })
         return { first, second }
@@ -82,14 +82,14 @@ describe("FeatureFlagRepositoryLive", () => {
     await runWithLive(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        yield* repo.enableForOrganization({ identifier: "slack", enabledByAdminUserId: ADMIN_USER_ID })
+        yield* repo.enableForOrganization({ identifier: "monitors", enabledByAdminUserId: ADMIN_USER_ID })
       }),
     )
 
     const otherOrgEnabled = await runWithLiveOtherOrg(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        return yield* repo.isEnabledForOrganization("slack")
+        return yield* repo.isEnabledForOrganization("monitors")
       }),
     )
     const otherOrgList = await runWithLiveOtherOrg(
@@ -104,19 +104,19 @@ describe("FeatureFlagRepositoryLive", () => {
   })
 
   it("treats globally enabled flags as enabled for any organization", async () => {
-    await pg.db.insert(featureFlags).values({ identifier: "slack", enabledForAll: true })
+    await pg.db.insert(featureFlags).values({ identifier: "monitors", enabledForAll: true })
 
     const result = await runWithLiveOtherOrg(
       Effect.gen(function* () {
         const repo = yield* FeatureFlagRepository
-        const enabled = yield* repo.isEnabledForOrganization("slack")
+        const enabled = yield* repo.isEnabledForOrganization("monitors")
         const list = yield* repo.listEnabledForOrganization()
         return { enabled, list }
       }),
     )
 
     expect(result.enabled).toBe(true)
-    expect(result.list.map((flag) => flag.identifier)).toEqual(["slack"])
+    expect(result.list.map((flag) => flag.identifier)).toEqual(["monitors"])
   })
 
   it("ignores DB rows for identifiers that are no longer in the code registry", async () => {
@@ -143,7 +143,7 @@ describe("FeatureFlagRepositoryLive", () => {
       runWithLive(
         Effect.gen(function* () {
           const repo = yield* FeatureFlagRepository
-          yield* repo.disableForOrganization("slack")
+          yield* repo.disableForOrganization("monitors")
         }),
       ),
     ).resolves.toBeUndefined()

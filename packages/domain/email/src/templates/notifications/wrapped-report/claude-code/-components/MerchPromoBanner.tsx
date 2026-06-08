@@ -3,9 +3,7 @@ import { Link, Section } from "@react-email/components"
 import React from "react"
 
 /**
- * Promotional banner pointing at the 41st.latitude.so merch drop. Gated by
- * the `wrapped-merch-promo` feature flag — see the dispatcher in
- * `../index.tsx`.
+ * Promotional banner pointing at the 41st.latitude.so merch drop.
  *
  * Visually departs from the warm-cream Claude-themed sections above on
  * purpose: matches the 41st landing page's pale-blue + cobalt + black

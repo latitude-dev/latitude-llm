@@ -35,7 +35,6 @@ import {
   Watch,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
@@ -339,16 +338,9 @@ function NotificationsSection() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
-  // Hide the entire section when the org doesn't have the email channel
-  // enabled — toggles for an inactive channel would just confuse users.
-  // The notifications backend also gates the email send on this flag,
-  // so the UI mirrors what the worker actually does.
-  const emailNotificationsEnabled = useHasFeatureFlag("email-notifications")
-
   const { data, isLoading } = useQuery({
     queryKey: ["notificationPreferences"],
     queryFn: () => getNotificationPreferences(),
-    enabled: emailNotificationsEnabled,
   })
 
   // Scroll the targeted toggle into view when the page is opened with a
@@ -357,12 +349,12 @@ function NotificationsSection() {
   // directly on the row they came to flip. Runs once `isLoading` flips false
   // because the rows don't exist in the DOM until then.
   useEffect(() => {
-    if (isLoading || !emailNotificationsEnabled) return
+    if (isLoading) return
     const hash = window.location.hash.slice(1)
     if (!hash.startsWith("notifications-")) return
     const el = document.getElementById(hash)
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
-  }, [isLoading, emailNotificationsEnabled])
+  }, [isLoading])
 
   // Local prefs mirror server prefs; saves run in the background per change.
   // Missing entries are treated as "email on" so a fresh user sees every
@@ -384,8 +376,6 @@ function NotificationsSection() {
       toast({ variant: "destructive", description: toUserMessage(error) })
     }
   }
-
-  if (!emailNotificationsEnabled) return null
 
   return (
     <section className="flex flex-col gap-4">

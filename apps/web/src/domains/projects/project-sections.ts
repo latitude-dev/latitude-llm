@@ -25,7 +25,7 @@ import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
  * the optional `flag` field and resolved by the `useVisible*` hooks below.
  */
 
-type SectionFlag = "behaviours" | "monitors" | "slack"
+type SectionFlag = "behaviours" | "monitors"
 
 interface ProjectSection {
   readonly key: string
@@ -132,7 +132,6 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         label: "Integrations",
         icon: Plug,
         path: (slug) => `/projects/${slug}/settings/integrations`,
-        flag: "slack",
       },
     ],
   },
@@ -148,8 +147,7 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
 function useSectionFlags(): Record<SectionFlag, boolean> {
   const behaviours = useHasFeatureFlag("behaviours")
   const monitors = useHasFeatureFlag("monitors")
-  const slack = useHasFeatureFlag("slack")
-  return useMemo(() => ({ behaviours, monitors, slack }), [behaviours, monitors, slack])
+  return useMemo(() => ({ behaviours, monitors }), [behaviours, monitors])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */

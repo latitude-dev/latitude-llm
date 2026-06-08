@@ -12,7 +12,7 @@ Usage: pnpm --filter @app/workers test-emails:incidents [options]
 Publishes notification-email:send tasks for seeded incident notifications
 so the templates land in Mailpit (localhost:8025). Requires the
 notification-emailer worker to be running (\`pnpm --filter @app/workers
-dev\`) and the email-notifications feature flag enabled.
+dev\`).
 
 Options:
   --organization-id <id>   Target organization (default: SEED_ORG_ID — Acme)

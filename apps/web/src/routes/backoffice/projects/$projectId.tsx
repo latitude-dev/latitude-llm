@@ -136,7 +136,7 @@ function BackofficeProjectDetailPage() {
         <ActionRow
           icon={ClaudeCodeIcon}
           title="Generate Claude Code Wrapped"
-          description="Enqueue the weekly summary email now. Worker still gates on the claude-code-wrapped feature flag and on Claude Code activity in the last 7 days."
+          description="Enqueue the weekly summary email now. The worker will generate it when the project has Claude Code activity in the last 7 days."
           action={<WrappedTriggerButton projectId={project.id} projectName={project.name} />}
         />
         <ActionRow

@@ -1,4 +1,3 @@
-import { FeatureFlagRepository } from "@domain/feature-flags"
 import { MembershipRepository, type MemberWithUser, OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
 import { generateId, type OrganizationId, type ProjectId, type WrappedReportId } from "@domain/shared"
@@ -15,7 +14,7 @@ export interface RunWrappedInput {
   readonly windowEnd: Date
 }
 
-export type RunWrappedSkippedReason = "flag-off" | "no-activity"
+export type RunWrappedSkippedReason = "no-activity"
 
 export type RunWrappedResult =
   | {
@@ -37,8 +36,8 @@ const resolveOwnerName = (members: readonly MemberWithUser[], organizationName: 
 }
 
 /**
- * Runs the per-project Wrapped pipeline: check the feature flag + activity,
- * build the report, and persist a `wrapped_reports` row. The downstream
+ * Runs the per-project Wrapped pipeline: check activity, build the report,
+ * and persist a `wrapped_reports` row. The downstream
  * fan-out (in-app notifications + per-recipient email) is the notification
  * pipeline's job — this use case only owns "compute + persist" and returns
  * the report id for the caller to plug into `request-wrapped-report-notifications`.
@@ -51,17 +50,8 @@ const resolveOwnerName = (members: readonly MemberWithUser[], organizationName: 
  * and saves with `type: "claude_code"`. When a second Wrapped type lands,
  * this becomes a registry dispatch keyed on the task payload's `type`.
  *
- * Defense-in-depth: the feature flag is re-checked here even though the
- * cron pre-filters by it. The button doesn't pre-filter (the worker is
- * the single source of truth) and either trigger can race with a flip.
  */
 export const runWrappedUseCase = Effect.fn("wrapped.runForProject")(function* (input: RunWrappedInput) {
-  const flags = yield* FeatureFlagRepository
-  const flagOn = yield* flags.isEnabledForOrganization("claude-code-wrapped")
-  if (!flagOn) {
-    return { status: "skipped", reason: "flag-off" } satisfies RunWrappedResult
-  }
-
   const reader = yield* ClaudeCodeSpanReader
   const sessions = yield* reader.countSessionsForProjectInWindow({
     organizationId: input.organizationId,

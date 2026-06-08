@@ -22,7 +22,6 @@
     "@bull-board/hono": "catalog:",
     "@hono/node-server": "catalog:",
     "hono": "catalog:",
-    "@domain/admin": "workspace:*",
     "@domain/ai": "workspace:*",
     "@domain/alerts": "workspace:*",
     "@domain/annotation-queues": "workspace:*",

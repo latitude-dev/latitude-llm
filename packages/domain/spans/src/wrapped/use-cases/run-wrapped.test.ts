@@ -1,5 +1,3 @@
-import { FeatureFlagRepository } from "@domain/feature-flags"
-import { createFakeFeatureFlagRepository } from "@domain/feature-flags/testing"
 import {
   MembershipRepository,
   type MemberWithUser,
@@ -31,8 +29,6 @@ import { runWrappedUseCase } from "./run-wrapped.ts"
 
 const ORG_ID = OrganizationId("org-cc-wrapped".padEnd(24, "x").slice(0, 24))
 const PROJECT_ID = ProjectId("proj-cc-wrapped".padEnd(24, "x").slice(0, 24))
-const ADMIN_USER_ID = UserId("user-cc-wrapped".padEnd(24, "x").slice(0, 24))
-
 const WINDOW_START = new Date("2026-05-04T00:00:00.000Z")
 const WINDOW_END = new Date("2026-05-11T00:00:00.000Z")
 
@@ -152,7 +148,6 @@ const makeProjectRepository = (project: Project): (typeof ProjectRepository)["Se
 
 interface TestHarness {
   readonly layer: Layer.Layer<
-    | FeatureFlagRepository
     | ClaudeCodeSpanReader
     | ProjectRepository
     | OrganizationRepository
@@ -162,15 +157,12 @@ interface TestHarness {
     | ChSqlClient
   >
   readonly saved: WrappedReportRecord[]
-  readonly enableFlag: () => Promise<void>
 }
 
 const setupHarness = (options: {
   readonly members: readonly MemberWithUser[]
   readonly sessions: number
-  readonly enableFlag: boolean
 }): TestHarness => {
-  const fakeFlags = createFakeFeatureFlagRepository()
   const { repository: memberships } = createFakeMembershipRepository({
     listMembersWithUser: () => Effect.succeed([...options.members]),
   })
@@ -201,7 +193,6 @@ const setupHarness = (options: {
   }
 
   const layer = Layer.mergeAll(
-    Layer.succeed(FeatureFlagRepository, fakeFlags.repository),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ProjectRepository, projectRepo),
     Layer.succeed(OrganizationRepository, organizationRepo),
@@ -214,17 +205,6 @@ const setupHarness = (options: {
   return {
     layer,
     saved,
-    enableFlag: async () => {
-      if (!options.enableFlag) return
-      await Effect.runPromise(
-        Effect.gen(function* () {
-          yield* fakeFlags.repository.enableForOrganization({
-            identifier: "claude-code-wrapped",
-            enabledByAdminUserId: ADMIN_USER_ID,
-          })
-        }).pipe(Effect.provide(Layer.succeed(SqlClient, sqlClient))),
-      )
-    },
   }
 }
 
@@ -244,29 +224,14 @@ describe("runWrappedUseCase", () => {
   beforeEach(() => {
     // Each test sets up its own harness; placeholder so harness is
     // always assigned-before-read in TS's flow analysis.
-    harness = setupHarness({ members: [], sessions: 0, enableFlag: false })
-  })
-
-  it("skips when the feature flag is off", async () => {
-    harness = setupHarness({
-      members: [makeMember("a", "a@test.com", true)],
-      sessions: 42,
-      enableFlag: false,
-    })
-
-    const result = await runUseCase(harness)
-
-    expect(result).toEqual({ status: "skipped", reason: "flag-off" })
-    expect(harness.saved).toHaveLength(0)
+    harness = setupHarness({ members: [], sessions: 0 })
   })
 
   it("skips when there is no Claude Code activity in the window", async () => {
     harness = setupHarness({
       members: [makeMember("a", "a@test.com", true)],
       sessions: 0,
-      enableFlag: true,
     })
-    await harness.enableFlag()
 
     const result = await runUseCase(harness)
 
@@ -274,7 +239,7 @@ describe("runWrappedUseCase", () => {
     expect(harness.saved).toHaveLength(0)
   })
 
-  it("persists a report and returns its id when the flag is on and the window has activity", async () => {
+  it("persists a report and returns its id when the window has activity", async () => {
     // Recipient resolution + email delivery moved to the notification pipeline,
     // so this use case no longer cares which members have verified emails — it
     // computes + persists the report and hands the id off via the return value.
@@ -284,9 +249,7 @@ describe("runWrappedUseCase", () => {
         makeMember("b", "bob@test.com", false), // unverified — irrelevant here now
       ],
       sessions: 12,
-      enableFlag: true,
     })
-    await harness.enableFlag()
 
     const result = await runUseCase(harness)
 
@@ -313,9 +276,7 @@ describe("runWrappedUseCase", () => {
         makeMember("b", "bob@test.com", true),
       ],
       sessions: 5,
-      enableFlag: true,
     })
-    await harness.enableFlag()
 
     await runUseCase(harness)
 
@@ -336,9 +297,7 @@ describe("runWrappedUseCase", () => {
         makeMember("b", "bob@test.com", true),
       ],
       sessions: 5,
-      enableFlag: true,
     })
-    await harness.enableFlag()
 
     await runUseCase(harness)
 
@@ -349,9 +308,7 @@ describe("runWrappedUseCase", () => {
     harness = setupHarness({
       members: [makeMember("b", "bob@test.com", true)],
       sessions: 5,
-      enableFlag: true,
     })
-    await harness.enableFlag()
 
     await runUseCase(harness)
 

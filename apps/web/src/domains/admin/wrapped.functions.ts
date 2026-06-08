@@ -32,9 +32,8 @@ export const adminTriggerWrappedInputSchema = z.object({
  * removed). Staff-driven manual clicks are infrequent enough that duplicate
  * publishes aren't a real concern.
  *
- * The worker is the single source of truth for the feature-flag gate — this
- * handler does NOT pre-check the flag. If the flag is off the worker simply
- * skips (logged as `flag-off`).
+ * The worker is the single source of truth for activity eligibility; this
+ * handler only enqueues the run.
  */
 export const adminTriggerWrapped = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])

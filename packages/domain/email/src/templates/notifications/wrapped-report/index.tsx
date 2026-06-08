@@ -1,4 +1,3 @@
-import { FeatureFlagRepository } from "@domain/feature-flags"
 import { WrappedReportId } from "@domain/shared"
 import {
   CURRENT_REPORT_VERSION,
@@ -44,11 +43,7 @@ interface RenderInput {
   readonly webAppUrl: string
   readonly reportId: string
   readonly reportVersion: ReportVersion
-  /**
-   * Resolved upstream from the `wrapped-merch-promo` flag. V1 ignores it
-   * (the V1 component never received this prop); V2 renders the
-   * 41st.latitude.so banner when true.
-   */
+  /** V1 ignores it; V2 renders the 41st.latitude.so banner when true. */
   readonly showMerchPromo: boolean
 }
 
@@ -131,12 +126,6 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
         cause,
       })),
     )
-    // Promo flag failures are non-fatal — render the email without the
-    // banner rather than dropping the whole send because of a flag lookup.
-    const flags = yield* FeatureFlagRepository
-    const showMerchPromo = yield* flags
-      .isEnabledForOrganization("wrapped-merch-promo")
-      .pipe(Effect.orElseSucceed(() => false))
     return yield* Effect.tryPromise({
       try: () =>
         renderWrappedHtml({
@@ -146,7 +135,7 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
           webAppUrl: ctx.webAppUrl,
           reportId: record.id,
           reportVersion: record.reportVersion,
-          showMerchPromo,
+          showMerchPromo: true,
         }),
       catch: (cause) => ({
         _tag: "RenderNotificationEmailError" as const,
