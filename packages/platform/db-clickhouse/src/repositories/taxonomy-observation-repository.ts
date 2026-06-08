@@ -240,21 +240,48 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           return yield* chSqlClient
             .query(async (client) => {
+              // Day-stratified sample across the lookback window, NOT newest-N.
+              // The inner window ranks each observation within its own day by a
+              // deterministic hash, then `ORDER BY rn` interleaves days
+              // round-robin: every active day contributes its rank-1 row before
+              // any day contributes its rank-2 row, and so on until `limit`.
+              // High-volume days keep contributing in later rounds; sparse days
+              // drop out once exhausted. The result is representative of the
+              // whole window instead of biased to the last few hours, and is
+              // deterministic (cityHash64, no rand()) so Temporal replays match.
+              // The inner scan selects observation_id only, so the embedding
+              // column is never materialized while ranking the full window.
               const result = await client.query({
                 query: `SELECT ${selectColumns}
-                        FROM (${latestProjectWindow})
+                        FROM taxonomy_observations FINAL
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND length(embedding) > 0
                           AND start_time >= {since:DateTime64(9, 'UTC')}
-                        ORDER BY start_time DESC, observation_id ASC
-                        LIMIT {limit:UInt32}`,
+                          AND observation_id IN (
+                            SELECT observation_id
+                            FROM (
+                              SELECT
+                                observation_id,
+                                row_number() OVER (
+                                  PARTITION BY toDate(start_time)
+                                  ORDER BY cityHash64(observation_id)
+                                ) AS rn
+                              FROM taxonomy_observations FINAL
+                              WHERE organization_id = {organizationId:String}
+                                AND project_id = {projectId:String}
+                                AND length(embedding) > 0
+                                AND start_time >= {since:DateTime64(9, 'UTC')}
+                            )
+                            ORDER BY rn ASC, observation_id ASC
+                            LIMIT {limit:UInt32}
+                          )
+                        ORDER BY start_time DESC, observation_id ASC`,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,
                   since: toClickhouseDateTime(since),
                   limit,
-                  ...latestProjectWindowParams,
                 },
                 format: "JSONEachRow",
               })

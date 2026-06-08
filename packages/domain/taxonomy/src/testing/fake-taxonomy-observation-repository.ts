@@ -6,6 +6,16 @@ import type { TaxonomyObservationRepositoryShape } from "../ports/taxonomy-obser
 const observationKey = (organizationId: string, projectId: string, observationId: string): string =>
   `${organizationId}|${projectId}|${observationId}`
 
+// Deterministic stand-in for ClickHouse's cityHash64 — only needs stable,
+// well-distributed per-id ordering for the day-stratified clustering sample.
+const deterministicHash = (value: string): number => {
+  let hash = 0
+  for (let index = 0; index < value.length; index++) {
+    hash = (Math.imul(hash, 31) + value.charCodeAt(index)) >>> 0
+  }
+  return hash
+}
+
 export const createFakeTaxonomyObservationRepository = (
   seed: readonly TaxonomyMomentObservation[] = [],
   overrides?: Partial<TaxonomyObservationRepositoryShape>,
@@ -103,14 +113,39 @@ export const createFakeTaxonomyObservationRepository = (
       }),
 
     listForClustering: ({ organizationId, projectId, since, limit }) =>
-      Effect.sync(() =>
-        latestProjectWindow(organizationId, projectId)
-          .filter((observation) => observation.embedding.length > 0 && observation.startTime >= since)
+      Effect.sync(() => {
+        // Mirror the day-stratified round-robin the ClickHouse repo runs: rank
+        // each observation within its UTC day by a deterministic hash, then
+        // interleave days (all rank-1s, then all rank-2s, …) up to `limit`.
+        // Reads the full project history (not the newest-N window) so the
+        // sample is representative of the whole lookback span, not the tail.
+        const eligible = [...rows.values()].filter(
+          (observation) =>
+            observation.organizationId === organizationId &&
+            observation.projectId === projectId &&
+            observation.embedding.length > 0 &&
+            observation.startTime >= since,
+        )
+        const dayBuckets = new Map<string, TaxonomyMomentObservation[]>()
+        for (const observation of eligible) {
+          const day = observation.startTime.toISOString().slice(0, 10)
+          const bucket = dayBuckets.get(day) ?? []
+          bucket.push(observation)
+          dayBuckets.set(day, bucket)
+        }
+        const ranked = [...dayBuckets.values()].flatMap((bucket) =>
+          [...bucket]
+            .sort((a, b) => deterministicHash(a.observationId) - deterministicHash(b.observationId))
+            .map((observation, rank) => ({ observation, rank })),
+        )
+        return ranked
+          .sort((a, b) => a.rank - b.rank || a.observation.observationId.localeCompare(b.observation.observationId))
+          .slice(0, limit)
+          .map((entry) => entry.observation)
           .sort(
             (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
           )
-          .slice(0, limit),
-      ),
+      }),
 
     listByCluster: ({ organizationId, projectId, clusterId, limit, beforeStartTime, beforeObservationId }) =>
       Effect.sync(() =>

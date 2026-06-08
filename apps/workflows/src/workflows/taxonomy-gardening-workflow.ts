@@ -38,7 +38,12 @@ const { nameTaxonomyClusterActivity } = proxyActivities<typeof activities>({
   },
 })
 
-const NAMING_ACTIVITY_CONCURRENCY = 4
+// Naming runs one cluster at a time. nameTaxonomyClusterActivity reads its
+// already-named siblings to build the forbidden-name list its collision guard
+// enforces; siblings named concurrently each still see the other as "Pending"
+// and can collide, which the sibling-duplicate quality gate then rejects.
+// Sequential naming guarantees each sibling sees the ones named before it.
+const NAMING_ACTIVITY_CONCURRENCY = 1
 
 const runInBatches = async <A, B>(
   items: readonly A[],
@@ -65,9 +70,9 @@ export const gardenTaxonomyWorkflow = async (
     const built = await buildHierarchicalGardenTaxonomyActivity(started)
     const lineage: TaxonomyClusterLineage[] = [...built.lineage]
     const namingPlan = await planGardenTaxonomyNamingActivity({ ...started, lineage })
-    // Batch by depth, deepest first. Within a depth we run with bounded
-    // concurrency, but we await all of a depth before naming the parents
-    // above it so each interior sees its children's final names.
+    // Name depth by depth, deepest first, and sequentially within a depth
+    // (see NAMING_ACTIVITY_CONCURRENCY). We await all of a depth before naming
+    // the parents above it so each interior sees its children's final names.
     for (const { clusterIds } of namingPlan.clusterIdsByDepth) {
       await runInBatches(clusterIds, NAMING_ACTIVITY_CONCURRENCY, (clusterId) =>
         nameTaxonomyClusterActivity({

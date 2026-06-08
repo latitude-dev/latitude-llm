@@ -181,4 +181,45 @@ describe("TaxonomyObservationRepositoryLive", () => {
     expect(result.noise).toHaveLength(0)
     expect(result.assignments).toMatchObject([{ clusterId, count: 1 }])
   })
+
+  it("day-stratifies the clustering sample instead of taking newest-N", async () => {
+    // Dedicated project so earlier tests' rows don't bleed into the sample.
+    const stratifiedProjectId = ProjectId("s".repeat(24))
+    const olderDay = new Date("2026-05-20T09:00:00.000Z")
+    const newerDay = new Date("2026-05-23T09:00:00.000Z")
+    // 3 observations on the older day, 3 on the newer day. A newest-N sample
+    // with limit 2 would return two newer-day rows; a day-stratified sample
+    // returns one row per day (round-robin rank-1 of each day first).
+    const sample = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        for (let index = 0; index < 3; index++) {
+          yield* repo.upsert(
+            makeObservation({
+              observationId: `old${index}`.padEnd(24, "0"),
+              projectId: stratifiedProjectId,
+              startTime: new Date(olderDay.getTime() + index * 60_000),
+            }),
+          )
+          yield* repo.upsert(
+            makeObservation({
+              observationId: `new${index}`.padEnd(24, "0"),
+              projectId: stratifiedProjectId,
+              startTime: new Date(newerDay.getTime() + index * 60_000),
+            }),
+          )
+        }
+        return yield* repo.listForClustering({
+          organizationId,
+          projectId: stratifiedProjectId,
+          since: new Date("2026-05-19T00:00:00.000Z"),
+          limit: 2,
+        })
+      }),
+    )
+
+    expect(sample).toHaveLength(2)
+    const days = new Set(sample.map((observation) => observation.startTime.toISOString().slice(0, 10)))
+    expect(days).toEqual(new Set(["2026-05-20", "2026-05-23"]))
+  })
 })
