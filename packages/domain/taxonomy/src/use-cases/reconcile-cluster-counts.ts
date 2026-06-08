@@ -1,8 +1,10 @@
 import { generateId, type OrganizationId, type ProjectId, TaxonomyLineageId, type TaxonomyRunId } from "@domain/shared"
 import { Effect } from "effect"
+import { TAXONOMY_CLUSTER_LOCK_TTL_SECONDS } from "../constants.ts"
 import { TaxonomyClusterState } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
+import { withTaxonomyClusterLock } from "../locks.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 
@@ -72,7 +74,20 @@ export const reconcileClusterCountsUseCase = (input: ReconcileClusterCountsInput
       if (!count) {
         if (parentsWithChildren.has(cluster.id)) {
           if (cluster.observationCount !== 0) {
-            yield* clusters.save({ ...cluster, observationCount: 0, updatedAt: now })
+            // Save under the cluster lock against a fresh read: live online
+            // assignment mutates centroid/counters on the same row concurrently
+            // and a stale full-row upsert here would clobber those updates.
+            yield* withTaxonomyClusterLock(
+              {
+                organizationId: input.organizationId,
+                clusterId: cluster.id,
+                ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+              },
+              Effect.gen(function* () {
+                const fresh = yield* clusters.findById(cluster.id)
+                yield* clusters.save({ ...fresh, observationCount: 0, updatedAt: now })
+              }),
+            )
             clustersUpdated += 1
           }
         } else {
@@ -101,14 +116,23 @@ export const reconcileClusterCountsUseCase = (input: ReconcileClusterCountsInput
         continue
       }
 
-      yield* clusters.save({
-        ...cluster,
-        observationCount: count.count,
-        firstObservedAt: count.firstObservedAt,
-        lastObservedAt: count.lastObservedAt,
-        state: TaxonomyClusterState.Active,
-        updatedAt: now,
-      })
+      // Save under the cluster lock against a fresh read: live online
+      // assignment mutates centroid/counters on the same row concurrently
+      // and a stale full-row upsert here would clobber those updates.
+      yield* withTaxonomyClusterLock(
+        { organizationId: input.organizationId, clusterId: cluster.id, ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS },
+        Effect.gen(function* () {
+          const fresh = yield* clusters.findById(cluster.id)
+          yield* clusters.save({
+            ...fresh,
+            observationCount: count.count,
+            firstObservedAt: count.firstObservedAt,
+            lastObservedAt: count.lastObservedAt,
+            state: TaxonomyClusterState.Active,
+            updatedAt: now,
+          })
+        }),
+      )
       clustersUpdated += 1
     }
 

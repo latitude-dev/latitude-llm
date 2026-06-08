@@ -3,6 +3,7 @@ import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import {
+  TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
   TAXONOMY_FPS_SAMPLE_BUDGET_MAX,
   TAXONOMY_FPS_SAMPLE_BUDGET_MIN,
   TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
@@ -11,6 +12,7 @@ import {
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { clamp, farthestPointSample } from "../helpers.ts"
+import { withTaxonomyClusterLock } from "../locks.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 
@@ -121,13 +123,26 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
           .slice(0, sampleBudget(cluster.observationCount))
           .map((child) => `${child.name}: ${child.description}`),
       })
-      yield* clusters.save({
-        ...cluster,
-        name: generated.name,
-        description: generated.description,
-        clusteredAt: now,
-        updatedAt: now,
-      })
+      // Save under the cluster lock against a fresh read: the LLM call above
+      // takes seconds, during which live online assignment mutates centroid/
+      // counters on the same row. A stale full-row upsert would clobber them.
+      yield* withTaxonomyClusterLock(
+        {
+          organizationId: input.organizationId,
+          clusterId: input.clusterId,
+          ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+        },
+        Effect.gen(function* () {
+          const fresh = yield* clusters.findById(input.clusterId)
+          yield* clusters.save({
+            ...fresh,
+            name: generated.name,
+            description: generated.description,
+            clusteredAt: now,
+            updatedAt: now,
+          })
+        }),
+      )
       return generated satisfies NameTaxonomyResult
     }
 
@@ -147,12 +162,25 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
       samples,
       ...(parent && parent.name !== "Pending" ? { parentName: parent.name } : {}),
     })
-    yield* clusters.save({
-      ...cluster,
-      name: generated.name,
-      description: generated.description,
-      clusteredAt: now,
-      updatedAt: now,
-    })
+    // Save under the cluster lock against a fresh read: the LLM call above takes
+    // seconds, during which live online assignment mutates centroid/counters on
+    // the same row. A stale full-row upsert would clobber them.
+    yield* withTaxonomyClusterLock(
+      {
+        organizationId: input.organizationId,
+        clusterId: input.clusterId,
+        ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+      },
+      Effect.gen(function* () {
+        const fresh = yield* clusters.findById(input.clusterId)
+        yield* clusters.save({
+          ...fresh,
+          name: generated.name,
+          description: generated.description,
+          clusteredAt: now,
+          updatedAt: now,
+        })
+      }),
+    )
     return generated satisfies NameTaxonomyResult
   }).pipe(Effect.withSpan("taxonomy.nameCluster"))

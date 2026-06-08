@@ -1,6 +1,14 @@
 import { AI, type AIShape, type GenerateInput, type GenerateResult } from "@domain/ai"
-import { ChSqlClient, OrganizationId, ProjectId, SessionId, SqlClient, TaxonomyClusterId } from "@domain/shared"
-import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
+import {
+  ChSqlClient,
+  DistributedLockRepository,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SqlClient,
+  TaxonomyClusterId,
+} from "@domain/shared"
+import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { TAXONOMY_CENTROID_HALF_LIFE_SECONDS, TAXONOMY_EMBEDDING_MODEL } from "../constants.ts"
@@ -85,6 +93,7 @@ const runNameCluster = (input: {
     Effect.provide(Layer.succeed(AI, input.ai)),
     Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
     Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+    Effect.provide(Layer.succeed(DistributedLockRepository, createFakeDistributedLockRepository().repository)),
   )
   return { effect, clusters }
 }

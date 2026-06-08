@@ -316,6 +316,9 @@ export const reconcileGardenTaxonomyCountsActivity = (input: GardenTaxonomyStepI
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
+      // Per-cluster saves take the distributed cluster lock to avoid clobbering
+      // centroids that live online assignment mutates concurrently.
+      (effect) => effect.pipe(Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient()))),
     ),
   )
 

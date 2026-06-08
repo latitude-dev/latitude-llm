@@ -604,6 +604,7 @@ describe("gardening use-cases", () => {
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+        Effect.provide(Layer.succeed(DistributedLockRepository, createFakeDistributedLockRepository().repository)),
       ),
     )
 
