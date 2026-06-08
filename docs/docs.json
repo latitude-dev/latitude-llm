@@ -189,6 +189,12 @@
         ]
       },
       {
+        "group": "Monitors",
+        "pages": [
+          "monitors/overview"
+        ]
+      },
+      {
         "group": "Security and Compliance",
         "pages": [
           "security/data-protection",
