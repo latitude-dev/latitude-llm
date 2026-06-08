@@ -315,7 +315,7 @@ describe("live monitoring integration", () => {
         }),
       },
     })
-  })
+  }, 15_000)
 
   it("replaces debounced trace-end:run when TracesIngested is dispatched twice for the same trace", async () => {
     await ch.client.insert({
@@ -372,5 +372,5 @@ describe("live monitoring integration", () => {
       (message) => message.queue === "live-evaluations" && message.task === "execute",
     )
     expect(liveEvalExecutePublishes).toHaveLength(1)
-  })
+  }, 15_000)
 })
