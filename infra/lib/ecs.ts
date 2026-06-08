@@ -684,26 +684,28 @@ function createTaskDefinition(
       },
     )
 
-  // Calculate valid Fargate CPU/memory combination
-  // Fargate only supports specific predefined values
+  // Calculate a valid Fargate CPU/memory combination. Fargate accepts memory
+  // only from CPU-specific ranges/increments, so round up rather than passing
+  // arbitrary totals like 2560 MiB after adding the Datadog sidecar.
   const totalCpu = serviceConfig.cpu + DATADOG_AGENT_CPU
   const totalMemory = serviceConfig.memory + DATADOG_AGENT_MEMORY
 
-  // Valid Fargate CPU values: 256, 512, 1024, 2048, 4096, 8192, 16384
-  const validCpuValues = [256, 512, 1024, 2048, 4096, 8192, 16384]
-  const taskCpu = validCpuValues.find((cpu) => cpu >= totalCpu) ?? 16384
+  const fargateOptions = [
+    { cpu: 256, minMemory: 512, maxMemory: 2048, step: 512 },
+    { cpu: 512, minMemory: 1024, maxMemory: 4096, step: 1024 },
+    { cpu: 1024, minMemory: 2048, maxMemory: 8192, step: 1024 },
+    { cpu: 2048, minMemory: 4096, maxMemory: 16384, step: 1024 },
+    { cpu: 4096, minMemory: 8192, maxMemory: 30720, step: 1024 },
+    { cpu: 8192, minMemory: 16384, maxMemory: 61440, step: 4096 },
+    { cpu: 16384, minMemory: 32768, maxMemory: 122880, step: 8192 },
+  ] as const
 
-  // Memory must be at least double the CPU (in MB) and in valid ranges
-  const minMemoryForCpu: Record<number, number> = {
-    256: 512,
-    512: 1024,
-    1024: 2048,
-    2048: 4096,
-    4096: 8192,
-    8192: 16384,
-    16384: 32768,
-  }
-  const taskMemory = Math.max(totalMemory, minMemoryForCpu[taskCpu] ?? 32768)
+  const taskOption =
+    fargateOptions.find((option) => option.cpu >= totalCpu && totalMemory <= option.maxMemory) ??
+    fargateOptions[fargateOptions.length - 1]
+  const taskCpu = taskOption.cpu
+  const taskMemoryBase = Math.max(totalMemory, taskOption.minMemory)
+  const taskMemory = Math.ceil(taskMemoryBase / taskOption.step) * taskOption.step
 
   return new aws.ecs.TaskDefinition(`${name}-${serviceConfig.name}-task`, {
     family: `${name}-${serviceConfig.name}`,

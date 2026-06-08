@@ -154,7 +154,7 @@ export const stagingConfig: EnvironmentConfig = {
         name: "workflows",
         // Match production sizing: Temporal worker webpack-bundles workflows at startup and needs RAM.
         cpu: 512,
-        memory: 1024,
+        memory: 2048,
         port: 8080,
         healthCheckPath: "/health",
         desiredCount: 1,
@@ -255,7 +255,7 @@ export const productionConfig: EnvironmentConfig = {
       {
         name: "workflows",
         cpu: 512,
-        memory: 1024,
+        memory: 2048,
         port: 8080,
         healthCheckPath: "/health",
         desiredCount: 1,
