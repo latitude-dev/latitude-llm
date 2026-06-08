@@ -116,6 +116,11 @@ search_datadog_spans(
   custom_attributes = ["error.*","http.*","issue.*"], max_tokens = 7000)
 ```
 
+**Link to an issue** (needed in the §4 report and the §7 PR). Prefer the canonical URL the error-tracking
+tool returns. Otherwise build it from the org base + issue id and open it to confirm it resolves:
+`https://app.datadoghq.eu/error-tracking/issues/<issue.id>`. (Span search responses also return a
+`base_url` and a `traces_explorer_url` you can fall back to.)
+
 ### 1.4 Query pitfalls (these bit us)
 - **`@error.message` is not reliably wildcard/full-text searchable.** `@error.message:"foo*"` may return 0.
   Instead **group by `@error.message`** in `aggregate_spans`, or filter by `@error.type` + `resource_name`
@@ -185,6 +190,10 @@ Use the `analyze-problem` skill's method. Then, specific to this workflow:
 - **Map the error to code from the span:** `service` → `apps/<svc>`; `resource_name` (e.g. bullmq
   `process <queue>`, or `GET /…`) → the handler/job; `error.stack` frames → the throwing module. Confirm
   the deployed SHA (`service.version`) matches what you're reading.
+- **Find the commit that introduced it.** `issue.first_seen_version` is the git SHA of the first
+  occurrence — the deploy that introduced the regression. Once you've located the faulty line(s), run
+  `git blame`/`git log -S '<symbol>' -- <file>` to name the culprit commit, and `get_change_stories`
+  to see that deploy in context. Capture both the `file:line` and the commit SHA — §4 asks for them.
 - **Decide fixability honestly.** If it's Class B/C/D/E in disguise, or the fix needs product/infra
   decisions beyond code, say so and record it (§6) instead of forcing a fake fix.
 - Respect the architecture (`architecture-boundaries`): fix at the right layer (domain use-case vs
@@ -198,13 +207,19 @@ Use the `analyze-problem` skill's method. Then, specific to this workflow:
 **Stop here. Do not write a fix, create a branch, or open a PR until the user approves.** This is a hard
 gate: everything up to now is read-only investigation. Report back with a concise plan and wait.
 
-Present:
-1. **Issues found** — a short triage table of the candidates from §2 (signature, service, occurrences +
-   trend, class), so the user sees what you considered and what you ruled out.
-2. **What you're focusing on** — which issue(s) you chose and **why** (impact × trend × confidence), and
+Present it in this order — be organized, not a wall of text:
+
+1. **Issues found** — a short list (table is fine) of the candidates from §2. For each, give:
+   the error signature, the service, occurrences + 14-day trend, the class (§2.2), a **link to the Datadog
+   issue** (§1.3), and a **one-line description of what it actually is** — not just the raw message.
+   Make clear which ones you ruled out and why.
+2. **What you're focusing on** — the issue(s) you chose and **why** (impact × trend × confidence), plus
    what you deliberately skipped with the class reason (infra / version-skew / not-an-error / upstream).
-3. **Hypothesis** — the root cause for each chosen issue, in plain language, and whether it generalizes
-   beyond the observed occurrence (sibling call sites with the same flaw).
+3. **Hypothesis** — for each chosen issue, the root cause in plain language, backed by concrete evidence:
+   - **`file:line` references** to the code at fault (and sibling call sites if it generalizes);
+   - the **commit that introduced it** where you can find it (`issue.first_seen_version` + `git blame` /
+     `git log -S`, §3) — link it as `<repo>/commit/<sha>`;
+   - whether this issue is one instance of a broader bug.
 4. **Proposed fix** — what you'll change, at which layer, the blast radius, and the **test plan**
    (the reproduction plus the novel cases you'll add).
 5. **PR plan** — single PR vs grouped (per §2.4), and the base branch (`development`).
@@ -270,7 +285,8 @@ Follow the **`create-pr`** skill for the description. Specifics for this workflo
   (`git merge-base --is-ancestor origin/development HEAD`); never base on `main`.
 - Branch first if you're on `development`/detached.
 - In the description, include:
-  - The **Datadog issue(s)** addressed (id + error signature + occurrence/trend context) and a link.
+  - The **Datadog issue(s)** addressed — **always a link per issue** (§1.3), with its error signature and
+    occurrence/trend context. Link the **introducing commit** too when you found it (§3).
   - **Root cause** in plain language, and why the fix is at *this* layer (note if it generalizes beyond
     the observed symptom / fixes sibling call sites).
   - The **tests** added and that they fail-without / pass-with the fix.
