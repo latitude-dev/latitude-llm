@@ -19,7 +19,7 @@ export const createApiKeysWorker = ({
 
   consumer.subscribe("api-keys", {
     create: (payload) => {
-      return generateApiKeyUseCase({ name: payload.name }).pipe(
+      return generateApiKeyUseCase({ name: payload.name, isSandbox: false }).pipe(
         withPostgres(
           Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive),
           pgClient,

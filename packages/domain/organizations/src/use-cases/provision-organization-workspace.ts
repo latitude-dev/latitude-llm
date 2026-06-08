@@ -49,6 +49,7 @@ export const provisionOrganizationWorkspaceUseCase = Effect.fn("organizations.pr
 
         const defaultApiKey = yield* generateApiKeyUseCase({
           name: DEFAULT_API_KEY_NAME,
+          isSandbox: false,
           actorUserId: input.actorUserId,
         })
 

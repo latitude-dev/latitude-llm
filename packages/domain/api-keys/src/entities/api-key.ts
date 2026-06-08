@@ -55,10 +55,14 @@ export const createApiKey = (params: {
 }
 
 /**
- * Generate a new API key token (UUID v4).
+ * Generate a new API key token (UUID v4), optionally prefixed.
+ *
+ * The optional `prefix` is prepended verbatim (e.g. `lat_sandbox_` for sandbox
+ * orgs); the random UUID body is unchanged so lookups by `tokenHash` work the
+ * same for prefixed and unprefixed tokens. Live keys pass no prefix.
  */
-export const generateApiKeyToken = (): string => {
-  return crypto.randomUUID()
+export const generateApiKeyToken = (prefix = ""): string => {
+  return `${prefix}${crypto.randomUUID()}`
 }
 
 /**
