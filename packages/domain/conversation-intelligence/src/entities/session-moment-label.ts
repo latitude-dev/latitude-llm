@@ -22,7 +22,6 @@ export const sessionMomentLabelSchema = z.object({
   summary: z.string(),
   evidence: z.string().min(1),
   confidence: z.number().min(0).max(1),
-  detectorVersion: z.string(),
   retentionDays: z.number().int().positive(),
   indexedAt: z.date(),
 })

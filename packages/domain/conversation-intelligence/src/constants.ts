@@ -8,7 +8,6 @@ export const CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL = "voyage-4-large"
 export const CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS = 2048
 export const CONVERSATION_INTELLIGENCE_LLM_MAX_DOCUMENT_CHARS = 24_000
 
-export const CONVERSATION_MOMENT_SEGMENTATION_VERSION = "semantic-moments-v3" as const
 /**
  * Continuity thresholds operate on voyage-4-large cosine similarity between a
  * turn and the current moment centroid. QA measurement on the tau2 corpus
@@ -51,4 +50,3 @@ export const SEMANTIC_MOMENT_BOUNDARY_REASONS = [
   "topic_drift",
   "session_end",
 ] as const
-export const SEMANTIC_MOMENT_SEGMENTATION_METHODS = ["embedding_continuity"] as const

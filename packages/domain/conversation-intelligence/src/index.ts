@@ -12,12 +12,10 @@ export {
   CONVERSATION_MOMENT_CONTINUITY_DEFAULT_THRESHOLD,
   CONVERSATION_MOMENT_CONTINUITY_MAX_THRESHOLD,
   CONVERSATION_MOMENT_CONTINUITY_MIN_THRESHOLD,
-  CONVERSATION_MOMENT_SEGMENTATION_VERSION,
   MOMENT_ACTORS,
   MOMENT_KINDS,
   OUTCOMES,
   SEMANTIC_MOMENT_BOUNDARY_REASONS,
-  SEMANTIC_MOMENT_SEGMENTATION_METHODS,
 } from "./constants.ts"
 export {
   type AnalysisStatus,
@@ -36,10 +34,8 @@ export {
 } from "./entities/session-moment-label.ts"
 export {
   SemanticMomentBoundaryReason,
-  SemanticMomentSegmentationMethod,
   type SessionSemanticMoment,
   semanticMomentBoundaryReasonSchema,
-  semanticMomentSegmentationMethodSchema,
   sessionSemanticMomentSchema,
 } from "./entities/session-semantic-moment.ts"
 export {

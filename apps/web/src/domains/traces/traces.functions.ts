@@ -116,8 +116,6 @@ export interface SessionMomentIntelligenceRecord {
     readonly lastMessageIndex: number
     readonly boundaryReason: string
     readonly coherenceScore: number
-    readonly segmentationMethod: string
-    readonly segmentationVersion: string
   }
   readonly labels: readonly {
     readonly labelId: string
@@ -385,8 +383,6 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
               lastMessageIndex: row.moment.lastMessageIndex,
               boundaryReason: row.moment.boundaryReason,
               coherenceScore: row.moment.coherenceScore,
-              segmentationMethod: row.moment.segmentationMethod,
-              segmentationVersion: row.moment.segmentationVersion,
             },
             labels: row.labels.map((label) => ({
               labelId: label.labelId,

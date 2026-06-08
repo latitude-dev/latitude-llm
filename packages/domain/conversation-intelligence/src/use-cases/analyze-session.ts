@@ -23,7 +23,6 @@ import {
   CONVERSATION_INTELLIGENCE_LLM_MAX_DOCUMENT_CHARS,
   CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH,
   CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
-  CONVERSATION_MOMENT_SEGMENTATION_VERSION,
   MOMENT_KINDS,
 } from "../constants.ts"
 import type { SessionAnalysis } from "../entities/session-analysis.ts"
@@ -196,7 +195,6 @@ const toDetectedMoment = (input: {
       summary: input.raw.summary,
       evidence: input.raw.evidence,
       confidence: input.raw.confidence,
-      detectorVersion: String(CONVERSATION_INTELLIGENCE_DETECTOR_VERSION),
       analysisHash: input.analysisHash,
       retentionDays: input.retentionDays,
       indexedAt: input.indexedAt,
@@ -215,7 +213,6 @@ interface DetectedMoment {
   readonly summary: string
   readonly evidence: string
   readonly confidence: number
-  readonly detectorVersion: string
   readonly analysisHash: string
   readonly retentionDays: number
   readonly indexedAt: Date
@@ -430,8 +427,6 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
           boundaryReason: segment.boundaryReason,
           embedding: [...segment.centroidEmbedding],
           coherenceScore: segment.coherenceScore,
-          segmentationMethod: "embedding_continuity",
-          segmentationVersion: CONVERSATION_MOMENT_SEGMENTATION_VERSION,
           retentionDays,
           indexedAt,
         } satisfies SessionSemanticMoment
@@ -475,7 +470,6 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
               summary: moment.summary,
               evidence: moment.evidence,
               confidence: moment.confidence,
-              detectorVersion: moment.detectorVersion,
               retentionDays,
               indexedAt,
             } satisfies SessionMomentLabel)

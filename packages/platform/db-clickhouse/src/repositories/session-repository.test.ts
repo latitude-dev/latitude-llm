@@ -2146,7 +2146,6 @@ describe("SessionRepository", () => {
       first_message_index: 0,
       last_message_index: 1,
       evidence: "quote",
-      detector_version: "v1",
       indexed_at: "2026-05-24 10:06:00.000",
     })
 

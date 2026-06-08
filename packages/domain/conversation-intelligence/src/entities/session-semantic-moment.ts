@@ -1,6 +1,6 @@
 import { organizationIdSchema, projectIdSchema, sessionIdSchema, traceIdSchema } from "@domain/shared"
 import { z } from "zod"
-import { SEMANTIC_MOMENT_BOUNDARY_REASONS, SEMANTIC_MOMENT_SEGMENTATION_METHODS } from "../constants.ts"
+import { SEMANTIC_MOMENT_BOUNDARY_REASONS } from "../constants.ts"
 
 export const semanticMomentBoundaryReasonSchema = z.enum(SEMANTIC_MOMENT_BOUNDARY_REASONS)
 export type SemanticMomentBoundaryReason = z.infer<typeof semanticMomentBoundaryReasonSchema>
@@ -13,13 +13,6 @@ export const SemanticMomentBoundaryReason = {
   TopicDrift: "topic_drift",
   SessionEnd: "session_end",
 } as const satisfies Record<string, SemanticMomentBoundaryReason>
-
-export const semanticMomentSegmentationMethodSchema = z.enum(SEMANTIC_MOMENT_SEGMENTATION_METHODS)
-export type SemanticMomentSegmentationMethod = z.infer<typeof semanticMomentSegmentationMethodSchema>
-
-export const SemanticMomentSegmentationMethod = {
-  EmbeddingContinuity: "embedding_continuity",
-} as const satisfies Record<string, SemanticMomentSegmentationMethod>
 
 export const sessionSemanticMomentSchema = z.object({
   organizationId: organizationIdSchema,
@@ -35,8 +28,6 @@ export const sessionSemanticMomentSchema = z.object({
   boundaryReason: semanticMomentBoundaryReasonSchema,
   embedding: z.array(z.number()),
   coherenceScore: z.number().min(0).max(1),
-  segmentationMethod: semanticMomentSegmentationMethodSchema,
-  segmentationVersion: z.string().min(1),
   retentionDays: z.number().int().positive(),
   indexedAt: z.date(),
 })

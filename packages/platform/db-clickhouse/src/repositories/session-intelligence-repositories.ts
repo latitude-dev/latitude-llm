@@ -52,8 +52,6 @@ type SemanticMomentRow = {
   readonly boundary_reason: string
   readonly embedding: readonly number[]
   readonly coherence_score: number
-  readonly segmentation_method: string
-  readonly segmentation_version: string
   readonly retention_days: number
   readonly indexed_at: string
 }
@@ -72,7 +70,6 @@ type MomentLabelRow = {
   readonly summary: string
   readonly evidence: string
   readonly confidence: number
-  readonly detector_version: string
   readonly retention_days: number
   readonly indexed_at: string
 }
@@ -105,8 +102,6 @@ const semanticMomentColumns = `
   boundary_reason,
   embedding,
   coherence_score,
-  segmentation_method,
-  segmentation_version,
   retention_days,
   indexed_at
 `
@@ -125,7 +120,6 @@ const momentLabelColumns = `
   summary,
   evidence,
   confidence,
-  detector_version,
   retention_days,
   indexed_at
 `
@@ -158,8 +152,6 @@ const toSemanticMomentInsertRow = (moment: SessionSemanticMoment) => ({
   boundary_reason: moment.boundaryReason,
   embedding: [...moment.embedding],
   coherence_score: moment.coherenceScore,
-  segmentation_method: moment.segmentationMethod,
-  segmentation_version: moment.segmentationVersion,
   retention_days: moment.retentionDays,
   indexed_at: toClickhouseDateTime(moment.indexedAt),
 })
@@ -178,7 +170,6 @@ const toMomentLabelInsertRow = (label: SessionMomentLabel) => ({
   summary: label.summary,
   evidence: label.evidence,
   confidence: label.confidence,
-  detector_version: label.detectorVersion,
   retention_days: label.retentionDays,
   indexed_at: toClickhouseDateTime(label.indexedAt),
 })
@@ -213,8 +204,6 @@ const toDomainSemanticMoment = (row: SemanticMomentRow): SessionSemanticMoment =
     boundaryReason: row.boundary_reason,
     embedding: row.embedding,
     coherenceScore: row.coherence_score,
-    segmentationMethod: row.segmentation_method,
-    segmentationVersion: row.segmentation_version,
     retentionDays: row.retention_days,
     indexedAt: parseClickhouseDate(row.indexed_at),
   })
@@ -234,7 +223,6 @@ const toDomainMomentLabel = (row: MomentLabelRow): SessionMomentLabel =>
     summary: row.summary,
     evidence: row.evidence,
     confidence: row.confidence,
-    detectorVersion: row.detector_version,
     retentionDays: row.retention_days,
     indexedAt: parseClickhouseDate(row.indexed_at),
   })

@@ -36,8 +36,6 @@ CREATE TABLE IF NOT EXISTS session_semantic_moments ON CLUSTER default
     boundary_reason       LowCardinality(String) CODEC(ZSTD(1)),
     embedding             Array(Float32)         CODEC(ZSTD(1)),
     coherence_score       Float32                DEFAULT 0.0 CODEC(ZSTD(1)),
-    segmentation_method   LowCardinality(String) CODEC(ZSTD(1)),
-    segmentation_version  LowCardinality(String) CODEC(ZSTD(1)),
     retention_days        UInt16                 DEFAULT 90 CODEC(T64, ZSTD(1)),
     indexed_at            DateTime64(3, 'UTC')   DEFAULT now64(3) CODEC(Delta(8), LZ4)
 )
@@ -62,7 +60,6 @@ CREATE TABLE IF NOT EXISTS session_moment_labels ON CLUSTER default
     summary               String                 DEFAULT '' CODEC(ZSTD(3)),
     evidence              String                 CODEC(ZSTD(3)),
     confidence            Float32                DEFAULT 0.0 CODEC(ZSTD(1)),
-    detector_version      LowCardinality(String) CODEC(ZSTD(1)),
     retention_days        UInt16                 DEFAULT 90 CODEC(T64, ZSTD(1)),
     indexed_at            DateTime64(3, 'UTC')   DEFAULT now64(3) CODEC(Delta(8), LZ4)
 )

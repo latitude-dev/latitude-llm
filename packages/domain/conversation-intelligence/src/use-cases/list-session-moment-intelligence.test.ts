@@ -52,8 +52,6 @@ const makeMoment = (analysisHash: string, momentId: string): SessionSemanticMome
   boundaryReason: "session_start",
   embedding: [],
   coherenceScore: 1,
-  segmentationMethod: "embedding_continuity",
-  segmentationVersion: "v1",
   retentionDays: 90,
   indexedAt: now,
 })
