@@ -48,6 +48,14 @@ export {
   seedDemoProjectTraceSearchActivity,
 } from "./seed-demo-project-activities.ts"
 export {
+  type BackfillSessionDescriptor,
+  listBackfillSessionsActivity,
+  resetSessionIntelligenceForProjectActivity,
+  resetTaxonomyForProjectActivity,
+  type SessionIntelligenceBackfillActivityInput,
+  waitForTaxonomyObservationStabilityActivity,
+} from "./session-intelligence-backfill-activities.ts"
+export {
   assertGardenTaxonomyQualityActivity,
   calibrateGardenTaxonomyActivity,
   completeGardenTaxonomyRunActivity,

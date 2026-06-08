@@ -18,6 +18,11 @@ export {
 } from "./refresh-evaluation-alignment-workflow.ts"
 export { type SeedDemoProjectWorkflowInput, seedDemoProjectWorkflow } from "./seed-demo-project-workflow.ts"
 export {
+  type BackfillSessionIntelligenceWorkflowInput,
+  type BackfillSessionIntelligenceWorkflowResult,
+  backfillSessionIntelligenceWorkflow,
+} from "./session-intelligence-backfill-workflow.ts"
+export {
   type GardenTaxonomyWorkflowInput,
   type GardenTaxonomyWorkflowResult,
   gardenTaxonomyWorkflow,

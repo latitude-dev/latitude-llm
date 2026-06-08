@@ -12,6 +12,12 @@ const _registry = {
     readonly reason: "trace_completed" | "backfill" | "manual_reprocess"
     readonly debounceMs?: number
   }>(),
+  backfillSessionIntelligenceWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly sessionLimit: number
+    readonly reason: "backoffice"
+  }>(),
   refreshEvaluationAlignmentWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string

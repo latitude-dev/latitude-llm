@@ -32,9 +32,7 @@ export function SessionIntelligenceBackfillButton({ projectId, projectName }: Se
         data: { projectId, confirmation: CONFIRMATION_PHRASE },
       })
       toast({
-        description: `Reset complete. Started ${result.workflowsStarted} session-intelligence workflows for ${projectName}${
-          result.workflowsAlreadyRunning > 0 ? ` (${result.workflowsAlreadyRunning} already running)` : ""
-        }.`,
+        description: `Backfill workflow started for ${projectName}. It will reset session intelligence, analyze up to ${result.sessionLimit.toLocaleString()} recent sessions, then garden taxonomy.`,
       })
       close()
       void router.invalidate()

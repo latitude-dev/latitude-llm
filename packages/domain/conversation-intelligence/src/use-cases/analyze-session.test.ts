@@ -13,8 +13,8 @@ import {
   TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
-import { type SessionDetail, SessionRepository, type TraceDetail, TraceRepository } from "@domain/spans"
-import { createFakeSessionRepository, createFakeTraceRepository } from "@domain/spans/testing"
+import { type SessionDetail, SessionRepository } from "@domain/spans"
+import { createFakeSessionRepository } from "@domain/spans/testing"
 import {
   CalibrationProfileRepository,
   type CalibrationProfileRepositoryShape,
@@ -167,18 +167,15 @@ const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster 
   ...overrides,
 })
 
-const makeTrace = (messages = makeSession().lastInputMessages.concat(makeSession().outputMessages)): TraceDetail => ({
-  ...makeSession(),
-  traceId,
-  sessionId,
-  inputMessages: messages.slice(0, 1),
-  outputMessages: messages.slice(1),
-  allMessages: messages,
-})
+const makeSessionWithMessages = (messages: readonly ReturnType<typeof message>[]) =>
+  makeSession({
+    inputMessages: messages.slice(0, 1),
+    lastInputMessages: messages.slice(0, 1),
+    outputMessages: messages.slice(1),
+  })
 
 const runUseCase = (input: {
   readonly session: SessionDetail
-  readonly trace?: TraceDetail
   readonly ai?: AIShape
   readonly seedAnalyses?: readonly import("../entities/session-analysis.ts").SessionAnalysis[]
   readonly seedClusters?: readonly TaxonomyCluster[]
@@ -191,7 +188,6 @@ const runUseCase = (input: {
   const taxonomyClusters = createFakeTaxonomyClusterRepository(input.seedClusters)
   const taxonomyLocks = createFakeDistributedLockRepository()
   const sessions = createFakeSessionRepository({ findBySessionId: () => Effect.succeed(input.session) })
-  const traces = createFakeTraceRepository({ listByTraceIds: () => Effect.succeed(input.trace ? [input.trace] : []) })
   const ai: AIShape =
     input.ai ??
     ({
@@ -208,7 +204,6 @@ const runUseCase = (input: {
     triggeringStartTime: now.toISOString(),
   }).pipe(
     Effect.provide(Layer.succeed(SessionRepository, sessions.repository)),
-    Effect.provide(Layer.succeed(TraceRepository, traces.repository)),
     Effect.provide(Layer.succeed(SessionAnalysisRepository, analyses.repository)),
     Effect.provide(Layer.succeed(SessionSemanticMomentRepository, semanticMoments.repository)),
     Effect.provide(Layer.succeed(SessionMomentLabelRepository, momentLabels.repository)),
@@ -229,7 +224,6 @@ describe("analyzeSessionUseCase", () => {
   it("analyzes user conversations and persists generated analysis", async () => {
     const { effect, analyses, semanticMoments, taxonomyObservations } = runUseCase({
       session: makeSession(),
-      trace: makeTrace(),
     })
 
     const result = await Effect.runPromise(effect)
@@ -248,8 +242,7 @@ describe("analyzeSessionUseCase", () => {
 
   it("persists deterministic taxonomy observation summaries", async () => {
     const { effect, taxonomyObservations } = runUseCase({
-      session: makeSession(),
-      trace: makeTrace([
+      session: makeSessionWithMessages([
         message("user", "Please check roaming for my account"),
         message("assistant", "I checked the account and reset the roaming profile"),
       ]),
@@ -277,8 +270,7 @@ describe("analyzeSessionUseCase", () => {
 
   it("uses language-neutral user-turn weighting for taxonomy naming summaries", async () => {
     const { effect, taxonomyObservations } = runUseCase({
-      session: makeSession(),
-      trace: makeTrace([
+      session: makeSessionWithMessages([
         message("user", "Hola, necesito cambiar la chaqueta de mi pedido reciente por una talla más grande."),
         message("assistant", "Puedo ayudarte con eso. ¿Qué talla quieres?"),
         message("user", "Por favor cámbiala por una chaqueta polar roja grande."),
@@ -295,7 +287,7 @@ describe("analyzeSessionUseCase", () => {
   })
 
   it("applies centroid updates when a same-session observation changes from noise to assigned", async () => {
-    const first = runUseCase({ session: makeSession(), trace: makeTrace() })
+    const first = runUseCase({ session: makeSession() })
     await Effect.runPromise(first.effect)
     const previous = first.taxonomyObservations.rows[0]
     expect(previous?.assignmentMethod).toBe("noise")
@@ -303,7 +295,6 @@ describe("analyzeSessionUseCase", () => {
     const cluster = makeCluster()
     const second = runUseCase({
       session: makeSession(),
-      trace: makeTrace(),
       seedClusters: [cluster],
       seedTaxonomyObservations: previous ? [previous] : [],
     })
@@ -321,7 +312,6 @@ describe("analyzeSessionUseCase", () => {
     let generateCalls = 0
     const { effect, analyses } = runUseCase({
       session: makeSession({ outputMessages: [] }),
-      trace: makeTrace([message("user", "I need help with my roaming data plan")]),
       ai: {
         generate: <T>() => {
           generateCalls++
@@ -342,8 +332,7 @@ describe("analyzeSessionUseCase", () => {
 
   it("detects interpretive labels with embedding anchors", async () => {
     const { effect, momentLabels } = runUseCase({
-      session: makeSession(),
-      trace: makeTrace([
+      session: makeSessionWithMessages([
         message("user", "I need help with roaming data"),
         message("user", "Please let me speak to a person"),
         message("assistant", "I will connect you to a human agent"),
@@ -373,7 +362,7 @@ describe("analyzeSessionUseCase", () => {
   })
 
   it("skips unchanged sessions by analysis hash", async () => {
-    const first = runUseCase({ session: makeSession(), trace: makeTrace() })
+    const first = runUseCase({ session: makeSession() })
     await Effect.runPromise(first.effect)
     const current = [...first.analyses.rows.values()][0]
     expect(current).toBeDefined()
@@ -381,7 +370,6 @@ describe("analyzeSessionUseCase", () => {
     let generateCalls = 0
     const second = runUseCase({
       session: makeSession(),
-      trace: makeTrace(),
       seedAnalyses: current ? [current] : [],
       ai: {
         generate: <T>() => {
@@ -407,7 +395,6 @@ describe("analyzeSessionUseCase", () => {
     const taxonomyClusters = createFakeTaxonomyClusterRepository()
     const taxonomyLocks = createFakeDistributedLockRepository()
     const sessions = createFakeSessionRepository()
-    const traces = createFakeTraceRepository()
 
     const result = await Effect.runPromise(
       analyzeSessionUseCase({
@@ -418,7 +405,6 @@ describe("analyzeSessionUseCase", () => {
         triggeringStartTime: now.toISOString(),
       }).pipe(
         Effect.provide(Layer.succeed(SessionRepository, sessions.repository)),
-        Effect.provide(Layer.succeed(TraceRepository, traces.repository)),
         Effect.provide(Layer.succeed(SessionAnalysisRepository, analyses.repository)),
         Effect.provide(Layer.succeed(SessionSemanticMomentRepository, semanticMoments.repository)),
         Effect.provide(Layer.succeed(SessionMomentLabelRepository, momentLabels.repository)),
@@ -448,7 +434,6 @@ describe("analyzeSessionUseCase", () => {
     let generateCalls = 0
     const { effect, analyses } = runUseCase({
       session: makeSession(),
-      trace: makeTrace(),
       ai: {
         generate: <T>() => {
           generateCalls++

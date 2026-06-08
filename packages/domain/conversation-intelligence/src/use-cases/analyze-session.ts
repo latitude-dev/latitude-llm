@@ -1,6 +1,6 @@
 import { AI } from "@domain/ai"
 import { OrganizationId, ProjectId, SessionId, TaxonomyClusterId, TraceId } from "@domain/shared"
-import { SessionRepository, TraceRepository } from "@domain/spans"
+import { SessionRepository } from "@domain/spans"
 import {
   type AnchorCalibration,
   assignObservationToClusterUseCase,
@@ -407,7 +407,6 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
     const projectId = ProjectId(input.projectId)
     const sessionId = SessionId(input.sessionId)
     const sessions = yield* SessionRepository
-    const traces = yield* TraceRepository
     const analyses = yield* SessionAnalysisRepository
     const semanticMoments = yield* SessionSemanticMomentRepository
     const momentLabels = yield* SessionMomentLabelRepository
@@ -438,14 +437,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
     }
 
     const traceIds = session.traceIds.filter((traceId) => traceId.length === 32).map(TraceId)
-    const traceDetails =
-      traceIds.length > 0 ? yield* traces.listByTraceIds({ organizationId, projectId, traceIds }) : []
-    const rawMessages =
-      traceDetails.length > 0
-        ? [...traceDetails]
-            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-            .flatMap((trace) => trace.allMessages)
-        : [...session.lastInputMessages, ...session.outputMessages]
+    const rawMessages = [...session.inputMessages, ...session.outputMessages]
     const normalizedMessages = normalizeMessages(rawMessages)
     const document = documentFromMessages(normalizedMessages)
     const analysisHash = yield* hash(`${CONVERSATION_INTELLIGENCE_DETECTOR_VERSION}\0${session.sessionId}\0${document}`)

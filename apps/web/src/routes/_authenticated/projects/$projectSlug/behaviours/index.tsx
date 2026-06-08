@@ -1,7 +1,8 @@
-import { Text } from "@repo/ui"
+import { Icon, Text } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
-import { TagsIcon } from "lucide-react"
+import { LockIcon, TagsIcon } from "lucide-react"
 import { useMemo } from "react"
+import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { type BehaviourSegment, useProjectBehaviours } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
 import type { BehaviourNodeRecord } from "../../../../../domains/taxonomy/taxonomy.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -28,6 +29,22 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/beha
 })
 
 function BehavioursPage() {
+  const behavioursEnabled = useHasFeatureFlag("behaviours")
+
+  if (!behavioursEnabled) {
+    return (
+      <Layout>
+        <Layout.Content>
+          <FeatureFlagOffSplash />
+        </Layout.Content>
+      </Layout>
+    )
+  }
+
+  return <BehavioursPageContent />
+}
+
+function BehavioursPageContent() {
   const project = useRouteProject()
   const [segment, setSegment] = useParamState("behaviourSegment", "all", {
     validate: (value): value is BehaviourSegment =>
@@ -120,5 +137,23 @@ function BehavioursPage() {
         </Layout.Aside>
       ) : null}
     </Layout>
+  )
+}
+
+function FeatureFlagOffSplash() {
+  return (
+    <div className="flex h-full w-full items-center justify-center p-8">
+      <div className="flex max-w-lg flex-col items-center gap-6 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted">
+          <Icon icon={LockIcon} size="lg" color="foregroundMuted" />
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <Text.H3 centered>Behaviours aren't available yet</Text.H3>
+          <Text.H5 color="foregroundMuted" centered>
+            This feature is rolling out gradually. Reach out to support if you'd like early access for your organization.
+          </Text.H5>
+        </div>
+      </div>
+    </div>
   )
 }

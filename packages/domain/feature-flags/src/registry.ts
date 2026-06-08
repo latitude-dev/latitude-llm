@@ -47,6 +47,11 @@ export const FEATURE_FLAGS = {
     description:
       "Unified alerting surface (per-monitor lifecycle, with notification delivery routed through the existing org/project notification settings).",
   },
+  behaviours: {
+    emoji: "🏷️",
+    name: "Behaviours",
+    description: "Enables the live taxonomy behaviours page for clustered user and agent interaction patterns.",
+  },
 } as const satisfies Record<string, { readonly emoji: string; readonly name: string; readonly description: string }>
 
 export type FeatureFlagId = keyof typeof FEATURE_FLAGS
