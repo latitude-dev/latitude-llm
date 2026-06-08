@@ -66,7 +66,12 @@ function WhatsNewContent({ onClose }: { onClose: () => void }) {
     <div className="flex flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <Text.H5M color="foregroundMuted">What's new</Text.H5M>
-        <button type="button" aria-label="Close" onClick={onClose} className="rounded p-0.5 transition-colors hover:bg-muted">
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="rounded p-0.5 transition-colors hover:bg-muted"
+        >
           <Icon icon={X} size="xs" color="foregroundMuted" />
         </button>
       </div>
