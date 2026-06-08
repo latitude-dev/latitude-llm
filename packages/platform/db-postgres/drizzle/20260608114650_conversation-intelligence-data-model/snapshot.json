@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "48e1d7f8-4fdf-4e2e-af8a-4a731c720f87",
+  "id": "fb1f6648-d1df-43d6-b716-c30c523745ca",
   "prevIds": [
-    "289e1d94-24a0-45e9-b715-8354b45965b4"
+    "c3b62cd1-9725-4173-a824-da8ba6f0a080"
   ],
   "ddl": [
     {
@@ -4689,32 +4689,6 @@
       "table": "saved_searches"
     },
     {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "assigned_user_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "saved_searches"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "created_by_user_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "saved_searches"
-    },
-    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
@@ -7798,41 +7772,6 @@
       "method": "btree",
       "concurrently": false,
       "name": "saved_searches_project_id_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "saved_searches"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "assigned_user_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "deleted_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "saved_searches_assigned_user_id_idx",
       "entityType": "indexes",
       "schema": "latitude",
       "table": "saved_searches"
