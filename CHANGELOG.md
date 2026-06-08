@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## v0.2.1 - 2026-06-08
+
+### Conversation intelligence
+
+- Fixed backoffice session-intelligence backfills to use isolated child workflow IDs, avoiding collisions with live trace-triggered analysis runs already waiting on debounce timers (ref: 00a186be).
+
+### Test mode
+
+- Added the `lat_sandbox_` token prefix for API keys minted in Test Mode sandbox organizations while keeping live organization keys unprefixed (ref: #3457).
+
 ## v0.2.0 - 2026-06-08
 
 ### Conversation intelligence
