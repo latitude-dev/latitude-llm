@@ -5,7 +5,7 @@ import {
   evaluationSchema,
 } from "@domain/evaluations"
 import type { EventEnvelope } from "@domain/events"
-import type { PublishOptions, QueueName, QueuePublisherShape } from "@domain/queue"
+import type { PublishOptions, QueueName, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import type { RedisClient } from "@platform/cache-redis"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
@@ -186,6 +186,11 @@ const createFakeRedisClient = (): RedisClient => {
 
 const delayedMessageKey = (queue: QueueName, dedupeKey: string) => `${queue}::${dedupeKey}`
 
+const createFakeWorkflowStarter = (): WorkflowStarterShape => ({
+  start: () => Effect.void as never,
+  signalWithStart: () => Effect.void,
+})
+
 const createQueueHarness = () => {
   const consumer = new TestQueueConsumer()
   const published: PublishedMessage[] = []
@@ -256,6 +261,7 @@ describe("live monitoring integration", () => {
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient: createFakeRedisClient(),
+      workflowStarter: createFakeWorkflowStarter(),
     })
 
     const envelope = makeEnvelope({
@@ -337,6 +343,7 @@ describe("live monitoring integration", () => {
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient: createFakeRedisClient(),
+      workflowStarter: createFakeWorkflowStarter(),
     })
 
     const envelope = makeEnvelope({
