@@ -16,12 +16,14 @@ const alertId = "a".repeat(24) as MonitorAlert["id"]
 const now = new Date("2026-06-01T12:00:00.000Z")
 const minsAgo = (minutes: number) => new Date(now.getTime() - minutes * 60 * 1000)
 
+// A 5-minute window ⇒ 1-min buckets, N = 5, tolerance 0.1 ⇒ maxFail = max(1, floor(0.5)) = 1.
+// `absolute count: 1` means every 1-min bucket needs ≥ 1 matching trace.
 const absoluteAlert: MonitorAlert = {
   id: alertId,
   monitorId: "m".repeat(24) as MonitorAlert["monitorId"],
   kind: "savedSearch.escalating",
   source: { type: "savedSearch", id: savedSearchId },
-  condition: { kind: "savedSearch.escalating", threshold: { mode: "absolute", count: 5 }, window: { minutes: 10 } },
+  condition: { kind: "savedSearch.escalating", threshold: { mode: "absolute", count: 1 }, window: { minutes: 5 } },
   severity: "high",
   createdAt: new Date("2026-06-01T00:00:00.000Z"),
 }
@@ -29,10 +31,26 @@ const multiplierAlert: MonitorAlert = {
   ...absoluteAlert,
   condition: {
     kind: "savedSearch.escalating",
-    threshold: { mode: "multiplier", factor: 2, baseline: { kind: "average", lookback: { unit: "hours", hours: 1 } } },
-    window: { minutes: 10 },
+    threshold: { mode: "multiplier", factor: 12, baseline: { kind: "average", lookback: { unit: "hours", hours: 1 } } },
+    window: { minutes: 5 },
   },
 }
+const expectedAlert: MonitorAlert = {
+  ...absoluteAlert,
+  condition: {
+    kind: "savedSearch.escalating",
+    threshold: { mode: "expected", sensitivity: 3 },
+    window: { minutes: 5 },
+  },
+}
+
+// One match landing in 1-min bucket `b` (b = 0 is the most recent minute before `now`).
+const inBucket = (b: number, offsetMin = 0.5) => minsAgo(b + offsetMin)
+// `count` matches all inside bucket `b` (offsets stay < 1 min so they share the bucket).
+const fillBucket = (b: number, count: number): Date[] =>
+  Array.from({ length: count }, (_unused, i) => minsAgo(b + 0.2 + i * 0.1))
+// One match in every bucket 0..4 ⇒ a breach sustained across the whole window.
+const sustained: readonly Date[] = [0, 1, 2, 3, 4].map((b) => inBucket(b))
 
 const incident = (overrides: Partial<AlertIncident>): AlertIncident => ({
   id: "c".repeat(24) as AlertIncident["id"],
@@ -45,7 +63,7 @@ const incident = (overrides: Partial<AlertIncident>): AlertIncident => ({
   startedAt: minsAgo(60),
   endedAt: null,
   createdAt: minsAgo(60),
-  entrySignals: { evaluatedThreshold: 5 },
+  entrySignals: { evaluatedThreshold: 1 },
   exitEligibleSince: null,
   monitorAlertId: alertId,
   condition: absoluteAlert.condition,
@@ -76,96 +94,86 @@ const run = (params: {
   ).then((result) => ({ result, incidents: store.incidents, events }))
 }
 
-// 6 matches inside the 10-minute window clears the absolute threshold of 5.
-const sustainedMatches = [9, 8, 6, 4, 2, 1].map(minsAgo)
-
 describe("runSavedSearchEscalatingAlertUseCase", () => {
-  it("opens with a frozen threshold snapshot and emits IncidentCreated", async () => {
-    const first = minsAgo(9)
-    const { result, incidents, events } = await run({ alert: absoluteAlert, matches: sustainedMatches })
+  it("does not open on a one-shot spike confined to a single bucket", async () => {
+    // 6 matches, all in the most recent minute ⇒ buckets 1..4 empty ⇒ failing 4 > maxFail 1.
+    const { result, incidents, events } = await run({ alert: absoluteAlert, matches: fillBucket(0, 6) })
+    expect(result.transition).toBe("none")
+    expect(incidents).toHaveLength(0)
+    expect(events).toHaveLength(0)
+  })
+
+  it("opens when the threshold is sustained across every bucket, backtracing started_at and freezing the threshold", async () => {
+    const { result, incidents, events } = await run({ alert: absoluteAlert, matches: sustained })
     expect(result.transition).toBe("opened")
-    expect(incidents[0]).toMatchObject({ startedAt: first, endedAt: null, entrySignals: { evaluatedThreshold: 5 } })
+    // started_at anchors to the earliest match in the window (~window start).
+    expect(incidents[0]).toMatchObject({
+      startedAt: inBucket(4),
+      endedAt: null,
+      entrySignals: { evaluatedThreshold: 1 },
+    })
     expect(events.map((event) => event.eventName)).toEqual(["IncidentCreated"])
   })
 
-  it("snapshots baseline + baselineCount for a multiplier open", async () => {
-    const { incidents } = await run({ alert: multiplierAlert, matches: sustainedMatches })
-    // window count 6; baseline = same 6 over 1h ⇒ normalised 1 ⇒ threshold 2.
+  it("opens within the failing-bucket tolerance (one empty bucket allowed on N=5)", async () => {
+    // Buckets 0..3 filled, bucket 4 empty ⇒ failing 1 ≤ maxFail 1 (exercises the min-1 floor).
+    const { result } = await run({ alert: absoluteAlert, matches: [0, 1, 2, 3].map((b) => inBucket(b)) })
+    expect(result.transition).toBe("opened")
+  })
+
+  it("does not open when failing buckets exceed the tolerance", async () => {
+    // Only buckets 0..2 filled ⇒ 2 empty ⇒ failing 2 > maxFail 1.
+    const { result, incidents } = await run({ alert: absoluteAlert, matches: [0, 1, 2].map((b) => inBucket(b)) })
+    expect(result.transition).toBe("none")
+    expect(incidents).toHaveLength(0)
+  })
+
+  it("freezes a per-bucket multiplier threshold + baselineCount on open", async () => {
+    // baseline = same 5 matches over 1h ⇒ baselineCount 5; perBucket = 12 × 5 × (1m / 60m) = 1.
+    const { result, incidents } = await run({ alert: multiplierAlert, matches: sustained })
+    expect(result.transition).toBe("opened")
     expect(incidents[0]?.entrySignals).toEqual({
-      evaluatedThreshold: 2,
-      baselineCount: 6,
+      evaluatedThreshold: 1,
+      baselineCount: 5,
       baseline: { kind: "average", lookback: { unit: "hours", hours: 1 } },
     })
   })
 
-  it("is a no-op while the condition keeps holding", async () => {
-    const { result, events } = await run({ alert: absoluteAlert, matches: sustainedMatches, seed: [incident({})] })
+  it("opens an expected-mode escalating incident, freezing the seasonal per-bucket band", async () => {
+    // No seasonal history ⇒ expected 0, σ floor 1 ⇒ perBucket threshold = 3 × 1 = 3.
+    // 3 matches in each of the 5 buckets clears it everywhere.
+    const matches = [0, 1, 2, 3, 4].flatMap((b) => fillBucket(b, 3))
+    const { result, incidents } = await run({ alert: expectedAlert, matches })
+    expect(result.transition).toBe("opened")
+    expect(incidents[0]?.entrySignals).toEqual({ evaluatedThreshold: 3 })
+  })
+
+  it("is a no-op while the breach stays sustained on an open incident", async () => {
+    const { result, events } = await run({ alert: absoluteAlert, matches: sustained, seed: [incident({})] })
     expect(result.transition).toBe("none")
     expect(events).toHaveLength(0)
   })
 
-  it("starts the dwell when the condition first drops", async () => {
-    const { result, incidents } = await run({ alert: absoluteAlert, matches: [minsAgo(2)], seed: [incident({})] })
-    expect(result.transition).toBe("exit-eligible")
-    expect(incidents[0]?.exitEligibleSince).toEqual(now)
-  })
-
-  it("cancels the dwell when the condition returns", async () => {
-    const { result, incidents } = await run({
-      alert: absoluteAlert,
-      matches: sustainedMatches,
-      seed: [incident({ exitEligibleSince: minsAgo(3) })],
-    })
-    expect(result.transition).toBe("exit-cancelled")
-    expect(incidents[0]?.exitEligibleSince).toBeNull()
-  })
-
-  it("keeps waiting while still inside the dwell window", async () => {
-    const { result, events } = await run({
-      alert: absoluteAlert,
-      matches: [minsAgo(1)],
-      seed: [incident({ exitEligibleSince: minsAgo(5) })],
-    })
-    expect(result.transition).toBe("none")
-    expect(events).toHaveLength(0)
-  })
-
-  it("closes and emits IncidentClosed once the dwell elapses", async () => {
+  it("closes and emits IncidentClosed once enough buckets drop below the frozen threshold", async () => {
+    // Only buckets 0..1 still have matches ⇒ 3 empty ⇒ failing 3 > maxFail 1.
     const { result, incidents, events } = await run({
       alert: absoluteAlert,
-      matches: [],
-      seed: [incident({ exitEligibleSince: minsAgo(15) })],
+      matches: [0, 1].map((b) => inBucket(b)),
+      seed: [incident({})],
     })
     expect(result.transition).toBe("closed")
     expect(incidents[0]?.endedAt).toEqual(now)
     expect(events.map((event) => event.eventName)).toEqual(["IncidentClosed"])
   })
 
-  it("opens an expected-mode escalating incident, freezing the seasonal threshold", async () => {
-    const expectedAlert: MonitorAlert = {
-      ...absoluteAlert,
-      condition: {
-        kind: "savedSearch.escalating",
-        threshold: { mode: "expected", sensitivity: 3 },
-        window: { minutes: 10 },
-      },
-    }
-    // No seasonal history ⇒ expected 0, σ floor 1 ⇒ threshold = 3 × 1 = 3.
-    // 5 matches in the 10-min window clears it; the frozen threshold is snapshotted.
-    const { result, incidents } = await run({ alert: expectedAlert, matches: [9, 7, 5, 3, 1].map(minsAgo) })
-    expect(result.transition).toBe("opened")
-    expect(incidents[0]?.entrySignals).toEqual({ evaluatedThreshold: 3 })
-  })
-
-  it("compares the live count against the frozen threshold, not a re-resolved one", async () => {
-    // Frozen threshold 10; only 5 matches now. A fresh multiplier resolve would
-    // produce a tiny threshold the count would clear — the frozen value must win.
-    const { result } = await run({
+  it("counts failing buckets against the frozen threshold, not a re-resolved one", async () => {
+    // Frozen per-bucket threshold 10; a fresh multiplier resolve would be ~1, which the sustained
+    // 1-per-bucket traffic clears — but every bucket is below the frozen 10, so it must close.
+    const { result, incidents } = await run({
       alert: multiplierAlert,
-      matches: [9, 7, 5, 3, 1].map(minsAgo),
+      matches: sustained,
       seed: [
         incident({
-          kind: "savedSearch.escalating",
           entrySignals: {
             evaluatedThreshold: 10,
             baselineCount: 50,
@@ -174,6 +182,7 @@ describe("runSavedSearchEscalatingAlertUseCase", () => {
         }),
       ],
     })
-    expect(result.transition).toBe("exit-eligible")
+    expect(result.transition).toBe("closed")
+    expect(incidents[0]?.endedAt).toEqual(now)
   })
 })

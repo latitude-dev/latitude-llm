@@ -4,7 +4,7 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { MonitorAlert } from "../entities/monitor.ts"
 import { createFakeSavedSearchMatchReader } from "../testing/fake-saved-search-match-reader.ts"
-import { evaluateSavedSearchAlert } from "./evaluate-saved-search-alert.ts"
+import { evaluateSavedSearchAlert, evaluateSavedSearchEscalatingAlert } from "./evaluate-saved-search-alert.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -134,39 +134,105 @@ describe("evaluateSavedSearchAlert", () => {
     })
   })
 
-  describe("savedSearch.escalating", () => {
-    it("counts over the configured window for an absolute threshold", async () => {
+  describe("evaluateSavedSearchEscalatingAlert", () => {
+    const evaluateEscalating = (input: { alert: MonitorAlert; matches: readonly Date[] }) =>
+      Effect.runPromise(
+        evaluateSavedSearchEscalatingAlert({
+          organizationId,
+          projectId,
+          alert: input.alert,
+          target: { query: null, filterSet: {} },
+          now,
+        }).pipe(
+          Effect.provide(createFakeSavedSearchMatchReader(input.matches).layer),
+          Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
+        ),
+      )
+
+    it("buckets the window at 1-min granularity for windows ≤ 15 min (absolute = per-bucket count)", async () => {
       const escalating = alert({
         kind: "savedSearch.escalating",
         condition: {
           kind: "savedSearch.escalating",
-          threshold: { mode: "absolute", count: 5 },
+          threshold: { mode: "absolute", count: 2 },
           window: { minutes: 10 },
         },
       })
-      const result = await evaluate({ alert: escalating, matches: [9, 8, 6, 4, 2, 1].map(minsAgo) })
-      expect(result).toMatchObject({ isMet: true, count: 6, threshold: 5 })
+      // bucket 0: two matches; bucket 3: one; bucket 9: three; the rest empty.
+      const matches = [minsAgo(0.3), minsAgo(0.6), minsAgo(3.5), minsAgo(9.2), minsAgo(9.5), minsAgo(9.8)]
+      const result = await evaluateEscalating({ alert: escalating, matches })
+      expect(result.bucketMs).toBe(60_000)
+      expect(result.bucketCounts).toHaveLength(10)
+      expect(result.perBucketThreshold).toBe(2)
+      expect(result.bucketCounts[0]).toBe(2)
+      expect(result.bucketCounts[3]).toBe(1)
+      expect(result.bucketCounts[9]).toBe(3)
+      expect(result.firstMatchInWindow).toEqual(minsAgo(9.8))
     })
 
-    it("normalises the baseline onto the window for a multiplier threshold", async () => {
+    it("buckets at 5-min granularity for windows > 15 min", async () => {
+      const escalating = alert({
+        kind: "savedSearch.escalating",
+        condition: {
+          kind: "savedSearch.escalating",
+          threshold: { mode: "absolute", count: 1 },
+          window: { minutes: 30 },
+        },
+      })
+      const result = await evaluateEscalating({ alert: escalating, matches: [minsAgo(2), minsAgo(27)] })
+      expect(result.bucketMs).toBe(5 * 60_000)
+      expect(result.bucketCounts).toHaveLength(6)
+      expect(result.bucketCounts[0]).toBe(1) // [now-5m, now)
+      expect(result.bucketCounts[5]).toBe(1) // [now-30m, now-25m)
+    })
+
+    it("normalises the baseline rate down to a single bucket for a multiplier threshold", async () => {
       const escalating = alert({
         kind: "savedSearch.escalating",
         condition: {
           kind: "savedSearch.escalating",
           threshold: {
             mode: "multiplier",
-            factor: 2,
+            factor: 60,
             baseline: { kind: "average", lookback: { unit: "hours", hours: 1 } },
           },
           window: { minutes: 10 },
         },
       })
-      // window = [now-10m, now): 6 matches. baseline = [now-60m, now): 18 (12 older + 6 in window).
-      // normalisedBaseline = 18 × (10m / 60m) = 3; threshold = 2 × 3 = 6 ⇒ met (6 ≥ 6).
-      const baselineOlder = [55, 50, 45, 40, 35, 30, 25, 22, 18, 15, 13, 11].map(minsAgo)
-      const inWindow = [9, 7, 5, 3, 2, 1].map(minsAgo)
-      const result = await evaluate({ alert: escalating, matches: [...baselineOlder, ...inWindow] })
-      expect(result).toMatchObject({ isMet: true, count: 6, baselineCount: 18, threshold: 6 })
+      // baseline = [now-60m, now): 3 matches ⇒ perBucket = 60 × 3 × (1m / 60m) = 3.
+      const result = await evaluateEscalating({ alert: escalating, matches: [minsAgo(1), minsAgo(2), minsAgo(3)] })
+      expect(result.perBucketThreshold).toBe(3)
+      expect(result.baselineCount).toBe(3)
+      expect(result.bucketMs).toBe(60_000)
+    })
+
+    it("sizes an expected-mode band to a single bucket (σ floor with no history)", async () => {
+      const escalating = alert({
+        kind: "savedSearch.escalating",
+        condition: {
+          kind: "savedSearch.escalating",
+          threshold: { mode: "expected", sensitivity: 3 },
+          window: { minutes: 10 },
+        },
+      })
+      // expected 0, σ floor 1 ⇒ perBucket threshold = 3 × 1 = 3; no baselineCount for expected.
+      const result = await evaluateEscalating({ alert: escalating, matches: [minsAgo(1), minsAgo(2)] })
+      expect(result.perBucketThreshold).toBe(3)
+      expect(result.baselineCount).toBeUndefined()
+    })
+
+    it("reports a null first match when the window is empty", async () => {
+      const escalating = alert({
+        kind: "savedSearch.escalating",
+        condition: {
+          kind: "savedSearch.escalating",
+          threshold: { mode: "absolute", count: 1 },
+          window: { minutes: 10 },
+        },
+      })
+      const result = await evaluateEscalating({ alert: escalating, matches: [minsAgo(20)] })
+      expect(result.firstMatchInWindow).toBeNull()
+      expect(result.bucketCounts).toEqual(new Array(10).fill(0))
     })
   })
 

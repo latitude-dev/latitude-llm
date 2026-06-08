@@ -152,9 +152,11 @@ export type AlertIncidentSourceType = (typeof ALERT_INCIDENT_SOURCE_TYPES)[numbe
  *                          notifications.
  *   savedSearch.escalating
  *                       — fires when the match count sustains above a
- *                          configured threshold for a `window` period
- *                          (sustained; closes after the same `window`
- *                          of the condition no longer holding).
+ *                          configured threshold for the whole `window`
+ *                          (sustained; the window is tiled into buckets and
+ *                          (almost) every bucket must clear the per-bucket
+ *                          threshold to open; closes promptly once enough
+ *                          recent buckets drop below it).
  */
 export const ALERT_INCIDENT_KINDS = [
   "issue.new",
@@ -348,28 +350,34 @@ export type AlertIncidentSavedSearchThresholdCondition = {
 }
 
 /**
- * Sustained alert. The count is taken over a rolling `window` ending at
- * evaluation time; the same `window` doubles as the dwell-on-exit for
- * the close transition. This single field is what the user types into
- * the form ("for at least 5 minutes") and it plays two roles in the
- * state machine:
+ * Sustained alert. `window` is the duration the threshold must stay crossed
+ * for before the incident opens — the single field the user types into the
+ * form ("for at least 5 minutes"). It is checked by tiling `[now - window, now]`
+ * into fixed-size buckets and requiring the per-bucket threshold to hold across
+ * (almost) the whole window:
  *
- *   - **Count window**: at every evaluation tick, `count = matches in
- *     [now - window, now]`. The window is the user's lever for ignoring
- *     transient spikes — a 1-second burst doesn't trip a 5-minute
- *     window because the spike's contribution to the rolling count
- *     ages out quickly.
- *   - **Exit dwell**: when `isMet` flips from true to false on an open
- *     incident, the dwell timer (`exitEligibleSince`) starts. The
- *     incident closes once the condition has stayed false for `window`
- *     minutes continuously.
+ *   - **Bucketing**: `bucketMs` = 1 min for `window <= 15 min`, else 5 min;
+ *     `N = floor(window / bucketMs)` buckets aligned to `now`. The per-bucket
+ *     threshold is the configured threshold sized to one bucket (absolute =
+ *     `count` per bucket; multiplier = `factor × baseline-rate × bucketMs`;
+ *     expected = the seasonal σ-band for a bucket-sized window). An empty bucket
+ *     always fails (a gap means the breach wasn't sustained).
+ *   - **Open**: open only when at most `maxFailingBuckets` buckets fail —
+ *     `floor(ESCALATING_BUCKET_FAIL_TOLERANCE × N)` with a floor of 1 bucket for
+ *     any positive tolerance (`0` = strict). A one-shot spike fills a single
+ *     bucket and leaves the rest failing, so it's filtered.
+ *   - **Close**: symmetric — close once *more* than `maxFailingBuckets` buckets
+ *     drop below the threshold frozen at open. No dwell; the incident closes
+ *     roughly `(maxFailingBuckets + 1) × bucketMs` after traffic stops.
  *
- * Minimum 5 minutes (= the throttle interval of the firing task; a
- * shorter window would be evaluated less often than it claims).
+ * Stateless: one bucketed query per check; no `exitEligibleSince`, no persisted
+ * timer. Minimum 5 minutes (= the throttle interval of the firing task; a
+ * shorter window would be evaluated less often than it claims). `window` need
+ * not be a multiple of `bucketMs` — a non-multiple under-covers by `< bucketMs`.
  */
 export type AlertIncidentSavedSearchEscalatingCondition = {
   kind: "savedSearch.escalating"
-  threshold: AlertCountThreshold // absolute or multiplier
+  threshold: AlertCountThreshold // absolute, multiplier, or expected (per-bucket)
   window: { minutes: number }    // ≥ 5
 }
 ```
@@ -733,10 +741,11 @@ Worked example for `savedSearch.threshold, multiplier`, "3 times more than the a
 
 Worked example for `savedSearch.escalating, multiplier`, "2 times more than yesterday for at least 1 hour":
 
-- Yesterday produced 1,200 matches → 50 per hour.
-- `normalisedBaseline = 1,200 × (1hr / 24hr) = 50` (matches per hour).
-- `threshold = 2 × 50 = 100`.
-- Last 1 hour produced 110 matches → `isMet = true`. Open the incident; dwell-on-exit also = 1 hour.
+- `window = 60 min > 15 min` → `bucketMs = 5 min`, `N = 12` buckets tiling the last hour.
+- Yesterday produced 1,200 matches → `4.17` per 5-min bucket on average.
+- `normalisedBaseline = 1,200 × (5min / 24hr) = 4.17` (matches per bucket).
+- `perBucketThreshold = 2 × 4.17 = 8.33`.
+- Open only when (almost) every 5-min bucket in the last hour had `≥ 8.33` matches — i.e. the elevated rate held all hour, not just one busy bucket. With the default 0.1 tolerance, `maxFailingBuckets = floor(0.1 × 12) = 1`, so one bucket may dip.
 
 The multiplier snapshot stored in `entrySignals` at the open transition (`evaluatedThreshold`, `baselineCount`, `baseline`) lets the close-side re-evaluate with the *same* baseline number — preventing the open incident's own elevated counts from drifting the threshold sideways. We compare the *current* count (which is recomputed each tick) against the *frozen* threshold.
 
@@ -796,48 +805,51 @@ The incidents panel will render an open multiplier-threshold incident as "Ongoin
 
 #### State machine — `savedSearch.escalating` (sustained)
 
-Mirrors `issue.escalating`:
+Bucketed sustained-gate on open, symmetric prompt close. `evaluateSavedSearchEscalatingAlert(...)` returns per-bucket match counts over `[now - window, now]` (newest-first, zero-filled, length `N`) plus the live per-bucket threshold:
 
 ```
 At evaluation:
-  let v = evaluateSavedSearchAlert(...)
-  let open = alert_incidents with monitor_alert_id = A.id,
-                                  endedAt IS NULL
-  if open is null and v.isMet:
-    // OPEN TRANSITION
-    INSERT alert_incidents:
-      startedAt      = v.firstMatchInWindow ?? now
-      endedAt        = null
-      monitorAlertId = A.id        (owning monitor resolved via join)
-      condition      = snapshot of A.condition
-      entrySignals = {
-        evaluatedThreshold: v.threshold,
-        baselineCount: v.baselineCount,         // present for multiplier
-        baseline: A.condition.threshold.baseline,  // multiplier only
-      }
-      exitEligibleSince = null
-    emit IncidentCreated
+  let D       = A.condition.window.minutes (minutes)
+  let bucketMs = (D <= 15 ? 1min : 5min)
+  let N        = floor(D / bucketMs)
+  let maxFail  = (ESCALATING_BUCKET_FAIL_TOLERANCE <= 0)
+                   ? 0
+                   : max(1, floor(ESCALATING_BUCKET_FAIL_TOLERANCE * N))   // default 0.1, min 1 bucket
+  let v        = evaluateSavedSearchEscalatingAlert(...)   // { bucketCounts[N], perBucketThreshold, firstMatchInWindow, baselineCount? }
+  let open     = alert_incidents with monitor_alert_id = A.id, endedAt IS NULL
+  // an empty bucket (count 0) always fails — a gap means the breach wasn't sustained
+  let failing(thr) = count(bucketCounts where count <= 0 or count < thr)
 
-  else if open is not null and v.isMet:
-    if open.exitEligibleSince is not null:
-      // condition came back, cancel the dwell timer
-      UPDATE alert_incidents SET exitEligibleSince = null
+  if open is null:
+    // OPEN TRANSITION — only when (almost) every bucket cleared the LIVE threshold
+    if failing(v.perBucketThreshold) <= maxFail:
+      INSERT alert_incidents:
+        startedAt      = v.firstMatchInWindow ?? (now - D)   // anchored to the window start
+        endedAt        = null
+        monitorAlertId = A.id        (owning monitor resolved via join)
+        condition      = snapshot of A.condition
+        entrySignals = {
+          evaluatedThreshold: v.perBucketThreshold,   // the FROZEN per-bucket threshold
+          baselineCount: v.baselineCount,             // present for multiplier
+          baseline: A.condition.threshold.baseline,   // multiplier only
+        }
+      emit IncidentCreated
 
-  else if open is not null and not v.isMet:
-    if open.exitEligibleSince is null:
-      // EXIT-ELIGIBLE TRANSITION
-      UPDATE alert_incidents SET exitEligibleSince = now
-    else if now - open.exitEligibleSince >= A.condition.window:
-      // CLOSE TRANSITION
+  else:
+    // CLOSE TRANSITION — once too many buckets drop below the FROZEN threshold
+    let thr = open.entrySignals.evaluatedThreshold ?? v.perBucketThreshold   // legacy rows: fresh threshold
+    if failing(thr) > maxFail:
       UPDATE alert_incidents SET endedAt = now
       emit IncidentClosed
 ```
 
 Notes:
 
-- **Multiplier baseline is frozen at entry.** The threshold value (and the supporting baselineCount) is snapshotted into `entrySignals` on the open transition. The close-side does NOT re-resolve `factor × baseline` at evaluation time — it compares `v.count >= entrySignals.evaluatedThreshold`. This prevents the open incident's own elevated counts from polluting a sliding baseline and pinning the incident open.
+- **Per-bucket threshold is frozen at entry.** The per-bucket threshold (and, for multiplier, the supporting `baselineCount`) is snapshotted into `entrySignals` on open. The close-side does NOT re-resolve `factor × baseline` or the seasonal band — it counts how many buckets fall below `entrySignals.evaluatedThreshold`. This prevents the open incident's own elevated counts from drifting a sliding baseline and pinning the incident open.
+- **Stateless — no `exitEligibleSince`, no dwell.** Open and close are both pure functions of the current bucketed query against the (live, then frozen) per-bucket threshold. The `exit_eligible_since` column stays in the schema but is unused by escalating now; a stale value on a legacy open incident is ignored, and that incident closes on the next check where failing buckets exceed the tolerance.
+- **Anti-flap via the shared tolerance.** Because the same `maxFail` applies on close, a brief single-bucket dip won't close a noisy-but-sustained breach. Re-opening after a genuine close still requires a fresh sustained window.
 - **No 72h backstop.** Saved-search conditions are deterministic and user-configured; if the user said "alert me when 5xx > 100 for 1 hour" and it's been holding for a week, that's the system working as designed.
-- The "alert is met" semantics for sustained incidents are entirely on the count window, not the dwell — the dwell only applies to the exit transition. This is what handles your reconnection-spike concern: a 1-second burst doesn't trip a 5-minute window because at the next evaluation tick the burst is already aged out of the rolling count.
+- **Spikes are filtered by construction.** A 1-second burst fills a single bucket and leaves the other `N - 1` buckets failing, so `failing` far exceeds `maxFail` and nothing opens — the sustained-for-the-window semantics, not a rolling-count aging trick.
 
 #### State machine — `savedSearch.match`
 
@@ -1454,6 +1466,8 @@ Scope is intentionally left open — the exact polish items are decided when the
 
 > **As-built deviations from the original task list:** (1) absolute-threshold "cumulative since creation" anchors on **`alert.createdAt`**, not `monitor.createdAt` — makes "remove and re-add to re-arm" reset the count; (2) match counting goes through a dedicated `SavedSearchMatchReader`, not `TraceRepository` (avoids touching its ~17 stubs); (3) the `monitors` queue carries three tasks (`checkSavedSearchMonitors` / `sweepSavedSearchMonitors` / `onSourceDeleted`); the orchestrator gates on the `monitors` flag in the worker, not the use-case.
 
+> **Post-M7 escalating rework (sustained-gate open + prompt close).** The escalating bullets above describe the *original* M7 machine (rolling-count open on the first met check; `exitEligibleSince` dwell = `window` on close), which had two flaws: a momentary spike opened immediately (a rolling count can't tell a spike from a sustained breach), and the close lagged ~3× the cadence because `window` doubled as the exit dwell. The escalating machine was reworked to be **bucketed and stateless** — `evaluateSavedSearchEscalatingAlert` tiles `[now − window, now]` into 1-/5-min buckets and the state machine opens only when (almost) every bucket clears the per-bucket threshold (default `ESCALATING_BUCKET_FAIL_TOLERANCE = 0.1`, floor 1 bucket) and closes once more than that many buckets drop below the threshold frozen at open. No `exitEligibleSince`, no dwell, no migration. See the **State machine — `savedSearch.escalating`** section above for the authoritative description; `evaluateSavedSearchAlert` now handles only `match`/`threshold`.
+
 ### Milestone 8 — Fold `/search` into the `/` page tabs, retire the standalone route
 
 > Branch: `LAT-630/search-bar-relocation` · Estimated size: ~2,200 lines (frontend-heavy)
@@ -1500,7 +1514,7 @@ Smaller than originally estimated because most of the heavy lifting has already 
     - **threshold (absolute)** — milestone alarms ("alert me when 100 5xx traces have matched").
     - **threshold (multiplier)** — spike detection ("alert me when I'm seeing 3× my baseline rate"). Explain the baseline choices: **the average of the last …** (the typical/normal-traffic case) vs **yesterday / the previous week** (for daily/weekly seasonality). Worked example with concrete numbers showing the normalisation, so customers don't have to derive it.
     - **expected** — the smart, dynamically-learned baseline ("alert me when I'm seeing more traffic than expected for this time of day/week"). Explain that, unlike average/previous-period, the customer picks no comparison window — Latitude learns the normal shape of traffic per time-of-day × day-of-week (same engine as automatic issue-escalation) — and that the single knob is **sensitivity**. Call out when to prefer it (traffic with strong, irregular seasonality) over a fixed average.
-    - **escalating (absolute, multiplier, and expected)** — sustained-condition alerts, with explanation of how the `window` field doubles as count window + exit dwell, and why that filters out short noise spikes. Any of the threshold modes can be combined with a sustained window.
+    - **escalating (absolute, multiplier, and expected)** — sustained-condition alerts: explain that the threshold must stay crossed for the whole `window` before the incident opens (so a short noise spike doesn't trip it), and that the incident closes promptly once the threshold no longer holds. Keep it high-level — no need to describe the internal bucketing. Any of the threshold modes can be combined with a sustained window.
   - **Mute, delete, edit**: what each action does, mute semantics (incidents still recorded, no notifications), what's editable on system vs user monitors.
   - **How notifications work**: brief, links to existing notification docs page. Clarify that monitors don't have their own notification settings — channel-level routing lives in the existing user/project preferences.
 - [ ] Add the page to the Mintlify nav (`docs/mint.json` or equivalent config), under the appropriate section (likely "Alerts" or "Reliability").

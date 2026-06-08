@@ -86,7 +86,9 @@ export const AlertConditionSchema = z
             .number()
             .int()
             .min(5)
-            .describe("Length of the rolling count window, which also doubles as the dwell-before-close. Minimum 5."),
+            .describe(
+              "How long the threshold must stay crossed before the incident opens. The incident stays open while the threshold keeps holding over this window and closes once it no longer does. Minimum 5.",
+            ),
         })
         .describe("Sustained-condition window."),
     }),

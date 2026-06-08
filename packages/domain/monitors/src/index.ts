@@ -1,4 +1,11 @@
 export {
+  countFailingBuckets,
+  ESCALATING_BUCKET_FAIL_TOLERANCE,
+  ESCALATING_BUCKET_LARGE_MS,
+  ESCALATING_BUCKET_SIZE_CUTOFF_MS,
+  ESCALATING_BUCKET_SMALL_MS,
+  maxFailingBuckets,
+  pickEscalatingBucketMs,
   SAVED_SEARCH_CURRENT_WINDOW_MS,
   SAVED_SEARCH_MONITORS_SWEEPER_KEY,
   SAVED_SEARCH_MONITORS_SWEEPER_PATTERN,
@@ -30,6 +37,7 @@ export type {
 } from "./ports/monitor-repository.ts"
 export { MonitorRepository } from "./ports/monitor-repository.ts"
 export type {
+  SavedSearchMatchBucketInput,
   SavedSearchMatchReaderShape,
   SavedSearchMatchTarget,
   SavedSearchMatchWindowInput,
@@ -63,9 +71,13 @@ export { deleteMonitorAlertUseCase } from "./use-cases/delete-monitor-alert.ts"
 export type {
   EvaluateSavedSearchAlertError,
   EvaluateSavedSearchAlertInput,
+  SavedSearchEscalatingEvaluation,
   SavedSearchEvaluation,
 } from "./use-cases/evaluate-saved-search-alert.ts"
-export { evaluateSavedSearchAlert } from "./use-cases/evaluate-saved-search-alert.ts"
+export {
+  evaluateSavedSearchAlert,
+  evaluateSavedSearchEscalatingAlert,
+} from "./use-cases/evaluate-saved-search-alert.ts"
 export type { GetMonitorBySlugInput } from "./use-cases/get-monitor-by-slug.ts"
 export { getMonitorBySlugUseCase } from "./use-cases/get-monitor-by-slug.ts"
 export type {

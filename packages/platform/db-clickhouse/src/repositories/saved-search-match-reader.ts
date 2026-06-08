@@ -1,5 +1,6 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import {
+  type SavedSearchMatchBucketInput,
   SavedSearchMatchReader,
   type SavedSearchMatchReaderShape,
   type SavedSearchMatchWindowInput,
@@ -103,6 +104,41 @@ const make = (): SavedSearchMatchReaderShape => ({
           }),
           Effect.mapError((error) => toRepositoryError(error, "SavedSearchMatchReader.firstMatchAt")),
         )
+    }),
+  countMatchesPerBucket: (input: SavedSearchMatchBucketInput) =>
+    Effect.gen(function* () {
+      const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+      const inner = yield* buildInnerQuery(input)
+      const bucketCount = Math.max(0, Math.floor((input.to.getTime() - input.from.getTime()) / input.bucketMs))
+      // Bucket each matching trace by how far its `start_time` sits before `to`,
+      // in `bucketNs` (= bucketMs) steps — index 0 is the bucket ending at `to`.
+      // `reinterpretAsInt64(DateTime64(9))` yields nanoseconds-since-epoch, the
+      // same primitive the trace list uses for `duration_ns`. ClickHouse only
+      // returns non-empty buckets, so we densify to `bucketCount` zero-filled
+      // entries in code.
+      const rows = yield* chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT
+                      intDiv(
+                        reinterpretAsInt64(toDateTime64({windowTo:String}, 9, 'UTC')) - reinterpretAsInt64(start_time),
+                        {bucketNs:Int64}
+                      ) AS bucket_index,
+                      count() AS matches
+                    FROM (${inner.sql})
+                    GROUP BY bucket_index`,
+            query_params: { ...inner.params, bucketNs: input.bucketMs * 1_000_000 },
+            format: "JSONEachRow",
+          })
+          return result.json<{ bucket_index: string; matches: string }>()
+        })
+        .pipe(Effect.mapError((error) => toRepositoryError(error, "SavedSearchMatchReader.countMatchesPerBucket")))
+      const counts = new Array<number>(bucketCount).fill(0)
+      for (const row of rows) {
+        const index = Number(row.bucket_index)
+        if (index >= 0 && index < bucketCount) counts[index] = Number(row.matches)
+      }
+      return counts
     }),
 })
 

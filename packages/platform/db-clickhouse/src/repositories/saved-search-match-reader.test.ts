@@ -75,6 +75,7 @@ const span = (n: number, startTime: Date, tags: readonly string[] = [TAG]): Span
     scope_version: "",
   }) satisfies SpanRow
 
+const t0930 = new Date("2026-06-01T09:30:00.000Z")
 const t10 = new Date("2026-06-01T10:00:00.000Z")
 const t1030 = new Date("2026-06-01T10:30:00.000Z")
 const t11 = new Date("2026-06-01T11:00:00.000Z")
@@ -144,5 +145,39 @@ describe("SavedSearchMatchReaderLive", () => {
     )
     // Drops the 'other'-tagged trace → t10 + t1030 only.
     expect(count).toBe(2)
+  })
+
+  it("buckets matches newest-first, zero-filled, aligned to `to`", async () => {
+    // [09:30, 11:00) tiled into 3×30-min buckets aligned to 11:00 (newest-first):
+    //   idx 0 = (10:30, 11:00) → empty (t11 == `to` is excluded)
+    //   idx 1 = (10:00, 10:30] → t1030 (+ the 'other'-tagged trace, no filter applied) → 2
+    //   idx 2 = (09:30, 10:00] → t10 → 1
+    const counts = await runCh(
+      reader.countMatchesPerBucket({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target,
+        from: t0930,
+        to: t11,
+        bucketMs: 30 * 60 * 1000,
+      }),
+    )
+    expect(counts).toEqual([0, 2, 1])
+  })
+
+  it("honours the structured filters per bucket", async () => {
+    const tagged = { query: null, filterSet: { tags: [{ op: "in" as const, value: [TAG] }] } }
+    const counts = await runCh(
+      reader.countMatchesPerBucket({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target: tagged,
+        from: t0930,
+        to: t11,
+        bucketMs: 30 * 60 * 1000,
+      }),
+    )
+    // The 'other'-tagged trace at 10:30 is dropped by the tag filter → idx 1 falls to 1.
+    expect(counts).toEqual([0, 1, 1])
   })
 })

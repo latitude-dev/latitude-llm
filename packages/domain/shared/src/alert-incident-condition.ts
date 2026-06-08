@@ -48,7 +48,13 @@ export type AlertIncidentSavedSearchThresholdCondition = z.infer<
   typeof alertIncidentSavedSearchThresholdConditionSchema
 >
 
-/** `window` is both the rolling count window and the dwell-on-exit; min 5 min (the firing throttle). */
+/**
+ * `window` is the sustained duration the threshold must stay crossed for before
+ * the incident opens: the threshold is evaluated per internal sub-bucket tiling
+ * the window and must hold across it (up to a small configurable failing-bucket
+ * tolerance) to open; the incident closes once failing buckets exceed that
+ * tolerance. Min 5 min (the firing throttle).
+ */
 export const alertIncidentSavedSearchEscalatingConditionSchema = z.object({
   kind: z.literal("savedSearch.escalating"),
   threshold: alertCountThresholdSchema,
