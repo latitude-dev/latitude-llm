@@ -137,25 +137,3 @@ export const embedAnchorText = (text: string) =>
     })
     return result.embedding
   })
-
-/**
- * Conversational ritual (greetings, closings, bare acknowledgements) produced
- * the largest QA clusters ("Greeting" alone held ~17% of assigned agent
- * observations) while carrying no behavioural signal. Observations whose
- * projection embedding sits closer to these ritual anchors than to the
- * substantive contrast anchors are skipped before taxonomy emission; semantic
- * moments and moment labels are unaffected.
- */
-export const RITUAL_POSITIVE_ANCHORS = [
-  "the user greets the assistant or says hello",
-  "the assistant greets the customer and offers help",
-  "the user thanks the assistant and says goodbye",
-  "the assistant closes the conversation wishing the customer a good day and offering future help",
-  "the user gives a bare acknowledgement such as yes okay or thanks",
-] as const
-export const RITUAL_CONTRAST_ANCHORS = [
-  "the user describes a problem or asks for a specific action on their account or order",
-  "the assistant performs troubleshooting account changes or order processing steps",
-] as const
-export const RITUAL_SUPPRESSION_THRESHOLD = 0.58
-export const RITUAL_SUPPRESSION_MARGIN = 0.06

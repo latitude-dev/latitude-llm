@@ -59,10 +59,6 @@ export async function resetTaxonomyForProjectActivity(input: SessionIntelligence
     `DELETE FROM latitude.taxonomy_runs WHERE organization_id = $1 AND project_id = $2`,
     params,
   )
-  await adminPostgres.pool.query(
-    `DELETE FROM latitude.calibration_profiles WHERE organization_id = $1 AND project_id = $2 AND scope = 'clustering'`,
-    params,
-  )
 }
 
 export async function listBackfillSessionsActivity(

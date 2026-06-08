@@ -36,7 +36,6 @@ export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
 export { BillingOverrideRepositoryLive } from "./repositories/billing-override-repository.ts"
 export { BillingUsageEventRepositoryLive } from "./repositories/billing-usage-event-repository.ts"
 export { BillingUsagePeriodRepositoryLive } from "./repositories/billing-usage-period-repository.ts"
-export { CalibrationProfileRepositoryLive } from "./repositories/calibration-profile-repository.ts"
 export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
 // Repository implementations
 export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"

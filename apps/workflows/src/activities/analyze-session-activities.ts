@@ -23,7 +23,7 @@ import {
   TaxonomyObservationRepositoryLive,
   withClickHouse,
 } from "@platform/db-clickhouse"
-import { CalibrationProfileRepositoryLive, TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { TaxonomyClusterRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
 import { hash } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -346,11 +346,7 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
-      withPostgres(
-        Layer.mergeAll(TaxonomyClusterRepositoryLive, CalibrationProfileRepositoryLive),
-        getPostgresClient(),
-        OrganizationId(input.organizationId),
-      ),
+      withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
       withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient()),
       Effect.tap((result) =>

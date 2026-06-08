@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "900f79b5-ea96-47d2-9575-f3482bec6571",
+  "id": "48e1d7f8-4fdf-4e2e-af8a-4a731c720f87",
   "prevIds": [
     "289e1d94-24a0-45e9-b715-8354b45965b4"
   ],
@@ -111,12 +111,6 @@
     {
       "isRlsEnabled": true,
       "name": "billing_usage_periods",
-      "entityType": "tables",
-      "schema": "latitude"
-    },
-    {
-      "isRlsEnabled": true,
-      "name": "calibration_profiles",
       "entityType": "tables",
       "schema": "latitude"
     },
@@ -2779,136 +2773,6 @@
       "entityType": "columns",
       "schema": "latitude",
       "table": "billing_usage_periods"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "organization_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "project_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "type": "varchar(32)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "scope",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "payload",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "metrics",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "sample_size",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "computed_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "calibration_profiles"
     },
     {
       "type": "varchar(24)",
@@ -7072,41 +6936,6 @@
           "asc": true,
           "nullsFirst": false,
           "opclass": null
-        },
-        {
-          "value": "project_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "scope",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "calibration_profiles_project_scope_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "calibration_profiles"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
         }
       ],
       "isUnique": false,
@@ -9119,16 +8948,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "calibration_profiles_pkey",
-      "schema": "latitude",
-      "table": "calibration_profiles",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "datasets_pkey",
       "schema": "latitude",
       "table": "datasets",
@@ -9755,19 +9574,6 @@
       "entityType": "policies",
       "schema": "latitude",
       "table": "billing_usage_periods"
-    },
-    {
-      "as": "PERMISSIVE",
-      "for": "ALL",
-      "roles": [
-        "public"
-      ],
-      "using": "organization_id = get_current_organization_id()",
-      "withCheck": "organization_id = get_current_organization_id()",
-      "name": "calibration_profiles_organization_policy",
-      "entityType": "policies",
-      "schema": "latitude",
-      "table": "calibration_profiles"
     },
     {
       "as": "PERMISSIVE",

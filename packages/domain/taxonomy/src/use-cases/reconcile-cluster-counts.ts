@@ -1,10 +1,8 @@
 import { generateId, type OrganizationId, type ProjectId, TaxonomyLineageId, type TaxonomyRunId } from "@domain/shared"
 import { Effect } from "effect"
-import { TAXONOMY_LIST_ALL_BY_CLUSTER_MAX } from "../constants.ts"
 import { TaxonomyClusterState } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
-import { cosineSimilarityNormalized, normalizeTaxonomyCentroid, normalizeTaxonomyEmbedding } from "../helpers.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 
@@ -38,56 +36,13 @@ export const reconcileClusterCountsUseCase = (input: ReconcileClusterCountsInput
     const parentsWithChildren = new Set(
       active.flatMap((cluster) => (cluster.parentClusterId ? [cluster.parentClusterId] : [])),
     )
-    const childrenByParentId = new Map<string, (typeof active)[number][]>()
-    for (const cluster of active) {
-      if (!cluster.parentClusterId) continue
-      const children = childrenByParentId.get(cluster.parentClusterId) ?? []
-      children.push(cluster)
-      childrenByParentId.set(cluster.parentClusterId, children)
-    }
 
-    for (const [parentId, children] of childrenByParentId) {
-      const parent = active.find((cluster) => cluster.id === parentId)
-      if (!parent) continue
-      const directRows = yield* observations.listAllByCluster({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        clusterId: parent.id,
-        limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
-      })
-      yield* observations.reassignMany(
-        directRows.flatMap((observation) => {
-          const embedding = normalizeTaxonomyEmbedding(observation.embedding)
-          const target = [...children].sort(
-            (a, b) =>
-              cosineSimilarityNormalized(normalizeTaxonomyCentroid(b.centroid), embedding) -
-              cosineSimilarityNormalized(normalizeTaxonomyCentroid(a.centroid), embedding),
-          )[0]
-          return target
-            ? [
-                {
-                  observation,
-                  assignedClusterId: target.id,
-                  assignmentMethod: "gardening_reassign" as const,
-                  assignmentConfidence: cosineSimilarityNormalized(
-                    normalizeTaxonomyCentroid(target.centroid),
-                    embedding,
-                  ),
-                  reassignmentRunId: input.runId,
-                  indexedAt: now,
-                },
-              ]
-            : []
-        }),
-      )
-    }
-
-    const countsAfterEvacuation = yield* observations.getClusterAssignmentCounts({
+    const assignmentCounts = yield* observations.getClusterAssignmentCounts({
       organizationId: input.organizationId,
       projectId: input.projectId,
       clusterIds: active.map((cluster) => cluster.id),
     })
-    const directCountByClusterId = new Map(countsAfterEvacuation.map((count) => [count.clusterId, count] as const))
+    const directCountByClusterId = new Map(assignmentCounts.map((count) => [count.clusterId, count] as const))
     const aggregateCountByClusterId = new Map<
       string,
       { readonly count: number; readonly firstObservedAt: Date; readonly lastObservedAt: Date }

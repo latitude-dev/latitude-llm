@@ -35,7 +35,7 @@ const baseSemanticMoment = {
 }
 
 describe("semantic moments", () => {
-  it("keeps the calibrated continuity threshold defaults bounded", () => {
+  it("keeps the continuity threshold defaults bounded", () => {
     expect(CONVERSATION_MOMENT_CONTINUITY_DEFAULT_THRESHOLD).toBeGreaterThanOrEqual(
       CONVERSATION_MOMENT_CONTINUITY_MIN_THRESHOLD,
     )

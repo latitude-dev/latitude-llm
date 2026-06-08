@@ -331,65 +331,6 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.listBySession")))
         }),
 
-      sampleEmbeddings: ({ organizationId, projectId, limit }) =>
-        Effect.gen(function* () {
-          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          return yield* chSqlClient
-            .query(async (client) => {
-              const result = await client.query({
-                query: `SELECT embedding
-                        FROM (${latestProjectWindow})
-                        WHERE organization_id = {organizationId:String}
-                          AND project_id = {projectId:String}
-                          AND length(embedding) > 0
-                        ORDER BY cityHash64(observation_id)
-                        LIMIT {limit:UInt32}`,
-                query_params: {
-                  organizationId: organizationId as string,
-                  projectId: projectId as string,
-                  limit,
-                  ...latestProjectWindowParams,
-                },
-                format: "JSONEachRow",
-              })
-              const rows = await result.json<{ embedding: readonly number[] }>()
-              return rows.map((row) => row.embedding)
-            })
-            .pipe(
-              Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.sampleEmbeddings")),
-            )
-        }),
-
-      sampleAssignmentScores: ({ organizationId, projectId, limit }) =>
-        Effect.gen(function* () {
-          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          return yield* chSqlClient
-            .query(async (client) => {
-              const result = await client.query({
-                query: `SELECT assigned_cluster_id != '' AS assigned, assignment_confidence AS confidence
-                        FROM (${latestProjectWindow})
-                        WHERE organization_id = {organizationId:String}
-                          AND project_id = {projectId:String}
-                        ORDER BY cityHash64(observation_id)
-                        LIMIT {limit:UInt32}`,
-                query_params: {
-                  organizationId: organizationId as string,
-                  projectId: projectId as string,
-                  limit,
-                  ...latestProjectWindowParams,
-                },
-                format: "JSONEachRow",
-              })
-              const rows = await result.json<{ assigned: number; confidence: number }>()
-              return rows.map((row) => ({ assigned: Boolean(row.assigned), confidence: Number(row.confidence) }))
-            })
-            .pipe(
-              Effect.mapError((error) =>
-                toRepositoryError(error, "TaxonomyObservationRepository.sampleAssignmentScores"),
-              ),
-            )
-        }),
-
       getCounts: ({ organizationId, projectId, since }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

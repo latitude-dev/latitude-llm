@@ -16,8 +16,6 @@ import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeS
 import { type SessionDetail, SessionRepository } from "@domain/spans"
 import { createFakeSessionRepository } from "@domain/spans/testing"
 import {
-  CalibrationProfileRepository,
-  type CalibrationProfileRepositoryShape,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   type TaxonomyCluster,
   TaxonomyClusterRepository,
@@ -113,11 +111,6 @@ const createFakeTaxonomyClusterRepository = (seed: readonly TaxonomyCluster[] = 
   return { repository: repository as TaxonomyClusterRepositoryShape, clusters }
 }
 
-const fakeCalibrationProfileRepository: CalibrationProfileRepositoryShape = {
-  findByProject: () => Effect.succeed(null),
-  save: () => Effect.void,
-}
-
 const createFakeTaxonomyObservationRepository = (seed: readonly TaxonomyMomentObservation[] = []) => {
   const rows: TaxonomyMomentObservation[] = [...seed]
   const repository: Partial<TaxonomyObservationRepositoryShape> = {
@@ -209,7 +202,6 @@ const runUseCase = (input: {
     Effect.provide(Layer.succeed(SessionMomentLabelRepository, momentLabels.repository)),
     Effect.provide(Layer.succeed(TaxonomyObservationRepository, taxonomyObservations.repository)),
     Effect.provide(Layer.succeed(TaxonomyClusterRepository, taxonomyClusters.repository)),
-    Effect.provide(Layer.succeed(CalibrationProfileRepository, fakeCalibrationProfileRepository)),
     Effect.provide(Layer.succeed(DistributedLockRepository, taxonomyLocks.repository)),
     Effect.provide(Layer.succeed(AI, ai)),
     Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
@@ -262,13 +254,15 @@ describe("analyzeSessionUseCase", () => {
     const [observation] = taxonomyObservations.rows as TaxonomyMomentObservation[]
     const topicSummary = observation?.projectionMetadata.summary
 
-    expect(observation?.projectionMethod).toBe(TaxonomyProjectionMethod.SessionUserIntentEmbedding)
-    expect(observation?.projectionMetadata.projectionKind).toBe("session_user_intent")
+    expect(observation?.projectionMethod).toBe(TaxonomyProjectionMethod.MomentTextEmbedding)
+    expect(observation?.projectionMetadata.projectionKind).toBe("session_conversation")
     expect(observation?.embedding).toEqual([1, 0])
-    expect(topicSummary).toEqual("user: Please check roaming for my account")
+    expect(topicSummary).toEqual(
+      "user: Please check roaming for my account\n\nassistant: I checked the account and reset the roaming profile",
+    )
   })
 
-  it("uses language-neutral user-turn weighting for taxonomy naming summaries", async () => {
+  it("uses the full conversation for taxonomy naming summaries", async () => {
     const { effect, taxonomyObservations } = runUseCase({
       session: makeSessionWithMessages([
         message("user", "Hola, necesito cambiar la chaqueta de mi pedido reciente por una talla más grande."),
@@ -283,7 +277,37 @@ describe("analyzeSessionUseCase", () => {
     const topicSummary = String(observation?.projectionMetadata.summary)
 
     expect(topicSummary).toContain("cambiar la chaqueta")
+    expect(topicSummary).toContain("Puedo ayudarte")
     expect(topicSummary).toContain("chaqueta polar roja grande")
+  })
+
+  it("does not truncate long taxonomy projections to the opening verification flow", async () => {
+    const repeatedVerification =
+      "assistant: To continue, I need to verify your identity with email, name, and ZIP.\n\n".repeat(30)
+    const midSessionOrderTopic = "user: I need to return the air purifier and cancel the garden hose order."
+    const closingResolution = "assistant: The return and cancellation were processed with a refund to PayPal."
+    const longSession = [repeatedVerification, midSessionOrderTopic, closingResolution].join("\n\n")
+    const embeddedTexts: string[] = []
+    const { effect, taxonomyObservations } = runUseCase({
+      session: makeSessionWithMessages([message("user", longSession), message("assistant", "Done")]),
+      ai: {
+        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          embeddedTexts.push(input.text)
+          return Effect.succeed({ embedding: [1, 0] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    const [observation] = taxonomyObservations.rows as TaxonomyMomentObservation[]
+    const taxonomyEmbeddingText = embeddedTexts.at(-1) ?? ""
+    const topicSummary = String(observation?.projectionMetadata.summary)
+
+    expect(taxonomyEmbeddingText).toContain(midSessionOrderTopic)
+    expect(topicSummary).toContain(midSessionOrderTopic)
   })
 
   it("applies centroid updates when a same-session observation changes from noise to assigned", async () => {
@@ -450,7 +474,6 @@ describe("analyzeSessionUseCase", () => {
         Effect.provide(Layer.succeed(SessionMomentLabelRepository, momentLabels.repository)),
         Effect.provide(Layer.succeed(TaxonomyObservationRepository, taxonomyObservations.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, taxonomyClusters.repository)),
-        Effect.provide(Layer.succeed(CalibrationProfileRepository, fakeCalibrationProfileRepository)),
         Effect.provide(Layer.succeed(DistributedLockRepository, taxonomyLocks.repository)),
         Effect.provide(
           Layer.succeed(AI, {

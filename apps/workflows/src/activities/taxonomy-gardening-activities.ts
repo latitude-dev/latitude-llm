@@ -1,9 +1,6 @@
-import { CONVERSATION_CALIBRATION_TTL_MS, calibrateSessionThresholdsUseCase } from "@domain/conversation-intelligence"
 import { OrganizationId, ProjectId, TaxonomyClusterId, TaxonomyRunId } from "@domain/shared"
 import {
   assertTaxonomyQualityUseCase,
-  CalibrationProfileRepository,
-  calibrateClusteringThresholdsUseCase,
   deprecateInactiveClustersUseCase,
   emitLineageUseCase,
   mergeNearDuplicateClustersUseCase,
@@ -12,7 +9,6 @@ import {
   reconcileClusterCountsUseCase,
   recurseTreeClustersUseCase,
   sweepNoiseAndBirthClustersUseCase,
-  TAXONOMY_CALIBRATION_TTL_MS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   type TaxonomyClusterLineage,
   TaxonomyClusterRepository,
@@ -25,14 +21,8 @@ import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { RedisCacheStoreLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
+import { TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
-  SessionRepositoryLive,
-  TaxonomyObservationRepositoryLive,
-  TraceRepositoryLive,
-  withClickHouse,
-} from "@platform/db-clickhouse"
-import {
-  CalibrationProfileRepositoryLive,
   TaxonomyClusterRepositoryLive,
   TaxonomyLineageRepositoryLive,
   TaxonomyRunRepositoryLive,
@@ -139,12 +129,7 @@ const gardeningLookbackStart = (now: Date): Date =>
 const withTaxonomyPostgres = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
   effect.pipe(
     withPostgres(
-      Layer.mergeAll(
-        CalibrationProfileRepositoryLive,
-        TaxonomyClusterRepositoryLive,
-        TaxonomyLineageRepositoryLive,
-        TaxonomyRunRepositoryLive,
-      ),
+      Layer.mergeAll(TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive, TaxonomyRunRepositoryLive),
       getPostgresClient(),
       OrganizationId(organizationId),
     ),
@@ -458,57 +443,3 @@ export const failGardenTaxonomyRunActivity = (input: GardenTaxonomyFailInput) =>
   )
 
 export { errorMessage as gardenTaxonomyErrorMessage }
-
-export interface GardenTaxonomyCalibrationResult {
-  readonly clusteringCalibrated: boolean
-  readonly sessionCalibrated: boolean
-}
-
-/**
- * Refreshes the project's calibrated thresholds before gardening when stale.
- * Clustering calibration reads stored embeddings/confidences (cheap);
- * session calibration re-embeds a session sample (Redis-cached from
- * regular analysis, so still cheap).
- */
-export const calibrateGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
-  runGardenStep(
-    "GardenTaxonomyWorkflow calibrate thresholds",
-    input,
-    Effect.gen(function* () {
-      const profiles = yield* CalibrationProfileRepository
-      const now = new Date(input.now)
-      const organizationId = OrganizationId(input.organizationId)
-      const projectId = ProjectId(input.projectId)
-
-      const clusteringProfile = yield* profiles.findByProject({ projectId, scope: "clustering" })
-      const clusteringStale =
-        clusteringProfile === null ||
-        now.getTime() - clusteringProfile.computedAt.getTime() > TAXONOMY_CALIBRATION_TTL_MS
-      if (clusteringStale) {
-        yield* calibrateClusteringThresholdsUseCase({ organizationId, projectId, dimension: input.dimension, now })
-      }
-
-      const sessionProfile = yield* profiles.findByProject({ projectId, scope: "conversation" })
-      const sessionStale =
-        sessionProfile === null || now.getTime() - sessionProfile.computedAt.getTime() > CONVERSATION_CALIBRATION_TTL_MS
-      if (sessionStale) {
-        yield* calibrateSessionThresholdsUseCase({ organizationId, projectId, now })
-      }
-
-      return {
-        clusteringCalibrated: clusteringStale,
-        sessionCalibrated: sessionStale,
-      } satisfies GardenTaxonomyCalibrationResult
-    }).pipe(
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) =>
-        effect.pipe(
-          withClickHouse(
-            Layer.mergeAll(TaxonomyObservationRepositoryLive, SessionRepositoryLive, TraceRepositoryLive),
-            getClickhouseClient(),
-            OrganizationId(input.organizationId),
-          ),
-        ),
-      withTaxonomyAiAndRedis,
-    ),
-  )

@@ -13,15 +13,13 @@ import {
 import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { TAXONOMY_EMBEDDING_DIMENSIONS, TAXONOMY_MAX_ACTIVE_CLUSTERS } from "../constants.ts"
+import { TAXONOMY_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { createTaxonomyCentroid, updateTaxonomyCentroid } from "../helpers.ts"
-import { CalibrationProfileRepository } from "../ports/calibration-profile-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLineageRepository } from "../ports/taxonomy-lineage-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
-import { createFakeCalibrationProfileRepository } from "../testing/fake-calibration-profile-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyLineageRepository } from "../testing/fake-taxonomy-lineage-repository.ts"
 import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
@@ -33,7 +31,8 @@ import { nameClusterUseCase } from "./name-taxonomy.ts"
 import { reassignNoiseToCurrentClustersUseCase } from "./reassign-noise-to-current-clusters.ts"
 import { reconcileClusterCountsUseCase } from "./reconcile-cluster-counts.ts"
 import { recurseTreeClustersUseCase } from "./recurse-tree-clusters.ts"
-import { computeBirthMinMembers, sweepNoiseAndBirthClustersUseCase } from "./sweep-noise-and-birth-clusters.ts"
+import { routeToDeepestClusterUseCase } from "./route-to-deepest-cluster.ts"
+import { sweepNoiseAndBirthClustersUseCase } from "./sweep-noise-and-birth-clusters.ts"
 import { taxonomyGardenProjectDedupeKey, triggerProjectGardeningUseCase } from "./trigger-project-gardening.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
@@ -111,13 +110,7 @@ const runUseCase = <A, E>(
   effect: Effect.Effect<
     A,
     E,
-    | TaxonomyObservationRepository
-    | TaxonomyClusterRepository
-    | DistributedLockRepository
-    | SqlClient
-    | ChSqlClient
-    | AI
-    | CalibrationProfileRepository
+    TaxonomyObservationRepository | TaxonomyClusterRepository | DistributedLockRepository | SqlClient | ChSqlClient | AI
   >,
   observations: ReturnType<typeof createFakeTaxonomyObservationRepository>,
   clusters: ReturnType<typeof createFakeTaxonomyClusterRepository>,
@@ -131,33 +124,30 @@ const runUseCase = <A, E>(
       Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
       Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       Effect.provide(Layer.succeed(AI, ai ?? createDeterministicAi())),
-      Effect.provide(Layer.succeed(CalibrationProfileRepository, createFakeCalibrationProfileRepository().repository)),
     ),
   )
 
 const createDeterministicAi = (): AIShape => ({
   generate: <T>(input: GenerateInput<T>) =>
     Effect.sync((): GenerateResult<T> => {
-      const raw = input.system.includes("mergeJudge")
-        ? { sameBehavior: true }
-        : input.system.includes("proposeCandidateThemes")
-          ? { candidates: [{ theme: "deterministic theme", examples: [0] }] }
-          : input.system.includes("behaviour profile")
-            ? {
-                userGoal: "A deterministic user goal",
-                userGoalVariants: [],
-                agentPattern: "A deterministic agent pattern",
-                commonFriction: "A deterministic friction summary",
-                outcomeSummary: "A deterministic outcome summary",
-                representativeQuotes: [],
-                answerPatternStatus: "unknown",
-                answerConsistencyScore: null,
-                confidence: 0.5,
-              }
-            : {
-                name: input.system.includes("category") ? "Named category" : "Named cluster",
-                description: "A deterministic long enough generated description.",
-              }
+      const raw = input.system.includes("proposeCandidateThemes")
+        ? { candidates: [{ theme: "deterministic theme", examples: [0] }] }
+        : input.system.includes("behaviour profile")
+          ? {
+              userGoal: "A deterministic user goal",
+              userGoalVariants: [],
+              agentPattern: "A deterministic agent pattern",
+              commonFriction: "A deterministic friction summary",
+              outcomeSummary: "A deterministic outcome summary",
+              representativeQuotes: [],
+              answerPatternStatus: "unknown",
+              answerConsistencyScore: null,
+              confidence: 0.5,
+            }
+          : {
+              name: input.system.includes("category") ? "Named category" : "Named cluster",
+              description: "A deterministic long enough generated description.",
+            }
       return { object: input.schema.parse(raw), tokens: 1, duration: 1 }
     }),
   embed: () => Effect.succeed({ embedding: [] }),
@@ -165,11 +155,6 @@ const createDeterministicAi = (): AIShape => ({
 })
 
 describe("gardening use-cases", () => {
-  it("computes the proportional birth member floor", () => {
-    expect(computeBirthMinMembers(250)).toBe(4)
-    expect(computeBirthMinMembers(10_000)).toBe(30)
-  })
-
   it("births a cluster from dense noise and reassigns members", async () => {
     const observations = createFakeTaxonomyObservationRepository([0, 1, 2, 3].map((index) => makeObservation(index)))
     const clusters = createFakeTaxonomyClusterRepository([])
@@ -184,6 +169,54 @@ describe("gardening use-cases", () => {
     expect(result.lineage).toHaveLength(1)
     expect([...clusters.clusters.values()]).toHaveLength(1)
     expect([...observations.rows.values()].every((row) => row.assignmentMethod === "gardening_birth")).toBe(true)
+  })
+
+  it("keeps root candidates below five percent of the sampled noise corpus as noise", async () => {
+    const existingClusterId = "a".repeat(24) as TaxonomyCluster["id"]
+    const observations = createFakeTaxonomyObservationRepository([
+      ...[0, 1, 2, 3].map((index) => makeObservation(index)),
+      ...Array.from({ length: 96 }, (_, offset) => ({
+        ...makeObservation(offset + 4, vector({ 1: 1 })),
+        assignedClusterId: existingClusterId,
+        assignmentMethod: "centroid_online" as const,
+      })),
+    ])
+    const clusters = createFakeTaxonomyClusterRepository([])
+
+    const result = await runUseCase(
+      sweepNoiseAndBirthClustersUseCase({ organizationId, projectId, runId, now }),
+      observations,
+      clusters,
+    )
+
+    expect(result.clustersBorn).toBe(0)
+    expect(result.lineage).toHaveLength(0)
+    expect([...clusters.clusters.values()]).toHaveLength(0)
+    expect([...observations.rows.values()].filter((row) => row.assignedClusterId === null)).toHaveLength(4)
+  })
+
+  it("keeps a parent assignment when child descent fails the split threshold", async () => {
+    const parent = makeCluster({
+      id: "a".repeat(24) as TaxonomyCluster["id"],
+      splitLinkThreshold: 0.9,
+    })
+    const child = makeCluster({
+      id: "b".repeat(24) as TaxonomyCluster["id"],
+      parentClusterId: parent.id,
+      path: `${parent.id}/`,
+      depth: 1,
+      centroid: centroidFrom(vector({ 0: 0.8, 1: 0.6 })),
+    })
+    const observations = createFakeTaxonomyObservationRepository([])
+    const clusters = createFakeTaxonomyClusterRepository([parent, child])
+
+    const result = await runUseCase(
+      routeToDeepestClusterUseCase({ projectId, dimension: "topic", queryVector: vector({ 0: 1 }) }),
+      observations,
+      clusters,
+    )
+
+    expect(result).toEqual({ method: "centroid_online", clusterId: parent.id, confidence: 1 })
   })
 
   it("merges near-duplicate clusters and reassigns loser observations", async () => {
@@ -253,9 +286,7 @@ describe("gardening use-cases", () => {
     expect(merge?.toClusterIds).toEqual([survivor.id])
   })
 
-  it("merges leaf root fragments at root density", async () => {
-    // 0.80 cosine: above the coarse root link (0.70) that defines the level,
-    // below the tight child-level floor (0.86) that used to gate nomination.
+  it("merges leaf root fragments above the centroid merge threshold", async () => {
     const survivor = makeCluster({
       id: "c".repeat(24) as TaxonomyCluster["id"],
       name: "Flight booking modification",
@@ -264,11 +295,9 @@ describe("gardening use-cases", () => {
     })
     const loser = makeCluster({
       id: "d".repeat(24) as TaxonomyCluster["id"],
-      // No name-token overlap with the survivor: nomination must come from
-      // the root density floor alone.
       name: "Reservation management",
       description: "Users manage existing reservations.",
-      centroid: centroidFrom(vector({ 0: 0.8, 1: 0.6 })),
+      centroid: centroidFrom(vector({ 0: 0.99, 1: 0.01 })),
       observationCount: 7,
     })
     const observations = createFakeTaxonomyObservationRepository([])
@@ -324,9 +353,7 @@ describe("gardening use-cases", () => {
   })
 
   it("merges the tight end of an approved chain instead of dropping the whole component", async () => {
-    // a~b are near-identical; c chains to b via an approved pair but sits far
-    // from a. A naive transitive component {a, b, c} fails the floor and used
-    // to block every merge in it; complete linkage keeps the a~b merge.
+    // a~b are near-identical; c is below the centroid-only merge threshold.
     const a = makeCluster({
       id: "c".repeat(24) as TaxonomyCluster["id"],
       name: "Retail order management",
@@ -344,7 +371,7 @@ describe("gardening use-cases", () => {
       id: "e".repeat(24) as TaxonomyCluster["id"],
       name: "Order address updates",
       description: "Users update shipping addresses on orders.",
-      // b~c ≈ 0.76 (nominated, approved); a~c ≈ 0.69 (below the root floor).
+      // b~c and a~c are below the centroid-only merge threshold.
       centroid: centroidFrom(vector({ 0: 0.69, 1: 0.724 })),
       observationCount: 30,
     })
@@ -395,7 +422,7 @@ describe("gardening use-cases", () => {
     expect(result.clustersMerged).toBe(0)
   })
 
-  it("does not merge similar clusters when the merge judge rejects the pair", async () => {
+  it("does not merge clusters below the centroid merge threshold", async () => {
     const lookup = makeCluster({
       id: "c".repeat(24) as TaxonomyCluster["id"],
       name: "Order lookup without ID",
@@ -405,23 +432,16 @@ describe("gardening use-cases", () => {
       id: "d".repeat(24) as TaxonomyCluster["id"],
       name: "Approval to proceed",
       description: "Users approve a proposed action before execution.",
+      centroid: centroidFrom(vector({ 0: 0.87, 1: 0.493 })),
       observationCount: 20,
     })
     const observations = createFakeTaxonomyObservationRepository([])
     const clusters = createFakeTaxonomyClusterRepository([lookup, approval])
-    const rejectingAi: AIShape = {
-      ...createDeterministicAi(),
-      generate: <T>(input: GenerateInput<T>) =>
-        Effect.sync(
-          (): GenerateResult<T> => ({ object: input.schema.parse({ sameBehavior: false }), tokens: 1, duration: 1 }),
-        ),
-    }
 
     const result = await runUseCase(
       mergeNearDuplicateClustersUseCase({ organizationId, projectId, runId, now }),
       observations,
       clusters,
-      rejectingAi,
     )
 
     expect(result.clustersMerged).toBe(0)
@@ -473,7 +493,12 @@ describe("gardening use-cases", () => {
       assignedClusterId: survivor.id,
       assignmentMethod: "gardening_reassign" as const,
     }))
-    const observations = createFakeTaxonomyObservationRepository(assigned)
+    const childAssigned = {
+      ...makeObservation(3),
+      assignedClusterId: child.id,
+      assignmentMethod: "gardening_reassign" as const,
+    }
+    const observations = createFakeTaxonomyObservationRepository([...assigned, childAssigned])
     const clusters = createFakeTaxonomyClusterRepository([survivor, emptyLeaf, child])
 
     const result = await runUseCase(
@@ -484,13 +509,13 @@ describe("gardening use-cases", () => {
 
     expect(result.clustersUpdated).toBe(2)
     expect(result.clustersDeprecated).toBe(1)
-    expect(clusters.clusters.get(survivor.id)?.observationCount).toBe(3)
+    expect(clusters.clusters.get(survivor.id)?.observationCount).toBe(4)
     expect(clusters.clusters.get(emptyLeaf.id)?.state).toBe("deprecated")
     expect(clusters.clusters.get(child.id)?.state).toBe("active")
-    expect(clusters.clusters.get(child.id)?.observationCount).toBe(3)
+    expect(clusters.clusters.get(child.id)?.observationCount).toBe(1)
   })
 
-  it("fails quality gates when aggregate parents still have direct assignments", async () => {
+  it("allows aggregate parents to keep direct residue assignments", async () => {
     const parent = makeCluster({ id: "p".repeat(24) as TaxonomyCluster["id"], observationCount: 2 })
     const child = makeCluster({
       id: "h".repeat(24) as TaxonomyCluster["id"],
@@ -506,10 +531,7 @@ describe("gardening use-cases", () => {
 
     await expect(
       runUseCase(assertTaxonomyQualityUseCase({ organizationId, projectId }), observations, clusters),
-    ).rejects.toMatchObject({
-      _tag: "TaxonomyQualityGateError",
-      findings: [`active parent cluster ${parent.id} has 1 direct current observations`],
-    })
+    ).resolves.toEqual({ clustersScanned: 2, findings: [] })
   })
 
   it("fails quality gates for exact sibling duplicates", async () => {
@@ -644,29 +666,6 @@ describe("gardening use-cases", () => {
     expect(result.lineage).toHaveLength(0)
     expect([...clusters.clusters.values()]).toHaveLength(1)
   })
-
-  it("stops birthing new clusters once the active-cluster cap is reached", async () => {
-    const observations = createFakeTaxonomyObservationRepository([0, 1, 2, 3].map((index) => makeObservation(index)))
-    // Orthogonal centroids so the dense noise can neither be absorbed nor
-    // birth a new cluster while the dimension sits at the cap.
-    const atCap = Array.from({ length: TAXONOMY_MAX_ACTIVE_CLUSTERS }, (_, index) =>
-      makeCluster({
-        id: String(index).padStart(24, "k").slice(0, 24) as TaxonomyCluster["id"],
-        centroid: centroidFrom(vector({ 1: 1 })),
-      }),
-    )
-    const clusters = createFakeTaxonomyClusterRepository(atCap)
-
-    const result = await runUseCase(
-      sweepNoiseAndBirthClustersUseCase({ organizationId, projectId, runId, now }),
-      observations,
-      clusters,
-    )
-
-    expect(result.clustersBorn).toBe(0)
-    expect(result.lineage).toHaveLength(0)
-    expect([...clusters.clusters.values()]).toHaveLength(TAXONOMY_MAX_ACTIVE_CLUSTERS)
-  })
 })
 
 describe("recurseTreeClustersUseCase", () => {
@@ -763,6 +762,29 @@ describe("recurseTreeClustersUseCase", () => {
     expect(result.childrenBorn).toBe(0)
     expect([...clusters.clusters.values()]).toHaveLength(1)
     expect(clusters.clusters.get(node.id)?.observationCount).toBe(60)
+  })
+
+  it("does not birth child clusters below five percent of the parent corpus", async () => {
+    const node = makeCluster({ observationCount: 100 })
+    const clusters = createFakeTaxonomyClusterRepository([node])
+    const observations = createFakeTaxonomyObservationRepository(
+      Array.from({ length: 100 }, (_, index) => ({
+        ...makeObservation(index, vector({ [Math.floor(index / 4)]: 1 })),
+        assignedClusterId: node.id,
+        assignmentMethod: "centroid_online" as const,
+        assignmentConfidence: 0.9,
+      })),
+    )
+
+    const result = await runUseCase(
+      recurseTreeClustersUseCase({ organizationId, projectId, runId }),
+      observations,
+      clusters,
+    )
+
+    expect(result.nodesRecursed).toBe(0)
+    expect(result.childrenBorn).toBe(0)
+    expect([...clusters.clusters.values()].filter((cluster) => cluster.parentClusterId === node.id)).toHaveLength(0)
   })
 
   it("skips small nodes below the recursion floor", async () => {

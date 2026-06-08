@@ -3,7 +3,6 @@ import { Effect } from "effect"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import { TaxonomyQualityGateError } from "../errors.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 
 export interface AssertTaxonomyQualityInput {
   readonly organizationId?: OrganizationId
@@ -27,8 +26,9 @@ const normalizedName = (name: string): string =>
 /**
  * Hard gates for taxonomy graph invariants that should never be presented to
  * users. Semantic quality remains judge/eval territory; these checks catch
- * stale counters, parent buckets that still own direct assignments, and exact
- * sibling duplicates caused by gardening bugs.
+ * stale counters and exact sibling duplicates caused by gardening bugs. Parent
+ * buckets may own direct residue assignments when child splits are accepted
+ * conservatively and ambiguous observations stay on the parent.
  */
 export const assertTaxonomyQualityUseCase = (input: AssertTaxonomyQualityInput) =>
   Effect.gen(function* () {
@@ -43,20 +43,6 @@ export const assertTaxonomyQualityUseCase = (input: AssertTaxonomyQualityInput) 
     for (const cluster of active) {
       if (cluster.observationCount === 0 && !parentsWithChildren.has(cluster.id)) {
         findings.push(`active leaf cluster ${cluster.id} has zero current observations`)
-      }
-    }
-
-    if (input.organizationId !== undefined && parentsWithChildren.size > 0) {
-      const observations = yield* TaxonomyObservationRepository
-      const parentAssignmentCounts = yield* observations.getClusterAssignmentCounts({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        clusterIds: [...parentsWithChildren],
-      })
-      for (const count of parentAssignmentCounts) {
-        if (count.count > 0) {
-          findings.push(`active parent cluster ${count.clusterId} has ${count.count} direct current observations`)
-        }
       }
     }
 

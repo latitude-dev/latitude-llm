@@ -2,10 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const { mockActivities } = vi.hoisted(() => {
   const mockActivities = {
-    calibrateGardenTaxonomyActivity: vi.fn(async () => ({
-      clusteringCalibrated: false,
-      sessionCalibrated: false,
-    })),
     startGardenTaxonomyRunActivity: vi.fn(async (input: Record<string, unknown>) => ({
       ...input,
       runId: "r".repeat(24),
@@ -75,7 +71,10 @@ describe("taxonomy gardening workflows", () => {
       workflowRunId: "test-workflow-run-id",
     })
     expect(mockActivities.planGardenTaxonomyNamingActivity).toHaveBeenCalledWith(
-      expect.objectContaining({ lineage: ["birth", "split"] }),
+      expect.objectContaining({ lineage: ["birth"] }),
+    )
+    expect(mockActivities.planGardenTaxonomyNamingActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ lineage: ["split"] }),
     )
     expect(mockActivities.nameTaxonomyClusterActivity).toHaveBeenCalledWith({
       organizationId: "o".repeat(24),

@@ -8,7 +8,6 @@ export type GardenTaxonomyWorkflowResult = activities.GardenTaxonomyActivityResu
 
 const {
   assertGardenTaxonomyQualityActivity,
-  calibrateGardenTaxonomyActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,
@@ -16,8 +15,8 @@ const {
   mergeGardenTaxonomyClustersActivity,
   planGardenTaxonomyNamingActivity,
   reassignGardenTaxonomyNoiseActivity,
-  reconcileGardenTaxonomyCountsActivity,
   recurseGardenTaxonomyTreeActivity,
+  reconcileGardenTaxonomyCountsActivity,
   startGardenTaxonomyRunActivity,
   sweepGardenTaxonomyNoiseActivity,
 } = proxyActivities<typeof activities>({
@@ -64,7 +63,6 @@ export const gardenTaxonomyWorkflow = async (
 ): Promise<GardenTaxonomyWorkflowResult> => {
   const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
   try {
-    await calibrateGardenTaxonomyActivity(started)
     const lineage: TaxonomyClusterLineage[] = []
     let noiseScanned = 0
     let clustersBorn = 0
@@ -78,8 +76,7 @@ export const gardenTaxonomyWorkflow = async (
       }
       const births = await sweepGardenTaxonomyNoiseActivity(step)
       const reassign = await reassignGardenTaxonomyNoiseActivity(step)
-      const recursion = await recurseGardenTaxonomyTreeActivity(step)
-      const iterationLineage = [...births.lineage, ...recursion.lineage]
+      const iterationLineage = [...births.lineage]
       const namingPlan = await planGardenTaxonomyNamingActivity({ ...step, lineage: iterationLineage })
       await runInBatches(namingPlan.clusterIds, NAMING_ACTIVITY_CONCURRENCY, (clusterId) =>
         nameTaxonomyClusterActivity({
@@ -88,20 +85,41 @@ export const gardenTaxonomyWorkflow = async (
           clusterId,
         }),
       )
+      const preSplitReconciliation = await reconcileGardenTaxonomyCountsActivity(step)
+      const splits = await recurseGardenTaxonomyTreeActivity(step)
+      const splitNamingPlan = await planGardenTaxonomyNamingActivity({ ...step, lineage: splits.lineage })
+      await runInBatches(splitNamingPlan.clusterIds, NAMING_ACTIVITY_CONCURRENCY, (clusterId) =>
+        nameTaxonomyClusterActivity({
+          organizationId: started.organizationId,
+          projectId: started.projectId,
+          clusterId,
+        }),
+      )
       const merges = await mergeGardenTaxonomyClustersActivity(step)
-      const reconciliation = await reconcileGardenTaxonomyCountsActivity(step)
+      const postMergeReconciliation = await reconcileGardenTaxonomyCountsActivity(step)
       const deaths = await deprecateGardenTaxonomyClustersActivity(step)
-      lineage.push(...iterationLineage, ...merges.lineage, ...reconciliation.lineage, ...deaths.lineage)
+      lineage.push(
+        ...iterationLineage,
+        ...preSplitReconciliation.lineage,
+        ...splits.lineage,
+        ...merges.lineage,
+        ...postMergeReconciliation.lineage,
+        ...deaths.lineage,
+      )
       noiseScanned += births.noiseScanned + reassign.noiseScanned
-      clustersBorn += births.clustersBorn + recursion.childrenBorn
+      clustersBorn += births.clustersBorn + splits.childrenBorn
       clustersMerged += merges.clustersMerged
-      clustersDeprecated += reconciliation.clustersDeprecated + deaths.clustersDeprecated
+      clustersDeprecated +=
+        preSplitReconciliation.clustersDeprecated +
+        postMergeReconciliation.clustersDeprecated +
+        deaths.clustersDeprecated
 
       if (
         births.clustersBorn === 0 &&
-        recursion.childrenBorn === 0 &&
+        splits.childrenBorn === 0 &&
         merges.clustersMerged === 0 &&
-        reconciliation.clustersDeprecated === 0
+        preSplitReconciliation.clustersDeprecated === 0 &&
+        postMergeReconciliation.clustersDeprecated === 0
       ) {
         break
       }

@@ -23,7 +23,7 @@ export const TaxonomyObservationAssignmentMethod = {
 /**
  * Canonical taxonomy observation for topic clustering.
  *
- * The current projection is one session-level user-intent embedding per
+ * The current topic projection is one session-level conversation embedding per
  * analyzed session. Semantic moments and moment labels remain the source of
  * truth for behavioural/process facets.
  */

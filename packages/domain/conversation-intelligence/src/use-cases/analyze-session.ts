@@ -2,10 +2,8 @@ import { AI } from "@domain/ai"
 import { OrganizationId, ProjectId, SessionId, TaxonomyClusterId, TraceId } from "@domain/shared"
 import { type SessionDetail, SessionRepository } from "@domain/spans"
 import {
-  type AnchorCalibration,
   assignObservationToClusterUseCase,
-  loadClusteringCalibration,
-  loadSessionCalibration,
+  normalizeTaxonomyEmbedding,
   routeToDeepestClusterUseCase,
   TAXONOMY_OBSERVATION_RETENTION_DAYS,
   type TaxonomyMomentObservation,
@@ -16,18 +14,12 @@ import {
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import { z } from "zod"
-import {
-  embedAnchorText,
-  MOMENT_LABEL_ANCHORS,
-  RITUAL_CONTRAST_ANCHORS,
-  RITUAL_POSITIVE_ANCHORS,
-  RITUAL_SUPPRESSION_MARGIN,
-  RITUAL_SUPPRESSION_THRESHOLD,
-} from "../anchors.ts"
+import { embedAnchorText, MOMENT_LABEL_ANCHORS } from "../anchors.ts"
 import {
   CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
   CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
   CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
+  CONVERSATION_INTELLIGENCE_LLM_MAX_DOCUMENT_CHARS,
   CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH,
   CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
   CONVERSATION_MOMENT_SEGMENTATION_VERSION,
@@ -74,9 +66,7 @@ const extractionMomentSchema = z.object({
   confidence: z.number().min(0).max(1),
 })
 
-const TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH = 2_000
-const SESSION_INTENT_SNIPPET_MAX_LENGTH = 320
-const SESSION_INTENT_SNIPPET_COUNT = 4
+const TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH = CONVERSATION_INTELLIGENCE_LLM_MAX_DOCUMENT_CHARS
 
 const sessionConversationMessages = (session: SessionDetail): readonly unknown[] => {
   const systemMessage =
@@ -93,99 +83,14 @@ const middleTruncate = (value: string, maxLength: number): string => {
   return `${value.slice(0, head)}\n[...truncated...]\n${value.slice(value.length - tail)}`
 }
 
-/**
- * Topic projection: one user-intent vector per session. Behaviours and process
- * details remain moment/facet evidence; the taxonomy clusters on what the user
- * came to support for.
- */
-const normalizeVector = (vector: readonly number[]): readonly number[] => {
-  const magnitude = vectorMagnitude(vector)
-  return magnitude === 0 ? vector : vector.map((value) => value / magnitude)
-}
-
-const saturatedLengthWeight = (content: string): number => Math.sqrt(Math.min(Math.max(content.length, 40), 300) / 300)
-
-/**
- * Language- and domain-neutral turn weighting for session-intent projection.
- *
- * The taxonomy projection should not rely on support-specific keyword rules
- * (email, order lookup, cancellation, etc.) or English phrase matching. Keep
- * weighting structural: user role, non-empty content, coarse length, and a
- * first-substantive boost. Short replies still contribute, but are naturally
- * down-weighted instead of being classified by hardcoded text patterns.
- */
-const turnIntentBaseWeight = (content: string): number => {
-  const stripped = stripToolTelemetry(content).trim()
-  if (stripped.length === 0) return 0
-  if (stripped.length < 12) return 0.2
-  if (stripped.length < 40) return 0.5
-  return 1
-}
-
-const buildSessionUserIntentProjection = (
-  turns: readonly SemanticSegmentationTurn[],
-): {
-  readonly embedding: readonly number[]
-  readonly summary: string
-  readonly sourceTurnIndexes: readonly number[]
-  readonly weightedTurnIndexes: readonly { readonly index: number; readonly weight: number }[]
-} | null => {
-  const weightedTurns: {
-    readonly turn: SemanticSegmentationTurn
-    readonly content: string
-    readonly weight: number
-    readonly normalizedEmbedding: readonly number[]
-  }[] = []
-  let boostedFirstSubstantive = false
-
-  for (const turn of turns) {
-    if (turn.role !== "user") continue
-    const content = stripToolTelemetry(turn.content).trim()
-    const base = turnIntentBaseWeight(content)
-    if (base === 0) continue
-    const firstIntentBoost = !boostedFirstSubstantive && base >= 1 ? 4 : 1
-    if (base >= 1) boostedFirstSubstantive = true
-    const weight = base * firstIntentBoost * saturatedLengthWeight(content)
-    if (weight <= 0) continue
-    weightedTurns.push({ turn, content, weight, normalizedEmbedding: normalizeVector(turn.embedding) })
-  }
-
-  if (weightedTurns.length === 0) return null
-  const dimensions = weightedTurns[0]?.normalizedEmbedding.length ?? 0
-  if (dimensions === 0) return null
-  const accumulator = Array.from({ length: dimensions }, () => 0)
-  let totalWeight = 0
-  for (const weighted of weightedTurns) {
-    totalWeight += weighted.weight
-    weighted.normalizedEmbedding.forEach((value, index) => {
-      accumulator[index] = (accumulator[index] ?? 0) + value * weighted.weight
-    })
-  }
-  if (totalWeight === 0) return null
-  const embedding = normalizeVector(accumulator.map((value) => value / totalWeight))
-  if (embedding.length === 0 || vectorMagnitude(embedding) === 0) return null
-
-  const selectedIndexes = new Set(
-    [...weightedTurns]
-      .sort((a, b) => b.weight - a.weight)
-      .slice(0, SESSION_INTENT_SNIPPET_COUNT)
-      .map((weighted) => weighted.turn.index),
-  )
-  const selectedTurns = weightedTurns.filter((weighted) => selectedIndexes.has(weighted.turn.index))
-  const summary = middleTruncate(
-    selectedTurns
-      .map((weighted) => `user: ${middleTruncate(weighted.content, SESSION_INTENT_SNIPPET_MAX_LENGTH)}`)
+const buildSessionConversationProjectionText = (messages: readonly NormalizedMessage[]): string =>
+  middleTruncate(
+    messages
+      .filter((message) => message.role === "user" || message.role === "assistant")
+      .map((message) => `${message.role}: ${stripToolTelemetry(message.text)}`)
       .join("\n\n"),
     TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH,
   )
-
-  return {
-    embedding,
-    summary,
-    sourceTurnIndexes: selectedTurns.map((weighted) => weighted.turn.index),
-    weightedTurnIndexes: weightedTurns.map((weighted) => ({ index: weighted.turn.index, weight: weighted.weight })),
-  }
-}
 
 // Tool-role turns (tool results) are excluded from the semantic pipeline:
 // segmentation centroids, label scoring, and topic projections all operate on
@@ -333,23 +238,10 @@ const cosineSimilarity = (a: readonly number[], b: readonly number[]): number =>
   return a.reduce((sum, value, index) => sum + value * (b[index] ?? 0), 0) / denominator
 }
 
-const isRitualProjection = (
-  embedding: readonly number[],
-  anchors: { readonly positive: readonly (readonly number[])[]; readonly contrast: readonly (readonly number[])[] },
-  gate?: AnchorCalibration | null,
-): boolean => {
-  const threshold = gate?.threshold ?? RITUAL_SUPPRESSION_THRESHOLD
-  const margin = gate?.margin ?? RITUAL_SUPPRESSION_MARGIN
-  const ritualScore = Math.max(...anchors.positive.map((anchor) => cosineSimilarity(embedding, anchor)), 0)
-  const substantiveScore = Math.max(...anchors.contrast.map((anchor) => cosineSimilarity(embedding, anchor)), 0)
-  return ritualScore >= threshold && ritualScore - substantiveScore >= margin
-}
-
 const detectEmbeddingAnchorMoments = (input: {
   readonly messages: readonly NormalizedMessage[]
   readonly turns: readonly SemanticSegmentationTurn[]
   readonly segments: ReturnType<typeof segmentSemanticMoments>
-  readonly labelGates?: Readonly<Record<string, AnchorCalibration>> | null
 }): Effect.Effect<readonly z.infer<typeof extractionMomentSchema>[], unknown, AI> =>
   Effect.gen(function* () {
     const embeddedAnchors = yield* Effect.forEach(MOMENT_LABEL_ANCHORS, (config) =>
@@ -374,9 +266,6 @@ const detectEmbeddingAnchorMoments = (input: {
         // multi-turn moments the centroid dilutes localized events below the
         // anchor threshold (QA: 184 labels across 500 support sessions, with
         // resolution detected 3 times). The label anchors to the best turn.
-        const gate = input.labelGates?.[config.kind]
-        const gateThreshold = gate?.threshold ?? config.threshold
-        const gateMargin = gate?.margin ?? config.margin
         let best: {
           readonly turn: SemanticSegmentationTurn
           readonly positiveScore: number
@@ -386,7 +275,7 @@ const detectEmbeddingAnchorMoments = (input: {
           const positiveScore = Math.max(...positive.map((anchor) => cosineSimilarity(turn.embedding, anchor)), 0)
           const contrastScore = Math.max(...contrast.map((anchor) => cosineSimilarity(turn.embedding, anchor)), 0)
           const margin = positiveScore - contrastScore
-          if (positiveScore < gateThreshold || margin < gateMargin) continue
+          if (positiveScore < config.threshold || margin < config.margin) continue
           if (!best || positiveScore + margin > best.positiveScore + best.margin) {
             best = { turn, positiveScore, margin }
           }
@@ -503,19 +392,15 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       } satisfies AnalyzeSessionResult
     }
 
-    const sessionCalibration = yield* loadSessionCalibration({ projectId })
-    const clusteringCalibration = yield* loadClusteringCalibration({ projectId })
     const embeddedTurns = yield* embedTurns(normalizedMessages)
     const semanticSegments = segmentSemanticMoments({
       turns: embeddedTurns,
-      ...(sessionCalibration ? { continuityClamps: sessionCalibration.continuity } : {}),
     })
 
     const anchorDetected = yield* detectEmbeddingAnchorMoments({
       messages: normalizedMessages,
       turns: embeddedTurns,
       segments: semanticSegments,
-      labelGates: sessionCalibration?.labelAnchors ?? null,
     })
     const rawMoments = anchorDetected
     const validatedMoments = (yield* Effect.forEach(rawMoments, (raw) =>
@@ -611,37 +496,31 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       }),
     ).pipe(Effect.map((labels) => labels.filter((label): label is SessionMomentLabel => label !== null)))
 
-    const ritualAnchors = {
-      positive: yield* Effect.forEach(RITUAL_POSITIVE_ANCHORS, embedAnchorText),
-      contrast: yield* Effect.forEach(RITUAL_CONTRAST_ANCHORS, embedAnchorText),
-    }
     const taxonomyObservationRows = yield* Effect.gen(function* () {
-      const projection = buildSessionUserIntentProjection(embeddedTurns)
-      if (projection === null) return [] as TaxonomyMomentObservation[]
-      if (isRitualProjection(projection.embedding, ritualAnchors, sessionCalibration?.ritual)) {
-        return [] as TaxonomyMomentObservation[]
-      }
+      const projectionText = buildSessionConversationProjectionText(normalizedMessages)
+      if (projectionText.length === 0) return [] as TaxonomyMomentObservation[]
+      const ai = yield* AI
+      const projectionEmbedding = yield* ai.embed({
+        text: projectionText,
+        model: CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
+        dimensions: CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
+        inputType: "document",
+      })
+      const projectionVector = normalizeTaxonomyEmbedding(projectionEmbedding.embedding)
+      if (projectionVector.length === 0) return [] as TaxonomyMomentObservation[]
 
       const dimension = "topic" as const
       const sessionMomentId = (yield* hash(`${sessionId}\0session_topic`)).slice(0, 24)
       const projectionHash = yield* hash(
-        `${analysisHash}\0${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.SessionUserIntentEmbedding}\0${projection.summary}`,
+        `${analysisHash}\0${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.MomentTextEmbedding}\0${projectionText}`,
       )
       const observationId = (yield* hash(
-        `${organizationId}\0${projectId}\0${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.SessionUserIntentEmbedding}\0observation`,
+        `${organizationId}\0${projectId}\0${sessionId}\0${dimension}\0${TaxonomyProjectionMethod.MomentTextEmbedding}\0observation`,
       )).slice(0, 24)
       const decision = yield* routeToDeepestClusterUseCase({
         projectId,
         dimension,
-        queryVector: projection.embedding,
-        ...(clusteringCalibration === null
-          ? {}
-          : {
-              gates: {
-                absoluteThreshold: clusteringCalibration.assignAbsoluteThreshold,
-                relativeMargin: clusteringCalibration.assignRelativeMargin,
-              },
-            }),
+        queryVector: projectionVector,
       })
 
       return [
@@ -652,15 +531,13 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
           sessionId,
           analysisHash,
           momentId: sessionMomentId,
-          projectionMethod: TaxonomyProjectionMethod.SessionUserIntentEmbedding,
+          projectionMethod: TaxonomyProjectionMethod.MomentTextEmbedding,
           projectionHash,
           projectionMetadata: {
-            projectionKind: "session_user_intent",
-            sourceTurnIndexes: [...projection.sourceTurnIndexes],
-            weightedTurnIndexes: [...projection.weightedTurnIndexes],
-            summary: projection.summary,
+            projectionKind: "session_conversation",
+            summary: projectionText,
           },
-          embedding: [...projection.embedding],
+          embedding: [...projectionVector],
           assignedClusterId: decision.clusterId === null ? null : TaxonomyClusterId(decision.clusterId),
           assignmentConfidence: decision.confidence,
           assignmentMethod:

@@ -98,6 +98,9 @@ export const TAXONOMY_GARDENING_SWEEP_BATCH = 25
 /** Gardening works over the live taxonomy window: newest observations first. */
 export const TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX = 100_000
 
+/** Maximum in-memory proposal sample passed to clustering helpers. */
+export const TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX = 10_000
+
 /** Hard cap on per-cluster batch reads inside the live gardening window. */
 export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 100_000
 
@@ -112,7 +115,7 @@ export const TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS = 3
 /**
  * Two noise embeddings are connected when their cosine ≥ this.
  * Seeded-Acme Voyage tuning raised this from 0.78 to 0.82: the full 1,574
- * session corpus produced clearer small behavior births without the broad
+ * session corpus produced clearer topic births without the broad
  * chaining seen at looser thresholds.
  */
 export const TAXONOMY_BIRTH_LINK_THRESHOLD = 0.82
@@ -125,79 +128,16 @@ export const TAXONOMY_BIRTH_LINK_THRESHOLD = 0.82
 export const TAXONOMY_BIRTH_MAX_DIAMETER = 0.45
 
 export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR = 4
-export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO = 0.005
-export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_CEILING = 30
-
-/**
- * Maximum active clusters per dimension a project can hold. Beyond this the
- * taxonomy stops being navigable, so the noise sweep recalibrates birth
- * density as the count grows (see TAXONOMY_BIRTH_LINK_PRESSURE_RANGE) and
- * stops birthing entirely at the cap. Capacity frees up through merges and
- * deprecations.
- */
-export const TAXONOMY_MAX_ACTIVE_CLUSTERS = 40
-
-/**
- * How much the birth connectivity threshold tightens as the active cluster
- * count approaches TAXONOMY_MAX_ACTIVE_CLUSTERS: at zero clusters births use
- * TAXONOMY_BIRTH_LINK_THRESHOLD, at the cap they would need
- * TAXONOMY_BIRTH_LINK_THRESHOLD + this range (denser, tighter candidates).
- * The birth member floor scales up alongside it.
- */
-export const TAXONOMY_BIRTH_LINK_PRESSURE_RANGE = 0.06
+export const TAXONOMY_VISIBLE_BIRTH_MIN_OBSERVATION_RATIO = 0.05
 
 /** Re-absorb a candidate birth into an existing cluster instead of birthing. */
 export const TAXONOMY_ABSORPTION_THRESHOLD = 0.85
 
-/**
- * Pairwise merge threshold between two active clusters. Used as the
- * similarity-only fallback for candidate pairs the LLM judge cannot evaluate
- * (a member still carries the "Pending" birth placeholder name).
- */
+/** Pairwise centroid similarity threshold required to merge two active clusters. */
 export const TAXONOMY_MERGE_THRESHOLD = 0.88
 
-/**
- * Pairs at/above this centroid similarity become merge candidates evaluated
- * by the LLM merge judge. QA at 500 sessions showed cosine in the 0.86–0.92
- * band carries no merge signal on a dense support corpus: the worst wrong
- * pair (order lookup vs action approval) scored 0.919 while true duplicates
- * scored 0.885. Similarity only nominates candidates; the judge decides.
- */
-export const TAXONOMY_MERGE_JUDGE_THRESHOLD = 0.86
-
-/** Concurrent LLM merge-judge calls per gardening run. */
-export const TAXONOMY_MERGE_JUDGE_CONCURRENCY = 4
 export const TAXONOMY_MERGE_NEAREST_NEIGHBORS = 10
 export const TAXONOMY_MERGE_CANDIDATES_PER_PARENT = 100
-
-/**
- * Cluster judges (merge dedup, purity audit) run on Haiku: short structured
- * verdicts where a fast non-reasoning model is cheaper and avoids the
- * reasoning-budget truncation failures seen with reasoning models.
- */
-export const TAXONOMY_JUDGE_MODEL = {
-  provider: "amazon-bedrock",
-  model: "anthropic.claude-haiku-4-5-20251001-v1:0",
-} as const
-
-/**
- * Name-duplicate merge nomination: clusters whose *names* overlap heavily can
- * be the same topic even when their full-text centroids diverge (the naming
- * pass abstracts away context the embeddings keep — QA: "Account
- * Verification" vs "Account verification using name and zip code" sat at
- * 0.742 cosine). Pairs with name-token Jaccard at/above the threshold are
- * nominated to the judge when their centroids clear the (lower) floor.
- */
-export const TAXONOMY_MERGE_NAME_NOMINATION_JACCARD = 0.5
-export const TAXONOMY_MERGE_NAME_NOMINATION_MIN_SIMILARITY = 0.65
-
-/**
- * A merge component's minimum pairwise similarity must stay at/above this
- * floor. Births are diameter-bounded but transitive merge chains were not:
- * one QA run chained six distinct intents into a single cluster through
- * pairwise ~0.88 links. Components failing the floor are skipped this run.
- */
-export const TAXONOMY_MERGE_COMPONENT_MIN_SIMILARITY = 0.82
 
 export const TAXONOMY_DEAD_CLUSTER_MASS_FLOOR = 0.5
 export const TAXONOMY_DEAD_CLUSTER_INACTIVITY_DAYS = 30
@@ -243,38 +183,6 @@ export const TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS = 2_000
 export const TAXONOMY_GARDEN_LOCK_TTL_SECONDS = Math.ceil(TAXONOMY_GARDENING_MAX_RUNTIME_MS / 1000) + 60
 
 // ---------------------------------------------------------------------------
-// Threshold calibration (clustering scope)
-// ---------------------------------------------------------------------------
-
-/**
- * Hand-picked similarity gates drift wrong across corpora (QA: every
- * misbehaving subsystem was the one still on hand-picked values). The
- * calibration pass derives gates from each project's own score distributions,
- * clamped to the guardrail bands below, and stores them in
- * `calibration_profiles`. Constants remain the fallback for uncalibrated
- * projects.
- */
-export const TAXONOMY_CALIBRATION_EMBEDDING_SAMPLE = 600
-export const TAXONOMY_CALIBRATION_SCORE_SAMPLE = 4_000
-/** Recompute when the stored profile is older than this. */
-export const TAXONOMY_CALIBRATION_TTL_MS = 24 * 60 * 60_000
-/** Birth link = clamp(pairwise-similarity quantile, band). */
-export const TAXONOMY_CALIBRATION_BIRTH_LINK_QUANTILE = 0.92
-export const TAXONOMY_CALIBRATION_BIRTH_LINK_MIN = 0.76
-export const TAXONOMY_CALIBRATION_BIRTH_LINK_MAX = 0.88
-/** Diameter scales off the link threshold: (1 - link) * factor, clamped. */
-export const TAXONOMY_CALIBRATION_DIAMETER_FACTOR = 2.5
-export const TAXONOMY_CALIBRATION_DIAMETER_MIN = 0.3
-export const TAXONOMY_CALIBRATION_DIAMETER_MAX = 0.6
-/** Assignment gate = clamp(p10 of assigned-observation confidences, band). */
-export const TAXONOMY_CALIBRATION_ASSIGN_QUANTILE = 0.1
-export const TAXONOMY_CALIBRATION_ASSIGN_MIN = 0.55
-export const TAXONOMY_CALIBRATION_ASSIGN_MAX = 0.75
-/** Purity audit: judged clusters per calibration and members sampled each. */
-export const TAXONOMY_CALIBRATION_PURITY_CLUSTERS = 6
-export const TAXONOMY_CALIBRATION_PURITY_MEMBERS = 6
-
-// ---------------------------------------------------------------------------
 // Cluster tree (categories are depth-0 nodes; depth = clustering density)
 // ---------------------------------------------------------------------------
 
@@ -285,23 +193,9 @@ export const TAXONOMY_CALIBRATION_PURITY_MEMBERS = 6
  * simply absorbs the broad root's mass.
  */
 export const TAXONOMY_TREE_MAX_DEPTH = 2
-/** Governor caps per level. */
-export const TAXONOMY_TREE_ROOT_CAP = 6
+/** Maximum number of children a single recursion pass exposes under one node. */
 export const TAXONOMY_TREE_CHILDREN_CAP = 8
-/**
- * Root births cluster at a coarser density than the old flat threshold so
- * depth-0 nodes play the category role. Calibration may override via the
- * clustering profile's rootLinkThreshold.
- */
-export const TAXONOMY_TREE_ROOT_LINK_THRESHOLD = 0.7
-export const TAXONOMY_CALIBRATION_ROOT_LINK_QUANTILE = 0.85
-export const TAXONOMY_CALIBRATION_ROOT_LINK_MIN = 0.62
-export const TAXONOMY_CALIBRATION_ROOT_LINK_MAX = 0.78
-/**
- * A node recurses into children when its directly-assigned share of the
- * project's observations exceeds the navigability budget (and depth allows).
- */
-export const TAXONOMY_TREE_RECURSE_SHARE = 0.12
+/** A node recurses into children when it has enough directly assigned members. */
 export const TAXONOMY_TREE_RECURSE_MIN_OBSERVATIONS = 60
 /** Bound recursion work per gardening run. */
 export const TAXONOMY_TREE_RECURSE_PER_RUN = 3
@@ -318,7 +212,10 @@ export const TAXONOMY_TREE_CHILD_LINK_MIN = 0.78
  * density near the coarse topic boundary.
  */
 export const TAXONOMY_TREE_CHILD_LINK_MAX = 0.8
-export const TAXONOMY_TREE_CHILD_MIN_MEMBERS_RATIO = 0.03
+/** Diameter scales off the link threshold: (1 - link) * factor, clamped. */
+export const TAXONOMY_TREE_CHILD_DIAMETER_FACTOR = 2.5
+export const TAXONOMY_TREE_CHILD_DIAMETER_MIN = 0.3
+export const TAXONOMY_TREE_CHILD_DIAMETER_MAX = 0.6
 /**
  * Recursion rollback: a split must produce at least two children covering a
  * meaningful share of members, and no child may dominate the covered mass —

@@ -1,39 +1,23 @@
-import { AI } from "@domain/ai"
 import { generateId, type OrganizationId, type ProjectId, TaxonomyLineageId, type TaxonomyRunId } from "@domain/shared"
 import { Effect } from "effect"
-import { z } from "zod"
 import {
   TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
-  TAXONOMY_JUDGE_MODEL,
   TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
   TAXONOMY_MERGE_CANDIDATES_PER_PARENT,
-  TAXONOMY_MERGE_COMPONENT_MIN_SIMILARITY,
-  TAXONOMY_MERGE_JUDGE_CONCURRENCY,
-  TAXONOMY_MERGE_JUDGE_THRESHOLD,
-  TAXONOMY_MERGE_NAME_NOMINATION_JACCARD,
-  TAXONOMY_MERGE_NAME_NOMINATION_MIN_SIMILARITY,
   TAXONOMY_MERGE_NEAREST_NEIGHBORS,
   TAXONOMY_MERGE_THRESHOLD,
-  TAXONOMY_NAMING_TIMEOUT_MS,
   TAXONOMY_TREE_MIN_CHILDREN,
-  TAXONOMY_TREE_ROOT_LINK_THRESHOLD,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
-import {
-  cosineSimilarityNormalized,
-  isDisplayableTaxonomyName,
-  mergeTaxonomyCentroids,
-  normalizeTaxonomyCentroid,
-} from "../helpers.ts"
+import { cosineSimilarityNormalized, mergeTaxonomyCentroids, normalizeTaxonomyCentroid } from "../helpers.ts"
 import { withTaxonomyClusterLock } from "../locks.ts"
 import { TaxonomyClusterRepository, type TaxonomyClusterRepositoryShape } from "../ports/taxonomy-cluster-repository.ts"
 import {
   TaxonomyObservationRepository,
   type TaxonomyObservationRepositoryShape,
 } from "../ports/taxonomy-observation-repository.ts"
-import { loadClusteringCalibration } from "./load-calibration.ts"
 
 export interface MergeNearDuplicateClustersInput {
   readonly organizationId: OrganizationId
@@ -78,30 +62,6 @@ interface MergeExecutionContext {
 
 const ROOT_PARENT_KEY = "__root__"
 
-const NAME_STOPWORDS = new Set(["the", "a", "an", "and", "or", "of", "for", "to", "with", "in", "on"])
-
-const nameTokens = (name: string): ReadonlySet<string> =>
-  new Set(
-    name
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .filter((token) => token.length > 2 && !NAME_STOPWORDS.has(token)),
-  )
-
-const namesOverlap = (a: string, b: string): boolean => {
-  const left = nameTokens(a)
-  const right = nameTokens(b)
-  if (left.size === 0 || right.size === 0) return false
-  let intersection = 0
-  for (const token of left) if (right.has(token)) intersection++
-  const jaccard = intersection / (left.size + right.size - intersection)
-  // Subset containment catches qualifier-style duplicates ("Account
-  // Verification" vs "Account Verification with Name and ZIP Code") whose
-  // Jaccard dilutes below the threshold.
-  const contained = intersection === Math.min(left.size, right.size)
-  return jaccard >= TAXONOMY_MERGE_NAME_NOMINATION_JACCARD || contained
-}
-
 const candidateMergePairs = (
   clusters: readonly TaxonomyCluster[],
   similarityFloor: number,
@@ -117,16 +77,7 @@ const candidateMergePairs = (
       const right = clusters[j]
       if (!leftVector || !rightVector || !left || !right) continue
       const similarity = cosineSimilarityNormalized(leftVector, rightVector)
-      const similarityNominated = similarity >= similarityFloor
-      // Name-duplicate nomination: heavy name overlap with a sane centroid
-      // floor; the judge still decides.
-      const nameNominated =
-        !similarityNominated &&
-        similarity >= TAXONOMY_MERGE_NAME_NOMINATION_MIN_SIMILARITY &&
-        isDisplayableTaxonomyName(left.name) &&
-        isDisplayableTaxonomyName(right.name) &&
-        namesOverlap(left.name, right.name)
-      if (similarityNominated || nameNominated) nearest.push({ left, right, similarity })
+      if (similarity >= similarityFloor) nearest.push({ left, right, similarity })
     }
     for (const pair of nearest.sort((a, b) => b.similarity - a.similarity).slice(0, TAXONOMY_MERGE_NEAREST_NEIGHBORS)) {
       const key = [pair.left.id, pair.right.id].sort().join(":")
@@ -138,56 +89,15 @@ const candidateMergePairs = (
     .slice(0, TAXONOMY_MERGE_CANDIDATES_PER_PARENT)
 }
 
-const mergeJudgeSchema = z.object({ sameBehavior: z.boolean() })
-
-const hasJudgeableIdentity = (cluster: TaxonomyCluster): boolean =>
-  isDisplayableTaxonomyName(cluster.name) && cluster.description.trim().length > 0
+const isDeterministicMerge = (pair: MergeCandidatePair): boolean => pair.similarity >= TAXONOMY_MERGE_THRESHOLD
 
 /**
- * LLM merge judge. Centroid cosine nominates candidate pairs but carries no
- * merge signal in the 0.86–0.92 band on dense corpora (QA: the worst wrong
- * pair outscored true duplicates), so the judge decides from names and
- * descriptions. Conservative on failure: an unanswered pair is not merged
- * this run — centroids drift slowly, so the next run retries.
- */
-const judgeSameBehavior = (pair: MergeCandidatePair) =>
-  Effect.gen(function* () {
-    const ai = yield* AI
-    const result = yield* ai.generate({
-      provider: TAXONOMY_JUDGE_MODEL.provider,
-      model: TAXONOMY_JUDGE_MODEL.model,
-      system: `You are a mergeJudge: decide whether two conversation topic clusters describe the same topic, such that keeping both adds no analytical value. Clusters describing the same task done via different methods, identifiers, or channels ARE the same topic (for example verifying an account with name+phone vs email vs name+ZIP are all one "account verification" topic). A cluster with far fewer conversations that sits inside the same domain as a much larger cluster is a fragment of that topic, not a separate topic — merge it. Only keep clusters separate when they capture different user goals (for example locating an order vs cancelling it). Return only schema-valid JSON.`,
-      prompt: `Cluster A (${pair.left.observationCount} conversations): ${pair.left.name}\n${pair.left.description}\n\nCluster B (${pair.right.observationCount} conversations): ${pair.right.name}\n${pair.right.description}\n\nReturn JSON exactly like {"sameBehavior":true} or {"sameBehavior":false}.`,
-      schema: mergeJudgeSchema,
-      temperature: 0,
-      maxTokens: 1_000,
-    })
-    return result.object.sameBehavior
-  }).pipe(
-    Effect.timeoutOrElse({
-      duration: TAXONOMY_NAMING_TIMEOUT_MS,
-      orElse: () => Effect.fail(new Error("Taxonomy merge judge timed out")),
-    }),
-    // Conservative fallback, but never silent: a misconfigured judge (e.g.
-    // missing provider credentials) rejecting every pair looks identical to
-    // genuine rejections unless the failure is logged.
-    Effect.tapError((error) =>
-      Effect.logWarning("Taxonomy merge judge failed; pair not merged this run", {
-        left: pair.left.name,
-        right: pair.right.name,
-        error: String(error),
-      }),
-    ),
-    Effect.orElseSucceed(() => false),
-  )
-
-/**
- * Complete-linkage component assembly. Judge-approved pairs chain
+ * Complete-linkage component assembly. Approved pairs chain
  * transitively; a naive union once produced components whose far ends fell
  * below the similarity floor, and dropping the whole component blocked even
  * its highest-confidence merges run after run. Best pairs are applied first,
  * and a component only grows while every cross-pair still clears the floor —
- * an approved pair on its own is exempt (it was individually judged).
+ * an approved pair on its own is exempt (it cleared the centroid floor).
  */
 const componentsFromApprovedPairs = (
   pairs: readonly MergeCandidatePair[],
@@ -266,7 +176,7 @@ const mergeCandidateFloor = (
 ): number =>
   parentKey === ROOT_PARENT_KEY
     ? rootFloor
-    : (parentsById.get(parentKey)?.splitLinkThreshold ?? TAXONOMY_MERGE_JUDGE_THRESHOLD)
+    : Math.max(parentsById.get(parentKey)?.splitLinkThreshold ?? TAXONOMY_MERGE_THRESHOLD, TAXONOMY_MERGE_THRESHOLD)
 
 const mergeComponentFloor = (
   cluster: TaxonomyCluster,
@@ -275,7 +185,10 @@ const mergeComponentFloor = (
 ): number =>
   cluster.parentClusterId === null
     ? rootFloor
-    : (parentsById.get(cluster.parentClusterId)?.splitLinkThreshold ?? TAXONOMY_MERGE_COMPONENT_MIN_SIMILARITY)
+    : Math.max(
+        parentsById.get(cluster.parentClusterId)?.splitLinkThreshold ?? TAXONOMY_MERGE_THRESHOLD,
+        TAXONOMY_MERGE_THRESHOLD,
+      )
 
 const nominateMergeCandidates = (
   siblingGroups: ReadonlyMap<string, readonly TaxonomyCluster[]>,
@@ -287,19 +200,7 @@ const nominateMergeCandidates = (
   )
 
 const approveMergeCandidates = (candidates: readonly MergeCandidatePair[]) =>
-  Effect.forEach(
-    candidates,
-    (pair) =>
-      Effect.gen(function* () {
-        // Same-run births still carry the "Pending" placeholder, so the
-        // judge has nothing to read; they use the strict similarity rule.
-        if (!hasJudgeableIdentity(pair.left) || !hasJudgeableIdentity(pair.right)) {
-          return pair.similarity >= TAXONOMY_MERGE_THRESHOLD ? pair : null
-        }
-        return (yield* judgeSameBehavior(pair)) ? pair : null
-      }),
-    { concurrency: TAXONOMY_MERGE_JUDGE_CONCURRENCY },
-  ).pipe(Effect.map((pairs) => pairs.filter((pair): pair is MergeCandidatePair => pair !== null)))
+  Effect.succeed(candidates.filter(isDeterministicMerge))
 
 const wouldDropBelowMinChildren = (
   component: readonly TaxonomyCluster[],
@@ -544,8 +445,7 @@ export const mergeNearDuplicateClustersUseCase = (input: MergeNearDuplicateClust
       active.flatMap((cluster) => (cluster.parentClusterId ? [cluster.parentClusterId] : [])),
     )
     const siblingGroups = groupByParent(active)
-    const calibration = yield* loadClusteringCalibration({ projectId: input.projectId })
-    const rootFloor = calibration?.rootLinkThreshold ?? TAXONOMY_TREE_ROOT_LINK_THRESHOLD
+    const rootFloor = TAXONOMY_MERGE_THRESHOLD
     const parentsById = parentMap(active)
     const candidates = nominateMergeCandidates(siblingGroups, parentsById, rootFloor)
     const approvedPairs = yield* approveMergeCandidates(candidates)

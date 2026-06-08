@@ -6,7 +6,6 @@ export {
   TAXONOMY_ASSIGN_TOPK,
   TAXONOMY_BIRTH_LINK_THRESHOLD,
   TAXONOMY_BIRTH_MAX_DIAMETER,
-  TAXONOMY_CALIBRATION_TTL_MS,
   TAXONOMY_CENTROID_HALF_LIFE_SECONDS,
   TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH,
   TAXONOMY_CLUSTER_LOCK_MAX_RETRIES,
@@ -38,9 +37,7 @@ export {
   TAXONOMY_MERGE_THRESHOLD,
   TAXONOMY_NAMING_MODEL,
   TAXONOMY_NAMING_REFRESH_OBSERVATIONS,
-  TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_CEILING,
   TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR,
-  TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO,
   TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS,
@@ -53,23 +50,11 @@ export {
   TAXONOMY_RUN_TRIGGERS,
   TAXONOMY_SEARCH_MIN_SCORE,
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
+  TAXONOMY_TREE_CHILD_DIAMETER_FACTOR,
+  TAXONOMY_TREE_CHILD_DIAMETER_MAX,
+  TAXONOMY_TREE_CHILD_DIAMETER_MIN,
   type TaxonomyObservationWeightScheme,
 } from "./constants.ts"
-export {
-  type AnchorCalibration,
-  anchorCalibrationSchema,
-  CALIBRATION_SCOPES,
-  type CalibrationPayload,
-  type CalibrationProfile,
-  type CalibrationScope,
-  type ClusteringCalibration,
-  calibrationPayloadSchema,
-  calibrationProfileSchema,
-  calibrationScopeSchema,
-  clusteringCalibrationSchema,
-  type SessionCalibration,
-  sessionCalibrationSchema,
-} from "./entities/calibration.ts"
 export {
   type TaxonomyCentroid,
   type TaxonomyCluster,
@@ -133,10 +118,6 @@ export {
   withTaxonomyGardenLock,
 } from "./locks.ts"
 export {
-  CalibrationProfileRepository,
-  type CalibrationProfileRepositoryShape,
-} from "./ports/calibration-profile-repository.ts"
-export {
   type ClusterAnalysisAggregate,
   type ClusterRepresentativeExample,
   TaxonomyClusterIntelligenceRepository,
@@ -196,11 +177,6 @@ export {
   assignObservationToClusterUseCase,
 } from "./use-cases/assign-observation-to-cluster.ts"
 export {
-  type CalibrateClusteringThresholdsInput,
-  type CalibrateClusteringThresholdsResult,
-  calibrateClusteringThresholdsUseCase,
-} from "./use-cases/calibrate-clustering-thresholds.ts"
-export {
   type ClusterAssignmentDecision,
   type DecideClusterAssignmentInput,
   decideClusterAssignment,
@@ -248,7 +224,6 @@ export {
   listProjectBehavioursUseCase,
   type ProjectBehaviourNode,
 } from "./use-cases/list-project-behaviours.ts"
-export { loadClusteringCalibration, loadSessionCalibration } from "./use-cases/load-calibration.ts"
 export {
   type MergeNearDuplicateClustersInput,
   type MergeNearDuplicateClustersResult,
@@ -276,7 +251,6 @@ export {
 } from "./use-cases/recurse-tree-clusters.ts"
 export { type RouteToDeepestClusterInput, routeToDeepestClusterUseCase } from "./use-cases/route-to-deepest-cluster.ts"
 export {
-  computeBirthMinMembers,
   type SweepNoiseAndBirthClustersInput,
   type SweepNoiseAndBirthClustersResult,
   sweepNoiseAndBirthClustersUseCase,

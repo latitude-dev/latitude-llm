@@ -101,22 +101,6 @@ export interface TaxonomyObservationRepositoryShape {
     readonly projectId: ProjectId
     readonly since: Date
   }) => Effect.Effect<TaxonomyObservationCounts, RepositoryError, ChSqlClient>
-  /** Pseudo-random sample of observation embeddings for threshold calibration. */
-  readonly sampleEmbeddings: (input: {
-    readonly organizationId: OrganizationId
-    readonly projectId: ProjectId
-    readonly limit: number
-  }) => Effect.Effect<readonly (readonly number[])[], RepositoryError, ChSqlClient>
-  /** Assignment confidences (assigned and noise) for gate calibration. */
-  readonly sampleAssignmentScores: (input: {
-    readonly organizationId: OrganizationId
-    readonly projectId: ProjectId
-    readonly limit: number
-  }) => Effect.Effect<
-    readonly { readonly assigned: boolean; readonly confidence: number }[],
-    RepositoryError,
-    ChSqlClient
-  >
   readonly getTopClustersByOccurrence: (input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

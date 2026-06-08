@@ -80,13 +80,6 @@ async function resetProjectTaxonomy(project: ProjectRow) {
     `DELETE FROM latitude.taxonomy_runs WHERE organization_id = $1 AND project_id = $2`,
     params,
   )
-  // Calibration is derived from the project's score distributions; a stale
-  // profile inside its TTL would silently survive the reset and skip
-  // recalibration on the next garden pass.
-  await adminPostgres.pool.query(
-    `DELETE FROM latitude.calibration_profiles WHERE organization_id = $1 AND project_id = $2 AND scope = 'clustering'`,
-    params,
-  )
 }
 
 async function resetProjectConversationIntelligence(project: ProjectRow) {

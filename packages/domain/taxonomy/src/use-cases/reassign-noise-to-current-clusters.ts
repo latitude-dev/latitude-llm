@@ -14,7 +14,6 @@ import {
   type ReassignTaxonomyObservationInput,
   TaxonomyObservationRepository,
 } from "../ports/taxonomy-observation-repository.ts"
-import { loadClusteringCalibration } from "./load-calibration.ts"
 import { routeToDeepestClusterUseCase } from "./route-to-deepest-cluster.ts"
 
 export interface ReassignNoiseToCurrentClustersInput {
@@ -94,15 +93,6 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
       return { noiseScanned: 0, observationsReassigned: 0 } satisfies ReassignNoiseToCurrentClustersResult
     }
 
-    const calibration = yield* loadClusteringCalibration({ projectId: input.projectId })
-    const gates =
-      calibration === null
-        ? undefined
-        : {
-            absoluteThreshold: calibration.assignAbsoluteThreshold,
-            relativeMargin: calibration.assignRelativeMargin,
-          }
-
     const decisions = yield* Effect.forEach(
       noise,
       (observation) =>
@@ -113,7 +103,6 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
             projectId: input.projectId,
             dimension,
             queryVector: observation.embedding,
-            ...(gates === undefined ? {} : { gates }),
           })
           if (decision.method !== "centroid_online" || decision.clusterId === null) return null
           return { observation, normalized, decision }

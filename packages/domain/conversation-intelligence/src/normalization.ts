@@ -1,6 +1,4 @@
-/** Message normalization shared by the analyzer, the workflow warm-up
- * activities, and threshold calibration. Embedding cache keys depend on this
- * exact text, so all consumers must use these helpers. */
+/** Message normalization shared by the analyzer and workflow warm-up activities. Embedding cache keys depend on this exact text, so all consumers must use these helpers. */
 
 export interface NormalizedMessage {
   readonly index: number

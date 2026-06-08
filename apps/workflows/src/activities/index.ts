@@ -57,7 +57,6 @@ export {
 } from "./session-intelligence-backfill-activities.ts"
 export {
   assertGardenTaxonomyQualityActivity,
-  calibrateGardenTaxonomyActivity,
   completeGardenTaxonomyRunActivity,
   deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,

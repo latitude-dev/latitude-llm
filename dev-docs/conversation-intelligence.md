@@ -1,14 +1,14 @@
 # Conversation Intelligence
 
-Conversation intelligence turns raw session telemetry into semantic structure: **session analyses**, **session semantic moments**, **session moment labels** (signals like escalation or frustration), and **sampled taxonomy observations** that feed the topic tree documented in [`./taxonomy.md`](./taxonomy.md). It is the session-analysis half of the behaviours product; the clustering half lives in the taxonomy domain.
+Conversation intelligence turns raw session telemetry into semantic structure: **session analyses**, **session semantic moments**, **session moment labels** (signals like escalation or frustration), and **session-level taxonomy observations** that feed the topic tree documented in [`./taxonomy.md`](./taxonomy.md). It is the session-analysis half of the behaviours product; the clustering half lives in the taxonomy domain.
 
 Domain code: `packages/domain/conversation-intelligence`. ClickHouse adapters: `packages/platform/db-clickhouse/src/repositories/conversation-intelligence-repositories.ts`. Orchestration: `apps/workflows/src/workflows/analyze-session-workflow.ts` + `apps/workflows/src/activities/analyze-session-activities.ts`, started from the trace-end boundary (see [`./spans.md`](./spans.md)) with the deterministic workflow id `org:${organizationId}:conversation-intelligence:analyzeSession:${projectId}:${sessionId}`.
 
 ## Design stance: embeddings-only in the hot path
 
-Analyzing every session with an LLM is not economically viable at telemetry volume. Everything that runs per session — segmentation, labeling, topic projection, cluster routing — uses **embeddings and deterministic math** only. LLM calls are reserved for *amortized* work that runs per project per gardening pass (calibration judges, cluster naming, merge judges), never per session.
+Analyzing every session with an LLM is not economically viable at telemetry volume. Everything that runs per session — segmentation, labeling, topic projection, cluster routing — uses **embeddings and deterministic math** only. LLM calls are reserved for amortized naming/profile work, never per-session analysis or merge decisions.
 
-The corollary: every fixed similarity threshold is wrong on some corpus. All embedding gates are therefore **calibrated per project** from the project's own score distributions (see "Calibration" below), with global constants only as cold-start fallbacks.
+The taxonomy and signal gates intentionally use fixed constants. This keeps QA tractable and prevents hidden per-project threshold drift; corpus-specific quality work happens through bounded gardening, naming, and evaluation rather than runtime threshold tuning.
 
 ## Pipeline
 
@@ -23,15 +23,14 @@ embed turns (voyage-4-large, 2048 dims, Redis-cached by content hash)
         ▼
 semantic segmentation ──► semantic moments (full-exchange minimum unit)
         │
-        ├──► moment labels (anchor cosine vs calibrated per-kind gates)
+        ├──► moment labels (anchor cosine vs static per-kind gates)
         │
-        └──► topic projection per moment (moment text embedding)
-                 │ ritual suppression (calibrated gate vs ritual anchors)
+        └──► session topic projection (full conversation embedding)
                  ▼
         deepest-fit tree routing (routeToDeepestClusterUseCase, @domain/taxonomy)
                  │
                  ▼
-persist: sampled observations (CH, first) ──► centroid increments (PG, retry-gated)
+persist: taxonomy observation (CH, first) ──► centroid increments (PG, retry-gated)
          ──► analysis gate row + moments + labels (CH, last)
 ```
 
@@ -47,22 +46,22 @@ Turns group into **semantic moments** by cosine continuity against the running m
 
 - The smallest moment unit is a **full exchange**: boundaries are only considered before a *user* turn, and never before the open moment holds at least one user and one assistant turn — an assistant response always belongs to the moment of the user turn it answers. (Single-message moments produced degenerate topics like "Affirmative Confirmation"; this rule is the fix.)
 - A bare acknowledgement ("ok", "thanks") never opens a moment of its own, but it must not glue the *following* user turn onto the old moment — the next substantive turn is judged on similarity like any other.
-- The continuity threshold is per-session: `median − 1.5·MAD` of adjacent-turn similarities, clamped to the project's calibrated `continuity.{min,default,max}` band; sessions with fewer than 6 adjacent pairs use the calibrated default.
+- The continuity threshold is per-session: `median - 1.5*MAD` of adjacent-turn similarities, clamped to the static continuity threshold band; sessions with fewer than 6 adjacent pairs use the static default.
 - A max-length cap splits runaway moments; the last segment keeps its genuine boundary reason (`max_length`, `semantic_drift`, `session_start`) rather than being overwritten.
 
 ### Moment labels (signals)
 
 `MOMENT_KINDS` (constants.ts): `escalation`, `hesitation`, `abandonment`, `user_frustration`, `user_satisfaction`, `resolution`, `policy_refusal`, `clarification_loop`.
 
-Each kind has a set of anchor phrases (`anchors.ts`), embedded once and Redis-cached. A turn fires a kind when its cosine to the kind's best anchor clears that kind's **calibrated gate** (threshold + margin). Labels attach to the semantic moment containing their message range, falling back to the nearest moment by index distance — never blindly the session's first moment.
+Each kind has a set of anchor phrases (`anchors.ts`), embedded once and Redis-cached. A turn fires a kind when its cosine to the kind's best anchor clears that kind's static gate (threshold + margin). Labels attach to the semantic moment containing their message range, falling back to the nearest moment by index distance — never blindly the session's first moment.
 
 Labels are **behavioral signals, not topics**. They feed the Signals columns, the sessions-table moments filter, and per-cluster intelligence rollups; they intentionally do not create taxonomy clusters.
 
 ### Topic projection and routing
 
-Each moment may emit one taxonomy observation: the moment's text is embedded (`moment_text_embedding` is the only projection method) and routed into the cluster tree with `routeToDeepestClusterUseCase` (deepest-fit descent — see taxonomy doc). Moments too similar to **ritual anchors** (greetings, thanks, sign-offs) are suppressed and never become observations; the ritual gate is calibrated like label gates.
+Each analyzed conversation emits at most one taxonomy observation: the full user/assistant conversation text is embedded (`moment_text_embedding` remains the historical projection method name) and routed into the cluster tree with `routeToDeepestClusterUseCase` (deepest-fit descent — see taxonomy doc). Labels and process signals remain separate from the topic projection; routine verification or greeting steps do not get their own taxonomy dimension.
 
-Taxonomy observations are always ingested when a session produces a taxonomy projection. They use the same 30-day horizon as semantic-search embeddings (`TAXONOMY_OBSERVATION_RETENTION_DAYS`) so the taxonomy follows live semantic traffic instead of freezing at a one-time project sample. The analyzer still persists the full `session_semantic_moments` and `session_moment_labels` outputs on the broader conversation-retention horizon. Gardening is the bounded part: clustering, calibration, noise reassignment, naming, and reconciliation operate from the newest taxonomy observation window (`TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX`, currently 100k), ordered newer to older. Observations that clear no cluster gate persist as `noise`, carry their rejected top similarity, feed clustering calibration, and are later swept by gardening into births or reassignments while they remain in the live window.
+Taxonomy observations are always ingested when a session produces a taxonomy projection. They use the same 30-day horizon as semantic-search embeddings (`TAXONOMY_OBSERVATION_RETENTION_DAYS`) so the taxonomy follows live semantic traffic instead of freezing at a one-time project sample. The analyzer still persists the full `session_semantic_moments` and `session_moment_labels` outputs on the broader conversation-retention horizon. Gardening is the bounded part: clustering, noise reassignment, naming, and reconciliation operate from the newest taxonomy observation window (`TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX`, currently 100k), ordered newer to older. Observations that clear no cluster gate persist as `noise` and are later swept by gardening into births or reassignments while they remain in the live window.
 
 ## Data model (ClickHouse)
 
@@ -100,14 +99,6 @@ The analyzer is a retried Temporal activity, so every write is either idempotent
 - **Centroid increments are not idempotent** (Postgres `observationCount + 1`, EMA add). Accepted observation rows act as applied-markers: they are written to ClickHouse *first*, and a retry skips the increment for any `observation_id` that already existed (`TaxonomyObservationRepository.filterExistingIds`). A crash between the two loses at most one increment — gardening self-corrects — instead of double-counting forever.
 - The hash-current skip (`analysisStatus !== "failed"` guard) makes unchanged sessions free.
 
-## Calibration (`calibrate-session-thresholds.ts`)
-
-Stored in Postgres `latitude.calibration_profiles` (`scope = "conversation"`), refreshed by the gardening workflow past its TTL, and deleted on QA resets so fresh corpora recalibrate with current code:
-
-- **Label anchor gates**: per-kind threshold from a high quantile of observed anchor similarities, clamped to a documented band, then **refined by an LLM judge** (Bedrock-hosted Haiku — the same `provider: "amazon-bedrock"` pattern as `FLAGGER_MODEL`; the bare `anthropic` provider has no credentials in our environments). The judge inspects the kind's best-scoring candidates and the gate walks down to the lowest score keeping cumulative precision above the target. Kinds the judge cannot verify get the **disabled sentinel `1.01`** — a gate no cosine can clear — rather than an unsafe static fallback; the anchor schema explicitly allows the sentinel, and the kind re-opens automatically when a future calibration verifies a band.
-- **Ritual gate** and **continuity clamps** derive from the same corpus distributions.
-- Judge calls run with `maxTokens: 1000` (reasoning models burn budget thinking; a tight cap silently becomes rejection) and **judge failures are logged before falling back** — a misconfigured judge rejecting everything must be distinguishable from genuine rejections.
-
 ## Read paths
 
 - **Session drawer** (`listSessionMomentIntelligenceUseCase`): moments + labels + observations for one session, defaulting to the latest analysis generation; the conversation tab anchors moment pills to message ranges.
@@ -116,14 +107,13 @@ Stored in Postgres `latitude.calibration_profiles` (`scope = "conversation"`), r
 
 ## Trade-off decisions
 
-- **Embeddings-only per session**: lower per-moment label precision accepted for unit economics; precision is recovered statistically through calibrated, judge-verified gates and corpus-level aggregation.
+- **Embeddings-only per session**: lower per-moment label precision accepted for unit economics; precision is recovered statistically through static anchor thresholds and corpus-level aggregation.
 - **Full-exchange moment unit**: coarser than per-message moments, deliberately — topic embeddings need the user ask *and* the agent response to carry intent.
 - **Generations are append-only**: re-analysis never deletes prior rows (cheap writes, replayable history) at the cost of the pinning discipline on every read.
-- **Conservative judge fallbacks, never silent**: any judge failure means "don't act" (kind disabled, pair unmerged) — and is always logged.
 
 ## Future work
 
 - **Superseded-generation reclamation**: a TTL or gardening sweep for non-current `analysis_hash` rows would shrink read costs and remove the pinning foot-gun at the storage layer.
 - **Ritual suppression for handoff exchanges**: "let me talk to a human" moments are behavioral, not topical, yet currently form a cross-domain topic cluster (escalation is already a first-class label); transfer-request ritual anchors would keep them out of the tree.
-- **Per-depth assignment-score sampling**: clustering calibration currently samples assignment confidences across all tree levels mixed; per-depth sampling sharpens the gates as trees deepen.
+- **Topic projection boilerplate suppression**: fixed thresholds make QA simpler, but repeated support rituals can still influence embeddings; future work can use deterministic text weighting or extraction to downweight cross-topic boilerplate without reintroducing threshold tuning.
 - **`needs_answer` outcome segment** (spec'd, unimplemented) and richer outcome classification.

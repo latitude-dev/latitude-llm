@@ -145,24 +145,6 @@ export const createFakeTaxonomyObservationRepository = (
           ),
       ),
 
-    sampleEmbeddings: ({ organizationId, projectId, limit }) =>
-      Effect.sync(() =>
-        latestProjectWindow(organizationId, projectId)
-          .filter((observation) => observation.embedding.length > 0)
-          .slice(0, limit)
-          .map((observation) => observation.embedding),
-      ),
-
-    sampleAssignmentScores: ({ organizationId, projectId, limit }) =>
-      Effect.sync(() =>
-        latestProjectWindow(organizationId, projectId)
-          .slice(0, limit)
-          .map((observation) => ({
-            assigned: observation.assignedClusterId !== null,
-            confidence: observation.assignmentConfidence,
-          })),
-      ),
-
     getCounts: ({ organizationId, projectId, since }) =>
       Effect.sync(() => {
         let total = 0
