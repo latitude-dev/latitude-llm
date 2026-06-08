@@ -1,15 +1,21 @@
 import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
 
-const productionTraceRateLimitDefaults = {
+const PRODUCTION_TRACE_RATE_LIMIT_DEFAULTS = {
   maxRequests: 600,
   maxBytes: 64 * 1024 * 1024,
   windowSeconds: 60,
 } as const
 
-const developmentTraceRateLimitDefaults = {
+const DEVELOPMENT_TRACE_RATE_LIMIT_DEFAULTS = {
   maxRequests: 5_000,
   maxBytes: 512 * 1024 * 1024,
+  windowSeconds: 60,
+} as const
+
+export const SANDBOX_TRACE_INGESTION_RATE_LIMIT = {
+  maxRequests: 60,
+  maxBytes: 64 * 1024 * 1024,
   windowSeconds: 60,
 } as const
 
@@ -31,12 +37,15 @@ export interface TraceIngestionRateLimitRedis {
   expire: (key: string, seconds: number) => Promise<unknown>
 }
 
-interface CheckTraceIngestionRateLimitInput {
+interface EnforceTraceIngestionRateLimitInput {
   readonly redis: TraceIngestionRateLimitRedis
   readonly organizationId: string
   readonly apiKeyId: string
   readonly payloadBytes: number
-  readonly config?: TraceIngestionRateLimitConfig
+}
+
+interface CheckTraceIngestionRateLimitInput extends EnforceTraceIngestionRateLimitInput {
+  readonly isSandbox?: boolean
 }
 
 type TraceIngestionRateLimitResult =
@@ -58,7 +67,8 @@ const parsePositiveEnvNumber = (name: string, fallback: number): number => {
 
 const loadTraceIngestionRateLimitConfig = (): TraceIngestionRateLimitConfig => {
   const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
-  const defaults = nodeEnv === "development" ? developmentTraceRateLimitDefaults : productionTraceRateLimitDefaults
+  const defaults =
+    nodeEnv === "development" ? DEVELOPMENT_TRACE_RATE_LIMIT_DEFAULTS : PRODUCTION_TRACE_RATE_LIMIT_DEFAULTS
 
   return {
     maxRequests: parsePositiveEnvNumber("LAT_INGEST_TRACE_RATE_LIMIT_MAX_REQUESTS", defaults.maxRequests),
@@ -67,7 +77,7 @@ const loadTraceIngestionRateLimitConfig = (): TraceIngestionRateLimitConfig => {
   }
 }
 
-const defaultTraceIngestionRateLimitConfig = loadTraceIngestionRateLimitConfig()
+const DEFAULT_TRACE_INGESTION_RATE_LIMIT = loadTraceIngestionRateLimitConfig()
 
 const getNumericPipelineValue = (result: readonly [unknown, unknown]): number | null => {
   const value = result[1]
@@ -79,16 +89,14 @@ const normalizeRetryAfterSeconds = (ttl: number, fallback: number): number => {
   return fallback
 }
 
-const buildRateLimitKey = (
-  input: Omit<CheckTraceIngestionRateLimitInput, "redis" | "payloadBytes" | "config">,
-): string => {
+const buildRateLimitKey = (input: Omit<EnforceTraceIngestionRateLimitInput, "redis" | "payloadBytes">): string => {
   return `ratelimit:ingest:traces:${input.organizationId}:${input.apiKeyId}`
 }
 
-export const checkTraceIngestionRateLimit = async (
-  input: CheckTraceIngestionRateLimitInput,
+export const enforceTraceIngestionRateLimit = async (
+  input: EnforceTraceIngestionRateLimitInput,
+  config: TraceIngestionRateLimitConfig,
 ): Promise<TraceIngestionRateLimitResult> => {
-  const config = input.config ?? defaultTraceIngestionRateLimitConfig
   const baseKey = buildRateLimitKey(input)
   const requestsKey = `${baseKey}:requests`
   const bytesKey = `${baseKey}:bytes`
@@ -146,4 +154,11 @@ export const checkTraceIngestionRateLimit = async (
   } catch {
     return { allowed: true }
   }
+}
+
+export const checkTraceIngestionRateLimit = (
+  input: CheckTraceIngestionRateLimitInput,
+): Promise<TraceIngestionRateLimitResult> => {
+  const config = input.isSandbox ? SANDBOX_TRACE_INGESTION_RATE_LIMIT : DEFAULT_TRACE_INGESTION_RATE_LIMIT
+  return enforceTraceIngestionRateLimit(input, config)
 }
