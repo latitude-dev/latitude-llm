@@ -570,7 +570,19 @@ const seedFixedTraces: Seeder = {
         return
       }
       const allFixedSpans = buildAllFixedSpans(ctx.scope)
-      yield* insertJsonEachRow(ctx.client, "spans", allFixedSpans)
+      // `insertJsonEachRow` chunks large inserts into multiple requests, so a
+      // mid-insert failure can commit some batches but not others. The sentinel
+      // above is read back from the `spans` table, so it must only become
+      // visible once the *whole* fixture set has landed — otherwise a retry
+      // after a partial insert would find the sentinel, skip, and leave spans
+      // permanently missing. Insert every non-sentinel span first and the
+      // sentinel trace's spans last. A retry that re-inserts earlier batches is
+      // safe: `spans` is a ReplacingMergeTree keyed by span_id, so duplicates
+      // collapse on merge.
+      const sentinelSpans = allFixedSpans.filter((span) => span.trace_id === sentinel)
+      const nonSentinelSpans = allFixedSpans.filter((span) => span.trace_id !== sentinel)
+      yield* insertJsonEachRow(ctx.client, "spans", nonSentinelSpans)
+      yield* insertJsonEachRow(ctx.client, "spans", sentinelSpans)
       if (!ctx.quiet) console.log(`  -> spans/fixed-traces: ${allFixedSpans.length} deterministic tau2 spans`)
     }),
 }

@@ -38,6 +38,7 @@
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
+    "@temporalio/activity": "catalog:",
     "@temporalio/workflow": "catalog:",
     "@temporalio/worker": "catalog:",
     "effect": "catalog:",

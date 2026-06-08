@@ -41,11 +41,29 @@ import { gardenTaxonomyWorkflow } from "./taxonomy-gardening-workflow.ts"
  * use-case created it) but its content is partial. Operators clean up
  * via the existing `softDeleteProject` admin server function.
  */
-const { seedDemoProjectPostgresActivity, seedDemoProjectClickHouseActivity, seedDemoProjectTraceSearchActivity } =
-  proxyActivities<typeof activities>({
-    startToCloseTimeout: "30 minutes",
-    retry: { ...defaultActivityRetryPolicy, nonRetryableErrorTypes: ["SeedError"] },
-  })
+const { seedDemoProjectPostgresActivity, seedDemoProjectClickHouseActivity } = proxyActivities<typeof activities>({
+  startToCloseTimeout: "30 minutes",
+  retry: { ...defaultActivityRetryPolicy, nonRetryableErrorTypes: ["SeedError"] },
+})
+
+/**
+ * The trace-search activity embeds every seeded trace via Voyage and is the
+ * long pole. It heartbeats per trace, so a worker that dies mid-run (in dev
+ * `tsx watch` restarts the worker on every file save) is detected within
+ * `heartbeatTimeout` and the activity is retried in seconds — instead of
+ * sitting orphaned in `Started` until the 30-minute `startToCloseTimeout`
+ * elapses, which is what made the seed appear to "hang". Retries are cheap:
+ * the activity skips already-written documents/embeddings via dedupe-by-hash.
+ *
+ * Kept in its own proxy because the Postgres/ClickHouse activities don't
+ * heartbeat — a shared `heartbeatTimeout` would fail them the moment they ran
+ * longer than the timeout without emitting one.
+ */
+const { seedDemoProjectTraceSearchActivity } = proxyActivities<typeof activities>({
+  startToCloseTimeout: "30 minutes",
+  heartbeatTimeout: "2 minutes",
+  retry: { ...defaultActivityRetryPolicy, nonRetryableErrorTypes: ["SeedError"] },
+})
 
 export interface SeedDemoProjectWorkflowInput {
   readonly organizationId: string
