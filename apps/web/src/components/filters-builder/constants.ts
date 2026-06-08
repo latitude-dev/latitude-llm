@@ -6,7 +6,6 @@ import {
   TRACE_FILTER_FIELDS,
 } from "@domain/shared"
 import type { FilterMode } from "./multi-select-filter.tsx"
-import type { DistinctColumn } from "./types.ts"
 
 const TEXT_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "text").map((f) => ({
   field: f.field,
@@ -14,10 +13,15 @@ const TEXT_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "text").map((f)
   placeholder: f.placeholder ?? "Enter value...",
 }))
 
-export const MULTI_SELECT_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "multiSelect").map((f) => ({
-  field: f.field as DistinctColumn,
+const ALL_MULTI_SELECT_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "multiSelect").map((f) => ({
+  field: f.field,
   label: f.label,
+  sessionOnly: "sessionOnly" in f && f.sessionOnly === true,
 }))
+
+export function getMultiSelectFieldsForMode(mode: FilterMode) {
+  return mode === "sessions" ? ALL_MULTI_SELECT_FIELDS : ALL_MULTI_SELECT_FIELDS.filter((f) => !f.sessionOnly)
+}
 
 export const STATUS_FIELDS = TRACE_FILTER_FIELDS.filter((f) => f.type === "status").map((f) => ({
   field: f.field,

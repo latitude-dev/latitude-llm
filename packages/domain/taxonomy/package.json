@@ -18,8 +18,6 @@
     "@domain/ai": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
-    "@domain/spans": "workspace:*",
-    "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   },

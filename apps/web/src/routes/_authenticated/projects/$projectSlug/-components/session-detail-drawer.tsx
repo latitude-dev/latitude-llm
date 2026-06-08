@@ -1,3 +1,4 @@
+import type { MomentKind } from "@domain/conversation-intelligence"
 import type { FilterSet } from "@domain/shared"
 import { Button, DetailDrawer, Icon, Skeleton, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
@@ -7,7 +8,7 @@ import { useSessionDetail } from "../../../../../domains/sessions/sessions.colle
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { IssueLifecycleActions } from "../issues/-components/issue-lifecycle-actions.tsx"
 import { IssueSlot } from "./session-detail-drawer/issue-slot.tsx"
-import { isSessionTab, SessionSlot } from "./session-detail-drawer/session-slot.tsx"
+import { isSessionTab, SessionSlot, type SessionTabId } from "./session-detail-drawer/session-slot.tsx"
 import { type DetailSlotKind, SlotTransition } from "./session-detail-drawer/slot-transition.tsx"
 import { isTraceDetailTab, type TraceDetailTabId, TraceSlot } from "./session-detail-drawer/trace-slot.tsx"
 import { useSessionTraces } from "./session-detail-drawer/use-session-traces.ts"
@@ -26,6 +27,9 @@ export function SessionDetailDrawer({
   searchQuery,
   filters,
   onFiltersChange,
+  focusMomentKind,
+  focusMomentId,
+  defaultTab,
 }: {
   readonly projectId: string
   readonly sessionId: string
@@ -33,13 +37,21 @@ export function SessionDetailDrawer({
   readonly searchQuery?: string
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
+  /** Lands on the Conversation tab scrolled to the first moment carrying this label kind. */
+  readonly focusMomentKind?: MomentKind | undefined
+  /** Scrolls the Conversation tab to this semantic moment (no label required). */
+  readonly focusMomentId?: string | undefined
+  /** Overrides which tab the drawer lands on when no URL param is set. */
+  readonly defaultTab?: SessionTabId | undefined
 }) {
   const [traceId, setTraceId] = useParamState("traceId", "")
   const [issueId, setIssueId] = useParamState("issueId", "")
   const [, setFocusAnnotationId] = useParamState("annotationId", "")
+  const [q] = useParamState("q", "")
   // Land on the conversation tab when arriving from an active search, so the
   // conversation tab's search-match autoscroll/highlight has something to scroll to.
-  const defaultSessionTab = (searchQuery?.length ?? 0) > 0 ? "conversation" : "session"
+  const defaultSessionTab =
+    defaultTab ?? ((searchQuery?.length ?? q.length) > 0 || focusMomentKind ? "conversation" : "session")
   const [activeTab, setActiveTab] = useParamState("sessionTab", defaultSessionTab, {
     validate: isSessionTab,
   })
@@ -173,6 +185,8 @@ export function SessionDetailDrawer({
               onOpenTrace={openTrace}
               onOpenIssue={openIssue}
               onOpenInConversation={focusAnnotationInConversation}
+              focusMomentKind={focusMomentKind}
+              focusMomentId={focusMomentId}
               {...(searchQuery ? { searchQuery } : {})}
               {...(filters ? { filters } : {})}
               {...(onFiltersChange ? { onFiltersChange } : {})}

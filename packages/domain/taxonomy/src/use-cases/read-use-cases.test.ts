@@ -5,39 +5,33 @@ import {
   ProjectId,
   SessionId,
   SqlClient,
-  TaxonomyCategoryId,
   TaxonomyClusterId,
   TaxonomyLineageId,
   TaxonomyRunId,
-  TraceId,
 } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import type { TaxonomyCategory } from "../entities/category.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
-import type { TaxonomyObservation } from "../entities/observation.ts"
+import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { createTaxonomyCentroid, updateTaxonomyCentroid } from "../helpers.ts"
-import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
-import { TaxonomyCategoryRepository } from "../ports/taxonomy-category-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyLineageRepository } from "../ports/taxonomy-lineage-repository.ts"
+import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { TaxonomyRunRepository } from "../ports/taxonomy-run-repository.ts"
-import { createFakeBehaviorObservationRepository } from "../testing/fake-behavior-observation-repository.ts"
-import { createFakeTaxonomyCategoryRepository } from "../testing/fake-taxonomy-category-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyLineageRepository } from "../testing/fake-taxonomy-lineage-repository.ts"
+import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
 import { createFakeTaxonomyRunRepository } from "../testing/fake-taxonomy-run-repository.ts"
 import { getLastRunUseCase, getTaxonomyAnalyticsUseCase } from "./analytics.ts"
-import { getCategoryDetailsUseCase, getClusterDetailsUseCase } from "./get-details.ts"
-import { listCategoriesUseCase } from "./list-categories.ts"
-import { listClustersInCategoryUseCase, listClustersUseCase } from "./list-clusters.ts"
+import { getClusterDetailsUseCase } from "./get-details.ts"
+import { listClustersUseCase } from "./list-clusters.ts"
 import { listObservationsInClusterUseCase } from "./list-observations-in-cluster.ts"
+import { listProjectBehavioursUseCase } from "./list-project-behaviours.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const now = new Date("2026-05-24T12:00:00.000Z")
-const categoryId = TaxonomyCategoryId("c".repeat(24))
 
 const embedding = () => {
   const vector = new Array(2048).fill(0)
@@ -59,33 +53,19 @@ const centroid = () => {
   return withoutAnchor
 }
 
-const makeCategory = (overrides: Partial<TaxonomyCategory> = {}): TaxonomyCategory => ({
-  id: categoryId,
+const makeObservation = (index: number, clusterId = TaxonomyClusterId("k".repeat(24))): TaxonomyMomentObservation => ({
   organizationId,
   projectId,
-  name: "Support",
-  description: "Support conversations",
-  centroidEmbedding: [1, 0],
-  clusterCount: 1,
-  observationCount: 10,
-  state: "active",
-  clusteredAt: now,
-  createdAt: now,
-  updatedAt: now,
-  ...overrides,
-})
-
-const makeObservation = (index: number, clusterId = TaxonomyClusterId("k".repeat(24))): TaxonomyObservation => ({
-  organizationId,
-  projectId,
+  observationId: String(index).padStart(24, "o").slice(0, 24),
   sessionId: SessionId(`session-${index}`),
+  analysisHash: String(index).repeat(64).slice(0, 64),
+  momentId: `moment-${index}`,
+  projectionMethod: "moment_text_embedding",
+  projectionHash: String(index).repeat(64).slice(0, 64),
+  projectionMetadata: { summary: `Observation ${index}` },
+  embedding: embedding(),
   startTime: new Date(now.getTime() + index * 1000),
   endTime: new Date(now.getTime() + index * 1000 + 500),
-  traceIds: [TraceId(String(index).padStart(32, "t").slice(0, 32))],
-  summary: `Observation ${index}`,
-  summaryHash: String(index).repeat(64).slice(0, 64),
-  embedding: embedding(),
-  embeddingModel: "voyage-4-large",
   assignedClusterId: clusterId,
   assignmentConfidence: 1,
   assignmentMethod: "centroid_online",
@@ -104,7 +84,11 @@ const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster 
   id: TaxonomyClusterId("k".repeat(24)),
   organizationId,
   projectId,
-  parentCategoryId: categoryId,
+  dimension: "topic",
+  parentClusterId: null,
+  depth: 0,
+  path: "",
+  splitLinkThreshold: null,
   name: "Support questions",
   description: "Users ask support questions",
   centroid: centroid(),
@@ -117,41 +101,6 @@ const makeCluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster 
   createdAt: now,
   updatedAt: now,
   ...overrides,
-})
-
-describe("listCategoriesUseCase", () => {
-  it("defaults to active non-empty categories", async () => {
-    const categories = createFakeTaxonomyCategoryRepository([
-      makeCategory({ id: TaxonomyCategoryId("a".repeat(24)), clusterCount: 1 }),
-      makeCategory({ id: TaxonomyCategoryId("b".repeat(24)), clusterCount: 0 }),
-      makeCategory({ id: TaxonomyCategoryId("d".repeat(24)), state: "deprecated" }),
-    ])
-
-    const result = await Effect.runPromise(
-      listCategoriesUseCase({ organizationId, projectId }).pipe(
-        Effect.provide(Layer.succeed(TaxonomyCategoryRepository, categories.repository)),
-        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
-      ),
-    )
-
-    expect(result.categories.map((category) => category.id)).toEqual([TaxonomyCategoryId("a".repeat(24))])
-  })
-
-  it("can include empty categories and filter by state", async () => {
-    const categories = createFakeTaxonomyCategoryRepository([
-      makeCategory({ id: TaxonomyCategoryId("a".repeat(24)), clusterCount: 0 }),
-      makeCategory({ id: TaxonomyCategoryId("d".repeat(24)), state: "deprecated", clusterCount: 0 }),
-    ])
-
-    const result = await Effect.runPromise(
-      listCategoriesUseCase({ organizationId, projectId, state: "deprecated", includeEmpty: true }).pipe(
-        Effect.provide(Layer.succeed(TaxonomyCategoryRepository, categories.repository)),
-        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
-      ),
-    )
-
-    expect(result.categories.map((category) => category.id)).toEqual([TaxonomyCategoryId("d".repeat(24))])
-  })
 })
 
 describe("listClustersUseCase", () => {
@@ -174,26 +123,6 @@ describe("listClustersUseCase", () => {
       TaxonomyClusterId("b".repeat(24)),
       TaxonomyClusterId("a".repeat(24)),
     ])
-  })
-
-  it("lists clusters in a category with paging", async () => {
-    const otherCategoryId = TaxonomyCategoryId("o".repeat(24))
-    const clusters = createFakeTaxonomyClusterRepository([
-      makeCluster({ id: TaxonomyClusterId("a".repeat(24)), parentCategoryId: categoryId, observationCount: 10 }),
-      makeCluster({ id: TaxonomyClusterId("b".repeat(24)), parentCategoryId: categoryId, observationCount: 8 }),
-      makeCluster({ id: TaxonomyClusterId("x".repeat(24)), parentCategoryId: otherCategoryId, observationCount: 99 }),
-    ])
-
-    const result = await Effect.runPromise(
-      listClustersInCategoryUseCase({ organizationId, projectId, categoryId, pageSize: 1 }).pipe(
-        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
-      ),
-    )
-
-    expect(result.items.map((cluster) => cluster.id)).toEqual([TaxonomyClusterId("a".repeat(24))])
-    expect(result.hasMore).toBe(true)
-    expect(result.nextCursor).toBe("1")
   })
 
   it("runs hybrid search with a query embedding", async () => {
@@ -225,48 +154,20 @@ describe("listClustersUseCase", () => {
     expect(result.items.map((cluster) => cluster.id)).toEqual([TaxonomyClusterId("a".repeat(24))])
     expect(result.hasMore).toBe(true)
   })
-
-  it("supports parent category filtering, explicit state, cursor, and sort options", async () => {
-    const clusters = createFakeTaxonomyClusterRepository([
-      makeCluster({ id: TaxonomyClusterId("a".repeat(24)), name: "Zulu", observationCount: 10 }),
-      makeCluster({ id: TaxonomyClusterId("b".repeat(24)), name: "Alpha", observationCount: 8 }),
-      makeCluster({ id: TaxonomyClusterId("c".repeat(24)), name: "Beta", state: "deprecated", observationCount: 100 }),
-    ])
-
-    const result = await Effect.runPromise(
-      listClustersUseCase({
-        organizationId,
-        projectId,
-        parentCategoryId: categoryId,
-        state: "active",
-        sort: "name_asc",
-        pageSize: 1,
-        cursor: "1",
-      }).pipe(
-        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(AI, noopAi)),
-        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
-      ),
-    )
-
-    expect(result.items.map((cluster) => cluster.id)).toEqual([TaxonomyClusterId("a".repeat(24))])
-    expect(result.hasMore).toBe(false)
-    expect(result.nextCursor).toBeNull()
-  })
 })
 
 describe("details read use-cases", () => {
   it("gets cluster details with recent observation samples", async () => {
     const cluster = makeCluster()
     const clusters = createFakeTaxonomyClusterRepository([cluster])
-    const observations = createFakeBehaviorObservationRepository(
+    const observations = createFakeTaxonomyObservationRepository(
       [0, 1, 2].map((index) => makeObservation(index, cluster.id)),
     )
 
     const result = await Effect.runPromise(
       getClusterDetailsUseCase({ organizationId, projectId, clusterId: cluster.id, sampleSize: 2 }).pipe(
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
@@ -277,60 +178,19 @@ describe("details read use-cases", () => {
     expect(result.recentObservations[0]?.assignedClusterId).toBe(cluster.id)
   })
 
-  it("gets category details with active member clusters", async () => {
-    const category = makeCategory()
-    const categories = createFakeTaxonomyCategoryRepository([category])
-    const clusters = createFakeTaxonomyClusterRepository([
-      makeCluster({ id: TaxonomyClusterId("a".repeat(24)), observationCount: 2 }),
-      makeCluster({ id: TaxonomyClusterId("b".repeat(24)), observationCount: 8 }),
-      makeCluster({ id: TaxonomyClusterId("d".repeat(24)), state: "deprecated", observationCount: 100 }),
-    ])
-
-    const result = await Effect.runPromise(
-      getCategoryDetailsUseCase({ organizationId, projectId, categoryId }).pipe(
-        Effect.provide(Layer.succeed(TaxonomyCategoryRepository, categories.repository)),
-        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
-      ),
-    )
-
-    expect(result.category.id).toBe(category.id)
-    expect(result.clusters.map((cluster) => cluster.id)).toEqual([
-      TaxonomyClusterId("b".repeat(24)),
-      TaxonomyClusterId("a".repeat(24)),
-    ])
-  })
-
   it("does not return cluster details for a different project", async () => {
     const otherProjectId = ProjectId("q".repeat(24))
     const cluster = makeCluster({ projectId: otherProjectId })
     const clusters = createFakeTaxonomyClusterRepository([cluster])
-    const observations = createFakeBehaviorObservationRepository([makeObservation(9, cluster.id)])
+    const observations = createFakeTaxonomyObservationRepository([makeObservation(9, cluster.id)])
 
     await expect(
       Effect.runPromise(
         getClusterDetailsUseCase({ organizationId, projectId, clusterId: cluster.id }).pipe(
           Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-          Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+          Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
           Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
           Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
-        ),
-      ),
-    ).rejects.toMatchObject({ _tag: "NotFoundError" })
-  })
-
-  it("does not return category details for a different project", async () => {
-    const otherProjectId = ProjectId("q".repeat(24))
-    const category = makeCategory({ projectId: otherProjectId })
-    const categories = createFakeTaxonomyCategoryRepository([category])
-    const clusters = createFakeTaxonomyClusterRepository([])
-
-    await expect(
-      Effect.runPromise(
-        getCategoryDetailsUseCase({ organizationId, projectId, categoryId: category.id }).pipe(
-          Effect.provide(Layer.succeed(TaxonomyCategoryRepository, categories.repository)),
-          Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-          Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         ),
       ),
     ).rejects.toMatchObject({ _tag: "NotFoundError" })
@@ -340,13 +200,13 @@ describe("details read use-cases", () => {
 describe("listObservationsInClusterUseCase", () => {
   it("paginates cluster observations by start time cursor", async () => {
     const clusterId = TaxonomyClusterId("k".repeat(24))
-    const observations = createFakeBehaviorObservationRepository(
+    const observations = createFakeTaxonomyObservationRepository(
       [0, 1, 2].map((index) => makeObservation(index, clusterId)),
     )
 
     const firstPage = await Effect.runPromise(
       listObservationsInClusterUseCase({ organizationId, projectId, clusterId, pageSize: 2 }).pipe(
-        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
     )
@@ -366,7 +226,7 @@ describe("listObservationsInClusterUseCase", () => {
         pageSize: 2,
         ...(firstPage.nextCursor === null ? {} : { cursor: firstPage.nextCursor }),
       }).pipe(
-        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
     )
@@ -378,13 +238,13 @@ describe("listObservationsInClusterUseCase", () => {
 
   it("does not skip observations that share a page-boundary timestamp", async () => {
     const clusterId = TaxonomyClusterId("s".repeat(24))
-    const observations = createFakeBehaviorObservationRepository(
+    const observations = createFakeTaxonomyObservationRepository(
       [0, 1, 2].map((index) => ({ ...makeObservation(index, clusterId), startTime: now })),
     )
 
     const firstPage = await Effect.runPromise(
       listObservationsInClusterUseCase({ organizationId, projectId, clusterId, pageSize: 2 }).pipe(
-        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
     )
@@ -396,7 +256,7 @@ describe("listObservationsInClusterUseCase", () => {
         pageSize: 2,
         ...(firstPage.nextCursor === null ? {} : { cursor: firstPage.nextCursor }),
       }).pipe(
-        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
     )
@@ -409,18 +269,186 @@ describe("listObservationsInClusterUseCase", () => {
   })
 })
 
+describe("listProjectBehavioursUseCase", () => {
+  it("returns the topic tree and hides pending or empty nodes", async () => {
+    const rootId = TaxonomyClusterId("a".repeat(24))
+    const childId = TaxonomyClusterId("b".repeat(24))
+    const leafRootId = TaxonomyClusterId("u".repeat(24))
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({ id: rootId, observationCount: 3 }),
+      makeCluster({
+        id: childId,
+        parentClusterId: rootId,
+        depth: 1,
+        path: `${rootId}/`,
+        observationCount: 3,
+      }),
+      makeCluster({ id: leafRootId, observationCount: 3 }),
+      makeCluster({ id: TaxonomyClusterId("g".repeat(24)), name: "Pending", observationCount: 10 }),
+      makeCluster({ id: TaxonomyClusterId("e".repeat(24)), observationCount: 0 }),
+      makeCluster({ id: TaxonomyClusterId("d".repeat(24)), state: "deprecated", observationCount: 20 }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository([
+      makeObservation(1, childId),
+      makeObservation(2, childId),
+      makeObservation(3, childId),
+      makeObservation(4, leafRootId),
+      makeObservation(5, leafRootId),
+      makeObservation(6, leafRootId),
+    ])
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    // Topics sort by subtree volume; children nest under their parent node.
+    expect(result.topics.map((topic) => topic.cluster.id)).toEqual([rootId, leafRootId])
+    expect(result.topics[0]?.children.map((child) => child.cluster.id)).toEqual([childId])
+    // Parent counters are aggregate subtree counters, so the UI must not add
+    // the parent value to its children and double-count the same sessions.
+    expect(result.topics[0]?.subtreeObservationCount).toBe(3)
+    expect(result.topics[1]?.subtreeObservationCount).toBe(3)
+  })
+
+  it("hides roots without a displayable name", async () => {
+    const pendingRootId = TaxonomyClusterId("u".repeat(24))
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({ id: pendingRootId, name: "Pending", observationCount: 3 }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository([makeObservation(1, pendingRootId)])
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result.topics).toEqual([])
+  })
+
+  it("filters new-this-week behaviours from firstObservedAt", async () => {
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({ id: TaxonomyClusterId("n".repeat(24)), firstObservedAt: new Date("2026-05-22T00:00:00.000Z") }),
+      makeCluster({ id: TaxonomyClusterId("o".repeat(24)), firstObservedAt: new Date("2026-04-01T00:00:00.000Z") }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository([
+      makeObservation(1, TaxonomyClusterId("n".repeat(24))),
+      makeObservation(2, TaxonomyClusterId("o".repeat(24))),
+    ])
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now, segment: "new_this_week" }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result.topics.map((topic) => [topic.cluster.id, topic.firstSeenLabel])).toEqual([
+      [TaxonomyClusterId("n".repeat(24)), "this_week"],
+    ])
+  })
+
+  it("filters spiking behaviours from exhaustive trend counts", async () => {
+    const clusterId = TaxonomyClusterId("s".repeat(24))
+    const stableId = TaxonomyClusterId("t".repeat(24))
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({ id: clusterId, firstObservedAt: new Date("2026-04-01T00:00:00.000Z"), observationCount: 6 }),
+      makeCluster({ id: stableId, firstObservedAt: new Date("2026-04-01T00:00:00.000Z"), observationCount: 6 }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository([
+      { ...makeObservation(1, clusterId), startTime: new Date("2026-05-20T00:00:00.000Z") },
+      ...[2, 3, 4, 5, 6].map((index) => makeObservation(index, clusterId)),
+      ...[7, 8, 9].map((index) => ({
+        ...makeObservation(index, stableId),
+        startTime: new Date("2026-05-20T00:00:00.000Z"),
+      })),
+    ])
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now, segment: "spiking" }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result.topics.map((topic) => [topic.cluster.id, topic.trend.status])).toEqual([[clusterId, "spike"]])
+  })
+
+  it("treats older clusters with zero baseline and enough current volume as spiking", async () => {
+    const clusterId = TaxonomyClusterId("z".repeat(24))
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({ id: clusterId, firstObservedAt: new Date("2026-04-01T00:00:00.000Z"), observationCount: 3 }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository(
+      [1, 2, 3].map((index) => makeObservation(index, clusterId)),
+    )
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now, minObservations: 3, segment: "spiking" }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result.topics.map((topic) => [topic.cluster.id, topic.trend.status])).toEqual([[clusterId, "new"]])
+  })
+
+  it("suppresses low-volume behaviours and respects project/org trend scope", async () => {
+    const otherOrganizationId = OrganizationId("z".repeat(24))
+    const visibleId = TaxonomyClusterId("v".repeat(24))
+    const lowVolumeId = TaxonomyClusterId("l".repeat(24))
+    const wrongOrgOnlyId = TaxonomyClusterId("w".repeat(24))
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({ id: visibleId, observationCount: 2 }),
+      makeCluster({ id: lowVolumeId, observationCount: 1 }),
+      makeCluster({ id: wrongOrgOnlyId, observationCount: 2 }),
+      makeCluster({
+        id: TaxonomyClusterId("x".repeat(24)),
+        projectId: ProjectId("x".repeat(24)),
+        observationCount: 100,
+      }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository([
+      makeObservation(1, visibleId),
+      makeObservation(2, visibleId),
+      { ...makeObservation(3, wrongOrgOnlyId), organizationId: otherOrganizationId },
+    ])
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now, minObservations: 2, segment: "spiking" }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result.topics).toEqual([])
+  })
+})
+
 describe("analytics read use-cases", () => {
   it("gets taxonomy analytics counts and top clusters", async () => {
-    const categories = createFakeTaxonomyCategoryRepository([
-      makeCategory({ id: TaxonomyCategoryId("a".repeat(24)) }),
-      makeCategory({ id: TaxonomyCategoryId("b".repeat(24)), state: "deprecated" }),
-    ])
     const clusters = createFakeTaxonomyClusterRepository([
       makeCluster({ id: TaxonomyClusterId("a".repeat(24)), observationCount: 2 }),
       makeCluster({ id: TaxonomyClusterId("b".repeat(24)), observationCount: 8 }),
       makeCluster({ id: TaxonomyClusterId("c".repeat(24)), state: "deprecated", observationCount: 20 }),
     ])
-    const observations = createFakeBehaviorObservationRepository([
+    const observations = createFakeTaxonomyObservationRepository([
       makeObservation(1, TaxonomyClusterId("a".repeat(24))),
       makeObservation(2, TaxonomyClusterId("b".repeat(24))),
       makeObservation(3, TaxonomyClusterId("a".repeat(24))),
@@ -428,15 +456,13 @@ describe("analytics read use-cases", () => {
 
     const result = await Effect.runPromise(
       getTaxonomyAnalyticsUseCase({ organizationId, projectId, now, windowDays: 1 }).pipe(
-        Effect.provide(Layer.succeed(TaxonomyCategoryRepository, categories.repository)),
         Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
-        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
         Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
         Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
       ),
     )
 
-    expect(result.totalActiveCategories).toBe(1)
     expect(result.totalActiveClusters).toBe(2)
     expect(result.totalObservations).toBe(3)
     expect(result.topClusters.map((row) => [row.cluster.id, row.occurrences])).toEqual([
@@ -452,6 +478,7 @@ describe("analytics read use-cases", () => {
         id: runId,
         organizationId,
         projectId,
+        dimension: "topic",
         trigger: "manual",
         status: "completed",
         startedAt: now,
@@ -461,7 +488,6 @@ describe("analytics read use-cases", () => {
         clustersBorn: 1,
         clustersMerged: 0,
         clustersDeprecated: 0,
-        categoriesRebuilt: 1,
         error: null,
       },
     ])
@@ -470,6 +496,7 @@ describe("analytics read use-cases", () => {
         id: TaxonomyLineageId("d".repeat(24)),
         organizationId,
         projectId,
+        dimension: "topic",
         runId,
         transitionType: "death",
         fromClusterIds: [TaxonomyClusterId("z".repeat(24))],
@@ -481,6 +508,7 @@ describe("analytics read use-cases", () => {
         id: TaxonomyLineageId("l".repeat(24)),
         organizationId,
         projectId,
+        dimension: "topic",
         runId,
         transitionType: "birth",
         fromClusterIds: [],

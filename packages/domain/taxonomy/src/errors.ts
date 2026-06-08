@@ -7,13 +7,6 @@ export class TaxonomyClusterNotFoundError extends Data.TaggedError("TaxonomyClus
   readonly httpMessage = "Taxonomy cluster not found"
 }
 
-export class TaxonomyCategoryNotFoundError extends Data.TaggedError("TaxonomyCategoryNotFoundError")<{
-  readonly categoryId: string
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "Taxonomy category not found"
-}
-
 export class TaxonomyRunNotFoundError extends Data.TaggedError("TaxonomyRunNotFoundError")<{
   readonly runId: string
 }> {
@@ -67,4 +60,12 @@ export class TaxonomyObservationNotFoundError extends Data.TaggedError("Taxonomy
 }> {
   readonly httpStatus = 404
   readonly httpMessage = "Taxonomy observation not found"
+}
+
+export class TaxonomyQualityGateError extends Data.TaggedError("TaxonomyQualityGateError")<{
+  readonly projectId: string
+  readonly findings: readonly string[]
+}> {
+  readonly httpStatus = 500
+  readonly httpMessage = "Taxonomy quality gate failed"
 }

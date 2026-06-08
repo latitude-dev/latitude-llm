@@ -1,7 +1,7 @@
-import { type OrganizationId, type ProjectId, SessionId, type TaxonomyClusterId } from "@domain/shared"
+import type { OrganizationId, ProjectId, TaxonomyClusterId } from "@domain/shared"
 import { Effect } from "effect"
-import type { TaxonomyObservation } from "../entities/observation.ts"
-import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
+import type { TaxonomyMomentObservation } from "../entities/observation.ts"
+import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 
 export interface ListTaxonomyObservationsInClusterInput {
   readonly organizationId: OrganizationId
@@ -12,7 +12,7 @@ export interface ListTaxonomyObservationsInClusterInput {
 }
 
 export interface ListObservationsInClusterResult {
-  readonly observations: readonly TaxonomyObservation[]
+  readonly observations: readonly TaxonomyMomentObservation[]
   readonly hasMore: boolean
   readonly nextCursor: string | null
   readonly pageSize: number
@@ -23,25 +23,25 @@ const MAX_PAGE_SIZE = 100
 
 const pageSize = (input: number | undefined): number => Math.min(Math.max(input ?? DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE)
 
-const encodeCursor = (observation: TaxonomyObservation): string =>
-  `${observation.startTime.toISOString()}|${encodeURIComponent(observation.sessionId)}`
+const encodeCursor = (observation: TaxonomyMomentObservation): string =>
+  `${observation.startTime.toISOString()}|${encodeURIComponent(observation.observationId)}`
 
 const parseCursor = (
   cursor: string | undefined,
-): { readonly beforeStartTime: Date; readonly beforeSessionId: SessionId } | undefined => {
+): { readonly beforeStartTime: Date; readonly beforeObservationId: string } | undefined => {
   if (!cursor) return undefined
   const separator = cursor.indexOf("|")
   if (separator < 0) return undefined
   const beforeStartTime = new Date(cursor.slice(0, separator))
   if (Number.isNaN(beforeStartTime.getTime())) return undefined
-  return { beforeStartTime, beforeSessionId: SessionId(decodeURIComponent(cursor.slice(separator + 1))) }
+  return { beforeStartTime, beforeObservationId: decodeURIComponent(cursor.slice(separator + 1)) }
 }
 
 export const listObservationsInClusterUseCase = (input: ListTaxonomyObservationsInClusterInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
-    const observations = yield* BehaviorObservationRepository
+    const observations = yield* TaxonomyObservationRepository
     const limit = pageSize(input.pageSize)
     const cursor = parseCursor(input.cursor)
     const rows = yield* observations.listByCluster({

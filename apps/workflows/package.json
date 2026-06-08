@@ -16,6 +16,7 @@
     "@domain/annotations": "workspace:*",
     "@domain/ai": "workspace:*",
     "@domain/billing": "workspace:*",
+    "@domain/conversation-intelligence": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/issues": "workspace:*",

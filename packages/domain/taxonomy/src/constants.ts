@@ -4,7 +4,7 @@
  * Initial values are seeded by analogy to `@domain/issues` and to published
  * cluster-labeling baselines, then refined by a tuning pass on the seeded
  * Acme corpus. They are MVP defaults, not optimal values — see
- * `specs/live-taxonomy.md#tuning-and-the-benchmark-corpus`.
+ * `dev-docs/taxonomy.md`.
  */
 
 // ---------------------------------------------------------------------------
@@ -13,9 +13,15 @@
 
 export const TAXONOMY_CLUSTER_NAME_MAX_LENGTH = 80
 export const TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH = 280
+export const TAXONOMY_PENDING_DISPLAY_NAME = "Pending"
+
+/**
+ * Single clustering dimension. Taxonomy observations are session-level topic
+ * projections; moment labels carry behavioural/process facets separately.
+ */
+export const TAXONOMY_DIMENSIONS = ["topic"] as const
 
 export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated"] as const
-export const TAXONOMY_CATEGORY_STATES = ["active", "deprecated"] as const
 
 /**
  * MVP emits `birth` / `death` / `merge` from gardening activities A/B/C.
@@ -42,39 +48,11 @@ export const TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS = [
 export const TAXONOMY_EMBEDDING_MODEL = "voyage-4-large"
 export const TAXONOMY_EMBEDDING_DIMENSIONS = 2048
 
-/**
- * Used only when `TAXONOMY_SUMMARY_STRATEGY = "llm"`. Summaries are
- * 1-sentence intent labels; reasoning tokens buy nothing here.
- */
-export const TAXONOMY_SUMMARY_MODEL = { provider: "anthropic", model: "claude-haiku-4-5" } as const
-
-/**
- * Global text-to-embed switch.
- *
- * - `"embed_direct"` (MVP default): no LLM call; embed normalized
- *   conversation text directly.
- * - `"llm"`: summarize via LLM, then embed the summary.
- *
- * Tradeoff in `specs/live-taxonomy.md#why-embed_direct-is-the-mvp-default`.
- */
-export const TAXONOMY_SUMMARY_STRATEGIES = ["embed_direct", "llm"] as const
-export type TaxonomySummaryStrategy = (typeof TAXONOMY_SUMMARY_STRATEGIES)[number]
-
-export const TAXONOMY_SUMMARY_STRATEGY: TaxonomySummaryStrategy = "embed_direct"
-
-/**
- * Used only when `TAXONOMY_SUMMARY_STRATEGY = "llm"`. Below this token count
- * we skip the LLM summary and embed conversation text directly even on the
- * opt-in path — short sessions are already single-intent.
- */
-export const TAXONOMY_SUMMARY_MIN_SESSION_TOKENS = 500
+export const TAXONOMY_PROJECTION_METHODS = ["moment_text_embedding", "session_user_intent_embedding"] as const
 
 // ---------------------------------------------------------------------------
 // Session document
 // ---------------------------------------------------------------------------
-
-export const TAXONOMY_SESSION_DOCUMENT_MAX_LENGTH = 30_000
-export const TAXONOMY_SESSION_MIN_LENGTH = 200
 
 // ---------------------------------------------------------------------------
 // Centroid math
@@ -117,13 +95,14 @@ export const TAXONOMY_GARDENING_MAX_RUNTIME_MS = 5 * 60_000
 export const TAXONOMY_GARDENING_STALE_GRACE_MS = 60_000
 export const TAXONOMY_GARDENING_SWEEP_BATCH = 25
 
-/**
- * Hard cap on `listAllByCluster` results. Merge needs every row to reassign;
- * naming/trends only need a sample. Pick generously for merge (50k clusters
- * × ~1k obs each is well past typical) and rely on callers to pass a smaller
- * value where a sample is enough.
- */
-export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 50_000
+/** Gardening works over the live taxonomy window: newest observations first. */
+export const TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX = 100_000
+
+/** Maximum in-memory proposal sample passed to clustering helpers. */
+export const TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX = 10_000
+
+/** Hard cap on per-cluster batch reads inside the live gardening window. */
+export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 100_000
 
 // ---------------------------------------------------------------------------
 // Births (noise sweep) + merge / death
@@ -136,7 +115,7 @@ export const TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS = 3
 /**
  * Two noise embeddings are connected when their cosine ≥ this.
  * Seeded-Acme Voyage tuning raised this from 0.78 to 0.82: the full 1,574
- * session corpus produced clearer small behavior births without the broad
+ * session corpus produced clearer topic births without the broad
  * chaining seen at looser thresholds.
  */
 export const TAXONOMY_BIRTH_LINK_THRESHOLD = 0.82
@@ -149,14 +128,16 @@ export const TAXONOMY_BIRTH_LINK_THRESHOLD = 0.82
 export const TAXONOMY_BIRTH_MAX_DIAMETER = 0.45
 
 export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR = 4
-export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO = 0.005
-export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_CEILING = 30
+export const TAXONOMY_VISIBLE_BIRTH_MIN_OBSERVATION_RATIO = 0.05
 
 /** Re-absorb a candidate birth into an existing cluster instead of birthing. */
 export const TAXONOMY_ABSORPTION_THRESHOLD = 0.85
 
-/** Pairwise merge threshold between two active clusters. */
-export const TAXONOMY_MERGE_THRESHOLD = 0.92
+/** Pairwise centroid similarity threshold required to merge two active clusters. */
+export const TAXONOMY_MERGE_THRESHOLD = 0.88
+
+export const TAXONOMY_MERGE_NEAREST_NEIGHBORS = 10
+export const TAXONOMY_MERGE_CANDIDATES_PER_PARENT = 100
 
 export const TAXONOMY_DEAD_CLUSTER_MASS_FLOOR = 0.5
 export const TAXONOMY_DEAD_CLUSTER_INACTIVITY_DAYS = 30
@@ -164,9 +145,6 @@ export const TAXONOMY_DEAD_CLUSTER_INACTIVITY_DAYS = 30
 // ---------------------------------------------------------------------------
 // Hierarchy + naming
 // ---------------------------------------------------------------------------
-
-export const TAXONOMY_HIERARCHY_MAX_CATEGORIES = 15
-export const TAXONOMY_CATEGORY_CONTINUATION_THRESHOLD = 0.8
 
 export const TAXONOMY_SEARCH_MIN_SCORE = 0.2
 export const TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY = 0.5
@@ -185,7 +163,13 @@ export const TAXONOMY_FPS_SAMPLE_BUDGET_MAX = 12
 // Storage
 // ---------------------------------------------------------------------------
 
-export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 90
+/** Same TTL horizon as semantic-search embeddings. */
+export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
+
+/**
+ * Taxonomy observations are always ingested while retained. Gardening is the
+ * bounded part: every pass operates on the newest live observations only.
+ */
 
 // ---------------------------------------------------------------------------
 // Lock TTLs (Redis SET NX EX)
@@ -197,3 +181,48 @@ export const TAXONOMY_CLUSTER_LOCK_MAX_RETRIES = 18
 export const TAXONOMY_CLUSTER_LOCK_RETRY_BASE_DELAY_MS = 100
 export const TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS = 2_000
 export const TAXONOMY_GARDEN_LOCK_TTL_SECONDS = Math.ceil(TAXONOMY_GARDENING_MAX_RUNTIME_MS / 1000) + 60
+
+// ---------------------------------------------------------------------------
+// Cluster tree (categories are depth-0 nodes; depth = clustering density)
+// ---------------------------------------------------------------------------
+
+/**
+ * Levels below root. Until parent nodes become aggregate-only categories, keep
+ * online gardening to one child level; recursively splitting direct-assignment
+ * residue can create parent/child/grandchild duplicates where the deepest node
+ * simply absorbs the broad root's mass.
+ */
+export const TAXONOMY_TREE_MAX_DEPTH = 2
+/** Maximum number of children a single recursion pass exposes under one node. */
+export const TAXONOMY_TREE_CHILDREN_CAP = 8
+/** A node recurses into children when it has enough directly assigned members. */
+export const TAXONOMY_TREE_RECURSE_MIN_OBSERVATIONS = 60
+/** Bound recursion work per gardening run. */
+export const TAXONOMY_TREE_RECURSE_PER_RUN = 3
+/**
+ * Child birth density derives from the parent's own member-pairwise
+ * similarity distribution (per-node density schedule), clamped below.
+ */
+export const TAXONOMY_TREE_CHILD_LINK_QUANTILE = 0.7
+export const TAXONOMY_TREE_CHILD_LINK_MIN = 0.78
+/**
+ * Child splits should expose navigable subtopics under broad roots. A very
+ * high per-node quantile can overfit to boilerplate-similar support sessions
+ * and reject useful retail subtopic splits as tiny shards, so cap child-level
+ * density near the coarse topic boundary.
+ */
+export const TAXONOMY_TREE_CHILD_LINK_MAX = 0.8
+/** Diameter scales off the link threshold: (1 - link) * factor, clamped. */
+export const TAXONOMY_TREE_CHILD_DIAMETER_FACTOR = 2.5
+export const TAXONOMY_TREE_CHILD_DIAMETER_MIN = 0.3
+export const TAXONOMY_TREE_CHILD_DIAMETER_MAX = 0.6
+/**
+ * Recursion rollback: a split must produce at least two children covering a
+ * meaningful share of members, and no child may dominate the covered mass —
+ * otherwise the node has no internal structure at the next density and stays
+ * a leaf.
+ */
+export const TAXONOMY_TREE_MIN_CHILDREN = 2
+export const TAXONOMY_TREE_MIN_COVERAGE = 0.3
+export const TAXONOMY_TREE_MAX_CHILD_DOMINANCE = 0.9
+export const TAXONOMY_TREE_DEEP_MAX_CHILD_DOMINANCE = 0.75

@@ -1,5 +1,10 @@
 import { SqlClient, type SqlClientShape } from "@domain/shared"
-import { type TaxonomyClusterLineage, TaxonomyLineageRepository, taxonomyClusterLineageSchema } from "@domain/taxonomy"
+import {
+  type TaxonomyClusterLineage,
+  TaxonomyDimension,
+  TaxonomyLineageRepository,
+  taxonomyClusterLineageSchema,
+} from "@domain/taxonomy"
 import { and, desc, eq, inArray } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -10,6 +15,7 @@ const toDomainLineage = (row: typeof taxonomyClusterLineage.$inferSelect): Taxon
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
+    dimension: TaxonomyDimension.Topic,
     runId: row.runId,
     transitionType: row.transitionType,
     fromClusterIds: row.fromClusterIds,

@@ -6,7 +6,7 @@ import {
   type TaxonomyClusterState,
 } from "@domain/taxonomy"
 import { sql } from "drizzle-orm"
-import { bigint, customType, index, jsonb, varchar, vector } from "drizzle-orm/pg-core"
+import { bigint, customType, doublePrecision, index, jsonb, varchar, vector } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 const tsvector = customType<{ data: string; driverData: string }>({
@@ -29,7 +29,10 @@ export const taxonomyClusters = latitudeSchema.table(
     id: cuid("id").primaryKey(),
     organizationId: cuid("organization_id").notNull(),
     projectId: cuid("project_id").notNull(),
-    parentCategoryId: cuid("parent_category_id", { default: false }),
+    parentClusterId: cuid("parent_cluster_id", { default: false }),
+    depth: bigint("depth", { mode: "number" }).notNull().default(0),
+    path: varchar("path", { length: 256 }).notNull().default(""),
+    splitLinkThreshold: doublePrecision("split_link_threshold"),
     name: varchar("name", { length: TAXONOMY_CLUSTER_NAME_MAX_LENGTH }).notNull(),
     description: varchar("description", { length: TAXONOMY_CLUSTER_DESCRIPTION_MAX_LENGTH }).notNull(),
     centroid: jsonb("centroid").$type<TaxonomyCentroid>().notNull(),
@@ -53,7 +56,6 @@ export const taxonomyClusters = latitudeSchema.table(
   (t) => [
     organizationRLSPolicy("taxonomy_clusters"),
     index("taxonomy_clusters_project_state_idx").on(t.organizationId, t.projectId, t.state, t.lastObservedAt),
-    index("taxonomy_clusters_parent_category_idx").on(t.organizationId, t.projectId, t.parentCategoryId),
     index("taxonomy_clusters_search_document_idx").using("gin", t.searchDocument),
   ],
 )

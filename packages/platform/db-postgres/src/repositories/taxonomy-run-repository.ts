@@ -1,5 +1,5 @@
 import { NotFoundError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { type TaxonomyRun, TaxonomyRunRepository, taxonomyRunSchema } from "@domain/taxonomy"
+import { TaxonomyDimension, type TaxonomyRun, TaxonomyRunRepository, taxonomyRunSchema } from "@domain/taxonomy"
 import { and, desc, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -10,6 +10,7 @@ const toDomainRun = (row: typeof taxonomyRuns.$inferSelect): TaxonomyRun =>
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
+    dimension: TaxonomyDimension.Topic,
     trigger: row.trigger,
     status: row.status,
     startedAt: row.startedAt,
@@ -19,7 +20,6 @@ const toDomainRun = (row: typeof taxonomyRuns.$inferSelect): TaxonomyRun =>
     clustersBorn: row.clustersBorn,
     clustersMerged: row.clustersMerged,
     clustersDeprecated: row.clustersDeprecated,
-    categoriesRebuilt: row.categoriesRebuilt,
     error: row.error,
   })
 
@@ -36,7 +36,6 @@ const toInsertRow = (run: TaxonomyRun): typeof taxonomyRuns.$inferInsert => ({
   clustersBorn: run.clustersBorn,
   clustersMerged: run.clustersMerged,
   clustersDeprecated: run.clustersDeprecated,
-  categoriesRebuilt: run.categoriesRebuilt,
   error: run.error,
 })
 
@@ -145,7 +144,6 @@ export const TaxonomyRunRepositoryLive = Layer.effect(
                   clustersBorn: row.clustersBorn,
                   clustersMerged: row.clustersMerged,
                   clustersDeprecated: row.clustersDeprecated,
-                  categoriesRebuilt: row.categoriesRebuilt,
                   error: row.error,
                 },
               }),

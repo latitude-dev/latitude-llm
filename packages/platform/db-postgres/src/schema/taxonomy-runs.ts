@@ -18,7 +18,6 @@ export const taxonomyRuns = latitudeSchema.table(
     clustersBorn: integer("clusters_born").notNull().default(0),
     clustersMerged: integer("clusters_merged").notNull().default(0),
     clustersDeprecated: integer("clusters_deprecated").notNull().default(0),
-    categoriesRebuilt: integer("categories_rebuilt").notNull().default(0),
     error: text("error"),
   },
   (t) => [

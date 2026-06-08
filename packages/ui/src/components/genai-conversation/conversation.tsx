@@ -106,6 +106,7 @@ export function Conversation({
   firstMatchHint,
   onAnnotationClick,
   messageAnnotationSlot,
+  messageTrailingSlot,
 }: {
   readonly messages: readonly (GenAIMessage | null)[]
   readonly enableNavigator?: boolean
@@ -142,6 +143,8 @@ export function Conversation({
   readonly onAnnotationClick?: ((annotationId: string, position: { x: number; y: number }) => void) | undefined
   /** Renders a slot below each message. Receives the original messageIndex and role. */
   readonly messageAnnotationSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
+  /** Renders a full-width slot below each message (e.g. semantic moment markers). Receives the original messageIndex and role. */
+  readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
 }) {
   const internalNavItemRefs = useRef<(HTMLDivElement | null)[]>([])
   // If the parent provides navItemRefsRef it owns the ScrollNavigator; use their ref directly.
@@ -253,6 +256,7 @@ export function Conversation({
           const isAssistant = message.role === "assistant"
           const isUser = message.role === "user"
           const annotationSlot = messageAnnotationSlot?.(index, message.role)
+          const trailingSlot = messageTrailingSlot?.(index, message.role)
 
           return (
             <div
@@ -290,6 +294,7 @@ export function Conversation({
                   {annotationSlot && <div className="mt-3">{annotationSlot}</div>}
                 </div>
               )}
+              {trailingSlot && <div className="mt-3 min-w-0">{trailingSlot}</div>}
             </div>
           )
         })

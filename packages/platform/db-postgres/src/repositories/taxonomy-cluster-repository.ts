@@ -7,9 +7,10 @@ import {
   TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY,
   type TaxonomyCluster,
   TaxonomyClusterRepository,
+  TaxonomyDimension,
   taxonomyClusterSchema,
 } from "@domain/taxonomy"
-import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, like, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { taxonomyClusters } from "../schema/taxonomy-clusters.ts"
@@ -19,7 +20,11 @@ const toDomainCluster = (row: typeof taxonomyClusters.$inferSelect): TaxonomyClu
     id: row.id,
     organizationId: row.organizationId,
     projectId: row.projectId,
-    parentCategoryId: row.parentCategoryId,
+    dimension: TaxonomyDimension.Topic,
+    parentClusterId: row.parentClusterId,
+    depth: row.depth,
+    path: row.path,
+    splitLinkThreshold: row.splitLinkThreshold,
     name: row.name,
     description: row.description,
     centroid: row.centroid,
@@ -94,7 +99,10 @@ const toInsertRow = (
   id: cluster.id,
   organizationId: cluster.organizationId,
   projectId: cluster.projectId,
-  parentCategoryId: cluster.parentCategoryId,
+  parentClusterId: cluster.parentClusterId,
+  depth: cluster.depth,
+  path: cluster.path,
+  splitLinkThreshold: cluster.splitLinkThreshold,
   name: cluster.name,
   description: cluster.description,
   centroid: cluster.centroid,
@@ -146,7 +154,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map(toDomainCluster)
         }),
 
-      listActiveByProject: ({ projectId }) =>
+      listActiveByProject: ({ projectId, parentClusterId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const rows = yield* sqlClient.query((db, organizationId) =>
@@ -158,6 +166,11 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   eq(taxonomyClusters.organizationId, organizationId),
                   eq(taxonomyClusters.projectId, projectId),
                   eq(taxonomyClusters.state, "active"),
+                  ...(parentClusterId === undefined
+                    ? []
+                    : parentClusterId === null
+                      ? [isNull(taxonomyClusters.parentClusterId)]
+                      : [eq(taxonomyClusters.parentClusterId, parentClusterId)]),
                 ),
               )
               .orderBy(desc(taxonomyClusters.observationCount), asc(taxonomyClusters.id)),
@@ -165,7 +178,26 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map(toDomainCluster)
         }),
 
-      listNearestActive: ({ projectId, queryVector, k }) =>
+      listSubtreeIds: ({ projectId, clusterId }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select({ id: taxonomyClusters.id })
+              .from(taxonomyClusters)
+              .where(
+                and(
+                  eq(taxonomyClusters.organizationId, organizationId),
+                  eq(taxonomyClusters.projectId, projectId),
+                  eq(taxonomyClusters.state, "active"),
+                  or(eq(taxonomyClusters.id, clusterId), like(taxonomyClusters.path, `%${clusterId}/%`)),
+                ),
+              ),
+          )
+          return rows.map((row) => TaxonomyClusterId(row.id))
+        }),
+
+      listNearestActive: ({ projectId, queryVector, k, parentClusterId }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const vector = yield* toVectorLiteral(queryVector, "TaxonomyClusterRepository.listNearestActive")
@@ -181,6 +213,11 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   eq(taxonomyClusters.projectId, projectId),
                   eq(taxonomyClusters.state, "active"),
                   isNotNull(taxonomyClusters.centroidEmbedding),
+                  ...(parentClusterId === undefined
+                    ? []
+                    : parentClusterId === null
+                      ? [isNull(taxonomyClusters.parentClusterId)]
+                      : [eq(taxonomyClusters.parentClusterId, parentClusterId)]),
                 ),
               )
               .orderBy(desc(cosine), asc(taxonomyClusters.id))
@@ -190,7 +227,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map((row) => ({ cluster: toDomainCluster(row), cosine: row.cosine }))
         }),
 
-      hybridSearch: ({ projectId, query, normalizedEmbedding, state, parentCategoryId, limit, offset }) =>
+      hybridSearch: ({ projectId, query, normalizedEmbedding, state, limit, offset }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const vector = yield* toVectorLiteral(normalizedEmbedding, "TaxonomyClusterRepository.hybridSearch")
@@ -209,7 +246,6 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
             isNotNull(taxonomyClusters.centroidEmbedding),
             or(gte(score, TAXONOMY_SEARCH_MIN_SCORE), gte(vectorScore, TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY)),
           ]
-          if (parentCategoryId) conditions.push(eq(taxonomyClusters.parentCategoryId, parentCategoryId))
 
           const rows = yield* sqlClient.query((db) =>
             db
@@ -229,7 +265,7 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
           return rows.map((row) => ({ ...row, clusterId: TaxonomyClusterId(row.clusterId) }))
         }),
 
-      list: ({ projectId, state, parentCategoryId, sort, limit, offset }) =>
+      list: ({ projectId, state, sort, limit, offset }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const conditions = [
@@ -237,7 +273,6 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
             eq(taxonomyClusters.projectId, projectId),
           ]
           if (state) conditions.push(eq(taxonomyClusters.state, state))
-          if (parentCategoryId !== undefined) conditions.push(eq(taxonomyClusters.parentCategoryId, parentCategoryId))
 
           const orderBy = (() => {
             switch (sort ?? "observation_count_desc") {
@@ -286,7 +321,10 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                 target: taxonomyClusters.id,
                 set: {
                   projectId: row.projectId,
-                  parentCategoryId: row.parentCategoryId,
+                  parentClusterId: row.parentClusterId,
+                  depth: row.depth,
+                  path: row.path,
+                  splitLinkThreshold: row.splitLinkThreshold,
                   name: row.name,
                   description: row.description,
                   centroid: row.centroid,
@@ -300,29 +338,6 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
                   updatedAt: row.updatedAt,
                 },
               }),
-          )
-        }),
-
-      bulkUpdateParentCategory: ({ projectId, assignments }) =>
-        Effect.gen(function* () {
-          if (assignments.length === 0) return
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const updatedAt = new Date()
-          const valuesSql = sql.join(
-            assignments.map(
-              (assignment) => sql`(${assignment.clusterId}::varchar, ${assignment.parentCategoryId ?? null}::varchar)`,
-            ),
-            sql.raw(", "),
-          )
-          yield* sqlClient.query((db, organizationId) =>
-            db.execute(sql`
-              UPDATE ${taxonomyClusters}
-              SET parent_category_id = v.parent_category_id, updated_at = ${updatedAt}
-              FROM (VALUES ${valuesSql}) AS v(cluster_id, parent_category_id)
-              WHERE ${taxonomyClusters.organizationId} = ${organizationId}
-                AND ${taxonomyClusters.projectId} = ${projectId}
-                AND ${taxonomyClusters.id} = v.cluster_id
-            `),
           )
         }),
 
@@ -344,21 +359,6 @@ export const TaxonomyClusterRepositoryLive = Layer.effect(
             db
               .update(taxonomyClusters)
               .set({ state: "deprecated", updatedAt: timestamp })
-              .where(and(eq(taxonomyClusters.organizationId, organizationId), eq(taxonomyClusters.id, clusterId))),
-          )
-        }),
-
-      incrementObservationCount: ({ clusterId, delta, lastObservedAt }) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          yield* sqlClient.query((db, organizationId) =>
-            db
-              .update(taxonomyClusters)
-              .set({
-                observationCount: sql`${taxonomyClusters.observationCount} + ${delta}`,
-                lastObservedAt,
-                updatedAt: lastObservedAt,
-              })
               .where(and(eq(taxonomyClusters.organizationId, organizationId), eq(taxonomyClusters.id, clusterId))),
           )
         }),

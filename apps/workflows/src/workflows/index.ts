@@ -1,3 +1,8 @@
+export {
+  type AnalyzeSessionWorkflowInput,
+  type AnalyzeSessionWorkflowResult,
+  analyzeSessionWorkflow,
+} from "./analyze-session-workflow.ts"
 export { publishAnnotationWorkflow } from "./annotation-publication-workflow.ts"
 export { assignScoreToKnownIssueWorkflow } from "./assign-score-to-known-issue-workflow.ts"
 export { type BillingOverageWorkflowInput, billingOverageWorkflow } from "./billing-overage-workflow.ts"
@@ -13,10 +18,12 @@ export {
 } from "./refresh-evaluation-alignment-workflow.ts"
 export { type SeedDemoProjectWorkflowInput, seedDemoProjectWorkflow } from "./seed-demo-project-workflow.ts"
 export {
-  type TaxonomyNameCategoryWorkflowInput,
-  type TaxonomyNameCategoryWorkflowResult,
-  type TaxonomyNameClusterWorkflowInput,
-  type TaxonomyNameClusterWorkflowResult,
-  taxonomyNameCategoryWorkflow,
-  taxonomyNameClusterWorkflow,
-} from "./taxonomy-naming-workflow.ts"
+  type BackfillSessionIntelligenceWorkflowInput,
+  type BackfillSessionIntelligenceWorkflowResult,
+  backfillSessionIntelligenceWorkflow,
+} from "./session-intelligence-backfill-workflow.ts"
+export {
+  type GardenTaxonomyWorkflowInput,
+  type GardenTaxonomyWorkflowResult,
+  gardenTaxonomyWorkflow,
+} from "./taxonomy-gardening-workflow.ts"

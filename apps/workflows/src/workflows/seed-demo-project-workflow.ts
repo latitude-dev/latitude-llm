@@ -1,6 +1,7 @@
-import { patched, proxyActivities } from "@temporalio/workflow"
+import { executeChild, patched, proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
+import { gardenTaxonomyWorkflow } from "./taxonomy-gardening-workflow.ts"
 
 /**
  * Seeds the base demo content and the derived read models that make the
@@ -40,15 +41,11 @@ import { defaultActivityRetryPolicy } from "./retry-policy.ts"
  * use-case created it) but its content is partial. Operators clean up
  * via the existing `softDeleteProject` admin server function.
  */
-const {
-  seedDemoProjectPostgresActivity,
-  seedDemoProjectClickHouseActivity,
-  seedDemoProjectTraceSearchActivity,
-  seedDemoProjectTaxonomyActivity,
-} = proxyActivities<typeof activities>({
-  startToCloseTimeout: "30 minutes",
-  retry: { ...defaultActivityRetryPolicy, nonRetryableErrorTypes: ["SeedError"] },
-})
+const { seedDemoProjectPostgresActivity, seedDemoProjectClickHouseActivity, seedDemoProjectTraceSearchActivity } =
+  proxyActivities<typeof activities>({
+    startToCloseTimeout: "30 minutes",
+    retry: { ...defaultActivityRetryPolicy, nonRetryableErrorTypes: ["SeedError"] },
+  })
 
 export interface SeedDemoProjectWorkflowInput {
   readonly organizationId: string
@@ -84,7 +81,14 @@ export const seedDemoProjectWorkflow = async (input: SeedDemoProjectWorkflowInpu
   // history can finish replaying without scheduling the derived-data steps.
   if (patched("seed-demo-project-derived-search-taxonomy-v1")) {
     await seedDemoProjectTraceSearchActivity(input)
-    await seedDemoProjectTaxonomyActivity(input)
+    // Gardening runs through the same Temporal workflow as production; the
+    // legacy in-activity orchestrator is gone.
+    await executeChild(gardenTaxonomyWorkflow, {
+      args: [
+        { organizationId: input.organizationId, projectId: input.projectId, dimension: "topic", trigger: "manual" },
+      ],
+      workflowId: `org:${input.organizationId}:taxonomy:garden:${input.projectId}:seed`,
+    })
   }
 
   return { action: "seeded" as const, projectId: input.projectId }

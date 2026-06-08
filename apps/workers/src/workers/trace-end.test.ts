@@ -6,6 +6,7 @@ import {
   evaluationSchema,
 } from "@domain/evaluations"
 import { createIssueCentroid } from "@domain/issues"
+import type { WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { evaluationScoreSchema } from "@domain/scores"
 import type { FilterSet } from "@domain/shared"
@@ -60,6 +61,26 @@ const toMessageJson = (role: "user" | "assistant", content: string) =>
   JSON.stringify([{ role, parts: [{ type: "text", content }] }])
 
 const toSystemJson = (content: string) => JSON.stringify([{ type: "text", content }])
+
+const createFakeWorkflowStarter = () => {
+  const started: Array<{
+    readonly workflow: string
+    readonly input: unknown
+    readonly options: unknown
+    readonly mode: "start" | "signalWithStart"
+  }> = []
+  const workflowStarter: WorkflowStarterShape = {
+    start: (workflow, input, options) =>
+      Effect.sync(() => {
+        started.push({ workflow, input, options, mode: "start" })
+      }) as never,
+    signalWithStart: (workflow, input, options) =>
+      Effect.sync(() => {
+        started.push({ workflow, input, options, mode: "signalWithStart" })
+      }),
+  }
+  return { workflowStarter, started }
+}
 
 const makeTraceRow = (input?: {
   readonly traceId?: string
@@ -290,6 +311,7 @@ describe("createTraceEndWorker", () => {
     const consumer = new TestQueueConsumer()
     const { publisher } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()
+    const { workflowStarter } = createFakeWorkflowStarter()
 
     createTraceEndWorker({
       consumer,
@@ -297,6 +319,7 @@ describe("createTraceEndWorker", () => {
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       redisClient,
+      workflowStarter,
     })
 
     expect(consumer.getRegisteredTasks("trace-end")).toEqual(["run"])
@@ -307,6 +330,7 @@ describe("runTraceEndJob", () => {
   it("skips when the trace no longer exists", async () => {
     const { publisher, published } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()
+    const { workflowStarter } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
@@ -314,6 +338,7 @@ describe("runTraceEndJob", () => {
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
+        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -392,6 +417,7 @@ describe("runTraceEndJob", () => {
 
     const { publisher, published } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()
+    const { workflowStarter, started } = createFakeWorkflowStarter()
 
     const result = await Effect.runPromise(
       runTraceEndJob({
@@ -399,6 +425,7 @@ describe("runTraceEndJob", () => {
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
+        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId: PROJECT_ID,
@@ -466,6 +493,27 @@ describe("runTraceEndJob", () => {
       ]),
     )
 
+    expect(started).toEqual([
+      {
+        workflow: "analyzeSessionWorkflow",
+        mode: "signalWithStart",
+        input: {
+          organizationId: ORGANIZATION_ID,
+          projectId: PROJECT_ID,
+          sessionId: SESSION_ID,
+          triggeringTraceId: TRACE_ID,
+          triggeringStartTime: TIMESTAMP.toISOString(),
+          reason: "trace_completed",
+          debounceMs: 5 * 60_000,
+        },
+        options: {
+          workflowId: `org:${ORGANIZATION_ID}:conversation-intelligence:analyzeSession:${PROJECT_ID}:${SESSION_ID}`,
+          signal: "traceCompleted",
+          signalArgs: [{ debounceMs: 5 * 60_000 }],
+        },
+      },
+    ])
+
     const queueItems = await pg.db.select().from(annotationQueueItems)
     expect(queueItems).toHaveLength(1)
     expect(queueItems[0]?.queueId).toBe("q".repeat(24))
@@ -530,6 +578,7 @@ describe("createRunHandler", () => {
 
     const { publisher } = createFakeQueuePublisher()
     const redisClient = createFakeRedisClient()
+    const { workflowStarter } = createFakeWorkflowStarter()
     const log = createMockLogger()
 
     await Effect.runPromise(
@@ -539,6 +588,7 @@ describe("createRunHandler", () => {
         postgresClient: pg.appPostgresClient,
         clickhouseClient: ch.client,
         redisClient,
+        workflowStarter,
       })({
         organizationId: ORGANIZATION_ID,
         projectId,

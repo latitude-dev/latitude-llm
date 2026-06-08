@@ -1,28 +1,35 @@
 import { AI } from "@domain/ai"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { OrganizationId, ProjectId, SessionId, TaxonomyClusterId, TraceId } from "@domain/shared"
 import {
-  BehaviorObservationRepository,
+  DistributedLockRepository,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  TaxonomyClusterId,
+  TaxonomyRunId,
+} from "@domain/shared"
+import { createFakeDistributedLockRepository } from "@domain/shared/testing"
+import {
   createTaxonomyCentroid,
-  TaxonomyCategoryRepository,
+  deprecateInactiveClustersUseCase,
+  emitLineageUseCase,
+  mergeNearDuplicateClustersUseCase,
+  nameClusterUseCase,
+  reassignNoiseToCurrentClustersUseCase,
+  recurseTreeClustersUseCase,
+  sweepNoiseAndBirthClustersUseCase,
   type TaxonomyCluster,
   TaxonomyClusterRepository,
   TaxonomyLineageRepository,
-  type TaxonomyObservation,
-  TaxonomyRunRepository,
+  type TaxonomyMomentObservation,
+  TaxonomyObservationRepository,
   updateTaxonomyCentroid,
 } from "@domain/taxonomy"
-import { BehaviorObservationRepositoryLive, type ClickHouseClient, withClickHouse } from "@platform/db-clickhouse"
-import {
-  TaxonomyCategoryRepositoryLive,
-  TaxonomyClusterRepositoryLive,
-  TaxonomyLineageRepositoryLive,
-  TaxonomyRunRepositoryLive,
-  withPostgres,
-} from "@platform/db-postgres"
+import { type ClickHouseClient, TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect, Layer } from "effect"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 const { mockAi, testEmbedding } = vi.hoisted(() => {
   const embedding = new Array(2048).fill(0)
@@ -40,11 +47,33 @@ const { mockAi, testEmbedding } = vi.hoisted(() => {
                     description: "Users ask for help canceling subscriptions.",
                   }).success
                 ? { name: "Cancellation", description: "Users ask for help canceling subscriptions." }
-                : {
-                    summary: "User asked to cancel and the assistant gave cancellation steps.",
-                    primaryActor: "both",
-                    intentTags: ["cancellation"],
-                  },
+                : input.schema.safeParse({
+                      userGoal: "Cancel a subscription",
+                      userGoalVariants: ["Cancel account"],
+                      agentPattern: "Assistant explains cancellation steps",
+                      commonFriction: "Users need help finding the cancellation path",
+                      outcomeSummary: "Most examples provide cancellation guidance",
+                      representativeQuotes: [{ quote: "I want to cancel" }],
+                      answerPatternStatus: "stable_answer_observed",
+                      answerConsistencyScore: 0.8,
+                      confidence: 0.9,
+                    }).success
+                  ? {
+                      userGoal: "Cancel a subscription",
+                      userGoalVariants: ["Cancel account"],
+                      agentPattern: "Assistant explains cancellation steps",
+                      commonFriction: "Users need help finding the cancellation path",
+                      outcomeSummary: "Most examples provide cancellation guidance",
+                      representativeQuotes: [{ quote: "I want to cancel" }],
+                      answerPatternStatus: "stable_answer_observed",
+                      answerConsistencyScore: 0.8,
+                      confidence: 0.9,
+                    }
+                  : {
+                      summary: "User asked to cancel and the assistant gave cancellation steps.",
+                      primaryActor: "both",
+                      intentTags: ["cancellation"],
+                    },
           ),
           tokens: 1,
           duration: 1,
@@ -65,7 +94,7 @@ vi.mock("@platform/ai", async () => {
   }
 })
 
-import { runGardenProjectJob, runGardenSweepJob, runObserveSessionJob } from "./taxonomy.ts"
+import { runGardenProjectJob, runGardenSweepJob } from "./taxonomy.ts"
 
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
@@ -74,75 +103,8 @@ const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
 const PROJECT_ID_2 = ProjectId("q".repeat(24))
 const PROJECT_ID_E2E = ProjectId("r".repeat(24))
-const SESSION_ID = "taxonomy-session-1"
-const TRACE_ID = "t".repeat(32)
 const CLUSTER_ID = TaxonomyClusterId("c".repeat(24))
 const START_TIME = new Date("2026-05-24T12:00:00.000Z")
-
-const toClickHouseDateTime = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
-const toMessageJson = (role: "user" | "assistant", content: string) =>
-  JSON.stringify([{ role, parts: [{ type: "text", content }] }])
-const toSystemJson = (content: string) => JSON.stringify([{ type: "text", content }])
-
-const makeSpanRow = (input: { readonly traceId: string; readonly sessionId: string }) => ({
-  organization_id: ORGANIZATION_ID as string,
-  project_id: PROJECT_ID as string,
-  session_id: input.sessionId,
-  user_id: "",
-  trace_id: input.traceId,
-  span_id: "s".repeat(16),
-  parent_span_id: "",
-  api_key_id: "test-api-key",
-  simulation_id: "",
-  start_time: toClickHouseDateTime(START_TIME),
-  end_time: toClickHouseDateTime(new Date(START_TIME.getTime() + 4_000)),
-  name: "taxonomy-test-root",
-  service_name: "taxonomy-test",
-  kind: 0,
-  status_code: 0,
-  status_message: "",
-  error_type: "",
-  tags: [],
-  metadata: {},
-  operation: "chat",
-  provider: "openai",
-  model: "gpt-test",
-  response_model: "gpt-test",
-  tokens_input: 64,
-  tokens_output: 48,
-  tokens_cache_read: 0,
-  tokens_cache_create: 0,
-  tokens_reasoning: 0,
-  cost_input_microcents: 0,
-  cost_output_microcents: 0,
-  cost_total_microcents: 0,
-  cost_is_estimated: 0,
-  time_to_first_token_ns: 0,
-  is_streaming: 0,
-  response_id: "",
-  finish_reasons: [],
-  input_messages: toMessageJson(
-    "user",
-    "I want to cancel my subscription. Please explain exactly how to cancel before renewal and how to confirm billing stops.",
-  ),
-  output_messages: toMessageJson(
-    "assistant",
-    "Open billing settings, choose manage plan, select cancel plan, confirm, and check your email for cancellation confirmation.",
-  ),
-  system_instructions: toSystemJson("You are a helpful assistant."),
-  tool_definitions: "",
-  tool_call_id: "",
-  tool_name: "",
-  tool_input: "",
-  tool_output: "",
-  attr_string: {},
-  attr_int: {},
-  attr_float: {},
-  attr_bool: {},
-  resource_string: {},
-  scope_name: "",
-  scope_version: "",
-})
 
 const createFakeRedisClient = () => {
   const values = new Map<string, string>()
@@ -176,17 +138,23 @@ const centroidFromTestEmbedding = (embedding = TEST_EMBEDDING) => {
   return withoutAnchor
 }
 
-const makeObservation = (index: number, projectId = PROJECT_ID, embedding = TEST_EMBEDDING): TaxonomyObservation => ({
+const makeObservation = (
+  index: number,
+  projectId = PROJECT_ID,
+  embedding = TEST_EMBEDDING,
+): TaxonomyMomentObservation => ({
   organizationId: ORGANIZATION_ID,
   projectId,
+  observationId: String(index).padStart(24, "o").slice(0, 24),
   sessionId: SessionId(`garden-session-${index}`),
+  analysisHash: String(index).repeat(64).slice(0, 64),
+  momentId: `moment-${index}`,
+  projectionMethod: "moment_text_embedding",
+  projectionHash: String(index).repeat(64).slice(0, 64),
+  projectionMetadata: { summary: `Garden observation ${index}` },
+  embedding,
   startTime: new Date(START_TIME.getTime() + index * 1000),
   endTime: new Date(START_TIME.getTime() + index * 1000 + 500),
-  traceIds: [TraceId(String(index).padStart(32, "g").slice(0, 32))],
-  summary: `Garden observation ${index}`,
-  summaryHash: String(index).repeat(64).slice(0, 64),
-  embedding,
-  embeddingModel: "voyage-4-large",
   assignedClusterId: null,
   assignmentConfidence: 0,
   assignmentMethod: "noise",
@@ -199,7 +167,11 @@ const makeCluster = (): TaxonomyCluster => ({
   id: CLUSTER_ID,
   organizationId: ORGANIZATION_ID,
   projectId: PROJECT_ID,
-  parentCategoryId: null,
+  dimension: "topic",
+  parentClusterId: null,
+  depth: 0,
+  path: "",
+  splitLinkThreshold: null,
   name: "Cancellation requests",
   description: "Users ask to cancel subscriptions.",
   centroid: centroidFromTestEmbedding(),
@@ -213,106 +185,55 @@ const makeCluster = (): TaxonomyCluster => ({
   updatedAt: START_TIME,
 })
 
-const insertSessionSpan = (traceId: string, sessionId: string) =>
-  ch.client.insert({ table: "spans", values: [makeSpanRow({ traceId, sessionId })], format: "JSONEachRow" })
-
-const runTaxonomyJob = (input: { readonly traceId: string; readonly sessionId: string }) =>
+/**
+ * Runs one garden pass by composing the same step use-cases the Temporal
+ * workflow schedules, in the same order — the legacy in-process orchestrator
+ * was removed with the category model.
+ */
+const gardenOnce = (runId: ReturnType<typeof TaxonomyRunId>) =>
   Effect.runPromise(
-    runObserveSessionJob(
-      {
-        organizationId: ORGANIZATION_ID,
-        projectId: PROJECT_ID,
-        sessionId: input.sessionId,
-        triggeringTraceId: input.traceId,
-        triggeringStartTime: START_TIME.toISOString(),
-      },
-      {
-        clickhouseClient: ch.client,
-        postgresClient: pg.appPostgresClient,
-        redisClient: createFakeRedisClient() as never,
-      },
+    Effect.gen(function* () {
+      const base = { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_E2E, runId }
+      const births = yield* sweepNoiseAndBirthClustersUseCase(base)
+      const merges = yield* mergeNearDuplicateClustersUseCase(base)
+      const deaths = yield* deprecateInactiveClustersUseCase(base)
+      yield* reassignNoiseToCurrentClustersUseCase(base)
+      const recursion = yield* recurseTreeClustersUseCase(base)
+      const lineage = [...births.lineage, ...merges.lineage, ...deaths.lineage, ...recursion.lineage]
+      yield* emitLineageUseCase({ transitions: lineage })
+      const bornClusterIds = new Set(
+        lineage.flatMap((row) =>
+          row.transitionType === "birth" || row.transitionType === "split" ? row.toClusterIds : [],
+        ),
+      )
+      for (const clusterId of bornClusterIds) {
+        yield* nameClusterUseCase({
+          organizationId: ORGANIZATION_ID,
+          projectId: PROJECT_ID_E2E,
+          clusterId: TaxonomyClusterId(clusterId),
+        })
+      }
+    }).pipe(
+      withPostgres(
+        Layer.mergeAll(TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive),
+        pg.appPostgresClient,
+        ORGANIZATION_ID,
+      ),
+      withClickHouse(TaxonomyObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID),
+      Effect.provide(Layer.succeed(AI, mockAi as never)),
+      Effect.provide(Layer.succeed(DistributedLockRepository, createFakeDistributedLockRepository().repository)),
     ),
   )
 
-const listNoise = (since: Date) =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const repo = yield* BehaviorObservationRepository
-      return yield* repo.listNoise({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, since })
-    }).pipe(withClickHouse(BehaviorObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
-  )
-
-const listClusterObservations = () =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const repo = yield* BehaviorObservationRepository
-      return yield* repo.listByCluster({
-        organizationId: ORGANIZATION_ID,
-        projectId: PROJECT_ID,
-        clusterId: CLUSTER_ID,
-        limit: 10,
-      })
-    }).pipe(withClickHouse(BehaviorObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
-  )
-
-const listLatestTaxonomyRun = () =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const repo = yield* TaxonomyRunRepository
-      return yield* repo.findLatestByProject({ projectId: PROJECT_ID })
-    }).pipe(withPostgres(TaxonomyRunRepositoryLive, pg.appPostgresClient, ORGANIZATION_ID)),
-  )
-
-describe("taxonomy observeSession worker", () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    vi.setSystemTime(START_TIME)
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it("writes a noise observation when no active clusters exist", async () => {
-    const traceId = TRACE_ID
-    await insertSessionSpan(traceId, SESSION_ID)
-
-    await runTaxonomyJob({ traceId, sessionId: SESSION_ID })
-
-    const rows = await listNoise(new Date("2026-05-24T00:00:00.000Z"))
-    expect(rows).toHaveLength(1)
-    expect(rows[0]?.sessionId).toBe(SESSION_ID)
-    expect(rows[0]?.assignmentMethod).toBe("noise")
-  })
-
-  it("assigns an observation to an existing active cluster", async () => {
-    const traceId = "u".repeat(32)
-    const sessionId = "taxonomy-session-2"
-    await insertSessionSpan(traceId, sessionId)
-
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* TaxonomyClusterRepository
-        yield* repo.save(makeCluster())
-      }).pipe(withPostgres(TaxonomyClusterRepositoryLive, pg.appPostgresClient, ORGANIZATION_ID)),
-    )
-
-    await runTaxonomyJob({ traceId, sessionId })
-
-    const rows = await listClusterObservations()
-    expect(rows).toHaveLength(1)
-    expect(rows[0]?.sessionId).toBe(sessionId)
-    expect(rows[0]?.assignmentMethod).toBe("centroid_online")
-  })
-
+describe("taxonomy gardening worker", () => {
   it("sweeps projects with enough observations and publishes throttled gardenProject jobs", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repo = yield* BehaviorObservationRepository
+        const repo = yield* TaxonomyObservationRepository
         for (let index = 100; index < 115; index++) {
           yield* repo.upsert(makeObservation(index))
         }
-      }).pipe(withClickHouse(BehaviorObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
+      }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
     )
     const queue = createFakeQueuePublisher()
     const adminPostgresClient = {
@@ -340,11 +261,11 @@ describe("taxonomy observeSession worker", () => {
   it("continues the garden sweep when one project publish fails", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repo = yield* BehaviorObservationRepository
+        const repo = yield* TaxonomyObservationRepository
         for (let index = 200; index < 215; index++) {
           yield* repo.upsert({ ...makeObservation(index), projectId: PROJECT_ID_2 })
         }
-      }).pipe(withClickHouse(BehaviorObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
+      }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
     )
     const queue = createFakeQueuePublisher()
     const publisher = {
@@ -376,43 +297,34 @@ describe("taxonomy observeSession worker", () => {
     expect(queue.published[0]).toMatchObject({ payload: { projectId: PROJECT_ID_2 } })
   })
 
-  it("runs end-to-end gardening with births, names, lineage, categories, and follow-up merge", async () => {
+  it("runs end-to-end gardening with births, names, lineage, and follow-up merge", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {
-        const repo = yield* BehaviorObservationRepository
+        const repo = yield* TaxonomyObservationRepository
+        const recent = new Date()
         for (let index = 300; index < 304; index++) {
-          yield* repo.upsert(makeObservation(index, PROJECT_ID_E2E))
+          yield* repo.upsert({
+            ...makeObservation(index, PROJECT_ID_E2E),
+            startTime: new Date(recent.getTime() + index * 1000),
+            endTime: new Date(recent.getTime() + index * 1000 + 500),
+          })
         }
-      }).pipe(withClickHouse(BehaviorObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
+      }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
     )
 
-    await Effect.runPromise(
-      runGardenProjectJob(
-        { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_E2E, reason: "manual" },
-        {
-          clickhouseClient: ch.client,
-          postgresClient: pg.appPostgresClient,
-          redisClient: createFakeRedisClient() as never,
-        },
-      ),
-    )
+    await gardenOnce(TaxonomyRunId("1".repeat(24)))
 
     const firstPass = await Effect.runPromise(
       Effect.gen(function* () {
         const clusters = yield* TaxonomyClusterRepository
-        const categories = yield* TaxonomyCategoryRepository
         const lineage = yield* TaxonomyLineageRepository
         return {
-          clusters: yield* clusters.listActiveByProject({ projectId: PROJECT_ID_E2E }),
-          categories: yield* categories.listByProject({
-            projectId: PROJECT_ID_E2E,
-            state: "active",
-          }),
-          lineage: yield* lineage.listRecent({ projectId: PROJECT_ID_E2E, limit: 10 }),
+          clusters: yield* clusters.listActiveByProject({ projectId: PROJECT_ID_E2E, dimension: "topic" }),
+          lineage: yield* lineage.listRecent({ projectId: PROJECT_ID_E2E, dimension: "topic", limit: 10 }),
         }
       }).pipe(
         withPostgres(
-          Layer.mergeAll(TaxonomyCategoryRepositoryLive, TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive),
+          Layer.mergeAll(TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive),
           pg.appPostgresClient,
           ORGANIZATION_ID,
         ),
@@ -421,9 +333,8 @@ describe("taxonomy observeSession worker", () => {
 
     expect(firstPass.clusters).toHaveLength(1)
     expect(firstPass.clusters[0]?.name).toBe("Cancellation")
-    expect(firstPass.clusters[0]?.parentCategoryId).toBeTruthy()
-    expect(firstPass.categories).toHaveLength(1)
-    expect(firstPass.categories[0]?.name).toBe("Cancellation")
+    expect(firstPass.clusters[0]?.parentClusterId).toBeNull()
+    expect(firstPass.clusters[0]?.depth).toBe(0)
     expect(firstPass.lineage.map((row) => row.transitionType)).toContain("birth")
 
     const mergeA = TaxonomyClusterId("m".repeat(24))
@@ -450,23 +361,14 @@ describe("taxonomy observeSession worker", () => {
       }).pipe(withPostgres(TaxonomyClusterRepositoryLive, pg.appPostgresClient, ORGANIZATION_ID)),
     )
 
-    await Effect.runPromise(
-      runGardenProjectJob(
-        { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_E2E, reason: "manual" },
-        {
-          clickhouseClient: ch.client,
-          postgresClient: pg.appPostgresClient,
-          redisClient: createFakeRedisClient() as never,
-        },
-      ),
-    )
+    await gardenOnce(TaxonomyRunId("2".repeat(24)))
 
     const secondPass = await Effect.runPromise(
       Effect.gen(function* () {
         const lineage = yield* TaxonomyLineageRepository
         const clusters = yield* TaxonomyClusterRepository
         return {
-          lineage: yield* lineage.listRecent({ projectId: PROJECT_ID_E2E, limit: 10 }),
+          lineage: yield* lineage.listRecent({ projectId: PROJECT_ID_E2E, dimension: "topic", limit: 10 }),
           mergeB: yield* clusters.findById(mergeB),
         }
       }).pipe(
@@ -482,15 +384,15 @@ describe("taxonomy observeSession worker", () => {
     expect(secondPass.mergeB.state).toBe("merged")
   })
 
-  it("adapts gardenProject reason into the taxonomy run trigger", async () => {
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* BehaviorObservationRepository
-        for (const index of [10, 11, 12, 13]) {
-          yield* repo.upsert(makeObservation(index))
-        }
-      }).pipe(withClickHouse(BehaviorObservationRepositoryLive, ch.client as ClickHouseClient, ORGANIZATION_ID)),
-    )
+  it("starts the garden workflow with the job reason as trigger", async () => {
+    const started: Array<{ readonly workflow: string; readonly input: unknown; readonly workflowId: string }> = []
+    const workflowStarter = {
+      start: (workflow: string, input: unknown, options: { readonly workflowId: string }) => {
+        started.push({ workflow, input, workflowId: options.workflowId })
+        return Effect.void
+      },
+      signalWithStart: () => Effect.void,
+    }
 
     await Effect.runPromise(
       runGardenProjectJob(
@@ -499,12 +401,17 @@ describe("taxonomy observeSession worker", () => {
           clickhouseClient: ch.client,
           postgresClient: pg.appPostgresClient,
           redisClient: createFakeRedisClient() as never,
+          workflowStarter: workflowStarter as never,
         },
       ),
     )
 
-    const run = await listLatestTaxonomyRun()
-    expect(run?.trigger).toBe("manual")
-    expect(run?.status).toBe("completed")
+    expect(started).toEqual([
+      {
+        workflow: "gardenTaxonomyWorkflow",
+        input: { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID, dimension: "topic", trigger: "manual" },
+        workflowId: `org:${ORGANIZATION_ID}:taxonomy:garden:${PROJECT_ID}`,
+      },
+    ])
   })
 })

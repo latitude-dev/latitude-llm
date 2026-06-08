@@ -453,13 +453,6 @@ const _registry = {
     gardenSweep: {
       readonly triggeredAt: string
     }
-    observeSession: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly sessionId: string
-      readonly triggeringTraceId: string
-      readonly triggeringStartTime: string
-    }
   }>(),
 
   billing: payloads<{

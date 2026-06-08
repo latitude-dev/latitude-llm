@@ -1,10 +1,12 @@
-import type { TraceFilterFieldName } from "@domain/shared"
+import type { SessionOnlyFilterFieldName, TraceFilterFieldName } from "@domain/shared"
 import type { ChFieldRegistry } from "../filter-builder.ts"
 import { buildStatusClause, mapDateTime64UtcQueryParam } from "./helpers.ts"
 
 type InternalField = "startTime"
 
-export const TRACE_FIELD_REGISTRY: ChFieldRegistry<TraceFilterFieldName | InternalField> = {
+export const TRACE_FIELD_REGISTRY: ChFieldRegistry<
+  Exclude<TraceFilterFieldName, SessionOnlyFilterFieldName> | InternalField
+> = {
   // `status` is synthetic on both tables — derived from `error_count` /
   // `span_count`. See `buildStatusClause` for the enum semantics. The previous
   // entry referenced `overall_status`, dropped in migration 00005.

@@ -1,32 +1,32 @@
 #!/usr/bin/env tsx
-import { QueuePublisher } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { SessionRepository } from "@domain/spans"
-import { TAXONOMY_OBSERVATION_DEBOUNCE_MS } from "@domain/taxonomy"
 import { createClickhouseClient, SessionRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
+import { createTemporalClient, createWorkflowStarter, loadTemporalConfig } from "@platform/workflows-temporal"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 
-loadDevelopmentEnvironments(import.meta.url)
+loadDevelopmentEnvironments(new URL("../../apps/workers/src/server.ts", import.meta.url).href)
 
 interface Args {
   readonly organizationId: string
   readonly projectId: string
   readonly dryRun: boolean
   readonly limit: number | undefined
+  readonly manualReprocess: boolean
 }
 
 const usage =
-  () => `Usage: pnpm --dir apps/workers exec tsx ../../scripts/taxonomy/rerun-project.ts --organization-id <orgId> --project-id <projectId> [--dry-run] [--limit <n>]
+  () => `Usage: pnpm --dir apps/workers exec tsx ../../scripts/taxonomy/rerun-project.ts --organization-id <orgId> --project-id <projectId> [--dry-run] [--limit <n>] [--manual-reprocess]
 
-Re-enqueues every ClickHouse session in a project through taxonomy:observeSession.
+Starts AnalyzeSessionWorkflow for every ClickHouse session in a project. The old taxonomy:observeSession queue path was removed by the session-moment taxonomy redesign.
 `
 
 const parseArgs = (argv: readonly string[]): Args => {
   let organizationId = ""
   let projectId = ""
   let dryRun = false
+  let manualReprocess = false
   let limit: number | undefined
 
   for (let index = 0; index < argv.length; index++) {
@@ -41,6 +41,9 @@ const parseArgs = (argv: readonly string[]): Args => {
         break
       case "--dry-run":
         dryRun = true
+        break
+      case "--manual-reprocess":
+        manualReprocess = true
         break
       case "--limit": {
         const parsed = Number.parseInt(argv[++index] ?? "", 10)
@@ -59,7 +62,7 @@ const parseArgs = (argv: readonly string[]): Args => {
   }
 
   if (!organizationId || !projectId) throw new Error("--organization-id and --project-id are required")
-  return { organizationId, projectId, dryRun, limit }
+  return { organizationId, projectId, dryRun, limit, manualReprocess }
 }
 
 const enqueueProjectSessions = (args: Args) =>
@@ -67,67 +70,65 @@ const enqueueProjectSessions = (args: Args) =>
     const organizationId = OrganizationId(args.organizationId)
     const projectId = ProjectId(args.projectId)
     const sessions = yield* SessionRepository
-    const publisher = yield* QueuePublisher
+    const temporalConfig = yield* Effect.sync(() => loadTemporalConfig())
+    const temporalClient = yield* Effect.promise(() => createTemporalClient(temporalConfig))
+    const workflowStarter = createWorkflowStarter(temporalClient, temporalConfig)
 
     let cursor: { readonly sortValue: string; readonly sessionId: string } | undefined
     let scanned = 0
-    let enqueued = 0
+    let started = 0
 
-    do {
-      const page = yield* sessions.listByProjectId({
-        organizationId,
-        projectId,
-        options: { limit: 500, cursor, sortBy: "lastActivity", sortDirection: "asc" },
-      })
-      for (const session of page.items) {
-        scanned++
-        if (args.limit !== undefined && scanned > args.limit) break
-        const triggeringTraceId = session.traceIds[0]
-        if (!triggeringTraceId) {
-          // recordSessionObservationUseCase requires a real trace anchor — an
-          // empty string flows through and corrupts the resulting CH row.
-          continue
+    try {
+      do {
+        const page = yield* sessions.listByProjectId({
+          organizationId,
+          projectId,
+          options: { limit: 500, cursor, sortBy: "lastActivity", sortDirection: "asc" },
+        })
+        for (const session of page.items) {
+          scanned++
+          if (args.limit !== undefined && scanned > args.limit) break
+          const triggeringTraceId = session.traceIds[0]
+          if (!triggeringTraceId) continue
+          if (!args.dryRun) {
+            yield* workflowStarter.signalWithStart(
+              "analyzeSessionWorkflow",
+              {
+                organizationId,
+                projectId,
+                sessionId: session.sessionId,
+                triggeringTraceId,
+                triggeringStartTime: session.startTime.toISOString(),
+                reason: args.manualReprocess ? "manual_reprocess" : "backfill",
+              },
+              {
+                workflowId: `org:${organizationId}:conversation-intelligence:analyzeSession:${projectId}:${session.sessionId}`,
+                signal: "refresh",
+                signalArgs: [],
+              },
+            )
+          }
+          started++
         }
-        if (!args.dryRun) {
-          yield* publisher.publish(
-            "taxonomy",
-            "observeSession",
-            {
-              organizationId,
-              projectId,
-              sessionId: session.sessionId,
-              triggeringTraceId,
-              triggeringStartTime: session.startTime.toISOString(),
-            },
-            {
-              dedupeKey: `org:${organizationId}:taxonomy:observeSession:${projectId}:${session.sessionId}`,
-              debounceMs: TAXONOMY_OBSERVATION_DEBOUNCE_MS,
-            },
-          )
-        }
-        enqueued++
-      }
-      if (args.limit !== undefined && scanned >= args.limit) break
-      cursor = page.nextCursor
-    } while (cursor !== undefined)
+        if (args.limit !== undefined && scanned >= args.limit) break
+        cursor = page.nextCursor
+      } while (cursor !== undefined)
+    } finally {
+      temporalClient.connection.close()
+    }
 
-    return { scanned: Math.min(scanned, args.limit ?? scanned), enqueued, dryRun: args.dryRun }
+    return { scanned: Math.min(scanned, args.limit ?? scanned), started, dryRun: args.dryRun }
   })
 
 const main = async () => {
   const args = parseArgs(process.argv.slice(2))
   const clickhouse = createClickhouseClient()
-  const publisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: Effect.runSync(loadBullMqConfig()) }))
   try {
     const result = await Effect.runPromise(
-      enqueueProjectSessions(args).pipe(
-        withClickHouse(SessionRepositoryLive, clickhouse, OrganizationId(args.organizationId)),
-        Effect.provide(Layer.succeed(QueuePublisher, publisher)),
-      ),
+      enqueueProjectSessions(args).pipe(withClickHouse(SessionRepositoryLive, clickhouse, OrganizationId(args.organizationId))),
     )
     console.log(JSON.stringify(result, null, 2))
   } finally {
-    await Effect.runPromise(publisher.close())
     await clickhouse.close()
   }
 }

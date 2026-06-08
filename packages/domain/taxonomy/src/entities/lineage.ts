@@ -1,6 +1,7 @@
 import { cuidSchema, taxonomyClusterIdSchema, taxonomyLineageIdSchema, taxonomyRunIdSchema } from "@domain/shared"
 import { z } from "zod"
 import { TAXONOMY_LINEAGE_TRANSITION_TYPES, TAXONOMY_RUN_STATUSES, TAXONOMY_RUN_TRIGGERS } from "../constants.ts"
+import { taxonomyDimensionSchema } from "./dimension.ts"
 
 export const taxonomyLineageTransitionTypeSchema = z.enum(TAXONOMY_LINEAGE_TRANSITION_TYPES)
 export type TaxonomyLineageTransitionType = z.infer<typeof taxonomyLineageTransitionTypeSchema>
@@ -17,6 +18,7 @@ export const taxonomyClusterLineageSchema = z.object({
   id: taxonomyLineageIdSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
+  dimension: taxonomyDimensionSchema,
   runId: taxonomyRunIdSchema,
   transitionType: taxonomyLineageTransitionTypeSchema,
   fromClusterIds: z.array(taxonomyClusterIdSchema),
@@ -48,6 +50,7 @@ export const taxonomyRunSchema = z.object({
   id: taxonomyRunIdSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
+  dimension: taxonomyDimensionSchema,
   trigger: taxonomyRunTriggerSchema,
   status: taxonomyRunStatusSchema,
   startedAt: z.date(),
@@ -57,7 +60,6 @@ export const taxonomyRunSchema = z.object({
   clustersBorn: z.number().int().nonnegative(),
   clustersMerged: z.number().int().nonnegative(),
   clustersDeprecated: z.number().int().nonnegative(),
-  categoriesRebuilt: z.number().int().nonnegative(),
   error: z.string().nullable(),
 })
 

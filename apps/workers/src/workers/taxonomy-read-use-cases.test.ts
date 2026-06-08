@@ -3,35 +3,27 @@ import {
   OrganizationId,
   ProjectId,
   SessionId,
-  TaxonomyCategoryId,
   TaxonomyClusterId,
   TaxonomyLineageId,
   TaxonomyRunId,
-  TraceId,
 } from "@domain/shared"
 import {
-  BehaviorObservationRepository,
   createTaxonomyCentroid,
-  getCategoryDetailsUseCase,
   getClusterDetailsUseCase,
   getLastRunUseCase,
   getTaxonomyAnalyticsUseCase,
-  listCategoriesUseCase,
-  listClustersInCategoryUseCase,
   listClustersUseCase,
   listObservationsInClusterUseCase,
-  type TaxonomyCategory,
-  TaxonomyCategoryRepository,
   type TaxonomyCluster,
   TaxonomyClusterRepository,
   TaxonomyLineageRepository,
-  type TaxonomyObservation,
+  type TaxonomyMomentObservation,
+  TaxonomyObservationRepository,
   TaxonomyRunRepository,
   updateTaxonomyCentroid,
 } from "@domain/taxonomy"
-import { BehaviorObservationRepositoryLive, type ClickHouseClient, withClickHouse } from "@platform/db-clickhouse"
+import { type ClickHouseClient, TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
-  TaxonomyCategoryRepositoryLive,
   TaxonomyClusterRepositoryLive,
   TaxonomyLineageRepositoryLive,
   TaxonomyRunRepositoryLive,
@@ -46,7 +38,6 @@ const ch = setupTestClickHouse()
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("s".repeat(24))
-const categoryId = TaxonomyCategoryId("c".repeat(24))
 const clusterId = TaxonomyClusterId("a".repeat(24))
 const runId = TaxonomyRunId("r".repeat(24))
 const now = new Date("2026-05-24T12:00:00.000Z")
@@ -71,26 +62,15 @@ const centroid = () => {
   return withoutAnchor
 }
 
-const category: TaxonomyCategory = {
-  id: categoryId,
-  organizationId,
-  projectId,
-  name: "Cancellation",
-  description: "Cancellation requests",
-  centroidEmbedding: embedding(),
-  clusterCount: 1,
-  observationCount: 2,
-  state: "active",
-  clusteredAt: now,
-  createdAt: now,
-  updatedAt: now,
-}
-
 const cluster: TaxonomyCluster = {
   id: clusterId,
   organizationId,
   projectId,
-  parentCategoryId: categoryId,
+  dimension: "topic",
+  parentClusterId: null,
+  depth: 0,
+  path: "",
+  splitLinkThreshold: null,
   name: "Billing cancellation",
   description: "Users ask to cancel subscriptions.",
   centroid: centroid(),
@@ -104,17 +84,19 @@ const cluster: TaxonomyCluster = {
   updatedAt: now,
 }
 
-const observation = (index: number): TaxonomyObservation => ({
+const observation = (index: number): TaxonomyMomentObservation => ({
   organizationId,
   projectId,
+  observationId: String(index).padStart(24, "o").slice(0, 24),
   sessionId: SessionId(`read-session-${index}`),
+  analysisHash: String(index).repeat(64).slice(0, 64),
+  momentId: `moment-${index}`,
+  projectionMethod: "moment_text_embedding",
+  projectionHash: String(index).repeat(64).slice(0, 64),
+  projectionMetadata: { summary: `Cancellation observation ${index}` },
+  embedding: embedding(),
   startTime: new Date(now.getTime() - index * 60_000),
   endTime: new Date(now.getTime() - index * 60_000 + 1000),
-  traceIds: [TraceId(String(index).padStart(32, "t").slice(0, 32))],
-  summary: `Cancellation observation ${index}`,
-  summaryHash: String(index).repeat(64).slice(0, 64),
-  embedding: embedding(),
-  embeddingModel: "voyage-4-large",
   assignedClusterId: clusterId,
   assignmentConfidence: 1,
   assignmentMethod: "centroid_online",
@@ -132,25 +114,19 @@ const ai: AIShape = {
   rerank: () => Effect.succeed([]),
 }
 
-const pgLayer = Layer.mergeAll(
-  TaxonomyCategoryRepositoryLive,
-  TaxonomyClusterRepositoryLive,
-  TaxonomyLineageRepositoryLive,
-  TaxonomyRunRepositoryLive,
-)
+const pgLayer = Layer.mergeAll(TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive, TaxonomyRunRepositoryLive)
 
 const seed = () =>
   Effect.gen(function* () {
-    const categories = yield* TaxonomyCategoryRepository
     const clusters = yield* TaxonomyClusterRepository
     const runs = yield* TaxonomyRunRepository
     const lineage = yield* TaxonomyLineageRepository
-    yield* categories.save(category)
     yield* clusters.save(cluster)
     yield* runs.save({
       id: runId,
       organizationId,
       projectId,
+      dimension: "topic",
       trigger: "manual",
       status: "completed",
       startedAt: now,
@@ -160,7 +136,6 @@ const seed = () =>
       clustersBorn: 1,
       clustersMerged: 0,
       clustersDeprecated: 0,
-      categoriesRebuilt: 1,
       error: null,
     })
     yield* lineage.appendMany([
@@ -168,6 +143,7 @@ const seed = () =>
         id: TaxonomyLineageId("l".repeat(24)),
         organizationId,
         projectId,
+        dimension: "topic",
         runId,
         transitionType: "birth",
         fromClusterIds: [],
@@ -180,10 +156,10 @@ const seed = () =>
 
 const seedObservations = () =>
   Effect.gen(function* () {
-    const observations = yield* BehaviorObservationRepository
+    const observations = yield* TaxonomyObservationRepository
     yield* observations.upsert(observation(0))
     yield* observations.upsert(observation(1))
-  }).pipe(withClickHouse(BehaviorObservationRepositoryLive, ch.client as ClickHouseClient, organizationId))
+  }).pipe(withClickHouse(TaxonomyObservationRepositoryLive, ch.client as ClickHouseClient, organizationId))
 
 describe("taxonomy read use-cases integration", () => {
   it("covers every P5 read use-case against PGlite and chdb-backed repositories", async () => {
@@ -193,34 +169,26 @@ describe("taxonomy read use-cases integration", () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         return {
-          categories: yield* listCategoriesUseCase({ organizationId, projectId }),
-          clustersInCategory: yield* listClustersInCategoryUseCase({ organizationId, projectId, categoryId }),
           clusters: yield* listClustersUseCase({ organizationId, projectId }),
           searchClusters: yield* listClustersUseCase({ organizationId, projectId, search: "cancel" }),
           clusterDetails: yield* getClusterDetailsUseCase({ organizationId, projectId, clusterId }),
-          categoryDetails: yield* getCategoryDetailsUseCase({ organizationId, projectId, categoryId }),
           observations: yield* listObservationsInClusterUseCase({ organizationId, projectId, clusterId, pageSize: 1 }),
           analytics: yield* getTaxonomyAnalyticsUseCase({ organizationId, projectId, windowDays: 1, now }),
           lastRun: yield* getLastRunUseCase({ organizationId, projectId }),
         }
       }).pipe(
         withPostgres(pgLayer, pg.appPostgresClient, organizationId),
-        withClickHouse(BehaviorObservationRepositoryLive, ch.client as ClickHouseClient, organizationId),
+        withClickHouse(TaxonomyObservationRepositoryLive, ch.client as ClickHouseClient, organizationId),
         Effect.provide(Layer.succeed(AI, ai)),
       ),
     )
 
-    expect(result.categories.categories.map((row) => row.id)).toContain(categoryId)
-    expect(result.clustersInCategory.items.map((row) => row.id)).toContain(clusterId)
     expect(result.clusters.items.map((row) => row.id)).toContain(clusterId)
     expect(result.searchClusters.items.map((row) => row.id)).toContain(clusterId)
     expect(result.clusterDetails.cluster.id).toBe(clusterId)
     expect(result.clusterDetails.recentObservations).toHaveLength(2)
-    expect(result.categoryDetails.category.id).toBe(categoryId)
-    expect(result.categoryDetails.clusters.map((row) => row.id)).toContain(clusterId)
     expect(result.observations.observations).toHaveLength(1)
     expect(result.observations.hasMore).toBe(true)
-    expect(result.analytics.totalActiveCategories).toBeGreaterThanOrEqual(1)
     expect(result.analytics.topClusters[0]?.cluster.id).toBe(clusterId)
     expect(result.lastRun.run?.id).toBe(runId)
     expect(result.lastRun.lineage.map((row) => row.transitionType)).toEqual(["birth"])

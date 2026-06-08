@@ -1,5 +1,6 @@
 import type { ProjectId, RepositoryError, SqlClient } from "@domain/shared"
 import { Context, type Effect } from "effect"
+import type { TaxonomyDimension } from "../entities/dimension.ts"
 import type { TaxonomyClusterLineage, TaxonomyLineageTransitionType } from "../entities/lineage.ts"
 
 export interface TaxonomyLineageRepositoryShape {
@@ -11,10 +12,12 @@ export interface TaxonomyLineageRepositoryShape {
    */
   listRecent(input: {
     readonly projectId: ProjectId
+    readonly dimension: TaxonomyDimension
     readonly limit: number
   }): Effect.Effect<readonly TaxonomyClusterLineage[], RepositoryError, SqlClient>
   listRecentByTransitionTypes(input: {
     readonly projectId: ProjectId
+    readonly dimension: TaxonomyDimension
     readonly transitionTypes: readonly TaxonomyLineageTransitionType[]
     readonly limit: number
   }): Effect.Effect<readonly TaxonomyClusterLineage[], RepositoryError, SqlClient>

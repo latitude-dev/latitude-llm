@@ -26,6 +26,7 @@ import { Effect } from "effect"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
+import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
 import { MAX_SEARCH_CANDIDATES, planSearch, type SearchPlan } from "./search-plan.ts"
 
 /**
@@ -187,7 +188,13 @@ export type FetchFullSessions = (
  * finalized aggregate columns projected inside `trace_rollup` itself.
  */
 const buildSearchFilters = (filters: FilterSet | undefined) => {
-  const { telemetryFilters, scoreFilters } = splitScoreFilters(filters)
+  // Conversation-intelligence filters (moments/topics) must be peeled off
+  // BEFORE the field registry sees the set: they are not registry fields and
+  // would be silently skipped, making the search path disagree with the
+  // metrics/histogram panels. They compile to session_id IN (...) clauses
+  // that resolve against the rollup's session_id in the HAVING.
+  const ci = buildSessionIntelligenceFilters(filters)
+  const { telemetryFilters, scoreFilters } = splitScoreFilters(ci.rest)
   const telemetry = telemetryFilters
     ? buildClickHouseWhere(telemetryFilters, SESSION_FIELD_REGISTRY)
     : { clauses: [], params: {} }
@@ -198,8 +205,9 @@ const buildSearchFilters = (filters: FilterSet | undefined) => {
     traceScoreWhere = `AND ${result.subquery}`
     scoreParams = result.params
   }
-  const finalHaving = telemetry.clauses.length > 0 ? `HAVING ${telemetry.clauses.join(" AND ")}` : ""
-  return { telemetryParams: telemetry.params, traceScoreWhere, scoreParams, finalHaving }
+  const havingClauses = [...telemetry.clauses, ...ci.clauses]
+  const finalHaving = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+  return { telemetryParams: { ...telemetry.params, ...ci.params }, traceScoreWhere, scoreParams, finalHaving }
 }
 
 type SearchCandidate = { trace_id: string; relevance_score: number }

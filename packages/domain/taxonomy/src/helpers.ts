@@ -1,87 +1,15 @@
-import type { TraceId } from "@domain/shared"
 import { createCentroid, mergeCentroids, normalizeCentroid, normalizeEmbedding, updateCentroid } from "@domain/shared"
 import {
   TAXONOMY_CENTROID_HALF_LIFE_SECONDS,
   TAXONOMY_EMBEDDING_DIMENSIONS,
   TAXONOMY_EMBEDDING_MODEL,
   TAXONOMY_OBSERVATION_WEIGHT_SCHEME,
-  TAXONOMY_SESSION_DOCUMENT_MAX_LENGTH,
+  TAXONOMY_PENDING_DISPLAY_NAME,
   type TaxonomyObservationWeightScheme,
 } from "./constants.ts"
 import type { TaxonomyCentroid } from "./entities/cluster.ts"
 
-interface BuildSessionDocumentInput {
-  readonly sessionId: string
-  readonly messages: readonly unknown[]
-  readonly traceIds: readonly TraceId[]
-}
-
-export interface SessionDocument {
-  readonly conversationText: string
-  readonly summaryPreview: string
-  readonly primaryActor: "user" | "agent" | "both"
-  readonly traceCount: number
-  readonly firstTraceId: TraceId | null
-  readonly lastTraceId: TraceId | null
-}
-
-const middleTruncate = (value: string, maxLength: number): string => {
-  if (value.length <= maxLength) return value
-  const head = Math.floor((maxLength - 15) / 2)
-  const tail = maxLength - 15 - head
-  return `${value.slice(0, head)}\n[...truncated...]\n${value.slice(value.length - tail)}`
-}
-
-const stringifyPart = (part: unknown): string => {
-  if (part === null || typeof part !== "object") return ""
-  const p = part as Record<string, unknown>
-  if (p.type === "text" && typeof p.content === "string") return p.content
-  if (p.type === "tool_call") return `[TOOL CALL: ${typeof p.name === "string" ? p.name : "unknown"}]`
-  if (p.type === "tool_call_response") return ""
-  if (typeof p.content === "string") return p.content
-  return ""
-}
-
-const messageRole = (message: unknown): "user" | "assistant" | null => {
-  if (message === null || typeof message !== "object") return null
-  const role = (message as { readonly role?: unknown }).role
-  return role === "user" || role === "assistant" ? role : null
-}
-
-const messageText = (message: unknown): string => {
-  if (message === null || typeof message !== "object") return ""
-  const parts = (message as { readonly parts?: unknown }).parts
-  if (!Array.isArray(parts)) return ""
-  return parts.map(stringifyPart).filter(Boolean).join("\n").trim()
-}
-
-export const buildSessionDocument = (input: BuildSessionDocumentInput): SessionDocument => {
-  let userTurns = 0
-  let assistantTurns = 0
-  const lines: string[] = []
-
-  for (const message of input.messages) {
-    const role = messageRole(message)
-    if (role === null) continue
-    const text = messageText(message)
-    if (text.length === 0) continue
-    if (role === "user") userTurns++
-    if (role === "assistant") assistantTurns++
-    lines.push(`${role === "user" ? "User" : "Assistant"}: ${text}`)
-  }
-
-  const conversationText = middleTruncate(lines.join("\n\n"), TAXONOMY_SESSION_DOCUMENT_MAX_LENGTH)
-  const primaryActor = userTurns > 0 && assistantTurns > 0 ? "both" : userTurns > 0 ? "user" : "agent"
-
-  return {
-    conversationText,
-    summaryPreview: conversationText.slice(0, 280),
-    primaryActor,
-    traceCount: input.traceIds.length,
-    firstTraceId: input.traceIds[0] ?? null,
-    lastTraceId: input.traceIds[input.traceIds.length - 1] ?? null,
-  }
-}
+export const isDisplayableTaxonomyName = (name: string): boolean => name !== TAXONOMY_PENDING_DISPLAY_NAME
 
 // ---------------------------------------------------------------------------
 // Centroid wrappers — taxonomy-shaped delegators to @domain/shared/centroid.
@@ -222,17 +150,19 @@ export const softmax = (values: readonly number[], temperature: number): number[
 }
 
 // ---------------------------------------------------------------------------
-// Single-linkage agglomerative clustering — the noise-sweep births pass.
+// Diameter-bounded greedy clustering — births and tree recursion.
 // ---------------------------------------------------------------------------
 
-export interface SingleLinkageCandidate {
+interface SingleLinkageCandidate {
   /** Indices into the original `embeddings` array. */
   readonly members: readonly number[]
   /** Max pairwise cosine *distance* (1 - cosine) between any two members. */
   readonly diameter: number
 }
 
-export interface SingleLinkageClustersInput {
+interface DiameterBoundedClusterCandidate extends SingleLinkageCandidate {}
+
+interface SingleLinkageClustersInput {
   /**
    * Already-normalized 2048-dim vectors (or whatever the embedding model
    * emits). Caller normalizes once at load time; this routine assumes dot
@@ -253,186 +183,89 @@ export interface SingleLinkageClustersInput {
  * Naive `O(n²)` pairwise scan — fine at MVP scale (a few thousand noise
  * embeddings per pass). The diameter check cuts single-linkage chains that
  * would otherwise string two unrelated topics through a thin bridge of
- * members. See `specs/live-taxonomy.md#a-noise-sweep-cluster-births`.
+ * members. See `dev-docs/taxonomy.md`.
  */
-export const singleLinkageClusters = (input: SingleLinkageClustersInput): readonly SingleLinkageCandidate[] => {
+export const diameterBoundedGreedyClusters = (
+  input: SingleLinkageClustersInput,
+): readonly DiameterBoundedClusterCandidate[] => {
   const { embeddings, connectivityThreshold, minMembers, maxDiameter } = input
-  const n = embeddings.length
-  if (n === 0 || minMembers <= 0) return []
+  if (embeddings.length === 0 || minMembers <= 0) return []
 
-  // Union-find by rank.
-  const parent = new Array<number>(n)
-  const rank = new Array<number>(n).fill(0)
-  for (let i = 0; i < n; i++) parent[i] = i
+  const minAnchorSimilarity = 1 - maxDiameter
+  const maxAnchors = 12
+  const working: {
+    members: number[]
+    sum: number[]
+    centroid: number[]
+    anchors: number[]
+  }[] = []
 
-  const find = (x: number): number => {
-    let root = x
-    while (parent[root] !== root) root = parent[root] ?? root
-    let node = x
-    while (parent[node] !== root) {
-      const next = parent[node] ?? node
-      parent[node] = root
-      node = next
+  const addToCluster = (cluster: (typeof working)[number], index: number, embedding: readonly number[]) => {
+    cluster.members.push(index)
+    if (cluster.sum.length === 0) cluster.sum = [...embedding]
+    else {
+      for (let dimension = 0; dimension < embedding.length; dimension++) {
+        cluster.sum[dimension] = (cluster.sum[dimension] ?? 0) + (embedding[dimension] ?? 0)
+      }
     }
-    return root
+    cluster.centroid = normalizeEmbedding(cluster.sum)
+    if (cluster.anchors.length < maxAnchors) cluster.anchors.push(index)
   }
 
-  const union = (a: number, b: number): void => {
-    const ra = find(a)
-    const rb = find(b)
-    if (ra === rb) return
-    const rankA = rank[ra] ?? 0
-    const rankB = rank[rb] ?? 0
-    if (rankA < rankB) {
-      parent[ra] = rb
-    } else if (rankA > rankB) {
-      parent[rb] = ra
+  for (let index = 0; index < embeddings.length; index++) {
+    const embedding = embeddings[index]
+    if (!embedding || embedding.length === 0) continue
+
+    let bestCluster: (typeof working)[number] | null = null
+    let bestSimilarity = connectivityThreshold
+    for (const cluster of working) {
+      if (embedding.length !== cluster.centroid.length) continue
+      const centroidSimilarity = cosineSimilarityNormalized(embedding, cluster.centroid)
+      if (centroidSimilarity < bestSimilarity) continue
+      const withinAnchors = cluster.anchors.every((anchorIndex) => {
+        const anchor = embeddings[anchorIndex]
+        return anchor !== undefined && cosineSimilarityNormalized(embedding, anchor) >= minAnchorSimilarity
+      })
+      if (!withinAnchors) continue
+      bestCluster = cluster
+      bestSimilarity = centroidSimilarity
+    }
+
+    if (bestCluster) {
+      addToCluster(bestCluster, index, embedding)
     } else {
-      parent[rb] = ra
-      rank[ra] = rankA + 1
+      const cluster = { members: [], sum: [], centroid: [], anchors: [] }
+      addToCluster(cluster, index, embedding)
+      working.push(cluster)
     }
   }
 
-  // Build connected components by walking the upper triangle once.
-  for (let i = 0; i < n; i++) {
-    const left = embeddings[i]
-    if (!left) continue
-    for (let j = i + 1; j < n; j++) {
-      const right = embeddings[j]
-      if (!right) continue
-      if (cosineSimilarityNormalized(left, right) >= connectivityThreshold) {
-        union(i, j)
-      }
-    }
-  }
-
-  const groups = new Map<number, number[]>()
-  for (let i = 0; i < n; i++) {
-    const root = find(i)
-    const bucket = groups.get(root)
-    if (bucket) bucket.push(i)
-    else groups.set(root, [i])
-  }
-
-  const candidates: SingleLinkageCandidate[] = []
-  for (const members of groups.values()) {
-    if (members.length < minMembers) continue
-    // Compute diameter (max pairwise cosine distance).
-    let maxDistance = 0
-    for (let i = 0; i < members.length; i++) {
-      const mi = members[i]
-      if (mi === undefined) continue
-      const left = embeddings[mi]
-      if (!left) continue
-      for (let j = i + 1; j < members.length; j++) {
-        const mj = members[j]
-        if (mj === undefined) continue
-        const right = embeddings[mj]
-        if (!right) continue
-        const distance = 1 - cosineSimilarityNormalized(left, right)
-        if (distance > maxDistance) maxDistance = distance
-      }
-    }
-    if (maxDistance > maxDiameter) continue
-    candidates.push({ members, diameter: maxDistance })
-  }
-  return candidates
-}
-
-// ---------------------------------------------------------------------------
-// Agglomerative average-linkage — the category roll-up.
-// ---------------------------------------------------------------------------
-
-export interface AgglomerativeClusterInput {
-  /** Already-normalized centroids (unit vectors). */
-  readonly vectors: readonly (readonly number[])[]
-  /** Target number of components. */
-  readonly k: number
-}
-
-export interface AgglomerativeAssignment {
-  /** Cluster index per input vector (0..k-1). */
-  readonly assignments: readonly number[]
-  /** Members per cluster, as indices into the original `vectors` array. */
-  readonly clusters: readonly (readonly number[])[]
-}
-
-/**
- * Sub-millisecond pure-TS agglomerative average-linkage over already-clean
- * input vectors. Used for the 5–15 leaf-cluster → category roll-up.
- * `O(n³)` in the worst case; trivial at this K.
- */
-export const agglomerativeCluster = (input: AgglomerativeClusterInput): AgglomerativeAssignment => {
-  const { vectors, k } = input
-  const n = vectors.length
-  if (n === 0) return { assignments: [], clusters: [] }
-  if (k <= 0) {
-    return { assignments: new Array(n).fill(0), clusters: [Array.from({ length: n }, (_, i) => i)] }
-  }
-  if (n <= k) {
-    return {
-      assignments: Array.from({ length: n }, (_, i) => i),
-      clusters: Array.from({ length: n }, (_, i) => [i]),
-    }
-  }
-
-  // Each row is a working cluster (list of member indices).
-  const groups: number[][] = Array.from({ length: n }, (_, i) => [i])
-
-  // Pairwise average-linkage *similarity* matrix (only upper triangle used).
-  // Built lazily on demand to avoid n² storage when n is small enough that
-  // straight recomputation is simpler than maintenance.
-  const groupSimilarity = (a: number[], b: number[]): number => {
-    let sum = 0
-    let count = 0
-    for (const ai of a) {
-      const va = vectors[ai]
-      if (!va) continue
-      for (const bi of b) {
-        const vb = vectors[bi]
-        if (!vb) continue
-        sum += cosineSimilarityNormalized(va, vb)
-        count++
-      }
-    }
-    return count === 0 ? 0 : sum / count
-  }
-
-  while (groups.length > k) {
-    let bestI = -1
-    let bestJ = -1
-    let bestSim = Number.NEGATIVE_INFINITY
-    for (let i = 0; i < groups.length; i++) {
-      const gi = groups[i]
-      if (!gi) continue
-      for (let j = i + 1; j < groups.length; j++) {
-        const gj = groups[j]
-        if (!gj) continue
-        const sim = groupSimilarity(gi, gj)
-        if (sim > bestSim) {
-          bestSim = sim
-          bestI = i
-          bestJ = j
+  return working
+    .filter((cluster) => cluster.members.length >= minMembers)
+    .map((cluster) => {
+      let maxObservedDistance = 0
+      const sampledMembers = cluster.members.length <= 200 ? cluster.members : cluster.anchors
+      for (let i = 0; i < sampledMembers.length; i++) {
+        const leftIndex = sampledMembers[i]
+        if (leftIndex === undefined) continue
+        const left = embeddings[leftIndex]
+        if (!left) continue
+        for (let j = i + 1; j < sampledMembers.length; j++) {
+          const rightIndex = sampledMembers[j]
+          if (rightIndex === undefined) continue
+          const right = embeddings[rightIndex]
+          if (!right) continue
+          const distance = 1 - cosineSimilarityNormalized(left, right)
+          if (distance > maxObservedDistance) maxObservedDistance = distance
         }
       }
-    }
-    if (bestI < 0 || bestJ < 0) break
-    const merged = [...(groups[bestI] ?? []), ...(groups[bestJ] ?? [])]
-    // Remove the higher index first to keep the lower index stable.
-    groups.splice(bestJ, 1)
-    groups[bestI] = merged
-  }
-
-  const assignments = new Array<number>(n).fill(-1)
-  for (let cluster = 0; cluster < groups.length; cluster++) {
-    const members = groups[cluster]
-    if (!members) continue
-    for (const member of members) {
-      assignments[member] = cluster
-    }
-  }
-  return { assignments, clusters: groups }
+      return { members: cluster.members, diameter: maxObservedDistance }
+    })
+    .filter((cluster) => cluster.diameter <= maxDiameter)
 }
+
+export const quantileSorted = (sorted: readonly number[], q: number): number =>
+  sorted.length === 0 ? 0 : (sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? 0)
 
 // ---------------------------------------------------------------------------
 // Farthest-Point Sampling — for cluster naming.
@@ -526,7 +359,7 @@ export const clamp = (value: number, min: number, max: number): number => {
 
 /**
  * Compute the normalized mean of an array of vectors. Used to derive the
- * centroid_embedding for a category from its member cluster centroids, and
+ * a roll-up centroid from member cluster centroids, and
  * to test absorption of a candidate birth against existing clusters.
  *
  * Returns an empty array when the input is empty or all-zero.

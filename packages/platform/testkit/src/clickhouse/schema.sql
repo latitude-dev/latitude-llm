@@ -14,7 +14,7 @@ CREATE TABLE behavior_observations
     `embedding` Array(Float32) CODEC(ZSTD(1)),
     `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
     `assigned_cluster_id` String DEFAULT '' CODEC(ZSTD(1)),
-    `assignment_confidence` Float32 DEFAULT 0.0 CODEC(ZSTD(1)),
+    `assignment_confidence` Float32 DEFAULT 0. CODEC(ZSTD(1)),
     `assignment_method` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1)),
     `reassignment_run_id` String DEFAULT '' CODEC(ZSTD(1)),
     `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
@@ -24,7 +24,109 @@ ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
 PRIMARY KEY (organization_id, project_id, session_id)
 ORDER BY (organization_id, project_id, session_id)
-TTL toDateTime(start_time) + toIntervalDay(retention_days + 30) DELETE
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE session_analyses
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `session_id` String CODEC(ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `end_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `trace_ids` Array(FixedString(32)) CODEC(ZSTD(1)),
+    `analysis_hash` FixedString(64) CODEC(ZSTD(1)),
+    `interaction_kind` LowCardinality(String) CODEC(ZSTD(1)),
+    `analysis_lens` LowCardinality(String) CODEC(ZSTD(1)),
+    `analysis_status` LowCardinality(String) CODEC(ZSTD(1)),
+    `status_reason` String DEFAULT '' CODEC(ZSTD(3)),
+    `detector_version` LowCardinality(String) CODEC(ZSTD(1)),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    `segmentation_version` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1)),
+    `projection_version` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1))
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, session_id)
+ORDER BY (organization_id, project_id, session_id)
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE session_semantic_moments
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `session_id` String CODEC(ZSTD(1)),
+    `analysis_hash` FixedString(64) CODEC(ZSTD(1)),
+    `moment_id` String CODEC(ZSTD(1)),
+    `trace_id` FixedString(32) CODEC(ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `end_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `first_message_index` UInt16 CODEC(T64, ZSTD(1)),
+    `last_message_index` UInt16 CODEC(T64, ZSTD(1)),
+    `boundary_reason` LowCardinality(String) CODEC(ZSTD(1)),
+    `embedding` Array(Float32) CODEC(ZSTD(1)),
+    `coherence_score` Float32 DEFAULT 0. CODEC(ZSTD(1)),
+    `segmentation_method` LowCardinality(String) CODEC(ZSTD(1)),
+    `segmentation_version` LowCardinality(String) CODEC(ZSTD(1)),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, session_id, analysis_hash, moment_id)
+ORDER BY (organization_id, project_id, session_id, analysis_hash, moment_id)
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE session_moment_labels
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `session_id` String CODEC(ZSTD(1)),
+    `analysis_hash` FixedString(64) CODEC(ZSTD(1)),
+    `label_id` String CODEC(ZSTD(1)),
+    `moment_id` String CODEC(ZSTD(1)),
+    `kind` LowCardinality(String) CODEC(ZSTD(1)),
+    `actor` LowCardinality(String) CODEC(ZSTD(1)),
+    `first_message_index` UInt16 CODEC(T64, ZSTD(1)),
+    `last_message_index` UInt16 CODEC(T64, ZSTD(1)),
+    `summary` String DEFAULT '' CODEC(ZSTD(3)),
+    `evidence` String CODEC(ZSTD(3)),
+    `confidence` Float32 DEFAULT 0. CODEC(ZSTD(1)),
+    `detector_version` LowCardinality(String) CODEC(ZSTD(1)),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(indexed_at)
+PRIMARY KEY (organization_id, project_id, session_id, analysis_hash, label_id)
+ORDER BY (organization_id, project_id, session_id, analysis_hash, label_id)
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE taxonomy_observations
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `observation_id` String CODEC(ZSTD(1)),
+    `session_id` String CODEC(ZSTD(1)),
+    `analysis_hash` FixedString(64) CODEC(ZSTD(1)),
+    `moment_id` String CODEC(ZSTD(1)),
+    `projection_method` LowCardinality(String) CODEC(ZSTD(1)),
+    `projection_hash` FixedString(64) CODEC(ZSTD(1)),
+    `projection_metadata` String DEFAULT '{}' CODEC(ZSTD(3)),
+    `embedding` Array(Float32) CODEC(ZSTD(1)),
+    `assigned_cluster_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `assignment_confidence` Float32 DEFAULT 0. CODEC(ZSTD(1)),
+    `assignment_method` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1)),
+    `reassignment_run_id` String DEFAULT '' CODEC(ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `end_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, observation_id)
+ORDER BY (organization_id, project_id, observation_id)
 SETTINGS index_granularity = 8192;
 
 CREATE TABLE dataset_rows
@@ -59,7 +161,7 @@ CREATE TABLE scores
     `source_id` FixedString(128) CODEC(ZSTD(1)),
     `simulation_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `issue_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
-    `value` Float32 CODEC(Gorilla, ZSTD(1)),
+    `value` Float32 CODEC(Gorilla(4), ZSTD(1)),
     `passed` Bool CODEC(T64, LZ4),
     `errored` Bool CODEC(T64, LZ4),
     `duration` UInt64 DEFAULT 0 CODEC(T64, ZSTD(1)),
@@ -81,6 +183,42 @@ PARTITION BY toYYYYMM(created_at)
 PRIMARY KEY (organization_id, project_id, created_at)
 ORDER BY (organization_id, project_id, created_at, source, source_id, session_id, trace_id, span_id, id)
 SETTINGS index_granularity = 8192;
+
+CREATE TABLE scores_hourly_buckets
+(
+    `organization_id` LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
+    `issue_id` FixedString(24) CODEC(ZSTD(1)),
+    `ts_hour` DateTime('UTC') CODEC(Delta(4), ZSTD(1)),
+    `count` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1))
+)
+ENGINE = AggregatingMergeTree
+PARTITION BY toYYYYMM(ts_hour)
+PRIMARY KEY (organization_id, project_id, issue_id)
+ORDER BY (organization_id, project_id, issue_id, ts_hour)
+SETTINGS index_granularity = 8192;
+
+CREATE MATERIALIZED VIEW scores_hourly_buckets_mv TO scores_hourly_buckets
+(
+    `organization_id` LowCardinality(FixedString(24)),
+    `project_id` LowCardinality(FixedString(24)),
+    `issue_id` FixedString(24),
+    `ts_hour` DateTime('UTC'),
+    `count` UInt64
+)
+AS SELECT
+    organization_id,
+    project_id,
+    issue_id,
+    toStartOfHour(created_at) AS ts_hour,
+    count() AS count
+FROM scores
+WHERE issue_id != ''
+GROUP BY
+    organization_id,
+    project_id,
+    issue_id,
+    ts_hour;
 
 CREATE TABLE sessions
 (
@@ -289,6 +427,47 @@ PRIMARY KEY (organization_id, project_id, start_time)
 ORDER BY (organization_id, project_id, start_time, session_id, trace_id, span_id)
 SETTINGS index_granularity = 8192;
 
+CREATE TABLE trace_search_documents
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `trace_id` FixedString(32) CODEC(ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `root_span_name` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1)),
+    `search_text` String DEFAULT '' CODEC(ZSTD(3)),
+    `content_hash` FixedString(64) CODEC(ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
+    INDEX idx_search_text_tokenbf search_text TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 1,
+    INDEX idx_search_text_ngrambf search_text TYPE ngrambf_v1(3, 512, 3, 0) GRANULARITY 1
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, trace_id)
+ORDER BY (organization_id, project_id, trace_id)
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE trace_search_embeddings
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `trace_id` FixedString(32) CODEC(ZSTD(1)),
+    `chunk_index` UInt16 CODEC(T64, ZSTD(1)),
+    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    `content_hash` FixedString(64) CODEC(ZSTD(1)),
+    `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
+    `embedding` Array(Float32) CODEC(ZSTD(1)),
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
+    `retention_days` UInt16 DEFAULT 30 CODEC(T64, ZSTD(1)),
+    `first_message_index` Nullable(UInt32) CODEC(T64, ZSTD(1)),
+    `last_message_index` Nullable(UInt32) CODEC(T64, ZSTD(1))
+)
+ENGINE = ReplacingMergeTree(indexed_at)
+PARTITION BY toYYYYMM(start_time)
+PRIMARY KEY (organization_id, project_id, trace_id, chunk_index)
+ORDER BY (organization_id, project_id, trace_id, chunk_index)
+SETTINGS index_granularity = 8192;
+
 CREATE TABLE traces
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
@@ -324,6 +503,7 @@ CREATE TABLE traces
     `last_input_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
     `output_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
     `system_instructions` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
+    `retention_days` SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1)),
     INDEX idx_start_time min_start_time TYPE minmax GRANULARITY 1
 )
 ENGINE = AggregatingMergeTree
@@ -364,12 +544,13 @@ CREATE MATERIALIZED VIEW traces_mv TO traces
     `input_messages` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
     `last_input_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
     `output_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
-    `system_instructions` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8)
+    `system_instructions` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
+    `retention_days` UInt16
 )
 AS SELECT
-    organization_id,
-    project_id,
-    trace_id,
+    organization_id AS organization_id,
+    project_id AS project_id,
+    trace_id AS trace_id,
     count() AS span_count,
     countIf(status_code = 2) AS error_count,
     min(start_time) AS min_start_time,
@@ -397,70 +578,10 @@ AS SELECT
     argMinIfState(spans.input_messages, start_time, spans.input_messages != '') AS input_messages,
     argMaxIfState(spans.input_messages, end_time, spans.output_messages != '') AS last_input_messages,
     argMaxIfState(spans.output_messages, end_time, spans.output_messages != '') AS output_messages,
-    argMinIfState(spans.system_instructions, start_time, spans.system_instructions != '') AS system_instructions
+    argMinIfState(spans.system_instructions, start_time, spans.system_instructions != '') AS system_instructions,
+    max(retention_days) AS retention_days
 FROM spans
 GROUP BY
     organization_id,
     project_id,
     trace_id;
-
-
-CREATE TABLE trace_search_documents
-(
-    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `trace_id` FixedString(32) CODEC(ZSTD(1)),
-    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
-    `root_span_name` LowCardinality(String) CODEC(ZSTD(1)),
-    `search_text` String CODEC(ZSTD(1)),
-    `content_hash` FixedString(64) CODEC(ZSTD(1)),
-    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
-)
-ENGINE = ReplacingMergeTree(indexed_at)
-PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, trace_id)
-ORDER BY (organization_id, project_id, trace_id);
-
-CREATE TABLE trace_search_embeddings
-(
-    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
-    `trace_id` FixedString(32) CODEC(ZSTD(1)),
-    `chunk_index` UInt16 CODEC(T64, ZSTD(1)),
-    `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
-    `content_hash` FixedString(64) CODEC(ZSTD(1)),
-    `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
-    `embedding` Array(Float32) CODEC(ZSTD(1)),
-    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
-    `first_message_index` Nullable(UInt32) CODEC(T64, ZSTD(1)),
-    `last_message_index` Nullable(UInt32) CODEC(T64, ZSTD(1))
-)
-ENGINE = ReplacingMergeTree(indexed_at)
-PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, trace_id, chunk_index)
-ORDER BY (organization_id, project_id, trace_id, chunk_index);
-
-CREATE TABLE scores_hourly_buckets
-(
-    organization_id LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
-    project_id LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
-    issue_id FixedString(24) CODEC(ZSTD(1)),
-    ts_hour DateTime('UTC') CODEC(Delta(4), ZSTD(1)),
-    count SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1))
-)
-ENGINE = AggregatingMergeTree
-PARTITION BY toYYYYMM(ts_hour)
-PRIMARY KEY (organization_id, project_id, issue_id)
-ORDER BY (organization_id, project_id, issue_id, ts_hour);
-
-CREATE MATERIALIZED VIEW scores_hourly_buckets_mv TO scores_hourly_buckets
-AS
-SELECT
-    organization_id,
-    project_id,
-    issue_id,
-    toStartOfHour(created_at) AS ts_hour,
-    count() AS count
-FROM scores
-WHERE issue_id != ''
-GROUP BY organization_id, project_id, issue_id, ts_hour;

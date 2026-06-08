@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { callOrder, mockActivities, patchedState } = vi.hoisted(() => {
+const { callOrder, mockActivities, childExecutions, patchedState } = vi.hoisted(() => {
   const callOrder: string[] = []
   const patchedState = { enabled: true }
+  const childExecutions: Array<{ readonly args: unknown[]; readonly workflowId: string }> = []
   const mockActivities = {
     seedDemoProjectPostgresActivity: vi.fn(async () => {
       callOrder.push("postgres")
@@ -13,16 +14,22 @@ const { callOrder, mockActivities, patchedState } = vi.hoisted(() => {
     seedDemoProjectTraceSearchActivity: vi.fn(async () => {
       callOrder.push("trace-search")
     }),
-    seedDemoProjectTaxonomyActivity: vi.fn(async () => {
-      callOrder.push("taxonomy")
-    }),
   }
-  return { callOrder, mockActivities, patchedState }
+  return { callOrder, mockActivities, childExecutions, patchedState }
 })
 
 vi.mock("@temporalio/workflow", () => ({
   patched: () => patchedState.enabled,
   proxyActivities: () => mockActivities,
+  executeChild: async (_workflow: unknown, options: { args: unknown[]; workflowId: string }) => {
+    callOrder.push("taxonomy")
+    childExecutions.push({ args: options.args, workflowId: options.workflowId })
+    return { status: "completed" }
+  },
+}))
+
+vi.mock("./taxonomy-gardening-workflow.ts", () => ({
+  gardenTaxonomyWorkflow: async () => ({ status: "completed" }),
 }))
 
 import { seedDemoProjectWorkflow } from "./seed-demo-project-workflow.ts"
@@ -38,6 +45,7 @@ const baseInput = {
 describe("seedDemoProjectWorkflow", () => {
   beforeEach(() => {
     callOrder.length = 0
+    childExecutions.length = 0
     patchedState.enabled = true
     vi.clearAllMocks()
   })
@@ -55,7 +63,12 @@ describe("seedDemoProjectWorkflow", () => {
     expect(mockActivities.seedDemoProjectPostgresActivity).toHaveBeenCalledWith(baseInput)
     expect(mockActivities.seedDemoProjectClickHouseActivity).toHaveBeenCalledWith(baseInput)
     expect(mockActivities.seedDemoProjectTraceSearchActivity).toHaveBeenCalledWith(baseInput)
-    expect(mockActivities.seedDemoProjectTaxonomyActivity).toHaveBeenCalledWith(baseInput)
+    expect(childExecutions).toEqual([
+      {
+        args: [{ organizationId: "org-1", projectId: "proj-demo", dimension: "topic", trigger: "manual" }],
+        workflowId: "org:org-1:taxonomy:garden:proj-demo:seed",
+      },
+    ])
   })
 
   it("keeps replay compatibility for workflows started before derived data seeding", async () => {
@@ -65,7 +78,7 @@ describe("seedDemoProjectWorkflow", () => {
 
     expect(callOrder).toEqual(["postgres", "clickhouse"])
     expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
-    expect(mockActivities.seedDemoProjectTaxonomyActivity).not.toHaveBeenCalled()
+    expect(childExecutions).toEqual([])
     expect(result).toEqual({ action: "seeded", projectId: "proj-demo" })
   })
 
@@ -77,7 +90,7 @@ describe("seedDemoProjectWorkflow", () => {
     await expect(seedDemoProjectWorkflow(baseInput)).rejects.toThrow("postgres seed failed")
     expect(mockActivities.seedDemoProjectClickHouseActivity).not.toHaveBeenCalled()
     expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
-    expect(mockActivities.seedDemoProjectTaxonomyActivity).not.toHaveBeenCalled()
+    expect(childExecutions).toEqual([])
   })
 
   it("propagates failure from the ClickHouse activity and skips derived-data activities", async () => {
@@ -87,6 +100,6 @@ describe("seedDemoProjectWorkflow", () => {
 
     await expect(seedDemoProjectWorkflow(baseInput)).rejects.toThrow("clickhouse seed failed")
     expect(mockActivities.seedDemoProjectTraceSearchActivity).not.toHaveBeenCalled()
-    expect(mockActivities.seedDemoProjectTaxonomyActivity).not.toHaveBeenCalled()
+    expect(childExecutions).toEqual([])
   })
 })

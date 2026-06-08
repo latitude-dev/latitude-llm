@@ -16,6 +16,7 @@ export const findNearestClustersUseCase = (input: FindNearestClustersInput) =>
     const repository = yield* TaxonomyClusterRepository
     return yield* repository.listNearestActive({
       projectId: input.projectId,
+      dimension: "topic",
       queryVector: input.queryVector,
       k: input.k ?? TAXONOMY_ASSIGN_TOPK,
     })

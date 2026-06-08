@@ -11,29 +11,31 @@ import {
   TAXONOMY_ABSORPTION_THRESHOLD,
   TAXONOMY_BIRTH_LINK_THRESHOLD,
   TAXONOMY_BIRTH_MAX_DIAMETER,
-  TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_CEILING,
+  TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+  TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
   TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR,
-  TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO,
   TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
+  TAXONOMY_VISIBLE_BIRTH_MIN_OBSERVATION_RATIO,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
+import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
 import {
-  clamp,
   createTaxonomyCentroid,
+  diameterBoundedGreedyClusters,
   meanNormalized,
   normalizeTaxonomyEmbedding,
-  singleLinkageClusters,
   updateTaxonomyCentroid,
 } from "../helpers.ts"
-import { BehaviorObservationRepository } from "../ports/behavior-observation-repository.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
+import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 
 export interface SweepNoiseAndBirthClustersInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly runId: TaxonomyRunId
+  readonly dimension?: TaxonomyDimensionType
   readonly now?: Date
 }
 
@@ -46,11 +48,10 @@ export interface SweepNoiseAndBirthClustersResult {
 
 const lookbackStart = (now: Date): Date => new Date(now.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
 
-export const computeBirthMinMembers = (noisePoolSize: number): number =>
-  clamp(
-    Math.round(noisePoolSize * TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_RATIO),
+const computeVisibleBirthMinMembers = (samplePoolSize: number): number =>
+  Math.max(
     TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR,
-    TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_CEILING,
+    Math.ceil(samplePoolSize * TAXONOMY_VISIBLE_BIRTH_MIN_OBSERVATION_RATIO),
   )
 
 const buildBornCluster = (input: {
@@ -58,6 +59,7 @@ const buildBornCluster = (input: {
   readonly projectId: ProjectId
   readonly memberEmbeddings: readonly (readonly number[])[]
   readonly memberStartTimes: readonly Date[]
+  readonly dimension: TaxonomyDimensionType
   readonly now: Date
 }): TaxonomyCluster => {
   let centroid = createTaxonomyCentroid()
@@ -82,7 +84,11 @@ const buildBornCluster = (input: {
     id: TaxonomyClusterId(generateId()),
     organizationId: input.organizationId,
     projectId: input.projectId,
-    parentCategoryId: null,
+    dimension: input.dimension,
+    parentClusterId: null,
+    depth: 0,
+    path: "",
+    splitLinkThreshold: null,
     name: "Pending",
     description: "",
     centroid,
@@ -102,12 +108,14 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("taxonomy.runId", input.runId)
     const now = input.now ?? new Date()
-    const observations = yield* BehaviorObservationRepository
+    const dimension = input.dimension ?? TaxonomyDimension.Topic
+    const observations = yield* TaxonomyObservationRepository
     const clusters = yield* TaxonomyClusterRepository
     const noise = yield* observations.listNoise({
       organizationId: input.organizationId,
       projectId: input.projectId,
       since: lookbackStart(now),
+      limit: Math.min(TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX, TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX),
     })
 
     if (noise.length < TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS) {
@@ -119,9 +127,15 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
       } satisfies SweepNoiseAndBirthClustersResult
     }
 
+    const counts = yield* observations.getCounts({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      since: lookbackStart(now),
+    })
+    const observationSampleSize = Math.min(counts.total, TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX)
     const normalizedEmbeddings = noise.map((observation) => normalizeTaxonomyEmbedding(observation.embedding))
-    const minMembers = computeBirthMinMembers(noise.length)
-    const candidates = singleLinkageClusters({
+    const minMembers = computeVisibleBirthMinMembers(observationSampleSize)
+    const candidates = diameterBoundedGreedyClusters({
       embeddings: normalizedEmbeddings,
       connectivityThreshold: TAXONOMY_BIRTH_LINK_THRESHOLD,
       minMembers,
@@ -132,7 +146,11 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
     let observationsAbsorbed = 0
     const lineage: TaxonomyClusterLineage[] = []
 
-    for (const candidate of candidates) {
+    // Largest candidates first so limited headroom goes to the most
+    // significant behaviours.
+    const orderedCandidates = [...candidates].sort((a, b) => b.members.length - a.members.length)
+
+    for (const candidate of orderedCandidates) {
       // Pull from the pre-normalized pool instead of re-normalizing each member's
       // raw embedding — `candidate.members` indexes the same arrays.
       const memberObservations: (typeof noise)[number][] = []
@@ -149,8 +167,10 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
 
       const nearest = yield* clusters.listNearestActive({
         projectId: input.projectId,
+        dimension,
         queryVector: candidateCentroid,
         k: 1,
+        parentClusterId: null,
       })
       const absorbingCluster = nearest[0]?.cosine >= TAXONOMY_ABSORPTION_THRESHOLD ? nearest[0].cluster : null
 
@@ -174,6 +194,7 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
         projectId: input.projectId,
         memberEmbeddings,
         memberStartTimes: memberObservations.map((observation) => observation.startTime),
+        dimension,
         now,
       })
       yield* clusters.save(bornCluster)
@@ -192,6 +213,7 @@ export const sweepNoiseAndBirthClustersUseCase = (input: SweepNoiseAndBirthClust
         id: TaxonomyLineageId(generateId()),
         organizationId: input.organizationId,
         projectId: input.projectId,
+        dimension,
         runId: input.runId,
         transitionType: "birth",
         fromClusterIds: [],

@@ -3,13 +3,14 @@ import {
   buildTraceEndLiveQueueSelectionInputs,
   orchestrateTraceEndLiveQueueMaterializationUseCase,
 } from "@domain/annotation-queues"
+import { CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS } from "@domain/conversation-intelligence"
 import {
   buildTraceEndEvaluationSelectionInputs,
   listAllActiveEvaluations,
   orchestrateTraceEndLiveEvaluationExecutesUseCase,
 } from "@domain/evaluations"
 import { SAVED_SEARCH_MONITORS_THROTTLE_MS, savedSearchMonitorsCheckDedupeKey } from "@domain/monitors"
-import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import {
   loadTraceForTraceEndUseCase,
@@ -17,7 +18,6 @@ import {
   summarizeTraceEndItemDecisions,
   type TraceEndItemDecisionCounts,
 } from "@domain/spans"
-import { TAXONOMY_OBSERVATION_DEBOUNCE_MS } from "@domain/taxonomy"
 import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import {
   type ClickHouseClient,
@@ -37,7 +37,7 @@ import {
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient, getWorkflowStarter } from "../clients.ts"
 
 const logger = createLogger("trace-end")
 const TRACE_END_QUEUE = "trace-end" as const
@@ -59,6 +59,7 @@ interface TraceEndDeps {
   clickhouseClient?: ClickHouseClient
   redisClient?: RedisClient
   logger?: TraceEndLogger
+  workflowStarter?: WorkflowStarterShape
 }
 
 interface RunTraceEndDeps {
@@ -66,6 +67,7 @@ interface RunTraceEndDeps {
   readonly postgresClient: PostgresClient
   readonly clickhouseClient: ClickHouseClient
   readonly redisClient: RedisClient
+  readonly workflowStarter: WorkflowStarterShape
 }
 
 type EvaluationSummary = TraceEndItemDecisionCounts & {
@@ -108,7 +110,7 @@ const buildRunLogContext = (payload: TraceEndPayload) => ({
 })
 
 export const runTraceEndJob =
-  ({ publisher, postgresClient, clickhouseClient, redisClient }: RunTraceEndDeps) =>
+  ({ publisher, postgresClient, clickhouseClient, redisClient, workflowStarter }: RunTraceEndDeps) =>
   (payload: TraceEndPayload) =>
     Effect.gen(function* () {
       if (payload.isSandbox) {
@@ -266,27 +268,31 @@ export const runTraceEndJob =
 
       const canonicalSessionId =
         traceDetail.sessionId && traceDetail.sessionId.length > 0 ? traceDetail.sessionId : traceDetail.traceId
-      yield* publisher
-        .publish(
-          "taxonomy",
-          "observeSession",
+      const analyzeSessionWorkflowId = `org:${payload.organizationId}:conversation-intelligence:analyzeSession:${payload.projectId}:${canonicalSessionId}`
+      yield* workflowStarter
+        .signalWithStart(
+          "analyzeSessionWorkflow",
           {
             organizationId: payload.organizationId,
             projectId: payload.projectId,
             sessionId: canonicalSessionId,
             triggeringTraceId: payload.traceId,
             triggeringStartTime: traceDetail.startTime.toISOString(),
+            reason: "trace_completed",
+            debounceMs: CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS,
           },
           {
-            dedupeKey: `org:${payload.organizationId}:taxonomy:observeSession:${payload.projectId}:${canonicalSessionId}`,
-            debounceMs: TAXONOMY_OBSERVATION_DEBOUNCE_MS,
+            workflowId: analyzeSessionWorkflowId,
+            signal: "traceCompleted",
+            signalArgs: [{ debounceMs: CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS }],
           },
         )
         .pipe(
           Effect.catch((error) =>
-            Effect.logError("Failed to enqueue taxonomy observeSession", {
+            Effect.logError("Failed to start conversation intelligence AnalyzeSessionWorkflow", {
               ...buildRunLogContext(payload),
               sessionId: canonicalSessionId,
+              workflowId: analyzeSessionWorkflowId,
               error,
             }),
           ),
@@ -377,11 +383,20 @@ export const createTraceEndWorker = ({
   clickhouseClient,
   redisClient,
   logger: injectedLogger,
+  workflowStarter,
 }: TraceEndDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
   const chClient = clickhouseClient ?? getClickhouseClient()
   const rdClient = redisClient ?? getRedisClient()
   const traceEndLogger = injectedLogger ?? logger
+  const temporalStarter =
+    workflowStarter ??
+    ({
+      start: (...args) =>
+        Effect.promise(() => getWorkflowStarter()).pipe(Effect.flatMap((starter) => starter.start(...args))),
+      signalWithStart: (...args) =>
+        Effect.promise(() => getWorkflowStarter()).pipe(Effect.flatMap((starter) => starter.signalWithStart(...args))),
+    } satisfies WorkflowStarterShape)
 
   consumer.subscribe(TRACE_END_QUEUE, {
     run: createRunHandler({
@@ -390,6 +405,7 @@ export const createTraceEndWorker = ({
       postgresClient: pgClient,
       clickhouseClient: chClient,
       redisClient: rdClient,
+      workflowStarter: temporalStarter,
     }),
   })
 }

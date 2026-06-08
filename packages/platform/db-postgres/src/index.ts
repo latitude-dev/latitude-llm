@@ -63,7 +63,6 @@ export {
 } from "./repositories/slack-integration-repository.ts"
 export { StripeBillingProviderLive } from "./repositories/stripe-billing-provider.ts"
 export { StripeSubscriptionLookupLive } from "./repositories/stripe-subscription-lookup.ts"
-export { TaxonomyCategoryRepositoryLive } from "./repositories/taxonomy-category-repository.ts"
 export { TaxonomyClusterRepositoryLive } from "./repositories/taxonomy-cluster-repository.ts"
 export { TaxonomyLineageRepositoryLive } from "./repositories/taxonomy-lineage-repository.ts"
 export { TaxonomyRunRepositoryLive } from "./repositories/taxonomy-run-repository.ts"

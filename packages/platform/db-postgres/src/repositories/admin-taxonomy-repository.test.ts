@@ -4,7 +4,6 @@ import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { organizations } from "../schema/better-auth.ts"
 import { projects } from "../schema/projects.ts"
-import { taxonomyCategories } from "../schema/taxonomy-categories.ts"
 import { taxonomyClusters } from "../schema/taxonomy-clusters.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
@@ -62,39 +61,28 @@ describe("AdminTaxonomyRepositoryLive.getProjectTaxonomy", () => {
       },
     ])
 
-    await pg.db.insert(taxonomyCategories).values([
+    await pg.db.insert(taxonomyClusters).values([
       {
         id: CATEGORY,
         organizationId: ORG,
         projectId: PROJECT,
         name: "Checkout issues",
         description: "Problems during checkout.",
-        clusterCount: 1,
-        observationCount: 10,
+        centroid,
+        observationCount: 3,
+        firstObservedAt: baseTime,
+        lastObservedAt: baseTime,
         clusteredAt: baseTime,
         createdAt: baseTime,
         updatedAt: baseTime,
       },
-      {
-        id: makeId("cat-tax-other"),
-        organizationId: OTHER_ORG,
-        projectId: OTHER_PROJECT,
-        name: "Other category",
-        description: "Should not be returned.",
-        clusterCount: 1,
-        observationCount: 99,
-        clusteredAt: baseTime,
-        createdAt: baseTime,
-        updatedAt: baseTime,
-      },
-    ])
-
-    await pg.db.insert(taxonomyClusters).values([
       {
         id: SUBCATEGORY,
         organizationId: ORG,
         projectId: PROJECT,
-        parentCategoryId: CATEGORY,
+        parentClusterId: CATEGORY,
+        depth: 1,
+        path: `${CATEGORY}/`,
         name: "Card declined",
         description: "Users see card declines.",
         centroid,
@@ -109,9 +97,11 @@ describe("AdminTaxonomyRepositoryLive.getProjectTaxonomy", () => {
         id: UNCATEGORIZED,
         organizationId: ORG,
         projectId: PROJECT,
-        parentCategoryId: null,
-        name: "Pending label",
-        description: "No category yet.",
+        parentClusterId: makeId("missing-root"),
+        depth: 1,
+        path: `${makeId("missing-root")}/`,
+        name: "Orphan child",
+        description: "Root no longer exists.",
         centroid,
         observationCount: 3,
         firstObservedAt: baseTime,
@@ -124,7 +114,6 @@ describe("AdminTaxonomyRepositoryLive.getProjectTaxonomy", () => {
         id: OTHER_SUBCATEGORY,
         organizationId: OTHER_ORG,
         projectId: OTHER_PROJECT,
-        parentCategoryId: makeId("cat-tax-other"),
         name: "Other cluster",
         description: "Should not be returned.",
         centroid,
@@ -148,6 +137,7 @@ describe("AdminTaxonomyRepositoryLive.getProjectTaxonomy", () => {
 
     expect(result.categories).toHaveLength(1)
     expect(result.categories[0]?.id).toBe(CATEGORY)
+    expect(result.categories[0]?.observationCount).toBe(10)
     expect(result.categories[0]?.subcategories.map((subcategory) => subcategory.id)).toEqual([SUBCATEGORY])
     expect(result.uncategorized.map((subcategory) => subcategory.id)).toEqual([UNCATEGORIZED])
   })

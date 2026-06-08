@@ -40,27 +40,43 @@ const applyObservationToCluster = (
   }
 }
 
+/** Follows at most this many merge redirects before giving up. */
+const MAX_MERGE_REDIRECTS = 3
+
 export const assignObservationToClusterUseCase = (input: AssignObservationToClusterInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("taxonomy.clusterId", input.clusterId)
     const clusterRepository = yield* TaxonomyClusterRepository
-    const clusterId = TaxonomyClusterId(input.clusterId)
 
-    return yield* withTaxonomyClusterLock(
-      {
-        organizationId: input.organizationId,
-        clusterId,
-        ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
-      },
-      Effect.gen(function* () {
-        const cluster = yield* clusterRepository.findById(clusterId)
-        if (cluster.organizationId !== input.organizationId || cluster.projectId !== input.projectId) {
-          return yield* new TaxonomyClusterNotFoundError({ clusterId: input.clusterId })
-        }
-        const updated = applyObservationToCluster(cluster, input, input.assignedAt ?? new Date())
-        yield* clusterRepository.save(updated)
-        return updated
-      }),
-    )
+    // The cluster can merge or deprecate between routing and lock
+    // acquisition; writing the stale snapshot back would resurrect it.
+    // Merged clusters redirect the increment to their survivor.
+    let clusterId = TaxonomyClusterId(input.clusterId)
+    for (let redirects = 0; redirects <= MAX_MERGE_REDIRECTS; redirects++) {
+      const result = yield* withTaxonomyClusterLock(
+        {
+          organizationId: input.organizationId,
+          clusterId,
+          ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
+        },
+        Effect.gen(function* () {
+          const cluster = yield* clusterRepository.findById(clusterId)
+          if (cluster.organizationId !== input.organizationId || cluster.projectId !== input.projectId) {
+            return yield* new TaxonomyClusterNotFoundError({ clusterId: input.clusterId })
+          }
+          if (cluster.state === "merged" && cluster.mergedIntoClusterId !== null) {
+            return { redirectTo: cluster.mergedIntoClusterId } as const
+          }
+          if (cluster.state !== "active") return { dropped: true } as const
+          const updated = applyObservationToCluster(cluster, input, input.assignedAt ?? new Date())
+          yield* clusterRepository.save(updated)
+          return { updated } as const
+        }),
+      )
+      if ("updated" in result) return result.updated
+      if ("dropped" in result) return null
+      clusterId = TaxonomyClusterId(result.redirectTo)
+    }
+    return null
   }).pipe(Effect.withSpan("taxonomy.assignObservationToCluster"))

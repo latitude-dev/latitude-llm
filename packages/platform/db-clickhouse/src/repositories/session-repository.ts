@@ -42,6 +42,7 @@ import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
+import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
 import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearchQuery } from "./search-by-project.ts"
 import { isActiveSearch } from "./search-plan.ts"
 
@@ -335,25 +336,26 @@ function buildSessionFilterClauses(filters: FilterSet | undefined): {
     return { havingClauses: [], whereClauses: [], params: {} }
   }
 
-  const { telemetryFilters, scoreFilters } = splitScoreFilters(filters)
+  const ci = buildSessionIntelligenceFilters(filters)
+  const { telemetryFilters, scoreFilters } = splitScoreFilters(ci.rest)
 
   const telemetry = telemetryFilters
     ? buildClickHouseWhere(telemetryFilters, SESSION_FIELD_REGISTRY)
     : { clauses: [], params: {} }
 
-  let whereClauses: string[] = []
+  const whereClauses: string[] = [...ci.clauses]
   let scoreParams: Record<string, unknown> = {}
 
   if (scoreFilters) {
     const result = buildScoreRollupSubquery("session_id", scoreFilters, false)
-    whereClauses = [result.subquery]
+    whereClauses.push(result.subquery)
     scoreParams = result.params
   }
 
   return {
     havingClauses: telemetry.clauses,
     whereClauses,
-    params: { ...telemetry.params, ...scoreParams },
+    params: { ...telemetry.params, ...scoreParams, ...ci.params },
   }
 }
 
