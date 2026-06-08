@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { billingUsageEvents } from "../schema/billing.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
-import { BillingUsageEventRepositoryLive } from "./billing-usage-event-repository.ts"
+import { BillingUsageEventRepositoryLive, dedupeAndOrderEventsForInsert } from "./billing-usage-event-repository.ts"
 
 const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
@@ -76,6 +76,75 @@ describe("BillingUsageEventRepositoryLive", () => {
 
     expect(found?.id).toBe(first.id)
     expect(await pg.db.select().from(billingUsageEvents)).toHaveLength(2)
+  })
+
+  // Concurrent same-period batches are written by multiple worker processes
+  // (the in-memory batcher only dedupes within one process). When two such
+  // batches shared idempotency keys but supplied them in different arrival
+  // orders, the multi-row `INSERT ... ON CONFLICT` acquired the unique-index
+  // locks in opposite orders and deadlocked. `insertMany` must therefore emit
+  // rows in a deterministic order keyed on the conflict tuple regardless of
+  // input order, so every transaction takes the locks in the same order.
+  it("orders events deterministically by (billingPeriodStart, idempotencyKey) regardless of input order", () => {
+    const a = makeEvent({ id: "a".repeat(24), idempotencyKey: "trace:org:project:a" })
+    const b = makeEvent({ id: "b".repeat(24), idempotencyKey: "trace:org:project:b" })
+    const c = makeEvent({ id: "c".repeat(24), idempotencyKey: "trace:org:project:c" })
+
+    const keysOf = (events: readonly BillingUsageEvent[]) => events.map((event) => event.idempotencyKey)
+    const expected = ["trace:org:project:a", "trace:org:project:b", "trace:org:project:c"]
+
+    // Two batches with the same keys in opposite arrival orders must converge
+    // to the identical insert order — this is the property that breaks the
+    // AB/BA deadlock cycle.
+    expect(keysOf(dedupeAndOrderEventsForInsert([c, a, b]))).toEqual(expected)
+    expect(keysOf(dedupeAndOrderEventsForInsert([b, c, a]))).toEqual(expected)
+    expect(keysOf(dedupeAndOrderEventsForInsert([a, b, c]))).toEqual(expected)
+  })
+
+  it("orders by billing period before idempotency key, and still dedupes per period", () => {
+    const nextPeriodEarlyKey = makeEvent({
+      id: "x".repeat(24),
+      idempotencyKey: "trace:org:project:a",
+      billingPeriodStart: NEXT_PERIOD_START,
+      billingPeriodEnd: NEXT_PERIOD_END,
+    })
+    const thisPeriodLateKey = makeEvent({ id: "y".repeat(24), idempotencyKey: "trace:org:project:z" })
+    const thisPeriodLateKeyDuplicate = makeEvent({ id: "z".repeat(24), idempotencyKey: "trace:org:project:z" })
+
+    const ordered = dedupeAndOrderEventsForInsert([nextPeriodEarlyKey, thisPeriodLateKeyDuplicate, thisPeriodLateKey])
+
+    // Earlier period sorts first even though its idempotency key sorts later;
+    // the duplicate within the later period collapses to a single row.
+    expect(ordered.map((event) => event.idempotencyKey)).toEqual(["trace:org:project:z", "trace:org:project:a"])
+    expect(ordered.map((event) => event.billingPeriodStart.getTime())).toEqual([
+      PERIOD_START.getTime(),
+      NEXT_PERIOD_START.getTime(),
+    ])
+  })
+
+  it("persists the identical ledger when the same keys arrive in opposite batch orders", async () => {
+    const a = makeEvent({ id: "a".repeat(24), idempotencyKey: "trace:org:project:a" })
+    const b = makeEvent({ id: "b".repeat(24), idempotencyKey: "trace:org:project:b" })
+    const c = makeEvent({ id: "c".repeat(24), idempotencyKey: "trace:org:project:c" })
+
+    const insertedForward = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* BillingUsageEventRepository
+        return yield* repo.insertMany([a, b, c])
+      }),
+    )
+    expect(insertedForward).toBe(3)
+
+    // A concurrent batch carrying the same keys in reverse must be a no-op
+    // (all conflicts), not a second set of rows.
+    const insertedReverse = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* BillingUsageEventRepository
+        return yield* repo.insertMany([c, b, a])
+      }),
+    )
+    expect(insertedReverse).toBe(0)
+    expect(await pg.db.select().from(billingUsageEvents)).toHaveLength(3)
   })
 
   it("allows an idempotency key to be reused in a different billing period", async () => {

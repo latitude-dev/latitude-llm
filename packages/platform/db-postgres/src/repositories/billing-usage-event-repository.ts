@@ -33,7 +33,27 @@ const toInsertRow = (event: BillingUsageEvent): typeof billingUsageEvents.$infer
   billingPeriodEnd: event.billingPeriodEnd,
 })
 
-const uniqueByPeriodAndIdempotencyKey = (events: readonly BillingUsageEvent[]): readonly BillingUsageEvent[] => {
+/**
+ * Dedupe a batch of usage events by their conflict-target tuple
+ * `(billingPeriodStart, idempotencyKey)` — the columns of the
+ * `billing_usage_events_period_idempotency_key_idx` unique index — and return
+ * them in a deterministic order keyed on that same tuple.
+ *
+ * The ordering matters for concurrency, not just tidiness. `insertMany` issues
+ * a single multi-row `INSERT ... ON CONFLICT DO NOTHING`, and Postgres acquires
+ * the unique-index locks row-by-row in the order rows are supplied. Trace usage
+ * is flushed by an in-memory batcher that only dedupes within one worker
+ * process, so the same org/period is written concurrently by multiple workers.
+ * When two such batches shared idempotency keys but supplied them in different
+ * arrival orders, they grabbed the index locks in opposite orders and deadlocked
+ * each other (Postgres "deadlock detected", observed on the `billing` queue).
+ *
+ * Sorting by the conflict key before insert makes every concurrent transaction
+ * take the locks in the same order, so the AB/BA cycle is impossible. The order
+ * only has to be *consistent* across transactions — it need not match the btree
+ * collation — so a plain value sort is sufficient.
+ */
+export const dedupeAndOrderEventsForInsert = (events: readonly BillingUsageEvent[]): readonly BillingUsageEvent[] => {
   const eventsByKey = new Map<string, BillingUsageEvent>()
 
   for (const event of events) {
@@ -43,7 +63,13 @@ const uniqueByPeriodAndIdempotencyKey = (events: readonly BillingUsageEvent[]): 
     }
   }
 
-  return [...eventsByKey.values()]
+  return [...eventsByKey.values()].sort((a, b) => {
+    const periodDelta = a.billingPeriodStart.getTime() - b.billingPeriodStart.getTime()
+    if (periodDelta !== 0) return periodDelta
+    if (a.idempotencyKey < b.idempotencyKey) return -1
+    if (a.idempotencyKey > b.idempotencyKey) return 1
+    return 0
+  })
 }
 
 export const BillingUsageEventRepositoryLive = Layer.succeed(BillingUsageEventRepository, {
@@ -68,7 +94,7 @@ export const BillingUsageEventRepositoryLive = Layer.succeed(BillingUsageEventRe
     const inserted = yield* sqlClient.query((db) =>
       db
         .insert(billingUsageEvents)
-        .values(uniqueByPeriodAndIdempotencyKey(events).map(toInsertRow))
+        .values(dedupeAndOrderEventsForInsert(events).map(toInsertRow))
         .onConflictDoNothing({ target: [billingUsageEvents.billingPeriodStart, billingUsageEvents.idempotencyKey] })
         .returning({ id: billingUsageEvents.id }),
     )
