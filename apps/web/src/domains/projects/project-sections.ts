@@ -1,5 +1,6 @@
 import {
   BellRingIcon,
+  Boxes,
   Building2,
   CreditCard,
   DatabaseIcon,
@@ -19,14 +20,7 @@ import {
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
-/**
- * Single source of truth for the navigable sections of a project and its settings
- * pages. Consumed by the project sidebar, the settings sub-nav, and the global command
- * palette so the three never drift. Feature-flag gating is expressed declaratively via
- * the optional `flag` field and resolved by the `useVisible*` hooks below.
- */
-
-type SectionFlag = "behaviours" | "monitors" | "sso"
+type SectionFlag = "behaviours" | "monitors" | "sso" | "sandbox"
 
 interface ProjectSection {
   readonly key: string
@@ -106,14 +100,24 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
   {
     title: "Project",
     items: [
-      { key: "general", label: "General", icon: Package, path: (slug) => `/projects/${slug}/settings/general` },
+      {
+        key: "general",
+        label: "General",
+        icon: Package,
+        path: (slug) => `/projects/${slug}/settings/general`,
+      },
       {
         key: "settings-issues",
         label: "Issues",
         icon: ShieldAlertIcon,
         path: (slug) => `/projects/${slug}/settings/issues`,
       },
-      { key: "flaggers", label: "Flaggers", icon: ScanSearch, path: (slug) => `/projects/${slug}/settings/flaggers` },
+      {
+        key: "flaggers",
+        label: "Flaggers",
+        icon: ScanSearch,
+        path: (slug) => `/projects/${slug}/settings/flaggers`,
+      },
     ],
   },
   {
@@ -125,9 +129,31 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         icon: Building2,
         path: (slug) => `/projects/${slug}/settings/organization`,
       },
-      { key: "members", label: "Members", icon: Users, path: (slug) => `/projects/${slug}/settings/members` },
-      { key: "keys", label: "Keys", icon: Key, path: (slug) => `/projects/${slug}/settings/keys` },
-      { key: "billing", label: "Billing", icon: CreditCard, path: (slug) => `/projects/${slug}/settings/billing` },
+      {
+        key: "members",
+        label: "Members",
+        icon: Users,
+        path: (slug) => `/projects/${slug}/settings/members`,
+      },
+      {
+        key: "keys",
+        label: "Keys",
+        icon: Key,
+        path: (slug) => `/projects/${slug}/settings/keys`,
+      },
+      {
+        key: "billing",
+        label: "Billing",
+        icon: CreditCard,
+        path: (slug) => `/projects/${slug}/settings/billing`,
+      },
+      {
+        key: "sandboxes",
+        label: "Sandboxes",
+        icon: Boxes,
+        path: (slug) => `/projects/${slug}/settings/sandboxes`,
+        flag: "sandbox",
+      },
       {
         key: "integrations",
         label: "Integrations",
@@ -146,7 +172,12 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
   {
     title: "Personal",
     items: [
-      { key: "account", label: "Account", icon: UserRound, path: (slug) => `/projects/${slug}/settings/account` },
+      {
+        key: "account",
+        label: "Account",
+        icon: UserRound,
+        path: (slug) => `/projects/${slug}/settings/account`,
+      },
     ],
   },
 ]
@@ -156,7 +187,8 @@ function useSectionFlags(): Record<SectionFlag, boolean> {
   const behaviours = useHasFeatureFlag("behaviours")
   const monitors = useHasFeatureFlag("monitors")
   const sso = useHasFeatureFlag("sso")
-  return useMemo(() => ({ behaviours, monitors, sso }), [behaviours, monitors, sso])
+  const sandbox = useHasFeatureFlag("sandbox")
+  return useMemo(() => ({ behaviours, monitors, sso, sandbox }), [behaviours, monitors, sso, sandbox])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */

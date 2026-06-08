@@ -1,6 +1,9 @@
+import { createApiKey } from "@domain/api-keys"
 import { createMembership, createOrganization } from "@domain/organizations"
 import { createProject } from "@domain/projects"
 import {
+  SEED_ACME_SANDBOX_ACTIVE_API_KEY_ID,
+  SEED_ACME_SANDBOX_ACTIVE_API_KEY_TOKEN,
   SEED_ACME_SANDBOX_ACTIVE_ATTRS_ID,
   SEED_ACME_SANDBOX_ACTIVE_NAME,
   SEED_ACME_SANDBOX_ACTIVE_ORG_ID,
@@ -27,6 +30,7 @@ import {
   SEED_OWNER_USER_ID,
   SEED_PROJECT_ID,
 } from "@domain/shared/seeding"
+import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import { users as usersTable } from "../../schema/better-auth.ts"
 import { projects as projectsTable } from "../../schema/projects.ts"
@@ -202,7 +206,22 @@ const seedAcmeSandboxes: Seeder = {
         catch: (error) => new SeedError({ reason: "Failed to seed Acme sandboxes", cause: error }),
       })
 
+      // Default `lat_sandbox_`-prefixed key for the active sandbox so it can
+      // ingest locally (the archived one stays keyless — ingestion is refused
+      // for archived sandboxes anyway).
+      const sandboxKeyHash = yield* hash(SEED_ACME_SANDBOX_ACTIVE_API_KEY_TOKEN)
+      yield* ctx.repositories.apiKey.save(
+        createApiKey({
+          id: SEED_ACME_SANDBOX_ACTIVE_API_KEY_ID,
+          organizationId: SEED_ACME_SANDBOX_ACTIVE_ORG_ID,
+          token: SEED_ACME_SANDBOX_ACTIVE_API_KEY_TOKEN,
+          tokenHash: sandboxKeyHash,
+          name: "Default API Key",
+        }),
+      )
+
       console.log(`  -> sandboxes (acme): "${activeOrg.name}" [active], "${archivedOrg.name}" [archived]`)
+      console.log(`  -> sandbox api key: ${SEED_ACME_SANDBOX_ACTIVE_API_KEY_TOKEN}`)
     }),
 }
 

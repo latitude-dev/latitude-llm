@@ -98,11 +98,16 @@ const requireSsoFeature = async (organizationId: OrganizationId): Promise<void> 
     }).pipe(withPostgres(FeatureFlagRepositoryLive, client, organizationId), withTracing),
   )
   if (!enabled) {
-    throw new ForbiddenError({ message: "Enterprise SSO is not enabled for this organization" })
+    throw new ForbiddenError({
+      message: "Enterprise SSO is not enabled for this organization",
+    })
   }
 }
 
-const requireSsoAdmin = async (): Promise<{ userId: string; organizationId: OrganizationId }> => {
+const requireSsoAdmin = async (): Promise<{
+  userId: string
+  organizationId: OrganizationId
+}> => {
   const { userId, organizationId } = await requireSession()
   await requireSsoFeature(organizationId)
 
@@ -114,7 +119,9 @@ const requireSsoAdmin = async (): Promise<{ userId: string; organizationId: Orga
     }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId), withTracing),
   )
   if (!isAdmin) {
-    throw new ForbiddenError({ message: "Only organization owners and admins can manage SSO" })
+    throw new ForbiddenError({
+      message: "Only organization owners and admins can manage SSO",
+    })
   }
 
   return { userId, organizationId }
@@ -168,12 +175,20 @@ const registerSsoProviderSchema = z.discriminatedUnion("kind", [
 export const registerSsoProvider = createServerFn({ method: "POST" })
   .inputValidator(registerSsoProviderSchema)
   .handler(
-    async ({ data }): Promise<{ provider: SsoProviderDto; verificationRecord: SsoDomainVerificationRecordDto }> => {
+    async ({
+      data,
+    }): Promise<{
+      provider: SsoProviderDto
+      verificationRecord: SsoDomainVerificationRecordDto
+    }> => {
       const { organizationId } = await requireSsoAdmin()
 
       const existing = await findOrgProvider(organizationId)
       if (existing) {
-        throw new ValidationError({ field: "domain", message: "This organization already has an SSO provider" })
+        throw new ValidationError({
+          field: "domain",
+          message: "This organization already has an SSO provider",
+        })
       }
 
       // Deterministic, URL-safe slug; the unique constraint on `provider_id`
@@ -242,7 +257,7 @@ export const registerSsoProvider = createServerFn({ method: "POST" })
             headers,
           })
           domainVerificationToken = fallback.domainVerificationToken
-        } catch (fallbackError) {
+        } catch (_fallbackError) {
           throw new Error(
             "SSO provider was registered but the domain verification token could not be retrieved. " +
               "Please refresh the page to obtain your DNS TXT record.",
@@ -260,28 +275,31 @@ export const registerSsoProvider = createServerFn({ method: "POST" })
     },
   )
 
-export const getSsoDomainVerificationRecord = createServerFn({ method: "POST" }).handler(
-  async (): Promise<SsoDomainVerificationRecordDto> => {
-    const { organizationId } = await requireSsoAdmin()
+export const getSsoDomainVerificationRecord = createServerFn({
+  method: "POST",
+}).handler(async (): Promise<SsoDomainVerificationRecordDto> => {
+  const { organizationId } = await requireSsoAdmin()
 
-    const provider = await findOrgProvider(organizationId)
-    if (!provider) {
-      throw new ValidationError({ field: "domain", message: "No SSO provider is configured for this organization" })
-    }
-
-    const auth = getBetterAuth()
-    // Returns the active token, or mints a new one when the previous expired.
-    const { domainVerificationToken } = await auth.api.requestDomainVerification({
-      body: { providerId: provider.providerId },
-      headers: getRequestHeaders(),
+  const provider = await findOrgProvider(organizationId)
+  if (!provider) {
+    throw new ValidationError({
+      field: "domain",
+      message: "No SSO provider is configured for this organization",
     })
+  }
 
-    return {
-      host: `_${DOMAIN_VERIFICATION_TOKEN_PREFIX}-${provider.providerId}.${provider.domain}`,
-      value: domainVerificationToken,
-    }
-  },
-)
+  const auth = getBetterAuth()
+  // Returns the active token, or mints a new one when the previous expired.
+  const { domainVerificationToken } = await auth.api.requestDomainVerification({
+    body: { providerId: provider.providerId },
+    headers: getRequestHeaders(),
+  })
+
+  return {
+    host: `_${DOMAIN_VERIFICATION_TOKEN_PREFIX}-${provider.providerId}.${provider.domain}`,
+    value: domainVerificationToken,
+  }
+})
 
 export const verifySsoDomain = createServerFn({ method: "POST" }).handler(
   async (): Promise<{ verified: boolean; message?: string }> => {
@@ -289,7 +307,10 @@ export const verifySsoDomain = createServerFn({ method: "POST" }).handler(
 
     const provider = await findOrgProvider(organizationId)
     if (!provider) {
-      throw new ValidationError({ field: "domain", message: "No SSO provider is configured for this organization" })
+      throw new ValidationError({
+        field: "domain",
+        message: "No SSO provider is configured for this organization",
+      })
     }
 
     const auth = getBetterAuth()

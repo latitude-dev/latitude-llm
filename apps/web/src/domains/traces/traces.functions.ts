@@ -2,7 +2,6 @@ import { listSessionMomentIntelligenceUseCase } from "@domain/conversation-intel
 import { exportSelectionSchema } from "@domain/exports"
 import {
   filterSetSchema,
-  OrganizationId,
   PERCENTILE_TRACE_FILTER_FIELDS,
   type PercentileTraceFilterField,
   ProjectId,
@@ -43,8 +42,9 @@ import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
 import { enforceExportRequestRateLimit } from "../../domains/exports/export-rate-limit.ts"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
-import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
+import { getSessionOrganizationId } from "../../server/auth.ts"
 import { getClickhouseClient, getQueuePublisher, getRedisClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 
 export interface TraceRecord {
   readonly organizationId: string
@@ -169,6 +169,7 @@ interface TraceListResult {
 export const listTracesByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       limit: z.number().optional(),
       cursor: traceListCursorSchema.optional(),
@@ -179,8 +180,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<TraceListResult> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     const page = await Effect.runPromise(
       Effect.gen(function* () {
@@ -217,14 +217,14 @@ export const listTracesByProject = createServerFn({ method: "GET" })
 export const countTracesByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       filters: filterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
   .handler(async ({ data }): Promise<number> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -246,14 +246,14 @@ export const countTracesByProject = createServerFn({ method: "GET" })
 export const getTraceMetricsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       filters: filterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
     }),
   )
   .handler(async ({ data }): Promise<TraceMetrics | null> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -273,10 +273,9 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
   })
 
 export const getTraceCohortSummary = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string() }))
+  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string() }))
   .handler(async ({ data }): Promise<CohortSummary> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     return Effect.runPromise(
       getTraceCohortSummaryUseCase({
@@ -291,6 +290,7 @@ export const getTraceCohortSummary = createServerFn({ method: "GET" })
   })
 
 const traceHistogramInputSchema = z.object({
+  sandboxOrgId: z.string().optional(),
   projectId: z.string(),
   filters: filterSetSchema.optional(),
   rangeStartIso: z.string(),
@@ -312,8 +312,7 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
       return []
     }
 
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     const mergedFilters = mergeTraceHistogramTimeFilters(data.filters, data.rangeStartIso, data.rangeEndIso)
 
@@ -338,14 +337,14 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
 export const getTraceSearchHighlights = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceId: z.string(),
       searchQuery: z.string().max(500),
     }),
   )
   .handler(async ({ data }): Promise<TraceSearchHighlightsResult> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     return Effect.runPromise(
       getTraceSearchHighlightsUseCase({
@@ -363,13 +362,19 @@ export const getTraceSearchHighlights = createServerFn({ method: "GET" })
   })
 
 export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string(), analysisHash: z.string().optional() }))
+  .inputValidator(
+    z.object({
+      sandboxOrgId: z.string().optional(),
+      projectId: z.string(),
+      sessionId: z.string(),
+      analysisHash: z.string().optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<readonly SessionMomentIntelligenceRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
     return Effect.runPromise(
       listSessionMomentIntelligenceUseCase({
-        organizationId,
+        organizationId: orgId,
         projectId: data.projectId,
         sessionId: data.sessionId,
         ...(data.analysisHash ? { analysisHash: data.analysisHash } : {}),
@@ -418,10 +423,9 @@ export const getSessionMomentIntelligence = createServerFn({ method: "GET" })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), traceId: z.string() }))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -500,13 +504,13 @@ export const enqueueTracesExport = createServerFn({ method: "POST" })
 export const getTraceDistribution = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       field: z.enum(PERCENTILE_TRACE_FILTER_FIELDS),
     }),
   )
   .handler(async ({ data }): Promise<TraceDistribution> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -527,6 +531,7 @@ export const getTraceDistribution = createServerFn({ method: "GET" })
 export const getTraceDistinctValues = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       column: z.enum(DISTINCT_COLUMNS),
       limit: z.number().optional(),
@@ -534,8 +539,7 @@ export const getTraceDistinctValues = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<readonly string[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     return Effect.runPromise(
       Effect.gen(function* () {

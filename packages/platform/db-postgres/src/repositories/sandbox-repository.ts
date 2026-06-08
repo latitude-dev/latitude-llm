@@ -1,4 +1,4 @@
-import type { Sandbox } from "@domain/sandboxes"
+import type { Sandbox, SandboxListItem } from "@domain/sandboxes"
 import { SandboxRepository } from "@domain/sandboxes"
 import {
   NotFoundError,
@@ -9,10 +9,10 @@ import {
   type SqlClientShape,
   UserId,
 } from "@domain/shared"
-import { and, eq, lt, sql } from "drizzle-orm"
+import { and, desc, eq, lt, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { organizations } from "../schema/better-auth.ts"
+import { organizations, users } from "../schema/better-auth.ts"
 import { sandboxes } from "../schema/sandboxes.ts"
 
 const toDomainSandbox = (row: typeof sandboxes.$inferSelect): Sandbox => ({
@@ -110,6 +110,43 @@ export const SandboxRepositoryLive = Layer.effect(
                 .returning({ organizationId: sandboxes.organizationId }),
             )
             .pipe(Effect.map((rows) => rows.length))
+        }),
+
+      listByParentOrgId: (parentOrgId: OrganizationIdType) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          return yield* sqlClient
+            .query((db) =>
+              db
+                .select({
+                  sandbox: sandboxes,
+                  organizationName: organizations.name,
+                  organizationSlug: organizations.slug,
+                  ownerName: users.name,
+                  ownerEmail: users.email,
+                })
+                .from(sandboxes)
+                .innerJoin(organizations, eq(organizations.id, sandboxes.organizationId))
+                .leftJoin(users, eq(users.id, sandboxes.createdByUserId))
+                .where(eq(organizations.parentOrgId, parentOrgId))
+                .orderBy(desc(sandboxes.createdAt)),
+            )
+            .pipe(
+              Effect.map((rows): readonly SandboxListItem[] =>
+                rows.map((row) => ({
+                  sandbox: toDomainSandbox(row.sandbox),
+                  organizationName: row.organizationName,
+                  organizationSlug: row.organizationSlug,
+                  owner: row.ownerEmail
+                    ? {
+                        userId: UserId(row.sandbox.createdByUserId),
+                        name: row.ownerName,
+                        email: row.ownerEmail,
+                      }
+                    : null,
+                })),
+              ),
+            )
         }),
 
       lockParentForCapCheck: (parentOrgId: OrganizationIdType) =>

@@ -2,8 +2,6 @@ import {
   buildSandboxActivityStampKey,
   buildSandboxQuotaKey,
   buildSandboxRejectedIngestKey,
-  buildSandboxTraceCoalesceKey,
-  buildSandboxTracesChannel,
   SANDBOX_LAST_REJECTED_INGEST_TTL_SECONDS,
   SandboxSignals,
 } from "@domain/sandboxes"
@@ -15,8 +13,7 @@ const secondsUntil = (date: Date): number => Math.max(1, Math.ceil((date.getTime
 /**
  * Redis-backed {@link SandboxSignals}. Every method fails open: a Redis outage
  * must never drop an otherwise-valid sandbox trace, so quota errors allow the
- * ingest, the activity debounce skips the write, and marker/publish become
- * no-ops.
+ * ingest, the activity debounce skips the write, and the marker becomes a no-op.
  */
 export const SandboxSignalsLive = (redis: RedisClient): Layer.Layer<SandboxSignals> =>
   Layer.succeed(SandboxSignals, {
@@ -55,31 +52,4 @@ export const SandboxSignalsLive = (redis: RedisClient): Layer.Layer<SandboxSigna
         Effect.map((result) => result === "OK"),
         Effect.catch(() => Effect.succeed(false)),
       ),
-
-    publishTraceSignal: (input) =>
-      Effect.tryPromise({
-        try: async () => {
-          // Coalesce per (kind, trace): only the window winner publishes, so a
-          // chatty trace pulses ~once per `coalesceMs` per kind instead of once
-          // per span — and a liveness pulse never suppresses the later upsert.
-          const won = await redis.set(
-            buildSandboxTraceCoalesceKey(input.organizationId, input.kind, input.traceId),
-            "1",
-            "PX",
-            input.coalesceMs,
-            "NX",
-          )
-          if (won !== "OK") return
-          await redis.publish(
-            buildSandboxTracesChannel(input.organizationId),
-            JSON.stringify({
-              kind: input.kind,
-              organizationId: input.organizationId,
-              traceId: input.traceId,
-              sessionId: input.sessionId,
-            }),
-          )
-        },
-        catch: (error) => error,
-      }).pipe(Effect.catch(() => Effect.void)),
   })

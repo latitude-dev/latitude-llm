@@ -16,10 +16,7 @@ export function useAuthenticatedUser() {
 
 /** Reads the active organization id from the parent route's cached loader data. */
 export function useAuthenticatedOrganizationId() {
-  return authenticatedRoute.useLoaderData({ select: (data) => data.organizationId })
-}
-
-/** Reads the impersonating admin's user id (if any) from the parent route's cached loader data. */
-export function useAuthenticatedImpersonatedBy() {
-  return authenticatedRoute.useLoaderData({ select: (data) => data.impersonatedBy })
+  return authenticatedRoute.useLoaderData({
+    select: (data) => data.organizationId,
+  })
 }

@@ -12,29 +12,23 @@ import {
   Tabs,
   Text,
   Tooltip,
-  useToast,
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { useNavigate } from "@tanstack/react-router"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
-  CopyIcon,
   GroupIcon,
-  LayersIcon,
   ListTreeIcon,
   MessageSquareIcon,
   MessagesSquareIcon,
 } from "lucide-react"
-import { type ReactNode, useEffect, useMemo, useState } from "react"
-import { useRegisterCommands } from "../../../../../components/command-palette/command-palette-provider.tsx"
-import { useCurrentProject } from "../../../../../components/command-palette/commands/use-current-project.ts"
-import type { PaletteCommand } from "../../../../../components/command-palette/types.ts"
+import { type ReactNode, use, useCallback, useEffect, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useAnnotationsByTrace } from "../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../domains/annotations/annotations.functions.ts"
 import { useSpansByTraceCollection } from "../../../../../domains/spans/spans.collection.ts"
+import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -44,6 +38,7 @@ import { TraceAnnotationsList } from "./annotations/trace-annotations-list.tsx"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
 import { TraceTab } from "./trace-detail-drawer/tabs/trace-tab.tsx"
+import { TraceCommandPaletteContributor } from "./trace-detail-drawer/trace-command-palette-contributor.tsx"
 
 export type TraceDetailTabId = "trace" | "conversation" | "spans" | "annotations"
 
@@ -221,9 +216,9 @@ export function TraceDetailBody({
   focusAnnotationId,
   searchQuery,
 }: TraceDetailBodyProps) {
-  const { toast } = useToast()
-  const navigate = useNavigate()
-  const project = useCurrentProject()
+  const isSandbox = !!use(TraceScopeContext)
+  const annotationsEnabled = !isSandbox
+  const commandPaletteEnabled = !isSandbox
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
     traceId,
@@ -236,6 +231,7 @@ export function TraceDetailBody({
     projectId,
     traceId,
     draftMode: "include",
+    enabled: annotationsEnabled,
   })
   const annotationCount = annotationsByTraceData?.items?.length ?? 0
   const annotationTabSuffix = useMemo(
@@ -260,14 +256,23 @@ export function TraceDetailBody({
   const spansTabSuffix = useMemo(() => getSpansTabSuffix(traceRecord?.spanCount), [traceRecord?.spanCount])
   const tabsWithCounts = useMemo<TabOption<TabId>[]>(
     () =>
-      TABS.map((tab) => {
+      TABS.filter((tab) => annotationsEnabled || tab.id !== "annotations").map((tab) => {
         if (tab.id === "annotations") return { ...tab, suffix: annotationTabSuffix }
         if (tab.id === "spans") return { ...tab, suffix: spansTabSuffix }
         return tab
       }),
-    [annotationTabSuffix, spansTabSuffix],
+    [annotationsEnabled, annotationTabSuffix, spansTabSuffix],
   )
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set([activeTab]))
+
+  // Stable so the palette contributor's command memo doesn't re-register each render.
+  const handleSetActiveTab = useCallback(
+    (tab: TabId) => {
+      onActiveTabChange(tab)
+      setVisitedTabs((prev) => new Set([...prev, tab]))
+    },
+    [onActiveTabChange],
+  )
 
   const { scrollContainerRef, textSelectionPopoverControlsRef, scrollToAnnotation } = useConversationAnnotationFocus({
     projectId,
@@ -275,16 +280,12 @@ export function TraceDetailBody({
     focusAnnotationId,
     isConversationActive: activeTab === "conversation",
     onActivateConversation: () => handleSetActiveTab("conversation"),
+    annotationsEnabled,
   })
 
   useEffect(() => {
     setVisitedTabs((prev) => new Set([...prev, activeTab]))
   }, [activeTab])
-
-  function handleSetActiveTab(tab: TabId) {
-    onActiveTabChange(tab)
-    setVisitedTabs((prev) => new Set([...prev, tab]))
-  }
 
   function handleAnnotationClick(annotation: AnnotationRecord) {
     if (isGlobalAnnotation(annotation)) return
@@ -296,125 +297,11 @@ export function TraceDetailBody({
     onSelectedSpanIdChange(spanId ?? "")
   }
 
-  // Contribute trace-scoped commands (tab navigation + copy ids) to the command palette
-  // while this trace is open. Ids include the traceId so two mounted bodies never collide.
-  const traceCommands = useMemo<readonly PaletteCommand[]>(() => {
-    const goToTab = (tab: TabId) => {
-      onActiveTabChange(tab)
-      setVisitedTabs((prev) => new Set([...prev, tab]))
-    }
-    const commands: PaletteCommand[] = [
-      {
-        id: `trace:${traceId}:conversation`,
-        title: "View conversation",
-        icon: MessagesSquareIcon,
-        section: "context",
-        group: "Trace",
-        keywords: "conversation messages",
-        perform: () => goToTab("conversation"),
-      },
-      {
-        id: `trace:${traceId}:spans`,
-        title: "View spans",
-        icon: ListTreeIcon,
-        section: "context",
-        group: "Trace",
-        keywords: "spans tree",
-        perform: () => goToTab("spans"),
-      },
-      {
-        id: `trace:${traceId}:annotations`,
-        title: "View annotations",
-        icon: MessageSquareIcon,
-        section: "context",
-        group: "Trace",
-        keywords: "annotations notes scores",
-        perform: () => goToTab("annotations"),
-      },
-    ]
-
-    if (project && traceRecord?.sessionId) {
-      const { sessionId } = traceRecord
-      const projectSlug = project.slug
-      commands.push({
-        id: `trace:${traceId}:open-session`,
-        title: "Open session",
-        icon: LayersIcon,
-        section: "context",
-        group: "Trace",
-        keywords: "open session view conversation",
-        perform: () => navigate({ to: `/projects/${projectSlug}`, search: { sessionId, tab: "sessions" } }),
-      })
-    }
-
-    commands.push({
-      id: `trace:${traceId}:copy-id`,
-      title: "Copy trace ID",
-      icon: CopyIcon,
-      section: "context",
-      group: "Trace",
-      keywords: "copy trace id",
-      perform: () => {
-        void navigator.clipboard.writeText(traceId)
-        toast({ description: "Trace ID copied to clipboard." })
-      },
-    })
-
-    if (traceRecord?.sessionId) {
-      const { sessionId } = traceRecord
-      commands.push({
-        id: `trace:${traceId}:copy-session-id`,
-        title: "Copy session ID",
-        icon: CopyIcon,
-        section: "context",
-        group: "Trace",
-        keywords: "copy session id",
-        perform: () => {
-          void navigator.clipboard.writeText(sessionId)
-          toast({ description: "Session ID copied to clipboard." })
-        },
-      })
-    }
-
-    if (traceRecord?.userId) {
-      const { userId } = traceRecord
-      commands.push({
-        id: `trace:${traceId}:copy-user-id`,
-        title: "Copy user ID",
-        icon: CopyIcon,
-        section: "context",
-        group: "Trace",
-        keywords: "copy user id",
-        perform: () => {
-          void navigator.clipboard.writeText(userId)
-          toast({ description: "User ID copied to clipboard." })
-        },
-      })
-    }
-
-    if (traceRecord?.rootSpanId) {
-      const { rootSpanId } = traceRecord
-      commands.push({
-        id: `trace:${traceId}:copy-root-span-id`,
-        title: "Copy root span ID",
-        icon: CopyIcon,
-        section: "context",
-        group: "Trace",
-        keywords: "copy root span id",
-        perform: () => {
-          void navigator.clipboard.writeText(rootSpanId)
-          toast({ description: "Root span ID copied to clipboard." })
-        },
-      })
-    }
-
-    return commands
-  }, [traceId, traceRecord, project, navigate, onActiveTabChange, toast])
-
-  useRegisterCommands(traceCommands)
-
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      {commandPaletteEnabled ? (
+        <TraceCommandPaletteContributor traceId={traceId} traceRecord={traceRecord} onGoToTab={handleSetActiveTab} />
+      ) : null}
       <div className="flex flex-col px-6 py-4 gap-5 border-b shrink-0">
         <div className="flex flex-col gap-1">
           <div className="flex flex-row items-center gap-2">
@@ -490,6 +377,7 @@ export function TraceDetailBody({
             navigateToSpan={navigateToSpan}
             projectId={projectId}
             isActive={activeTab === "conversation"}
+            annotationsEnabled={annotationsEnabled}
             scrollContainerRef={scrollContainerRef}
             textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
             {...(searchQuery ? { searchQuery } : {})}
@@ -513,20 +401,22 @@ export function TraceDetailBody({
           />
         )}
       </div>
-      <div
-        className={cn("flex flex-col flex-1 overflow-hidden", {
-          hidden: activeTab !== "annotations",
-        })}
-      >
-        {visitedTabs.has("annotations") && (
-          <TraceAnnotationsList
-            projectId={projectId}
-            traceId={traceId}
-            hideAnnotationIntro
-            onAnnotationClick={handleAnnotationClick}
-          />
-        )}
-      </div>
+      {annotationsEnabled ? (
+        <div
+          className={cn("flex flex-col flex-1 overflow-hidden", {
+            hidden: activeTab !== "annotations",
+          })}
+        >
+          {visitedTabs.has("annotations") && (
+            <TraceAnnotationsList
+              projectId={projectId}
+              traceId={traceId}
+              hideAnnotationIntro
+              onAnnotationClick={handleAnnotationClick}
+            />
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }

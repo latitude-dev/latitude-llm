@@ -2,14 +2,11 @@ export {
   buildSandboxActivityStampKey,
   buildSandboxQuotaKey,
   buildSandboxRejectedIngestKey,
-  buildSandboxTraceCoalesceKey,
-  buildSandboxTracesChannel,
   SANDBOX_ACTIVITY_STAMP_DEBOUNCE_MS,
   SANDBOX_IDLE_ARCHIVE_DAYS,
   SANDBOX_IDLE_SWEEPER_KEY,
   SANDBOX_IDLE_SWEEPER_PATTERN,
   SANDBOX_LAST_REJECTED_INGEST_TTL_SECONDS,
-  SANDBOX_TRACE_SIGNAL_COALESCE_MS,
 } from "./constants.ts"
 export type { Sandbox, SandboxStatus } from "./entities/sandbox.ts"
 export {
@@ -25,7 +22,7 @@ export {
   SandboxNotFoundError,
   SandboxQuotaExceededError,
 } from "./errors.ts"
-export { SandboxRepository } from "./ports/sandbox-repository.ts"
+export { type SandboxListItem, SandboxRepository } from "./ports/sandbox-repository.ts"
 export type {
   SandboxRejectedIngestKind,
   SandboxRejectedIngestMarker,
@@ -49,10 +46,6 @@ export {
   type DeleteSandboxInput,
   deleteSandboxUseCase,
 } from "./use-cases/delete-sandbox.ts"
-export {
-  publishSandboxTraceSignalsUseCase,
-  type SandboxTraceRef,
-} from "./use-cases/publish-sandbox-trace-signals.ts"
 export {
   type ReactivateSandboxInput,
   reactivateSandboxUseCase,

@@ -1,7 +1,5 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
 import type { QueuePublishError } from "@domain/queue"
-import { SandboxSignals } from "@domain/sandboxes"
-import { createFakeSandboxSignals } from "@domain/sandboxes/testing"
 import { ChSqlClient, type ChSqlClientShape, OrganizationId, StorageDisk } from "@domain/shared"
 import { createFakeStorageDisk } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
@@ -51,7 +49,6 @@ const createFakeEventsPublisher = (): EventsPublisher<QueuePublishError> & { rea
 
 const run = (isSandbox: boolean) => {
   const eventsPublisher = createFakeEventsPublisher()
-  const { signals, state } = createFakeSandboxSignals()
   const { repository: spanRepo } = createFakeSpanRepository()
 
   const effect = processIngestedSpansUseCase({ eventsPublisher })({
@@ -69,39 +66,29 @@ const run = (isSandbox: boolean) => {
       Layer.mergeAll(
         Layer.succeed(SpanRepository, spanRepo),
         Layer.succeed(StorageDisk, createFakeStorageDisk().disk),
-        Layer.succeed(SandboxSignals, signals),
         Layer.succeed(ChSqlClient, {} as ChSqlClientShape),
       ),
     ),
   )
 
-  return { effect, eventsPublisher, signalsState: state }
+  return { effect, eventsPublisher }
 }
 
-describe("processIngestedSpansUseCase realtime publish", () => {
-  it("publishes a coalesced trace-upsert pulse and stamps the sandbox bit for sandbox orgs", async () => {
-    const { effect, eventsPublisher, signalsState } = run(true)
+describe("processIngestedSpansUseCase sandbox bit", () => {
+  it("stamps the sandbox bit on the TracesIngested event for sandbox orgs", async () => {
+    const { effect, eventsPublisher } = run(true)
     await Effect.runPromise(effect)
 
-    expect(signalsState.published).toEqual([
-      {
-        kind: "upsert",
-        organizationId: ORGANIZATION_ID,
-        traceId: "0af7651916cd43dd8448eb211c80319c",
-        sessionId: expect.any(String),
-      },
-    ])
     expect(eventsPublisher.published[0]).toMatchObject({
       name: "TracesIngested",
       payload: { isSandbox: true },
     })
   })
 
-  it("never publishes a realtime pulse for live orgs", async () => {
-    const { effect, eventsPublisher, signalsState } = run(false)
+  it("emits the TracesIngested event without the sandbox bit for live orgs", async () => {
+    const { effect, eventsPublisher } = run(false)
     await Effect.runPromise(effect)
 
-    expect(signalsState.published).toHaveLength(0)
     expect(eventsPublisher.published[0]).toMatchObject({
       name: "TracesIngested",
       payload: { isSandbox: false },

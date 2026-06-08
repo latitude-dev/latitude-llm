@@ -93,11 +93,10 @@ export const AdminSearchRepositoryLive = Layer.effect(
                   })
                   .from(organizations)
                   .where(
-                    or(
-                      ilike(organizations.name, pattern),
-                      ilike(organizations.slug, pattern),
-                      ilike(sql`CAST(${organizations.id} AS TEXT)`, pattern),
-                    ),
+                    // Sandbox orgs (Test Mode) carry a `parent_org_id`; they are
+                    // an implementation detail of their parent org and must never
+                    // surface in the backoffice as standalone organizations.
+                    sql`${isNull(organizations.parentOrgId)} AND (${ilike(organizations.name, pattern)} OR ${ilike(organizations.slug, pattern)} OR ${ilike(sql`CAST(${organizations.id} AS TEXT)`, pattern)})`,
                   )
                   .orderBy(organizations.name)
                   .limit(MAX_RESULTS_PER_ENTITY),
@@ -119,7 +118,10 @@ export const AdminSearchRepositoryLive = Layer.effect(
                   .from(projects)
                   .innerJoin(organizations, eq(projects.organizationId, organizations.id))
                   .where(
-                    sql`${isNull(projects.deletedAt)} AND (${ilike(projects.name, pattern)} OR ${ilike(projects.slug, pattern)} OR ${ilike(sql`CAST(${projects.id} AS TEXT)`, pattern)})`,
+                    // Exclude soft-deleted projects AND projects that live inside a
+                    // sandbox org (`organizations.parent_org_id IS NOT NULL`) — those
+                    // belong to Test Mode and aren't real customer projects.
+                    sql`${isNull(projects.deletedAt)} AND ${isNull(organizations.parentOrgId)} AND (${ilike(projects.name, pattern)} OR ${ilike(projects.slug, pattern)} OR ${ilike(sql`CAST(${projects.id} AS TEXT)`, pattern)})`,
                   )
                   .orderBy(projects.name)
                   .limit(MAX_RESULTS_PER_ENTITY),

@@ -3,7 +3,7 @@ import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   type FilterSet,
   filterSetSchema,
-  OrganizationId,
+  type OrganizationId,
   PERCENTILE_SESSION_FILTER_FIELDS,
   type PercentileSessionFilterField,
   ProjectId,
@@ -43,8 +43,8 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 
 const serializeSession = (session: Session) => ({
   organizationId: session.organizationId,
@@ -111,6 +111,7 @@ interface SessionListResult {
 export const listSessionsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       limit: z.number().optional(),
       cursor: sessionListCursorSchema.optional(),
@@ -121,8 +122,7 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<SessionListResult> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
     const filters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
 
     const page = await Effect.runPromise(
@@ -164,6 +164,7 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
 export const countSessionsByProject = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       filters: filterSetSchema.optional(),
       searchQuery: z.string().max(500).optional(),
@@ -176,8 +177,7 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
       readonly totalCount: number
       readonly matchingTraceCount?: number
     }> => {
-      const { organizationId } = await requireSession()
-      const orgId = OrganizationId(organizationId)
+      const orgId = await resolveOrgScope(data)
       const filters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
 
       const result = await Effect.runPromise(
@@ -235,6 +235,7 @@ const expandTopicFilters = async (
 }
 
 const sessionHistogramInputSchema = z.object({
+  sandboxOrgId: z.string().optional(),
   projectId: z.string(),
   filters: filterSetSchema.optional(),
   rangeStartIso: z.string(),
@@ -255,8 +256,7 @@ export const getSessionTimeHistogramByProject = createServerFn({ method: "GET" }
       return []
     }
 
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     const expandedFilters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
     const mergedFilters = mergeTraceHistogramTimeFilters(expandedFilters, data.rangeStartIso, data.rangeEndIso)
@@ -275,10 +275,11 @@ export const getSessionTimeHistogramByProject = createServerFn({ method: "GET" }
   })
 
 export const getSessionMetricsByProject = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .inputValidator(
+    z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), filters: filterSetSchema.optional() }),
+  )
   .handler(async ({ data }): Promise<SessionMetrics | null> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
     const filters = await expandTopicFilters(orgId, ProjectId(data.projectId), data.filters)
 
     return Effect.runPromise(
@@ -294,10 +295,9 @@ export const getSessionMetricsByProject = createServerFn({ method: "GET" })
   })
 
 export const getSessionCohortSummary = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string() }))
+  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string() }))
   .handler(async ({ data }): Promise<CohortSummary> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     return Effect.runPromise(
       getSessionCohortSummaryUseCase({
@@ -333,10 +333,9 @@ const serializeSessionDetail = (session: SessionDetail, latestTraceId: string): 
 })
 
 export const getSessionDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string() }))
+  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), sessionId: z.string() }))
   .handler(async ({ data }) => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
     const projectId = ProjectId(data.projectId)
 
     const result = await Effect.runPromise(
@@ -394,6 +393,7 @@ export interface SessionIssueRecord {
 export const listSessionIssues = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceIds: z.array(z.string().length(32)).max(500),
     }),
@@ -401,8 +401,7 @@ export const listSessionIssues = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<readonly SessionIssueRecord[]> => {
     if (data.traceIds.length === 0) return []
 
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
     const projectId = ProjectId(data.projectId)
     const now = new Date()
 
@@ -460,13 +459,13 @@ export const listSessionIssues = createServerFn({ method: "GET" })
 export const getSessionDistribution = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       field: z.enum(PERCENTILE_SESSION_FILTER_FIELDS),
     }),
   )
   .handler(async ({ data }): Promise<TraceDistribution> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     return Effect.runPromise(
       Effect.gen(function* () {
@@ -489,6 +488,7 @@ const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as cons
 export const getSessionDistinctValues = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       column: z.enum(DISTINCT_COLUMNS),
       limit: z.number().optional(),
@@ -496,8 +496,7 @@ export const getSessionDistinctValues = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<readonly string[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
 
     return Effect.runPromise(
       Effect.gen(function* () {

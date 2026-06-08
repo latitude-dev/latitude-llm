@@ -6,6 +6,7 @@ import {
 } from "@domain/sandboxes"
 import { OrganizationId } from "@domain/shared"
 import {
+  ApiKeyRepositoryLive,
   BillingOverrideRepositoryLive,
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
@@ -24,11 +25,15 @@ import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient } from "../../server/clients.ts"
 
 const sandboxWriteLayers = Layer.mergeAll(SandboxRepositoryLive, OrganizationRepositoryLive, MembershipRepositoryLive)
+// createSandbox seeds a default sandbox API key in the same use-case, so its
+// layer carries the api-key repo + outbox writer alongside the cap-check deps.
 const sandboxCapLayers = Layer.mergeAll(
   sandboxWriteLayers,
   BillingOverrideRepositoryLive,
   StripeSubscriptionLookupLive,
   SettingsReaderLive,
+  ApiKeyRepositoryLive,
+  OutboxEventWriterLive,
 )
 const sandboxDeleteLayers = Layer.mergeAll(sandboxWriteLayers, ProjectRepositoryLive, OutboxEventWriterLive)
 

@@ -16,9 +16,11 @@ export {
   type AdminOrganizationDetails,
   type AdminOrganizationMember,
   type AdminOrganizationProject,
+  type AdminOrganizationSandbox,
   adminOrganizationDetailsSchema,
   adminOrganizationMemberSchema,
   adminOrganizationProjectSchema,
+  adminOrganizationSandboxSchema,
 } from "./organization-details.ts"
 export { AdminOrganizationRepository, type AdminOrganizationSummary } from "./organization-repository.ts"
 export {

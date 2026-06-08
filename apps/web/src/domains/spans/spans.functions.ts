@@ -1,4 +1,4 @@
-import { OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import { ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
 import { buildConversationSpanMaps, SpanRepository, TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
@@ -8,8 +8,8 @@ import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getRedisClient } from "../../server/clients.ts"
+import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 
 const dateTimeParamSchema = z
   .string()
@@ -146,6 +146,7 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
 export const listSpansByTrace = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceId: z.string(),
       startTimeFrom: dateTimeParamSchema.optional(),
@@ -153,8 +154,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<SpanRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
@@ -173,6 +173,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
 export const listSpansBySession = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       sessionId: z.string(),
       startTimeFrom: dateTimeParamSchema.optional(),
@@ -180,8 +181,7 @@ export const listSpansBySession = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<SpanRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
@@ -198,11 +198,10 @@ export const listSpansBySession = createServerFn({ method: "GET" })
   })
 
 export const mapConversationToSpans = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .inputValidator(z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), traceId: z.string() }))
   .handler(
     async ({ data }): Promise<{ messageSpanMap: Record<number, string>; toolCallSpanMap: Record<string, string> }> => {
-      const { organizationId } = await requireSession()
-      const orgId = OrganizationId(organizationId)
+      const orgId = await resolveOrgScope(data)
       const traceId = TraceId(data.traceId)
 
       return Effect.runPromise(
@@ -240,6 +239,7 @@ export const mapConversationToSpans = createServerFn({ method: "GET" })
 export const getSpanDetail = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({
+      sandboxOrgId: z.string().optional(),
       projectId: z.string(),
       traceId: z.string(),
       spanId: z.string(),
@@ -248,8 +248,7 @@ export const getSpanDetail = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<SpanDetailRecord> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
+    const orgId = await resolveOrgScope(data)
     const span = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository

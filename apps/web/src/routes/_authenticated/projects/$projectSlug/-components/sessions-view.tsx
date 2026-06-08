@@ -12,10 +12,11 @@ import {
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { useQueries } from "@tanstack/react-query"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { use, useCallback, useMemo, useState } from "react"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
 import { useSessionMetrics, useSessionsInfiniteScroll } from "../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
+import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
@@ -69,13 +70,16 @@ function useExpandedSessionTraces(
   expandedIds: ReadonlySet<string>,
   sessions: readonly SessionRecord[],
 ) {
+  const scope = use(TraceScopeContext)
   const expandedSessions = useMemo(() => sessions.filter((s) => expandedIds.has(s.sessionId)), [sessions, expandedIds])
 
   // Shared cache with the session panel's `useSessionTraces` — same key, same
   // query function. With the panel open on an expanded row the ClickHouse query
   // runs once and both surfaces read from it.
   const results = useQueries({
-    queries: expandedSessions.map((s) => sessionTracesQueryOptions(projectId, s.sessionId, s.traceIds)),
+    queries: expandedSessions.map((s) =>
+      sessionTracesQueryOptions(scope?.sandboxOrgId, projectId, s.sessionId, s.traceIds),
+    ),
   })
 
   return useMemo(() => {
@@ -95,9 +99,7 @@ interface SessionsViewProps {
   readonly projectId: string
   readonly filters: FilterSet
   readonly filtersOpen: boolean
-  /** Session whose detail panel is open — highlights its row. */
   readonly activeSessionId: string | undefined
-  /** Trace currently shown in the panel's trace slot — highlights its sub-row. */
   readonly activeTraceId?: string | undefined
   readonly sorting: InfiniteTableSorting
   readonly onSortingChange: (sorting: InfiniteTableSorting) => void
@@ -106,27 +108,11 @@ interface SessionsViewProps {
   readonly totalTraceCount: number
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onFiltersClose: () => void
-  /**
-   * Opens the session detail panel. A bare session-row click passes just the
-   * session id (panel lands on Metadata); a trace reference passes the trace id
-   * too (panel slides straight into that trace's slot).
-   */
   readonly onOpenSession: (sessionId: string, traceId?: string) => void
-  /** Closes the session detail panel (clicking the already-open session row). */
   readonly onCloseSession: () => void
   readonly visibleColumnIds: readonly SessionColumnId[]
   readonly isSearching: boolean
-  /**
-   * Free-text search query forwarded to `listSessionsByProject`. Optional —
-   * the project page's Sessions tab (the original consumer) renders this view
-   * without search, and the `/search` route passes the current query through.
-   *
-   * When non-empty, `useSessionsInfiniteScroll` returns the per-session
-   * `searchMatches` payload (keyed by `sessionId`) alongside the sessions
-   * page. We destructure it from the same hook call so the route doesn't
-   * have to thread it as a prop — one source of truth, no risk of the route
-   * forgetting to plumb a second piece of data.
-   */
+  readonly selectable?: boolean
   readonly searchQuery?: string
 }
 
@@ -148,7 +134,12 @@ export function SessionsView({
   visibleColumnIds,
   isSearching,
   searchQuery,
+  selectable = true,
 }: SessionsViewProps) {
+  // Annotations are an LLM-feedback feature — off under a sandbox scope. Skip
+  // the counts fetch so the Indicators column shows errors only (mirrors the
+  // Traces table's `annotationsEnabled` gate).
+  const annotationsEnabled = !use(TraceScopeContext)
   const effectiveVisibleColumnIds = useMemo(
     () => (isSearching ? visibleColumnIds : visibleColumnIds.filter((id) => id !== "searchMatches")),
     [visibleColumnIds, isSearching],
@@ -241,7 +232,7 @@ export function SessionsView({
   const { data: annotationCounts, pendingTraceIds: annotationCountsPendingTraceIds } = useAnnotationCountsByTraceIds({
     projectId,
     traceIds: sessionRelevantTraceIds,
-    enabled: sessionRelevantTraceIds.length > 0,
+    enabled: annotationsEnabled && sessionRelevantTraceIds.length > 0,
   })
 
   const getRowAnnotationCounts = useCallback(
@@ -646,7 +637,7 @@ export function SessionsView({
           getRowAriaLabel={getRowAriaLabel}
           getRowClassName={getRowClassName}
           {...(activeTraceId || activeSessionId ? { activeRowKey: activeTraceId || (activeSessionId as string) } : {})}
-          selection={selection}
+          {...(selectable ? { selection } : {})}
           infiniteScroll={infiniteScroll}
           sorting={sorting}
           defaultSorting={searchQuery ? DEFAULT_SEARCH_SORTING : DEFAULT_SESSION_SORTING}

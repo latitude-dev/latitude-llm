@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
 import { type AnnotationQueue, AnnotationQueueRepository, LIVE_QUEUE_DEFAULT_SAMPLING } from "@domain/annotation-queues"
+import { ApiKeyRepository } from "@domain/api-keys"
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
 import { type Flagger, FlaggerRepository, provisionFlaggersUseCase } from "@domain/flaggers"
 import { createProject, ProjectRepository } from "@domain/projects"
@@ -19,6 +20,7 @@ import {
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import {
   AnnotationQueueRepositoryLive,
+  ApiKeyRepositoryLive,
   closePostgres,
   createPostgresClient,
   EvaluationRepositoryLive,
@@ -26,6 +28,8 @@ import {
   ProjectRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { parseEnv } from "@platform/env"
+import { hash } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { liveSeedFixtureKeys, liveSeedFixtures } from "./fixtures.ts"
 import { type BuiltTraceSpan, buildTraceRequests, type SeedSpanDefinition } from "./otlp.ts"
@@ -69,10 +73,11 @@ export type SeedTargets = {
 
 /**
  * Resolved run-time identity for a live-seeds invocation. The default flow
- * targets the seeded `Default Project`; when the CLI overrides the project
- * slug, we look up the project by slug (scoped to `SEED_ORG_ID`, the Acme
- * seed org) and enter `flaggersOnly` mode so the tool doesn't assert that
- * evaluations + the high-cost live queue exist in the target project.
+ * targets the seeded `Default Project` in the Acme org; when the CLI overrides
+ * the project slug, we look up the project by slug **scoped to the org that
+ * owns the `--api-key-token`** (the same org ingest routes to — e.g. a sandbox
+ * org, not necessarily Acme) and enter `flaggersOnly` mode so the tool doesn't
+ * assert that evaluations + the high-cost live queue exist in the target project.
  */
 export type SeedRunContext = {
   readonly organizationId: OrganizationId
@@ -140,14 +145,17 @@ export type SendLiveSeedDataOptions = {
   readonly seed?: string
   /**
    * Override target project slug. When set, the tool looks up the project by
-   * slug in the Acme seed org and runs in flaggers-only mode (evaluations
-   * + high-cost live queue are not required to exist in the target project).
-   * Fixture selection is restricted to the flagger-triggering set.
+   * slug in the org that owns {@link apiKeyToken} (e.g. a sandbox org) and runs
+   * in flaggers-only mode (evaluations + high-cost live queue are not required
+   * to exist in the target project). Fixture selection is restricted to the
+   * flagger-triggering set. Required when {@link apiKeyToken} is non-default.
    */
   readonly projectSlug?: string
   /**
    * Override API key token for ingest `Authorization` header. Defaults to the
-   * seed token (`lat_seed_default_api_key_token`), which is Acme-scoped.
+   * seed token (`lat_seed_default_api_key_token`), which is Acme-scoped. The key
+   * also decides which org is seeded — a sandbox's default key targets that
+   * sandbox (its spans route there at ingest, so project work is scoped there).
    */
   readonly apiKeyToken?: string
 }
@@ -400,15 +408,51 @@ async function provisionFlaggers(ctx: SeedRunContext): Promise<void> {
 
 /**
  * Resolve a `SeedRunContext` from CLI options. Defaults to the seed identity
- * (Acme org + Default Project + seed API key). When `projectSlug` is overridden
- * the project is looked up by slug (scoped to `SEED_ORG_ID`, the Acme seed org)
- * and `flaggersOnly` is turned on. Missing projects are created on the fly
- * so the CLI works against a fresh slug without requiring a UI round-trip.
+ * (Acme org + Default Project + seed API key). When `projectSlug` is overridden,
+ * the project is looked up by slug **in the org that owns `--api-key-token`** —
+ * the same org ingest routes the spans to (`Authorization` + `X-Latitude-Project`
+ * in {@link postSpanToIngest}). So a sandbox key + sandbox project slug seeds the
+ * sandbox tenant, with project create + flagger provisioning scoped there rather
+ * than to Acme. Missing projects are created on the fly. `flaggersOnly` is turned
+ * on for overrides so the tool doesn't assert seeded evaluations / live queues.
  */
+/**
+ * Resolve the org that owns an API key from its token. The key→org mapping is
+ * deliberately cross-tenant (it's how ingest auth resolves a token before any
+ * org is known), so `findByTokenHash` must run on the RLS-bypassing admin
+ * connection (`LAT_ADMIN_DATABASE_URL`) — the org-scoped runtime role can't see
+ * a key it isn't currently scoped to.
+ */
+async function resolveOrgFromApiKey(apiKeyToken: string): Promise<OrganizationId> {
+  const adminUrl = Effect.runSync(parseEnv("LAT_ADMIN_DATABASE_URL", "string"))
+  const adminClient = createPostgresClient({ databaseUrl: adminUrl })
+
+  try {
+    return await Effect.runPromise(
+      Effect.gen(function* () {
+        const tokenHash = yield* hash(apiKeyToken)
+        const repo = yield* ApiKeyRepository
+        const apiKey = yield* repo.findByTokenHash(tokenHash)
+        return apiKey.organizationId
+      }).pipe(withPostgres(ApiKeyRepositoryLive, adminClient, SEED_ORG_ID)),
+    ).catch((error: unknown) => {
+      if (error instanceof Error && "_tag" in error && error._tag === "NotFoundError") {
+        throw new Error(`No API key matches --api-key-token "${apiKeyToken}".`)
+      }
+      throw error
+    })
+  } finally {
+    await closePostgres(adminClient.pool)
+  }
+}
+
 async function resolveRunContext(options: SendLiveSeedDataOptions): Promise<SeedRunContext> {
   const apiKeyToken = options.apiKeyToken ?? SEED_API_KEY_TOKEN
+  const isSeedKey = apiKeyToken === SEED_API_KEY_TOKEN
 
-  if (!options.projectSlug || options.projectSlug === SEED_PROJECT_SLUG) {
+  // Fast path: the seeded key + default project is the fully-seeded Acme context
+  // (evaluations + live queue present), and needs no DB round-trip.
+  if (isSeedKey && (!options.projectSlug || options.projectSlug === SEED_PROJECT_SLUG)) {
     return {
       organizationId: SEED_ORG_ID,
       projectId: SEED_PROJECT_ID,
@@ -419,6 +463,16 @@ async function resolveRunContext(options: SendLiveSeedDataOptions): Promise<Seed
   }
 
   const targetSlug = options.projectSlug
+  if (!targetSlug) {
+    throw new Error("A non-default --api-key-token requires --project-slug (the project to target in that key's org).")
+  }
+
+  // The key decides the tenant — the same org ingest routes to. Resolve it
+  // before opening the org-scoped client; project/flagger work then runs under
+  // that org (RLS is purely `organization_id = get_current_organization_id()`,
+  // so the runtime role can read/write any org once scoped to it).
+  const organizationId = isSeedKey ? SEED_ORG_ID : await resolveOrgFromApiKey(apiKeyToken)
+
   const client = createPostgresClient()
 
   try {
@@ -426,7 +480,7 @@ async function resolveRunContext(options: SendLiveSeedDataOptions): Promise<Seed
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.findBySlug(targetSlug)
-      }).pipe(withPostgres(ProjectRepositoryLive, client, SEED_ORG_ID)),
+      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
     ).catch((error: unknown) => {
       if (error instanceof Error && "_tag" in error && error._tag === "NotFoundError") {
         return null
@@ -440,18 +494,18 @@ async function resolveRunContext(options: SendLiveSeedDataOptions): Promise<Seed
         Effect.gen(function* () {
           const repo = yield* ProjectRepository
           const created = createProject({
-            organizationId: SEED_ORG_ID,
+            organizationId,
             name: targetSlug,
             slug: targetSlug,
           })
           yield* repo.save(created)
-          console.log(`[live-seeds] Created project "${targetSlug}" in the Acme seed org`)
+          console.log(`[live-seeds] Created project "${targetSlug}" in org ${organizationId}`)
           return created
-        }).pipe(withPostgres(ProjectRepositoryLive, client, SEED_ORG_ID)),
+        }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
       ))
 
     return {
-      organizationId: SEED_ORG_ID,
+      organizationId,
       projectId: project.id,
       projectSlug: project.slug,
       apiKeyToken,

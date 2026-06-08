@@ -1,17 +1,24 @@
-import type { NotFoundError, OrganizationId, RepositoryError, SqlClient } from "@domain/shared"
+import type { NotFoundError, OrganizationId, RepositoryError, SqlClient, UserId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 import type { Sandbox, SandboxStatus } from "../entities/sandbox.ts"
 
 /**
- * Sandbox lifecycle is *cross-org* management: a parent live org owns sibling
- * sandbox orgs, and the per-plan cap counts sandboxes across that family. The
- * `sandboxes` table's RLS scopes each row to its *own* sandbox org, so no
- * single live-org RLS context can see a parent's sandboxes. These methods are
- * therefore scoped by explicit `organizationId` / `parentOrgId` arguments and
- * run on an RLS-bypassing (admin) `SqlClient`, mirroring the cross-org reads in
- * `@domain/admin`. Authorization is the caller's responsibility (the use-cases
- * gate every call on parent-org membership before touching this port).
+ * A sandbox joined to its `organizations` row (for name/slug — a sandbox *is*
+ * an org) and its creator/owner (`created_by_user_id`, a user in the parent
+ * org). Powers the parent-org switcher and the "your sandboxes" settings list,
+ * neither of which can read the sandbox's own RLS scope.
  */
+export interface SandboxListItem {
+  readonly sandbox: Sandbox
+  readonly organizationName: string
+  readonly organizationSlug: string
+  readonly owner: {
+    readonly userId: UserId
+    readonly name: string | null
+    readonly email: string
+  } | null
+}
+
 export class SandboxRepository extends Context.Service<
   SandboxRepository,
   {
@@ -23,6 +30,9 @@ export class SandboxRepository extends Context.Service<
     ) => Effect.Effect<Sandbox, NotFoundError | RepositoryError, SqlClient>
     countActiveByParentOrgId: (parentOrgId: OrganizationId) => Effect.Effect<number, RepositoryError, SqlClient>
     archiveIdle: (cutoff: Date) => Effect.Effect<number, RepositoryError, SqlClient>
+    listByParentOrgId: (
+      parentOrgId: OrganizationId,
+    ) => Effect.Effect<readonly SandboxListItem[], RepositoryError, SqlClient>
     /**
      * Take a transaction-scoped advisory lock keyed on the parent org, so the
      * active-cap "count then write" sequence is serialized per parent and two

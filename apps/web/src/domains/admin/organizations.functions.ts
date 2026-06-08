@@ -63,6 +63,21 @@ export interface AdminOrganizationProjectDto {
   createdAt: string
 }
 
+export interface AdminOrganizationSandboxDto {
+  /** The sandbox's own organization id (a sandbox is an org with a parent). */
+  organizationId: string
+  name: string
+  slug: string
+  status: "active" | "archived"
+  lastActivityAt: string
+  owner: {
+    id: string
+    email: string
+    name: string | null
+  } | null
+  createdAt: string
+}
+
 interface AdminOrganizationDetailsDto {
   id: string
   name: string
@@ -70,6 +85,7 @@ interface AdminOrganizationDetailsDto {
   stripeCustomerId: string | null
   members: AdminOrganizationMemberDto[]
   projects: AdminOrganizationProjectDto[]
+  sandboxes: AdminOrganizationSandboxDto[]
   createdAt: string
   updatedAt: string
 }
@@ -119,6 +135,15 @@ const toDto = (details: AdminOrganizationDetails): AdminOrganizationDetailsDto =
     name: p.name,
     slug: p.slug,
     createdAt: p.createdAt.toISOString(),
+  })),
+  sandboxes: details.sandboxes.map((s) => ({
+    organizationId: s.organizationId,
+    name: s.name,
+    slug: s.slug,
+    status: s.status,
+    lastActivityAt: s.lastActivityAt.toISOString(),
+    owner: s.owner ? { id: s.owner.id, email: s.owner.email, name: s.owner.name } : null,
+    createdAt: s.createdAt.toISOString(),
   })),
   createdAt: details.createdAt.toISOString(),
   updatedAt: details.updatedAt.toISOString(),

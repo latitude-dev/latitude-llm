@@ -2,7 +2,7 @@ import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
 import { OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { processIngestedSpansUseCase } from "@domain/spans"
-import { RedisCacheStoreLive, type RedisClient, SandboxSignalsLive } from "@platform/cache-redis"
+import { RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
@@ -111,7 +111,6 @@ export const createSpanIngestionWorker = ({
           withTracing,
           Effect.provide(StorageDiskLive(disk)),
           Effect.provide(RedisCacheStoreLive(rdClient)),
-          Effect.provide(SandboxSignalsLive(rdClient)),
         )
 
         return processEffect

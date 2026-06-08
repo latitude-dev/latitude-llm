@@ -14,10 +14,10 @@ import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
 import { type ReactNode, type RefObject, useCallback, useMemo, useRef } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
+import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
 import { useTraceSearchHighlights } from "../../../../../../../domains/traces/traces.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
-import { useAuthenticatedImpersonatedBy, useAuthenticatedUser } from "../../../../../-route-data.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
 import {
   type TextSelectionPopoverControls,
@@ -38,39 +38,16 @@ function toSearchHighlightRanges(result: TraceSearchHighlightsResult | undefined
   }))
 }
 
-function ConversationContent({
-  traceDetail,
-  navigateToSpan,
-  projectId,
-  isActive,
-  scrollContainerRef,
-  textSelectionPopoverControlsRef,
-  onPopoverClose,
-  searchQuery,
-  messageTrailingSlot,
-}: {
-  readonly traceDetail: TraceDetailRecord
-  readonly navigateToSpan?: ((spanId: string) => void) | undefined
-  readonly projectId: string
-  readonly isActive: boolean
-  readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
-  readonly textSelectionPopoverControlsRef?: RefObject<TextSelectionPopoverControls | null> | undefined
-  readonly onPopoverClose?: (() => void) | undefined
-  readonly searchQuery?: string | undefined
-  /** Renders a slot below each message (e.g. semantic moment labels). Receives the original messageIndex and role. */
-  readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
-}) {
-  const internalScrollRef = useRef<HTMLDivElement>(null)
-  const scrollRef = scrollContainerRef ?? internalScrollRef
-  const navigatorRef = useRef<ScrollNavigatorHandle>(null)
-  const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
-  const clearSelectionRef = useRef<(() => void) | null>(null)
-
-  const user = useAuthenticatedUser()
-  const impersonatedBy = useAuthenticatedImpersonatedBy()
-  const isDev = import.meta.env.DEV
-  const isAdmin = (user as { role?: string }).role === "admin"
-  const showDownload = isDev || isAdmin || impersonatedBy !== null
+/**
+ * Latitude-staff-only "download conversation as JSON" affordance: visible to
+ * admins and impersonating admins (support), plus local dev builds for
+ * convenience — never to regular customers. The session comes from
+ * `useAuthSession` (tree-agnostic), so it works the same in the sandbox tree,
+ * which has no `_authenticated` match.
+ */
+function StaffConversationDownloadButton({ traceDetail }: { readonly traceDetail: TraceDetailRecord }) {
+  const { isAdmin, isImpersonating } = useAuthSession()
+  const isStaff = import.meta.env.DEV || isAdmin || isImpersonating
 
   const handleDownload = useCallback(() => {
     const json = JSON.stringify(traceDetail.allMessages, null, 2)
@@ -84,6 +61,45 @@ function ConversationContent({
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }, [traceDetail])
+
+  if (!isStaff) return null
+  return (
+    <Button variant="ghost" size="sm" onClick={handleDownload} aria-label="Download conversation as JSON">
+      <Icon icon={DownloadIcon} size="sm" />
+    </Button>
+  )
+}
+
+function ConversationContent({
+  traceDetail,
+  navigateToSpan,
+  projectId,
+  isActive,
+  annotationsEnabled,
+  scrollContainerRef,
+  textSelectionPopoverControlsRef,
+  onPopoverClose,
+  searchQuery,
+  messageTrailingSlot,
+}: {
+  readonly traceDetail: TraceDetailRecord
+  readonly navigateToSpan?: ((spanId: string) => void) | undefined
+  readonly projectId: string
+  readonly isActive: boolean
+  /** Off under a sandbox scope — hides the inline annotate affordances and skips annotation fetches. */
+  readonly annotationsEnabled: boolean
+  readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
+  readonly textSelectionPopoverControlsRef?: RefObject<TextSelectionPopoverControls | null> | undefined
+  readonly onPopoverClose?: (() => void) | undefined
+  readonly searchQuery?: string | undefined
+  /** Renders a slot below each message (e.g. semantic moment labels). Receives the original messageIndex and role. */
+  readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
+}) {
+  const internalScrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef = scrollContainerRef ?? internalScrollRef
+  const navigatorRef = useRef<ScrollNavigatorHandle>(null)
+  const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
+  const clearSelectionRef = useRef<(() => void) | null>(null)
 
   const { data: spanMaps } = useConversationSpanMaps({
     projectId,
@@ -108,6 +124,7 @@ function ConversationContent({
   const { messageLevelAnnotations, isCreatePending, isUpdatePending } = useTraceAnnotationsData({
     projectId,
     traceId: traceDetail.traceId,
+    enabled: annotationsEnabled,
   })
 
   const {
@@ -127,6 +144,7 @@ function ConversationContent({
     traceId: traceDetail.traceId,
     isActive,
     getSpanIdForMessage,
+    annotationsEnabled,
   })
 
   const effectiveSearchQuery = searchQuery ?? ""
@@ -190,57 +208,59 @@ function ConversationContent({
           scrollContainerRef={scrollRef}
           navigatorRef={navigatorRef}
           navItemRefsRef={navItemRefs}
-          onTextSelect={handleTextSelect}
-          onSelectionDismiss={closeAnnotationPopover}
           clearSelectionRef={clearSelectionRef}
           highlightRanges={mergedHighlightRanges}
           firstMatchHint={firstMatchHint}
-          onAnnotationClick={onAnnotationClick}
-          messageAnnotationSlot={(messageIndex, role) => {
-            const data = messageLevelAnnotations.get(messageIndex)
-            return (
-              <MessageAnnotationTrigger
-                key={data?.annotations.map((a) => a.id).join(",") ?? `no-annotation-${messageIndex}`}
-                messageIndex={messageIndex}
-                messageRole={role}
-                projectId={projectId}
-                traceId={traceDetail.traceId}
-                spanId={spanMaps?.messageSpanMap[messageIndex]}
-                annotations={data?.annotations ?? []}
-                annotators={data?.annotators ?? []}
-                onClose={onPopoverClose}
-              />
-            )
-          }}
+          {...(annotationsEnabled
+            ? {
+                onTextSelect: handleTextSelect,
+                onSelectionDismiss: closeAnnotationPopover,
+                onAnnotationClick,
+                messageAnnotationSlot: (messageIndex: number, role: string) => {
+                  const data = messageLevelAnnotations.get(messageIndex)
+                  return (
+                    <MessageAnnotationTrigger
+                      key={data?.annotations.map((a) => a.id).join(",") ?? `no-annotation-${messageIndex}`}
+                      messageIndex={messageIndex}
+                      messageRole={role}
+                      projectId={projectId}
+                      traceId={traceDetail.traceId}
+                      spanId={spanMaps?.messageSpanMap[messageIndex]}
+                      annotations={data?.annotations ?? []}
+                      annotators={data?.annotators ?? []}
+                      onClose={onPopoverClose}
+                    />
+                  )
+                },
+              }
+            : {})}
           {...(messageActions ? { messageActions } : {})}
           {...(toolCallActions ? { toolCallActions } : {})}
           {...(messageTrailingSlot ? { messageTrailingSlot } : {})}
         />
-        <AnnotationPopover
-          position={textSelectionPopoverPosition}
-          scrollContainerRef={scrollRef}
-          projectId={projectId}
-          annotations={textSelectionAnnotations}
-          showCreateForm={textSelectionAnnotations.length === 0}
-          createInitialPassed={textSelectionInitialPassed}
-          createAutoFocus={textSelectionInitialPassed !== null}
-          isCreateLoading={isCreatePending}
-          isUpdateLoading={isUpdatePending}
-          onSave={createTextSelectionAnnotation}
-          onUpdate={updateTextSelectionAnnotation}
-          onClose={() => {
-            closeAnnotationPopover()
-            clearSelectionRef.current?.()
-            onPopoverClose?.()
-          }}
-        />
+        {annotationsEnabled ? (
+          <AnnotationPopover
+            position={textSelectionPopoverPosition}
+            scrollContainerRef={scrollRef}
+            projectId={projectId}
+            annotations={textSelectionAnnotations}
+            showCreateForm={textSelectionAnnotations.length === 0}
+            createInitialPassed={textSelectionInitialPassed}
+            createAutoFocus={textSelectionInitialPassed !== null}
+            isCreateLoading={isCreatePending}
+            isUpdateLoading={isUpdatePending}
+            onSave={createTextSelectionAnnotation}
+            onUpdate={updateTextSelectionAnnotation}
+            onClose={() => {
+              closeAnnotationPopover()
+              clearSelectionRef.current?.()
+              onPopoverClose?.()
+            }}
+          />
+        ) : null}
       </div>
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-        {showDownload && (
-          <Button variant="ghost" size="sm" onClick={handleDownload} aria-label="Download conversation as JSON">
-            <Icon icon={DownloadIcon} size="sm" />
-          </Button>
-        )}
+        <StaffConversationDownloadButton traceDetail={traceDetail} />
         <ScrollNavigator
           ref={navigatorRef}
           scrollContainerRef={scrollRef}
@@ -267,6 +287,7 @@ export function ConversationTab({
   navigateToSpan,
   projectId,
   isActive,
+  annotationsEnabled = true,
   scrollContainerRef,
   textSelectionPopoverControlsRef,
   onPopoverClose,
@@ -279,6 +300,8 @@ export function ConversationTab({
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
   readonly projectId: string
   readonly isActive: boolean
+  /** Off under a sandbox scope — hides inline annotate affordances and skips annotation fetches. Defaults on. */
+  readonly annotationsEnabled?: boolean
   /** Optional ref to the scroll container. Used for external scroll control (e.g., annotation navigation). */
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
   readonly textSelectionPopoverControlsRef?: RefObject<TextSelectionPopoverControls | null> | undefined
@@ -309,6 +332,7 @@ export function ConversationTab({
   return (
     <ConversationContent
       isActive={isActive}
+      annotationsEnabled={annotationsEnabled}
       traceDetail={traceDetail}
       navigateToSpan={navigateToSpan}
       projectId={projectId}

@@ -371,6 +371,13 @@ export const SEED_ACME_SANDBOX_ACTIVE_SLUG = "acme-dev-sandbox"
 export const SEED_ACME_SANDBOX_ACTIVE_ATTRS_ID = "acmesbx1act0attrs00000a1"
 /** Sandbox project under the active sandbox, linked to `SEED_PROJECT_ID`. */
 export const SEED_ACME_SANDBOX_ACTIVE_PROJECT_ID = ProjectId("acmesbx1act0proj000000a1")
+/**
+ * Default API key for the active sandbox org. Carries the `lat_sandbox_` prefix
+ * so seeded sandboxes can ingest locally and so the prefix is exercised in dev,
+ * mirroring how `createSandbox` mints one for real sandboxes.
+ */
+export const SEED_ACME_SANDBOX_ACTIVE_API_KEY_ID = ApiKeyId("acmesbx1act0apikey0000a1")
+export const SEED_ACME_SANDBOX_ACTIVE_API_KEY_TOKEN = "lat_sandbox_seed_default_api_key_token"
 
 /**
  * Acme sandbox #2 — `archived`. Idle past the 7-day threshold; surfaces the

@@ -14,8 +14,6 @@ import { base64Encode } from "@repo/utils"
 import { Effect } from "effect"
 import { SpanDecodingError } from "../errors.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
-import { sessionIdCandidates } from "../otlp/resolvers/identity.ts"
-import { first } from "../otlp/resolvers/utils.ts"
 import { resolveSpanProjectSlug } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
 import { deterministicSample } from "../sampling/deterministic-sampler.ts"
@@ -85,42 +83,21 @@ function inspectPayload(request: OtlpExportTraceServiceRequest): PayloadInspecti
   return { totalSpans, spanSlugs, uniqueSlugs }
 }
 
-/** Earliest id-only view of a trace, for the pre-persist sandbox liveness pulse. */
-interface OtlpTraceSignal {
-  readonly traceId: string
-  readonly sessionId: string
-}
-
 interface OtlpSandboxInspection {
   readonly totalSpans: number
-  /** One entry per distinct trace in the batch (first span wins for `sessionId`). */
-  readonly traceSignals: readonly OtlpTraceSignal[]
 }
 
 export const inspectOtlpForSandbox = (decoded: OtlpExportTraceServiceRequest | null): OtlpSandboxInspection => {
-  if (!decoded) return { totalSpans: 0, traceSignals: [] }
+  if (!decoded) return { totalSpans: 0 }
 
   let totalSpans = 0
-  const sessionByTrace = new Map<string, string>()
   for (const resourceSpans of decoded.resourceSpans ?? []) {
     for (const scopeSpans of resourceSpans.scopeSpans ?? []) {
-      for (const span of scopeSpans.spans ?? []) {
-        totalSpans++
-        const traceId = span.traceId
-        if (traceId && !sessionByTrace.has(traceId)) {
-          sessionByTrace.set(traceId, first(sessionIdCandidates, span.attributes ?? []) ?? "")
-        }
-      }
+      totalSpans += scopeSpans.spans?.length ?? 0
     }
   }
 
-  return {
-    totalSpans,
-    traceSignals: [...sessionByTrace].map(([traceId, sessionId]) => ({
-      traceId,
-      sessionId,
-    })),
-  }
+  return { totalSpans }
 }
 
 const resolveProject = (slug: string): Effect.Effect<Project | null, RepositoryError, ProjectRepository | SqlClient> =>

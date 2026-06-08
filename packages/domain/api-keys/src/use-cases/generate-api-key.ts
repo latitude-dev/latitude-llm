@@ -1,5 +1,11 @@
 import { OutboxEventWriter } from "@domain/events"
-import { type ApiKeyId, type RepositoryError, SqlClient, type ValidationError } from "@domain/shared"
+import {
+  type ApiKeyId,
+  type OrganizationId,
+  type RepositoryError,
+  SqlClient,
+  type ValidationError,
+} from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
 import { Effect } from "effect"
 import { SANDBOX_API_KEY_TOKEN_PREFIX } from "../constants.ts"
@@ -12,12 +18,19 @@ export interface GenerateApiKeyInput {
   readonly name: string
   readonly isSandbox: boolean
   readonly actorUserId?: string
+  /**
+   * Target org for the key. Defaults to the current `SqlClient` scope. Pass it
+   * to mint a key in a *different* org within the caller's transaction — e.g.
+   * `createSandboxUseCase` runs in the parent scope but seeds the key into the
+   * new sandbox org (admin client, so RLS doesn't block the cross-org insert).
+   */
+  readonly organizationId?: OrganizationId
 }
 
 export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError | CryptoError
 
 export const generateApiKeyUseCase = Effect.fn("apiKeys.generateApiKey")(function* (input: GenerateApiKeyInput) {
-  const { organizationId } = yield* SqlClient
+  const organizationId = input.organizationId ?? (yield* SqlClient).organizationId
   if (input.id) {
     yield* Effect.annotateCurrentSpan("apiKey.id", input.id)
   }

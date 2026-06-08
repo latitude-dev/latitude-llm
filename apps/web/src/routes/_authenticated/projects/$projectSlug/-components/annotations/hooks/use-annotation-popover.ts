@@ -18,6 +18,8 @@ interface UseAnnotationPopoverOptions {
   readonly traceId: string
   readonly isActive: boolean
   readonly getSpanIdForMessage?: (messageIndex: number) => string | undefined
+  /** Off under a sandbox scope — skips the annotations fetch and keeps the popover closed. */
+  readonly annotationsEnabled?: boolean
 }
 
 export interface TextSelectionPopoverControls {
@@ -30,6 +32,7 @@ export function useAnnotationPopover({
   traceId,
   isActive,
   getSpanIdForMessage,
+  annotationsEnabled = true,
 }: UseAnnotationPopoverOptions) {
   const {
     annotations,
@@ -39,17 +42,17 @@ export function useAnnotationPopover({
     isCreatePending,
     isUpdatePending,
     isDeletePending,
-  } = useTraceAnnotationsData({ projectId, traceId })
+  } = useTraceAnnotationsData({ projectId, traceId, enabled: annotationsEnabled })
 
   const [popoverState, setPopoverState] = useState<AnnotationPopoverState | null>(null)
-  const openPopover = isActive && popoverState ? popoverState : null
+  const openPopover = isActive && annotationsEnabled && popoverState ? popoverState : null
 
   const openAnnotationPopover = useCallback(
     (next: AnnotationPopoverState) => {
-      if (!isActive) return
+      if (!isActive || !annotationsEnabled) return
       setPopoverState(next)
     },
-    [isActive],
+    [isActive, annotationsEnabled],
   )
 
   const openExistingAnnotationPopover = useCallback(

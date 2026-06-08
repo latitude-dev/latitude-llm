@@ -1,7 +1,8 @@
 import type { MomentKind } from "@domain/conversation-intelligence"
 import { Button, Icon, Popover, PopoverClose, PopoverContent, PopoverTrigger, Text } from "@repo/ui"
 import { XIcon } from "lucide-react"
-import { type RefObject, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { type RefObject, use, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
 import { useSessionMomentIntelligence } from "../../../../../../domains/traces/traces.collection.ts"
 import type { SessionMomentIntelligenceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
@@ -297,6 +298,8 @@ export function ConversationTab({
   /** Scrolls to this semantic moment when no label kind is focused. */
   readonly focusMomentId?: string | undefined
 }) {
+  // Annotations are an LLM-feedback feature — off under a sandbox scope.
+  const annotationsEnabled = !use(TraceScopeContext)
   const [focusAnnotationId, setFocusAnnotationId] = useParamState("annotationId", "")
   const selectedLabelStore = useSelectedLabelStore()
   const { scrollContainerRef, textSelectionPopoverControlsRef, traceDetail, isDetailLoading } =
@@ -306,6 +309,7 @@ export function ConversationTab({
       focusAnnotationId,
       isConversationActive: isActive,
       onFocusConsumed: () => setFocusAnnotationId(""),
+      annotationsEnabled,
     })
   const { data: moments } = useSessionMomentIntelligence({ projectId, sessionId })
 
@@ -365,6 +369,7 @@ export function ConversationTab({
       isDetailLoading={isDetailLoading}
       projectId={projectId}
       isActive={isActive}
+      annotationsEnabled={annotationsEnabled}
       scrollContainerRef={scrollContainerRef}
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
       {...(labelsByMessageIndex.size > 0 ? { messageTrailingSlot } : {})}

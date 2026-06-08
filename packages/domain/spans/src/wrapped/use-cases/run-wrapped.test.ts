@@ -52,6 +52,7 @@ const makeProject = (): Project => ({
   settings: null,
   firstTraceAt: null,
   deletedAt: null,
+  linkedProjectId: null,
   lastEditedAt: new Date("2026-01-01T00:00:00.000Z"),
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),

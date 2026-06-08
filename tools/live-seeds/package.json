@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@domain/annotation-queues": "workspace:*",
+    "@domain/api-keys": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/flaggers": "workspace:*",
     "@domain/projects": "workspace:*",
@@ -26,6 +27,7 @@
     "@domain/spans": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
+    "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "tsx": "catalog:"
   }

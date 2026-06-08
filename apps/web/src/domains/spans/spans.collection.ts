@@ -1,7 +1,9 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
+import { use } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
+import { TraceScopeContext } from "../traces/trace-scope.tsx"
 import {
   getSpanDetail,
   listSpansBySession,
@@ -18,12 +20,16 @@ const makeSpansByTraceCollection = (
   traceId: string,
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
+  sandboxOrgId: string | undefined,
 ) =>
   createCollection(
     queryCollectionOptions({
       queryClient,
-      queryKey: ["spans", "trace", projectId, traceId, startTimeFrom, startTimeTo],
-      queryFn: () => listSpansByTrace({ data: { projectId, traceId, startTimeFrom, startTimeTo } }),
+      queryKey: ["spans", "trace", sandboxOrgId, projectId, traceId, startTimeFrom, startTimeTo],
+      queryFn: () =>
+        listSpansByTrace({
+          data: { ...(sandboxOrgId ? { sandboxOrgId } : {}), projectId, traceId, startTimeFrom, startTimeTo },
+        }),
       getKey: (item: SpanRecord): string => `${item.traceId}-${item.spanId}`,
     }),
   )
@@ -36,10 +42,17 @@ const getSpansByTraceCollection = (
   traceId: string,
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
+  sandboxOrgId: string | undefined,
 ): SpansByTraceCollection => {
-  const cacheKey = `${projectId}:${traceId}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
+  const cacheKey = `${sandboxOrgId ?? ""}:${projectId}:${traceId}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
   if (!traceCollectionsCache[cacheKey]) {
-    traceCollectionsCache[cacheKey] = makeSpansByTraceCollection(projectId, traceId, startTimeFrom, startTimeTo)
+    traceCollectionsCache[cacheKey] = makeSpansByTraceCollection(
+      projectId,
+      traceId,
+      startTimeFrom,
+      startTimeTo,
+      sandboxOrgId,
+    )
   }
   return traceCollectionsCache[cacheKey]
 }
@@ -55,7 +68,8 @@ export const useSpansByTraceCollection = ({
   readonly startTimeFrom?: string | undefined
   readonly startTimeTo?: string | undefined
 }) => {
-  const collection = getSpansByTraceCollection(projectId, traceId, startTimeFrom, startTimeTo)
+  const scope = use(TraceScopeContext)
+  const collection = getSpansByTraceCollection(projectId, traceId, startTimeFrom, startTimeTo, scope?.sandboxOrgId)
   return useLiveQuery((q) => q.from({ span: collection }))
 }
 
@@ -64,12 +78,16 @@ const makeSpansBySessionCollection = (
   sessionId: string,
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
+  sandboxOrgId: string | undefined,
 ) =>
   createCollection(
     queryCollectionOptions({
       queryClient,
-      queryKey: ["spans", "session", projectId, sessionId, startTimeFrom, startTimeTo],
-      queryFn: () => listSpansBySession({ data: { projectId, sessionId, startTimeFrom, startTimeTo } }),
+      queryKey: ["spans", "session", sandboxOrgId, projectId, sessionId, startTimeFrom, startTimeTo],
+      queryFn: () =>
+        listSpansBySession({
+          data: { ...(sandboxOrgId ? { sandboxOrgId } : {}), projectId, sessionId, startTimeFrom, startTimeTo },
+        }),
       getKey: (item: SpanRecord): string => `${item.traceId}-${item.spanId}`,
     }),
   )
@@ -82,10 +100,17 @@ const getSpansBySessionCollection = (
   sessionId: string,
   startTimeFrom: string | undefined,
   startTimeTo: string | undefined,
+  sandboxOrgId: string | undefined,
 ): SpansBySessionCollection => {
-  const cacheKey = `${projectId}:${sessionId}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
+  const cacheKey = `${sandboxOrgId ?? ""}:${projectId}:${sessionId}:${startTimeFrom ?? ""}:${startTimeTo ?? ""}`
   if (!sessionCollectionsCache[cacheKey]) {
-    sessionCollectionsCache[cacheKey] = makeSpansBySessionCollection(projectId, sessionId, startTimeFrom, startTimeTo)
+    sessionCollectionsCache[cacheKey] = makeSpansBySessionCollection(
+      projectId,
+      sessionId,
+      startTimeFrom,
+      startTimeTo,
+      sandboxOrgId,
+    )
   }
   return sessionCollectionsCache[cacheKey]
 }
@@ -101,7 +126,8 @@ export const useSpansBySessionCollection = ({
   readonly startTimeFrom?: string | undefined
   readonly startTimeTo?: string | undefined
 }) => {
-  const collection = getSpansBySessionCollection(projectId, sessionId, startTimeFrom, startTimeTo)
+  const scope = use(TraceScopeContext)
+  const collection = getSpansBySessionCollection(projectId, sessionId, startTimeFrom, startTimeTo, scope?.sandboxOrgId)
   return useLiveQuery((q) => q.from({ span: collection }))
 }
 
@@ -118,9 +144,20 @@ export const useSpanDetail = ({
   readonly startTimeFrom?: string | undefined
   readonly startTimeTo?: string | undefined
 }) => {
+  const scope = use(TraceScopeContext)
   return useQuery<SpanDetailRecord>({
-    queryKey: ["spanDetail", projectId, traceId, spanId, startTimeFrom, startTimeTo],
-    queryFn: () => getSpanDetail({ data: { projectId, traceId, spanId, startTimeFrom, startTimeTo } }),
+    queryKey: ["spanDetail", scope?.sandboxOrgId, projectId, traceId, spanId, startTimeFrom, startTimeTo],
+    queryFn: () =>
+      getSpanDetail({
+        data: {
+          ...(scope ? { sandboxOrgId: scope.sandboxOrgId } : {}),
+          projectId,
+          traceId,
+          spanId,
+          startTimeFrom,
+          startTimeTo,
+        },
+      }),
     staleTime: Infinity, // Span data is immutable once ingested
   })
 }
@@ -134,9 +171,11 @@ export function useConversationSpanMaps({
   readonly traceId: string
   readonly enabled?: boolean
 }) {
+  const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: ["conversationSpanMaps", projectId, traceId],
-    queryFn: () => mapConversationToSpans({ data: { projectId, traceId } }),
+    queryKey: ["conversationSpanMaps", scope?.sandboxOrgId, projectId, traceId],
+    queryFn: () =>
+      mapConversationToSpans({ data: { ...(scope ? { sandboxOrgId: scope.sandboxOrgId } : {}), projectId, traceId } }),
     enabled: enabled && projectId.length > 0 && traceId.length > 0,
   })
 }
