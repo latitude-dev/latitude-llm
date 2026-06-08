@@ -51,7 +51,7 @@ jobs:
 
       - name: Install uv
         if: steps.check_version.outputs.should_publish == 'true'
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
 
