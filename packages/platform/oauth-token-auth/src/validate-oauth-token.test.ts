@@ -41,6 +41,7 @@ interface OAuthSetup {
   readonly tokenRowId: string
   readonly clientId: string
   readonly userId: string
+  readonly email: string
   readonly organizationId: string
 }
 
@@ -60,6 +61,7 @@ interface InsertOAuthSetupOptions {
 const insertOAuthSetup = async (db: PostgresDb, options: InsertOAuthSetupOptions): Promise<OAuthSetup> => {
   const userFixture = await Effect.runPromise(createUserFixture(db))
   const userId = userFixture.id
+  const email = userFixture.email
   const clientId = `client-${generateId()}`
   const accessToken = `${generateId()}_${generateId()}`
   const refreshToken = `${generateId()}_${generateId()}`
@@ -96,6 +98,7 @@ const insertOAuthSetup = async (db: PostgresDb, options: InsertOAuthSetupOptions
     tokenRowId,
     clientId,
     userId,
+    email,
     organizationId: options.organizationId ?? "",
   }
 }
@@ -139,6 +142,7 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     expect(result?.organizationId).toBe(organization.id)
     expect(result?.oauthClientId).toBe(setup.clientId)
     expect(result?.scopes).toEqual(["openid", "profile"])
+    expect(result?.email).toBe(setup.email)
     expect(touched).toEqual([setup.tokenRowId])
   })
 
@@ -234,6 +238,7 @@ describe.skipIf(!nodeSupportsUint8Hex)("validateOAuthAccessToken (integration, N
     // Second call — cache hit, no second touch.
     const cached = await Effect.runPromise(validateOAuthAccessToken(setup.accessToken, deps))
     expect(cached?.userId).toBe(setup.userId)
+    expect(cached?.email).toBe(setup.email)
     expect(touched).toEqual([setup.tokenRowId])
   })
 })
