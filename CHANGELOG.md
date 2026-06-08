@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## v0.2.2 - 2026-06-08
+
+### Test mode
+
+- Added a daily idle-sandbox sweep that archives inactive test-mode sandboxes from the workers service (ref: #3460).
+
+### Demo project seeding
+
+- Made demo-project seeding more resilient on remote ClickHouse by batching large span inserts, moving the fixed-traces sentinel to the end of the seed, parallelizing trace-search embedding, and adding Temporal heartbeats for faster retry detection (ref: #3471).
+
+### Conversation intelligence
+
+- Capped taxonomy gardening sample windows at 10k observations to keep clustering work bounded (ref: deff1fc5b).
+
+### Infrastructure
+
+- Increased workflow task memory and rounded ECS task sizing to valid Fargate increments after adding sidecars, reducing Temporal worker OOM risk (ref: 159a3c2b).
+
 ## v0.2.1 - 2026-06-08
 
 ### Conversation intelligence
