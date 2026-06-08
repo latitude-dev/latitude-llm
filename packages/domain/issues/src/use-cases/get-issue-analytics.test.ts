@@ -25,6 +25,8 @@ const makeIssue = (overrides: Partial<Issue> & { id: Issue["id"] }): Issue => ({
   name: "Issue",
   description: "An issue",
   source: "annotation",
+  assigneeId: null,
+  priority: null,
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   escalatedAt: null,

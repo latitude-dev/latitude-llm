@@ -21,6 +21,7 @@
     "@domain/events": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/exports": "workspace:*",
+    "@domain/organizations": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/scores": "workspace:*",

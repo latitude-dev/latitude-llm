@@ -7,6 +7,9 @@ export const ISSUE_STATES = ["new", "escalating", "ongoing", "resolved", "regres
 
 export const ISSUE_SOURCES = ["annotation", "flagger", "custom"] as const
 
+/** Manual triage priority levels, ascending in urgency. Null means "unset". */
+export const ISSUE_PRIORITIES = ["low", "medium", "high", "urgent"] as const
+
 export const NEW_ISSUE_AGE_DAYS = 7
 
 /**

@@ -25,6 +25,7 @@ export {
   ISSUE_DISCOVERY_RERANK_MODEL,
   ISSUE_DISCOVERY_SEARCH_CANDIDATES,
   ISSUE_DISCOVERY_SEARCH_RATIO,
+  ISSUE_PRIORITIES,
   ISSUE_REFRESH_THROTTLE_MS,
   ISSUE_SOURCES,
   ISSUE_STATES,
@@ -37,9 +38,11 @@ export {
 export {
   type Issue,
   type IssueCentroid,
+  IssuePriority,
   type IssueSource,
   type IssueState,
   issueCentroidSchema,
+  issuePrioritySchema,
   issueSchema,
   issueSourceSchema,
   issueStateSchema,
@@ -227,3 +230,9 @@ export {
   type SweepEscalatingIssuesResult,
   sweepEscalatingIssuesUseCase,
 } from "./use-cases/sweep-escalating-issues.ts"
+export {
+  type UpdateIssueTriageError,
+  type UpdateIssueTriageInput,
+  type UpdateIssueTriageResult,
+  updateIssueTriageUseCase,
+} from "./use-cases/update-issue-triage.ts"

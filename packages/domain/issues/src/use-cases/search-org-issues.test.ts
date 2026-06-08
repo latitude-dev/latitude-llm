@@ -25,6 +25,8 @@ const makeIssue = (id: string, projectId: ProjectId, name: string, overrides: Pa
   name,
   description: "",
   source: "annotation",
+  assigneeId: null,
+  priority: null,
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-03-01T00:00:00.000Z"),
   escalatedAt: null,

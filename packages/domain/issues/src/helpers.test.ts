@@ -51,6 +51,8 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   name: "Secret leakage",
   description: "The assistant reveals internal credentials.",
   source: "annotation",
+  assigneeId: null,
+  priority: null,
   centroid: createIssueCentroid(),
   clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
   escalatedAt: null,
