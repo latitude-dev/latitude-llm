@@ -40,6 +40,18 @@ export const createFakeSandboxRepository = (overrides?: Partial<SandboxRepositor
         ).length,
       ),
 
+    archiveIdle: (cutoff) =>
+      Effect.sync(() => {
+        let archived = 0
+        for (const sandbox of sandboxes.values()) {
+          if (sandbox.status === "active" && sandbox.lastActivityAt.getTime() < cutoff.getTime()) {
+            sandboxes.set(sandbox.organizationId, { ...sandbox, status: "archived" })
+            archived++
+          }
+        }
+        return archived
+      }),
+
     // No-op: in-memory tests are single-threaded, so there's no lock to take.
     lockParentForCapCheck: () => Effect.void,
 

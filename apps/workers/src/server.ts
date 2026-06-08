@@ -3,6 +3,7 @@ import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { HonoAdapter } from "@bull-board/hono"
 import { ESCALATION_SWEEPER_KEY, ESCALATION_SWEEPER_PATTERN } from "@domain/issues"
 import { SAVED_SEARCH_MONITORS_SWEEPER_KEY, SAVED_SEARCH_MONITORS_SWEEPER_PATTERN } from "@domain/monitors"
+import { SANDBOX_IDLE_SWEEPER_KEY, SANDBOX_IDLE_SWEEPER_PATTERN } from "@domain/sandboxes"
 import { TAXONOMY_GARDENING_CRON_KEY, TAXONOMY_GARDENING_CRON_PATTERN } from "@domain/taxonomy"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
@@ -60,6 +61,7 @@ import { createNotificationsWorker } from "./workers/notifications.ts"
 import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProductFeedbackWorker } from "./workers/product-feedback.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
+import { createSandboxesWorker } from "./workers/sandboxes.ts"
 import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createStartFlaggerWorkflowWorker } from "./workers/start-flagger-workflow.ts"
@@ -230,6 +232,10 @@ const bootstrap = async () => {
       adminPostgresClient: getAdminPostgresClient(),
       clickhouseClient: ctx.clickhouseClient,
     })
+    createSandboxesWorker({
+      consumer: ctx.consumer,
+      adminPostgresClient: getAdminPostgresClient(),
+    })
 
     // Register (or refresh) the weekly Wrapped trigger. upsert semantics
     // make this idempotent across worker restarts. The handler derives
@@ -283,6 +289,17 @@ const bootstrap = async () => {
           "gardenSweep",
           { triggeredAt: new Date().toISOString() },
           { key: TAXONOMY_GARDENING_CRON_KEY, pattern: TAXONOMY_GARDENING_CRON_PATTERN, tz: "UTC" },
+        )
+        .pipe(withTracing),
+    )
+
+    await Effect.runPromise(
+      queuePublisher
+        .scheduleRepeatable(
+          "sandboxes",
+          "archiveIdle",
+          {},
+          { key: SANDBOX_IDLE_SWEEPER_KEY, pattern: SANDBOX_IDLE_SWEEPER_PATTERN, tz: "UTC" },
         )
         .pipe(withTracing),
     )

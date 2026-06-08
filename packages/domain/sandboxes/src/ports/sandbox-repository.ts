@@ -22,6 +22,7 @@ export class SandboxRepository extends Context.Service<
       organizationId: OrganizationId,
     ) => Effect.Effect<Sandbox, NotFoundError | RepositoryError, SqlClient>
     countActiveByParentOrgId: (parentOrgId: OrganizationId) => Effect.Effect<number, RepositoryError, SqlClient>
+    archiveIdle: (cutoff: Date) => Effect.Effect<number, RepositoryError, SqlClient>
     /**
      * Take a transaction-scoped advisory lock keyed on the parent org, so the
      * active-cap "count then write" sequence is serialized per parent and two

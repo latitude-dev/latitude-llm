@@ -694,6 +694,9 @@ importers:
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
+      '@domain/sandboxes':
+        specifier: workspace:*
+        version: link:../../packages/domain/sandboxes
       '@domain/scores':
         specifier: workspace:*
         version: link:../../packages/domain/scores

@@ -542,6 +542,10 @@ const _registry = {
       readonly windowEndIso: string
     }
   }>(),
+
+  sandboxes: payloads<{
+    archiveIdle: Record<string, never>
+  }>(),
 }
 
 export type TopicRegistry = typeof _registry

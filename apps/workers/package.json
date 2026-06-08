@@ -46,6 +46,7 @@
     "@domain/monitors": "workspace:*",
     "@domain/notifications": "workspace:*",
     "@domain/queue": "workspace:*",
+    "@domain/sandboxes": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@domain/taxonomy": "workspace:*",

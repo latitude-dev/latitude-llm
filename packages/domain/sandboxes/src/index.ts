@@ -5,6 +5,9 @@ export {
   buildSandboxTraceCoalesceKey,
   buildSandboxTracesChannel,
   SANDBOX_ACTIVITY_STAMP_DEBOUNCE_MS,
+  SANDBOX_IDLE_ARCHIVE_DAYS,
+  SANDBOX_IDLE_SWEEPER_KEY,
+  SANDBOX_IDLE_SWEEPER_PATTERN,
   SANDBOX_LAST_REJECTED_INGEST_TTL_SECONDS,
   SANDBOX_TRACE_SIGNAL_COALESCE_MS,
 } from "./constants.ts"
@@ -29,6 +32,10 @@ export type {
   SandboxSignalsShape,
 } from "./ports/sandbox-signals.ts"
 export { SandboxSignals } from "./ports/sandbox-signals.ts"
+export {
+  type ArchiveIdleSandboxesResult,
+  archiveIdleSandboxesUseCase,
+} from "./use-cases/archive-idle-sandboxes.ts"
 export {
   type ArchiveSandboxInput,
   archiveSandboxUseCase,
