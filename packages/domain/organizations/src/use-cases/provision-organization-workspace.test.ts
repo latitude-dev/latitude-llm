@@ -1,4 +1,5 @@
-import { type ApiKey, ApiKeyRepository, DEFAULT_API_KEY_NAME } from "@domain/api-keys"
+import { ApiKeyRepository, DEFAULT_API_KEY_NAME, SANDBOX_API_KEY_TOKEN_PREFIX } from "@domain/api-keys"
+import { createFakeApiKeyRepository } from "@domain/api-keys/testing"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { type Project, ProjectRepository } from "@domain/projects"
 import { OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
@@ -13,7 +14,7 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
     let transactionCalls = 0
     let inTransaction = false
     const writtenEvents: OutboxWriteEvent[] = []
-    const savedApiKeys: ApiKey[] = []
+    const { repository: apiKeyRepo, apiKeys: savedApiKeys } = createFakeApiKeyRepository()
     const savedProjects: Project[] = []
 
     const sqlClient: SqlClientShape = {
@@ -48,18 +49,7 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
               writtenEvents.push(event)
             }),
         }),
-        Effect.provideService(ApiKeyRepository, {
-          findById: () => Effect.die(new Error("unused")),
-          list: () => Effect.succeed(savedApiKeys),
-          save: (apiKey: ApiKey) =>
-            Effect.sync(() => {
-              savedApiKeys.push(apiKey)
-            }),
-          delete: () => Effect.die(new Error("unused")),
-          touch: () => Effect.die(new Error("unused")),
-          findByTokenHash: () => Effect.die(new Error("unused")),
-          touchBatch: () => Effect.die(new Error("unused")),
-        }),
+        Effect.provideService(ApiKeyRepository, apiKeyRepo),
         Effect.provideService(ProjectRepository, {
           findById: () => Effect.die(new Error("unused")),
           findBySlug: () => Effect.die(new Error("unused")),
@@ -109,8 +99,10 @@ describe("provisionOrganizationWorkspaceUseCase", () => {
         slug: "acme",
       },
     })
-    expect(savedApiKeys).toHaveLength(1)
-    expect(savedApiKeys[0]?.name).toBe(DEFAULT_API_KEY_NAME)
+    const apiKeys = [...savedApiKeys.values()]
+    expect(apiKeys).toHaveLength(1)
+    expect(apiKeys[0]?.name).toBe(DEFAULT_API_KEY_NAME)
+    expect(apiKeys[0]?.token.startsWith(SANDBOX_API_KEY_TOKEN_PREFIX)).toBe(false)
     expect(savedProjects).toHaveLength(1)
     expect(savedProjects[0]).toMatchObject({ name: "My project", slug: "my-project", organizationId: ORG_ID })
     expect(result.defaultApiKey).toMatchObject({ name: DEFAULT_API_KEY_NAME })

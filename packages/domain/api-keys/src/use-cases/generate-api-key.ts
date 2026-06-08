@@ -2,6 +2,7 @@ import { OutboxEventWriter } from "@domain/events"
 import { type ApiKeyId, type RepositoryError, SqlClient, type ValidationError } from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
 import { Effect } from "effect"
+import { SANDBOX_API_KEY_TOKEN_PREFIX } from "../constants.ts"
 import { createApiKey, generateApiKeyToken } from "../entities/api-key.ts"
 import { InvalidApiKeyNameError } from "../errors.ts"
 import { ApiKeyRepository } from "../ports/api-key-repository.ts"
@@ -9,6 +10,7 @@ import { ApiKeyRepository } from "../ports/api-key-repository.ts"
 export interface GenerateApiKeyInput {
   readonly id?: ApiKeyId
   readonly name: string
+  readonly isSandbox: boolean
   readonly actorUserId?: string
 }
 
@@ -21,14 +23,20 @@ export const generateApiKeyUseCase = Effect.fn("apiKeys.generateApiKey")(functio
   }
 
   if (!input.name || input.name.trim().length === 0) {
-    return yield* new InvalidApiKeyNameError({ name: input.name, reason: "Name cannot be empty" })
+    return yield* new InvalidApiKeyNameError({
+      name: input.name,
+      reason: "Name cannot be empty",
+    })
   }
 
   if (input.name.length > 256) {
-    return yield* new InvalidApiKeyNameError({ name: input.name, reason: "Name exceeds 256 characters" })
+    return yield* new InvalidApiKeyNameError({
+      name: input.name,
+      reason: "Name exceeds 256 characters",
+    })
   }
 
-  const token = generateApiKeyToken()
+  const token = generateApiKeyToken(input.isSandbox ? SANDBOX_API_KEY_TOKEN_PREFIX : "")
   const tokenHash = yield* hash(token)
   const apiKey = createApiKey({
     id: input.id,

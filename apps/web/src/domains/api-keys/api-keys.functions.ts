@@ -69,6 +69,7 @@ export const createApiKey = createServerFn({ method: "POST" })
       generateApiKeyUseCase({
         ...(data.id ? { id: ApiKeyId(data.id) } : {}),
         name: data.name,
+        isSandbox: false,
         actorUserId: userId,
       }).pipe(
         withPostgres(Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive), client, organizationId),

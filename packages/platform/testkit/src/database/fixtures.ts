@@ -70,6 +70,8 @@ export const createUserFixture = (
 export interface OrganizationFixtureInput {
   readonly name?: string
   readonly slug?: string
+  /** Set to make this org a Test Mode sandbox (sibling tenant of the parent live org). */
+  readonly parentOrgId?: string
 }
 
 /**
@@ -103,6 +105,7 @@ export const createOrganizationFixture = (
           name,
           slug,
           settings: null,
+          parentOrgId: input.parentOrgId ?? null,
         })
         .returning({
           id: organizations.id,

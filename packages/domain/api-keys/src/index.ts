@@ -1,4 +1,4 @@
-export { DEFAULT_API_KEY_NAME } from "./constants.ts"
+export { DEFAULT_API_KEY_NAME, SANDBOX_API_KEY_TOKEN_PREFIX } from "./constants.ts"
 export {
   type ApiKey,
   apiKeySchema,

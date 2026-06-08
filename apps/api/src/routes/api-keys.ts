@@ -152,7 +152,7 @@ const createApiKey = apiKeyEndpoint({
     const { name } = c.req.valid("json")
 
     const apiKey = await Effect.runPromise(
-      generateApiKeyUseCase({ name }).pipe(
+      generateApiKeyUseCase({ name, isSandbox: false }).pipe(
         withPostgres(
           Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive),
           c.var.postgresClient,
