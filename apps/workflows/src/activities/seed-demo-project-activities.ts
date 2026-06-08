@@ -150,6 +150,12 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
   return Effect.runPromise(
     Effect.gen(function* () {
       const traceRows = yield* listSeededTraceRows(input)
+      // Heartbeat once up front: the per-trace heartbeats below only start
+      // firing after the first trace finishes, so without this the heartbeat
+      // clock would have to cover `listSeededTraceRows` + the first trace's
+      // embeds before any signal — a slow start could trip `heartbeatTimeout`
+      // on attempt 1 even though nothing is wrong.
+      yield* heartbeat("start")
       const traceRepo = yield* TraceRepository
       const searchRepo = yield* TraceSearchRepository
       const ai = yield* AI
