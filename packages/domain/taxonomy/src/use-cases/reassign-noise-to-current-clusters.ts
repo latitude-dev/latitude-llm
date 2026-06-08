@@ -2,7 +2,7 @@ import { applyDecay, type OrganizationId, type ProjectId, TaxonomyClusterId, typ
 import { Effect } from "effect"
 import {
   TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
-  TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+  TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
@@ -87,7 +87,7 @@ export const reassignNoiseToCurrentClustersUseCase = (input: ReassignNoiseToCurr
       organizationId: input.organizationId,
       projectId: input.projectId,
       since,
-      limit: TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+      limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
     })
     if (noise.length === 0) {
       return { noiseScanned: 0, observationsReassigned: 0 } satisfies ReassignNoiseToCurrentClustersResult

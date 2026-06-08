@@ -96,13 +96,14 @@ export const TAXONOMY_GARDENING_STALE_GRACE_MS = 60_000
 export const TAXONOMY_GARDENING_SWEEP_BATCH = 25
 
 /** Gardening works over the live taxonomy window: newest observations first. */
-export const TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX = 100_000
-
 /** Maximum in-memory proposal sample passed to clustering helpers. */
 export const TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX = 10_000
 
+/** Gardening reads are capped to the same bounded sample size as clustering. */
+export const TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX = 10_000
+
 /** Hard cap on per-cluster batch reads inside the live gardening window. */
-export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 100_000
+export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 10_000
 
 // ---------------------------------------------------------------------------
 // Births (noise sweep) + merge / death
