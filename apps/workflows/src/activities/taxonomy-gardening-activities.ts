@@ -243,26 +243,6 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
   )
 }
 
-/**
- * taxonomy_observations is ReplacingMergeTree(indexed_at). All gardening
- * steps share the run's `now`, so an observation moved by two steps in one
- * run (merge then recursion, reassign then recursion) would write two rows
- * with the SAME version — ClickHouse keeps an arbitrary one. Each step gets
- * a deterministic millisecond offset so later steps always win, and Temporal
- * retries reproduce the same timestamps.
- */
-const GARDEN_STAGE_OFFSET_MS = {
-  sweep: 0,
-  reassign: 1,
-  recurse: 2,
-  merge: 3,
-  deprecate: 4,
-  reconcile: 5,
-} as const
-
-const stageNow = (now: string, stage: keyof typeof GARDEN_STAGE_OFFSET_MS): Date =>
-  new Date(Date.parse(now) + GARDEN_STAGE_OFFSET_MS[stage])
-
 export const sweepGardenTaxonomyNoiseActivity = (input: GardenTaxonomyStepInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow sweep noise",
@@ -272,7 +252,6 @@ export const sweepGardenTaxonomyNoiseActivity = (input: GardenTaxonomyStepInput)
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "sweep"),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
@@ -289,7 +268,6 @@ export const mergeGardenTaxonomyClustersActivity = (input: GardenTaxonomyStepInp
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "merge"),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
@@ -306,7 +284,6 @@ export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomySte
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "deprecate"),
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
 
@@ -319,7 +296,6 @@ export const reassignGardenTaxonomyNoiseActivity = (input: GardenTaxonomyStepInp
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "reassign"),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
@@ -336,7 +312,6 @@ export const recurseGardenTaxonomyTreeActivity = (input: GardenTaxonomyStepInput
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "recurse"),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
@@ -353,7 +328,6 @@ export const reconcileGardenTaxonomyCountsActivity = (input: GardenTaxonomyStepI
       projectId: ProjectId(input.projectId),
       runId: TaxonomyRunId(input.runId),
       dimension: input.dimension,
-      now: stageNow(input.now, "reconcile"),
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, input.organizationId),
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
