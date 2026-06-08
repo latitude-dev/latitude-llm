@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-06-08
+
+Unblocks install, upgrade, and re-keying on OpenClaw 2026.5+. Lockstep release with `@latitude-data/openclaw-telemetry-cli` 0.0.8.
+
+### Fixed
+
+- **`apiKey` / `project` are no longer `required` in `configSchema`, so install and upgrade work on OpenClaw 2026.5+.** `openclaw plugins install <spec> --force` recreates `plugins.entries[id]` with an empty `config` and validates the whole config against each plugin's `configSchema` *during* the install — before `@latitude-data/openclaw-telemetry-cli` layers credentials in (its step 3). Newer OpenClaw enforces `configSchema.required` at that point, so the transient configless entry failed with `[plugins] @latitude-data/openclaw-telemetry invalid config: apiKey: must have required property 'apiKey', project: must have required property 'project'` → `Could not start the CLI` → the install aborted before credentials were ever written. This broke fresh installs, version upgrades, and re-configuring an existing entry with a new API key (the entry on disk still had valid creds, but `--force` reset it to configless for validation). The two keys were never meaningfully required: the runtime already self-disables when creds are absent (`loadConfig` → `enabled: hasCreds && !explicitlyDisabled`), so the schema constraint bought nothing and blocked the installer. New `src/manifest.test.ts` guards against reintroducing it.
+
 ## [0.0.7] - 2026-04-29
 
 Captures every `llm_output` event regardless of OpenClaw's hook fire order, mirrors `openclaw.session.id` onto the OTEL-standard session attrs Latitude's resolver looks for, and clears OpenClaw 2026.4.26's `potential-exfiltration` audit warning.
