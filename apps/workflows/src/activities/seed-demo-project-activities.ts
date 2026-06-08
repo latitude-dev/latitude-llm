@@ -19,6 +19,7 @@ import {
 } from "@platform/db-clickhouse"
 import { seedDemoProjectClickHouse } from "@platform/db-clickhouse/seeding"
 import { seedDemoProjectPostgres } from "@platform/db-postgres/seeding"
+import { Context as ActivityContext } from "@temporalio/activity"
 import { Effect, Layer } from "effect"
 import { getAdminPostgresClient, getClickhouseClient, getRedisClient } from "../clients.ts"
 
@@ -87,6 +88,37 @@ type DemoTraceRow = {
 // Hardcoded rather than resolved from org settings so demo rows never expire per-tenant config.
 const DEMO_PROJECT_RETENTION_DAYS = 30
 
+/**
+ * Embedding every seeded trace is the long pole of the demo seed. The
+ * production trace-search worker gets parallelism for free (one queue job
+ * per trace, processed across the worker pool); here every trace is indexed
+ * inside a single activity, so we fan out across traces with a bounded
+ * concurrency instead of awaiting each in turn. Chunks within a trace stay
+ * sequential — trace count (hundreds to thousands) dominates, so trace-level
+ * parallelism is where the win is, and processing one chunk at a time per
+ * trace keeps in-flight Voyage calls ~equal to this bound rather than
+ * `bound × chunks`. The Voyage adapter has no rate-limit guard, so this is
+ * the only throttle on the embedding fan-out.
+ */
+const SEED_TRACE_SEARCH_CONCURRENCY = 8
+
+/**
+ * Emit a Temporal activity heartbeat, no-op when not running inside an
+ * activity (unit tests, the local seed-repro path). `Context.current()`
+ * throws outside activity execution, so the guard keeps the same effect
+ * usable in both places. Paired with the workflow's `heartbeatTimeout`, a
+ * heartbeat per completed trace lets Temporal detect a dead worker in
+ * seconds instead of waiting out the 30-minute start-to-close timeout.
+ */
+const heartbeat = (details: string): Effect.Effect<void> =>
+  Effect.sync(() => {
+    try {
+      ActivityContext.current().heartbeat(details)
+    } catch {
+      // Not inside a Temporal activity — nothing to heartbeat.
+    }
+  })
+
 const listSeededTraceRows = (input: SeedDemoProjectActivityInput) =>
   queryClickhouse<DemoTraceRow>(
     getClickhouseClient(),
@@ -122,84 +154,95 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
       const searchRepo = yield* TraceSearchRepository
       const ai = yield* AI
 
-      for (const row of traceRows) {
-        const traceId = TraceId(row.trace_id)
-        const startTimeMs = typeof row.start_time_ms === "string" ? Number(row.start_time_ms) : row.start_time_ms
-        const startTime = new Date(startTimeMs)
-        const trace = yield* traceRepo.findByTraceId({ organizationId, projectId, traceId })
-        if (trace.allMessages.length === 0) continue
+      const indexTrace = (row: DemoTraceRow) =>
+        Effect.gen(function* () {
+          const traceId = TraceId(row.trace_id)
+          const startTimeMs = typeof row.start_time_ms === "string" ? Number(row.start_time_ms) : row.start_time_ms
+          const startTime = new Date(startTimeMs)
+          const trace = yield* traceRepo.findByTraceId({ organizationId, projectId, traceId })
+          if (trace.allMessages.length === 0) {
+            yield* heartbeat(row.trace_id)
+            return
+          }
 
-        const document = yield* buildTraceSearchDocument({
-          traceId,
-          startTime,
-          rootSpanName: row.root_span_name,
-          messages: trace.allMessages,
-        })
-
-        yield* searchRepo.upsertDocument({
-          organizationId,
-          projectId,
-          traceId,
-          startTime,
-          rootSpanName: document.rootSpanName,
-          searchText: document.searchText,
-          contentHash: document.contentHash,
-          retentionDays: DEMO_PROJECT_RETENTION_DAYS,
-        })
-
-        // NOTE: mirrors `prioritizeChunksForEmbedding` in apps/workers/src/workers/trace-search.ts.
-        // Not imported directly because extracting it to @domain/spans is a larger refactor.
-        const eligibleChunks = document.chunks
-          .filter((item) => item.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
-          .sort((a, b) => b.chunkIndex - a.chunkIndex)
-
-        for (const chunk of eligibleChunks) {
-          const hasExisting = yield* searchRepo.hasEmbeddingWithHash(
-            organizationId,
-            projectId,
+          const document = yield* buildTraceSearchDocument({
             traceId,
-            chunk.chunkIndex,
-            chunk.contentHash,
-          )
-          if (hasExisting) continue
-
-          const embedding = yield* ai
-            .embed({
-              text: chunk.text,
-              model: TRACE_SEARCH_EMBEDDING_MODEL,
-              dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
-              telemetry: {
-                spanName: "demo-project.trace-search.embed",
-                name: "demo-project-trace-search-embed",
-                tags: ["demo-project", "trace-search", "embedding"],
-              },
-            })
-            .pipe(
-              Effect.tapError((err) =>
-                Effect.logWarning("demo-project trace-search embed failed — skipping chunk", {
-                  chunkIndex: chunk.chunkIndex,
-                  error: err,
-                }),
-              ),
-              Effect.orElseSucceed(() => null),
-            )
-          if (embedding === null) continue
-
-          yield* searchRepo.upsertEmbedding({
-            organizationId,
-            projectId,
-            traceId,
-            chunkIndex: chunk.chunkIndex,
             startTime,
-            contentHash: chunk.contentHash,
-            embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
-            embedding: embedding.embedding as readonly number[],
-            retentionDays: DEMO_PROJECT_RETENTION_DAYS,
-            firstMessageIndex: chunk.firstMessageIndex,
-            lastMessageIndex: chunk.lastMessageIndex,
+            rootSpanName: row.root_span_name,
+            messages: trace.allMessages,
           })
-        }
-      }
+
+          yield* searchRepo.upsertDocument({
+            organizationId,
+            projectId,
+            traceId,
+            startTime,
+            rootSpanName: document.rootSpanName,
+            searchText: document.searchText,
+            contentHash: document.contentHash,
+            retentionDays: DEMO_PROJECT_RETENTION_DAYS,
+          })
+
+          // NOTE: mirrors `prioritizeChunksForEmbedding` in apps/workers/src/workers/trace-search.ts.
+          // Not imported directly because extracting it to @domain/spans is a larger refactor.
+          const eligibleChunks = document.chunks
+            .filter((item) => item.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
+            .sort((a, b) => b.chunkIndex - a.chunkIndex)
+
+          for (const chunk of eligibleChunks) {
+            const hasExisting = yield* searchRepo.hasEmbeddingWithHash(
+              organizationId,
+              projectId,
+              traceId,
+              chunk.chunkIndex,
+              chunk.contentHash,
+            )
+            if (hasExisting) continue
+
+            const embedding = yield* ai
+              .embed({
+                text: chunk.text,
+                model: TRACE_SEARCH_EMBEDDING_MODEL,
+                dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+                telemetry: {
+                  spanName: "demo-project.trace-search.embed",
+                  name: "demo-project-trace-search-embed",
+                  tags: ["demo-project", "trace-search", "embedding"],
+                },
+              })
+              .pipe(
+                Effect.tapError((err) =>
+                  Effect.logWarning("demo-project trace-search embed failed — skipping chunk", {
+                    chunkIndex: chunk.chunkIndex,
+                    error: err,
+                  }),
+                ),
+                Effect.orElseSucceed(() => null),
+              )
+            if (embedding === null) continue
+
+            yield* searchRepo.upsertEmbedding({
+              organizationId,
+              projectId,
+              traceId,
+              chunkIndex: chunk.chunkIndex,
+              startTime,
+              contentHash: chunk.contentHash,
+              embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+              embedding: embedding.embedding as readonly number[],
+              retentionDays: DEMO_PROJECT_RETENTION_DAYS,
+              firstMessageIndex: chunk.firstMessageIndex,
+              lastMessageIndex: chunk.lastMessageIndex,
+            })
+          }
+
+          yield* heartbeat(row.trace_id)
+        })
+
+      yield* Effect.forEach(traceRows, indexTrace, {
+        concurrency: SEED_TRACE_SEARCH_CONCURRENCY,
+        discard: true,
+      })
     }).pipe(
       withClickHouse(Layer.mergeAll(TraceRepositoryLive, TraceSearchRepositoryLive), clickhouse, organizationId),
       withAi(AIEmbedLive, redis),
