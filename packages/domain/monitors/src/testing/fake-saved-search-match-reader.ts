@@ -32,6 +32,8 @@ export const createFakeSavedSearchMatchReader = (matchTimestamps: readonly Date[
       Effect.succeed(
         inWindow(input).reduce<Date | null>((earliest, at) => (earliest && earliest <= at ? earliest : at), null),
       ),
+    lastMatchAt: (input) =>
+      Effect.succeed(inWindow(input).reduce<Date | null>((latest, at) => (latest && latest >= at ? latest : at), null)),
     countMatchesPerBucket: (input) => Effect.succeed(bucketCounts(input)),
   })
 

@@ -138,6 +138,27 @@ describe("SavedSearchMatchReaderLive", () => {
     expect(first).toBeNull()
   })
 
+  it("returns the latest matching trace start_time", async () => {
+    // [10:00, 11:00) includes t10 + t1030; t11 == the exclusive upper bound is excluded ⇒ latest is t1030.
+    const last = await runCh(
+      reader.lastMatchAt({ organizationId: ORG_ID, projectId: PROJECT_ID, target, from: t10, to: t11 }),
+    )
+    expect(last).toEqual(t1030)
+  })
+
+  it("returns null from lastMatchAt when no trace matches the window", async () => {
+    const last = await runCh(
+      reader.lastMatchAt({
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        target,
+        from: new Date("2026-06-01T12:00:00.000Z"),
+        to: new Date("2026-06-01T13:00:00.000Z"),
+      }),
+    )
+    expect(last).toBeNull()
+  })
+
   it("applies the saved search's structured filters", async () => {
     const tagged = { query: null, filterSet: { tags: [{ op: "in" as const, value: [TAG] }] } }
     const count = await runCh(

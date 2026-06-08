@@ -28,6 +28,8 @@ export interface SavedSearchMatchReaderShape {
   countMatches(input: SavedSearchMatchWindowInput): Effect.Effect<number, RepositoryError, ChSqlClient>
   /** Earliest matching trace `start_time` in `[from, to)`, or `null` when none match. */
   firstMatchAt(input: SavedSearchMatchWindowInput): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
+  /** Latest matching trace `start_time` in `[from, to)`, or `null` when none match. Mirror of {@link firstMatchAt}; backs the escalating incident's backtraced `ended_at`. */
+  lastMatchAt(input: SavedSearchMatchWindowInput): Effect.Effect<Date | null, RepositoryError, ChSqlClient>
   /**
    * Per-bucket match counts over `[from, to)`, tiled into `N = floor((to - from) / bucketMs)`
    * fixed-width buckets aligned to `to`. Returns exactly `N` counts, **newest-first**

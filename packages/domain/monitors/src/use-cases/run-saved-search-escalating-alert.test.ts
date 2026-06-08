@@ -154,16 +154,35 @@ describe("runSavedSearchEscalatingAlertUseCase", () => {
     expect(events).toHaveLength(0)
   })
 
-  it("closes and emits IncidentClosed once enough buckets drop below the frozen threshold", async () => {
-    // Only buckets 0..1 still have matches ⇒ 3 empty ⇒ failing 3 > maxFail 1.
+  it("closes, emits IncidentClosed, and backtraces ended_at to the last matching trace", async () => {
+    // Buckets 2..4 empty ⇒ failing 3 > maxFail 1 ⇒ close; the last match is in bucket 0.
     const { result, incidents, events } = await run({
       alert: absoluteAlert,
       matches: [0, 1].map((b) => inBucket(b)),
       seed: [incident({})],
     })
     expect(result.transition).toBe("closed")
-    expect(incidents[0]?.endedAt).toEqual(now)
+    expect(incidents[0]?.endedAt).toEqual(inBucket(0)) // last matching trace, NOT the detection time (now)
     expect(events.map((event) => event.eventName)).toEqual(["IncidentClosed"])
+  })
+
+  it("backtraces ended_at to the last match even when traffic stopped before the window", async () => {
+    // All matches predate the 5-min window ⇒ every bucket empty ⇒ close. ended_at must be the
+    // most recent past match (when traffic actually stopped), not the detection time (now).
+    const lastTrace = minsAgo(7)
+    const { result, incidents } = await run({
+      alert: absoluteAlert,
+      matches: [lastTrace, minsAgo(8), minsAgo(9)],
+      seed: [incident({})],
+    })
+    expect(result.transition).toBe("closed")
+    expect(incidents[0]?.endedAt).toEqual(lastTrace)
+  })
+
+  it("falls back to now for ended_at when the incident has no matching traces in its lifetime", async () => {
+    const { result, incidents } = await run({ alert: absoluteAlert, matches: [], seed: [incident({})] })
+    expect(result.transition).toBe("closed")
+    expect(incidents[0]?.endedAt).toEqual(now)
   })
 
   it("counts failing buckets against the frozen threshold, not a re-resolved one", async () => {
@@ -183,6 +202,7 @@ describe("runSavedSearchEscalatingAlertUseCase", () => {
       ],
     })
     expect(result.transition).toBe("closed")
-    expect(incidents[0]?.endedAt).toEqual(now)
+    // Backtraced to the last matching trace of the sustained set, not the detection time.
+    expect(incidents[0]?.endedAt).toEqual(inBucket(0))
   })
 })

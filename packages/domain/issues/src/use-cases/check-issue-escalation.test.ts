@@ -402,6 +402,92 @@ describe("checkIssueEscalationUseCase", () => {
     })
   })
 
+  it("backtracks IssueEscalationEnded.endedAt to the last bucket still above the threshold", async () => {
+    const issue = makeIssue()
+    const events: OutboxWriteEvent[] = []
+    const dwellStart = new Date(Date.now() - ESCALATION_EXIT_DWELL_MS - 1000)
+    const openIncident = makeOpenIncident({
+      entrySignals: {
+        expected1h: 10,
+        expected6hPerHour: 10,
+        stddev1h: 2,
+        stddev6hPerHour: 2,
+        kShort: 3,
+        kLong: 2,
+        entryThreshold1h: 16,
+        entryThreshold6hPerHour: 14,
+        entryCount24h: 600,
+      },
+      startedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: dwellStart,
+    })
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: true,
+      signals: makeSignals({ recent1h: 5, recent6h: 30, recent24h: 400 }),
+      events,
+      openIncident,
+      occurrenceBuckets: [
+        { bucket: "2026-05-07T07:00:00.000Z", count: 12 }, // crossing
+        { bucket: "2026-05-07T08:00:00.000Z", count: 9 }, // last crossing — escalation subsided after this
+        { bucket: "2026-05-07T09:00:00.000Z", count: 2 }, // below threshold
+      ],
+      thresholdBuckets: [
+        { bucket: "2026-05-07T07:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T08:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T09:00:00.000Z", thresholdCount: 5 },
+      ],
+    })
+
+    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+
+    expect(result.transition).toBe("exited")
+    const payload = events[0]?.payload as { endedAt: string }
+    expect(payload.endedAt).toBe("2026-05-07T08:00:00.000Z") // last crossing bucket, NOT the detection time (now)
+  })
+
+  it("falls back to the event time for endedAt when no bucket crossed in the window", async () => {
+    const issue = makeIssue()
+    const events: OutboxWriteEvent[] = []
+    const before = Date.now()
+    const openIncident = makeOpenIncident({
+      entrySignals: {
+        expected1h: 10,
+        expected6hPerHour: 10,
+        stddev1h: 2,
+        stddev6hPerHour: 2,
+        kShort: 3,
+        kLong: 2,
+        entryThreshold1h: 16,
+        entryThreshold6hPerHour: 14,
+        entryCount24h: 600,
+      },
+      startedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+      exitEligibleSince: new Date(Date.now() - ESCALATION_EXIT_DWELL_MS - 1000),
+    })
+    const { apply } = provideTestLayers({
+      issue,
+      isEscalating: true,
+      signals: makeSignals({ recent1h: 5, recent6h: 30, recent24h: 400 }),
+      events,
+      openIncident,
+      occurrenceBuckets: [
+        { bucket: "2026-05-07T08:00:00.000Z", count: 2 },
+        { bucket: "2026-05-07T09:00:00.000Z", count: 3 },
+      ],
+      thresholdBuckets: [
+        { bucket: "2026-05-07T08:00:00.000Z", thresholdCount: 5 },
+        { bucket: "2026-05-07T09:00:00.000Z", thresholdCount: 5 },
+      ],
+    })
+
+    const result = await Effect.runPromise(apply(checkIssueEscalationUseCase({ organizationId, projectId, issueId })))
+
+    expect(result.transition).toBe("exited")
+    const payload = events[0]?.payload as { endedAt: string }
+    expect(new Date(payload.endedAt).getTime()).toBeGreaterThanOrEqual(before)
+  })
+
   it("forwards reason='absolute-rate-drop' when the 24h backstop trips", async () => {
     const issue = makeIssue()
     const events: OutboxWriteEvent[] = []

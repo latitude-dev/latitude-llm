@@ -640,6 +640,8 @@ Note: the `entrySignals` snapshot holds only scalar stats (expected / σ / thres
 
 The natural home for this is the producer side (`checkIssueEscalationUseCase`, which already has `ScoreAnalyticsRepository` + `ChSqlClient`): it resolves the backtracked timestamp and forwards it on the `IssueEscalated` event, which the alert-incidents worker passes through as `occurredAt`. Because it changes the existing **non-flag-gated** escalation path, it lands in **M6** alongside the rest of the issue-event work, not in M3.
 
+**`endedAt` backtracking (symmetric to the above).** The detector also exits *late* (the band-shape exit holds for a dwell before closing), so on the organic exit we backtrack `endedAt` to the **last** bucket whose count was still above the seasonal threshold — `backtrackEscalationEnd`, the exact mirror of `backtrackEscalationStart` (same 24h/1h-bucket histogram + threshold series, scanned newest→oldest). The backtracked timestamp rides the existing `IssueEscalationEnded.endedAt` payload through to `closeAlertIncidentFromIssueEventUseCase`, which already writes it to `ended_at` — so only the *value* computed in `checkIssueEscalationUseCase` changed. No crossing in the window → the event time (`now`). This applies **only to the organic detector exit**; a **manual** resolve/ignore close (`applyIssueLifecycleCommandUseCase`) keeps `endedAt = now` (the user closed it now), mirroring that the open side never backtracks a manual action.
+
 For other kinds, behaviour is unchanged (`issue.new` / `issue.regressed` are eventful — `startedAt = endedAt = occurredAt` stays correct).
 
 #### Escalation sensitivity sourcing
@@ -839,7 +841,10 @@ At evaluation:
     // CLOSE TRANSITION — once too many buckets drop below the FROZEN threshold
     let thr = open.entrySignals.evaluatedThreshold ?? v.perBucketThreshold   // legacy rows: fresh threshold
     if failing(thr) > maxFail:
-      UPDATE alert_incidents SET endedAt = now
+      // Backtrace ended_at to the last matching trace of the incident (mirror of started_at),
+      // so the recorded close reflects when traffic actually stopped, not the detection tick.
+      endedAt = lastMatchAt(open.startedAt, now) ?? now
+      UPDATE alert_incidents SET endedAt = endedAt
       emit IncidentClosed
 ```
 
@@ -847,6 +852,7 @@ Notes:
 
 - **Per-bucket threshold is frozen at entry.** The per-bucket threshold (and, for multiplier, the supporting `baselineCount`) is snapshotted into `entrySignals` on open. The close-side does NOT re-resolve `factor × baseline` or the seasonal band — it counts how many buckets fall below `entrySignals.evaluatedThreshold`. This prevents the open incident's own elevated counts from drifting a sliding baseline and pinning the incident open.
 - **Stateless — no `exitEligibleSince`, no dwell.** Open and close are both pure functions of the current bucketed query against the (live, then frozen) per-bucket threshold. The `exit_eligible_since` column stays in the schema but is unused by escalating now; a stale value on a legacy open incident is ignored, and that incident closes on the next check where failing buckets exceed the tolerance.
+- **`ended_at` is backtraced (mirror of `started_at`).** On close, `ended_at = SavedSearchMatchReader.lastMatchAt(startedAt, now) ?? now` — the last matching trace of the incident, so the recorded close reflects when traffic actually stopped, not the (cadence-delayed) detection tick. The lookup runs only on the close transition. `[startedAt, now)` is the lower bound because the *current* window is empty at close (that's why it closes), so the last match usually predates it.
 - **Anti-flap via the shared tolerance.** Because the same `maxFail` applies on close, a brief single-bucket dip won't close a noisy-but-sustained breach. Re-opening after a genuine close still requires a fresh sustained window.
 - **No 72h backstop.** Saved-search conditions are deterministic and user-configured; if the user said "alert me when 5xx > 100 for 1 hour" and it's been holding for a week, that's the system working as designed.
 - **Spikes are filtered by construction.** A 1-second burst fills a single bucket and leaves the other `N - 1` buckets failing, so `failing` far exceeds `maxFail` and nothing opens — the sustained-for-the-window semantics, not a rolling-count aging trick.

@@ -105,6 +105,31 @@ const make = (): SavedSearchMatchReaderShape => ({
           Effect.mapError((error) => toRepositoryError(error, "SavedSearchMatchReader.firstMatchAt")),
         )
     }),
+  lastMatchAt: (input) =>
+    Effect.gen(function* () {
+      const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+      const inner = yield* buildInnerQuery(input)
+      return yield* chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            // `count()` guards the empty case — `max()` over zero rows returns the
+            // epoch, not NULL, so we'd otherwise report a bogus 1970 last match.
+            query: `SELECT toString(max(start_time)) AS last_at, count() AS matches FROM (${inner.sql})`,
+            query_params: inner.params,
+            format: "JSONEachRow",
+          })
+          return result.json<{ last_at: string | null; matches: string }>()
+        })
+        .pipe(
+          Effect.map((rows) => {
+            const row = rows[0]
+            if (!row || Number(row.matches) === 0 || !row.last_at) return null
+            const parsed = new Date(row.last_at.includes(" ") ? `${row.last_at.replace(" ", "T")}Z` : row.last_at)
+            return Number.isNaN(parsed.getTime()) ? null : parsed
+          }),
+          Effect.mapError((error) => toRepositoryError(error, "SavedSearchMatchReader.lastMatchAt")),
+        )
+    }),
   countMatchesPerBucket: (input: SavedSearchMatchBucketInput) =>
     Effect.gen(function* () {
       const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

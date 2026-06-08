@@ -28,22 +28,20 @@ export interface CheckIssueEscalationInput {
   readonly escalationSensitivity?: number
 }
 
-/** Look-back window + bucket for `startedAt` backtracking on the escalation `enter` transition. */
+/** Look-back window + bucket for `started_at` / `ended_at` backtracking on the escalation enter/exit transitions. */
 const BACKTRACK_WINDOW_MS = 24 * 60 * 60 * 1000
 const BACKTRACK_BUCKET_SECONDS = 60 * 60
 
-/**
- * The detector flags late (the band must hold a while), so backtrack: return the
- * first bucket whose count cleared the seasonal threshold (same `kShort`). No
- * crossing in the window → the event time (`now`).
- */
-const backtrackEscalationStart = (input: {
+interface BacktrackInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly issueId: IssueId
   readonly kShort: number
   readonly now: Date
-}) =>
+}
+
+/** The issue's occurrence histogram over the backtrack window as ascending `{bucket,count}` rows, paired with a per-bucket seasonal-threshold lookup (same `kShort`). */
+const escalationCrossingBuckets = (input: BacktrackInput) =>
   Effect.gen(function* () {
     const analytics = yield* ScoreAnalyticsRepository
     const to = input.now
@@ -75,7 +73,36 @@ const backtrackEscalationStart = (input: {
     }
 
     const ascending = [...counts].sort((a, b) => a.bucket.localeCompare(b.bucket))
+    return { ascending, thresholdByBucket }
+  })
+
+/**
+ * The detector flags late (the band must hold a while), so backtrack: return the
+ * first bucket whose count cleared the seasonal threshold (same `kShort`). No
+ * crossing in the window → the event time (`now`).
+ */
+const backtrackEscalationStart = (input: BacktrackInput) =>
+  Effect.gen(function* () {
+    const { ascending, thresholdByBucket } = yield* escalationCrossingBuckets(input)
     for (const bucket of ascending) {
+      const threshold = thresholdByBucket.get(bucket.bucket)
+      if (threshold !== undefined && bucket.count >= threshold) {
+        const ts = new Date(bucket.bucket)
+        if (!Number.isNaN(ts.getTime())) return ts
+      }
+    }
+    return input.now
+  })
+
+/**
+ * Mirror of {@link backtrackEscalationStart} for the close: the detector exits late
+ * (dwell), so backtrack `ended_at` to the **last** bucket whose count was still above
+ * the seasonal threshold. No crossing in the window → the event time (`now`).
+ */
+const backtrackEscalationEnd = (input: BacktrackInput) =>
+  Effect.gen(function* () {
+    const { ascending, thresholdByBucket } = yield* escalationCrossingBuckets(input)
+    for (const bucket of [...ascending].reverse()) {
       const threshold = thresholdByBucket.get(bucket.bucket)
       if (threshold !== undefined && bucket.count >= threshold) {
         const ts = new Date(bucket.bucket)
@@ -227,6 +254,17 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
     }
 
     if (decision.transition === "exit") {
+      // Backtrack the end to the last bucket still above the seasonal threshold (mirror of the
+      // enter-side backtrack), so the incident's `ended_at` reflects when the escalation actually
+      // subsided rather than the dwell-delayed detection tick.
+      const endedAt = yield* backtrackEscalationEnd({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        issueId: IssueId(input.issueId),
+        kShort,
+        now,
+      })
+
       yield* outboxEventWriter.write({
         eventName: "IssueEscalationEnded",
         aggregateType: "issue",
@@ -236,7 +274,7 @@ export const checkIssueEscalationUseCase = (input: CheckIssueEscalationInput) =>
           organizationId: issueWithLifecycle.organizationId,
           projectId: issueWithLifecycle.projectId,
           issueId: issueWithLifecycle.id,
-          endedAt: now.toISOString(),
+          endedAt: endedAt.toISOString(),
           reason: decision.reason ?? "threshold",
         },
       })
