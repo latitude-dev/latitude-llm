@@ -1128,19 +1128,7 @@ Identifier: `monitors`. Added to `FEATURE_FLAGS` in `packages/domain/feature-fla
 
 - Sidebar nav item hidden when the flag is off.
 - `/projects/$slug/monitors` route renders a "Not available" splash when accessed directly without the flag.
-- The `monitors` flag itself stays in place after M10 — only the three stale flags (`email-notifications`, `notifications`, `timeline-incidents`) are removed there. The `monitors` flag's own cleanup is a future post-rollout PR.
-
-## Stale flag removal
-
-In M10, three flags are removed and every reference cleaned up:
-
-| Flag | Removal action |
-|---|---|
-| `email-notifications` | Drop the worker org-level gate in `notifications.ts`. Drop the frontend query in `account.tsx`. |
-| `notifications` | Drop `<NotificationBell>` gate. Drop the issues settings page gate. |
-| `timeline-incidents` | Drop `use-show-incidents-overlay.ts` gate so the overlay always shows. |
-
-Cleanup of the override table (`DELETE FROM organization_feature_flags WHERE identifier IN (...)`) runs as a one-shot SQL command (manual, not a Drizzle migration).
+- The `monitors` flag itself stays in place during rollout; its own cleanup is a future post-rollout PR.
 
 ## Provisioning system monitors
 
@@ -1527,26 +1515,16 @@ Smaller than originally estimated because most of the heavy lifting has already 
 - [ ] Add cross-links from existing related pages (issues, saved searches, notifications) to the new monitors page.
 - [ ] If feasible: 2-3 inline screenshots of the dashboard and the create modal. Optional if the screenshots block on the UI not being final-final.
 
-### Milestone 11 — Remove stale feature flags
-
-> Branch: `LAT-630/remove-stale-flags` · Estimated size: ~400 lines
-
-**Goal:** Three flags that are on for everyone get removed. The `monitors` flag stays.
-
-- [ ] Remove `email-notifications`, `notifications`, `timeline-incidents` from the registry. Drop every read site (worker, frontend hooks, settings pages).
-- [ ] One-shot SQL cleanup: `DELETE FROM organization_feature_flags WHERE identifier IN ('email-notifications', 'notifications', 'timeline-incidents');` (manual command, runbook entry, not a Drizzle migration).
-- [ ] `grep -r` sanity check: no remaining references.
-
 ### Milestone 12 — Promote spec to dev-docs
 
 > Branch: `LAT-630/dev-docs` · Estimated size: minimal
 
 **Goal:** Durable design knowledge lives at `dev-docs/monitors.md`; `specs/monitors.md` is removed.
 
-- [ ] Copy the non-implementation-plan sections of `specs/monitors.md` to `dev-docs/monitors.md`, reframed as durable docs.
-- [ ] Add cross-links from `dev-docs/notifications.md` and `dev-docs/reliability.md`.
-- [ ] Delete `specs/monitors.md`.
-- [ ] No code changes.
+- [x] Copy the non-implementation-plan sections of `specs/monitors.md` to `dev-docs/monitors.md`, reframed as durable docs.
+- [x] Add cross-links from `dev-docs/notifications.md` and `dev-docs/reliability.md`.
+- [ ] Delete `specs/monitors.md`. **Deferred** — kept in place for now (Milestone 10's user-facing docs aren't done yet, and the spec still carries the rollout history). Delete once the spec has no remaining unique value.
+- [x] No code changes (this milestone).
 
 ---
 

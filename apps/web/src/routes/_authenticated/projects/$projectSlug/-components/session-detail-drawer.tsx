@@ -37,8 +37,9 @@ export function SessionDetailDrawer({
   const [traceId, setTraceId] = useParamState("traceId", "")
   const [issueId, setIssueId] = useParamState("issueId", "")
   const [, setFocusAnnotationId] = useParamState("annotationId", "")
-  const [q] = useParamState("q", "")
-  const defaultSessionTab = q.length > 0 ? "conversation" : "session"
+  // Land on the conversation tab when arriving from an active search, so the
+  // conversation tab's search-match autoscroll/highlight has something to scroll to.
+  const defaultSessionTab = (searchQuery?.length ?? 0) > 0 ? "conversation" : "session"
   const [activeTab, setActiveTab] = useParamState("sessionTab", defaultSessionTab, {
     validate: isSessionTab,
   })

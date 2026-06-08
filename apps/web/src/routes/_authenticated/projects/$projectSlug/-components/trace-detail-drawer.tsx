@@ -144,7 +144,10 @@ function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSy
   const { initialTab: _initialTabIgnored, closeLabel, drawerStoreKey, ...rest } = props
   // Shared with the session panel via the `detailTab` URL param so Conversation
   // / Annotations carry over when switching between trace and session views.
-  const [activeTab, setActiveTab] = useParamState("detailTab", "trace", {
+  // Default to Conversation when arriving from an active search so the
+  // search-match autoscroll/highlight lands on a hit instead of the trace tab.
+  const defaultTab = (props.searchQuery?.length ?? 0) > 0 ? "conversation" : "trace"
+  const [activeTab, setActiveTab] = useParamState("detailTab", defaultTab, {
     validate: isTraceDetailTab,
   })
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")

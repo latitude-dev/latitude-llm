@@ -74,7 +74,7 @@ export function SearchInput({
               key={segment.id}
               className={cn(
                 "inline-flex min-w-0 shrink-0 items-center",
-                isSemantic ? "" : "h-7 gap-1 rounded-full border px-2 text-xs font-medium shadow-sm",
+                isSemantic ? "" : "h-7 gap-1 rounded-lg border px-2 text-xs font-medium shadow-sm size-min",
                 segment.kind === "literal" ? "border-primary/25 bg-primary/10 text-primary" : "",
                 segment.kind === "token" ? "border-phrase/30 bg-phrase/10 text-phrase-foreground" : "",
               )}
@@ -114,8 +114,8 @@ export function SearchInput({
                 placeholder={placeholder}
                 maxLength={SEARCH_QUERY_MAX_LENGTH}
                 className={cn(
-                  "bg-transparent outline-none [field-sizing:content] placeholder:text-muted-foreground",
-                  isSemantic ? "h-6 min-w-[1ch] text-sm" : "h-6 min-w-[2ch] font-mono text-xs",
+                  "bg-transparent outline-none field-sizing-content placeholder:text-muted-foreground h-5",
+                  isSemantic ? "min-w-[1ch] text-sm" : "min-w-[2ch] font-mono text-xs",
                 )}
               />
               {!isSemantic ? (

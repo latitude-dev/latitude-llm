@@ -272,6 +272,7 @@ Each step in the pipeline is therefore idempotent:
 
 ## See also
 
+- [monitors.md](./monitors.md) — monitors are the upstream producer of incident notifications; a monitor's mute gate is the one seam into this pipeline (`request-incident-notifications` skips the fan-out for a muted monitor's incidents).
 - Design spec: `specs/notifications-multi-channel.md` (decisions, trade-offs, out-of-scope, full architecture).
 - Skill: `.agents/skills/notifications/SKILL.md` for agent-facing instructions.
 - Skill: `.agents/skills/async-jobs-and-events/SKILL.md` for general queue/worker conventions.

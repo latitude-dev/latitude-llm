@@ -1,5 +1,5 @@
 import type { FilterSet } from "@domain/shared"
-import { Button, Icon, SplitButton, Tooltip, toast } from "@repo/ui"
+import { Button, Icon, SplitButton, toast } from "@repo/ui"
 import { BookmarkPlusIcon, PencilIcon } from "lucide-react"
 import { useUpdateSavedSearch } from "../../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../../domains/saved-searches/saved-searches.functions.ts"
@@ -9,12 +9,12 @@ import { serializeFilters } from "./trace-page-state.ts"
 /**
  * Primary action at the right of the search bar:
  *  - hidden when there's nothing to save and no saved search is selected;
- *  - "Search" + bookmark-plus when content is present but no saved search is selected (saves a new one);
- *  - a split button when a saved search is selected: "Search" + pencil updates it in place (disabled
+ *  - "Save search" + bookmark-plus when content is present but no saved search is selected (saves a new one);
+ *  - a split button when a saved search is selected: "Update search" + pencil updates it in place (disabled
  *    while the active state matches the stored one exactly), and the always-enabled chevron offers
  *    "Save as a new search".
  *
- * The create flows ("Search"/new and "Save as a new search") are delegated to `onRequestSave`; the
+ * The create flows ("Save search"/new and "Save as a new search") are delegated to `onRequestSave`; the
  * parent owns the shared `SaveSearchModal`.
  */
 export function SaveOrUpdateSearchButton({
@@ -49,7 +49,7 @@ export function SaveOrUpdateSearchButton({
         {...(updateMutation.isPending ? { isLoading: true } : {})}
         actions={[
           {
-            content: "Search",
+            content: "Update search",
             icon: <Icon icon={PencilIcon} size="sm" />,
             tooltip: "Update search",
             // Only the primary half is locked when there's no drift; the chevron stays enabled.
@@ -81,16 +81,9 @@ export function SaveOrUpdateSearchButton({
   if (!hasContent) return null
 
   return (
-    <Tooltip
-      asChild
-      trigger={
-        <Button variant="default" size="default" onClick={onRequestSave}>
-          <Icon icon={BookmarkPlusIcon} size="sm" />
-          Search
-        </Button>
-      }
-    >
+    <Button variant="default" size="default" onClick={onRequestSave}>
+      <Icon icon={BookmarkPlusIcon} size="sm" />
       Save search
-    </Tooltip>
+    </Button>
   )
 }

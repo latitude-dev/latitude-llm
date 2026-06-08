@@ -98,6 +98,7 @@ Instead, the implementation should be split into direct domains such as:
 - `packages/domain/evaluations`
 - `packages/domain/annotation-queues`
 - `packages/domain/simulations`
+- `packages/domain/monitors` — the alerting layer that watches issues/saved searches and raises incidents; see [monitors.md](./monitors.md)
 
 Settings remain attached to their owner domains:
 
