@@ -1,5 +1,5 @@
 import { OrganizationId, ProjectId, SessionId, TaxonomyClusterId, TraceId } from "@domain/shared"
-import { SessionRepository, TraceRepository } from "@domain/spans"
+import { SessionRepository, stripLoneSurrogates, TraceRepository } from "@domain/spans"
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import {
@@ -152,7 +152,9 @@ export const recordSessionObservationUseCase = Effect.fn("taxonomy.recordSession
       startTime: session.startTime,
       endTime: session.endTime,
       traceIds,
-      summary: document.summaryPreview,
+      // Slicing the conversation into a preview can split an emoji's surrogate
+      // pair; ClickHouse's strict JSON parser rejects lone surrogates on insert.
+      summary: stripLoneSurrogates(document.summaryPreview),
       summaryHash,
       // Deliberately excluded from gardening birth sweeps: short sessions do
       // not have enough behavioral signal to justify an embedding.
@@ -193,6 +195,14 @@ export const recordSessionObservationUseCase = Effect.fn("taxonomy.recordSession
       textToEmbed = generated.summary
     }
   }
+
+  // The summary/embedding inputs derive from arbitrary LLM I/O (and from
+  // length-sliced previews), so they can carry unpaired UTF-16 surrogates.
+  // Both downstream sinks reject them: ClickHouse's JSON insert fails with
+  // "missing second part of surrogate pair", and the Voyage embeddings API
+  // returns a 400 for invalid UTF-8. Canonicalise before either is reached.
+  summary = stripLoneSurrogates(summary)
+  textToEmbed = stripLoneSurrogates(textToEmbed)
 
   const embedded = yield* embedBehaviorSummaryUseCase({
     organizationId: input.organizationId,

@@ -522,4 +522,57 @@ describe("online taxonomy observation use-cases", () => {
     expect(row?.assignedClusterId).toBe(clusterId)
     expect(clusters.clusters.get(clusterId)?.observationCount).toBe(2)
   })
+
+  it("sanitises lone UTF-16 surrogates before embedding and persisting the summary", async () => {
+    // Regression: arbitrary LLM I/O (and length-sliced previews) can carry
+    // unpaired surrogates. ClickHouse's JSON insert rejects them with "missing
+    // second part of surrogate pair" and the Voyage embeddings API returns a
+    // 400 for invalid UTF-8. Both inputs must be canonicalised first.
+    const observations = createFakeBehaviorObservationRepository()
+    const clusters = createFakeTaxonomyClusterRepository([])
+    const locks = createFakeDistributedLockRepository()
+    const loneSurrogateRegex = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+
+    // High surrogate (leading half of an emoji) with no trailing low surrogate.
+    const dirty = `I want to cancel my subscription \uD83D and confirm the billing stops. `.repeat(6)
+    expect(dirty).toMatch(loneSurrogateRegex)
+    const dirtySession = makeSession({
+      traceIds: [],
+      lastInputMessages: [{ role: "user", parts: [{ type: "text", content: dirty }] }],
+      outputMessages: [{ role: "assistant", parts: [{ type: "text", content: dirty }] }],
+    })
+
+    const embedInputs: string[] = []
+    const capturingAi = Layer.succeed(AI, {
+      embed: (input) =>
+        Effect.sync(() => {
+          embedInputs.push(input.text)
+          return { embedding: [...embedding(0)] }
+        }),
+      generate: () => Effect.die("generate must not be called under embed_direct"),
+      rerank: () => Effect.succeed([]),
+    })
+
+    await Effect.runPromise(
+      recordSessionObservationUseCase({ organizationId, projectId, sessionId }).pipe(
+        Effect.provide(makeSessionRepository(dirtySession)),
+        Effect.provide(makeTraceRepository([])),
+        Effect.provide(capturingAi),
+        Effect.provide(Layer.succeed(BehaviorObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(DistributedLockRepository, locks.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(embedInputs).toHaveLength(1)
+    expect(embedInputs[0]).not.toMatch(loneSurrogateRegex)
+    expect(embedInputs[0]).toContain("�")
+
+    const storedSummary = [...observations.rows.values()][0]?.summary
+    expect(storedSummary).toBeDefined()
+    expect(storedSummary).not.toMatch(loneSurrogateRegex)
+    expect(storedSummary).toContain("�")
+  })
 })
