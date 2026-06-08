@@ -150,7 +150,8 @@ function FeatureFlagOffSplash() {
         <div className="flex flex-col items-center gap-2">
           <Text.H3 centered>Behaviours aren't available yet</Text.H3>
           <Text.H5 color="foregroundMuted" centered>
-            This feature is rolling out gradually. Reach out to support if you'd like early access for your organization.
+            This feature is rolling out gradually. Reach out to support if you'd like early access for your
+            organization.
           </Text.H5>
         </div>
       </div>
