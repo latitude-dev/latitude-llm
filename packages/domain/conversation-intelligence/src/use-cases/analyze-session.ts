@@ -26,7 +26,7 @@ import {
   CONVERSATION_MOMENT_SEGMENTATION_VERSION,
   MOMENT_KINDS,
 } from "../constants.ts"
-import type { AnalysisLens, InteractionKind, SessionAnalysis } from "../entities/session-analysis.ts"
+import type { SessionAnalysis } from "../entities/session-analysis.ts"
 import type { MomentLabelKind as MomentKind, SessionMomentLabel } from "../entities/session-moment-label.ts"
 import type { SessionSemanticMoment } from "../entities/session-semantic-moment.ts"
 import {
@@ -122,20 +122,13 @@ const embedTurns = (messages: readonly NormalizedMessage[]) =>
     )
   })
 
-const classifyInteraction = (
-  messages: readonly NormalizedMessage[],
-): {
-  readonly interactionKind: InteractionKind
-  readonly analysisLens: AnalysisLens
-} => {
+const isConversation = (messages: readonly NormalizedMessage[]): boolean => {
   const hasUser = messages.some((message) => message.role === "user")
   const hasAssistant = messages.some((message) => message.role === "assistant")
-  if (hasUser && hasAssistant) return { interactionKind: "user_conversation", analysisLens: "conversation" }
-  return { interactionKind: "unknown", analysisLens: "telemetry_only" }
+  return hasUser && hasAssistant
 }
 
-const isAllowedMoment = (kind: string, lens: AnalysisLens): kind is MomentKind =>
-  lens === "conversation" && (MOMENT_KINDS as readonly string[]).includes(kind)
+const isAllowedMoment = (kind: string): kind is MomentKind => (MOMENT_KINDS as readonly string[]).includes(kind)
 
 const confidenceFloor = (kind: MomentKind): number => {
   switch (kind) {
@@ -173,11 +166,10 @@ const toDetectedMoment = (input: {
   readonly analysisHash: string
   readonly indexedAt: Date
   readonly retentionDays: number
-  readonly lens: AnalysisLens
   readonly messages: readonly NormalizedMessage[]
 }) =>
   Effect.gen(function* () {
-    if (!isAllowedMoment(input.raw.kind, input.lens)) return null
+    if (!isAllowedMoment(input.raw.kind)) return null
     const kind = input.raw.kind
     if (input.raw.confidence < confidenceFloor(kind)) return null
     if (input.raw.lastMessageIndex < input.raw.firstMessageIndex) return null
@@ -323,11 +315,8 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
         endTime: startTime,
         traceIds: input.triggeringTraceId.length === 32 ? [TraceId(input.triggeringTraceId)] : [],
         analysisHash: "0".repeat(64),
-        interactionKind: "unknown",
-        analysisLens: "telemetry_only",
         analysisStatus: "failed",
         statusReason: "Session not found",
-        detectorVersion: String(CONVERSATION_INTELLIGENCE_DETECTOR_VERSION),
         retentionDays: input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
         indexedAt,
       })
@@ -346,7 +335,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
 
     const indexedAt = new Date()
     const retentionDays = input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS
-    const classification = classifyInteraction(normalizedMessages)
+    const canAnalyzeConversation = isConversation(normalizedMessages)
 
     const baseAnalysis = {
       organizationId,
@@ -356,10 +345,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       endTime: session.endTime,
       traceIds,
       analysisHash,
-      interactionKind: classification.interactionKind,
-      analysisLens: classification.analysisLens,
       statusReason: "",
-      detectorVersion: CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
       retentionDays,
       indexedAt,
     } satisfies Omit<SessionAnalysis, "analysisStatus">
@@ -380,7 +366,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
         momentCount: 0,
       } satisfies AnalyzeSessionResult
     }
-    if (classification.analysisLens === "telemetry_only") {
+    if (!canAnalyzeConversation) {
       yield* analyses.upsert({
         ...baseAnalysis,
         analysisStatus: "skipped_non_conversation",
@@ -413,7 +399,6 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
         analysisHash,
         indexedAt,
         retentionDays,
-        lens: classification.analysisLens,
         messages: normalizedMessages,
       }),
     )).flatMap((moment): DetectedMoment[] => (moment === null ? [] : [moment as DetectedMoment]))
@@ -634,11 +619,8 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
           endTime: startTime,
           traceIds: input.triggeringTraceId.length === 32 ? [TraceId(input.triggeringTraceId)] : [],
           analysisHash: "0".repeat(64),
-          interactionKind: "unknown",
-          analysisLens: "telemetry_only",
           analysisStatus: "failed",
           statusReason: error instanceof Error ? error.message : "Session analysis failed",
-          detectorVersion: String(CONVERSATION_INTELLIGENCE_DETECTOR_VERSION),
           retentionDays: input.retentionDays ?? CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
           indexedAt,
         })

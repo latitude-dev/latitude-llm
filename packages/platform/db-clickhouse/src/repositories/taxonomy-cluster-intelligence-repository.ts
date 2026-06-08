@@ -55,7 +55,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                           count() AS source_observation_count,
                           uniqExact(o.session_id) AS source_session_count,
                           uniqExactIf(o.session_id, a.analysis_status != '') AS source_analysis_count,
-                          uniqExactIf(o.session_id, a.analysis_lens = 'conversation') AS eligible_session_count,
+                          uniqExactIf(o.session_id, a.analysis_status = 'analyzed') AS eligible_session_count,
                           uniqExactIf(o.session_id, startsWith(a.analysis_status, 'skipped')) AS skipped_count,
                           uniqExactIf(o.session_id, a.analysis_status = 'failed') AS failed_count
                         FROM taxonomy_observations AS o FINAL
@@ -96,7 +96,7 @@ export const TaxonomyClusterIntelligenceRepositoryLive = Layer.effect(
                           AND o.project_id = {projectId:String}
                           AND o.assigned_cluster_id IN {clusterIds:Array(String)}
                           AND o.analysis_hash = a.analysis_hash
-                          AND a.analysis_lens = 'conversation'
+                          AND a.analysis_status = 'analyzed'
                           AND o.start_time >= {sourceWindowStart:DateTime64(9, 'UTC')}
                           AND o.start_time < {sourceWindowEnd:DateTime64(9, 'UTC')}
                         GROUP BY key`,

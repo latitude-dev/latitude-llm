@@ -35,15 +35,10 @@ CREATE TABLE session_analyses
     `end_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
     `trace_ids` Array(FixedString(32)) CODEC(ZSTD(1)),
     `analysis_hash` FixedString(64) CODEC(ZSTD(1)),
-    `interaction_kind` LowCardinality(String) CODEC(ZSTD(1)),
-    `analysis_lens` LowCardinality(String) CODEC(ZSTD(1)),
     `analysis_status` LowCardinality(String) CODEC(ZSTD(1)),
     `status_reason` String DEFAULT '' CODEC(ZSTD(3)),
-    `detector_version` LowCardinality(String) CODEC(ZSTD(1)),
     `retention_days` UInt16 DEFAULT 90 CODEC(T64, ZSTD(1)),
-    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
-    `segmentation_version` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1)),
-    `projection_version` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1))
+    `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
 )
 ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)

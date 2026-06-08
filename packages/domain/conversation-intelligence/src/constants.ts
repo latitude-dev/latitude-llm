@@ -22,9 +22,6 @@ export const CONVERSATION_MOMENT_CONTINUITY_DEFAULT_THRESHOLD = 0.55
 export const CONVERSATION_MOMENT_CONTINUITY_MIN_THRESHOLD = 0.45
 export const CONVERSATION_MOMENT_CONTINUITY_MAX_THRESHOLD = 0.65
 
-export const INTERACTION_KINDS = ["user_conversation", "unknown"] as const
-
-export const ANALYSIS_LENSES = ["conversation", "telemetry_only"] as const
 export const ANALYSIS_STATUSES = [
   "analyzed",
   "skipped_empty",

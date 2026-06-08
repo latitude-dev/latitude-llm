@@ -2130,10 +2130,7 @@ describe("SessionRepository", () => {
       end_time: "2026-05-24 10:05:00.000000000",
       trace_ids: [],
       analysis_hash: hash,
-      interaction_kind: "user_conversation",
-      analysis_lens: "conversation",
       analysis_status: "analyzed",
-      detector_version: "v1",
       indexed_at: indexedAt,
     })
 

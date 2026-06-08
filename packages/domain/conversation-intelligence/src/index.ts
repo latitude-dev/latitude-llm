@@ -1,5 +1,4 @@
 export {
-  ANALYSIS_LENSES,
   ANALYSIS_STATUSES,
   CONVERSATION_INTELLIGENCE_ANALYSIS_DEBOUNCE_MS,
   CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
@@ -14,7 +13,6 @@ export {
   CONVERSATION_MOMENT_CONTINUITY_MAX_THRESHOLD,
   CONVERSATION_MOMENT_CONTINUITY_MIN_THRESHOLD,
   CONVERSATION_MOMENT_SEGMENTATION_VERSION,
-  INTERACTION_KINDS,
   MOMENT_ACTORS,
   MOMENT_KINDS,
   OUTCOMES,
@@ -22,12 +20,8 @@ export {
   SEMANTIC_MOMENT_SEGMENTATION_METHODS,
 } from "./constants.ts"
 export {
-  type AnalysisLens,
   type AnalysisStatus,
-  analysisLensSchema,
   analysisStatusSchema,
-  type InteractionKind,
-  interactionKindSchema,
   type SessionAnalysis,
   sessionAnalysisSchema,
 } from "./entities/session-analysis.ts"

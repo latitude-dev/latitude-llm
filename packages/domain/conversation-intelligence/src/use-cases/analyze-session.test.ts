@@ -222,8 +222,6 @@ describe("analyzeSessionUseCase", () => {
     const analysis = [...analyses.rows.values()][0]
 
     expect(result).toEqual({ action: "recorded", status: "analyzed", momentCount: 0 })
-    expect(analysis?.interactionKind).toBe("user_conversation")
-    expect(analysis?.analysisLens).toBe("conversation")
     expect(analysis?.analysisStatus).toBe("analyzed")
     expect(semanticMoments.rows).toHaveLength(1)
     expect(taxonomyObservations.rows).toHaveLength(1)
@@ -380,7 +378,7 @@ describe("analyzeSessionUseCase", () => {
 
     expect(result).toEqual({ action: "recorded", status: "skipped_non_conversation", momentCount: 0 })
     expect(generateCalls).toBe(0)
-    expect(analysis?.interactionKind).toBe("unknown")
+    expect(analysis?.analysisStatus).toBe("skipped_non_conversation")
   })
 
   it("detects interpretive labels with embedding anchors", async () => {

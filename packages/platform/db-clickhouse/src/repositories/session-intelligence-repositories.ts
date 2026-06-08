@@ -32,11 +32,8 @@ type AnalysisRow = {
   readonly end_time: string
   readonly trace_ids: readonly string[]
   readonly analysis_hash: string
-  readonly interaction_kind: string
-  readonly analysis_lens: string
   readonly analysis_status: string
   readonly status_reason: string
-  readonly detector_version: string
   readonly retention_days: number
   readonly indexed_at: string
 }
@@ -88,11 +85,8 @@ const analysisColumns = `
   end_time,
   trace_ids,
   analysis_hash,
-  interaction_kind,
-  analysis_lens,
   analysis_status,
   status_reason,
-  detector_version,
   retention_days,
   indexed_at
 `
@@ -144,11 +138,8 @@ const toAnalysisInsertRow = (analysis: SessionAnalysis) => ({
   end_time: toClickhouseDateTime(analysis.endTime),
   trace_ids: [...analysis.traceIds],
   analysis_hash: analysis.analysisHash,
-  interaction_kind: analysis.interactionKind,
-  analysis_lens: analysis.analysisLens,
   analysis_status: analysis.analysisStatus,
   status_reason: analysis.statusReason,
-  detector_version: analysis.detectorVersion,
   retention_days: analysis.retentionDays,
   indexed_at: toClickhouseDateTime(analysis.indexedAt),
 })
@@ -201,11 +192,8 @@ const toDomainAnalysis = (row: AnalysisRow): SessionAnalysis =>
     endTime: parseClickhouseDate(row.end_time),
     traceIds: row.trace_ids.map(TraceId),
     analysisHash: row.analysis_hash,
-    interactionKind: row.interaction_kind,
-    analysisLens: row.analysis_lens,
     analysisStatus: row.analysis_status,
     statusReason: row.status_reason,
-    detectorVersion: row.detector_version,
     retentionDays: row.retention_days,
     indexedAt: parseClickhouseDate(row.indexed_at),
   })
