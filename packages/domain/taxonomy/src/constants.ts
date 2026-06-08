@@ -188,12 +188,11 @@ export const TAXONOMY_GARDEN_LOCK_TTL_SECONDS = Math.ceil(TAXONOMY_GARDENING_MAX
 // ---------------------------------------------------------------------------
 
 /**
- * Levels below root. Until parent nodes become aggregate-only categories, keep
- * online gardening to one child level; recursively splitting direct-assignment
- * residue can create parent/child/grandchild duplicates where the deepest node
- * simply absorbs the broad root's mass.
+ * Depth levels supported by the divisive builder. depth=0 is the root level
+ * (broad categories), depth=1 is sub-categories, depth=2 is fine leaves.
+ * The schedule array below has exactly this many entries.
  */
-export const TAXONOMY_TREE_MAX_DEPTH = 2
+export const TAXONOMY_TREE_MAX_DEPTH = 3
 /** Maximum number of children a single recursion pass exposes under one node. */
 export const TAXONOMY_TREE_CHILDREN_CAP = 8
 /** A node recurses into children when it has enough directly assigned members. */
@@ -227,3 +226,42 @@ export const TAXONOMY_TREE_MIN_CHILDREN = 2
 export const TAXONOMY_TREE_MIN_COVERAGE = 0.3
 export const TAXONOMY_TREE_MAX_CHILD_DOMINANCE = 0.9
 export const TAXONOMY_TREE_DEEP_MAX_CHILD_DOMINANCE = 0.75
+
+// ---------------------------------------------------------------------------
+// Divisive builder — per-depth schedule
+//
+// Each depth has its own (maxK, min-cluster-size, sibling-separation,
+// min-split-score) tuple. Broad-then-narrow: roots permit up to 10 children,
+// require larger absolute floors and a looser sibling separation (siblings
+// at the root are intentionally diverse topics); deeper levels accept smaller
+// fractions of the parent's mass and require tighter sibling separation.
+//
+// Tuning the defaults: the seeded Acme corpus has ~1500 sessions across
+// ~8 hand-authored support topics + non-session agents. 1% root floor →
+// ~15 sessions absolute; combined with the abs floor (20) this keeps the
+// root tree at roughly 6-10 categories without admitting "user says hello"
+// style fragments. Depth-1 at 3% of parent allows real sub-topics to surface
+// on parents with ~150+ members; depth-2 at 5% of parent + an 8-row absolute
+// floor keeps the long tail honest.
+// ---------------------------------------------------------------------------
+
+export interface TaxonomyTreeDepthSchedule {
+  readonly maxChildren: number
+  readonly minClusterFraction: number
+  readonly minClusterAbs: number
+  readonly maxSiblingCosine: number
+  readonly minSplitScore: number
+}
+
+export const TAXONOMY_TREE_DEPTH_SCHEDULE: readonly TaxonomyTreeDepthSchedule[] = [
+  { maxChildren: 10, minClusterFraction: 0.01, minClusterAbs: 20, maxSiblingCosine: 0.85, minSplitScore: 1.5 },
+  { maxChildren: 8, minClusterFraction: 0.03, minClusterAbs: 10, maxSiblingCosine: 0.9, minSplitScore: 1.2 },
+  { maxChildren: 6, minClusterFraction: 0.05, minClusterAbs: 8, maxSiblingCosine: 0.93, minSplitScore: 1.1 },
+]
+
+/** k-means++ restarts per K sweep at each tree node. */
+export const TAXONOMY_KMEANS_RESTARTS = 3
+/** k-means iteration cap. Convergence on normalized 2048-D embeddings is fast. */
+export const TAXONOMY_KMEANS_MAX_ITER = 25
+/** k-means convergence tolerance in (1 - cosine) centroid drift. */
+export const TAXONOMY_KMEANS_TOLERANCE = 1e-4

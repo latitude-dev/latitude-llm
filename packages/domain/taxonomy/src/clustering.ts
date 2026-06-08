@@ -1,0 +1,403 @@
+/**
+ * Pure clustering primitives for the divisive hierarchical taxonomy build.
+ *
+ * Inputs are L2-normalized embeddings (voyage-4-large, 2048d). On unit vectors
+ * cosine similarity equals the dot product, so all distance work below uses
+ * dot products and the centroid update is "mean then re-normalize" (spherical
+ * k-means). No dependency on Effect or repositories — everything here is
+ * deterministic given the input.
+ *
+ * Algorithm (high level):
+ *   - At every tree node we sweep K = 2..maxChildrenAtThisDepth.
+ *     For each K we run spherical k-means++ a few times and keep the best
+ *     restart by Calinski–Harabasz (variance-ratio criterion adapted to
+ *     cosine similarity).
+ *   - We reject Ks that violate per-depth invariants (min cluster size, max
+ *     pairwise sibling-centroid cosine). If no K is valid we leave the node
+ *     as a leaf.
+ *   - We then recurse into each child cluster with depth+1 and the next
+ *     entry in the depth schedule.
+ *
+ * Why bisecting K-means with auto-K instead of HDBSCAN / single-linkage:
+ *   - We rebuild the whole tree per gardening pass over a bounded sample
+ *     (≤10k) and want a single algorithmic primitive that gives both a
+ *     coarse-to-fine partition AND a stable per-node centroid suitable for
+ *     online assignment. Spherical k-means satisfies both. HDBSCAN is not
+ *     ergonomic in JS and produces clusters that don't carry well-defined
+ *     centroids for the online deepest-fit router we already ship.
+ *   - Per-depth schedules are the cheapest way to express "broad at the
+ *     root, narrow at the leaves" without per-corpus hand tuning.
+ */
+
+import { normalizeEmbedding } from "@domain/shared"
+import { cosineSimilarityNormalized } from "./helpers.ts"
+
+export interface DepthSchedule {
+  /** Maximum K to try at this depth. K=2..maxChildren is swept. */
+  readonly maxChildren: number
+  /** Minimum cluster size as a fraction of the parent's member count. */
+  readonly minClusterFraction: number
+  /** Absolute floor on cluster size at this depth — overrides the fraction. */
+  readonly minClusterAbs: number
+  /**
+   * Two sibling centroids closer than this cosine cannot coexist at this
+   * depth. The full K is rejected when any pair exceeds it.
+   */
+  readonly maxSiblingCosine: number
+  /**
+   * Minimum Calinski–Harabasz improvement (vs. K=1 / no split) required to
+   * accept a split at this depth. Higher → more aggressive leaf-keeping.
+   * Expressed as the variance-ratio criterion itself; a node is left a leaf
+   * when the best K's score is below this.
+   */
+  readonly minSplitScore: number
+}
+
+export interface ClusteringTreeNode {
+  /** Indices into the original `embeddings` array — *all* members at this node. */
+  readonly memberIndices: readonly number[]
+  /** Normalized centroid over `memberIndices`. */
+  readonly centroid: readonly number[]
+  /** Empty for leaves. */
+  readonly children: readonly ClusteringTreeNode[]
+  readonly depth: number
+}
+
+interface BuildHierarchicalClustersInput {
+  /** L2-normalized embeddings; all same dimension. */
+  readonly embeddings: readonly (readonly number[])[]
+  /** One entry per depth (depth 0 = root). When recursion exceeds the array
+   *  length the node becomes a leaf. */
+  readonly depthSchedule: readonly DepthSchedule[]
+  /** K-means++ restarts per K sweep. */
+  readonly restarts: number
+  /** K-means iterations cap. */
+  readonly maxIter: number
+  /** Tolerance for k-means convergence (max centroid drift). */
+  readonly tolerance: number
+  /** Random seed — pass a project-stable value for run-to-run stability. */
+  readonly seed: number
+}
+
+// ---------------------------------------------------------------------------
+// PRNG — mulberry32. We need a deterministic, seedable PRNG so a gardening
+// pass on the same observation sample produces the same tree across retries.
+// Math.random would diverge between activity attempts and Temporal replays.
+// ---------------------------------------------------------------------------
+
+const createRng = (seed: number) => {
+  let state = seed >>> 0
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0
+    let t = state
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mean + normalize over an index set — used as the centroid update step in
+// spherical k-means and at every tree node to publish a stable centroid.
+// ---------------------------------------------------------------------------
+
+const meanOverIndices = (
+  embeddings: readonly (readonly number[])[],
+  indices: readonly number[],
+  dimensions: number,
+): number[] => {
+  if (indices.length === 0) return []
+  const sum = new Array<number>(dimensions).fill(0)
+  for (const memberIndex of indices) {
+    const vector = embeddings[memberIndex]
+    if (!vector || vector.length !== dimensions) continue
+    for (let i = 0; i < dimensions; i++) sum[i] = (sum[i] ?? 0) + (vector[i] ?? 0)
+  }
+  return normalizeEmbedding(sum)
+}
+
+// ---------------------------------------------------------------------------
+// k-means++ initialization adapted to cosine. Pick the first center
+// uniformly, then iteratively pick centers with probability proportional to
+// (1 - max-similarity-to-already-picked)². This biases initial centers to be
+// far apart on the cosine sphere, which is what we want.
+// ---------------------------------------------------------------------------
+
+const kmeansPlusPlusInit = (
+  embeddings: readonly (readonly number[])[],
+  memberIndices: readonly number[],
+  k: number,
+  rng: () => number,
+): number[][] => {
+  const n = memberIndices.length
+  if (n === 0 || k <= 0) return []
+  const dimensions = embeddings[memberIndices[0] ?? 0]?.length ?? 0
+  if (dimensions === 0) return []
+
+  const seedIndex = memberIndices[Math.floor(rng() * n)] ?? memberIndices[0] ?? 0
+  const seedVector = embeddings[seedIndex]
+  if (!seedVector) return []
+
+  const centers: number[][] = [[...seedVector]]
+  const minDistance = new Array<number>(n).fill(Number.POSITIVE_INFINITY)
+  for (let localIdx = 0; localIdx < n; localIdx++) {
+    const vector = embeddings[memberIndices[localIdx] ?? -1]
+    if (!vector) continue
+    minDistance[localIdx] = 1 - cosineSimilarityNormalized(vector, seedVector)
+  }
+
+  while (centers.length < k) {
+    let total = 0
+    for (let i = 0; i < n; i++) total += (minDistance[i] ?? 0) ** 2
+    if (total <= 0) break
+    let target = rng() * total
+    let chosen = 0
+    for (let i = 0; i < n; i++) {
+      target -= (minDistance[i] ?? 0) ** 2
+      if (target <= 0) {
+        chosen = i
+        break
+      }
+    }
+    const newCenterVector = embeddings[memberIndices[chosen] ?? -1]
+    if (!newCenterVector) break
+    centers.push([...newCenterVector])
+    for (let i = 0; i < n; i++) {
+      const vector = embeddings[memberIndices[i] ?? -1]
+      if (!vector) continue
+      const distance = 1 - cosineSimilarityNormalized(vector, newCenterVector)
+      const current = minDistance[i] ?? Number.POSITIVE_INFINITY
+      if (distance < current) minDistance[i] = distance
+    }
+  }
+
+  return centers
+}
+
+// ---------------------------------------------------------------------------
+// Spherical k-means: assign by max cosine, update centers by mean+normalize.
+// Returns assignments (local index → cluster index) and final centroids.
+// ---------------------------------------------------------------------------
+
+interface KmeansResult {
+  /** assignments[localIndex] = clusterIndex */
+  readonly assignments: readonly number[]
+  readonly centroids: readonly (readonly number[])[]
+  /** Sum of cosine similarities to each point's assigned centroid — higher is tighter. */
+  readonly cohesion: number
+  readonly iterations: number
+}
+
+const sphericalKmeans = (input: {
+  readonly embeddings: readonly (readonly number[])[]
+  readonly memberIndices: readonly number[]
+  readonly initialCentroids: readonly (readonly number[])[]
+  readonly maxIter: number
+  readonly tolerance: number
+}): KmeansResult => {
+  const { embeddings, memberIndices, initialCentroids, maxIter, tolerance } = input
+  const n = memberIndices.length
+  const k = initialCentroids.length
+  const assignments = new Array<number>(n).fill(0)
+  let centroids = initialCentroids.map((vector) => [...vector])
+  let iteration = 0
+  let cohesion = 0
+  for (iteration = 0; iteration < maxIter; iteration++) {
+    let changed = false
+    cohesion = 0
+    for (let localIdx = 0; localIdx < n; localIdx++) {
+      const vector = embeddings[memberIndices[localIdx] ?? -1]
+      if (!vector) continue
+      let bestCluster = 0
+      let bestSimilarity = Number.NEGATIVE_INFINITY
+      for (let clusterIdx = 0; clusterIdx < k; clusterIdx++) {
+        const centroid = centroids[clusterIdx]
+        if (!centroid) continue
+        const similarity = cosineSimilarityNormalized(vector, centroid)
+        if (similarity > bestSimilarity) {
+          bestSimilarity = similarity
+          bestCluster = clusterIdx
+        }
+      }
+      if (assignments[localIdx] !== bestCluster) {
+        assignments[localIdx] = bestCluster
+        changed = true
+      }
+      cohesion += bestSimilarity
+    }
+    const dimensions = centroids[0]?.length ?? 0
+    const newCentroids: number[][] = []
+    for (let clusterIdx = 0; clusterIdx < k; clusterIdx++) {
+      const memberLocalIndices: number[] = []
+      for (let localIdx = 0; localIdx < n; localIdx++) {
+        if (assignments[localIdx] === clusterIdx) memberLocalIndices.push(memberIndices[localIdx] ?? -1)
+      }
+      const updated =
+        memberLocalIndices.length > 0
+          ? meanOverIndices(embeddings, memberLocalIndices, dimensions)
+          : (centroids[clusterIdx] ?? [])
+      newCentroids.push([...updated])
+    }
+    let maxDrift = 0
+    for (let clusterIdx = 0; clusterIdx < k; clusterIdx++) {
+      const before = centroids[clusterIdx]
+      const after = newCentroids[clusterIdx]
+      if (!before || !after) continue
+      const drift = 1 - cosineSimilarityNormalized(before, after)
+      if (drift > maxDrift) maxDrift = drift
+    }
+    centroids = newCentroids
+    if (!changed || maxDrift <= tolerance) break
+  }
+  return { assignments, centroids, cohesion, iterations: iteration }
+}
+
+// ---------------------------------------------------------------------------
+// Calinski–Harabasz adapted to cosine. We treat (1 - cosine) as squared
+// distance on the unit sphere; the ratio of "between" to "within" mean
+// distances multiplied by (n-k)/(k-1) gives a normalized score where higher
+// = better-separated. This avoids paying for an O(n²) silhouette per K.
+// ---------------------------------------------------------------------------
+
+const calinskiHarabaszScore = (
+  embeddings: readonly (readonly number[])[],
+  memberIndices: readonly number[],
+  assignments: readonly number[],
+  centroids: readonly (readonly number[])[],
+): number => {
+  const n = memberIndices.length
+  const k = centroids.length
+  if (n <= k || k <= 1) return 0
+  const dimensions = centroids[0]?.length ?? 0
+  const overallCentroid = meanOverIndices(embeddings, memberIndices, dimensions)
+  let between = 0
+  let within = 0
+  for (let clusterIdx = 0; clusterIdx < k; clusterIdx++) {
+    const centroid = centroids[clusterIdx]
+    if (!centroid) continue
+    let clusterSize = 0
+    for (let localIdx = 0; localIdx < n; localIdx++) {
+      if (assignments[localIdx] !== clusterIdx) continue
+      clusterSize++
+      const vector = embeddings[memberIndices[localIdx] ?? -1]
+      if (!vector) continue
+      within += 1 - cosineSimilarityNormalized(vector, centroid)
+    }
+    if (clusterSize === 0) continue
+    between += clusterSize * (1 - cosineSimilarityNormalized(centroid, overallCentroid))
+  }
+  if (within <= 0) return 0
+  return between / (k - 1) / (within / (n - k))
+}
+
+// ---------------------------------------------------------------------------
+// chooseBestK — sweep K, run multi-restart spherical k-means, accept the K
+// that maximizes CH score while satisfying the depth invariants.
+// ---------------------------------------------------------------------------
+
+interface ChooseBestKInput {
+  readonly embeddings: readonly (readonly number[])[]
+  readonly memberIndices: readonly number[]
+  readonly schedule: DepthSchedule
+  readonly restarts: number
+  readonly maxIter: number
+  readonly tolerance: number
+  readonly rng: () => number
+}
+
+interface ChooseBestKResult {
+  readonly k: number
+  readonly assignments: readonly number[]
+  readonly centroids: readonly (readonly number[])[]
+  readonly score: number
+  readonly clusterMemberIndices: readonly (readonly number[])[]
+}
+
+const chooseBestK = (input: ChooseBestKInput): ChooseBestKResult | null => {
+  const { embeddings, memberIndices, schedule, restarts, maxIter, tolerance, rng } = input
+  const n = memberIndices.length
+  const minByFraction = Math.ceil(n * schedule.minClusterFraction)
+  const minClusterSize = Math.max(schedule.minClusterAbs, minByFraction)
+  if (n < minClusterSize * 2) return null
+
+  let best: ChooseBestKResult | null = null
+  const maxK = Math.min(schedule.maxChildren, Math.floor(n / minClusterSize))
+  for (let k = 2; k <= maxK; k++) {
+    for (let restart = 0; restart < restarts; restart++) {
+      const initial = kmeansPlusPlusInit(embeddings, memberIndices, k, rng)
+      if (initial.length !== k) continue
+      const { assignments, centroids } = sphericalKmeans({
+        embeddings,
+        memberIndices,
+        initialCentroids: initial,
+        maxIter,
+        tolerance,
+      })
+      const clusterMemberIndices: number[][] = Array.from({ length: k }, () => [])
+      for (let localIdx = 0; localIdx < n; localIdx++) {
+        const cluster = assignments[localIdx] ?? 0
+        const bucket = clusterMemberIndices[cluster]
+        if (bucket) bucket.push(memberIndices[localIdx] ?? -1)
+      }
+      // Reject Ks that produced an undersized cluster — these are
+      // micro-clusters by definition; they should not be siblings of the
+      // remaining mass at this depth.
+      const undersized = clusterMemberIndices.some((bucket) => bucket.length < minClusterSize)
+      if (undersized) continue
+      // Reject Ks where two siblings are too close to be distinguishable
+      // topics at this depth.
+      let pairwiseTooClose = false
+      for (let i = 0; i < k && !pairwiseTooClose; i++) {
+        const left = centroids[i]
+        if (!left) continue
+        for (let j = i + 1; j < k && !pairwiseTooClose; j++) {
+          const right = centroids[j]
+          if (!right) continue
+          if (cosineSimilarityNormalized(left, right) > schedule.maxSiblingCosine) pairwiseTooClose = true
+        }
+      }
+      if (pairwiseTooClose) continue
+      const score = calinskiHarabaszScore(embeddings, memberIndices, assignments, centroids)
+      if (score < schedule.minSplitScore) continue
+      if (!best || score > best.score) {
+        best = { k, assignments, centroids, score, clusterMemberIndices }
+      }
+    }
+  }
+  return best
+}
+
+// ---------------------------------------------------------------------------
+// Top-level recursive divisive builder.
+// ---------------------------------------------------------------------------
+
+export const buildHierarchicalClusters = (input: BuildHierarchicalClustersInput): ClusteringTreeNode => {
+  const { embeddings, depthSchedule, restarts, maxIter, tolerance, seed } = input
+  const dimensions = embeddings[0]?.length ?? 0
+  const allIndices = embeddings
+    .map((vector, index) => (vector && vector.length === dimensions ? index : -1))
+    .filter((index) => index >= 0)
+  const rng = createRng(seed)
+
+  const recurse = (memberIndices: readonly number[], depth: number): ClusteringTreeNode => {
+    const centroid = meanOverIndices(embeddings, memberIndices, dimensions)
+    const schedule = depthSchedule[depth]
+    if (!schedule || memberIndices.length === 0) {
+      return { memberIndices, centroid, children: [], depth }
+    }
+    const best = chooseBestK({
+      embeddings,
+      memberIndices,
+      schedule,
+      restarts,
+      maxIter,
+      tolerance,
+      rng,
+    })
+    if (!best) return { memberIndices, centroid, children: [], depth }
+    const children = best.clusterMemberIndices.map((childIndices) => recurse(childIndices, depth + 1))
+    return { memberIndices, centroid, children, depth }
+  }
+
+  return recurse(allIndices, 0)
+}

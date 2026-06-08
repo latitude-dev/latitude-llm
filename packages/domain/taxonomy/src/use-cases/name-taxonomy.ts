@@ -49,20 +49,59 @@ const withNamingTimeout = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     }),
   )
 
-const generateClusterName = (input: { readonly samples: readonly string[]; readonly parentName?: string }) =>
+const TOPIC_POLICY =
+  "Conversation topic clusters describe what users come to do (e.g. 'Order Status', 'Returns and Refunds', 'Account Billing'). They are NOT conversational rituals (no 'user greets', 'user thanks', 'user says hello'), NOT model behaviours (no 'agent apologizes'), and NOT generic dispositions ('frustrated user'). If samples disagree, name the dominant topic of the conversation transcripts."
+
+/**
+ * Normalize a name so we can detect collisions ("Order Status" vs "order
+ * status" vs "Order-Status" should all be treated as the same name).
+ */
+const normalizeName = (name: string): string =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+
+interface GenerateInput {
+  readonly mode: "leaf" | "interior" | "root"
+  readonly samples: readonly string[]
+  readonly parentName?: string
+  readonly parentDescription?: string
+  /** Names this cluster's name MUST NOT match. Parent + siblings + (for interiors) children. */
+  readonly forbiddenNames: readonly string[]
+  /** Extra "do not pick this exact name" overlay when retrying after a collision. */
+  readonly retryForbiddenName?: string
+}
+
+const generateClusterName = (input: GenerateInput) =>
   withNamingTimeout(
     Effect.gen(function* () {
       const ai = yield* AI
       const sampleLines = input.samples.map((sample, index) => `${index}: ${sample}`).join("\n")
       const parentContext = input.parentName
-        ? `These conversations are a sub-topic WITHIN the broader topic "${input.parentName}" — name what distinguishes them inside it; do not restate the parent topic.\n\n`
+        ? `These conversations are a sub-topic WITHIN the broader topic "${input.parentName}"${
+            input.parentDescription && input.parentDescription.length > 0 ? ` (${input.parentDescription})` : ""
+          }. Your name MUST be strictly more specific than "${input.parentName}" — never restate or paraphrase it.\n\n`
         : ""
+      const forbidden = [...new Set(input.forbiddenNames.filter((name) => name.trim().length > 0))]
+      const forbiddenContext =
+        forbidden.length > 0
+          ? `FORBIDDEN names — your "name" field must not match or paraphrase any of these (they're already used by the parent, siblings, or your own children):\n${forbidden.map((name) => `- ${name}`).join("\n")}\n\n`
+          : ""
+      const retryContext = input.retryForbiddenName
+        ? `Previous attempt returned "${input.retryForbiddenName}" which is forbidden. Pick a DIFFERENT name.\n\n`
+        : ""
+      const modeContext =
+        input.mode === "root"
+          ? "These are NOT raw conversation samples — they are the names and descriptions of the TOP-LEVEL categories in this entire project's taxonomy. Your job is to produce a SHORT umbrella label that captures the WHOLE project. It MUST cover EVERY listed top-level category — never name something that fits one branch but excludes the others. A correct label feels like 'Customer Support Conversations', 'Internal Helpdesk Tickets', or '<Company> Customer Interactions' — broad and category-neutral. The label must not be identical to or paraphrase any listed category."
+          : input.mode === "interior"
+            ? "These are NOT raw conversation samples — they are the names and descriptions of THIS cluster's CHILD topics. Your job is to find a single short umbrella TOPIC that subsumes all of them and is BROADER than every child. The umbrella must not be identical or near-identical to any child."
+            : "These are raw conversation samples. Find the dominant topic across them."
       const map = yield* ai.generate({
         provider: TAXONOMY_NAMING_MODEL.provider,
         model: TAXONOMY_NAMING_MODEL.model,
-        system:
-          "proposeCandidateThemes: propose concise candidate themes for this conversation topic cluster. Return only schema-valid JSON.",
-        prompt: `${parentContext}Samples:\n${sampleLines}`,
+        system: `proposeCandidateThemes: propose concise candidate conversation TOPIC themes for this cluster. ${TOPIC_POLICY} ${modeContext} Return only schema-valid JSON.`,
+        prompt: `${parentContext}${forbiddenContext}${retryContext}Samples:\n${sampleLines}`,
         schema: candidateThemesSchema,
         temperature: 0.2,
         maxTokens: 800,
@@ -70,9 +109,8 @@ const generateClusterName = (input: { readonly samples: readonly string[]; reado
       const reduced = yield* ai.generate({
         provider: TAXONOMY_NAMING_MODEL.provider,
         model: TAXONOMY_NAMING_MODEL.model,
-        system:
-          "Collapse candidate themes into one clear conversation topic cluster name and description. The name should read like a support topic (what the conversations are about), not a behaviour. Return only schema-valid JSON with BOTH required string keys: name and description.",
-        prompt: `${parentContext}Samples:\n${sampleLines}\n\nCandidates:\n${JSON.stringify(map.object.candidates)}\n\nReturn JSON exactly like {"name":"Short topic label","description":"One sentence describing what these conversations are about."}`,
+        system: `Collapse candidate themes into ONE conversation TOPIC name (2-5 words) and a one-sentence description of what the user is trying to do. ${TOPIC_POLICY} ${modeContext} The name MUST be clearly distinct from any forbidden names provided. Return only schema-valid JSON with BOTH required string keys: name and description.`,
+        prompt: `${parentContext}${forbiddenContext}${retryContext}Samples:\n${sampleLines}\n\nCandidates:\n${JSON.stringify(map.object.candidates)}\n\nReturn JSON exactly like {"name":"Short topic label","description":"One sentence describing what these conversations are about."}`,
         schema: finalNameSchema,
         temperature: 0.2,
         maxTokens: 1600,
@@ -88,6 +126,28 @@ const readableObservationSummary = (value: unknown): string | null => {
   return trimmed
 }
 
+const generateWithCollisionGuard = (input: Omit<GenerateInput, "retryForbiddenName">) =>
+  Effect.gen(function* () {
+    const forbiddenNormalized = new Set(input.forbiddenNames.map(normalizeName).filter((n) => n.length > 0))
+    const firstAttempt = yield* generateClusterName(input)
+    if (!forbiddenNormalized.has(normalizeName(firstAttempt.name))) {
+      return firstAttempt
+    }
+    // Retry once with the offending name surfaced explicitly.
+    const retry = yield* generateClusterName({ ...input, retryForbiddenName: firstAttempt.name })
+    if (!forbiddenNormalized.has(normalizeName(retry.name))) {
+      return retry
+    }
+    // Last-resort fallback: keep the LLM's second attempt but suffix it so
+    // the tree still shows distinct names. We never silently overwrite with
+    // a forbidden value because that breaks the assertTaxonomyQuality
+    // duplicate-name gate.
+    return {
+      name: `${retry.name} (subtopic)`,
+      description: retry.description,
+    }
+  })
+
 export const nameClusterUseCase = (input: NameClusterInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
@@ -96,6 +156,22 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
     const clusters = yield* TaxonomyClusterRepository
     const observations = yield* TaxonomyObservationRepository
     const cluster = yield* clusters.findById(input.clusterId)
+
+    const parent =
+      cluster.parentClusterId === null
+        ? null
+        : yield* clusters.findById(cluster.parentClusterId).pipe(Effect.orElseSucceed(() => null))
+    const siblings = (yield* clusters.listActiveByProject({
+      projectId: input.projectId,
+      dimension: cluster.dimension,
+      parentClusterId: cluster.parentClusterId,
+    })).filter((candidate) => candidate.id !== cluster.id && candidate.name !== "Pending")
+    const children = (yield* clusters.listActiveByProject({
+      projectId: input.projectId,
+      dimension: cluster.dimension,
+      parentClusterId: cluster.id,
+    })).filter((child) => child.name !== "Pending" && child.description.trim().length > 0)
+
     const rows = yield* observations.listAllByCluster({
       organizationId: input.organizationId,
       projectId: input.projectId,
@@ -103,68 +179,62 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
       limit: TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
     })
     const ranked = [...rows].sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
-    const candidates = ranked.flatMap((row) => {
+    const memberSummaries = ranked.flatMap((row) => {
       const summary = readableObservationSummary(row.projectionMetadata.summary)
       return summary === null ? [] : [{ embedding: row.embedding, summary }]
     })
-    if (candidates.length === 0) {
-      const children = (yield* clusters.listActiveByProject({
-        projectId: input.projectId,
-        dimension: cluster.dimension,
-      }))
-        .filter((candidate) => candidate.parentClusterId === cluster.id)
-        .filter((child) => child.name !== "Pending" && child.description.trim().length > 0)
-        .sort((a, b) => b.observationCount - a.observationCount)
-      if (children.length === 0) {
-        return { name: cluster.name, description: cluster.description } satisfies NameTaxonomyResult
-      }
-      const generated = yield* generateClusterName({
-        samples: children
-          .slice(0, sampleBudget(cluster.observationCount))
-          .map((child) => `${child.name}: ${child.description}`),
-      })
-      // Save under the cluster lock against a fresh read: the LLM call above
-      // takes seconds, during which live online assignment mutates centroid/
-      // counters on the same row. A stale full-row upsert would clobber them.
-      yield* withTaxonomyClusterLock(
-        {
-          organizationId: input.organizationId,
-          clusterId: input.clusterId,
-          ttlSeconds: TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
-        },
-        Effect.gen(function* () {
-          const fresh = yield* clusters.findById(input.clusterId)
-          yield* clusters.save({
-            ...fresh,
-            name: generated.name,
-            description: generated.description,
-            clusteredAt: now,
-            updatedAt: now,
-          })
-        }),
+
+    let generated: NameTaxonomyResult
+    if (memberSummaries.length > 0) {
+      // Leaf path (or interior with residue): name from direct member text.
+      const selected = farthestPointSample(
+        memberSummaries.map((row) => row.embedding),
+        sampleBudget(cluster.observationCount),
       )
-      return generated satisfies NameTaxonomyResult
+      const samples = selected.flatMap((index) => {
+        const row = memberSummaries[index]
+        return row === undefined ? [] : [row.summary]
+      })
+      generated = yield* generateWithCollisionGuard({
+        mode: "leaf",
+        samples,
+        forbiddenNames: [
+          ...(parent && parent.name !== "Pending" ? [parent.name] : []),
+          ...siblings.map((sibling) => sibling.name),
+          ...children.map((child) => child.name),
+        ],
+        ...(parent && parent.name !== "Pending" ? { parentName: parent.name } : {}),
+        ...(parent && parent.description.trim().length > 0 ? { parentDescription: parent.description } : {}),
+      })
+    } else if (children.length > 0) {
+      // Interior path: collapse already-named children into a broader umbrella.
+      // Naming is run deepest-first by the workflow so children are stable.
+      // The root cluster (no parent) uses a different mode because the LLM
+      // tends to pick a name that fits its biggest child instead of a true
+      // project-wide superset when run through the regular "interior" prompt.
+      const isRoot = parent === null
+      generated = yield* generateWithCollisionGuard({
+        mode: isRoot ? "root" : "interior",
+        samples: children
+          .slice(0, sampleBudget(children.reduce((sum, child) => sum + child.observationCount, 0)))
+          .map((child) => `${child.name}: ${child.description}`),
+        forbiddenNames: [
+          ...(parent && parent.name !== "Pending" ? [parent.name] : []),
+          ...siblings.map((sibling) => sibling.name),
+          ...children.map((child) => child.name),
+        ],
+        ...(parent && parent.name !== "Pending" ? { parentName: parent.name } : {}),
+        ...(parent && parent.description.trim().length > 0 ? { parentDescription: parent.description } : {}),
+      })
+    } else {
+      // No members, no named children — leave Pending so a later pass can
+      // try again once children are named.
+      return { name: cluster.name, description: cluster.description } satisfies NameTaxonomyResult
     }
 
-    const selected = farthestPointSample(
-      candidates.map((row) => row.embedding),
-      sampleBudget(cluster.observationCount),
-    )
-    const samples = selected.flatMap((index) => {
-      const row = candidates[index]
-      return row === undefined ? [] : [row.summary]
-    })
-    const parent =
-      cluster.parentClusterId === null
-        ? null
-        : yield* clusters.findById(cluster.parentClusterId).pipe(Effect.orElseSucceed(() => null))
-    const generated = yield* generateClusterName({
-      samples,
-      ...(parent && parent.name !== "Pending" ? { parentName: parent.name } : {}),
-    })
-    // Save under the cluster lock against a fresh read: the LLM call above takes
-    // seconds, during which live online assignment mutates centroid/counters on
-    // the same row. A stale full-row upsert would clobber them.
+    // Save under the cluster lock against a fresh read: the LLM call above
+    // takes seconds, during which live online assignment mutates centroid/
+    // counters on the same row. A stale full-row upsert would clobber them.
     yield* withTaxonomyClusterLock(
       {
         organizationId: input.organizationId,

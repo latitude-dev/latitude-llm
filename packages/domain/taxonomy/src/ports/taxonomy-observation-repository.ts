@@ -81,6 +81,17 @@ export interface TaxonomyObservationRepositoryShape {
   readonly listNoise: (
     input: ListTaxonomyNoiseInput,
   ) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
+  /**
+   * Newest observations in the live gardening window, regardless of current
+   * assignment. The divisive tree builder rebuilds the project's taxonomy
+   * from scratch each pass and needs to see all members, not just noise.
+   */
+  readonly listForClustering: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly since: Date
+    readonly limit: number
+  }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
   readonly listByCluster: (
     input: ListTaxonomyObservationClusterInput,
   ) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>

@@ -235,6 +235,37 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             .pipe(Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.listNoise")))
         }),
 
+      listForClustering: ({ organizationId, projectId, since, limit }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT ${selectColumns}
+                        FROM (${latestProjectWindow})
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND length(embedding) > 0
+                          AND start_time >= {since:DateTime64(9, 'UTC')}
+                        ORDER BY start_time DESC, observation_id ASC
+                        LIMIT {limit:UInt32}`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  since: toClickhouseDateTime(since),
+                  limit,
+                  ...latestProjectWindowParams,
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<TaxonomyObservationRow>()
+              return rows.map(toDomainObservation)
+            })
+            .pipe(
+              Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.listForClustering")),
+            )
+        }),
+
       listByCluster: ({ organizationId, projectId, clusterId, limit, beforeStartTime, beforeObservationId }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

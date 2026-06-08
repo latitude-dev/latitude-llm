@@ -1,3 +1,4 @@
+export type { DepthSchedule } from "./clustering.ts"
 export {
   TAXONOMY_ABSORPTION_THRESHOLD,
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
@@ -30,6 +31,9 @@ export {
   TAXONOMY_GARDENING_STALE_GRACE_MS,
   TAXONOMY_GARDENING_SWEEP_BATCH,
   TAXONOMY_GARDENING_THROTTLE_MS,
+  TAXONOMY_KMEANS_MAX_ITER,
+  TAXONOMY_KMEANS_RESTARTS,
+  TAXONOMY_KMEANS_TOLERANCE,
   TAXONOMY_LINEAGE_TRANSITION_TYPES,
   TAXONOMY_LIST_ALL_BY_CLUSTER_MAX,
   TAXONOMY_MERGE_CANDIDATES_PER_PARENT,
@@ -53,7 +57,9 @@ export {
   TAXONOMY_TREE_CHILD_DIAMETER_FACTOR,
   TAXONOMY_TREE_CHILD_DIAMETER_MAX,
   TAXONOMY_TREE_CHILD_DIAMETER_MIN,
+  TAXONOMY_TREE_DEPTH_SCHEDULE,
   type TaxonomyObservationWeightScheme,
+  type TaxonomyTreeDepthSchedule,
 } from "./constants.ts"
 export {
   type TaxonomyCentroid,
@@ -178,6 +184,11 @@ export {
   type ReplaceObservationInClusterInput,
   replaceObservationInClusterUseCase,
 } from "./use-cases/assign-observation-to-cluster.ts"
+export {
+  type BuildHierarchicalTaxonomyInput,
+  type BuildHierarchicalTaxonomyResult,
+  buildHierarchicalTaxonomyUseCase,
+} from "./use-cases/build-hierarchical-taxonomy.ts"
 export {
   type ClusterAssignmentDecision,
   type DecideClusterAssignmentInput,

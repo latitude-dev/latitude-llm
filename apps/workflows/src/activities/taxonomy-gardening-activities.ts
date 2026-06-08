@@ -1,6 +1,7 @@
 import { OrganizationId, ProjectId, TaxonomyClusterId, TaxonomyRunId } from "@domain/shared"
 import {
   assertTaxonomyQualityUseCase,
+  buildHierarchicalTaxonomyUseCase,
   deprecateInactiveClustersUseCase,
   emitLineageUseCase,
   mergeNearDuplicateClustersUseCase,
@@ -76,6 +77,13 @@ export interface GardenTaxonomyLineageResult {
 
 export interface GardenTaxonomyNamingPlanResult {
   readonly clusterIds: readonly string[]
+  /**
+   * Cluster ids grouped by tree depth, deepest first. Interior naming
+   * depends on its children already having stable names, so the workflow
+   * must process one depth at a time. Same data as `clusterIds`,
+   * partitioned so the workflow can batch and await per depth.
+   */
+  readonly clusterIdsByDepth: ReadonlyArray<{ readonly depth: number; readonly clusterIds: readonly string[] }>
   readonly clustersScanned: number
 }
 
@@ -228,6 +236,23 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
   )
 }
 
+export const buildHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow build hierarchical tree",
+    input,
+    buildHierarchicalTaxonomyUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      runId: TaxonomyRunId(input.runId),
+      dimension: input.dimension,
+      now: new Date(input.now),
+    }).pipe(
+      (effect) => withTaxonomyPostgres(effect, input.organizationId),
+      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
+      withTaxonomyAiAndRedis,
+    ),
+  )
+
 export const sweepGardenTaxonomyNoiseActivity = (input: GardenTaxonomyStepInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow sweep noise",
@@ -349,10 +374,25 @@ export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput 
       )
       const projectId = ProjectId(input.projectId)
       const activeClusters = yield* clusters.listActiveByProject({ projectId, dimension: input.dimension })
+      // Name deepest clusters first. Interior naming falls back to its
+      // children's already-assigned names; if we name top-down the interior
+      // gets handed "Pending" descriptions and either stays Pending or
+      // collapses onto the dominant child's name.
+      const ordered = [...activeClusters]
+        .filter((cluster) => bornClusterIds.has(cluster.id) || cluster.name === "Pending")
+        .sort((a, b) => b.depth - a.depth)
+      const byDepth = new Map<number, string[]>()
+      for (const cluster of ordered) {
+        const bucket = byDepth.get(cluster.depth) ?? []
+        bucket.push(cluster.id)
+        byDepth.set(cluster.depth, bucket)
+      }
+      const clusterIdsByDepth = [...byDepth.entries()]
+        .sort(([leftDepth], [rightDepth]) => rightDepth - leftDepth)
+        .map(([depth, clusterIds]) => ({ depth, clusterIds }))
       return {
-        clusterIds: activeClusters
-          .filter((cluster) => bornClusterIds.has(cluster.id) || cluster.name === "Pending")
-          .map((cluster) => cluster.id),
+        clusterIds: ordered.map((cluster) => cluster.id),
+        clusterIdsByDepth,
         clustersScanned: activeClusters.length,
       } satisfies GardenTaxonomyNamingPlanResult
     }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),

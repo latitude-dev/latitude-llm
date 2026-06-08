@@ -102,6 +102,16 @@ export const createFakeTaxonomyObservationRepository = (
         return typeof limit === "number" ? filtered.slice(0, limit) : filtered
       }),
 
+    listForClustering: ({ organizationId, projectId, since, limit }) =>
+      Effect.sync(() =>
+        latestProjectWindow(organizationId, projectId)
+          .filter((observation) => observation.embedding.length > 0 && observation.startTime >= since)
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+          .slice(0, limit),
+      ),
+
     listByCluster: ({ organizationId, projectId, clusterId, limit, beforeStartTime, beforeObservationId }) =>
       Effect.sync(() =>
         latestProjectWindow(organizationId, projectId)
