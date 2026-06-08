@@ -1,6 +1,11 @@
 /** Skip the `last_activity_at` write if one already happened within this window. */
 export const SANDBOX_ACTIVITY_STAMP_DEBOUNCE_MS = 5 * 60_000 // 5 minutes
 
+export const SANDBOX_IDLE_ARCHIVE_DAYS = 7
+
+export const SANDBOX_IDLE_SWEEPER_KEY = "sandboxes:idle-sweep"
+export const SANDBOX_IDLE_SWEEPER_PATTERN = "0 3 * * *"
+
 /** Coalesce realtime trace signals (liveness + upsert) to at most one per kind, per trace, per window. */
 export const SANDBOX_TRACE_SIGNAL_COALESCE_MS = 300
 
