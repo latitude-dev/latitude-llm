@@ -1,6 +1,6 @@
 import { AI } from "@domain/ai"
 import { OrganizationId, ProjectId, SessionId, TaxonomyClusterId, TraceId } from "@domain/shared"
-import { SessionRepository } from "@domain/spans"
+import { type SessionDetail, SessionRepository } from "@domain/spans"
 import {
   type AnchorCalibration,
   assignObservationToClusterUseCase,
@@ -77,6 +77,14 @@ const extractionMomentSchema = z.object({
 const TAXONOMY_DIRECT_PROJECTION_MAX_LENGTH = 2_000
 const SESSION_INTENT_SNIPPET_MAX_LENGTH = 320
 const SESSION_INTENT_SNIPPET_COUNT = 4
+
+const sessionConversationMessages = (session: SessionDetail): readonly unknown[] => {
+  const systemMessage =
+    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
+      ? [{ role: "system", parts: session.systemInstructions }]
+      : []
+  return [...systemMessage, ...session.lastInputMessages, ...session.outputMessages]
+}
 
 const middleTruncate = (value: string, maxLength: number): string => {
   if (value.length <= maxLength) return value
@@ -437,7 +445,7 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
     }
 
     const traceIds = session.traceIds.filter((traceId) => traceId.length === 32).map(TraceId)
-    const rawMessages = [...session.inputMessages, ...session.outputMessages]
+    const rawMessages = sessionConversationMessages(session)
     const normalizedMessages = normalizeMessages(rawMessages)
     const document = documentFromMessages(normalizedMessages)
     const analysisHash = yield* hash(`${CONVERSATION_INTELLIGENCE_DETECTOR_VERSION}\0${session.sessionId}\0${document}`)

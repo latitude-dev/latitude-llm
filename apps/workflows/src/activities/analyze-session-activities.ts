@@ -49,6 +49,18 @@ interface AnalyzeSessionMessage {
   readonly text: string
 }
 
+const sessionConversationMessages = (session: {
+  readonly systemInstructions: unknown
+  readonly lastInputMessages: readonly unknown[]
+  readonly outputMessages: readonly unknown[]
+}): readonly unknown[] => {
+  const systemMessage =
+    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
+      ? [{ role: "system", parts: session.systemInstructions }]
+      : []
+  return [...systemMessage, ...session.lastInputMessages, ...session.outputMessages]
+}
+
 export interface AnalyzeSessionLoadedActivityResult {
   readonly found: boolean
   readonly rawMessages: readonly unknown[]
@@ -175,7 +187,7 @@ export const loadAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) =
         .findBySessionId({ organizationId, projectId, sessionId })
         .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
       if (session === null) return { found: false, rawMessages: [] } satisfies AnalyzeSessionLoadedActivityResult
-      const rawMessages = [...session.inputMessages, ...session.outputMessages]
+      const rawMessages = sessionConversationMessages(session)
       return { found: true, rawMessages } satisfies AnalyzeSessionLoadedActivityResult
     }).pipe((effect) => withAnalyzeSessionClickHouse(effect, input.organizationId), withTracing),
   )

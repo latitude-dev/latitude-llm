@@ -361,6 +361,46 @@ describe("analyzeSessionUseCase", () => {
     expect(momentLabels.rows.every((moment) => moment.evidence.length > 0 && moment.confidence >= 0.65)).toBe(true)
   })
 
+  it("anchors user frustration labels to the rendered user message index", async () => {
+    const frustratedUserMessage = "This is incredibly frustrating, you keep giving me the wrong answer."
+    const renderedMessages = [
+      { role: "system", parts: [{ type: "text", content: "You are a support assistant" }] },
+      message("user", "Can you help me update my billing email?"),
+      message("assistant", "Sure, open account settings and choose Profile."),
+      message("user", frustratedUserMessage),
+      message("assistant", "I'm sorry, I will correct that now."),
+    ] as const
+    const { effect, momentLabels } = runUseCase({
+      session: makeSession({
+        systemInstructions: [{ type: "text", content: "You are a support assistant" }] as never,
+        inputMessages: [message("user", "Can you help me update my billing email?")],
+        lastInputMessages: [renderedMessages[1], renderedMessages[2], renderedMessages[3]],
+        outputMessages: [renderedMessages[4]],
+      }),
+      ai: {
+        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          const text = input.text.toLowerCase()
+          if (text.includes("frustrat") || text.includes("annoyance") || text.includes("anger")) {
+            return Effect.succeed({ embedding: [1, 0] })
+          }
+          return Effect.succeed({ embedding: [-1, 0] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    const frustration = momentLabels.rows.find((label) => label.kind === "user_frustration")
+    expect(frustration).toBeDefined()
+    expect(frustration?.actor).toBe("user")
+    expect(frustration?.firstMessageIndex).toBe(3)
+    expect(frustration?.lastMessageIndex).toBe(3)
+    expect(renderedMessages[frustration?.lastMessageIndex ?? -1]?.role).toBe("user")
+    expect(frustration?.evidence).toBe(frustratedUserMessage)
+  })
+
   it("skips unchanged sessions by analysis hash", async () => {
     const first = runUseCase({ session: makeSession() })
     await Effect.runPromise(first.effect)
