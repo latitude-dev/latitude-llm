@@ -727,6 +727,8 @@ describe("IssueRepositoryLive searchOrgWide", () => {
         issueRow("isl3", searchOrgId, projA, "Unrelated latency"),
         issueRow("isl4", searchOrgId, projDeleted, "Timeout in deleted project"),
         issueRow("isl5", otherOrgId, projOther, "Timeout secret"),
+        issueRow("isl6", searchOrgId, projA, "Resolved timeout", { resolvedAt: baseTime }),
+        issueRow("isl7", searchOrgId, projB, "Ignored timeout", { ignoredAt: baseTime }),
       ])
 
     // Semantic issues: identical 1-hot embedding in two live projects + one in another org. The
@@ -740,6 +742,8 @@ describe("IssueRepositoryLive searchOrgWide", () => {
         issueRow("ise1", searchOrgId, projA, "Zeta alpha", embedded),
         issueRow("ise2", searchOrgId, projB, "Zeta beta", embedded),
         issueRow("ise3", otherOrgId, projOther, "Zeta secret", embedded),
+        issueRow("ise4", searchOrgId, projA, "Zeta resolved", { ...embedded, resolvedAt: baseTime }),
+        issueRow("ise5", searchOrgId, projB, "Zeta ignored", { ...embedded, ignoredAt: baseTime }),
       ])
   })
 
@@ -760,9 +764,11 @@ describe("IssueRepositoryLive searchOrgWide", () => {
       expect(byName.get("Checkout timeout")).toMatchObject({ projectSlug: "iss-beta", projectName: "Beta Project" })
     })
 
-    it("excludes issues in deleted projects and other organizations", async () => {
+    it("excludes archived issues, issues in deleted projects, and other organizations", async () => {
       const results = await search({ query: "timeout", limit: 25 })
       const names = results.map((r) => r.issue.name)
+      expect(names).not.toContain("Resolved timeout")
+      expect(names).not.toContain("Ignored timeout")
       expect(names).not.toContain("Timeout in deleted project")
       expect(names).not.toContain("Timeout secret")
       expect(names).not.toContain("Unrelated latency")
@@ -783,11 +789,13 @@ describe("IssueRepositoryLive searchOrgWide", () => {
   })
 
   describe("semantic tier (embedding)", () => {
-    it("matches by embedding across projects and excludes other orgs", async () => {
+    it("matches by embedding across projects and excludes archived issues and other orgs", async () => {
       const results = await search({ query: "zeta", normalizedEmbedding: makeEmbedding({ 0: 1 }), limit: 25 })
       const names = results.map((r) => r.issue.name)
       expect(names).toContain("Zeta alpha")
       expect(names).toContain("Zeta beta")
+      expect(names).not.toContain("Zeta resolved")
+      expect(names).not.toContain("Zeta ignored")
       expect(names).not.toContain("Zeta secret")
       expect(new Set(results.filter((r) => r.issue.name.startsWith("Zeta")).map((r) => r.issue.projectId)).size).toBe(2)
     })

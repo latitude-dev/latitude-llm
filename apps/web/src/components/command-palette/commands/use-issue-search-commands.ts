@@ -18,8 +18,9 @@ const SEMANTIC_DEBOUNCE_MS = 250
  * - **Semantic (debounced):** vector relevance, surfacing related issues whose titles don't
  *   literally contain the query (requires the embedding pipeline).
  *
- * Lexical hits rank first, then semantic hits not already shown (dedupe by id). Each result shows
- * its owning project (plus current states) and selecting one opens that project's issue drawer.
+ * Only active issues are returned. Lexical hits rank first, then semantic hits not already shown
+ * (dedupe by id). Each result shows its owning project (plus current states) and selecting one
+ * opens that project's issue drawer.
  */
 export function useIssueSearchCommands(query: string): {
   readonly commands: readonly PaletteCommand[]

@@ -336,7 +336,7 @@ const toOrgIssueSearchRecord = (item: OrgIssueSearchItem): OrgIssueSearchRecord 
  * analytics pipeline), this is a lightweight search across every project in the caller's
  * organization. The lexical tier runs always; the semantic tier runs only when `semantic` is set
  * (the debounced call), embedding the query first. Each result carries its owning project's
- * slug/name and derived lifecycle states.
+ * slug/name and derived lifecycle states. Resolved/ignored issues are excluded.
  */
 export const searchOrgIssues = createServerFn({ method: "GET" })
   .inputValidator(

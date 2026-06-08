@@ -30,8 +30,9 @@ export interface SearchOrgIssuesInput {
 /**
  * Org-wide issue search for the Command Palette. Runs the repository's lexical tier always and the
  * semantic tier when an embedding is supplied, then merges them **lexical-first**, de-duplicates by
- * issue id, and caps at `limit`. Lifecycle states are derived here (Postgres-only — no ClickHouse),
- * so each result is ready to render with its project and current states.
+ * issue id, and caps at `limit`. The repository only returns active (unresolved, unignored) issues.
+ * Lifecycle states are derived here (Postgres-only — no ClickHouse), so each result is ready to
+ * render with its project and current states.
  */
 export const searchOrgIssuesUseCase = (
   input: SearchOrgIssuesInput,

@@ -133,12 +133,12 @@ in the Projects group, which renders before the Actions group, so it already out
 
 ### In-project entity search
 
-- **Issues** (`commands/use-issue-search-commands.ts`): combines an instant client-side
-  title-substring match over a cached pool of recent issues (`useIssues({ limit: 50 })`, no
-  `searchQuery`) with the debounced semantic search (`useIssues({ searchQuery })`). Substring
-  hits rank first, then semantic hits not already shown. Selecting opens the issue drawer via
-  the `issueId` search param. The semantic half needs the embedding backend; the substring
-  half works offline, which is why "json" reliably finds "JSON output truncated…".
+- **Issues** (`commands/use-issue-search-commands.ts`): combines an instant org-wide lexical
+  search with the debounced semantic search (`useIssuesOrgSearch`). Only active issues are
+  returned; resolved/ignored issues are excluded so archived results do not clutter the
+  recommended section. Lexical hits rank first, then semantic hits not already shown. Selecting
+  opens the issue drawer via the `issueId` search param. The semantic half needs the embedding
+  backend.
 - **Datasets / Saved searches** (`commands/use-project-search-commands.ts`): full project
   lists (`useDatasetsList` / `useSavedSearchesList`, each fetched only while searching via an
   `enabled` option), filtered client-side by `commandMatches`. Selecting navigates to the

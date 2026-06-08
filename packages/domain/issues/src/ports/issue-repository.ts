@@ -78,8 +78,9 @@ export interface IssueRepositoryShape {
    * - **Semantic** (embedding present): the hybrid vector + lexical relevance blend, surfacing
    *   related issues whose names don't literally contain the query.
    *
-   * Each hit carries lifecycle flags and the owning project's slug/name. Issues in soft-deleted
-   * projects are excluded. The caller merges the two tiers (lexical first) and caps the result.
+   * Each hit carries lifecycle flags and the owning project's slug/name. Resolved/ignored issues
+   * and issues in soft-deleted projects are excluded. The caller merges the two tiers (lexical
+   * first) and caps the result.
    * When `preferProjectId` is set, that project's issues rank first *within each tier* (so a
    * current-project lexical hit still beats an other-project semantic hit) — the palette passes the
    * current project so local results lead.

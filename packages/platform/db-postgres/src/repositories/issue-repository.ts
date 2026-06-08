@@ -365,6 +365,8 @@ const issueRepositoryCoreLive = Layer.effect(
                   and(
                     eq(issues.organizationId, organizationId),
                     isNull(projects.deletedAt),
+                    isNull(issues.resolvedAt),
+                    isNull(issues.ignoredAt),
                     or(sql`${issues.searchDocument} @@ ${lexicalQuery}`, ilike(issues.name, `%${query}%`)),
                   ),
                 )
@@ -403,6 +405,8 @@ const issueRepositoryCoreLive = Layer.effect(
                 and(
                   eq(issues.organizationId, organizationId),
                   isNull(projects.deletedAt),
+                  isNull(issues.resolvedAt),
+                  isNull(issues.ignoredAt),
                   isNotNull(issues.centroidEmbedding),
                   sql`(${score} >= ${ISSUE_DISCOVERY_MIN_SIMILARITY} OR ${vectorScore} >= ${ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY})`,
                 ),
