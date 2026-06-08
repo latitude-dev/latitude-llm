@@ -84,8 +84,14 @@ const coarsenTrajectoryRows = (
     resolution: number
     churnRisk: number
     wins: number
+    maxLastMessageIndex: number
+    maxEscalationLastMessageIndex: number
+    maxResolutionLastMessageIndex: number
+    maxChurnRiskLastMessageIndex: number
+    maxWinsLastMessageIndex: number
   }[],
   axis: TrajectoryAxis,
+  metric: TrajectoryMetric,
 ) => {
   if (axis === "day") {
     return {
@@ -93,10 +99,12 @@ const coarsenTrajectoryRows = (
       buckets: [...new Set(rows.map((row) => row.bucket))].sort((left, right) => left.localeCompare(right)),
     }
   }
-  const rawTurns = rows.map((row) => Number(row.bucket)).filter(Number.isFinite)
+  const metricRows = rows.filter((row) => metricValue(row, metric) > 0)
+  const rawTurns = metricRows.map((row) => Number(row.bucket)).filter(Number.isFinite)
   if (rawTurns.length === 0) return { rows, buckets: [] }
   const minTurn = Math.min(...rawTurns)
-  const maxTurn = Math.max(...rawTurns)
+  const matchingLastTurns = metricRows.map((row) => maxLastMessageIndexForMetric(row, metric)).filter(Number.isFinite)
+  const maxTurn = Math.max(...rawTurns, ...matchingLastTurns)
   const bucketSize = niceTurnBucketSize(maxTurn - minTurn + 1)
   const coarsened = new Map<
     string,
@@ -108,6 +116,11 @@ const coarsenTrajectoryRows = (
       resolution: number
       churnRisk: number
       wins: number
+      maxLastMessageIndex: number
+      maxEscalationLastMessageIndex: number
+      maxResolutionLastMessageIndex: number
+      maxChurnRiskLastMessageIndex: number
+      maxWinsLastMessageIndex: number
     }
   >()
   for (const row of rows) {
@@ -125,17 +138,38 @@ const coarsenTrajectoryRows = (
       resolution: 0,
       churnRisk: 0,
       wins: 0,
+      maxLastMessageIndex: 0,
+      maxEscalationLastMessageIndex: 0,
+      maxResolutionLastMessageIndex: 0,
+      maxChurnRiskLastMessageIndex: 0,
+      maxWinsLastMessageIndex: 0,
     }
     current.frequency += row.frequency
     current.escalation += row.escalation
     current.resolution += row.resolution
     current.churnRisk += row.churnRisk
     current.wins += row.wins
+    current.maxLastMessageIndex = Math.max(current.maxLastMessageIndex, row.maxLastMessageIndex)
+    current.maxEscalationLastMessageIndex = Math.max(
+      current.maxEscalationLastMessageIndex,
+      row.maxEscalationLastMessageIndex,
+    )
+    current.maxResolutionLastMessageIndex = Math.max(
+      current.maxResolutionLastMessageIndex,
+      row.maxResolutionLastMessageIndex,
+    )
+    current.maxChurnRiskLastMessageIndex = Math.max(
+      current.maxChurnRiskLastMessageIndex,
+      row.maxChurnRiskLastMessageIndex,
+    )
+    current.maxWinsLastMessageIndex = Math.max(current.maxWinsLastMessageIndex, row.maxWinsLastMessageIndex)
     coarsened.set(key, current)
   }
-  const buckets = [...new Set([...coarsened.values()].map((row) => row.bucket))].sort(
-    (left, right) => Number(left.split(":")[0]) - Number(right.split(":")[0]),
-  )
+  const buckets = Array.from({ length: Math.ceil((maxTurn - minTurn + 1) / bucketSize) }, (_, index) => {
+    const start = minTurn + index * bucketSize
+    const end = Math.min(start + bucketSize - 1, maxTurn)
+    return `${start}:${end}`
+  })
   return { rows: [...coarsened.values()], buckets }
 }
 
@@ -143,6 +177,23 @@ const metricValue = (
   row: { frequency: number; escalation: number; resolution: number; churnRisk: number; wins: number },
   metric: TrajectoryMetric,
 ) => row[metric]
+
+const maxLastMessageIndexForMetric = (
+  row: {
+    maxLastMessageIndex: number
+    maxEscalationLastMessageIndex: number
+    maxResolutionLastMessageIndex: number
+    maxChurnRiskLastMessageIndex: number
+    maxWinsLastMessageIndex: number
+  },
+  metric: TrajectoryMetric,
+) => {
+  if (metric === "escalation") return row.maxEscalationLastMessageIndex
+  if (metric === "resolution") return row.maxResolutionLastMessageIndex
+  if (metric === "churnRisk") return row.maxChurnRiskLastMessageIndex
+  if (metric === "wins") return row.maxWinsLastMessageIndex
+  return row.maxLastMessageIndex
+}
 
 const bubbleSize = (count: number, maxCount: number): number => {
   if (count <= 0 || maxCount <= 0) return 0
@@ -171,7 +222,7 @@ export function BehavioursTrajectoryChart({
   const visibleIds = visibleNodes.map((node) => node.cluster.id)
   const { data, isLoading } = useBehaviourTrajectory(projectId, visibleIds, axis, timeRange)
   const rawRows = data?.rows ?? []
-  const trajectory = useMemo(() => coarsenTrajectoryRows(rawRows, axis), [rawRows, axis])
+  const trajectory = useMemo(() => coarsenTrajectoryRows(rawRows, axis, metric), [rawRows, axis, metric])
   const rows = trajectory.rows
   const buckets = trajectory.buckets
   const maxCount = Math.max(...rows.map((row) => metricValue(row, metric)), 0)

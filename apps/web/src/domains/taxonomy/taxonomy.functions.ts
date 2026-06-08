@@ -106,6 +106,11 @@ interface BehaviourTrajectoryRowRecord {
   readonly resolution: number
   readonly churnRisk: number
   readonly wins: number
+  readonly maxLastMessageIndex: number
+  readonly maxEscalationLastMessageIndex: number
+  readonly maxResolutionLastMessageIndex: number
+  readonly maxChurnRiskLastMessageIndex: number
+  readonly maxWinsLastMessageIndex: number
 }
 
 interface BehaviourTrajectoryRecord {
@@ -497,7 +502,12 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
               countIf(m.kind = 'escalation') AS escalation,
               countIf(m.kind = 'resolution') AS resolution,
               countIf(m.kind IN ('abandonment', 'user_frustration')) AS churnRisk,
-              countIf(m.kind IN ('resolution', 'user_satisfaction')) AS wins
+              countIf(m.kind IN ('resolution', 'user_satisfaction')) AS wins,
+              max(m.last_message_index) AS maxLastMessageIndex,
+              maxIf(m.last_message_index, m.kind = 'escalation') AS maxEscalationLastMessageIndex,
+              maxIf(m.last_message_index, m.kind = 'resolution') AS maxResolutionLastMessageIndex,
+              maxIf(m.last_message_index, m.kind IN ('abandonment', 'user_frustration')) AS maxChurnRiskLastMessageIndex,
+              maxIf(m.last_message_index, m.kind IN ('resolution', 'user_satisfaction')) AS maxWinsLastMessageIndex
             FROM cluster_sessions AS cs
             INNER JOIN session_moment_labels AS m FINAL
               ON cs.organization_id = m.organization_id
@@ -524,6 +534,11 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
           readonly resolution: number | string
           readonly churnRisk: number | string
           readonly wins: number | string
+          readonly maxLastMessageIndex: number | string
+          readonly maxEscalationLastMessageIndex: number | string
+          readonly maxResolutionLastMessageIndex: number | string
+          readonly maxChurnRiskLastMessageIndex: number | string
+          readonly maxWinsLastMessageIndex: number | string
         }>
         return rows.map((row) => ({
           categoryClusterId,
@@ -533,6 +548,11 @@ export const getBehaviourTrajectory = createServerFn({ method: "GET" })
           resolution: parseTrajectoryNumber(row.resolution),
           churnRisk: parseTrajectoryNumber(row.churnRisk),
           wins: parseTrajectoryNumber(row.wins),
+          maxLastMessageIndex: parseTrajectoryNumber(row.maxLastMessageIndex),
+          maxEscalationLastMessageIndex: parseTrajectoryNumber(row.maxEscalationLastMessageIndex),
+          maxResolutionLastMessageIndex: parseTrajectoryNumber(row.maxResolutionLastMessageIndex),
+          maxChurnRiskLastMessageIndex: parseTrajectoryNumber(row.maxChurnRiskLastMessageIndex),
+          maxWinsLastMessageIndex: parseTrajectoryNumber(row.maxWinsLastMessageIndex),
         }))
       }),
     )
