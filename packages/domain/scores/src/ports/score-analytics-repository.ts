@@ -100,6 +100,24 @@ export interface IssueEscalationSignals {
   readonly samplesCount: number
 }
 
+/**
+ * Lifetime impact rollup for one issue. Occurrences/traces/sessions come from
+ * `scores`; cost/tokens are summed over the issue's distinct affected traces
+ * (`traces`); `affectedUsers` is the count of distinct non-empty users on the
+ * sessions those occurrences belong to (`sessions`). Occurrences without a
+ * session (or sessions without a resolved user) do not contribute to
+ * `affectedUsers`/`affectedSessions`.
+ */
+export interface IssueImpactAggregate {
+  readonly issueId: IssueId
+  readonly occurrences: number
+  readonly affectedTraces: number
+  readonly affectedSessions: number
+  readonly affectedUsers: number
+  readonly costMicrocents: number
+  readonly tokens: number
+}
+
 /** A single time-bucket for issue occurrence time-series. */
 export interface IssueOccurrenceBucket {
   readonly bucket: string // ISO date string
@@ -262,6 +280,18 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly issueIds: readonly IssueId[]
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly IssueOccurrenceAggregate[], RepositoryError, ChSqlClient>
+
+  // -- Per-issue lifetime impact rollup (occurrences, reach, cost) -----------
+  // Occurrences/traces/sessions read from `scores`; cost/tokens summed over the
+  // issue's distinct affected traces (`traces`); users resolved from the
+  // `sessions` MV. All metrics are lifetime (no time-range bound), matching
+  // `aggregateByIssues`.
+  aggregateImpactByIssue(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly issueId: IssueId
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<IssueImpactAggregate, RepositoryError, ChSqlClient>
 
   // -- Per-issue signals for the seasonal-anomaly escalation detector --------
   // Reads:

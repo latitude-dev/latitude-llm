@@ -560,6 +560,104 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
+  // aggregateImpactByIssue
+  // ------------------------------------------------------------------
+
+  describe("aggregateImpactByIssue", () => {
+    const fixture = setupFixture()
+    const issueI = "issue_impactiiiiiiiii"
+    const issueOther = "issue_impactother0000"
+    const traceI1 = "a".repeat(32)
+    const traceI2 = "b".repeat(32)
+    const traceOther = "c".repeat(32)
+    const sessionI1 = "session-impact-1"
+    const sessionI2 = "session-impact-2"
+    const sessionOther = "session-impact-other"
+    const userU1 = "user-impact-1"
+    const userU2 = "user-impact-2"
+    const userU3 = "user-impact-3"
+
+    beforeEach(async () => {
+      // Spans feed `traces` (cost/tokens) and `sessions` (user_id) via MVs.
+      await fixture.insertSpans([
+        {
+          ...makeSpanRow({ traceId: traceI1, spanId: `i1${"a".repeat(14)}`, tags: [] }),
+          session_id: sessionI1,
+          user_id: userU1,
+          tokens_input: 120,
+          tokens_output: 80,
+          cost_total_microcents: 100,
+        },
+        {
+          ...makeSpanRow({ traceId: traceI2, spanId: `i2${"a".repeat(14)}`, tags: [] }),
+          session_id: sessionI2,
+          user_id: userU2,
+          tokens_input: 60,
+          tokens_output: 40,
+          cost_total_microcents: 50,
+        },
+        // Belongs to another issue — must not contribute to issueI's impact.
+        {
+          ...makeSpanRow({ traceId: traceOther, spanId: `i3${"a".repeat(14)}`, tags: [] }),
+          session_id: sessionOther,
+          user_id: userU3,
+          tokens_input: 999,
+          tokens_output: 999,
+          cost_total_microcents: 9999,
+        },
+      ])
+
+      await fixture.insertScores([
+        // Two occurrences on the same trace/session → distinct counts must dedupe.
+        makeScoreRow({ issue_id: issueI, trace_id: traceI1, session_id: sessionI1 }),
+        makeScoreRow({ issue_id: issueI, trace_id: traceI1, session_id: sessionI1 }),
+        makeScoreRow({ issue_id: issueI, trace_id: traceI2, session_id: sessionI2 }),
+        // Occurrence with no trace/session: counts toward occurrences only.
+        makeScoreRow({ issue_id: issueI, trace_id: "", session_id: "" }),
+        // Another issue's occurrence — excluded.
+        makeScoreRow({ issue_id: issueOther, trace_id: traceOther, session_id: sessionOther }),
+      ])
+    })
+
+    it("rolls up occurrences, reach, cost and tokens for one issue", async () => {
+      const impact = await fixture.runCh(
+        fixture.repo.aggregateImpactByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueI),
+        }),
+      )
+
+      expect(impact.occurrences).toBe(4)
+      expect(impact.affectedTraces).toBe(2)
+      expect(impact.affectedSessions).toBe(2)
+      expect(impact.affectedUsers).toBe(2)
+      expect(impact.costMicrocents).toBe(150)
+      expect(impact.tokens).toBe(300)
+    })
+
+    it("returns zeroes for an issue with no occurrences", async () => {
+      const impact = await fixture.runCh(
+        fixture.repo.aggregateImpactByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId("issue_impactemptyyyyy"),
+        }),
+      )
+
+      expect(impact).toEqual({
+        issueId: "issue_impactemptyyyyy",
+        occurrences: 0,
+        affectedTraces: 0,
+        affectedSessions: 0,
+        affectedUsers: 0,
+        costMicrocents: 0,
+        tokens: 0,
+      })
+    })
+  })
+
+  // ------------------------------------------------------------------
   // aggregateTagsByIssues
   // ------------------------------------------------------------------
 

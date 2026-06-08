@@ -44,6 +44,7 @@ export {
   type IssueEscalationSignals,
   type IssueEscalationThresholdBucket,
   type IssueEscalationThresholdSeries,
+  type IssueImpactAggregate,
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
   type IssueTagsAggregate,

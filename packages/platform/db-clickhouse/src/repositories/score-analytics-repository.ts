@@ -3,6 +3,7 @@ import type {
   IssueEscalationSignals,
   IssueEscalationThresholdBucket,
   IssueEscalationThresholdSeries,
+  IssueImpactAggregate,
   IssueOccurrenceAggregate,
   IssueOccurrenceBucket,
   IssueTagsAggregate,
@@ -162,6 +163,21 @@ type IssueOccurrenceRow = {
   baseline_avg_occurrences: string
   first_seen_at: string
   last_seen_at: string
+}
+
+type IssueImpactCoreRow = {
+  occurrences: string
+  affected_traces: string
+  affected_sessions: string
+}
+
+type IssueImpactTraceRow = {
+  cost_microcents: string
+  tokens: string
+}
+
+type IssueImpactUserRow = {
+  affected_users: string
 }
 
 type IssueOccurrenceBucketRow = {
@@ -845,6 +861,103 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               return result.json<IssueOccurrenceRow>()
             })
             .pipe(Effect.map((rows) => rows.map(toIssueOccurrence)))
+        }),
+
+      // -- aggregateImpactByIssue --------------------------------------------
+      // Three reads merged in TypeScript:
+      //   1. occurrences / distinct affected traces / distinct affected sessions
+      //      from raw `scores` (lifetime, no created_at bound — same as
+      //      `aggregateByIssues`).
+      //   2. cost + tokens summed over the issue's distinct affected traces from
+      //      the `traces` MV. `SimpleAggregateFunction(sum)` partial rows add up
+      //      across merges, so a plain `sum()` over all matching rows is exact.
+      //   3. distinct users from the `sessions` MV, finalizing the
+      //      `argMaxIf` user_id state per session and counting non-empty values.
+      aggregateImpactByIssue: ({ organizationId, projectId, issueId, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const params = {
+            ...scopeParams(organizationId, projectId),
+            issueId: issueId as string,
+          }
+
+          const [coreRows, traceRows, userRows] = yield* Effect.all(
+            [
+              chSqlClient.query<IssueImpactCoreRow[]>(async (client) => {
+                const result = await client.query({
+                  query: `SELECT
+                          count()                                       AS occurrences,
+                          uniqExactIf(trace_id, trace_id != '')         AS affected_traces,
+                          uniqExactIf(session_id, session_id != '')     AS affected_sessions
+                        FROM scores
+                        WHERE ${scopeClause(options)}
+                          AND issue_id = {issueId:String}`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                })
+                return result.json<IssueImpactCoreRow>()
+              }),
+              chSqlClient.query<IssueImpactTraceRow[]>(async (client) => {
+                const result = await client.query({
+                  // `traces` has no simulation_id column, so the simulation filter only
+                  // applies to the inner `scores` subquery via `scopeClause(options)`.
+                  query: `SELECT
+                          sum(cost_total_microcents) AS cost_microcents,
+                          sum(tokens_total)          AS tokens
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND trace_id IN (
+                            SELECT DISTINCT trace_id
+                            FROM scores
+                            WHERE ${scopeClause(options)}
+                              AND issue_id = {issueId:String}
+                              AND trace_id != ''
+                          )`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                })
+                return result.json<IssueImpactTraceRow>()
+              }),
+              chSqlClient.query<IssueImpactUserRow[]>(async (client) => {
+                const result = await client.query({
+                  query: `SELECT count(DISTINCT user_id) AS affected_users
+                        FROM (
+                          SELECT session_id, argMaxIfMerge(user_id) AS user_id
+                          FROM sessions
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            AND session_id IN (
+                              SELECT DISTINCT session_id
+                              FROM scores
+                              WHERE ${scopeClause(options)}
+                                AND issue_id = {issueId:String}
+                                AND session_id != ''
+                            )
+                          GROUP BY session_id
+                        )
+                        WHERE user_id != ''`,
+                  query_params: params,
+                  format: "JSONEachRow",
+                })
+                return result.json<IssueImpactUserRow>()
+              }),
+            ],
+            { concurrency: 3 },
+          )
+
+          const core = coreRows[0]
+          const trace = traceRows[0]
+          const user = userRows[0]
+          return {
+            issueId,
+            occurrences: Number(core?.occurrences ?? 0),
+            affectedTraces: Number(core?.affected_traces ?? 0),
+            affectedSessions: Number(core?.affected_sessions ?? 0),
+            affectedUsers: Number(user?.affected_users ?? 0),
+            costMicrocents: Number(trace?.cost_microcents ?? 0),
+            tokens: Number(trace?.tokens ?? 0),
+          } satisfies IssueImpactAggregate
         }),
 
       // -- escalationSignalsByIssues -----------------------------------------
