@@ -5,7 +5,7 @@ description: Practical habits for human annotation that keep issue discovery and
 
 # Annotate traces effectively
 
-Annotations feed [issue discovery](../../issues/overview), [evaluation alignment](../../evaluations/alignment), and the rest of what Latitude does with your feedback. A thumbs-up or thumbs-down alone is rarely enough — add a short sentence of context, especially on failures. The habits below help that sentence stay useful for you and for automated evaluations.
+Annotations feed [issue discovery](../../issues/overview), [evaluation alignment](../../evaluations/alignment), and the rest of what Latitude does with your feedback. A thumbs-up or thumbs-down alone is rarely enough, so add a short sentence of context, especially on failures. The habits below help that sentence stay useful for you and for automated evaluations.
 
 For how annotations work, see [Annotations Overview](../overview). For automatic annotations, see [Flaggers](../flaggers). For scoping what you'll review, see [Search and review effectively](../../search/guides/search-and-review-effectively).
 
@@ -42,9 +42,9 @@ A few rules of thumb:
 
 Every annotation can be **conversation-level**, **message-level**, or **text-range**. Pick based on what you're calling out.
 
-- **Conversation-level** — the overall interaction went well or poorly. Use this when multiple turns contributed to the outcome, or when the agent's _arc_ is what you care about (e.g. cycling between tools, gradually losing context).
-- **Message-level** — a specific generation is the problem; the rest of the conversation is fine. Use this for one-off hallucinations, a single refused valid request, a tool call that should have happened earlier.
-- **Text-range** — pin the annotation to an exact span. Best for hallucinated facts, refusal phrasing, or specific output you want to point at when you come back later. Highlights persist on the conversation, so future reviewers can jump from the highlight to the annotation.
+- **Conversation-level**: the overall interaction went well or poorly. Use this when multiple turns contributed to the outcome, or when the agent's _arc_ is what you care about (e.g. cycling between tools, gradually losing context).
+- **Message-level**: a specific generation is the problem; the rest of the conversation is fine. Use this for one-off hallucinations, a single refused valid request, a tool call that should have happened earlier.
+- **Text-range**: pin the annotation to an exact span. Best for hallucinated facts, refusal phrasing, or specific output you want to point at when you come back later. Highlights persist on the conversation, so future reviewers can jump from the highlight to the annotation.
 
 <Note>
   Don't over-narrow. If three things went wrong in one conversation, one
@@ -57,18 +57,18 @@ Every annotation can be **conversation-level**, **message-level**, or **text-ran
 
 A [saved search](../../search/saved-searches) is a query plus filters that define which traces to review, saved so you can come back to them. Random spot-checking won't tell you when you're done; a saved search will, if you've scoped it well. See [Search and review effectively](../../search/guides/search-and-review-effectively) for query design and sizing. The review loop:
 
-1. Open the saved search and work matches from the trace detail view. **Annotated / Total** shows how far you've gotten.
-2. Mix thumbs-up and thumbs-down while you go — don't only annotate failures.
-3. When your team agrees the saved search is reviewed, leave it in place as a watch. **Last found** tells you if the issue returns.
+1. Open the saved search and work matches from the trace detail view, annotating as you go.
+2. Mix thumbs-up and thumbs-down while you go. Don't only annotate failures.
+3. When your team agrees the saved search is reviewed, leave it in place. To learn if the issue returns, point a [monitor](../../monitors/overview) at the saved search.
 
 ## Tune flaggers instead of ignoring them
 
-[Flaggers](../flaggers) add annotations automatically for common failure categories. Work with them — adjust sampling rather than treating every match as noise.
+[Flaggers](../flaggers) add annotations automatically for common failure categories. Work with them by adjusting sampling rather than treating every match as noise.
 
 - **Start with defaults.** Run a project for a week with flaggers on. Look at what each flagger catches before changing anything.
 - **Lower sampling when noisy.** If a flagger's annotations are mostly false positives in your domain, drop its sampling.
 - **Raise sampling when missing real cases.** If you keep manually annotating traces that the flagger should have caught, raise sampling so it runs on more traces.
-- **Disable temporarily, never permanently.** If a flagger is wrong for your product right now (e.g. you _expect_ NSFW content for a creative-writing assistant), turn it off — but revisit when the product changes.
+- **Disable temporarily, never permanently.** If a flagger is wrong for your product right now (e.g. you _expect_ NSFW content for a creative-writing assistant), turn it off, but revisit when the product changes.
 
 Flagger annotations feed [issue discovery](../../issues/overview) and [alignment](../../evaluations/alignment) the same way yours do. If a flagger already annotated a trace, you can usually skip it.
 
@@ -85,12 +85,12 @@ Annotations age. The product changes, the model changes, the prompts change.
 
 - **Re-review after a fix.** When an issue is resolved, annotate a few recent matches of its watch evaluation to confirm the fix held.
 - **Watch alignment.** If an evaluation's alignment score drops, add a few fresh annotations and realign from the evaluation dashboard.
-- **Prune stale saved searches.** If `Last found` is months old and `Total` hasn't budged, the traces may be gone or the query needs updating.
+- **Prune stale saved searches.** If reopening one turns up no recent matches, the traces may be gone or the query needs updating.
 
 ## What teams often do
 
 - **A weekly review slot.** Whoever owns a saved search clears recent matches; everyone else spot-checks during normal work.
-- **Delegated saved searches.** Domain-specific saved searches assigned to the engineer or PM who knows that surface area.
+- **Delegated saved searches.** Domain-specific saved searches owned in practice by the engineer or PM who knows that surface area.
 - **Annotation during dogfood.** Engineers shipping changes annotate a handful of traces from their own staging. This catches regressions before they reach a user.
 
 ## Recommended pattern

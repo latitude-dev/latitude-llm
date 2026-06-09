@@ -56,10 +56,10 @@ You create your own monitors on top of [saved searches](../search/saved-searches
 There are two ways into the create flow:
 
 1. **From the Monitors page**: click the **Monitor** button in the top-right and pick a saved search inside the form.
-2. **From a saved search**: open the saved-search dropdown on the Sessions or Traces page. Each saved search offers **Create monitor** (or **View monitor** if one already watches it), which opens the same form with that search pre-selected.
+2. **From a saved search**: open the **Saved searches** dropdown next to the search bar on the Traces page. Hover a saved search and click its bell icon for **Create monitor** (or **View monitor** if one already watches it), which opens the same form with that search pre-selected.
 
-<Frame caption="The saved-search dropdown: each saved search offers a Create monitor action that opens the form with that search pre-selected.">
-  <img src="/images/monitors/create-monitor-from-saved-search.png" alt="The saved-search dropdown with a Create monitor action on a saved-search row" />
+<Frame caption="The Saved searches dropdown: hover a saved search and click the bell icon to create a monitor that watches it.">
+  <img src="/images/monitors/create-monitor-from-saved-search.png" alt="The Saved searches dropdown with a bell icon to create a monitor on a saved-search row" />
 </Frame>
 
 The create form asks for:
@@ -212,6 +212,8 @@ When a monitor fires, the incident goes through Latitude's normal notification s
 
 - **Who** gets notified and **on which channel** is controlled by your per-user and per-project notification preferences, not by the monitor.
 - A monitor's only effect on delivery is its **mute** state: a muted monitor still records incidents but stops the notifications from going out.
+
+Incidents can be delivered by email and to **Slack**. Email is toggled per person in notification preferences. Slack is connected once per organization at **Settings → Integrations**: after you connect a workspace, you route the **Incidents** group (the Issue discovered, regressed, and escalating notifications, plus monitor incidents) to the Slack channels you choose.
 
 To change channel routing or per-user preferences, use your notification settings rather than the monitor.
 
