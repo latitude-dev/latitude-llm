@@ -315,6 +315,60 @@ describe("listProjectBehavioursUseCase", () => {
     expect(result.topics[1]?.subtreeObservationCount).toBe(3)
   })
 
+  it("unwraps the single englobing root and surfaces its depth-1 children as top-level rows", async () => {
+    const rootId = TaxonomyClusterId("a".repeat(24))
+    const firstChildId = TaxonomyClusterId("b".repeat(24))
+    const secondChildId = TaxonomyClusterId("c".repeat(24))
+    const clusters = createFakeTaxonomyClusterRepository([
+      makeCluster({ id: rootId, observationCount: 0 }),
+      makeCluster({ id: firstChildId, parentClusterId: rootId, depth: 1, path: `${rootId}/`, observationCount: 4 }),
+      makeCluster({ id: secondChildId, parentClusterId: rootId, depth: 1, path: `${rootId}/`, observationCount: 3 }),
+    ])
+    const observations = createFakeTaxonomyObservationRepository([
+      makeObservation(1, firstChildId),
+      makeObservation(2, firstChildId),
+      makeObservation(3, firstChildId),
+      makeObservation(4, firstChildId),
+      makeObservation(5, secondChildId),
+      makeObservation(6, secondChildId),
+      makeObservation(7, secondChildId),
+    ])
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    // The all-encompassing root is dropped; the table opens on its children.
+    expect(result.topics.map((topic) => topic.cluster.id)).toEqual([firstChildId, secondChildId])
+    expect(result.topics.every((topic) => topic.cluster.id !== rootId)).toBe(true)
+  })
+
+  it("keeps a single childless root (tiny corpus collapsed to one leaf)", async () => {
+    const onlyRootId = TaxonomyClusterId("a".repeat(24))
+    const clusters = createFakeTaxonomyClusterRepository([makeCluster({ id: onlyRootId, observationCount: 3 })])
+    const observations = createFakeTaxonomyObservationRepository([
+      makeObservation(1, onlyRootId),
+      makeObservation(2, onlyRootId),
+      makeObservation(3, onlyRootId),
+    ])
+
+    const result = await Effect.runPromise(
+      listProjectBehavioursUseCase({ organizationId, projectId, now }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result.topics.map((topic) => topic.cluster.id)).toEqual([onlyRootId])
+  })
+
   it("hides roots without a displayable name", async () => {
     const pendingRootId = TaxonomyClusterId("u".repeat(24))
     const clusters = createFakeTaxonomyClusterRepository([

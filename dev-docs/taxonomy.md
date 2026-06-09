@@ -1,6 +1,6 @@
 # Taxonomy — the unified topic cluster tree
 
-Taxonomy organizes live-retained session-level **topic observations** produced by [conversation intelligence](./conversation-intelligence.md) into a **single tree of clusters** per project. There is no separate category model: every tree level is the same kind of node, and **depth is clustering density** — the tree is broad at the root and progressively narrower at the leaves. "Categories" in the product UI are simply depth-0 nodes.
+Taxonomy organizes live-retained session-level **topic observations** produced by [conversation intelligence](./conversation-intelligence.md) into a **single tree of clusters** per project. There is no separate category model: every tree level is the same kind of node, and **depth is clustering density** — the tree is broad at the root and progressively narrower at the leaves. The divisive build always produces exactly one depth-0 root that englobes the whole project, so the **product UI hides that root and treats its depth-1 children as the top-level "categories"** (see "Read paths").
 
 The tree is produced two ways that must be read separately:
 
@@ -126,7 +126,7 @@ A two-call map-reduce (`TAXONOMY_NAMING_MODEL`) proposes candidate themes then c
 
 ## Read paths
 
-- **Behaviours page** (`listProjectBehavioursUseCase`): returns the literal tree. Each node's `subtreeObservationCount` is rolled up across visible descendants **at read time** (not the stored counter); zero-residue interior nodes synthesize a zero trend rather than vanish with their subtree. The web layer rolls conversation-intelligence rates up each subtree weighted by sessions and renders an indented, expandable tree.
+- **Behaviours page** (`listProjectBehavioursUseCase`): returns the literal tree, but **unwraps the single englobing root** — when there is exactly one depth-0 root with children, its depth-1 children become the top-level rows so the table opens on several real categories instead of one all-encompassing row (a tiny corpus collapsed to a single childless root is still shown). Each node's `subtreeObservationCount` is rolled up across visible descendants **at read time** (not the stored counter); zero-residue interior nodes synthesize a zero trend rather than vanish with their subtree. The web layer indents by **relative** tree-walk depth (not absolute `cluster.depth`), rolls conversation-intelligence rates up each subtree weighted by sessions, and renders an expandable tree. The topics filter dropdown (`getTopicFilterOptions`) applies the same root unwrap.
 - **Behaviour drawer / cluster intelligence** (`getClusterSessionIntelligenceUseCase`): sessions list, histograms, and the intelligence profile are all **subtree-scoped** (`listSubtreeIds` → `assigned_cluster_id IN (...)`), so an interior node's profile covers its whole subtree.
 - **Sessions table topics filter**: selected nodes expand to subtree ids server-side before ClickHouse; see the CI doc for the subquery shape and time-bound pruning.
 - **Backoffice** (`AdminTaxonomyRepositoryLive`): keeps the legacy category/subcategory DTO shape but sources it from the tree — roots as groups, descendants rolled up by first path segment.
