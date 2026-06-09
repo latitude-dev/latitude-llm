@@ -10,9 +10,11 @@ import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../..
 import { useRouteProject } from "../../-route-data.ts"
 import { IssueDetailBody } from "../-components/issue-detail-drawer.tsx"
 import { IssueLifecycleActions } from "../-components/issue-lifecycle-actions.tsx"
+import { IssueLifecycleStatuses } from "../-components/issue-lifecycle-statuses.tsx"
 import { IssueExamples } from "./-components/issue-examples.tsx"
 import { IssuePatterns } from "./-components/issue-patterns.tsx"
 import { IssueSummary } from "./-components/issue-summary.tsx"
+import { IssueTriageControls } from "./-components/issue-triage-controls.tsx"
 
 const issueDetailRoute = getRouteApi("/_authenticated/projects/$projectSlug/issues/$issueId/")
 
@@ -68,7 +70,7 @@ function IssueDetailPage() {
       <Layout.Content>
         <Layout.Header
           title={
-            <div className="flex min-w-0 flex-row items-center gap-2">
+            <div className="flex min-w-0 flex-row items-center gap-3">
               <Tooltip
                 asChild
                 side="bottom"
@@ -85,20 +87,30 @@ function IssueDetailPage() {
               {isLoading ? (
                 <Skeleton className="h-7 w-56" />
               ) : (
-                <Text.H4M className="min-w-0 truncate">{issue?.name ?? "Issue not found"}</Text.H4M>
+                <>
+                  <Text.H4M className="min-w-0 truncate">{issue?.name ?? "Issue not found"}</Text.H4M>
+                  {issue && issue.states.length > 0 ? (
+                    <div className="shrink-0">
+                      <IssueLifecycleStatuses states={issue.states} />
+                    </div>
+                  ) : null}
+                </>
               )}
             </div>
           }
           description={isLoading ? undefined : (issue?.description ?? "This issue could not be loaded.")}
-          actions={<IssueLifecycleActions projectId={project.id} issueId={issueId} />}
+          actions={
+            <>
+              <IssueTriageControls projectId={project.id} issueId={issueId} compact />
+              <IssueLifecycleActions projectId={project.id} issueId={issueId} compact />
+            </>
+          }
         />
-        <div className="px-6">
-          <IssueSummary projectId={project.id} issueId={issueId} />
-        </div>
         <IssueDetailBody
           projectId={project.id}
           issueId={issueId}
           variant="page"
+          prepend={<IssueSummary projectId={project.id} issueId={issueId} />}
           trendAside={<IssuePatterns projectId={project.id} issueId={issueId} />}
           beforeTraces={<IssueExamples projectId={project.id} issueId={issueId} />}
         />

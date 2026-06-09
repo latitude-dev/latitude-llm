@@ -1,6 +1,19 @@
-import { Button, CloseTrigger, Icon, Label, Modal, Switch, Text, useToast } from "@repo/ui"
+import {
+  Button,
+  CloseTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  Icon,
+  Label,
+  Modal,
+  Switch,
+  Text,
+  useToast,
+} from "@repo/ui"
 import { useParams } from "@tanstack/react-router"
-import { CheckIcon, LinkIcon, PauseIcon, PlayIcon, XIcon } from "lucide-react"
+import { CheckIcon, LinkIcon, MoreVerticalIcon, PauseIcon, PlayIcon, XIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
@@ -46,13 +59,19 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
  * Lifted out of the body so both the standalone issue drawer and the
  * session-panel issue slot can render these in the top toolbar (alongside
  * next/prev or "View session"), instead of cramming them next to the title.
+ *
+ * `compact` collapses the pair into a primary Resolve button + an overflow
+ * (kebab) menu holding Ignore — for the issue page header, where the inline
+ * triage pickers already make the action area wide.
  */
 export function IssueLifecycleActions({
   projectId,
   issueId,
+  compact = false,
 }: {
   readonly projectId: string
   readonly issueId: string
+  readonly compact?: boolean
 }) {
   const { toast } = useToast()
   const { projectSlug } = useParams({ strict: false })
@@ -175,33 +194,75 @@ export function IssueLifecycleActions({
 
   useRegisterCommands(paletteCommands)
 
+  const isLifecycleDisabled = issue === null || issue === undefined || isLifecycleLoading
+
+  const onResolveClick = () => {
+    if (issue?.resolvedAt) {
+      setLifecycleConfirmAction("unresolve")
+      return
+    }
+
+    setKeepMonitoring(issue?.keepMonitoringDefault ?? true)
+    setResolveModalOpen(true)
+  }
+
+  // Compact (issue page header): the primary action is a filled `h-7` pill that
+  // lines up with the adjacent triage pickers; secondary lives in the kebab.
+  // Default (drawer/session toolbar): the original outline button, unchanged.
+  const resolveButton = compact ? (
+    <Button variant="default" size="sm" className="text-sm" disabled={isLifecycleDisabled} onClick={onResolveClick}>
+      <Icon icon={issue?.resolvedAt ? XIcon : CheckIcon} size="sm" />
+      {issue?.resolvedAt ? "Unresolve" : "Resolve"}
+    </Button>
+  ) : (
+    <Button variant="outline" disabled={isLifecycleDisabled} onClick={onResolveClick}>
+      <Icon icon={issue?.resolvedAt ? XIcon : CheckIcon} size="sm" />
+      {issue?.resolvedAt ? "Unresolve" : "Resolve"}
+    </Button>
+  )
+
   return (
     <>
-      <Button
-        variant="ghost"
-        className="text-foreground group-hover:text-secondary-foreground/80"
-        disabled={issue === null || issue === undefined || isLifecycleLoading}
-        onClick={() => setLifecycleConfirmAction(issue?.ignoredAt ? "unignore" : "ignore")}
-      >
-        <Icon icon={issue?.ignoredAt ? PlayIcon : PauseIcon} size="sm" />
-        {issue?.ignoredAt ? "Unignore" : "Ignore"}
-      </Button>
-      <Button
-        variant="outline"
-        disabled={issue === null || issue === undefined || isLifecycleLoading}
-        onClick={() => {
-          if (issue?.resolvedAt) {
-            setLifecycleConfirmAction("unresolve")
-            return
-          }
-
-          setKeepMonitoring(issue?.keepMonitoringDefault ?? true)
-          setResolveModalOpen(true)
-        }}
-      >
-        <Icon icon={issue?.resolvedAt ? XIcon : CheckIcon} size="sm" />
-        {issue?.resolvedAt ? "Unresolve" : "Resolve"}
-      </Button>
+      {compact ? (
+        <>
+          {resolveButton}
+          <DropdownMenuRoot>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                disabled={isLifecycleDisabled}
+                aria-label="More issue actions"
+              >
+                <Icon icon={MoreVerticalIcon} size="sm" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="gap-2"
+                onSelect={() => setLifecycleConfirmAction(issue?.ignoredAt ? "unignore" : "ignore")}
+              >
+                <Icon icon={issue?.ignoredAt ? PlayIcon : PauseIcon} size="sm" />
+                {issue?.ignoredAt ? "Unignore" : "Ignore"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenuRoot>
+        </>
+      ) : (
+        <>
+          <Button
+            variant="ghost"
+            className="text-foreground group-hover:text-secondary-foreground/80"
+            disabled={isLifecycleDisabled}
+            onClick={() => setLifecycleConfirmAction(issue?.ignoredAt ? "unignore" : "ignore")}
+          >
+            <Icon icon={issue?.ignoredAt ? PlayIcon : PauseIcon} size="sm" />
+            {issue?.ignoredAt ? "Unignore" : "Ignore"}
+          </Button>
+          {resolveButton}
+        </>
+      )}
 
       <Modal.Root open={resolveModalOpen} onOpenChange={setResolveModalOpen}>
         <Modal.Content dismissible>

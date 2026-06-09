@@ -129,7 +129,7 @@ export function MemberSelector({
           <SelectedTrigger selected={selectedOption} />
         </ComboboxTrigger>
       </Button>
-      <ComboboxContent anchor={triggerRef} container={portalContainer?.current}>
+      <ComboboxContent anchor={triggerRef} container={portalContainer?.current} chips={false} className="min-w-56">
         <ComboboxInput
           placeholder="Search members..."
           value={inputValue}

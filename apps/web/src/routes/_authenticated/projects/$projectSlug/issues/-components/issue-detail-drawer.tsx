@@ -372,22 +372,26 @@ export function IssueDetailBody({
             </DetailSection>
           )}
 
-          <DetailSection
-            icon={<Icon icon={CheckIcon} size="sm" />}
-            label="Evaluations"
-            defaultOpen
-            contentClassName="pl-0 max-h-none overflow-visible"
-          >
-            <IssueDrawerEvaluations
-              projectId={projectId}
-              issueId={issueId}
-              issueSource={issue?.source ?? "annotation"}
-              evaluations={issue?.evaluations ?? []}
-              flaggerSlugs={issue?.flaggerSlugs ?? []}
-              canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
-              isIssueLoading={isLoading}
-            />
-          </DetailSection>
+          {/* The page variant relocates Evaluations into the summary card's actions
+              column (see `IssueSummary`), so it only renders here for the drawer. */}
+          {variant === "drawer" ? (
+            <DetailSection
+              icon={<Icon icon={CheckIcon} size="sm" />}
+              label="Evaluations"
+              defaultOpen
+              contentClassName="pl-0 max-h-none overflow-visible"
+            >
+              <IssueDrawerEvaluations
+                projectId={projectId}
+                issueId={issueId}
+                issueSource={issue?.source ?? "annotation"}
+                evaluations={issue?.evaluations ?? []}
+                flaggerSlugs={issue?.flaggerSlugs ?? []}
+                canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
+                isIssueLoading={isLoading}
+              />
+            </DetailSection>
+          ) : null}
 
           {beforeTraces}
 
