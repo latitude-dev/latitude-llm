@@ -96,7 +96,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
               collapsed={collapsed}
             />
           ) : null}
-          <SandboxSwitcher collapsed={collapsed} />
+          <SandboxSwitcher collapsed={collapsed} projectId={project.id} />
           <NavItem
             icon={PROJECT_SETTINGS_SECTION.icon}
             label={PROJECT_SETTINGS_SECTION.label}

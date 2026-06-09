@@ -22,7 +22,7 @@ export {
   SandboxNotFoundError,
   SandboxQuotaExceededError,
 } from "./errors.ts"
-export { type SandboxListItem, SandboxRepository } from "./ports/sandbox-repository.ts"
+export { SandboxRepository } from "./ports/sandbox-repository.ts"
 export type {
   SandboxRejectedIngestKind,
   SandboxRejectedIngestMarker,
@@ -33,10 +33,6 @@ export {
   type ArchiveIdleSandboxesResult,
   archiveIdleSandboxesUseCase,
 } from "./use-cases/archive-idle-sandboxes.ts"
-export {
-  type ArchiveSandboxInput,
-  archiveSandboxUseCase,
-} from "./use-cases/archive-sandbox.ts"
 export {
   type CreateSandboxInput,
   type CreateSandboxResult,

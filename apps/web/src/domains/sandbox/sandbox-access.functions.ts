@@ -21,6 +21,7 @@ interface SandboxAccessDto {
     readonly organizationId: string
     readonly name: string
     readonly parentOrgId: string
+    readonly status: "active" | "archived"
   }
 }
 
@@ -41,6 +42,7 @@ export const authorizeSandboxAccess = createServerFn({ method: "GET" })
         organizationId: sandbox.organizationId,
         name: sandbox.name,
         parentOrgId: sandbox.parentOrgId,
+        status: sandbox.status,
       },
     }
   })

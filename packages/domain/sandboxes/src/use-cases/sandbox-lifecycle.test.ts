@@ -13,7 +13,6 @@ import { createSandbox } from "../entities/sandbox.ts"
 import { SandboxAccessDeniedError, SandboxActiveCapReachedError } from "../errors.ts"
 import { SandboxRepository } from "../ports/sandbox-repository.ts"
 import { createFakeSandboxRepository } from "../testing/fake-sandbox-repository.ts"
-import { archiveSandboxUseCase } from "./archive-sandbox.ts"
 import { createSandboxUseCase } from "./create-sandbox.ts"
 import { reactivateSandboxUseCase } from "./reactivate-sandbox.ts"
 
@@ -128,15 +127,10 @@ describe("sandbox lifecycle (unit)", () => {
     expect(failure(exit)).toBeInstanceOf(SandboxActiveCapReachedError)
   })
 
-  it("archiving frees a slot, then reactivation fits within the cap", async () => {
+  it("reactivates an archived sandbox within the cap", async () => {
     const existing = OrganizationId(generateId())
-    const { layer } = buildLayer({ seedSandbox: { organizationId: existing, status: "active" } })
-
-    await Effect.runPromise(
-      archiveSandboxUseCase({ sandboxOrganizationId: existing, actorUserId: ADMIN_USER_ID }).pipe(
-        Effect.provide(layer),
-      ),
-    )
+    // The single slot is free (the only sandbox is archived), so it fits.
+    const { layer } = buildLayer({ seedSandbox: { organizationId: existing, status: "archived" } })
 
     const reactivated = await Effect.runPromise(
       reactivateSandboxUseCase({ sandboxOrganizationId: existing, actorUserId: ADMIN_USER_ID }).pipe(

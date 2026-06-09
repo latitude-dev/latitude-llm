@@ -1,19 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getSandboxDefaultApiKey } from "./sandbox-api-keys.functions.ts"
-import { archiveSandbox, deleteSandbox, reactivateSandbox } from "./sandbox-lifecycle.functions.ts"
-import { listSandboxesForParentOrg, type SandboxListItemDto } from "./sandbox-list.functions.ts"
+import { reactivateSandbox } from "./sandbox-lifecycle.functions.ts"
+import { listSandboxOrgIdsForParentOrg } from "./sandbox-list.functions.ts"
 
 export const SANDBOXES_QUERY_KEY = ["sandboxes", "parent-org"] as const
 
 /**
- * The active-org's sandboxes (active + archived), powering both the sidebar
- * switcher and the "your sandboxes" settings list. Shares one query key so a
- * create/archive/delete invalidation refreshes every consumer at once.
+ * The active-org's sandbox org ids (active + archived) — all the sidebar toggle
+ * needs to find-or-navigate the org's single sandbox. Shares one query key so a
+ * create invalidation refreshes it.
  */
-export function useSandboxesForParentOrg(options?: { readonly enabled?: boolean }) {
-  return useQuery<readonly SandboxListItemDto[]>({
+export function useSandboxOrgIdsForParentOrg(options?: { readonly enabled?: boolean }) {
+  return useQuery<readonly string[]>({
     queryKey: SANDBOXES_QUERY_KEY,
-    queryFn: () => listSandboxesForParentOrg(),
+    queryFn: () => listSandboxOrgIdsForParentOrg(),
     staleTime: 30_000,
     enabled: options?.enabled ?? true,
   })
@@ -30,26 +30,18 @@ export function useSandboxDefaultApiKey(sandboxOrgId: string, enabled = true) {
 }
 
 /**
- * Archive / reactivate / delete a sandbox, each refreshing the shared sandbox
- * list. The cap (and reactivation-over-cap refusal) is enforced server-side; the
- * UI just reflects the result.
+ * Reactivate a sandbox (from the sandbox banner), refreshing the shared sandbox
+ * list. Reactivation always fits the single-sandbox-per-org cap; the UI just
+ * reflects the server result.
  */
 export function useSandboxLifecycleMutations() {
   const queryClient = useQueryClient()
   const invalidate = () => queryClient.invalidateQueries({ queryKey: SANDBOXES_QUERY_KEY })
 
-  const archive = useMutation({
-    mutationFn: (sandboxOrganizationId: string) => archiveSandbox({ data: { sandboxOrganizationId } }),
-    onSuccess: invalidate,
-  })
   const reactivate = useMutation({
     mutationFn: (sandboxOrganizationId: string) => reactivateSandbox({ data: { sandboxOrganizationId } }),
     onSuccess: invalidate,
   })
-  const remove = useMutation({
-    mutationFn: (sandboxOrganizationId: string) => deleteSandbox({ data: { sandboxOrganizationId } }),
-    onSuccess: invalidate,
-  })
 
-  return { archive, reactivate, remove }
+  return { reactivate }
 }

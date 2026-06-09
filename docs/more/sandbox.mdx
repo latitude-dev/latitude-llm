@@ -15,7 +15,7 @@ A sandbox is deliberately **minimal and focused on trace-level debugging**: it i
 
 ## Switching to a sandbox
 
-Use the **Sandbox** button in the sidebar to switch into a sandbox or create one. While you're in a sandbox, a blue banner across the top makes it unmistakable which environment you're in, and **Switch to live** takes you back.
+Your organization has a single sandbox. Flip the **Sandbox** toggle in the sidebar to switch into it — the first time, Latitude creates your sandbox and a sandbox copy of the project you're currently in; after that, the toggle just takes you there (and mirrors any new project you switch from). While you're in a sandbox, a blue banner across the top makes it unmistakable which environment you're in, and **Switch to live** takes you back.
 
 <Frame>
   <img src="/images/sandbox/sandbox-sidebar-button.png" alt="Sandbox button in the Latitude sidebar" />
@@ -63,28 +63,16 @@ A sandbox key can only ever write to its sandbox, and a production key can only 
   <Card title="Billing" icon="credit-card">
     Sandbox usage is **completely free**. Sandbox traces are never metered or charged and never touch your credit balance. Abuse is bounded by the rate limit and a per-period span quota instead.
   </Card>
-  <Card title="Sandboxes per plan" icon="layers">
-    The number of **active** sandboxes you can have depends on your plan (see below).
+  <Card title="Span quota" icon="layers">
+    Sandbox ingestion is bounded by a per-period **span quota** that scales with your plan: **100,000 spans** on Free, **1,000,000 spans** on Pro, and unlimited on Enterprise.
   </Card>
 </CardGroup>
 
-### Sandboxes per plan
-
-| Plan | Active sandboxes | Span quota per period |
-| --- | --- | --- |
-| Free | 1 | 100,000 spans |
-| Pro | 15 | 1,000,000 spans |
-| Enterprise | Unlimited | Unlimited |
-
-Only **active** sandboxes count toward the cap. A sandbox that goes to sleep (see below) frees a slot, so you're never permanently stuck — you can reactivate an old one or create a fresh one whenever you're within the cap.
-
 ## Sleep and reactivation
 
-A sandbox is put to **sleep** (archived) after **7 days of inactivity**, or whenever you archive it manually. Sleeping sandboxes hold no live capacity and don't count toward your plan's active cap.
+A sandbox is put to **sleep** (archived) after **7 days of inactivity**. Sleeping sandboxes hold no live capacity.
 
-Sending traces to a sleeping sandbox is **rejected** with a `403` (mirroring how an out-of-credits production org behaves) — nothing is silently accepted, and the sandbox isn't silently revived. **Reactivate** it from the sandbox settings to resume ingestion. If exceeding the active cap would block reactivation, archive or delete another sandbox first.
-
-**Deleting** a sandbox is the only destructive action and is how you permanently reclaim a slot and its storage.
+Sending traces to a sleeping sandbox is **rejected** with a `403` (mirroring how an out-of-credits production org behaves) — nothing is silently accepted, and the sandbox isn't silently revived. To wake it back up, open the sandbox and press **Activate** in the banner (which turns gray while the sandbox is asleep) to resume ingestion.
 
 ## Related
 

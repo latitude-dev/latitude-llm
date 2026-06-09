@@ -42,13 +42,19 @@ export function SandboxAddProjectModal({
     [attachable],
   )
 
+  // Once loaded, if every production project is already attached there's
+  // nothing left to link — collapse to the sandbox-only name field. Keep the
+  // toggle visible while loading so it doesn't flicker in.
+  const allowProduction = isLoading || (attachable ?? []).some((p) => !p.alreadyAttached)
+  const effectiveMode: SandboxProjectMode = allowProduction ? mode : "new"
+
   const submitting = attachProduction.isPending || createSandboxOnly.isPending
-  const canSubmit = mode === "existing" ? productionProjectId.length > 0 : newProjectName.trim().length > 0
+  const canSubmit = effectiveMode === "existing" ? productionProjectId.length > 0 : newProjectName.trim().length > 0
 
   const handleSubmit = async () => {
     try {
       const project =
-        mode === "existing"
+        effectiveMode === "existing"
           ? await attachProduction.mutateAsync(productionProjectId)
           : await createSandboxOnly.mutateAsync(newProjectName.trim())
       onOpenChange(false)
@@ -81,7 +87,7 @@ export function SandboxAddProjectModal({
     >
       <FormWrapper>
         <SandboxProjectChooser
-          mode={mode}
+          mode={effectiveMode}
           onModeChange={setMode}
           productionProjects={productionProjects}
           productionProjectId={productionProjectId}
@@ -89,6 +95,7 @@ export function SandboxAddProjectModal({
           newName={newProjectName}
           onNewNameChange={setNewProjectName}
           loading={isLoading}
+          allowProduction={allowProduction}
         />
       </FormWrapper>
     </Modal>

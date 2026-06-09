@@ -1,8 +1,14 @@
 import { isSandbox, MembershipRepository, OrganizationRepository } from "@domain/organizations"
+import { SandboxRepository } from "@domain/sandboxes"
 import { NotFoundError, type OrganizationId, organizationIdSchema, type UserId } from "@domain/shared"
-import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  MembershipRepositoryLive,
+  OrganizationRepositoryLive,
+  SandboxRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { getAdminPostgresClient, getPostgresClient } from "./clients.ts"
 
 /**
@@ -22,6 +28,7 @@ interface ResolvedSandboxAccess {
   readonly organizationId: OrganizationId
   readonly name: string
   readonly parentOrgId: OrganizationId
+  readonly status: "active" | "archived"
 }
 
 export async function resolveSandboxAccess(input: {
@@ -50,8 +57,16 @@ export async function resolveSandboxAccess(input: {
       if (!isSandbox(org)) {
         return yield* Effect.fail(new NotFoundError({ entity: "Sandbox", id: sandboxOrgId }))
       }
-      return { organizationId: org.id, name: org.name, parentOrgId: org.parentOrgId }
-    }).pipe(withPostgres(OrganizationRepositoryLive, getAdminPostgresClient()), withTracing),
+      // Read the sandbox row's status here (not in a follow-up client request)
+      // so route context carries it on first paint — avoids the active→archived
+      // flash in the sandbox strip.
+      const sandboxRepo = yield* SandboxRepository
+      const row = yield* sandboxRepo.findByOrganizationId(sandboxOrgId)
+      return { organizationId: org.id, name: org.name, parentOrgId: org.parentOrgId, status: row.status }
+    }).pipe(
+      withPostgres(Layer.merge(OrganizationRepositoryLive, SandboxRepositoryLive), getAdminPostgresClient()),
+      withTracing,
+    ),
   )
 
   // Membership check is scoped to the PARENT org (whose `members` rows are

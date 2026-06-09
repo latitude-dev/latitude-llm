@@ -1,9 +1,4 @@
-import {
-  archiveSandboxUseCase,
-  createSandboxUseCase,
-  deleteSandboxUseCase,
-  reactivateSandboxUseCase,
-} from "@domain/sandboxes"
+import { createSandboxUseCase, deleteSandboxUseCase, reactivateSandboxUseCase } from "@domain/sandboxes"
 import { OrganizationId } from "@domain/shared"
 import {
   ApiKeyRepositoryLive,
@@ -51,20 +46,6 @@ export const createSandbox = createServerFn({ method: "POST" })
         actorUserId: userId,
         name: data.name,
       }).pipe(withPostgres(sandboxCapLayers, client, organizationId), withTracing),
-    )
-  })
-
-export const archiveSandbox = createServerFn({ method: "POST" })
-  .inputValidator(sandboxIdInput)
-  .handler(async ({ data }) => {
-    const { userId, organizationId } = await requireSession()
-    const client = getAdminPostgresClient()
-
-    return await Effect.runPromise(
-      archiveSandboxUseCase({
-        sandboxOrganizationId: OrganizationId(data.sandboxOrganizationId),
-        actorUserId: userId,
-      }).pipe(withPostgres(sandboxWriteLayers, client, organizationId), withTracing),
     )
   })
 

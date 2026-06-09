@@ -7,6 +7,7 @@ interface SandboxSummaryDto {
   readonly organizationId: string
   readonly name: string
   readonly parentOrgId: string
+  readonly status: "active" | "archived"
 }
 
 export const getSandbox = createServerFn({ method: "GET" })
@@ -17,5 +18,6 @@ export const getSandbox = createServerFn({ method: "GET" })
       organizationId: context.sandbox.organizationId,
       name: context.sandbox.name,
       parentOrgId: context.sandbox.parentOrgId,
+      status: context.sandbox.status,
     }),
   )

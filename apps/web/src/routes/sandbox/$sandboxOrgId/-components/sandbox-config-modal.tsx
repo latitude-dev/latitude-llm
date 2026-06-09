@@ -47,7 +47,7 @@ export function SandboxConfigModal({
           ) : keyInfo?.token ? (
             <CopyableText value={keyInfo.token} size="sm" tooltip="Copy API key" />
           ) : (
-            <Text.H6 color="foregroundMuted">No key yet — create one from sandbox settings.</Text.H6>
+            <Text.H6 color="foregroundMuted">No key found for this sandbox.</Text.H6>
           )}
         </div>
       </div>
