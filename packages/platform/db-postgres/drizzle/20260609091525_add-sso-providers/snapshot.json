@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c3773def-e505-4628-8cee-14505f4f0172",
+  "id": "4adaf8cf-f260-4a9a-be97-4ff1dbf81386",
   "prevIds": [
-    "289e1d94-24a0-45e9-b715-8354b45965b4"
+    "fb1f6648-d1df-43d6-b716-c30c523745ca"
   ],
   "ddl": [
     {
@@ -231,12 +231,6 @@
     {
       "isRlsEnabled": true,
       "name": "slack_integration_details",
-      "entityType": "tables",
-      "schema": "latitude"
-    },
-    {
-      "isRlsEnabled": true,
-      "name": "taxonomy_categories",
       "entityType": "tables",
       "schema": "latitude"
     },
@@ -4857,32 +4851,6 @@
       "table": "saved_searches"
     },
     {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "assigned_user_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "saved_searches"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "created_by_user_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "saved_searches"
-    },
-    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
@@ -5686,178 +5654,6 @@
       "name": "id",
       "entityType": "columns",
       "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "organization_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "project_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "varchar(80)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "name",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "varchar(280)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "description",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "vector(2048)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "centroid_embedding",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "tsvector",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": {
-        "as": "\n          setweight(to_tsvector('english', coalesce(name, '')), 'A') ||\n          setweight(to_tsvector('english', coalesce(description, '')), 'B')\n        ",
-        "type": "stored"
-      },
-      "identity": null,
-      "name": "search_document",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "cluster_count",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "bigint",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "observation_count",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "varchar(16)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'active'",
-      "generated": null,
-      "identity": null,
-      "name": "state",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "clustered_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "latitude",
       "table": "taxonomy_cluster_lineage"
     },
     {
@@ -6011,7 +5807,46 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "parent_category_id",
+      "name": "parent_cluster_id",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "taxonomy_clusters"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "depth",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "taxonomy_clusters"
+    },
+    {
+      "type": "varchar(256)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "''",
+      "generated": null,
+      "identity": null,
+      "name": "path",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "taxonomy_clusters"
+    },
+    {
+      "type": "double precision",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "split_link_threshold",
       "entityType": "columns",
       "schema": "latitude",
       "table": "taxonomy_clusters"
@@ -6340,19 +6175,6 @@
       "generated": null,
       "identity": null,
       "name": "clusters_deprecated",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "taxonomy_runs"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "categories_rebuilt",
       "entityType": "columns",
       "schema": "latitude",
       "table": "taxonomy_runs"
@@ -7072,6 +6894,27 @@
       "entityType": "indexes",
       "schema": "latitude",
       "table": "sessions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "ssoProviders_organizationId_unique_idx",
+      "entityType": "indexes",
+      "schema": "latitude",
+      "table": "sso_providers"
     },
     {
       "nameExplicit": true,
@@ -8188,41 +8031,6 @@
           "asc": true,
           "nullsFirst": false,
           "opclass": null
-        },
-        {
-          "value": "assigned_user_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "deleted_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "saved_searches_assigned_user_id_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "saved_searches"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
         }
       ],
       "isUnique": false,
@@ -8764,62 +8572,6 @@
           "opclass": null
         },
         {
-          "value": "state",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "taxonomy_categories_project_state_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "search_document",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "gin",
-      "concurrently": false,
-      "name": "taxonomy_categories_search_document_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "project_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
           "value": "created_at",
           "isExpression": false,
           "asc": true,
@@ -8875,41 +8627,6 @@
       "method": "btree",
       "concurrently": false,
       "name": "taxonomy_clusters_project_state_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "taxonomy_clusters"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "organization_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "project_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "parent_category_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "taxonomy_clusters_parent_category_idx",
       "entityType": "indexes",
       "schema": "latitude",
       "table": "taxonomy_clusters"
@@ -9650,16 +9367,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "taxonomy_categories_pkey",
-      "schema": "latitude",
-      "table": "taxonomy_categories",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "taxonomy_cluster_lineage_pkey",
       "schema": "latitude",
       "table": "taxonomy_cluster_lineage",
@@ -10341,19 +10048,6 @@
       "entityType": "policies",
       "schema": "latitude",
       "table": "slack_integration_details"
-    },
-    {
-      "as": "PERMISSIVE",
-      "for": "ALL",
-      "roles": [
-        "public"
-      ],
-      "using": "organization_id = get_current_organization_id()",
-      "withCheck": "organization_id = get_current_organization_id()",
-      "name": "taxonomy_categories_organization_policy",
-      "entityType": "policies",
-      "schema": "latitude",
-      "table": "taxonomy_categories"
     },
     {
       "as": "PERMISSIVE",

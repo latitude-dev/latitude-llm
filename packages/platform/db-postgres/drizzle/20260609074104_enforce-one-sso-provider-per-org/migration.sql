@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "ssoProviders_organizationId_unique_idx" ON "latitude"."sso_providers" ("organization_id");

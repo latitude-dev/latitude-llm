@@ -14,6 +14,7 @@ CREATE TABLE "latitude"."sso_providers" (
 );
 --> statement-breakpoint
 ALTER TABLE "latitude"."sso_providers" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE UNIQUE INDEX "ssoProviders_organizationId_unique_idx" ON "latitude"."sso_providers" ("organization_id");--> statement-breakpoint
 CREATE INDEX "ssoProviders_organizationId_idx" ON "latitude"."sso_providers" ("organization_id");--> statement-breakpoint
 CREATE INDEX "ssoProviders_domain_idx" ON "latitude"."sso_providers" ("domain");--> statement-breakpoint
 CREATE INDEX "ssoProviders_userId_idx" ON "latitude"."sso_providers" ("user_id");--> statement-breakpoint
