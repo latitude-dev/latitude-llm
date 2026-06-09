@@ -3,11 +3,15 @@
  * workflow calls to materialize the cluster tree.
  *
  * High level:
- *   1. List the newest TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX observations
- *      in the live window, regardless of current assignment. This is the
- *      bounded sample the rest of the algorithm operates on; on large
- *      tenants (5M sessions/month) it is a per-day-stratified slice — small
- *      tenants see their whole live window.
+ *   1. List up to TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX observations from the
+ *      lookback window, regardless of current assignment. The repository
+ *      day-stratifies this sample: it ranks each observation within its own
+ *      day and interleaves days round-robin, so the bounded sample is
+ *      representative of the whole window rather than biased toward the last
+ *      few hours. On large tenants (5M sessions/month) this spreads the budget
+ *      across days; small tenants whose corpus fits under the cap see their
+ *      whole live window. The sample is deterministic (hash-ordered, no
+ *      rand()) so a gardening pass replays identically under Temporal.
  *   2. Build the tree top-down with `buildHierarchicalClusters` using the
  *      per-depth schedule. The schedule encodes broad-at-the-root,
  *      narrow-at-the-leaves without per-corpus tuning.

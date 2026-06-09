@@ -226,15 +226,23 @@ export const listProjectBehavioursUseCase = (input: ListProjectBehavioursInput) 
       }
     }
 
-    const topics = sortNodes(
-      displayable
-        .filter((cluster) => cluster.parentClusterId === null)
-        .flatMap((cluster) => {
-          const node = buildNode(cluster)
-          return node === null ? [] : [node]
-        }),
-      sortBy,
-    )
+    const rootNodes = displayable
+      .filter((cluster) => cluster.parentClusterId === null)
+      .flatMap((cluster) => {
+        const node = buildNode(cluster)
+        return node === null ? [] : [node]
+      })
+
+    // The divisive build always produces a single depth-0 root that englobes
+    // the entire project — it is the "everything" node, not a meaningful
+    // category. When it is the only root and it has children, surface its
+    // children (the real depth-1 categories) as the top-level rows so the
+    // behaviours table opens on several categories instead of one
+    // all-encompassing row. A tiny corpus that collapsed to a single childless
+    // root still shows that root.
+    const topLevel =
+      rootNodes.length === 1 && (rootNodes[0]?.children.length ?? 0) > 0 ? (rootNodes[0]?.children ?? []) : rootNodes
+    const topics = sortNodes(topLevel, sortBy)
 
     return { topics: truncateNodes(topics, limit) } satisfies ListProjectBehavioursResult
   }).pipe(Effect.withSpan("taxonomy.listProjectBehaviours"))

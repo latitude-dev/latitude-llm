@@ -342,7 +342,14 @@ export const getTopicFilterOptions = createServerFn({ method: "GET" })
             walk(childrenByParent.get(node.id) ?? [])
           }
         }
-        walk(active.filter((cluster) => cluster.parentClusterId === null))
+        // The divisive build always produces a single root that englobes the
+        // whole project — filtering by it means "everything", so it is a
+        // useless option. When it is the only root and it has children, start
+        // the option list from its depth-1 children (mirrors the behaviours
+        // table). A single childless root still surfaces as the only option.
+        const roots = active.filter((cluster) => cluster.parentClusterId === null)
+        const rootChildren = roots.length === 1 && roots[0] ? (childrenByParent.get(roots[0].id) ?? []) : []
+        walk(roots.length === 1 && rootChildren.length > 0 ? rootChildren : roots)
         return out
       }).pipe(withPostgres(postgresTaxonomyReadLayer, getPostgresClient(), orgId), withTracing),
     )
