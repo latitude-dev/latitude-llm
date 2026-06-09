@@ -39,6 +39,7 @@ describe("createRedisClient", () => {
         host: "localhost",
         port: 6379,
         db: 0,
+        keyPrefix: "latitude:",
         enableOfflineQueue: false,
         connectTimeout: 5000,
         commandTimeout: 5000,
@@ -72,6 +73,7 @@ describe("createRedisClient", () => {
         redisOptions: expect.objectContaining({
           host: "memorydb.example.com",
           port: 6379,
+          keyPrefix: "latitude:",
           connectTimeout: 5000,
           commandTimeout: 5000,
           maxRetriesPerRequest: null,

@@ -22,18 +22,7 @@ import { relativeTime, toTitle } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import {
-  Gamepad2,
-  Loader2,
-  LogOut,
-  type LucideIcon,
-  Microchip,
-  Monitor,
-  RectangleGoggles,
-  TabletSmartphone,
-  Tv,
-  Watch,
-} from "lucide-react"
+import { Loader2, LogOut, type LucideIcon, Monitor, TabletSmartphone, Tv } from "lucide-react"
 import { useEffect, useState } from "react"
 import {
   getNotificationPreferences,
@@ -126,20 +115,16 @@ const formatDeviceLine = (session: UserSessionDto): string => {
 }
 
 /**
- * UA-Parser device-type → lucide icon. Keys mirror the values
- * `UAParser().device.type` can return, plus our `"desktop"` fallback for the
- * undefined case. Anything we don't recognize falls back to the generic
+ * Bowser `platform.type` → lucide icon. Bowser only emits
+ * `desktop | mobile | tablet | tv`, with `"desktop"` as the fallback for
+ * the unset case. Anything we don't recognize falls back to the generic
  * `tablet-smartphone` so an unexpected value never breaks the row.
  */
 const DEVICE_ICONS: Readonly<Record<string, LucideIcon>> = {
   desktop: Monitor,
   mobile: TabletSmartphone,
   tablet: TabletSmartphone,
-  console: Gamepad2,
-  smarttv: Tv,
-  wearable: Watch,
-  xr: RectangleGoggles,
-  embedded: Microchip,
+  tv: Tv,
 }
 
 const deviceIconFor = (kind: string): LucideIcon => DEVICE_ICONS[kind] ?? TabletSmartphone

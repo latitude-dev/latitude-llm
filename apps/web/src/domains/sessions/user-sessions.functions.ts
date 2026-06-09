@@ -13,13 +13,13 @@
  *
  * The list is parsed server-side (User-Agent → browser/OS/device, IP →
  * country/city) so the page stays a thin client: the TanStack Start
- * compiler strips `ua-parser-js` + `geoip.ts` from the client bundle the
+ * compiler strips `bowser` + `geoip.ts` from the client bundle the
  * same way it already does for the admin user-details page.
  */
 import { UnauthorizedError } from "@domain/shared"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
-import { UAParser } from "ua-parser-js"
+import Bowser from "bowser"
 import { z } from "zod"
 import { getBetterAuth } from "../../server/clients.ts"
 import { type GeoIpInfo, lookupGeoIpBatch } from "../../server/geoip.ts"
@@ -38,8 +38,8 @@ export interface UserSessionDto {
   readonly browserName: string | null
   readonly osName: string | null
   /**
-   * `"desktop"` when the parser leaves device type unset (laptops /
-   * desktops), otherwise the parser's value (`"mobile"`, `"tablet"`, …).
+   * `"desktop"` when Bowser leaves `platform.type` unset (laptops /
+   * desktops), otherwise Bowser's value (`"mobile"`, `"tablet"`, `"tv"`).
    */
   readonly deviceKind: string
   readonly geo: GeoIpInfo | null
@@ -64,7 +64,7 @@ const asIso = (value: Date | string): string =>
   value instanceof Date ? value.toISOString() : new Date(value).toISOString()
 
 const toDto = (row: BetterAuthSessionRow, geo: GeoIpInfo | null, current: boolean): UserSessionDto => {
-  const parsed = row.userAgent ? UAParser(row.userAgent) : null
+  const parsed = row.userAgent ? Bowser.parse(row.userAgent) : null
   return {
     id: row.id,
     token: row.token,
@@ -72,7 +72,7 @@ const toDto = (row: BetterAuthSessionRow, geo: GeoIpInfo | null, current: boolea
     userAgent: row.userAgent ?? null,
     browserName: parsed?.browser.name ?? null,
     osName: parsed?.os.name ?? null,
-    deviceKind: parsed?.device.type ?? "desktop",
+    deviceKind: parsed?.platform.type ?? "desktop",
     geo,
     createdAt: asIso(row.createdAt),
     updatedAt: asIso(row.updatedAt),

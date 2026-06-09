@@ -15,8 +15,8 @@ import { recordSpanExceptionForDatadog, serializeError } from "@repo/observabili
 import { base64urlEncode } from "@repo/utils"
 import { Queue, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
-
 import { createBullMqRedisConnection } from "./connection.ts"
+import { BULLMQ_PREFIX } from "./constants.ts"
 import { type BullMqWorkerIncident, failedJobContextFromJob } from "./worker-incidents.ts"
 
 const tracer = trace.getTracer("bullmq")
@@ -160,7 +160,7 @@ export const createBullMqQueuePublisher = (
     const getQueue = (name: QueueName): Queue => {
       let queue = queues.get(name)
       if (!queue) {
-        queue = new Queue(name, { connection, prefix: "{bull}" })
+        queue = new Queue(name, { connection, prefix: BULLMQ_PREFIX })
         queues.set(name, queue)
       }
       return queue
@@ -314,7 +314,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
               },
               {
                 connection: createBullMqRedisConnection(config.redis),
-                prefix: "{bull}",
+                prefix: BULLMQ_PREFIX,
                 concurrency: concurrencyOverrides.get(queue) ?? DEFAULT_CONCURRENCY,
                 removeOnComplete: { count: 1000 },
                 removeOnFail: { count: 1000 },

@@ -475,8 +475,6 @@ jobs:
         run: pnpm turbo run build --filter "@app/*"
         env:
           NODE_ENV: production
-          VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}
-          VITE_LAT_WEB_URL: ${{ vars.VITE_LAT_WEB_URL }}
           VITE_LAT_TURNSTILE_SITE_KEY: ${{ vars.VITE_LAT_TURNSTILE_SITE_KEY }}
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
@@ -489,7 +487,7 @@ jobs:
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/public \
             --service web \
             --release-version "$RELEASE" \
-            --minified-path-prefix "${{ vars.VITE_LAT_WEB_URL }}"
+            --minified-path-prefix "${{ vars.DD_SOURCEMAP_URL_PREFIX }}"
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/server \
             --service web \
             --release-version "$RELEASE" \
@@ -850,8 +848,6 @@ jobs:
         run: pnpm turbo run build --filter "@app/*"
         env:
           NODE_ENV: production
-          VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}
-          VITE_LAT_WEB_URL: ${{ vars.VITE_LAT_WEB_URL }}
           VITE_LAT_TURNSTILE_SITE_KEY: ${{ vars.VITE_LAT_TURNSTILE_SITE_KEY }}
           VITE_LAT_POSTHOG_KEY: ${{ vars.VITE_LAT_POSTHOG_KEY }}
           VITE_LAT_POSTHOG_HOST: ${{ vars.VITE_LAT_POSTHOG_HOST }}
@@ -863,7 +859,7 @@ jobs:
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/public \
             --service web \
             --release-version "$RELEASE" \
-            --minified-path-prefix "${{ vars.VITE_LAT_WEB_URL }}"
+            --minified-path-prefix "${{ vars.DD_SOURCEMAP_URL_PREFIX }}"
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/server \
             --service web \
             --release-version "$RELEASE" \

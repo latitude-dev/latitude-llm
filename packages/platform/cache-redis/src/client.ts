@@ -1,5 +1,6 @@
 import { Cluster, Redis, type RedisOptions } from "ioredis"
 import type { RedisConnection } from "./connection.ts"
+import { REDIS_KEY_PREFIX } from "./constants.ts"
 
 type ReadyCapableRedisClient = Redis | Cluster
 
@@ -70,6 +71,11 @@ const passthroughDnsLookup = (
 export const createRedisClient = (connection: RedisConnection): Redis | Cluster => {
   const baseOptions = {
     ...buildRedisConnectionOptions(connection),
+    // Namespace every cache/lock/rate-limiter key under `latitude:` so Latitude
+    // can share a Redis instance without colliding. Set here (not in
+    // buildRedisConnectionOptions) so it never leaks into the BullMQ connection,
+    // which derives its own prefix from REDIS_KEY_PREFIX instead.
+    keyPrefix: REDIS_KEY_PREFIX,
     // Fail fast instead of buffering commands indefinitely when Redis is unavailable.
     enableOfflineQueue: false,
     connectTimeout: 5000,
@@ -92,6 +98,7 @@ export const createRedisClient = (connection: RedisConnection): Redis | Cluster 
       enableOfflineQueue: true,
       redisOptions: {
         ...buildRedisConnectionOptions(connection),
+        keyPrefix: REDIS_KEY_PREFIX,
         connectTimeout: 5000,
         commandTimeout: 5000,
         // Let cluster client handle retries via slot refresh mechanism
