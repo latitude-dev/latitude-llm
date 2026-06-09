@@ -36,6 +36,12 @@ export type AuthContext =
       readonly scopes: ReadonlyArray<string>
       /** Underlying access token's `accessTokenExpiresAt`. */
       readonly expiresAt: Date
+      /**
+       * Granting user's email, for telemetry enrichment only (`usr.email` span
+       * attribute). Optional — absent for tokens cached before the field
+       * existed or whose user row is missing.
+       */
+      readonly email?: string | undefined
     }
 
 /**
