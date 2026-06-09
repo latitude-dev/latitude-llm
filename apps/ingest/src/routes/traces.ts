@@ -48,11 +48,15 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     const body = await c.req.arrayBuffer()
     if (!body.byteLength) return c.json({}, 202)
 
+    const organizationId = c.get("organizationId")
+    const isSandbox = c.get("isSandbox")
+
     const rateLimit = await checkTraceIngestionRateLimit({
       redis: getRedisClient(),
-      organizationId: c.get("organizationId"),
+      organizationId,
       apiKeyId: c.get("apiKeyId"),
       payloadBytes: body.byteLength,
+      isSandbox,
     })
 
     if (!rateLimit.allowed) {
@@ -71,9 +75,8 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
       )
     }
 
-    const organization = OrganizationId(c.get("organizationId"))
+    const organization = OrganizationId(organizationId)
     const apiKeyId = c.get("apiKeyId")
-    const isSandbox = c.get("isSandbox")
     const defaultProjectSlug = c.get("defaultProjectSlug")
 
     const disk = getStorageDisk()

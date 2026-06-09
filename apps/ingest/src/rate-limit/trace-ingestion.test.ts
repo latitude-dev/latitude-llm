@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest"
-import { checkTraceIngestionRateLimit, type TraceIngestionRateLimitRedis } from "./trace-ingestion.ts"
+import {
+  checkTraceIngestionRateLimit,
+  enforceTraceIngestionRateLimit,
+  SANDBOX_TRACE_INGESTION_RATE_LIMIT,
+  type TraceIngestionRateLimitRedis,
+} from "./trace-ingestion.ts"
 
 type PipelineCommand =
   | { readonly type: "incr"; readonly key: string }
-  | { readonly type: "incrby"; readonly key: string; readonly increment: number }
+  | {
+      readonly type: "incrby"
+      readonly key: string
+      readonly increment: number
+    }
   | { readonly type: "ttl"; readonly key: string }
 
 class FakeRedisPipeline {
@@ -92,14 +101,13 @@ const createInput = (redis: TraceIngestionRateLimitRedis, payloadBytes: number) 
   organizationId: "org-1",
   apiKeyId: "key-1",
   payloadBytes,
-  config: testConfig,
 })
 
 describe("checkTraceIngestionRateLimit", () => {
   it("allows requests within the configured request and byte limits", async () => {
     const redis = new FakeRedis()
 
-    const result = await checkTraceIngestionRateLimit(createInput(redis, 40))
+    const result = await enforceTraceIngestionRateLimit(createInput(redis, 40), testConfig)
 
     expect(result).toEqual({ allowed: true })
   })
@@ -107,9 +115,9 @@ describe("checkTraceIngestionRateLimit", () => {
   it("blocks when the request count exceeds the configured limit", async () => {
     const redis = new FakeRedis()
 
-    await checkTraceIngestionRateLimit(createInput(redis, 10))
-    await checkTraceIngestionRateLimit(createInput(redis, 10))
-    const result = await checkTraceIngestionRateLimit(createInput(redis, 10))
+    await enforceTraceIngestionRateLimit(createInput(redis, 10), testConfig)
+    await enforceTraceIngestionRateLimit(createInput(redis, 10), testConfig)
+    const result = await enforceTraceIngestionRateLimit(createInput(redis, 10), testConfig)
 
     expect(result).toEqual({
       allowed: false,
@@ -121,8 +129,8 @@ describe("checkTraceIngestionRateLimit", () => {
   it("blocks when the total ingested bytes exceed the configured limit", async () => {
     const redis = new FakeRedis()
 
-    await checkTraceIngestionRateLimit(createInput(redis, 60))
-    const result = await checkTraceIngestionRateLimit(createInput(redis, 60))
+    await enforceTraceIngestionRateLimit(createInput(redis, 60), testConfig)
+    const result = await enforceTraceIngestionRateLimit(createInput(redis, 60), testConfig)
 
     expect(result).toEqual({
       allowed: false,
@@ -132,9 +140,33 @@ describe("checkTraceIngestionRateLimit", () => {
   })
 
   it("fails open when redis is unavailable", async () => {
-    const result = await checkTraceIngestionRateLimit(createInput(new ThrowingRedis(), 60))
+    const result = await enforceTraceIngestionRateLimit(createInput(new ThrowingRedis(), 60), testConfig)
 
     expect(result).toEqual({ allowed: true })
+  })
+
+  it("applies the flat sandbox ceiling when isSandbox is set", async () => {
+    const redis = new FakeRedis()
+    const sandboxInput = {
+      redis,
+      organizationId: "org-1",
+      apiKeyId: "key-1",
+      payloadBytes: 10,
+      isSandbox: true,
+    }
+
+    for (let i = 0; i < SANDBOX_TRACE_INGESTION_RATE_LIMIT.maxRequests; i++) {
+      expect(await checkTraceIngestionRateLimit(sandboxInput)).toEqual({
+        allowed: true,
+      })
+    }
+    const overLimit = await checkTraceIngestionRateLimit(sandboxInput)
+
+    expect(overLimit).toEqual({
+      allowed: false,
+      limitedBy: "requests",
+      retryAfterSeconds: SANDBOX_TRACE_INGESTION_RATE_LIMIT.windowSeconds,
+    })
   })
 
   it("rate-limits across projects within the same org+apiKey (no `projectId` in the key)", async () => {
@@ -143,10 +175,14 @@ describe("checkTraceIngestionRateLimit", () => {
     // share the same trace-ingestion allowance.
     const redis = new FakeRedis()
 
-    await checkTraceIngestionRateLimit(createInput(redis, 10))
-    await checkTraceIngestionRateLimit(createInput(redis, 10))
-    const third = await checkTraceIngestionRateLimit(createInput(redis, 10))
+    await enforceTraceIngestionRateLimit(createInput(redis, 10), testConfig)
+    await enforceTraceIngestionRateLimit(createInput(redis, 10), testConfig)
+    const third = await enforceTraceIngestionRateLimit(createInput(redis, 10), testConfig)
 
-    expect(third).toEqual({ allowed: false, limitedBy: "requests", retryAfterSeconds: 30 })
+    expect(third).toEqual({
+      allowed: false,
+      limitedBy: "requests",
+      retryAfterSeconds: 30,
+    })
   })
 })
