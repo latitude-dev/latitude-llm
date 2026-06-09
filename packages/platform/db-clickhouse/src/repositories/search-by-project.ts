@@ -289,6 +289,7 @@ const TRACE_ROLLUP_BODY = `
     argMaxIfMerge(t.user_id)                       AS user_id,
     argMaxIfMerge(t.simulation_id)                 AS simulation_id,
     groupUniqArrayArray(t.tags)                    AS tags,
+    maxMap(t.metadata)                             AS metadata,
     groupUniqArrayIfMerge(t.models)                AS models,
     groupUniqArrayIfMerge(t.providers)             AS providers,
     groupUniqArrayIfMerge(t.service_names)         AS service_names,

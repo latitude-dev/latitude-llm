@@ -46,6 +46,7 @@ interface SpanOverrides {
   readonly tokensInput?: number
   readonly tokensOutput?: number
   readonly costTotalMicrocents?: number
+  readonly metadata?: Record<string, string>
   readonly inputMessages?: string
   readonly outputMessages?: string
   readonly systemInstructions?: string
@@ -75,7 +76,7 @@ const makeSpanRow = (overrides: SpanOverrides): SpanRow => {
     status_message: "",
     error_type: "",
     tags: [],
-    metadata: {},
+    metadata: overrides.metadata ?? {},
     operation: "",
     provider: overrides.provider ?? "",
     model: overrides.model ?? "",
@@ -1229,6 +1230,58 @@ describe("SessionRepository", () => {
       expect(match.matchingTraceCount).toBe(1)
       expect(match.matchingTraceIds).toEqual([traces[2]])
       expect(match.bestTraceId).toBe(traces[2])
+    })
+
+    it("metadata filters are applied per-trace inside trace_rollup", async () => {
+      const start = new Date(Date.UTC(2026, 0, 3, 11, 0, 0))
+      const sessionId = "metadata-having-session"
+      const traces = ["m1", "m2", "m3"].map(padTrace)
+      const filters = { "metadata.environment": [{ op: "eq" as const, value: "production" }] }
+
+      await insertSpans(
+        traces.map((t, i) =>
+          makeSpanRow({
+            traceId: t,
+            spanId: padSpan(`m${i + 1}`),
+            sessionId,
+            startTime: new Date(start.getTime() + i * 1_000),
+            metadata: { environment: i === 1 ? "production" : "staging" },
+          }),
+        ),
+      )
+      await insertSearchDocs(
+        traces.map((t, i) => ({
+          traceId: t,
+          text: `metadata needle trace ${i}`,
+          startTime: start,
+          contentHashSuffix: `m${i}`,
+        })),
+      )
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: '"metadata needle"', limit: 10, filters },
+        }),
+      )
+
+      expect(page.items).toHaveLength(1)
+      const match = nonNull(page.searchMatches?.[sessionId])
+      expect(match.matchingTraceCount).toBe(1)
+      expect(match.matchingTraceIds).toEqual([traces[1]])
+      expect(match.bestTraceId).toBe(traces[1])
+
+      const count = await runCh(
+        repo.countByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          searchQuery: '"metadata needle"',
+          filters,
+        }),
+      )
+      expect(count.totalCount).toBe(1)
+      expect(count.matchingTraceCount).toBe(1)
     })
 
     // 4) Cursor stability: paginate ten matching sessions across one project.
