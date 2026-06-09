@@ -12,11 +12,10 @@ import {
 import { Effect, Option } from "effect"
 
 /**
- * Session semantic search scans conversation-intelligence moments instead of
- * trace-search chunks. The cap bounds the cosine scan before the read path
- * fetches matching sessions.
+ * ClickHouse vector similarity indexes only apply to ORDER BY distance LIMIT N
+ * queries within `max_limit_for_vector_search_queries`.
  */
-const SESSION_SEMANTIC_MOMENT_SCAN_LIMIT = 30_000
+const SESSION_SEMANTIC_MOMENT_SCAN_LIMIT = 1_000
 
 function escapeLikePattern(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
@@ -100,24 +99,29 @@ function buildSessionSemanticSubquery(
                 argMax(last_message_index, score) AS matched_last_message_index
               FROM (
                 SELECT
+                  organization_id,
+                  project_id,
                   session_id,
+                  analysis_hash,
                   (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS score,
                   first_message_index,
                   last_message_index
                 FROM session_semantic_moments FINAL
-                WHERE organization_id = {organizationId:String}
-                  AND project_id = {projectId:String}
+                WHERE cityHash64(organization_id) = cityHash64({organizationId:String})
+                  AND cityHash64(project_id) = cityHash64({projectId:String})
                   ${sessionFilter}
-                  AND (session_id, analysis_hash) IN (
-                    SELECT session_id, argMax(analysis_hash, indexed_at)
-                    FROM session_analyses
-                    WHERE organization_id = {organizationId:String}
-                      AND project_id = {projectId:String}
-                    GROUP BY session_id
-                  )
-                ORDER BY score DESC
+                ORDER BY cosineDistance(embedding, {queryEmbedding:Array(Float32)}) ASC
                 LIMIT {semanticMomentScanLimit:UInt32}
               )
+              WHERE organization_id = {organizationId:String}
+                AND project_id = {projectId:String}
+                AND (session_id, analysis_hash) IN (
+                  SELECT session_id, argMax(analysis_hash, indexed_at)
+                  FROM session_analyses
+                  WHERE organization_id = {organizationId:String}
+                    AND project_id = {projectId:String}
+                  GROUP BY session_id
+                )
               GROUP BY session_id`,
     params: {
       queryEmbedding: [...queryEmbedding],

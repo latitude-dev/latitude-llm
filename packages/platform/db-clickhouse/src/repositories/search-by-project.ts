@@ -289,6 +289,15 @@ const fetchSearchCandidates = ({
             candidateCap: MAX_SEARCH_CANDIDATES,
             ...plan.params,
           },
+          ...(plan.ranked
+            ? {
+                clickhouse_settings: {
+                  max_limit_for_vector_search_queries: 1000,
+                  vector_search_filter_strategy: "postfilter" as const,
+                  vector_search_index_fetch_multiplier: 100,
+                },
+              }
+            : {}),
           format: "JSONEachRow",
         })
         return result.json<SearchCandidate>()
