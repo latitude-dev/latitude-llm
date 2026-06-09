@@ -216,11 +216,31 @@ export const registerSsoProvider = createServerFn({ method: "POST" })
       const provider = await findOrgProvider(organizationId)
       if (!provider) throw new Error("SSO provider was registered but could not be read back")
 
+      if (domainVerificationToken === undefined) {
+        console.warn(
+          "[registerSsoProvider] registerSSOProvider did not return a domainVerificationToken; " +
+            "falling back to requestDomainVerification for provider %s",
+          provider.providerId,
+        )
+        try {
+          const fallback = await auth.api.requestDomainVerification({
+            body: { providerId: provider.providerId },
+            headers,
+          })
+          domainVerificationToken = fallback.domainVerificationToken
+        } catch (fallbackError) {
+          throw new Error(
+            "SSO provider was registered but the domain verification token could not be retrieved. " +
+              "Please refresh the page to obtain your DNS TXT record.",
+          )
+        }
+      }
+
       return {
         provider: toDto(provider),
         verificationRecord: {
           host: `_${DOMAIN_VERIFICATION_TOKEN_PREFIX}-${provider.providerId}.${provider.domain}`,
-          value: domainVerificationToken ?? "",
+          value: domainVerificationToken,
         },
       }
     },
