@@ -126,6 +126,7 @@ export function IssueDetailBody({
   onOverlayActiveChange,
   variant = "drawer",
   prepend,
+  beforeTraces,
 }: {
   readonly projectId: string
   readonly issueId: string
@@ -138,6 +139,8 @@ export function IssueDetailBody({
    */
   readonly variant?: "drawer" | "page"
   readonly prepend?: ReactNode
+  /** Rendered in the scroll area just before the Traces section (e.g. Examples). */
+  readonly beforeTraces?: ReactNode
 }) {
   const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
   const {
@@ -343,6 +346,8 @@ export function IssueDetailBody({
               isIssueLoading={isLoading}
             />
           </DetailSection>
+
+          {beforeTraces}
 
           <DetailSection
             icon={<Icon icon={TextAlignStartIcon} size="sm" />}

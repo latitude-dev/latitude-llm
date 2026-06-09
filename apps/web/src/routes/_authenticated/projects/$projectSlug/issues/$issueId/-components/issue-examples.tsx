@@ -1,26 +1,34 @@
 import {
-  Badge,
   Button,
   Conversation,
   DetailSection,
   type FirstMatchHint,
   type HighlightRange,
   Icon,
+  Sheet,
   Skeleton,
   Text,
   Tooltip,
   useMountEffect,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ChevronLeftIcon, ChevronRightIcon, MessageSquareTextIcon } from "lucide-react"
-import { type RefObject, useMemo, useRef } from "react"
+import { ChevronLeftIcon, ChevronRightIcon, ListTreeIcon, Maximize2Icon, MessageSquareTextIcon } from "lucide-react"
+import { type RefObject, useMemo, useRef, useState } from "react"
 import { useIssueOccurrences } from "../../../../../../../domains/issues/issues.collection.ts"
 import type { IssueOccurrenceRecord } from "../../../../../../../domains/issues/issues.functions.ts"
 import { useTraceDetail } from "../../../../../../../domains/traces/traces.collection.ts"
 import { useParamState } from "../../../../../../../lib/hooks/useParamState.ts"
+import { TraceDetailDrawer } from "../../../-components/trace-detail-drawer.tsx"
 
 const SCROLL_OBSERVER_TIMEOUT_MS = 2000
 const FUZZY_OFFSET_WINDOW = 10
+
+// Corner label for the framed message region — mirrors the semantic-search
+// "Related to your search" treatment, but for issue occurrences.
+const REGION_LABEL = {
+  label: "Where this issue occurs",
+  tooltip: "An annotation flagged this message as an occurrence of this issue.",
+} as const
 
 function centerVertically(container: HTMLElement, target: Element) {
   const containerRect = container.getBoundingClientRect()
@@ -103,21 +111,24 @@ function ExampleConversation({
   const { data: traceDetail, isLoading } = useTraceDetail({ projectId, traceId: occurrence.traceId })
 
   const { anchor } = occurrence
-  const hasSubstring = anchor.partIndex !== null && anchor.startOffset !== null && anchor.endOffset !== null
 
+  // Frame the flagged message (region highlight, like semantic search) and,
+  // when the annotation pinpointed a substring, also paint that exact text.
   const highlightRanges = useMemo<readonly HighlightRange[]>(() => {
-    if (!hasSubstring || anchor.partIndex === null || anchor.startOffset === null || anchor.endOffset === null)
-      return []
-    return [
-      {
+    const ranges: HighlightRange[] = [
+      { messageIndex: anchor.messageIndex, partIndex: 0, startOffset: 0, endOffset: 0, type: "search-semantic-region" },
+    ]
+    if (anchor.partIndex !== null && anchor.startOffset !== null && anchor.endOffset !== null) {
+      ranges.push({
         messageIndex: anchor.messageIndex,
         partIndex: anchor.partIndex,
         startOffset: anchor.startOffset,
         endOffset: anchor.endOffset,
         type: "annotation",
-      },
-    ]
-  }, [anchor, hasSubstring])
+      })
+    }
+    return ranges
+  }, [anchor])
 
   const firstMatchHint = useMemo<FirstMatchHint | null>(
     () => (anchor.partIndex !== null ? { messageIndex: anchor.messageIndex, partIndex: anchor.partIndex } : null),
@@ -154,13 +165,7 @@ function ExampleConversation({
         scrollContainerRef={scrollRef}
         highlightRanges={highlightRanges}
         firstMatchHint={firstMatchHint}
-        messageTrailingSlot={(messageIndex) =>
-          messageIndex === anchor.messageIndex ? (
-            <Badge variant="yellow" size="small" shape="rounded">
-              Flagged here
-            </Badge>
-          ) : null
-        }
+        regionLabel={REGION_LABEL}
       />
     </div>
   )
@@ -168,14 +173,20 @@ function ExampleConversation({
 
 /**
  * Examples carousel: cycles through an issue's pinpointed occurrences and, for
- * each, renders its conversation scrolled to and highlighting the exact flagged
- * message/substring, with the annotator feedback shown above. The current
- * example is reflected in the `?example=<scoreId>` param for sharable links.
+ * each, renders its conversation scrolled to and framing the exact flagged
+ * message/substring (same highlight treatment as search), with the annotator
+ * feedback above. "Expand" / "See trace" open the full trace drawer (on the
+ * Conversation / Trace tab respectively), like clicking a row in Traces. The
+ * current example is reflected in `?example=<scoreId>` for sharable links.
  */
 export function IssueExamples({ projectId, issueId }: { readonly projectId: string; readonly issueId: string }) {
   const { data, isLoading } = useIssueOccurrences({ projectId, issueId })
   const occurrences = useMemo(() => data?.items ?? [], [data])
   const [exampleId, setExampleId] = useParamState("example", "")
+  const [traceSheet, setTraceSheet] = useState<{
+    readonly traceId: string
+    readonly tab: "conversation" | "trace"
+  } | null>(null)
 
   const currentIndex = useMemo(() => {
     const found = occurrences.findIndex((occurrence) => occurrence.scoreId === exampleId)
@@ -222,7 +233,24 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
             <Text.H6 color="foregroundMuted">
               Example {currentIndex + 1} of {occurrences.length}
             </Text.H6>
-            <div className="flex flex-row items-center gap-1">
+            <div className="flex flex-row items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTraceSheet({ traceId: current.traceId, tab: "trace" })}
+              >
+                <Icon icon={ListTreeIcon} size="sm" />
+                See trace
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTraceSheet({ traceId: current.traceId, tab: "conversation" })}
+              >
+                <Icon icon={Maximize2Icon} size="sm" />
+                Expand
+              </Button>
+              <div className="mx-1 h-5 w-px bg-border" />
               <Tooltip
                 asChild
                 side="bottom"
@@ -270,6 +298,23 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
           <ExampleConversation key={current.scoreId} projectId={projectId} occurrence={current} />
         </div>
       )}
+
+      <Sheet open={traceSheet !== null} onClose={() => setTraceSheet(null)} closeAriaLabel="Close trace panel">
+        {traceSheet ? (
+          <TraceDetailDrawer
+            key={`${traceSheet.traceId}-${traceSheet.tab}`}
+            projectId={projectId}
+            traceId={traceSheet.traceId}
+            onClose={() => setTraceSheet(null)}
+            canNavigateNext={false}
+            canNavigatePrev={false}
+            urlSyncedTabs={false}
+            initialTab={traceSheet.tab}
+            drawerStoreKey="issue-trace-detail-drawer-width"
+            closeLabel="Back to issue"
+          />
+        ) : null}
+      </Sheet>
     </DetailSection>
   )
 }
