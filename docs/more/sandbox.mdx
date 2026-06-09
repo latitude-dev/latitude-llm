@@ -1,0 +1,93 @@
+---
+title: Sandbox
+description: An isolated, free environment to debug your agents with Latitude's traces UI from your dev and staging environments — without polluting production.
+---
+
+# Sandbox
+
+A **sandbox** is an isolated environment where you can send and inspect traces while you build. Point your agent at a sandbox from your **dev or staging** environment and watch exactly what it did in Latitude's traces UI — without your development traffic ever touching your production dashboards, billing, or alerts.
+
+A sandbox is deliberately **minimal and focused on trace-level debugging**: it ingests and shows your traces, and nothing more. It mirrors your organization's project layout but holds completely separate data — your development traces.
+
+<Frame>
+  <img src="/images/sandbox/sandbox-layout.png" alt="Sandbox traces view with the blue sandbox banner across the top" />
+</Frame>
+
+## Switching to a sandbox
+
+Use the **Sandbox** button in the sidebar to switch into a sandbox or create one. While you're in a sandbox, a blue banner across the top makes it unmistakable which environment you're in, and **Switch to live** takes you back.
+
+<Frame>
+  <img src="/images/sandbox/sandbox-sidebar-button.png" alt="Sandbox button in the Latitude sidebar" />
+</Frame>
+
+## What's available in a sandbox
+
+A sandbox is intentionally light. It gives you the full **trace-level debugging** experience — the Traces and Sessions list, grouping, sorting, filters, and per-trace detail (duration, tokens, spans, model, status).
+
+The production monitoring layer is **not** available in a sandbox. The following features do **not** run on sandbox traces, by design:
+
+- Semantic and saved searches
+- Monitors and alerts
+- Issue detection and clustering
+- Evaluations, annotations, and flaggers
+- Outbound notifications (email, Slack, webhooks) — a sandbox never reaches an external channel, so your experiments can't page teammates or hit customer alert channels
+
+This keeps a sandbox free and fast, and means none of your development traffic triggers LLM work or costs.
+
+## Using the same project identifiers as production
+
+You instrument your code with the **same project names everywhere** — the API key decides where the traces land. Inside a sandbox you add the production projects you want to debug (which links them by stable id), or create sandbox-only projects for prototyping.
+
+The only thing you change when developing against a sandbox is the **API key**. Sandbox keys are created from inside the sandbox and are prefixed **`lat_sandbox_`**, so they're easy to spot in code, logs, and review:
+
+```bash
+# Production
+LATITUDE_API_KEY=lat_...
+
+# Sandbox — same project names, different key
+LATITUDE_API_KEY=lat_sandbox_...
+```
+
+A sandbox key can only ever write to its sandbox, and a production key can only ever write to production — the key is the boundary. Sending a trace to a project the sandbox doesn't have is **rejected** (just as production rejects unknown projects), so there's never a silently created typo project.
+
+## Differences from production
+
+<CardGroup cols={2}>
+  <Card title="Rate limit" icon="gauge">
+    Sandbox keys have their own, lower ingest rate limit (**60 requests/min**, **64 MB/min**). Pointing real production traffic at a sandbox key fails loudly and immediately with a `429` — a clear signal to fix the key.
+  </Card>
+  <Card title="Retention" icon="clock">
+    Sandbox traces are short-lived — spans are retained for **7 days** and then age out. A sandbox is for active debugging, not long-term storage.
+  </Card>
+  <Card title="Billing" icon="credit-card">
+    Sandbox usage is **completely free**. Sandbox traces are never metered or charged and never touch your credit balance. Abuse is bounded by the rate limit and a per-period span quota instead.
+  </Card>
+  <Card title="Sandboxes per plan" icon="layers">
+    The number of **active** sandboxes you can have depends on your plan (see below).
+  </Card>
+</CardGroup>
+
+### Sandboxes per plan
+
+| Plan | Active sandboxes | Span quota per period |
+| --- | --- | --- |
+| Free | 1 | 100,000 spans |
+| Pro | 15 | 1,000,000 spans |
+| Enterprise | Unlimited | Unlimited |
+
+Only **active** sandboxes count toward the cap. A sandbox that goes to sleep (see below) frees a slot, so you're never permanently stuck — you can reactivate an old one or create a fresh one whenever you're within the cap.
+
+## Sleep and reactivation
+
+A sandbox is put to **sleep** (archived) after **7 days of inactivity**, or whenever you archive it manually. Sleeping sandboxes hold no live capacity and don't count toward your plan's active cap.
+
+Sending traces to a sleeping sandbox is **rejected** with a `403` (mirroring how an out-of-credits production org behaves) — nothing is silently accepted, and the sandbox isn't silently revived. **Reactivate** it from the sandbox settings to resume ingestion. If exceeding the active cap would block reactivation, archive or delete another sandbox first.
+
+**Deleting** a sandbox is the only destructive action and is how you permanently reclaim a slot and its storage.
+
+## Related
+
+- [Environments](../observability/features/environments): Separate dev, staging, and production traces with tags or metadata
+- [Start tracing](../telemetry/start-tracing): Instrument your agent and send traces to Latitude
+- [Traces](../observability/traces): The traces UI you use inside a sandbox
