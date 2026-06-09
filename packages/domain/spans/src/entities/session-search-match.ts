@@ -10,26 +10,14 @@
  * base entities.
  *
  * Fields:
- *  - `bestScore` — `max(relevance_score)` over the session's matching
- *    traces. The aggregation choice (max vs avg vs top-k) is documented in
- *    `specs/session-problems/2-session-level-search.md` §4.2; the SQL in
- *    `search-by-project.ts` hardcodes `max(...)`.
- *  - `bestTraceId` — trace id at `argMax(trace_id, relevance_score)`; the
- *    deep-link target for "open the most-relevant trace in this session".
- *  - `matchingTraceCount` — number of traces in the session that matched
- *    the query. Surfaced separately from the score so the UI can show
- *    "5 traces match" without baking the count into the ranking.
- *  - `matchingTraceIds` — every matching trace id, sorted by per-trace
- *    score descending.
- *  - `matchingTraceScores` — parallel-aligned scores for
- *    `matchingTraceIds[i]`. Two arrays instead of an array of pairs to
- *    keep the ClickHouse wire payload small and to match the
- *    `arrayMap(p -> p.N, ...)` shape produced by the repository query.
+ *  - `bestScore` — the score assigned to this matching session.
+ *  - `matchedFirstMessageIndex` / `matchedLastMessageIndex` — optional
+ *    session-conversation message range for the best semantic moment. Lexical
+ *    matches do not need a stored range because the drawer can recompute
+ *    literal/token highlights from the selected session's conversation.
  */
 export interface SessionSearchMatch {
   readonly bestScore: number
-  readonly bestTraceId: string
-  readonly matchingTraceCount: number
-  readonly matchingTraceIds: readonly string[]
-  readonly matchingTraceScores: readonly number[]
+  readonly matchedFirstMessageIndex?: number | undefined
+  readonly matchedLastMessageIndex?: number | undefined
 }

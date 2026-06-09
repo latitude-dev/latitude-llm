@@ -14,7 +14,7 @@ import { Effect, Option } from "effect"
 /**
  * Session semantic search scans conversation-intelligence moments instead of
  * trace-search chunks. The cap bounds the cosine scan before the read path
- * rolls matching moment traces up to sessions.
+ * fetches matching sessions.
  */
 const SESSION_SEMANTIC_MOMENT_SCAN_LIMIT = 30_000
 
@@ -33,9 +33,12 @@ function buildSessionLexicalSubquery(parsed: ParsedSearchQuery): {
 
   if (matchNothing) {
     return {
-      subquery: `SELECT CAST(trace_id AS String) AS trace_id
+      subquery: `SELECT
+                   session_id,
+                   0.0 AS relevance_score,
+                   CAST(NULL AS Nullable(UInt32)) AS matched_first_message_index,
+                   CAST(NULL AS Nullable(UInt32)) AS matched_last_message_index
                  FROM session_search_documents
-                 ARRAY JOIN trace_ids AS trace_id
                  WHERE organization_id = {organizationId:String}
                    AND project_id = {projectId:String}
                    AND 0`,
@@ -63,9 +66,12 @@ function buildSessionLexicalSubquery(parsed: ParsedSearchQuery): {
   const phraseClause = predicates.length > 0 ? `AND ${predicates.join(" AND ")}` : ""
 
   return {
-    subquery: `SELECT CAST(trace_id AS String) AS trace_id
+    subquery: `SELECT
+                 session_id,
+                 0.0 AS relevance_score,
+                 CAST(NULL AS Nullable(UInt32)) AS matched_first_message_index,
+                 CAST(NULL AS Nullable(UInt32)) AS matched_last_message_index
                FROM session_search_documents
-               ARRAY JOIN trace_ids AS trace_id
                WHERE organization_id = {organizationId:String}
                  AND project_id = {projectId:String}
                  ${phraseClause}`,
@@ -79,12 +85,16 @@ function buildSessionSemanticSubquery(queryEmbedding: readonly number[]): {
 } {
   return {
     subquery: `SELECT
-                trace_id,
-                max(semantic_score) AS semantic_score
+                session_id,
+                max(score) AS relevance_score,
+                argMax(first_message_index, score) AS matched_first_message_index,
+                argMax(last_message_index, score) AS matched_last_message_index
               FROM (
                 SELECT
-                  CAST(trace_id AS String) AS trace_id,
-                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+                  session_id,
+                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS score,
+                  first_message_index,
+                  last_message_index
                 FROM session_semantic_moments FINAL
                 WHERE organization_id = {organizationId:String}
                   AND project_id = {projectId:String}
@@ -95,10 +105,10 @@ function buildSessionSemanticSubquery(queryEmbedding: readonly number[]): {
                       AND project_id = {projectId:String}
                     GROUP BY session_id
                   )
-                ORDER BY semantic_score DESC
+                ORDER BY score DESC
                 LIMIT {semanticMomentScanLimit:UInt32}
               )
-              GROUP BY trace_id`,
+              GROUP BY session_id`,
     params: {
       queryEmbedding: [...queryEmbedding],
       semanticMomentScanLimit: SESSION_SEMANTIC_MOMENT_SCAN_LIMIT,
@@ -124,7 +134,7 @@ function buildSessionSearchPlan(
     const lex = buildSessionLexicalSubquery(parsed)
     return {
       ranked: false,
-      subquery: `SELECT trace_id, 0.0 AS relevance_score FROM (${lex.subquery})`,
+      subquery: lex.subquery,
       params: lex.params,
     }
   }
@@ -133,9 +143,12 @@ function buildSessionSearchPlan(
     if (!hasEmbedding) {
       return {
         ranked: true,
-        subquery: `SELECT CAST(trace_id AS String) AS trace_id, 0.0 AS relevance_score
+        subquery: `SELECT
+                     session_id,
+                     0.0 AS relevance_score,
+                     CAST(NULL AS Nullable(UInt32)) AS matched_first_message_index,
+                     CAST(NULL AS Nullable(UInt32)) AS matched_last_message_index
                    FROM session_search_documents
-                   ARRAY JOIN trace_ids AS trace_id
                    WHERE organization_id = {organizationId:String}
                      AND project_id = {projectId:String}
                      AND 0`,
@@ -145,9 +158,13 @@ function buildSessionSearchPlan(
     const sem = buildSessionSemanticSubquery(queryEmbedding)
     return {
       ranked: true,
-      subquery: `SELECT trace_id, semantic_score AS relevance_score
+      subquery: `SELECT
+                   session_id,
+                   relevance_score,
+                   matched_first_message_index,
+                   matched_last_message_index
                  FROM (${sem.subquery})
-                 WHERE semantic_score >= {minRelevanceScore:Float64}`,
+                 WHERE relevance_score >= {minRelevanceScore:Float64}`,
       params: {
         ...sem.params,
         minRelevanceScore: TRACE_SEARCH_MIN_RELEVANCE_SCORE,
@@ -159,7 +176,7 @@ function buildSessionSearchPlan(
   if (!hasEmbedding) {
     return {
       ranked: false,
-      subquery: `SELECT trace_id, 0.0 AS relevance_score FROM (${lex.subquery})`,
+      subquery: lex.subquery,
       params: lex.params,
     }
   }
@@ -167,12 +184,14 @@ function buildSessionSearchPlan(
   const sem = buildSessionSemanticSubquery(queryEmbedding)
   return {
     ranked: true,
-    subquery: `SELECT lex.trace_id AS trace_id,
-                      max(sem.semantic_score) AS relevance_score
+    subquery: `SELECT lex.session_id AS session_id,
+                      max(coalesce(sem.relevance_score, 0.0)) AS relevance_score,
+                      argMax(sem.matched_first_message_index, coalesce(sem.relevance_score, 0.0)) AS matched_first_message_index,
+                      argMax(sem.matched_last_message_index, coalesce(sem.relevance_score, 0.0)) AS matched_last_message_index
                FROM (${lex.subquery}) AS lex
                LEFT JOIN (${sem.subquery}) AS sem
-                 ON lex.trace_id = sem.trace_id
-               GROUP BY lex.trace_id`,
+                 ON lex.session_id = sem.session_id
+               GROUP BY lex.session_id`,
     params: { ...lex.params, ...sem.params },
   }
 }

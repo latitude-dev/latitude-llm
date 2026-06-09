@@ -1,5 +1,6 @@
 import type { MomentKind } from "@domain/conversation-intelligence"
 import type { FilterSet } from "@domain/shared"
+import type { SessionSearchMatch } from "@domain/spans"
 import { Button, DetailDrawer, Icon, Skeleton, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronLeftIcon } from "lucide-react"
@@ -25,6 +26,7 @@ export function SessionDetailDrawer({
   sessionId,
   onClose,
   searchQuery,
+  searchMatch,
   filters,
   onFiltersChange,
   focusMomentKind,
@@ -35,6 +37,7 @@ export function SessionDetailDrawer({
   readonly sessionId: string
   readonly onClose: () => void
   readonly searchQuery?: string
+  readonly searchMatch?: SessionSearchMatch | undefined
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
   /** Lands on the Conversation tab scrolled to the first moment carrying this label kind. */
@@ -187,6 +190,7 @@ export function SessionDetailDrawer({
               onOpenInConversation={focusAnnotationInConversation}
               focusMomentKind={focusMomentKind}
               focusMomentId={focusMomentId}
+              searchMatch={searchMatch}
               {...(searchQuery ? { searchQuery } : {})}
               {...(filters ? { filters } : {})}
               {...(onFiltersChange ? { onFiltersChange } : {})}

@@ -43,7 +43,7 @@ import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
-import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearchQuery } from "./search-by-project.ts"
+import { countSessionsBySearchQuery, listSessionsBySearchQuery } from "./search-by-project.ts"
 import { isActiveSearch } from "./search-plan.ts"
 
 const LIST_SELECT = `
@@ -309,6 +309,7 @@ const toDomainSessionDetail = (row: SessionDetailRow): SessionDetail => ({
   inputMessages: parseMessages(row.input_messages),
   lastInputMessages: parseMessages(row.last_input_messages),
   outputMessages: parseMessages(row.output_messages),
+  allMessages: [...parseMessages(row.last_input_messages), ...parseMessages(row.output_messages)],
 })
 
 interface SortColumn {
@@ -486,36 +487,6 @@ const DEFAULT_SORT: SortColumn = SORT_COLUMNS.lastActivity as SortColumn
 export const SessionRepositoryLive = Layer.effect(
   SessionRepository,
   Effect.gen(function* () {
-    /**
-     * Fetch full `Session` rows for the matched ids returned by the
-     * search rollup. Closure captures `LIST_SELECT` + `toDomainSession`,
-     * which is why the search module takes this as a callback instead of
-     * importing them directly (would otherwise be a circular import).
-     */
-    const fetchFullSessionsByIds =
-      (organizationId: string, projectId: string): FetchFullSessions =>
-      (sessionIds) =>
-        Effect.gen(function* () {
-          if (sessionIds.length === 0) return new Map<string, Session>()
-          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-          const rows = yield* chSqlClient
-            .query(async (client) => {
-              const result = await client.query({
-                query: `SELECT ${LIST_SELECT}
-                        FROM sessions
-                        WHERE organization_id = {organizationId:String}
-                          AND project_id = {projectId:String}
-                          AND session_id IN ({sessionIds:Array(String)})
-                        GROUP BY organization_id, project_id, session_id`,
-                query_params: { organizationId, projectId, sessionIds: [...sessionIds] },
-                format: "JSONEachRow",
-              })
-              return result.json<SessionListRow>()
-            })
-            .pipe(Effect.mapError((error) => toRepositoryError(error, "listByProjectId")))
-          return new Map(rows.map((r) => [normalizeCHString(r.session_id), toDomainSession(r)] as const))
-        })
-
     const listByProjectId: SessionRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) =>
       Effect.gen(function* () {
         const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -536,7 +507,6 @@ export const SessionRepositoryLive = Layer.effect(
             limit,
             sortBy: options.sortBy,
             sortDirection: options.sortDirection,
-            fetchFullSessions: fetchFullSessionsByIds(organizationId as string, projectId as string),
           })
         }
 

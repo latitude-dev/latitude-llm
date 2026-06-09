@@ -136,24 +136,3 @@ export const TRACE_SEARCH_EMBEDDING_DIMENSIONS = 2048
  * Re-tune against production if the noise / signal distribution shifts.
  */
 export const TRACE_SEARCH_MIN_RELEVANCE_SCORE = 0.3
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Session Search Constants
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Per-session cap on the `matching_trace_ids` / `matching_trace_scores`
- * arrays returned by the session-search rollup. The CTE-side `groupArray`
- * is bounded only by the upstream `SEMANTIC_SCAN_LIMIT = 30_000` candidate
- * set — a pathological single-session project could otherwise materialize
- * a 30k-element tuple array per row (≈ 1.2 MB × 2 arrays per row from the
- * parallel id/score split). The UI only renders a handful of matching
- * turns per session card, and `best_trace_id` + `matching_trace_count`
- * carry the rest of the signal, so capping at 50 keeps the worst case
- * bounded without changing user-visible behavior.
- *
- * Note: `matching_trace_count` continues to reflect the **true** count of
- * matching traces per session — the cap only limits the materialized
- * id/score arrays.
- */
-export const SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW = 50

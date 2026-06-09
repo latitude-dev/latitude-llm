@@ -1128,9 +1128,9 @@ describe("SessionRepository", () => {
     }
 
     // 1) Lexical-only: phrase match across two sessions with two traces each,
-    //    no embeddings — every trace scores 0.0. They must still appear,
-    //    each session reporting matching_trace_count = 2 (spec §6.4).
-    it("lexical-only: sessions with all-zero per-trace scores still surface and count", async () => {
+    //    no embeddings — each matched session scores 0.0 and carries no
+    //    semantic range metadata.
+    it("lexical-only: sessions with all-zero scores still surface", async () => {
       const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
       const sessionA = "lex-session-a"
       const sessionB = "lex-session-b"
@@ -1184,15 +1184,10 @@ describe("SessionRepository", () => {
       expect(matches[sessionB]).toBeDefined()
       expect(matches[sessionA]?.bestScore).toBe(0)
       expect(matches[sessionB]?.bestScore).toBe(0)
-      expect(matches[sessionA]?.matchingTraceCount).toBe(2)
-      expect(matches[sessionB]?.matchingTraceCount).toBe(2)
-      expect(matches[sessionA]?.matchingTraceIds).toHaveLength(2)
-      expect(matches[sessionA]?.matchingTraceScores).toHaveLength(2)
-      expect([...nonNull(matches[sessionA]).matchingTraceIds].sort()).toEqual([traceA1, traceA2].sort())
-      expect([...nonNull(matches[sessionB]).matchingTraceIds].sort()).toEqual([traceB1, traceB2].sort())
-      // All zero-score lexical matches: scores parallel-aligned and all 0.
-      expect(matches[sessionA]?.matchingTraceScores.every((s) => s === 0)).toBe(true)
-      expect(matches[sessionB]?.matchingTraceScores.every((s) => s === 0)).toBe(true)
+      expect(matches[sessionA]?.matchedFirstMessageIndex).toBeUndefined()
+      expect(matches[sessionA]?.matchedLastMessageIndex).toBeUndefined()
+      expect(matches[sessionB]?.matchedFirstMessageIndex).toBeUndefined()
+      expect(matches[sessionB]?.matchedLastMessageIndex).toBeUndefined()
     })
 
     it("lexical-only: token phrases can match across traces in a session document", async () => {
@@ -1239,15 +1234,14 @@ describe("SessionRepository", () => {
 
       expect(page.items.map((session) => session.sessionId)).toEqual([matchingSession])
       const match = nonNull(page.searchMatches?.[matchingSession])
-      expect([...match.matchingTraceIds].sort()).toEqual([traceA, traceB].sort())
-      expect(match.matchingTraceCount).toBe(2)
+      expect(match.bestScore).toBe(0)
+      expect(match.matchedFirstMessageIndex).toBeUndefined()
+      expect(match.matchedLastMessageIndex).toBeUndefined()
     })
 
-    // 2) Hybrid: a session with three matching traces; two have embeddings
-    //    with distinct cosine scores, one has no embedding (relevance_score
-    //    falls to 0 via the LEFT JOIN). best_score = max of semantic scores,
-    //    matching_trace_count = 3, ids ordered by score DESC.
-    it("hybrid: bestScore picks max semantic score; embedding-less matches still count via LEFT JOIN", async () => {
+    // 2) Hybrid: lexical narrows to the session document and semantic moments
+    //    score the session with a best matching section.
+    it("hybrid: bestScore picks max semantic score and exposes the best session section", async () => {
       const start = new Date(Date.UTC(2026, 0, 2, 10, 0, 0))
       const sessionId = "hybrid-session"
       const traceStrong = padTrace("c1") // aligned (cosine ~ 1.0)
@@ -1312,17 +1306,9 @@ describe("SessionRepository", () => {
       expect(page.items).toHaveLength(1)
       const match = nonNull(page.searchMatches?.[sessionId])
       expect(match).toBeDefined()
-      expect(match.matchingTraceCount).toBe(3)
-      // best_score is max(relevance_score). Strong is fully aligned, cosine = 1.0.
       expect(match.bestScore).toBeCloseTo(1.0, 5)
-      expect(match.bestTraceId).toBe(traceStrong)
-      // ids parallel-aligned with scores DESC. Strong first, weak second, no-emb (0) last.
-      expect(match.matchingTraceIds[0]).toBe(traceStrong)
-      expect(match.matchingTraceIds[2]).toBe(traceNoEmb)
-      expect(match.matchingTraceScores[0]).toBeCloseTo(1.0, 5)
-      expect(match.matchingTraceScores[1]).toBeGreaterThan(0)
-      expect(match.matchingTraceScores[1]).toBeLessThan(1.0)
-      expect(match.matchingTraceScores[2]).toBe(0)
+      expect(match.matchedFirstMessageIndex).toBe(0)
+      expect(match.matchedLastMessageIndex).toBe(0)
     })
 
     it("semantic-only search reads current session moments instead of trace embeddings", async () => {
@@ -1416,15 +1402,12 @@ describe("SessionRepository", () => {
       expect(page.items.map((session) => session.sessionId)).toEqual([currentSession])
       const match = nonNull(page.searchMatches?.[currentSession])
       expect(match.bestScore).toBeCloseTo(1, 5)
-      expect(match.bestTraceId).toBe(currentTrace)
-      expect(match.matchingTraceIds).toEqual([currentTrace])
+      expect(match.matchedFirstMessageIndex).toBe(0)
+      expect(match.matchedLastMessageIndex).toBe(0)
     })
 
-    // 3) Score-filter / telemetry HAVING applied per-trace (spec §6.6).
-    //    One session, five matching traces. One has cost > threshold; four
-    //    don't. The session must surface with matching_trace_count = 1 (only
-    //    the cost-passing trace), not absent and not 5.
-    it("telemetry HAVING is applied per-trace inside trace_rollup, not post-rollup", async () => {
+    // 3) Score-filter / telemetry HAVING applies to the matched session row.
+    it("telemetry HAVING is applied to matched sessions", async () => {
       const start = new Date(Date.UTC(2026, 0, 3, 10, 0, 0))
       const sessionId = "having-session"
       const traces = ["d1", "d2", "d3", "d4", "d5"].map(padTrace)
@@ -1466,12 +1449,10 @@ describe("SessionRepository", () => {
 
       expect(page.items).toHaveLength(1)
       const match = nonNull(page.searchMatches?.[sessionId])
-      expect(match.matchingTraceCount).toBe(1)
-      expect(match.matchingTraceIds).toEqual([traces[2]])
-      expect(match.bestTraceId).toBe(traces[2])
+      expect(match.bestScore).toBe(0)
     })
 
-    it("metadata filters are applied per-trace inside trace_rollup", async () => {
+    it("metadata filters are applied to matched session rows", async () => {
       const start = new Date(Date.UTC(2026, 0, 3, 11, 0, 0))
       const sessionId = "metadata-having-session"
       const traces = ["m1", "m2", "m3"].map(padTrace)
@@ -1505,11 +1486,7 @@ describe("SessionRepository", () => {
         }),
       )
 
-      expect(page.items).toHaveLength(1)
-      const match = nonNull(page.searchMatches?.[sessionId])
-      expect(match.matchingTraceCount).toBe(1)
-      expect(match.matchingTraceIds).toEqual([traces[1]])
-      expect(match.bestTraceId).toBe(traces[1])
+      expect(page.items).toHaveLength(0)
 
       const count = await runCh(
         repo.countByProjectId({
@@ -1519,8 +1496,7 @@ describe("SessionRepository", () => {
           filters,
         }),
       )
-      expect(count.totalCount).toBe(1)
-      expect(count.matchingTraceCount).toBe(1)
+      expect(count.totalCount).toBe(0)
     })
 
     // 4) Cursor stability: paginate ten matching sessions across one project.
@@ -1601,11 +1577,10 @@ describe("SessionRepository", () => {
       expect(sessionIdsInOrder).toEqual(sortedDesc)
     })
 
-    // 5) Orphan-trace-as-session (spec §6.7). A matching trace whose spans
-    //    carry no session id surfaces as a 1-trace session keyed by
-    //    toString(trace_id). The synthesized Session has empty models /
-    //    providers / tags and tokens_total = 0.
-    it("orphan trace surfaces as a synthesized 1-trace session keyed by toString(trace_id)", async () => {
+    // 5) Session search returns sessions from the sessions table. Orphan
+    //    telemetry can still appear when the sessions MV materializes it with
+    //    the trace id as the fallback session id.
+    it("orphan trace search documents return only materialized session rows", async () => {
       const start = new Date(Date.UTC(2026, 0, 5, 10, 0, 0))
       const orphanTrace = padTrace("e0")
       const realTrace = padTrace("e1")
@@ -1636,29 +1611,13 @@ describe("SessionRepository", () => {
         }),
       )
 
-      expect(page.items).toHaveLength(2)
-      const orphanItem = page.items.find((s) => s.sessionId === orphanTrace)
-      expect(orphanItem).toBeDefined()
-      // Orphan synthesis: traceIds is the matching set, models/providers/tags empty,
-      // tokens_total = 0 from the spans seeded.
-      expect(orphanItem?.traceCount).toBe(1)
-      expect(orphanItem?.traceIds).toEqual([orphanTrace])
-      expect(orphanItem?.models).toEqual([])
-      expect(orphanItem?.providers).toEqual([])
-      expect(orphanItem?.tags).toEqual([])
-      expect(orphanItem?.tokensTotal).toBe(0)
-
-      const match = nonNull(page.searchMatches?.[orphanTrace])
-      expect(match).toBeDefined()
-      expect(match.matchingTraceCount).toBe(1)
-      expect(match.matchingTraceIds).toEqual([orphanTrace])
-      expect(match.bestTraceId).toBe(orphanTrace)
+      expect(page.items.map((s) => s.sessionId).sort()).toEqual([orphanTrace, realSession].sort())
+      expect(page.searchMatches?.[realSession]?.bestScore).toBe(0)
     })
 
-    // 6) Multi-trace session: matching_trace_ids and matching_trace_scores
-    //    parallel-aligned and sorted by score DESC across five distinct
-    //    embedding magnitudes.
-    it("matching_trace_ids and matching_trace_scores are parallel-aligned and sorted by score DESC", async () => {
+    // 6) Multi-moment session: bestScore and range come from the highest
+    //    scoring semantic moment.
+    it("semantic session metadata points at the highest-scoring matching section", async () => {
       const start = new Date(Date.UTC(2026, 0, 6, 10, 0, 0))
       const sessionId = "ordering-session"
       // Five distinct cosine magnitudes by scaling the aligned [0.1, ...]
@@ -1730,37 +1689,26 @@ describe("SessionRepository", () => {
 
       expect(page.items).toHaveLength(1)
       const match = nonNull(page.searchMatches?.[sessionId])
-      // Ids must be in score-DESC order: t1 (0.92), t3 (0.71), t5 (0.55), t2 (0.34), t4 (0.18).
-      expect(match.matchingTraceIds).toEqual([traces[0], traces[2], traces[4], traces[1], traces[3]])
-      // Scores parallel-aligned: monotonically non-increasing.
-      const scores = match.matchingTraceScores
-      for (let i = 1; i < scores.length; i++) {
-        expect(scores[i - 1]).toBeGreaterThanOrEqual(nonNull(scores[i]))
-      }
-      // Spot-check the extremes against the analytic cosine values.
-      expect(scores[0]).toBeCloseTo(0.92, 1)
-      expect(scores[scores.length - 1]).toBeCloseTo(0.18, 1)
-      expect(match.matchingTraceCount).toBe(5)
-      expect(match.bestTraceId).toBe(traces[0])
+      expect(match.bestScore).toBeCloseTo(0.92, 1)
+      expect(match.matchedFirstMessageIndex).toBe(0)
+      expect(match.matchedLastMessageIndex).toBe(0)
     })
 
-    // 7) List + count consistency. A search returns the same candidate set
-    //    via both paths: matchingTraceCount on each item, summed across all
-    //    pages, equals matchingTraceCount from countByProjectId; totalCount
-    //    equals the number of sessions reachable by full pagination.
+    // 7) List + count consistency. A search returns the same session candidate
+    //    set via both paths.
     it("list and count share the same candidate set", async () => {
       const start = new Date(Date.UTC(2026, 0, 7, 10, 0, 0))
       // Build N matching sessions and a few non-matching sessions so the
       // total/matching counts are not trivially equal.
       const matching = Array.from({ length: 4 }, (_v, i) => `lc-match-${i}`)
       const nonMatching = ["lc-skip-1", "lc-skip-2"]
-      const matchingTracesPerSession = [3, 1, 2, 4] // varying fan-out
+      const traceFanoutPerSession = [3, 1, 2, 4]
 
       let spanIdx = 0
       const allSpans: SpanRow[] = []
       const docs: SearchDoc[] = []
       matching.forEach((sid, si) => {
-        for (let ti = 0; ti < nonNull(matchingTracesPerSession[si]); ti++) {
+        for (let ti = 0; ti < nonNull(traceFanoutPerSession[si]); ti++) {
           const traceId = padTrace(`l${si}${ti}`)
           allSpans.push(
             makeSpanRow({
@@ -1802,7 +1750,7 @@ describe("SessionRepository", () => {
       const count = await runCh(repo.countByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery }))
 
       // Page through all matching sessions with a small limit.
-      const collected: { sessionId: string; matchingTraceCount: number }[] = []
+      const collected: string[] = []
       let cursor: SessionListPage["nextCursor"]
       for (let i = 0; i < 10; i++) {
         const page = await runCh(
@@ -1814,7 +1762,8 @@ describe("SessionRepository", () => {
         )
         for (const item of page.items) {
           const m = nonNull(page.searchMatches?.[item.sessionId])
-          collected.push({ sessionId: item.sessionId, matchingTraceCount: m.matchingTraceCount })
+          expect(m.bestScore).toBe(0)
+          collected.push(item.sessionId)
         }
         if (!page.hasMore || !page.nextCursor) break
         cursor = page.nextCursor
@@ -1822,9 +1771,7 @@ describe("SessionRepository", () => {
 
       expect(count.totalCount).toBe(matching.length)
       expect(collected).toHaveLength(matching.length)
-      const summed = collected.reduce((acc, c) => acc + c.matchingTraceCount, 0)
-      expect(summed).toBe(matchingTracesPerSession.reduce((a, b) => a + b, 0))
-      expect(count.matchingTraceCount).toBe(summed)
+      expect(new Set(collected)).toEqual(new Set(matching))
     })
 
     // 8) Default ordering: with searchQuery active and no explicit sortBy,

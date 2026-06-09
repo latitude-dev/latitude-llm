@@ -1,5 +1,6 @@
 import type { MomentKind } from "@domain/conversation-intelligence"
 import type { FilterSet } from "@domain/shared"
+import type { SessionSearchMatch } from "@domain/spans"
 import { CopyableText, Icon, ProviderIcon, Status, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { GroupIcon, ListTreeIcon, MessageSquareIcon, MessagesSquareIcon, ShieldAlertIcon } from "lucide-react"
@@ -48,6 +49,7 @@ export function SessionSlot({
   onOpenIssue,
   onOpenInConversation,
   searchQuery,
+  searchMatch,
   filters,
   onFiltersChange,
   focusMomentKind,
@@ -63,6 +65,7 @@ export function SessionSlot({
   readonly onOpenIssue: (issueId: string) => void
   readonly onOpenInConversation: (annotationId: string) => void
   readonly searchQuery?: string
+  readonly searchMatch?: SessionSearchMatch | undefined
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
   /** Scrolls the Conversation tab to the first moment carrying this label kind. */
@@ -209,6 +212,7 @@ export function SessionSlot({
               isActive={effectiveActiveTab === "conversation"}
               focusMomentKind={focusMomentKind}
               focusMomentId={focusMomentId}
+              searchMatch={searchMatch}
               {...(searchQuery ? { searchQuery } : {})}
             />
           </div>

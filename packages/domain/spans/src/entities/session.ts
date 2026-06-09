@@ -79,6 +79,7 @@ export const sessionDetailSchema = sessionSchema.extend({
   inputMessages: z.array(genAIMessageSchema).readonly(),
   lastInputMessages: z.array(genAIMessageSchema).readonly(),
   outputMessages: z.array(genAIMessageSchema).readonly(),
+  allMessages: z.array(genAIMessageSchema).readonly(),
 })
 
 export type SessionDetail = z.infer<typeof sessionDetailSchema>

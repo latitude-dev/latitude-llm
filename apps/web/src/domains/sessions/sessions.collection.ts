@@ -144,8 +144,6 @@ export function useSessionsInfiniteScroll({
 
 /**
  * Counts sessions for a project with optional filters + free-text search.
- * When `searchQuery` is non-empty the response also includes
- * `matchingTraceCount` so the UI can render "N sessions · M matching traces".
  */
 export function useSessionsCount({
   projectId,
@@ -174,7 +172,6 @@ export function useSessionsCount({
 
   return {
     totalCount: data?.totalCount ?? 0,
-    matchingTraceCount: data?.matchingTraceCount,
     isLoading,
   }
 }

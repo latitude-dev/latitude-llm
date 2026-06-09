@@ -11,11 +11,10 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { useQueries } from "@tanstack/react-query"
-import { ChevronsDownUpIcon, ChevronsUpDownIcon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
 import { useSessionMetrics, useSessionsInfiniteScroll } from "../../../../../domains/sessions/sessions.collection.ts"
-import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
+import type { SessionRecord, SessionSearchMatchRecord } from "../../../../../domains/sessions/sessions.functions.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
 import type { SelectionState } from "../../../../../lib/hooks/useSelectableRows.ts"
@@ -47,7 +46,7 @@ export const SESSION_COLUMN_OPTIONS = [
   { id: "lastActivity", label: "Last Activity", required: true },
   { id: "name", label: "Name" },
   { id: "tags", label: "Tags" },
-  { id: "searchMatches", label: "Matching traces" },
+  { id: "searchMatches", label: "Search match" },
   { id: "duration", label: "Duration" },
   { id: "ttft", label: "Time To First Token", defaultHidden: true },
   { id: "cost", label: "Cost" },
@@ -111,7 +110,7 @@ interface SessionsViewProps {
    * session id (panel lands on Metadata); a trace reference passes the trace id
    * too (panel slides straight into that trace's slot).
    */
-  readonly onOpenSession: (sessionId: string, traceId?: string) => void
+  readonly onOpenSession: (sessionId: string, traceId?: string, searchMatch?: SessionSearchMatchRecord) => void
   /** Closes the session detail panel (clicking the already-open session row). */
   readonly onCloseSession: () => void
   readonly visibleColumnIds: readonly SessionColumnId[]
@@ -154,32 +153,16 @@ export function SessionsView({
     [visibleColumnIds, isSearching],
   )
   // Inline expansion (independent of the row-body click, which opens the panel).
-  // The chevron toggles `expandedIds`; `showAllInSessionIds` is the per-session
+  // The chevron toggles `expandedIds`.
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(() =>
     activeSessionId ? new Set([activeSessionId]) : new Set(),
   )
-  const [showAllInSessionIds, setShowAllInSessionIds] = useState<ReadonlySet<string>>(new Set())
-  const toggleShowAllForSession = useCallback((sessionId: string) => {
-    setShowAllInSessionIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(sessionId)) next.delete(sessionId)
-      else next.add(sessionId)
-      return next
-    })
-  }, [])
 
   const toggleSessionExpanded = useCallback((sessionId: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev)
       if (next.has(sessionId)) next.delete(sessionId)
       else next.add(sessionId)
-      return next
-    })
-    // Collapsing resets the matches-only view for next time.
-    setShowAllInSessionIds((prev) => {
-      if (!prev.has(sessionId)) return prev
-      const next = new Set(prev)
-      next.delete(sessionId)
       return next
     })
   }, [])
@@ -193,12 +176,6 @@ export function SessionsView({
 
   const collapseSession = useCallback((sessionId: string) => {
     setExpandedIds((prev) => {
-      if (!prev.has(sessionId)) return prev
-      const next = new Set(prev)
-      next.delete(sessionId)
-      return next
-    })
-    setShowAllInSessionIds((prev) => {
       if (!prev.has(sessionId)) return prev
       const next = new Set(prev)
       next.delete(sessionId)
@@ -333,20 +310,16 @@ export function SessionsView({
       },
       {
         key: "searchMatches",
-        header: "Matching traces",
+        header: "Search match",
         width: 150,
-        // Empty cell when no match metadata exists for the session (or the row
-        // is a child trace). The column is always declared so the visible-
-        // column-ids logic doesn't need a search-mode branch; presence of the
-        // pill alone signals search-mode to the eye.
         render: (row) => {
           if (row.kind !== "session") return EMPTY_CELL
           const match = searchMatches?.[row.session.sessionId]
           if (!match) return EMPTY_CELL
+          const hasRange = match.matchedFirstMessageIndex !== undefined && match.matchedLastMessageIndex !== undefined
           return (
             <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              {match.matchingTraceCount} matching trace
-              {match.matchingTraceCount === 1 ? "" : "s"}
+              {hasRange ? "Matching section" : "Lexical match"}
             </span>
           )
         },
@@ -540,7 +513,7 @@ export function SessionsView({
         onCloseSession()
         return
       }
-      onOpenSession(sessionId)
+      onOpenSession(sessionId, undefined, searchMatches?.[sessionId])
       if (row.session.traceCount > 1) expandSession(sessionId)
     } else {
       onOpenSession(row.trace.sessionId, row.trace.traceId)
@@ -563,58 +536,11 @@ export function SessionsView({
     return `View trace ${short}`
   }, [])
 
-  // Flat set of every matching trace id across visible sessions → dim the
-  // non-matching expanded sub-rows so search hits stand out (search mode only).
-  const matchingTraceIdSet = useMemo(() => {
-    if (!searchMatches) return undefined
-    const set = new Set<string>()
-    for (const match of Object.values(searchMatches)) {
-      for (const id of match.matchingTraceIds) set.add(id)
-    }
-    return set
-  }, [searchMatches])
-
-  const getRowClassName = useCallback(
-    (row: SessionTableRow, context: { isActive: boolean; isExpanded: boolean; isSubRow: boolean }) => {
-      if (!matchingTraceIdSet || row.kind !== "trace" || !context.isSubRow) return undefined
-      return matchingTraceIdSet.has(row.trace.traceId) ? undefined : "opacity-50"
-    },
-    [matchingTraceIdSet],
-  )
-
   const getExpandedRows = (row: SessionTableRow): ExpandedRows<SessionTableRow> => {
     if (row.kind !== "session") return { data: [] }
     const sessionId = row.session.sessionId
     const entry = traceMap.get(sessionId)
     if (!entry) return { data: [], isLoading: true }
-
-    // Search mode: default-hide non-matching traces behind a show/hide toggle row.
-    const match = searchMatches?.[sessionId]
-    if (match) {
-      const matchingSet = new Set(match.matchingTraceIds)
-      const showingAll = showAllInSessionIds.has(sessionId)
-      const matchingTraces = entry.data.filter((t) => matchingSet.has(t.traceId))
-      const visibleTraces = showingAll ? entry.data : matchingTraces
-      const hiddenCount = entry.data.length - matchingTraces.length
-      const header =
-        hiddenCount > 0 ? (
-          <button
-            type="button"
-            onClick={() => toggleShowAllForSession(sessionId)}
-            className="flex w-full items-center justify-start gap-2 px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            {showingAll ? <ChevronsDownUpIcon className="size-3.5" /> : <ChevronsUpDownIcon className="size-3.5" />}
-            {showingAll ? "Hide" : "Show"} {hiddenCount} non-matching trace
-            {hiddenCount === 1 ? "" : "s"}
-          </button>
-        ) : undefined
-      return {
-        data: visibleTraces.map((trace): SessionTableRow => ({ kind: "trace", trace })),
-        isLoading: entry.isLoading,
-        blankSlate: "No traces in this session",
-        ...(header ? { header } : {}),
-      }
-    }
 
     return {
       data: entry.data.map((trace): SessionTableRow => ({ kind: "trace", trace })),
@@ -644,7 +570,6 @@ export function SessionsView({
           onRowClick={onRowClick}
           onToggleExpand={onToggleExpand}
           getRowAriaLabel={getRowAriaLabel}
-          getRowClassName={getRowClassName}
           {...(activeTraceId || activeSessionId ? { activeRowKey: activeTraceId || (activeSessionId as string) } : {})}
           selection={selection}
           infiniteScroll={infiniteScroll}

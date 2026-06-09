@@ -83,10 +83,8 @@ export type SessionRecord = ReturnType<typeof serializeSession>
 
 const serializeSearchMatch = (match: SessionSearchMatch) => ({
   bestScore: match.bestScore,
-  bestTraceId: match.bestTraceId,
-  matchingTraceCount: match.matchingTraceCount,
-  matchingTraceIds: match.matchingTraceIds,
-  matchingTraceScores: match.matchingTraceScores,
+  matchedFirstMessageIndex: match.matchedFirstMessageIndex,
+  matchedLastMessageIndex: match.matchedLastMessageIndex,
 })
 
 export type SessionSearchMatchRecord = ReturnType<typeof serializeSearchMatch>
@@ -174,7 +172,6 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
       data,
     }): Promise<{
       readonly totalCount: number
-      readonly matchingTraceCount?: number
     }> => {
       const { organizationId } = await requireSession()
       const orgId = OrganizationId(organizationId)
@@ -198,7 +195,6 @@ export const countSessionsByProject = createServerFn({ method: "GET" })
 
       return {
         totalCount: result.totalCount,
-        ...(result.matchingTraceCount !== undefined ? { matchingTraceCount: result.matchingTraceCount } : {}),
       }
     },
   )
@@ -314,6 +310,7 @@ export const getSessionCohortSummary = createServerFn({ method: "GET" })
 export interface SessionDetailRecord extends SessionRecord {
   readonly systemInstructions: GenAISystem
   readonly inputMessages: readonly GenAIMessage[]
+  readonly allMessages: readonly GenAIMessage[]
   readonly outputMessages: readonly GenAIMessage[]
   /**
    * Trace whose conversation the panel's Conversation tab renders — the
@@ -328,6 +325,7 @@ const serializeSessionDetail = (session: SessionDetail, latestTraceId: string): 
   ...serializeSession(session),
   systemInstructions: session.systemInstructions,
   inputMessages: session.inputMessages,
+  allMessages: session.allMessages,
   outputMessages: session.outputMessages,
   latestTraceId,
 })

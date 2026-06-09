@@ -12,6 +12,7 @@ import { useProjectsCollection } from "../../../../domains/projects/projects.col
 import { useSavedSearchBySlug } from "../../../../domains/saved-searches/saved-searches.collection.ts"
 import type { SavedSearchRecord } from "../../../../domains/saved-searches/saved-searches.functions.ts"
 import { withSessionDefaults } from "../../../../domains/sessions/sessions.collection.ts"
+import type { SessionSearchMatchRecord } from "../../../../domains/sessions/sessions.functions.ts"
 import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { enqueueTracesExport } from "../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
@@ -76,6 +77,7 @@ function ProjectPage() {
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [, setSelectedSpanId] = useParamState("spanId", "")
+  const [activeSessionSearchMatch, setActiveSessionSearchMatch] = useState<SessionSearchMatchRecord | undefined>()
   const [rawFilters, setRawFilters] = useParamState("filters", "")
   const [query, setQuery] = useParamState("query", "")
   const [savedSearchSlug, setSavedSearchSlug] = useParamState("savedSearch", "")
@@ -257,9 +259,10 @@ function ProjectPage() {
   // trace reference (currently only via deep link) also sets `traceId` so the
   // panel slides straight into that trace's slot.
   const onOpenSession = useCallback(
-    (sessionId: string, traceId?: string) => {
+    (sessionId: string, traceId?: string, searchMatch?: SessionSearchMatchRecord) => {
       setActiveSessionId(sessionId)
       setActiveTraceId(traceId ?? "")
+      setActiveSessionSearchMatch(searchMatch)
     },
     [setActiveSessionId, setActiveTraceId],
   )
@@ -268,6 +271,7 @@ function ProjectPage() {
     setActiveSessionId("")
     setActiveTraceId("")
     setSelectedSpanId("")
+    setActiveSessionSearchMatch(undefined)
   }, [setActiveSessionId, setActiveTraceId, setSelectedSpanId])
 
   // Submitting a new query invalidates any open drawer context against the new result set.
@@ -602,6 +606,7 @@ function ProjectPage() {
             onClose={closeSessionPanel}
             filters={filters}
             onFiltersChange={onFiltersChange}
+            searchMatch={activeSessionSearchMatch}
             {...(hasSearchQuery ? { searchQuery: query } : {})}
           />
         </Layout.Aside>

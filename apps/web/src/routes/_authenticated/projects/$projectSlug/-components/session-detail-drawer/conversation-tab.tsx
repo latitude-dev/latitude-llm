@@ -1,4 +1,10 @@
 import type { MomentKind } from "@domain/conversation-intelligence"
+import {
+  computeTraceSearchHighlights,
+  parseSearchQuery,
+  type SessionSearchMatch,
+  type TraceSearchHighlightsResult,
+} from "@domain/spans"
 import { Button, Icon, Popover, PopoverClose, PopoverContent, PopoverTrigger, Text } from "@repo/ui"
 import { XIcon } from "lucide-react"
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
@@ -285,6 +291,7 @@ export function ConversationTab({
   latestTraceId,
   isActive,
   searchQuery,
+  searchMatch,
   focusMomentKind,
   focusMomentId,
 }: {
@@ -293,6 +300,7 @@ export function ConversationTab({
   readonly latestTraceId: string
   readonly isActive: boolean
   readonly searchQuery?: string
+  readonly searchMatch?: SessionSearchMatch | undefined
   readonly focusMomentKind?: MomentKind | undefined
   /** Scrolls to this semantic moment when no label kind is focused. */
   readonly focusMomentId?: string | undefined
@@ -335,6 +343,26 @@ export function ConversationTab({
     onFocused: selectedLabelStore.set,
   })
 
+  const sessionSearchHighlights = useMemo<TraceSearchHighlightsResult | undefined>(() => {
+    if (!searchQuery || !traceDetail) return undefined
+    const parsedQuery = parseSearchQuery(searchQuery)
+    const semanticMatch =
+      searchMatch?.matchedFirstMessageIndex !== undefined && searchMatch.matchedLastMessageIndex !== undefined
+        ? {
+            chunkIndex: 0,
+            firstMessageIndex: searchMatch.matchedFirstMessageIndex,
+            lastMessageIndex: searchMatch.matchedLastMessageIndex,
+            relevanceScore: searchMatch.bestScore,
+          }
+        : null
+
+    return computeTraceSearchHighlights({
+      messages: traceDetail.allMessages,
+      parsedQuery,
+      semanticMatch,
+    })
+  }, [searchMatch, searchQuery, traceDetail])
+
   // Stable across label selection changes — see `useSelectedLabelStore`.
   const messageTrailingSlot = useCallback(
     (messageIndex: number) => {
@@ -369,6 +397,7 @@ export function ConversationTab({
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
       {...(labelsByMessageIndex.size > 0 ? { messageTrailingSlot } : {})}
       {...(searchQuery ? { searchQuery } : {})}
+      {...(sessionSearchHighlights ? { searchHighlightsDataOverride: sessionSearchHighlights } : {})}
     />
   )
 }

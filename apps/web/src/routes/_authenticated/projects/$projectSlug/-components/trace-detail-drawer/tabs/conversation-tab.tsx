@@ -47,6 +47,7 @@ function ConversationContent({
   textSelectionPopoverControlsRef,
   onPopoverClose,
   searchQuery,
+  searchHighlightsDataOverride,
   messageTrailingSlot,
 }: {
   readonly traceDetail: TraceDetailRecord
@@ -57,6 +58,7 @@ function ConversationContent({
   readonly textSelectionPopoverControlsRef?: RefObject<TextSelectionPopoverControls | null> | undefined
   readonly onPopoverClose?: (() => void) | undefined
   readonly searchQuery?: string | undefined
+  readonly searchHighlightsDataOverride?: TraceSearchHighlightsResult | undefined
   /** Renders a slot below each message (e.g. semantic moment labels). Receives the original messageIndex and role. */
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
 }) {
@@ -130,11 +132,13 @@ function ConversationContent({
   })
 
   const effectiveSearchQuery = searchQuery ?? ""
-  const { data: searchHighlightsData } = useTraceSearchHighlights({
+  const { data: fetchedSearchHighlightsData } = useTraceSearchHighlights({
     projectId,
     traceId: traceDetail.traceId,
     searchQuery: effectiveSearchQuery,
+    enabled: !searchHighlightsDataOverride,
   })
+  const searchHighlightsData = searchHighlightsDataOverride ?? fetchedSearchHighlightsData
 
   const searchHighlightRanges = useMemo(() => toSearchHighlightRanges(searchHighlightsData), [searchHighlightsData])
 
@@ -271,6 +275,7 @@ export function ConversationTab({
   textSelectionPopoverControlsRef,
   onPopoverClose,
   searchQuery,
+  searchHighlightsDataOverride,
   messageTrailingSlot,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
@@ -285,6 +290,7 @@ export function ConversationTab({
   /** Optional callback when annotation popover closes. Used to clear selection state. */
   readonly onPopoverClose?: (() => void) | undefined
   readonly searchQuery?: string | undefined
+  readonly searchHighlightsDataOverride?: TraceSearchHighlightsResult | undefined
   /** Renders a slot below each message (e.g. semantic moment labels). Receives the original messageIndex and role. */
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
 }) {
@@ -316,6 +322,7 @@ export function ConversationTab({
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
       onPopoverClose={onPopoverClose}
       searchQuery={searchQuery}
+      searchHighlightsDataOverride={searchHighlightsDataOverride}
       messageTrailingSlot={messageTrailingSlot}
     />
   )

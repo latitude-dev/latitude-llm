@@ -118,14 +118,10 @@ export interface SessionListPage {
 }
 
 /**
- * Return shape for `countByProjectId`. `totalCount` is always populated;
- * `matchingTraceCount` is only present when `searchQuery` was active, where
- * it counts matching traces (not sessions) across all matched sessions —
- * useful for "N traces across M sessions" headers on the search page.
+ * Return shape for `countByProjectId`. `totalCount` is always populated.
  */
 export interface SessionCountResult {
   readonly totalCount: number
-  readonly matchingTraceCount?: number
 }
 
 export interface SessionMetrics {
