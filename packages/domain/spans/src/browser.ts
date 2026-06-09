@@ -80,6 +80,11 @@ export {
   TRACE_HISTOGRAM_METRICS,
   TraceRepository,
 } from "./ports/trace-repository.ts"
+export type {
+  TraceHighlight,
+  TraceSearchHighlightsResult,
+} from "./use-cases/compute-trace-search-highlights.ts"
+export { computeTraceSearchHighlights } from "./use-cases/compute-trace-search-highlights.ts"
 export type { GetSessionCohortSummaryInput } from "./use-cases/get-session-cohort-summary.ts"
 export { getSessionCohortSummaryUseCase } from "./use-cases/get-session-cohort-summary.ts"
 export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
@@ -91,6 +96,7 @@ export type {
 } from "./use-cases/load-trace-for-trace-end.ts"
 export { loadTraceForTraceEndUseCase } from "./use-cases/load-trace-for-trace-end.ts"
 export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
+export { parseSearchQuery } from "./use-cases/parse-search-query.ts"
 export type {
   SelectTraceEndItemsError,
   TraceEndSelectionDecision,
