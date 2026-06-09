@@ -22,10 +22,10 @@ The taxonomy and signal gates intentionally use fixed constants. This keeps QA t
 
 ## Pipeline
 
-One session analysis runs as a single Temporal activity wrapping `analyzeSessionUseCase`:
+The Temporal workflow is split into deterministic orchestration plus cache warm-up activities. `loadAnalyzeSessionActivity`, `hashAnalyzeSessionActivity`, and `checkAnalyzeSessionEligibilityActivity` decide whether work is needed; for ordinary trace-completed runs the workflow then warms the turn-embedding and label-anchor caches before calling `persistAnalyzeSessionActivity`. The persisted state is still produced by the full `analyzeSessionUseCase`, so backfill/manual runs and trace-completed runs share the same write path:
 
 ```
-SessionRepository/TraceRepository ──► turn extraction (tool telemetry stripped)
+SessionRepository ──► turn extraction (tool telemetry stripped)
         │
         ▼
 embed turns (voyage-4-large, 2048 dims, Redis-cached by content hash)
@@ -48,7 +48,7 @@ Sessions that are empty, too short, or not user/agent conversations short-circui
 
 ### Turn extraction
 
-Messages come from trace details (falling back to `session.lastInputMessages` when traces lack detail). Tool-role messages and tool-call telemetry inside assistant messages are **stripped before any embedding** — tool names like `get_customer_by_phone` otherwise dominate moment embeddings and produce false labels. Empty-text messages are dropped; original message indexes are preserved so moments and labels point back into the real message array. When a session has no 32-char trace id, moments reference a stable 32-hex surrogate hashed from the triggering id instead of failing schema validation.
+Messages come from the `SessionRepository` session detail: `systemInstructions`, `lastInputMessages`, and `outputMessages`. Tool-role messages and tool-call telemetry inside assistant messages are **stripped before any embedding** — tool names like `get_customer_by_phone` otherwise dominate moment embeddings and produce false labels. Empty-text messages are dropped; original message indexes are preserved so moments and labels point back into the real message array. When a session has no 32-char trace id, moments reference a stable 32-hex surrogate hashed from the triggering id instead of failing schema validation.
 
 ### Semantic segmentation (`semantic-segmentation.ts`)
 
@@ -69,7 +69,7 @@ Labels are **behavioral signals, not topics**. They feed the Signals columns, th
 
 ### Topic projection and routing
 
-Each analyzed conversation emits at most one taxonomy observation: the full user/assistant conversation text is embedded (`moment_text_embedding` remains the historical projection method name) and routed into the cluster tree with `routeToDeepestClusterUseCase` (deepest-fit descent — see taxonomy doc). Labels and process signals remain separate from the topic projection; routine verification or greeting steps do not get their own taxonomy dimension.
+Each analyzed conversation emits at most one taxonomy observation: the full user/assistant conversation text is middle-truncated to `CONVERSATION_INTELLIGENCE_LLM_MAX_DOCUMENT_CHARS`, embedded (`moment_text_embedding` remains the historical projection method name), normalized, and routed into the cluster tree with `routeToDeepestClusterUseCase` (deepest-fit descent — see taxonomy doc). The observation's `moment_id` is a synthetic session-topic id, not one of the semantic segment ids. Labels and process signals remain separate from the topic projection; routine verification or greeting steps do not get their own taxonomy dimension.
 
 Taxonomy observations are always ingested when a session produces a taxonomy projection. They use the same 30-day horizon as semantic-search embeddings (`TAXONOMY_OBSERVATION_RETENTION_DAYS`) so the taxonomy follows live semantic traffic instead of freezing at a one-time project sample. The analyzer still persists the full `session_semantic_moments` and `session_moment_labels` outputs on the broader conversation-retention horizon. Gardening is the bounded part: it rebuilds the whole tree from a day-stratified sample of up to `TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX` (10k) observations across the lookback window with a single top-down divisive clustering pass, then names the clusters. Observations that clear no online cluster gate persist as `noise`, but the rebuild samples every member regardless of current assignment and reassigns it to a leaf, so noise is reabsorbed at the next pass rather than swept incrementally. See [`./taxonomy.md`](./taxonomy.md) for the build algorithm.
 
@@ -79,18 +79,18 @@ All four tables are `ReplacingMergeTree(indexed_at)` partitioned by month, sorte
 
 | Table | Key (after org/project) | Holds |
 |---|---|---|
-| `session_analyses` | `session_id` | One row per session: `analysis_hash`, status, lens, trace ids |
+| `session_analyses` | `session_id` | One row per session: `analysis_hash`, status, status reason, trace ids |
 | `session_semantic_moments` | `session_id, analysis_hash, moment_id` | Segmentation output: message index range, boundary reason, coherence |
 | `session_moment_labels` | `session_id, analysis_hash, label_id` | Signal kind, confidence, evidence, message range, `moment_id` |
-| `taxonomy_observations` | `assigned_cluster_id, start_time, observation_id` | Topic projections: embedding, `assigned_cluster_id`, assignment method/confidence, `analysis_hash`, `projection_hash` |
+| `taxonomy_observations` | `observation_id` | Topic projections: stable session-level `observation_id`, synthetic session-topic `moment_id`, embedding, `assigned_cluster_id`, assignment method/confidence, `analysis_hash`, `projection_hash`, JSON `projection_metadata` |
 
 ### Analysis generations and the pinning rule
 
 `analysis_hash` is a content hash of the session's analyzable messages plus segmentation/anchor versioning. Re-analysis after a session grows produces a **new generation** with a new hash. Moment and label ids hash the generation hash (`makeMomentId`, `labelId = hash(analysisHash\0label\0momentId)`), so each generation gets a fresh set and superseded moments/labels **accumulate** one set per generation — the analyses table itself collapses to one row per session.
 
-The **taxonomy observation id is the exception**: it hashes only `org\0project\0session\0dimension\0method`, *not* the generation hash, so it is **stable across generations**. Re-analysis therefore reuses the same `observation_id`, and the new row generally **replaces** the prior one in ClickHouse (ReplacingMergeTree) rather than accumulating. The row still carries `analysis_hash`, so pinning is still required: if a new generation routes the session to a *different* cluster, the sort key `(assigned_cluster_id, start_time, observation_id)` differs and a second row survives until compaction, and unpinned rate denominators would count both.
+The **taxonomy observation id is the exception**: it hashes only `org\0project\0session\0dimension\0method`, *not* the generation hash, so it is **stable across generations**. Re-analysis therefore reuses the same `observation_id`; because `taxonomy_observations` is keyed by `(organization_id, project_id, observation_id)`, `FINAL` returns the newest projection by `indexed_at` even when the assignment moved to another cluster. The row still carries `analysis_hash`, so joined read paths pin to the current analysis generation before combining taxonomy observations with trace ids or moment labels.
 
-**Every read must pin to the session's current generation.** The canonical, FINAL-free form:
+**Every read of generationed moment/label data, and every join that combines taxonomy observations with moment labels or trace ids, must pin to the session's current generation.** The canonical, FINAL-free form:
 
 ```sql
 AND (x.session_id, x.analysis_hash) IN (
@@ -101,7 +101,7 @@ AND (x.session_id, x.analysis_hash) IN (
 )
 ```
 
-Unpinned reads return the union of all generations — duplicated moments, stale labels, ghost observations in rate denominators. This bug class surfaced three independent times in adversarial review; treat any new read of these tables without the pin as wrong by default.
+Unpinned moment/label reads return the union of all generations — duplicated moments, stale labels, and wrong denominators in behavior rates. Repository methods that read only taxonomy observations use `FINAL` over the stable observation id; web and session-filter paths that join observations to labels pin both sides to the current `analysis_hash`.
 
 ### Idempotency and retry semantics
 

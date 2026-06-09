@@ -14,7 +14,7 @@ Domain code: `packages/domain/taxonomy`. Postgres adapters: `packages/platform/d
 `taxonomy_clusters` (Postgres, `packages/platform/db-postgres/src/schema/taxonomy-clusters.ts`) rows carry the tree shape. The `TaxonomyCluster` entity (`packages/domain/taxonomy/src/entities/cluster.ts`) mirrors them:
 
 - `parent_cluster_id` — null for roots.
-- `depth` — 0 for roots, bounded by `TAXONOMY_TREE_MAX_DEPTH` (3 levels: roots, sub-topics, fine leaves).
+- `depth` — 0 for roots, bounded by the length of `TAXONOMY_TREE_DEPTH_SCHEDULE` (current schedule: roots, sub-topics, fine leaves).
 - `path` — slash-terminated ancestor id chain (`"rootId/parentId/"`, empty for roots). Subtree membership is a path prefix match (`listSubtreeIds`), safe because cuids contain no LIKE metacharacters and segments are slash-delimited.
 - `split_link_threshold` — the cosine density boundary at which this node's children are still distinguishable from each other (the minimum pairwise cosine between its children's centroids). Null for leaves. The **online router reads it as a per-level descent gate** so the coarse root threshold can't force descent into a tight subtree on marginal similarity.
 - `centroid` — JSONB decayed weighted sum (shared math with issues via `@domain/shared` centroid helpers), plus a derived `centroid_embedding vector(2048)` for pgvector nearest-neighbour. An interior node keeps a full-topic centroid representing the parent topic for the first hop of descent.
@@ -47,7 +47,7 @@ Postgres (`@platform/db-postgres`):
 
 ClickHouse:
 
-- `taxonomy_observations` — live-retained moment topic projections: 2048-d `embedding` (voyage-4-large), `assigned_cluster_id` (empty = noise), `assignment_method` (`centroid_online` / `gardening_birth` / `gardening_reassign` / `noise`), `assignment_confidence`, `analysis_hash`, `reassignment_run_id`, `start_time` / `end_time` / `indexed_at`. Rows expire on the embedding horizon (`TAXONOMY_OBSERVATION_RETENTION_DAYS`, 30 days). `ReplacingMergeTree(indexed_at)` resolves duplicates by latest version. The deprecated observation `dimension` column is not part of this table; clusters and run records still carry the singleton `topic` dimension while the broader naming cleanup completes.
+- `taxonomy_observations` — the only live topic-observation table. It stores one retained projection per analyzed session: stable `observation_id`, `session_id`, `analysis_hash`, synthetic session-topic `moment_id`, `projection_method`, `projection_hash`, JSON `projection_metadata` (including the session conversation summary used for naming), 2048-d `embedding` (voyage-4-large), `assigned_cluster_id` (empty = noise), `assignment_method` (`centroid_online` / `gardening_birth` / `gardening_reassign` / `noise`), `assignment_confidence`, `reassignment_run_id`, `start_time` / `end_time` / `indexed_at`. Rows expire on the embedding horizon (`TAXONOMY_OBSERVATION_RETENTION_DAYS`, 30 days). `ReplacingMergeTree(indexed_at)` is keyed by `(organization_id, project_id, observation_id)`, so re-analysis of the same session replaces the prior projection by latest version. There is no observation `dimension` column in ClickHouse; clusters and run records still carry the singleton `topic` dimension. The old `behavior_observations` table is deprecated and removed by the cleanup migration.
 
 ### Read windows
 
@@ -123,7 +123,7 @@ A two-call map-reduce (`TAXONOMY_NAMING_MODEL`) proposes candidate themes then c
 
 ### Quality gate
 
-`assertGardenTaxonomyQualityActivity` fails the run on structural defects — notably **duplicate sibling names** (same parent, normalized-equal name) and active leaves with zero current observations. A failed gate surfaces as a failed run for Temporal retry rather than shipping a broken tree.
+`assertGardenTaxonomyQualityActivity` fails the run on structural defects — notably **duplicate sibling names** (same parent, normalized-equal name) and active leaf rows whose Postgres direct `observation_count` is zero. Parents with children may have zero direct count because their members live in descendants. A failed gate surfaces as a failed run for Temporal retry rather than shipping a broken tree.
 
 ### Cross-run continuity (`lineage.ts`)
 
@@ -139,8 +139,8 @@ The matcher is biased toward continuation on purpose — a false continuation is
 ## Read paths
 
 - **Behaviours page** (`listProjectBehavioursUseCase`): returns the literal tree, but **unwraps the single englobing root** — when there is exactly one depth-0 root with children, its depth-1 children become the top-level rows so the table opens on several real categories instead of one all-encompassing row (a tiny corpus collapsed to a single childless root is still shown). Each node's `subtreeObservationCount` is rolled up across visible descendants **at read time** (not the stored counter); zero-residue interior nodes synthesize a zero trend rather than vanish with their subtree. The web layer indents by **relative** tree-walk depth (not absolute `cluster.depth`), rolls conversation-intelligence rates up each subtree weighted by sessions, and renders an expandable tree. The topics filter dropdown (`getTopicFilterOptions`) applies the same root unwrap.
-- **Behaviour drawer / cluster intelligence** (`getClusterSessionIntelligenceUseCase`): sessions list, histograms, and the intelligence profile are all **subtree-scoped** (`listSubtreeIds` → `assigned_cluster_id IN (...)`), so an interior node's profile covers its whole subtree.
-- **Sessions table topics filter**: selected nodes expand to subtree ids server-side before ClickHouse; see the CI doc for the subquery shape and time-bound pruning.
+- **Behaviour drawer / cluster intelligence** (`getClusterSessionIntelligenceUseCase` and web server functions): sessions list, histograms, trajectories, and the intelligence profile are all **subtree-scoped** (`listSubtreeIds` → `assigned_cluster_id IN (...)`), so an interior node's profile covers its whole subtree. The web SQL pins taxonomy observations and moment labels to the session's current analysis generation before joining them.
+- **Sessions table topics filter**: selected nodes expand to subtree ids server-side before ClickHouse; see the CI doc for the subquery shape and time-bound pruning. Repository-level observation reads use `FINAL` over the stable `observation_id` key; read paths that join observations to moments or trace ids still pin through `session_analyses` so every joined row comes from the same current generation.
 - **Backoffice** (`AdminTaxonomyRepositoryLive`): keeps the legacy category/subcategory DTO shape but sources it from the tree — roots as groups, descendants rolled up by first path segment.
 
 ## Trade-off decisions
