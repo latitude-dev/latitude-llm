@@ -12,7 +12,7 @@ The fastest path to value is a **great self-hosting experience and documentation
 
 We then **polish**: add OSS/pluggable AI providers so the stack can run on fully open models, and **update the self-hosting docs** accordingly once that lands.
 
-**House-cleaning comes first.** Right after the audit and **before any self-hosting/docs work**, a short cleanup pass (Phase 2) strips the AGPL `ua-parser-js` dependency, removes dead code (e.g. `db-weaviate`), and lands the small audit-driven fixes (e.g. Redis key-namespacing for shared instances) so everything is built on a clean, fully-permissive base.
+**House-cleaning comes first.** Right after the audit and **before any self-hosting/docs work**, a short cleanup pass (Phase 2) strips the AGPL `ua-parser-js` dependency, removes dead code (e.g. `db-weaviate`), de-bakes the `web` client's build-time deployment URLs (so one public image serves any domain), and lands the small audit-driven fixes (e.g. Redis key-namespacing for shared instances) so everything is built on a clean, fully-permissive base.
 
 **Documentation ships *with* each tier, not after.** Each self-hosting tier below lands together with the docs that make it usable — docs are part of the deliverable, not a follow-up.
 
@@ -111,10 +111,10 @@ These are **not blockers** for shipping self-hosting — they are requirements w
 Establish the authoritative picture before changing anything; this directly feeds every tier's docs.
 
 - [x] **P1-1**: Produce a dependency matrix covering every third-party infra component, SaaS integration, library, and AI provider/model, with licenses and self-hosting restrictions. → **see [Appendix A](#appendix-a--dependency-license--self-hosting-audit)**.
-- [ ] **P1-2**: Audit `.env.example` and tag every var as **required**, **optional**, or **proprietary-enhancement**; identify the minimal var set per tier (and which AI keys unlock which features).
-- [ ] **P1-3**: Map exactly which features break without Voyage / Bedrock / Anthropic, and confirm the app still boots and core observability works without them (informs P4-4).
-- [ ] **P1-4**: Confirm `@platform/db-weaviate` is dead and list anything else removable (feeds Phase 2); confirm GHCR image visibility / publishing story.
-- [ ] **P1-5**: Write down the canonical **self-host profile** (which adapters/images constitute it, and the current proprietary-AI requirement).
+- [x] **P1-2**: Audit `.env.example` and tag every var as **required**, **optional**, or **proprietary-enhancement**; identify the minimal var set per tier (and which AI keys unlock which features). → **see [Appendix B](#appendix-b--environment-variable-matrix-p1-2)**.
+- [x] **P1-3**: Map exactly which features break without Voyage / Bedrock / Anthropic, and confirm the app still boots and core observability works without them (informs P4-4). **Result — key-free boot confirmed.** All three adapters resolve credentials **lazily at call time**, never at layer-construction or startup: `@platform/ai-voyage` `AIEmbedLive`/`AIRerankLive` are `Layer.succeed` whose `embed`/`rerank` read `LAT_VOYAGE_API_KEY` only when invoked; `@platform/ai-vercel` `AIGenerateLive` is `Layer.effect` whose build only defines `generate`, with Bedrock/Anthropic credentials read inside the call. No app's `clients.ts`/`server.ts` wires an AI adapter at boot, and the **trace-ingest path touches no AI** (`apps/ingest` → `ingestSpansUseCase` is decode → sample → enqueue, zero embed/rerank/LLM). So every service boots and core observability (ingest + trace viewing) works with **no proprietary AI keys**; AI features fail per-call with a clear message and search degrades to lexical. → **full map in [Appendix C](#appendix-c--feature-degradation-without-proprietary-ai-p1-3)**.
+- [x] **P1-4**: Confirm `@platform/db-weaviate` is dead and list anything else removable (feeds Phase 2); confirm GHCR image visibility / publishing story. **Result:** `db-weaviate` is dead, **and four more stale leftover dirs match the same pattern** — `packages/platform/events-outbox`, `packages/domain/auth`, `packages/domain/subscriptions`, `packages/domain/onboarding` each hold **only** a `.tsbuildinfo` (no `package.json`/`src`), with **zero importers** and no `package.json` anywhere declaring those names. All five are removed in **P2-2**. **Image story:** the single multi-stage `Dockerfile` carries the 6 expected targets; `build-images.yml` (called by `deploy.yml`) pushes to **`ghcr.io/latitude-dev`** as **`latitude-<env>-<service>`** (`<env>` ∈ staging/production), tagged **`sha-<8>` + `:latest`** (not semver), **single-arch** (no buildx `platforms:`), on `development` push (→ staging) and `vX.Y.Z` tag (→ production). The **`web` target bakes six `VITE_*` build-args** (`Dockerfile` `ARG VITE_…` + workflow `--build-arg`), so today's images are deploy-specific — exactly the rename + runtime-config work **P4-1** owns. GHCR package visibility is GitHub-default (private) until P4-1 publishes the public env-neutral set.
+- [x] **P1-5**: Write down the canonical **self-host profile** (which adapters/images constitute it, and the current proprietary-AI requirement). → **see [Appendix D](#appendix-d--canonical-self-host-profile-p1-5)**.
 - [x] **P1-6**: **Audit shared-infra coexistence** — can a self-hoster point Latitude at *existing* Postgres/ClickHouse/Redis/object-store/Temporal? Result: **4/6 are dedicated-namespace isolatable** — Postgres (`latitude` schema), ClickHouse (`CLICKHOUSE_DB` database), Temporal (`LAT_TEMPORAL_NAMESPACE` + task queue), object storage (dedicated `LAT_STORAGE_S3_BUCKET`). Postgres notes: the target DB needs the `vector` (pgvector) extension and an admin role with schema-create. **Two Redis gaps remain → P2-4 (Phase 2).**
 
 **Exit gate**: a written, reviewed dependency matrix and an agreed self-host profile; the required-vs-optional split (and the documented AI requirement) is finalized; and shared-infra coexistence is audited (P1-6) — the Redis-namespacing fix it surfaced lands in Phase 2 (P2-4).
@@ -124,11 +124,17 @@ Establish the authoritative picture before changing anything; this directly feed
 Strip cruft and land the small audit-driven code fixes so every later phase builds on a clean, fully-permissive, coexistence-ready base. Small, self-contained PRs.
 
 - [ ] **P2-1**: **Swap `ua-parser-js@2.0.9` (AGPL-3.0) → `bowser@2.14.1` (MIT)** to make the shipped web app fully permissive (the audit's one shipped copyleft dep — see Appendix A, finding #2). It's used **server-side only**, for cosmetic User-Agent → browser/OS/device labels, in two files: `apps/web/src/domains/admin/users.functions.ts` and `apps/web/src/domains/sessions/user-sessions.functions.ts`. Per file it's two edits — swap the import (`import { UAParser } from "ua-parser-js"` → `import Bowser from "bowser"`), call `Bowser.parse(ua)` instead of `UAParser(ua)`, and change `parsed?.device.type` → `parsed?.platform.type` (`browser.name` / `os.name` map unchanged; `platform.type ∈ {desktop, mobile, tablet, tv}` so the `?? "desktop"` fallback still holds). Remove `ua-parser-js` from / add `bowser` to `apps/web/package.json` (bowser is **already in the lockfile** via `@aws-sdk/util-user-agent-browser`, so no net-new package). Fix the stale `UAParser().device.type` comment in `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx`. Land as its own small PR off `development`.
-- [ ] **P2-2**: **Remove the dead `@platform/db-weaviate` package** — confirmed unused (no importers; the `weaviate` npm client isn't even installed; the dir holds only a stale 1.1 MB `tsconfig.tsbuildinfo`, no `package.json`/`src`). Delete the directory and any lingering workspace / tsconfig references.
+- [ ] **P2-2**: **Remove the dead `@platform/db-weaviate` package and the other stale leftover package dirs** — the P1-4 audit confirmed **five** directories that hold **only** a stale `.tsbuildinfo` (no `package.json`/`src`), with zero importers and no `package.json` declaring their names: `packages/platform/db-weaviate`, `packages/platform/events-outbox`, `packages/domain/auth`, `packages/domain/subscriptions`, `packages/domain/onboarding`. (`db-weaviate`'s `weaviate` npm client isn't even installed; vector storage moved to pgvector.) Delete all five directories and any lingering workspace / tsconfig references.
 - [ ] **P2-3**: **Sweep for other dead code with `knip`** (`knip.json` is already configured) — prune genuinely-unused files, exports, and dependencies it surfaces (respecting the existing entry/ignore config), plus any orphaned `LAT_*` env vars / `.env.example` drift. Triage, don't blindly delete; skip intentional entry points.
 - [ ] **P2-4**: **Namespace Latitude on a shared Redis** (so it can coexist with other apps without key collisions) — the fix surfaced by the P1-6 coexistence audit. Add a configurable **global cache key prefix** (ioredis `keyPrefix`, e.g. `LAT_REDIS_KEY_PREFIX=latitude:`) and/or a selectable **`db` index** (today `db 0` is hardcoded and keys are only `org:…`-scoped); and make the **BullMQ prefix Latitude-namespaced/configurable** (today a fixed `{bull}`). Prerequisite for "bring-your-own Redis" in Tier 2/3 (P4-2, P5-4).
+- [ ] **P2-5**: **De-bake the `web` client's deployment URLs (make the public image URL-neutral)** — a foundational fix that de-risks P4-1, surfaced by the P1-4 image audit. Today the `web` target bakes two deployment-specific URLs into the JS bundle at build time; remove that bake so one public image serves any domain. **Principle (promote to `AGENTS.md` in Phase 8):** frontend URL constants use **relative paths**; any absolute URL needed server-side is injected from a **runtime `LAT_*` env var**, never a build-time `VITE_*` bake.
+  - **Delete `VITE_LAT_API_URL` entirely** — it has **zero `import.meta.env` readers** (the web app calls the API via same-origin TanStack server-function RPC). Remove from `Dockerfile` (`ARG`), `turbo.json` (web build `env`), `.env.example`, `.github/workflows/build-images.yml` + `deploy.yml` (build env), and `infra/lib/ecs.ts` (where it's set as a **runtime** container env — a no-op, since `VITE_*` binds only at build).
+  - **Remove `VITE_LAT_WEB_URL` from the client bundle** — its one client read (`apps/web/src/lib/auth-config.ts` → `WEB_BASE_URL`) feeds three consumers, each fixed per the principle: (1) `auth-client.ts` — **drop `baseURL`**; Better Auth's client resolves `window.location.origin` in the browser and a relative `/api/auth` under SSR (verified in `better-auth/dist/utils/url.mjs` `getBaseURL`). (2) `routes/login.tsx` — OAuth start becomes a **relative path** `/api/auth/${provider}/start?…` (`window.location.assign`, same-origin). (3) `routes/wrapped/$id.tsx` `og:image` (needs an **absolute** URL for crawlers, emitted in the SSR `head()`) — source the base from **runtime `LAT_WEB_URL`** via the existing server-fn loader (`getWrappedPageData`), threaded through `loaderData`. Then `auth-config.ts` drops `WEB_BASE_URL` (keeps `AUTH_BASE_PATH` + `TURNSTILE_SITE_KEY`). Remove the build-time `VITE_LAT_WEB_URL` from `Dockerfile`/`turbo.json`/`.env.example`/`build-images.yml`/`deploy.yml` build env + the no-op `infra/lib/ecs.ts` line.
+  - **Rename the one legitimate remaining use** — `deploy.yml`'s Datadog source-map `--minified-path-prefix "${{ vars.VITE_LAT_WEB_URL }}"` is no longer about the build; rename the GitHub Actions repo variable + reference to a `DD_*` name (e.g. `DD_SOURCEMAP_URL_PREFIX`) to decouple it from the deleted `VITE_*` concept.
+  - **Leave the four optional `VITE_*`** (`VITE_LAT_TURNSTILE_SITE_KEY`, `VITE_LAT_POSTHOG_KEY`, `VITE_LAT_POSTHOG_HOST`, `VITE_LAT_GTM_CONTAINER_ID`) **as-is** — kept for Latitude-cloud builds; **simply unset on public images** ⇒ not baked ⇒ those features no-op. Net result: the public `web` image bakes **no** deployment-specific URL.
+  - **Caveat:** the `deploy.yml` build-env + Datadog rename touch the **production deploy pipeline** (and a GitHub repo-variable rename), and the `infra/lib/ecs.ts` lines touch `infra/` (normally untouched) — these are dead/no-op cleanup only, but coordinate before landing.
 
-**Exit gate**: the shipped application is **100% permissive** (no AGPL — `ua-parser-js` replaced by `bowser`); no dead infra packages remain (`db-weaviate` gone); knip is clean or its remaining reports are explicitly triaged; and Latitude is **namespaced for shared-Redis coexistence** (P2-4). Done before Phase 3 starts.
+**Exit gate**: the shipped application is **100% permissive** (no AGPL — `ua-parser-js` replaced by `bowser`); no dead infra packages remain (`db-weaviate` gone); knip is clean or its remaining reports are explicitly triaged; Latitude is **namespaced for shared-Redis coexistence** (P2-4); and the public `web` bundle **bakes no deployment URLs** (P2-5). Done before Phase 3 starts.
 
 ### Phase 3 — Tier 1: Local (Development) experience
 
@@ -150,7 +156,7 @@ The headline "easy self-hosting" path: one machine, published images, one `.env`
   - **Stable images from the `vX.Y.Z` release-tag flow** (`scripts/release.sh`, the only production trigger): publish `ghcr.io/latitude-dev/latitude-<service>:vX.Y.Z` (+ `:latest`). These are what Tier 2/3 pin.
   - **Edge images from `development` pushes**: publish a `:development` (edge) tag for testing pre-release builds — `development` is trunk and deploys only to **staging**, so this is never the self-host default.
   - Rename away from today's deploy-specific `latitude-<env>-<service>` / sha-tag scheme.
-  - **The `web` image must not bake URLs**: replace the build-time `VITE_*` args with **runtime-injected** client config (startup placeholder substitution) so one public `web` image serves any self-hoster's domains.
+  - **The `web` image must not bake URLs** — **done in P2-5** (frontend URLs went relative; the one SSR-absolute case reads runtime `LAT_WEB_URL`; the baked `VITE_LAT_API_URL`/`VITE_LAT_WEB_URL` are deleted). P4-1 only needs to confirm no deployment URL is baked and that the four optional `VITE_*` stay unset on the public image — no placeholder-substitution mechanism required.
 - [ ] **P4-2**: Author a full-stack self-host **`docker-stack.yml`** (one file usable with both `docker compose up` and `docker stack deploy`) running **all app services + infra + the bundled SeaweedFS + a one-shot migrations container**, with production-grade defaults and `deploy:` blocks so Swarm can scale it. Keep each infra service (Postgres/ClickHouse/Redis/SeaweedFS/Temporal) as a **clearly-marked, independently removable block** so an operator can comment it out and point the matching `LAT_*` env at an **existing instance** (bring-your-own infra). The bundled Temporal mirrors the Tier-1 dev recipe — `temporalio/auto-setup` on the bundled Postgres (Postgres for default + visibility store, no Elasticsearch).
 - [ ] **P4-3**: Bundle **SeaweedFS** (Apache-2.0) as the self-host object store — a single-container all-in-one S3 service (`server -s3`) wired behind the `s3` driver (`LAT_STORAGE_DRIVER=s3` + `LAT_STORAGE_S3_ENDPOINT`). Document the three options (`fs` on a shared volume / bundled SeaweedFS / bring-your-own managed S3) and the **all-services-share-storage** constraint (ingest writes payloads that workers read; exports are written by workers and served by web). Ship a committed **`.env.production.example`** (operator copies it to `.env.production`) pre-wired to the self-host profile with secrets-generation guidance and AI keys called out.
 - [ ] **P4-4**: Ensure **graceful degradation** with no proprietary AI keys — the app boots and core observability (ingest + trace viewing) works; AI-dependent features are cleanly disabled with a clear message instead of crashing.
@@ -212,7 +218,7 @@ Guarantees nothing is lost when `specs/oss.md` is deleted. Runs **incrementally*
 
 - **Self-host limits**: are billing/Stripe-gated limits simply disabled in self-host, or replaced with config-driven limits?
 - **Graceful degradation surface**: exactly how do AI-dependent features present when their provider is unconfigured (hidden, disabled with a tooltip, empty state)?
-- **Image distribution (mostly decided)**: GHCR, env-neutral `latitude-<service>` images, **`vX.Y.Z` + `latest` on release tags** (stable, what self-hosters pin) and a **`development` edge tag** on trunk pushes. Open: the exact **runtime client-config mechanism for the `web` image** (so `VITE_*` URLs aren't baked) and whether to also mirror images to Docker Hub.
+- **Image distribution (mostly decided)**: GHCR, env-neutral `latitude-<service>` images, **`vX.Y.Z` + `latest` on release tags** (stable, what self-hosters pin) and a **`development` edge tag** on trunk pushes. **Decided (P2-5):** no placeholder-substitution mechanism is needed for the `web` image — frontend URLs use relative paths and the one SSR-absolute URL reads runtime `LAT_WEB_URL`; the baked `VITE_LAT_API_URL`/`VITE_LAT_WEB_URL` are removed. Still open: whether to also mirror images to Docker Hub.
 - **Stateful deps in the Helm chart — decided (P5-4):** every dependency (Postgres/ClickHouse/Redis/SeaweedFS/Temporal) is an independent `enabled` toggle — bundled subcharts by default, disable + point at existing/managed instances via an `external:` block.
 - **Temporal self-host shape (minor):** `auto-setup` image (easiest — auto-creates schema on boot) vs. the plain server image + a one-shot schema-setup job (cleaner for prod); and reuse Latitude's Postgres with a dedicated `temporal` database vs. a separate Postgres. *(Bundling a Postgres-backed Temporal — no Elasticsearch/Cassandra — is **decided**; see P5-2.)*
 - **(Phase 6) Embeddings default**: which OSS embedding model is the blessed default, and how do we handle the **dimension/migration** implications of switching embedding models against existing pgvector data?
@@ -302,3 +308,93 @@ Core chosen runtime libraries — all permissive: Hono (MIT), TanStack Router/St
 4. **Keep `agentation` dev-only** (already dead-code-eliminated) — no change needed, but note it so it is never promoted to a runtime dependency.
 5. **`@img/sharp-libvips` (LGPL) — no action.** Dynamically-linked, unmodified prebuilt; permits commercial/self-host use.
 6. Treat the proprietary **AI providers as a functional (not legal) limitation** — already tracked as the Phase 6 polish.
+
+## Appendix B — Environment variable matrix (P1-2)
+
+Tags: **Required** (a real deploy won't function / won't boot without it), **Optional** (has a safe default or cleanly no-ops when unset), **Proprietary-enhancement** (a non-OSS provider key that unlocks an AI feature; unset = that feature degrades, never a crash — see [Appendix C](#appendix-c--feature-degradation-without-proprietary-ai-p1-3)). `VITE_*` vars are browser-facing client config currently **baked into the `web` image at build time** (P4-1 makes them runtime-injected).
+
+### Core — Required on every tier
+
+| Var | Notes |
+| --- | --- |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Bundled-Postgres container credentials. Omit if BYO Postgres (set `LAT_DATABASE_URL` instead). |
+| `POSTGRES_RUNTIME_USER` / `POSTGRES_RUNTIME_PASSWORD` | RLS-bound runtime user (created by `docker/init-db.sh`). |
+| `LAT_DATABASE_URL` | Runtime (RLS) connection; `latitude` schema, needs the `vector` extension. |
+| `LAT_ADMIN_DATABASE_URL` | Superuser connection (migrations, seeds, cross-org runtime queries). |
+| `CLICKHOUSE_URL` / `CLICKHOUSE_USER` / `CLICKHOUSE_PASSWORD` / `CLICKHOUSE_DB` | OLAP span store; dedicated `CLICKHOUSE_DB`. |
+| `CLICKHOUSE_MIGRATION_URL` | Migration tooling (goose). |
+| `LAT_REDIS_HOST` / `LAT_REDIS_PORT` | Cache Redis. |
+| `LAT_BULLMQ_HOST` | Queue Redis (`LAT_BULLMQ_PORT` defaults to 6380). |
+| `LAT_TEMPORAL_ADDRESS` / `LAT_TEMPORAL_NAMESPACE` / `LAT_TEMPORAL_TASK_QUEUE` | Workflow engine. |
+| `LAT_STORAGE_DRIVER` (+ `LAT_STORAGE_FS_ROOT` **or** the `LAT_STORAGE_S3_*` set) | `fs` needs `LAT_STORAGE_FS_ROOT`; `s3` needs `LAT_STORAGE_S3_BUCKET`/`_REGION`/`_ACCESS_KEY_ID`/`_SECRET_ACCESS_KEY` (+ `_ENDPOINT` for non-AWS). |
+| `LAT_MASTER_ENCRYPTION_KEY` | 32-byte hex (AES-256-GCM); **generate a unique value per deploy.** |
+| `LAT_BETTER_AUTH_SECRET` / `LAT_BETTER_AUTH_URL` | Auth signing secret + base URL; **generate a unique secret.** |
+| `LAT_WEB_URL` / `LAT_API_URL` / `LAT_INGEST_URL` (+ matching `*_PORT`) | Service URLs/ports. |
+| `LAT_TRUSTED_ORIGINS` / `LAT_CORS_ALLOWED_ORIGINS` | Must list your real origins. |
+| `VITE_LAT_API_URL` / `VITE_LAT_WEB_URL` | Browser-facing URLs; **build-time-baked today** (P4-1 fixes). |
+| `NODE_ENV` | `production` on Tiers 2–3. |
+
+### Optional — tunables with safe defaults
+
+`LAT_PG_POOL_MAX`, `LAT_PG_IDLE_TIMEOUT_MS`, `LAT_PG_CONNECT_TIMEOUT_MS`, `CLICKHOUSE_CLUSTER_ENABLED`, `LAT_REDIS_TLS`, `LAT_REDIS_CLUSTER`, `LAT_BULLMQ_PORT`, `LAT_BULLMQ_PASSWORD`, `LAT_BULLMQ_CLUSTER`, `LAT_BULL_BOARD_USERNAME`/`LAT_BULL_BOARD_PASSWORD` (queue-dashboard auth), `LAT_EXPORT_RATE_LIMIT_*`, `LAT_INGEST_TRACE_RATE_LIMIT_*`, `LAT_WORKERS_HEALTH_PORT`, `LAT_WORKFLOWS_HEALTH_PORT`, `LAT_TEMPORAL_API_KEY` (Temporal Cloud only), `LAT_WEB_BUNDLE_ANALYZE`, `LAT_ALLOWED_EMAIL_DOMAIN`. *(The shared-Redis namespacing vars from P2-4 — `LAT_REDIS_KEY_PREFIX`, `LAT_REDIS_DB`, `LAT_BULLMQ_PREFIX` — join this group once that ships.)*
+
+### Optional — email transport (at least one needed for magic-link / invite login)
+
+Defaults to **Mailpit** (`LAT_MAILPIT_HOST`/`_PORT`/`_FROM`). Alternatives: Mailgun (`LAT_MAILGUN_*`), generic SMTP (`LAT_SMTP_*`), SendGrid (`LAT_SENDGRID_*`). With no transport reachable, transactional email (magic links, invites) won't send.
+
+### Optional — integrations (cleanly no-op when unset)
+
+OAuth (`LAT_GOOGLE_*`, `LAT_GITHUB_*`), Slack (`LAT_SLACK_*`), Stripe billing (`LAT_STRIPE_*`), Cloudflare Turnstile (`LAT_TURNSTILE_SECRET_KEY` + `VITE_LAT_TURNSTILE_SITE_KEY`), observability/OTEL (`LAT_OBSERVABILITY_*`), Latitude dogfood (`LAT_LATITUDE_TELEMETRY_*`, `LAT_LATITUDE_API_URL`), Intercom (`LAT_V2_SUPPORT_APP_*`), PostHog (`LAT_POSTHOG_*`, `VITE_LAT_POSTHOG_*`), Framer changelog (`LAT_FRAMER_*`), GTM (`VITE_LAT_GTM_CONTAINER_ID`), ipinfo GeoIP (`LAT_IPINFO_TOKEN`), Loops lifecycle email (`LAT_LOOPS_API_KEY`), GEPA optimizer (`LAT_GEPA_*`).
+
+### Proprietary-enhancement — AI keys (unset = feature degrades, never a crash)
+
+| Var(s) | Provider | Unlocks |
+| --- | --- | --- |
+| `LAT_VOYAGE_API_KEY` | Voyage AI | Embeddings + reranking → semantic trace/issue search, search highlights, issue clustering |
+| `LAT_ANTHROPIC_API_KEY` | Anthropic | Internal LLM flows — flaggers, evaluations, conversation intelligence, issue summarization, AI generation, annotator optimizations |
+| `LAT_AWS_REGION` + `LAT_AWS_ACCESS_KEY_ID`/`_SECRET_ACCESS_KEY`/`_SESSION_TOKEN`/`_BEARER_TOKEN_BEDROCK` | Amazon Bedrock | Same internal LLM flows as Anthropic (alternative provider; region defaults to `eu-central-1`, creds fall back to the AWS provider chain) |
+
+### Minimal required set per tier
+
+- **Tier 1 — Local (dev):** the committed `.env.example` / `.env.development` already boots the whole stack key-free — bundled Postgres/ClickHouse/Redis/Temporal, `fs` storage at `LAT_STORAGE_FS_ROOT`, Mailpit, localhost URLs, and the example dev secrets. **No AI keys** needed; AI features stay inert until a key is added.
+- **Tier 2 — Single-host (prod):** the **Core (Required)** rows above with **freshly generated** `LAT_MASTER_ENCRYPTION_KEY` + `LAT_BETTER_AUTH_SECRET`, your real public URLs/origins, a production object store (`fs` on a durable volume / bundled SeaweedFS via the `s3` driver / BYO managed S3), and a real email transport. Add the AI keys for full features.
+- **Tier 3 — Cluster:** identical env contract to Tier 2, supplied via k8s Secrets/ConfigMaps; the bundled-vs-external infra toggles (P5-4) decide which `LAT_*` point at in-cluster subcharts vs managed services.
+
+## Appendix C — Feature degradation without proprietary AI (P1-3)
+
+**Boot is always safe.** No AI adapter is constructed at startup; each reads its key lazily and fails per-call with a tagged error (`AIError` / `AICredentialError`). Trace ingest (`apps/ingest` → `ingestSpansUseCase`: decode → sample → enqueue) calls no AI. So every service boots and **core observability works with zero AI keys**.
+
+| Capability | Provider / port | Without the key |
+| --- | --- | --- |
+| Trace/span ingest, storage, viewing; project/org mgmt; billing | none | **Works** |
+| Semantic trace search, search highlights/snippets | Voyage (`AIEmbed`/`AIRerank`) | **Degrades** to lexical/literal search (`get-trace-search-highlights` checks `Effect.serviceOption(AI)` and returns literal highlights) |
+| Issue semantic search + candidate reranking | Voyage | **Degrades** to lexical tier |
+| Issue clustering / discovery embeddings | Voyage | Discovery step that needs embeddings can't run |
+| Flaggers (AI-drafted annotations) | Anthropic / Bedrock (`AIGenerate`) | Per-job failure with a clear message |
+| Evaluations (LLM-as-judge); evaluation/annotator optimization | Anthropic / Bedrock | Per-job failure |
+| Conversation intelligence / session analysis | Anthropic / Bedrock | Per-job failure |
+| Issue summarization / details refresh; annotation enrichment; AI generation | Anthropic / Bedrock | Per-job failure |
+
+Error strings (for docs/UX): `"Voyage AI is unavailable: set LAT_VOYAGE_API_KEY."`, `"Anthropic is unavailable: set LAT_ANTHROPIC_API_KEY."`, `"Amazon Bedrock is unavailable: set LAT_AWS_REGION."` The exact UX surface (hidden vs disabled-with-tooltip vs empty state) is an open question owned by P4-4.
+
+## Appendix D — Canonical self-host profile (P1-5)
+
+The single blessed configuration verified per tier. **Today it documents the proprietary-AI requirement; Phase 6 makes it fully OSS.**
+
+**Images (the P4-1 target):** env-neutral `ghcr.io/latitude-dev/latitude-<service>` for the 6 build targets (`api`, `ingest`, `workers`, `workflows`, `web`, `migrations`), pinned to a `:vX.Y.Z` release tag (`:development` = edge). **One image set, three tiers** — only orchestration differs.
+
+**Adapters (the OSS-default ports):**
+
+- **Postgres + pgvector** (`pgvector/pgvector:pg16`) — dedicated `latitude` schema; requires the `vector` extension and a schema-create admin role.
+- **ClickHouse** (`clickhouse/clickhouse-server`) — dedicated `CLICKHOUSE_DB` database.
+- **Redis ×2** (cache + BullMQ) — namespaced for shared instances after P2-4.
+- **Temporal** (`temporalio/auto-setup`, Postgres-backed default + visibility store, no Elasticsearch) — dedicated namespace + task queue.
+- **Object storage** — `fs` (Tier 1) / bundled **SeaweedFS** behind the `s3` driver (Tier 2/3) / BYO managed S3.
+- **Email** — Mailpit (dev) or any SMTP / Mailgun / SendGrid (prod).
+
+**Proprietary-AI requirement (current, until Phase 6):**
+
+- Embeddings + reranking → **Voyage AI** (`LAT_VOYAGE_API_KEY`). Unset ⇒ search degrades to lexical, clustering reduced.
+- Internal LLM flows → **Anthropic** (`LAT_ANTHROPIC_API_KEY`) and/or **Amazon Bedrock** (`LAT_AWS_*`). Unset ⇒ flaggers/evals/summaries/etc. disabled per-call.
+
+**Guarantee:** with **no** AI keys the stack still boots and serves core observability (ingest + trace viewing); AI features light up as keys are added. Every shipped runtime dependency is permissive (MIT / Apache / BSD / ISC) — see [Appendix A](#appendix-a--dependency-license--self-hosting-audit).
