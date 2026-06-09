@@ -136,9 +136,37 @@ Contributions are welcome. Read the [Contributing Guide](CONTRIBUTING.md) to get
 
 ## 🧑‍💻 Thanks to all of our contributors
 
-<a href="https://github.com/latitude-dev/latitude-llm/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=latitude-dev/latitude-llm" alt="Latitude contributors" />
-</a>
+<p align="center">
+  <a href="https://github.com/geclos" title="geclos"><img src="https://avatars.githubusercontent.com/u/1948929?v=4&s=128" width="64" height="64" alt="geclos" /></a>
+  <a href="https://github.com/csansoon" title="csansoon"><img src="https://avatars.githubusercontent.com/u/57395395?v=4&s=128" width="64" height="64" alt="csansoon" /></a>
+  <a href="https://github.com/andresgutgon" title="andresgutgon"><img src="https://avatars.githubusercontent.com/u/49499?v=4&s=128" width="64" height="64" alt="andresgutgon" /></a>
+  <a href="https://github.com/neoxelox" title="neoxelox"><img src="https://avatars.githubusercontent.com/u/15955031?v=4&s=128" width="64" height="64" alt="neoxelox" /></a>
+  <a href="https://github.com/learningbizz" title="learningbizz"><img src="https://avatars.githubusercontent.com/u/58665730?v=4&s=128" width="64" height="64" alt="learningbizz" /></a>
+  <a href="https://github.com/cesr" title="cesr"><img src="https://avatars.githubusercontent.com/u/5465249?v=4&s=128" width="64" height="64" alt="cesr" /></a>
+  <a href="https://github.com/guillemwilly" title="guillemwilly"><img src="https://avatars.githubusercontent.com/u/161842218?v=4&s=128" width="64" height="64" alt="guillemwilly" /></a>
+  <a href="https://github.com/paulacavero" title="paulacavero"><img src="https://avatars.githubusercontent.com/u/147257979?v=4&s=128" width="64" height="64" alt="paulacavero" /></a>
+  <a href="https://github.com/ntizish" title="ntizish"><img src="https://avatars.githubusercontent.com/u/66680150?v=4&s=128" width="64" height="64" alt="ntizish" /></a>
+  <a href="https://github.com/Ashad-h" title="Ashad-h"><img src="https://avatars.githubusercontent.com/u/15173020?v=4&s=128" width="64" height="64" alt="Ashad-h" /></a>
+  <a href="https://github.com/cballou" title="cballou"><img src="https://avatars.githubusercontent.com/u/166784?v=4&s=128" width="64" height="64" alt="cballou" /></a>
+  <a href="https://github.com/samufyi" title="samufyi"><img src="https://avatars.githubusercontent.com/u/114986220?v=4&s=128" width="64" height="64" alt="samufyi" /></a>
+  <a href="https://github.com/daavidrgz" title="daavidrgz"><img src="https://avatars.githubusercontent.com/u/72865058?v=4&s=128" width="64" height="64" alt="daavidrgz" /></a>
+  <a href="https://github.com/Bald1nh0" title="Bald1nh0"><img src="https://avatars.githubusercontent.com/u/61911413?v=4&s=128" width="64" height="64" alt="Bald1nh0" /></a>
+  <a href="https://github.com/txus" title="txus"><img src="https://avatars.githubusercontent.com/u/83234?v=4&s=128" width="64" height="64" alt="txus" /></a>
+  <a href="https://github.com/felpasl" title="felpasl"><img src="https://avatars.githubusercontent.com/u/5658895?v=4&s=128" width="64" height="64" alt="felpasl" /></a>
+  <a href="https://github.com/NewtTheWolf" title="NewtTheWolf"><img src="https://avatars.githubusercontent.com/u/59208097?v=4&s=128" width="64" height="64" alt="NewtTheWolf" /></a>
+  <a href="https://github.com/baibhavKumar1" title="baibhavKumar1"><img src="https://avatars.githubusercontent.com/u/109906215?v=4&s=128" width="64" height="64" alt="baibhavKumar1" /></a>
+  <a href="https://github.com/cursoragent" title="cursoragent"><img src="https://avatars.githubusercontent.com/u/199161495?v=4&s=128" width="64" height="64" alt="cursoragent" /></a>
+  <a href="https://github.com/david8z" title="david8z"><img src="https://avatars.githubusercontent.com/u/31882023?v=4&s=128" width="64" height="64" alt="david8z" /></a>
+  <a href="https://github.com/eltociear" title="eltociear"><img src="https://avatars.githubusercontent.com/u/22633385?v=4&s=128" width="64" height="64" alt="eltociear" /></a>
+  <a href="https://github.com/marcos-muino-garcia" title="marcos-muino-garcia"><img src="https://avatars.githubusercontent.com/u/166235?v=4&s=128" width="64" height="64" alt="marcos-muino-garcia" /></a>
+  <a href="https://github.com/PeterDaveHello" title="PeterDaveHello"><img src="https://avatars.githubusercontent.com/u/3691490?v=4&s=128" width="64" height="64" alt="PeterDaveHello" /></a>
+  <a href="https://github.com/timneutkens" title="timneutkens"><img src="https://avatars.githubusercontent.com/u/6324199?v=4&s=128" width="64" height="64" alt="timneutkens" /></a>
+  <a href="https://github.com/VaibhavWakde52" title="VaibhavWakde52"><img src="https://avatars.githubusercontent.com/u/149496880?v=4&s=128" width="64" height="64" alt="VaibhavWakde52" /></a>
+  <a href="https://github.com/zhyd1997" title="zhyd1997"><img src="https://avatars.githubusercontent.com/u/31362988?v=4&s=128" width="64" height="64" alt="zhyd1997" /></a>
+  <a href="https://github.com/buweiyuqi" title="buweiyuqi"><img src="https://avatars.githubusercontent.com/u/57198914?v=4&s=128" width="64" height="64" alt="buweiyuqi" /></a>
+  <a href="https://github.com/monotykamary" title="monotykamary"><img src="https://avatars.githubusercontent.com/u/1130103?v=4&s=128" width="64" height="64" alt="monotykamary" /></a>
+  <a href="https://github.com/wnor543" title="wnor543"><img src="https://avatars.githubusercontent.com/u/23494178?v=4&s=128" width="64" height="64" alt="wnor543" /></a>
+</p>
 
 ## 🔗 Links
 
