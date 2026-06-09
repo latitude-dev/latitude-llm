@@ -3,6 +3,7 @@ import {
   assertTaxonomyQualityUseCase,
   buildHierarchicalTaxonomyUseCase,
   emitLineageUseCase,
+  isDisplayableTaxonomyName,
   nameClusterUseCase,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   type TaxonomyClusterLineage,
@@ -281,7 +282,7 @@ export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput 
       // gets handed "Pending" descriptions and either stays Pending or
       // collapses onto the dominant child's name.
       const ordered = [...activeClusters]
-        .filter((cluster) => bornClusterIds.has(cluster.id) || cluster.name === "Pending")
+        .filter((cluster) => bornClusterIds.has(cluster.id) || !isDisplayableTaxonomyName(cluster.name))
         .sort((a, b) => b.depth - a.depth)
       const byDepth = new Map<number, string[]>()
       for (const cluster of ordered) {

@@ -148,9 +148,11 @@ export const solveAssignment = (cost: readonly (readonly number[])[]): number[] 
   return assignment
 }
 
-// Cost the optimizer treats as "never pair these" — any real pair (cost in
-// [0, 1] since cosine ∈ [-1, 1]) is strictly preferred, so disallowed and
-// padding cells are only ever chosen when a row has no allowed partner left.
+// Cost the optimizer treats as "never pair these". A real pair costs
+// `1 - cosine`, and cosine ∈ [-1, 1], so real costs lie in [0, 2]; this
+// sentinel sits well above that ceiling, so any real pair is strictly
+// preferred and disallowed/padding cells are only ever chosen when a row has
+// no allowed partner left. Keep it > 2 if you ever retune.
 const DISALLOWED_COST = 10
 
 /**
