@@ -33,6 +33,7 @@ const defaultRunContext: SeedRunContext = {
   projectSlug: SEED_PROJECT_SLUG,
   apiKeyToken: SEED_API_KEY_TOKEN,
   flaggersOnly: false,
+  remote: false,
 }
 
 function createSeedTargets(): SeedTargets {
