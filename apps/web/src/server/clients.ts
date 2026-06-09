@@ -208,7 +208,6 @@ export const getBetterAuth = () => {
           ),
         ),
       extraPlugins: [
-        tanstackStartCookies(),
         // OAuth2/OIDC authorization server for MCP clients (Claude Code,
         // Cursor, …). Issues opaque random access + refresh tokens that the
         // API resource server validates via `@platform/oauth-token-auth`.
@@ -240,6 +239,12 @@ export const getBetterAuth = () => {
             allowDynamicClientRegistration: true,
           },
         }),
+        // Cookie integration MUST be the last plugin in the array. Better Auth
+        // only forwards `Set-Cookie` headers into the TanStack Start cookie
+        // store for plugins whose `hooks.after` run *before* it; any plugin
+        // placed after this one could set cookies that never reach the
+        // framework (BA logs a warning when it isn't last).
+        tanstackStartCookies(),
       ],
       onUserCreated: async (user) => {
         await Effect.runPromise(

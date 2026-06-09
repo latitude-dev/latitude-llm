@@ -370,7 +370,6 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
             }),
           ]
         : []),
-      ...(config.extraPlugins ?? []),
       ...(stripeClient && stripeWebhookSecret
         ? [
             stripe({
@@ -442,6 +441,11 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
             }) as StripePlugin<StripeOptions>,
           ]
         : []),
+      // Caller-provided plugins are spread LAST so a cookie-integration plugin
+      // (e.g. `tanstackStartCookies`) lands at the very end of the array.
+      // Better Auth forwards `Set-Cookie` headers from plugins whose
+      // `hooks.after` run before the cookie plugin, so it must come last.
+      ...(config.extraPlugins ?? []),
     ],
   })
 }
