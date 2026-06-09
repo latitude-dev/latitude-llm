@@ -1,14 +1,14 @@
 ---
 title: Saved Searches
-description: Bookmark useful searches, assign ownership, and track what your team has reviewed
+description: Bookmark useful search queries and filter sets, then reopen them from the Saved searches dropdown
 ---
 
 # Saved Searches
 
-A saved search is a reusable search query, filter set, or both. Save it once, then return to the same cohort from the Search landing page.
+A saved search is a reusable search query, filter set, or both. Save it once, then return to the same cohort from the **Saved searches** dropdown on the Traces page.
 
 <Frame>
-  <img src="/images/search/saved-searches-list.png" alt="Saved searches table with columns for last found, assignee, annotated count, and total count" />
+  <img src="/images/search/saved-searches-list.png" alt="The Saved searches dropdown on the Traces page, listing saved searches by name, query, and filter count" />
 </Frame>
 
 ## What a Saved Search Stores
@@ -23,46 +23,33 @@ A saved search must include a query, filters, or both. _"All errors in productio
 
 Saved searches are project-scoped. Two projects can have saved searches with the same name; they're independent.
 
-## The Saved Searches Page
+## The Saved searches dropdown
 
-When no query is active, the Search landing page shows saved searches. Each row includes:
+Saved searches live in the **Saved searches** dropdown, on the left of the search bar on the Traces page. Open it to see every saved search in the project. Each row shows:
 
-| Column | What it shows |
+| Element | What it shows |
 | --- | --- |
-| **Saved search** | The name, plus a preview of the query, filter count, and creation date |
-| **Last found** | The timestamp of the most recent matching trace |
-| **Assigned To** | The team member responsible for this search (optional) |
-| **Annotated** | How many matching traces have at least one annotation on them |
-| **Total** | How many traces match the saved search right now |
+| **Name** | The label you gave the saved search |
+| **Query** | A preview of the search text, if the saved search has one |
+| **Filters** | How many filters are part of the saved search |
 
-Click a row to reopen the saved search with its query and filters restored.
+Use the filter box at the top of the dropdown to find a saved search by name. Click a row to reopen the saved search with its query and filters restored. Hovering a row also reveals actions to create or view a [monitor](../monitors/overview), rename, and delete (see below).
 
 ## Creating a Saved Search
 
-1. Open **Search** and run a query, apply filters, or both.
-2. Click **Save search** in the toolbar.
+1. On the **Traces** page, run a query, apply filters, or both.
+2. Click **Save search**, or open the **Saved searches** dropdown and click **Save current search** at the bottom.
 3. Give it a descriptive name and confirm.
 
-Latitude reloads the Search page with the saved search active. The new entry appears in the saved searches table the next time you clear the search.
+The saved search becomes active right away, and the new entry appears in the **Saved searches** dropdown.
 
 <Tip>
   Good names describe what's in the cohort, not how you searched for it. _"Failed payments last week"_ is more useful at a glance than _"q: payment errors filter: status=error"_.
 </Tip>
 
-## Assigning Ownership
-
-Each saved search can be assigned to an organization member. Assignment is only an ownership signal: everyone can still see and open the search.
-
-To assign or reassign:
-
-- Open the row's actions menu and pick **Assign to**, or
-- Click the assignee cell directly in the table and choose a member from the dropdown.
-
-The **Annotated / Total** ratio shows the assignee how much of the cohort still needs review.
-
 ## Renaming and Deleting
 
-The row's actions menu lets you assign, rename, or delete a saved search. Deleting removes only the bookmark; the underlying traces are not affected.
+Hover a row in the **Saved searches** dropdown to reveal its actions, then rename or delete the saved search. Deleting removes only the bookmark; the underlying traces are not affected. Deleting a saved search also removes any [monitor](../monitors/overview) alerts watching it.
 
 ## Editing a Saved Search
 
@@ -83,8 +70,8 @@ You're investigating reports that the agent gets confused during multi-turn chec
 
 1. Run a search like `"checkout"` and add a filter for `metadata.flow = "checkout"` and `spanCount >= 5`.
 2. Save it as _"Checkout flows over 5 steps"_.
-3. Assign it to yourself.
-4. Work through the matches. **Total** shows the cohort size; **Annotated** shows review progress.
+3. Work through the matches, opening each trace to inspect and annotate it.
+4. Reopen the saved search whenever you want to return to the same cohort.
 
 ### Watch for a recurring issue
 
@@ -92,22 +79,23 @@ You've resolved a tool-retry issue and want to make sure it doesn't return.
 
 1. Run a search filtered to the relevant tag or metadata.
 2. Save it as _"Tool retry regressions"_.
-3. Check it weekly; **Last found** shows when the latest matching trace appeared.
+3. Reopen it whenever you want to check, or point a [monitor](../monitors/overview) at it to be alerted automatically when matching traces arrive.
 
 ### Share a cohort with a teammate
 
 You've found interesting jailbreak attempts and want a teammate to review them.
 
-1. Save the search.
-2. Reassign it to the teammate.
-3. They'll see it with their avatar the next time they open Search.
+1. Save the search with a clear name.
+2. Tell your teammate the name.
+3. Saved searches are shared across the project, so they'll find it in the **Saved searches** dropdown.
 
 ## What Saved Searches Don't Do
 
-Saved searches are bookmarks, not subscriptions. They don't notify you, generate evaluation scores, or run background processing when a new trace matches. For automated detection that produces scores and feeds issue discovery, see [Flaggers](../annotations/flaggers).
+Saved searches are bookmarks, not subscriptions. On their own they don't notify you, generate evaluation scores, or run background processing when a new trace matches. To get **alerted** when matching traces start arriving, spike, or stay elevated, point a [monitor](../monitors/overview) at the saved search. For automated detection that produces scores and feeds issue discovery, see [Flaggers](../annotations/flaggers).
 
 ## Next Steps
 
+- [Monitors](../monitors/overview): Alert on a saved search when matching traces arrive, spike, or stay elevated
 - [Search Overview](./overview): How search itself works
 - [Flaggers](../annotations/flaggers): Automatic annotators for common failure categories
 - [Inline Annotations](../annotations/inline-annotations): Leave feedback on traces from your saved search

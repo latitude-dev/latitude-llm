@@ -1,0 +1,224 @@
+---
+title: Monitors Overview
+description: Watch your issues and saved searches, and get alerted when something needs your attention.
+---
+
+# Monitors
+
+A **monitor** watches your production traffic and opens an **incident** when a condition you care about is met. Each monitor has one or more **alerts**, and each alert watches a single signal with its own condition and severity. When any of a monitor's alerts fires, Latitude records an incident and sends you a notification through your existing notification channels.
+
+Monitors live on the **Monitors** page of each project. Open it from the project sidebar.
+
+<Frame caption="The Monitors page: system and user monitors side by side, each with its status, last incident, and a plain-English summary of its condition.">
+  <img src="/images/monitors/monitors-list.png" alt="The Monitors page listing system and user monitors with their status, last incident, and condition" />
+</Frame>
+
+## System monitors vs. your monitors
+
+There are two kinds of monitors:
+
+- **System monitors** are set up automatically for every project. They watch your [issues](../issues/overview) and are marked with a **System** badge. You can't create, rename, or delete them, and you can't change what they watch, but you _can_ mute them.
+- **Your monitors** are the ones you create. Today they watch [saved searches](../search/saved-searches). You have full control: add and remove alerts, rename, mute, and delete.
+
+<Frame caption="System monitors have a System badge next to their name.">
+  <img src="/images/monitors/system-monitor-badge.png" alt="A system monitor row showing its name next to the System badge" />
+</Frame>
+
+The Monitors list shows both, with columns for:
+
+| Column | What it shows |
+| --- | --- |
+| **Monitor** | The monitor's name, plus a **System** badge for system monitors |
+| **Status** | **Live** (alerts are active) or **Muted** (still recording incidents, but not notifying) |
+| **Last incident** | When the monitor most recently fired, or `—` if it never has |
+| **Condition** | A plain-English summary of the monitor's first alert, with a `+N` badge when it has more |
+
+Click any row to open its details panel, where you can see every alert, the full incident history, and the mute control.
+
+## The three system monitors
+
+Every project comes with three monitors that watch the issue lifecycle. Each one notifies you about a different moment:
+
+- **Issue discovered**: fires each time a brand-new issue is detected in your traffic.
+- **Issue regressed**: fires each time an issue you had resolved is detected again.
+- **Issue escalating**: fires when an ongoing issue is being detected _more than expected_ for this time of day and week. This is the one monitor with a tunable knob: its **sensitivity** (a value from 1 to 6) controls how large a deviation from the normal pattern is needed before it fires. Open the monitor and edit the alert to change it.
+
+System monitors **can't be deleted**: they're part of how Latitude keeps you informed about issues. If you don't want to be notified by one, **mute** it (see [Mute](#mute) below).
+
+<Tip>
+  The three system monitors replace the old per-project issue-notification checkboxes. Tuning who gets notified, and on which channel, still happens in your notification preferences. See [How notifications work](#how-notifications-work).
+</Tip>
+
+## Creating a monitor for a saved search
+
+You create your own monitors on top of [saved searches](../search/saved-searches). A saved search defines _which_ traces you care about; the monitor decides _when_ that pattern is worth an alert.
+
+There are two ways into the create flow:
+
+1. **From the Monitors page**: click the **Monitor** button in the top-right and pick a saved search inside the form.
+2. **From a saved search**: open the **Saved searches** dropdown next to the search bar on the Traces page. Hover a saved search and click its bell icon for **Create monitor** (or **View monitor** if one already watches it), which opens the same form with that search pre-selected.
+
+<Frame caption="The Saved searches dropdown: hover a saved search and click the bell icon to create a monitor that watches it.">
+  <img src="/images/monitors/create-monitor-from-saved-search.png" alt="The Saved searches dropdown with a bell icon to create a monitor on a saved-search row" />
+</Frame>
+
+The create form asks for:
+
+- **Name**: a human-readable label, e.g. _"Tool error spikes"_.
+- **Description**: optional; what the monitor is for.
+- **One or more alerts**: each alert is a card where you pick the saved search, the alert kind, the condition, and a severity.
+<Frame caption="Create a monitor form: a name, an optional description, and one or more alert cards. The preview sentence at the bottom of each card restates the configuration in plain English.">
+  <img src="/images/monitors/create-monitor.png" alt="The New monitor form with a saved-search alert and its plain-English preview sentence" />
+</Frame>
+As you fill in an alert, a one-line **preview sentence** at the bottom of the card restates the configuration in plain English, so you can confirm it does what you intend before saving. For example:
+
+```text
+Alerts each time a new trace matching 'Checkout 5xx errors' is detected.
+```
+
+Each alert card has a **severity** selector (**Low**, **Medium**, or **High**) that sets the tone of the incident badge and the notification.
+
+
+## The three saved-search alert kinds
+
+A saved-search alert can watch its search in one of three ways, shown as tabs on the alert card: **Match**, **Threshold**, and **Escalating**.
+
+### Match: alert when matching traces start arriving
+
+Use **Match** when even one matching trace is worth knowing about, for example a saved search for `status = 5xx in production`.
+
+```text
+Alerts each time a new trace matching 'Production 5xx' is detected.
+```
+
+<Frame caption="A Match alert card: pick the saved search to watch and a severity. It fires each time a new matching trace is detected.">
+  <img src="/images/monitors/alert-match.png" alt="A Match alert card with the saved-search selector and severity options" />
+</Frame>
+
+To keep this from becoming noise, matches are **limited to one alert every 5 minutes**:
+
+- A burst of 500 matches arriving at once produces **one** alert, not 500.
+- If matching activity is **continuous**, you'll get a fresh alert **every 5 minutes** for as long as it keeps happening, so an ongoing problem stays visible instead of going quiet after the first alert.
+- After a **quiet period** with no matches, the next match opens a fresh alert again.
+
+<Tip>
+  The 5-minute cadence is deliberate: continuous matching keeps re-surfacing so you don't tune out and forget the problem is still live.
+</Tip>
+
+### Threshold: alert at a milestone or a spike
+
+Use **Threshold** when one match doesn't matter, but a lot of them do. The threshold row reads as a sentence you complete: **Alert when traces are detected … [amount] [comparison] [baseline]**. There are three flavors.
+
+#### Absolute count
+
+A simple count: alert once you've seen a set number of matching traces.
+
+```text
+Alerts when traces matching 'Production 5xx' are detected 100 times.
+```
+
+<Frame caption="A Threshold alert card in absolute-count mode: the threshold row reads 'Alert when traces are detected 100 times'.">
+  <img src="/images/monitors/alert-threshold.png" alt="A Threshold alert card configured to alert when traces are detected 100 times" />
+</Frame>
+
+#### Multiplier: relative to a baseline
+
+Spike detection: alert when the current volume rises to some multiple **above a baseline** you choose. Pick the comparison **times more than** and then choose the baseline:
+
+- **The average of the last N hours/days**: the normal-traffic case. Latitude divides the baseline window into 5-minute slices and compares your current rate against the average slice.
+- **The previous period** (yesterday, or the previous week): for traffic that follows **daily or weekly patterns**, where "normal" depends on the day or time.
+
+```text
+Alerts when traces matching 'Production 5xx' are detected 3 times more than the average of the last 7 days.
+```
+
+<Tip>
+  **Worked example.** Your saved search averages **20 matches per 5-minute slice** over the last 7 days. With a multiplier of **3**, the alert fires when the current 5-minute window crosses **60 matches** (3 × 20). If your baseline rises to 30/slice next week, the trigger automatically rises to 90, and you don't re-tune it.
+</Tip>
+
+#### Expected: a baseline that learns your patterns
+
+The smartest option: alert when you're seeing **more traffic than expected for this time of day and week**. Unlike average or previous-period, you don't pick a comparison window at all: Latitude learns what's normal for each time of day and day of the week on its own.
+
+```text
+Alerts when traces matching 'Production 5xx' are detected 3 times more than expected.
+```
+
+Choose **expected** when your traffic swings a lot depending on the time of day or day of week (busy weekday mornings, quiet weekends). A single average blurs those swings together; expected accounts for them.
+
+<Info>
+  **How "expected" works.** From your trace history, Latitude builds a profile of normal volume for each slot in the week (every hour-of-day × day-of-week pair) together with a tolerance band for how much that volume naturally varies. On each check it compares the current window's count against the expectation for *that* slot and fires when the count breaks above the band. **Sensitivity** sets how wide the band is: a higher value tightens it, so smaller deviations trip the alert. It's the same seasonal detector that powers the **Issue escalating** system monitor.
+</Info>
+
+### Escalating: alert only when a spike sticks around
+
+Use **Escalating** when you want to ignore short blips that fix themselves, and only hear about a problem that **sticks around**. An escalating alert combines any of the threshold modes above with a **window**:
+
+```text
+Alerts when traces matching 'Production 5xx' are detected 3 times more than expected, sustained for at least 15 minutes.
+```
+
+<Frame caption="An Escalating alert in expected mode: 'detected 3 times more than expected', plus a Window that requires the condition to be sustained for at least 5 minutes.">
+  <img src="/images/monitors/alert-escalating-expected.png" alt="An Escalating alert combining a more-than-expected threshold with a sustained window" />
+</Frame>
+
+The **window** field does two things:
+
+- It's the **measurement window**: the condition has to stay true for the whole window, not just for a moment. A single one-minute spike won't trip it.
+- It's the **cool-down**: once an incident opens, it stays open until things have been calm for that same window, so it doesn't rapidly open and close.
+
+An escalating alert can wrap any threshold mode (including a plain absolute count, as below) with that window:
+
+<Frame caption="The same Escalating kind wrapping a plain absolute count: 'detected 100 times, sustained for at least 5 minutes'.">
+  <img src="/images/monitors/alert-escalating.png" alt="An Escalating alert combining an absolute threshold with a sustained-for-at-least window" />
+</Frame>
+
+That's why escalating alerts are the right choice for the kind of thing you'd want to be paged about: short, noisy spikes get filtered out automatically.
+
+## Mute, delete, and edit
+
+### Mute
+
+Muting a monitor stops it from **notifying** you, but it keeps **recording incidents**. Open the monitor and use the **Mute** / **Unmute** button, or use the actions menu on the list row. Muting is the right tool for a monitor that's correct but currently noisy: you keep the incident history for later, you just stop the notifications.
+
+A muted monitor shows the **Muted** status in the list; a live one shows **Live**.
+
+### Delete
+
+You can **delete** your own monitors from the list's actions menu (or remove individual alerts from the details panel). A few rules:
+
+- **System monitors can't be deleted**: mute them instead.
+- A monitor must always keep **at least one alert**. When you remove the last alert, the UI offers to delete the whole monitor instead.
+- Deleting a monitor stops it firing and hides it from the list. Incidents it already recorded remain queryable.
+
+### Edit
+
+What's editable depends on the monitor type:
+
+| Action | Your monitors | System monitors |
+| --- | --- | --- |
+| Mute / unmute | ✅ | ✅ |
+| Rename / edit description | ✅ | ❌ |
+| Add / remove alerts | ✅ | ❌ |
+| Change an alert's kind, source, or severity | ✅ | ❌ |
+| Edit a condition value | ✅ | Only the **Issue escalating** sensitivity |
+| Delete the monitor | ✅ | ❌ |
+
+System monitors are **locked**: you can't change their name, alerts, or severities. The single tunable value is the **Issue escalating** sensitivity.
+
+## How notifications work
+
+When a monitor fires, the incident goes through Latitude's normal notification system, the same one used everywhere else. Monitors themselves **don't carry notification settings**:
+
+- **Who** gets notified and **on which channel** is controlled by your per-user and per-project notification preferences, not by the monitor.
+- A monitor's only effect on delivery is its **mute** state: a muted monitor still records incidents but stops the notifications from going out.
+
+Incidents can be delivered by email and to **Slack**. Email is toggled per person in notification preferences. Slack is connected once per organization at **Settings → Integrations**: after you connect a workspace, you route the **Incidents** group (the Issue discovered, regressed, and escalating notifications, plus monitor incidents) to the Slack channels you choose.
+
+To change channel routing or per-user preferences, use your notification settings rather than the monitor.
+
+## Next steps
+
+- [Issues overview](../issues/overview): what the system monitors watch
+- [Saved searches](../search/saved-searches): the basis for your own monitors
+- [Search overview](../search/overview): building the queries your monitors watch

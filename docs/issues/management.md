@@ -53,6 +53,8 @@ A regressed issue is a previously resolved problem that has returned. Treat it a
 
 Regression can mean the first fix was incomplete, a later change reintroduced the problem, or the agent drifted after model or prompt updates.
 
+You don't have to watch for regressions by hand: the **Issue regressed** system [monitor](../monitors/overview) notifies you automatically whenever a resolved issue is detected again.
+
 ## Ignoring Issues
 
 Ignoring is different from resolving:
@@ -74,5 +76,6 @@ As your project matures:
 ## Next Steps
 
 - [Issues Overview](./overview): How issues are discovered
+- [Monitors](../monitors/overview): Get notified when issues are discovered, regress, or escalate
 - [Evaluations](../evaluations/overview): Generate monitors from issues
 - [Annotations](../annotations/overview): Leave human feedback on issue traces

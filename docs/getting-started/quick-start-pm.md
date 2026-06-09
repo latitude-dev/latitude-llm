@@ -37,19 +37,11 @@ Use the filter sidebar to narrow traces by status, cost, duration, model, provid
 
 ## Finding Traces with Search
 
-The **Search** page is where you go to investigate a specific kind of trace. Type a plain-English query — _"failed payments"_, _"frustrated user"_, _"long latency on signup"_ — and Latitude returns the most relevant traces, ranked by a hybrid of keyword and semantic match. Use `"quotes"` for exact phrases.
+Search lives right on the **Traces** page. Type a plain-English query into the search bar, such as _"failed payments"_, _"frustrated user"_, or _"long latency on signup"_, and Latitude returns the most relevant traces, ranked by a blend of keyword and semantic match. Use `"quotes"` for exact phrases.
 
 Filters work alongside the query, so you can scope to a time range, a specific model, traces with errors, or any custom metadata your application sends.
 
-When a search is one you'll come back to, click **Save search** in the toolbar. Saved searches appear on the Search landing page in a table with the columns:
-
-- **Saved search**: The name, plus a preview of the query and filters
-- **Last found**: When the most recent matching trace appeared
-- **Assigned To**: A team member responsible for reviewing matches
-- **Annotated**: How many matching traces have been reviewed
-- **Total**: How many traces currently match
-
-Use saved searches to define review cohorts for your team. The Annotated and Total counts help you track how much of a cohort has been reviewed. See [Saved Searches](../search/saved-searches) for details.
+When a search is one you'll come back to, click **Save search** and give it a name. Saved searches are then a click away from the **Saved searches** dropdown next to the search bar, each showing its name, query, and filter count. Reopening one restores its query and filters so you, or a teammate, can pick the cohort back up. See [Saved Searches](../search/saved-searches) for details.
 
 ## Automatic Detection with Flaggers
 

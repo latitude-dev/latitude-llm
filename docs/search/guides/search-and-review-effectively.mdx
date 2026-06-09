@@ -30,7 +30,7 @@ When both query and filters are active, a trace must match both to appear.
 
 Before you click **Save search**, check that you could actually work through the matches and that they're varied enough to learn from.
 
-- **Small enough to finish.** If `Total` is in the thousands and you're reviewing by hand, tighten filters or shorten the time range until a week of review feels realistic. You can always broaden later.
+- **Small enough to finish.** If the result set is in the thousands and you're reviewing by hand, tighten filters or shorten the time range until a week of review feels realistic. You can always broaden later.
 - **Varied enough to learn.** Twenty different traces teach you more about your agent than two hundred near-identical ones. If every match looks the same, add a filter (model, metadata, span count) or tweak the query for edge cases.
 
 ## Name saved searches for what's in them
@@ -47,8 +47,7 @@ When you save:
 
 1. Run the query and filters until the result set looks right.
 2. **Save search** with a name a teammate can understand without opening it.
-3. **Assign an owner** when the saved search is actively being reviewed. Assignment signals responsibility, not visibility — anyone can still see and open it.
-4. Open matches from the trace detail view and use **Annotated / Total** to track progress.
+3. Open matches from the trace detail view and annotate as you work through them.
 
 ## Investigation vs review vs regression watch
 
@@ -57,31 +56,32 @@ The same feature serves three intents:
 **Investigation** (may stay unsaved)
 
 - Narrow time window, specific query.
-- Delete the saved search when done — or **Save as new** if you want a permanent watch derived from what you learned.
+- Delete the saved search when done, or **Save as new** if you want a permanent cohort derived from what you learned.
 
 **Review** (bounded work)
 
-- Stable query and filters so `Total` means something.
-- Work matches until the team agrees you're through it; track **Annotated**.
+- Stable query and filters so the cohort stays consistent between sessions.
+- Work matches until the team agrees you're through it.
 - Leave the saved search in place if you might need to re-sample later.
 
 **Regression watch** (ongoing)
 
 - Filters on metadata or tags that won't break when wording changes (e.g. `metadata.flow = "checkout"`, not a one-off phrase from a single bad trace).
-- Check **Last found** weekly — if it hasn't moved but `Total` is steady, the issue may be gone or the search may be stale.
+- For anything you want to keep an eye on, point a [monitor](../../monitors/overview) at the saved search so Latitude alerts you when matching traces arrive again, instead of reopening it by hand.
 - Update or delete watches when the product changes. Stale saved searches just get in the way.
 
 <Note>
-  Saved searches don't send notifications. **Last found** is how you know
-  new matches showed up — build a habit of checking watches you own.
+  Saved searches don't send notifications on their own. To get alerted when
+  new matches show up, point a [monitor](../../monitors/overview) at the saved
+  search.
 </Note>
 
 ## Update vs save as new
 
 When a loaded saved search drifts from what you want:
 
-- **Update saved search** — same intent, refined scope (e.g. extend from 7 to 30 days, add a model filter everyone agrees on).
-- **Save as new search** — a related cohort (e.g. same checkout flow but errors only vs all outcomes).
+- **Update saved search**: same intent, refined scope (e.g. extend from 7 to 30 days, add a model filter everyone agrees on).
+- **Save as new search**: a related cohort (e.g. same checkout flow but errors only vs all outcomes).
 
 Use **Save as new** when two teams need similar but different views. Use **Update** when everyone shares one definition.
 
@@ -93,7 +93,7 @@ Use **Save as new** when two teams need similar but different views. Use **Updat
 | --- | --- | --- |
 | **Who finds matches** | Latitude, on every completed trace | You, when you run or reopen the search |
 | **Best for** | Known failure categories (jailbreak, frustration, tool errors) | Product-specific cohorts that flaggers don't cover |
-| **Output** | Automatic annotations | A bookmarked working set — annotate, export, or inspect manually |
+| **Output** | Automatic annotations | A bookmarked working set you annotate, export, or inspect manually |
 | **Configuration** | Project settings (enable, sampling) | Query + filters + name |
 
 Use flaggers for the built-in failure types. Use saved searches for flows, metadata combinations, and regressions only your product can name. Most teams use both.
@@ -102,9 +102,9 @@ Use flaggers for the built-in failure types. Use saved searches for flows, metad
 
 The easiest searches start in your app: fields and tags you'll still recognize in a few months.
 
-- **Stable keys**: `metadata.flow`, `metadata.environment`, `metadata.feature` — not one-off debug strings.
+- **Stable keys**: `metadata.flow`, `metadata.environment`, `metadata.feature`, not one-off debug strings.
 - **Values you will filter on**: If you care about "refunds over $100", emit `metadata.refund_tier = "high"` (or a numeric field) rather than hoping the dollar amount appears in user messages.
-- **Tags for cross-cutting flags**: `production`, `canary`, `beta-user` — easy filter targets alongside semantic search.
+- **Tags for cross-cutting flags**: `production`, `canary`, `beta-user`, all easy filter targets alongside semantic search.
 
 You don't need a perfect schema on day one. Add fields when you find yourself re-running the same awkward query twice.
 
@@ -112,26 +112,26 @@ You don't need a perfect schema on day one. Add fields when you find yourself re
 
 Saved searches go stale when the product, model, or prompts change.
 
-- **Check `Last found` and `Total` monthly** for watches you still care about. No new matches for months often means update or delete.
-- **Avoid duplicates** — two names for the same cohort split review progress and confuse assignees.
-- **Watch filter-only saves** — filters with no query and no time limit can grow forever; long-lived watches should lean on metadata that stays meaningful.
+- **Reopen watches you still care about monthly** and skim recent matches. No new matches for months often means update or delete.
+- **Avoid duplicates**: two names for the same cohort confuse the team and waste review effort.
+- **Watch filter-only saves**: filters with no query and no time limit can grow forever, so long-lived watches should lean on metadata that stays meaningful.
 
 ## Common pitfalls
 
 - **Searching for what only lives in tool results.** Use metadata filters instead.
 - **Over-literal quoting.** `"the user wants a refund because the order was damaged"` must appear exactly; use semantic search plus a metadata filter if you have one.
-- **Saving before the result set looks right.** `Total` and `Annotated` only help if the saved search definition is correct.
-- **Giant unbounded saved searches.** Assigning someone 5,000 traces won't get the cohort reviewed.
+- **Saving before the result set looks right.** A saved search is only useful if its query and filters are correct, so check the matches before you save.
+- **Giant unbounded saved searches.** A cohort of 5,000 traces won't get reviewed by hand; tighten it first.
 - **Confusing flaggers with search.** Flaggers annotate automatically; saved searches are for cohorts you scope and review yourself.
-- **Expecting alerts.** No email when a new trace matches; check `Last found` or make watch review a recurring task.
+- **Expecting alerts.** A saved search won't email you when a new trace matches; point a [monitor](../../monitors/overview) at it for that.
 
 ## What teams often do
 
-- **One owner per saved search under active review** — one person responsible; everyone else can still see and open it.
-- **Saved searches owned by the team that knows the area** — checkout with payments, support flows with the team that ships them.
-- **A quick pass on new matches** — owners skim recent hits on their watches before weekly planning.
-- **Save as new instead of arguing** — when two squads need slightly different views of the same flow, don't overwrite a shared search.
+- **A clear owner in practice for each saved search under active review**: one person works the cohort, even though everyone can see and open it.
+- **Saved searches named for the area that knows them**: checkout with payments, support flows with the team that ships them.
+- **A quick pass on new matches**: skim recent hits on the searches you watch before weekly planning.
+- **Save as new instead of arguing**: when two squads need slightly different views of the same flow, don't overwrite a shared search.
 
 ## Recommended pattern
 
-Start with one or two saved searches per failure mode your team already cares about. Assign an owner, work matches through the trace detail view, and re-check **Last found** as part of a weekly habit. Promote the searches that keep producing useful annotations into watches; delete the ones that don't.
+Start with one or two saved searches per failure mode your team already cares about. Work matches through the trace detail view, and reopen them as part of a weekly habit. For the ones worth watching continuously, point a [monitor](../../monitors/overview) at them so you're alerted automatically; delete the searches that stop being useful.

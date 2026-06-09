@@ -64,20 +64,23 @@ Every trace captured with the same session id appears in the same session.
 
 ## Viewing sessions
 
-Toggle between **Traces** and **Sessions** from the observability view.
+Switch between **Sessions** and **Traces** with the tab toggle at the top of the **Traces** page. Sessions is the default view.
 
-The sessions view shows:
+The sessions view shows one row per session, with columns for:
 
-- expandable session rows
-- traces within each session
-- start time
-- duration
+- session name (the root span's name, falling back to the session id)
+- last activity
+- tags
+- duration (active execution time)
 - time to first token
 - cost
 - session id
 - user id, when provided
 - models used
 - span count
+- error and annotation indicators
+
+Expand a row to see the traces inside the session, or click it to open a detail panel with the full conversation, the span tree, annotations, and any linked issues.
 
 Each trace within a session keeps its own metrics, so you can identify which turn had high latency, high cost, errors, or unusual behaviour.
 

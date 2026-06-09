@@ -5,7 +5,7 @@ description: Annotate any trace directly from its detail view
 
 # Inline Annotations
 
-Inline annotations are the main way to leave human feedback on a trace. Any trace you can open—from Traces, Search, Issues, or Sessions—has an annotation panel.
+Inline annotations are the main way to leave human feedback on a trace. Any trace you can open has an annotation panel, whether you reached it from the Traces page, Issues, or a saved search.
 
 ## How Inline Annotations Work
 
@@ -29,9 +29,9 @@ For batch review, start from [search](../search/overview) or a [saved search](..
 1. Run or open a search for the cohort you want to review, such as _"failed payments last week"_ or _"checkout flows over 5 steps"_.
 2. Open a matching trace.
 3. Read the conversation, annotate it, and move to the next trace.
-4. Use the saved search's **Annotated / Total** columns to track progress.
+4. Reopen the saved search from the **Saved searches** dropdown whenever you want to pick the cohort back up.
 
-For shared review work, assign the saved search to a teammate. Assignment is a lightweight ownership signal; everyone can still see and open the search.
+For shared review work, saved searches are visible to everyone in the project, so a teammate can open the same cohort from the **Saved searches** dropdown.
 
 ## When to Use Inline Annotations
 
