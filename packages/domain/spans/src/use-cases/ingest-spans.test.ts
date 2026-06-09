@@ -738,15 +738,6 @@ describe("ingestSpansWithBillingUseCase sandbox path", () => {
     expect(sandboxSignals.state.quotaIncrements).toEqual([{ organizationId: ORGANIZATION_ID, spanCount: 1 }])
     expect(sandboxRepo.stampCount).toBe(1)
     expect(sandboxSignals.state.rejected).toHaveLength(0)
-    // Earliest signal: a pre-persist liveness pulse for the arriving trace.
-    expect(sandboxSignals.state.published).toEqual([
-      {
-        kind: "liveness",
-        organizationId: ORGANIZATION_ID,
-        traceId: "0af7651916cd43dd8448eb211c80319c",
-        sessionId: "",
-      },
-    ])
   })
 
   it("archived sandbox: refuses with SandboxArchived before persist and records the marker", async () => {
@@ -772,7 +763,6 @@ describe("ingestSpansWithBillingUseCase sandbox path", () => {
     }
     expect(published).toHaveLength(0)
     expect(sandboxSignals.state.quotaIncrements).toHaveLength(0)
-    expect(sandboxSignals.state.published).toHaveLength(0)
     expect(sandboxSignals.state.rejected).toEqual([
       { organizationId: ORGANIZATION_ID, marker: { kind: "SandboxArchived", at: expect.any(String), spansDropped: 1 } },
     ])
@@ -804,7 +794,6 @@ describe("ingestSpansWithBillingUseCase sandbox path", () => {
       expect(result.failure).toBeInstanceOf(SandboxQuotaExceededError)
     }
     expect(published).toHaveLength(0)
-    expect(sandboxSignals.state.published).toHaveLength(0)
     expect(sandboxSignals.state.rejected).toEqual([
       {
         organizationId: ORGANIZATION_ID,
@@ -829,7 +818,6 @@ describe("ingestSpansWithBillingUseCase sandbox path", () => {
     expect(published).toHaveLength(1)
     expect((published[0]?.payload as { isSandbox: boolean }).isSandbox).toBe(false)
     expect(sandboxSignals.state.quotaIncrements).toHaveLength(0)
-    expect(sandboxSignals.state.published).toHaveLength(0)
     expect(sandboxRepo.stampCount).toBe(0)
   })
 })

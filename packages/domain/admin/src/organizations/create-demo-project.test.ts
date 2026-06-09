@@ -41,6 +41,7 @@ const mkOrg = (overrides: Partial<AdminOrganizationDetails> = {}): AdminOrganiza
   stripeCustomerId: null,
   members: [member("user-1"), member("user-2"), member("user-3")],
   projects: [],
+  sandboxes: [],
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
   ...overrides,

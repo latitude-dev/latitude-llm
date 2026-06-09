@@ -1,34 +1,25 @@
-import { Button, Icon, Text } from "@repo/ui"
-import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
-import { ArrowLeft } from "lucide-react"
-
-const sandboxRoute = getRouteApi("/sandbox/$sandboxOrgId")
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { resolveDefaultSandboxProjectSlug } from "../../../domains/sandbox/sandbox-navigation.functions.ts"
 
 /**
- * Stub landing page for a Test Mode sandbox. Proves the
- * `/sandbox/:sandboxOrgId` parent-route gate (`route.tsx`) wires the
- * `sandboxMiddleware`-authorized `getSandbox` result into route context;
- * the real sandbox UI (traces list, settings, Live ⇄ Sandbox switch)
- * lands in later Test Mode tickets and reads the same context.
+ * Sandbox landing. Mirrors the Live landing (`/_authenticated/`): resolves the
+ * sandbox's current project (last-visited cookie, else first) and redirects into
+ * its traces. With no projects yet, sends the user to the manage page to add one.
  */
 export const Route = createFileRoute("/sandbox/$sandboxOrgId/")({
-  component: SandboxStubPage,
+  loader: async ({ params }) => {
+    const slug = await resolveDefaultSandboxProjectSlug({
+      data: { sandboxOrgId: params.sandboxOrgId },
+    })
+    if (!slug) {
+      throw redirect({
+        to: "/sandbox/$sandboxOrgId/manage",
+        params: { sandboxOrgId: params.sandboxOrgId },
+      })
+    }
+    throw redirect({
+      to: "/sandbox/$sandboxOrgId/projects/$projectSlug",
+      params: { sandboxOrgId: params.sandboxOrgId, projectSlug: slug },
+    })
+  },
 })
-
-function SandboxStubPage() {
-  const sandbox = sandboxRoute.useRouteContext({ select: (c) => c.sandbox })
-
-  return (
-    <div className="flex flex-col gap-4 p-6">
-      <Text.H3>Sandbox: {sandbox.name}</Text.H3>
-      <div>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/">
-            <Icon icon={ArrowLeft} size="sm" />
-            Back to live
-          </Link>
-        </Button>
-      </div>
-    </div>
-  )
-}

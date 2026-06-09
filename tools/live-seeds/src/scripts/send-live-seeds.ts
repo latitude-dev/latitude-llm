@@ -13,8 +13,12 @@ Options:
   --ingest-url <url>             Base URL for the ingest service
   --project-slug <slug>          Target project slug (default: seeded default-project). When
                                  overridden, the tool finds (or creates) the project by slug in
-                                 the Acme seed org and auto-restricts fixtures to flagger-only.
-  --api-key-token <token>        Ingest API key (default: seed token lat_seed_default_api_key_token)
+                                 the org that owns --api-key-token (e.g. a sandbox org) and
+                                 auto-restricts fixtures to flagger-only. Required when
+                                 --api-key-token is not the default seed key.
+  --api-key-token <token>        Ingest API key (default: seed token lat_seed_default_api_key_token).
+                                 The key decides the target org — e.g. a sandbox's default key
+                                 (lat_sandbox_seed_default_api_key_token) seeds that sandbox.
   --time-scale <n>               Multiply fixture delays by this factor (default: 1)
   --count-per-fixture <n>        Generate this many cases per selected fixture (default: 5)
   --parallel-cases <n>           Number of cases to dispatch concurrently (default: 4)

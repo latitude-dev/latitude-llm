@@ -106,6 +106,10 @@ export function useCommandPaletteState(): CommandPaletteState {
  *
  * Reads only the stable actions context, so a registration re-render of the palette never
  * feeds back into the contributing component.
+ *
+ * Throws when no provider is mounted — only render command contributors inside
+ * the authenticated tree. Shells without a palette (the sandbox) must gate the
+ * contributor out at the call site rather than calling this without a provider.
  */
 export function useRegisterCommands(commands: readonly PaletteCommand[]): void {
   const id = useId()

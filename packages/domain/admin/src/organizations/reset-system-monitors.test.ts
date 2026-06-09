@@ -20,6 +20,7 @@ const makeOrg = (projectIds: readonly string[]): AdminOrganizationDetails => ({
   stripeCustomerId: null,
   members: [],
   projects: projectIds.map((id) => ({ id, name: `Project ${id}`, slug: id, createdAt: at })),
+  sandboxes: [],
   createdAt: at,
   updatedAt: at,
 })

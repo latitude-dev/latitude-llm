@@ -3,8 +3,10 @@ import type { FilterSet } from "@domain/shared"
 import { Button, DetailDrawer, Icon, Skeleton, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronLeftIcon } from "lucide-react"
+import { use } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useSessionDetail } from "../../../../../domains/sessions/sessions.collection.ts"
+import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { IssueLifecycleActions } from "../issues/-components/issue-lifecycle-actions.tsx"
 import { IssueSlot } from "./session-detail-drawer/issue-slot.tsx"
@@ -92,7 +94,13 @@ export function SessionDetailDrawer({
   // session" clears both so we can't land in an ambiguous state after close.
   // When the session itself is missing we suppress the back affordance —
   // there is nothing to go back to.
-  const detailKind: DetailSlotKind | null = traceId.length > 0 ? "trace" : issueId.length > 0 ? "issue" : null
+  // Issues are an analysis feature the sandbox doesn't surface — never resolve
+  // the issue slot under a sandbox scope, even from a deep-linked `?issueId=`
+  // (its `IssueLifecycleActions` registers command-palette commands, and the
+  // sandbox tree has no provider).
+  const issuesEnabled = !use(TraceScopeContext)
+  const detailKind: DetailSlotKind | null =
+    traceId.length > 0 ? "trace" : issueId.length > 0 && issuesEnabled ? "issue" : null
   const showDetail = detailKind !== null && !isSessionMissing
 
   const openTrace = (nextTraceId: string, options: OpenTraceOptions = {}) => {

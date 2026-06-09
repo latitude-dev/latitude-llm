@@ -1,6 +1,7 @@
-import { createFileRoute, notFound, Outlet, redirect } from "@tanstack/react-router"
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router"
 import { getSandbox } from "../../../domains/sandbox/sandbox.functions.ts"
 import { parseServerError } from "../../../lib/errors.ts"
+import { SandboxShell } from "./-components/sandbox-shell.tsx"
 
 /**
  * Parent route for the `/sandbox/:sandboxOrgId/*` subtree.
@@ -30,9 +31,5 @@ export const Route = createFileRoute("/sandbox/$sandboxOrgId")({
       throw error
     }
   },
-  component: SandboxLayout,
+  component: SandboxShell,
 })
-
-function SandboxLayout() {
-  return <Outlet />
-}

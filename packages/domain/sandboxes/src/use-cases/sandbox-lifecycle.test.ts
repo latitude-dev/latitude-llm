@@ -1,5 +1,8 @@
+import { ApiKeyRepository } from "@domain/api-keys"
+import { createFakeApiKeyRepository } from "@domain/api-keys/testing"
 import { BillingOverrideRepository, StripeSubscriptionLookup } from "@domain/billing"
 import { createFakeBillingOverrideRepository, createFakeStripeSubscriptionLookup } from "@domain/billing/testing"
+import { OutboxEventWriter } from "@domain/events"
 import { createOrganization, MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import { createFakeMembershipRepository, createFakeOrganizationRepository } from "@domain/organizations/testing"
 import { generateId, OrganizationId, SettingsReader, SqlClient, UserId } from "@domain/shared"
@@ -73,6 +76,8 @@ const buildLayer = (input?: {
     Layer.succeed(MembershipRepository, membership.repository),
     Layer.succeed(BillingOverrideRepository, override.repository),
     Layer.succeed(StripeSubscriptionLookup, subscription.service),
+    Layer.succeed(ApiKeyRepository, createFakeApiKeyRepository().repository),
+    Layer.succeed(OutboxEventWriter, { write: () => Effect.void }),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: PARENT_ORG_ID })),
     Layer.succeed(SettingsReader, {
       getOrganizationSettings: () => Effect.succeed(null),

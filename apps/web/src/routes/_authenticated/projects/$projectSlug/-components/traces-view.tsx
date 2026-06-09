@@ -1,8 +1,9 @@
 import type { FilterSet } from "@domain/shared"
 import type { InfiniteTableSorting } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { type RefObject, useCallback, useMemo } from "react"
+import { type RefObject, use, useCallback, useMemo } from "react"
 import { useAnnotationCountsByTraceIds } from "../../../../../domains/annotations/annotations.collection.ts"
+import { TraceScopeContext } from "../../../../../domains/traces/trace-scope.tsx"
 import { useTraceMetrics, useTracesInfiniteScroll } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout, listingLayoutIntrinsicScroll } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -29,6 +30,7 @@ interface TracesViewProps {
   readonly traceIdsRef: RefObject<string[]>
   readonly visibleColumnIds: readonly TraceColumnId[]
   readonly searchQuery?: string
+  readonly selectable?: boolean
 }
 
 export function TracesView({
@@ -48,9 +50,13 @@ export function TracesView({
   traceIdsRef,
   visibleColumnIds,
   searchQuery,
+  selectable = true,
 }: TracesViewProps) {
   const hasActiveFilters = Object.keys(filters).length > 0
   const hasSearchQuery = !!searchQuery && searchQuery.length > 0
+  // Annotations are an LLM-feedback feature — off in a sandbox. Skip the fetch
+  // and hide the badges/click affordance when reading under a sandbox scope.
+  const annotationsEnabled = !use(TraceScopeContext)
 
   const {
     data: traces,
@@ -72,7 +78,7 @@ export function TracesView({
   const { data: annotationCounts, pendingTraceIds: annotationCountsPendingTraceIds } = useAnnotationCountsByTraceIds({
     projectId,
     traceIds,
-    enabled: traceIds.length > 0,
+    enabled: annotationsEnabled && traceIds.length > 0,
   })
 
   // Write trace IDs into the shared ref during render so the parent can navigate next/prev without a callback effect
@@ -161,10 +167,10 @@ export function TracesView({
           visibleColumnIds={visibleColumnIds}
           onTraceClick={handleTraceClick}
           onErrorClick={handleErrorClick}
-          onAnnotationClick={handleAnnotationClick}
+          {...(annotationsEnabled ? { onAnnotationClick: handleAnnotationClick } : {})}
           getTraceRowAriaLabel={getRowAriaLabel}
           {...(activeTraceId ? { activeTraceId } : {})}
-          selection={selection}
+          {...(selectable ? { selection } : {})}
           infiniteScroll={infiniteScroll}
           sorting={sorting}
           defaultSorting={hasSearchQuery ? DEFAULT_SEARCH_SORTING : DEFAULT_TRACE_TABLE_SORTING}
@@ -178,8 +184,7 @@ export function TracesView({
           }
           traceMetrics={traceMetrics}
           metricsLoading={metricsLoading}
-          annotationCounts={annotationCounts}
-          annotationCountsPendingTraceIds={annotationCountsPendingTraceIds}
+          {...(annotationsEnabled ? { annotationCounts, annotationCountsPendingTraceIds } : {})}
         />
       </Layout.List>
     </Layout.Body>

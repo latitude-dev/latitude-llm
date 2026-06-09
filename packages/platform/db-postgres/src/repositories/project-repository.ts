@@ -23,6 +23,7 @@ const toDomainProject = (row: typeof projects.$inferSelect): Project => ({
   firstTraceAt: row.firstTraceAt,
   deletedAt: row.deletedAt,
   lastEditedAt: row.lastEditedAt,
+  linkedProjectId: row.linkedProjectId ? ProjectId(row.linkedProjectId) : null,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
@@ -35,6 +36,7 @@ const toInsertRow = (project: Project): typeof projects.$inferInsert => ({
   settings: project.settings,
   firstTraceAt: project.firstTraceAt,
   deletedAt: project.deletedAt,
+  linkedProjectId: project.linkedProjectId,
 })
 
 /**

@@ -17,6 +17,12 @@ export interface CreateProjectInput {
   readonly id?: ProjectId
   readonly name: string
   readonly actorUserId?: string
+  /**
+   * Test Mode: the production project's stable id this (sandbox) project links
+   * to. Stored as an opaque id (no FK, per the no-FK repository rule); null /
+   * omitted for ordinary and sandbox-only projects.
+   */
+  readonly linkedProjectId?: ProjectId | null
 }
 
 export type CreateProjectError = RepositoryError | ValidationError | ConflictError | InvalidProjectNameError
@@ -62,6 +68,7 @@ export const createProjectUseCase = Effect.fn("projects.createProject")(function
         organizationId,
         name: trimmedName,
         slug: uniqueSlug,
+        linkedProjectId: input.linkedProjectId ?? null,
       })
 
       yield* repo.save(project)

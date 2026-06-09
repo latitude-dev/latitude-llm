@@ -19,6 +19,13 @@ export const projectSchema = z.object({
   firstTraceAt: z.date().nullable(),
   deletedAt: z.date().nullable(),
   lastEditedAt: z.date(),
+  /**
+   * Test Mode: when this project lives in a sandbox org and was created by
+   * attaching a production project, this is that production project's stable
+   * id (the durable link, immune to renames/slug changes). Null for ordinary
+   * production projects and for sandbox-only projects.
+   */
+  linkedProjectId: projectIdSchema.nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -34,6 +41,7 @@ export const createProject = (params: {
   firstTraceAt?: Date
   deletedAt?: Date
   lastEditedAt?: Date
+  linkedProjectId?: ProjectId | null
   createdAt?: Date
   updatedAt?: Date
 }): Project => {
@@ -47,6 +55,7 @@ export const createProject = (params: {
     firstTraceAt: params.firstTraceAt ?? null,
     deletedAt: params.deletedAt ?? null,
     lastEditedAt: params.lastEditedAt ?? now,
+    linkedProjectId: params.linkedProjectId ?? null,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,
   })

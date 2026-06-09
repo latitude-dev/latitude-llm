@@ -1,3 +1,4 @@
+import { DEFAULT_API_KEY_NAME, generateApiKeyUseCase } from "@domain/api-keys"
 import { resolveEffectivePlan } from "@domain/billing"
 import {
   createOrganization,
@@ -38,7 +39,9 @@ export const createSandboxUseCase = Effect.fn("sandboxes.createSandbox")(functio
 
   const { plan } = yield* resolveEffectivePlan(input.parentOrganizationId)
 
-  const slug = yield* generateUniqueOrganizationSlugUseCase({ name: input.name })
+  const slug = yield* generateUniqueOrganizationSlugUseCase({
+    name: input.name,
+  })
   const organizationId = generateId<"OrganizationId">()
   const organization = createOrganization({
     id: organizationId,
@@ -46,22 +49,32 @@ export const createSandboxUseCase = Effect.fn("sandboxes.createSandbox")(functio
     slug,
     parentOrgId: input.parentOrganizationId,
   })
-  const sandbox = createSandbox({ organizationId, createdByUserId: input.actorUserId })
+  const sandbox = createSandbox({
+    organizationId,
+    createdByUserId: input.actorUserId,
+  })
 
   const sqlClient = yield* SqlClient
   yield* sqlClient.transaction(
     Effect.gen(function* () {
       const organizationRepository = yield* OrganizationRepository
       const sandboxRepository = yield* SandboxRepository
-      // Lock + count + insert in one tx so concurrent creates can't both pass
-      // the cap (the lock serializes this section per parent org).
       yield* sandboxRepository.lockParentForCapCheck(input.parentOrganizationId)
       const activeCount = yield* sandboxRepository.countActiveByParentOrgId(input.parentOrganizationId)
       if (activeCount >= plan.sandboxActiveCap) {
-        return yield* new SandboxActiveCapReachedError({ cap: plan.sandboxActiveCap, planSlug: plan.slug })
+        return yield* new SandboxActiveCapReachedError({
+          cap: plan.sandboxActiveCap,
+          planSlug: plan.slug,
+        })
       }
       yield* organizationRepository.save(organization)
       yield* sandboxRepository.create(sandbox)
+      yield* generateApiKeyUseCase({
+        name: DEFAULT_API_KEY_NAME,
+        isSandbox: true,
+        organizationId,
+        actorUserId: input.actorUserId,
+      })
     }),
   )
 

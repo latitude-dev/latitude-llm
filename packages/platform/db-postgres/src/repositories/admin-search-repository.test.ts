@@ -16,6 +16,7 @@ const makeId = (prefix: string): string => prefix.padEnd(24, "x").slice(0, 24)
 
 const ORG_A = makeId("org-alpha")
 const ORG_B = makeId("org-beta")
+const ORG_SANDBOX = makeId("org-alpha-sandbox")
 
 describe("AdminSearchRepositoryLive.unifiedSearch", () => {
   beforeAll(async () => {
@@ -54,6 +55,16 @@ describe("AdminSearchRepositoryLive.unifiedSearch", () => {
     await pg.db.insert(organizations).values([
       { id: ORG_A, name: "Alpha", slug: "alpha", createdAt: baseTime, updatedAt: baseTime },
       { id: ORG_B, name: "Beta Inc", slug: "beta-inc", createdAt: baseTime, updatedAt: baseTime },
+      // Sandbox org (Test Mode) — has a parent, so it must NOT appear in search
+      // even though its name/slug match "alpha".
+      {
+        id: ORG_SANDBOX,
+        name: "Alpha Sandbox",
+        slug: "alpha-sandbox",
+        parentOrgId: ORG_A,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
     ])
 
     await pg.db.insert(members).values([
@@ -85,6 +96,16 @@ describe("AdminSearchRepositoryLive.unifiedSearch", () => {
         name: "alpha-archived",
         slug: "alpha-archived",
         deletedAt: baseTime,
+        createdAt: baseTime,
+        updatedAt: baseTime,
+      },
+      // A project living inside a sandbox org — must not surface as a customer
+      // project even though its name matches "alpha".
+      {
+        id: makeId("proj-sbx"),
+        organizationId: ORG_SANDBOX,
+        name: "alpha-sandbox-proj",
+        slug: "alpha-sandbox-proj",
         createdAt: baseTime,
         updatedAt: baseTime,
       },
@@ -147,6 +168,18 @@ describe("AdminSearchRepositoryLive.unifiedSearch", () => {
     expect(names).toEqual(["alpha-prod"])
     expect(result.projects[0]?.organizationName).toBe("Alpha")
     expect(result.projects[0]?.organizationSlug).toBe("alpha")
+  })
+
+  it("excludes sandbox orgs and their projects from search", async () => {
+    const result = await runWithLive(
+      Effect.gen(function* () {
+        const repo = yield* AdminSearchRepository
+        return yield* repo.unifiedSearch("sandbox", "all")
+      }),
+    )
+
+    expect(result.organizations).toEqual([])
+    expect(result.projects).toEqual([])
   })
 
   it("returns entities matching the requested entityType only", async () => {

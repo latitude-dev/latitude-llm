@@ -3,6 +3,7 @@ import {
   type AdminOrganizationMember,
   type AdminOrganizationProject,
   AdminOrganizationRepository,
+  type AdminOrganizationSandbox,
   type AdminOrganizationSummary,
 } from "@domain/admin"
 import { type ApiKeyId, NotFoundError, OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
@@ -12,6 +13,9 @@ import type { Operator } from "../client.ts"
 import { apiKeys } from "../schema/api-keys.ts"
 import { members, organizations, subscriptions, users } from "../schema/better-auth.ts"
 import { projects } from "../schema/projects.ts"
+import { sandboxes } from "../schema/sandboxes.ts"
+
+type SandboxStatusValue = AdminOrganizationSandbox["status"]
 
 type MemberRoleValue = AdminOrganizationMember["role"]
 type UserRoleValue = AdminOrganizationMember["user"]["role"]
@@ -99,10 +103,44 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
             },
           }))
 
+          // Sandboxes (Test Mode) belonging to this org. A sandbox *is* an org
+          // (`organizations.parent_org_id = <this org>`), so we join the sandbox
+          // attributes row to its own org row for name/slug, plus the creator.
+          // All statuses (active + archived) — staff want the full history.
+          const sandboxRows = yield* sqlClient.query((db) =>
+            db
+              .select({
+                organizationId: sandboxes.organizationId,
+                name: organizations.name,
+                slug: organizations.slug,
+                status: sandboxes.status,
+                lastActivityAt: sandboxes.lastActivityAt,
+                createdAt: sandboxes.createdAt,
+                ownerId: users.id,
+                ownerEmail: users.email,
+                ownerName: users.name,
+              })
+              .from(sandboxes)
+              .innerJoin(organizations, eq(organizations.id, sandboxes.organizationId))
+              .leftJoin(users, eq(users.id, sandboxes.createdByUserId))
+              .where(eq(organizations.parentOrgId, organizationId))
+              .orderBy(desc(sandboxes.createdAt)),
+          )
+
           const projectDtos: AdminOrganizationProject[] = projectRows.map((r) => ({
             id: r.id,
             name: r.name,
             slug: r.slug,
+            createdAt: r.createdAt,
+          }))
+
+          const sandboxDtos: AdminOrganizationSandbox[] = sandboxRows.map((r) => ({
+            organizationId: r.organizationId,
+            name: r.name,
+            slug: r.slug,
+            status: r.status as SandboxStatusValue,
+            lastActivityAt: r.lastActivityAt,
+            owner: r.ownerEmail ? { id: r.ownerId as string, email: r.ownerEmail, name: r.ownerName ?? null } : null,
             createdAt: r.createdAt,
           }))
 
@@ -113,6 +151,7 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
             stripeCustomerId: orgRow.stripeCustomerId ?? null,
             members: memberDtos,
             projects: projectDtos,
+            sandboxes: sandboxDtos,
             createdAt: orgRow.createdAt,
             updatedAt: orgRow.updatedAt,
           }
@@ -137,7 +176,14 @@ export const AdminOrganizationRepositoryLive = Layer.effect(
                 createdAt: organizations.createdAt,
               })
               .from(organizations)
-              .where(inArray(organizations.id, idList)),
+              // Sandbox orgs (Test Mode) carry a `parent_org_id`. They generate
+              // traces like any org, so ClickHouse surfaces them in the usage
+              // ranking — but they must not appear in the backoffice org listing.
+              // Dropping them here means the use-case treats them like a
+              // hard-deleted org (id present in CH, absent from the summary map)
+              // and silently skips them, with the cursor still anchored on the CH
+              // row so pagination doesn't re-fetch them.
+              .where(and(inArray(organizations.id, idList), isNull(organizations.parentOrgId))),
           )
 
           const memberCountRows = yield* sqlClient.query((db) =>

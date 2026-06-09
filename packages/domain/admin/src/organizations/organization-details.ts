@@ -35,6 +35,24 @@ export const adminOrganizationProjectSchema = z.object({
 })
 export type AdminOrganizationProject = z.infer<typeof adminOrganizationProjectSchema>
 
+export const adminOrganizationSandboxSchema = z.object({
+  /** The sandbox's own organization id (sandbox = org with a parent). */
+  organizationId: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  status: z.enum(["active", "archived"]),
+  lastActivityAt: z.date(),
+  owner: z
+    .object({
+      id: z.string(),
+      email: z.string(),
+      name: z.string().nullable(),
+    })
+    .nullable(),
+  createdAt: z.date(),
+})
+export type AdminOrganizationSandbox = z.infer<typeof adminOrganizationSandboxSchema>
+
 export const adminOrganizationDetailsSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -43,6 +61,7 @@ export const adminOrganizationDetailsSchema = z.object({
   stripeCustomerId: z.string().nullable(),
   members: z.array(adminOrganizationMemberSchema),
   projects: z.array(adminOrganizationProjectSchema),
+  sandboxes: z.array(adminOrganizationSandboxSchema),
   createdAt: z.date(),
   updatedAt: z.date(),
 })

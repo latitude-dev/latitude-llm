@@ -30,6 +30,7 @@ import {
   type AdminOrganizationBillingDto,
   type AdminOrganizationMemberDto,
   type AdminOrganizationProjectDto,
+  type AdminOrganizationSandboxDto,
   adminClearOrganizationBillingOverride,
   adminGetOrganization,
   adminGetOrganizationBilling,
@@ -178,6 +179,8 @@ function BackofficeOrganizationDetailPage() {
           </DashboardSection>
         }
       />
+
+      <SandboxesSection sandboxes={organization.sandboxes} />
 
       <FeatureFlagsSection organizationId={organization.id} featureFlags={featureFlags} />
 
@@ -620,5 +623,62 @@ function MemberRow({ member }: { member: AdminOrganizationMemberDto }) {
         </div>
       }
     />
+  )
+}
+
+/**
+ * Sandboxes (Test Mode) panel. A sandbox is an org under the hood, but it's
+ * deliberately excluded from the global org search — this panel is the one
+ * place staff can see every sandbox a customer org has spun up, active and
+ * archived alike, so the count and the archived ones are both shown.
+ */
+function SandboxesSection({ sandboxes }: { sandboxes: AdminOrganizationSandboxDto[] }) {
+  const activeCount = sandboxes.filter((s) => s.status === "active").length
+
+  return (
+    <DashboardSection
+      title="Sandboxes"
+      count={sandboxes.length}
+      aside={
+        sandboxes.length > 0 ? (
+          <Text.H6 color="foregroundMuted">
+            {activeCount} active · {sandboxes.length - activeCount} archived
+          </Text.H6>
+        ) : undefined
+      }
+    >
+      {sandboxes.length === 0 ? (
+        <Text.H6 color="foregroundMuted">This organization has no sandboxes.</Text.H6>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {sandboxes.map((sandbox) => (
+            <SandboxRow key={sandbox.organizationId} sandbox={sandbox} />
+          ))}
+        </div>
+      )}
+    </DashboardSection>
+  )
+}
+
+function SandboxRow({ sandbox }: { sandbox: AdminOrganizationSandboxDto }) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-background px-3 py-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Text.H5 weight="semibold" ellipsis>
+            {sandbox.name}
+          </Text.H5>
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">/{sandbox.slug}</code>
+          <CopyButton value={sandbox.organizationId} tooltip="Copy sandbox org id" />
+        </div>
+        <Text.H6 color="foregroundMuted">
+          {sandbox.owner ? `Owner: ${sandbox.owner.email}` : "Owner: (unknown)"} · last active{" "}
+          {relativeTime(sandbox.lastActivityAt)} · created {relativeTime(sandbox.createdAt)}
+        </Text.H6>
+      </div>
+      <Badge variant={sandbox.status === "active" ? "outlineSuccessMuted" : "secondary"} noWrap>
+        {sandbox.status}
+      </Badge>
+    </div>
   )
 }

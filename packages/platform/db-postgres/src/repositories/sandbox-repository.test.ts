@@ -1,3 +1,4 @@
+import type { ApiKeyRepository } from "@domain/api-keys"
 import type { BillingOverrideRepository, StripeSubscriptionLookup } from "@domain/billing"
 import type { OutboxEventWriter } from "@domain/events"
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
@@ -22,6 +23,7 @@ import { projects } from "../schema/projects.ts"
 import { sandboxes } from "../schema/sandboxes.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
+import { ApiKeyRepositoryLive } from "./api-key-repository.ts"
 import { BillingOverrideRepositoryLive } from "./billing-override-repository.ts"
 import { MembershipRepositoryLive } from "./membership-repository.ts"
 import { OrganizationRepositoryLive } from "./organization-repository.ts"
@@ -29,6 +31,12 @@ import { ProjectRepositoryLive } from "./project-repository.ts"
 import { SandboxRepositoryLive } from "./sandbox-repository.ts"
 import { SettingsReaderLive } from "./settings-reader-repository.ts"
 import { StripeSubscriptionLookupLive } from "./stripe-subscription-lookup.ts"
+
+// createSandbox now seeds a default sandbox API key, whose token is encrypted
+// with LAT_MASTER_ENCRYPTION_KEY — provide a test key (same pattern as the
+// slack-integration repo test).
+process.env.LAT_MASTER_ENCRYPTION_KEY =
+  process.env.LAT_MASTER_ENCRYPTION_KEY ?? "75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b"
 
 const pg = setupTestPostgres()
 
@@ -41,6 +49,7 @@ const sandboxLayers = Layer.mergeAll(
   SettingsReaderLive,
   ProjectRepositoryLive,
   OutboxEventWriterLive,
+  ApiKeyRepositoryLive,
 )
 
 type SandboxEnv =
@@ -52,6 +61,7 @@ type SandboxEnv =
   | SettingsReader
   | ProjectRepository
   | OutboxEventWriter
+  | ApiKeyRepository
   | SqlClient
 
 // Sandbox lifecycle is cross-org management, so the use-cases run on the

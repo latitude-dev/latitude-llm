@@ -39,7 +39,7 @@ export function SearchInput({
     >
       <Popover open={legendOpen} onOpenChange={setLegendOpen}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Search syntax help">
+          <Button variant="ghost" size="icon-xs" aria-label="Search syntax help">
             <Icon
               icon={SearchIcon}
               size="sm"

@@ -7,12 +7,6 @@ export interface FakeSandboxSignalsState {
   readonly quotaIncrements: { organizationId: string; spanCount: number }[]
   readonly rejected: { organizationId: string; marker: SandboxRejectedIngestMarker }[]
   readonly activityAcquisitions: string[]
-  readonly published: {
-    kind: "liveness" | "upsert"
-    organizationId: string
-    traceId: string
-    sessionId: string
-  }[]
 }
 
 /**
@@ -27,7 +21,6 @@ export const createFakeSandboxSignals = (overrides?: Partial<SandboxSignalsShape
     quotaIncrements: [],
     rejected: [],
     activityAcquisitions: [],
-    published: [],
   }
 
   const signals: SandboxSignalsShape = {
@@ -45,15 +38,6 @@ export const createFakeSandboxSignals = (overrides?: Partial<SandboxSignalsShape
       Effect.sync(() => {
         state.activityAcquisitions.push(input.organizationId)
         return true
-      }),
-    publishTraceSignal: (input) =>
-      Effect.sync(() => {
-        state.published.push({
-          kind: input.kind,
-          organizationId: input.organizationId,
-          traceId: input.traceId,
-          sessionId: input.sessionId,
-        })
       }),
     ...overrides,
   }

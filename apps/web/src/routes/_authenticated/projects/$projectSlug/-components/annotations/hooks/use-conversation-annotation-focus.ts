@@ -25,6 +25,7 @@ export function useConversationAnnotationFocus({
   isConversationActive,
   onActivateConversation,
   onFocusConsumed,
+  annotationsEnabled = true,
 }: {
   readonly projectId: string
   readonly traceId: string
@@ -32,11 +33,18 @@ export function useConversationAnnotationFocus({
   readonly isConversationActive: boolean
   readonly onActivateConversation?: (() => void) | undefined
   readonly onFocusConsumed?: (() => void) | undefined
+  /** Off under a sandbox scope — skips the annotations fetch and focus wiring. */
+  readonly annotationsEnabled?: boolean
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const textSelectionPopoverControlsRef = useRef<TextSelectionPopoverControls | null>(null)
 
-  const { data: annotationsData } = useAnnotationsByTrace({ projectId, traceId, draftMode: "include" })
+  const { data: annotationsData } = useAnnotationsByTrace({
+    projectId,
+    traceId,
+    draftMode: "include",
+    enabled: annotationsEnabled,
+  })
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({ projectId, traceId })
 
   const { scrollToAnnotation, executePendingScroll } = useAnnotationNavigation({

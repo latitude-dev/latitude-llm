@@ -33,7 +33,19 @@ export const FEATURE_FLAGS = {
     description:
       "Lets org owners/admins configure SAML or OIDC single sign-on and (optionally) enforce it for their verified email domain.",
   },
-} as const satisfies Record<string, { readonly emoji: string; readonly name: string; readonly description: string }>
+  sandbox: {
+    emoji: "🧪",
+    name: "Test Mode sandbox",
+    description: "Enables the Live ⇄ Sandbox switcher and the sandbox namespace for isolated development traces.",
+  },
+} as const satisfies Record<
+  string,
+  {
+    readonly emoji: string
+    readonly name: string
+    readonly description: string
+  }
+>
 
 export type FeatureFlagId = keyof typeof FEATURE_FLAGS
 

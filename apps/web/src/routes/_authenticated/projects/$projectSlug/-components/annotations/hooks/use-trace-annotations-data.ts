@@ -52,13 +52,16 @@ export interface AnnotationFormData {
 interface UseTraceAnnotationsDataOptions {
   readonly projectId: string
   readonly traceId: string
+  /** Off under a sandbox scope — skips the annotations fetch (mutations stay inert). */
+  readonly enabled?: boolean
 }
 
-export function useTraceAnnotationsData({ projectId, traceId }: UseTraceAnnotationsDataOptions) {
+export function useTraceAnnotationsData({ projectId, traceId, enabled = true }: UseTraceAnnotationsDataOptions) {
   const { data: annotations, isLoading: isAnnotationsLoading } = useAnnotationsByTrace({
     projectId,
     traceId,
     draftMode: "include",
+    enabled,
   })
 
   const memberByUserId = useMemberByUserIdMap()

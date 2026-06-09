@@ -1,5 +1,4 @@
 import type { DomainEvent, EventsPublisher } from "@domain/events"
-import { publishSandboxTraceSignalsUseCase, type SandboxSignals } from "@domain/sandboxes"
 import {
   type ChSqlClient,
   getFromDisk,
@@ -166,7 +165,7 @@ export const processIngestedSpansUseCase =
   ): Effect.Effect<
     void,
     SpanDecodingError | StorageError | RepositoryError | TPublishError,
-    ChSqlClient | SpanRepository | StorageDisk | SandboxSignals
+    ChSqlClient | SpanRepository | StorageDisk
   > =>
     Effect.gen(function* () {
       yield* Effect.annotateCurrentSpan("organizationId", input.organizationId)
@@ -187,17 +186,6 @@ export const processIngestedSpansUseCase =
 
       const repo = yield* SpanRepository
       yield* repo.insert(persistedSpans)
-
-      if (input.isSandbox) {
-        yield* publishSandboxTraceSignalsUseCase({
-          organizationId: input.organizationId,
-          kind: "upsert",
-          traces: persistedSpans.map((span) => ({
-            traceId: span.traceId,
-            sessionId: span.sessionId,
-          })),
-        })
-      }
 
       // Spans in a single OTLP batch may now belong to different projects (per-span scoping).
       // Group by projectId so each TracesIngested event addresses one project at a time —

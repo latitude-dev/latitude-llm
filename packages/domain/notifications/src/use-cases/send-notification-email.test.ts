@@ -58,6 +58,7 @@ function setup(
           settings: null,
           firstTraceAt: null,
           deletedAt: null,
+          linkedProjectId: null,
           lastEditedAt: new Date("2026-05-01T00:00:00Z"),
           createdAt: new Date("2026-05-01T00:00:00Z"),
           updatedAt: new Date("2026-05-01T00:00:00Z"),

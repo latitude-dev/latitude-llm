@@ -375,7 +375,12 @@ function ProjectPage() {
   if (!isConnected && hasNoTraces) {
     return (
       <Layout>
-        <TracesEmptyOnboarding project={currentProject} orgHasConnectedProjects={orgHasConnectedProjects} />
+        <TracesEmptyOnboarding
+          projectId={currentProject.id}
+          projectSlug={currentProject.slug}
+          onboardingType={currentProject.settings.onboardingType}
+          orgHasConnectedProjects={orgHasConnectedProjects}
+        />
       </Layout>
     )
   }

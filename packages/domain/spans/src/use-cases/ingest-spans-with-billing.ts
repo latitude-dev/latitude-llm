@@ -1,6 +1,5 @@
 import { checkTraceIngestionBillingUseCase, resolveEffectivePlan } from "@domain/billing"
 import {
-  publishSandboxTraceSignalsUseCase,
   type Sandbox,
   SandboxArchivedError,
   SandboxQuotaExceededError,
@@ -16,9 +15,8 @@ import { decodeOtlpRequest, type IngestSpansInput, ingestSpansUseCase, inspectOt
  * Pre-enqueue guard for a sandbox ingest (never billed): the loud, pre-persist
  * refusals that mirror billing's 402 — archived (403 `SandboxArchived`) and
  * over-quota (403 `SandboxQuotaExceeded`), each leaving a "last rejected ingest"
- * marker for the sandbox UI — plus the debounced `last_activity_at` stamp and the
- * earliest realtime "liveness" pulse (before enqueue, skipping queue + worker
- * latency). Operates on the request decoded once by the caller. `sandbox` is `null`
+ * marker for the sandbox UI — plus the debounced `last_activity_at` stamp.
+ * Operates on the request decoded once by the caller. `sandbox` is `null`
  * only on the rare data-inconsistency where a sandbox org has no attributes row —
  * treated as active (no archived refusal). Fails before any span is enqueued.
  */
@@ -72,12 +70,6 @@ const guardSandboxIngestion = Effect.fn("spans.guardSandboxIngestion")(function*
       )
     }
   }
-
-  yield* publishSandboxTraceSignalsUseCase({
-    organizationId: input.organizationId,
-    kind: "liveness",
-    traces: inspection.traceSignals,
-  })
 })
 
 export const ingestSpansWithBillingUseCase = Effect.fn("spans.ingestSpansWithBilling")(function* (

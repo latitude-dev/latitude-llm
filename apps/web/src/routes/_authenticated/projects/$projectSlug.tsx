@@ -17,6 +17,7 @@ import { requireSession } from "../../../server/auth.ts"
 import { getPostgresClient } from "../../../server/clients.ts"
 import { ChangelogSidebarEntry } from "../-components/changelog/changelog-sidebar-entry.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
+import { SandboxSwitcher } from "../-components/sandbox-switcher.tsx"
 
 const getProjectBySlug = createServerFn({ method: "GET" })
   .inputValidator(z.object({ slug: z.string() }))
@@ -95,6 +96,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
               collapsed={collapsed}
             />
           ) : null}
+          <SandboxSwitcher collapsed={collapsed} />
           <NavItem
             icon={PROJECT_SETTINGS_SECTION.icon}
             label={PROJECT_SETTINGS_SECTION.label}

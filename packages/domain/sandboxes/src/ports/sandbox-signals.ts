@@ -10,8 +10,8 @@ export interface SandboxRejectedIngestMarker {
 
 /**
  * Redis-backed, abuse-guard signals for sandbox ingestion: the per-period span
- * quota counter, the "last rejected ingest" marker, the `last_activity_at`
- * debounce, and the realtime trace-upsert Pub/Sub pulse.
+ * quota counter, the "last rejected ingest" marker, and the `last_activity_at`
+ * debounce.
  *
  * Every method **fails open** (errors are swallowed in the adapter) — these are
  * an abuse guard and a UX nicety, never a reason to drop otherwise-valid traces.
@@ -44,28 +44,6 @@ export interface SandboxSignalsShape {
     readonly organizationId: string
     readonly debounceMs: number
   }): Effect.Effect<boolean>
-
-  /**
-   * Publish an id-only trace signal to the sandbox's channel, coalesced per
-   * (kind, trace) so each kind pulses at most once per window. Never carries
-   * trace content. The channel itself is `organizationId`-scoped, so the payload
-   * carries that same sandbox-org id (a sandbox is 1:1 with its org) — not a
-   * separate `sandboxes.id`.
-   *
-   * `kind` distinguishes the two signals from `specs/test-mode.md`:
-   *  - `"liveness"` — fired at the HTTP boundary the moment spans arrive, before
-   *    persist, so the UI can react instantly (activity indicator / optimistic
-   *    refetch).
-   *  - `"upsert"` — fired after the span is persisted, the authoritative signal
-   *    to refetch the list (read-after-write safe).
-   */
-  publishTraceSignal(input: {
-    readonly kind: "liveness" | "upsert"
-    readonly organizationId: string
-    readonly traceId: string
-    readonly sessionId: string
-    readonly coalesceMs: number
-  }): Effect.Effect<void>
 }
 
 export class SandboxSignals extends Context.Service<SandboxSignals, SandboxSignalsShape>()(

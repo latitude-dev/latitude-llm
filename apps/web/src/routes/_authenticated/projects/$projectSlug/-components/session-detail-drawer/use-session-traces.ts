@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
+import { use } from "react"
+import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
 import { listTracesByProject, type TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 
 const EMPTY: readonly TraceRecord[] = []
@@ -19,8 +21,8 @@ const SESSION_TRACES_HARD_CAP = 500
  */
 const TRACE_ID_CHUNK_SIZE = 100
 
-const sessionTracesQueryKey = (projectId: string, sessionId: string) =>
-  ["session-traces", projectId, sessionId] as const
+const sessionTracesQueryKey = (sandboxOrgId: string | undefined, projectId: string, sessionId: string) =>
+  ["session-traces", sandboxOrgId, projectId, sessionId] as const
 
 /**
  * Fetches a session's traces by its authoritative `traceIds` (from the
@@ -34,8 +36,13 @@ const sessionTracesQueryKey = (projectId: string, sessionId: string) =>
  * The query key stays `(projectId, sessionId)` only — `traceIds` is left out so
  * the session panel and the inline expanded row keep sharing one cache entry.
  */
-export const sessionTracesQueryOptions = (projectId: string, sessionId: string, traceIds: readonly string[]) => ({
-  queryKey: sessionTracesQueryKey(projectId, sessionId),
+export const sessionTracesQueryOptions = (
+  sandboxOrgId: string | undefined,
+  projectId: string,
+  sessionId: string,
+  traceIds: readonly string[],
+) => ({
+  queryKey: sessionTracesQueryKey(sandboxOrgId, projectId, sessionId),
   queryFn: async () => {
     const ordered = traceIds.slice(0, SESSION_TRACES_HARD_CAP)
     if (ordered.length === 0) return [] as TraceRecord[]
@@ -45,6 +52,7 @@ export const sessionTracesQueryOptions = (projectId: string, sessionId: string, 
       const chunk = ordered.slice(i, i + TRACE_ID_CHUNK_SIZE)
       const page = await listTracesByProject({
         data: {
+          ...(sandboxOrgId ? { sandboxOrgId } : {}),
           projectId,
           limit: chunk.length,
           sortBy: "startTime",
@@ -76,8 +84,9 @@ export function useSessionTraces({
   readonly traceIds: readonly string[]
   readonly enabled?: boolean
 }) {
+  const scope = use(TraceScopeContext)
   const query = useQuery({
-    ...sessionTracesQueryOptions(projectId, sessionId, traceIds),
+    ...sessionTracesQueryOptions(scope?.sandboxOrgId, projectId, sessionId, traceIds),
     enabled: enabled && projectId.length > 0 && sessionId.length > 0 && traceIds.length > 0,
   })
 

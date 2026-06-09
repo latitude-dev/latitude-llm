@@ -151,14 +151,12 @@ They're small, light, sub-set copies of the org.
   teammates or reach customers' alert channels. In-sandbox UI surfacing is fine; only
   outbound alerts are forbidden.
 
-- **The sandbox traces UI is a live, list-first debug view.** It shows the
+- **The sandbox traces UI is a list-first debug view.** It shows the
   Traces/Sessions list only — the production summary panel and histogram
   (cost/tokens/duration totals) are hidden as monitoring noise; per-row columns stay
-  (duration, tokens, spans, model, status). Spans stream in with no manual refresh: after
-  a span is persisted the worker publishes an id-only signal over Redis Pub/Sub and the UI
-  refetches the visible list — never splicing rows client-side, so sort/filter/pagination
-  stay correct. SSE transport, polling fallback, WebSockets deferred. See **Realtime**
-  below.
+  (duration, tokens, spans, model, status). The list refetches on the normal cadence
+  (and a lightweight count poll surfaces the first arriving trace) rather than streaming
+  per span — **realtime push (SSE / Redis Pub/Sub) is deferred**, see **Realtime** below.
 
 ## How isolation works
 
@@ -309,9 +307,15 @@ on sandbox-owned data and surfaced as loud refusals.
 
 ## Realtime (sandbox traces)
 
-A sandbox should feel like watching traces stream into your terminal: you run your
-agent and the UI updates as spans arrive, no refresh. This is what makes the sandbox
-genuinely pleasant for local debugging.
+> **Status: deferred — not in scope for the current sandbox work.** The realtime push
+> path (SSE endpoint + Redis Pub/Sub bridge from ingestion) was cut. The list-first UI
+> below ships; live streaming does not — the list refetches on its normal cadence with a
+> lightweight count poll for the first trace. The transport/bridging design below is
+> retained as the plan for if/when realtime is revived (see **Future**).
+
+A sandbox should eventually feel like watching traces stream into your terminal: you run
+your agent and the UI updates as spans arrive, no refresh. That is the target experience
+once realtime is revived; today the list-first view stands on its own.
 
 - **List-first, no summary aggregations.** The sandbox reuses the production
   **Traces | Sessions** list, grouping, sorting, and filters, but **drops the summary
@@ -373,6 +377,9 @@ This is about **trace data** appearing live — independent of the LLM-driven fe
 
 ## Future (door left open)
 
+- **Realtime trace streaming** — the SSE endpoint + Redis Pub/Sub bridge described under
+  **Realtime** above. Deferred to keep the current scope to the list-first UI; the design
+  is captured there for when it's picked back up.
 - **LLM-driven feedback in a sandbox** — flaggers, evaluations, issue clustering. Off
   by design today; the architecture is built so we can switch it on per-sandbox later.
   When we do, that brings its normal billing, and we can shorten the trace-settling

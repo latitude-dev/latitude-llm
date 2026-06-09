@@ -9,7 +9,8 @@ import {
 } from "@domain/spans"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
+import { use, useMemo } from "react"
+import { TraceScopeContext, traceScopeData, traceScopeKey } from "./trace-scope.tsx"
 import {
   countTracesByProject,
   getSessionMomentIntelligence,
@@ -43,6 +44,7 @@ export function useTracesInfiniteScroll({
   readonly filters?: FilterSet
   readonly searchQuery?: string
 }) {
+  const scope = use(TraceScopeContext)
   const {
     data: paginatedData,
     isLoading,
@@ -50,10 +52,11 @@ export function useTracesInfiniteScroll({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["traces", projectId, sorting, filters, searchQuery],
+    queryKey: [...traceScopeKey(scope), "traces", projectId, sorting, filters, searchQuery],
     queryFn: async ({ pageParam }) => {
       const result = await listTracesByProject({
         data: {
+          ...traceScopeData(scope),
           projectId,
           limit: BATCH_SIZE,
           cursor: pageParam,
@@ -97,9 +100,10 @@ export function useTracesCount({
   readonly filters?: FilterSet
   readonly searchQuery?: string
 }) {
+  const scope = use(TraceScopeContext)
   const { data: totalCount = 0, isLoading } = useQuery({
-    queryKey: ["traces-count", projectId, filters, searchQuery],
-    queryFn: () => countTracesByProject({ data: { projectId, filters, searchQuery } }),
+    queryKey: [...traceScopeKey(scope), "traces-count", projectId, filters, searchQuery],
+    queryFn: () => countTracesByProject({ data: { ...traceScopeData(scope), projectId, filters, searchQuery } }),
     staleTime: 30_000,
     enabled: projectId.length > 0,
   })
@@ -116,11 +120,13 @@ export function useTraceMetrics({
   readonly filters?: FilterSet
   readonly searchQuery?: string
 }) {
+  const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: ["traces-metrics", projectId, filters, searchQuery],
+    queryKey: [...traceScopeKey(scope), "traces-metrics", projectId, filters, searchQuery],
     queryFn: () =>
       getTraceMetricsByProject({
         data: {
+          ...traceScopeData(scope),
           projectId,
           ...(filters ? { filters } : {}),
           ...(searchQuery ? { searchQuery } : {}),
@@ -132,11 +138,12 @@ export function useTraceMetrics({
 }
 
 export function useTraceCohortSummary({ projectId }: { readonly projectId: string }) {
+  const scope = use(TraceScopeContext)
   return useQuery<CohortSummary>({
-    queryKey: ["traces-cohort-summary", projectId],
+    queryKey: [...traceScopeKey(scope), "traces-cohort-summary", projectId],
     queryFn: () =>
       getTraceCohortSummary({
-        data: { projectId },
+        data: { ...traceScopeData(scope), projectId },
       }),
     staleTime: 30_000,
     enabled: projectId.length > 0,
@@ -156,6 +163,7 @@ export function useTraceTimeHistogram({
   readonly rangeStartIso?: string
   readonly rangeEndIso?: string
 }) {
+  const scope = use(TraceScopeContext)
   const { rangeStartIso, rangeEndIso, bucketSeconds, queryKey } = useMemo(() => {
     const nowMs = Date.now()
     const { rangeStartIso: rs, rangeEndIso: re } = resolveTraceHistogramRangeIso(filters, nowMs)
@@ -172,6 +180,7 @@ export function useTraceTimeHistogram({
       rangeEndIso: effectiveRangeEndIso,
       bucketSeconds: bs,
       queryKey: [
+        ...traceScopeKey(scope),
         "traces-histogram",
         projectId,
         filters,
@@ -181,13 +190,14 @@ export function useTraceTimeHistogram({
         bs,
       ] as const,
     }
-  }, [projectId, filters, searchQuery, rangeStartIsoOverride, rangeEndIsoOverride])
+  }, [scope, projectId, filters, searchQuery, rangeStartIsoOverride, rangeEndIsoOverride])
 
   const query = useQuery({
     queryKey,
     queryFn: (): Promise<readonly TraceTimeHistogramBucket[]> =>
       getTraceTimeHistogramByProject({
         data: {
+          ...traceScopeData(scope),
           projectId,
           rangeStartIso,
           rangeEndIso,
@@ -217,9 +227,10 @@ export function useTraceDistribution({
   readonly field: PercentileTraceFilterField
   readonly enabled?: boolean
 }) {
+  const scope = use(TraceScopeContext)
   return useQuery<TraceDistribution>({
-    queryKey: ["trace-distribution", projectId, field],
-    queryFn: () => getTraceDistribution({ data: { projectId, field } }),
+    queryKey: [...traceScopeKey(scope), "trace-distribution", projectId, field],
+    queryFn: () => getTraceDistribution({ data: { ...traceScopeData(scope), projectId, field } }),
     // Distribution is intentionally insensitive to other filters and changes
     // slowly relative to a user's interaction window — long stale time keeps
     // the chart steady while picking a threshold.
@@ -239,9 +250,13 @@ export function useTraceDistinctValues({
   readonly search?: string
   readonly enabled?: boolean
 }) {
+  const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: ["trace-distinct", projectId, column, search],
-    queryFn: () => getTraceDistinctValues({ data: { projectId, column, limit: 50, ...(search ? { search } : {}) } }),
+    queryKey: [...traceScopeKey(scope), "trace-distinct", projectId, column, search],
+    queryFn: () =>
+      getTraceDistinctValues({
+        data: { ...traceScopeData(scope), projectId, column, limit: 50, ...(search ? { search } : {}) },
+      }),
     staleTime: 60_000,
     enabled: enabled && projectId.length > 0,
     // Keep the previous matches visible while the next query for a new search
@@ -259,12 +274,13 @@ export function useTraceDetail({
   readonly traceId: string
   readonly enabled?: boolean
 }) {
+  const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: traceDetailQueryKey(projectId, traceId),
+    queryKey: [...traceScopeKey(scope), ...traceDetailQueryKey(projectId, traceId)],
     // getTraceDetail returns `never` at the type level to satisfy TanStack Start's
     // Serialize constraint (see traces.functions.ts); cast back to the actual type
     queryFn: async () => {
-      const result = await getTraceDetail({ data: { projectId, traceId } })
+      const result = await getTraceDetail({ data: { ...traceScopeData(scope), projectId, traceId } })
       return result as TraceDetailRecord | null
     },
     enabled: enabled && projectId.length > 0 && traceId.length > 0,
@@ -280,10 +296,11 @@ export function useSessionMomentIntelligence({
   readonly sessionId: string | null | undefined
   readonly enabled?: boolean
 }) {
+  const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: sessionMomentIntelligenceQueryKey(projectId, sessionId ?? ""),
+    queryKey: [...traceScopeKey(scope), ...sessionMomentIntelligenceQueryKey(projectId, sessionId ?? "")],
     queryFn: async (): Promise<readonly SessionMomentIntelligenceRecord[]> =>
-      getSessionMomentIntelligence({ data: { projectId, sessionId: sessionId ?? "" } }),
+      getSessionMomentIntelligence({ data: { ...traceScopeData(scope), projectId, sessionId: sessionId ?? "" } }),
     enabled: enabled && projectId.length > 0 && Boolean(sessionId),
   })
 }
@@ -299,10 +316,13 @@ export function useTraceSearchHighlights({
   readonly searchQuery: string
   readonly enabled?: boolean
 }) {
+  const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: ["traceSearchHighlights", projectId, traceId, searchQuery] as const,
+    queryKey: [...traceScopeKey(scope), "traceSearchHighlights", projectId, traceId, searchQuery] as const,
     queryFn: async (): Promise<TraceSearchHighlightsResult> => {
-      const result = await getTraceSearchHighlights({ data: { projectId, traceId, searchQuery } })
+      const result = await getTraceSearchHighlights({
+        data: { ...traceScopeData(scope), projectId, traceId, searchQuery },
+      })
       return result as TraceSearchHighlightsResult
     },
     enabled: enabled && projectId.length > 0 && traceId.length > 0 && searchQuery.length > 0,
