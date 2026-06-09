@@ -11,6 +11,11 @@
  * are inert and can be cleaned from the backoffice.
  */
 export const FEATURE_FLAGS = {
+  "wrapped-merch-promo": {
+    emoji: "👕",
+    name: "Wrapped merch promo",
+    description: "Shows the 41st.latitude.so 'share on X for free merch' banner inside the weekly Wrapped email.",
+  },
   monitors: {
     emoji: "📡",
     name: "Monitors",

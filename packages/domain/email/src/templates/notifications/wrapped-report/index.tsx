@@ -1,3 +1,4 @@
+import { FeatureFlagRepository } from "@domain/feature-flags"
 import { WrappedReportId } from "@domain/shared"
 import {
   CURRENT_REPORT_VERSION,
@@ -126,6 +127,12 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
         cause,
       })),
     )
+    // Promo flag failures are non-fatal — render the email without the
+    // banner rather than dropping the whole send because of a flag lookup.
+    const flags = yield* FeatureFlagRepository
+    const showMerchPromo = yield* flags
+      .isEnabledForOrganization("wrapped-merch-promo")
+      .pipe(Effect.orElseSucceed(() => false))
     return yield* Effect.tryPromise({
       try: () =>
         renderWrappedHtml({
@@ -135,7 +142,7 @@ export const wrappedReportRenderer: NotificationEmailRenderer<"wrapped.report"> 
           webAppUrl: ctx.webAppUrl,
           reportId: record.id,
           reportVersion: record.reportVersion,
-          showMerchPromo: true,
+          showMerchPromo,
         }),
       catch: (cause) => ({
         _tag: "RenderNotificationEmailError" as const,
