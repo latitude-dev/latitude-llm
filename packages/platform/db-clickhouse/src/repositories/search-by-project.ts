@@ -177,6 +177,58 @@ const SESSION_SEARCH_SELECT = `
   nullIf(max(lastBySession[session_id]), -1)  AS matched_last_message_index
 `
 
+const COUNT_FILTER_SELECTS: Readonly<Record<string, readonly string[]>> = {
+  status: ["sum(span_count) AS span_count", "sum(error_count) AS error_count"],
+  hasLlmActivity: ["sum(tokens_total) AS tokens_total", "groupUniqArrayIfMerge(models) AS models"],
+  sessionId: ["session_id"],
+  traceId: ["groupUniqArrayMerge(trace_ids) AS trace_ids"],
+  simulationId: ["argMaxIfMerge(simulation_id) AS simulation_id"],
+  userId: ["argMaxIfMerge(user_id) AS user_id"],
+  name: ["argMinIfMerge(root_span_name) AS root_span_name"],
+  tags: ["groupUniqArrayArray(tags) AS tags"],
+  models: ["groupUniqArrayIfMerge(models) AS models"],
+  providers: ["groupUniqArrayIfMerge(providers) AS providers"],
+  serviceNames: ["groupUniqArrayIfMerge(service_names) AS service_names"],
+  cost: ["sum(cost_total_microcents) AS cost_total_microcents"],
+  duration: ["sum(duration_ns) AS duration_ns"],
+  ttft: [
+    `if(
+      min(time_of_first_token) < toDateTime64('2261-01-01', 9, 'UTC')
+        AND min(time_of_first_token) > min(min_start_time),
+      reinterpretAsInt64(min(time_of_first_token))
+        - reinterpretAsInt64(min(min_start_time)),
+      0
+    ) AS time_to_first_token_ns`,
+  ],
+  spanCount: ["sum(span_count) AS span_count"],
+  errorCount: ["sum(error_count) AS error_count"],
+  traceCount: ["uniqExactMerge(trace_count) AS trace_count"],
+  tokensInput: ["sum(tokens_input) AS tokens_input"],
+  tokensOutput: ["sum(tokens_output) AS tokens_output"],
+  startTime: ["min(min_start_time) AS start_time"],
+}
+
+const buildSessionSearchCountSelect = (filters: FilterSet | undefined): string => {
+  const columns = new Map<string, string>([
+    ["organization_id", "organization_id"],
+    ["project_id", "project_id"],
+    ["session_id", "session_id"],
+  ])
+
+  for (const field of Object.keys(filters ?? {})) {
+    if (field.startsWith("metadata.")) {
+      columns.set("metadata", "maxMap(metadata) AS metadata")
+      continue
+    }
+
+    for (const expr of COUNT_FILTER_SELECTS[field] ?? []) {
+      columns.set(expr, expr)
+    }
+  }
+
+  return [...columns.values()].join(",\n                    ")
+}
+
 const buildSearchFilters = (filters: FilterSet | undefined) => {
   if (!filters || Object.keys(filters).length === 0) {
     return { havingClauses: [], whereClauses: [], params: {} }
@@ -380,37 +432,40 @@ export const countSessionsBySearchQuery = ({
     if (candidates.length === 0) return { totalCount: 0 } satisfies SessionCountResult
 
     const sessionIds = candidates.map((c) => normalizeCHString(c.session_id))
-    const relevanceScores = candidates.map((c) => Number(c.relevance_score))
-    const firstMessageIndexes = candidates.map((c) => c.matched_first_message_index ?? -1)
-    const lastMessageIndexes = candidates.map((c) => c.matched_last_message_index ?? -1)
     const finalWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
     const finalHaving = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+    const hasAggregateFilters = havingClauses.length > 0
+    const countSelect = buildSessionSearchCountSelect(filters)
 
     return yield* chSqlClient
       .query(async (client) => {
         const result = await client.query({
-          query: `WITH
-                    mapFromArrays({sessionIds:Array(String)}, {relevanceScores:Array(Float64)}) AS scoreBySession,
-                    mapFromArrays({sessionIds:Array(String)}, {firstMessageIndexes:Array(Int32)}) AS firstBySession,
-                    mapFromArrays({sessionIds:Array(String)}, {lastMessageIndexes:Array(Int32)}) AS lastBySession
-                  SELECT count() AS total
-                  FROM (
-                    SELECT ${SESSION_SEARCH_SELECT}
-                    FROM sessions
-                    WHERE organization_id = {organizationId:String}
-                      AND project_id = {projectId:String}
-                      AND session_id IN ({sessionIds:Array(String)})
-                      ${finalWhere}
-                    GROUP BY organization_id, project_id, session_id
-                    ${finalHaving}
-                  )`,
+          query: hasAggregateFilters
+            ? `SELECT count() AS total
+                FROM (
+                  SELECT ${countSelect}
+                  FROM sessions
+                  WHERE organization_id = {organizationId:String}
+                    AND project_id = {projectId:String}
+                    AND session_id IN ({sessionIds:Array(String)})
+                    ${finalWhere}
+                  GROUP BY organization_id, project_id, session_id
+                  ${finalHaving}
+                )`
+            : `SELECT count() AS total
+               FROM (
+                 SELECT session_id
+                 FROM sessions
+                 WHERE organization_id = {organizationId:String}
+                   AND project_id = {projectId:String}
+                   AND session_id IN ({sessionIds:Array(String)})
+                   ${finalWhere}
+                 GROUP BY organization_id, project_id, session_id
+               )`,
           query_params: {
             organizationId: organizationId as string,
             projectId: projectId as string,
             sessionIds,
-            relevanceScores,
-            firstMessageIndexes,
-            lastMessageIndexes,
             ...filterParams,
           },
           format: "JSONEachRow",

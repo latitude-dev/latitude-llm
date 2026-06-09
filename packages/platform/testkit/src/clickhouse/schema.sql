@@ -250,6 +250,7 @@ CREATE TABLE sessions
     `output_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
     `system_instructions` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
     `retention_days` SimpleAggregateFunction(max, UInt16) DEFAULT 90 CODEC(T64, ZSTD(1)),
+    INDEX idx_sessions_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_start_time min_start_time TYPE minmax GRANULARITY 1
 )
 ENGINE = AggregatingMergeTree

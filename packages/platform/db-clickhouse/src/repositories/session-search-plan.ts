@@ -79,10 +79,19 @@ function buildSessionLexicalSubquery(parsed: ParsedSearchQuery): {
   }
 }
 
-function buildSessionSemanticSubquery(queryEmbedding: readonly number[]): {
+function buildSessionSemanticSubquery(
+  queryEmbedding: readonly number[],
+  options: { readonly sessionFilterSubquery?: string } = {},
+): {
   subquery: string
   params: Record<string, unknown>
 } {
+  const sessionFilter = options.sessionFilterSubquery
+    ? `AND session_id IN (
+         SELECT session_id FROM (${options.sessionFilterSubquery})
+       )`
+    : ""
+
   return {
     subquery: `SELECT
                 session_id,
@@ -98,6 +107,7 @@ function buildSessionSemanticSubquery(queryEmbedding: readonly number[]): {
                 FROM session_semantic_moments FINAL
                 WHERE organization_id = {organizationId:String}
                   AND project_id = {projectId:String}
+                  ${sessionFilter}
                   AND (session_id, analysis_hash) IN (
                     SELECT session_id, argMax(analysis_hash, indexed_at)
                     FROM session_analyses
@@ -181,7 +191,7 @@ function buildSessionSearchPlan(
     }
   }
 
-  const sem = buildSessionSemanticSubquery(queryEmbedding)
+  const sem = buildSessionSemanticSubquery(queryEmbedding, { sessionFilterSubquery: lex.subquery })
   return {
     ranked: true,
     subquery: `SELECT lex.session_id AS session_id,
