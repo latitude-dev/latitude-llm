@@ -1,5 +1,5 @@
 import type { NotificationPreferences, OrganizationSettings } from "@domain/shared"
-import { boolean, index, integer, jsonb, text, varchar } from "drizzle-orm/pg-core"
+import { boolean, index, integer, jsonb, text, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import {
   cuid,
   latitudeSchema,
@@ -323,6 +323,7 @@ export const ssoProviders = latitudeSchema.table(
   },
   (t) => [
     organizationRLSPolicy("sso_providers"),
+    uniqueIndex("ssoProviders_organizationId_unique_idx").on(t.organizationId),
     index("ssoProviders_organizationId_idx").on(t.organizationId),
     index("ssoProviders_domain_idx").on(t.domain),
     index("ssoProviders_userId_idx").on(t.userId),
