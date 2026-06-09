@@ -126,6 +126,19 @@ cd /Users/sans/src/latitude-v2/tools/live-seeds
 pnpm seed:live-seeds --ingest-url http://127.0.0.1:3002
 ```
 
+Seed a remote environment (e.g. staging) with no local DB access:
+
+```bash
+cd tools/live-seeds
+pnpm seed:live-seeds --remote \
+  --ingest-url https://staging-ingest.latitude.so \
+  --api-key-token <remote-api-key> \
+  --project-slug <remote-project-slug> \
+  --fixtures tool-call-error,frustration-in --count-per-fixture 1
+```
+
+See [Remote mode](#remote-mode) below for what it skips and why.
+
 Speed up the within-trace timing:
 
 ```bash
@@ -151,6 +164,7 @@ pnpm seed:live-seeds --no-provision-system-queues
 
 - `--fixtures <a,b,c>`: comma-separated fixture keys to send
 - `--ingest-url <url>`: base URL for the ingest service
+- `--remote`: seed a remote environment with no local DB access (see [Remote mode](#remote-mode)); requires `--ingest-url`, `--api-key-token`, and `--project-slug`
 - `--time-scale <n>`: multiplies fixture delays by the given factor
 - `--count-per-fixture <n>`: generates this many cases for each selected fixture
 - `--parallel-cases <n>`: maximum number of cases dispatched concurrently
@@ -289,6 +303,24 @@ The script prints a final wait hint based on the current `TRACE_END_DEBOUNCE_MS`
 - `src/otlp.ts`: OTLP request builders and message helpers
 - `src/random.ts`: seeded RNG used for reproducible generation
 - `src/types.ts`: shared fixture and generated-case types
+
+## Remote mode
+
+By default the tool resolves the key→org mapping and the target project against your **local** Postgres before sending any spans. That makes it impossible to point it at a remote environment (staging, a sandbox on prod, etc.) whose database this machine can't reach — the local key lookup fails with `No API key matches`.
+
+`--remote` removes that coupling. The OTLP request already carries `Authorization: Bearer <key>` and `X-Latitude-Project: <slug>`, and the remote ingest authenticates the key and resolves the project on its own side — so in remote mode the tool trusts the provided `--api-key-token` + `--project-slug` and sends straight through, with **zero local DB access**.
+
+What remote mode skips:
+
+- key→org resolution (`LAT_ADMIN_DATABASE_URL` lookup)
+- project find/create
+- flagger provisioning
+- target loading (evaluations / live queues / flaggers)
+- the sample-aware trace-id search — remote sampling outcomes can't be verified from here, so each trace gets a stable generated id directly
+
+Because there's no seeded eval/live-queue context, fixtures are restricted to the **flaggers-only** set (`frustration-in`, `tool-call-error`, `empty-response`, `output-schema`), exactly as a non-default key already behaves locally. The downstream-verification steps in [How To Verify The Run](#how-to-verify-the-run) don't apply — you verify by looking at the traces in the target environment's UI. (For a sandbox project specifically, no LLM-driven fan-out runs at all by design, so only the traces themselves will appear.)
+
+`--remote` requires `--ingest-url`, `--api-key-token`, and `--project-slug`; it errors early if any are missing.
 
 ## Scope
 

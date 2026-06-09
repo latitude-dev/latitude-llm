@@ -85,6 +85,16 @@ export type SeedRunContext = {
   readonly projectSlug: string
   readonly apiKeyToken: string
   readonly flaggersOnly: boolean
+  /**
+   * Remote mode: no local Postgres access at all. The key→org and project
+   * resolution that the local flow does is skipped — the remote ingest
+   * authenticates the key and resolves `X-Latitude-Project` on its own side.
+   * org/project ids carried here are inert placeholders (only ever hash inputs
+   * for sample search, which remote mode bypasses), targets are empty, and
+   * flagger provisioning is off. Used to seed a remote env (staging, prod) whose
+   * DB this machine can't reach.
+   */
+  readonly remote: boolean
 }
 
 /**
@@ -158,6 +168,15 @@ export type SendLiveSeedDataOptions = {
    * sandbox (its spans route there at ingest, so project work is scoped there).
    */
   readonly apiKeyToken?: string
+  /**
+   * Seed a remote environment with no local Postgres access. Requires
+   * {@link apiKeyToken}, {@link projectSlug}, and a remote {@link ingestBaseUrl}.
+   * Skips key→org resolution, project find/create, flagger provisioning, target
+   * loading, and the sample-aware trace-id search (sampling outcomes can't be
+   * verified against a remote tenant). Fixtures are restricted to the
+   * flaggers-only set, as in any non-default-key run.
+   */
+  readonly remote?: boolean
 }
 
 export type BuildLiveSeedRunPlanOptions = {
@@ -450,6 +469,26 @@ async function resolveRunContext(options: SendLiveSeedDataOptions): Promise<Seed
   const apiKeyToken = options.apiKeyToken ?? SEED_API_KEY_TOKEN
   const isSeedKey = apiKeyToken === SEED_API_KEY_TOKEN
 
+  // Remote mode: no local DB. The remote ingest authenticates the key and
+  // resolves the project, so we trust the provided slug + key as-is and skip
+  // every Postgres round-trip. org/project ids are inert placeholders here.
+  if (options.remote) {
+    if (!options.apiKeyToken) {
+      throw new Error("--remote requires --api-key-token (the key the remote ingest authenticates).")
+    }
+    if (!options.projectSlug) {
+      throw new Error("--remote requires --project-slug (the project to target on the remote env).")
+    }
+    return {
+      organizationId: SEED_ORG_ID,
+      projectId: SEED_PROJECT_ID,
+      projectSlug: options.projectSlug,
+      apiKeyToken,
+      flaggersOnly: true,
+      remote: true,
+    }
+  }
+
   // Fast path: the seeded key + default project is the fully-seeded Acme context
   // (evaluations + live queue present), and needs no DB round-trip.
   if (isSeedKey && (!options.projectSlug || options.projectSlug === SEED_PROJECT_SLUG)) {
@@ -459,6 +498,7 @@ async function resolveRunContext(options: SendLiveSeedDataOptions): Promise<Seed
       projectSlug: SEED_PROJECT_SLUG,
       apiKeyToken,
       flaggersOnly: false,
+      remote: false,
     }
   }
 
@@ -510,6 +550,7 @@ async function resolveRunContext(options: SendLiveSeedDataOptions): Promise<Seed
       projectSlug: project.slug,
       apiKeyToken,
       flaggersOnly: true,
+      remote: false,
     }
   } finally {
     await closePostgres(client.pool)
@@ -735,6 +776,17 @@ async function findTraceIdForCaseTrace(input: {
   readonly caseIndex: number
   readonly traceIndex: number
 }): Promise<{ readonly traceId: string; readonly preview: LiveSeedSamplePreview }> {
+  // Remote mode has no local targets to sample against, and the remote tenant's
+  // sampling can't be verified from here — so skip the search and take a stable
+  // trace id directly. The preview is empty (no eval/queue/flagger outcomes).
+  if (input.ctx.remote) {
+    const traceId = hashHex(
+      `seed-live-seeds:${input.runSeed}:${input.fixture.key}:${input.caseIndex.toString()}:${input.traceIndex.toString()}:${input.generatedTrace.key}:0`,
+      32,
+    )
+    return { traceId, preview: { evaluationsById: {}, liveQueue: false, flaggersBySlug: {} } }
+  }
+
   const samplingPlan =
     input.generatedTrace.role === "target"
       ? input.fixture.sampling
@@ -891,7 +943,9 @@ function printFixturePlan(
 
   console.log("[plan] Live-seed run")
   console.log(`  - ingest endpoint: ${normalizeBaseUrl(ingestBaseUrl)}/v1/traces`)
-  console.log(`  - project slug: ${ctx.projectSlug}${ctx.flaggersOnly ? " (flaggers-only mode)" : ""}`)
+  console.log(
+    `  - project slug: ${ctx.projectSlug}${ctx.remote ? " (remote mode)" : ctx.flaggersOnly ? " (flaggers-only mode)" : ""}`,
+  )
   console.log(`  - flagger provisioning: ${provisioned ? "enabled" : "skipped"}`)
   console.log(`  - trace-end debounce: ${Math.ceil(TRACE_END_DEBOUNCE_MS / 1000).toString()}s`)
   console.log(`  - runId: ${plan.runId}`)
@@ -1121,11 +1175,17 @@ export async function sendLiveSeedData(options: SendLiveSeedDataOptions): Promis
   const seed = options.seed ?? randomUUID().replaceAll("-", "")
   const ctx = await resolveRunContext(options)
 
-  if (options.provisionFlaggers) {
+  if (ctx.remote) {
+    console.log("[remote] No local DB access — sample-aware trace-id search and flagger provisioning are disabled.")
+  }
+
+  if (options.provisionFlaggers && !ctx.remote) {
     await provisionFlaggers(ctx)
   }
 
-  const targets = await loadSeedTargets(ctx)
+  const targets: SeedTargets = ctx.remote
+    ? { evaluationsById: {}, highCostLiveQueue: undefined, flaggersBySlug: {} }
+    : await loadSeedTargets(ctx)
   const plan = await buildLiveSeedRunPlan({
     ...(options.fixtureKeys ? { fixtureKeys: options.fixtureKeys } : {}),
     countPerFixture: options.countPerFixture,
@@ -1135,7 +1195,7 @@ export async function sendLiveSeedData(options: SendLiveSeedDataOptions): Promis
     ctx,
   })
 
-  printFixturePlan(plan, options.ingestBaseUrl, options.provisionFlaggers, options.parallelCases, ctx)
+  printFixturePlan(plan, options.ingestBaseUrl, options.provisionFlaggers && !ctx.remote, options.parallelCases, ctx)
 
   const plannedTraceCount = getPlannedTraceCount(plan.cases)
   const plannedSpanCount = getPlannedSpanCount(plan.cases)

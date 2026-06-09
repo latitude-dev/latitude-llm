@@ -19,6 +19,11 @@ Options:
   --api-key-token <token>        Ingest API key (default: seed token lat_seed_default_api_key_token).
                                  The key decides the target org — e.g. a sandbox's default key
                                  (lat_sandbox_seed_default_api_key_token) seeds that sandbox.
+  --remote                       Seed a remote environment (e.g. staging) with no local DB access.
+                                 Requires --ingest-url, --api-key-token, and --project-slug. Skips
+                                 key→org resolution, project create, flagger provisioning, and the
+                                 sample-aware trace-id search; the remote ingest authenticates the
+                                 key and resolves the project itself. Fixtures are flaggers-only.
   --time-scale <n>               Multiply fixture delays by this factor (default: 1)
   --count-per-fixture <n>        Generate this many cases per selected fixture (default: 5)
   --parallel-cases <n>           Number of cases to dispatch concurrently (default: 4)
@@ -77,6 +82,7 @@ const { values, positionals } = parseArgs({
     seed: { type: "string" },
     "verbose-spans": { type: "boolean", default: false },
     "no-provision-flaggers": { type: "boolean", default: false },
+    remote: { type: "boolean", default: false },
     "list-fixtures": { type: "boolean", default: false },
     help: { type: "boolean", default: false },
   },
@@ -104,6 +110,21 @@ const fixtureKeys =
     .map((fixture) => fixture.trim())
     .filter((fixture) => fixture.length > 0) ?? undefined
 
+const remote = values.remote ?? false
+
+if (remote) {
+  const missing = [
+    !values["ingest-url"] ? "--ingest-url" : undefined,
+    !values["api-key-token"] ? "--api-key-token" : undefined,
+    !values["project-slug"] ? "--project-slug" : undefined,
+  ].filter((flag): flag is string => flag !== undefined)
+  if (missing.length > 0) {
+    console.error(`--remote requires ${missing.join(", ")}.`)
+    console.log(USAGE)
+    process.exit(1)
+  }
+}
+
 const ingestBaseUrl = values["ingest-url"] ?? resolveDefaultIngestUrl()
 const timeScale = parsePositiveNumber(values["time-scale"] ?? "1", "--time-scale")
 const countPerFixture = parsePositiveInteger(values["count-per-fixture"] ?? "5", "--count-per-fixture")
@@ -122,6 +143,7 @@ const options = {
   parallelCases,
   provisionFlaggers,
   verboseSpans,
+  remote,
   ...(values.seed ? { seed: values.seed } : {}),
   ...(values["project-slug"] ? { projectSlug: values["project-slug"] } : {}),
   ...(values["api-key-token"] ? { apiKeyToken: values["api-key-token"] } : {}),

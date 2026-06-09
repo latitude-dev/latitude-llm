@@ -214,6 +214,7 @@
         "pages": [
           "getting-started/concepts",
           "getting-started/mcp",
+          "more/sandbox",
           "more/api-reference"
         ]
       }
