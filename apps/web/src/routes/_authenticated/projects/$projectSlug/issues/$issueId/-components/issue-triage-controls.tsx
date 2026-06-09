@@ -7,7 +7,9 @@ import { toUserMessage } from "../../../../../../../lib/errors.ts"
 
 type Priority = NonNullable<UpdateIssueTriageRecord["priority"]>
 
-const UNSET = "" as const
+// Non-empty sentinel for the "cleared" option: Radix `Select.Item` forbids an
+// empty-string value (it reserves "" for the placeholder/clear state).
+const UNSET = "__unset__" as const
 
 const PRIORITY_OPTIONS: SelectOption<Priority | typeof UNSET>[] = [
   { label: "No priority", value: UNSET },
