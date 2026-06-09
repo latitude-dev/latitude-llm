@@ -100,13 +100,14 @@ These are **not blockers** for shipping self-hosting — they are requirements w
 
 Establish the authoritative picture before changing anything; this directly feeds every tier's docs.
 
-- [ ] **P1-1**: Produce a dependency matrix covering every third-party infra component, SaaS integration, library, and AI provider/model. Classify each as **OSS/self-hostable**, **optional (no-ops when unset)**, or **required proprietary (AI)**.
+- [x] **P1-1**: Produce a dependency matrix covering every third-party infra component, SaaS integration, library, and AI provider/model, with licenses and self-hosting restrictions. → **see [Appendix A](#appendix-a--dependency-license--self-hosting-audit)**.
 - [ ] **P1-2**: Audit `.env.example` and tag every var as **required**, **optional**, or **proprietary-enhancement**; identify the minimal var set per tier (and which AI keys unlock which features).
 - [ ] **P1-3**: Map exactly which features break without Voyage / Bedrock / Anthropic, and confirm the app still boots and core observability works without them (informs P3-4).
 - [ ] **P1-4**: Confirm `@platform/db-weaviate` is dead and list anything else removable; confirm GHCR image visibility / publishing story.
 - [ ] **P1-5**: Write down the canonical **self-host profile** (which adapters/images constitute it, and the current proprietary-AI requirement).
+- [ ] **P1-6**: **Swap `ua-parser-js@2.0.9` (AGPL-3.0) → `bowser@2.14.1` (MIT)** to make the shipped web app fully permissive (the audit's one shipped copyleft dep — see Appendix A, finding #2). It's used **server-side only**, for cosmetic User-Agent → browser/OS/device labels, in two files: `apps/web/src/domains/admin/users.functions.ts` and `apps/web/src/domains/sessions/user-sessions.functions.ts`. Per file it's two edits — swap the import (`import { UAParser } from "ua-parser-js"` → `import Bowser from "bowser"`), call `Bowser.parse(ua)` instead of `UAParser(ua)`, and change `parsed?.device.type` → `parsed?.platform.type` (`browser.name` / `os.name` map unchanged; `platform.type ∈ {desktop, mobile, tablet, tv}` so the `?? "desktop"` fallback still holds). Remove `ua-parser-js` from / add `bowser` to `apps/web/package.json` (bowser is **already in the lockfile** via `@aws-sdk/util-user-agent-browser`, so no net-new package). Fix the stale `UAParser().device.type` comment in `apps/web/src/routes/_authenticated/projects/$projectSlug/settings/account.tsx`. Land as its own small PR off `development` (code change, not docs).
 
-**Exit gate**: a written, reviewed dependency matrix and an agreed self-host profile; the required-vs-optional split (and the documented AI requirement) is finalized.
+**Exit gate**: a written, reviewed dependency matrix and an agreed self-host profile; the required-vs-optional split (and the documented AI requirement) is finalized; and the shipped app's only AGPL dependency (`ua-parser-js`) is replaced by MIT `bowser` (P1-6).
 
 ### Phase 2 — Tier 1: Local / development experience
 
@@ -183,3 +184,85 @@ Convenience layer on top of Tier 2; pursued only after Tiers 1–3 are solid.
 - **(Phase 5) Internal LLM default**: do we bundle/recommend a specific local model (e.g. via Ollama) as the OSS default, and what's the minimum hardware guidance?
 
 > More context and instructions from the user will be folded into this spec incrementally.
+
+## Appendix A — Dependency license & self-hosting audit
+
+**Scope.** Every shipped/required dependency of the product: infra services (the things you run — Postgres, ClickHouse, Redis, Temporal, object storage), the AI providers/models we call, and the application libraries (TypeScript **and** Python). It deliberately **excludes** the `infra/` Pulumi folder (that is Latitude's own cloud deployment, not a self-hoster's dependency).
+
+**Method.** Ground-truth, not memory: JS licenses from `pnpm licenses list --json` over the fully installed tree (~1,900 unique package@version entries, direct + transitive, all platforms); Python from each `pyproject.toml` + installed `dist-info/METADATA`; infra images resolved to their actual running versions and license; AI from declared SDK deps + each provider's service terms. Audited **2026-06-09**.
+
+> **A note on the question that matters most — "does any license prohibit self-deploying Latitude?"**
+> **No.** No dependency license prohibits deploying Latitude yourself, at any scale, for hobby **or** commercial/business use. The few non-permissive items below are either (a) external services where the restrictive clause only triggers if *you resell that service itself* (Redis, MinIO), (b) dev-only and stripped from the shipped build (agentation), or (c) copyleft that Latitude already satisfies by being public MIT source (ua-parser-js, libvips). The actionable items are about keeping the stack *cleanly* OSS, not about legality of self-hosting.
+
+### Bottom line — the only non-permissive findings
+
+| # | Dependency | License | Ships in product? | Prohibits self-deploy (hobby/business)? | Recommended action |
+| - | --- | --- | --- | --- | --- |
+| 1 | **Redis** (`redis:7` → 7.4.9) | RSALv2 / SSPLv1 (dual, source-available, **non-OSS**) | Run as a service (cache + BullMQ) | **No** — RSAL/SSPL only restrict offering *Redis itself* as a managed service; internal use inside Latitude is unrestricted | **Kept as-is (decided).** Document the rationale; Valkey / `redis:7.2` remain optional fully-OSS drop-ins for stricter operators |
+| 2 | **ua-parser-js@2.0.9** | AGPL-3.0-or-later (commercial license also sold) | **Yes** — runtime dep in `apps/web` (server-side UA parsing for backoffice/sessions) | **No** — but it is the only copyleft in the shipped app; AGPL's source-offer duty is already met since Latitude is public MIT source | Pin **ua-parser-js v1 (MIT)** or swap for an MIT UA parser to keep the app copyleft-free |
+| 3 | **MinIO** — *not a dependency; candidate only* | AGPL-3.0 | **No — not in the repo.** Only relevant if Phase 3 (P3-2) bundles it; would run as a **separate** S3 service | **No** — talking to an unmodified MinIO over the S3 API does not impose AGPL on Latitude | Prefer **SeaweedFS** (Apache-2.0) / "any S3-compatible store" / the `fs` driver instead, so no AGPL is ever introduced |
+| 4 | **agentation@3.0.2** | PolyForm-Shield-1.0.0 (source-available, **non-OSS**) | **No** — `devDependency`, dev-gated by `import.meta.env.DEV`, dead-code-eliminated from prod | **No** — never shipped (and Shield only restricts building a competitor anyway) | Keep dev-only |
+| 5 | **@img/sharp-libvips-\*@1.2.4** (libvips prebuilt, via `sharp`) | LGPL-3.0-or-later | Yes (transitive, platform binary) | **No** — LGPL dynamically-linked prebuilt, unmodified; permits commercial use | None |
+
+Everything else is permissive or attribution-only — see the distribution and per-area tables below.
+
+### Infrastructure / external services (the things you run)
+
+| Service | Image / source (compose) | License | Self-host / on-prem restriction | Notes |
+| --- | --- | --- | --- | --- |
+| PostgreSQL + pgvector | `pgvector/pgvector:pg16` | PostgreSQL License (both) | **None** | Primary OLTP store; permissive BSD-style |
+| ClickHouse | `clickhouse/clickhouse-server:26.2` | Apache-2.0 | **None** | Span/telemetry OLAP store |
+| Redis (cache + BullMQ) | `redis:7` → **7.4.9** | **RSALv2 / SSPLv1** (source-available) | **None for internal use**; SSPL/RSAL trigger only on reselling Redis-as-a-service | Non-OSS license, but internal use is unrestricted → **kept as-is**. Valkey / `redis:7.2` optional for stricter operators |
+| Temporal (server) | `temporalio/auto-setup:1.27.2` | MIT | **None** | Self-hostable; Temporal Cloud is optional |
+| Temporal UI | `temporalio/ui:2.36.0` | MIT | **None** | |
+| Mailpit (local SMTP) | `axllent/mailpit:v1.24` | MIT | **None** | Dev only |
+| Object storage | Default `fs` driver; S3 via `@aws-sdk/client-s3` (Apache-2.0) to **any** S3-compatible backend | Apache-2.0 (client) | **None** | MinIO (AGPL-3.0) is a *candidate*, not a dependency; prefer **SeaweedFS** (Apache-2.0) / external S3 if one is bundled |
+
+No MongoDB, Elasticsearch, or other SSPL/Elastic/BSL-licensed datastore is used. The default app object-storage driver is `fs`; the S3 client is `@aws-sdk/client-s3` (Apache-2.0), which speaks to any S3-compatible backend.
+
+### AI providers & models
+
+The model-provider **client SDKs are all OSS** (Apache-2.0 / MIT). The **default internal providers are proprietary, paid, not self-hostable** services — a *functional* limitation (addressed in Phase 5), **not a license that forbids self-hosting or commercial use**.
+
+| Provider / model | Used for | Client SDK (license) | Service terms | Self-hostable model? | Restriction on self-deploying Latitude |
+| --- | --- | --- | --- | --- | --- |
+| **Voyage AI** (embeddings + rerank) | semantic search, highlights, issue clustering | `voyageai` (MIT) | Proprietary paid API | No | None legal; needs API key — **hard functional dep today** (Phase 5 adds OSS option) |
+| **Anthropic** (Claude) | flaggers, annotator optimization, AI flows | `@anthropic-ai/sdk` (MIT), `@ai-sdk/anthropic` (Apache-2.0) | Proprietary commercial API ToS | No | None legal; needs account + key |
+| **Amazon Bedrock** | internal AI flows | `@ai-sdk/amazon-bedrock`, `@aws-sdk/client-bedrock-runtime` (Apache-2.0) | Proprietary AWS service + per-model EULAs | No | None legal; needs AWS account |
+| **OpenAI / Cohere** (provider options) | model provider options; OpenAI-compatible endpoints | `openai` (Apache-2.0), `cohere-ai` (MIT), `@ai-sdk/openai` (Apache-2.0) | Proprietary APIs — **but `openai` also targets any OpenAI-compatible server** (Ollama, vLLM, LM Studio) | Endpoint-dependent | None — this SDK is the **Phase-5 enabler** for fully-OSS local models |
+| Vercel AI SDK core | provider abstraction | `ai`, `@ai-sdk/provider` (Apache-2.0) | n/a (library) | n/a | None |
+
+### Application libraries — TypeScript
+
+Installed-tree license distribution (direct + transitive, all platforms; ~1,900 unique entries):
+
+| License | Count (approx.) | Class |
+| --- | --- | --- |
+| MIT (+ `mit`, MIT-0) | ~1,114 | Permissive |
+| Apache-2.0 | 297 | Permissive |
+| ISC | 92 | Permissive |
+| BSD-3-Clause / BSD-2-Clause | 24 / 23 | Permissive |
+| MPL-2.0 | 6 | Weak copyleft (file-level) — no use restriction |
+| CC0-1.0 / Unlicense / 0BSD / WTFPL / Zlib / Python-2.0 (PSF) | ~10 total | Permissive / public-domain-equivalent |
+| CC-BY-3.0 / CC-BY-4.0 | 2 | Attribution-only data (`spdx-exceptions`, `caniuse-lite`) |
+| **AGPL-3.0-or-later** | **1** | `ua-parser-js` — see finding #2 |
+| **PolyForm-Shield-1.0.0** | **1** | `agentation` (dev-only) — see finding #4 |
+| **LGPL-3.0-or-later** | **1** | `@img/sharp-libvips-*` — see finding #5 |
+
+Core chosen runtime libraries — all permissive: Hono (MIT), TanStack Router/Start + React (MIT), Better Auth (MIT), Drizzle ORM (Apache-2.0) / drizzle-kit (MIT) / `pg` (MIT), `@clickhouse/client` (Apache-2.0), ioredis (MIT), **BullMQ (MIT)**, nodemailer (MIT-0), `@slack/web-api` (MIT), posthog-node (MIT), Effect (MIT), Zod (MIT). Toolchain: Vite (MIT), Turbo (MIT), Vitest (MIT), Biome (MIT/Apache-2.0), TypeScript (Apache-2.0). The 6 MPL-2.0 packages (`satori`, `@resvg/resvg-js`, `lightningcss`, `dompurify` [MPL **or** Apache-2.0]) are weak file-level copyleft with **no restriction** on use, self-hosting, or commercial deployment.
+
+### Application libraries — Python
+
+| Project | Role | Dependency license summary | Restriction |
+| --- | --- | --- | --- |
+| `packages/telemetry/python` (`latitude-telemetry`, MIT) | Published client tracing SDK (instruments the *user's* app; **not** part of the self-hosted server) | OpenTelemetry SDK/exporters (Apache-2.0); OpenLLMetry `opentelemetry-instrumentation-*` (Apache-2.0); Arize OpenInference `openinference-*` (Apache-2.0); `pydantic` (MIT); `typing-extensions` (PSF/Python-2.0); `openai-agents` (MIT) | **None** — all permissive |
+| `packages/platform/op-gepa/python` (`latitude-op-gepa`) | Optional internal prompt-optimizer runtime | `gepa` (MIT), `pydantic` (MIT), `typing-extensions` (PSF) | **None** — optional; all permissive |
+
+### Recommendations (feed Phase 1 → Phase 3)
+
+1. **Keep Redis as-is — decided.** Latitude uses Redis only internally (cache + BullMQ) and does not resell it as a service, so RSALv2/SSPLv1 impose no restriction on self-hosting at any scale. Document this rationale in the self-hosting guide. Valkey / `redis:7.2` (BSD-3) stay available as fully-OSS drop-ins for operators whose policy forbids source-available licenses, but Latitude does not switch.
+2. **Drop the AGPL from the shipped app (decided — scheduled as P1-6)**: replace `ua-parser-js@2.0.9` with **`bowser@2.14.1`** (MIT, already in the lockfile via `@aws-sdk/util-user-agent-browser`). Usage is trivial (cosmetic User-Agent → browser/OS/device labels in two server functions). **Not required for legal self-hosting** — AGPL permits private/commercial self-hosting and Latitude's public source already satisfies it — but it makes the deployed app 100% permissive and removes the one copyleft obligation. See **P1-6** for the exact where/how.
+3. **Object store: no AGPL today.** The S3 driver speaks to any S3-compatible backend (default `fs`); **MinIO is not a dependency.** If Phase 3 (P3-2) bundles a self-host object store, prefer **SeaweedFS (Apache-2.0)** or "bring any S3-compatible store" over MinIO so no AGPL is introduced.
+4. **Keep `agentation` dev-only** (already dead-code-eliminated) — no change needed, but note it so it is never promoted to a runtime dependency.
+5. **`@img/sharp-libvips` (LGPL) — no action.** Dynamically-linked, unmodified prebuilt; permits commercial/self-host use.
+6. Treat the proprietary **AI providers as a functional (not legal) limitation** — already tracked as the Phase 5 polish.
