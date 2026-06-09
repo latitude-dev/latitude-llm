@@ -993,7 +993,8 @@ describe("SessionRepository", () => {
       readonly contentHashSuffix: string
     }
 
-    interface SearchEmbedding {
+    interface SemanticMomentFixture {
+      readonly sessionId: string
       readonly traceId: string
       readonly chunkIndex: number
       readonly embedding: readonly number[]
@@ -1019,24 +1020,59 @@ describe("SessionRepository", () => {
         ),
       )
 
-    const insertSearchEmbeddings = (rows: readonly SearchEmbedding[]) =>
-      Effect.runPromise(
+    const analysisHashForSession = (sessionId: string) =>
+      `${"c".repeat(64 - Math.min(sessionId.length, 64))}${sessionId.slice(-64)}`
+
+    const insertSemanticMoments = async (rows: readonly SemanticMomentFixture[]) => {
+      const analysisHashBySession = new Map<string, string>()
+      for (const r of rows) {
+        if (!analysisHashBySession.has(r.sessionId)) {
+          analysisHashBySession.set(r.sessionId, analysisHashForSession(r.sessionId))
+        }
+      }
+      const analysisRows = Array.from(analysisHashBySession.entries()).map(([sessionId, analysisHash]) => {
+        const sessionRows = rows.filter((row) => row.sessionId === sessionId)
+        const first = nonNull(sessionRows[0])
+        return {
+          organization_id: ORG_ID as string,
+          project_id: PROJECT_ID as string,
+          session_id: sessionId,
+          start_time: toClickHouseDateTime(first.startTime),
+          end_time: toClickHouseDateTime(first.startTime),
+          trace_ids: [...new Set(sessionRows.map((row) => row.traceId))],
+          analysis_hash: analysisHash,
+          analysis_status: "analyzed",
+          status_reason: "",
+          retention_days: 90,
+          indexed_at: toClickHouseDateTime(first.startTime),
+        }
+      })
+
+      await Effect.runPromise(insertJsonEachRow(ch.client, "session_analyses", analysisRows))
+      await Effect.runPromise(
         insertJsonEachRow(
           ch.client,
-          "trace_search_embeddings",
+          "session_semantic_moments",
           rows.map((r) => ({
             organization_id: ORG_ID as string,
             project_id: PROJECT_ID as string,
+            session_id: r.sessionId,
+            analysis_hash: nonNull(analysisHashBySession.get(r.sessionId)),
+            moment_id: `${r.sessionId}-${r.chunkIndex}-${r.contentHashSuffix}`,
             trace_id: r.traceId,
-            chunk_index: r.chunkIndex,
             start_time: toClickHouseDateTime(r.startTime),
-            content_hash: `${"b".repeat(64 - r.contentHashSuffix.length)}${r.contentHashSuffix}`,
-            embedding_model: "voyage-4-large",
+            end_time: toClickHouseDateTime(r.startTime),
+            first_message_index: r.chunkIndex,
+            last_message_index: r.chunkIndex,
+            boundary_reason: "session_start",
             embedding: [...r.embedding],
+            coherence_score: 1,
+            retention_days: 90,
             indexed_at: toClickHouseDateTime(r.startTime),
           })),
         ),
       )
+    }
 
     // 1) Lexical-only: phrase match across two sessions with two traces each,
     //    no embeddings — every trace scores 0.0. They must still appear,
@@ -1152,9 +1188,16 @@ describe("SessionRepository", () => {
         v[0] = 0.1
         return v as readonly number[]
       })()
-      await insertSearchEmbeddings([
-        { traceId: traceStrong, chunkIndex: 0, embedding: alignedEmbedding, startTime: start, contentHashSuffix: "e1" },
-        { traceId: traceWeak, chunkIndex: 0, embedding: weakVec, startTime: start, contentHashSuffix: "e2" },
+      await insertSemanticMoments([
+        {
+          sessionId,
+          traceId: traceStrong,
+          chunkIndex: 0,
+          embedding: alignedEmbedding,
+          startTime: start,
+          contentHashSuffix: "e1",
+        },
+        { sessionId, traceId: traceWeak, chunkIndex: 0, embedding: weakVec, startTime: start, contentHashSuffix: "e2" },
       ])
 
       const page = await runCh(
@@ -1179,6 +1222,101 @@ describe("SessionRepository", () => {
       expect(match.matchingTraceScores[1]).toBeGreaterThan(0)
       expect(match.matchingTraceScores[1]).toBeLessThan(1.0)
       expect(match.matchingTraceScores[2]).toBe(0)
+    })
+
+    it("semantic-only search reads current session moments instead of trace embeddings", async () => {
+      const start = new Date(Date.UTC(2026, 0, 2, 12, 0, 0))
+      const currentSession = "moment-current-session"
+      const staleSession = "moment-stale-session"
+      const currentTrace = padTrace("mc")
+      const staleTrace = padTrace("ms")
+      const staleHash = "s".repeat(64)
+      const latestHash = "l".repeat(64)
+
+      await insertSpans([
+        makeSpanRow({ traceId: currentTrace, spanId: padSpan("mc"), sessionId: currentSession, startTime: start }),
+        makeSpanRow({
+          traceId: staleTrace,
+          spanId: padSpan("ms"),
+          sessionId: staleSession,
+          startTime: new Date(start.getTime() + 1_000),
+        }),
+      ])
+      await insertSemanticMoments([
+        {
+          sessionId: currentSession,
+          traceId: currentTrace,
+          chunkIndex: 0,
+          embedding: alignedEmbedding,
+          startTime: start,
+          contentHashSuffix: "mc",
+        },
+      ])
+      await Effect.runPromise(
+        insertJsonEachRow(ch.client, "session_analyses", [
+          {
+            organization_id: ORG_ID as string,
+            project_id: PROJECT_ID as string,
+            session_id: staleSession,
+            start_time: toClickHouseDateTime(start),
+            end_time: toClickHouseDateTime(start),
+            trace_ids: [staleTrace],
+            analysis_hash: staleHash,
+            analysis_status: "analyzed",
+            status_reason: "",
+            retention_days: 90,
+            indexed_at: toClickHouseDateTime(start),
+          },
+          {
+            organization_id: ORG_ID as string,
+            project_id: PROJECT_ID as string,
+            session_id: staleSession,
+            start_time: toClickHouseDateTime(start),
+            end_time: toClickHouseDateTime(start),
+            trace_ids: [staleTrace],
+            analysis_hash: latestHash,
+            analysis_status: "skipped_too_short",
+            status_reason: "",
+            retention_days: 90,
+            indexed_at: toClickHouseDateTime(new Date(start.getTime() + 1_000)),
+          },
+        ]),
+      )
+      await Effect.runPromise(
+        insertJsonEachRow(ch.client, "session_semantic_moments", [
+          {
+            organization_id: ORG_ID as string,
+            project_id: PROJECT_ID as string,
+            session_id: staleSession,
+            analysis_hash: staleHash,
+            moment_id: "stale-moment",
+            trace_id: staleTrace,
+            start_time: toClickHouseDateTime(start),
+            end_time: toClickHouseDateTime(start),
+            first_message_index: 0,
+            last_message_index: 0,
+            boundary_reason: "session_start",
+            embedding: [...alignedEmbedding],
+            coherence_score: 1,
+            retention_days: 90,
+            indexed_at: toClickHouseDateTime(start),
+          },
+        ]),
+      )
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: "semantic moments only", limit: 10 },
+        }),
+      )
+
+      expect(page.items.map((session) => session.sessionId)).toEqual([currentSession])
+      const match = nonNull(page.searchMatches?.[currentSession])
+      expect(match.bestScore).toBeCloseTo(1, 5)
+      expect(match.bestTraceId).toBe(currentTrace)
+      expect(match.matchingTraceIds).toEqual([currentTrace])
     })
 
     // 3) Score-filter / telemetry HAVING applied per-trace (spec §6.6).
@@ -1470,8 +1608,9 @@ describe("SessionRepository", () => {
           contentHashSuffix: `t${i}`,
         })),
       )
-      await insertSearchEmbeddings(
+      await insertSemanticMoments(
         traces.map((t, i) => ({
+          sessionId,
           traceId: t,
           chunkIndex: 0,
           embedding: nonNull(vectors[i]),
@@ -1621,8 +1760,15 @@ describe("SessionRepository", () => {
         { traceId: traceHigh, text: "ordering check high score", startTime: start, contentHashSuffix: "oh" },
       ])
       // Only the high-score session gets an aligned embedding.
-      await insertSearchEmbeddings([
-        { traceId: traceHigh, chunkIndex: 0, embedding: alignedEmbedding, startTime: start, contentHashSuffix: "oh" },
+      await insertSemanticMoments([
+        {
+          sessionId: sessionHigh,
+          traceId: traceHigh,
+          chunkIndex: 0,
+          embedding: alignedEmbedding,
+          startTime: start,
+          contentHashSuffix: "oh",
+        },
       ])
 
       const page = await runCh(
@@ -1671,8 +1817,15 @@ describe("SessionRepository", () => {
         { traceId: traceHigh, text: "relevance sentinel high", startTime: start, contentHashSuffix: "rh" },
         { traceId: traceLow, text: "relevance sentinel low", startTime: start, contentHashSuffix: "rl" },
       ])
-      await insertSearchEmbeddings([
-        { traceId: traceHigh, chunkIndex: 0, embedding: alignedEmbedding, startTime: start, contentHashSuffix: "rh" },
+      await insertSemanticMoments([
+        {
+          sessionId: sessionHigh,
+          traceId: traceHigh,
+          chunkIndex: 0,
+          embedding: alignedEmbedding,
+          startTime: start,
+          contentHashSuffix: "rh",
+        },
       ])
 
       const page = await runCh(
@@ -1721,8 +1874,9 @@ describe("SessionRepository", () => {
             contentHashSuffix: `ax${i}`,
           })),
         )
-        await insertSearchEmbeddings(
+        await insertSemanticMoments(
           sessions.map((s, i) => ({
+            sessionId: s.id,
             traceId: padTrace(`ax${i}`),
             chunkIndex: 0,
             embedding: s.embed,
@@ -1862,8 +2016,9 @@ describe("SessionRepository", () => {
           v[0] = 0.1
           return v as readonly number[]
         })()
-        await insertSearchEmbeddings([
+        await insertSemanticMoments([
           {
+            sessionId: sessionAbove,
             traceId: traceAbove,
             chunkIndex: 0,
             embedding: alignedEmbedding,
@@ -1871,6 +2026,7 @@ describe("SessionRepository", () => {
             contentHashSuffix: "fa",
           },
           {
+            sessionId: sessionBelow,
             traceId: traceBelow,
             chunkIndex: 0,
             embedding: orthogonalVec,
@@ -2050,11 +2206,12 @@ describe("SessionRepository", () => {
             contentHashSuffix: `mp${i}`,
           })),
         )
-        await insertSearchEmbeddings(
+        await insertSemanticMoments(
           fixtures
             .map((f, i) =>
               f.embed
                 ? {
+                    sessionId: f.id,
                     traceId: padTrace(`mp${i}`),
                     chunkIndex: 0,
                     embedding: f.embed,

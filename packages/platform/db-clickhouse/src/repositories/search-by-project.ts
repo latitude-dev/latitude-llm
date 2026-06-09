@@ -27,13 +27,15 @@ import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
-import { MAX_SEARCH_CANDIDATES, planSearch, type SearchPlan } from "./search-plan.ts"
+import { MAX_SEARCH_CANDIDATES } from "./search-plan.ts"
+import { planSessionSearch, type SessionSearchPlan } from "./session-search-plan.ts"
 
 /**
- * Session-level search read path. The trace-level `search-plan.ts` provides
- * `(trace_id, relevance_score)` candidates; we materialize that subquery
- * via `fetchSearchCandidates` in its own roundtrip, then feed the candidate
- * trace_ids and scores as parameter-bound arrays into a
+ * Session-level search read path. Lexical candidates still come from
+ * `trace_search_documents`; semantic candidates come from current-generation
+ * `session_semantic_moments`. We materialize the candidate
+ * `(trace_id, relevance_score)` rows via `fetchSearchCandidates` in their own
+ * roundtrip, then feed the candidate trace_ids and scores as parameter-bound arrays into a
  * `trace_rollup → session_rollup` query so results collapse to one row per
  * session with the matching-trace metadata the UI needs ("N matching
  * turns", drill-in on `bestTraceId`, etc.). The split keeps the `traces`
@@ -220,12 +222,12 @@ type SearchCandidate = { trace_id: string; relevance_score: number }
  * the "read all AggregateFunction columns" cliff that the JOIN form hits
  * once the candidate set is more than a few hundred rows (LAT-649).
  *
- * The inner `GROUP BY trace_id` collapses duplicate rows that lexical plans
- * can surface before `trace_search_documents` (a `ReplacingMergeTree`) has
- * merged. The outer `LIMIT {candidateCap:UInt32}` caps how many candidates
- * the application materializes, protecting the Node worker from broad
- * lexical phrases on XL projects — semantic plans already cap server-side
- * via `SEMANTIC_SCAN_LIMIT`, lexical/hybrid plans don't.
+ * The inner `GROUP BY trace_id` collapses duplicate rows that can surface
+ * before ClickHouse's ReplacingMergeTree tables have merged. The outer
+ * `LIMIT {candidateCap:UInt32}` caps how many candidates the application
+ * materializes, protecting the Node worker from broad lexical phrases on XL
+ * projects — semantic plans already cap server-side, lexical/hybrid plans
+ * don't.
  */
 const fetchSearchCandidates = ({
   organizationId,
@@ -234,7 +236,7 @@ const fetchSearchCandidates = ({
 }: {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
-  readonly plan: SearchPlan
+  readonly plan: SessionSearchPlan
 }): Effect.Effect<readonly SearchCandidate[], RepositoryError, ChSqlClient> =>
   Effect.gen(function* () {
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -342,7 +344,7 @@ export const listSessionsBySearchQuery = ({
 }: ListSearchInput): Effect.Effect<SessionListPage, RepositoryError, ChSqlClient> =>
   Effect.gen(function* () {
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-    const plan = yield* planSearch(parsed)
+    const plan = yield* planSessionSearch(parsed)
     const { telemetryParams, traceScoreWhere, scoreParams, finalHaving } = buildSearchFilters(filters)
 
     const candidates = yield* fetchSearchCandidates({ organizationId, projectId, plan })
@@ -495,7 +497,7 @@ export const countSessionsBySearchQuery = ({
 }: CountSearchInput): Effect.Effect<SessionCountResult, RepositoryError, ChSqlClient> =>
   Effect.gen(function* () {
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
-    const plan = yield* planSearch(parsed)
+    const plan = yield* planSessionSearch(parsed)
     const { telemetryParams, traceScoreWhere, scoreParams, finalHaving } = buildSearchFilters(filters)
 
     const candidates = yield* fetchSearchCandidates({ organizationId, projectId, plan })

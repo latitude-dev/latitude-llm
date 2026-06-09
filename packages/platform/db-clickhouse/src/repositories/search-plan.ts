@@ -62,7 +62,7 @@ function escapeLikePattern(text: string): string {
  * A phrase that normalizes/tokenizes to nothing intentionally matches zero rows
  * rather than silently dropping the filter.
  */
-function buildLexicalSearchSubquery(parsed: ParsedSearchQuery): {
+export function buildLexicalSearchSubquery(parsed: ParsedSearchQuery): {
   subquery: string
   params: Record<string, unknown>
 } {
