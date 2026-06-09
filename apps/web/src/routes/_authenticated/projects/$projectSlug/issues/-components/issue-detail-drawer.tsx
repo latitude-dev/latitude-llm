@@ -124,10 +124,20 @@ export function IssueDetailBody({
   projectId,
   issueId,
   onOverlayActiveChange,
+  variant = "drawer",
+  prepend,
 }: {
   readonly projectId: string
   readonly issueId: string
   readonly onOverlayActiveChange?: (active: boolean) => void
+  /**
+   * `drawer` (default) renders the identity header + summary fields above the
+   * scrollable sections. `page` omits both — the full-page Issue view renders
+   * its own header and summary — and `prepend` lets the page drop extra
+   * sections (e.g. Patterns) into the same scroll area.
+   */
+  readonly variant?: "drawer" | "page"
+  readonly prepend?: ReactNode
 }) {
   const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
   const {
@@ -217,71 +227,80 @@ export function IssueDetailBody({
   return (
     <>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex shrink-0 flex-col gap-3 border-b px-6 py-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-1">
-              {isLoading ? <Skeleton className="h-7 w-56" /> : <Text.H4M>{issue?.name ?? "Issue not found"}</Text.H4M>}
-              {isLoading ? (
-                <Skeleton className="h-5 w-full" />
-              ) : (
-                <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
+        {variant === "drawer" ? (
+          <div className="flex shrink-0 flex-col gap-3 border-b px-6 py-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1">
+                {isLoading ? (
+                  <Skeleton className="h-7 w-56" />
+                ) : (
+                  <Text.H4M>{issue?.name ?? "Issue not found"}</Text.H4M>
+                )}
+                {isLoading ? (
+                  <Skeleton className="h-5 w-full" />
+                ) : (
+                  <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
+                )}
+              </div>
+              {!isLoading && issue && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-[33%] max-w-max flex-1">
+                    <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
+                  </div>
+                  {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
+                </div>
               )}
             </div>
-            {!isLoading && issue && (
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex min-w-[33%] max-w-max flex-1">
-                  <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
-                </div>
-                {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
-              </div>
-            )}
           </div>
-        </div>
+        ) : null}
 
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
-              {isLoading ? (
-                <SummaryField label="Status" value={<Skeleton className="h-5 w-24" />} />
-              ) : issue && issue.states.length > 0 ? (
-                <SummaryField label="Status" value={<IssueLifecycleStatuses states={issue.states} wrap />} />
-              ) : null}
-              <SummaryField
-                label="Seen at"
-                value={
-                  isLoading ? (
-                    <Skeleton className="h-5 w-32" />
-                  ) : issue ? (
-                    <SeenAtSummaryValue lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />
-                  ) : (
-                    "-"
-                  )
-                }
-              />
-              {!isLoading && issue?.resolvedAt ? (
+          {prepend}
+          {variant === "drawer" ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
+                {isLoading ? (
+                  <SummaryField label="Status" value={<Skeleton className="h-5 w-24" />} />
+                ) : issue && issue.states.length > 0 ? (
+                  <SummaryField label="Status" value={<IssueLifecycleStatuses states={issue.states} wrap />} />
+                ) : null}
                 <SummaryField
-                  label="Resolved at"
-                  value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Resolved at" iso={issue.resolvedAt} />}
+                  label="Seen at"
+                  value={
+                    isLoading ? (
+                      <Skeleton className="h-5 w-32" />
+                    ) : issue ? (
+                      <SeenAtSummaryValue lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />
+                    ) : (
+                      "-"
+                    )
+                  }
                 />
-              ) : null}
-              {!isLoading && issue?.ignoredAt ? (
+                {!isLoading && issue?.resolvedAt ? (
+                  <SummaryField
+                    label="Resolved at"
+                    value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Resolved at" iso={issue.resolvedAt} />}
+                  />
+                ) : null}
+                {!isLoading && issue?.ignoredAt ? (
+                  <SummaryField
+                    label="Ignored at"
+                    value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Ignored at" iso={issue.ignoredAt} />}
+                  />
+                ) : null}
                 <SummaryField
-                  label="Ignored at"
-                  value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Ignored at" iso={issue.ignoredAt} />}
+                  label="Occurrences"
+                  value={
+                    isLoading ? (
+                      <Skeleton className="h-5 w-16" />
+                    ) : (
+                      <Text.H5 color="foreground">{issue ? formatCount(issue.totalOccurrences) : "-"}</Text.H5>
+                    )
+                  }
                 />
-              ) : null}
-              <SummaryField
-                label="Occurrences"
-                value={
-                  isLoading ? (
-                    <Skeleton className="h-5 w-16" />
-                  ) : (
-                    <Text.H5 color="foreground">{issue ? formatCount(issue.totalOccurrences) : "-"}</Text.H5>
-                  )
-                }
-              />
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <DetailSection
             icon={<Icon icon={ArrowDownRightIcon} size="sm" />}
