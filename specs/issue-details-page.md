@@ -2,6 +2,13 @@
 
 > **Documentation**: `dev-docs/issues.md`, `dev-docs/reliability.md`, `dev-docs/scores.md`, `dev-docs/spans.md`, `dev-docs/monitors.md`
 
+> **Build status (Phases 1–3 shipped on branch `issue-details-page-redesign`).** This spec is the *intended* design; the **as-built state and the next steps live in the execution/handoff doc** (`~/.claude/plans/system-instruction-the-user-has-recursive-crown.md`) — read that first to continue. Key deviations from the design below, decided during the build:
+> - **Layout**: no right rail. The page is a fixed `Layout.Header` (back + title + description + lifecycle actions) + a compact non-scrolling **summary band** (triage + status + first/last seen + occurrences + sessions + users + cost; the *affected-traces* tile was dropped; *users* hidden at 0) + a single scroll area ordered **Patterns → Trend → Evaluations → Examples → Traces**.
+> - **Patterns**: four horizontally-scrollable cards (not tabs). Dimensions are `model | provider | tool (span tool_name) | tag` (not `operation`); baseline = all project spans, lifetime; per-span counting; lift gated/floored, shows `<1%`/"not seen elsewhere" never `0%`.
+> - **Examples**: published annotation occurrences with a `messageIndex` anchor + trace (cap 30, no pagination); reuses the search region-frame highlight + substring highlight; feedback rendered as the underlying annotation (author/flagger + comment); Expand/See-trace open the trace drawer. Eval/custom occurrences excluded.
+> - **Trend** still reuses the drawer's fixed 14-day/12h chart (zoomable trend is Phase 6).
+> - **Page prev/next-issue navigation is not built** (deferred to Phase 7).
+
 ## Purpose
 
 Today an issue is inspected through a right-side **drawer** (`IssueDetailDrawer` / `IssueDetailBody`) that shows name/description, a summary row, a 14-day trend histogram, linked evaluations, and a paginated mini-traces table. It answers *"what is this cluster?"* but not *"how much does it matter, who does it hit, what is special about it, and where exactly does it happen?"*.
@@ -306,28 +313,28 @@ Backend only (no frontend tests), per repo convention:
 
 ### Phase 1 — Page scaffold + impact + light triage
 
-- [ ] **P1-1**: Add `assignee_id` + `priority` columns (Drizzle migration), extend `Issue` entity, `IssueWithLifecycle`, `IssueDetails`, `IssueListItem`, and `IssuePriority` literal union.
-- [ ] **P1-2**: `updateIssueTriageUseCase` + web server function `updateIssueTriage` + collection hook, with assignee org-membership validation.
-- [ ] **P1-3**: `aggregateImpactByIssue` ClickHouse method (occurrences, affected traces/sessions/users, cost/tokens, total project traces) + tests; web `getIssueImpact`.
-- [ ] **P1-4**: New route `issues/$issueId/index.tsx` behind the `issue-page` flag; sticky header (canonical status badge, prev/next, lifecycle actions, Monitor), description, right rail (triage pickers, details), and the impact strip including the derived severity hint.
-- [ ] **P1-5**: Reuse the existing trend histogram and occurrences table on the page (no zoom yet); reuse the existing evaluations/monitoring section.
-- [ ] **P1-6**: "Open full page" affordance from the drawer and/or issues table (flag-gated).
+- [x] **P1-1**: Add `assignee_id` + `priority` columns (Drizzle migration), extend `Issue` entity, `IssueWithLifecycle`, `IssueDetails`, `IssueListItem`, and `IssuePriority` literal union.
+- [x] **P1-2**: `updateIssueTriageUseCase` + web server function `updateIssueTriage` + collection hook, with assignee org-membership validation.
+- [x] **P1-3**: `aggregateImpactByIssue` ClickHouse method (occurrences, affected traces/sessions/users, cost/tokens, total project traces) + tests; web `getIssueImpact`.
+- [x] **P1-4**: New route `issues/$issueId/index.tsx` behind the `issue-page` flag; sticky header (canonical status badge, prev/next, lifecycle actions, Monitor), description, right rail (triage pickers, details), and the impact strip including the derived severity hint.
+- [x] **P1-5**: Reuse the existing trend histogram and occurrences table on the page (no zoom yet); reuse the existing evaluations/monitoring section.
+- [x] **P1-6**: "Open full page" affordance from the drawer and/or issues table (flag-gated).
 
 **Exit gate**: an issue opens as a dedicated, bookmarkable page showing identity, impact (users/sessions/traces/cost), trend, occurrences, monitoring, and working assignee/priority/resolve/ignore. Drawer unchanged.
 
 ### Phase 2 — Patterns (vs baseline)
 
-- [ ] **P2-1**: `aggregateDimensionsByIssue` for `model`/`provider`/`operation`/`tag` with baseline + lift + significance gate + tests.
-- [ ] **P2-2**: `getIssueDimensions` web function + per-dimension hooks.
-- [ ] **P2-3**: Patterns card (Model/Provider/Tool/Tags tabs) with lift badges, outlier flags, and the low-sample empty state.
+- [x] **P2-1**: `aggregateDimensionsByIssue` for `model`/`provider`/`operation`/`tag` with baseline + lift + significance gate + tests.
+- [x] **P2-2**: `getIssueDimensions` web function + per-dimension hooks.
+- [x] **P2-3**: Patterns card (Model/Provider/Tool/Tags tabs) with lift badges, outlier flags, and the low-sample empty state.
 
 **Exit gate**: the page shows which models/providers/tools/tags are over-represented in this issue vs. the project baseline, with lift and significance handling.
 
 ### Phase 3 — Examples carousel
 
-- [ ] **P3-1**: Surface the focused occurrence's score anchor (`messageIndex`/`partIndex`/offsets) to the web layer for an issue's occurrences.
-- [ ] **P3-2**: `IssueExamples` component reusing `Conversation` + `use-annotation-navigation` to scroll/highlight the exact part, with `messageTrailingSlot` feedback card and J/K cycling.
-- [ ] **P3-3**: Trace-level/span-level fallback when anchors are absent; `?example=<scoreId>` shareable URL.
+- [x] **P3-1**: Surface the focused occurrence's score anchor (`messageIndex`/`partIndex`/offsets) to the web layer for an issue's occurrences.
+- [x] **P3-2**: `IssueExamples` component reusing `Conversation` + `use-annotation-navigation` to scroll/highlight the exact part, with `messageTrailingSlot` feedback card and J/K cycling.
+- [x] **P3-3**: Trace-level/span-level fallback when anchors are absent; `?example=<scoreId>` shareable URL.
 
 **Exit gate**: users can cycle through concrete occurrences with the failing message/part highlighted and the originating feedback shown inline.
 
