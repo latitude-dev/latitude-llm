@@ -82,13 +82,15 @@ function DimensionRow({
         </Text.H6>
       </div>
       {/* Issue share fills the bar; the tick marks the project baseline, so the
-          gap between them is "how much more this appears here than elsewhere". */}
+          gap between them is "how much more this appears here than elsewhere".
+          A translucent-white notch stays light in both themes; the position is
+          clamped off the rounded edges so a near-zero baseline is still visible. */}
       <div className="relative h-2 w-full overflow-hidden rounded bg-muted">
         <div className="h-full rounded bg-primary" style={{ width: `${Math.min(Math.round(percent * 100), 100)}%` }} />
         {baselinePercent > 0 ? (
           <div
-            className="absolute top-0 h-full w-0.5 bg-foreground/50"
-            style={{ left: `${Math.min(baselinePercent * 100, 100)}%` }}
+            className="absolute top-0 h-full w-0.5 rounded-full bg-white/70"
+            style={{ left: `${Math.min(Math.max(baselinePercent * 100, 1.5), 98)}%` }}
           />
         ) : null}
       </div>
@@ -160,7 +162,9 @@ export function IssuePatterns({ projectId, issueId }: { readonly projectId: stri
   return (
     <div className="flex flex-col gap-2">
       <Text.H6 color="foregroundMuted">Patterns vs. project baseline</Text.H6>
-      <div className="flex flex-row flex-wrap gap-3">
+      {/* Horizontal scroll (not wrap): the four cards stay on one row and scroll
+          when the viewport is too narrow, instead of stacking and eating vertical space. */}
+      <div className="flex flex-row gap-3 overflow-x-auto pb-1">
         {DIMENSIONS.map((dimension) => (
           <DimensionCard key={dimension.id} projectId={projectId} issueId={issueId} dimension={dimension} />
         ))}
