@@ -225,6 +225,10 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
             if (!config.isSsoEnforcedForEmail || !ctx) return { data: session }
 
             const path = ctx.path ?? ""
+            // BA 1.6.x routes: social OAuth callbacks land on `/callback/:id`;
+            // SSO callbacks land on `/sso/callback/:id` (OIDC) and
+            // `/sso/saml2/sp/acs/:id` (SAML) — neither starts with "/callback",
+            // so they are correctly exempt from enforcement here.
             const isEnforcedPath = path === "/magic-link/verify" || path.startsWith("/callback")
             if (!isEnforcedPath) return { data: session }
 

@@ -66,11 +66,15 @@ const requireWebUrl = (): string => {
   return url
 }
 
-const spEntityId = (providerId: string): string =>
-  `${requireWebUrl()}${AUTH_BASE_PATH}/sso/saml2/sp/metadata?providerId=${encodeURIComponent(providerId)}`
+const buildSpEntityId = (webUrl: string, providerId: string): string =>
+  `${webUrl}${AUTH_BASE_PATH}/sso/saml2/sp/metadata?providerId=${encodeURIComponent(providerId)}`
 
 const toDto = (provider: SsoProvider): SsoProviderDto => {
-  const base = `${requireWebUrl()}${AUTH_BASE_PATH}`
+  const webUrl = requireWebUrl()
+  const base = `${webUrl}${AUTH_BASE_PATH}`
+  // In SAML, the SP metadata URL and EntityID are the same URL by convention.
+  // We expose both fields because IdP setup wizards ask for them under different labels.
+  const entityId = buildSpEntityId(webUrl, provider.providerId)
   return {
     providerId: provider.providerId,
     issuer: provider.issuer,
@@ -78,9 +82,9 @@ const toDto = (provider: SsoProvider): SsoProviderDto => {
     kind: provider.kind,
     domainVerified: provider.domainVerified,
     enforced: provider.enforced,
-    spMetadataUrl: spEntityId(provider.providerId),
+    spMetadataUrl: entityId,
     acsUrl: `${base}/sso/saml2/sp/acs/${encodeURIComponent(provider.providerId)}`,
-    spEntityId: spEntityId(provider.providerId),
+    spEntityId: entityId,
     oidcCallbackUrl: `${base}/sso/callback/${encodeURIComponent(provider.providerId)}`,
   }
 }
@@ -178,6 +182,9 @@ export const registerSsoProvider = createServerFn({ method: "POST" })
       const auth = getBetterAuth()
       const headers = getRequestHeaders()
 
+      const webUrl = requireWebUrl()
+      const entityId = buildSpEntityId(webUrl, providerId)
+
       let domainVerificationToken: string | undefined
       try {
         const result = await auth.api.registerSSOProvider({
@@ -191,10 +198,10 @@ export const registerSsoProvider = createServerFn({ method: "POST" })
                   samlConfig: {
                     entryPoint: data.entryPoint,
                     cert: data.idpCert,
-                    callbackUrl: `${requireWebUrl()}${AUTH_BASE_PATH}/sso/saml2/sp/acs/${encodeURIComponent(providerId)}`,
-                    audience: spEntityId(providerId),
+                    callbackUrl: `${webUrl}${AUTH_BASE_PATH}/sso/saml2/sp/acs/${encodeURIComponent(providerId)}`,
+                    audience: entityId,
                     wantAssertionsSigned: true,
-                    spMetadata: { entityID: spEntityId(providerId) },
+                    spMetadata: { entityID: entityId },
                   },
                 }
               : {
@@ -207,9 +214,16 @@ export const registerSsoProvider = createServerFn({ method: "POST" })
           },
           headers,
         })
-        domainVerificationToken = (result as { domainVerificationToken?: string }).domainVerificationToken
+        const parsed = z.object({ domainVerificationToken: z.string().optional() }).safeParse(result)
+        domainVerificationToken = parsed.success ? parsed.data.domainVerificationToken : undefined
       } catch (error) {
         const message = error instanceof Error ? error.message : "Could not register the SSO provider"
+        if (message.toLowerCase().includes("unique") || message.toLowerCase().includes("duplicate")) {
+          throw new ValidationError({
+            field: "domain",
+            message: "This domain is already registered by another organization",
+          })
+        }
         throw new ValidationError({ field: "domain", message })
       }
 
