@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## v0.2.3 - 2026-06-09
+
+### Conversation intelligence
+
+- Rebuilt taxonomy gardening around a top-down divisive clustering pass with depth-aware naming, producing hierarchical topic trees in one bounded run instead of the previous sweep/recurse/merge flow (ref: 70579ffc1).
+- Made taxonomy clustering samples day-stratified and deterministic across the lookback window, preventing high-volume recent traffic from dominating rebuilds (ref: #3473).
+- Serialized taxonomy naming and added collision guards so sibling topics receive distinct labels before the quality gate runs (ref: #3473).
+- Hid the all-encompassing taxonomy root from behaviours tables and topic filters, promoting the first meaningful category level while still showing a single root for tiny corpora (ref: #3473).
+
+### Models
+
+- Updated the bundled models.dev model catalog (ref: #3474).
+
 ## v0.2.2 - 2026-06-08
 
 ### Test mode
