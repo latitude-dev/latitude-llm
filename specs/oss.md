@@ -1,6 +1,6 @@
 # OSS-friendly & self-hostable Latitude
 
-> **Documentation**: `dev-docs/deployment.md`, `dev-docs/network-diagram.md`, `infra/README.md`, `README.md`, `CONTRIBUTING.md`, `.env.example`, `docker-compose.yml`, `.tmuxinator.yml` — and a new self-hosting guide under `docs/` (Mintlify) created across Phases 2–4.
+> **Documentation**: `dev-docs/deployment.md`, `dev-docs/network-diagram.md`, `infra/README.md`, `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `.env.example`, `docker-compose.yml`, `.tmuxinator.yml` — and two new `docs/` (Mintlify) areas created across Phases 2–4: a **Development** entry (Tier 1: local dev + contribution guidelines) and a **Deployment** group (Tier 2 **Single-host**, Tier 3 **Cluster**).
 
 This spec tracks the initiative to make the Latitude product — and therefore this repository — the most **OSS-friendly and self-host-ready** it can be. It is a living document: high-level context, goals, and milestones are captured here so they aren't lost, and detail will be filled in as more information and decisions arrive.
 
@@ -14,19 +14,21 @@ We then **polish**: add OSS/pluggable AI providers so the stack can run on fully
 
 ## Self-hosting tiers
 
-We define **three tiers** of running Latitude, increasing in operational complexity and in production-readiness. Each is a first-class, documented path. *(Tier names below are provisional — open to rename.)*
+We define **three tiers** of running Latitude, increasing in operational complexity and in production-readiness. Each is a first-class, documented path.
 
-### Tier 1 — Local (development)
+**Docs structure:** in the `docs/` (Mintlify) site, **Tier 1 lives under a "Development" entry** (local setup + how to contribute) and **Tiers 2–3 live under a "Deployment" group** with **"Single-host"** and **"Cluster"** subentries — keeping "run it to hack on it" cleanly separate from "deploy it for real."
 
-For contributors and people evaluating Latitude on their machine. **Infra-only Docker Compose** (Postgres, ClickHouse, Redis, Mailpit, Temporal) with the **Latitude services run directly by the developer** for hot reload and good DevEx — `pnpm dev` (Turbo) or the existing **`.tmuxinator.yml`** layout that already starts infra + `api`/`ingest`/`web`/`workers`/`workflows` + pg studio in panes. Optimized for **fast iteration**, not durability. **Object storage:** the local **`fs`** driver (a mounted directory) — no object store to run.
+### Tier 1 — Local (Development)
 
-### Tier 2 — Single-host (Docker Compose) — *"production, the easy way"*
+For contributors and people evaluating Latitude on their machine. **Infra-only Docker Compose** (Postgres, ClickHouse, Redis, Mailpit, Temporal) with the **Latitude services run directly by the developer** for hot reload and good DevEx — `pnpm dev` (Turbo) or the existing **`.tmuxinator.yml`** layout that already starts infra + `api`/`ingest`/`web`/`workers`/`workflows` + pg studio in panes. Optimized for **fast iteration**, not durability. **Object storage:** the local **`fs`** driver (a mounted directory) — no object store to run. **Artifacts:** `docker-compose.yml` (infra-only), `.env.development`, `.tmuxinator.yml` / `pnpm --filter <pkg> dev`.
 
-A simple, straightforward way to run a **production-grade Latitude instance on a single machine** entirely via Docker Compose: all **application services** (`web`, `api`, `ingest`, `workers`, `workflows`) **plus** infra, using **published container images** (no build step), sane production defaults, and one `.env`. This is the **headline near-term deliverable** for "easy self-hosting." **Object storage:** bundles **SeaweedFS** (Apache-2.0) as a single-container all-in-one S3 service behind the existing `s3` driver — or point at any S3-compatible / managed store (`fs` on a shared volume also works on a single host). One-click PaaS templates (Phase 6) are a convenience layer on top of this tier.
+### Tier 2 — Single-host (Production simple)
 
-### Tier 3 — Cluster / Cloud (advanced) — *"production, the scalable way"*
+A simple, straightforward way to run a **production-grade Latitude instance on a single machine** entirely via Docker Compose: all **application services** (`web`, `api`, `ingest`, `workers`, `workflows`) **plus** infra, using **published container images** (no build step), sane production defaults, and one `.env`. This is the **headline near-term deliverable** for "easy self-hosting." **Object storage:** bundles **SeaweedFS** (Apache-2.0) as a single-container all-in-one S3 service behind the existing `s3` driver — or point at any S3-compatible / managed store (`fs` on a shared volume also works on a single host). One-click PaaS templates (Phase 6) are a convenience layer on top of this tier. **Artifacts:** `docker-stack.yml` (one file that runs under both `docker compose up` and `docker stack deploy`), `.env.production` (operator-created from a committed `.env.production.example`), **pulled** published images + a bundled SeaweedFS service, `s3` driver.
 
-A little less simple but still straightforward way to deploy a **scalable, HA, production-grade Latitude** on a Kubernetes cluster — any managed k8s (EKS/GKE/AKS) or on-prem/bare-metal. Delivered as a **cloud-agnostic Helm chart** (+ raw manifests) using the same published container images and env contract: a Deployment per service (`web`, `api`, `ingest`, `workers`, `workflows`), ingress, PVCs, secrets, and a migration job. **Object storage:** **SeaweedFS** (Apache-2.0) via its official Helm chart (standalone → distributed/erasure-coded for HA), or bring your own managed S3 — both behind the same `s3` driver.
+### Tier 3 — Cluster (Production advanced)
+
+A little less simple but still straightforward way to deploy a **scalable, HA, production-grade Latitude** on a Kubernetes cluster — any managed k8s (EKS/GKE/AKS) or on-prem/bare-metal. Delivered as a **cloud-agnostic Helm chart** (+ raw manifests) using the same published container images and env contract: a Deployment per service (`web`, `api`, `ingest`, `workers`, `workflows`), ingress, PVCs, secrets, and a migration job. **Object storage:** **SeaweedFS** (Apache-2.0) via its official Helm chart (standalone → distributed/erasure-coded for HA), or bring your own managed S3 — both behind the same `s3` driver. **Artifacts:** `charts/latitude/` Helm chart (incl. `values.yaml`), **pulled** published images, `s3` driver.
 
 > **Why k8s/Helm lives in Tier 3, not Tier 2:** Helm presupposes a running cluster, ingress controller, persistent volumes, and secret management — advanced-tier prerequisites. It is, however, *portable* and additive: a single chart serves every cloud and on-prem.
 >
@@ -64,7 +66,7 @@ These are **not blockers** for shipping self-hosting — they are requirements w
 3. **No self-hosting story / documentation.**
    The README quick-start is entirely about the **hosted cloud** ("sign up at latitude.so"). There is **no self-hosting guide**, no documented "run your own Latitude" path, and the existing `docker-compose.yml` only provisions **infrastructure**, not the application services. The `infra/` Pulumi project documents Latitude's *own* deploy, not a third party's. **This is the priority gap.**
 
-4. **No published, ready-to-run application container images** for self-hosters (images are built/pushed to GHCR for Latitude's own deploy; public, versioned, multi-arch images would let Tier 2/3 pull instead of build). *(verify GHCR visibility)*
+4. **No public, ready-to-run application container images** for self-hosters. The build mechanism already exists: one multi-stage `Dockerfile` with **6 targets** (`api`, `ingest`, `workers`, `workflows`, `web`, `migrations`) built by `build-images.yml`, pushed to GHCR on every `development` push (→ **staging** only) and on every `vX.Y.Z` release tag (→ **production**, via `scripts/release.sh`). But those images are **Latitude-deploy-specific** — named `latitude-<env>-<service>`, **sha-tagged** (not semver), and the `web` image **bakes Latitude's own `VITE_*` URLs at build time** — so they are *not* reusable by third parties. A public, env-neutral, version-tagged image set is the missing piece (P3-1).
 
 5. **No one-click / templated deploys.** No Helm chart, generalized IaC, or Railway/Render/Coolify templates exist for third parties.
 
@@ -110,7 +112,7 @@ Establish the authoritative picture before changing anything; this directly feed
 
 **Exit gate**: a written, reviewed dependency matrix and an agreed self-host profile; the required-vs-optional split (and the documented AI requirement) is finalized; and the shipped app's only AGPL dependency (`ua-parser-js`) is replaced by MIT `bowser` (P1-6).
 
-### Phase 2 — Tier 1: Local / development experience
+### Phase 2 — Tier 1: Local (Development) experience
 
 Polish and document the path contributors already use; make it key-free.
 
@@ -118,33 +120,37 @@ Polish and document the path contributors already use; make it key-free.
 - [ ] **P2-2**: One-command local bootstrap (`make dev` / `pnpm setup`) that brings up infra, migrates, seeds, and starts services — reproducible from a clean clone.
 - [ ] **P2-3**: Ensure the **full test suite runs with no proprietary keys**; gate this in CI so regressions are caught.
 - [ ] **P2-4**: Clarify optional dev tooling (e.g. `op-gepa` Python venv) so its absence never blocks a contributor.
-- [ ] **P2-5**: Refresh `CONTRIBUTING.md` + a Tier-1 page in the self-hosting guide with a "first run / first contribution in N minutes" path.
+- [ ] **P2-5**: Create the **"Development"** docs entry in `docs/` (a `docs.json` group, **separate from Deployment**) covering (a) the Tier-1 local-dev flow (infra Compose + `pnpm dev` / `.tmuxinator.yml`, "first run in N minutes") and (b) **contribution guidelines** linking to `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`; refresh `CONTRIBUTING.md` itself to match the key-free local workflow.
 
 **Exit gate**: a new contributor can clone, start everything with hot reload, and run the whole test suite green without any third-party account or key.
 
-### Phase 3 — Tier 2: Single-host production (Docker Compose) — *priority deliverable*
+### Phase 3 — Tier 2: Single-host (Production simple) — *priority deliverable*
 
 The headline "easy self-hosting" path: one machine, published images, one `.env`, full stack.
 
-- [ ] **P3-1**: Publish **public, versioned, multi-arch container images** for all five app services (pending P1-4) so self-hosters pull instead of build.
-- [ ] **P3-2**: Author a full-stack self-host compose (e.g. `docker-compose.selfhost.yml` or a compose profile) running **all app services + infra** with production-grade defaults.
-- [ ] **P3-3**: Bundle **SeaweedFS** (Apache-2.0) as the self-host object store — a single-container all-in-one S3 service (`server -s3`) wired behind the `s3` driver (`LAT_STORAGE_DRIVER=s3` + `LAT_STORAGE_S3_ENDPOINT`). Document the three options (`fs` on a shared volume / bundled SeaweedFS / bring-your-own managed S3) and the **all-services-share-storage** constraint (ingest writes payloads that workers read; exports are written by workers and served by web). Ship a **`.env.selfhost.example`** pre-wired to the self-host profile with secrets-generation guidance and AI keys called out.
+- [ ] **P3-1**: Publish **public, env-neutral, multi-arch container images** for the **6 build targets** (`api`, `ingest`, `workers`, `workflows`, `web`, `migrations`) so Tier 2/3 **pull** instead of build — the single multi-stage `Dockerfile` stays the build recipe. **Tie tags to the release system:**
+  - **Stable images from the `vX.Y.Z` release-tag flow** (`scripts/release.sh`, the only production trigger): publish `ghcr.io/latitude-dev/latitude-<service>:vX.Y.Z` (+ `:latest`). These are what Tier 2/3 pin.
+  - **Edge images from `development` pushes**: publish a `:development` (edge) tag for testing pre-release builds — `development` is trunk and deploys only to **staging**, so this is never the self-host default.
+  - Rename away from today's deploy-specific `latitude-<env>-<service>` / sha-tag scheme.
+  - **The `web` image must not bake URLs**: replace the build-time `VITE_*` args with **runtime-injected** client config (startup placeholder substitution) so one public `web` image serves any self-hoster's domains.
+- [ ] **P3-2**: Author a full-stack self-host **`docker-stack.yml`** (one file usable with both `docker compose up` and `docker stack deploy`) running **all app services + infra + the bundled SeaweedFS + a one-shot migrations container**, with production-grade defaults and `deploy:` blocks so Swarm can scale it.
+- [ ] **P3-3**: Bundle **SeaweedFS** (Apache-2.0) as the self-host object store — a single-container all-in-one S3 service (`server -s3`) wired behind the `s3` driver (`LAT_STORAGE_DRIVER=s3` + `LAT_STORAGE_S3_ENDPOINT`). Document the three options (`fs` on a shared volume / bundled SeaweedFS / bring-your-own managed S3) and the **all-services-share-storage** constraint (ingest writes payloads that workers read; exports are written by workers and served by web). Ship a committed **`.env.production.example`** (operator copies it to `.env.production`) pre-wired to the self-host profile with secrets-generation guidance and AI keys called out.
 - [ ] **P3-4**: Ensure **graceful degradation** with no proprietary AI keys — the app boots and core observability (ingest + trace viewing) works; AI-dependent features are cleanly disabled with a clear message instead of crashing.
 - [ ] **P3-5**: Quarantine/remove dead `@platform/db-weaviate` (pending P1-4) and any other dead infra packages.
 - [ ] **P3-6**: Verify one-command bring-up from a clean machine (migrations + seed run automatically; clear health checks).
-- [ ] **P3-7**: **Self-hosting guide — Tier 2**: requirements, quick start, full **env reference** (required vs optional vs proprietary-enhancement), the documented AI requirement, backups/upgrades, and a **"Self-host"** section added to `README.md`.
+- [ ] **P3-7**: Create the **"Deployment"** docs group in `docs/` (separate from Development) with a **"Single-host"** subentry: requirements, quick start, full **env reference** (required vs optional vs proprietary-enhancement), the documented AI requirement, backups/upgrades — plus a **"Self-host"** section in `README.md` linking it.
 
-**Exit gate**: `docker compose -f <selfhost compose> up` on a clean machine yields a working Latitude — core observability with zero proprietary keys, full features when the documented AI keys are supplied — and a stranger can reproduce it from the docs alone.
+**Exit gate**: `docker compose -f docker-stack.yml up` on a clean machine yields a working Latitude — core observability with zero proprietary keys, full features when the documented AI keys are supplied — and a stranger can reproduce it from the docs alone.
 
-### Phase 4 — Tier 3: Cluster / Cloud production (advanced, Helm-only)
+### Phase 4 — Tier 3: Cluster (Production advanced, Helm-only)
 
 Scalable, HA deployment via a cloud-agnostic Helm chart on the same images. **`infra/` is not touched.**
 
-- [ ] **P4-1**: Author a **Helm chart** (+ raw manifests) under e.g. `deploy/helm/` for all five services (`web`, `api`, `ingest`, `workers`, `workflows`) with a Deployment + Service each, ingress, HPA-ready resource requests, PVCs, secrets, and a migration job; `values.yaml` pre-wired to the self-host profile.
+- [ ] **P4-1**: Author a **Helm chart** (+ raw manifests) under **`charts/latitude/`** (incl. `values.yaml`) for all five services (`web`, `api`, `ingest`, `workers`, `workflows`) with a Deployment + Service each, ingress, HPA-ready resource requests, PVCs, secrets, and a migration job (the `migrations` image); `values.yaml` pre-wired to the self-host profile.
 - [ ] **P4-2**: Decide and implement the **Temporal** story for the chart (bundled self-hosted Temporal subchart vs. external Temporal the operator points at) — see open questions.
 - [ ] **P4-3**: **Object storage:** ship **SeaweedFS** (Apache-2.0) via its official Helm chart (standalone → distributed/erasure-coded) as the bundled default, with bring-your-own managed S3 documented (both behind the `s3` driver). For the other stateful deps (Postgres/ClickHouse/Redis), decide bundled subcharts (turnkey) vs. bring-your-own managed services, with both documented.
 - [ ] **P4-4**: Document operations for Tier 3: scaling each service, persistence/backups, secrets management, upgrades/migrations, and health/observability.
-- [ ] **P4-5**: Smoke-test `helm install` against a real cluster (managed k8s); **self-hosting guide — Tier 3** page.
+- [ ] **P4-5**: Smoke-test `helm install` against a real cluster (managed k8s); add the **"Cluster"** subentry under the **Deployment** docs group.
 
 **Exit gate**: a third party can deploy a scalable Latitude via `helm install`, following the docs, on any conformant cluster — with no Latitude-account-specific assumptions and no changes to `infra/`.
 
@@ -157,7 +163,7 @@ The core of "no hard non-OSS AI deps." Make every internal AI capability runnabl
 - [ ] **P5-3**: Make the **internal LLM provider** (flaggers, evals, conversation intelligence, issue summarization, AI generation, annotator optimizations) selectable to any **OpenAI-compatible endpoint**; keep Bedrock/Anthropic as optional providers.
 - [ ] **P5-4**: Tests for each new adapter + a fully-OSS-profile integration path that requires no proprietary key.
 - [ ] **P5-5**: Resolve the **embedding-dimension migration** problem (switching embedding models against existing pgvector data).
-- [ ] **P5-6**: **Update the self-hosting docs and profile across all tiers** to make fully-OSS models the documented default; downgrade proprietary providers to optional enhancements.
+- [ ] **P5-6**: **Update the Deployment (and Development) docs and the self-host profile across all tiers** to make fully-OSS models the documented default; downgrade proprietary providers to optional enhancements.
 
 **Exit gate**: with zero proprietary AI keys set, Latitude runs search, issues, and evals end-to-end on open models; proprietary providers still work when configured; docs reflect the fully-OSS profile.
 
@@ -174,10 +180,9 @@ Convenience layer on top of Tier 2; pursued only after Tiers 1–3 are solid.
 
 ## Open questions / decisions pending
 
-- **Tier naming**: finalize names for Tier 2 ("Single-host") and Tier 3 ("Cluster / Cloud") — current names are provisional.
 - **Self-host limits**: are billing/Stripe-gated limits simply disabled in self-host, or replaced with config-driven limits?
 - **Graceful degradation surface**: exactly how do AI-dependent features present when their provider is unconfigured (hidden, disabled with a tooltip, empty state)?
-- **Image distribution**: which registry and tagging scheme for public images (GHCR? Docker Hub? both?), and how versions track releases.
+- **Image distribution (mostly decided)**: GHCR, env-neutral `latitude-<service>` images, **`vX.Y.Z` + `latest` on release tags** (stable, what self-hosters pin) and a **`development` edge tag** on trunk pushes. Open: the exact **runtime client-config mechanism for the `web` image** (so `VITE_*` URLs aren't baked) and whether to also mirror images to Docker Hub.
 - **Temporal in the Helm chart (P4-2)**: bundle self-hosted Temporal as a chart dependency/subchart for a turnkey install, or require an external Temporal (self-hosted or Temporal Cloud) the operator points at?
 - **Stateful deps in the Helm chart (P4-3)**: bundle Postgres/ClickHouse/Redis subcharts (turnkey but not production-ideal), or bring-your-own managed services (recommended for real prod)? *(Object storage is **decided**: bundled **SeaweedFS** + BYO managed S3.)*
 - **(Phase 5) Embeddings default**: which OSS embedding model is the blessed default, and how do we handle the **dimension/migration** implications of switching embedding models against existing pgvector data?
@@ -261,7 +266,7 @@ Core chosen runtime libraries — all permissive: Hono (MIT), TanStack Router/St
 
 ### Recommendations (feed Phase 1 → Phase 3)
 
-1. **Keep Redis as-is — decided.** Latitude uses Redis only internally (cache + BullMQ) and does not resell it as a service, so RSALv2/SSPLv1 impose no restriction on self-hosting at any scale. Document this rationale in the self-hosting guide. Valkey / `redis:7.2` (BSD-3) stay available as fully-OSS drop-ins for operators whose policy forbids source-available licenses, but Latitude does not switch.
+1. **Keep Redis as-is — decided.** Latitude uses Redis only internally (cache + BullMQ) and does not resell it as a service, so RSALv2/SSPLv1 impose no restriction on self-hosting at any scale. Document this rationale in the Deployment docs. Valkey / `redis:7.2` (BSD-3) stay available as fully-OSS drop-ins for operators whose policy forbids source-available licenses, but Latitude does not switch.
 2. **Drop the AGPL from the shipped app (decided — scheduled as P1-6)**: replace `ua-parser-js@2.0.9` with **`bowser@2.14.1`** (MIT, already in the lockfile via `@aws-sdk/util-user-agent-browser`). Usage is trivial (cosmetic User-Agent → browser/OS/device labels in two server functions). **Not required for legal self-hosting** — AGPL permits private/commercial self-hosting and Latitude's public source already satisfies it — but it makes the deployed app 100% permissive and removes the one copyleft obligation. See **P1-6** for the exact where/how.
 3. **Object store — decided: SeaweedFS (Apache-2.0).** The storage port is already provider-agnostic (default `fs`, or any S3-compatible endpoint), so no new abstraction is needed. Tier 1 stays on `fs`; **Tier 2 bundles SeaweedFS as a single container, Tier 3 via its official Helm chart** (standalone → distributed); bring-your-own managed S3 is documented for both. **MinIO (AGPL) is not used.** RustFS (Apache-2.0) is the most promising future drop-in but is currently beta — revisit as the bundled default once it reaches a stable GA.
 4. **Keep `agentation` dev-only** (already dead-code-eliminated) — no change needed, but note it so it is never promoted to a runtime dependency.
