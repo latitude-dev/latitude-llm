@@ -4,13 +4,50 @@ import { LockIcon, TagsIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { type BehaviourSegment, useProjectBehaviours } from "../../../../../domains/taxonomy/taxonomy.collection.ts"
-import type { BehaviourNodeRecord } from "../../../../../domains/taxonomy/taxonomy.functions.ts"
+import type {
+  BehaviourMomentRangeRecord,
+  BehaviourNodeRecord,
+  BehaviourTrajectoryMetric,
+} from "../../../../../domains/taxonomy/taxonomy.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
 import { BehaviourDetailDrawer, BehavioursView } from "./-components/behaviours-view.tsx"
+
+const isBehaviourTrajectoryMetric = (value: string): value is BehaviourTrajectoryMetric =>
+  value === "frequency" || value === "escalation" || value === "resolution" || value === "churnRisk" || value === "wins"
+
+const findNodeByPath = (
+  topics: readonly BehaviourNodeRecord[],
+  path: readonly string[],
+): { readonly node: BehaviourNodeRecord; readonly parent: BehaviourNodeRecord | null } | null => {
+  let nodes = topics
+  let parent: BehaviourNodeRecord | null = null
+  let selected: { readonly node: BehaviourNodeRecord; readonly parent: BehaviourNodeRecord | null } | null = null
+  for (const id of path) {
+    const node = nodes.find((candidate) => candidate.cluster.id === id)
+    if (!node) return null
+    selected = { node, parent }
+    nodes = node.children
+    parent = node
+  }
+  return selected
+}
+
+const findNodeById = (
+  nodes: readonly BehaviourNodeRecord[],
+  clusterId: string,
+  parent: BehaviourNodeRecord | null = null,
+): { readonly node: BehaviourNodeRecord; readonly parent: BehaviourNodeRecord | null } | null => {
+  for (const node of nodes) {
+    if (node.cluster.id === clusterId) return { node, parent }
+    const found = findNodeById(node.children, clusterId, node)
+    if (found) return found
+  }
+  return null
+}
 
 function BehavioursBreadcrumb() {
   return (
@@ -50,9 +87,13 @@ function BehavioursPageContent() {
     validate: (value): value is BehaviourSegment =>
       value === "all" || value === "new_this_week" || value === "spiking" || value === "high_escalation",
   })
-  const [activeBehaviourId, setActiveBehaviourId] = useParamState("behaviourId", "")
+  const [behaviourPathParam, setBehaviourPathParam] = useParamState("behaviourPath", "", { history: "push" })
   const [timeFrom, setTimeFrom] = useParamState("behaviourTimeFrom", "")
   const [timeTo, setTimeTo] = useParamState("behaviourTimeTo", "")
+  const [momentMetric, setMomentMetric] = useParamState("behaviourMomentMetric", "")
+  const [momentTurnFrom, setMomentTurnFrom] = useParamState("behaviourMomentTurnFrom", "")
+  const [momentTurnTo, setMomentTurnTo] = useParamState("behaviourMomentTurnTo", "")
+  const [momentTurnMax, setMomentTurnMax] = useParamState("behaviourMomentTurnMax", "")
   const timeRange = useMemo(
     () =>
       timeFrom || timeTo
@@ -70,22 +111,38 @@ function BehavioursPageContent() {
     sortBy: "category",
     ...(timeRange ? { timeRange } : {}),
   })
+  const momentRange = useMemo((): BehaviourMomentRangeRecord | undefined => {
+    if (!isBehaviourTrajectoryMetric(momentMetric)) return undefined
+    const fromTurn = Number(momentTurnFrom)
+    const toTurn = Number(momentTurnTo)
+    if (!Number.isInteger(fromTurn) || !Number.isInteger(toTurn) || fromTurn < 0 || toTurn < fromTurn) return undefined
+    return { metric: momentMetric, fromTurn, toTurn }
+  }, [momentMetric, momentTurnFrom, momentTurnTo])
+  const setMomentRange = (range: BehaviourMomentRangeRecord | undefined) => {
+    setMomentMetric(range?.metric ?? "")
+    setMomentTurnFrom(range ? String(range.fromTurn) : "")
+    setMomentTurnTo(range ? String(range.toTurn) : "")
+  }
+  const parsedMomentTurnMax = Number(momentTurnMax)
+  const momentRangeMaxTurn =
+    momentRange && Number.isInteger(parsedMomentTurnMax) && parsedMomentTurnMax >= momentRange.toTurn
+      ? parsedMomentTurnMax
+      : (momentRange?.toTurn ?? 0)
+  const setMomentRangeWithMax = (range: BehaviourMomentRangeRecord | undefined, maxTurn?: number) => {
+    setMomentRange(range)
+    setMomentTurnMax(range && maxTurn !== undefined ? String(Math.max(maxTurn, range.toTurn)) : "")
+  }
   const topics = data?.topics ?? []
+  const behaviourPath = useMemo(
+    () => (behaviourPathParam ? behaviourPathParam.split(".").filter(Boolean) : []),
+    [behaviourPathParam],
+  )
+  const activeBehaviourId = behaviourPath.at(-1)
   const activeNode = useMemo(() => {
     if (!activeBehaviourId) return null
-    const walk = (
-      nodes: readonly BehaviourNodeRecord[],
-      parent: BehaviourNodeRecord | null,
-    ): { readonly node: BehaviourNodeRecord; readonly parent: BehaviourNodeRecord | null } | null => {
-      for (const node of nodes) {
-        if (node.cluster.id === activeBehaviourId) return { node, parent }
-        const found = walk(node.children, node)
-        if (found) return found
-      }
-      return null
-    }
-    return walk(topics, null)
-  }, [activeBehaviourId, topics])
+    return findNodeByPath(topics, behaviourPath) ?? findNodeById(topics, activeBehaviourId)
+  }, [activeBehaviourId, behaviourPath, topics])
+  const setBehaviourPath = (path: readonly string[]) => setBehaviourPathParam(path.join("."))
   const hasNoBehaviours = !isLoading && topics.length === 0 && segment === "all" && !timeRange
 
   if (hasNoBehaviours) {
@@ -112,7 +169,7 @@ function BehavioursPageContent() {
           projectId={project.id}
           isLoading={isLoading}
           segment={segment}
-          activeBehaviourId={activeBehaviourId || undefined}
+          behaviourPath={behaviourPath}
           timeFilter={
             <TimeFilterDropdown
               {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
@@ -125,7 +182,9 @@ function BehavioursPageContent() {
           }
           timeRange={timeRange}
           onSegmentChange={setSegment}
-          onActiveBehaviourChange={(behaviourId) => setActiveBehaviourId(behaviourId ?? "")}
+          onBehaviourPathChange={setBehaviourPath}
+          momentRange={momentRange}
+          onMomentRangeChange={setMomentRangeWithMax}
         />
       </Layout.Content>
       {activeNode ? (
@@ -135,7 +194,13 @@ function BehavioursPageContent() {
             parentName={activeNode.parent?.cluster.name ?? null}
             projectId={project.id}
             timeRange={timeRange}
-            onClose={() => setActiveBehaviourId("")}
+            momentRange={momentRange}
+            momentRangeMaxTurn={momentRangeMaxTurn}
+            onMomentRangeChange={setMomentRangeWithMax}
+            onClose={() => {
+              setBehaviourPath([])
+              setMomentRangeWithMax(undefined)
+            }}
           />
         </Layout.Aside>
       ) : null}

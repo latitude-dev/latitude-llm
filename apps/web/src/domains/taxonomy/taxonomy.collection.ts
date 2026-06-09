@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import {
+  type BehaviourMomentRangeRecord,
   type BehaviourSessionFilter,
   type BehaviourTimeRangeRecord,
   type BehaviourTrajectoryAxis,
@@ -16,6 +17,8 @@ type BehaviourSortBy = "category" | "volume" | "trend" | "first_seen" | "last_se
 
 const timeRangeKey = (timeRange: BehaviourTimeRangeRecord | undefined) =>
   `${timeRange?.fromIso ?? ""}:${timeRange?.toIso ?? ""}`
+const momentRangeKey = (momentRange: BehaviourMomentRangeRecord | undefined) =>
+  momentRange ? `${momentRange.metric}:${momentRange.fromTurn}:${momentRange.toTurn}` : ""
 
 const clusterProfileQueryKey = (
   projectId: string,
@@ -27,7 +30,8 @@ const behaviourSessionsQueryKey = (
   clusterId: string,
   filter: BehaviourSessionFilter,
   timeRange: BehaviourTimeRangeRecord | undefined,
-) => ["behaviourSessions", projectId, clusterId, filter, timeRangeKey(timeRange)] as const
+  momentRange: BehaviourMomentRangeRecord | undefined,
+) => ["behaviourSessions", projectId, clusterId, filter, timeRangeKey(timeRange), momentRangeKey(momentRange)] as const
 const behaviourTrajectoryQueryKey = (
   projectId: string,
   categoryClusterIds: readonly string[],
@@ -70,9 +74,10 @@ export function useBehaviourSessions(
   clusterId: string | undefined,
   filter: BehaviourSessionFilter,
   timeRange: BehaviourTimeRangeRecord | undefined,
+  momentRange: BehaviourMomentRangeRecord | undefined,
 ) {
   return useInfiniteQuery({
-    queryKey: behaviourSessionsQueryKey(projectId, clusterId ?? "", filter, timeRange),
+    queryKey: behaviourSessionsQueryKey(projectId, clusterId ?? "", filter, timeRange, momentRange),
     queryFn: ({ pageParam }) =>
       getBehaviourSessions({
         data: {
@@ -82,6 +87,7 @@ export function useBehaviourSessions(
           offset: pageParam,
           limit: 50,
           ...(timeRange ? { timeRange } : {}),
+          ...(momentRange ? { momentRange } : {}),
         },
       }),
     initialPageParam: 0,

@@ -9,6 +9,7 @@ import {
   InfiniteTable,
   type InfiniteTableColumn,
   Skeleton,
+  Slider,
   Tabs,
   TagList,
   Text,
@@ -16,7 +17,16 @@ import {
 } from "@repo/ui"
 import { formatCount, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, FlameIcon, MinusIcon, SparklesIcon, TagIcon } from "lucide-react"
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ChevronRightIcon,
+  FlameIcon,
+  MinusIcon,
+  SparklesIcon,
+  TagIcon,
+  XIcon,
+} from "lucide-react"
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import {
   type BehaviourSegment,
@@ -24,16 +34,17 @@ import {
   useClusterProfile,
 } from "../../../../../../domains/taxonomy/taxonomy.collection.ts"
 import type {
+  BehaviourMomentRangeRecord,
   BehaviourNodeRecord,
   BehaviourSessionFilter,
   BehaviourSessionRecord,
   BehaviourTimeRangeRecord,
+  BehaviourTrajectoryMetric,
 } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
-import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { SessionDetailDrawer } from "../../-components/session-detail-drawer.tsx"
 import { BehavioursTrajectoryChart } from "./behaviours-trajectory-chart.tsx"
 
@@ -51,6 +62,50 @@ interface BehaviourTableRow {
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString()
 const signalLabel = (kind: string) => kind.replaceAll("_", " ").replace(/^./, (char) => char.toUpperCase())
+const metricLabel = (metric: BehaviourTrajectoryMetric) =>
+  metric === "churnRisk" ? "Churn risk" : metric === "wins" ? "Wins" : signalLabel(metric)
+
+const momentKindsForTrajectoryMetric = (metric: BehaviourTrajectoryMetric): readonly MomentKind[] => {
+  switch (metric) {
+    case "escalation":
+      return ["escalation"]
+    case "resolution":
+      return ["resolution"]
+    case "churnRisk":
+      return ["abandonment", "user_frustration"]
+    case "wins":
+      return ["resolution", "user_satisfaction"]
+    case "frequency":
+      return []
+  }
+}
+
+const selectedMomentRangeLabel = (range: BehaviourMomentRangeRecord) =>
+  `${metricLabel(range.metric)} moments in turns ${range.fromTurn + 1}${
+    range.toTurn === range.fromTurn ? "" : `-${range.toTurn + 1}`
+  }`
+
+const parseTurnBucket = (bucket: string): { readonly fromTurn: number; readonly toTurn: number } | undefined => {
+  const [rawStart, rawEnd] = bucket.split(":")
+  const fromTurn = Number(rawStart)
+  const toTurn = rawEnd === undefined ? fromTurn : Number(rawEnd)
+  if (!Number.isInteger(fromTurn) || !Number.isInteger(toTurn) || fromTurn < 0 || toTurn < fromTurn) return undefined
+  return { fromTurn, toTurn }
+}
+
+const findBehaviourPath = (
+  nodes: readonly BehaviourNodeRecord[],
+  clusterId: string,
+  ancestors: readonly string[] = [],
+): readonly string[] | undefined => {
+  for (const node of nodes) {
+    const path = [...ancestors, node.cluster.id]
+    if (node.cluster.id === clusterId) return path
+    const childPath = findBehaviourPath(node.children, clusterId, path)
+    if (childPath) return childPath
+  }
+  return undefined
+}
 
 const trendLabel = (status: BehaviourNodeRecord["trend"]["status"]): string => {
   switch (status) {
@@ -177,12 +232,18 @@ export function BehaviourDetailDrawer({
   parentName,
   projectId,
   timeRange,
+  momentRange,
+  momentRangeMaxTurn,
+  onMomentRangeChange,
   onClose,
 }: {
   readonly node: BehaviourNodeRecord
   readonly parentName: string | null
   readonly projectId: string
   readonly timeRange: BehaviourTimeRangeRecord | undefined
+  readonly momentRange: BehaviourMomentRangeRecord | undefined
+  readonly momentRangeMaxTurn: number
+  readonly onMomentRangeChange: (range: BehaviourMomentRangeRecord | undefined, maxTurn?: number) => void
   readonly onClose: () => void
 }) {
   const cluster = node.cluster
@@ -197,10 +258,16 @@ export function BehaviourDetailDrawer({
     fetchNextPage: fetchNextBehaviourSessionsPage,
     hasNextPage: hasNextBehaviourSessionsPage,
     isFetchingNextPage: isFetchingNextBehaviourSessionsPage,
-  } = useBehaviourSessions(projectId, cluster.id, sessionFilter, timeRange)
+  } = useBehaviourSessions(projectId, cluster.id, sessionFilter, timeRange, momentRange)
   const behaviourSessions = behaviourSessionsData?.pages.flatMap((page) => page.sessions) ?? []
   const behaviourSessionHistogram = behaviourSessionsData?.pages[0]?.histogram ?? []
   const detectedSignals = intelligence?.topMoments ?? []
+  const activeMomentKinds = momentRange
+    ? momentKindsForTrajectoryMetric(momentRange.metric)
+    : sessionFilter === "all"
+      ? []
+      : [sessionFilter]
+  const hasSessionFilters = sessionFilter !== "all" || Boolean(momentRange)
   const sessionFilterOptions = detectedSignals
     .filter((signal): signal is { readonly kind: MomentKind; readonly count: number } =>
       (MOMENT_KINDS as readonly string[]).includes(signal.kind),
@@ -215,7 +282,7 @@ export function BehaviourDetailDrawer({
     setSessionFilter("all")
     setSessionOverlayId(null)
     setSessionPanelEntered(false)
-  }, [cluster.id, timeRange])
+  }, [cluster.id, timeRange, momentRange])
 
   const openSessionOverlay = (session: BehaviourSessionRecord) => {
     setSessionOverlayId(session.sessionId)
@@ -275,10 +342,13 @@ export function BehaviourDetailDrawer({
                     {sessionFilterOptions.map((option) => (
                       <MetricButton
                         key={option.id}
-                        active={sessionFilter === option.id}
+                        active={activeMomentKinds.includes(option.id)}
                         label={option.label}
                         valueText={option.valueText}
-                        onClick={() => setSessionFilter((current) => (current === option.id ? "all" : option.id))}
+                        onClick={() => {
+                          onMomentRangeChange(undefined)
+                          setSessionFilter((current) => (current === option.id && !momentRange ? "all" : option.id))
+                        }}
                       />
                     ))}
                   </div>
@@ -286,11 +356,29 @@ export function BehaviourDetailDrawer({
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <Text.H5>Associated sessions</Text.H5>
+                    {hasSessionFilters ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSessionFilter("all")
+                          onMomentRangeChange(undefined)
+                        }}
+                      >
+                        <Icon icon={XIcon} size="xs" />
+                        Clear filters
+                      </Button>
+                    ) : null}
                   </div>
+                  {momentRange ? (
+                    <TurnRangeSlider range={momentRange} maxTurn={momentRangeMaxTurn} onChange={onMomentRangeChange} />
+                  ) : null}
                   <Text.H6 color="foregroundMuted">
-                    {sessionFilter === "all"
-                      ? "All sessions for this behaviour"
-                      : `Sessions matching ${sessionFilter.replaceAll("_", " ")}`}
+                    {momentRange
+                      ? selectedMomentRangeLabel(momentRange)
+                      : sessionFilter === "all"
+                        ? "All sessions for this behaviour"
+                        : `Sessions matching ${sessionFilter.replaceAll("_", " ")}`}
                   </Text.H6>
                   {behaviourSessionsLoading ? (
                     <Skeleton className="h-16 rounded-xl" />
@@ -344,6 +432,63 @@ export function BehaviourDetailDrawer({
         </>
       ) : null}
     </>
+  )
+}
+
+function TurnRangeSlider({
+  range,
+  maxTurn,
+  onChange,
+}: {
+  readonly range: BehaviourMomentRangeRecord
+  readonly maxTurn: number
+  readonly onChange: (range: BehaviourMomentRangeRecord, maxTurn: number) => void
+}) {
+  const sliderMax = Math.max(maxTurn, range.toTurn, 1)
+  const committedValue = [range.fromTurn, range.toTurn] as const
+  const [draftValue, setDraftValue] = useState<readonly [number, number]>(committedValue)
+
+  useEffect(() => {
+    setDraftValue(committedValue)
+  }, [range.fromTurn, range.toTurn])
+
+  const [draftFrom, draftTo] = draftValue
+
+  const normalizeRange = (values: readonly number[]) => {
+    const first = values[0] ?? range.fromTurn
+    const second = values[1] ?? range.toTurn
+    const fromTurn = Math.max(0, Math.min(first, second))
+    const toTurn = Math.min(sliderMax, Math.max(first, second))
+    return [fromTurn, toTurn] as const
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg bg-secondary px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <Text.H6 color="foregroundMuted">Turn range</Text.H6>
+        <Text.H6B className="tabular-nums">
+          {draftFrom + 1}
+          {draftTo === draftFrom ? "" : `-${draftTo + 1}`}
+        </Text.H6B>
+      </div>
+      <Slider
+        aria-label="Selected turn range"
+        min={0}
+        max={sliderMax}
+        step={1}
+        minStepsBetweenThumbs={0}
+        value={[draftFrom, draftTo]}
+        onValueChange={(values) => setDraftValue(normalizeRange(values))}
+        onValueCommit={(values) => {
+          const [fromTurn, toTurn] = normalizeRange(values)
+          onChange({ ...range, fromTurn, toTurn }, sliderMax)
+        }}
+      />
+      <div className="flex items-center justify-between text-muted-foreground text-xs tabular-nums">
+        <span>1</span>
+        <span>{sliderMax + 1}</span>
+      </div>
+    </div>
   )
 }
 
@@ -597,22 +742,27 @@ export function BehavioursView({
   projectId,
   isLoading,
   segment,
-  activeBehaviourId,
+  behaviourPath,
   timeFilter,
   timeRange,
+  momentRange,
   onSegmentChange,
-  onActiveBehaviourChange,
+  onBehaviourPathChange,
+  onMomentRangeChange,
 }: {
   readonly topics: readonly BehaviourNodeRecord[]
   readonly projectId: string
   readonly isLoading: boolean
   readonly segment: BehaviourSegment
-  readonly activeBehaviourId: string | undefined
+  readonly behaviourPath: readonly string[]
   readonly timeFilter: ReactNode
   readonly timeRange: BehaviourTimeRangeRecord | undefined
+  readonly momentRange: BehaviourMomentRangeRecord | undefined
   readonly onSegmentChange: (segment: BehaviourSegment) => void
-  readonly onActiveBehaviourChange: (behaviourId: string | undefined) => void
+  readonly onBehaviourPathChange: (path: readonly string[]) => void
+  readonly onMomentRangeChange: (range: BehaviourMomentRangeRecord | undefined, maxTurn?: number) => void
 }) {
+  const activeBehaviourId = behaviourPath.at(-1)
   const expandableKeys = useMemo(() => {
     const keys = new Set<string>()
     const walk = (nodes: readonly BehaviourNodeRecord[]) => {
@@ -624,25 +774,62 @@ export function BehavioursView({
     walk(topics)
     return keys
   }, [topics])
-  const [collapsedKeys, setCollapsedKeys] = useState<ReadonlySet<string>>(new Set())
-  // The drill path lives in the URL with push-history semantics so the
-  // browser back/forward buttons step through chart selections instead of
-  // leaving the page.
-  const [dotChartPathParam, setDotChartPathParam] = useParamState("behaviourPath", "", { history: "push" })
-  const dotChartPath: readonly string[] = useMemo(
-    () => (dotChartPathParam ? dotChartPathParam.split(".") : []),
-    [dotChartPathParam],
-  )
+  const defaultCollapsedKeys = useMemo(() => {
+    const keys = new Set<string>()
+    const walk = (nodes: readonly BehaviourNodeRecord[], depth: number) => {
+      for (const node of nodes) {
+        if (depth > 0 && node.children.length > 0) keys.add(node.cluster.id)
+        walk(node.children, depth + 1)
+      }
+    }
+    walk(topics, 0)
+    return keys
+  }, [topics])
+  const [collapsedKeys, setCollapsedKeys] = useState<ReadonlySet<string>>(() => defaultCollapsedKeys)
+
+  useEffect(() => {
+    setCollapsedKeys((previous) => {
+      const next = new Set([...previous].filter((key) => expandableKeys.has(key)))
+      for (const key of defaultCollapsedKeys) next.add(key)
+      return next.size === previous.size && [...next].every((key) => previous.has(key)) ? previous : next
+    })
+  }, [defaultCollapsedKeys, expandableKeys])
 
   // Chart clicks drive the table selection too: the path tail becomes the
   // active behaviour (highlighted row + detail drawer). Clearing the path
   // closes the drawer.
   const handleDotChartPathChange = useCallback(
     (path: readonly string[]) => {
-      setDotChartPathParam(path.join("."))
-      onActiveBehaviourChange(path.length > 0 ? path[path.length - 1] : undefined)
+      onBehaviourPathChange(path)
+      onMomentRangeChange(undefined)
     },
-    [setDotChartPathParam, onActiveBehaviourChange],
+    [onBehaviourPathChange, onMomentRangeChange],
+  )
+
+  const handleDotChartPointSelect = useCallback(
+    ({
+      path,
+      axis,
+      metric,
+      bucket,
+      maxTurn,
+    }: {
+      readonly path: readonly string[]
+      readonly axis: "day" | "turn"
+      readonly metric: BehaviourTrajectoryMetric
+      readonly bucket: string
+      readonly maxTurn: number
+    }) => {
+      onBehaviourPathChange(path)
+      if (axis !== "turn") {
+        onMomentRangeChange(undefined)
+        return
+      }
+
+      const turnRange = parseTurnBucket(bucket)
+      onMomentRangeChange(turnRange ? { metric, ...turnRange } : undefined, maxTurn)
+    },
+    [onBehaviourPathChange, onMomentRangeChange],
   )
 
   // The dot chart selection narrows the table to the deepest *drilled*
@@ -653,7 +840,7 @@ export function BehavioursView({
   const tableTopics: readonly BehaviourNodeRecord[] = useMemo(() => {
     let nodes = topics
     let subtreeRoot: BehaviourNodeRecord | undefined
-    for (const id of dotChartPath) {
+    for (const id of behaviourPath) {
       const node = nodes.find((candidate) => candidate.cluster.id === id)
       if (!node) return topics
       if (node.children.length > 0) {
@@ -662,7 +849,7 @@ export function BehavioursView({
       }
     }
     return subtreeRoot ? [subtreeRoot] : topics
-  }, [topics, dotChartPath])
+  }, [topics, behaviourPath])
 
   // The visible rows are a depth-first walk that stops at collapsed nodes.
   const rows: readonly BehaviourTableRow[] = useMemo(() => {
@@ -706,10 +893,15 @@ export function BehavioursView({
   const setActiveByOffset = useCallback(
     (offset: number) => {
       const next = rows[activeIndex + offset]
-      if (next) onActiveBehaviourChange(next.node.cluster.id)
-      else if (activeIndex === -1 && rows[0]) onActiveBehaviourChange(rows[0].node.cluster.id)
+      if (next) {
+        onBehaviourPathChange(findBehaviourPath(topics, next.node.cluster.id) ?? [next.node.cluster.id])
+        onMomentRangeChange(undefined)
+      } else if (activeIndex === -1 && rows[0]) {
+        onBehaviourPathChange(findBehaviourPath(topics, rows[0].node.cluster.id) ?? [rows[0].node.cluster.id])
+        onMomentRangeChange(undefined)
+      }
     },
-    [activeIndex, rows, onActiveBehaviourChange],
+    [activeIndex, rows, topics, onBehaviourPathChange, onMomentRangeChange],
   )
 
   useHotkeys([
@@ -803,12 +995,21 @@ export function BehavioursView({
               active={segment}
               onSelect={(value) => onSegmentChange(value)}
             />
-            {dotChartPath.length > 0 ? (
-              // Resets the drill filter without touching the behaviour selection.
-              <Button variant="ghost" size="sm" className="whitespace-nowrap" onClick={() => setDotChartPathParam("")}>
-                Clear filter
+            {behaviourPath.length > 0 || momentRange ? (
+              // Clears the path-driven selection and any chart-derived filters.
+              <Button
+                variant="ghost"
+                size="sm"
+                className="whitespace-nowrap"
+                onClick={() => {
+                  onBehaviourPathChange([])
+                  onMomentRangeChange(undefined)
+                }}
+              >
+                Clear selection
               </Button>
             ) : null}
+            {momentRange ? <BehaviourBadge label={selectedMomentRangeLabel(momentRange)} icon={TagIcon} /> : null}
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
       </Layout.Actions>
@@ -825,9 +1026,10 @@ export function BehavioursView({
               <BehavioursTrajectoryChart
                 projectId={projectId}
                 topics={topics}
-                selectedPath={dotChartPath}
+                selectedPath={behaviourPath}
                 timeRange={timeRange}
                 onSelectPath={handleDotChartPathChange}
+                onSelectPoint={handleDotChartPointSelect}
               />
               <InfiniteTable
                 {...listingLayoutIntrinsicScroll.infiniteTable}
@@ -851,7 +1053,12 @@ export function BehavioursView({
                       return next
                     })
                   }
-                  onActiveBehaviourChange(row.node.cluster.id === activeBehaviourId ? undefined : row.node.cluster.id)
+                  onBehaviourPathChange(
+                    row.node.cluster.id === activeBehaviourId
+                      ? []
+                      : (findBehaviourPath(topics, row.node.cluster.id) ?? [row.node.cluster.id]),
+                  )
+                  onMomentRangeChange(undefined)
                 }}
                 {...(activeBehaviourId ? { activeRowKey: activeBehaviourId, activeRowAutoScroll: true } : {})}
                 blankSlate="No behaviours match the current filters"
