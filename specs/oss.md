@@ -4,6 +4,8 @@
 
 This spec tracks the initiative to make the Latitude product — and therefore this repository — the most **OSS-friendly and self-host-ready** it can be. It is a living document: high-level context, goals, and milestones are captured here so they aren't lost, and detail will be filled in as more information and decisions arrive.
 
+> **This spec is temporary.** As each phase stabilizes it must **promote its durable knowledge** out of here and into the permanent knowledge bases — `dev-docs/*.md` (architecture/design), the `docs/` Mintlify site (user-facing Development & Deployment guides), and `AGENTS.md` (repo-wide rules). **Phase 7** consolidates anything outstanding and **deletes this file** — nothing here should be lost when `specs/oss.md` is removed.
+
 ## Strategy & sequencing
 
 The fastest path to value is a **great self-hosting experience and documentation first**, even with current limitations — most notably that **AI-dependent features still require proprietary providers** (Voyage AI for embeddings/reranking; Amazon Bedrock / Anthropic for internal LLM flows). We **accept and clearly document** that requirement in the near term rather than letting it block shipping a usable self-host.
@@ -11,6 +13,8 @@ The fastest path to value is a **great self-hosting experience and documentation
 We then **polish**: add OSS/pluggable AI providers so the stack can run on fully open models, and **update the self-hosting docs** accordingly once that lands.
 
 **Documentation ships *with* each tier, not after.** Each self-hosting tier below lands together with the docs that make it usable — docs are part of the deliverable, not a follow-up.
+
+Finally, **promote all durable knowledge into `dev-docs/` / `docs/` / `AGENTS.md` and delete this spec** (Phase 7).
 
 ## Self-hosting tiers
 
@@ -181,6 +185,18 @@ Convenience layer on top of Tier 2; pursued only after Tiers 1–3 are solid.
 - [ ] **P6-4**: A deploy-targets matrix in the docs (what each template provisions, trade-offs).
 
 **Exit gate**: at least one one-click template deploys a working Latitude; each shipped template is documented and smoke-tested.
+
+### Phase 7 — Promote durable knowledge & retire the spec
+
+Guarantees nothing is lost when `specs/oss.md` is deleted. Runs **incrementally** — promote each phase's durable knowledge as it stabilizes — and is **not gated on the optional Phase 6**; the final deletion happens once the core work (Phases 1–5) has landed and been documented.
+
+- [ ] **P7-1**: Promote the **self-hosting architecture** into `dev-docs/` — expand `dev-docs/deployment.md` (or add a `dev-docs/self-hosting.md`) with the **three-tier model** (Local / Single-host / Cluster), the per-tier deploy artifacts, the **image build → publish → release-tag/edge-tag** flow, the **storage abstraction** (`StorageDiskPort` + flydrive, namespaces), **shared-infra coexistence + bring-your-own-infra**, and the **self-host profile**. Future-state prose, not changelog.
+- [ ] **P7-2**: Promote the **dependency-license audit** (Appendix A) into a durable doc (e.g. `dev-docs/licensing.md`) so the "no license blocks self-hosting" conclusion, the per-dependency matrix, and the policy survive spec deletion.
+- [ ] **P7-3**: Escalate durable **repo-wide rules into `AGENTS.md`**: shipped runtime deps must be permissive (MIT/Apache/BSD/ISC) — **no AGPL/SSPL/source-available in the application bundle**, audit new deps' licenses; **self-host object store is SeaweedFS** (never reintroduce MinIO/AGPL); infra deps must stay **isolatable + bring-your-own-able** (dedicated schema/db/namespace/bucket, namespaced Redis keys); public image **naming/tagging is tied to the release flow** (`:vX.Y.Z` stable, `:development` edge).
+- [ ] **P7-4**: Confirm the user-facing `docs/` **Development** and **Deployment** areas (built in Phases 2–4) read as complete and authoritative on their own, with no dependency on this spec.
+- [ ] **P7-5**: **Delete `specs/oss.md`** once P7-1…P7-4 have landed and the knowledge is confirmed durable; remove dangling references to it.
+
+**Exit gate**: every durable decision in this spec lives in `dev-docs/`, the `docs/` site, or `AGENTS.md`; `specs/oss.md` is deleted; no doc or comment points at the removed spec.
 
 ## Open questions / decisions pending
 
