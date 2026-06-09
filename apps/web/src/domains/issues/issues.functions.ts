@@ -4,7 +4,9 @@ import {
   type ApplyIssueLifecycleCommandResult,
   applyIssueLifecycleCommandUseCase,
   buildHistogramBucketScaffold,
+  computeDimensionOutliers,
   DEFAULT_ESCALATION_SENSITIVITY_K,
+  type DimensionOutlier,
   deriveIssueLifecycleStates,
   embedIssueSearchQueryUseCase,
   fillBuckets,
@@ -25,7 +27,13 @@ import {
   TAG_AGGREGATION_FALLBACK_DAYS,
   updateIssueTriageUseCase,
 } from "@domain/issues"
-import { type IssueEscalationThresholdBucket, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
+import {
+  type DimensionValue,
+  type IssueDimension,
+  type IssueEscalationThresholdBucket,
+  ScoreAnalyticsRepository,
+  ScoreRepository,
+} from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, resolveSettings, SettingsReader } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
@@ -170,6 +178,14 @@ const updateIssueTriageInputSchema = z.object({
   // `undefined` (key omitted) leaves the field unchanged; `null` clears it; a value sets it.
   assigneeId: z.string().nullable().optional(),
   priority: issuePrioritySchema.nullable().optional(),
+})
+
+const issueDimensionSchema = z.enum(["model", "provider", "tool", "tag"]) satisfies z.ZodType<IssueDimension>
+
+const issueDimensionsInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+  dimension: issueDimensionSchema,
 })
 
 const toUtcDayEnd = (value: Date): Date =>
@@ -706,6 +722,44 @@ export const getIssueImpact = createServerFn({ method: "GET" })
         withTracing,
       ),
     )
+  })
+
+export interface IssueDimensionsRecord {
+  readonly dimension: IssueDimension
+  readonly sampleSize: number
+  readonly issue: readonly DimensionValue[]
+  readonly baseline: readonly DimensionValue[]
+  readonly outliers: readonly DimensionOutlier[]
+}
+
+export const getIssueDimensions = createServerFn({ method: "GET" })
+  .inputValidator(issueDimensionsInputSchema)
+  .handler(async ({ data }): Promise<IssueDimensionsRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const chClient = getClickhouseClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    const distribution = await Effect.runPromise(
+      Effect.gen(function* () {
+        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        return yield* scoreAnalyticsRepository.aggregateDimensionByIssue({
+          organizationId: orgId,
+          projectId,
+          issueId,
+          dimension: data.dimension,
+        })
+      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId), withTracing),
+    )
+
+    return {
+      dimension: distribution.dimension,
+      sampleSize: distribution.sampleSize,
+      issue: distribution.issue,
+      baseline: distribution.baseline,
+      outliers: computeDimensionOutliers(distribution),
+    }
   })
 
 export interface UpdateIssueTriageRecord {

@@ -1,9 +1,11 @@
+import type { IssueDimension } from "@domain/scores"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type {
   IssueDetailRecord,
+  IssueDimensionsRecord,
   IssueImpactRecord,
   IssueRecord,
   IssueSummaryRecord,
@@ -17,6 +19,7 @@ import {
   countIssueTraces,
   getIssue,
   getIssueDetail,
+  getIssueDimensions,
   getIssueImpact,
   listIssues,
   listIssueTraces,
@@ -86,6 +89,9 @@ const getIssueQueryKey = (projectId: string, issueId: string) => ["issue", proje
 const getIssueDetailQueryKey = (projectId: string, issueId: string) => ["issue-detail", projectId, issueId] as const
 
 const getIssueImpactQueryKey = (projectId: string, issueId: string) => ["issue-impact", projectId, issueId] as const
+
+const getIssueDimensionsQueryKey = (projectId: string, issueId: string, dimension: IssueDimension) =>
+  ["issue-dimensions", projectId, issueId, dimension] as const
 
 const getIssueTracesQueryKey = (projectId: string, issueId: string) => ["issue-traces", projectId, issueId] as const
 
@@ -294,6 +300,25 @@ export function useIssueImpact({
   return useQuery({
     queryKey: getIssueImpactQueryKey(projectId, issueId),
     queryFn: (): Promise<IssueImpactRecord> => getIssueImpact({ data: { projectId, issueId } }),
+    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+  })
+}
+
+export function useIssueDimensions({
+  projectId,
+  issueId,
+  dimension,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly issueId: string
+  readonly dimension: IssueDimension
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: getIssueDimensionsQueryKey(projectId, issueId, dimension),
+    queryFn: (): Promise<IssueDimensionsRecord> => getIssueDimensions({ data: { projectId, issueId, dimension } }),
     enabled: enabled && projectId.length > 0 && issueId.length > 0,
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
   })

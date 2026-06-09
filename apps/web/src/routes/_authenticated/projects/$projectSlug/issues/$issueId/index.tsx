@@ -10,6 +10,7 @@ import { useRouteProject } from "../../-route-data.ts"
 import { IssueDetailBody } from "../-components/issue-detail-drawer.tsx"
 import { IssueLifecycleActions } from "../-components/issue-lifecycle-actions.tsx"
 import { IssueImpactStrip } from "./-components/issue-impact-strip.tsx"
+import { IssuePatterns } from "./-components/issue-patterns.tsx"
 import { IssueTriageControls } from "./-components/issue-triage-controls.tsx"
 
 const issueDetailRoute = getRouteApi("/_authenticated/projects/$projectSlug/issues/$issueId/")
@@ -71,8 +72,9 @@ function IssueDetailPage() {
             </Layout.ActionRowItem>
           </Layout.ActionsRow>
         </Layout.Actions>
-        <div className="px-6">
+        <div className="flex flex-col gap-3 px-6">
           <IssueImpactStrip projectId={project.id} issueId={issueId} />
+          <IssuePatterns projectId={project.id} issueId={issueId} />
         </div>
         <IssueDetailBody projectId={project.id} issueId={issueId} />
       </Layout.Content>
