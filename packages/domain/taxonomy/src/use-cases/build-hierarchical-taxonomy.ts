@@ -19,16 +19,18 @@
  *      Interior nodes get a `splitLinkThreshold` derived from the chosen K's
  *      tightest sibling-pair cosine so the online router has a per-level
  *      gate to descend by.
- *   4. Re-assign every member observation directly to its leaf cluster
- *      (interior nodes carry derived counts only). This is the "birth"
- *      transition for everything in this pass.
- *   5. Deprecate every previously-active cluster that we did not just
- *      re-emit — there is no continuity matcher in this pass; each
- *      gardening cycle is a clean rebuild. (Stable id lineage across runs
- *      is captured by `taxonomy_cluster_lineage` rows; clients displaying
- *      historical trends already query CH which is the ground truth.)
- *   6. Emit `birth` rows for each new cluster and `death` rows for the
- *      previously-active clusters that got deprecated.
+ *   4. Match the new nodes 1:1 against the previously-active clusters with a
+ *      Hungarian centroid assignment (`matchTaxonomyLineage`). A confident
+ *      same-depth match reuses the old cluster's id so trends that key on the
+ *      id stay continuous across passes; everything else gets a fresh cuid.
+ *   5. Materialize and persist the rows. `save` upserts on id, so a
+ *      continuation updates its predecessor's row in place (new centroid,
+ *      preserved age, carried-over name when the topic barely moved).
+ *   6. Re-assign every member observation directly to its leaf cluster
+ *      (interior nodes carry derived counts only).
+ *   7. Deprecate every previously-active cluster that no new node continued.
+ *   8. Emit `continuation` rows for reused ids, `birth` rows for new nodes,
+ *      and `death` rows for the deprecated clusters.
  *
  * What is intentionally NOT here:
  *   - LLM naming. Names are assigned by the workflow's naming step against
@@ -51,10 +53,12 @@ import { Effect } from "effect"
 import { buildHierarchicalClusters, type ClusteringTreeNode } from "../clustering.ts"
 import {
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+  TAXONOMY_CONTINUATION_THRESHOLD,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
   TAXONOMY_KMEANS_MAX_ITER,
   TAXONOMY_KMEANS_RESTARTS,
   TAXONOMY_KMEANS_TOLERANCE,
+  TAXONOMY_NAME_REUSE_THRESHOLD,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_TREE_DEPTH_SCHEDULE,
@@ -62,13 +66,14 @@ import {
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
-import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import {
   cosineSimilarityNormalized,
   createTaxonomyCentroid,
+  normalizeTaxonomyCentroid,
   normalizeTaxonomyEmbedding,
   updateTaxonomyCentroid,
 } from "../helpers.ts"
+import { matchTaxonomyLineage } from "../lineage.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 
@@ -82,7 +87,10 @@ export interface BuildHierarchicalTaxonomyInput {
 
 export interface BuildHierarchicalTaxonomyResult {
   readonly observationsScanned: number
+  /** Genuinely new nodes (no confident predecessor). */
   readonly clustersBorn: number
+  /** Nodes that reused a previously-active cluster's id (`continuation`). */
+  readonly clustersContinued: number
   readonly clustersDeprecated: number
   readonly leavesAssigned: number
   readonly maxDepthReached: number
@@ -113,6 +121,16 @@ const buildPersistedCluster = (input: {
   readonly memberStartTimes: readonly Date[]
   readonly memberCount: number
   readonly now: Date
+  /** Carried over on a name-stable continuation; "Pending" otherwise. */
+  readonly name: string
+  readonly description: string
+  /**
+   * On a continuation we preserve the predecessor's birth/creation timestamps
+   * so the cluster's age survives the rebuild; fresh births fall back to the
+   * current pass.
+   */
+  readonly firstObservedAt?: Date | undefined
+  readonly createdAt?: Date | undefined
 }): TaxonomyCluster => {
   let centroid = createTaxonomyCentroid()
   let clusteredAt = input.now
@@ -141,16 +159,16 @@ const buildPersistedCluster = (input: {
     depth: input.depth,
     path: input.path,
     splitLinkThreshold: input.splitLinkThreshold,
-    name: TAXONOMY_PENDING_DISPLAY_NAME,
-    description: "",
+    name: input.name,
+    description: input.description,
     centroid,
     observationCount: input.memberCount,
     state: "active",
     mergedIntoClusterId: null,
-    firstObservedAt: sortedTimes[0] ?? input.now,
+    firstObservedAt: input.firstObservedAt ?? sortedTimes[0] ?? input.now,
     lastObservedAt: sortedTimes[sortedTimes.length - 1] ?? input.now,
     clusteredAt,
-    createdAt: input.now,
+    createdAt: input.createdAt ?? input.now,
     updatedAt: input.now,
   }
 }
@@ -184,69 +202,41 @@ interface PersistedLeaf {
   readonly centroid: readonly number[]
 }
 
-interface WalkContext {
-  readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
-  readonly dimension: TaxonomyDimensionType
-  readonly observations: readonly TaxonomyMomentObservation[]
-  readonly normalizedEmbeddings: readonly (readonly number[])[]
-  readonly now: Date
-  readonly bornClusters: TaxonomyCluster[]
-  readonly bornLeaves: PersistedLeaf[]
-  readonly lineage: TaxonomyClusterLineage[]
-  readonly runId: TaxonomyRunId
-  maxDepth: number
+/**
+ * A node of the freshly built tree, captured before any id is assigned. The
+ * continuity matcher needs every node's centroid up front (it solves one global
+ * 1:1 assignment), so we collect descriptors first, match, resolve ids, and
+ * only then materialize the persisted rows.
+ */
+interface NodeDescriptor {
+  readonly tempId: string
+  readonly parentTempId: string | null
+  readonly depth: number
+  /** Normalized centroid of the node's members. */
+  readonly centroid: readonly number[]
+  readonly splitLinkThreshold: number | null
+  readonly memberIndices: readonly number[]
+  readonly isLeaf: boolean
 }
 
-const walkAndPersist = (node: ClusteringTreeNode, parentId: string | null, parentPath: string, ctx: WalkContext) => {
-  const memberEmbeddings = node.memberIndices.map((index) => ctx.normalizedEmbeddings[index] ?? [])
-  const memberStartTimes = node.memberIndices.map((index) => ctx.observations[index]?.startTime ?? ctx.now)
-  const id = generateId()
-  const path = parentId === null ? "" : `${parentPath}${parentId}/`
-  const splitLinkThreshold = computeSplitLinkThreshold(node.children)
-  // PG `observation_count` caches CH's direct-assignment count. Every member
-  // observation is routed to a leaf cluster, so interior nodes carry zero
-  // direct count — clients roll up subtree counts at read time.
-  const directCount = node.children.length === 0 ? node.memberIndices.length : 0
-  const cluster = buildPersistedCluster({
-    id,
-    organizationId: ctx.organizationId,
-    projectId: ctx.projectId,
-    dimension: ctx.dimension,
-    parentId,
-    path,
+const collectNodes = (
+  node: ClusteringTreeNode,
+  parentTempId: string | null,
+  counter: { value: number },
+  out: NodeDescriptor[],
+): string => {
+  const tempId = String(counter.value++)
+  out.push({
+    tempId,
+    parentTempId,
     depth: node.depth,
-    splitLinkThreshold,
-    memberEmbeddings,
-    memberStartTimes,
-    memberCount: directCount,
-    now: ctx.now,
+    centroid: node.centroid,
+    splitLinkThreshold: computeSplitLinkThreshold(node.children),
+    memberIndices: node.memberIndices,
+    isLeaf: node.children.length === 0,
   })
-  ctx.bornClusters.push(cluster)
-  ctx.lineage.push({
-    id: TaxonomyLineageId(generateId()),
-    organizationId: ctx.organizationId,
-    projectId: ctx.projectId,
-    dimension: ctx.dimension,
-    runId: ctx.runId,
-    transitionType: "birth",
-    fromClusterIds: [],
-    toClusterIds: [cluster.id],
-    similarity: null,
-    createdAt: ctx.now,
-  })
-  if (node.depth > ctx.maxDepth) ctx.maxDepth = node.depth
-  if (node.children.length === 0) {
-    ctx.bornLeaves.push({
-      clusterId: cluster.id,
-      observationIndices: node.memberIndices,
-      centroid: node.centroid,
-    })
-    return
-  }
-  for (const child of node.children) {
-    walkAndPersist(child, id, path, ctx)
-  }
+  for (const child of node.children) collectNodes(child, tempId, counter, out)
+  return tempId
 }
 
 export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonomyInput) =>
@@ -269,6 +259,7 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
       return {
         observationsScanned: observations.length,
         clustersBorn: 0,
+        clustersContinued: 0,
         clustersDeprecated: 0,
         leavesAssigned: 0,
         maxDepthReached: 0,
@@ -286,34 +277,133 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
       seed: seedFromProjectId(input.projectId),
     })
 
-    const ctx: WalkContext = {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      dimension,
-      observations,
-      normalizedEmbeddings,
-      now,
-      bornClusters: [],
-      bornLeaves: [],
-      lineage: [],
-      runId: input.runId,
-      maxDepth: 0,
-    }
-    // If the entire corpus collapses to a single leaf at depth 0, the tree
-    // is still useful (and exactly what tiny tenants should see) — emit it
-    // as one root cluster covering everything.
-    walkAndPersist(tree, null, "", ctx)
+    // Collect the freshly built nodes before assigning ids. If the entire
+    // corpus collapses to a single leaf at depth 0, the tree is still useful
+    // (and exactly what tiny tenants should see) — it is collected as one root.
+    const descriptors: NodeDescriptor[] = []
+    collectNodes(tree, null, { value: 0 }, descriptors)
 
-    // Persist new clusters top-down so a child save never references a
-    // parent that does not exist yet.
-    const orderedClusters = [...ctx.bornClusters].sort((a, b) => a.depth - b.depth)
-    for (const cluster of orderedClusters) {
+    // Continuity matching: reuse a previously-active cluster's id when a new
+    // node is confidently the same topic (Hungarian 1:1 centroid match). This
+    // keeps cluster ids — and therefore every trend that keys on them — stable
+    // across gardening passes instead of resetting every run.
+    const previouslyActive = yield* clustersRepo.listActiveByProject({ projectId: input.projectId, dimension })
+    const oldById = new Map(previouslyActive.map((cluster) => [cluster.id as string, cluster] as const))
+    const match = matchTaxonomyLineage({
+      newNodes: descriptors.map((node) => ({ tempId: node.tempId, depth: node.depth, centroid: node.centroid })),
+      oldClusters: previouslyActive.map((cluster) => ({
+        id: cluster.id,
+        depth: cluster.depth,
+        centroid: normalizeTaxonomyCentroid(cluster.centroid),
+      })),
+      continuationThreshold: TAXONOMY_CONTINUATION_THRESHOLD,
+      nameReuseThreshold: TAXONOMY_NAME_REUSE_THRESHOLD,
+    })
+    const decisionByTempId = new Map(match.decisions.map((decision) => [decision.tempId, decision] as const))
+    // A continuation reuses its predecessor's id; every other node gets a fresh
+    // cuid. Resolve all ids before materializing so child `path`s reference the
+    // resolved parent id.
+    const finalIdByTempId = new Map<string, string>()
+    for (const node of descriptors) {
+      const decision = decisionByTempId.get(node.tempId)
+      finalIdByTempId.set(node.tempId, decision?.transition === "continuation" ? decision.reuseId : generateId())
+    }
+
+    // Materialize depth-ascending so a parent's id and path are known before
+    // its children build theirs.
+    const orderedDescriptors = [...descriptors].sort((a, b) => a.depth - b.depth)
+    const pathByTempId = new Map<string, string>()
+    const bornClusters: TaxonomyCluster[] = []
+    const bornLeaves: PersistedLeaf[] = []
+    const lineage: TaxonomyClusterLineage[] = []
+    let maxDepth = 0
+    let clustersBorn = 0
+    let clustersContinued = 0
+    for (const node of orderedDescriptors) {
+      const finalId = finalIdByTempId.get(node.tempId) ?? generateId()
+      const parentFinalId = node.parentTempId === null ? null : (finalIdByTempId.get(node.parentTempId) ?? null)
+      const parentPath = node.parentTempId === null ? "" : (pathByTempId.get(node.parentTempId) ?? "")
+      const path = parentFinalId === null ? "" : `${parentPath}${parentFinalId}/`
+      pathByTempId.set(node.tempId, path)
+
+      const decision = decisionByTempId.get(node.tempId)
+      const old = decision?.transition === "continuation" ? oldById.get(decision.reuseId) : undefined
+      const carryName = decision?.transition === "continuation" && decision.carryName && old !== undefined
+
+      const memberEmbeddings = node.memberIndices.map((index) => normalizedEmbeddings[index] ?? [])
+      const memberStartTimes = node.memberIndices.map((index) => observations[index]?.startTime ?? now)
+      // PG `observation_count` caches CH's direct-assignment count. Every member
+      // observation is routed to a leaf cluster, so interior nodes carry zero
+      // direct count — clients roll up subtree counts at read time.
+      const directCount = node.isLeaf ? node.memberIndices.length : 0
+      const cluster = buildPersistedCluster({
+        id: finalId,
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        dimension,
+        parentId: parentFinalId,
+        path,
+        depth: node.depth,
+        splitLinkThreshold: node.splitLinkThreshold,
+        memberEmbeddings,
+        memberStartTimes,
+        memberCount: directCount,
+        now,
+        // Carry the old name only when the topic barely moved; otherwise leave
+        // it "Pending" so the naming step re-names while keeping the stable id.
+        name: carryName && old ? old.name : TAXONOMY_PENDING_DISPLAY_NAME,
+        description: carryName && old ? old.description : "",
+        firstObservedAt: old?.firstObservedAt,
+        createdAt: old?.createdAt,
+      })
+      bornClusters.push(cluster)
+      if (node.depth > maxDepth) maxDepth = node.depth
+
+      if (old) {
+        clustersContinued++
+        lineage.push({
+          id: TaxonomyLineageId(generateId()),
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          dimension,
+          runId: input.runId,
+          transitionType: "continuation",
+          fromClusterIds: [old.id],
+          toClusterIds: [cluster.id],
+          similarity: decision?.transition === "continuation" ? decision.similarity : null,
+          createdAt: now,
+        })
+      } else {
+        clustersBorn++
+        lineage.push({
+          id: TaxonomyLineageId(generateId()),
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          dimension,
+          runId: input.runId,
+          transitionType: "birth",
+          fromClusterIds: [],
+          toClusterIds: [cluster.id],
+          similarity: null,
+          createdAt: now,
+        })
+      }
+
+      if (node.isLeaf) {
+        bornLeaves.push({ clusterId: cluster.id, observationIndices: node.memberIndices, centroid: node.centroid })
+      }
+    }
+
+    // Persist clusters top-down (already depth-ascending) so a child save never
+    // references a parent that does not exist yet. `save` upserts on id, so a
+    // continuation cleanly updates the reused row in place.
+    for (const cluster of bornClusters) {
       yield* clustersRepo.save(cluster)
     }
 
     // Reassign every member observation directly to its leaf cluster.
-    if (ctx.bornLeaves.length > 0) {
-      const reassignments = ctx.bornLeaves.flatMap((leaf) =>
+    if (bornLeaves.length > 0) {
+      const reassignments = bornLeaves.flatMap((leaf) =>
         leaf.observationIndices.flatMap((index) => {
           const observation = observations[index]
           const embedding = normalizedEmbeddings[index]
@@ -334,17 +424,15 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
       yield* observationsRepo.reassignMany(reassignments)
     }
 
-    // Mark every previously-active cluster as deprecated. We do not attempt
-    // continuity matching across runs in this version — each gardening pass
-    // is a clean rebuild and lineage rows record the births.
-    const previouslyActive = yield* clustersRepo.listActiveByProject({ projectId: input.projectId, dimension })
-    const bornIds = new Set(ctx.bornClusters.map((cluster) => cluster.id))
+    // Deprecate every previously-active cluster that no new node continued.
+    // Continued clusters keep their id (it is among `finalIds`) and stay active.
+    const finalIds = new Set(finalIdByTempId.values())
     let clustersDeprecated = 0
     for (const cluster of previouslyActive) {
-      if (bornIds.has(cluster.id)) continue
+      if (finalIds.has(cluster.id)) continue
       yield* clustersRepo.markDeprecated({ clusterId: cluster.id, timestamp: now })
       clustersDeprecated++
-      ctx.lineage.push({
+      lineage.push({
         id: TaxonomyLineageId(generateId()),
         organizationId: input.organizationId,
         projectId: input.projectId,
@@ -360,10 +448,11 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
 
     return {
       observationsScanned: observations.length,
-      clustersBorn: ctx.bornClusters.length,
+      clustersBorn,
+      clustersContinued,
       clustersDeprecated,
-      leavesAssigned: ctx.bornLeaves.reduce((sum, leaf) => sum + leaf.observationIndices.length, 0),
-      maxDepthReached: ctx.maxDepth,
-      lineage: ctx.lineage,
+      leavesAssigned: bornLeaves.reduce((sum, leaf) => sum + leaf.observationIndices.length, 0),
+      maxDepthReached: maxDepth,
+      lineage,
     } satisfies BuildHierarchicalTaxonomyResult
   }).pipe(Effect.withSpan("taxonomy.buildHierarchicalTaxonomy"))

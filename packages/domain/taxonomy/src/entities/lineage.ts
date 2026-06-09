@@ -9,9 +9,7 @@ export type TaxonomyLineageTransitionType = z.infer<typeof taxonomyLineageTransi
 export const TaxonomyLineageTransitionType = {
   Birth: "birth",
   Death: "death",
-  Merge: "merge",
   Continuation: "continuation",
-  Split: "split",
 } as const satisfies Record<string, TaxonomyLineageTransitionType>
 
 export const taxonomyClusterLineageSchema = z.object({

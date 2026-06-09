@@ -1,4 +1,4 @@
-import { createCentroid, mergeCentroids, normalizeCentroid, normalizeEmbedding, updateCentroid } from "@domain/shared"
+import { createCentroid, normalizeCentroid, normalizeEmbedding, updateCentroid } from "@domain/shared"
 import {
   TAXONOMY_CENTROID_HALF_LIFE_SECONDS,
   TAXONOMY_EMBEDDING_DIMENSIONS,
@@ -53,28 +53,6 @@ export const updateTaxonomyCentroid = ({
     contribution: { embedding, createdAt: timestamp },
     contributionWeight: weight,
     operation,
-    timestamp,
-  }) as TaxonomyCentroid & { readonly clusteredAt: Date }
-
-interface MergeTaxonomyCentroidsInput {
-  readonly survivor: TaxonomyCentroid & { readonly clusteredAt: Date }
-  readonly loser: TaxonomyCentroid & { readonly clusteredAt: Date }
-  readonly timestamp: Date
-}
-
-/**
- * Decay survivor + loser running sums to `timestamp` and combine. Preserves
- * the loser's accumulated decayed mass — re-aggregating from raw observations
- * would zero out contributions older than ~one half-life.
- */
-export const mergeTaxonomyCentroids = ({
-  survivor,
-  loser,
-  timestamp,
-}: MergeTaxonomyCentroidsInput): TaxonomyCentroid & { readonly clusteredAt: Date } =>
-  mergeCentroids<TaxonomyObservationWeightScheme>({
-    survivor,
-    loser,
     timestamp,
   }) as TaxonomyCentroid & { readonly clusteredAt: Date }
 
@@ -148,124 +126,6 @@ export const softmax = (values: readonly number[], temperature: number): number[
   }
   return exps
 }
-
-// ---------------------------------------------------------------------------
-// Diameter-bounded greedy clustering — births and tree recursion.
-// ---------------------------------------------------------------------------
-
-interface SingleLinkageCandidate {
-  /** Indices into the original `embeddings` array. */
-  readonly members: readonly number[]
-  /** Max pairwise cosine *distance* (1 - cosine) between any two members. */
-  readonly diameter: number
-}
-
-interface DiameterBoundedClusterCandidate extends SingleLinkageCandidate {}
-
-interface SingleLinkageClustersInput {
-  /**
-   * Already-normalized 2048-dim vectors (or whatever the embedding model
-   * emits). Caller normalizes once at load time; this routine assumes dot
-   * products equal cosine similarity.
-   */
-  readonly embeddings: readonly (readonly number[])[]
-  /** Two embeddings are connected when cosine ≥ this. */
-  readonly connectivityThreshold: number
-  /** Reject candidate clusters with fewer than this many members. */
-  readonly minMembers: number
-  /** Reject candidates whose diameter exceeds this cosine *distance*. */
-  readonly maxDiameter: number
-}
-
-/**
- * Connected-components clustering over a thresholded cosine graph.
- *
- * Naive `O(n²)` pairwise scan — fine at MVP scale (a few thousand noise
- * embeddings per pass). The diameter check cuts single-linkage chains that
- * would otherwise string two unrelated topics through a thin bridge of
- * members. See `dev-docs/taxonomy.md`.
- */
-export const diameterBoundedGreedyClusters = (
-  input: SingleLinkageClustersInput,
-): readonly DiameterBoundedClusterCandidate[] => {
-  const { embeddings, connectivityThreshold, minMembers, maxDiameter } = input
-  if (embeddings.length === 0 || minMembers <= 0) return []
-
-  const minAnchorSimilarity = 1 - maxDiameter
-  const maxAnchors = 12
-  const working: {
-    members: number[]
-    sum: number[]
-    centroid: number[]
-    anchors: number[]
-  }[] = []
-
-  const addToCluster = (cluster: (typeof working)[number], index: number, embedding: readonly number[]) => {
-    cluster.members.push(index)
-    if (cluster.sum.length === 0) cluster.sum = [...embedding]
-    else {
-      for (let dimension = 0; dimension < embedding.length; dimension++) {
-        cluster.sum[dimension] = (cluster.sum[dimension] ?? 0) + (embedding[dimension] ?? 0)
-      }
-    }
-    cluster.centroid = normalizeEmbedding(cluster.sum)
-    if (cluster.anchors.length < maxAnchors) cluster.anchors.push(index)
-  }
-
-  for (let index = 0; index < embeddings.length; index++) {
-    const embedding = embeddings[index]
-    if (!embedding || embedding.length === 0) continue
-
-    let bestCluster: (typeof working)[number] | null = null
-    let bestSimilarity = connectivityThreshold
-    for (const cluster of working) {
-      if (embedding.length !== cluster.centroid.length) continue
-      const centroidSimilarity = cosineSimilarityNormalized(embedding, cluster.centroid)
-      if (centroidSimilarity < bestSimilarity) continue
-      const withinAnchors = cluster.anchors.every((anchorIndex) => {
-        const anchor = embeddings[anchorIndex]
-        return anchor !== undefined && cosineSimilarityNormalized(embedding, anchor) >= minAnchorSimilarity
-      })
-      if (!withinAnchors) continue
-      bestCluster = cluster
-      bestSimilarity = centroidSimilarity
-    }
-
-    if (bestCluster) {
-      addToCluster(bestCluster, index, embedding)
-    } else {
-      const cluster = { members: [], sum: [], centroid: [], anchors: [] }
-      addToCluster(cluster, index, embedding)
-      working.push(cluster)
-    }
-  }
-
-  return working
-    .filter((cluster) => cluster.members.length >= minMembers)
-    .map((cluster) => {
-      let maxObservedDistance = 0
-      const sampledMembers = cluster.members.length <= 200 ? cluster.members : cluster.anchors
-      for (let i = 0; i < sampledMembers.length; i++) {
-        const leftIndex = sampledMembers[i]
-        if (leftIndex === undefined) continue
-        const left = embeddings[leftIndex]
-        if (!left) continue
-        for (let j = i + 1; j < sampledMembers.length; j++) {
-          const rightIndex = sampledMembers[j]
-          if (rightIndex === undefined) continue
-          const right = embeddings[rightIndex]
-          if (!right) continue
-          const distance = 1 - cosineSimilarityNormalized(left, right)
-          if (distance > maxObservedDistance) maxObservedDistance = distance
-        }
-      }
-      return { members: cluster.members, diameter: maxObservedDistance }
-    })
-    .filter((cluster) => cluster.diameter <= maxDiameter)
-}
-
-export const quantileSorted = (sorted: readonly number[], q: number): number =>
-  sorted.length === 0 ? 0 : (sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? 0)
 
 // ---------------------------------------------------------------------------
 // Farthest-Point Sampling — for cluster naming.
@@ -355,31 +215,4 @@ export const clamp = (value: number, min: number, max: number): number => {
   if (value < min) return min
   if (value > max) return max
   return value
-}
-
-/**
- * Compute the normalized mean of an array of vectors. Used to derive the
- * a roll-up centroid from member cluster centroids, and
- * to test absorption of a candidate birth against existing clusters.
- *
- * Returns an empty array when the input is empty or all-zero.
- */
-export const meanNormalized = (vectors: readonly (readonly number[])[]): number[] => {
-  if (vectors.length === 0) return []
-  const dimensions = vectors[0]?.length ?? 0
-  if (dimensions === 0) return []
-  const accumulator = new Array<number>(dimensions).fill(0)
-  let count = 0
-  for (const v of vectors) {
-    if (!v || v.length !== dimensions) continue
-    for (let i = 0; i < dimensions; i++) {
-      accumulator[i] = (accumulator[i] ?? 0) + (v[i] ?? 0)
-    }
-    count++
-  }
-  if (count === 0) return []
-  for (let i = 0; i < dimensions; i++) {
-    accumulator[i] = (accumulator[i] ?? 0) / count
-  }
-  return normalizeEmbedding(accumulator)
 }
