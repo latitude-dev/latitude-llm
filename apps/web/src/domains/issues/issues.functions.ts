@@ -779,6 +779,8 @@ export interface IssueOccurrenceRecord {
   readonly feedback: string
   readonly createdAt: string
   readonly annotatorId: string | null
+  /** Set when an automatic flagger authored the annotation (so the UI can attribute it). */
+  readonly flaggerSlug: string | null
   /** Location of the flagged content in the trace's canonical conversation. */
   readonly anchor: {
     readonly messageIndex: number
@@ -821,7 +823,7 @@ export const getIssueOccurrences = createServerFn({ method: "GET" })
       if (score.source !== "annotation" || score.traceId === null || score.metadata.messageIndex === undefined) {
         return []
       }
-      const { messageIndex, partIndex, startOffset, endOffset, textFormat } = score.metadata
+      const { messageIndex, partIndex, startOffset, endOffset, textFormat, flaggerSlug } = score.metadata
       return [
         {
           scoreId: score.id,
@@ -829,6 +831,7 @@ export const getIssueOccurrences = createServerFn({ method: "GET" })
           feedback: score.feedback,
           createdAt: score.createdAt.toISOString(),
           annotatorId: score.annotatorId,
+          flaggerSlug: flaggerSlug ?? null,
           anchor: {
             messageIndex,
             partIndex: partIndex ?? null,

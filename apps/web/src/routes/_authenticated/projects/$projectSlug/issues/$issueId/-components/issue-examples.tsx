@@ -1,23 +1,30 @@
 import {
+  Avatar,
   Button,
   Conversation,
   DetailSection,
   type FirstMatchHint,
   type HighlightRange,
   Icon,
+  LatitudeLogo,
   Sheet,
   Skeleton,
   Text,
   Tooltip,
   useMountEffect,
 } from "@repo/ui"
+import { relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
+import { useParams } from "@tanstack/react-router"
 import { ChevronLeftIcon, ChevronRightIcon, ListTreeIcon, Maximize2Icon, MessageSquareTextIcon } from "lucide-react"
 import { type RefObject, useMemo, useRef, useState } from "react"
 import { useIssueOccurrences } from "../../../../../../../domains/issues/issues.collection.ts"
 import type { IssueOccurrenceRecord } from "../../../../../../../domains/issues/issues.functions.ts"
+import { useMemberByUserIdMap } from "../../../../../../../domains/members/members.collection.ts"
+import { pickUserFromMembersMap } from "../../../../../../../domains/members/pick-users-from-members.ts"
 import { useTraceDetail } from "../../../../../../../domains/traces/traces.collection.ts"
 import { useParamState } from "../../../../../../../lib/hooks/useParamState.ts"
+import { FlaggerBadge } from "../../../-components/flaggers/flagger-badge.tsx"
 import { TraceDetailDrawer } from "../../../-components/trace-detail-drawer.tsx"
 
 const SCROLL_OBSERVER_TIMEOUT_MS = 2000
@@ -172,6 +179,46 @@ function ExampleConversation({
 }
 
 /**
+ * Renders the occurrence's annotation the way it appears elsewhere: the author
+ * (member avatar + name, or Latitude + flagger badge for automatic flaggers)
+ * with the feedback comment underneath.
+ */
+function OccurrenceAnnotation({
+  projectId,
+  occurrence,
+}: {
+  readonly projectId: string
+  readonly occurrence: IssueOccurrenceRecord
+}) {
+  const { projectSlug } = useParams({ strict: false })
+  const memberByUserId = useMemberByUserIdMap()
+  const annotator = pickUserFromMembersMap(memberByUserId, occurrence.annotatorId)
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-row items-center gap-2">
+        {occurrence.flaggerSlug ? (
+          <div className="flex flex-row items-center gap-1.5">
+            <LatitudeLogo className="h-4 w-4" />
+            <Text.H6 weight="bold">Latitude</Text.H6>
+            <FlaggerBadge projectId={projectId} projectSlug={projectSlug} slug={occurrence.flaggerSlug} />
+          </div>
+        ) : annotator ? (
+          <>
+            <Avatar name={annotator.name} imageSrc={annotator.imageSrc} size="xs" />
+            <Text.H6 weight="bold">{annotator.name}</Text.H6>
+          </>
+        ) : (
+          <Text.H6 weight="bold">Annotation</Text.H6>
+        )}
+        <Text.H6 color="foregroundMuted">{relativeTime(new Date(occurrence.createdAt))}</Text.H6>
+      </div>
+      <Text.H5 color="foreground">{occurrence.feedback}</Text.H5>
+    </div>
+  )
+}
+
+/**
  * Examples carousel: cycles through an issue's pinpointed occurrences and, for
  * each, renders its conversation scrolled to and framing the exact flagged
  * message/substring (same highlight treatment as search), with the annotator
@@ -228,7 +275,7 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
           No pinpointed examples yet. Examples appear when an occurrence is annotated on a specific message.
         </Text.H6>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 rounded-lg bg-secondary p-4">
           <div className="flex flex-row items-center justify-between gap-2">
             <Text.H6 color="foregroundMuted">
               Example {currentIndex + 1} of {occurrences.length}
@@ -288,14 +335,12 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
             </div>
           </div>
 
-          <div className="flex flex-col gap-1 rounded-lg bg-secondary p-3">
-            <Text.H6 color="foregroundMuted">Feedback</Text.H6>
-            <Text.H5 color="foreground">{current.feedback}</Text.H5>
-          </div>
-
           {/* Keyed by score id: switching examples remounts the viewer so the
               scroll-to-anchor effect re-runs for the new occurrence. */}
           <ExampleConversation key={current.scoreId} projectId={projectId} occurrence={current} />
+
+          {/* The feedback rendered as its underlying annotation (author + comment). */}
+          <OccurrenceAnnotation projectId={projectId} occurrence={current} />
         </div>
       )}
 
