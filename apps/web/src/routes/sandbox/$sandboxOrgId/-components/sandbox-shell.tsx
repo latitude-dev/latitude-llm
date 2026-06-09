@@ -1,52 +1,92 @@
-import { Button, CopyableText, Icon, Text } from "@repo/ui"
-import { getRouteApi, Link, Outlet, useParams, useRouterState } from "@tanstack/react-router"
+import { Button, CopyableText, cn, Icon, Text, useToast } from "@repo/ui"
+import { eq } from "@tanstack/react-db"
+import { getRouteApi, Link, Outlet, useParams, useRouter, useRouterState } from "@tanstack/react-router"
 import { ArrowLeftRight, TextAlignStartIcon } from "lucide-react"
 import { useState } from "react"
+import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
+import { useSandboxLifecycleMutations } from "../../../../domains/sandbox/sandbox.collection.ts"
 import { useSandboxProjects } from "../../../../domains/sandbox/sandbox-projects.collection.ts"
 import { AppSidebar, NavItem } from "../../../../layouts/AppSidebar/index.tsx"
+import { toUserMessage } from "../../../../lib/errors.ts"
 import { SandboxConfigModal } from "./sandbox-config-modal.tsx"
 import { SandboxNavHeader } from "./sandbox-nav-header.tsx"
 
 const sandboxRoute = getRouteApi("/sandbox/$sandboxOrgId")
 
-/**
- * Thin primary-blue strip at the very top of the sandbox. It's the *underlying
- * layer*: the white app panel below sits on top with rounded top corners, so the
- * blue peeks through as concave notches (per AGE-128 / the design reference).
- * Left: a lightweight "Switch to live" link; center: the reassurance message;
- * right: "View configuration" (once on a project) to grab the slug + API key
- * after the onboarding empty state is gone.
- */
 function SandboxStrip({
   sandboxOrgId,
   sandboxName,
   projectSlug,
+  liveProjectSlug,
+  isArchived,
 }: {
   readonly sandboxOrgId: string
   readonly sandboxName: string
   readonly projectSlug?: string | undefined
+  readonly liveProjectSlug?: string | undefined
+  readonly isArchived: boolean
 }) {
   const [configOpen, setConfigOpen] = useState(false)
+  const { toast } = useToast()
+  const router = useRouter()
+  const { reactivate } = useSandboxLifecycleMutations()
+
+  const activate = async () => {
+    try {
+      await reactivate.mutateAsync(sandboxOrgId)
+      await router.invalidate()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Could not activate sandbox",
+        description: toUserMessage(error),
+      })
+    }
+  }
 
   return (
     <div className="relative flex shrink-0 items-center justify-between gap-4 px-4 py-3 text-primary-foreground">
-      <Link
-        to="/"
-        className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary-foreground hover:underline"
-      >
-        <Icon icon={ArrowLeftRight} size="xs" color="white" />
-        Switch to live
-      </Link>
-      <Text.H6 color="white" className="pointer-events-none absolute inset-x-0 text-center opacity-95">
-        You're testing in a sandbox. Data you send here doesn't affect your live traces.
-      </Text.H6>
+      {liveProjectSlug ? (
+        <Link
+          to="/projects/$projectSlug"
+          params={{ projectSlug: liveProjectSlug }}
+          className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary-foreground hover:underline"
+        >
+          <Icon icon={ArrowLeftRight} size="xs" color="white" />
+          Switch to live
+        </Link>
+      ) : (
+        <Link
+          to="/"
+          className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary-foreground hover:underline"
+        >
+          <Icon icon={ArrowLeftRight} size="xs" color="white" />
+          Switch to live
+        </Link>
+      )}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-3">
+        <Text.H6 color="white" className="text-center opacity-95">
+          {isArchived
+            ? "This sandbox is asleep. Activate it to resume sending traces."
+            : "You're testing in a sandbox. Data you send here doesn't affect your live traces."}
+        </Text.H6>
+        {isArchived ? (
+          <Button
+            variant="default"
+            size="sm"
+            className="pointer-events-auto shrink-0"
+            isLoading={reactivate.isPending}
+            onClick={() => void activate()}
+          >
+            Activate
+          </Button>
+        ) : null}
+      </div>
       {projectSlug ? (
-        // Outline-on-colour: ghost base (transparent container — `outline` is
-        // bg-secondary and the white fill can't be overridden via className),
-        // with a white border + white text for the blue strip.
         <Button
           variant="ghost"
           size="sm"
+          disabled={isArchived}
           onClick={() => setConfigOpen(true)}
           className="border border-primary-foreground/50 text-primary-foreground group-hover:bg-primary-foreground/10 group-hover:text-primary-foreground"
         >
@@ -66,28 +106,45 @@ function SandboxStrip({
   )
 }
 
-/**
- * Wrapper layout for the `/sandbox/:sandboxOrgId/*` namespace. The blue strip is
- * an underlying layer; the white app panel (header + sidebar + routed page) sits
- * on top with rounded top corners. The header mirrors production (project
- * switcher + account); the sidebar carries only **Traces** for now. Owns its own
- * viewport height because this namespace lives outside `_authenticated`.
- */
 export function SandboxShell() {
   const { sandboxOrgId } = sandboxRoute.useParams()
   const sandbox = sandboxRoute.useRouteContext({ select: (c) => c.sandbox })
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const { projectSlug } = useParams({ strict: false }) as { projectSlug?: string }
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const { projectSlug } = useParams({ strict: false }) as {
+    projectSlug?: string
+  }
   const { data: projects } = useSandboxProjects(sandboxOrgId)
   const currentProject = projectSlug ? projects?.find((p) => p.slug === projectSlug) : undefined
+
+  const linkedProjectId = currentProject?.linkedProjectId ?? undefined
+  const { data: liveProject } = useProjectsCollection(
+    (q) => q.where(({ project }) => eq(project.id, linkedProjectId ?? "\0")).findOne(),
+    [linkedProjectId],
+  )
+  const liveProjectSlug = linkedProjectId ? liveProject?.slug : undefined
+  const isArchived = sandbox.status === "archived"
 
   const tracesTo = projectSlug ? `/sandbox/${sandboxOrgId}/projects/${projectSlug}` : `/sandbox/${sandboxOrgId}`
   const tracesActive = pathname.startsWith(`/sandbox/${sandboxOrgId}/projects/`)
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-primary">
-      <SandboxStrip sandboxOrgId={sandboxOrgId} sandboxName={sandbox.name} projectSlug={projectSlug} />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-2xl bg-background">
+    <div className={cn("flex h-screen flex-col overflow-hidden", isArchived ? "bg-muted-foreground" : "bg-primary")}>
+      <SandboxStrip
+        sandboxOrgId={sandboxOrgId}
+        sandboxName={sandbox.name}
+        projectSlug={projectSlug}
+        liveProjectSlug={liveProjectSlug}
+        isArchived={isArchived}
+      />
+      <div
+        className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-2xl bg-background"
+        inert={isArchived}
+      >
+        {isArchived ? (
+          <div className="absolute inset-0 z-20 cursor-not-allowed bg-background/50" aria-hidden="true" />
+        ) : null}
         <SandboxNavHeader sandboxOrgId={sandboxOrgId} sandboxName={sandbox.name} />
         <div className="flex min-h-0 flex-1">
           <AppSidebar

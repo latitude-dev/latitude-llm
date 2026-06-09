@@ -4,7 +4,6 @@ import type { OutboxEventWriter } from "@domain/events"
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import type { ProjectRepository } from "@domain/projects"
 import {
-  archiveSandboxUseCase,
   createSandboxUseCase,
   deleteSandboxUseCase,
   reactivateSandboxUseCase,
@@ -180,10 +179,7 @@ describe("sandbox lifecycle use-cases", () => {
     expect(failure(secondExit)).toBeInstanceOf(SandboxActiveCapReachedError)
 
     // Archiving frees the single slot.
-    await runScoped(
-      parent.parentOrgId,
-      archiveSandboxUseCase({ sandboxOrganizationId: first.organization.id, actorUserId: parent.memberUserId }),
-    )
+    await pg.db.update(sandboxes).set({ status: "archived" }).where(eq(sandboxes.organizationId, first.organization.id))
 
     const third = await runScoped(
       parent.parentOrgId,
@@ -196,33 +192,21 @@ describe("sandbox lifecycle use-cases", () => {
     expect(third.sandbox.status).toBe("active")
   })
 
-  it("allows up to the Pro plan active cap of 15", async () => {
+  it("caps the Pro plan at 1 active sandbox too", async () => {
     const parent = await seedParentOrg({ plan: "pro" })
 
-    // Seed 14 active sandboxes directly, then a 15th via the use-case succeeds.
-    for (let i = 0; i < 14; i++) {
-      await seedSandbox(parent, "active")
-    }
-    const fifteenth = await runScoped(
+    const first = await runScoped(
       parent.parentOrgId,
-      createSandboxUseCase({
-        parentOrganizationId: parent.parentOrgId,
-        actorUserId: parent.memberUserId,
-        name: "Fifteen",
-      }),
+      createSandboxUseCase({ parentOrganizationId: parent.parentOrgId, actorUserId: parent.memberUserId, name: "One" }),
     )
-    expect(fifteenth.sandbox.status).toBe("active")
+    expect(first.sandbox.status).toBe("active")
 
-    // The 16th exceeds the cap.
-    const sixteenthExit = await runScopedExit(
+    // Every plan now caps at a single active sandbox, so the second is refused.
+    const secondExit = await runScopedExit(
       parent.parentOrgId,
-      createSandboxUseCase({
-        parentOrganizationId: parent.parentOrgId,
-        actorUserId: parent.memberUserId,
-        name: "Sixteen",
-      }),
+      createSandboxUseCase({ parentOrganizationId: parent.parentOrgId, actorUserId: parent.memberUserId, name: "Two" }),
     )
-    expect(failure(sixteenthExit)).toBeInstanceOf(SandboxActiveCapReachedError)
+    expect(failure(secondExit)).toBeInstanceOf(SandboxActiveCapReachedError)
   })
 
   it("reactivates an archived sandbox only within the cap", async () => {
@@ -238,10 +222,7 @@ describe("sandbox lifecycle use-cases", () => {
 
     // Archive it again, fill the single slot with another active sandbox, and
     // reactivation must now be refused.
-    await runScoped(
-      parent.parentOrgId,
-      archiveSandboxUseCase({ sandboxOrganizationId: archived, actorUserId: parent.memberUserId }),
-    )
+    await pg.db.update(sandboxes).set({ status: "archived" }).where(eq(sandboxes.organizationId, archived))
     await seedSandbox(parent, "active")
 
     const refusedExit = await runScopedExit(

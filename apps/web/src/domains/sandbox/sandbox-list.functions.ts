@@ -7,47 +7,24 @@ import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient } from "../../server/clients.ts"
 
 /**
- * A sandbox as seen from its *parent* live org — the shape the switcher and the
- * "your sandboxes" settings list render. The `organizationId` is the sandbox
- * org's own id (used to route into `/sandbox/:sandboxOrgId/...`).
+ * The sandbox org ids owned by the caller's active (parent) org — all the
+ * sidebar toggle needs to find-or-navigate the org's single sandbox. Reads on
+ * the admin client because each sandbox's rows are RLS-scoped to its *own* org,
+ * so a parent-scoped connection can't see them; authorization is the session
+ * itself — the caller can only ever list their own active org's family.
  */
-export interface SandboxListItemDto {
-  readonly organizationId: string
-  readonly name: string
-  readonly slug: string
-  readonly status: "active" | "archived"
-  readonly lastActivityAt: string
-  readonly createdAt: string
-  readonly owner: { readonly name: string | null; readonly email: string } | null
-}
-
-/**
- * Lists every sandbox (active *and* archived) owned by the caller's active
- * (parent) org. Reads on the admin client because each sandbox's rows are
- * RLS-scoped to its *own* org, so a parent-scoped connection can't see them;
- * authorization is the session itself — the caller can only ever list their
- * own active org's family.
- */
-export const listSandboxesForParentOrg = createServerFn({ method: "GET" }).handler(
-  async (): Promise<readonly SandboxListItemDto[]> => {
+export const listSandboxOrgIdsForParentOrg = createServerFn({ method: "GET" }).handler(
+  async (): Promise<readonly string[]> => {
     const { organizationId } = await requireSession()
     const client = getAdminPostgresClient()
 
-    const items = await Effect.runPromise(
+    const ids = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SandboxRepository
-        return yield* repo.listByParentOrgId(organizationId)
+        return yield* repo.listOrganizationIdsByParentOrgId(organizationId)
       }).pipe(withPostgres(SandboxRepositoryLive, client, organizationId), withTracing),
     )
 
-    return items.map((item) => ({
-      organizationId: item.sandbox.organizationId,
-      name: item.organizationName,
-      slug: item.organizationSlug,
-      status: item.sandbox.status,
-      lastActivityAt: item.sandbox.lastActivityAt.toISOString(),
-      createdAt: item.sandbox.createdAt.toISOString(),
-      owner: item.owner ? { name: item.owner.name, email: item.owner.email } : null,
-    }))
+    return ids.map((id) => String(id))
   },
 )

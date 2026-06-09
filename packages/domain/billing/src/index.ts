@@ -13,7 +13,6 @@ export {
   calculateOverageAmountMills,
   calculatePlanSpendMills,
   ENTERPRISE_PLAN_CONFIG,
-  ENTERPRISE_SANDBOX_ACTIVE_CAP,
   FREE_PLAN_CONFIG,
   OverageCreditUnit,
   PLAN_CONFIGS,

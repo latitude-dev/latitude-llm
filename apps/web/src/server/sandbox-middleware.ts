@@ -39,6 +39,7 @@ interface ResolvedSandbox {
   readonly organizationId: OrganizationId
   readonly name: string
   readonly parentOrgId: OrganizationId
+  readonly status: "active" | "archived"
 }
 
 interface SandboxAccess {
@@ -61,6 +62,7 @@ export const sandboxMiddleware = createMiddleware({ type: "function" }).server(a
       organizationId: OrganizationId(dto.sandbox.organizationId),
       name: dto.sandbox.name,
       parentOrgId: OrganizationId(dto.sandbox.parentOrgId),
+      status: dto.sandbox.status,
     },
   }
   return rawArgs.next({

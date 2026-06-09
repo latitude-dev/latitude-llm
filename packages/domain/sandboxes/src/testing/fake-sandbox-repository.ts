@@ -51,17 +51,12 @@ export const createFakeSandboxRepository = (overrides?: Partial<SandboxRepositor
         }
         return archived
       }),
-    listByParentOrgId: (parentOrgId) =>
+    listOrganizationIdsByParentOrgId: (parentOrgId) =>
       Effect.succeed(
         [...sandboxes.values()]
           .filter((sandbox) => parentByOrganizationId.get(sandbox.organizationId) === parentOrgId)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-          .map((sandbox) => ({
-            sandbox,
-            organizationName: sandbox.organizationId,
-            organizationSlug: sandbox.organizationId,
-            owner: null,
-          })),
+          .map((sandbox) => sandbox.organizationId),
       ),
 
     // No-op: in-memory tests are single-threaded, so there's no lock to take.

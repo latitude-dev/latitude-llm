@@ -18,6 +18,10 @@ export interface ProductionProjectOption {
  * "Production project" (attach → linked sandbox project) vs "New project"
  * (sandbox-only) — instead of smuggling "create new" in as a dropdown option.
  * Fully controlled; the parent owns the state and the submit action.
+ *
+ * When `allowProduction` is false (every production project is already attached)
+ * the toggle and the production picker collapse away, leaving just the
+ * sandbox-only name field — there's nothing left to attach.
  */
 export function SandboxProjectChooser({
   mode,
@@ -28,6 +32,7 @@ export function SandboxProjectChooser({
   newName,
   onNewNameChange,
   loading,
+  allowProduction = true,
 }: {
   readonly mode: SandboxProjectMode
   readonly onModeChange: (mode: SandboxProjectMode) => void
@@ -37,25 +42,28 @@ export function SandboxProjectChooser({
   readonly newName: string
   readonly onNewNameChange: (name: string) => void
   readonly loading?: boolean
+  readonly allowProduction?: boolean
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="inline-flex w-fit items-center gap-1 rounded-lg border border-border bg-secondary p-0.5">
-        {MODE_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => onModeChange(option.id)}
-            className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", {
-              "bg-background text-foreground shadow-sm": mode === option.id,
-              "text-muted-foreground hover:text-foreground": mode !== option.id,
-            })}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-      {mode === "existing" ? (
+      {allowProduction ? (
+        <div className="inline-flex w-fit items-center gap-1 rounded-lg border border-border bg-secondary p-0.5">
+          {MODE_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onModeChange(option.id)}
+              className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", {
+                "bg-background text-foreground shadow-sm": mode === option.id,
+                "text-muted-foreground hover:text-foreground": mode !== option.id,
+              })}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {allowProduction && mode === "existing" ? (
         <Select
           name="sandbox-production-project"
           label="Project to debug"

@@ -1,6 +1,5 @@
 import {
   BellRingIcon,
-  Boxes,
   Building2,
   CreditCard,
   DatabaseIcon,
@@ -20,7 +19,7 @@ import {
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
-type SectionFlag = "behaviours" | "monitors" | "sso" | "sandbox"
+type SectionFlag = "behaviours" | "monitors" | "sso"
 
 interface ProjectSection {
   readonly key: string
@@ -148,13 +147,6 @@ const PROJECT_SETTINGS_GROUPS: readonly ProjectSettingsGroup[] = [
         path: (slug) => `/projects/${slug}/settings/billing`,
       },
       {
-        key: "sandboxes",
-        label: "Sandboxes",
-        icon: Boxes,
-        path: (slug) => `/projects/${slug}/settings/sandboxes`,
-        flag: "sandbox",
-      },
-      {
         key: "integrations",
         label: "Integrations",
         icon: Plug,
@@ -187,8 +179,7 @@ function useSectionFlags(): Record<SectionFlag, boolean> {
   const behaviours = useHasFeatureFlag("behaviours")
   const monitors = useHasFeatureFlag("monitors")
   const sso = useHasFeatureFlag("sso")
-  const sandbox = useHasFeatureFlag("sandbox")
-  return useMemo(() => ({ behaviours, monitors, sso, sandbox }), [behaviours, monitors, sso, sandbox])
+  return useMemo(() => ({ behaviours, monitors, sso }), [behaviours, monitors, sso])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */
