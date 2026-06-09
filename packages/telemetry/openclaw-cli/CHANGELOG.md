@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-06-08
+
+Lockstep release with `@latitude-data/openclaw-telemetry` 0.0.8, which drops the `apiKey` / `project` `required` constraint from the plugin's `configSchema`. `RUNTIME_VERSION` is bumped to `0.0.8` so `latitude-openclaw install` pins to the fixed runtime.
+
 ### Fixed
 
+- **Install, upgrade, and re-keying no longer fail on OpenClaw 2026.5+.** `openclaw plugins install <spec> --force` (this CLI's step 2) recreates `plugins.entries[id]` with an empty `config` and validates it against the plugin's `configSchema` before the CLI layers credentials in (step 3). Newer OpenClaw enforces `configSchema.required` at that point, so the transient configless entry aborted the install with `invalid config: must have required property 'apiKey'` — including when re-running to replace an existing entry's API key. The fix is in the runtime manifest (`required` removed); this CLI bumps `RUNTIME_VERSION` to `0.0.8` to install it. No CLI code change beyond the pin.
 - Installer links now point to the current Latitude docs and API key settings URLs.
 
 ## [0.0.7] - 2026-04-29

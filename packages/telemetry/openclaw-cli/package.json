@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/openclaw-telemetry-cli",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "One-shot installer for the @latitude-data/openclaw-telemetry OpenClaw plugin. Configures credentials, plugins.allow, and the gateway-restart prompt against ~/.openclaw/openclaw.json.",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",

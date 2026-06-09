@@ -2,18 +2,18 @@
   "id": "@latitude-data/openclaw-telemetry",
   "name": "Latitude Telemetry",
   "description": "Streams every OpenClaw agent run to Latitude as OTLP traces — full prompt, message history, assistant output, tool I/O, token usage, and agent name.",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "configSchema": {
     "type": "object",
     "additionalProperties": true,
     "properties": {
       "apiKey": {
         "type": "string",
-        "description": "Latitude bearer token. Required."
+        "description": "Latitude bearer token. Needed for the plugin to emit; when absent the plugin stays inactive (it does not error). The installer writes it after `openclaw plugins install` creates the entry, so it is intentionally not schema-required."
       },
       "project": {
         "type": "string",
-        "description": "Latitude project slug to route traces into. Required."
+        "description": "Latitude project slug to route traces into. Needed for the plugin to emit; when absent the plugin stays inactive. Not schema-required for the same reason as apiKey."
       },
       "baseUrl": {
         "type": "string",
@@ -34,7 +34,6 @@
         "default": true,
         "description": "Set to false to pause emission without uninstalling."
       }
-    },
-    "required": ["apiKey", "project"]
+    }
   }
 }

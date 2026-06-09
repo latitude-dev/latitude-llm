@@ -33,7 +33,7 @@ import { readCliVersion } from "./version.ts"
  * supply-chain audit warning automatically.
  */
 const RUNTIME_PACKAGE_NAME = "@latitude-data/openclaw-telemetry"
-const RUNTIME_VERSION = "0.0.7"
+const RUNTIME_VERSION = "0.0.8"
 
 const DOCS_URL = "https://docs.latitude.so/telemetry/openclaw"
 
