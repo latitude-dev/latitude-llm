@@ -36,7 +36,6 @@ const oauthContext = (result: OAuthTokenAuthResult): AuthContext => ({
   oauthClientId: result.oauthClientId,
   scopes: result.scopes,
   expiresAt: result.expiresAt,
-  email: result.email,
 })
 
 const authenticateWithApiKey = (

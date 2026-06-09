@@ -9,7 +9,6 @@ import {
 } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { createMiddleware, createStart } from "@tanstack/react-start"
-import { getSession } from "./domains/sessions/session.functions.ts"
 
 type Logger = ReturnType<typeof createLogger>
 
@@ -120,25 +119,6 @@ export const tracingFnMiddleware = ({ tracer, logger }: { tracer: Tracer; logger
       if (traceId) span.setAttribute("trace.trace_id", traceId)
       if (issueId) span.setAttribute("issue.id", issueId)
       if (datasetId) span.setAttribute("dataset.id", datasetId)
-
-      // Best-effort tenant/user enrichment so Datadog error issues carry the
-      // affected org + user. Uses Datadog's reserved `usr.*` keys (native user
-      // facet) plus a custom `organization.id`. `getSession()` rides Better
-      // Auth's 5-min cookie cache (cheap) and calling this server fn from the
-      // global fn-middleware does not recurse — TanStack does not re-apply
-      // global middleware to nested server-fn calls. Never affects handling.
-      try {
-        const session = await getSession()
-        if (session) {
-          span.setAttribute("usr.id", session.user.id)
-          if (session.user.email) span.setAttribute("usr.email", session.user.email)
-          if (session.user.name) span.setAttribute("usr.name", session.user.name)
-          const organizationId = session.session.activeOrganizationId
-          if (organizationId) span.setAttribute("organization.id", organizationId)
-        }
-      } catch {
-        // Unauthenticated request or session lookup failed — skip enrichment.
-      }
 
       try {
         const result = await rawArgs.next()

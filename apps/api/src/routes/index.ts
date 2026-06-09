@@ -3,7 +3,6 @@ import { API_VERSION } from "../constants.ts"
 import { registerMcpRoute } from "../mcp/index.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
-import { createSpanEnrichmentMiddleware } from "../middleware/span-enrichment.ts"
 import { validationErrorMiddleware } from "../middleware/validation.ts"
 import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
 import { accountPath, createAccountRoutes } from "./account.ts"
@@ -53,7 +52,6 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
     }),
   )
   routes.use("*", createOrganizationContextMiddleware())
-  routes.use("*", createSpanEnrichmentMiddleware())
 
   routes.route(projectsPath, createProjectsRoutes())
   routes.route(scoresPath, createScoresRoutes())

@@ -4,7 +4,7 @@ import type { RedisClient } from "@platform/cache-redis"
 // drizzle-orm version (peer-dep collisions cause private-property typecheck
 // errors otherwise).
 import { eq, type PostgresClient } from "@platform/db-postgres"
-import { oauthAccessTokens, oauthApplications, users } from "@platform/db-postgres/schema/better-auth"
+import { oauthAccessTokens, oauthApplications } from "@platform/db-postgres/schema/better-auth"
 import { hash } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
@@ -42,12 +42,6 @@ export interface OAuthTokenAuthResult {
   readonly scopes: ReadonlyArray<string>
   /** Token's `accessTokenExpiresAt`. Cached entries re-check this on hit. */
   readonly expiresAt: Date
-  /**
-   * Email of the granting user, for telemetry/observability enrichment only
-   * (e.g. the `usr.email` span attribute). Optional: cache entries written
-   * before this field existed omit it, so consumers must tolerate `undefined`.
-   */
-  readonly email?: string | undefined
 }
 
 /**
@@ -61,7 +55,6 @@ interface CachedOAuthTokenAuthResult {
   readonly oauthClientId: string
   readonly scopes: ReadonlyArray<string>
   readonly expiresAt: string
-  readonly email?: string | undefined
 }
 
 const isCachedOAuthResult = (value: unknown): value is CachedOAuthTokenAuthResult | null => {
@@ -74,10 +67,7 @@ const isCachedOAuthResult = (value: unknown): value is CachedOAuthTokenAuthResul
     typeof v.oauthClientId === "string" &&
     Array.isArray(v.scopes) &&
     v.scopes.every((s) => typeof s === "string") &&
-    typeof v.expiresAt === "string" &&
-    // `email` is optional: legacy cache entries (written before it existed)
-    // simply omit it. Reject only a present-but-non-string value.
-    (v.email === undefined || typeof v.email === "string")
+    typeof v.expiresAt === "string"
   )
 }
 
@@ -98,7 +88,6 @@ const getCached = (
         oauthClientId: parsed.oauthClientId,
         scopes: parsed.scopes,
         expiresAt: new Date(parsed.expiresAt),
-        email: parsed.email,
       } satisfies OAuthTokenAuthResult
     },
     catch: () => undefined,
@@ -119,7 +108,6 @@ const cache = (
           oauthClientId: result.oauthClientId,
           scopes: result.scopes,
           expiresAt: result.expiresAt.toISOString(),
-          email: result.email,
         } satisfies CachedOAuthTokenAuthResult)
   return Effect.tryPromise({
     try: () => withTimeout(redis.setex(getCacheKey(tokenHash), ttl, JSON.stringify(payload)), undefined),
@@ -179,7 +167,6 @@ interface DbRow {
   readonly accessTokenExpiresAt: Date | null
   readonly applicationDisabled: boolean | null
   readonly organizationId: string | null
-  readonly email: string | null
 }
 
 const lookupByToken = (client: PostgresClient, token: string): Promise<DbRow | undefined> =>
@@ -192,16 +179,9 @@ const lookupByToken = (client: PostgresClient, token: string): Promise<DbRow | u
       accessTokenExpiresAt: oauthAccessTokens.accessTokenExpiresAt,
       applicationDisabled: oauthApplications.disabled,
       organizationId: oauthApplications.organizationId,
-      // For telemetry enrichment only (`usr.email` span attribute). The join
-      // is on the user the token was issued to; rides along on the cache-miss
-      // path, so it adds no per-request cost beyond the existing 5-min cache.
-      email: users.email,
     })
     .from(oauthAccessTokens)
     .innerJoin(oauthApplications, eq(oauthApplications.clientId, oauthAccessTokens.clientId))
-    // LEFT join: `email` is telemetry-only, so a missing/deleted user must not
-    // change token validity. A null email just means no `usr.email` attribute.
-    .leftJoin(users, eq(users.id, oauthAccessTokens.userId))
     .where(eq(oauthAccessTokens.accessToken, token))
     .limit(1)
     .then((rows) => rows[0])
@@ -314,7 +294,6 @@ export const validateOAuthAccessToken = (
       oauthClientId: row.clientId,
       scopes: parseScopes(row.scopes),
       expiresAt: row.accessTokenExpiresAt,
-      email: row.email ?? undefined,
     }
 
     yield* cache(redis, tokenHash, result, ttlFromExpiry(row.accessTokenExpiresAt))

@@ -113,8 +113,7 @@ export const stagingConfig: EnvironmentConfig = {
       {
         name: "web",
         cpu: 512,
-        // Match production memory: staging web SSR/runtime now exceeds 1 GiB and ECS kills the container.
-        memory: 2048,
+        memory: 1024,
         port: 8080,
         healthCheckPath: "/api/health",
         desiredCount: 1,
