@@ -549,6 +549,7 @@ function ProjectPage() {
           filters={filters}
           mode={activeTab}
           onTimeRangeSelect={onTimeRangeSelect}
+          {...(hasSearchQuery ? { searchQuery: query } : {})}
         />
       </div>
 

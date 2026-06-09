@@ -1,6 +1,7 @@
 import { AI, AIError, type AIShape } from "@domain/ai"
 import { type ChSqlClient, isNotFoundError, OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import {
+  emptySessionMetrics,
   type SessionListPage,
   SessionRepository,
   type SessionRepositoryShape,
@@ -2160,6 +2161,162 @@ describe("SessionRepository", () => {
           }),
         )
         expect(page.items.map((s) => s.sessionId)).toEqual(["dur-long", "dur-medium", "dur-short"])
+      })
+    })
+
+    // The metrics + histogram panels must agree with the searched list/count:
+    // both aggregate over the same trace_rollup → session_rollup candidate set,
+    // so non-matching sessions drop out and per-session numerics reflect only
+    // the matched traces.
+    describe("metrics + histogram in search mode", () => {
+      it("aggregateMetricsByProjectId rolls up matched-trace numerics over matched sessions", async () => {
+        const start = new Date(Date.UTC(2026, 0, 12, 10, 0, 0))
+        const sessionM1 = "mh-match-1"
+        const sessionM2 = "mh-match-2"
+        const sessionN = "mh-nomatch"
+        const m1a = padTrace("mh1a")
+        const m1b = padTrace("mh1b")
+        const m2a = padTrace("mh2a")
+        const n1 = padTrace("mhn1")
+
+        await insertSpans([
+          makeSpanRow({
+            traceId: m1a,
+            spanId: padSpan("mh1a"),
+            sessionId: sessionM1,
+            startTime: start,
+            costTotalMicrocents: 100,
+          }),
+          makeSpanRow({
+            traceId: m1b,
+            spanId: padSpan("mh1b"),
+            sessionId: sessionM1,
+            startTime: new Date(start.getTime() + 1_000),
+            costTotalMicrocents: 200,
+          }),
+          makeSpanRow({
+            traceId: m2a,
+            spanId: padSpan("mh2a"),
+            sessionId: sessionM2,
+            startTime: new Date(start.getTime() + 2_000),
+            costTotalMicrocents: 400,
+          }),
+          makeSpanRow({
+            traceId: n1,
+            spanId: padSpan("mhn1"),
+            sessionId: sessionN,
+            startTime: new Date(start.getTime() + 3_000),
+            costTotalMicrocents: 9_999,
+          }),
+        ])
+        await insertSearchDocs([
+          { traceId: m1a, text: "metricsneedle alpha", startTime: start, contentHashSuffix: "mh1a" },
+          { traceId: m1b, text: "metricsneedle beta", startTime: start, contentHashSuffix: "mh1b" },
+          { traceId: m2a, text: "metricsneedle gamma", startTime: start, contentHashSuffix: "mh2a" },
+          { traceId: n1, text: "unrelated chatter", startTime: start, contentHashSuffix: "mhn1" },
+        ])
+
+        const searchQuery = '"metricsneedle"'
+        const metrics = await runCh(
+          repo.aggregateMetricsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery }),
+        )
+        const count = await runCh(repo.countByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery }))
+
+        expect(count.totalCount).toBe(2)
+        expect(count.matchingTraceCount).toBe(3)
+        // traceCount mirrors matchingTraceCount; the non-matching session is excluded.
+        expect(metrics.traceCount).toBe(3)
+        // Cost is rolled up per session first (M1 = 100 + 200 = 300, M2 = 400),
+        // then min/max/sum are taken across sessions.
+        expect(metrics.costTotalMicrocents.sum).toBe(700)
+        expect(metrics.costTotalMicrocents.min).toBe(300)
+        expect(metrics.costTotalMicrocents.max).toBe(400)
+      })
+
+      it("histogramByProjectId buckets matched sessions and excludes non-matching", async () => {
+        const start = new Date(Date.UTC(2026, 0, 13, 10, 0, 0))
+        const sessionA = "hh-a"
+        const sessionB = "hh-b"
+        const sessionN = "hh-n"
+        const a1 = padTrace("hha1")
+        const a2 = padTrace("hha2")
+        const b1 = padTrace("hhb1")
+        const n1 = padTrace("hhn1")
+
+        await insertSpans([
+          makeSpanRow({
+            traceId: a1,
+            spanId: padSpan("hha1"),
+            sessionId: sessionA,
+            startTime: start,
+            costTotalMicrocents: 50,
+          }),
+          makeSpanRow({
+            traceId: a2,
+            spanId: padSpan("hha2"),
+            sessionId: sessionA,
+            startTime: new Date(start.getTime() + 1_000),
+            costTotalMicrocents: 70,
+          }),
+          makeSpanRow({
+            traceId: b1,
+            spanId: padSpan("hhb1"),
+            sessionId: sessionB,
+            startTime: new Date(start.getTime() + 2_000),
+            costTotalMicrocents: 30,
+          }),
+          makeSpanRow({
+            traceId: n1,
+            spanId: padSpan("hhn1"),
+            sessionId: sessionN,
+            startTime: new Date(start.getTime() + 3_000),
+            costTotalMicrocents: 9_000,
+          }),
+        ])
+        await insertSearchDocs([
+          { traceId: a1, text: "histoneedle one", startTime: start, contentHashSuffix: "hha1" },
+          { traceId: a2, text: "histoneedle two", startTime: start, contentHashSuffix: "hha2" },
+          { traceId: b1, text: "histoneedle three", startTime: start, contentHashSuffix: "hhb1" },
+          { traceId: n1, text: "background noise", startTime: start, contentHashSuffix: "hhn1" },
+        ])
+
+        const searchQuery = '"histoneedle"'
+        const buckets = await runCh(
+          repo.histogramByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            bucketSeconds: 3600,
+            searchQuery,
+          }),
+        )
+        const count = await runCh(repo.countByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery }))
+
+        const sessionTotal = buckets.reduce((acc, b) => acc + b.sessionCount, 0)
+        const traceTotal = buckets.reduce((acc, b) => acc + b.traceCount, 0)
+        const costTotal = buckets.reduce((acc, b) => acc + b.costTotalMicrocentsSum, 0)
+
+        // Buckets agree with the searched count: 2 sessions, 3 matched traces.
+        expect(sessionTotal).toBe(count.totalCount)
+        expect(traceTotal).toBe(count.matchingTraceCount)
+        // The non-matching session's 9_000 microcents never enters the rollup.
+        expect(costTotal).toBe(50 + 70 + 30)
+      })
+
+      it("returns empty metrics and no buckets when the search matches nothing", async () => {
+        const searchQuery = '"needle-that-matches-no-document-zzz"'
+        const metrics = await runCh(
+          repo.aggregateMetricsByProjectId({ organizationId: ORG_ID, projectId: PROJECT_ID, searchQuery }),
+        )
+        const buckets = await runCh(
+          repo.histogramByProjectId({
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            bucketSeconds: 3600,
+            searchQuery,
+          }),
+        )
+        expect(metrics).toEqual(emptySessionMetrics())
+        expect(buckets).toEqual([])
       })
     })
 

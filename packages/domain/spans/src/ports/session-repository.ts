@@ -49,6 +49,7 @@ export interface SessionRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
+    readonly searchQuery?: string
   }): Effect.Effect<SessionMetrics, RepositoryError, ChSqlClient>
 
   histogramByProjectId(input: {
@@ -56,6 +57,7 @@ export interface SessionRepositoryShape {
     readonly projectId: ProjectId
     readonly filters?: FilterSet
     readonly bucketSeconds: number
+    readonly searchQuery?: string
   }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError, ChSqlClient>
 
   findBySessionId(input: {

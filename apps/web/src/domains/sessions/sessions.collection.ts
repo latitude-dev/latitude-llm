@@ -253,21 +253,24 @@ export function useSessionCohortSummary({ projectId }: { readonly projectId: str
 export function useSessionMetrics({
   projectId,
   filters,
+  searchQuery,
 }: {
   readonly projectId: string
   readonly filters?: FilterSet
+  readonly searchQuery?: string
 }) {
   const scope = use(TraceScopeContext)
   const effectiveFilters = useMemo(() => withSessionDefaults(filters), [filters])
 
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "sessions-metrics", projectId, effectiveFilters],
+    queryKey: [...traceScopeKey(scope), "sessions-metrics", projectId, effectiveFilters, searchQuery],
     queryFn: () =>
       getSessionMetricsByProject({
         data: {
           ...traceScopeData(scope),
           projectId,
           filters: effectiveFilters,
+          ...(searchQuery ? { searchQuery } : {}),
         },
       }),
     staleTime: 30_000,
@@ -278,11 +281,13 @@ export function useSessionMetrics({
 export function useSessionTimeHistogram({
   projectId,
   filters,
+  searchQuery,
   rangeStartIso: rangeStartIsoOverride,
   rangeEndIso: rangeEndIsoOverride,
 }: {
   readonly projectId: string
   readonly filters: FilterSet
+  readonly searchQuery?: string
   readonly rangeStartIso?: string
   readonly rangeEndIso?: string
 }) {
@@ -309,12 +314,13 @@ export function useSessionTimeHistogram({
         "sessions-histogram",
         projectId,
         effectiveFilters,
+        searchQuery,
         effectiveRangeStartIso,
         effectiveRangeEndIso,
         bs,
       ] as const,
     }
-  }, [scope, projectId, effectiveFilters, rangeStartIsoOverride, rangeEndIsoOverride])
+  }, [scope, projectId, effectiveFilters, searchQuery, rangeStartIsoOverride, rangeEndIsoOverride])
 
   const query = useQuery({
     queryKey,
@@ -327,6 +333,7 @@ export function useSessionTimeHistogram({
           rangeEndIso,
           bucketSeconds,
           ...(Object.keys(effectiveFilters).length > 0 ? { filters: effectiveFilters } : {}),
+          ...(searchQuery ? { searchQuery } : {}),
         },
       }),
     staleTime: 30_000,

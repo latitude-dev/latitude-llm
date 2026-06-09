@@ -18,9 +18,11 @@ import type {
   SessionCountResult,
   SessionListCursor,
   SessionListPage,
+  SessionMetrics,
   SessionSearchMatch,
+  TraceTimeHistogramBucket,
 } from "@domain/spans"
-import { SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW } from "@domain/spans"
+import { emptySessionMetrics, SESSION_SEARCH_MAX_MATCHING_TRACES_PER_ROW } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect } from "effect"
 import { buildClickHouseWhere } from "../filter-builder.ts"
@@ -548,5 +550,281 @@ export const countSessionsBySearchQuery = ({
           matchingTraceCount: Number(rows[0]?.matching_trace_count_total ?? 0),
         })),
         Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
+      )
+  })
+
+/**
+ * Rolls the matched `trace_rollup` rows up to one row per session, summing the
+ * per-trace numerics the analytics panels report so the metrics/histogram agree
+ * with the searched list (`listSessionsBySearchQuery` projects the same shape).
+ * `session_start_time` (min over the session's matched traces) is the column the
+ * histogram buckets on, mirroring the non-search panels' `min(min_start_time)`.
+ *
+ * **Coupling**: like {@link TRACE_ROLLUP_BODY}, this embeds in a `WITH` that
+ * already declares the `trace_rollup` CTE; it is not standalone.
+ */
+const SESSION_ROLLUP_BODY = `
+  SELECT
+    session_id,
+    count()                       AS matching_trace_count,
+    min(start_time)               AS session_start_time,
+    sum(cost_total_microcents)    AS cost_total_microcents,
+    sum(span_count)               AS span_count,
+    sum(tokens_total)             AS tokens_total,
+    sum(duration_ns)              AS duration_ns,
+    sum(time_to_first_token_ns)   AS time_to_first_token_ns
+  FROM trace_rollup
+  GROUP BY session_id
+`
+
+const num = (raw: string | number): number => {
+  const n = typeof raw === "number" ? raw : Number(raw)
+  return Number.isFinite(n) ? n : 0
+}
+
+const toRollup = (min: string, max: string, avg: string, median: string, sum: string) => ({
+  min: num(min),
+  max: num(max),
+  avg: num(avg),
+  median: num(median),
+  sum: num(sum),
+})
+
+type SessionSearchMetricsRow = {
+  row_count: string
+  trace_count_sum: string
+  duration_min: string
+  duration_max: string
+  duration_avg: string
+  duration_median: string
+  duration_sum: string
+  cost_min: string
+  cost_max: string
+  cost_avg: string
+  cost_median: string
+  cost_sum: string
+  span_min: string
+  span_max: string
+  span_avg: string
+  span_median: string
+  span_sum: string
+  tokens_min: string
+  tokens_max: string
+  tokens_avg: string
+  tokens_median: string
+  tokens_sum: string
+  ttft_min: string
+  ttft_max: string
+  ttft_avg: string
+  ttft_median: string
+  ttft_sum: string
+}
+
+const toSessionSearchMetrics = (row: SessionSearchMetricsRow | undefined): SessionMetrics => {
+  if (!row || num(row.row_count) === 0) return emptySessionMetrics()
+  return {
+    durationNs: toRollup(row.duration_min, row.duration_max, row.duration_avg, row.duration_median, row.duration_sum),
+    costTotalMicrocents: toRollup(row.cost_min, row.cost_max, row.cost_avg, row.cost_median, row.cost_sum),
+    spanCount: toRollup(row.span_min, row.span_max, row.span_avg, row.span_median, row.span_sum),
+    tokensTotal: toRollup(row.tokens_min, row.tokens_max, row.tokens_avg, row.tokens_median, row.tokens_sum),
+    timeToFirstTokenNs: toRollup(row.ttft_min, row.ttft_max, row.ttft_avg, row.ttft_median, row.ttft_sum),
+    traceCount: num(row.trace_count_sum),
+  }
+}
+
+interface MetricsSearchInput {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly parsed: ParsedSearchQuery
+  readonly filters: FilterSet | undefined
+}
+
+/**
+ * Search-active metrics path. Aggregates min/max/avg/median/sum over the
+ * `session_rollup` (one row per session, numerics summed across that session's
+ * matched traces). The non-search aggregate in `session-repository.ts` runs the
+ * same SELECT against the `sessions` table; keeping the column aliases identical
+ * means the two share the `toSessionMetrics`-shaped contract and the cards read
+ * the same whether or not a search is active.
+ */
+export const aggregateMetricsBySearchQuery = ({
+  organizationId,
+  projectId,
+  parsed,
+  filters,
+}: MetricsSearchInput): Effect.Effect<SessionMetrics, RepositoryError, ChSqlClient> =>
+  Effect.gen(function* () {
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+    const plan = yield* planSearch(parsed)
+    const { telemetryParams, traceScoreWhere, scoreParams, finalHaving } = buildSearchFilters(filters)
+
+    const candidates = yield* fetchSearchCandidates({ organizationId, projectId, plan })
+    if (candidates.length === 0) return emptySessionMetrics()
+    const traceIds = candidates.map((c) => normalizeCHString(c.trace_id))
+    const relevanceScores = candidates.map((c) => Number(c.relevance_score))
+
+    return yield* chSqlClient
+      .query(async (client) => {
+        const result = await client.query({
+          query: `WITH
+                    mapFromArrays(
+                      {traceIds:Array(FixedString(32))},
+                      {relevanceScores:Array(Float64)}
+                    ) AS scoreByTrace,
+                    trace_rollup AS (${TRACE_ROLLUP_BODY}
+                    ${traceScoreWhere}
+                    GROUP BY
+                      t.organization_id, t.project_id, t.trace_id
+                    ${finalHaving}
+                  ),
+                  session_rollup AS (${SESSION_ROLLUP_BODY})
+                  SELECT
+                    count() AS row_count,
+                    sum(matching_trace_count) AS trace_count_sum,
+                    min(duration_ns) AS duration_min,
+                    max(duration_ns) AS duration_max,
+                    avg(duration_ns) AS duration_avg,
+                    quantileTDigest(0.5)(duration_ns) AS duration_median,
+                    sum(duration_ns) AS duration_sum,
+                    min(cost_total_microcents) AS cost_min,
+                    max(cost_total_microcents) AS cost_max,
+                    avg(cost_total_microcents) AS cost_avg,
+                    quantileTDigest(0.5)(cost_total_microcents) AS cost_median,
+                    sum(cost_total_microcents) AS cost_sum,
+                    min(span_count) AS span_min,
+                    max(span_count) AS span_max,
+                    avg(span_count) AS span_avg,
+                    quantileTDigest(0.5)(span_count) AS span_median,
+                    sum(span_count) AS span_sum,
+                    min(tokens_total) AS tokens_min,
+                    max(tokens_total) AS tokens_max,
+                    avg(tokens_total) AS tokens_avg,
+                    quantileTDigest(0.5)(tokens_total) AS tokens_median,
+                    sum(tokens_total) AS tokens_sum,
+                    minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
+                    maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
+                    avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,
+                    quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median,
+                    sumIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_sum
+                  FROM session_rollup`,
+          query_params: {
+            organizationId: organizationId as string,
+            projectId: projectId as string,
+            traceIds,
+            relevanceScores,
+            ...telemetryParams,
+            ...scoreParams,
+          },
+          format: "JSONEachRow",
+        })
+        return result.json<SessionSearchMetricsRow>()
+      })
+      .pipe(
+        Effect.map((rows) => toSessionSearchMetrics(rows[0])),
+        Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
+      )
+  })
+
+type SessionSearchHistogramRow = {
+  bucket_start: string
+  session_count: string
+  trace_count: string
+  cost_sum: string
+  duration_median: string
+  tokens_sum: string
+  span_sum: string
+  ttft_median: string
+}
+
+const toSessionSearchHistogramBucket = (row: SessionSearchHistogramRow): TraceTimeHistogramBucket => ({
+  bucketStart: parseCHDate(row.bucket_start).toISOString(),
+  sessionCount: num(row.session_count),
+  traceCount: num(row.trace_count),
+  costTotalMicrocentsSum: num(row.cost_sum),
+  durationNsMedian: num(row.duration_median),
+  tokensTotalSum: num(row.tokens_sum),
+  spanCountSum: num(row.span_sum),
+  timeToFirstTokenNsMedian: num(row.ttft_median),
+})
+
+interface HistogramSearchInput {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly parsed: ParsedSearchQuery
+  readonly filters: FilterSet | undefined
+  readonly bucketSeconds: number
+}
+
+/**
+ * Search-active histogram path. Buckets the matched `session_rollup` by each
+ * session's earliest matched-trace `start_time`. Time-window filters arrive in
+ * `filters` (merged upstream by `mergeTraceHistogramTimeFilters`) and are
+ * applied per-trace inside `trace_rollup` via `buildSearchFilters`, exactly like
+ * the list/count search paths.
+ */
+export const histogramBySearchQuery = ({
+  organizationId,
+  projectId,
+  parsed,
+  filters,
+  bucketSeconds,
+}: HistogramSearchInput): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError, ChSqlClient> =>
+  Effect.gen(function* () {
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+    const plan = yield* planSearch(parsed)
+    const { telemetryParams, traceScoreWhere, scoreParams, finalHaving } = buildSearchFilters(filters)
+
+    const candidates = yield* fetchSearchCandidates({ organizationId, projectId, plan })
+    if (candidates.length === 0) return []
+    const traceIds = candidates.map((c) => normalizeCHString(c.trace_id))
+    const relevanceScores = candidates.map((c) => Number(c.relevance_score))
+    const bs = Math.floor(bucketSeconds)
+
+    return yield* chSqlClient
+      .query(async (client) => {
+        const result = await client.query({
+          query: `WITH
+                    mapFromArrays(
+                      {traceIds:Array(FixedString(32))},
+                      {relevanceScores:Array(Float64)}
+                    ) AS scoreByTrace,
+                    trace_rollup AS (${TRACE_ROLLUP_BODY}
+                    ${traceScoreWhere}
+                    GROUP BY
+                      t.organization_id, t.project_id, t.trace_id
+                    ${finalHaving}
+                  ),
+                  session_rollup AS (${SESSION_ROLLUP_BODY})
+                  SELECT
+                    toDateTime(
+                      intDiv(toUnixTimestamp(session_start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
+                      'UTC'
+                    ) AS bucket_start,
+                    count() AS session_count,
+                    sum(matching_trace_count) AS trace_count,
+                    sum(cost_total_microcents) AS cost_sum,
+                    quantileTDigest(0.5)(duration_ns) AS duration_median,
+                    sum(tokens_total) AS tokens_sum,
+                    sum(span_count) AS span_sum,
+                    quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median
+                  FROM session_rollup
+                  GROUP BY bucket_start
+                  ORDER BY bucket_start ASC`,
+          query_params: {
+            organizationId: organizationId as string,
+            projectId: projectId as string,
+            traceIds,
+            relevanceScores,
+            bucketSeconds: bs,
+            ...telemetryParams,
+            ...scoreParams,
+          },
+          format: "JSONEachRow",
+        })
+        return result.json<SessionSearchHistogramRow>()
+      })
+      .pipe(
+        Effect.map((rows): readonly TraceTimeHistogramBucket[] => rows.map(toSessionSearchHistogramBucket)),
+        Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
       )
   })

@@ -215,6 +215,7 @@ export function SessionsView({
   const { data: sessionMetrics, isLoading: sessionMetricsLoading } = useSessionMetrics({
     projectId,
     ...(hasActiveFilters ? { filters } : {}),
+    ...(searchQuery ? { searchQuery } : {}),
   })
 
   // Fetch annotation counts for every trace that could show in the visible

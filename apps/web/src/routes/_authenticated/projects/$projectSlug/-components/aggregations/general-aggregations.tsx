@@ -61,6 +61,7 @@ export function GeneralAggregations({
   projectId,
   filters,
   mode,
+  searchQuery,
   selectedMetric,
   onMetricSelect,
   onCollapse,
@@ -68,6 +69,7 @@ export function GeneralAggregations({
   readonly projectId: string
   readonly filters: FilterSet
   readonly mode: "traces" | "sessions"
+  readonly searchQuery?: string
   readonly selectedMetric: TraceHistogramMetric
   readonly onMetricSelect: (metric: TraceHistogramMetric) => void
   readonly onCollapse: () => void
@@ -75,24 +77,29 @@ export function GeneralAggregations({
   const isSessionsMode = mode === "sessions"
   const hasActiveFilters = Object.keys(filters).length > 0
   const filterOpts = hasActiveFilters ? { filters } : {}
+  const searchOpts = searchQuery ? { searchQuery } : {}
   const traceModeProjectId = isSessionsMode ? "" : projectId
   const sessionModeProjectId = isSessionsMode ? projectId : ""
 
   const { data: traceMetrics, isLoading: traceMetricsLoading } = useTraceMetrics({
     projectId: traceModeProjectId,
     ...filterOpts,
+    ...searchOpts,
   })
   const { totalCount: traceTotalCount, isLoading: traceCountLoading } = useTracesCount({
     projectId: traceModeProjectId,
     ...filterOpts,
+    ...searchOpts,
   })
   const { totalCount: sessionTotalCount, isLoading: sessionCountLoading } = useSessionsCount({
     projectId,
     ...filterOpts,
+    ...searchOpts,
   })
   const { data: sessionMetrics, isLoading: sessionMetricsLoading } = useSessionMetrics({
     projectId: sessionModeProjectId,
     ...filterOpts,
+    ...searchOpts,
   })
 
   const activeMetrics: TraceMetrics | SessionMetrics | undefined = isSessionsMode

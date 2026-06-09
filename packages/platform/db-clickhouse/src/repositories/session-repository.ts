@@ -43,7 +43,13 @@ import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
 import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 import { buildSessionIntelligenceFilters } from "../session-intelligence-filters.ts"
-import { countSessionsBySearchQuery, type FetchFullSessions, listSessionsBySearchQuery } from "./search-by-project.ts"
+import {
+  aggregateMetricsBySearchQuery,
+  countSessionsBySearchQuery,
+  type FetchFullSessions,
+  histogramBySearchQuery,
+  listSessionsBySearchQuery,
+} from "./search-by-project.ts"
 import { isActiveSearch } from "./search-plan.ts"
 
 const LIST_SELECT = `
@@ -797,10 +803,21 @@ export const SessionRepositoryLive = Layer.effect(
             )
         }),
 
-      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) =>
+      aggregateMetricsByProjectId: ({ organizationId, projectId, filters, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+
+          const parsed = searchQuery && searchQuery.length > 0 ? parseSearchQuery(searchQuery) : undefined
+          if (parsed && isActiveSearch(parsed)) {
+            return yield* aggregateMetricsBySearchQuery({
+              organizationId,
+              projectId,
+              parsed,
+              filters: resolvedFilters,
+            })
+          }
+
           const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(resolvedFilters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
@@ -860,10 +877,22 @@ export const SessionRepositoryLive = Layer.effect(
             )
         }),
 
-      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds }) =>
+      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds, searchQuery }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
           const resolvedFilters = yield* resolvePercentileFilters(organizationId, projectId, filters)
+
+          const parsed = searchQuery && searchQuery.length > 0 ? parseSearchQuery(searchQuery) : undefined
+          if (parsed && isActiveSearch(parsed)) {
+            return yield* histogramBySearchQuery({
+              organizationId,
+              projectId,
+              parsed,
+              filters: resolvedFilters,
+              bucketSeconds,
+            })
+          }
+
           const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(resolvedFilters)
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""

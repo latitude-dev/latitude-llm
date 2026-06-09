@@ -245,6 +245,7 @@ const sessionHistogramInputSchema = z.object({
     .int()
     .positive()
     .max(90 * 24 * 60 * 60),
+  searchQuery: z.string().max(500).optional(),
 })
 
 export const getSessionTimeHistogramByProject = createServerFn({ method: "GET" })
@@ -269,14 +270,24 @@ export const getSessionTimeHistogramByProject = createServerFn({ method: "GET" }
           projectId: ProjectId(data.projectId),
           filters: mergedFilters,
           bucketSeconds: data.bucketSeconds,
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
-      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })
 
 export const getSessionMetricsByProject = createServerFn({ method: "GET" })
   .inputValidator(
-    z.object({ sandboxOrgId: z.string().optional(), projectId: z.string(), filters: filterSetSchema.optional() }),
+    z.object({
+      sandboxOrgId: z.string().optional(),
+      projectId: z.string(),
+      filters: filterSetSchema.optional(),
+      searchQuery: z.string().max(500).optional(),
+    }),
   )
   .handler(async ({ data }): Promise<SessionMetrics | null> => {
     const orgId = await resolveOrgScope(data)
@@ -289,8 +300,13 @@ export const getSessionMetricsByProject = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           ...(filters ? { filters } : {}),
+          ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         })
-      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId), withTracing),
+      }).pipe(
+        withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId),
+        withAi(AIEmbedLive, getRedisClient()),
+        withTracing,
+      ),
     )
   })
 

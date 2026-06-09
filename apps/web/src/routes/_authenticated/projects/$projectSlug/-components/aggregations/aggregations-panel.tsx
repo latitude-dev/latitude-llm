@@ -16,6 +16,8 @@ interface TraceAggregationsPanelProps {
   readonly filters: FilterSet
   /** Must match the table below the panel — drives which rollup the cards + histogram use. */
   readonly mode: "traces" | "sessions"
+  /** Free-text search query active on the page; narrows the cards + histogram to matches. */
+  readonly searchQuery?: string
   /** Called when user selects a time range via brush on the histogram. */
   readonly onTimeRangeSelect?: (range: { from: string; to: string } | null) => void
 }
@@ -25,6 +27,7 @@ export function TraceAggregationsPanel({
   projectSlug,
   filters,
   mode,
+  searchQuery,
   onTimeRangeSelect,
 }: TraceAggregationsPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
@@ -62,6 +65,7 @@ export function TraceAggregationsPanel({
           selectedMetric={selectedMetric}
           onMetricSelect={onMetricSelect}
           onCollapse={() => setCollapsed(true)}
+          {...(searchQuery ? { searchQuery } : {})}
         />
         {incidentsFlagEnabled ? (
           <div className="flex items-center justify-end gap-2 px-4 -mb-1">
@@ -91,6 +95,7 @@ export function TraceAggregationsPanel({
           metric={selectedMetric}
           showIncidents={incidentsFlagEnabled && showIncidents}
           onRangeSelect={onTimeRangeSelect}
+          {...(searchQuery ? { searchQuery } : {})}
         />
       </div>
     </div>

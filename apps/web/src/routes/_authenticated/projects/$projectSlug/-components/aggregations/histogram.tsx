@@ -28,6 +28,7 @@ interface HistogramProps {
   readonly mode: "traces" | "sessions"
   readonly metric: TraceHistogramMetric
   readonly showIncidents: boolean
+  readonly searchQuery?: string
   readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }
 
@@ -38,16 +39,20 @@ export function Histogram({
   mode,
   metric,
   showIncidents,
+  searchQuery,
   onRangeSelect,
 }: HistogramProps) {
   const isSessionsMode = mode === "sessions"
+  const searchOpts = searchQuery ? { searchQuery } : {}
   const traceHistogram = useTraceTimeHistogram({
     projectId: isSessionsMode ? "" : projectId,
     filters,
+    ...searchOpts,
   })
   const sessionHistogram = useSessionTimeHistogram({
     projectId: isSessionsMode ? projectId : "",
     filters,
+    ...searchOpts,
   })
   const {
     data: sparseBuckets,
