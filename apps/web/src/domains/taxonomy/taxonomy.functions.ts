@@ -84,6 +84,13 @@ export interface BehaviourTimeRangeRecord {
 }
 
 export type BehaviourSessionFilter = "all" | MomentKind
+export type BehaviourTrajectoryMetric = "frequency" | "escalation" | "resolution" | "churnRisk" | "wins"
+
+export interface BehaviourMomentRangeRecord {
+  readonly metric: BehaviourTrajectoryMetric
+  readonly fromTurn: number
+  readonly toTurn: number
+}
 
 export interface BehaviourSessionRecord {
   readonly sessionId: string
@@ -146,6 +153,17 @@ const behaviourTimeRangeSchema = z
     fromIso: z.string().optional(),
     toIso: z.string().optional(),
   })
+  .optional()
+
+const behaviourTrajectoryMetricSchema = z.enum(["frequency", "escalation", "resolution", "churnRisk", "wins"])
+
+const behaviourMomentRangeSchema = z
+  .object({
+    metric: behaviourTrajectoryMetricSchema,
+    fromTurn: z.number().int().min(0),
+    toTurn: z.number().int().min(0),
+  })
+  .refine((range) => range.toTurn >= range.fromTurn, "toTurn must be greater than or equal to fromTurn")
   .optional()
 
 const parseBehaviourTimeRange = (timeRange: BehaviourTimeRangeRecord | undefined) => ({
@@ -585,11 +603,29 @@ const behaviourSessionFilterSql = `
     OR ({filter:String} NOT IN ('all', 'resolution', 'abandonment') AND has(momentKinds, {filter:String})))
 `
 
+const behaviourMetricMomentSql = `
+  (({momentMetric:String} = 'frequency' AND m.kind != '')
+    OR ({momentMetric:String} = 'escalation' AND m.kind = 'escalation')
+    OR ({momentMetric:String} = 'resolution' AND m.kind = 'resolution')
+    OR ({momentMetric:String} = 'churnRisk' AND m.kind IN ('abandonment', 'user_frustration'))
+    OR ({momentMetric:String} = 'wins' AND m.kind IN ('resolution', 'user_satisfaction')))
+`
+
+const behaviourMomentRangeSql = `
+  ${behaviourMetricMomentSql}
+  AND m.first_message_index >= {turnFrom:UInt16}
+  AND m.first_message_index <= {turnTo:UInt16}
+`
+
 // Observations are pinned to each session's CURRENT analysis: superseded
 // analysis generations are never deleted, so an unscoped read unions every
 // re-analysis and \`any(analysis_hash)\` could pick a stale hash, breaking the
 // trace link and silently dropping every moment label.
-const behaviourClusterSessionsCte = (timeFromClause = "", timeToClause = "") => `
+const behaviourClusterSessionsCte = (
+  timeFromClause = "",
+  timeToClause = "",
+  momentRange: BehaviourMomentRangeRecord | undefined = undefined,
+) => `
   WITH latest_analyses AS (
     SELECT organization_id, project_id, session_id, analysis_hash, trace_ids
     FROM session_analyses FINAL
@@ -624,10 +660,12 @@ const behaviourClusterSessionsCte = (timeFromClause = "", timeToClause = "") => 
     SELECT
       cs.session_id AS sessionId,
       any(cs.traceId) AS traceId,
-      any(cs.momentId) AS momentId,
+      ${momentRange ? `argMinIf(m.moment_id, m.first_message_index, ${behaviourMomentRangeSql})` : "any(cs.momentId)"}
+        AS momentId,
       any(cs.summary) AS summary,
       any(cs.startTime) AS startTime,
       any(cs.endTime) AS endTime,
+      ${momentRange ? `countIf(${behaviourMomentRangeSql})` : "toUInt64(0)"} AS selectedMomentCount,
       groupUniqArrayIf(m.kind, m.kind != '') AS momentKinds
     FROM cluster_sessions AS cs
     LEFT JOIN session_moment_labels AS m FINAL
@@ -648,6 +686,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
       limit: z.number().int().min(1).max(100).optional(),
       filter: z.enum(["all", ...MOMENT_KINDS]).optional(),
       timeRange: behaviourTimeRangeSchema,
+      momentRange: behaviourMomentRangeSchema,
     }),
   )
   .handler(async ({ data }): Promise<BehaviourSessionsRecord> => {
@@ -657,6 +696,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
     const limit = data.limit ?? 50
     const filter = data.filter ?? "all"
     const timeRange = parseBehaviourTimeRange(data.timeRange)
+    const momentRange = data.momentRange
     // Tree node: sessions assigned anywhere in its subtree belong to it.
     const clusterIds = await Effect.runPromise(
       Effect.gen(function* () {
@@ -673,11 +713,16 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
       ...(timeRange.from ? { startTimeFrom: timeRange.from.toISOString().replace("Z", "") } : {}),
       ...(timeRange.to ? { startTimeTo: timeRange.to.toISOString().replace("Z", "") } : {}),
     }
+    const momentRangeClause = momentRange ? "AND selectedMomentCount > 0" : ""
+    const momentRangeQueryParams = momentRange
+      ? { momentMetric: momentRange.metric, turnFrom: momentRange.fromTurn, turnTo: momentRange.toTurn }
+      : {}
     const result = await getClickhouseClient().query({
-      query: `${behaviourClusterSessionsCte(timeFromClause, timeToClause)}
+      query: `${behaviourClusterSessionsCte(timeFromClause, timeToClause, momentRange)}
               SELECT sessionId, traceId, momentId, summary, startTime, endTime, momentKinds
               FROM enriched_sessions
               WHERE ${behaviourSessionFilterSql}
+              ${momentRangeClause}
               ORDER BY endTime DESC
               LIMIT {pageSize:UInt32}
               OFFSET {offset:UInt32}`,
@@ -689,6 +734,7 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
         pageSize: limit + 1,
         offset,
         ...timeQueryParams,
+        ...momentRangeQueryParams,
       },
       format: "JSONEachRow",
     })
@@ -706,15 +752,23 @@ export const getBehaviourSessions = createServerFn({ method: "GET" })
         ? "1 HOUR"
         : "1 DAY"
     const histogramResult = await getClickhouseClient().query({
-      query: `${behaviourClusterSessionsCte(timeFromClause, timeToClause)}
+      query: `${behaviourClusterSessionsCte(timeFromClause, timeToClause, momentRange)}
               SELECT
                 toStartOfInterval(endTime, INTERVAL ${histogramInterval}) AS startTime,
                 count() AS count
               FROM enriched_sessions
               WHERE ${behaviourSessionFilterSql}
+              ${momentRangeClause}
               GROUP BY startTime
               ORDER BY startTime ASC`,
-      query_params: { organizationId, projectId: data.projectId, clusterIds, filter, ...timeQueryParams },
+      query_params: {
+        organizationId,
+        projectId: data.projectId,
+        clusterIds,
+        filter,
+        ...timeQueryParams,
+        ...momentRangeQueryParams,
+      },
       format: "JSONEachRow",
     })
     const histogram = (await histogramResult.json()) as Array<{

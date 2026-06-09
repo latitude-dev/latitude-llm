@@ -6,9 +6,9 @@ import { useBehaviourTrajectory } from "../../../../../../domains/taxonomy/taxon
 import type {
   BehaviourNodeRecord,
   BehaviourTimeRangeRecord,
+  BehaviourTrajectoryMetric,
 } from "../../../../../../domains/taxonomy/taxonomy.functions.ts"
 
-type TrajectoryMetric = "frequency" | "escalation" | "resolution" | "churnRisk" | "wins"
 type TrajectoryAxis = "day" | "turn"
 
 const MAX_COLLAPSED_ROWS = 3
@@ -18,7 +18,7 @@ const ROW_HEIGHT_PX = 48
 const MAX_TURN_BUCKETS = 14
 const CHART_X_PADDING_PERCENT = 2.5
 
-const metricOptions: ReadonlyArray<{ readonly id: TrajectoryMetric; readonly label: string }> = [
+const metricOptions: ReadonlyArray<{ readonly id: BehaviourTrajectoryMetric; readonly label: string }> = [
   { id: "frequency", label: "Frequency" },
   { id: "escalation", label: "Escalation" },
   { id: "resolution", label: "Resolution" },
@@ -91,7 +91,7 @@ const coarsenTrajectoryRows = (
     maxWinsLastMessageIndex: number
   }[],
   axis: TrajectoryAxis,
-  metric: TrajectoryMetric,
+  metric: BehaviourTrajectoryMetric,
 ) => {
   if (axis === "day") {
     return {
@@ -175,7 +175,7 @@ const coarsenTrajectoryRows = (
 
 const metricValue = (
   row: { frequency: number; escalation: number; resolution: number; churnRisk: number; wins: number },
-  metric: TrajectoryMetric,
+  metric: BehaviourTrajectoryMetric,
 ) => row[metric]
 
 const maxLastMessageIndexForMetric = (
@@ -186,7 +186,7 @@ const maxLastMessageIndexForMetric = (
     maxChurnRiskLastMessageIndex: number
     maxWinsLastMessageIndex: number
   },
-  metric: TrajectoryMetric,
+  metric: BehaviourTrajectoryMetric,
 ) => {
   if (metric === "escalation") return row.maxEscalationLastMessageIndex
   if (metric === "resolution") return row.maxResolutionLastMessageIndex
@@ -207,15 +207,23 @@ export function BehavioursTrajectoryChart({
   selectedPath,
   timeRange,
   onSelectPath,
+  onSelectPoint,
 }: {
   readonly projectId: string
   readonly topics: readonly BehaviourNodeRecord[]
   readonly selectedPath: readonly string[]
   readonly timeRange: BehaviourTimeRangeRecord | undefined
   readonly onSelectPath: (path: readonly string[]) => void
+  readonly onSelectPoint: (selection: {
+    readonly path: readonly string[]
+    readonly axis: TrajectoryAxis
+    readonly metric: BehaviourTrajectoryMetric
+    readonly bucket: string
+    readonly maxTurn: number
+  }) => void
 }) {
-  const [metric, setMetric] = useState<TrajectoryMetric>("frequency")
-  const [axis, setAxis] = useState<TrajectoryAxis>("day")
+  const [metric, setMetric] = useState<BehaviourTrajectoryMetric>("frequency")
+  const [axis, setAxis] = useState<TrajectoryAxis>("turn")
   const [showAll, setShowAll] = useState(false)
   const visibleLevel = useMemo(() => resolveVisibleLevel(topics, selectedPath), [topics, selectedPath])
   const visibleNodes = showAll ? visibleLevel.nodes : visibleLevel.nodes.slice(0, MAX_COLLAPSED_ROWS)
@@ -227,6 +235,10 @@ export function BehavioursTrajectoryChart({
   const buckets = trajectory.buckets
   const maxCount = Math.max(...rows.map((row) => metricValue(row, metric)), 0)
   const rowsByCategoryAndBucket = new Map(rows.map((row) => [`${row.categoryClusterId}:${row.bucket}`, row]))
+  const maxTurn =
+    axis === "turn"
+      ? Math.max(...buckets.map((candidate) => Number(candidate.split(":")[1] ?? candidate)).filter(Number.isFinite), 0)
+      : 0
   const chartHeight = Math.max(visibleNodes.length * ROW_HEIGHT_PX, ROW_HEIGHT_PX)
   const canGoBack = visibleLevel.trail.length > 0
   const currentPath = visibleLevel.trail.map((node) => node.cluster.id)
@@ -349,7 +361,15 @@ export function BehavioursTrajectoryChart({
                             marginTop: -size / 2,
                             backgroundColor: rowColors[rowIndex % rowColors.length],
                           }}
-                          onClick={() => onSelectPath([...currentPath, node.cluster.id])}
+                          onClick={() =>
+                            onSelectPoint({
+                              path: [...currentPath, node.cluster.id],
+                              axis,
+                              metric,
+                              bucket,
+                              maxTurn,
+                            })
+                          }
                         />
                       }
                     >
