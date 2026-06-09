@@ -18,10 +18,8 @@ export {
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_DETAILS_GENERATION_MODEL,
   ISSUE_DETAILS_MAX_OCCURRENCES,
-  ISSUE_DIMENSION_BASELINE_FLOOR,
-  ISSUE_DIMENSION_MIN_SAMPLE,
-  ISSUE_DIMENSION_MIN_VALUE_COUNT,
-  ISSUE_DIMENSION_OUTLIER_MIN_LIFT,
+  ISSUE_DIMENSION_MIN_RATE_ELEVATION,
+  ISSUE_DIMENSION_MIN_SUPPORT,
   ISSUE_DISCOVERY_MIN_RELEVANCE,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
   ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY,
@@ -39,7 +37,7 @@ export {
   MIN_SEASONAL_SAMPLES,
   NEW_ISSUE_AGE_DAYS,
 } from "./constants.ts"
-export { computeDimensionOutliers, type DimensionOutlier } from "./dimension-outliers.ts"
+export { type DimensionPattern, rankDimensionValues } from "./dimension-patterns.ts"
 export {
   type Issue,
   type IssueCentroid,

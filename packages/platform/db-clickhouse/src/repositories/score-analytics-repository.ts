@@ -1,8 +1,8 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type {
-  DimensionValue,
+  DimensionConditionalRate,
   IssueDimension,
-  IssueDimensionDistribution,
+  IssueDimensionComparison,
   IssueEscalationSignals,
   IssueEscalationThresholdBucket,
   IssueEscalationThresholdSeries,
@@ -57,6 +57,7 @@ const ISSUE_DIMENSION_VALUE_EXPR: Record<IssueDimension, string> = {
   provider: "provider",
   tool: "tool_name",
   tag: "arrayJoin(tags)",
+  finishReason: "arrayJoin(finish_reasons)",
 }
 
 const toClickHouseDateTime64 = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
@@ -192,9 +193,15 @@ type IssueImpactUserRow = {
   affected_users: string
 }
 
-type DimensionCountRow = {
+type DimensionRateRow = {
   value: string
-  cnt: string
+  total_traces: string
+  affected_traces: string
+}
+
+type DimensionTotalsRow = {
+  total_traces: string
+  affected_traces: string
 }
 
 type IssueOccurrenceBucketRow = {
@@ -1000,6 +1007,11 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
         }),
 
       // -- aggregateDimensionByIssue -----------------------------------------
+      // Reverse conditioning, trace-level: for each value v of the dimension,
+      // `conditionalRate = P(issue | v)` = (distinct issue traces carrying v) /
+      // (distinct project traces carrying v). `baseRate = P(issue)` =
+      // issueAffectedTraces / totalProjectTraces. See the port doc + the spec
+      // (Data model method #2) for why reverse, not forward (`P(v | issue)`).
       aggregateDimensionByIssue: ({ organizationId, projectId, issueId, dimension, timeRange, options }) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -1023,46 +1035,64 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             ...scoreRange.params,
           }
 
-          // The inner subquery emits one row per span (or per tag, for `tag`); the
-          // outer filter drops the empty value so it counts toward neither the
-          // numerator nor the denominator.
-          const runDimension = (extraWhere: string) =>
-            chSqlClient.query<DimensionCountRow[]>(async (client) => {
-              const result = await client.query({
-                query: `SELECT value, count() AS cnt
-                      FROM (
-                        SELECT ${valueExpr} AS value
-                        FROM spans
-                        WHERE ${spanWhere}${extraWhere}
-                      )
-                      WHERE value != ''
-                      GROUP BY value
-                      ORDER BY cnt DESC, value ASC`,
-                query_params: params,
-                format: "JSONEachRow",
-              })
-              return result.json<DimensionCountRow>()
+          // Per-value reverse rates. The inner subquery emits one row per span
+          // (or per tag/finish-reason, which fan out via arrayJoin); `countDistinct`
+          // collapses to the trace, so a trace with many spans on the same value
+          // counts once. The empty value is dropped from both numerator and support.
+          const perValue = chSqlClient.query<DimensionRateRow[]>(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                      value,
+                      countDistinct(trace_id) AS total_traces,
+                      countDistinctIf(trace_id, in_issue) AS affected_traces
+                    FROM (
+                      SELECT trace_id, ${valueExpr} AS value, trace_id IN (${issueTracesSql}) AS in_issue
+                      FROM spans
+                      WHERE ${spanWhere}
+                    )
+                    WHERE value != ''
+                    GROUP BY value
+                    ORDER BY affected_traces DESC, total_traces DESC, value ASC`,
+              query_params: params,
+              format: "JSONEachRow",
             })
+            return result.json<DimensionRateRow>()
+          })
 
-          const [issueRows, baselineRows] = yield* Effect.all(
-            [runDimension(` AND trace_id IN (${issueTracesSql})`), runDimension("")],
-            { concurrency: 2 },
-          )
-
-          const total = (rows: readonly DimensionCountRow[]) => rows.reduce((sum, row) => sum + Number(row.cnt), 0)
-          const toValues = (rows: readonly DimensionCountRow[], denominator: number): DimensionValue[] =>
-            rows.map((row) => {
-              const count = Number(row.cnt)
-              return { value: row.value, count, percent: denominator === 0 ? 0 : count / denominator }
+          // Base rate: distinct issue traces over distinct project traces, in the
+          // same span universe so the rates are comparable to the per-value ones.
+          const totals = chSqlClient.query<DimensionTotalsRow[]>(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                      countDistinct(trace_id) AS total_traces,
+                      countDistinctIf(trace_id, trace_id IN (${issueTracesSql})) AS affected_traces
+                    FROM spans
+                    WHERE ${spanWhere} AND trace_id != ''`,
+              query_params: params,
+              format: "JSONEachRow",
             })
+            return result.json<DimensionTotalsRow>()
+          })
 
-          const issueTotal = total(issueRows)
-          return {
-            dimension,
-            sampleSize: issueTotal,
-            issue: toValues(issueRows, issueTotal),
-            baseline: toValues(baselineRows, total(baselineRows)),
-          } satisfies IssueDimensionDistribution
+          const [valueRows, totalsRows] = yield* Effect.all([perValue, totals], { concurrency: 2 })
+
+          const totalProjectTraces = Number(totalsRows[0]?.total_traces ?? 0)
+          const issueAffectedTraces = Number(totalsRows[0]?.affected_traces ?? 0)
+          const baseRate = totalProjectTraces === 0 ? 0 : issueAffectedTraces / totalProjectTraces
+
+          const values: DimensionConditionalRate[] = valueRows.map((row) => {
+            const totalTraces = Number(row.total_traces)
+            const affectedTraces = Number(row.affected_traces)
+            return {
+              value: row.value,
+              affectedTraces,
+              totalTraces,
+              conditionalRate: totalTraces === 0 ? 0 : affectedTraces / totalTraces,
+              coverage: issueAffectedTraces === 0 ? 0 : affectedTraces / issueAffectedTraces,
+            }
+          })
+
+          return { dimension, baseRate, issueAffectedTraces, values } satisfies IssueDimensionComparison
         }),
 
       // -- escalationSignalsByIssues -----------------------------------------

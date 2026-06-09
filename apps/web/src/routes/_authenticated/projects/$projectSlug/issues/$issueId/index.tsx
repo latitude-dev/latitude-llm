@@ -99,7 +99,7 @@ function IssueDetailPage() {
           projectId={project.id}
           issueId={issueId}
           variant="page"
-          prepend={<IssuePatterns projectId={project.id} issueId={issueId} />}
+          trendAside={<IssuePatterns projectId={project.id} issueId={issueId} />}
           beforeTraces={<IssueExamples projectId={project.id} issueId={issueId} />}
         />
       </Layout.Content>

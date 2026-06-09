@@ -4,9 +4,8 @@ import {
   type ApplyIssueLifecycleCommandResult,
   applyIssueLifecycleCommandUseCase,
   buildHistogramBucketScaffold,
-  computeDimensionOutliers,
   DEFAULT_ESCALATION_SENSITIVITY_K,
-  type DimensionOutlier,
+  type DimensionPattern,
   deriveIssueLifecycleStates,
   embedIssueSearchQueryUseCase,
   fillBuckets,
@@ -23,12 +22,12 @@ import {
   listIssuesUseCase,
   listIssueTracesUseCase,
   type OrgIssueSearchItem,
+  rankDimensionValues,
   searchOrgIssuesUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
   updateIssueTriageUseCase,
 } from "@domain/issues"
 import {
-  type DimensionValue,
   type IssueDimension,
   type IssueEscalationThresholdBucket,
   ScoreAnalyticsRepository,
@@ -180,7 +179,13 @@ const updateIssueTriageInputSchema = z.object({
   priority: issuePrioritySchema.nullable().optional(),
 })
 
-const issueDimensionSchema = z.enum(["model", "provider", "tool", "tag"]) satisfies z.ZodType<IssueDimension>
+const issueDimensionSchema = z.enum([
+  "model",
+  "provider",
+  "tool",
+  "tag",
+  "finishReason",
+]) satisfies z.ZodType<IssueDimension>
 
 const issueDimensionsInputSchema = z.object({
   projectId: z.string(),
@@ -736,10 +741,11 @@ export const getIssueImpact = createServerFn({ method: "GET" })
 
 export interface IssueDimensionsRecord {
   readonly dimension: IssueDimension
-  readonly sampleSize: number
-  readonly issue: readonly DimensionValue[]
-  readonly baseline: readonly DimensionValue[]
-  readonly outliers: readonly DimensionOutlier[]
+  /** Issue's unconditional trace incidence — the reference each pattern's `conditionalRate` is judged against. */
+  readonly baseRate: number
+  readonly issueAffectedTraces: number
+  /** Support-gated, rate-elevation–ranked values (most over-represented first). */
+  readonly patterns: readonly DimensionPattern[]
 }
 
 export const getIssueDimensions = createServerFn({ method: "GET" })
@@ -751,7 +757,7 @@ export const getIssueDimensions = createServerFn({ method: "GET" })
     const projectId = ProjectId(data.projectId)
     const issueId = IssueId(data.issueId)
 
-    const distribution = await Effect.runPromise(
+    const comparison = await Effect.runPromise(
       Effect.gen(function* () {
         const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
         return yield* scoreAnalyticsRepository.aggregateDimensionByIssue({
@@ -764,11 +770,10 @@ export const getIssueDimensions = createServerFn({ method: "GET" })
     )
 
     return {
-      dimension: distribution.dimension,
-      sampleSize: distribution.sampleSize,
-      issue: distribution.issue,
-      baseline: distribution.baseline,
-      outliers: computeDimensionOutliers(distribution),
+      dimension: comparison.dimension,
+      baseRate: comparison.baseRate,
+      issueAffectedTraces: comparison.issueAffectedTraces,
+      patterns: rankDimensionValues(comparison),
     }
   })
 

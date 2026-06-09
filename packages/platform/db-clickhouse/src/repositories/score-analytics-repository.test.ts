@@ -665,18 +665,27 @@ describe("ScoreAnalyticsRepository", () => {
     const fixture = setupFixture()
     const issueDim = "issue_dimensioniiiiii"
     const issueOther = "issue_dimensionother0"
-    const traceD1 = "d".repeat(32)
-    const traceD2 = "e".repeat(32)
-    const traceOther = "f".repeat(32)
+    const traceD1 = "d".repeat(32) // in issue
+    const traceD2 = "e".repeat(32) // in issue
+    const traceD3 = "1".repeat(32) // project trace, NOT in any issue (exercises reverse conditioning)
+    const traceOther = "f".repeat(32) // in another issue
 
     const span = (
-      overrides: { traceId: string; spanId: string; model?: string; provider?: string; toolName?: string },
+      overrides: {
+        traceId: string
+        spanId: string
+        model?: string
+        provider?: string
+        toolName?: string
+        finishReasons?: readonly string[]
+      },
       tags: readonly string[] = [],
     ): SpanRow => ({
       ...makeSpanRow({ traceId: overrides.traceId, spanId: overrides.spanId, tags }),
       model: overrides.model ?? "",
       provider: overrides.provider ?? "",
       tool_name: overrides.toolName ?? "",
+      finish_reasons: [...(overrides.finishReasons ?? [])],
     })
 
     beforeEach(async () => {
@@ -688,9 +697,11 @@ describe("ScoreAnalyticsRepository", () => {
             model: "claude-opus",
             provider: "anthropic",
             toolName: "search",
+            finishReasons: ["stop"],
           },
           ["billing"],
         ),
+        // Second span on the same trace, same model/provider → trace-level dedup.
         span({ traceId: traceD1, spanId: `d2${"a".repeat(14)}`, model: "claude-opus", provider: "anthropic" }),
         span(
           {
@@ -699,27 +710,45 @@ describe("ScoreAnalyticsRepository", () => {
             model: "claude-sonnet",
             provider: "anthropic",
             toolName: "lookup",
+            finishReasons: ["length"],
           },
           ["billing", "auth"],
         ),
-        // Baseline-only traffic from a different issue's trace.
-        span({ traceId: traceOther, spanId: `f1${"a".repeat(14)}`, model: "gpt-4o", provider: "openai" }, [
-          "onboarding",
-        ]),
+        // A project trace that also uses claude-opus but is NOT in the issue, so
+        // claude-opus's conditional rate is 1/2 rather than 1/1.
+        span({
+          traceId: traceD3,
+          spanId: `c1${"a".repeat(14)}`,
+          model: "claude-opus",
+          provider: "anthropic",
+          finishReasons: ["stop"],
+        }),
+        // Traffic from a different issue's trace.
+        span(
+          {
+            traceId: traceOther,
+            spanId: `f1${"a".repeat(14)}`,
+            model: "gpt-4o",
+            provider: "openai",
+            finishReasons: ["stop"],
+          },
+          ["onboarding"],
+        ),
         span({ traceId: traceOther, spanId: `f2${"a".repeat(14)}`, model: "gpt-4o", provider: "openai" }),
       ])
 
       await fixture.insertScores([
         makeScoreRow({ issue_id: issueDim, trace_id: traceD1 }),
         makeScoreRow({ issue_id: issueDim, trace_id: traceD2 }),
+        // traceD3 has no occurrence — it is a pure project (baseline) trace.
         makeScoreRow({ issue_id: issueOther, trace_id: traceOther }),
       ])
     })
 
-    const byValue = (values: readonly { value: string; count: number; percent: number }[]) =>
+    const byValue = <T extends { value: string }>(values: readonly T[]) =>
       new Map(values.map((v) => [v.value, v] as const))
 
-    const aggregate = (dimension: "model" | "provider" | "tool" | "tag") =>
+    const aggregate = (dimension: "model" | "provider" | "tool" | "tag" | "finishReason") =>
       fixture.runCh(
         fixture.repo.aggregateDimensionByIssue({
           organizationId: ORG_ID,
@@ -731,37 +760,55 @@ describe("ScoreAnalyticsRepository", () => {
 
     // One test (not several) because `beforeEach` inserts are not truncated
     // between tests in the shared per-describe chdb session, so re-running it
-    // would double the span counts these assertions check.
-    it("compares the issue's dimension distributions against the project baseline", async () => {
+    // would double the trace counts these assertions check.
+    it("computes per-value conditional rates and the base rate (reverse conditioning, trace-level)", async () => {
+      // Base rate: 2 of 4 project traces (D1, D2 in issue; D3, Other not) are in the issue.
       const models = await aggregate("model")
       expect(models.dimension).toBe("model")
-      expect(models.sampleSize).toBe(3)
-      const modelIssue = byValue(models.issue)
-      expect(modelIssue.get("claude-opus")?.count).toBe(2)
-      expect(modelIssue.get("claude-opus")?.percent).toBeCloseTo(2 / 3, 5)
-      expect(modelIssue.get("claude-sonnet")?.count).toBe(1)
-      // gpt-4o belongs to another issue's trace — excluded from the issue side.
-      expect(modelIssue.has("gpt-4o")).toBe(false)
-      const modelBaseline = byValue(models.baseline)
-      expect(modelBaseline.get("gpt-4o")?.count).toBe(2)
-      expect(modelBaseline.get("claude-opus")?.count).toBe(2)
-      expect(modelBaseline.get("gpt-4o")?.percent).toBeCloseTo(2 / 5, 5)
+      expect(models.issueAffectedTraces).toBe(2)
+      expect(models.baseRate).toBeCloseTo(0.5, 5)
+      // Most-associated first: opus and sonnet both have 1 affected trace, opus has more support.
+      expect(models.values.map((v) => v.value)).toEqual(["claude-opus", "claude-sonnet", "gpt-4o"])
+      const m = byValue(models.values)
+      // claude-opus: used by D1 (issue) and D3 (not) → 1/2 of its traces fall into the issue.
+      expect(m.get("claude-opus")).toMatchObject({ totalTraces: 2, affectedTraces: 1 })
+      expect(m.get("claude-opus")?.conditionalRate).toBeCloseTo(0.5, 5)
+      expect(m.get("claude-opus")?.coverage).toBeCloseTo(0.5, 5)
+      // claude-sonnet: only D2, which is in the issue → 100% conditional rate.
+      expect(m.get("claude-sonnet")?.conditionalRate).toBeCloseTo(1, 5)
+      // gpt-4o: only the other issue's trace → present in the baseline, 0 affected.
+      expect(m.get("gpt-4o")).toMatchObject({ totalTraces: 1, affectedTraces: 0 })
+      expect(m.get("gpt-4o")?.conditionalRate).toBe(0)
 
-      // Tools: d1 → search, e1 → lookup; d2 has no tool name and is excluded.
+      // Provider: anthropic spans 3 traces (D1, D2, D3), 2 in the issue → 2/3.
+      const providers = await aggregate("provider")
+      const p = byValue(providers.values)
+      expect(p.get("anthropic")).toMatchObject({ totalTraces: 3, affectedTraces: 2 })
+      expect(p.get("anthropic")?.conditionalRate).toBeCloseTo(2 / 3, 5)
+      expect(p.get("anthropic")?.coverage).toBeCloseTo(1, 5)
+      expect(p.get("openai")?.affectedTraces).toBe(0)
+
+      // Tools: D1 → search, D2 → lookup; spans without a tool name are excluded.
       const tools = await aggregate("tool")
-      expect(tools.sampleSize).toBe(2)
-      const toolIssue = byValue(tools.issue)
-      expect(toolIssue.get("search")?.count).toBe(1)
-      expect(toolIssue.get("lookup")?.count).toBe(1)
-      expect(toolIssue.has("")).toBe(false)
+      const t = byValue(tools.values)
+      expect(t.get("search")).toMatchObject({ totalTraces: 1, affectedTraces: 1 })
+      expect(t.get("lookup")?.affectedTraces).toBe(1)
+      expect(t.has("")).toBe(false)
 
-      // Tags: flattened, one per span; onboarding only on the other issue's trace.
+      // Tags: flattened, deduped to the trace; onboarding only on the other issue's trace.
       const tags = await aggregate("tag")
-      const tagIssue = byValue(tags.issue)
-      expect(tagIssue.get("billing")?.count).toBe(2)
-      expect(tagIssue.get("auth")?.count).toBe(1)
-      expect(tagIssue.has("onboarding")).toBe(false)
-      expect(byValue(tags.baseline).get("onboarding")?.count).toBe(1)
+      const tg = byValue(tags.values)
+      expect(tg.get("billing")).toMatchObject({ totalTraces: 2, affectedTraces: 2 })
+      expect(tg.get("billing")?.coverage).toBeCloseTo(1, 5)
+      expect(tg.get("auth")?.affectedTraces).toBe(1)
+      expect(tg.get("onboarding")?.affectedTraces).toBe(0)
+
+      // Finish reasons: "stop" spans D1, D3 and Other (3 traces), only D1 in the issue → 1/3.
+      const finishReasons = await aggregate("finishReason")
+      const f = byValue(finishReasons.values)
+      expect(f.get("stop")).toMatchObject({ totalTraces: 3, affectedTraces: 1 })
+      expect(f.get("stop")?.conditionalRate).toBeCloseTo(1 / 3, 5)
+      expect(f.get("length")?.affectedTraces).toBe(1)
     })
   })
 

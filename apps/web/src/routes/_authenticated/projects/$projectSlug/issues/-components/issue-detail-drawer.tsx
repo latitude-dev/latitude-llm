@@ -46,6 +46,14 @@ import { IssueLifecycleActions } from "./issue-lifecycle-actions.tsx"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
 import { IssueTrendBar } from "./issue-trend-bar.tsx"
 
+/**
+ * Shared fixed height for the page's side-by-side Trend + Patterns panels, so
+ * the two always line up; each scrolls internally if its content is taller.
+ */
+const ISSUE_PAGE_PANEL_HEIGHT = "h-72"
+/** Trend chart height inside that panel (leaves room for the panel header + padding). */
+const ISSUE_PAGE_TREND_CHART_HEIGHT = 200
+
 function SummaryField({ label, value }: { readonly label: string; readonly value: ReactNode }) {
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-0.5">
@@ -126,6 +134,7 @@ export function IssueDetailBody({
   onOverlayActiveChange,
   variant = "drawer",
   prepend,
+  trendAside,
   beforeTraces,
 }: {
   readonly projectId: string
@@ -139,6 +148,11 @@ export function IssueDetailBody({
    */
   readonly variant?: "drawer" | "page"
   readonly prepend?: ReactNode
+  /**
+   * Rendered (page variant) beside the Trend at a shared fixed height (e.g.
+   * Patterns), so the wide histogram and the narrow list sit on one row.
+   */
+  readonly trendAside?: ReactNode
   /** Rendered in the scroll area just before the Traces section (e.g. Examples). */
   readonly beforeTraces?: ReactNode
 }) {
@@ -305,30 +319,58 @@ export function IssueDetailBody({
             </div>
           ) : null}
 
-          <DetailSection
-            icon={<Icon icon={ArrowDownRightIcon} size="sm" />}
-            label="Trend"
-            defaultOpen
-            contentClassName="pl-0 max-h-none overflow-visible"
-          >
-            <div className="flex flex-col rounded-lg bg-secondary p-2">
-              <div className="px-4 py-3">
-                <IssueTrendBar
-                  buckets={issue?.trend ?? []}
-                  bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
-                  height={120}
-                  isLoading={isLoading}
-                  labelLayout="floating"
-                  maxVisibleBucketLabels={4}
-                  barVariant="details"
-                  states={issue?.states ?? []}
-                  resolvedAt={issue?.resolvedAt ?? null}
-                  escalationThresholds={issue?.trendEscalationThresholds ?? null}
-                  incidents={trendIncidents}
-                />
+          {variant === "page" && trendAside ? (
+            // Page: Trend (wide) and the aside (e.g. Patterns) share one row at a
+            // fixed height so they always line up; each scrolls internally if taller.
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
+              <div
+                className={`flex ${ISSUE_PAGE_PANEL_HEIGHT} min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 xl:flex-1`}
+              >
+                <Text.H6 color="foregroundMuted">Trend</Text.H6>
+                <div className="flex min-w-0 flex-1 flex-col justify-center">
+                  <IssueTrendBar
+                    buckets={issue?.trend ?? []}
+                    bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
+                    height={ISSUE_PAGE_TREND_CHART_HEIGHT}
+                    isLoading={isLoading}
+                    labelLayout="floating"
+                    maxVisibleBucketLabels={4}
+                    barVariant="details"
+                    states={issue?.states ?? []}
+                    resolvedAt={issue?.resolvedAt ?? null}
+                    escalationThresholds={issue?.trendEscalationThresholds ?? null}
+                    incidents={trendIncidents}
+                  />
+                </div>
               </div>
+              <div className={`${ISSUE_PAGE_PANEL_HEIGHT} xl:w-[340px] xl:shrink-0`}>{trendAside}</div>
             </div>
-          </DetailSection>
+          ) : (
+            <DetailSection
+              icon={<Icon icon={ArrowDownRightIcon} size="sm" />}
+              label="Trend"
+              defaultOpen
+              contentClassName="pl-0 max-h-none overflow-visible"
+            >
+              <div className="flex flex-col rounded-lg bg-secondary p-2">
+                <div className="px-4 py-3">
+                  <IssueTrendBar
+                    buckets={issue?.trend ?? []}
+                    bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
+                    height={120}
+                    isLoading={isLoading}
+                    labelLayout="floating"
+                    maxVisibleBucketLabels={4}
+                    barVariant="details"
+                    states={issue?.states ?? []}
+                    resolvedAt={issue?.resolvedAt ?? null}
+                    escalationThresholds={issue?.trendEscalationThresholds ?? null}
+                    incidents={trendIncidents}
+                  />
+                </div>
+              </div>
+            </DetailSection>
+          )}
 
           <DetailSection
             icon={<Icon icon={CheckIcon} size="sm" />}

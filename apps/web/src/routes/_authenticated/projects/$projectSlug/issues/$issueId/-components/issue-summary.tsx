@@ -8,6 +8,13 @@ import { IssueTriageControls } from "./issue-triage-controls.tsx"
 
 const MICROCENTS_PER_DOLLAR = 100_000_000
 
+/** Issue's share of all project traces, with `<1%` for a tiny-but-present rate. */
+const formatPercent = (fraction: number) => {
+  if (fraction <= 0) return "0%"
+  if (fraction < 0.01) return "<1%"
+  return `${Math.round(fraction * 100)}%`
+}
+
 function SummaryField({ label, children }: { readonly label: string; readonly children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
@@ -82,6 +89,27 @@ export function IssueSummary({ projectId, issueId }: { readonly projectId: strin
           <Skeleton className="h-5 w-16" />
         ) : (
           <Text.H5 color="foreground">{issue ? formatCount(issue.totalOccurrences) : "-"}</Text.H5>
+        )}
+      </SummaryField>
+
+      <SummaryField label="Affected traces">
+        {impactLoading ? (
+          <Skeleton className="h-5 w-16" />
+        ) : impact ? (
+          <Tooltip
+            asChild
+            trigger={
+              <div className="flex cursor-default flex-row items-baseline gap-1">
+                <Text.H5 color="foreground">{formatCount(impact.affectedTraces)}</Text.H5>
+                <Text.H6 color="foregroundMuted">· {formatPercent(impact.affectedTracesPercent)}</Text.H6>
+              </div>
+            }
+          >
+            {formatPercent(impact.affectedTracesPercent)} of all project traces are part of this issue — the baseline
+            the Patterns section compares against.
+          </Tooltip>
+        ) : (
+          <Text.H5 color="foreground">-</Text.H5>
         )}
       </SummaryField>
 

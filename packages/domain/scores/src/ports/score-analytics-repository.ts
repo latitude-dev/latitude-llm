@@ -119,32 +119,50 @@ export interface IssueImpactAggregate {
 }
 
 /**
- * A telemetry dimension whose value distribution can be compared between an
- * issue's affected traces and the project baseline. `tool` reads the span
- * `tool_name`; `tag` arrays are flattened so each tag is counted once per span.
+ * A telemetry dimension whose values can be tested for association with an
+ * issue. Each is read from a span field and rolled up to the trace: `model` →
+ * `model`, `provider` → `provider`, `tool` → `tool_name`, `tag` → flattened
+ * `tags`, `finishReason` → flattened `finish_reasons`. A trace "carries" a
+ * value if any of its spans has it.
  */
-export type IssueDimension = "model" | "provider" | "tool" | "tag"
+export type IssueDimension = "model" | "provider" | "tool" | "tag" | "finishReason"
 
-/** One value of a dimension with its span count and share within its bucket. */
-export interface DimensionValue {
+/**
+ * One value of a dimension under **reverse** conditioning: of the traces that
+ * carry this value, the share that fall into the issue (`conditionalRate =
+ * P(issue | value)`), compared elsewhere against the issue's unconditional base
+ * rate. Counts are distinct traces, not spans.
+ *
+ * The two-direction trade-off (this reverse form vs. the forward `P(value |
+ * issue)`) is documented at length in `specs/issue-details-page.md` (Data model
+ * method #2); reverse was chosen for stable, directly-readable rates and an
+ * intuitive support gate.
+ */
+export interface DimensionConditionalRate {
   readonly value: string
-  readonly count: number
-  /** Share of the bucket's total (non-empty) spans for this dimension, in `[0, 1]`. */
-  readonly percent: number
+  /** Distinct traces carrying this value that are in the issue. */
+  readonly affectedTraces: number
+  /** Distinct project traces carrying this value (the conditional-rate denominator / support). */
+  readonly totalTraces: number
+  /** `affectedTraces / totalTraces` = `P(issue | value)`, in `[0, 1]`. */
+  readonly conditionalRate: number
+  /** `affectedTraces / issueAffectedTraces` = share of the issue this value explains, in `[0, 1]`. */
+  readonly coverage: number
 }
 
 /**
- * Distribution of a dimension for one issue vs. the project baseline. Counts
- * are over spans that carry a non-empty value for the dimension (the empty
- * bucket is excluded from both numerator and denominator). `sampleSize` is the
- * issue-side span total backing the distribution — used to gate low-evidence
- * outlier calls. Outlier/lift computation lives in `@domain/issues`.
+ * Reverse-conditioned comparison of one dimension for one issue. `baseRate` is
+ * the issue's unconditional trace incidence (`issueAffectedTraces /
+ * totalProjectTraces`) — the reference each value's `conditionalRate` is judged
+ * against, and the same number the impact strip reports as affected-traces %.
+ * The repository returns every non-empty value; support gating and
+ * rate-elevation ranking live in `@domain/issues`.
  */
-export interface IssueDimensionDistribution {
+export interface IssueDimensionComparison {
   readonly dimension: IssueDimension
-  readonly sampleSize: number
-  readonly issue: readonly DimensionValue[]
-  readonly baseline: readonly DimensionValue[]
+  readonly baseRate: number
+  readonly issueAffectedTraces: number
+  readonly values: readonly DimensionConditionalRate[]
 }
 
 /** A single time-bucket for issue occurrence time-series. */
@@ -322,10 +340,11 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<IssueImpactAggregate, RepositoryError, ChSqlClient>
 
-  // -- Per-issue dimension distribution vs. project baseline -----------------
-  // Groups spans of the issue's affected traces by `dimension` and compares the
-  // shares against all project spans in the same window. Spans with an empty
-  // value for the dimension are excluded from both sides.
+  // -- Per-issue dimension comparison (reverse conditioning) -----------------
+  // For each value of `dimension`, computes the share of the project traces
+  // carrying that value which fall into the issue (`P(issue | value)`), plus the
+  // issue's unconditional base rate (`P(issue)`). Trace-level distinct counting;
+  // the empty value is excluded. Support gating + ranking live in `@domain/issues`.
   aggregateDimensionByIssue(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -333,7 +352,7 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly dimension: IssueDimension
     readonly timeRange?: ScoreAnalyticsTimeRange
     readonly options?: ScoreAnalyticsOptions
-  }): Effect.Effect<IssueDimensionDistribution, RepositoryError, ChSqlClient>
+  }): Effect.Effect<IssueDimensionComparison, RepositoryError, ChSqlClient>
 
   // -- Per-issue signals for the seasonal-anomaly escalation detector --------
   // Reads:

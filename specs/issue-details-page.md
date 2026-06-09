@@ -4,7 +4,7 @@
 
 > **Build status (Phases 1–3 shipped on branch `issue-details-page-redesign`).** This spec is the *intended* design; the **as-built state and the next steps live in the execution/handoff doc** (`~/.claude/plans/system-instruction-the-user-has-recursive-crown.md`) — read that first to continue. Key deviations from the design below, decided during the build:
 > - **Layout**: no right rail. The page is a fixed `Layout.Header` (back + title + description + lifecycle actions) + a compact non-scrolling **summary band** (triage + status + first/last seen + occurrences + sessions + users + cost; the *affected-traces* tile was dropped; *users* hidden at 0) + a single scroll area ordered **Patterns → Trend → Evaluations → Examples → Traces**.
-> - **Patterns**: four horizontally-scrollable cards (not tabs). Dimensions are `model | provider | tool (span tool_name) | tag` (not `operation`); baseline = all project spans, lifetime; per-span counting; lift gated/floored, shows `<1%`/"not seen elsewhere" never `0%`.
+> - **Patterns** *(shipped v1; redesign specified below — not yet built)*: v1 shipped four horizontally-scrollable cards using **forward** conditioning (share of the issue's occurrences using a value vs. that value's share of all project spans), per-span counting, and lift badges. The Patterns sections below **supersede** v1: a single rate-elevation–ranked list using **reverse** conditioning at trace level (see *Data model* method #2 and the Patterns block in *Block-by-block presentation*).
 > - **Examples**: published annotation occurrences with a `messageIndex` anchor + trace (cap 30, no pagination); reuses the search region-frame highlight + substring highlight; feedback rendered as the underlying annotation (author/flagger + comment); Expand/See-trace open the trace drawer. Eval/custom occurrences excluded.
 > - **Trend** still reuses the drawer's fixed 14-day/12h chart (zoomable trend is Phase 6).
 > - **Page prev/next-issue navigation is not built** (deferred to Phase 7).
@@ -21,7 +21,7 @@ The drawer is intentionally **not** the design baseline. We build the page first
 
 - A dedicated, bookmarkable, shareable route for a single issue.
 - Make **impact** a headline fact, not a footnote: affected users, affected sessions, affected traces, and cost — alongside occurrence count.
-- Surface **what is unusual** about an issue's occurrences vs. the project baseline (model / provider / tool / tags), ranked by over-representation (lift).
+- Surface **what is unusual** about an issue's occurrences vs. the project baseline (model / provider / tool / tags / finish reason), ranked by how disproportionately each value's traces fall into the issue (rate-elevation).
 - Surface **where** the issue happens inside a conversation: which interaction (trace) of the session it usually occurs on.
 - Surface **what it is connected to**: co-occurring issues and a benchmark rank against the project's other issues.
 - Let users **see the failing moment**: cycle through concrete occurrence examples with the exact message/part highlighted and the originating feedback shown inline.
@@ -46,8 +46,11 @@ The drawer is intentionally **not** the design baseline. We build the page first
 - **Occurrence**: a score assigned to the issue (`scores.issue_id`), carrying `value`, `passed`, `source`, `feedback`, `trace_id`, `session_id`, `span_id`, and (for annotations) message/part anchors.
 - **Trace / interaction**: a single request/response unit. One trace = one interaction.
 - **Session / conversation**: an ordered set of traces sharing a `session_id`. "Interaction 3 of the session" = the 3rd trace by start time.
-- **Baseline**: comparable telemetry that is **not** an occurrence of this issue — used as the denominator for lift. Default baseline = all project traces in the same time window (see Architecture for the exact definition).
-- **Lift**: `issuePercent / baselinePercent` for a dimension value. Lift > 1 means the value is over-represented among occurrences.
+- **Base rate**: the issue's unconditional trace incidence in the time window — `affectedTraces / totalProjectTraces`. The reference every Patterns conditional rate is compared against (it is the same number the impact strip reports as "affected traces %").
+- **Conditional rate**: for a dimension value `v`, `P(issue | v)` — the share of project traces carrying `v` that fall into this issue. The Patterns headline number.
+- **Rate-elevation**: `conditionalRate − baseRate`, in percentage points — how much more a value's traces fall into the issue than traces overall. Patterns' sort key.
+- **Coverage**: `affectedTracesWithValue / issueAffectedTraces` — what share of the *issue* a value explains. Distinguishes a strong-and-broad culprit from a strong-but-niche one.
+- **Lift**: `conditionalRate / baseRate` (equivalently `P(v | issue) / P(v)` — the two are algebraically identical). Lift > 1 means over-represented. Kept as a concept; the UI shows the rate pair + rate-elevation rather than the raw multiplier, which is unstable for rare values.
 
 ## Conceptual model
 
@@ -56,7 +59,7 @@ The page is organized as a top-to-bottom **report** with a persistent metadata/t
 1. **Identity** — name, description, lifecycle status, source, slug, tags.
 2. **Impact** — occurrences, affected traces (count + %), affected sessions, affected users, cost, and a derived severity hint.
 3. **Trend** — wide, zoomable occurrence histogram with existing escalation/incident overlays.
-4. **Patterns** — dimension distributions (model, provider, tool/operation, tags) vs. baseline, ranked by lift, significance-gated.
+4. **Patterns** — a single ranked list of the dimension values (model, provider, tool, tag, finish reason) whose traces most disproportionately fall into this issue vs. the project base rate (rate-elevation), support-gated.
 5. **Where it happens** — distribution of the session-interaction position at which the issue occurs.
 6. **Related** — co-occurring issues (shared traces/sessions, with lift) and a project benchmark rank.
 7. **Examples** — inline carousel cycling through occurrences with the exact message/part highlighted.
@@ -122,24 +125,74 @@ All methods live on `ScoreAnalyticsRepository` (port: `packages/domain/scores/sr
    - `affectedTracesPercent = affectedTraces / totalProjectTraces` (already computed today; fold into this method).
    - Cost/tokens are summed over **distinct** affected traces (join occurrences → `traces` by `trace_id`) to avoid double counting when multiple occurrences share a trace.
 
-2. **`aggregateDimensionsByIssue(issueId, dimension, range?) → DimensionComparison`** and a baseline counterpart folded into one response.
+2. **`aggregateDimensionByIssue(issueId, dimension, range?) → IssueDimensionComparison`** — one read per dimension.
 
    ```typescript
-   type IssueDimension = "model" | "provider" | "operation" | "tag";
-   type DimensionValue = { value: string; count: number; percent: number };
-   type DimensionComparison = {
+   type IssueDimension = "model" | "provider" | "tool" | "tag" | "finishReason";
+
+   type DimensionConditionalRate = {
+     value: string;            // e.g. "gpt-5.5", "anthropic", "search_web", "length"
+     affectedTraces: number;   // distinct traces carrying this value that are in the issue
+     totalTraces: number;      // distinct project traces carrying this value (in range)
+     conditionalRate: number;  // affectedTraces / totalTraces = P(issue | value), in [0, 1]
+     coverage: number;         // affectedTraces / issueAffectedTraces = share of the issue this value explains, in [0, 1]
+   };
+
+   type IssueDimensionComparison = {
      dimension: IssueDimension;
-     sampleSize: number;          // occurrence sample backing the issue distribution
-     issue: DimensionValue[];     // sorted desc by percent
-     baseline: DimensionValue[];
-     outliers: Array<{ value: string; issuePercent: number; baselinePercent: number; lift: number }>;
+     baseRate: number;            // issueAffectedTraces / totalProjectTraces = P(issue), in [0, 1]
+     issueAffectedTraces: number; // distinct traces in the issue (coverage denominator)
+     values: DimensionConditionalRate[]; // support-gated, sorted by rate-elevation (conditionalRate − baseRate) desc
    };
    ```
 
-   - `model` / `provider` / `operation` / `tag` read from `spans` of affected traces (and `traces` aggregations where cheaper: `models`, `providers`, `tags`).
-   - **Baseline = all project spans/traces in `range` (occurrence and non-occurrence alike).** This is simpler and stable than a strict "non-occurrence" set and is an acceptable denominator at issue scale; documented as the chosen definition.
-   - `outliers` ranked by `lift = issuePercent / baselinePercent`, filtered to a minimum lift and minimum issue count so a 3-occurrence issue cannot report "100% modelX".
-   - Significance: gate on `sampleSize`; below the threshold the method returns the distributions but an empty `outliers` array and the UI shows "not enough data to compare".
+   **Dimension value sources (trace-level).** Each dimension reads a span value and is rolled up to the **trace**: a trace "carries" value `v` if any of its spans has `v`. `model` → `spans.model`, `provider` → `spans.provider`, `tool` → `spans.tool_name`, `tag` → `arrayJoin(spans.tags)`, `finishReason` → `arrayJoin(spans.finish_reasons)`. The empty value `''` is excluded. (`operation` / `response_model` are intentionally not dimensions — they describe rather than implicate. Trace-`metadata` JSON keys are a separate, deferred dimension family; see Tasks.)
+
+   **Counting unit is the trace, not the span.** "Is this trace affected by the issue?" is a yes/no, so a trace with ten LLM calls on the same model counts once, not ten times. The numerator (`affectedTraces`) and denominator (`totalTraces`) are both `countDistinct(trace_id)`; this also makes `baseRate` identical to the impact strip's affected-traces %.
+
+   <!--
+   PATTERN VALUE — how the comparison is computed, and why it is "reverse" (P(issue | value))
+   rather than "forward" (P(value | issue)). Recorded here so a future change is a deliberate
+   one, not an accidental regression.
+
+   Both directions answer "is this value over-represented in the issue?" and, by Bayes, share the
+   SAME lift: P(value | issue) / P(value) == P(issue | value) / P(issue). What differs is which
+   numbers reach the screen and how each behaves on real data.
+
+   FORWARD — P(value | issue), the v1 build:
+     • Compute: of the issue's traces, what share carry value v (issueShare), vs. that value's
+       share across all project traces (baselineShare). Outlier = issueShare / baselineShare.
+     • Introduces: a ratio with an unbounded, unstable tail. A value that is rare *everywhere*
+       (including in the issue) divides a tiny issueShare by a near-zero baselineShare and posts a
+       huge multiplier (the "×386 on a 2%-coverage value" problem). The displayed multiplier needs
+       a baseline floor to avoid divide-by-zero, and that floor is exactly what inflates rare
+       values. The reader must mentally divide two shares to reach "is this a culprit?".
+
+   REVERSE — P(issue | value), the chosen design:
+     • Compute, per value v: conditionalRate = (distinct issue traces carrying v) / (distinct
+       project traces carrying v). Compare to baseRate = P(issue) = issueAffectedTraces /
+       totalProjectTraces. rate-elevation = conditionalRate − baseRate; lift = conditionalRate /
+       baseRate (same number as forward lift).
+     • Introduces: two bounded, directly-readable percentages — "85% of gpt-5.5 traces fall into
+       this issue, base rate 3%" — which is the causal/culprit sentence stated outright instead of
+       implied. The significance gate becomes natural ("need ≥ N traces using v to trust its
+       rate") and kills the rare-value inflation at the source, so no baseline floor and no raw
+       multiplier on screen. baseRate ties Patterns to the headline impact %, so the page reads as
+       one narrative. Cost is equal or lower: a single scan with countDistinct(trace_id) +
+       countDistinctIf(trace_id, trace_id IN issueTraces) GROUP BY value, instead of two passes.
+     • Caveat it introduces: reverse can surface a value that is strongly predictive but niche
+       (30 traces, 28 in the issue = 93% rate, yet 0.5% of a large issue). That is still a true
+       finding, so we keep it but (a) gate on minimum trace support to drop true flukes and
+       (b) carry `coverage` on every row so "strong-and-broad" is visually distinct from
+       "strong-but-niche". Sort stays on rate-elevation (strength) primary.
+
+   DECISION: reverse. It states the culprit directly, is numerically stable without floors, gates
+   intuitively, and aligns with the impact base rate — at equal-or-lower query cost. Revisit only
+   if the niche-but-high-rate caveat proves noisy in practice (then consider a coverage-weighted
+   sort), in which case this is the place to flip back the conditioning, not the UI.
+   -->
+
+   **Significance gate.** Values are filtered to a minimum trace support (`totalTraces ≥ ISSUE_DIMENSION_MIN_SUPPORT`, a named constant) so a value used by a handful of traces cannot post a "93% rate". When no value clears the gate, `values` is empty and the UI shows "not enough data to compare against the project baseline yet". `baseRate` and `issueAffectedTraces` may be reused from `aggregateImpactByIssue` rather than recomputed.
 
 3. **`coOccurringIssues(issueId, range?) → CoOccurringIssue[]`**
 
@@ -267,7 +320,14 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 
 4. **Trend.** A wider version of the occurrence histogram with **zoom/pan controls** and a range selector local to the page. Reuses `IssueTrendBar` (escalation-threshold curve, incident overlays, regressed/escalating bucket coloring) extended for a larger canvas and interactive zoom. Backed by the existing `histogramByIssues` (variable bucket size + range). Optional stacked split by source (annotation/evaluation/custom) is allowed but secondary.
 
-5. **Patterns (vs baseline).** A tabbed card — **Model | Provider | Tool | Tags** — backed by `getIssueDimensions`. Each tab lists the top values as horizontal bars showing the issue percent, with a **lift badge** (`×1.5 vs 40% baseline`) and an **outlier flag** on statistically over-represented values. Sorted so the most anomalous values surface first. Below the significance threshold the card shows "not enough occurrences to compare against the project baseline yet".
+5. **Patterns (what's unusual).** A **single ranked list across all dimensions** (model, provider, tool, tag, finish reason) — not tabs or per-dimension cards — backed by `getIssueDimensions`. Each row is one dimension value and reads as a culprit sentence:
+
+   > `Model` **gpt-5.5** — **85%** of its traces are in this issue (base rate **3%**) · covers **60%** of occurrences
+
+   - Rows are sorted by **rate-elevation** (`conditionalRate − baseRate`) descending, so the values whose traces most disproportionately fall into the issue surface first, *regardless of which dimension they belong to*. A dimension whose values all fail the support gate simply does not appear — no empty sections, no fixed ordering by dimension.
+   - Each row shows the **conditional rate** (headline), the **base rate** (reference), and **coverage** (how much of the issue the value explains), so a strong-and-broad culprit is visually distinct from a strong-but-niche one. A small **dimension chip** labels each row; a dimension filter is optional sugar.
+   - A subtle bar can encode the conditional rate with a tick at the base rate, so the gap (rate-elevation) is the visual emphasis. The raw lift multiplier is **not** shown (it is unstable for rare values; the two percentages carry the meaning).
+   - When no value clears the support gate the section shows "not enough data to compare against the project baseline yet".
 
 6. **Where it happens.** A compact bar chart of the **session-interaction position** distribution (`getIssueFailurePositions`): x-axis = interaction index within the conversation (`1, 2, 3, … , 10+`), y-axis = share of occurrences, with a callout for the **median interaction** (e.g. *"usually on interaction 3 of the conversation"*) and a separate note for the single-interaction share. This is the headline "where" insight; it directly tells users whether failures are an opening-turn problem or a long-conversation-degradation problem.
 
@@ -304,7 +364,7 @@ Gate the new route and any new nav entry behind an org feature flag (e.g. `issue
 Backend only (no frontend tests), per repo convention:
 
 - Use-case tests for `updateIssueTriageUseCase` (assignee org-membership validation, priority set/clear, idempotency).
-- Repository tests (chdb testkit) for each new analytics method: `aggregateImpactByIssue` (distinct-trace cost dedupe, affected-users), `aggregateDimensionsByIssue` (lift math + significance gate), `coOccurringIssues` (shared sets + self-exclusion + lift), `failurePositionBySession` (window ranking, single-interaction handling, overflow bucket), `issueBenchmark` (percentile ranking).
+- Repository tests (chdb testkit) for each new analytics method: `aggregateImpactByIssue` (distinct-trace cost dedupe, affected-users), `aggregateDimensionByIssue` (trace-level conditional-rate + coverage math + support gate), `coOccurringIssues` (shared sets + self-exclusion + lift), `failurePositionBySession` (window ranking, single-interaction handling, overflow bucket), `issueBenchmark` (percentile ranking).
 - Read-path tests that `get-issue-details` / `list-issues` surface `assigneeId` + `priority`.
 
 ## Tasks
@@ -329,6 +389,17 @@ Backend only (no frontend tests), per repo convention:
 - [x] **P2-3**: Patterns card (Model/Provider/Tool/Tags tabs) with lift badges, outlier flags, and the low-sample empty state.
 
 **Exit gate**: the page shows which models/providers/tools/tags are over-represented in this issue vs. the project baseline, with lift and significance handling.
+
+#### Phase 2 — Revision (R2: reverse conditioning + single list)
+
+Supersedes the v1 build above. Rationale and the forward-vs-reverse decision live in *Data model* method #2.
+
+- [ ] **P2-R1**: Recompute `aggregateDimensionByIssue` at **trace level** with **reverse** conditioning — return `conditionalRate`, `coverage`, `baseRate`, `issueAffectedTraces` (single `countDistinct` / `countDistinctIf … GROUP BY value` scan). Add `finishReason`; drop `operation`. Replace the lift/sample/floor gates with a single `ISSUE_DIMENSION_MIN_SUPPORT` trace-support gate. Update chdb tests (conditional-rate + coverage math, support gate, niche-but-high-rate case).
+- [ ] **P2-R2**: Update `getIssueDimensions` web function + hooks for the new `IssueDimensionComparison` shape.
+- [ ] **P2-R3**: Replace the four cards with a **single list ranked by rate-elevation across all dimensions** — dimension chip + conditional rate + base rate + coverage, support-gated empty state, no per-dimension sections.
+- [ ] **P2-R4** *(deferred — most complex, do last)*: add trace-`metadata` JSON keys as a dimension family. Requires discovering which keys are present/useful across an issue's traces (skip unique-per-trace keys) and bucketing their values before the same reverse comparison applies.
+
+**Revised exit gate**: the page shows a single ranked list of the model/provider/tool/tag/finish-reason values whose traces most disproportionately fall into this issue (conditional rate vs. base rate), support-gated, with coverage shown per row.
 
 ### Phase 3 — Examples carousel
 

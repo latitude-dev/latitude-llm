@@ -11,29 +11,33 @@ export const ISSUE_SOURCES = ["annotation", "flagger", "custom"] as const
 export const ISSUE_PRIORITIES = ["low", "medium", "high", "urgent"] as const
 
 // ---------------------------------------------------------------------------
-// Dimension distribution outliers (Patterns panel)
+// Dimension patterns (Patterns panel)
 // ---------------------------------------------------------------------------
 
 /**
- * Minimum issue-side span sample (the dimension distribution's `sampleSize`)
- * before we surface any "over-represented vs. baseline" outliers. Below this we
- * don't have enough evidence to claim a value is anomalous, so the UI shows a
- * "not enough data" state instead of misleading lifts.
+ * Minimum trace support before a dimension value is eligible to be ranked as a
+ * pattern. The "support" is `totalTraces` — the number of distinct project
+ * traces that carry the value (the denominator of its conditional rate). Below
+ * this we cannot trust the conditional rate (a value used by two traces, both
+ * in the issue, would otherwise post a "100% rate"), so the value is dropped
+ * and, when no value clears the gate, the UI shows a "not enough data" state.
+ *
+ * This single trace-support gate replaces v1's sample/value-count/lift/floor
+ * stack: under reverse conditioning the rare-value inflation those guarded
+ * against is gated at its source (the denominator), not patched after the fact.
  */
-export const ISSUE_DIMENSION_MIN_SAMPLE = 20
-
-/** A dimension value must occur at least this many times in the issue to be an outlier candidate. */
-export const ISSUE_DIMENSION_MIN_VALUE_COUNT = 3
-
-/** Minimum lift (`issuePercent / baselinePercent`) for a value to count as over-represented. */
-export const ISSUE_DIMENSION_OUTLIER_MIN_LIFT = 1.5
+export const ISSUE_DIMENSION_MIN_SUPPORT = 10
 
 /**
- * Floor applied to the baseline share when computing lift, so a value that is
- * essentially absent from the baseline yields a large finite lift instead of a
- * division by zero / non-serializable `Infinity`.
+ * Minimum rate-elevation (`conditionalRate − baseRate`, in `[0, 1]`) for a value
+ * to be shown as a pattern. At least 1 percentage point more of a value's traces
+ * must fall into the issue than traces overall, otherwise it sits too close to
+ * the baseline to be worth surfacing. The floor is on the *elevation*, not the
+ * conditional rate, so a rare-but-predictive value (e.g. 0.8% conditional over a
+ * 0.01% base) still qualifies — its elevation is what matters, not its absolute
+ * share. Keeps the (scrollable) list to genuinely over-represented values.
  */
-export const ISSUE_DIMENSION_BASELINE_FLOOR = 0.001
+export const ISSUE_DIMENSION_MIN_RATE_ELEVATION = 0.01
 
 export const NEW_ISSUE_AGE_DAYS = 7
 

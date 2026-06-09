@@ -31,7 +31,8 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
     rollupByTraceIds: () => Effect.succeed([]),
     rollupBySessionIds: () => Effect.succeed([]),
     aggregateByIssues: () => Effect.succeed([]),
-    aggregateDimensionByIssue: ({ dimension }) => Effect.succeed({ dimension, sampleSize: 0, issue: [], baseline: [] }),
+    aggregateDimensionByIssue: ({ dimension }) =>
+      Effect.succeed({ dimension, baseRate: 0, issueAffectedTraces: 0, values: [] }),
     aggregateImpactByIssue: ({ issueId }) =>
       Effect.succeed({
         issueId,
