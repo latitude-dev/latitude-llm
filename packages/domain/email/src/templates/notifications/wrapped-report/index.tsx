@@ -44,11 +44,7 @@ interface RenderInput {
   readonly webAppUrl: string
   readonly reportId: string
   readonly reportVersion: ReportVersion
-  /**
-   * Resolved upstream from the `wrapped-merch-promo` flag. V1 ignores it
-   * (the V1 component never received this prop); V2 renders the
-   * 41st.latitude.so banner when true.
-   */
+  /** V1 ignores it; V2 renders the 41st.latitude.so banner when true. */
   readonly showMerchPromo: boolean
 }
 

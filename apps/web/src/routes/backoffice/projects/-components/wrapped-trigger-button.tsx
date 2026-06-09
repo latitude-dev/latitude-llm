@@ -11,9 +11,9 @@ interface WrappedTriggerButtonProps {
 
 /**
  * Manually triggers a Claude Code Wrapped run for this project. The worker
- * decides — based on the org's `claude-code-wrapped` feature flag and the
- * presence of Claude Code spans — whether anything actually ships. The
- * confirmation modal calls that out so staff don't expect blind sends.
+ * decides based on the presence of Claude Code spans whether anything
+ * actually ships. The confirmation modal calls that out so staff don't
+ * expect blind sends.
  */
 export function WrappedTriggerButton({ projectId, projectName }: WrappedTriggerButtonProps) {
   const { toast } = useToast()
@@ -26,7 +26,7 @@ export function WrappedTriggerButton({ projectId, projectName }: WrappedTriggerB
     try {
       await adminTriggerWrapped({ data: { projectId, type: "claude_code" } })
       toast({
-        description: `Claude Code Wrapped enqueued for ${projectName}. Members will receive a notification if the flag is on and the project had activity this week.`,
+        description: `Claude Code Wrapped enqueued for ${projectName}. Members will receive a notification if the project had activity this week.`,
       })
       setIsOpen(false)
       void router.invalidate()
@@ -64,7 +64,7 @@ export function WrappedTriggerButton({ projectId, projectName }: WrappedTriggerB
             </Text.H5>
             <Alert
               variant="warning"
-              description="The wrapped will only be generated if the organization has the `claude-code-wrapped` feature flag enabled and the project recorded Claude Code activity in the last 7 days. Otherwise the generation is skipped."
+              description="The wrapped will only be generated if the project recorded Claude Code activity in the last 7 days. Otherwise the generation is skipped."
             />
           </Modal.Body>
           <Modal.Footer>

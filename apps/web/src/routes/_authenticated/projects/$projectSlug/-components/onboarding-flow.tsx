@@ -3,7 +3,6 @@ import { useForm } from "@tanstack/react-form"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { useCallback, useRef, useState } from "react"
-import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { invalidateProjectFlaggers, useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
 import {
   configureProjectFlaggersForOnboarding,
@@ -60,8 +59,7 @@ export function OnboardingFlow({
   const { toast } = useToast()
   const navigate = useNavigate()
 
-  const slackFlagEnabled = useHasFeatureFlag("slack")
-  const slackStepEnabled = slackFlagEnabled && slackEnvConfigured
+  const slackStepEnabled = slackEnvConfigured
 
   // Force back to `role` if a URL deep-links past `stack` without `onboardingType` set.
   const onboardingTypeSet = onboardingType != null

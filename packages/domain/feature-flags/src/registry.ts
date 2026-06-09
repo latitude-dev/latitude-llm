@@ -11,35 +11,10 @@
  * are inert and can be cleaned from the backoffice.
  */
 export const FEATURE_FLAGS = {
-  "claude-code-wrapped": {
-    emoji: "🎁",
-    name: "Claude Code Wrapped",
-    description: "Creates the weekly Wrapped for projects with Claude Code telemetry within the organization.",
-  },
   "wrapped-merch-promo": {
     emoji: "👕",
     name: "Wrapped merch promo",
     description: "Shows the 41st.latitude.so 'share on X for free merch' banner inside the weekly Wrapped email.",
-  },
-  "email-notifications": {
-    emoji: "✉️",
-    name: "Email notifications",
-    description: "Enables email delivery for incident notifications and the related user preferences UI.",
-  },
-  notifications: {
-    emoji: "🔔",
-    name: "In-app notifications",
-    description: "Enables the in-app notifications bell and the per-project notification settings page.",
-  },
-  slack: {
-    emoji: "💬",
-    name: "Slack integration",
-    description: "Enables the Slack integration settings and incident delivery to Slack.",
-  },
-  "timeline-incidents": {
-    emoji: "📊",
-    name: "Timeline incidents overlay",
-    description: "Renders the incident overlay on trace and issue timeline histograms.",
   },
   monitors: {
     emoji: "📡",

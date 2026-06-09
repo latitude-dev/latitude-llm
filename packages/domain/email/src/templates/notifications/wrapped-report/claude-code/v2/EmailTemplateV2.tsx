@@ -29,11 +29,7 @@ interface EmailTemplateV2Props {
   readonly report: Report
   readonly webAppUrl: string
   readonly reportId: WrappedReportId
-  /**
-   * Resolved by the dispatcher from the `wrapped-merch-promo` flag. When
-   * true, renders the 41st.latitude.so merch banner between the primary
-   * CTA and the footer. Defaults to false so previews stay flag-free.
-   */
+  /** When true, renders the 41st.latitude.so merch banner between the primary CTA and the footer. */
   readonly showMerchPromo?: boolean
 }
 

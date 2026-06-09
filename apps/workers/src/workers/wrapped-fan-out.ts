@@ -1,4 +1,3 @@
-import { AdminFeatureFlagRepository } from "@domain/admin"
 import { listProjectsWithClaudeCodeSpansUseCase } from "@domain/spans"
 import { Effect } from "effect"
 
@@ -33,7 +32,6 @@ interface FanOutWeeklyRunInput {
 
 type FanOutWeeklyRunResult =
   | { readonly status: "no-activity" }
-  | { readonly status: "no-eligible-orgs" }
   | { readonly status: "fanned-out"; readonly publishedCount: number }
 
 /**
@@ -45,14 +43,10 @@ type FanOutWeeklyRunResult =
  *
  *   1. Ask ClickHouse for projects with at least one Claude Code span in
  *      the window.
- *   2. Ask admin postgres which organizations have the
- *      `claude-code-wrapped` feature flag enabled (or whether it's
- *      enabled globally).
- *   3. Intersect — keep only projects whose org is flag-enabled.
- *   4. Publish one task per surviving pair, stamped `type: "claude_code"`.
+ *   2. Publish one task per project, stamped `type: "claude_code"`.
  *
  * When a second Wrapped type lands, this becomes a per-type loop over a
- * small registry of `{ flag, listEligibleProjects }` entries.
+ * small registry of `{ listEligibleProjects }` entries.
  *
  * The publish step is a callback so the use case isn't coupled to the
  * queue adapter — tests substitute a capture function.
@@ -67,23 +61,11 @@ export const fanOutWeeklyRunUseCase = (deps: FanOutWeeklyRunDeps) =>
       return { status: "no-activity" } satisfies FanOutWeeklyRunResult
     }
 
-    const adminFlags = yield* AdminFeatureFlagRepository
-    const eligibility = yield* adminFlags.findEligibilityForFlag("claude-code-wrapped")
-
-    const enabledOrgIds = new Set(eligibility.organizationIds.map((id) => id as string))
-    const eligible = eligibility.enabledForAll
-      ? projects
-      : projects.filter((project) => enabledOrgIds.has(project.organizationId as string))
-
-    if (eligible.length === 0) {
-      return { status: "no-eligible-orgs" } satisfies FanOutWeeklyRunResult
-    }
-
     const windowStartIso = input.windowStart.toISOString()
     const windowEndIso = input.windowEnd.toISOString()
 
     yield* Effect.forEach(
-      eligible,
+      projects,
       (project) =>
         deps.publish({
           type: "claude_code",
@@ -95,5 +77,5 @@ export const fanOutWeeklyRunUseCase = (deps: FanOutWeeklyRunDeps) =>
       { concurrency: PUBLISH_CONCURRENCY, discard: true },
     )
 
-    return { status: "fanned-out", publishedCount: eligible.length } satisfies FanOutWeeklyRunResult
+    return { status: "fanned-out", publishedCount: projects.length } satisfies FanOutWeeklyRunResult
   })

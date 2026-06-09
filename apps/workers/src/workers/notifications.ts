@@ -1,4 +1,3 @@
-import { FeatureFlagRepository } from "@domain/feature-flags"
 import { SlackIntegrationRepository } from "@domain/integrations"
 import {
   createNotificationUseCase,
@@ -14,7 +13,6 @@ import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-click
 import {
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
-  FeatureFlagRepositoryLive,
   IncidentMonitorReaderLive,
   MembershipRepositoryLive,
   NotificationRepositoryLive,
@@ -39,7 +37,6 @@ interface NotificationsDeps {
 const requestLayer = Layer.mergeAll(
   AlertIncidentRepositoryLive,
   EvaluationRepositoryLive,
-  FeatureFlagRepositoryLive,
   IncidentMonitorReaderLive,
   MembershipRepositoryLive,
   ProjectRepositoryLive,
@@ -49,15 +46,14 @@ const requestLayer = Layer.mergeAll(
   UserRepositoryLive,
 )
 
-const createLayer = Layer.mergeAll(FeatureFlagRepositoryLive, NotificationRepositoryLive, UserRepositoryLive)
+const createLayer = Layer.mergeAll(NotificationRepositoryLive, UserRepositoryLive)
 
 /**
  * Org-level Slack fan-out runs at the producer step (not per recipient).
  * Slack channel notifications are independent of the per-user create-
  * notification loop above: one Slack message per `(occurrence, route)`
- * regardless of recipient count. Skipped entirely when the `slack` flag
- * is off, the org has no active integration, or no routes are
- * configured for the kind's group.
+ * regardless of recipient count. Skipped when the org has no active
+ * integration, or no routes are configured for the kind's group.
  *
  * Idempotency comes from the worker (claim-then-act against
  * `slack_deliveries`), but the dedupeKey here lets BullMQ coalesce
@@ -78,14 +74,10 @@ interface ProducerRequest {
 const fanOutSlackRoutes = (
   requests: readonly ProducerRequest[],
   publisher: QueuePublisherShape,
-): Effect.Effect<void, never, FeatureFlagRepository | SlackIntegrationRepository | SqlClient> =>
+): Effect.Effect<void, never, SlackIntegrationRepository | SqlClient> =>
   Effect.gen(function* () {
     if (requests.length === 0) return
     const first = requests[0]!
-
-    const flags = yield* FeatureFlagRepository
-    const slackEnabled = yield* flags.isEnabledForOrganization("slack")
-    if (!slackEnabled) return
 
     const repo = yield* SlackIntegrationRepository
     const integration = yield* repo.findActiveByOrganizationId().pipe(Effect.orElseSucceed(() => null))
@@ -268,15 +260,6 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
           return
         }
         if (!result.emailEligible) return
-
-        // Org-level kill switch: if the `email-notifications` flag is off
-        // for this org, we never enqueue the email-send task. The in-app
-        // row is already written; the bell still works. Flag is checked
-        // here (creator step) rather than in the emailer because it's
-        // cheaper to skip the publish than to enqueue + ack a no-op.
-        const flags = yield* FeatureFlagRepository
-        const emailEnabled = yield* flags.isEnabledForOrganization("email-notifications")
-        if (!emailEnabled) return
 
         yield* publisher.publish(
           "notification-email",
