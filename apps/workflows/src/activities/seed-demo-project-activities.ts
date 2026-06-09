@@ -1,5 +1,5 @@
 import { AI } from "@domain/ai"
-import { ApiKeyId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { ApiKeyId, OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import { createSeedScope, type SeedScope } from "@domain/shared/seeding"
 import {
   buildTraceSearchDocument,
@@ -186,6 +186,12 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
             rootSpanName: document.rootSpanName,
             searchText: document.searchText,
             contentHash: document.contentHash,
+            retentionDays: DEMO_PROJECT_RETENTION_DAYS,
+          })
+          yield* searchRepo.refreshSessionDocument({
+            organizationId,
+            projectId,
+            sessionId: trace.sessionId || SessionId(traceId),
             retentionDays: DEMO_PROJECT_RETENTION_DAYS,
           })
 

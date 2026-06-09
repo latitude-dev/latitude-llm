@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
+import type { OrganizationId, ProjectId, RepositoryError, SessionId, TraceId } from "@domain/shared"
 import { Context, type Effect } from "effect"
 
 export interface TraceSemanticHighlightMatch {
@@ -37,12 +37,13 @@ export interface TraceSearchEmbeddingRow {
 /**
  * Repository port for trace search indexing operations.
  *
- * Handles upserts to trace_search_documents (lexical) and
- * trace_search_embeddings (semantic) tables. Query-side semantic retrieval
- * runs inline as a subquery inside the main `traces` SQL in
- * `TraceRepositoryLive`, so the port intentionally exposes only write/dedup
- * ops — a standalone `querySemanticCandidates` method would duplicate the
- * cosine-distance SQL that the repository already embeds.
+ * Handles writes to trace_search_documents (trace lexical),
+ * session_search_documents (session lexical), and trace_search_embeddings
+ * (trace semantic). Query-side semantic retrieval runs inline as a subquery
+ * inside the main `traces` SQL in `TraceRepositoryLive`, so the port
+ * intentionally exposes only write/dedup ops — a standalone
+ * `querySemanticCandidates` method would duplicate the cosine-distance SQL
+ * that the repository already embeds.
  */
 export interface TraceSearchRepositoryShape {
   /**
@@ -50,6 +51,19 @@ export interface TraceSearchRepositoryShape {
    * Uses ReplacingMergeTree semantics - later indexed_at wins.
    */
   upsertDocument(row: TraceSearchDocumentRow): Effect.Effect<void, RepositoryError>
+
+  /**
+   * Rebuild the session-level lexical document from the current trace lexical
+   * documents in the session. Session search reads this projection so lexical
+   * matching is session-shaped while trace search can keep using per-trace
+   * documents.
+   */
+  refreshSessionDocument(args: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly retentionDays?: number
+  }): Effect.Effect<void, RepositoryError>
 
   /**
    * Upsert a semantic search embedding.

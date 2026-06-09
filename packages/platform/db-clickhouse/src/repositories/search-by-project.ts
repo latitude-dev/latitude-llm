@@ -31,8 +31,8 @@ import { MAX_SEARCH_CANDIDATES } from "./search-plan.ts"
 import { planSessionSearch, type SessionSearchPlan } from "./session-search-plan.ts"
 
 /**
- * Session-level search read path. Lexical candidates still come from
- * `trace_search_documents`; semantic candidates come from current-generation
+ * Session-level search read path. Lexical candidates come from
+ * `session_search_documents`; semantic candidates come from current-generation
  * `session_semantic_moments`. We materialize the candidate
  * `(trace_id, relevance_score)` rows via `fetchSearchCandidates` in their own
  * roundtrip, then feed the candidate trace_ids and scores as parameter-bound arrays into a

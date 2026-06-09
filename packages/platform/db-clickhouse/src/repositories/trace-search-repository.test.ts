@@ -1,4 +1,4 @@
-import { OrganizationId, ProjectId, SEED_ORG_ID, SEED_PROJECT_ID, TraceId } from "@domain/shared/seeding"
+import { OrganizationId, ProjectId, SEED_ORG_ID, SEED_PROJECT_ID, SessionId, TraceId } from "@domain/shared/seeding"
 import {
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
   TRACE_SEARCH_EMBEDDING_MODEL,
@@ -8,16 +8,83 @@ import {
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
+import type { SpanRow } from "../seeds/spans/span-builders.ts"
+import { insertJsonEachRow } from "../sql.ts"
 import { withClickHouse } from "../with-clickhouse.ts"
 import { TraceSearchRepositoryLive } from "./trace-search-repository.ts"
 
 const ORG_ID = OrganizationId(SEED_ORG_ID)
 const PROJECT_ID = ProjectId(SEED_PROJECT_ID)
 const TEST_TRACE_ID = TraceId("a".repeat(32)) // 32-char trace ID
+const toClickHouseDateTime = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
 
 // setupTestClickHouse registers a beforeEach that TRUNCATEs every user table,
 // so tests start with clean trace_search_documents / trace_search_embeddings.
 const ch = setupTestClickHouse()
+
+const makeSpanRow = ({
+  traceId,
+  spanId,
+  sessionId,
+  startTime,
+}: {
+  readonly traceId: string
+  readonly spanId: string
+  readonly sessionId: string
+  readonly startTime: Date
+}): SpanRow => ({
+  organization_id: ORG_ID as string,
+  project_id: PROJECT_ID as string,
+  session_id: sessionId,
+  user_id: "",
+  trace_id: traceId,
+  span_id: spanId,
+  parent_span_id: "",
+  api_key_id: "test-api-key",
+  simulation_id: "",
+  start_time: toClickHouseDateTime(startTime),
+  end_time: toClickHouseDateTime(new Date(startTime.getTime() + 1_000)),
+  name: "root",
+  service_name: "test-service",
+  kind: 0,
+  status_code: 0,
+  status_message: "",
+  error_type: "",
+  tags: [],
+  metadata: {},
+  operation: "",
+  provider: "",
+  model: "",
+  response_model: "",
+  tokens_input: 0,
+  tokens_output: 0,
+  tokens_cache_read: 0,
+  tokens_cache_create: 0,
+  tokens_reasoning: 0,
+  cost_input_microcents: 0,
+  cost_output_microcents: 0,
+  cost_total_microcents: 0,
+  cost_is_estimated: 0,
+  time_to_first_token_ns: 0,
+  is_streaming: 0,
+  response_id: "",
+  finish_reasons: [],
+  input_messages: "",
+  output_messages: "",
+  system_instructions: "",
+  tool_definitions: "",
+  tool_call_id: "",
+  tool_name: "",
+  tool_input: "",
+  tool_output: "",
+  attr_string: {},
+  attr_int: {},
+  attr_float: {},
+  attr_bool: {},
+  resource_string: {},
+  scope_name: "",
+  scope_version: "",
+})
 
 describe("TraceSearchRepository", () => {
   let repo: TraceSearchRepositoryShape
@@ -45,6 +112,81 @@ describe("TraceSearchRepository", () => {
       )
 
       expect(result).toBeUndefined()
+    })
+  })
+
+  describe("refreshSessionDocument", () => {
+    it("rebuilds one lexical document from all trace documents in a session", async () => {
+      const sessionId = SessionId("session-lexical-doc")
+      const traceA = TraceId("a".repeat(32))
+      const traceB = TraceId("b".repeat(32))
+      const start = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+
+      await Effect.runPromise(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({ traceId: traceA, spanId: "1".repeat(16), sessionId, startTime: start }),
+          makeSpanRow({
+            traceId: traceB,
+            spanId: "2".repeat(16),
+            sessionId,
+            startTime: new Date(start.getTime() + 1_000),
+          }),
+        ]),
+      )
+      await Effect.runPromise(
+        repo.upsertDocument({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: traceA,
+          startTime: start,
+          rootSpanName: "root-a",
+          searchText: "first trace text",
+          contentHash: "a".repeat(64),
+        }),
+      )
+      await Effect.runPromise(
+        repo.upsertDocument({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: traceB,
+          startTime: new Date(start.getTime() + 1_000),
+          rootSpanName: "root-b",
+          searchText: "second trace text",
+          contentHash: "b".repeat(64),
+        }),
+      )
+
+      await Effect.runPromise(
+        repo.refreshSessionDocument({ organizationId: ORG_ID, projectId: PROJECT_ID, sessionId, retentionDays: 42 }),
+      )
+
+      const result = await ch.client.query({
+        query: `SELECT
+                  session_id,
+                  CAST(trace_ids AS Array(String)) AS trace_ids,
+                  root_span_name,
+                  search_text,
+                  retention_days
+                FROM session_search_documents FINAL
+                WHERE organization_id = {organizationId:String}
+                  AND project_id = {projectId:String}
+                  AND session_id = {sessionId:String}`,
+        query_params: { organizationId: ORG_ID as string, projectId: PROJECT_ID as string, sessionId },
+        format: "JSONEachRow",
+      })
+      const rows = await result.json<{
+        session_id: string
+        trace_ids: string[]
+        root_span_name: string
+        search_text: string
+        retention_days: number
+      }>()
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]?.trace_ids).toEqual([traceA, traceB])
+      expect(rows[0]?.root_span_name).toBe("root-a")
+      expect(rows[0]?.search_text).toBe("first trace text\n\nsecond trace text")
+      expect(rows[0]?.retention_days).toBe(42)
     })
   })
 

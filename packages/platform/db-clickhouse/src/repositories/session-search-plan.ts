@@ -3,9 +3,13 @@ import {
   CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
   CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
 } from "@domain/conversation-intelligence"
-import { type ParsedSearchQuery, TRACE_SEARCH_MIN_RELEVANCE_SCORE } from "@domain/spans"
+import {
+  normalizeLiteralPhrase,
+  type ParsedSearchQuery,
+  TRACE_SEARCH_MIN_RELEVANCE_SCORE,
+  tokenizePhrase,
+} from "@domain/spans"
 import { Effect, Option } from "effect"
-import { buildLexicalSearchSubquery } from "./search-plan.ts"
 
 /**
  * Session semantic search scans conversation-intelligence moments instead of
@@ -13,6 +17,61 @@ import { buildLexicalSearchSubquery } from "./search-plan.ts"
  * rolls matching moment traces up to sessions.
  */
 const SESSION_SEMANTIC_MOMENT_SCAN_LIMIT = 30_000
+
+function escapeLikePattern(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
+}
+
+function buildSessionLexicalSubquery(parsed: ParsedSearchQuery): {
+  subquery: string
+  params: Record<string, unknown>
+} {
+  const literalPhrases = parsed.literalPhrases.map(normalizeLiteralPhrase)
+  const tokenized = parsed.tokenPhrases.map(tokenizePhrase)
+  const matchNothing =
+    literalPhrases.some((phrase) => phrase.length === 0) || tokenized.some((tokens) => tokens.length === 0)
+
+  if (matchNothing) {
+    return {
+      subquery: `SELECT CAST(trace_id AS String) AS trace_id
+                 FROM session_search_documents
+                 ARRAY JOIN trace_ids AS trace_id
+                 WHERE organization_id = {organizationId:String}
+                   AND project_id = {projectId:String}
+                   AND 0`,
+      params: {},
+    }
+  }
+
+  const predicates: string[] = []
+  const params: Record<string, unknown> = {}
+
+  literalPhrases.forEach((phrase, phraseIdx) => {
+    const paramName = `literalPhrase${phraseIdx}`
+    predicates.push(`search_text LIKE {${paramName}:String}`)
+    params[paramName] = `%${escapeLikePattern(phrase)}%`
+  })
+
+  tokenized.forEach((tokens, phraseIdx) => {
+    const paramName = `tokenPhrase${phraseIdx}`
+    predicates.push(
+      `hasAllTokens(search_text, {${paramName}:Array(String)}) AND hasSubstr(tokens(lower(search_text), 'splitByNonAlpha'), {${paramName}:Array(String)})`,
+    )
+    params[paramName] = [...tokens]
+  })
+
+  const phraseClause = predicates.length > 0 ? `AND ${predicates.join(" AND ")}` : ""
+
+  return {
+    subquery: `SELECT CAST(trace_id AS String) AS trace_id
+               FROM session_search_documents
+               ARRAY JOIN trace_ids AS trace_id
+               WHERE organization_id = {organizationId:String}
+                 AND project_id = {projectId:String}
+                 ${phraseClause}`,
+    params,
+  }
+}
 
 function buildSessionSemanticSubquery(queryEmbedding: readonly number[]): {
   subquery: string
@@ -62,7 +121,7 @@ function buildSessionSearchPlan(
   const hasEmbedding = !!queryEmbedding && queryEmbedding.length > 0
 
   if (hasPhrases && !hasSemantic) {
-    const lex = buildLexicalSearchSubquery(parsed)
+    const lex = buildSessionLexicalSubquery(parsed)
     return {
       ranked: false,
       subquery: `SELECT trace_id, 0.0 AS relevance_score FROM (${lex.subquery})`,
@@ -75,7 +134,8 @@ function buildSessionSearchPlan(
       return {
         ranked: true,
         subquery: `SELECT CAST(trace_id AS String) AS trace_id, 0.0 AS relevance_score
-                   FROM trace_search_documents
+                   FROM session_search_documents
+                   ARRAY JOIN trace_ids AS trace_id
                    WHERE organization_id = {organizationId:String}
                      AND project_id = {projectId:String}
                      AND 0`,
@@ -95,7 +155,7 @@ function buildSessionSearchPlan(
     }
   }
 
-  const lex = buildLexicalSearchSubquery(parsed)
+  const lex = buildSessionLexicalSubquery(parsed)
   if (!hasEmbedding) {
     return {
       ranked: false,

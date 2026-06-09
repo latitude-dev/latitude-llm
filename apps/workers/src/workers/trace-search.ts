@@ -1,6 +1,6 @@
 import { AI } from "@domain/ai"
 import type { QueueConsumer } from "@domain/queue"
-import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, SessionId, TraceId } from "@domain/shared"
 import {
   buildTraceSearchDocument,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
@@ -149,7 +149,15 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
       retentionDays,
     })
 
-    logger.info(`Indexed lexical search document for trace ${traceId}`)
+    const sessionId = traceDetail.sessionId || SessionId(traceId)
+    yield* traceSearchRepo.refreshSessionDocument({
+      organizationId: OrganizationId(organizationId),
+      projectId: ProjectId(projectId),
+      sessionId,
+      retentionDays,
+    })
+
+    logger.info(`Indexed lexical search documents for trace ${traceId} and session ${sessionId}`)
 
     // Chunk indices are assigned in chronological order, so processing them in
     // descending order prioritizes the tail when budget pressure means we may

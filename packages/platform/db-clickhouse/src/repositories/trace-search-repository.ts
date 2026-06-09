@@ -1,6 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { TraceSearchRepository, type TraceSearchRepositoryShape } from "@domain/spans"
+import { hash, normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 // ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
@@ -33,6 +34,92 @@ export const TraceSearchRepositoryLive = Layer.effect(
           })
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "upsertDocument")))
+
+    const refreshSessionDocument: TraceSearchRepositoryShape["refreshSessionDocument"] = ({
+      organizationId,
+      projectId,
+      sessionId,
+      retentionDays,
+    }) =>
+      Effect.gen(function* () {
+        const rows = yield* chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `WITH trace_sessions AS (
+                        SELECT
+                          trace_id,
+                          coalesce(
+                            nullIf(argMaxIfMerge(session_id), ''),
+                            toString(trace_id)
+                          ) AS session_id
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                        GROUP BY trace_id
+                      )
+                      SELECT
+                        CAST(d.trace_id AS String) AS trace_id,
+                        d.start_time AS start_time,
+                        d.root_span_name AS root_span_name,
+                        d.search_text AS search_text,
+                        d.content_hash AS content_hash
+                      FROM trace_search_documents AS d FINAL
+                      INNER JOIN trace_sessions AS ts ON d.trace_id = ts.trace_id
+                      WHERE d.organization_id = {organizationId:String}
+                        AND d.project_id = {projectId:String}
+                        AND ts.session_id = {sessionId:String}
+                      ORDER BY d.start_time ASC, d.trace_id ASC`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                sessionId: sessionId as string,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<{
+              trace_id: string
+              start_time: string
+              root_span_name: string
+              search_text: string
+              content_hash: string
+            }>()
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "refreshSessionDocument.select")))
+
+        if (rows.length === 0) return
+
+        const searchText = rows
+          .map((row) => normalizeCHString(row.search_text).trim())
+          .filter((text) => text.length > 0)
+          .join("\n\n")
+        const contentHash = yield* hash(
+          `${sessionId}\0${rows.map((row) => normalizeCHString(row.content_hash)).join("\0")}\0${searchText}`,
+        ).pipe(Effect.mapError((error) => toRepositoryError(error, "refreshSessionDocument.hash")))
+        const first = rows[0]
+
+        yield* chSqlClient
+          .query(async (client) => {
+            await client.insert({
+              table: "session_search_documents",
+              values: [
+                {
+                  organization_id: organizationId as string,
+                  project_id: projectId as string,
+                  session_id: sessionId as string,
+                  start_time: toClickhouseDateTime(parseCHDate(first?.start_time ?? new Date().toISOString())),
+                  trace_ids: rows.map((row) => normalizeCHString(row.trace_id)),
+                  root_span_name: normalizeCHString(first?.root_span_name ?? ""),
+                  search_text: searchText,
+                  content_hash: contentHash,
+                  retention_days: retentionDays ?? 90,
+                  indexed_at: toClickhouseDateTime(new Date()),
+                },
+              ],
+              format: "JSONEachRow",
+            })
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "refreshSessionDocument.insert")))
+      })
 
     const upsertEmbedding: TraceSearchRepositoryShape["upsertEmbedding"] = (row) =>
       chSqlClient
@@ -145,6 +232,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
 
     return {
       upsertDocument,
+      refreshSessionDocument,
       upsertEmbedding,
       hasEmbeddingWithHash,
       findSemanticHighlightForTrace,

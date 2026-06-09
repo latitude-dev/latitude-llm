@@ -1002,8 +1002,11 @@ describe("SessionRepository", () => {
       readonly contentHashSuffix: string
     }
 
-    const insertSearchDocs = (docs: readonly SearchDoc[]) =>
-      Effect.runPromise(
+    const sessionHashForId = (sessionId: string) =>
+      `${"s".repeat(64 - Math.min(sessionId.length, 64))}${sessionId.slice(-64)}`
+
+    const insertSearchDocs = async (docs: readonly SearchDoc[]) => {
+      await Effect.runPromise(
         insertJsonEachRow(
           ch.client,
           "trace_search_documents",
@@ -1019,6 +1022,56 @@ describe("SessionRepository", () => {
           })),
         ),
       )
+      const result = await ch.client.query({
+        query: `SELECT
+                  CAST(trace_id AS String) AS trace_id,
+                  coalesce(nullIf(argMaxIfMerge(session_id), ''), toString(trace_id)) AS session_id
+                FROM traces
+                WHERE organization_id = {organizationId:String}
+                  AND project_id = {projectId:String}
+                  AND trace_id IN ({traceIds:Array(FixedString(32))})
+                GROUP BY trace_id`,
+        query_params: {
+          organizationId: ORG_ID as string,
+          projectId: PROJECT_ID as string,
+          traceIds: docs.map((doc) => doc.traceId),
+        },
+        format: "JSONEachRow",
+      })
+      const sessionByTrace = new Map(
+        (await result.json<{ trace_id: string; session_id: string }>()).map((row) => [row.trace_id, row.session_id]),
+      )
+      const docsBySession = new Map<string, SearchDoc[]>()
+      for (const doc of docs) {
+        const sessionId = sessionByTrace.get(doc.traceId) ?? doc.traceId
+        docsBySession.set(sessionId, [...(docsBySession.get(sessionId) ?? []), doc])
+      }
+
+      await Effect.runPromise(
+        insertJsonEachRow(
+          ch.client,
+          "session_search_documents",
+          [...docsBySession.entries()].map(([sessionId, sessionDocs]) => {
+            const sortedDocs = [...sessionDocs].sort(
+              (a, b) => a.startTime.getTime() - b.startTime.getTime() || a.traceId.localeCompare(b.traceId),
+            )
+            const first = nonNull(sortedDocs[0])
+            return {
+              organization_id: ORG_ID as string,
+              project_id: PROJECT_ID as string,
+              session_id: sessionId,
+              start_time: toClickHouseDateTime(first.startTime),
+              trace_ids: sortedDocs.map((doc) => doc.traceId),
+              root_span_name: "root",
+              search_text: sortedDocs.map((doc) => doc.text).join("\n\n"),
+              content_hash: sessionHashForId(sessionId),
+              retention_days: 90,
+              indexed_at: toClickHouseDateTime(first.startTime),
+            }
+          }),
+        ),
+      )
+    }
 
     const analysisHashForSession = (sessionId: string) =>
       `${"c".repeat(64 - Math.min(sessionId.length, 64))}${sessionId.slice(-64)}`
@@ -1140,6 +1193,54 @@ describe("SessionRepository", () => {
       // All zero-score lexical matches: scores parallel-aligned and all 0.
       expect(matches[sessionA]?.matchingTraceScores.every((s) => s === 0)).toBe(true)
       expect(matches[sessionB]?.matchingTraceScores.every((s) => s === 0)).toBe(true)
+    })
+
+    it("lexical-only: token phrases can match across traces in a session document", async () => {
+      const start = new Date(Date.UTC(2026, 0, 1, 11, 0, 0))
+      const matchingSession = "lex-session-cross-trace"
+      const nonMatchingSession = "lex-session-single-trace"
+      const traceA = padTrace("xa")
+      const traceB = padTrace("xb")
+      const traceC = padTrace("xc")
+
+      await insertSpans([
+        makeSpanRow({ traceId: traceA, spanId: padSpan("xa"), sessionId: matchingSession, startTime: start }),
+        makeSpanRow({
+          traceId: traceB,
+          spanId: padSpan("xb"),
+          sessionId: matchingSession,
+          startTime: new Date(start.getTime() + 1_000),
+        }),
+        makeSpanRow({
+          traceId: traceC,
+          spanId: padSpan("xc"),
+          sessionId: nonMatchingSession,
+          startTime: new Date(start.getTime() + 2_000),
+        }),
+      ])
+      await insertSearchDocs([
+        { traceId: traceA, text: "alpha", startTime: start, contentHashSuffix: "xa" },
+        { traceId: traceB, text: "omega", startTime: new Date(start.getTime() + 1_000), contentHashSuffix: "xb" },
+        {
+          traceId: traceC,
+          text: "alpha unrelated omega",
+          startTime: new Date(start.getTime() + 2_000),
+          contentHashSuffix: "xc",
+        },
+      ])
+
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: "`alpha omega`", limit: 10 },
+        }),
+      )
+
+      expect(page.items.map((session) => session.sessionId)).toEqual([matchingSession])
+      const match = nonNull(page.searchMatches?.[matchingSession])
+      expect([...match.matchingTraceIds].sort()).toEqual([traceA, traceB].sort())
+      expect(match.matchingTraceCount).toBe(2)
     })
 
     // 2) Hybrid: a session with three matching traces; two have embeddings
