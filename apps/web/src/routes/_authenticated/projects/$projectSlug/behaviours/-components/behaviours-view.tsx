@@ -282,7 +282,14 @@ export function BehaviourDetailDrawer({
     setSessionFilter("all")
     setSessionOverlayId(null)
     setSessionPanelEntered(false)
-  }, [cluster.id, timeRange, momentRange])
+  }, [cluster.id, timeRange])
+
+  useEffect(() => {
+    if (!momentRange) return
+    setSessionFilter("all")
+    setSessionOverlayId(null)
+    setSessionPanelEntered(false)
+  }, [momentRange])
 
   const openSessionOverlay = (session: BehaviourSessionRecord) => {
     setSessionOverlayId(session.sessionId)
