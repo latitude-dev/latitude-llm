@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+## v0.2.4 - 2026-06-09
+
+### Enterprise SSO
+
+- Added enterprise SSO with SAML 2.0 and OIDC via `@better-auth/sso`, including provider repository and Better Auth schema support (ref: #3434).
+- Ordered `tanstackStartCookies` last in the Better Auth plugin chain so SSO sign-in cookies are set correctly (ref: #3485).
+
+### Test mode
+
+- Added the test-mode sandbox layout and traces UI (ref: #3456).
+- Lowered the per-key rate limit for sandbox keys (ref: #3462).
+- Added user-facing sandbox documentation (ref: #3490).
+
+### Conversation intelligence
+
+- Added filtering of behaviour sessions by trajectory turns (ref: #3479).
+- Added a Hungarian lineage continuity matcher with dead-path purge to keep taxonomy topic identity stable across rebuilds (ref: #3476).
+- Aggregated metadata in the session search rollup so search results carry merged metadata (ref: #3482).
+
+### Platform
+
+- Removed always-on feature flag gates, simplifying code paths that were permanently enabled (ref: #3454).
+- Dropped the deprecated ClickHouse behavior observations table (ref: #3487).
+
+### Telemetry
+
+- Dropped the required `apiKey`/`project` fields from the OpenClaw plugin config schema (v0.0.8, ref: #3458).
+
+### Docs
+
+- Added a Monitors overview page (ref: #3472).
+
 ## v0.2.3 - 2026-06-09
 
 ### Conversation intelligence
