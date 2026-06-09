@@ -1,4 +1,3 @@
-import { Effect } from "effect"
 import {
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_ASSIGN_RELATIVE_MARGIN,
@@ -18,10 +17,6 @@ export type ClusterAssignmentDecision =
       readonly clusterId: null
       readonly confidence: number
     }
-
-export interface DecideClusterAssignmentInput {
-  readonly topK: readonly NearestClusterMatch[]
-}
 
 // Assignment is load-bearing — `topK[0]` lands every online observation on a
 // cluster. The port promises cosine-descending order but we sort defensively
@@ -61,16 +56,3 @@ export const decideClusterAssignment = (
 
   return { method: "noise", clusterId: null, confidence: topSimilarity }
 }
-
-export const decideClusterAssignmentUseCase = (input: DecideClusterAssignmentInput) =>
-  Effect.gen(function* () {
-    const sorted = sortedByCosineDesc(input.topK)
-    const decision = decideClusterAssignment(sorted)
-    const top1 = sorted[0]?.cosine ?? 0
-    const top2 = sorted[1]?.cosine ?? 0
-    yield* Effect.annotateCurrentSpan("taxonomy.assign.topk.cosine.top1", top1)
-    yield* Effect.annotateCurrentSpan("taxonomy.assign.topk.cosine.top2", top2)
-    yield* Effect.annotateCurrentSpan("taxonomy.assign.topk.cosine.spread", top1 - top2)
-    yield* Effect.annotateCurrentSpan("taxonomy.assign.outcome", decision.method)
-    return decision
-  }).pipe(Effect.withSpan("taxonomy.decideClusterAssignment"))

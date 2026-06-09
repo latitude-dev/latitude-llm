@@ -1,29 +1,15 @@
 import { AI } from "@domain/ai"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import {
-  DistributedLockRepository,
-  OrganizationId,
-  ProjectId,
-  SessionId,
-  TaxonomyClusterId,
-  TaxonomyRunId,
-} from "@domain/shared"
+import { DistributedLockRepository, OrganizationId, ProjectId, SessionId, TaxonomyRunId } from "@domain/shared"
 import { createFakeDistributedLockRepository } from "@domain/shared/testing"
 import {
-  createTaxonomyCentroid,
-  deprecateInactiveClustersUseCase,
+  buildHierarchicalTaxonomyUseCase,
   emitLineageUseCase,
-  mergeNearDuplicateClustersUseCase,
   nameClusterUseCase,
-  reassignNoiseToCurrentClustersUseCase,
-  recurseTreeClustersUseCase,
-  sweepNoiseAndBirthClustersUseCase,
-  type TaxonomyCluster,
   TaxonomyClusterRepository,
   TaxonomyLineageRepository,
   type TaxonomyMomentObservation,
   TaxonomyObservationRepository,
-  updateTaxonomyCentroid,
 } from "@domain/taxonomy"
 import { type ClickHouseClient, TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { TaxonomyClusterRepositoryLive, TaxonomyLineageRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -103,7 +89,6 @@ const ORGANIZATION_ID = OrganizationId("o".repeat(24))
 const PROJECT_ID = ProjectId("p".repeat(24))
 const PROJECT_ID_2 = ProjectId("q".repeat(24))
 const PROJECT_ID_E2E = ProjectId("r".repeat(24))
-const CLUSTER_ID = TaxonomyClusterId("c".repeat(24))
 const START_TIME = new Date("2026-05-24T12:00:00.000Z")
 
 const createFakeRedisClient = () => {
@@ -122,20 +107,6 @@ const createFakeRedisClient = () => {
       return 1
     },
   }
-}
-
-const centroidFromTestEmbedding = (embedding = TEST_EMBEDDING) => {
-  const centroid = createTaxonomyCentroid()
-  const updated = updateTaxonomyCentroid({
-    centroid: { ...centroid, clusteredAt: START_TIME },
-    embedding,
-    weight: 1,
-    timestamp: START_TIME,
-    operation: "add",
-    previousClusteredAt: START_TIME,
-  })
-  const { clusteredAt: _clusteredAt, ...withoutAnchor } = updated
-  return withoutAnchor
 }
 
 const makeObservation = (
@@ -163,55 +134,32 @@ const makeObservation = (
   indexedAt: START_TIME,
 })
 
-const makeCluster = (): TaxonomyCluster => ({
-  id: CLUSTER_ID,
-  organizationId: ORGANIZATION_ID,
-  projectId: PROJECT_ID,
-  dimension: "topic",
-  parentClusterId: null,
-  depth: 0,
-  path: "",
-  splitLinkThreshold: null,
-  name: "Cancellation requests",
-  description: "Users ask to cancel subscriptions.",
-  centroid: centroidFromTestEmbedding(),
-  observationCount: 1,
-  state: "active",
-  mergedIntoClusterId: null,
-  firstObservedAt: START_TIME,
-  lastObservedAt: START_TIME,
-  clusteredAt: START_TIME,
-  createdAt: START_TIME,
-  updatedAt: START_TIME,
-})
-
 /**
- * Runs one garden pass by composing the same step use-cases the Temporal
- * workflow schedules, in the same order — the legacy in-process orchestrator
- * was removed with the category model.
+ * Runs one garden pass by composing the live workflow steps in order: the
+ * divisive build (which also runs the Hungarian continuity matcher against the
+ * previous pass), lineage emission, then deepest-first naming of births and any
+ * still-`Pending` continuations — exactly what the Temporal workflow schedules.
  */
 const gardenOnce = (runId: ReturnType<typeof TaxonomyRunId>) =>
   Effect.runPromise(
     Effect.gen(function* () {
-      const base = { organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_E2E, runId }
-      const births = yield* sweepNoiseAndBirthClustersUseCase(base)
-      const merges = yield* mergeNearDuplicateClustersUseCase(base)
-      const deaths = yield* deprecateInactiveClustersUseCase(base)
-      yield* reassignNoiseToCurrentClustersUseCase(base)
-      const recursion = yield* recurseTreeClustersUseCase(base)
-      const lineage = [...births.lineage, ...merges.lineage, ...deaths.lineage, ...recursion.lineage]
-      yield* emitLineageUseCase({ transitions: lineage })
-      const bornClusterIds = new Set(
-        lineage.flatMap((row) =>
-          row.transitionType === "birth" || row.transitionType === "split" ? row.toClusterIds : [],
-        ),
-      )
-      for (const clusterId of bornClusterIds) {
-        yield* nameClusterUseCase({
-          organizationId: ORGANIZATION_ID,
-          projectId: PROJECT_ID_E2E,
-          clusterId: TaxonomyClusterId(clusterId),
-        })
+      const built = yield* buildHierarchicalTaxonomyUseCase({
+        organizationId: ORGANIZATION_ID,
+        projectId: PROJECT_ID_E2E,
+        runId,
+        dimension: "topic",
+      })
+      yield* emitLineageUseCase({ transitions: built.lineage })
+      const clusters = yield* TaxonomyClusterRepository
+      const active = yield* clusters.listActiveByProject({ projectId: PROJECT_ID_E2E, dimension: "topic" })
+      const bornIds = new Set(built.lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])))
+      // Name births and continuations that drifted enough to be left "Pending",
+      // deepest-first so interior nodes see their children's final names.
+      const toName = [...active]
+        .filter((cluster) => bornIds.has(cluster.id) || cluster.name === "Pending")
+        .sort((a, b) => b.depth - a.depth)
+      for (const cluster of toName) {
+        yield* nameClusterUseCase({ organizationId: ORGANIZATION_ID, projectId: PROJECT_ID_E2E, clusterId: cluster.id })
       }
     }).pipe(
       withPostgres(
@@ -297,12 +245,14 @@ describe("taxonomy gardening worker", () => {
     expect(queue.published[0]).toMatchObject({ payload: { projectId: PROJECT_ID_2 } })
   })
 
-  it("runs end-to-end gardening with births, names, lineage, and follow-up merge", async () => {
+  it("runs end-to-end gardening with births, names, lineage, and a stable continuation across passes", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* TaxonomyObservationRepository
         const recent = new Date()
-        for (let index = 300; index < 304; index++) {
+        // The divisive build has a cold-start gate of TAXONOMY_GARDENING_MIN_OBSERVATIONS
+        // (15); seed comfortably above it so the single topic materializes as a root.
+        for (let index = 300; index < 320; index++) {
           yield* repo.upsert({
             ...makeObservation(index, PROJECT_ID_E2E),
             startTime: new Date(recent.getTime() + index * 1000),
@@ -337,39 +287,21 @@ describe("taxonomy gardening worker", () => {
     expect(firstPass.clusters[0]?.depth).toBe(0)
     expect(firstPass.lineage.map((row) => row.transitionType)).toContain("birth")
 
-    const mergeA = TaxonomyClusterId("m".repeat(24))
-    const mergeB = TaxonomyClusterId("n".repeat(24))
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const clusters = yield* TaxonomyClusterRepository
-        yield* clusters.save({
-          ...makeCluster(),
-          id: mergeA,
-          projectId: PROJECT_ID_E2E,
-          name: "Pending",
-          centroid: centroidFromTestEmbedding(),
-          observationCount: 2,
-        })
-        yield* clusters.save({
-          ...makeCluster(),
-          id: mergeB,
-          projectId: PROJECT_ID_E2E,
-          name: "Pending",
-          centroid: centroidFromTestEmbedding(),
-          observationCount: 1,
-        })
-      }).pipe(withPostgres(TaxonomyClusterRepositoryLive, pg.appPostgresClient, ORGANIZATION_ID)),
-    )
+    const firstClusterId = firstPass.clusters[0]?.id
+    expect(firstClusterId).toBeDefined()
 
+    // Second pass rebuilds the tree from scratch over the same observations.
+    // The Hungarian continuity matcher must recognise the single root as the
+    // same topic and reuse its id — `continuation`, not a fresh birth+death.
     await gardenOnce(TaxonomyRunId("2".repeat(24)))
 
     const secondPass = await Effect.runPromise(
       Effect.gen(function* () {
-        const lineage = yield* TaxonomyLineageRepository
         const clusters = yield* TaxonomyClusterRepository
+        const lineage = yield* TaxonomyLineageRepository
         return {
+          clusters: yield* clusters.listActiveByProject({ projectId: PROJECT_ID_E2E, dimension: "topic" }),
           lineage: yield* lineage.listRecent({ projectId: PROJECT_ID_E2E, dimension: "topic", limit: 10 }),
-          mergeB: yield* clusters.findById(mergeB),
         }
       }).pipe(
         withPostgres(
@@ -380,8 +312,9 @@ describe("taxonomy gardening worker", () => {
       ),
     )
 
-    expect(secondPass.lineage.map((row) => row.transitionType)).toContain("merge")
-    expect(secondPass.mergeB.state).toBe("merged")
+    expect(secondPass.clusters).toHaveLength(1)
+    expect(secondPass.clusters[0]?.id).toBe(firstClusterId)
+    expect(secondPass.lineage.map((row) => row.transitionType)).toContain("continuation")
   })
 
   it("starts the garden workflow with the job reason as trigger", async () => {

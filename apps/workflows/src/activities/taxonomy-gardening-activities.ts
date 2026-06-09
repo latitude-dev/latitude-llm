@@ -2,14 +2,9 @@ import { OrganizationId, ProjectId, TaxonomyClusterId, TaxonomyRunId } from "@do
 import {
   assertTaxonomyQualityUseCase,
   buildHierarchicalTaxonomyUseCase,
-  deprecateInactiveClustersUseCase,
   emitLineageUseCase,
-  mergeNearDuplicateClustersUseCase,
+  isDisplayableTaxonomyName,
   nameClusterUseCase,
-  reassignNoiseToCurrentClustersUseCase,
-  reconcileClusterCountsUseCase,
-  recurseTreeClustersUseCase,
-  sweepNoiseAndBirthClustersUseCase,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   type TaxonomyClusterLineage,
   TaxonomyClusterRepository,
@@ -253,100 +248,6 @@ export const buildHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomySte
     ),
   )
 
-export const sweepGardenTaxonomyNoiseActivity = (input: GardenTaxonomyStepInput) =>
-  runGardenStep(
-    "GardenTaxonomyWorkflow sweep noise",
-    input,
-    sweepNoiseAndBirthClustersUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      runId: TaxonomyRunId(input.runId),
-      dimension: input.dimension,
-    }).pipe(
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
-      withTaxonomyAiAndRedis,
-    ),
-  )
-
-export const mergeGardenTaxonomyClustersActivity = (input: GardenTaxonomyStepInput) =>
-  runGardenStep(
-    "GardenTaxonomyWorkflow merge clusters",
-    input,
-    mergeNearDuplicateClustersUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      runId: TaxonomyRunId(input.runId),
-      dimension: input.dimension,
-    }).pipe(
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
-      withTaxonomyAiAndRedis,
-    ),
-  )
-
-export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyStepInput) =>
-  runGardenStep(
-    "GardenTaxonomyWorkflow deprecate clusters",
-    input,
-    deprecateInactiveClustersUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      runId: TaxonomyRunId(input.runId),
-      dimension: input.dimension,
-    }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
-  )
-
-export const reassignGardenTaxonomyNoiseActivity = (input: GardenTaxonomyStepInput) =>
-  runGardenStep(
-    "GardenTaxonomyWorkflow reassign noise",
-    input,
-    reassignNoiseToCurrentClustersUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      runId: TaxonomyRunId(input.runId),
-      dimension: input.dimension,
-    }).pipe(
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
-      withTaxonomyAiAndRedis,
-    ),
-  )
-
-export const recurseGardenTaxonomyTreeActivity = (input: GardenTaxonomyStepInput) =>
-  runGardenStep(
-    "GardenTaxonomyWorkflow recurse tree",
-    input,
-    recurseTreeClustersUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      runId: TaxonomyRunId(input.runId),
-      dimension: input.dimension,
-    }).pipe(
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
-      withTaxonomyAiAndRedis,
-    ),
-  )
-
-export const reconcileGardenTaxonomyCountsActivity = (input: GardenTaxonomyStepInput) =>
-  runGardenStep(
-    "GardenTaxonomyWorkflow reconcile counts",
-    input,
-    reconcileClusterCountsUseCase({
-      organizationId: OrganizationId(input.organizationId),
-      projectId: ProjectId(input.projectId),
-      runId: TaxonomyRunId(input.runId),
-      dimension: input.dimension,
-    }).pipe(
-      (effect) => withTaxonomyPostgres(effect, input.organizationId),
-      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
-      // Per-cluster saves take the distributed cluster lock to avoid clobbering
-      // centroids that live online assignment mutates concurrently.
-      (effect) => effect.pipe(Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient()))),
-    ),
-  )
-
 export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInput) =>
   runGardenStep(
     "GardenTaxonomyWorkflow assert quality",
@@ -367,10 +268,12 @@ export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput 
     input,
     Effect.gen(function* () {
       const clusters = yield* TaxonomyClusterRepository
+      // Only `birth` rows need naming. A `continuation` reuses its
+      // predecessor's id (and carries its name unless the topic moved enough to
+      // leave the row "Pending"), so the `name === "Pending"` filter below
+      // re-names exactly the continuations that drifted.
       const bornClusterIds = new Set(
-        input.lineage.flatMap((row) =>
-          row.transitionType === "birth" || row.transitionType === "split" ? row.toClusterIds : [],
-        ),
+        input.lineage.flatMap((row) => (row.transitionType === "birth" ? row.toClusterIds : [])),
       )
       const projectId = ProjectId(input.projectId)
       const activeClusters = yield* clusters.listActiveByProject({ projectId, dimension: input.dimension })
@@ -379,7 +282,7 @@ export const planGardenTaxonomyNamingActivity = (input: GardenTaxonomyStepInput 
       // gets handed "Pending" descriptions and either stays Pending or
       // collapses onto the dominant child's name.
       const ordered = [...activeClusters]
-        .filter((cluster) => bornClusterIds.has(cluster.id) || cluster.name === "Pending")
+        .filter((cluster) => bornClusterIds.has(cluster.id) || !isDisplayableTaxonomyName(cluster.name))
         .sort((a, b) => b.depth - a.depth)
       const byDepth = new Map<number, string[]>()
       for (const cluster of ordered) {

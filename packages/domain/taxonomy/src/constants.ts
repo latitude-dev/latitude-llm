@@ -24,11 +24,16 @@ export const TAXONOMY_DIMENSIONS = ["topic"] as const
 export const TAXONOMY_CLUSTER_STATES = ["active", "merged", "deprecated"] as const
 
 /**
- * MVP emits `birth` / `death` / `merge` from gardening activities A/B/C.
- * `continuation` and `split` are reserved values added by the
- * Hungarian-lineage Future Work and are not written by MVP code.
+ * The divisive build emits exactly these three transitions:
+ *   - `birth`  — a freshly built node with no confident predecessor.
+ *   - `death`  — a previously-active cluster no new node continued.
+ *   - `continuation` — a new node reused an old cluster's id (Hungarian 1:1
+ *     centroid match ≥ `TAXONOMY_CONTINUATION_THRESHOLD`).
+ * `split` / `merge` were retired with the bottom-up gardening path: a confident
+ * 1:1 continuation carries the identity trend UIs need, and the divisive build
+ * cannot produce near-duplicate siblings to merge. See `dev-docs/taxonomy.md`.
  */
-export const TAXONOMY_LINEAGE_TRANSITION_TYPES = ["birth", "death", "merge", "continuation", "split"] as const
+export const TAXONOMY_LINEAGE_TRANSITION_TYPES = ["birth", "death", "continuation"] as const
 
 export const TAXONOMY_RUN_TRIGGERS = ["cron", "manual", "threshold"] as const
 export const TAXONOMY_RUN_STATUSES = ["pending", "running", "completed", "failed"] as const
@@ -91,9 +96,6 @@ export const TAXONOMY_GARDENING_THROTTLE_MS = 60 * 60_000
  * eligibility check has no edge cases. See spec "Cold-start window."
  */
 export const TAXONOMY_GARDENING_MIN_OBSERVATIONS = 15
-export const TAXONOMY_GARDENING_MAX_RUNTIME_MS = 5 * 60_000
-export const TAXONOMY_GARDENING_STALE_GRACE_MS = 60_000
-export const TAXONOMY_GARDENING_SWEEP_BATCH = 25
 
 /** Gardening works over the live taxonomy window: newest observations first. */
 /** Maximum in-memory proposal sample passed to clustering helpers. */
@@ -106,42 +108,11 @@ export const TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX = 10_000
 export const TAXONOMY_LIST_ALL_BY_CLUSTER_MAX = 10_000
 
 // ---------------------------------------------------------------------------
-// Births (noise sweep) + merge / death
+// Gardening sample window
 // ---------------------------------------------------------------------------
 
+/** Lookback window the divisive build day-stratifies its observation sample over. */
 export const TAXONOMY_NOISE_LOOKBACK_DAYS = 7
-/** Lowered from 8 in the adversarial-review pass; see cold-start gate above. */
-export const TAXONOMY_NOISE_BIRTH_MIN_OBSERVATIONS = 3
-
-/**
- * Two noise embeddings are connected when their cosine ≥ this.
- * Seeded-Acme Voyage tuning raised this from 0.78 to 0.82: the full 1,574
- * session corpus produced clearer topic births without the broad
- * chaining seen at looser thresholds.
- */
-export const TAXONOMY_BIRTH_LINK_THRESHOLD = 0.82
-
-/**
- * Reject candidates whose max pairwise cosine distance exceeds this — cuts
- * single-linkage chains. Full-corpus seeded-Acme Voyage tuning kept this at
- * 0.45; looser diameters admitted broad single-linkage components.
- */
-export const TAXONOMY_BIRTH_MAX_DIAMETER = 0.45
-
-export const TAXONOMY_NOISE_BIRTH_MIN_MEMBERS_FLOOR = 4
-export const TAXONOMY_VISIBLE_BIRTH_MIN_OBSERVATION_RATIO = 0.05
-
-/** Re-absorb a candidate birth into an existing cluster instead of birthing. */
-export const TAXONOMY_ABSORPTION_THRESHOLD = 0.85
-
-/** Pairwise centroid similarity threshold required to merge two active clusters. */
-export const TAXONOMY_MERGE_THRESHOLD = 0.88
-
-export const TAXONOMY_MERGE_NEAREST_NEIGHBORS = 10
-export const TAXONOMY_MERGE_CANDIDATES_PER_PARENT = 100
-
-export const TAXONOMY_DEAD_CLUSTER_MASS_FLOOR = 0.5
-export const TAXONOMY_DEAD_CLUSTER_INACTIVITY_DAYS = 30
 
 // ---------------------------------------------------------------------------
 // Hierarchy + naming
@@ -177,55 +148,6 @@ export const TAXONOMY_OBSERVATION_RETENTION_DAYS = 30
 // ---------------------------------------------------------------------------
 
 export const TAXONOMY_CLUSTER_LOCK_TTL_SECONDS = 30
-// Retry policy: worst-case cumulative wait ≈29s, just under the lock TTL.
-export const TAXONOMY_CLUSTER_LOCK_MAX_RETRIES = 18
-export const TAXONOMY_CLUSTER_LOCK_RETRY_BASE_DELAY_MS = 100
-export const TAXONOMY_CLUSTER_LOCK_RETRY_MAX_DELAY_MS = 2_000
-export const TAXONOMY_GARDEN_LOCK_TTL_SECONDS = Math.ceil(TAXONOMY_GARDENING_MAX_RUNTIME_MS / 1000) + 60
-
-// ---------------------------------------------------------------------------
-// Cluster tree (categories are depth-0 nodes; depth = clustering density)
-// ---------------------------------------------------------------------------
-
-/**
- * Depth levels supported by the divisive builder. depth=0 is the root level
- * (broad categories), depth=1 is sub-categories, depth=2 is fine leaves.
- * The schedule array below has exactly this many entries.
- */
-export const TAXONOMY_TREE_MAX_DEPTH = 3
-/** Maximum number of children a single recursion pass exposes under one node. */
-export const TAXONOMY_TREE_CHILDREN_CAP = 8
-/** A node recurses into children when it has enough directly assigned members. */
-export const TAXONOMY_TREE_RECURSE_MIN_OBSERVATIONS = 60
-/** Bound recursion work per gardening run. */
-export const TAXONOMY_TREE_RECURSE_PER_RUN = 3
-/**
- * Child birth density derives from the parent's own member-pairwise
- * similarity distribution (per-node density schedule), clamped below.
- */
-export const TAXONOMY_TREE_CHILD_LINK_QUANTILE = 0.7
-export const TAXONOMY_TREE_CHILD_LINK_MIN = 0.78
-/**
- * Child splits should expose navigable subtopics under broad roots. A very
- * high per-node quantile can overfit to boilerplate-similar support sessions
- * and reject useful retail subtopic splits as tiny shards, so cap child-level
- * density near the coarse topic boundary.
- */
-export const TAXONOMY_TREE_CHILD_LINK_MAX = 0.8
-/** Diameter scales off the link threshold: (1 - link) * factor, clamped. */
-export const TAXONOMY_TREE_CHILD_DIAMETER_FACTOR = 2.5
-export const TAXONOMY_TREE_CHILD_DIAMETER_MIN = 0.3
-export const TAXONOMY_TREE_CHILD_DIAMETER_MAX = 0.6
-/**
- * Recursion rollback: a split must produce at least two children covering a
- * meaningful share of members, and no child may dominate the covered mass —
- * otherwise the node has no internal structure at the next density and stays
- * a leaf.
- */
-export const TAXONOMY_TREE_MIN_CHILDREN = 2
-export const TAXONOMY_TREE_MIN_COVERAGE = 0.3
-export const TAXONOMY_TREE_MAX_CHILD_DOMINANCE = 0.9
-export const TAXONOMY_TREE_DEEP_MAX_CHILD_DOMINANCE = 0.75
 
 // ---------------------------------------------------------------------------
 // Divisive builder — per-depth schedule
@@ -258,6 +180,24 @@ export const TAXONOMY_TREE_DEPTH_SCHEDULE: readonly TaxonomyTreeDepthSchedule[] 
   { maxChildren: 8, minClusterFraction: 0.03, minClusterAbs: 10, maxSiblingCosine: 0.9, minSplitScore: 1.2 },
   { maxChildren: 6, minClusterFraction: 0.05, minClusterAbs: 8, maxSiblingCosine: 0.93, minSplitScore: 1.1 },
 ]
+
+// ---------------------------------------------------------------------------
+// Cross-run lineage continuity (Hungarian matcher)
+//
+// Between building the tree and persisting it, the build matches new nodes 1:1
+// against the previously-active clusters by centroid cosine. A match above
+// CONTINUATION_THRESHOLD reuses the old id (emits `continuation`); below it the
+// node is born fresh. NAME_REUSE_THRESHOLD is the tighter band at which the
+// topic moved so little that re-naming would only churn the label, so the old
+// name is carried over and the naming step skips the cluster.
+//
+// Seeded by analogy to published lineage-layer baselines; tune offline on real
+// cross-pass corpora. Biased toward continuation on purpose: a false
+// continuation is a visual no-op, a false birth+death pair breaks trend charts.
+// ---------------------------------------------------------------------------
+
+export const TAXONOMY_CONTINUATION_THRESHOLD = 0.92
+export const TAXONOMY_NAME_REUSE_THRESHOLD = 0.95
 
 /** k-means++ restarts per K sweep at each tree node. */
 export const TAXONOMY_KMEANS_RESTARTS = 3

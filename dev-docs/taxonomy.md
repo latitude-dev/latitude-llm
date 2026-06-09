@@ -43,7 +43,7 @@ Postgres (`@platform/db-postgres`):
 
 - `taxonomy_clusters` — the tree (above).
 - `taxonomy_runs` — one row per gardening run: `trigger` (`cron` / `manual` / `threshold`), `status` (`pending` / `running` / `completed` / `failed`), `observations_scanned`, `noise_scanned`, `clusters_born`, `clusters_merged`, `clusters_deprecated`, `error`. The current build path leaves `noise_scanned` and `clusters_merged` at `0`.
-- `taxonomy_cluster_lineage` — append-only transition rows with `from_cluster_ids` / `to_cluster_ids` (native Postgres arrays, no join table), `similarity`, `run_id`. The transition enum reserves `birth` / `death` / `merge` / `continuation` / `split`, but the current build **only emits `birth`** (every new cluster) and **`death`** (every previously-active cluster not re-emitted). It drives naming plans and the activity feed.
+- `taxonomy_cluster_lineage` — append-only transition rows with `from_cluster_ids` / `to_cluster_ids` (native Postgres arrays, no join table), `similarity`, `run_id`. The transition enum is exactly `birth` / `death` / `continuation`: a build emits `birth` for a freshly created node, `death` for a previously-active cluster no new node continued, and `continuation` when the continuity matcher reused an old cluster's id (see "Cross-run continuity"). `split` / `merge` were retired with the bottom-up gardening path. It drives naming plans and the activity feed.
 
 ClickHouse:
 
@@ -88,9 +88,10 @@ Each activity is idempotent under Temporal retries via the run-scoped determinis
 1. **Sample** up to `TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX` (10k) observations from the `TAXONOMY_NOISE_LOOKBACK_DAYS` (7-day) window via the day-stratified `listForClustering`, regardless of current assignment. Below `TAXONOMY_GARDENING_MIN_OBSERVATIONS` the build returns empty (cold-start gate).
 2. **Build the tree top-down** with `buildHierarchicalClusters` (see "Clustering primitives"). All sampled members end up on leaves.
 3. **Persist top-down** (clusters sorted by depth ascending) so a child save never references a missing parent. Interior nodes are stored with `observation_count = 0` and a `split_link_threshold` derived from their children's tightest sibling separation.
-4. **Reassign every member to its leaf** in bulk (`reassignMany`, `assignment_method = "gardening_birth"`), confidence = cosine to the leaf centroid clamped to `[0,1]`.
-5. **Deprecate every previously-active cluster** that was not just re-emitted. There is **no continuity matcher** — each pass is a clean rebuild with fresh cluster ids; `taxonomy_cluster_lineage` records the churn.
-6. **Emit lineage**: a `birth` row per new cluster, a `death` row per deprecated cluster.
+4. **Match new nodes against the previous tree** with the continuity matcher (see "Cross-run continuity"): a confident 1:1 centroid match reuses the old cluster's id, so trends that key on the id stay continuous across passes.
+5. **Reassign every member to its leaf** in bulk (`reassignMany`, `assignment_method = "gardening_birth"`), confidence = cosine to the leaf centroid clamped to `[0,1]`.
+6. **Deprecate every previously-active cluster** that no new node continued.
+7. **Emit lineage**: a `continuation` row per reused id, a `birth` row per genuinely new node, a `death` row per deprecated cluster.
 
 ### Clustering primitives (`clustering.ts`)
 
@@ -124,6 +125,17 @@ A two-call map-reduce (`TAXONOMY_NAMING_MODEL`) proposes candidate themes then c
 
 `assertGardenTaxonomyQualityActivity` fails the run on structural defects — notably **duplicate sibling names** (same parent, normalized-equal name) and active leaves with zero current observations. A failed gate surfaces as a failed run for Temporal retry rather than shipping a broken tree.
 
+### Cross-run continuity (`lineage.ts`)
+
+The divisive build rebuilds the whole tree from scratch every pass, so without intervention every node would get a fresh cuid — the previous pass's clusters all "die", the new ones are all "born", and any chart or trend that keys on `taxonomy_clusters.id` resets every 6 hours. The **continuity matcher** (`matchTaxonomyLineage`, a pure function) closes that gap between tree assembly and persistence:
+
+- It builds a cosine-similarity matrix of the new nodes × the previously-active clusters, **masking cross-depth pairs** (a tight leaf must not inherit a broad root's identity — depth stability matters to the UI).
+- It solves a one-shot **Hungarian (Kuhn–Munkres) assignment** that maximizes total similarity under a strict 1:1 constraint, then accepts each assigned pair as a `continuation` only when its cosine clears `TAXONOMY_CONTINUATION_THRESHOLD` (0.92). Continuations reuse the old cluster's id — `save` upserts, so the row updates in place with the new centroid while preserving its age (`firstObservedAt` / `createdAt`).
+- **Name stability**: when the topic barely moved (cosine ≥ `TAXONOMY_NAME_REUSE_THRESHOLD`, 0.95) the continuation carries the old name, so the naming step skips it (it names only `birth` rows and continuations left `Pending`). This avoids cosmetic name churn across passes.
+- Everything else stays as before: an unmatched new node is a `birth`, an uncontinued old cluster is a `death`.
+
+The matcher is biased toward continuation on purpose — a false continuation is a visual no-op, a false birth+death pair breaks trend charts. It is pure and deterministic, so a pass replays identically under Temporal. Thresholds are MVP defaults seeded by analogy to published lineage-layer baselines; tune offline on real cross-pass corpora. `split` / `merge` are intentionally not modelled: a confident 1:1 continuation carries the identity trend UIs need, and the divisive build cannot produce near-duplicate siblings to merge.
+
 ## Read paths
 
 - **Behaviours page** (`listProjectBehavioursUseCase`): returns the literal tree, but **unwraps the single englobing root** — when there is exactly one depth-0 root with children, its depth-1 children become the top-level rows so the table opens on several real categories instead of one all-encompassing row (a tiny corpus collapsed to a single childless root is still shown). Each node's `subtreeObservationCount` is rolled up across visible descendants **at read time** (not the stored counter); zero-residue interior nodes synthesize a zero trend rather than vanish with their subtree. The web layer indents by **relative** tree-walk depth (not absolute `cluster.depth`), rolls conversation-intelligence rates up each subtree weighted by sessions, and renders an expandable tree. The topics filter dropdown (`getTopicFilterOptions`) applies the same root unwrap.
@@ -134,16 +146,16 @@ A two-call map-reduce (`TAXONOMY_NAMING_MODEL`) proposes candidate themes then c
 ## Trade-off decisions
 
 - **One tree instead of clusters + categories**: levels differ only by density, so a single node type replaced the two-model design; it removed an entire data model and the singleton-category pathology, at the cost of residue semantics every read surface must respect.
-- **Top-down divisive rebuild instead of incremental agglomeration**: a global "tight" density is unknowable up front (telecom separates at ~0.88 where airline only separates at ~0.80); per-depth schedules adapt and rebuilding the whole tree from the raw sample each pass keeps shape rules tenant-agnostic — no thresholds depend on string matching or topic priors. The cost is that cluster ids churn every pass (no cross-run continuity yet) and the build is CPU-heavy pure JS bounded by the activity timeout.
-- **Clean rebuild, every member on a leaf**: the divisive build cannot produce near-duplicate siblings (enforced by `maxSiblingCosine`) and needs no merge/noise phases, so the old sweep → recurse → merge → reconcile → deprecate loop collapses to one build pass. The price is that online residue and any drift since the last pass are discarded and re-derived rather than continued.
+- **Top-down divisive rebuild instead of incremental agglomeration**: a global "tight" density is unknowable up front (telecom separates at ~0.88 where airline only separates at ~0.80); per-depth schedules adapt and rebuilding the whole tree from the raw sample each pass keeps shape rules tenant-agnostic — no thresholds depend on string matching or topic priors. The build is CPU-heavy pure JS bounded by the activity timeout. Cluster ids no longer churn every pass — the continuity matcher reuses them for stable topics (see "Cross-run continuity").
+- **Clean rebuild, every member on a leaf**: the divisive build cannot produce near-duplicate siblings (enforced by `maxSiblingCosine`) and needs no merge/noise phases, so the old sweep → recurse → merge → reconcile → deprecate loop was deleted and collapses to one build pass plus the continuity matcher. The price is that online residue and any drift since the last pass are discarded and re-derived rather than continued.
 - **Day-stratified sampling**: newest-N would let a single busy hour dominate the tree on a high-volume tenant; round-robin-over-days keeps the sample representative of the lookback window while staying deterministic for replay.
 - **Sequential naming**: trades naming wall-clock (serial LLM calls) for a guarantee that sibling names are unique by construction, which the quality gate requires.
 - **Cached counters over CH aggregation on read**: listing surfaces need counts without ClickHouse round-trips; the price is the online counter discipline above.
 
 ## Future work
 
-- **Cross-run continuity / lineage matching**: the rebuild assigns fresh ids every pass, so trend lines that key on cluster id break across runs. The reserved `continuation` lineage transition and a centroid/name matcher would let a rebuilt cluster inherit its predecessor's identity.
+- **Tune the continuity thresholds**: `TAXONOMY_CONTINUATION_THRESHOLD` / `TAXONOMY_NAME_REUSE_THRESHOLD` are MVP defaults. Calibrate offline against real cross-pass corpora; consider a secondary signal (member session-id overlap in CH) to keep a `continuation` when a topic's centroid drifts past the threshold from seasonality rather than a genuine change.
+- **Elide no-op continuation rows**: when a continued cluster's centroid moved < ε and its name is unchanged, the `continuation` row is a no-op; skipping it would keep the activity feed signal-heavy.
 - **Parallelize naming across independent parents**: only true siblings must serialize; clusters under different parents could be named concurrently without reintroducing the collision race that forced full sequential naming.
-- **Remove the dead bottom-up path**: `sweepNoiseAndBirthClustersUseCase`, `recurseTreeClustersUseCase`, `mergeNearDuplicateClustersUseCase`, `reconcileClusterCountsUseCase`, `reassignNoiseToCurrentClustersUseCase`, and `deprecateInactiveClustersUseCase` (and their `*GardenTaxonomy*Activity` wrappers) remain defined but are no longer invoked by the workflow — kept for Temporal replay safety of in-flight histories and as reference. Once the divisive build is proven in production they can be deleted.
 - **Beam or re-entrant descent** for cross-root boundary observations on the online path.
 - **Stratification window**: the sample lower bound is the fixed 7-day lookback; making the window adaptive (e.g. widen when volume is low) would improve small-tenant coverage.

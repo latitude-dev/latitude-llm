@@ -167,7 +167,7 @@ export const getLastRunUseCase = (input: GetLastRunInput) =>
     const lineage = yield* lineageRepository.listRecentByTransitionTypes({
       projectId: input.projectId,
       dimension: "topic",
-      transitionTypes: ["birth", "merge"],
+      transitionTypes: ["birth", "continuation"],
       limit: 10,
     })
     return { run, lineage } satisfies GetLastRunResult
