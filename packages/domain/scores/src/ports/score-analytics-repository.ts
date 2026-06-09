@@ -118,6 +118,35 @@ export interface IssueImpactAggregate {
   readonly tokens: number
 }
 
+/**
+ * A telemetry dimension whose value distribution can be compared between an
+ * issue's affected traces and the project baseline. `tool` reads the span
+ * `tool_name`; `tag` arrays are flattened so each tag is counted once per span.
+ */
+export type IssueDimension = "model" | "provider" | "tool" | "tag"
+
+/** One value of a dimension with its span count and share within its bucket. */
+export interface DimensionValue {
+  readonly value: string
+  readonly count: number
+  /** Share of the bucket's total (non-empty) spans for this dimension, in `[0, 1]`. */
+  readonly percent: number
+}
+
+/**
+ * Distribution of a dimension for one issue vs. the project baseline. Counts
+ * are over spans that carry a non-empty value for the dimension (the empty
+ * bucket is excluded from both numerator and denominator). `sampleSize` is the
+ * issue-side span total backing the distribution — used to gate low-evidence
+ * outlier calls. Outlier/lift computation lives in `@domain/issues`.
+ */
+export interface IssueDimensionDistribution {
+  readonly dimension: IssueDimension
+  readonly sampleSize: number
+  readonly issue: readonly DimensionValue[]
+  readonly baseline: readonly DimensionValue[]
+}
+
 /** A single time-bucket for issue occurrence time-series. */
 export interface IssueOccurrenceBucket {
   readonly bucket: string // ISO date string
@@ -292,6 +321,19 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly issueId: IssueId
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<IssueImpactAggregate, RepositoryError, ChSqlClient>
+
+  // -- Per-issue dimension distribution vs. project baseline -----------------
+  // Groups spans of the issue's affected traces by `dimension` and compares the
+  // shares against all project spans in the same window. Spans with an empty
+  // value for the dimension are excluded from both sides.
+  aggregateDimensionByIssue(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly issueId: IssueId
+    readonly dimension: IssueDimension
+    readonly timeRange?: ScoreAnalyticsTimeRange
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<IssueDimensionDistribution, RepositoryError, ChSqlClient>
 
   // -- Per-issue signals for the seasonal-anomaly escalation detector --------
   // Reads:

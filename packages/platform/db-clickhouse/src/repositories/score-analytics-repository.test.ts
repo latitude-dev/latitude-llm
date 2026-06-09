@@ -658,6 +658,114 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
+  // aggregateDimensionByIssue
+  // ------------------------------------------------------------------
+
+  describe("aggregateDimensionByIssue", () => {
+    const fixture = setupFixture()
+    const issueDim = "issue_dimensioniiiiii"
+    const issueOther = "issue_dimensionother0"
+    const traceD1 = "d".repeat(32)
+    const traceD2 = "e".repeat(32)
+    const traceOther = "f".repeat(32)
+
+    const span = (
+      overrides: { traceId: string; spanId: string; model?: string; provider?: string; toolName?: string },
+      tags: readonly string[] = [],
+    ): SpanRow => ({
+      ...makeSpanRow({ traceId: overrides.traceId, spanId: overrides.spanId, tags }),
+      model: overrides.model ?? "",
+      provider: overrides.provider ?? "",
+      tool_name: overrides.toolName ?? "",
+    })
+
+    beforeEach(async () => {
+      await fixture.insertSpans([
+        span(
+          {
+            traceId: traceD1,
+            spanId: `d1${"a".repeat(14)}`,
+            model: "claude-opus",
+            provider: "anthropic",
+            toolName: "search",
+          },
+          ["billing"],
+        ),
+        span({ traceId: traceD1, spanId: `d2${"a".repeat(14)}`, model: "claude-opus", provider: "anthropic" }),
+        span(
+          {
+            traceId: traceD2,
+            spanId: `e1${"a".repeat(14)}`,
+            model: "claude-sonnet",
+            provider: "anthropic",
+            toolName: "lookup",
+          },
+          ["billing", "auth"],
+        ),
+        // Baseline-only traffic from a different issue's trace.
+        span({ traceId: traceOther, spanId: `f1${"a".repeat(14)}`, model: "gpt-4o", provider: "openai" }, [
+          "onboarding",
+        ]),
+        span({ traceId: traceOther, spanId: `f2${"a".repeat(14)}`, model: "gpt-4o", provider: "openai" }),
+      ])
+
+      await fixture.insertScores([
+        makeScoreRow({ issue_id: issueDim, trace_id: traceD1 }),
+        makeScoreRow({ issue_id: issueDim, trace_id: traceD2 }),
+        makeScoreRow({ issue_id: issueOther, trace_id: traceOther }),
+      ])
+    })
+
+    const byValue = (values: readonly { value: string; count: number; percent: number }[]) =>
+      new Map(values.map((v) => [v.value, v] as const))
+
+    const aggregate = (dimension: "model" | "provider" | "tool" | "tag") =>
+      fixture.runCh(
+        fixture.repo.aggregateDimensionByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueDim),
+          dimension,
+        }),
+      )
+
+    // One test (not several) because `beforeEach` inserts are not truncated
+    // between tests in the shared per-describe chdb session, so re-running it
+    // would double the span counts these assertions check.
+    it("compares the issue's dimension distributions against the project baseline", async () => {
+      const models = await aggregate("model")
+      expect(models.dimension).toBe("model")
+      expect(models.sampleSize).toBe(3)
+      const modelIssue = byValue(models.issue)
+      expect(modelIssue.get("claude-opus")?.count).toBe(2)
+      expect(modelIssue.get("claude-opus")?.percent).toBeCloseTo(2 / 3, 5)
+      expect(modelIssue.get("claude-sonnet")?.count).toBe(1)
+      // gpt-4o belongs to another issue's trace — excluded from the issue side.
+      expect(modelIssue.has("gpt-4o")).toBe(false)
+      const modelBaseline = byValue(models.baseline)
+      expect(modelBaseline.get("gpt-4o")?.count).toBe(2)
+      expect(modelBaseline.get("claude-opus")?.count).toBe(2)
+      expect(modelBaseline.get("gpt-4o")?.percent).toBeCloseTo(2 / 5, 5)
+
+      // Tools: d1 → search, e1 → lookup; d2 has no tool name and is excluded.
+      const tools = await aggregate("tool")
+      expect(tools.sampleSize).toBe(2)
+      const toolIssue = byValue(tools.issue)
+      expect(toolIssue.get("search")?.count).toBe(1)
+      expect(toolIssue.get("lookup")?.count).toBe(1)
+      expect(toolIssue.has("")).toBe(false)
+
+      // Tags: flattened, one per span; onboarding only on the other issue's trace.
+      const tags = await aggregate("tag")
+      const tagIssue = byValue(tags.issue)
+      expect(tagIssue.get("billing")?.count).toBe(2)
+      expect(tagIssue.get("auth")?.count).toBe(1)
+      expect(tagIssue.has("onboarding")).toBe(false)
+      expect(byValue(tags.baseline).get("onboarding")?.count).toBe(1)
+    })
+  })
+
+  // ------------------------------------------------------------------
   // aggregateTagsByIssues
   // ------------------------------------------------------------------
 

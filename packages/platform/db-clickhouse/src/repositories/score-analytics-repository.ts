@@ -1,5 +1,8 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type {
+  DimensionValue,
+  IssueDimension,
+  IssueDimensionDistribution,
   IssueEscalationSignals,
   IssueEscalationThresholdBucket,
   IssueEscalationThresholdSeries,
@@ -46,6 +49,15 @@ import { SCORE_FIELD_REGISTRY } from "../registries/score-fields.ts"
 // tags. Tag distributions converge fast, so a sample of this size captures
 // effectively all tag variants while bounding the join cost for noisy issues.
 const ISSUE_TAG_TRACE_SAMPLE_LIMIT = 200
+
+// SQL value expression per dimension. `tag` flattens the span tags array so
+// each tag is counted once per span; the others read a single span column.
+const ISSUE_DIMENSION_VALUE_EXPR: Record<IssueDimension, string> = {
+  model: "model",
+  provider: "provider",
+  tool: "tool_name",
+  tag: "arrayJoin(tags)",
+}
 
 const toClickHouseDateTime64 = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
 
@@ -178,6 +190,11 @@ type IssueImpactTraceRow = {
 
 type IssueImpactUserRow = {
   affected_users: string
+}
+
+type DimensionCountRow = {
+  value: string
+  cnt: string
 }
 
 type IssueOccurrenceBucketRow = {
@@ -593,6 +610,28 @@ const buildScoreCreatedAtTimeRange = (
   return { clauses, params }
 }
 
+// Same shape as `buildScoreCreatedAtTimeRange` but bound to the spans table's
+// `start_time` column (used by the dimension distribution reads over `spans`).
+const buildSpanStartTimeRange = (
+  timeRange: ScoreAnalyticsTimeRange | undefined,
+  prefix: string,
+): { clauses: string[]; params: Record<string, unknown> } => {
+  const clauses: string[] = []
+  const params: Record<string, unknown> = {}
+
+  if (timeRange?.from) {
+    clauses.push(`start_time >= toDateTime64({${prefix}_from:String}, 3, 'UTC')`)
+    params[`${prefix}_from`] = toClickHouseDateTime64(timeRange.from)
+  }
+
+  if (timeRange?.to) {
+    clauses.push(`start_time <= toDateTime64({${prefix}_to:String}, 3, 'UTC')`)
+    params[`${prefix}_to`] = toClickHouseDateTime64(timeRange.to)
+  }
+
+  return { clauses, params }
+}
+
 const buildIssueAnalyticsWhere = (input: {
   readonly filters: FilterSet | undefined
   readonly timeRange: ScoreAnalyticsTimeRange | undefined
@@ -958,6 +997,72 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             costMicrocents: Number(trace?.cost_microcents ?? 0),
             tokens: Number(trace?.tokens ?? 0),
           } satisfies IssueImpactAggregate
+        }),
+
+      // -- aggregateDimensionByIssue -----------------------------------------
+      aggregateDimensionByIssue: ({ organizationId, projectId, issueId, dimension, timeRange, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const valueExpr = ISSUE_DIMENSION_VALUE_EXPR[dimension]
+          const spanScope = `organization_id = {organizationId:String} AND project_id = {projectId:String}${
+            options?.excludeSimulations ? " AND simulation_id = ''" : ""
+          }`
+          const spanRange = buildSpanStartTimeRange(timeRange, "dimspan")
+          const scoreRange = buildScoreCreatedAtTimeRange(timeRange, "dimscore")
+          const spanWhere = [spanScope, ...spanRange.clauses].join(" AND ")
+          // Distinct traces that carry an occurrence of this issue, scoped the same way.
+          const issueTracesSql = `SELECT DISTINCT trace_id
+            FROM scores
+            WHERE ${scopeClause(options)}
+              AND issue_id = {issueId:String}
+              AND trace_id != ''${scoreRange.clauses.length > 0 ? ` AND ${scoreRange.clauses.join(" AND ")}` : ""}`
+          const params = {
+            ...scopeParams(organizationId, projectId),
+            issueId: issueId as string,
+            ...spanRange.params,
+            ...scoreRange.params,
+          }
+
+          // The inner subquery emits one row per span (or per tag, for `tag`); the
+          // outer filter drops the empty value so it counts toward neither the
+          // numerator nor the denominator.
+          const runDimension = (extraWhere: string) =>
+            chSqlClient.query<DimensionCountRow[]>(async (client) => {
+              const result = await client.query({
+                query: `SELECT value, count() AS cnt
+                      FROM (
+                        SELECT ${valueExpr} AS value
+                        FROM spans
+                        WHERE ${spanWhere}${extraWhere}
+                      )
+                      WHERE value != ''
+                      GROUP BY value
+                      ORDER BY cnt DESC, value ASC`,
+                query_params: params,
+                format: "JSONEachRow",
+              })
+              return result.json<DimensionCountRow>()
+            })
+
+          const [issueRows, baselineRows] = yield* Effect.all(
+            [runDimension(` AND trace_id IN (${issueTracesSql})`), runDimension("")],
+            { concurrency: 2 },
+          )
+
+          const total = (rows: readonly DimensionCountRow[]) => rows.reduce((sum, row) => sum + Number(row.cnt), 0)
+          const toValues = (rows: readonly DimensionCountRow[], denominator: number): DimensionValue[] =>
+            rows.map((row) => {
+              const count = Number(row.cnt)
+              return { value: row.value, count, percent: denominator === 0 ? 0 : count / denominator }
+            })
+
+          const issueTotal = total(issueRows)
+          return {
+            dimension,
+            sampleSize: issueTotal,
+            issue: toValues(issueRows, issueTotal),
+            baseline: toValues(baselineRows, total(baselineRows)),
+          } satisfies IssueDimensionDistribution
         }),
 
       // -- escalationSignalsByIssues -----------------------------------------

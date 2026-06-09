@@ -10,6 +10,31 @@ export const ISSUE_SOURCES = ["annotation", "flagger", "custom"] as const
 /** Manual triage priority levels, ascending in urgency. Null means "unset". */
 export const ISSUE_PRIORITIES = ["low", "medium", "high", "urgent"] as const
 
+// ---------------------------------------------------------------------------
+// Dimension distribution outliers (Patterns panel)
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimum issue-side span sample (the dimension distribution's `sampleSize`)
+ * before we surface any "over-represented vs. baseline" outliers. Below this we
+ * don't have enough evidence to claim a value is anomalous, so the UI shows a
+ * "not enough data" state instead of misleading lifts.
+ */
+export const ISSUE_DIMENSION_MIN_SAMPLE = 20
+
+/** A dimension value must occur at least this many times in the issue to be an outlier candidate. */
+export const ISSUE_DIMENSION_MIN_VALUE_COUNT = 3
+
+/** Minimum lift (`issuePercent / baselinePercent`) for a value to count as over-represented. */
+export const ISSUE_DIMENSION_OUTLIER_MIN_LIFT = 1.5
+
+/**
+ * Floor applied to the baseline share when computing lift, so a value that is
+ * essentially absent from the baseline yields a large finite lift instead of a
+ * division by zero / non-serializable `Infinity`.
+ */
+export const ISSUE_DIMENSION_BASELINE_FLOOR = 0.001
+
 export const NEW_ISSUE_AGE_DAYS = 7
 
 /**
