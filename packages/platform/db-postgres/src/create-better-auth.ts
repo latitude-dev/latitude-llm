@@ -1,9 +1,11 @@
 import type { DBAdapter } from "@better-auth/core/db/adapter"
+import { sso } from "@better-auth/sso"
 import { type StripeOptions, type StripePlugin, stripe } from "@better-auth/stripe"
 import { generateId } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { APIError } from "better-auth/api"
 import { admin as adminPlugin, captcha, magicLink, organization as organizationPlugin } from "better-auth/plugins"
 import { Effect } from "effect"
 import Stripe from "stripe"
@@ -18,6 +20,7 @@ import {
   oauthConsents,
   organizations,
   sessions,
+  ssoProviders,
   subscriptions,
   users,
   verifications,
@@ -74,6 +77,13 @@ export interface BetterAuthConfig {
    * Used on staging to restrict access to internal users only.
    */
   readonly allowedEmailDomain?: string
+  /**
+   * SSO enforcement predicate: true when the email's domain has a verified
+   * SSO provider with `enforced = true`. Consulted on session creation for
+   * the magic-link and social sign-in paths (SSO callbacks are exempt) —
+   * see the `session.create.before` hook below.
+   */
+  readonly isSsoEnforcedForEmail?: (email: string) => Promise<boolean>
 }
 
 export interface StripePlanConfig {
@@ -128,6 +138,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       oauthApplications,
       oauthAccessTokens,
       oauthConsents,
+      ssoProviders,
     },
   }) as unknown as DBAdapter
 
@@ -137,6 +148,21 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     basePath,
     secret,
     trustedOrigins: config.trustedOrigins ?? [],
+    /**
+     * Enterprise SSO posture: provider registration and mutation are
+     * server-side only (web SSO settings server fns calling
+     * `auth.api.registerSSOProvider` & co. after feature-flag + owner/admin
+     * checks). `disabledPaths` only blocks the HTTP router (404) — direct
+     * `auth.api.*` calls are unaffected. Sign-in, ACS/callback, and SP
+     * metadata endpoints stay routable.
+     */
+    disabledPaths: [
+      "/sso/register",
+      "/sso/update-provider",
+      "/sso/delete-provider",
+      "/sso/request-domain-verification",
+      "/sso/verify-domain",
+    ],
     // The `users.role` column is surfaced on the session user by the
     // `admin` plugin installed below. The plugin declares it in its own
     // schema (`{ type: "string", required: false, input: false }`), so
@@ -181,6 +207,36 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
               userId: member.userId,
               role: member.role,
             })
+          },
+        },
+      },
+      session: {
+        create: {
+          /**
+           * SSO enforcement. Whitelist of enforced sign-in paths:
+           * - `/callback/:id` — social OAuth callback (Google/GitHub)
+           * - `/magic-link/verify` — covers links issued before enforcement
+           *   was switched on (issuance is already blocked in the web
+           *   `sendMagicLink` server fn)
+           * Everything else (SSO callbacks, admin impersonation, token
+           * flows) creates sessions untouched.
+           */
+          before: async (session, ctx) => {
+            if (!config.isSsoEnforcedForEmail || !ctx) return { data: session }
+
+            const path = ctx.path ?? ""
+            // BA 1.6.x routes: social OAuth callbacks land on `/callback/:id`;
+            // SSO callbacks land on `/sso/callback/:id` (OIDC) and
+            // `/sso/saml2/sp/acs/:id` (SAML) — neither starts with "/callback",
+            // so they are correctly exempt from enforcement here.
+            const isEnforcedPath = path === "/magic-link/verify" || path.startsWith("/callback")
+            if (!isEnforcedPath) return { data: session }
+
+            const user = await ctx.context.internalAdapter.findUserById(session.userId)
+            if (user && (await config.isSsoEnforcedForEmail(user.email))) {
+              throw new APIError("FORBIDDEN", { message: "Your organization requires SSO sign-in" })
+            }
+            return { data: session }
           },
         },
       },
@@ -277,6 +333,33 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         defaultRole: "user",
         adminRoles: ["admin"],
         impersonationSessionDuration: 60 * 60,
+      }),
+      /**
+       * Enterprise SSO (SAML 2.0 + OIDC). Providers are org-bound rows in
+       * `sso_providers` (see schema comment there for the RLS / admin-client
+       * read rules and the app-extended `enforced` column).
+       *
+       * - JIT-provisions users and org members (`defaultRole: "member"`)
+       *   into the provider's bound organization on first SSO sign-in.
+       * - `domainVerification` requires a DNS TXT proof before domain-matched
+       *   sign-ins activate for a provider.
+       * - IdP-initiated SAML is rejected (`allowIdpInitiated: false`):
+       *   unsolicited assertions are an audience-injection risk; every
+       *   sign-in must correlate to an SP-initiated AuthnRequest.
+       * - `requireTimestamps` enforces SAML2Int (Okta, Entra, OneLogin all
+       *   comply).
+       */
+      sso({
+        organizationProvisioning: {
+          disabled: false,
+          defaultRole: "member",
+        },
+        domainVerification: { enabled: true },
+        saml: {
+          enableInResponseToValidation: true,
+          allowIdpInitiated: false,
+          requireTimestamps: true,
+        },
       }),
       ...(config.captchaSecretKey
         ? [

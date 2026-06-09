@@ -6,8 +6,10 @@ import z from "zod"
 import { Turnstile } from "../components/turnstile.tsx"
 import { sendMagicLink } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
+import { lookupSsoForEmail } from "../domains/sso/sso.functions.ts"
 import { appendTrackingParams, gtmHeadScripts, pickTrackingParams } from "../lib/analytics/gtm.ts"
 import { GtmNoScript, SignupCompleteWatcher } from "../lib/analytics/signup-complete-watcher.tsx"
+import { authClient } from "../lib/auth-client.ts"
 import { TURNSTILE_SITE_KEY, WEB_BASE_URL } from "../lib/auth-config.ts"
 import { toUserMessage } from "../lib/errors.ts"
 import { getPostHogSessionId } from "../lib/posthog/posthog-client.ts"
@@ -34,6 +36,7 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [isSent, setIsSent] = useState(false)
+  const [isRedirectingToSso, setIsRedirectingToSso] = useState(false)
   const [email, setEmail] = useState(prefilledEmail ?? "")
   const captchaTokenRef = useRef<string | undefined>(undefined)
   const handleCaptchaVerify = useCallback((token: string) => {
@@ -69,6 +72,25 @@ function LoginPage() {
     }
 
     try {
+      // Verified enterprise SSO domains skip the magic link entirely and
+      // hand the browser to the IdP (`signIn.sso` 302s through Better Auth).
+      const ssoMatch = await lookupSsoForEmail({ data: { email: emailValue } })
+      if (ssoMatch) {
+        setIsRedirectingToSso(true)
+        const { error: ssoError } = await authClient.signIn.sso({
+          email: emailValue,
+          callbackURL,
+          newUserCallbackURL,
+        })
+        if (ssoError) {
+          setIsRedirectingToSso(false)
+          setError(ssoError.message ?? "Could not start SSO sign-in")
+          setIsLoading(false)
+        }
+        // On success the client redirects the page — keep the loading state.
+        return
+      }
+
       await sendMagicLink({
         data: {
           email: emailValue,
@@ -80,9 +102,9 @@ function LoginPage() {
       })
 
       setIsSent(true)
+      setIsLoading(false)
     } catch (err) {
       setError(toUserMessage(err))
-    } finally {
       setIsLoading(false)
     }
   }
@@ -206,7 +228,11 @@ function LoginPage() {
               disabled={isLoading}
               className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-[1px] active:shadow-none transition-all"
             >
-              {isLoading ? "Sending…" : "Continue with email"}
+              {isRedirectingToSso
+                ? "Redirecting to your identity provider…"
+                : isLoading
+                  ? "Sending…"
+                  : "Continue with email"}
             </Button>
           </form>
 

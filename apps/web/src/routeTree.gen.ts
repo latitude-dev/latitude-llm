@@ -59,6 +59,7 @@ import { Route as AuthenticatedProjectsProjectSlugMonitorsIndexRouteImport } fro
 import { Route as AuthenticatedProjectsProjectSlugIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/index'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/index'
 import { Route as AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/behaviours/index'
+import { Route as AuthenticatedProjectsProjectSlugSettingsSsoRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/sso'
 import { Route as AuthenticatedProjectsProjectSlugSettingsOrganizationRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/organization'
 import { Route as AuthenticatedProjectsProjectSlugSettingsMembersRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/members'
 import { Route as AuthenticatedProjectsProjectSlugSettingsKeysRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/keys'
@@ -344,6 +345,12 @@ const AuthenticatedProjectsProjectSlugBehavioursIndexRoute =
     path: '/behaviours/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugSettingsSsoRoute =
+  AuthenticatedProjectsProjectSlugSettingsSsoRouteImport.update({
+    id: '/sso',
+    path: '/sso',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugSettingsRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugSettingsOrganizationRoute =
   AuthenticatedProjectsProjectSlugSettingsOrganizationRouteImport.update({
     id: '/organization',
@@ -460,6 +467,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
   '/projects/$projectSlug/settings/members': typeof AuthenticatedProjectsProjectSlugSettingsMembersRoute
   '/projects/$projectSlug/settings/organization': typeof AuthenticatedProjectsProjectSlugSettingsOrganizationRoute
+  '/projects/$projectSlug/settings/sso': typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
   '/projects/$projectSlug/behaviours/': typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   '/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
@@ -516,6 +524,7 @@ export interface FileRoutesByTo {
   '/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
   '/projects/$projectSlug/settings/members': typeof AuthenticatedProjectsProjectSlugSettingsMembersRoute
   '/projects/$projectSlug/settings/organization': typeof AuthenticatedProjectsProjectSlugSettingsOrganizationRoute
+  '/projects/$projectSlug/settings/sso': typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
   '/projects/$projectSlug/behaviours': typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   '/projects/$projectSlug/datasets': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
@@ -579,6 +588,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectSlug/settings/keys': typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
   '/_authenticated/projects/$projectSlug/settings/members': typeof AuthenticatedProjectsProjectSlugSettingsMembersRoute
   '/_authenticated/projects/$projectSlug/settings/organization': typeof AuthenticatedProjectsProjectSlugSettingsOrganizationRoute
+  '/_authenticated/projects/$projectSlug/settings/sso': typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
   '/_authenticated/projects/$projectSlug/behaviours/': typeof AuthenticatedProjectsProjectSlugBehavioursIndexRoute
   '/_authenticated/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/_authenticated/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
@@ -642,6 +652,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/keys'
     | '/projects/$projectSlug/settings/members'
     | '/projects/$projectSlug/settings/organization'
+    | '/projects/$projectSlug/settings/sso'
     | '/projects/$projectSlug/behaviours/'
     | '/projects/$projectSlug/datasets/'
     | '/projects/$projectSlug/issues/'
@@ -698,6 +709,7 @@ export interface FileRouteTypes {
     | '/projects/$projectSlug/settings/keys'
     | '/projects/$projectSlug/settings/members'
     | '/projects/$projectSlug/settings/organization'
+    | '/projects/$projectSlug/settings/sso'
     | '/projects/$projectSlug/behaviours'
     | '/projects/$projectSlug/datasets'
     | '/projects/$projectSlug/issues'
@@ -760,6 +772,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectSlug/settings/keys'
     | '/_authenticated/projects/$projectSlug/settings/members'
     | '/_authenticated/projects/$projectSlug/settings/organization'
+    | '/_authenticated/projects/$projectSlug/settings/sso'
     | '/_authenticated/projects/$projectSlug/behaviours/'
     | '/_authenticated/projects/$projectSlug/datasets/'
     | '/_authenticated/projects/$projectSlug/issues/'
@@ -1144,6 +1157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugBehavioursIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/settings/sso': {
+      id: '/_authenticated/projects/$projectSlug/settings/sso'
+      path: '/sso'
+      fullPath: '/projects/$projectSlug/settings/sso'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsSsoRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+    }
     '/_authenticated/projects/$projectSlug/settings/organization': {
       id: '/_authenticated/projects/$projectSlug/settings/organization'
       path: '/organization'
@@ -1271,6 +1291,7 @@ interface AuthenticatedProjectsProjectSlugSettingsRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsKeysRoute: typeof AuthenticatedProjectsProjectSlugSettingsKeysRoute
   AuthenticatedProjectsProjectSlugSettingsMembersRoute: typeof AuthenticatedProjectsProjectSlugSettingsMembersRoute
   AuthenticatedProjectsProjectSlugSettingsOrganizationRoute: typeof AuthenticatedProjectsProjectSlugSettingsOrganizationRoute
+  AuthenticatedProjectsProjectSlugSettingsSsoRoute: typeof AuthenticatedProjectsProjectSlugSettingsSsoRoute
   AuthenticatedProjectsProjectSlugSettingsIndexRoute: typeof AuthenticatedProjectsProjectSlugSettingsIndexRoute
 }
 
@@ -1294,6 +1315,8 @@ const AuthenticatedProjectsProjectSlugSettingsRouteChildren: AuthenticatedProjec
       AuthenticatedProjectsProjectSlugSettingsMembersRoute,
     AuthenticatedProjectsProjectSlugSettingsOrganizationRoute:
       AuthenticatedProjectsProjectSlugSettingsOrganizationRoute,
+    AuthenticatedProjectsProjectSlugSettingsSsoRoute:
+      AuthenticatedProjectsProjectSlugSettingsSsoRoute,
     AuthenticatedProjectsProjectSlugSettingsIndexRoute:
       AuthenticatedProjectsProjectSlugSettingsIndexRoute,
   }

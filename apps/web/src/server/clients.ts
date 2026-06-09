@@ -1,6 +1,7 @@
 import { PRO_PLAN_CONFIG, SELF_SERVE_PLAN_SLUGS } from "@domain/billing"
 import type { QueuePublisherShape, WorkflowQuerierShape, WorkflowStarterShape } from "@domain/queue"
 import { generateId, OrganizationId, type StorageDiskPort } from "@domain/shared"
+import { isSsoEnforcedForEmailUseCase } from "@domain/sso"
 import { createRedisClient, createRedisConnection, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
 import {
@@ -10,7 +11,9 @@ import {
   invalidateEffectivePlanCache,
   type PostgresClient,
   SqlClientLive,
+  SsoProviderRepositoryLive,
   type StripePlanConfig,
+  withPostgres,
 } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
@@ -194,6 +197,16 @@ export const getBetterAuth = () => {
       ...(stripeSecretKey ? { stripeSecretKey } : {}),
       ...(stripeWebhookSecret ? { stripeWebhookSecret } : {}),
       ...(selfServePlans.length > 0 ? { subscriptionPlans: selfServePlans } : {}),
+      // Pre-auth lookup (no org context yet) → admin client. See the
+      // `session.create.before` hook in `createBetterAuth` for where this
+      // blocks magic-link/social sign-ins on enforced SSO domains.
+      isSsoEnforcedForEmail: async (email) =>
+        await Effect.runPromise(
+          isSsoEnforcedForEmailUseCase({ email }).pipe(
+            withPostgres(SsoProviderRepositoryLive, getAdminPostgresClient()),
+            withTracing,
+          ),
+        ),
       extraPlugins: [
         tanstackStartCookies(),
         // OAuth2/OIDC authorization server for MCP clients (Claude Code,

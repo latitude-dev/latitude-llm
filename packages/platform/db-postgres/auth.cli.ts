@@ -12,6 +12,7 @@
  *
  * @see https://www.better-auth.com/docs/concepts/cli
  */
+import { sso } from "@better-auth/sso"
 import { stripe } from "@better-auth/stripe"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
@@ -32,6 +33,7 @@ export const auth = betterAuth({
     organization(),
     magicLink({ sendMagicLink: async () => {} }),
     mcp({ loginPage: "/dummy" }),
+    sso({ domainVerification: { enabled: true } }),
     stripe({
       stripeClient,
       stripeWebhookSecret: "whsec_dummy",

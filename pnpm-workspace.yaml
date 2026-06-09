@@ -42,6 +42,7 @@ catalog:
   "@vitejs/plugin-react": 6.0.1
   better-auth: 1.6.11
   "@better-auth/core": 1.6.9
+  "@better-auth/sso": 1.6.9
   "@better-auth/stripe": 1.6.10
   "@bull-board/api": 6.12.1
   "@bull-board/hono": 6.12.1
