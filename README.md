@@ -7,7 +7,7 @@
 </p>
 
 <h1 align="center" style="border: none; margin-bottom: 8px;">
-  Issue detection for AI Agents
+  Open source AI Agent Monitoring
 </h1>
 
 <p align="center">
