@@ -7,6 +7,7 @@ import type {
   IssueDetailRecord,
   IssueDimensionsRecord,
   IssueImpactRecord,
+  IssueOccurrenceRecord,
   IssueRecord,
   IssueSummaryRecord,
   IssuesListResultRecord,
@@ -21,6 +22,7 @@ import {
   getIssueDetail,
   getIssueDimensions,
   getIssueImpact,
+  getIssueOccurrences,
   listIssues,
   listIssueTraces,
   searchOrgIssues,
@@ -92,6 +94,9 @@ const getIssueImpactQueryKey = (projectId: string, issueId: string) => ["issue-i
 
 const getIssueDimensionsQueryKey = (projectId: string, issueId: string, dimension: IssueDimension) =>
   ["issue-dimensions", projectId, issueId, dimension] as const
+
+const getIssueOccurrencesQueryKey = (projectId: string, issueId: string) =>
+  ["issue-occurrences", projectId, issueId] as const
 
 const getIssueTracesQueryKey = (projectId: string, issueId: string) => ["issue-traces", projectId, issueId] as const
 
@@ -319,6 +324,24 @@ export function useIssueDimensions({
   return useQuery({
     queryKey: getIssueDimensionsQueryKey(projectId, issueId, dimension),
     queryFn: (): Promise<IssueDimensionsRecord> => getIssueDimensions({ data: { projectId, issueId, dimension } }),
+    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+  })
+}
+
+export function useIssueOccurrences({
+  projectId,
+  issueId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly issueId: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: getIssueOccurrencesQueryKey(projectId, issueId),
+    queryFn: (): Promise<{ readonly items: readonly IssueOccurrenceRecord[] }> =>
+      getIssueOccurrences({ data: { projectId, issueId } }),
     enabled: enabled && projectId.length > 0 && issueId.length > 0,
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
   })

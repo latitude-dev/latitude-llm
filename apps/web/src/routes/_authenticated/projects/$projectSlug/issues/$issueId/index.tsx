@@ -10,6 +10,7 @@ import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../..
 import { useRouteProject } from "../../-route-data.ts"
 import { IssueDetailBody } from "../-components/issue-detail-drawer.tsx"
 import { IssueLifecycleActions } from "../-components/issue-lifecycle-actions.tsx"
+import { IssueExamples } from "./-components/issue-examples.tsx"
 import { IssuePatterns } from "./-components/issue-patterns.tsx"
 import { IssueSummary } from "./-components/issue-summary.tsx"
 
@@ -98,7 +99,12 @@ function IssueDetailPage() {
           projectId={project.id}
           issueId={issueId}
           variant="page"
-          prepend={<IssuePatterns projectId={project.id} issueId={issueId} />}
+          prepend={
+            <>
+              <IssuePatterns projectId={project.id} issueId={issueId} />
+              <IssueExamples projectId={project.id} issueId={issueId} />
+            </>
+          }
         />
       </Layout.Content>
     </Layout>
