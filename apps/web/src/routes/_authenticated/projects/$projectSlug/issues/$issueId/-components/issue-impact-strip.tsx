@@ -63,12 +63,16 @@ export function IssueImpactStrip({ projectId, issueId }: { readonly projectId: s
         isLoading={isLoading}
         value={impact ? formatCount(impact.affectedSessions) : "-"}
       />
-      <ImpactTile
-        label="Affected users"
-        hint="Distinct users across the sessions where this issue occurred."
-        isLoading={isLoading}
-        value={impact ? formatCount(impact.affectedUsers) : "-"}
-      />
+      {/* Hidden once loaded with no user attribution — showing "0 users" would
+          read as "nobody affected" when it really means "no user id on these traces". */}
+      {isLoading || (impact !== undefined && impact.affectedUsers > 0) ? (
+        <ImpactTile
+          label="Affected users"
+          hint="Distinct users across the sessions where this issue occurred."
+          isLoading={isLoading}
+          value={impact ? formatCount(impact.affectedUsers) : "-"}
+        />
+      ) : null}
       <ImpactTile
         label="Cost impact"
         hint="Total cost of the traces affected by this issue."
