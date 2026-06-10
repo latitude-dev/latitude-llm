@@ -88,6 +88,7 @@ export {
 export { buildHistogramBucketScaffold, fillBuckets } from "./histogram-buckets.ts"
 export { type IssueDiscoveryLockInput, issueDiscoveryLockKey, withIssueDiscoveryLock } from "./locks.ts"
 export {
+  type IssueCentroidNeighbor,
   type IssueLifecycleFlags,
   type IssueListPage,
   IssueRepository,

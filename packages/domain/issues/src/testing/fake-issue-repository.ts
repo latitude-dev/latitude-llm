@@ -8,6 +8,15 @@ const DEFAULT_LIFECYCLE: IssueLifecycleFlags = {
   isRegressed: false,
 }
 
+const dot = (a: readonly number[], b: readonly number[]): number =>
+  a.reduce((sum, value, index) => sum + value * (b[index] ?? 0), 0)
+
+const normalize = (vector: readonly number[]): readonly number[] | null => {
+  const magnitude = Math.sqrt(dot(vector, vector))
+  if (magnitude === 0) return null
+  return vector.map((value) => value / magnitude)
+}
+
 interface FakeIssueRepositoryOptions {
   /**
    * Per-issue lifecycle overlay. Tests that exercise escalation / regression
@@ -64,6 +73,26 @@ export const createFakeIssueRepository = (
             score: 1,
           })),
       ),
+
+    findSimilarByCentroid: ({ projectId, issueId, limit }) =>
+      Effect.sync(() => {
+        // Mirrors the real adapter: cosine over normalized centroid bases,
+        // empty when the source is missing or has a zero-mass centroid,
+        // zero-mass neighbors skipped, self excluded, project-scoped.
+        const source = issues.get(issueId)
+        if (!source || source.projectId !== projectId || source.centroid.mass <= 0) return []
+        const sourceVector = normalize(source.centroid.base)
+        if (sourceVector === null) return []
+        return [...issues.values()]
+          .filter((issue) => issue.projectId === projectId && issue.id !== issueId && issue.centroid.mass > 0)
+          .flatMap((issue) => {
+            const vector = normalize(issue.centroid.base)
+            if (vector === null) return []
+            return [{ issueId: issue.id, similarity: dot(sourceVector, vector) }]
+          })
+          .sort((a, b) => b.similarity - a.similarity)
+          .slice(0, limit)
+      }),
 
     searchOrgWide: ({ query, preferProjectId, limit }) =>
       Effect.sync(() => {
