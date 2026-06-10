@@ -256,6 +256,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         disableImplicitLinking: true,
         allowDifferentEmails: false,
         updateUserInfoOnLink: false,
+        allowUnlinkingAll: true,
       },
     },
     socialProviders: {

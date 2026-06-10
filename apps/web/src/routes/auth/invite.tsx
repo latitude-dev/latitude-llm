@@ -1,7 +1,7 @@
 import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { AlertCircle, Users } from "lucide-react"
-import { useState } from "react"
+import { type SubmitEvent, useState } from "react"
 import z from "zod"
 import { getInvitationPreview } from "../../domains/auth/auth.functions.ts"
 import { getSession, updateUserName } from "../../domains/sessions/session.functions.ts"
@@ -47,7 +47,7 @@ function InvitePage() {
 
   const userHasName = session.user.name && session.user.name.trim().length > 0
 
-  const handleAcceptInvitation = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAcceptInvitation = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isSubmitting) return
 
@@ -59,7 +59,9 @@ function InvitePage() {
         await updateUserName({ data: { name: name.trim() } })
       }
 
-      const { error } = await authClient.organization.acceptInvitation({ invitationId })
+      const { error } = await authClient.organization.acceptInvitation({
+        invitationId,
+      })
       if (error) {
         setError(error.message)
         setIsSubmitting(false)
@@ -79,7 +81,9 @@ function InvitePage() {
     setError(undefined)
 
     try {
-      const { error } = await authClient.organization.rejectInvitation({ invitationId })
+      const { error } = await authClient.organization.rejectInvitation({
+        invitationId,
+      })
       if (error) {
         setError(error.message)
         setIsSubmitting(false)

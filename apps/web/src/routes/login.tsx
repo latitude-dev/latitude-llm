@@ -1,7 +1,7 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { AlertCircle, ArrowRight, Mail } from "lucide-react"
-import { useCallback, useRef, useState } from "react"
+import { type SubmitEvent, useCallback, useRef, useState } from "react"
 import z from "zod"
 import { Turnstile } from "../components/turnstile.tsx"
 import { sendMagicLink } from "../domains/auth/auth.functions.ts"
@@ -9,6 +9,7 @@ import { getSession } from "../domains/sessions/session.functions.ts"
 import { lookupSsoForEmail } from "../domains/sso/sso.functions.ts"
 import { appendTrackingParams, gtmHeadScripts, pickTrackingParams } from "../lib/analytics/gtm.ts"
 import { GtmNoScript, SignupCompleteWatcher } from "../lib/analytics/signup-complete-watcher.tsx"
+import { oauthCallbackErrorMessage } from "../lib/auth/oauth-errors.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { TURNSTILE_SITE_KEY, WEB_BASE_URL } from "../lib/auth-config.ts"
 import { toUserMessage } from "../lib/errors.ts"
@@ -17,6 +18,9 @@ import { getPostHogSessionId } from "../lib/posthog/posthog-client.ts"
 const loginSearchParams = z.object({
   redirect: z.string().optional(),
   email: z.string().optional(),
+  // Better Auth appends `?error=<code>` to `errorCallbackURL` when a social
+  // sign-in fails at the OAuth callback (e.g. `account_not_linked`).
+  error: z.string().optional(),
 })
 
 export const Route = createFileRoute("/login")({
@@ -32,9 +36,9 @@ export const Route = createFileRoute("/login")({
 })
 
 function LoginPage() {
-  const { redirect: redirectPath, email: prefilledEmail } = Route.useSearch()
+  const { redirect: redirectPath, email: prefilledEmail, error: oauthErrorCode } = Route.useSearch()
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string>()
+  const [error, setError] = useState<string | undefined>(() => oauthCallbackErrorMessage(oauthErrorCode))
   const [isSent, setIsSent] = useState(false)
   const [isRedirectingToSso, setIsRedirectingToSso] = useState(false)
   const [email, setEmail] = useState(prefilledEmail ?? "")
@@ -46,7 +50,7 @@ function LoginPage() {
     captchaTokenRef.current = undefined
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isLoading) return
 
@@ -59,7 +63,10 @@ function LoginPage() {
 
     const callbackURL = redirectPath ?? "/"
     const tracking = pickTrackingParams(window.location.search)
-    const newUserCallbackURL = appendTrackingParams(redirectPath ?? "/welcome", { ...tracking, signup: "email" })
+    const newUserCallbackURL = appendTrackingParams(redirectPath ?? "/welcome", {
+      ...tracking,
+      signup: "email",
+    })
 
     // Capture session + referrer/UTM now; the magic link is verified later
     // (maybe cross-device) without this context. Server stashes it by email and
@@ -216,8 +223,10 @@ function LoginPage() {
             )}
 
             {error && (
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <Icon icon={AlertCircle} className="h-4 w-4" />
+              <div className="flex items-start gap-2">
+                <div className="shrink-0 mt-0.5">
+                  <Icon icon={AlertCircle} size="sm" color="destructive" />
+                </div>
                 <Text.H6 color="destructive">{error}</Text.H6>
               </div>
             )}
