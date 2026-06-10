@@ -4,6 +4,7 @@ export interface NormalizedMessage {
   readonly index: number
   readonly role: "user" | "assistant" | "tool" | "system" | "unknown"
   readonly text: string
+  readonly isCompactionSummaryCandidate?: boolean
 }
 
 export const roleOf = (message: unknown): NormalizedMessage["role"] => {
@@ -42,7 +43,15 @@ export const stripToolTelemetry = (content: string): string =>
 // tool call scored as escalation) and label evidence.
 export const normalizeMessages = (messages: readonly unknown[]): readonly NormalizedMessage[] =>
   messages
-    .map((message, index) => ({ index, role: roleOf(message), text: stripToolTelemetry(textOf(message)) }))
+    .map((message, index) => ({
+      index,
+      role: roleOf(message),
+      text: stripToolTelemetry(textOf(message)),
+      isCompactionSummaryCandidate:
+        message !== null &&
+        typeof message === "object" &&
+        (message as { readonly isCompactionSummaryCandidate?: unknown }).isCompactionSummaryCandidate === true,
+    }))
     .filter((message) => message.text.length > 0)
 
 export const documentFromMessages = (messages: readonly NormalizedMessage[]): string =>

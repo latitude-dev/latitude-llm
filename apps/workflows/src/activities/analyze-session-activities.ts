@@ -49,6 +49,7 @@ interface AnalyzeSessionMessage {
   readonly index: number
   readonly role: "user" | "assistant" | "tool" | "system" | "unknown"
   readonly text: string
+  readonly isCompactionSummaryCandidate?: boolean
 }
 
 const sessionConversationMessages = (session: {
@@ -154,7 +155,15 @@ const stripToolTelemetry = (content: string): string =>
 
 const normalizeMessages = (messages: readonly unknown[]): readonly AnalyzeSessionMessage[] =>
   messages
-    .map((message, index) => ({ index, role: roleOf(message), text: stripToolTelemetry(textOf(message)) }))
+    .map((message, index) => ({
+      index,
+      role: roleOf(message),
+      text: stripToolTelemetry(textOf(message)),
+      isCompactionSummaryCandidate:
+        message !== null &&
+        typeof message === "object" &&
+        (message as { readonly isCompactionSummaryCandidate?: unknown }).isCompactionSummaryCandidate === true,
+    }))
     .filter((message) => message.text.length > 0)
 
 const documentFromMessages = (messages: readonly AnalyzeSessionMessage[]): string =>
@@ -193,7 +202,14 @@ export const loadAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) =
         .findBySessionId({ organizationId, projectId, sessionId })
         .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
       if (session === null) return { found: false, rawMessages: [] } satisfies AnalyzeSessionLoadedActivityResult
-      const rawMessages = sessionConversationMessages(session)
+      const conversationSpine = yield* sessions
+        .findConversationSpineBySessionId({ organizationId, projectId, sessionId })
+        .pipe(
+          Effect.catchTag("NotFoundError", () =>
+            Effect.succeed({ source: "session_detail" as const, messages: sessionConversationMessages(session) }),
+          ),
+        )
+      const rawMessages = conversationSpine.messages
       return { found: true, rawMessages } satisfies AnalyzeSessionLoadedActivityResult
     }).pipe((effect) => withAnalyzeSessionClickHouse(effect, input.organizationId), withTracing),
   )

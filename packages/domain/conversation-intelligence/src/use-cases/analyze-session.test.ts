@@ -20,6 +20,7 @@ import {
   MessageEmbeddingRepository,
   type MessageEmbeddingRepositoryShape,
   type MessageEmbeddingUpsert,
+  type SessionConversationSpineMessage,
   type SessionDetail,
   SessionRepository,
   TraceSearchBudget,
@@ -38,6 +39,7 @@ import {
 } from "@domain/taxonomy"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { normalizeMessages } from "../normalization.ts"
 import { SessionAnalysisRepository } from "../ports/session-analysis-repository.ts"
 import { SessionMomentLabelRepository } from "../ports/session-moment-label-repository.ts"
 import { SessionSemanticMomentRepository } from "../ports/session-semantic-moment-repository.ts"
@@ -222,6 +224,20 @@ const makeSessionWithMessages = (messages: readonly ReturnType<typeof message>[]
     outputMessages: messages.slice(1),
   })
 
+const sessionConversationMessages = (session: SessionDetail): readonly SessionConversationSpineMessage[] => {
+  const systemMessage =
+    Array.isArray(session.systemInstructions) && session.systemInstructions.length > 0
+      ? [{ role: "system", parts: session.systemInstructions }]
+      : []
+  return normalizeMessages([...systemMessage, ...session.lastInputMessages, ...session.outputMessages]).map(
+    (message) => ({
+      role: message.role,
+      content: message.text,
+      ...(message.isCompactionSummaryCandidate ? { isCompactionSummaryCandidate: true } : {}),
+    }),
+  )
+}
+
 const runUseCase = (input: {
   readonly session: SessionDetail
   readonly ai?: AIShape
@@ -231,6 +247,7 @@ const runUseCase = (input: {
   readonly seedMessageEmbeddings?: readonly MessageEmbedding[]
   readonly budgetAllowed?: boolean
   readonly resetAnchorCache?: boolean
+  readonly spineMessages?: readonly SessionConversationSpineMessage[]
 }) => {
   if (input.resetAnchorCache !== false) clearConversationIntelligenceAnchorEmbeddingCacheForTesting()
   const analyses = createFakeSessionAnalysisRepository(input.seedAnalyses ?? [])
@@ -239,7 +256,14 @@ const runUseCase = (input: {
   const taxonomyObservations = createFakeTaxonomyObservationRepository(input.seedTaxonomyObservations)
   const taxonomyClusters = createFakeTaxonomyClusterRepository(input.seedClusters)
   const taxonomyLocks = createFakeDistributedLockRepository()
-  const sessions = createFakeSessionRepository({ findBySessionId: () => Effect.succeed(input.session) })
+  const sessions = createFakeSessionRepository({
+    findBySessionId: () => Effect.succeed(input.session),
+    findConversationSpineBySessionId: () =>
+      Effect.succeed({
+        source: input.spineMessages ? "trace_message_occurrences" : "session_detail",
+        messages: input.spineMessages ?? sessionConversationMessages(input.session),
+      }),
+  })
   const messageEmbeddings = createFakeMessageEmbeddingRepository(input.seedMessageEmbeddings ?? [])
   const traceSearchBudget = createFakeTraceSearchBudget(input.budgetAllowed ?? true)
   const ai: AIShape =
@@ -479,6 +503,67 @@ describe("analyzeSessionUseCase", () => {
     expect(topicSummary).toContain("cambiar la chaqueta")
     expect(topicSummary).toContain("Puedo ayudarte")
     expect(topicSummary).toContain("chaqueta polar roja grande")
+  })
+
+  it("uses the occurrence-derived distinct spine for compacted sessions", async () => {
+    const { effect, taxonomyObservations } = runUseCase({
+      session: makeSessionWithMessages([
+        message("user", "Summary: the user asked about an order."),
+        message("assistant", "I can continue from the summary."),
+      ]),
+      spineMessages: [
+        { role: "user", content: "I need to change the delivery address on order A-100." },
+        { role: "assistant", content: "I can help update the delivery address." },
+        {
+          role: "user",
+          content: "Summary: the user had already discussed order A-100 and address changes.",
+          isCompactionSummaryCandidate: true,
+        },
+        { role: "user", content: "Please send it to the Barcelona office instead." },
+        { role: "assistant", content: "The delivery address is now the Barcelona office." },
+      ],
+    })
+
+    await Effect.runPromise(effect)
+
+    const [observation] = taxonomyObservations.rows as TaxonomyMomentObservation[]
+    const topicSummary = String(observation?.projectionMetadata.summary)
+
+    expect(topicSummary).toContain("delivery address on order A-100")
+    expect(topicSummary).toContain("Summary: the user had already discussed order A-100")
+    expect(topicSummary).toContain("Barcelona office")
+  })
+
+  it("excludes compaction summary candidates from anchor label scoring", async () => {
+    const { effect, momentLabels } = runUseCase({
+      session: makeSession(),
+      spineMessages: [
+        { role: "user", content: "Can you check where my package is?" },
+        { role: "assistant", content: "I can check the shipment status." },
+        {
+          role: "user",
+          content: "Summary: the user was frustrated and angry about a previous answer.",
+          isCompactionSummaryCandidate: true,
+        },
+        { role: "user", content: "What is the latest tracking status?" },
+        { role: "assistant", content: "The package is in transit and arrives tomorrow." },
+      ],
+      ai: {
+        generate: <T>() => Effect.die(`generate not used`) as Effect.Effect<GenerateResult<T>, never>,
+        embed: (input) => {
+          const text = input.text.toLowerCase()
+          if (text.includes("frustrated") || text.includes("frustration annoyance or anger")) {
+            return Effect.succeed({ embedding: [1, 0] })
+          }
+          return Effect.succeed({ embedding: [0, 1] })
+        },
+        rerank: () => Effect.die("rerank not used"),
+      },
+    })
+
+    await Effect.runPromise(effect)
+
+    expect(momentLabels.rows.some((label) => label.kind === "user_frustration")).toBe(false)
   })
 
   it("does not truncate long taxonomy projections to the opening verification flow", async () => {

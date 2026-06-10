@@ -94,11 +94,21 @@ Search-document construction rules:
 - format searchable non-text parts as lightweight placeholders where useful, such as `[IMAGE]`, `[FILE:<id>]`, and `[TOOL CALL: <name>]`
 - skip unsearchable/noisy parts such as tool-call responses, and reasoning parts (large, low search value, not worth the embedding cost)
 
-The trace-search document is normalized before storage and embedding. The local cap is expressed as an estimated token cap using `TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE = 4`; the default cap is `TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS = 5_000`, producing `TRACE_SEARCH_DOCUMENT_MAX_LENGTH = 20_000` characters.
+The trace-search document is normalized before lexical storage. The local cap is expressed as an estimated token cap using `TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE = 4`; the default cap is `TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS = 5_000`, producing `TRACE_SEARCH_DOCUMENT_MAX_LENGTH = 20_000` characters.
 
-When the normalized conversation exceeds that cap, truncation keeps both ends of the conversation: the initial half of the cap, an omission marker, and the final half of the cap. The middle is omitted. This preserves the setup and final outcome of long conversations while keeping budget accounting predictable.
+When the normalized lexical conversation exceeds that cap, truncation keeps both ends of the conversation: the initial half of the cap, an omission marker, and the final half of the cap. The middle is omitted. This preserves the setup and final outcome of long conversations while keeping text-index storage predictable.
 
-Semantic indexing is gated by Redis-backed per-organization token budgets before calling Voyage. The default budget profile is proportional across windows: `167M` tokens daily, `1.15B` weekly, and `5B` monthly. At `voyage-4-large` pricing, the monthly budget is intended as an approximately `$600/org/month` worst-case ceiling — sized at 50% of the `$100` Pro base — before plan-specific budgets replace the defaults.
+Semantic indexing uses the shared message embedding store. For every non-tool message in `TraceDetail.allMessages`, the worker canonicalizes `"{role}: {text}"` with `canonicalizeMessageForEmbedding`, hashes it with `hashMessageContent`, ensures a `message_embeddings` vector exists for the hash, and writes a `trace_message_occurrences` row for that trace/message position. Occurrence rows are written even when the org embedding budget is exhausted, so a later writer can fill the missing vector and make the occurrence searchable.
+
+Semantic indexing is gated by Redis-backed per-organization token budgets before calling Voyage. The same budget applies to trace search and conversation intelligence because both write through `message_embeddings`. The default budget profile is proportional across windows: `167M` tokens daily, `1.15B` weekly, and `5B` monthly. At `voyage-4-large` pricing, the monthly budget is intended as an approximately `$600/org/month` worst-case ceiling — sized at 50% of the `$100` Pro base — before plan-specific budgets replace the defaults.
+
+### Shared Message Embeddings
+
+`message_embeddings` is a content-addressed vector store keyed by `(organization_id, project_id, content_hash)`. It stores the `voyage-4-large` 2048-dimensional document embedding and refreshes `last_seen_at` on insert; rows TTL after the longest consumer retention horizon. The table intentionally carries no trace identity.
+
+`trace_message_occurrences` is the trace-link table keyed for vector-to-trace fan-out. It stores `(trace_id, message_index, content_hash, session_id, start_time, role, is_output, retention_days)` and TTLs with trace-search retention. Full per-trace duplication is cheap here; only vectors are deduped. The trace-end search worker is the only writer because it is the boundary that knows the message positions within a finished trace.
+
+Conversation intelligence also resolves turn vectors through `message_embeddings`, but it never writes occurrences. Its session conversation comes from `SessionRepository.findConversationSpineBySessionId`, which reads distinct occurrence hashes in first-seen order and recovers message text from the corresponding trace payloads. This handles mid-session compaction: prior replayed turns keep their original positions, a new summary appears once at the compaction point, and subsequent turns append after it. When no occurrence rows exist, the repository falls back to the legacy `SessionDetail` reconstruction so older sessions can still be analyzed.
 
 ## Trace Search Query Semantics
 
@@ -109,6 +119,8 @@ Trace search parses the search bar into three independent text-search components
 - backtick text (`` `...` ``) is an ordered token phrase. It is lower-cased and tokenized with the same `splitByNonAlpha` shape as the ClickHouse text index. ClickHouse 26.2 does not expose `hasPhrase`, so the repository composes `hasAllTokens(search_text, tokens)` as the indexed prefilter with `hasSubstr(tokens(lower(search_text), 'splitByNonAlpha'), tokens)` as the adjacency/order check.
 
 When a query contains both lexical components and semantic text, lexical components are mandatory filters and the semantic prompt ranks the remaining traces. Hybrid search uses a `LEFT JOIN` from lexical matches to semantic scores so traces that satisfy the literal/token filters still appear when embeddings are missing or expired; those rows receive a zero relevance score. The semantic relevance floor only applies to semantic-only searches.
+
+Semantic search scans distinct rows in `message_embeddings`, joins matching hashes through `trace_message_occurrences`, and max-pools per trace. The winning occurrence's `message_index` drives semantic highlighting. A matched historical message fans out to every trace that replayed it, preserving the old trace-search behavior while avoiding repeated embedding work.
 
 The UI editor mirrors these semantics: regular text remains semantic, `"..."` renders as a literal pill, and `` `...` `` renders as an ordered token-phrase pill. Pasted mixed syntax is parsed into the same segments before serialization back to `searchQuery`.
 
