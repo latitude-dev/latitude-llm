@@ -3,11 +3,12 @@
 > **Documentation**: `dev-docs/issues.md`, `dev-docs/reliability.md`, `dev-docs/scores.md`, `dev-docs/spans.md`, `dev-docs/monitors.md`
 
 > **Build status (Phases 1–3 shipped on branch `issue-details-page-redesign`).** This spec is the *intended* design; the **as-built state and the next steps live in the execution/handoff doc** (`~/.claude/plans/system-instruction-the-user-has-recursive-crown.md`) — read that first to continue. Key deviations from the design below, decided during the build:
+> - **The page replaces the drawer (no hybrid).** The earlier "graduate the drawer to a curated subset" model is **dropped**. **Phase 3.5** brings the page to feature parity with the drawer (prev/next, tags, copyable slug); **Phase 3.6** then removes the drawer outright, repoints every issue link to the page route, redirects legacy `?issueId=` URLs, and retires the `issue-page` flag. Old Phase 7 is gone; its docs + flag-removal work moved into Phase 3.6.
 > - **Layout**: no right rail. The page is a fixed `Layout.Header` (back + title + description + lifecycle actions) + a compact non-scrolling **summary band** (triage + status + first/last seen + occurrences + sessions + users + cost; the *affected-traces* tile was dropped; *users* hidden at 0) + a single scroll area ordered **Patterns → Trend → Evaluations → Examples → Traces**.
 > - **Patterns** *(shipped v1; redesign specified below — not yet built)*: v1 shipped four horizontally-scrollable cards using **forward** conditioning (share of the issue's occurrences using a value vs. that value's share of all project spans), per-span counting, and lift badges. The Patterns sections below **supersede** v1: a single rate-elevation–ranked list using **reverse** conditioning at trace level (see *Data model* method #2 and the Patterns block in *Block-by-block presentation*).
-> - **Examples**: published annotation occurrences with a `messageIndex` anchor + trace (cap 30, no pagination); reuses the search region-frame highlight + substring highlight; feedback rendered as the underlying annotation (author/flagger + comment); Expand/See-trace open the trace drawer. Eval/custom occurrences excluded.
+> - **Examples**: published annotation occurrences with a `messageIndex` anchor + trace (cap 30, no pagination); reuses the search region-frame highlight + substring highlight; feedback rendered as the underlying annotation (author/flagger + comment); Expand/See-trace open the trace drawer. Eval/custom occurrences excluded. **Carousel cycling moves to H/L keys** (Phase 3.5) so J/K are free for issue prev/next.
 > - **Trend** still reuses the drawer's fixed 14-day/12h chart (zoomable trend is Phase 6).
-> - **Page prev/next-issue navigation is not built** (deferred to Phase 7).
+> - **Page prev/next-issue navigation**: built in **Phase 3.5** as header buttons + **J/K** hotkeys, cycling over the **default-sorted** issue list (via `useIssues`) — it does **not** carry the originating list's filters/sort (deliberate simplification; faithful ordering is a possible later enhancement).
 
 ## Purpose
 
@@ -15,7 +16,7 @@ Today an issue is inspected through a right-side **drawer** (`IssueDetailDrawer`
 
 This spec defines a **dedicated full-page Issue view** built from scratch as a first-class route. The page is an **issue report**: it turns the issue + its occurrences (scores) + the underlying telemetry (spans/traces) into impact, pattern, relational, and example analysis — using **only data we already store** (no new LLM calls, no prompt changes).
 
-The drawer is intentionally **not** the design baseline. We build the page first, then decide which elements graduate back into the simpler drawer view as a curated subset (hybrid model). The drawer keeps its role: fast in-list triage with prev/next cycling.
+The drawer is intentionally **not** the design baseline. We build the page first to full feature parity, then **remove the drawer entirely** — the page becomes the single issue surface (row click navigates to it, every issue link points at it, and legacy `?issueId=` drawer URLs redirect to it). The fast in-list triage workflow the drawer provided (prev/next cycling) is preserved as header buttons + J/K hotkeys on the page. There is **no** hybrid drawer.
 
 ## Goals
 
@@ -334,7 +335,7 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 7. **Related issues.** A list from `getCoOccurringIssues`: each row shows the related issue name (hydrated from Postgres), its lifecycle badge, the **shared-session percent**, and a **lift** chip (*"appears in 64% of this issue's sessions — ×8 vs baseline"*). Rows link to that issue's page. Below the list, the **benchmark** summary may also appear here as well as in the rail (*"Top 3% by user reach, top 8% by volume among 214 issues"*). Empty state when no meaningful co-occurrence exists.
 
 8. **Examples.** An inline **occurrence carousel** built on the reusable `Conversation` component (`packages/ui/src/components/genai-conversation/conversation.tsx`) and the annotation-navigation system (`use-annotation-navigation.ts`):
-   - Prev/next (and J/K keys) cycle through occurrences (scores) of the issue.
+   - Prev/next (and **H/L** keys) cycle through occurrences (scores) of the issue. (Issue-level prev/next on the page uses J/K; examples use H/L to avoid the collision.)
    - For each occurrence, the embedded conversation **scrolls to and highlights the exact message/part** using the score's `metadata.messageIndex` / `partIndex` / `startOffset`/`endOffset` (via existing `data-message-index` / `data-part-index` attributes and box-shadow highlight).
    - The originating **feedback/reason** renders inline as a card anchored under the message (`messageTrailingSlot`), so the *why* sits next to the failing text.
    - **Degradation:** occurrences without message-level anchors (evaluation/custom) highlight at span/trace level instead. A counter (`3 / 47`) shows position in the set.
@@ -351,13 +352,21 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 - **Benchmark**: percentile chips.
 - **Monitoring**: count of linked evaluations + headline alignment %, anchored link to the full Monitoring section.
 
-### Drawer relationship (after the page ships)
+### Drawer removal (Phase 3.6)
 
-Once the page exists, the drawer is re-derived as a **curated subset** for in-list triage: identity + status, impact strip, trend, triage controls, and an "Open full page ↗" link. Heavy analysis (patterns, where-it-happens, related, examples) lives on the page. The exact subset is decided after the page is built and reviewed (per the product decision), so the drawer migration is the final phase, not the first.
+The drawer is **removed**, not graduated. Once the page reaches feature parity (Phase 3.5: prev/next, tags, copyable slug), Phase 3.6:
+
+- makes the issues-table **row click navigate to `/projects/$slug/issues/$issueId`** instead of opening the drawer via `?issueId=`;
+- **repoints every issue link** — annotation cards, in-app notifications (`useIssueUrl`), incident-marker popover, monitor-incidents table, and the issue URLs built in **email** (`@domain/email`) and **Slack** (`@domain/integrations`) incident templates — from `…/issues?issueId=<id>` to the path route `…/issues/<id>`;
+- adds a **backwards-compat redirect**: the issues list route redirects any incoming `?issueId=<id>` to `/issues/<id>` (preserving `?example=`), because already-sent emails/Slack messages carry the legacy URL and are immutable;
+- **deletes the `IssueDetailDrawer` chrome** (the close / prev-next / open-full-page wrapper). The shared `IssueDetailBody` **stays** — both the issue page and the session-detail panel's issue slot render it, the latter still in **drawer** mode, so its `variant` prop is **retained** (not collapsed);
+- **retires the `issue-page` flag** so the page renders unconditionally.
+
+There is no curated drawer subset; the page is the only issue surface.
 
 ## Feature flag
 
-Gate the new route and any new nav entry behind an org feature flag (e.g. `issue-page`), mirroring the `monitors` rollout pattern (`dev-docs/monitors.md`). The flag gates: the `$issueId` route, the "open full page" affordance from the drawer/table, and the new triage columns' UI. Backend triage columns and analytics methods can exist unflagged (additive, inert without UI).
+The new route, the "open full page" affordances, and the triage UI are gated behind the org feature flag `issue-page` during Phases 1–3.5, mirroring the `monitors` rollout pattern (`dev-docs/monitors.md`). Backend triage columns and analytics methods are unflagged (additive, inert without UI). The flag is **temporary**: **Phase 3.6 removes it** when the page replaces the drawer and becomes the sole, always-on issue surface.
 
 ## Test strategy
 
@@ -409,6 +418,29 @@ Supersedes the v1 build above. Rationale and the forward-vs-reverse decision liv
 
 **Exit gate**: users can cycle through concrete occurrences with the failing message/part highlighted and the originating feedback shown inline.
 
+### Phase 3.5 — Page feature parity with the drawer
+
+Bring the drawer's remaining affordances onto the page (drawer left intact as the reference).
+
+- [x] **P3.5-1**: Render issue **tags** (`TagList`) and a **copyable slug** (`CopyableText`) on the page header/summary band — not behind the `variant === "drawer"` branch of `IssueDetailBody`. *(As built: slug-copy badge sits under the title in the `Layout.Header` `description` slot; the issue **description text + tags** drop to a full-width row at the top of the content area — `IssueDetailBody` `prepend` — so they use the whole width left of/under the action buttons instead of being squeezed into the header's left column.)*
+- [x] **P3.5-2**: **Prev/next issue** buttons + **J/K** hotkeys, cycling over the default-sorted issue list via `useIssues` (disabled at ends; does not carry the originating list's filters/sort). *(As built: new `IssueNeighborNav` at the **start of the header actions** (left of triage, divider between); cycles within the issue's own lifecycle group; hotkeys suppressed while a trace sheet is open.)*
+- [x] **P3.5-3**: Rebind the **Examples** carousel from J/K to **H/L** (and its on-screen hotkey badges) so issue prev/next can own J/K. *(L = next, H = prev; suppressed while the example's trace sheet is open.)*
+
+**Exit gate**: the page renders tags + copyable slug, J/K moves between issues, and H/L cycles examples without collision — the page covers everything the drawer did.
+
+### Phase 3.6 — Page replaces the drawer
+
+The page becomes the single issue surface; the drawer and flag are removed. Absorbs old Phase 7's docs + flag-removal.
+
+- [x] **P3.6-1**: Issues-table rows navigate to `/issues/$issueId` as **real anchors** via `InfiniteTable`'s `renderRowLink` (per the web-frontend skill — cmd/middle-click works; not `onRowClick` + `useNavigate`); repoint web issue links (`annotation-card`, `useIssueUrl` notification helper, `incident-marker-popover`, `monitor-incidents-table`, and the "Copy issue link" palette command in `issue-lifecycle-actions`) to the path route. *(Also removed the now-obsolete `preserveSearchParams` prop from `IncidentMarkerPopover` — search-merge was only meaningful for the same-route drawer.)*
+- [x] **P3.6-2**: Backwards-compat redirect in the issues list route `beforeLoad`: `?issueId=<id>` → `/issues/<id>` (preserves `?example=`). Uses an identity-passthrough `validateSearch` so the list's other URL params (`useParamState`) are untouched.
+- [x] **P3.6-3**: Repoint issue URLs in the email (`@domain/email`) and Slack (`@domain/integrations`) incident-opened/closed/event templates (+ their preview URLs) to the path route.
+- [x] **P3.6-4**: Remove the `IssueDetailDrawer` **chrome** + the list's use of it (drawer render, `?issueId=` param state, list J/K cycling). **`IssueDetailBody` and its `variant` prop are kept** — the session-detail panel's issue slot still renders it in drawer mode (the plan's "collapse the variant prop" was wrong).
+- [x] **P3.6-5**: Retire the `issue-page` flag (registry entry + the page's route guard; the drawer's "open full page" button was deleted with the chrome). The page renders unconditionally.
+- [x] **P3.6-6** *(was P7-2)*: Docs sync — `dev-docs/issues.md` Product Surface ("Issue page behavior": page route + redirect, triage fields, prev/next, the shipped report sections) and `docs/issues/overview.mdx` (drawer → page prose; left a TODO flagging the stale `issue-detail.png` screenshot). `docs/issues/management.md` had no drawer references.
+
+**Exit gate**: the drawer is gone; every issue link (web + email + Slack) opens the page; legacy `?issueId=` redirects; the flag is removed; docs match the shipped surface.
+
 ### Phase 4 — Related issues + benchmark
 
 - [ ] **P4-1**: `coOccurringIssues` ClickHouse method (shared traces/sessions, lift, self-exclusion, floor) + tests; Postgres hydration of related issue rows.
@@ -432,10 +464,6 @@ Supersedes the v1 build above. Rationale and the forward-vs-reverse decision liv
 
 **Exit gate**: the trend histogram is wide and zoomable on the page.
 
-### Phase 7 — Drawer graduation + docs
+### Phase 7 — *(removed)*
 
-- [ ] **P7-1**: Re-derive the drawer as a curated subset (identity, impact strip, trend, triage, "open full page"), moving heavy analysis to the page only.
-- [ ] **P7-2**: Promote durable behavior into `dev-docs/issues.md` (Product Surface section: page vs drawer, triage fields, the new analytics) and update `docs/issues/` product docs.
-- [ ] **P7-3**: Remove the feature flag once stable.
-
-**Exit gate**: hybrid drawer+page shipped; durable knowledge promoted to `dev-docs/`; flag retired.
+Dropped. The drawer is **replaced**, not graduated — see **Phase 3.6**, which removes the drawer, retires the flag (was P7-3), and syncs the docs (was P7-2). There is no hybrid drawer+page.

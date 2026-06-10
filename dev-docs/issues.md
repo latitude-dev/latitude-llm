@@ -355,7 +355,7 @@ Issue-linked evaluation creation is explicit:
 
 - issue discovery and issue creation do not automatically create evaluations
 - issues may have several linked evaluations
-- the managed UI exposes `Monitor issue` only from the issue details drawer, and only when the issue currently has no linked evaluations
+- the managed UI exposes `Monitor issue` only from the issue page, and only when the issue currently has no linked evaluations
 - each trigger starts the `optimize-evaluation` Temporal workflow with a deterministic `evaluations:generate:${issueId}` workflow id for initial generation (or `evaluations:optimize:${evaluationId}` for manual realignment); the server function returns `void`, and the frontend polls `getIssueAlignmentState`, which queries Temporal via `workflow.describe()` until the workflow terminates and the resulting evaluation appears via normal data-fetching
 - once created, automatic throttled realignment continues as new annotations arrive: each new annotation writes `ScoreAssignedToIssue`, which the `domain-events` dispatcher routes to `issues:refresh` (throttled at 8h), which in turn publishes `evaluations:automaticRefreshAlignment` (throttled at 1h, one per active linked evaluation) to kick off `refresh-evaluation-alignment`; that workflow escalates into `optimize-evaluation` via `evaluations:automaticOptimization` (throttled at 8h) when the incremental alignment-metric drop exceeds tolerance. All windows are first-publish-wins so a continuous annotation stream cannot push the fire time forward indefinitely
 
@@ -373,7 +373,7 @@ The project `Issues` page mirrors the project `Traces` page shell:
 - a top action row
 - a shared aggregate-counts-plus-histogram analytics panel
 - an infinitely paginated issues table
-- a right-side issue details drawer opened from row click
+- a dedicated full-page issue view at `/projects/<slug>/issues/<issueId>`, opened from row click — the legacy `?issueId=` drawer deep link (still live in already-sent emails/Slack messages) redirects there for backwards compatibility
 
 Action-row behavior:
 
@@ -408,12 +408,13 @@ Issues table behavior:
 - `Affected traces` is the occurrences count divided by the total number of traces in the selected time window, capped at `100%`
 - `Evaluations` shows linked evaluation tags with truncated names plus the alignment metric percentage, or `-` when none are linked
 
-Issue details drawer behavior:
+Issue page behavior:
 
-- page-level time range, lifecycle-tab, and search controls do not apply inside the drawer; drawer reads use full history
-- the header uses the same close and previous/next navigation pattern as the `Traces` details drawer
-- the header actions are ignore/unignore and resolve/unresolve
-- the body includes issue name/description, a summary row, a collapsible 14-day trend histogram ending today, a collapsible linked-evaluations section, and a collapsible infinitely paginated mini traces table
+- the dedicated route (`/projects/<slug>/issues/<issueId>`) is the single issue surface; it replaced the former right-side drawer. The list row click navigates here, and the legacy `?issueId=` deep link redirects to it
+- page-level time range, lifecycle-tab, and search controls do not apply on the page; issue reads use full history
+- the header shows the issue name + canonical lifecycle status, the resolve/ignore lifecycle actions, the assignee + priority triage pickers, previous/next-issue navigation (buttons + `J`/`K`, cycling the default-sorted list of the issue's own lifecycle group), and a copyable slug; the description and tags sit in a full-width row below
+- the report body includes the impact summary band (occurrences, affected traces/sessions/users, cost), the Patterns section, a 14-day trend histogram, the linked-evaluations section, an Examples carousel (`H`/`L` cycling), and an infinitely paginated traces table; clicking a trace opens it in an overlay sheet on top of the page
 - linked evaluations show name, last alignment date, alignment metric, manual realign, and per-evaluation archive actions; the alignment badge tooltip surfaces the confusion matrix plus a "Advanced statistics" link button that opens a modal with every metric derivable from it (accuracy, recall, specificity, balanced accuracy, precision, F1, MCC)
 - while a realignment is in flight, the UI shows `Aligning...`
-- when an issue has no linked evaluations, the drawer shows `Monitor issue`; once at least one linked evaluation exists, the managed UI no longer shows another monitor-generation button
+- when an issue has no linked evaluations, the page shows `Monitor issue`; once at least one linked evaluation exists, the managed UI no longer shows another monitor-generation button
+- the page's body component (`IssueDetailBody`, drawer-style: header, summary, evaluations, trend, traces) is also reused inside the session-detail panel's issue slot
