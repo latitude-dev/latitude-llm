@@ -18,6 +18,8 @@ export {
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_DETAILS_GENERATION_MODEL,
   ISSUE_DETAILS_MAX_OCCURRENCES,
+  ISSUE_DIMENSION_MIN_RATE_ELEVATION,
+  ISSUE_DIMENSION_MIN_SUPPORT,
   ISSUE_DISCOVERY_MIN_RELEVANCE,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
   ISSUE_DISCOVERY_MIN_VECTOR_SIMILARITY,
@@ -25,6 +27,7 @@ export {
   ISSUE_DISCOVERY_RERANK_MODEL,
   ISSUE_DISCOVERY_SEARCH_CANDIDATES,
   ISSUE_DISCOVERY_SEARCH_RATIO,
+  ISSUE_PRIORITIES,
   ISSUE_REFRESH_THROTTLE_MS,
   ISSUE_SOURCES,
   ISSUE_STATES,
@@ -34,12 +37,15 @@ export {
   MIN_SEASONAL_SAMPLES,
   NEW_ISSUE_AGE_DAYS,
 } from "./constants.ts"
+export { type DimensionPattern, rankDimensionValues } from "./dimension-patterns.ts"
 export {
   type Issue,
   type IssueCentroid,
+  IssuePriority,
   type IssueSource,
   type IssueState,
   issueCentroidSchema,
+  issuePrioritySchema,
   issueSchema,
   issueSourceSchema,
   issueStateSchema,
@@ -227,3 +233,9 @@ export {
   type SweepEscalatingIssuesResult,
   sweepEscalatingIssuesUseCase,
 } from "./use-cases/sweep-escalating-issues.ts"
+export {
+  type UpdateIssueTriageError,
+  type UpdateIssueTriageInput,
+  type UpdateIssueTriageResult,
+  updateIssueTriageUseCase,
+} from "./use-cases/update-issue-triage.ts"

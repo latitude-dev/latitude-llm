@@ -1,25 +1,6 @@
-import {
-  Button,
-  CopyableText,
-  DetailDrawer,
-  DetailSection,
-  Icon,
-  Sheet,
-  Skeleton,
-  TagList,
-  Text,
-  Tooltip,
-} from "@repo/ui"
+import { Button, CopyableText, DetailSection, Icon, Sheet, Skeleton, TagList, Text, Tooltip } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { useHotkeys } from "@tanstack/react-hotkeys"
-import {
-  ArrowDownIcon,
-  ArrowDownRightIcon,
-  ArrowUpIcon,
-  CheckIcon,
-  DatabaseIcon,
-  TextAlignStartIcon,
-} from "lucide-react"
+import { ArrowDownRightIcon, CheckIcon, DatabaseIcon, TextAlignStartIcon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { useProjectAlertIncidentsInRange } from "../../../../../../domains/alerts/alerts.collection.ts"
@@ -39,9 +20,16 @@ import {
 import { TraceDetailDrawer } from "../../-components/trace-detail-drawer.tsx"
 import { IssueDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
 import { formatIssueAgeAgoLabel, formatSeenAgeParts } from "./issue-formatters.ts"
-import { IssueLifecycleActions } from "./issue-lifecycle-actions.tsx"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
 import { IssueTrendBar } from "./issue-trend-bar.tsx"
+
+/**
+ * Shared fixed height for the page's side-by-side Trend + Patterns panels, so
+ * the two always line up; each scrolls internally if its content is taller.
+ */
+const ISSUE_PAGE_PANEL_HEIGHT = "h-72"
+/** Trend chart height inside that panel (leaves room for the panel header + padding). */
+const ISSUE_PAGE_TREND_CHART_HEIGHT = 200
 
 function SummaryField({ label, value }: { readonly label: string; readonly value: ReactNode }) {
   return (
@@ -121,10 +109,29 @@ export function IssueDetailBody({
   projectId,
   issueId,
   onOverlayActiveChange,
+  variant = "drawer",
+  prepend,
+  trendAside,
+  beforeTraces,
 }: {
   readonly projectId: string
   readonly issueId: string
   readonly onOverlayActiveChange?: (active: boolean) => void
+  /**
+   * `drawer` (default) renders the identity header + summary fields above the
+   * scrollable sections. `page` omits both — the full-page Issue view renders
+   * its own header and summary — and `prepend` lets the page drop extra
+   * sections (e.g. Patterns) into the same scroll area.
+   */
+  readonly variant?: "drawer" | "page"
+  readonly prepend?: ReactNode
+  /**
+   * Rendered (page variant) beside the Trend at a shared fixed height (e.g.
+   * Patterns), so the wide histogram and the narrow list sit on one row.
+   */
+  readonly trendAside?: ReactNode
+  /** Rendered in the scroll area just before the Traces section (e.g. Examples). */
+  readonly beforeTraces?: ReactNode
 }) {
   const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
   const {
@@ -214,113 +221,159 @@ export function IssueDetailBody({
   return (
     <>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex shrink-0 flex-col gap-3 border-b px-6 py-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-1">
-              {isLoading ? <Skeleton className="h-7 w-56" /> : <Text.H4M>{issue?.name ?? "Issue not found"}</Text.H4M>}
-              {isLoading ? (
-                <Skeleton className="h-5 w-full" />
-              ) : (
-                <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
+        {variant === "drawer" ? (
+          <div className="flex shrink-0 flex-col gap-3 border-b px-6 py-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1">
+                {isLoading ? (
+                  <Skeleton className="h-7 w-56" />
+                ) : (
+                  <Text.H4M>{issue?.name ?? "Issue not found"}</Text.H4M>
+                )}
+                {isLoading ? (
+                  <Skeleton className="h-5 w-full" />
+                ) : (
+                  <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
+                )}
+              </div>
+              {!isLoading && issue && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-[33%] max-w-max flex-1">
+                    <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
+                  </div>
+                  {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
+                </div>
               )}
             </div>
-            {!isLoading && issue && (
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex min-w-[33%] max-w-max flex-1">
-                  <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
+          </div>
+        ) : null}
+
+        {/* Page renders its own `Layout.Header` (with `pb-0`) directly above, so
+            the body only needs a slim top pad; the drawer keeps the full `pt-6`
+            since its in-body header sits above with a border. */}
+        <div className={`flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6 ${variant === "page" ? "pt-2" : "pt-6"}`}>
+          {prepend}
+          {variant === "drawer" ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
+                {isLoading ? (
+                  <SummaryField label="Status" value={<Skeleton className="h-5 w-24" />} />
+                ) : issue && issue.states.length > 0 ? (
+                  <SummaryField label="Status" value={<IssueLifecycleStatuses states={issue.states} wrap />} />
+                ) : null}
+                <SummaryField
+                  label="Seen at"
+                  value={
+                    isLoading ? (
+                      <Skeleton className="h-5 w-32" />
+                    ) : issue ? (
+                      <SeenAtSummaryValue lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />
+                    ) : (
+                      "-"
+                    )
+                  }
+                />
+                {!isLoading && issue?.resolvedAt ? (
+                  <SummaryField
+                    label="Resolved at"
+                    value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Resolved at" iso={issue.resolvedAt} />}
+                  />
+                ) : null}
+                {!isLoading && issue?.ignoredAt ? (
+                  <SummaryField
+                    label="Ignored at"
+                    value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Ignored at" iso={issue.ignoredAt} />}
+                  />
+                ) : null}
+                <SummaryField
+                  label="Occurrences"
+                  value={
+                    isLoading ? (
+                      <Skeleton className="h-5 w-16" />
+                    ) : (
+                      <Text.H5 color="foreground">{issue ? formatCount(issue.totalOccurrences) : "-"}</Text.H5>
+                    )
+                  }
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {variant === "page" && trendAside ? (
+            // Page: Trend (wide) and the aside (e.g. Patterns) share one row at a
+            // fixed height so they always line up; each scrolls internally if taller.
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
+              <div
+                className={`flex ${ISSUE_PAGE_PANEL_HEIGHT} min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 xl:flex-1`}
+              >
+                <Text.H6 color="foregroundMuted">Trend</Text.H6>
+                <div className="flex min-w-0 flex-1 flex-col justify-center">
+                  <IssueTrendBar
+                    buckets={issue?.trend ?? []}
+                    bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
+                    height={ISSUE_PAGE_TREND_CHART_HEIGHT}
+                    isLoading={isLoading}
+                    labelLayout="floating"
+                    maxVisibleBucketLabels={4}
+                    barVariant="details"
+                    states={issue?.states ?? []}
+                    resolvedAt={issue?.resolvedAt ?? null}
+                    escalationThresholds={issue?.trendEscalationThresholds ?? null}
+                    incidents={trendIncidents}
+                  />
                 </div>
-                {issue.tags.length > 0 && <TagList tags={issue.tags} wrap />}
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-row flex-wrap content-start items-start gap-x-8 gap-y-4">
-              {isLoading ? (
-                <SummaryField label="Status" value={<Skeleton className="h-5 w-24" />} />
-              ) : issue && issue.states.length > 0 ? (
-                <SummaryField label="Status" value={<IssueLifecycleStatuses states={issue.states} wrap />} />
-              ) : null}
-              <SummaryField
-                label="Seen at"
-                value={
-                  isLoading ? (
-                    <Skeleton className="h-5 w-32" />
-                  ) : issue ? (
-                    <SeenAtSummaryValue lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />
-                  ) : (
-                    "-"
-                  )
-                }
-              />
-              {!isLoading && issue?.resolvedAt ? (
-                <SummaryField
-                  label="Resolved at"
-                  value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Resolved at" iso={issue.resolvedAt} />}
-                />
-              ) : null}
-              {!isLoading && issue?.ignoredAt ? (
-                <SummaryField
-                  label="Ignored at"
-                  value={<IssueLifecycleTimestampSummaryValue tooltipHeading="Ignored at" iso={issue.ignoredAt} />}
-                />
-              ) : null}
-              <SummaryField
-                label="Occurrences"
-                value={
-                  isLoading ? (
-                    <Skeleton className="h-5 w-16" />
-                  ) : (
-                    <Text.H5 color="foreground">{issue ? formatCount(issue.totalOccurrences) : "-"}</Text.H5>
-                  )
-                }
-              />
+              <div className={`${ISSUE_PAGE_PANEL_HEIGHT} xl:w-[340px] xl:shrink-0`}>{trendAside}</div>
             </div>
-          </div>
-
-          <DetailSection
-            icon={<Icon icon={ArrowDownRightIcon} size="sm" />}
-            label="Trend"
-            defaultOpen
-            contentClassName="pl-0 max-h-none overflow-visible"
-          >
-            <div className="flex flex-col rounded-lg bg-secondary p-2">
-              <div className="px-4 py-3">
-                <IssueTrendBar
-                  buckets={issue?.trend ?? []}
-                  bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
-                  height={120}
-                  isLoading={isLoading}
-                  labelLayout="floating"
-                  maxVisibleBucketLabels={4}
-                  barVariant="details"
-                  states={issue?.states ?? []}
-                  resolvedAt={issue?.resolvedAt ?? null}
-                  escalationThresholds={issue?.trendEscalationThresholds ?? null}
-                  incidents={trendIncidents}
-                />
+          ) : (
+            <DetailSection
+              icon={<Icon icon={ArrowDownRightIcon} size="sm" />}
+              label="Trend"
+              defaultOpen
+              contentClassName="pl-0 max-h-none overflow-visible"
+            >
+              <div className="flex flex-col rounded-lg bg-secondary p-2">
+                <div className="px-4 py-3">
+                  <IssueTrendBar
+                    buckets={issue?.trend ?? []}
+                    bucketSeconds={issue?.trendBucketSeconds ?? 24 * 60 * 60}
+                    height={120}
+                    isLoading={isLoading}
+                    labelLayout="floating"
+                    maxVisibleBucketLabels={4}
+                    barVariant="details"
+                    states={issue?.states ?? []}
+                    resolvedAt={issue?.resolvedAt ?? null}
+                    escalationThresholds={issue?.trendEscalationThresholds ?? null}
+                    incidents={trendIncidents}
+                  />
+                </div>
               </div>
-            </div>
-          </DetailSection>
+            </DetailSection>
+          )}
 
-          <DetailSection
-            icon={<Icon icon={CheckIcon} size="sm" />}
-            label="Evaluations"
-            defaultOpen
-            contentClassName="pl-0 max-h-none overflow-visible"
-          >
-            <IssueDrawerEvaluations
-              projectId={projectId}
-              issueId={issueId}
-              issueSource={issue?.source ?? "annotation"}
-              evaluations={issue?.evaluations ?? []}
-              flaggerSlugs={issue?.flaggerSlugs ?? []}
-              canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
-              isIssueLoading={isLoading}
-            />
-          </DetailSection>
+          {/* The page variant relocates Evaluations into the summary card's actions
+              column (see `IssueSummary`), so it only renders here for the drawer. */}
+          {variant === "drawer" ? (
+            <DetailSection
+              icon={<Icon icon={CheckIcon} size="sm" />}
+              label="Evaluations"
+              defaultOpen
+              contentClassName="pl-0 max-h-none overflow-visible"
+            >
+              <IssueDrawerEvaluations
+                projectId={projectId}
+                issueId={issueId}
+                issueSource={issue?.source ?? "annotation"}
+                evaluations={issue?.evaluations ?? []}
+                flaggerSlugs={issue?.flaggerSlugs ?? []}
+                canMonitorIssue={issue ? issue.resolvedAt === null && issue.ignoredAt === null : false}
+                isIssueLoading={isLoading}
+              />
+            </DetailSection>
+          ) : null}
+
+          {beforeTraces}
 
           <DetailSection
             icon={<Icon icon={TextAlignStartIcon} size="sm" />}
@@ -398,93 +451,5 @@ export function IssueDetailBody({
         ) : null}
       </Sheet>
     </>
-  )
-}
-
-export function IssueDetailDrawer({
-  projectId,
-  issueId,
-  onClose,
-  onNextIssue,
-  onPrevIssue,
-  canNavigateNext,
-  canNavigatePrev,
-}: {
-  readonly projectId: string
-  readonly issueId: string
-  readonly onClose: () => void
-  readonly onNextIssue?: () => void
-  readonly onPrevIssue?: () => void
-  readonly canNavigateNext: boolean
-  readonly canNavigatePrev: boolean
-}) {
-  const [overlayActive, setOverlayActive] = useState(false)
-
-  useHotkeys([
-    {
-      hotkey: "Alt+ArrowDown",
-      callback: () => onNextIssue?.(),
-      options: { enabled: canNavigateNext && !!onNextIssue && !overlayActive },
-    },
-    {
-      hotkey: "Alt+ArrowUp",
-      callback: () => onPrevIssue?.(),
-      options: { enabled: canNavigatePrev && !!onPrevIssue && !overlayActive },
-    },
-  ])
-
-  return (
-    <DetailDrawer
-      storeKey="issue-detail-drawer-width"
-      onClose={onClose}
-      closeLabel={
-        <>
-          Close <HotkeyBadge hotkey="Escape" />
-        </>
-      }
-      actions={
-        <>
-          <Tooltip
-            asChild
-            side="bottom"
-            trigger={
-              <Button
-                variant="ghost"
-                className="w-8 h-8 p-0"
-                disabled={!canNavigateNext}
-                onClick={onNextIssue}
-                type="button"
-                aria-label="Next issue"
-              >
-                <ArrowDownIcon className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            }
-          >
-            Next issue <HotkeyBadge hotkey="Alt+ArrowDown" /> <HotkeyBadge hotkey="J" />
-          </Tooltip>
-          <Tooltip
-            asChild
-            side="bottom"
-            trigger={
-              <Button
-                variant="ghost"
-                className="w-8 h-8 p-0"
-                disabled={!canNavigatePrev}
-                onClick={onPrevIssue}
-                type="button"
-                aria-label="Previous issue"
-              >
-                <ArrowUpIcon className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            }
-          >
-            Previous issue <HotkeyBadge hotkey="Alt+ArrowUp" /> <HotkeyBadge hotkey="K" />
-          </Tooltip>
-        </>
-      }
-      rightActions={<IssueLifecycleActions projectId={projectId} issueId={issueId} />}
-    >
-      <IssueDetailBody projectId={projectId} issueId={issueId} onOverlayActiveChange={setOverlayActive} />
-    </DetailDrawer>
   )
 }

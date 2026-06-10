@@ -102,6 +102,8 @@ const buildNewIssueFromScore = ({
     name,
     description,
     source,
+    assigneeId: null,
+    priority: null,
     centroid,
     clusteredAt: centroid.clusteredAt,
     escalatedAt: null,

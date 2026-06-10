@@ -1,4 +1,4 @@
-import { CENTROID_EMBEDDING_DIMENSIONS, type IssueCentroid, type IssueSource } from "@domain/issues"
+import { CENTROID_EMBEDDING_DIMENSIONS, type IssueCentroid, type IssuePriority, type IssueSource } from "@domain/issues"
 import { sql } from "drizzle-orm"
 import { customType, index, jsonb, text, unique, uuid, varchar, vector } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
@@ -18,6 +18,8 @@ export const issues = latitudeSchema.table(
     name: varchar("name", { length: 128 }).notNull(), // generated from clustered score feedback and related context; generic enough to represent the shared failure pattern across different backgrounds
     description: text("description").notNull(), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation
     source: varchar("source", { length: 32 }).$type<IssueSource>().notNull(), // provenance of the first creating score
+    assigneeId: cuid("assignee_id", { default: false }), // nullable; user (org member) assigned to triage this issue. No FK (repo convention); not auto-generated.
+    priority: varchar("priority", { length: 16 }).$type<IssuePriority>(), // nullable; manual triage priority (low/medium/high/urgent). Null = unset.
     centroid: jsonb("centroid").$type<IssueCentroid>().notNull(), // canonical running weighted sum of clustered score feedback embeddings; `centroidEmbedding` stores the derived normalized pgvector used for search.
     // No IVFFlat/HNSW index: issues per project are expected in the hundreds to low thousands, so an
     // exact sequential scan over the project-scoped subset outperforms an approximate index (and

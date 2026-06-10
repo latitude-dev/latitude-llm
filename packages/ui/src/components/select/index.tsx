@@ -58,6 +58,8 @@ export type SelectProps<V = unknown> = Omit<FormFieldProps, "children"> &
     width?: "auto" | "full"
     contentWidth?: "auto" | "trigger"
     contentClassName?: string
+    /** Extra classes merged onto the trigger, e.g. to align radius/padding with adjacent buttons. */
+    triggerClassName?: string
     size?: "small" | "default"
     removable?: boolean
     searchable?: boolean
@@ -100,6 +102,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
     width = "full",
     contentWidth = "auto",
     contentClassName,
+    triggerClassName,
     size = "default",
     align = "start",
     alignOffset,
@@ -183,7 +186,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
             ) : (
               <SelectTrigger
                 size={size}
-                className={cn({ "border-red-500 focus:ring-red-500": errors })}
+                className={cn({ "border-red-500 focus:ring-red-500": errors }, triggerClassName)}
                 removable={removable && hasSelection && !disabled && !loading}
                 onRemove={_onRemove}
               >

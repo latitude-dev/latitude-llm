@@ -1,8 +1,12 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type {
+  DimensionConditionalRate,
+  IssueDimension,
+  IssueDimensionComparison,
   IssueEscalationSignals,
   IssueEscalationThresholdBucket,
   IssueEscalationThresholdSeries,
+  IssueImpactAggregate,
   IssueOccurrenceAggregate,
   IssueOccurrenceBucket,
   IssueTagsAggregate,
@@ -45,6 +49,16 @@ import { SCORE_FIELD_REGISTRY } from "../registries/score-fields.ts"
 // tags. Tag distributions converge fast, so a sample of this size captures
 // effectively all tag variants while bounding the join cost for noisy issues.
 const ISSUE_TAG_TRACE_SAMPLE_LIMIT = 200
+
+// SQL value expression per dimension. `tag` flattens the span tags array so
+// each tag is counted once per span; the others read a single span column.
+const ISSUE_DIMENSION_VALUE_EXPR: Record<IssueDimension, string> = {
+  model: "model",
+  provider: "provider",
+  tool: "tool_name",
+  tag: "arrayJoin(tags)",
+  finishReason: "arrayJoin(finish_reasons)",
+}
 
 const toClickHouseDateTime64 = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
 
@@ -162,6 +176,32 @@ type IssueOccurrenceRow = {
   baseline_avg_occurrences: string
   first_seen_at: string
   last_seen_at: string
+}
+
+type IssueImpactCoreRow = {
+  occurrences: string
+  affected_traces: string
+  affected_sessions: string
+}
+
+type IssueImpactTraceRow = {
+  cost_microcents: string
+  tokens: string
+}
+
+type IssueImpactUserRow = {
+  affected_users: string
+}
+
+type DimensionRateRow = {
+  value: string
+  total_traces: string
+  affected_traces: string
+}
+
+type DimensionTotalsRow = {
+  total_traces: string
+  affected_traces: string
 }
 
 type IssueOccurrenceBucketRow = {
@@ -577,6 +617,28 @@ const buildScoreCreatedAtTimeRange = (
   return { clauses, params }
 }
 
+// Same shape as `buildScoreCreatedAtTimeRange` but bound to the spans table's
+// `start_time` column (used by the dimension distribution reads over `spans`).
+const buildSpanStartTimeRange = (
+  timeRange: ScoreAnalyticsTimeRange | undefined,
+  prefix: string,
+): { clauses: string[]; params: Record<string, unknown> } => {
+  const clauses: string[] = []
+  const params: Record<string, unknown> = {}
+
+  if (timeRange?.from) {
+    clauses.push(`start_time >= toDateTime64({${prefix}_from:String}, 3, 'UTC')`)
+    params[`${prefix}_from`] = toClickHouseDateTime64(timeRange.from)
+  }
+
+  if (timeRange?.to) {
+    clauses.push(`start_time <= toDateTime64({${prefix}_to:String}, 3, 'UTC')`)
+    params[`${prefix}_to`] = toClickHouseDateTime64(timeRange.to)
+  }
+
+  return { clauses, params }
+}
+
 const buildIssueAnalyticsWhere = (input: {
   readonly filters: FilterSet | undefined
   readonly timeRange: ScoreAnalyticsTimeRange | undefined
@@ -600,6 +662,97 @@ const buildIssueAnalyticsWhere = (input: {
 
   return { clauses, params }
 }
+
+// ---------------------------------------------------------------------------
+// aggregateImpactByIssue queries — one helper per read, joined with
+// `Effect.all` in the repository method.
+// ---------------------------------------------------------------------------
+
+type IssueImpactQueryParams = ReturnType<typeof scopeParams> & { issueId: string }
+
+/** Occurrences / distinct affected traces / distinct affected sessions from raw
+ * `scores` (lifetime, no created_at bound — same as `aggregateByIssues`). */
+const queryIssueImpactCore = (
+  chSqlClient: ChSqlClientShape<ClickHouseClient>,
+  params: IssueImpactQueryParams,
+  options?: ScoreAnalyticsOptions,
+) =>
+  chSqlClient.query<IssueImpactCoreRow[]>(async (client) => {
+    const result = await client.query({
+      query: `SELECT
+              count()                                       AS occurrences,
+              uniqExactIf(trace_id, trace_id != '')         AS affected_traces,
+              uniqExactIf(session_id, session_id != '')     AS affected_sessions
+            FROM scores
+            WHERE ${scopeClause(options)}
+              AND issue_id = {issueId:String}`,
+      query_params: params,
+      format: "JSONEachRow",
+    })
+    return result.json<IssueImpactCoreRow>()
+  })
+
+/** Cost + tokens summed over the issue's distinct affected traces from the
+ * `traces` MV. `SimpleAggregateFunction(sum)` partial rows add up across
+ * merges, so a plain `sum()` over all matching rows is exact. */
+const queryIssueImpactCostTokens = (
+  chSqlClient: ChSqlClientShape<ClickHouseClient>,
+  params: IssueImpactQueryParams,
+  options?: ScoreAnalyticsOptions,
+) =>
+  chSqlClient.query<IssueImpactTraceRow[]>(async (client) => {
+    const result = await client.query({
+      // `traces` has no simulation_id column, so the simulation filter only
+      // applies to the inner `scores` subquery via `scopeClause(options)`.
+      query: `SELECT
+              sum(cost_total_microcents) AS cost_microcents,
+              sum(tokens_total)          AS tokens
+            FROM traces
+            WHERE organization_id = {organizationId:String}
+              AND project_id = {projectId:String}
+              AND trace_id IN (
+                SELECT DISTINCT trace_id
+                FROM scores
+                WHERE ${scopeClause(options)}
+                  AND issue_id = {issueId:String}
+                  AND trace_id != ''
+              )`,
+      query_params: params,
+      format: "JSONEachRow",
+    })
+    return result.json<IssueImpactTraceRow>()
+  })
+
+/** Distinct users from the `sessions` MV, finalizing the `argMaxIf` user_id
+ * state per session and counting non-empty values. */
+const queryIssueImpactUsers = (
+  chSqlClient: ChSqlClientShape<ClickHouseClient>,
+  params: IssueImpactQueryParams,
+  options?: ScoreAnalyticsOptions,
+) =>
+  chSqlClient.query<IssueImpactUserRow[]>(async (client) => {
+    const result = await client.query({
+      query: `SELECT count(DISTINCT user_id) AS affected_users
+            FROM (
+              SELECT session_id, argMaxIfMerge(user_id) AS user_id
+              FROM sessions
+              WHERE organization_id = {organizationId:String}
+                AND project_id = {projectId:String}
+                AND session_id IN (
+                  SELECT DISTINCT session_id
+                  FROM scores
+                  WHERE ${scopeClause(options)}
+                    AND issue_id = {issueId:String}
+                    AND session_id != ''
+                )
+              GROUP BY session_id
+            )
+            WHERE user_id != ''`,
+      query_params: params,
+      format: "JSONEachRow",
+    })
+    return result.json<IssueImpactUserRow>()
+  })
 
 // ---------------------------------------------------------------------------
 // Repository implementation
@@ -845,6 +998,129 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
               return result.json<IssueOccurrenceRow>()
             })
             .pipe(Effect.map((rows) => rows.map(toIssueOccurrence)))
+        }),
+
+      // -- aggregateImpactByIssue --------------------------------------------
+      // Three independent reads (see the `queryIssueImpact*` helpers above),
+      // run concurrently and merged in TypeScript.
+      aggregateImpactByIssue: ({ organizationId, projectId, issueId, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const params = {
+            ...scopeParams(organizationId, projectId),
+            issueId: issueId as string,
+          }
+
+          const [coreRows, traceRows, userRows] = yield* Effect.all(
+            [
+              queryIssueImpactCore(chSqlClient, params, options),
+              queryIssueImpactCostTokens(chSqlClient, params, options),
+              queryIssueImpactUsers(chSqlClient, params, options),
+            ],
+            { concurrency: 3 },
+          )
+
+          const core = coreRows[0]
+          const trace = traceRows[0]
+          const user = userRows[0]
+          return {
+            issueId,
+            occurrences: Number(core?.occurrences ?? 0),
+            affectedTraces: Number(core?.affected_traces ?? 0),
+            affectedSessions: Number(core?.affected_sessions ?? 0),
+            affectedUsers: Number(user?.affected_users ?? 0),
+            costMicrocents: Number(trace?.cost_microcents ?? 0),
+            tokens: Number(trace?.tokens ?? 0),
+          } satisfies IssueImpactAggregate
+        }),
+
+      // -- aggregateDimensionByIssue -----------------------------------------
+      // Reverse conditioning, trace-level: for each value v of the dimension,
+      // `conditionalRate = P(issue | v)` = (distinct issue traces carrying v) /
+      // (distinct project traces carrying v). `baseRate = P(issue)` =
+      // issueAffectedTraces / totalProjectTraces. See the port doc + the spec
+      // (Data model method #2) for why reverse, not forward (`P(v | issue)`).
+      aggregateDimensionByIssue: ({ organizationId, projectId, issueId, dimension, timeRange, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const valueExpr = ISSUE_DIMENSION_VALUE_EXPR[dimension]
+          const spanScope = `organization_id = {organizationId:String} AND project_id = {projectId:String}${
+            options?.excludeSimulations ? " AND simulation_id = ''" : ""
+          }`
+          const spanRange = buildSpanStartTimeRange(timeRange, "dimspan")
+          const scoreRange = buildScoreCreatedAtTimeRange(timeRange, "dimscore")
+          const spanWhere = [spanScope, ...spanRange.clauses].join(" AND ")
+          // Distinct traces that carry an occurrence of this issue, scoped the same way.
+          const issueTracesSql = `SELECT DISTINCT trace_id
+            FROM scores
+            WHERE ${scopeClause(options)}
+              AND issue_id = {issueId:String}
+              AND trace_id != ''${scoreRange.clauses.length > 0 ? ` AND ${scoreRange.clauses.join(" AND ")}` : ""}`
+          const params = {
+            ...scopeParams(organizationId, projectId),
+            issueId: issueId as string,
+            ...spanRange.params,
+            ...scoreRange.params,
+          }
+
+          // Per-value reverse rates. The inner subquery emits one row per span
+          // (or per tag/finish-reason, which fan out via arrayJoin); `countDistinct`
+          // collapses to the trace, so a trace with many spans on the same value
+          // counts once. The empty value is dropped from both numerator and support.
+          const perValue = chSqlClient.query<DimensionRateRow[]>(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                      value,
+                      countDistinct(trace_id) AS total_traces,
+                      countDistinctIf(trace_id, in_issue) AS affected_traces
+                    FROM (
+                      SELECT trace_id, ${valueExpr} AS value, trace_id IN (${issueTracesSql}) AS in_issue
+                      FROM spans
+                      WHERE ${spanWhere}
+                    )
+                    WHERE value != ''
+                    GROUP BY value
+                    ORDER BY affected_traces DESC, total_traces DESC, value ASC`,
+              query_params: params,
+              format: "JSONEachRow",
+            })
+            return result.json<DimensionRateRow>()
+          })
+
+          // Base rate: distinct issue traces over distinct project traces, in the
+          // same span universe so the rates are comparable to the per-value ones.
+          const totals = chSqlClient.query<DimensionTotalsRow[]>(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                      countDistinct(trace_id) AS total_traces,
+                      countDistinctIf(trace_id, trace_id IN (${issueTracesSql})) AS affected_traces
+                    FROM spans
+                    WHERE ${spanWhere} AND trace_id != ''`,
+              query_params: params,
+              format: "JSONEachRow",
+            })
+            return result.json<DimensionTotalsRow>()
+          })
+
+          const [valueRows, totalsRows] = yield* Effect.all([perValue, totals], { concurrency: 2 })
+
+          const totalProjectTraces = Number(totalsRows[0]?.total_traces ?? 0)
+          const issueAffectedTraces = Number(totalsRows[0]?.affected_traces ?? 0)
+          const baseRate = totalProjectTraces === 0 ? 0 : issueAffectedTraces / totalProjectTraces
+
+          const values: DimensionConditionalRate[] = valueRows.map((row) => {
+            const totalTraces = Number(row.total_traces)
+            const affectedTraces = Number(row.affected_traces)
+            return {
+              value: row.value,
+              affectedTraces,
+              totalTraces,
+              conditionalRate: totalTraces === 0 ? 0 : affectedTraces / totalTraces,
+              coverage: issueAffectedTraces === 0 ? 0 : affectedTraces / issueAffectedTraces,
+            }
+          })
+
+          return { dimension, baseRate, issueAffectedTraces, values } satisfies IssueDimensionComparison
         }),
 
       // -- escalationSignalsByIssues -----------------------------------------

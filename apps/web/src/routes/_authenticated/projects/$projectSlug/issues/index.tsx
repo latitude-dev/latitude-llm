@@ -14,7 +14,7 @@ import {
   useValueWithDefault,
 } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute, useParams } from "@tanstack/react-router"
+import { createFileRoute, redirect, useParams } from "@tanstack/react-router"
 import { useProjectFlaggers } from "../../../../../domains/flaggers/flaggers.collection.ts"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { BreadcrumbText } from "../../../-components/breadcrumb-ui.tsx"
@@ -49,7 +49,7 @@ function IssuesBreadcrumb() {
 }
 
 import { ActivityIcon, ArchiveIcon, CheckIcon, DownloadIcon, PauseIcon, SearchIcon } from "lucide-react"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { invalidateIssueQueries, useIssues } from "../../../../../domains/issues/issues.collection.ts"
 import {
   applyBulkIssueLifecycleAction,
@@ -66,7 +66,6 @@ import { ExportConfirmationModal } from "../-components/export-confirmation-moda
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
-import { IssueDetailDrawer } from "./-components/issue-detail-drawer.tsx"
 import { IssuesAnalyticsPanel } from "./-components/issues-analytics-panel.tsx"
 import { IssuesEmptyState } from "./-components/issues-empty-state.tsx"
 import {
@@ -102,6 +101,21 @@ function parseSorting(raw: string): IssuesTableSorting {
 }
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issues/")({
+  // Preserve every list search param (lifecycle/time/search/sort live in the URL via
+  // `useParamState`, not here); we only inspect `issueId` so the legacy drawer deep link
+  // — still live in already-sent emails/Slack messages — redirects to the full issue page.
+  validateSearch: (search: Record<string, unknown>): Record<string, unknown> => search,
+  beforeLoad: ({ params, search }) => {
+    const issueId = search.issueId
+    if (typeof issueId === "string" && issueId.length > 0) {
+      const example = search.example
+      throw redirect({
+        to: "/projects/$projectSlug/issues/$issueId",
+        params: { projectSlug: params.projectSlug, issueId },
+        ...(typeof example === "string" && example.length > 0 ? { search: { example } } : {}),
+      })
+    }
+  },
   staticData: {
     breadcrumb: IssuesBreadcrumb,
   },
@@ -110,7 +124,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issu
 
 function IssuesPage() {
   const project = useRouteProject()
-  const [activeIssueId, setActiveIssueId] = useParamState("issueId", "")
   const [lifecycleGroup, setLifecycleGroup] = useParamState("issuesLifecycle", "active", {
     validate: (value): value is "active" | "archived" => value === "active" || value === "archived",
   })
@@ -130,7 +143,6 @@ function IssuesPage() {
   const [bulkIgnoreModalOpen, setBulkIgnoreModalOpen] = useState(false)
   const [keepMonitoring, setKeepMonitoring] = useState(true)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
-  const issueIdsRef = useRef<string[]>([])
 
   useDebounce(
     () => {
@@ -179,7 +191,6 @@ function IssuesPage() {
   const showSkeletons = isLoading || isReloading
   const issues = isReloading ? EMPTY_ISSUES : issuesData
 
-  const currentIssueIndex = activeIssueId ? issueIdsRef.current.indexOf(activeIssueId) : -1
   const issueIds = useMemo(() => issues.map((issue) => issue.id), [issues])
   const selection = useSelectableRows({
     rowIds: issueIds,
@@ -187,9 +198,6 @@ function IssuesPage() {
     controlledState: selectionState,
     onStateChange: setSelectionState,
   })
-  const canNavigateNext =
-    issueIdsRef.current.length > 0 && (currentIssueIndex < 0 || currentIssueIndex < issueIdsRef.current.length - 1)
-  const canNavigatePrev = issueIdsRef.current.length > 0 && (currentIssueIndex < 0 || currentIssueIndex > 0)
 
   const handleExportIssues = useCallback(async () => {
     const bulkSelection = selection.bulkSelection
@@ -438,11 +446,9 @@ function IssuesPage() {
           sorting={sorting}
           occurrencesSum={occurrencesSum}
           visibleColumnIds={columnSettings.visibleColumnIds}
-          activeIssueId={activeIssueId || undefined}
           selection={selection}
           onSortChange={setSorting}
-          onActiveIssueChange={(issueId) => setActiveIssueId(issueId ?? "")}
-          issueIdsRef={issueIdsRef}
+          projectSlug={project.slug}
         />
         {selection.bulkSelection && (
           <ExportConfirmationModal
@@ -509,30 +515,6 @@ function IssuesPage() {
           }
         />
       </Layout.Content>
-      {activeIssueId ? (
-        <Layout.Aside>
-          <IssueDetailDrawer
-            key={activeIssueId}
-            projectId={project.id}
-            issueId={activeIssueId}
-            onClose={() => setActiveIssueId("")}
-            onNextIssue={() => {
-              const nextIssueId = issueIdsRef.current[currentIssueIndex + 1]
-              if (nextIssueId) {
-                setActiveIssueId(nextIssueId)
-              }
-            }}
-            onPrevIssue={() => {
-              const previousIssueId = issueIdsRef.current[currentIssueIndex - 1]
-              if (previousIssueId) {
-                setActiveIssueId(previousIssueId)
-              }
-            }}
-            canNavigateNext={canNavigateNext}
-            canNavigatePrev={canNavigatePrev}
-          />
-        </Layout.Aside>
-      ) : null}
     </Layout>
   )
 }

@@ -1401,6 +1401,9 @@ importers:
       '@domain/exports':
         specifier: workspace:*
         version: link:../exports
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../organizations
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue

@@ -41,9 +41,13 @@ export {
 export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.ts"
 export { isImmutableScore } from "./helpers.ts"
 export {
+  type DimensionConditionalRate,
+  type IssueDimension,
+  type IssueDimensionComparison,
   type IssueEscalationSignals,
   type IssueEscalationThresholdBucket,
   type IssueEscalationThresholdSeries,
+  type IssueImpactAggregate,
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
   type IssueTagsAggregate,

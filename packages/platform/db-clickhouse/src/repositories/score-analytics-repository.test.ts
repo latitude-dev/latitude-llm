@@ -560,6 +560,259 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
+  // aggregateImpactByIssue
+  // ------------------------------------------------------------------
+
+  describe("aggregateImpactByIssue", () => {
+    const fixture = setupFixture()
+    const issueI = "issue_impactiiiiiiiii"
+    const issueOther = "issue_impactother0000"
+    const traceI1 = "a".repeat(32)
+    const traceI2 = "b".repeat(32)
+    const traceOther = "c".repeat(32)
+    const sessionI1 = "session-impact-1"
+    const sessionI2 = "session-impact-2"
+    const sessionOther = "session-impact-other"
+    const userU1 = "user-impact-1"
+    const userU2 = "user-impact-2"
+    const userU3 = "user-impact-3"
+
+    beforeEach(async () => {
+      // Spans feed `traces` (cost/tokens) and `sessions` (user_id) via MVs.
+      await fixture.insertSpans([
+        {
+          ...makeSpanRow({ traceId: traceI1, spanId: `i1${"a".repeat(14)}`, tags: [] }),
+          session_id: sessionI1,
+          user_id: userU1,
+          tokens_input: 120,
+          tokens_output: 80,
+          cost_total_microcents: 100,
+        },
+        {
+          ...makeSpanRow({ traceId: traceI2, spanId: `i2${"a".repeat(14)}`, tags: [] }),
+          session_id: sessionI2,
+          user_id: userU2,
+          tokens_input: 60,
+          tokens_output: 40,
+          cost_total_microcents: 50,
+        },
+        // Belongs to another issue — must not contribute to issueI's impact.
+        {
+          ...makeSpanRow({ traceId: traceOther, spanId: `i3${"a".repeat(14)}`, tags: [] }),
+          session_id: sessionOther,
+          user_id: userU3,
+          tokens_input: 999,
+          tokens_output: 999,
+          cost_total_microcents: 9999,
+        },
+      ])
+
+      await fixture.insertScores([
+        // Two occurrences on the same trace/session → distinct counts must dedupe.
+        makeScoreRow({ issue_id: issueI, trace_id: traceI1, session_id: sessionI1 }),
+        makeScoreRow({ issue_id: issueI, trace_id: traceI1, session_id: sessionI1 }),
+        makeScoreRow({ issue_id: issueI, trace_id: traceI2, session_id: sessionI2 }),
+        // Occurrence with no trace/session: counts toward occurrences only.
+        makeScoreRow({ issue_id: issueI, trace_id: "", session_id: "" }),
+        // Another issue's occurrence — excluded.
+        makeScoreRow({ issue_id: issueOther, trace_id: traceOther, session_id: sessionOther }),
+      ])
+    })
+
+    it("rolls up occurrences, reach, cost and tokens for one issue", async () => {
+      const impact = await fixture.runCh(
+        fixture.repo.aggregateImpactByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueI),
+        }),
+      )
+
+      expect(impact.occurrences).toBe(4)
+      expect(impact.affectedTraces).toBe(2)
+      expect(impact.affectedSessions).toBe(2)
+      expect(impact.affectedUsers).toBe(2)
+      expect(impact.costMicrocents).toBe(150)
+      expect(impact.tokens).toBe(300)
+    })
+
+    it("returns zeroes for an issue with no occurrences", async () => {
+      const impact = await fixture.runCh(
+        fixture.repo.aggregateImpactByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId("issue_impactemptyyyyy"),
+        }),
+      )
+
+      expect(impact).toEqual({
+        issueId: "issue_impactemptyyyyy",
+        occurrences: 0,
+        affectedTraces: 0,
+        affectedSessions: 0,
+        affectedUsers: 0,
+        costMicrocents: 0,
+        tokens: 0,
+      })
+    })
+  })
+
+  // ------------------------------------------------------------------
+  // aggregateDimensionByIssue
+  // ------------------------------------------------------------------
+
+  describe("aggregateDimensionByIssue", () => {
+    const fixture = setupFixture()
+    const issueDim = "issue_dimensioniiiiii"
+    const issueOther = "issue_dimensionother0"
+    const traceD1 = "d".repeat(32) // in issue
+    const traceD2 = "e".repeat(32) // in issue
+    const traceD3 = "1".repeat(32) // project trace, NOT in any issue (exercises reverse conditioning)
+    const traceOther = "f".repeat(32) // in another issue
+
+    const span = (
+      overrides: {
+        traceId: string
+        spanId: string
+        model?: string
+        provider?: string
+        toolName?: string
+        finishReasons?: readonly string[]
+      },
+      tags: readonly string[] = [],
+    ): SpanRow => ({
+      ...makeSpanRow({ traceId: overrides.traceId, spanId: overrides.spanId, tags }),
+      model: overrides.model ?? "",
+      provider: overrides.provider ?? "",
+      tool_name: overrides.toolName ?? "",
+      finish_reasons: [...(overrides.finishReasons ?? [])],
+    })
+
+    beforeEach(async () => {
+      await fixture.insertSpans([
+        span(
+          {
+            traceId: traceD1,
+            spanId: `d1${"a".repeat(14)}`,
+            model: "claude-opus",
+            provider: "anthropic",
+            toolName: "search",
+            finishReasons: ["stop"],
+          },
+          ["billing"],
+        ),
+        // Second span on the same trace, same model/provider → trace-level dedup.
+        span({ traceId: traceD1, spanId: `d2${"a".repeat(14)}`, model: "claude-opus", provider: "anthropic" }),
+        span(
+          {
+            traceId: traceD2,
+            spanId: `e1${"a".repeat(14)}`,
+            model: "claude-sonnet",
+            provider: "anthropic",
+            toolName: "lookup",
+            finishReasons: ["length"],
+          },
+          ["billing", "auth"],
+        ),
+        // A project trace that also uses claude-opus but is NOT in the issue, so
+        // claude-opus's conditional rate is 1/2 rather than 1/1.
+        span({
+          traceId: traceD3,
+          spanId: `c1${"a".repeat(14)}`,
+          model: "claude-opus",
+          provider: "anthropic",
+          finishReasons: ["stop"],
+        }),
+        // Traffic from a different issue's trace.
+        span(
+          {
+            traceId: traceOther,
+            spanId: `f1${"a".repeat(14)}`,
+            model: "gpt-4o",
+            provider: "openai",
+            finishReasons: ["stop"],
+          },
+          ["onboarding"],
+        ),
+        span({ traceId: traceOther, spanId: `f2${"a".repeat(14)}`, model: "gpt-4o", provider: "openai" }),
+      ])
+
+      await fixture.insertScores([
+        makeScoreRow({ issue_id: issueDim, trace_id: traceD1 }),
+        makeScoreRow({ issue_id: issueDim, trace_id: traceD2 }),
+        // traceD3 has no occurrence — it is a pure project (baseline) trace.
+        makeScoreRow({ issue_id: issueOther, trace_id: traceOther }),
+      ])
+    })
+
+    const byValue = <T extends { value: string }>(values: readonly T[]) =>
+      new Map(values.map((v) => [v.value, v] as const))
+
+    const aggregate = (dimension: "model" | "provider" | "tool" | "tag" | "finishReason") =>
+      fixture.runCh(
+        fixture.repo.aggregateDimensionByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueDim),
+          dimension,
+        }),
+      )
+
+    // One test (not several) because `beforeEach` inserts are not truncated
+    // between tests in the shared per-describe chdb session, so re-running it
+    // would double the trace counts these assertions check.
+    it("computes per-value conditional rates and the base rate (reverse conditioning, trace-level)", async () => {
+      // Base rate: 2 of 4 project traces (D1, D2 in issue; D3, Other not) are in the issue.
+      const models = await aggregate("model")
+      expect(models.dimension).toBe("model")
+      expect(models.issueAffectedTraces).toBe(2)
+      expect(models.baseRate).toBeCloseTo(0.5, 5)
+      // Most-associated first: opus and sonnet both have 1 affected trace, opus has more support.
+      expect(models.values.map((v) => v.value)).toEqual(["claude-opus", "claude-sonnet", "gpt-4o"])
+      const m = byValue(models.values)
+      // claude-opus: used by D1 (issue) and D3 (not) → 1/2 of its traces fall into the issue.
+      expect(m.get("claude-opus")).toMatchObject({ totalTraces: 2, affectedTraces: 1 })
+      expect(m.get("claude-opus")?.conditionalRate).toBeCloseTo(0.5, 5)
+      expect(m.get("claude-opus")?.coverage).toBeCloseTo(0.5, 5)
+      // claude-sonnet: only D2, which is in the issue → 100% conditional rate.
+      expect(m.get("claude-sonnet")?.conditionalRate).toBeCloseTo(1, 5)
+      // gpt-4o: only the other issue's trace → present in the baseline, 0 affected.
+      expect(m.get("gpt-4o")).toMatchObject({ totalTraces: 1, affectedTraces: 0 })
+      expect(m.get("gpt-4o")?.conditionalRate).toBe(0)
+
+      // Provider: anthropic spans 3 traces (D1, D2, D3), 2 in the issue → 2/3.
+      const providers = await aggregate("provider")
+      const p = byValue(providers.values)
+      expect(p.get("anthropic")).toMatchObject({ totalTraces: 3, affectedTraces: 2 })
+      expect(p.get("anthropic")?.conditionalRate).toBeCloseTo(2 / 3, 5)
+      expect(p.get("anthropic")?.coverage).toBeCloseTo(1, 5)
+      expect(p.get("openai")?.affectedTraces).toBe(0)
+
+      // Tools: D1 → search, D2 → lookup; spans without a tool name are excluded.
+      const tools = await aggregate("tool")
+      const t = byValue(tools.values)
+      expect(t.get("search")).toMatchObject({ totalTraces: 1, affectedTraces: 1 })
+      expect(t.get("lookup")?.affectedTraces).toBe(1)
+      expect(t.has("")).toBe(false)
+
+      // Tags: flattened, deduped to the trace; onboarding only on the other issue's trace.
+      const tags = await aggregate("tag")
+      const tg = byValue(tags.values)
+      expect(tg.get("billing")).toMatchObject({ totalTraces: 2, affectedTraces: 2 })
+      expect(tg.get("billing")?.coverage).toBeCloseTo(1, 5)
+      expect(tg.get("auth")?.affectedTraces).toBe(1)
+      expect(tg.get("onboarding")?.affectedTraces).toBe(0)
+
+      // Finish reasons: "stop" spans D1, D3 and Other (3 traces), only D1 in the issue → 1/3.
+      const finishReasons = await aggregate("finishReason")
+      const f = byValue(finishReasons.values)
+      expect(f.get("stop")).toMatchObject({ totalTraces: 3, affectedTraces: 1 })
+      expect(f.get("stop")?.conditionalRate).toBeCloseTo(1 / 3, 5)
+      expect(f.get("length")?.affectedTraces).toBe(1)
+    })
+  })
+
+  // ------------------------------------------------------------------
   // aggregateTagsByIssues
   // ------------------------------------------------------------------
 

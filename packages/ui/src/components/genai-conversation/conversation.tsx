@@ -16,14 +16,33 @@ import {
   TextSelectionProvider,
 } from "./text-selection.tsx"
 
-function SemanticRegionFrame({ children }: { readonly children: ReactNode }) {
+const DEFAULT_REGION_LABEL = "Related to your search"
+const DEFAULT_REGION_TOOLTIP: ReactNode =
+  "AI flagged these messages as related to your search by meaning, not just exact words."
+
+/**
+ * Frames a contiguous run of messages as a highlighted region with a small
+ * corner label. Defaults to the semantic-search copy, but `label`/`tooltip`
+ * let other features (e.g. issue occurrence examples) reuse the same treatment.
+ */
+function SemanticRegionFrame({
+  children,
+  label = DEFAULT_REGION_LABEL,
+  tooltip = DEFAULT_REGION_TOOLTIP,
+}: {
+  readonly children: ReactNode
+  readonly label?: ReactNode
+  readonly tooltip?: ReactNode
+}) {
   return (
     <div className="relative flex min-w-0 flex-col gap-6 rounded-lg bg-primary/3 px-4 py-6 ring-1 ring-primary/30 dark:bg-primary/6">
       <div className="absolute -top-3 right-3 z-10 inline-flex h-6 items-center gap-1.5 rounded bg-primary px-2 text-xs font-medium text-primary-foreground">
-        <span className="leading-none">Related to your search</span>
-        <Tooltip trigger={<Icon icon={InfoIcon} size="sm" aria-label="Explain related search match" />}>
-          AI flagged these messages as related to your search by meaning, not just exact words.
-        </Tooltip>
+        <span className="leading-none">{label}</span>
+        {tooltip ? (
+          <Tooltip trigger={<Icon icon={InfoIcon} size="sm" aria-label="Explain highlighted region" />}>
+            {tooltip}
+          </Tooltip>
+        ) : null}
       </div>
       {children}
     </div>
@@ -107,6 +126,7 @@ export function Conversation({
   onAnnotationClick,
   messageAnnotationSlot,
   messageTrailingSlot,
+  regionLabel,
 }: {
   readonly messages: readonly (GenAIMessage | null)[]
   readonly enableNavigator?: boolean
@@ -145,6 +165,8 @@ export function Conversation({
   readonly messageAnnotationSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
   /** Renders a full-width slot below each message (e.g. semantic moment markers). Receives the original messageIndex and role. */
   readonly messageTrailingSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
+  /** Overrides the corner label/tooltip on `search-semantic-region` frames (defaults to the search copy). */
+  readonly regionLabel?: { readonly label: ReactNode; readonly tooltip?: ReactNode } | undefined
 }) {
   const internalNavItemRefs = useRef<(HTMLDivElement | null)[]>([])
   // If the parent provides navItemRefsRef it owns the ScrollNavigator; use their ref directly.
@@ -301,7 +323,14 @@ export function Conversation({
 
         if (group.kind === "semantic") {
           const firstIndex = group.items[0]?.index ?? groupIdx
-          return [<SemanticRegionFrame key={`semantic-${firstIndex}`}>{rendered}</SemanticRegionFrame>]
+          return [
+            <SemanticRegionFrame
+              key={`semantic-${firstIndex}`}
+              {...(regionLabel ? { label: regionLabel.label, tooltip: regionLabel.tooltip ?? null } : {})}
+            >
+              {rendered}
+            </SemanticRegionFrame>,
+          ]
         }
         return rendered
       })}

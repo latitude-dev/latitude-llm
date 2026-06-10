@@ -193,9 +193,8 @@ export function AnnotationCard({
                 projectSlug && annotation.issueId ? (
                   <Link
                     data-no-navigate
-                    to="/projects/$projectSlug/issues"
-                    params={{ projectSlug }}
-                    search={{ issueId: annotation.issueId }}
+                    to="/projects/$projectSlug/issues/$issueId"
+                    params={{ projectSlug, issueId: annotation.issueId }}
                     aria-label={`Open issue ${linkedIssueName}`}
                     onClick={(event) => event.stopPropagation()}
                     className="inline-flex min-w-0"

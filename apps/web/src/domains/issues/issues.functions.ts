@@ -5,6 +5,7 @@ import {
   applyIssueLifecycleCommandUseCase,
   buildHistogramBucketScaffold,
   DEFAULT_ESCALATION_SENSITIVITY_K,
+  type DimensionPattern,
   deriveIssueLifecycleStates,
   embedIssueSearchQueryUseCase,
   fillBuckets,
@@ -13,6 +14,7 @@ import {
   type IssueListItem,
   IssueRepository,
   issueLifecycleCommandSchema,
+  issuePrioritySchema,
   issuesLifecycleGroupSchema,
   issuesSortDirectionSchema,
   issuesSortFieldSchema,
@@ -20,18 +22,26 @@ import {
   listIssuesUseCase,
   listIssueTracesUseCase,
   type OrgIssueSearchItem,
+  rankDimensionValues,
   searchOrgIssuesUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
+  updateIssueTriageUseCase,
 } from "@domain/issues"
-import { type IssueEscalationThresholdBucket, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
+import {
+  type IssueDimension,
+  type IssueEscalationThresholdBucket,
+  ScoreAnalyticsRepository,
+  ScoreRepository,
+} from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, resolveSettings, SettingsReader } from "@domain/shared"
-import type { TraceDetail } from "@domain/spans"
+import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,
   IssueRepositoryLive,
+  MembershipRepositoryLive,
   OutboxEventWriterLive,
   ScoreRepositoryLive,
   SettingsReaderLive,
@@ -156,6 +166,43 @@ const issueTracesCountInputSchema = z.object({
   issueId: z.string(),
 })
 
+const issueImpactInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+})
+
+const updateIssueTriageInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+  // `undefined` (key omitted) leaves the field unchanged; `null` clears it; a value sets it.
+  assigneeId: z.string().nullable().optional(),
+  priority: issuePrioritySchema.nullable().optional(),
+})
+
+const issueDimensionSchema = z.enum([
+  "model",
+  "provider",
+  "tool",
+  "tag",
+  "finishReason",
+]) satisfies z.ZodType<IssueDimension>
+
+const issueDimensionsInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+  dimension: issueDimensionSchema,
+})
+
+const issueOccurrencesInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+})
+
+// Cap on how many pinpointed example occurrences the carousel loads. Examples
+// are for eyeballing a few representative failures, not exhaustive browsing
+// (the Traces section covers full enumeration).
+const ISSUE_EXAMPLES_LIMIT = 30
+
 const toUtcDayEnd = (value: Date): Date =>
   new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), 23, 59, 59, 999))
 
@@ -182,6 +229,8 @@ const toIssueDetailRecord = (input: {
   name: input.issue.name,
   description: input.issue.description,
   source: input.issue.source,
+  assigneeId: input.issue.assigneeId,
+  priority: input.issue.priority,
   states: input.states,
   createdAt: input.issue.createdAt.toISOString(),
   updatedAt: input.issue.updatedAt.toISOString(),
@@ -637,6 +686,205 @@ export const countIssueTraces = createServerFn({ method: "GET" })
         return { total }
       }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId), withTracing),
     )
+  })
+
+export interface IssueImpactRecord {
+  readonly occurrences: number
+  readonly affectedTraces: number
+  readonly affectedSessions: number
+  readonly affectedUsers: number
+  readonly costMicrocents: number
+  readonly tokens: number
+  readonly totalProjectTraces: number
+  /** Fraction of project traces affected by this issue, in `[0, 1]`. */
+  readonly affectedTracesPercent: number
+}
+
+export const getIssueImpact = createServerFn({ method: "GET" })
+  .inputValidator(issueImpactInputSchema)
+  .handler(async ({ data }): Promise<IssueImpactRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const chClient = getClickhouseClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        const traceRepository = yield* TraceRepository
+
+        const [impact, totalProjectTraces] = yield* Effect.all([
+          scoreAnalyticsRepository.aggregateImpactByIssue({ organizationId: orgId, projectId, issueId }),
+          traceRepository.countByProjectId({ organizationId: orgId, projectId }),
+        ])
+
+        const affectedTracesPercent =
+          totalProjectTraces === 0 ? 0 : Math.min(impact.affectedTraces / totalProjectTraces, 1)
+
+        return {
+          occurrences: impact.occurrences,
+          affectedTraces: impact.affectedTraces,
+          affectedSessions: impact.affectedSessions,
+          affectedUsers: impact.affectedUsers,
+          costMicrocents: impact.costMicrocents,
+          tokens: impact.tokens,
+          totalProjectTraces,
+          affectedTracesPercent,
+        } satisfies IssueImpactRecord
+      }).pipe(
+        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
+        withTracing,
+      ),
+    )
+  })
+
+export interface IssueDimensionsRecord {
+  readonly dimension: IssueDimension
+  /** Issue's unconditional trace incidence — the reference each pattern's `conditionalRate` is judged against. */
+  readonly baseRate: number
+  readonly issueAffectedTraces: number
+  /** Support-gated, rate-elevation–ranked values (most over-represented first). */
+  readonly patterns: readonly DimensionPattern[]
+}
+
+export const getIssueDimensions = createServerFn({ method: "GET" })
+  .inputValidator(issueDimensionsInputSchema)
+  .handler(async ({ data }): Promise<IssueDimensionsRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const chClient = getClickhouseClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    const comparison = await Effect.runPromise(
+      Effect.gen(function* () {
+        const scoreAnalyticsRepository = yield* ScoreAnalyticsRepository
+        return yield* scoreAnalyticsRepository.aggregateDimensionByIssue({
+          organizationId: orgId,
+          projectId,
+          issueId,
+          dimension: data.dimension,
+        })
+      }).pipe(withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId), withTracing),
+    )
+
+    return {
+      dimension: comparison.dimension,
+      baseRate: comparison.baseRate,
+      issueAffectedTraces: comparison.issueAffectedTraces,
+      patterns: rankDimensionValues(comparison),
+    }
+  })
+
+/** An occurrence (annotation score) that pinpoints where the issue manifests in a conversation. */
+export interface IssueOccurrenceRecord {
+  readonly scoreId: string
+  readonly traceId: string
+  readonly feedback: string
+  readonly createdAt: string
+  readonly annotatorId: string | null
+  /** Set when an automatic flagger authored the annotation (so the UI can attribute it). */
+  readonly flaggerSlug: string | null
+  /** Location of the flagged content in the trace's canonical conversation. */
+  readonly anchor: {
+    readonly messageIndex: number
+    readonly partIndex: number | null
+    readonly startOffset: number | null
+    readonly endOffset: number | null
+    readonly textFormat: string | null
+  }
+}
+
+/**
+ * Lists an issue's occurrences that pinpoint a culprit — published annotation
+ * scores carrying a `messageIndex` anchor and a trace to render. These are the
+ * examples the page cycles through, highlighting the exact message/substring.
+ */
+export const getIssueOccurrences = createServerFn({ method: "GET" })
+  .inputValidator(issueOccurrencesInputSchema)
+  .handler(async ({ data }): Promise<{ readonly items: readonly IssueOccurrenceRecord[] }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    const page = await Effect.runPromise(
+      Effect.gen(function* () {
+        const scoreRepository = yield* ScoreRepository
+        return yield* scoreRepository.listByIssueId({
+          projectId,
+          issueId,
+          source: "annotation",
+          options: { limit: ISSUE_EXAMPLES_LIMIT, draftMode: "exclude" },
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, pgClient, orgId), withTracing),
+    )
+
+    const items = page.items.flatMap((score): IssueOccurrenceRecord[] => {
+      // Only annotation scores carry message anchors; skip occurrences without a
+      // trace to render or without a pinpointed message.
+      if (score.source !== "annotation" || score.traceId === null || score.metadata.messageIndex === undefined) {
+        return []
+      }
+      const { messageIndex, partIndex, startOffset, endOffset, textFormat, flaggerSlug } = score.metadata
+      return [
+        {
+          scoreId: score.id,
+          traceId: score.traceId,
+          feedback: score.feedback,
+          createdAt: score.createdAt.toISOString(),
+          annotatorId: score.annotatorId,
+          flaggerSlug: flaggerSlug ?? null,
+          anchor: {
+            messageIndex,
+            partIndex: partIndex ?? null,
+            startOffset: startOffset ?? null,
+            endOffset: endOffset ?? null,
+            textFormat: textFormat ?? null,
+          },
+        },
+      ]
+    })
+
+    return { items }
+  })
+
+export interface UpdateIssueTriageRecord {
+  readonly issueId: string
+  readonly assigneeId: string | null
+  readonly priority: z.infer<typeof issuePrioritySchema> | null
+  readonly updatedAt: string
+  readonly changed: boolean
+}
+
+export const updateIssueTriage = createServerFn({ method: "POST" })
+  .inputValidator(updateIssueTriageInputSchema)
+  .handler(async ({ data }): Promise<UpdateIssueTriageRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+
+    const result = await Effect.runPromise(
+      updateIssueTriageUseCase({
+        projectId: data.projectId,
+        issueId: IssueId(data.issueId),
+        ...(data.assigneeId !== undefined ? { assigneeId: data.assigneeId } : {}),
+        ...(data.priority !== undefined ? { priority: data.priority } : {}),
+      }).pipe(
+        withPostgres(Layer.mergeAll(IssueRepositoryLive, MembershipRepositoryLive), pgClient, orgId),
+        withTracing,
+      ),
+    )
+
+    return {
+      issueId: result.issueId,
+      assigneeId: result.assigneeId,
+      priority: result.priority,
+      updatedAt: result.updatedAt.toISOString(),
+      changed: result.changed,
+    }
   })
 
 export const applyIssueLifecycleAction = createServerFn({ method: "POST" })

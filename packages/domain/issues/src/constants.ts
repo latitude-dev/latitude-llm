@@ -7,6 +7,38 @@ export const ISSUE_STATES = ["new", "escalating", "ongoing", "resolved", "regres
 
 export const ISSUE_SOURCES = ["annotation", "flagger", "custom"] as const
 
+/** Manual triage priority levels, ascending in urgency. Null means "unset". */
+export const ISSUE_PRIORITIES = ["low", "medium", "high", "urgent"] as const
+
+// ---------------------------------------------------------------------------
+// Dimension patterns (Patterns panel)
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimum trace support before a dimension value is eligible to be ranked as a
+ * pattern. The "support" is `totalTraces` — the number of distinct project
+ * traces that carry the value (the denominator of its conditional rate). Below
+ * this we cannot trust the conditional rate (a value used by two traces, both
+ * in the issue, would otherwise post a "100% rate"), so the value is dropped
+ * and, when no value clears the gate, the UI shows a "not enough data" state.
+ *
+ * This single trace-support gate replaces v1's sample/value-count/lift/floor
+ * stack: under reverse conditioning the rare-value inflation those guarded
+ * against is gated at its source (the denominator), not patched after the fact.
+ */
+export const ISSUE_DIMENSION_MIN_SUPPORT = 10
+
+/**
+ * Minimum rate-elevation (`conditionalRate − baseRate`, in `[0, 1]`) for a value
+ * to be shown as a pattern. At least 1 percentage point more of a value's traces
+ * must fall into the issue than traces overall, otherwise it sits too close to
+ * the baseline to be worth surfacing. The floor is on the *elevation*, not the
+ * conditional rate, so a rare-but-predictive value (e.g. 0.8% conditional over a
+ * 0.01% base) still qualifies — its elevation is what matters, not its absolute
+ * share. Keeps the (scrollable) list to genuinely over-represented values.
+ */
+export const ISSUE_DIMENSION_MIN_RATE_ELEVATION = 0.01
+
 export const NEW_ISSUE_AGE_DAYS = 7
 
 /**

@@ -8,8 +8,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { useHotkeys } from "@tanstack/react-hotkeys"
-import type { RefObject } from "react"
+import { Link } from "@tanstack/react-router"
 import type { IssueRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import {
   ListingLayout as Layout,
@@ -82,11 +81,9 @@ export function IssuesView({
   sorting,
   occurrencesSum,
   visibleColumnIds,
-  activeIssueId,
   selection,
   onSortChange,
-  onActiveIssueChange,
-  issueIdsRef,
+  projectSlug,
 }: {
   readonly issues: readonly IssueRecord[]
   readonly isLoading: boolean
@@ -94,40 +91,10 @@ export function IssuesView({
   readonly sorting: IssuesTableSorting
   readonly occurrencesSum: number
   readonly visibleColumnIds: readonly IssuesColumnId[]
-  readonly activeIssueId: string | undefined
   readonly selection: InfiniteTableSelection
   readonly onSortChange: (sorting: IssuesTableSorting) => void
-  readonly onActiveIssueChange: (issueId: string | undefined) => void
-  readonly issueIdsRef: RefObject<string[]>
+  readonly projectSlug: string
 }) {
-  const issueIds = issues.map((issue) => issue.id)
-  issueIdsRef.current = issueIds
-
-  useHotkeys([
-    {
-      hotkey: "J",
-      callback: () => {
-        const currentIndex = activeIssueId ? issueIds.indexOf(activeIssueId) : -1
-        const nextIssueId = issueIds[currentIndex + 1]
-        if (nextIssueId) {
-          onActiveIssueChange(nextIssueId)
-        } else if (!activeIssueId && issueIds[0]) {
-          onActiveIssueChange(issueIds[0])
-        }
-      },
-    },
-    {
-      hotkey: "K",
-      callback: () => {
-        const currentIndex = activeIssueId ? issueIds.indexOf(activeIssueId) : issueIds.length
-        const previousIssueId = issueIds[currentIndex - 1]
-        if (previousIssueId) {
-          onActiveIssueChange(previousIssueId)
-        }
-      },
-    },
-  ])
-
   const allColumns: readonly InfiniteTableColumn<IssueRecord>[] = [
     {
       key: "issue",
@@ -266,10 +233,15 @@ export function IssuesView({
               ? "bg-rose-500/7 hover:bg-rose-500/10 dark:bg-rose-500/15 dark:hover:bg-rose-500/19"
               : undefined
           }
-          {...(activeIssueId ? { activeRowKey: activeIssueId } : {})}
           selection={selection}
-          onRowClick={(issue) => onActiveIssueChange(issue.id === activeIssueId ? undefined : issue.id)}
-          getRowAriaLabel={(issue) => (issue.id === activeIssueId ? `Close ${issue.name}` : `Open ${issue.name}`)}
+          renderRowLink={(issue, props) => (
+            <Link
+              to="/projects/$projectSlug/issues/$issueId"
+              params={{ projectSlug, issueId: issue.id }}
+              aria-label={`Open ${issue.name}`}
+              {...props}
+            />
+          )}
           infiniteScroll={infiniteScroll}
           sorting={sorting}
           defaultSorting={{ column: "lastSeen", direction: "desc" }}

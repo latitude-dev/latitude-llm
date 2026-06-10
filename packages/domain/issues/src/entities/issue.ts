@@ -1,7 +1,7 @@
 import { scoreSourceSchema } from "@domain/scores"
 import { cuidSchema, issueIdSchema, SLUG_MAX_LENGTH } from "@domain/shared"
 import { z } from "zod"
-import { ISSUE_NAME_MAX_LENGTH, ISSUE_SOURCES, ISSUE_STATES } from "../constants.ts"
+import { ISSUE_NAME_MAX_LENGTH, ISSUE_PRIORITIES, ISSUE_SOURCES, ISSUE_STATES } from "../constants.ts"
 
 // ---------------------------------------------------------------------------
 // IssueState
@@ -12,6 +12,16 @@ export type IssueState = z.infer<typeof issueStateSchema>
 
 export const issueSourceSchema = z.enum(ISSUE_SOURCES)
 export type IssueSource = z.infer<typeof issueSourceSchema>
+
+export const issuePrioritySchema = z.enum(ISSUE_PRIORITIES)
+export type IssuePriority = z.infer<typeof issuePrioritySchema>
+
+export const IssuePriority = {
+  Low: "low",
+  Medium: "medium",
+  High: "high",
+  Urgent: "urgent",
+} as const satisfies Record<string, IssuePriority>
 
 export const IssueState = {
   New: "new",
@@ -44,6 +54,8 @@ export const issueSchema = z.object({
   name: z.string().min(1).max(ISSUE_NAME_MAX_LENGTH), // generated from clustered score feedback and related evaluation/annotation context; generic enough to represent the shared failure pattern across different backgrounds
   description: z.string().min(1), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation; helps both human understanding and BM25 matching
   source: issueSourceSchema, // provenance of the first creating score
+  assigneeId: cuidSchema.nullable(), // user (org member) manually assigned to triage this issue; null when unassigned
+  priority: issuePrioritySchema.nullable(), // manual triage priority; null when unset
   centroid: issueCentroidSchema, // running weighted sum of clustered score feedback embeddings; drives derived pgvector semantic matching.
   clusteredAt: z.date(), // last time the centroid/cluster state was refreshed; authoritative decay anchor (not updatedAt)
   escalatedAt: z.date().nullable(), // DORMANT: not maintained by the system. "Currently escalating" is derived from open `alert_incidents` rows. Kept on the entity for backward compatibility; always null in practice.
