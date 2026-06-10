@@ -14,7 +14,7 @@ const buildIssueUrl = (
   payload: Parameters<NotificationEmailRenderer<"incident.opened">>[0],
 ): string | undefined => {
   if (!ctx.project) return undefined
-  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues?issueId=${encodeURIComponent(payload.sourceId)}`
+  return `${ctx.webAppUrl}/projects/${ctx.project.slug}/issues/${encodeURIComponent(payload.sourceId)}`
 }
 
 export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"> = (payload, ctx) =>

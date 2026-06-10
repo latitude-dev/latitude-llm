@@ -144,7 +144,7 @@ IncidentOpenedEmail.PreviewProps = {
   sourceId: "dds0rt8sqgpuku4u4wabze9r",
   sourceName: "Token leakage in responses",
   description: "Agent occasionally echoes API keys or PII back to the user when summarising prior tool outputs.",
-  issueUrl: "https://console.latitude.so/projects/sample-project/issues?issueId=preview-issue",
+  issueUrl: "https://console.latitude.so/projects/sample-project/issues/preview-issue",
   chartUrl: "https://placehold.co/600x200/dbe5ff/3b5bff?text=Trend+chart",
   notificationCreatedAt: new Date("2026-03-18T10:05:00Z"),
   organizationName: "Acme Inc.",
