@@ -11,6 +11,7 @@ import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.
 import type { TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import type { OpenTraceOptions } from "../session-detail-drawer.tsx"
+import { useSpanFilters } from "../trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
 import { SpansTab } from "../trace-detail-drawer/tabs/spans-tab.tsx"
 import { AnnotationsTab } from "./annotations-tab.tsx"
 import { ConversationTab } from "./conversation-tab.tsx"
@@ -81,6 +82,7 @@ export function SessionSlot({
   // A single-trace session can surface its spans inline
   const singleTrace = traces.length === 1 ? traces[0] : undefined
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
+  const { openWithErrors, openWithModel } = useSpanFilters()
   const requestedTab: SessionTabId = activeTab === "spans" && !singleTrace ? "session" : activeTab
   // A deep-linked tab for a feature that's off (sandbox) falls back to Session.
   const effectiveActiveTab: SessionTabId =
@@ -97,6 +99,20 @@ export function SessionSlot({
 
   function selectTab(tab: SessionTabId) {
     onActiveTabChange(tab)
+  }
+
+  function navigateToSpansWithErrors() {
+    if (!singleTrace) return
+    openWithErrors()
+    setSelectedSpanId("")
+    onActiveTabChange("spans")
+  }
+
+  function navigateToSpansWithModel(model: string) {
+    if (!singleTrace) return
+    openWithModel(model)
+    setSelectedSpanId("")
+    onActiveTabChange("spans")
   }
 
   // Badge counts. Both queries are shared (same key) with the tab panes, so
@@ -189,11 +205,27 @@ export function SessionSlot({
             )}
             <SessionStatusPill status={status} lastActivity={relativeTime(new Date(session.endTime))} />
             {session.errorCount > 0 ? (
-              <Status
-                variant="destructive"
-                indicator={false}
-                label={`${formatCount(session.errorCount)} ${session.errorCount === 1 ? "error" : "errors"}`}
-              />
+              singleTrace ? (
+                <button
+                  type="button"
+                  onClick={navigateToSpansWithErrors}
+                  aria-label={`View ${session.errorCount} errored spans`}
+                  className="inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <Status
+                    variant="destructive"
+                    indicator={false}
+                    label={`${formatCount(session.errorCount)} ${session.errorCount === 1 ? "error" : "errors"}`}
+                    className="cursor-pointer transition-opacity hover:opacity-80"
+                  />
+                </button>
+              ) : (
+                <Status
+                  variant="destructive"
+                  indicator={false}
+                  label={`${formatCount(session.errorCount)} ${session.errorCount === 1 ? "error" : "errors"}`}
+                />
+              )
             ) : null}
           </div>
           <CopyableText
@@ -210,6 +242,8 @@ export function SessionSlot({
         {effectiveActiveTab === "session" && (
           <MetadataTab
             session={session}
+            spansNavEnabled={Boolean(singleTrace)}
+            {...(singleTrace ? { onOpenSpansWithModel: navigateToSpansWithModel } : {})}
             {...(filters ? { filters } : {})}
             {...(onFiltersChange ? { onFiltersChange } : {})}
           />

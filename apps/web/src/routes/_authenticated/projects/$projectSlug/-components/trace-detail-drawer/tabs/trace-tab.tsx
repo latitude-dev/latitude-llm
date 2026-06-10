@@ -18,6 +18,7 @@ import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domain
 import { TraceOutlierBadge, type TraceOutlierMetric } from "../../trace-outlier-badge.tsx"
 import { DurationBar } from "../duration-bar.tsx"
 import { computeDurationBreakdown } from "../duration-composition.ts"
+import { ModelFilterLink } from "./spans-tab/model-filter-link.tsx"
 import { UsageSummary } from "./spans-tab/span-detail/usage-summary.tsx"
 
 function JsonBlock({ value }: { readonly value: unknown }) {
@@ -43,6 +44,7 @@ export function TraceTab({
   isDetailLoading,
   filters,
   onFiltersChange,
+  onOpenSpansWithModel,
   defaultOutputOpen = true,
 }: {
   readonly traceId: string
@@ -55,6 +57,7 @@ export function TraceTab({
   readonly isDetailLoading: boolean
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
+  readonly onOpenSpansWithModel?: ((model: string) => void) | undefined
   readonly defaultOutputOpen?: boolean
 }) {
   const hasProviders = traceRecord && traceRecord.providers.length > 0
@@ -141,11 +144,18 @@ export function TraceTab({
                 {p}
               </Tooltip>
             ))}
-          {hasModels && (
-            <Text.H5 color="foregroundMuted" noWrap>
-              {traceRecord.models.join(", ")}
-            </Text.H5>
-          )}
+          {hasModels &&
+            (onOpenSpansWithModel ? (
+              <div className="flex flex-row flex-wrap items-center gap-1.5">
+                {traceRecord.models.map((model) => (
+                  <ModelFilterLink key={model} model={model} onClick={() => onOpenSpansWithModel(model)} />
+                ))}
+              </div>
+            ) : (
+              <Text.H5 color="foregroundMuted" noWrap>
+                {traceRecord.models.join(", ")}
+              </Text.H5>
+            ))}
         </div>
       )}
 
