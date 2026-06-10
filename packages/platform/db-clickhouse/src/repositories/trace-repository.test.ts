@@ -203,7 +203,22 @@ describe("TraceRepository", () => {
         tool_name: "lookup_order",
         tool_call_id: "call_1",
       }
-      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [toolSpan]))
+      // A chat span defining a tool that is never called — must still appear
+      // in the multiselect options.
+      const chatSpanWithDefs: SpanRow = {
+        ...makeSpanRow({
+          traceId: TRACE_ID,
+          spanId: "1002a1b2c3d4e5f6",
+          startTime: new Date("2026-03-15T12:00:00Z"),
+          costTotalMicrocents: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+        }),
+        name: "chat gpt-test",
+        operation: "chat",
+        tool_definitions: '[{"name":"defined_only_tool","description":"d","parameters":{}}]',
+      }
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [toolSpan, chatSpanWithDefs]))
     })
 
     it("matches traces that called the tool", async () => {
@@ -230,7 +245,7 @@ describe("TraceRepository", () => {
       expect(matches).toBe(false)
     })
 
-    it("lists distinct tool names for the multiselect", async () => {
+    it("lists called and defined-but-never-called tools for the multiselect", async () => {
       const values = await runCh(
         repo.distinctFilterValues({
           organizationId: ORG_ID,
@@ -238,7 +253,7 @@ describe("TraceRepository", () => {
           column: "tools",
         }),
       )
-      expect(values).toEqual(["lookup_order"])
+      expect(values).toEqual(["defined_only_tool", "lookup_order"])
     })
   })
 

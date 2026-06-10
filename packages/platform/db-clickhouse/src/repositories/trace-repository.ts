@@ -1442,16 +1442,24 @@ export const TraceRepositoryLive = Layer.effect(
           }
           const searchClause = search ? " AND val ILIKE {search:String}" : ""
 
-          // Tools have no traces column — read distinct names off the
-          // execute_tool spans directly (LowCardinality + bloom-indexed).
+          // Tools have no traces column — union called tools (execute_tool
+          // spans) with defined-but-never-called ones (tool_names on chat
+          // spans) so the options match the Tools page inventory.
           const query =
             column === "tools"
-              ? `SELECT DISTINCT tool_name AS val
-                      FROM spans
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        AND operation = 'execute_tool'
-                        AND val != ''${searchClause}
+              ? `SELECT DISTINCT val FROM (
+                        SELECT tool_name AS val
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND operation = 'execute_tool'
+                        UNION ALL
+                        SELECT arrayJoin(tool_names) AS val
+                        FROM spans
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                      )
+                      WHERE val != ''${searchClause}
                       ORDER BY val
                       LIMIT {limit:UInt32}`
               : COLUMN_EXPRS[column]
