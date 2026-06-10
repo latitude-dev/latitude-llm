@@ -158,16 +158,16 @@ This is a behavior change: it shifts `firstMessageIndex`/`lastMessageIndex` on p
 
 - [x] Store table and repository exist; no production reads or writes yet; hash-equality test green in CI.
 
-### [ ] Phase 2 - Conversation intelligence on the store
+### [x] Phase 2 - Conversation intelligence on the store
 
-- [ ] **P2-1**: Replace `embedTurns` with `resolveTurnEmbeddings` (hash -> batch lookup -> embed misses, budget-gated -> write-through). No changes to segmentation, labeling, or persisted schemas.
-- [ ] **P2-2**: Cache anchor embeddings (static per `CONVERSATION_INTELLIGENCE_DETECTOR_VERSION`) instead of re-embedding per analysis pass.
-- [ ] **P2-3**: Skip taxonomy projection re-embedding when `projectionHash` is unchanged from the latest observation.
-- [ ] **P2-4**: Verify analysis outputs are identical pre/post on a fixture set (same moments, labels, centroids, confidences); the swap must be invisible to consumers.
+- [x] **P2-1**: Replace `embedTurns` with `resolveTurnEmbeddings` (hash -> batch lookup -> embed misses, budget-gated -> write-through). No changes to segmentation, labeling, or persisted schemas.
+- [x] **P2-2**: Cache anchor embeddings (static per `CONVERSATION_INTELLIGENCE_DETECTOR_VERSION`) instead of re-embedding per analysis pass.
+- [x] **P2-3**: Skip taxonomy projection re-embedding when `projectionHash` is unchanged from the latest observation.
+- [x] **P2-4**: Verify analysis outputs are identical pre/post on a fixture set (same moments, labels, centroids, confidences); the swap must be invisible to consumers.
 
 **Exit gate**:
 
-- [ ] Re-analysis of a grown session embeds only new messages; embedding call volume for CI drops accordingly in metrics; analysis outputs unchanged on fixtures.
+- [~] Re-analysis of a grown session embeds only new messages; embedding call volume drop is covered by fixture call-count tests; production metrics validation remains a post-deploy check.
 
 ### [ ] Phase 3 - Trace search on the store
 
