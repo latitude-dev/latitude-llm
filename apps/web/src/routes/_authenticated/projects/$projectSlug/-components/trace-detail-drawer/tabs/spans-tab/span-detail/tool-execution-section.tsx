@@ -1,6 +1,8 @@
-import { CodeBlock, DetailSection, DetailSummary, Text } from "@repo/ui"
+import { Button, CodeBlock, DetailSection, DetailSummary, Icon, Text } from "@repo/ui"
+import { Link, useParams } from "@tanstack/react-router"
 import { ArrowDownRightIcon, ArrowUpRightIcon, WrenchIcon } from "lucide-react"
 import { useMemo } from "react"
+import { useHasFeatureFlag } from "../../../../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import { JsonBlock } from "./helpers.tsx"
 
@@ -23,17 +25,37 @@ export function ToolExecutionSection({ span }: { readonly span: SpanDetailRecord
   const parsedInput = useMemo(() => tryParseJson(span.toolInput), [span.toolInput])
   const parsedOutput = useMemo(() => tryParseJson(span.toolOutput), [span.toolOutput])
   const toolName = span.toolName || span.name
+  // The Tools dashboard link only makes sense for named tools, behind the
+  // flag, on routes that carry a project slug.
+  const { projectSlug } = useParams({ strict: false })
+  const toolsEnabled = useHasFeatureFlag("tools")
+  const showToolLink = toolsEnabled && Boolean(span.toolName) && typeof projectSlug === "string"
 
   return (
     <>
       {(span.toolCallId || toolName) && (
         <DetailSection icon={<WrenchIcon className="w-4 h-4" />} label="Tool">
-          <DetailSummary
-            items={[
-              ...(toolName ? [{ label: "Tool Name", value: toolName }] : []),
-              ...(span.toolCallId ? [{ label: "Tool Call ID", value: span.toolCallId, copyable: true }] : []),
-            ]}
-          />
+          <div className="flex flex-col gap-2">
+            <DetailSummary
+              items={[
+                ...(toolName ? [{ label: "Tool Name", value: toolName }] : []),
+                ...(span.toolCallId ? [{ label: "Tool Call ID", value: span.toolCallId, copyable: true }] : []),
+              ]}
+            />
+            {showToolLink ? (
+              <div className="flex">
+                <Button asChild variant="outline" size="sm">
+                  <Link
+                    to="/projects/$projectSlug/tools/$toolName"
+                    params={{ projectSlug: projectSlug as string, toolName: span.toolName }}
+                  >
+                    <Icon icon={WrenchIcon} size="sm" />
+                    View tool analytics
+                  </Link>
+                </Button>
+              </div>
+            ) : null}
+          </div>
         </DetailSection>
       )}
 

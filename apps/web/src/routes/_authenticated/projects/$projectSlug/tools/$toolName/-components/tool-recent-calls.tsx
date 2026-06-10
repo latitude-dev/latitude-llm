@@ -24,15 +24,15 @@ export function ToolRecentCalls({
   readonly onOverlayActiveChange?: (active: boolean) => void
 }) {
   const [errorsOnly, setErrorsOnly] = useState(false)
-  const [openTraceId, setOpenTraceId] = useState<string | null>(null)
+  const [openCall, setOpenCall] = useState<{ traceId: string; spanId: string } | null>(null)
   const { data: calls, isLoading, infiniteScroll } = useRecentToolCalls({ projectId, toolName, range, errorsOnly })
 
-  const openTrace = (traceId: string) => {
-    setOpenTraceId(traceId)
+  const openTrace = (call: { traceId: string; spanId: string }) => {
+    setOpenCall(call)
     onOverlayActiveChange?.(true)
   }
   const closeTrace = () => {
-    setOpenTraceId(null)
+    setOpenCall(null)
     onOverlayActiveChange?.(false)
   }
 
@@ -109,9 +109,11 @@ export function ToolRecentCalls({
   ]
 
   return (
-    <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+    // Plain background — the table rows are themselves bg-secondary, which
+    // reads muddy when nested inside another bg-secondary panel.
+    <div className="flex min-w-0 flex-col gap-3">
       <div className="flex items-center justify-between">
-        <Text.H6 color="foregroundMuted">Recent calls</Text.H6>
+        <Text.H5M color="foreground">Recent calls</Text.H5M>
         <div className="flex items-center gap-2">
           <Label htmlFor="tool-errors-only" className="cursor-pointer">
             <Text.H6 color="foregroundMuted">Errors only</Text.H6>
@@ -124,24 +126,25 @@ export function ToolRecentCalls({
         isLoading={isLoading}
         columns={columns}
         getRowKey={(call) => call.spanId}
-        onRowClick={(call) => openTrace(call.traceId)}
+        onRowClick={(call) => openTrace({ traceId: call.traceId, spanId: call.spanId })}
         getRowAriaLabel={(call) => `Open trace of call ${call.toolCallId || call.spanId}`}
         infiniteScroll={infiniteScroll}
         scrollAreaLayout="intrinsic"
         className="max-h-[420px]"
         blankSlate={errorsOnly ? "No failed calls in this time window" : "No calls in this time window"}
       />
-      <Sheet open={openTraceId !== null} onClose={closeTrace} closeAriaLabel="Close trace panel">
-        {openTraceId ? (
+      <Sheet open={openCall !== null} onClose={closeTrace} closeAriaLabel="Close trace panel">
+        {openCall ? (
           <TraceDetailDrawer
-            key={openTraceId}
+            key={`${openCall.traceId}-${openCall.spanId}`}
             projectId={projectId}
-            traceId={openTraceId}
+            traceId={openCall.traceId}
             onClose={closeTrace}
             canNavigateNext={false}
             canNavigatePrev={false}
             urlSyncedTabs={false}
-            initialTab="trace"
+            initialTab="spans"
+            initialSpanId={openCall.spanId}
             drawerStoreKey="tool-trace-detail-drawer-width"
             closeLabel="Back to tool"
           />

@@ -1,5 +1,6 @@
 import { CopyableText, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
+import { ChevronRightIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { type ToolsTimeRange, useToolParameterStats } from "../../../../../../../domains/tools/tools.collection.ts"
 import { formatPercent } from "../../-components/tool-formatters.ts"
@@ -16,8 +17,8 @@ function CoverageBar({ fraction }: { readonly fraction: number }) {
 }
 
 /**
- * "How it's called": top-level tool_input keys ranked by usage (left), and
- * the most common values of the selected key (right). Computed over a recent
+ * "How it's called": tool_input keys ranked by usage (left rail), and the
+ * most common values of the selected key (right). Computed over a recent
  * sample — `sampleSize` is surfaced in the footer.
  */
 export function ToolParametersExplorer({
@@ -56,8 +57,9 @@ export function ToolParametersExplorer({
         </div>
       ) : (
         <div className="flex min-h-0 flex-col gap-4 sm:flex-row">
-          {/* Keys, ranked by share of sampled calls. */}
-          <div className="flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto sm:max-h-[280px]">
+          {/* Parameter rail. Required params show in ~every call, so the share
+              carries little signal — keep it muted, no bar. */}
+          <div className="flex min-w-0 flex-col gap-1 overflow-y-auto sm:max-h-[280px] sm:w-[220px] sm:shrink-0">
             {stats.map((stat) => {
               const fraction = sampleSize > 0 ? stat.occurrences / sampleSize : 0
               const isActive = stat.key === activeKey
@@ -66,19 +68,24 @@ export function ToolParametersExplorer({
                   key={stat.key}
                   type="button"
                   onClick={() => setSelectedKey(stat.key)}
-                  className={`flex flex-col gap-1 rounded-md p-2 text-left transition-colors ${
-                    isActive ? "bg-background" : "hover:bg-background/60"
+                  aria-pressed={isActive}
+                  className={`group flex flex-row items-center gap-1.5 rounded-md border px-2 py-1.5 text-left transition-colors ${
+                    isActive
+                      ? "border-border bg-background shadow-sm"
+                      : "border-transparent hover:border-border/60 hover:bg-background/60"
                   }`}
                 >
-                  <div className="flex min-w-0 flex-row items-center gap-2">
-                    <Text.H6 color="foreground" className="min-w-0 flex-1 truncate font-mono">
-                      {stat.key}
-                    </Text.H6>
-                    <Text.H6 color="foreground" className="shrink-0 font-semibold tabular-nums">
-                      {formatPercent(fraction)}
-                    </Text.H6>
-                  </div>
-                  <CoverageBar fraction={fraction} />
+                  <Text.H6 color="foreground" className="min-w-0 flex-1 truncate font-mono">
+                    {stat.key}
+                  </Text.H6>
+                  <Text.H6 color="foregroundMuted" className="shrink-0 tabular-nums">
+                    {formatPercent(fraction)}
+                  </Text.H6>
+                  <ChevronRightIcon
+                    className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-opacity ${
+                      isActive ? "opacity-100" : "opacity-0 group-hover:opacity-60"
+                    }`}
+                  />
                 </button>
               )
             })}

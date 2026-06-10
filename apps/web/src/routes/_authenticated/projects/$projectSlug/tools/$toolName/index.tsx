@@ -1,11 +1,10 @@
-import { Button, CodeBlock, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Button, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, LockIcon, TextAlignStartIcon, WrenchIcon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useToolDetail } from "../../../../../../domains/tools/tools.collection.ts"
-import type { ToolDetailRecord } from "../../../../../../domains/tools/tools.functions.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
@@ -17,6 +16,7 @@ import {
 } from "../-components/tool-formatters.ts"
 import { ToolActivityRow } from "./-components/tool-activity-row.tsx"
 import { ToolContextPanel } from "./-components/tool-context-panel.tsx"
+import { ToolDefinitionParams } from "./-components/tool-definition-params.tsx"
 import { ToolNeighborNav } from "./-components/tool-neighbor-nav.tsx"
 import { ToolParametersExplorer } from "./-components/tool-parameters-explorer.tsx"
 import { ToolRecentCalls } from "./-components/tool-recent-calls.tsx"
@@ -107,17 +107,6 @@ function MetricTile({
   )
 }
 
-/** Pretty-printed lossless definition; the raw payload is the source of truth. */
-function definitionPretty(detail: ToolDetailRecord | undefined): string | null {
-  const json = detail?.definition?.definitionJson
-  if (!json) return null
-  try {
-    return JSON.stringify(JSON.parse(json), null, 2)
-  } catch {
-    return json
-  }
-}
-
 function ToolDetailPageContent() {
   const { projectSlug, toolName } = Route.useParams()
   const project = useRouteProject()
@@ -139,7 +128,6 @@ function ToolDetailPageContent() {
   const { data: detail, isLoading } = useToolDetail({ projectId: project.id, toolName, range })
   const usage = detail?.usage ?? null
   const definition = detail?.definition ?? null
-  const prettyDefinition = definitionPretty(detail)
   const notFound = !isLoading && detail !== undefined && usage === null && definition === null
 
   return (
@@ -237,7 +225,7 @@ function ToolDetailPageContent() {
                     isLoading={isLoading}
                   />
                   <MetricTile
-                    label="Selection rate"
+                    label="Calls per offer"
                     value={
                       definition && usage
                         ? formatPercent(definition.offeredCount > 0 ? usage.calls / definition.offeredCount : 0)
@@ -245,8 +233,8 @@ function ToolDetailPageContent() {
                     }
                     tooltip={
                       definition
-                        ? `Calls per offer — offered ${formatCount(definition.offeredCount)} times. Can exceed 100% when one turn calls it multiple times.`
-                        : "Selection rate needs tool definitions on chat spans."
+                        ? `How often the model picks this tool when it's available — offered ${formatCount(definition.offeredCount)} times. Can exceed 100% when one turn calls it multiple times.`
+                        : "Calls per offer needs tool definitions on chat spans."
                     }
                     isLoading={isLoading}
                   />
@@ -273,20 +261,18 @@ function ToolDetailPageContent() {
                 </div>
               )}
             </div>
-            {/* Definition — the lossless payload as the agent ships it. */}
+            {/* Definition — readable parameter list from the latest payload. */}
             <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 xl:w-[500px]">
               <div className="flex items-center justify-between">
-                <Text.H6 color="foregroundMuted">Definition</Text.H6>
+                <Text.H6 color="foregroundMuted">Parameters</Text.H6>
                 {definition ? (
                   <Text.H6 color="foregroundMuted">last seen {relativeTime(new Date(definition.lastOffered))}</Text.H6>
                 ) : null}
               </div>
               {isLoading ? (
                 <Skeleton className="h-40 w-full" />
-              ) : prettyDefinition ? (
-                <div className="max-h-[320px] min-h-0 overflow-y-auto">
-                  <CodeBlock value={prettyDefinition} className="bg-secondary" />
-                </div>
+              ) : definition ? (
+                <ToolDefinitionParams definitionJson={definition.definitionJson} />
               ) : (
                 <Text.H5 color="foregroundMuted">
                   Definition not found — this tool was called but no chat span in this window carried its definition.

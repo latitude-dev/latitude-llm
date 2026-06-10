@@ -120,6 +120,12 @@ export type TraceDetailDrawerProps = {
   readonly urlSyncedTabs?: boolean
   /** Used when `urlSyncedTabs` is false; defaults to `"trace"`. */
   readonly initialTab?: TabId
+  /**
+   * Pre-selects a span (pair with `initialTab="spans"` to land on its detail).
+   * Used when `urlSyncedTabs` is false; URL-synced contexts read `spanId` from
+   * the URL instead.
+   */
+  readonly initialSpanId?: string
   /** Overrides the default close control tooltip / screen-reader hint. */
   readonly closeLabel?: ReactNode
   /** LocalStorage key for persisted drawer width. */
@@ -136,7 +142,13 @@ export function TraceDetailDrawer({ urlSyncedTabs = true, ...props }: TraceDetai
 }
 
 function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSyncedTabs">) {
-  const { initialTab: _initialTabIgnored, closeLabel, drawerStoreKey, ...rest } = props
+  const {
+    initialTab: _initialTabIgnored,
+    initialSpanId: _initialSpanIdIgnored,
+    closeLabel,
+    drawerStoreKey,
+    ...rest
+  } = props
   // Shared with the session panel via the `detailTab` URL param so Conversation
   // / Annotations carry over when switching between trace and session views.
   // Default to Conversation when arriving from an active search so the
@@ -148,7 +160,10 @@ function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSy
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
   return (
     <TraceDetailDrawerShell
-      {...(rest as Omit<TraceDetailDrawerProps, "urlSyncedTabs" | "initialTab" | "closeLabel" | "drawerStoreKey">)}
+      {...(rest as Omit<
+        TraceDetailDrawerProps,
+        "urlSyncedTabs" | "initialTab" | "initialSpanId" | "closeLabel" | "drawerStoreKey"
+      >)}
       activeTab={activeTab}
       onActiveTabChange={setActiveTab}
       selectedSpanId={selectedSpanId}
@@ -160,12 +175,15 @@ function TraceDetailDrawerWithUrlTabs(props: Omit<TraceDetailDrawerProps, "urlSy
 }
 
 function TraceDetailDrawerWithLocalTabs(props: Omit<TraceDetailDrawerProps, "urlSyncedTabs">) {
-  const { initialTab, closeLabel, drawerStoreKey, ...rest } = props
+  const { initialTab, initialSpanId, closeLabel, drawerStoreKey, ...rest } = props
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "trace")
-  const [selectedSpanId, setSelectedSpanId] = useState("")
+  const [selectedSpanId, setSelectedSpanId] = useState(initialSpanId ?? "")
   return (
     <TraceDetailDrawerShell
-      {...(rest as Omit<TraceDetailDrawerProps, "urlSyncedTabs" | "initialTab" | "closeLabel" | "drawerStoreKey">)}
+      {...(rest as Omit<
+        TraceDetailDrawerProps,
+        "urlSyncedTabs" | "initialTab" | "initialSpanId" | "closeLabel" | "drawerStoreKey"
+      >)}
       activeTab={activeTab}
       onActiveTabChange={setActiveTab}
       selectedSpanId={selectedSpanId}

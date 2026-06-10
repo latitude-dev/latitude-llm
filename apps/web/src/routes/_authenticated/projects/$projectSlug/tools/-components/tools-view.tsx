@@ -16,7 +16,7 @@ export const TOOLS_COLUMN_OPTIONS = [
   { id: "trend", label: "Trend" },
   { id: "calls", label: "Calls" },
   { id: "tracesPct", label: "% of traces" },
-  { id: "selectionRate", label: "Selection rate" },
+  { id: "selectionRate", label: "Calls per offer" },
   { id: "errorRate", label: "Error rate" },
   { id: "duration", label: "Duration" },
   { id: "lastCalled", label: "Last called" },
@@ -105,13 +105,24 @@ export function ToolsView({
       width: 176,
       minWidth: 176,
       render: (tool) => (
-        <ToolTrendBar
-          buckets={tool.trend}
-          fromIso={rangeFromIso}
-          toIso={rangeToIso}
-          bucketSeconds={trendBucketSeconds}
-          height={36}
-        />
+        // The sparkline's positioned spans paint above the row's stretched
+        // link and would swallow clicks — wrap it in its own link so clicking
+        // the trend also opens the tool.
+        <Link
+          to="/projects/$projectSlug/tools/$toolName"
+          params={{ projectSlug, toolName: tool.name }}
+          className="block"
+          tabIndex={-1}
+          aria-hidden
+        >
+          <ToolTrendBar
+            buckets={tool.trend}
+            fromIso={rangeFromIso}
+            toIso={rangeToIso}
+            bucketSeconds={trendBucketSeconds}
+            height={36}
+          />
+        </Link>
       ),
     },
     {
@@ -156,7 +167,7 @@ export function ToolsView({
     },
     {
       key: "selectionRate",
-      header: "Selection rate",
+      header: "Calls per offer",
       width: 110,
       minWidth: 96,
       align: "end",
@@ -164,13 +175,13 @@ export function ToolsView({
       render: (tool) =>
         tool.selectionRate !== null ? (
           <Tooltip asChild trigger={<span className="tabular-nums">{formatPercent(tool.selectionRate)}</span>}>
-            Calls per offer: the model called this tool {formatCount(tool.metrics?.calls ?? 0)} times out of{" "}
-            {formatCount(tool.offeredCount)} chat turns where it was available. Can exceed 100% when a single turn calls
+            How often the model picks this tool when it's available: {formatCount(tool.metrics?.calls ?? 0)} calls
+            across {formatCount(tool.offeredCount)} chat turns that offered it. Can exceed 100% when a single turn calls
             it multiple times.
           </Tooltip>
         ) : (
           <Tooltip asChild trigger={<span>-</span>}>
-            Selection rate needs tool definitions on chat spans — none were found for this tool.
+            Calls per offer needs tool definitions on chat spans — none were found for this tool.
           </Tooltip>
         ),
     },

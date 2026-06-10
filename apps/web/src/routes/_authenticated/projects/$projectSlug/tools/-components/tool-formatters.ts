@@ -8,7 +8,7 @@ export const TOOL_CRITICAL_ERROR_RATE = 0.25
 export const DEFAULT_TOOLS_RANGE_SECONDS = 30 * 24 * 60 * 60 // last 30 days
 
 /** Roughly how many sparkline / chart buckets to aim for over a range. */
-const TARGET_TREND_BUCKETS = 28
+const TARGET_TREND_BUCKETS = 30
 const HOUR_SECONDS = 60 * 60
 const DAY_SECONDS = 24 * HOUR_SECONDS
 
@@ -23,13 +23,15 @@ export function formatPercent(rate: number): string {
 
 /**
  * Picks a bucket width for trend queries: hour-aligned for short ranges,
- * day-aligned for long ones, aiming for ~28 buckets.
+ * day-aligned for long ones, aiming for ~30 buckets. Day buckets round to
+ * the NEAREST day so the default 30-day window gets daily buckets rather
+ * than rounding up to 2-day ones.
  */
 export function pickToolTrendBucketSeconds(rangeMs: number): number {
   const rawSeconds = Math.max(1, Math.floor(rangeMs / 1000 / TARGET_TREND_BUCKETS))
   if (rawSeconds <= HOUR_SECONDS) return HOUR_SECONDS
   if (rawSeconds <= DAY_SECONDS) return Math.ceil(rawSeconds / HOUR_SECONDS) * HOUR_SECONDS
-  return Math.ceil(rawSeconds / DAY_SECONDS) * DAY_SECONDS
+  return Math.max(1, Math.round(rawSeconds / DAY_SECONDS)) * DAY_SECONDS
 }
 
 type ToolStatusKey = "unused" | "failing" | "noDefinition"

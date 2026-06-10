@@ -55,7 +55,7 @@ export interface ToolsAnalyticsRecord {
   readonly tools: readonly ToolSummaryRecord[]
 }
 
-export interface ToolDefinitionDetailRecord {
+interface ToolDefinitionDetailRecord {
   /**
    * Parsed name/description for headers; `definitionJson` carries the full
    * lossless definition (including `parameters`) for display.
@@ -67,7 +67,7 @@ export interface ToolDefinitionDetailRecord {
   readonly lastOffered: string
 }
 
-export interface ToolDetailRecord {
+interface ToolDetailRecord {
   readonly definition: ToolDefinitionDetailRecord | null
   readonly usage: ToolUsageMetricsRecord | null
 }
