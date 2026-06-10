@@ -1125,7 +1125,7 @@ describe("SessionRepository", () => {
 
     interface SearchEmbedding {
       readonly traceId: string
-      readonly chunkIndex: number
+      readonly messageIndex: number
       readonly embedding: readonly number[]
       readonly startTime: Date
       readonly contentHashSuffix: string
@@ -1151,20 +1151,38 @@ describe("SessionRepository", () => {
 
     const insertSearchEmbeddings = (rows: readonly SearchEmbedding[]) =>
       Effect.runPromise(
-        insertJsonEachRow(
-          ch.client,
-          "trace_search_embeddings",
-          rows.map((r) => ({
-            organization_id: ORG_ID as string,
-            project_id: PROJECT_ID as string,
-            trace_id: r.traceId,
-            chunk_index: r.chunkIndex,
-            start_time: toClickHouseDateTime(r.startTime),
-            content_hash: `${"b".repeat(64 - r.contentHashSuffix.length)}${r.contentHashSuffix}`,
-            embedding_model: "voyage-4-large",
-            embedding: [...r.embedding],
-            indexed_at: toClickHouseDateTime(r.startTime),
-          })),
+        Effect.all(
+          [
+            insertJsonEachRow(
+              ch.client,
+              "message_embeddings",
+              rows.map((r) => ({
+                organization_id: ORG_ID as string,
+                project_id: PROJECT_ID as string,
+                content_hash: `${"b".repeat(64 - r.contentHashSuffix.length)}${r.contentHashSuffix}`,
+                embedding_model: "voyage-4-large",
+                embedding: [...r.embedding],
+                last_seen_at: toClickHouseDateTime(r.startTime),
+              })),
+            ),
+            insertJsonEachRow(
+              ch.client,
+              "trace_message_occurrences",
+              rows.map((r) => ({
+                organization_id: ORG_ID as string,
+                project_id: PROJECT_ID as string,
+                trace_id: r.traceId,
+                message_index: r.messageIndex,
+                content_hash: `${"b".repeat(64 - r.contentHashSuffix.length)}${r.contentHashSuffix}`,
+                session_id: "search-test-session",
+                start_time: toClickHouseDateTime(r.startTime),
+                role: "assistant",
+                is_output: 1,
+                indexed_at: toClickHouseDateTime(r.startTime),
+              })),
+            ),
+          ],
+          { discard: true },
         ),
       )
 
@@ -1283,8 +1301,14 @@ describe("SessionRepository", () => {
         return v as readonly number[]
       })()
       await insertSearchEmbeddings([
-        { traceId: traceStrong, chunkIndex: 0, embedding: alignedEmbedding, startTime: start, contentHashSuffix: "e1" },
-        { traceId: traceWeak, chunkIndex: 0, embedding: weakVec, startTime: start, contentHashSuffix: "e2" },
+        {
+          traceId: traceStrong,
+          messageIndex: 0,
+          embedding: alignedEmbedding,
+          startTime: start,
+          contentHashSuffix: "e1",
+        },
+        { traceId: traceWeak, messageIndex: 0, embedding: weakVec, startTime: start, contentHashSuffix: "e2" },
       ])
 
       const page = await runCh(
@@ -1603,7 +1627,7 @@ describe("SessionRepository", () => {
       await insertSearchEmbeddings(
         traces.map((t, i) => ({
           traceId: t,
-          chunkIndex: 0,
+          messageIndex: 0,
           embedding: nonNull(vectors[i]),
           startTime: start,
           contentHashSuffix: `v${i}`,
@@ -1752,7 +1776,7 @@ describe("SessionRepository", () => {
       ])
       // Only the high-score session gets an aligned embedding.
       await insertSearchEmbeddings([
-        { traceId: traceHigh, chunkIndex: 0, embedding: alignedEmbedding, startTime: start, contentHashSuffix: "oh" },
+        { traceId: traceHigh, messageIndex: 0, embedding: alignedEmbedding, startTime: start, contentHashSuffix: "oh" },
       ])
 
       const page = await runCh(
@@ -1802,7 +1826,7 @@ describe("SessionRepository", () => {
         { traceId: traceLow, text: "relevance sentinel low", startTime: start, contentHashSuffix: "rl" },
       ])
       await insertSearchEmbeddings([
-        { traceId: traceHigh, chunkIndex: 0, embedding: alignedEmbedding, startTime: start, contentHashSuffix: "rh" },
+        { traceId: traceHigh, messageIndex: 0, embedding: alignedEmbedding, startTime: start, contentHashSuffix: "rh" },
       ])
 
       const page = await runCh(
@@ -1854,7 +1878,7 @@ describe("SessionRepository", () => {
         await insertSearchEmbeddings(
           sessions.map((s, i) => ({
             traceId: padTrace(`ax${i}`),
-            chunkIndex: 0,
+            messageIndex: 0,
             embedding: s.embed,
             startTime: new Date(start.getTime() + s.offsetMs),
             contentHashSuffix: `ax${i}`,
@@ -1995,14 +2019,14 @@ describe("SessionRepository", () => {
         await insertSearchEmbeddings([
           {
             traceId: traceAbove,
-            chunkIndex: 0,
+            messageIndex: 0,
             embedding: alignedEmbedding,
             startTime: start,
             contentHashSuffix: "fa",
           },
           {
             traceId: traceBelow,
-            chunkIndex: 0,
+            messageIndex: 0,
             embedding: orthogonalVec,
             startTime: new Date(start.getTime() + 600_000),
             contentHashSuffix: "fb",
@@ -2186,7 +2210,7 @@ describe("SessionRepository", () => {
               f.embed
                 ? {
                     traceId: padTrace(`mp${i}`),
-                    chunkIndex: 0,
+                    messageIndex: 0,
                     embedding: f.embed,
                     startTime: new Date(start.getTime() + f.offsetSec * 1_000),
                     contentHashSuffix: `mp${i}`,

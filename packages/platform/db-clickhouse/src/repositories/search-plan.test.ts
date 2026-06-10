@@ -1,7 +1,7 @@
 import { AI, AIError, type AIShape } from "@domain/ai"
 import { parseSearchQuery, TRACE_SEARCH_EMBEDDING_DIMENSIONS } from "@domain/spans"
 import { Effect, Layer } from "effect"
-import { afterEach, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 import { planSearch } from "./search-plan.ts"
 
 const mockAILayer = Layer.succeed(AI, {
@@ -10,20 +10,8 @@ const mockAILayer = Layer.succeed(AI, {
   rerank: () => Effect.fail(new AIError({ message: "Rerank not implemented in mock" })),
 } as AIShape)
 
-const previousSharedReads = process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS
-
 describe("planSearch", () => {
-  afterEach(() => {
-    if (previousSharedReads === undefined) {
-      delete process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS
-    } else {
-      process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = previousSharedReads
-    }
-  })
-
   it("applies the shared-message semantic cap after joining to usable occurrences", async () => {
-    process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
-
     const plan = await Effect.runPromise(planSearch(parseSearchQuery("needle")).pipe(Effect.provide(mockAILayer)))
     const normalizedSql = plan.subquery.replace(/\s+/g, " ")
 

@@ -135,7 +135,6 @@ export { TraceSearchBudget } from "./ports/trace-search-budget.ts"
 export type {
   TraceMessageOccurrenceRow,
   TraceSearchDocumentRow,
-  TraceSearchEmbeddingRow,
   TraceSearchRepositoryShape,
   TraceSemanticHighlightMatch,
 } from "./ports/trace-search-repository.ts"

@@ -24,13 +24,12 @@ const EMPTY_RESULT: TraceSearchHighlightsResult = { highlights: [], firstMatchIn
  *      no token phrases, no semantic prompt) short-circuits to the empty
  *      result before touching ClickHouse.
  *   2. Fetch the trace detail and (when the parsed query has a semantic
- *      prompt) the per-trace winning-chunk metadata in parallel.
+ *      prompt) the per-trace winning-message metadata in parallel.
  *      `findByTraceId` not found → empty result.
  *   3. The semantic branch embeds the prompt via Voyage and runs the focused
  *      per-trace `argMax` query. AI unavailable or embed failure → semantic
  *      match drops to `null` and the renderer falls back to literal/token
- *      highlights only (same shape as a pre-migration `trace_search_embeddings`
- *      row with NULL range columns).
+ *      highlights only.
  *   4. Delegate to the pure `computeTraceSearchHighlights` use-case for the
  *      actual highlight emission.
  */
@@ -86,12 +85,11 @@ export const getTraceSearchHighlightsUseCase = (args: {
   })
 
 /**
- * Embed the semantic prompt and look up the winning-chunk metadata for the
- * given trace. AI may be absent in dev/CI — treated identically to a chunk
- * indexed before migration 00017 (no semantic-region highlight; literal /
- * token still flow). Repository errors are also swallowed to `null` because
- * the highlight layer is decorative — a backend hiccup on the semantic side
- * shouldn't block literal/token highlights from rendering.
+ * Embed the semantic prompt and look up the winning-message metadata for the
+ * given trace. AI may be absent in dev/CI (no semantic-region highlight;
+ * literal / token still flow). Repository errors are also swallowed to `null`
+ * because the highlight layer is decorative — a backend hiccup on the semantic
+ * side shouldn't block literal/token highlights from rendering.
  */
 const findSemanticMatch = (args: {
   readonly organizationId: OrganizationId

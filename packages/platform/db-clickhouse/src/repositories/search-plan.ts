@@ -7,7 +7,6 @@ import {
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
   tokenizePhrase,
 } from "@domain/spans"
-import { parseEnv } from "@platform/env"
 import { Effect, Option } from "effect"
 
 /**
@@ -21,13 +20,9 @@ import { Effect, Option } from "effect"
  */
 
 /**
- * Cap on the semantic-side **chunk-row** candidate pool. Each trace can carry
- * multiple chunks now, so the cap is sized for chunks, not traces. Cosine scan
- * stays linear over the embeddings table; above ~30k chunk rows per project
- * latency becomes user-visible. The cap trades recall on the long tail for
- * bounded query time — at the average ~3-chunks-per-trace ratio that's ~10k
- * traces, comfortably above realistic project sizes inside the 30-day TTL
- * window.
+ * Cap on the semantic-side message candidate pool. Cosine scan stays linear
+ * over the shared message embeddings table; the cap trades recall on the long
+ * tail for bounded query time after filtering to usable trace occurrences.
  */
 const SEMANTIC_SCAN_LIMIT = 30_000
 
@@ -46,9 +41,6 @@ const SEMANTIC_SCAN_LIMIT = 30_000
  * enough that `Array(FixedString(32))` serialization stays under ~2 MB.
  */
 export const MAX_SEARCH_CANDIDATES = 50_000
-
-const useSharedMessageEmbeddingsReads = (): boolean =>
-  Effect.runSync(parseEnv("LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS", "boolean", false))
 
 function escapeLikePattern(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
@@ -117,64 +109,14 @@ function buildLexicalSearchSubquery(parsed: ParsedSearchQuery): {
 
 /**
  * Builds a subquery for semantic search candidates using a pre-computed query
- * embedding. The embedding table holds one row per trace **chunk**, so we
- * compute per-chunk cosine similarity and roll up to a per-trace score via
- * `max(...) GROUP BY trace_id` — a trace's relevance is its best-matching
- * chunk's similarity. The inner `ORDER BY semantic_score DESC LIMIT N` bounds
- * the per-project cosine scan cost by keeping the nearest chunks first; the
- * outer rollup collapses surviving chunks back into one row per trace for the
- * downstream join.
- *
- * When `semanticMetadata` is `true`, the rollup also surfaces `argMax(...)`
- * of `chunk_index`, `first_message_index`, `last_message_index` aligned to the
- * winning `semantic_score` — used by `getTraceSearchHighlights` (LAT-601) to
- * paint the matched conversational region as a semantic-region highlight.
- * `false` keeps the SQL byte-identical to the pre-PR-2 listing query so
- * existing callers see no change.
+ * embedding. The shared embedding table holds one row per canonical message
+ * hash, and trace_message_occurrences links those hashes to trace positions.
+ * We compute per-message cosine similarity and roll up to a per-trace score
+ * via `max(...) GROUP BY trace_id` — a trace's relevance is its best-matching
+ * message. The inner `ORDER BY semantic_score DESC LIMIT N` bounds the
+ * per-project cosine scan cost after joining to usable message occurrences.
  */
-function buildLegacySemanticSearchSubquery(
-  queryEmbedding: readonly number[],
-  semanticMetadata: boolean,
-): {
-  subquery: string
-  params: Record<string, unknown>
-} {
-  const innerExtraCols = semanticMetadata
-    ? `,
-                  chunk_index,
-                  first_message_index,
-                  last_message_index`
-    : ""
-  const outerExtraCols = semanticMetadata
-    ? `,
-                argMax(chunk_index, semantic_score)         AS matched_chunk_index,
-                argMax(first_message_index, semantic_score) AS matched_first_message_index,
-                argMax(last_message_index, semantic_score)  AS matched_last_message_index`
-    : ""
-
-  return {
-    subquery: `SELECT
-                trace_id,
-                max(semantic_score) AS semantic_score${outerExtraCols}
-              FROM (
-                SELECT
-                  CAST(trace_id AS String) AS trace_id,
-                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score${innerExtraCols}
-                FROM trace_search_embeddings
-                WHERE organization_id = {organizationId:String}
-                  AND project_id = {projectId:String}
-                ORDER BY semantic_score DESC
-                LIMIT {semanticScanLimit:UInt32}
-              )
-              GROUP BY trace_id`,
-    params: {
-      queryEmbedding: [...queryEmbedding],
-      semanticScanLimit: SEMANTIC_SCAN_LIMIT,
-    },
-  }
-}
-
-function buildSharedMessageSemanticSearchSubquery(
+function buildSemanticSearchSubquery(
   queryEmbedding: readonly number[],
   semanticMetadata: boolean,
 ): {
@@ -238,18 +180,6 @@ function buildSharedMessageSemanticSearchSubquery(
   }
 }
 
-function buildSemanticSearchSubquery(
-  queryEmbedding: readonly number[],
-  semanticMetadata: boolean,
-): {
-  subquery: string
-  params: Record<string, unknown>
-} {
-  return useSharedMessageEmbeddingsReads()
-    ? buildSharedMessageSemanticSearchSubquery(queryEmbedding, semanticMetadata)
-    : buildLegacySemanticSearchSubquery(queryEmbedding, semanticMetadata)
-}
-
 /**
  * Plan returned by `buildSearchPlan`. Callers branch on `ranked`:
  *   - `ranked = true`  → ORDER BY relevance_score DESC (semantic / hybrid).
@@ -257,12 +187,11 @@ function buildSemanticSearchSubquery(
  *     sort so phrase matches surface in chronological order rather than by
  *     trace_id hash.
  *
- * `semanticMetadata` (LAT-601): when true the subquery exposes the winning
- * chunk's metadata alongside `relevance_score` —
+ * `semanticMetadata`: when true the subquery exposes the winning message
+ * position alongside `relevance_score` using the existing matched_* column
+ * names —
  * `matched_chunk_index`, `matched_first_message_index`,
- * `matched_last_message_index`. NULL on traces that matched purely lexically
- * or were indexed before migration 00017. Default `false` keeps the SQL
- * byte-identical to before; the listing query plan is unchanged.
+ * `matched_last_message_index`. NULL on traces that matched purely lexically.
  *
  * @public
  */
@@ -302,7 +231,7 @@ function buildSearchPlan(
   // Outer projection for plans that don't actually carry semantic metadata
   // (phrase-only, semantic-without-embedding). The columns are present so
   // every plan has the same shape when `semanticMetadata: true`; values are
-  // NULL because there's no winning chunk to point at.
+  // NULL because there's no winning message to point at.
   const nullMetadataCols = semanticMetadata
     ? `,
                       CAST(NULL AS Nullable(UInt16))  AS matched_chunk_index,

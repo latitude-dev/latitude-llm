@@ -58,8 +58,8 @@ export const TRACE_SEARCH_CHUNK_HEAD_BUDGET_CHARS = 8_000
 
 /**
  * Retention window for embeddings. Enforced via ClickHouse TTL on the
- * `trace_search_embeddings` table (see the migration). Shorter than the
- * document window because embeddings are the expensive side.
+ * shared `message_embeddings` and `trace_message_occurrences` tables. Shorter
+ * than the document window because embeddings are the expensive side.
  */
 export const TRACE_SEARCH_EMBEDDING_LOOKBACK_DAYS = 30
 
