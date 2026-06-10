@@ -12,8 +12,8 @@ import type {
   ToolDefinitionDetail,
   ToolParameterStat,
   ToolParameterStatsResult,
-  ToolsAnalytics,
   ToolSummary,
+  ToolsAnalytics,
   ToolUsageMetrics,
 } from "@domain/spans"
 import { ToolAnalyticsRepository, toolDefinitionSchema } from "@domain/spans"
@@ -189,8 +189,8 @@ type RecentCallRow = {
   status_message: string
   error_type: string
   tool_call_id: string
-  tool_input: string
-  tool_output: string
+  tool_input_preview: string
+  tool_output_preview: string
   tool_input_truncated: number
   tool_output_truncated: number
 }
@@ -259,8 +259,8 @@ const toRecentToolCall = (row: RecentCallRow): RecentToolCall => ({
   statusMessage: row.status_message,
   errorType: normalizeCHString(row.error_type),
   toolCallId: normalizeCHString(row.tool_call_id),
-  toolInput: row.tool_input,
-  toolOutput: row.tool_output,
+  toolInput: row.tool_input_preview,
+  toolOutput: row.tool_output_preview,
   toolInputTruncated: row.tool_input_truncated === 1,
   toolOutputTruncated: row.tool_output_truncated === 1,
 })
@@ -548,7 +548,10 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
             })
             .pipe(
               Effect.map(({ statRows, sampleRows }): ToolParameterStatsResult => {
-                const statsByKey = new Map<string, { occurrences: number; topValues: { value: string; count: number }[] }>()
+                const statsByKey = new Map<
+                  string,
+                  { occurrences: number; topValues: { value: string; count: number }[] }
+                >()
                 for (const row of statRows) {
                   let entry = statsByKey.get(row.key)
                   if (!entry) {
@@ -689,8 +692,8 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                       SELECT
                         span_id, trace_id, session_id, start_time, duration_ns,
                         status_code, status_message, error_type, tool_call_id,
-                        substring(tool_input, 1, {payloadCap:UInt32}) AS tool_input,
-                        substring(tool_output, 1, {payloadCap:UInt32}) AS tool_output,
+                        substring(tool_input, 1, {payloadCap:UInt32}) AS tool_input_preview,
+                        substring(tool_output, 1, {payloadCap:UInt32}) AS tool_output_preview,
                         length(tool_input) > {payloadCap:UInt32} AS tool_input_truncated,
                         length(tool_output) > {payloadCap:UInt32} AS tool_output_truncated
                       FROM spans

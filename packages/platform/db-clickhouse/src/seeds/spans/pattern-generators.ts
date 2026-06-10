@@ -24,6 +24,17 @@ import {
   userMessage,
 } from "./span-builders.ts"
 
+// Fraction of seeded tool calls that fail, so tool analytics show realistic
+// error rates.
+const TOOL_FAILURE_RATE = 0.06
+
+function makeToolFailure(tool: ToolConfig): { type: string; message: string } {
+  return {
+    type: "ToolExecutionError",
+    message: `Tool ${tool.name} failed: upstream returned an error`,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Pattern 1: Simple chat completion (1 span)
 // ---------------------------------------------------------------------------
@@ -101,6 +112,7 @@ function generateToolCallTrace(
       base: toBase(ctx, traceId, rootSpanId, cursor, toolDuration),
       tool,
       callId,
+      ...(Math.random() < TOOL_FAILURE_RATE ? { error: makeToolFailure(tool) } : {}),
     })
     spans.push(toolSpan)
     conversationHistory.push(toolResultMessage(callId, tool.sampleResult))
@@ -256,6 +268,7 @@ function generateAgentTrace(
         base: toBase(ctx, traceId, rootSpanId, cursor, toolDuration),
         tool,
         callId,
+        ...(Math.random() < TOOL_FAILURE_RATE ? { error: makeToolFailure(tool) } : {}),
       })
 
       if (allowNesting && Math.random() < 0.25) {
