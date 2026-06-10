@@ -17,6 +17,7 @@ import { IssuePatterns } from "./-components/issue-patterns.tsx"
 import { IssueRelated } from "./-components/issue-related.tsx"
 import { IssueSummary } from "./-components/issue-summary.tsx"
 import { IssueTriageControls } from "./-components/issue-triage-controls.tsx"
+import { useIssueTriageCommands } from "./-components/use-issue-triage-commands.tsx"
 
 const issueDetailRoute = getRouteApi("/_authenticated/projects/$projectSlug/issues/$issueId/")
 
@@ -50,6 +51,8 @@ function IssueDetailPage() {
   const { projectSlug, issueId } = Route.useParams()
   const project = useRouteProject()
   const { data: issue, isLoading } = useIssueDetail({ projectId: project.id, issueId })
+  // Palette: "Assign to…" / "Set priority…" live while this page is mounted.
+  useIssueTriageCommands({ projectId: project.id, issueId })
   // A trace sheet (from Examples or the Traces table) being open suppresses the
   // J/K prev/next-issue hotkeys so paging a trace never swaps the issue under it.
   const [overlayActive, setOverlayActive] = useState(false)
