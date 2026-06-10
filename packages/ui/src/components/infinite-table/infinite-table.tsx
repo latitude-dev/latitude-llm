@@ -14,9 +14,17 @@ import type { InfiniteTableColumn, InfiniteTableProps } from "./types.ts"
 import { useHeaderLayoutLock } from "./use-header-layout-lock.ts"
 
 const ROW_HEIGHT = 40
+const GROUP_HEADER_ROW_HEIGHT = 36
 const SKELETON_ROW_COUNT = 8
 const EXPANDED_SKELETON_COUNT = 3
 const SELECTION_COLUMN_WIDTH = 48
+
+/**
+ * Virtualized row model: data rows interleaved with injected group header
+ * rows (see `getRowGroup`). Data entries point back into `data` by index so
+ * selection/active-row/render contracts keep operating on data positions.
+ */
+type DisplayRow = { readonly kind: "group"; readonly groupKey: string } | { readonly kind: "data"; readonly dataIndex: number }
 
 const EXPANDED_SKELETON_CELL_CLASS =
   "px-4 py-2 first:rounded-l-lg last:rounded-r-lg overflow-hidden align-middle text-sm leading-5"
@@ -92,12 +100,34 @@ export function InfiniteTable<T>({
   isRowExpandable,
   onToggleExpand,
   hideExpandedRowSeparator = false,
+  getRowGroup,
+  renderGroupHeader,
 }: InfiniteTableProps<T>) {
   const hasExpansion = !!expandedRowKeys && !!getExpandedRows
   const colCount = columns.length + (selection ? 1 : 0) + (hasExpansion ? 1 : 0)
   const hasSubheaderRow = useMemo(() => columns.some((col) => col.renderSubheader != null), [columns])
   const hasMore = infiniteScroll?.hasMore ?? false
-  const totalVirtualRows = data.length + (hasMore || (isLoading && data.length === 0) ? SKELETON_ROW_COUNT : 0)
+
+  const hasGrouping = !!getRowGroup && !!renderGroupHeader
+  const displayRows = useMemo<readonly DisplayRow[]>(() => {
+    if (!hasGrouping || !getRowGroup) {
+      return data.map((_, dataIndex) => ({ kind: "data", dataIndex }))
+    }
+
+    const rows: DisplayRow[] = []
+    let previousGroup: string | null = null
+    data.forEach((row, dataIndex) => {
+      const groupKey = getRowGroup(row)
+      if (groupKey !== previousGroup) {
+        rows.push({ kind: "group", groupKey })
+        previousGroup = groupKey
+      }
+      rows.push({ kind: "data", dataIndex })
+    })
+    return rows
+  }, [data, getRowGroup, hasGrouping])
+
+  const totalVirtualRows = displayRows.length + (hasMore || (isLoading && data.length === 0) ? SKELETON_ROW_COUNT : 0)
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -126,7 +156,7 @@ export function InfiniteTable<T>({
   const virtualizer = useVirtualizer({
     count: totalVirtualRows,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: (index) => (displayRows[index]?.kind === "group" ? GROUP_HEADER_ROW_HEIGHT : ROW_HEIGHT),
     overscan: 10,
   })
 
@@ -156,6 +186,13 @@ export function InfiniteTable<T>({
     return data.findIndex((row) => getExpandedRows(row).data.some((subRow) => getRowKey(subRow) === activeRowKey))
   }, [activeRowKey, data, getExpandedRows, getRowKey])
 
+  // The virtualizer indexes display rows (group headers included), so the
+  // active DATA index must be translated before scroll-to-row.
+  const activeDisplayIndex = useMemo(() => {
+    if (activeRowIndex < 0) return -1
+    return displayRows.findIndex((displayRow) => displayRow.kind === "data" && displayRow.dataIndex === activeRowIndex)
+  }, [activeRowIndex, displayRows])
+
   const { tableRef, layoutFixed } = useHeaderLayoutLock({
     columns,
     hasSelection: !!selection,
@@ -165,10 +202,10 @@ export function InfiniteTable<T>({
   })
 
   useLayoutEffect(() => {
-    if (!activeRowAutoScroll || activeRowIndex < 0) return
+    if (!activeRowAutoScroll || activeDisplayIndex < 0) return
 
     const scrollActiveRowIntoView = () => {
-      virtualizer.scrollToIndex(activeRowIndex, {
+      virtualizer.scrollToIndex(activeDisplayIndex, {
         align: "center",
         behavior: "instant",
       })
@@ -280,8 +317,8 @@ export function InfiniteTable<T>({
             {virtualRows.map((virtualRow) => {
               const index = virtualRow.index
 
-              if (index >= data.length) {
-                const skeletonIndex = index - data.length
+              if (index >= displayRows.length) {
+                const skeletonIndex = index - displayRows.length
                 return (
                   <tbody
                     key={`skeleton-${skeletonIndex}`}
@@ -296,8 +333,26 @@ export function InfiniteTable<T>({
                 )
               }
 
-              const row = data[index]
-              const rowKey = rowKeys[index]
+              const displayRow = displayRows[index]
+              if (!displayRow) return null
+
+              if (displayRow.kind === "group") {
+                // Group header: a single full-width cell — no checkbox, no
+                // DataRow, no row link/click — so selection and navigation
+                // semantics never see it.
+                return (
+                  <tbody key={`group-${displayRow.groupKey}`} ref={virtualizer.measureElement} data-index={index}>
+                    <tr>
+                      <td colSpan={colCount} className="p-0 border-none">
+                        {renderGroupHeader?.(displayRow.groupKey)}
+                      </td>
+                    </tr>
+                  </tbody>
+                )
+              }
+
+              const row = data[displayRow.dataIndex]
+              const rowKey = rowKeys[displayRow.dataIndex]
               if (!row || rowKey === undefined) return null
 
               const canExpand = hasExpansion && (isRowExpandable ? isRowExpandable(row) : true)
@@ -335,7 +390,7 @@ export function InfiniteTable<T>({
                         }
                       : {})}
                     {...(renderRowLink ? { renderRowLink } : {})}
-                    dataIndex={virtualRow.index}
+                    dataIndex={displayRow.dataIndex}
                   />
                   {expanded?.isLoading && renderExpandedSkeletonRows(columns, hasExpansion, !!selection)}
                   {expanded &&
@@ -396,7 +451,7 @@ export function InfiniteTable<T>({
                               }
                             : {})}
                           {...(renderRowLink ? { renderRowLink } : {})}
-                          dataIndex={virtualRow.index}
+                          dataIndex={displayRow.dataIndex}
                           isSubRow
                         />
                       )

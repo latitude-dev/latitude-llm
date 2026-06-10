@@ -103,6 +103,17 @@ export interface InfiniteTableSharedProps<T> {
   onToggleExpand?: (row: T) => void
   /** Hide the horizontal separator rendered after expanded sub-rows. */
   hideExpandedRowSeparator?: boolean
+  /**
+   * Stable group key per row. Whenever consecutive rows return different keys,
+   * a full-width group header row (rendered by `renderGroupHeader`) is injected
+   * above the run. Headers live outside the data array: they are not
+   * selectable, not clickable, and invisible to `getRowKey`/selection — the
+   * caller only guarantees `data` arrives ordered by group. Requires
+   * `renderGroupHeader`.
+   */
+  getRowGroup?: (row: T) => string
+  /** Renders the content of an injected group header row (see `getRowGroup`). */
+  renderGroupHeader?: (groupKey: string) => ReactNode
 }
 
 export type InfiniteTableProps<T> =
