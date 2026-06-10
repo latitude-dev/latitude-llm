@@ -6,6 +6,7 @@ import {
   canonicalizeMessageForEmbedding,
   extractTraceSearchEmbeddingMessages,
   hashMessageContent,
+  isTraceSearchSemanticMessage,
   MessageEmbeddingRepository,
   type MessageEmbeddingUpsert,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
@@ -205,7 +206,7 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
 
           const outputStartIndex = trace.allMessages.length - trace.outputMessages.length
           const hashedMessages = yield* Effect.forEach(
-            extractTraceSearchEmbeddingMessages(trace.allMessages).filter((message) => message.role !== "tool"),
+            extractTraceSearchEmbeddingMessages(trace.allMessages).filter(isTraceSearchSemanticMessage),
             (message) =>
               Effect.gen(function* () {
                 const canonicalText = canonicalizeMessageForEmbedding({ role: message.role, text: message.text })

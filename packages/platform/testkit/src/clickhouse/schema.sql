@@ -463,7 +463,7 @@ CREATE TABLE trace_message_occurrences
     `is_output` UInt8 CODEC(T64, ZSTD(1)),
     `retention_days` UInt16 DEFAULT 30 CODEC(T64, ZSTD(1)),
     `indexed_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
-    PROJECTION trace_message_occurrences_by_trace
+    PROJECTION trace_message_occurrences_by_content_hash
     (
         SELECT
             organization_id,
@@ -477,13 +477,13 @@ CREATE TABLE trace_message_occurrences
             is_output,
             retention_days,
             indexed_at
-        ORDER BY (organization_id, project_id, trace_id, message_index)
+        ORDER BY (organization_id, project_id, content_hash, trace_id, message_index)
     )
 )
 ENGINE = ReplacingMergeTree(indexed_at)
 PARTITION BY toYYYYMM(start_time)
-PRIMARY KEY (organization_id, project_id, content_hash, trace_id, message_index)
-ORDER BY (organization_id, project_id, content_hash, trace_id, message_index)
+PRIMARY KEY (organization_id, project_id, trace_id, message_index)
+ORDER BY (organization_id, project_id, trace_id, message_index)
 SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild';
 
 CREATE TABLE traces

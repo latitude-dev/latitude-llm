@@ -72,7 +72,8 @@ export interface TraceSearchRepositoryShape {
 
   /**
    * Upsert per-trace message occurrence rows for shared message embeddings.
-   * Rows are idempotent under ReplacingMergeTree on the full occurrence key.
+   * Rows are idempotent under ReplacingMergeTree by trace message position;
+   * later content at the same trace_id + message_index replaces older hashes.
    */
   upsertMessageOccurrences(rows: readonly TraceMessageOccurrenceRow[]): Effect.Effect<void, RepositoryError>
 

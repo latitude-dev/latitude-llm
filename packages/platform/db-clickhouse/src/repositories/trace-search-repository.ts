@@ -1,6 +1,6 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
-import { TraceSearchRepository, type TraceSearchRepositoryShape } from "@domain/spans"
+import { TRACE_SEARCH_EMBEDDING_MODEL, TraceSearchRepository, type TraceSearchRepositoryShape } from "@domain/spans"
 import { parseEnv } from "@platform/env"
 import { Effect, Layer } from "effect"
 
@@ -181,7 +181,20 @@ export const TraceSearchRepositoryLive = Layer.effect(
                       argMax(o.message_index, semantic_score) AS message_index,
                       max(semantic_score)                     AS relevance_score,
                       count() AS row_count
-                    FROM trace_message_occurrences AS o
+                    FROM (
+                      SELECT
+                        organization_id,
+                        project_id,
+                        trace_id,
+                        message_index,
+                        argMax(content_hash, indexed_at) AS content_hash,
+                        argMax(role, indexed_at) AS role
+                      FROM trace_message_occurrences
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                      GROUP BY organization_id, project_id, trace_id, message_index
+                    ) AS o
                     INNER JOIN (
                       SELECT
                         content_hash,
@@ -189,14 +202,14 @@ export const TraceSearchRepositoryLive = Layer.effect(
                       FROM message_embeddings
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
+                        AND embedding_model = {embeddingModel:String}
                     ) AS e ON o.content_hash = e.content_hash
-                    WHERE o.organization_id = {organizationId:String}
-                      AND o.project_id = {projectId:String}
-                      AND o.trace_id = {traceId:FixedString(32)}`,
+                    WHERE o.role IN ('user', 'assistant')`,
             query_params: {
               organizationId: args.organizationId as string,
               projectId: args.projectId as string,
               traceId: args.traceId,
+              embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
               queryEmbedding: [...args.queryEmbedding],
             },
             format: "JSONEachRow",

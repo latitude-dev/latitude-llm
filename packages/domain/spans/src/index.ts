@@ -149,6 +149,7 @@ export type {
 export {
   buildTraceSearchDocument,
   extractTraceSearchEmbeddingMessages,
+  isTraceSearchSemanticMessage,
 } from "./use-cases/build-trace-search-document.ts"
 export type {
   BuildTracesExportInput,

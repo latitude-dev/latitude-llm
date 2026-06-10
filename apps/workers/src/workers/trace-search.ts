@@ -6,6 +6,7 @@ import {
   canonicalizeMessageForEmbedding,
   extractTraceSearchEmbeddingMessages,
   hashMessageContent,
+  isTraceSearchSemanticMessage,
   MessageEmbeddingRepository,
   type MessageEmbeddingUpsert,
   TRACE_SEARCH_CHARS_PER_TOKEN_ESTIMATE,
@@ -120,7 +121,7 @@ const uniqueMessagesByHash = <T extends { readonly contentHash: string }>(messag
  *  2. Build the search document (lexical text only for the semantic path).
  *  3. Upsert the lexical document from canonical trace text. This is built
  *     independently of which messages already have embeddings.
- *  4. Canonicalize each non-tool message, ensure shared vectors exist, and
+ *  4. Canonicalize each semantic-search eligible message, ensure shared vectors exist, and
  *     insert per-trace occurrence rows unconditionally.
  */
 export const processRefreshTrace = (payload: RefreshTracePayload) =>
@@ -170,7 +171,7 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
 
     const outputStartIndex = traceDetail.allMessages.length - traceDetail.outputMessages.length
     const hashedMessages = yield* Effect.forEach(
-      extractTraceSearchEmbeddingMessages(traceDetail.allMessages).filter((message) => message.role !== "tool"),
+      extractTraceSearchEmbeddingMessages(traceDetail.allMessages).filter(isTraceSearchSemanticMessage),
       (message) =>
         Effect.gen(function* () {
           const canonicalText = canonicalizeMessageForEmbedding({ role: message.role, text: message.text })

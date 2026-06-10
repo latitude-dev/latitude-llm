@@ -113,6 +113,9 @@ export interface TraceSearchEmbeddingMessage {
   readonly text: string
 }
 
+export const isTraceSearchSemanticMessage = (message: { readonly role: MessageEmbeddingRole }): boolean =>
+  message.role === "user" || message.role === "assistant"
+
 export const extractTraceSearchEmbeddingMessages = (
   messages: readonly GenAIMessage[],
 ): readonly TraceSearchEmbeddingMessage[] =>

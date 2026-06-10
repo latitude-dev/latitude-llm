@@ -183,30 +183,53 @@ function buildSharedMessageSemanticSearchSubquery(
 } {
   const outerExtraCols = semanticMetadata
     ? `,
-                argMax(o.message_index, e.semantic_score) AS matched_chunk_index,
-                argMax(o.message_index, e.semantic_score) AS matched_first_message_index,
-                argMax(o.message_index, e.semantic_score) AS matched_last_message_index`
+                argMax(message_index, semantic_score) AS matched_chunk_index,
+                argMax(message_index, semantic_score) AS matched_first_message_index,
+                argMax(message_index, semantic_score) AS matched_last_message_index`
     : ""
 
   return {
     subquery: `SELECT
-                CAST(o.trace_id AS String) AS trace_id,
-                max(e.semantic_score) AS semantic_score${outerExtraCols}
-              FROM trace_message_occurrences AS o
-              INNER JOIN (
+                trace_id,
+                max(semantic_score) AS semantic_score${outerExtraCols}
+              FROM (
                 SELECT
-                  content_hash,
-                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
-                FROM message_embeddings
-                WHERE organization_id = {organizationId:String}
-                  AND project_id = {projectId:String}
-                  AND embedding_model = {embeddingModel:String}
+                  CAST(o.trace_id AS String) AS trace_id,
+                  o.message_index AS message_index,
+                  e.semantic_score AS semantic_score
+                FROM (
+                  SELECT
+                    organization_id,
+                    project_id,
+                    trace_id,
+                    message_index,
+                    argMax(content_hash, indexed_at) AS content_hash,
+                    argMax(role, indexed_at) AS role
+                  FROM trace_message_occurrences
+                  WHERE organization_id = {organizationId:String}
+                    AND project_id = {projectId:String}
+                  GROUP BY organization_id, project_id, trace_id, message_index
+                ) AS o
+                INNER JOIN (
+                  SELECT
+                    content_hash,
+                    (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+                  FROM (
+                    SELECT
+                      content_hash,
+                      argMax(embedding, last_seen_at) AS embedding
+                    FROM message_embeddings
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                      AND embedding_model = {embeddingModel:String}
+                    GROUP BY content_hash
+                  ) AS latest_embeddings
+                ) AS e ON o.content_hash = e.content_hash
+                WHERE o.role IN ('user', 'assistant')
                 ORDER BY semantic_score DESC
                 LIMIT {semanticScanLimit:UInt32}
-              ) AS e ON o.content_hash = e.content_hash
-              WHERE o.organization_id = {organizationId:String}
-                AND o.project_id = {projectId:String}
-              GROUP BY o.trace_id`,
+              ) AS semantic_candidates
+              GROUP BY trace_id`,
     params: {
       queryEmbedding: [...queryEmbedding],
       embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,

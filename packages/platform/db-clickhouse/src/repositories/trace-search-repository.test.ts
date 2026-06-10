@@ -289,5 +289,147 @@ describe("TraceSearchRepository", () => {
       expect(result?.lastMessageIndex).toBe(5)
       expect(result?.relevanceScore).toBeCloseTo(1, 6)
     })
+
+    it("ignores shared message embeddings from other models", async () => {
+      process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
+
+      await Effect.runPromise(
+        messageEmbeddingRepo.upsertMany([
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            contentHash: "other-model-message-hash",
+            embedding: basisVector(0),
+            embeddingModel: "older-embedding-model",
+          },
+        ]),
+      )
+      await Effect.runPromise(
+        repo.upsertMessageOccurrences([
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TEST_TRACE_ID,
+            messageIndex: 5,
+            contentHash: "other-model-message-hash",
+            sessionId: SessionId("session-1"),
+            startTime: new Date(),
+            role: "assistant",
+            isOutput: true,
+          },
+        ]),
+      )
+
+      const result = await Effect.runPromise(
+        repo.findSemanticHighlightForTrace({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TEST_TRACE_ID,
+          queryEmbedding: basisVector(0),
+        }),
+      )
+
+      expect(result).toBeNull()
+    })
+
+    it("ignores stale occurrence hashes after a trace message is refreshed", async () => {
+      process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
+
+      await Effect.runPromise(
+        messageEmbeddingRepo.upsertMany([
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            contentHash: "stale-message-hash",
+            embedding: basisVector(0),
+            embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          },
+        ]),
+      )
+
+      await ch.client.insert({
+        table: "trace_message_occurrences",
+        values: [
+          {
+            organization_id: ORG_ID as string,
+            project_id: PROJECT_ID as string,
+            trace_id: TEST_TRACE_ID,
+            message_index: 5,
+            content_hash: "stale-message-hash",
+            session_id: "session-1",
+            start_time: "2026-01-01 00:00:00.000000000",
+            role: "assistant",
+            is_output: 1,
+            indexed_at: "2026-01-01 00:00:00.000",
+          },
+          {
+            organization_id: ORG_ID as string,
+            project_id: PROJECT_ID as string,
+            trace_id: TEST_TRACE_ID,
+            message_index: 5,
+            content_hash: "refreshed-message-hash",
+            session_id: "session-1",
+            start_time: "2026-01-01 00:00:00.000000000",
+            role: "assistant",
+            is_output: 1,
+            indexed_at: "2026-01-01 00:00:01.000",
+          },
+        ],
+        format: "JSONEachRow",
+      })
+
+      const result = await Effect.runPromise(
+        repo.findSemanticHighlightForTrace({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TEST_TRACE_ID,
+          queryEmbedding: basisVector(0),
+        }),
+      )
+
+      expect(result).toBeNull()
+    })
+
+    it("ignores system message occurrences when shared-message reads are enabled", async () => {
+      process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
+
+      await Effect.runPromise(
+        messageEmbeddingRepo.upsertMany([
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            contentHash: "system-message-hash",
+            embedding: basisVector(0),
+            embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          },
+        ]),
+      )
+      await Effect.runPromise(
+        repo.upsertMessageOccurrences([
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TEST_TRACE_ID,
+            messageIndex: 0,
+            contentHash: "system-message-hash",
+            sessionId: SessionId("session-1"),
+            startTime: new Date(),
+            role: "system",
+            isOutput: false,
+          },
+        ]),
+      )
+
+      const result = await Effect.runPromise(
+        repo.findSemanticHighlightForTrace({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TEST_TRACE_ID,
+          queryEmbedding: basisVector(0),
+        }),
+      )
+
+      expect(result).toBeNull()
+    })
   })
 })
