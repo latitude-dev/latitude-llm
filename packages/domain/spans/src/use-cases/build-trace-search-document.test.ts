@@ -9,7 +9,7 @@ import {
   TRACE_SEARCH_DOCUMENT_MAX_ESTIMATED_TOKENS,
   TRACE_SEARCH_DOCUMENT_MAX_LENGTH,
 } from "../constants.ts"
-import { buildTraceSearchDocument } from "./build-trace-search-document.ts"
+import { buildTraceSearchDocument, extractTraceSearchEmbeddingMessages } from "./build-trace-search-document.ts"
 
 const startTime = new Date("2026-01-01T00:00:00.000Z")
 
@@ -93,6 +93,24 @@ describe("buildTraceSearchDocument", () => {
     expect(allChunkText).toContain("user question")
     expect(allChunkText).toContain("final answer")
     expect(allChunkText).not.toContain("secret chain of thought")
+  })
+
+  it("skips reasoning text from message-level embeddings", () => {
+    const messages = extractTraceSearchEmbeddingMessages([
+      textMessage("user", "user question"),
+      {
+        role: "assistant",
+        parts: [
+          { type: "reasoning", content: "secret chain of thought tokens" },
+          { type: "text", content: "final answer" },
+        ],
+      } as GenAIMessage,
+    ])
+
+    expect(messages).toEqual([
+      { index: 0, role: "user", text: "user question" },
+      { index: 1, role: "assistant", text: "final answer" },
+    ])
   })
 
   it("stringifies object-shaped tool_call_response payloads for the lexical index", async () => {
