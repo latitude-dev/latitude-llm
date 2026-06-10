@@ -12,6 +12,7 @@ import {
   getEscalationOccurrenceThreshold,
   getRelatedIssuesUseCase,
   type Issue,
+  issueAssigneeFilterSchema,
   type IssueListItem,
   IssueRepository,
   issueLifecycleCommandSchema,
@@ -67,6 +68,7 @@ const listIssuesInputSchema = z.object({
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).optional(),
   lifecycleGroup: issuesLifecycleGroupSchema.optional(),
+  assigneeIds: z.array(issueAssigneeFilterSchema).min(1).optional(),
   sort: z
     .object({
       field: issuesSortFieldSchema,
@@ -94,6 +96,8 @@ const toIssueRecord = (issue: IssueListItem) => ({
   description: issue.description,
   source: issue.source,
   states: issue.states,
+  assigneeId: issue.assigneeId,
+  priority: issue.priority,
   createdAt: issue.createdAt.toISOString(),
   updatedAt: issue.updatedAt.toISOString(),
   escalatedAt: issue.escalatedAt?.toISOString() ?? null,
@@ -112,7 +116,7 @@ const toIssueRecord = (issue: IssueListItem) => ({
 
 export type IssueRecord = ReturnType<typeof toIssueRecord>
 
-const toIssuesListResultRecord = (result: ListIssuesResult) => ({
+const toIssuesListResultRecord = (result: ListIssuesResult, viewerUserId: string) => ({
   analytics: {
     counts: result.analytics.counts,
     histogram: result.analytics.histogram.map(toIssuesBucketRecord),
@@ -126,6 +130,11 @@ const toIssuesListResultRecord = (result: ListIssuesResult) => ({
   limit: result.limit,
   offset: result.offset,
   occurrencesSum: result.occurrencesSum,
+  priorityCounts: result.priorityCounts,
+  // Resolved server-side from the per-assignee counts so the client never
+  // receives the full assignee map; reflects every filter except the assignee
+  // filter itself (see ListIssuesResult.assigneeCounts).
+  myIssuesCount: result.assigneeCounts[viewerUserId] ?? 0,
 })
 
 export type IssuesListResultRecord = ReturnType<typeof toIssuesListResultRecord>
@@ -286,7 +295,7 @@ type IssueLifecycleCommandRecord = ReturnType<typeof toIssueLifecycleCommandReco
 export const listIssues = createServerFn({ method: "GET" })
   .inputValidator(listIssuesInputSchema)
   .handler(async ({ data }): Promise<IssuesListResultRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const orgId = OrganizationId(organizationId)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
@@ -342,6 +351,7 @@ export const listIssues = createServerFn({ method: "GET" })
           ...(data.limit !== undefined ? { limit: data.limit } : {}),
           ...(data.offset !== undefined ? { offset: data.offset } : {}),
           ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+          ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
           ...(data.sort ? { sort: data.sort } : {}),
           ...(timeRange ? { timeRange } : {}),
           ...(directMatch
@@ -363,7 +373,7 @@ export const listIssues = createServerFn({ method: "GET" })
       ),
     )
 
-    return toIssuesListResultRecord(result)
+    return toIssuesListResultRecord(result, userId)
   })
 
 export interface OrgIssueSearchRecord {
@@ -985,6 +995,7 @@ const bulkIssueLifecycleActionInputSchema = z.object({
   command: issueLifecycleCommandSchema,
   keepMonitoring: z.boolean().optional(),
   lifecycleGroup: issuesLifecycleGroupSchema.optional(),
+  assigneeIds: z.array(issueAssigneeFilterSchema).min(1).optional(),
   sort: z
     .object({
       field: issuesSortFieldSchema,
@@ -1045,6 +1056,7 @@ export const applyBulkIssueLifecycleAction = createServerFn({ method: "POST" })
               limit: BULK_ACTION_BATCH_SIZE,
               offset,
               ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+              ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
               ...(data.sort ? { sort: data.sort } : {}),
               ...(timeRange ? { timeRange } : {}),
               ...(search
@@ -1115,6 +1127,7 @@ export const enqueueIssuesExport = createServerFn({ method: "POST" })
       projectId: z.string(),
       selection: exportSelectionSchema.optional(),
       lifecycleGroup: issuesLifecycleGroupSchema.optional(),
+      assigneeIds: z.array(issueAssigneeFilterSchema).min(1).optional(),
       sort: z
         .object({
           field: issuesSortFieldSchema,
@@ -1163,6 +1176,7 @@ export const enqueueIssuesExport = createServerFn({ method: "POST" })
         recipientEmail: email,
         ...(data.selection ? { selection: data.selection } : {}),
         ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+        ...(data.assigneeIds?.length ? { assigneeIds: data.assigneeIds } : {}),
         ...(data.sort ? { sort: data.sort } : {}),
         ...(data.searchQuery ? { searchQuery: data.searchQuery } : {}),
         ...(exportTimeRange ? { timeRange: exportTimeRange } : {}),

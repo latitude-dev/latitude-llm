@@ -48,6 +48,13 @@ const EMPTY_ISSUES_ANALYTICS: IssuesListResultRecord["analytics"] = {
   histogramBucketSeconds: 24 * 60 * 60,
   totalTraces: 0,
 }
+const EMPTY_PRIORITY_COUNTS: IssuesListResultRecord["priorityCounts"] = {
+  urgent: 0,
+  high: 0,
+  medium: 0,
+  low: 0,
+  none: 0,
+}
 const DEFAULT_ISSUES_SORTING = {
   column: "lastSeen",
   direction: "desc",
@@ -67,6 +74,7 @@ interface IssuesKeyInput {
   readonly projectId: string
   readonly limit: number
   readonly lifecycleGroup: "active" | "archived" | undefined
+  readonly assigneeIds: readonly string[] | undefined
   readonly sorting: IssuesSorting
   readonly searchQuery: string | undefined
   readonly timeRange: IssuesTimeRange | undefined
@@ -78,6 +86,7 @@ const getIssuesQueryKey = (input: IssuesKeyInput) =>
     input.projectId,
     input.limit,
     input.lifecycleGroup ?? null,
+    input.assigneeIds?.length ? [...input.assigneeIds].sort().join(",") : null,
     input.sorting.column,
     input.sorting.direction,
     input.searchQuery ?? null,
@@ -119,6 +128,7 @@ const buildListIssuesRequest = (input: IssuesKeyInput, offset: number) => ({
     direction: input.sorting.direction,
   },
   ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
+  ...(input.assigneeIds?.length ? { assigneeIds: [...input.assigneeIds] } : {}),
   ...(input.searchQuery ? { searchQuery: input.searchQuery } : {}),
   ...(input.timeRange?.fromIso || input.timeRange?.toIso ? { timeRange: input.timeRange } : {}),
 })
@@ -126,6 +136,7 @@ const buildListIssuesRequest = (input: IssuesKeyInput, offset: number) => ({
 export function useIssues(input: {
   readonly projectId: string
   readonly lifecycleGroup?: "active" | "archived"
+  readonly assigneeIds?: readonly string[]
   readonly sorting?: IssuesSorting
   readonly searchQuery?: string
   readonly timeRange?: IssuesTimeRange
@@ -139,6 +150,7 @@ export function useIssues(input: {
     projectId: input.projectId,
     limit,
     lifecycleGroup: input.lifecycleGroup,
+    assigneeIds: input.assigneeIds?.length ? input.assigneeIds : undefined,
     sorting,
     searchQuery: normalizedSearchQuery,
     timeRange: input.timeRange,
@@ -150,6 +162,7 @@ export function useIssues(input: {
       keyInput.projectId,
       keyInput.limit,
       keyInput.lifecycleGroup,
+      keyInput.assigneeIds,
       keyInput.sorting.column,
       keyInput.sorting.direction,
       keyInput.searchQuery,
@@ -221,6 +234,8 @@ export function useIssues(input: {
     totalCount: firstPage?.totalCount ?? 0,
     hasAnyIssues: firstPage?.hasAnyIssues ?? false,
     occurrencesSum: firstPage?.occurrencesSum ?? 0,
+    priorityCounts: firstPage?.priorityCounts ?? EMPTY_PRIORITY_COUNTS,
+    myIssuesCount: firstPage?.myIssuesCount ?? 0,
     isLoading,
     // True while a new query key is in flight and the previous result is being
     // shown as placeholder (e.g. after a sort/filter change). Lets consumers
@@ -371,7 +386,8 @@ export function useIssueOccurrences({
 /**
  * Mutation for the light-triage fields (assignee, priority). Omit a field to
  * leave it unchanged; pass `null` to clear it. Invalidates the issue detail
- * queries on success so the page/drawer reflect the new triage state.
+ * queries AND the issues list on success — the list groups by priority and
+ * filters/counts by assignee, so triage edits must regroup it.
  */
 export function useUpdateIssueTriage(projectId: string, issueId: string) {
   return useMutation({
@@ -387,7 +403,7 @@ export function useUpdateIssueTriage(projectId: string, issueId: string) {
           ...(input.priority !== undefined ? { priority: input.priority } : {}),
         },
       }),
-    onSuccess: () => invalidateIssueDetailQueries(projectId, issueId),
+    onSuccess: () => invalidateIssueQueries(projectId, issueId),
   })
 }
 
