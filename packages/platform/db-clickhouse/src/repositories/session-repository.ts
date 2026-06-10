@@ -1003,7 +1003,11 @@ export const SessionRepositoryLive = Layer.effect(
 
           // Tools have no sessions column — union called tools (execute_tool
           // spans) with defined-but-never-called ones (tool_names on chat
-          // spans) so the options match the Tools page inventory.
+          // spans) so the options match the Tools page inventory. Deliberately
+          // NOT session-scoped: most spans carry no session id, and an options
+          // list missing known tools reads as a bug. A selected tool with no
+          // sessioned calls simply matches no sessions (the filter clause
+          // keeps its session_id guard).
           const query =
             column === "tools"
               ? `SELECT DISTINCT val FROM (
@@ -1012,13 +1016,11 @@ export const SessionRepositoryLive = Layer.effect(
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
                           AND operation = 'execute_tool'
-                          AND session_id != ''
                         UNION ALL
                         SELECT arrayJoin(tool_names) AS val
                         FROM spans
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND session_id != ''
                       )
                       WHERE val != ''${searchClause}
                       ORDER BY val
