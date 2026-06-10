@@ -5,6 +5,7 @@ import {
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
   tokenizePhrase,
 } from "@domain/spans"
+import { parseEnv } from "@platform/env"
 import { Effect, Option } from "effect"
 
 /**
@@ -43,6 +44,9 @@ const SEMANTIC_SCAN_LIMIT = 30_000
  * enough that `Array(FixedString(32))` serialization stays under ~2 MB.
  */
 export const MAX_SEARCH_CANDIDATES = 50_000
+
+const useSharedMessageEmbeddingsReads = (): boolean =>
+  Effect.runSync(parseEnv("LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS", "boolean", false))
 
 function escapeLikePattern(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
@@ -126,7 +130,7 @@ function buildLexicalSearchSubquery(parsed: ParsedSearchQuery): {
  * `false` keeps the SQL byte-identical to the pre-PR-2 listing query so
  * existing callers see no change.
  */
-function buildSemanticSearchSubquery(
+function buildLegacySemanticSearchSubquery(
   queryEmbedding: readonly number[],
   semanticMetadata: boolean,
 ): {
@@ -166,6 +170,72 @@ function buildSemanticSearchSubquery(
       semanticScanLimit: SEMANTIC_SCAN_LIMIT,
     },
   }
+}
+
+function buildSharedMessageSemanticSearchSubquery(
+  queryEmbedding: readonly number[],
+  semanticMetadata: boolean,
+  embeddingModel: string,
+): {
+  subquery: string
+  params: Record<string, unknown>
+} {
+  const outerExtraCols = semanticMetadata
+    ? `,
+                argMax(o.message_index, e.semantic_score) AS matched_chunk_index,
+                argMax(o.message_index, e.semantic_score) AS matched_first_message_index,
+                argMax(o.message_index, e.semantic_score) AS matched_last_message_index`
+    : ""
+
+  return {
+    subquery: `SELECT
+                CAST(o.trace_id AS String) AS trace_id,
+                max(e.semantic_score) AS semantic_score${outerExtraCols}
+              FROM (
+                SELECT
+                  organization_id,
+                  project_id,
+                  trace_id,
+                  message_index,
+                  argMax(content_hash, indexed_at) AS content_hash,
+                  argMax(role, indexed_at) AS role
+                FROM trace_message_occurrences
+                WHERE organization_id = {organizationId:String}
+                  AND project_id = {projectId:String}
+                GROUP BY organization_id, project_id, trace_id, message_index
+              ) AS o
+              INNER JOIN (
+                SELECT
+                  content_hash,
+                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+                FROM message_embeddings
+                WHERE organization_id = {organizationId:String}
+                  AND project_id = {projectId:String}
+                  AND embedding_model = {embeddingModel:String}
+                ORDER BY semantic_score DESC
+                LIMIT {semanticScanLimit:UInt32}
+              ) AS e ON o.content_hash = e.content_hash
+              WHERE o.role IN ('user', 'assistant')
+              GROUP BY o.trace_id`,
+    params: {
+      queryEmbedding: [...queryEmbedding],
+      embeddingModel,
+      semanticScanLimit: SEMANTIC_SCAN_LIMIT,
+    },
+  }
+}
+
+function buildSemanticSearchSubquery(
+  queryEmbedding: readonly number[],
+  semanticMetadata: boolean,
+  embeddingModel: string,
+): {
+  subquery: string
+  params: Record<string, unknown>
+} {
+  return useSharedMessageEmbeddingsReads()
+    ? buildSharedMessageSemanticSearchSubquery(queryEmbedding, semanticMetadata, embeddingModel)
+    : buildLegacySemanticSearchSubquery(queryEmbedding, semanticMetadata)
 }
 
 /**
@@ -208,14 +278,19 @@ export type SearchPlan = {
  * or to a deliberate empty result when there are no phrases — same fallback
  * shape the previous design relied on.
  */
+type QueryEmbedding = {
+  readonly embedding: readonly number[]
+  readonly model: string
+}
+
 function buildSearchPlan(
   parsed: ParsedSearchQuery,
-  queryEmbedding: readonly number[] | undefined,
+  queryEmbedding: QueryEmbedding | undefined,
   semanticMetadata: boolean,
 ): SearchPlan {
   const hasPhrases = parsed.literalPhrases.length > 0 || parsed.tokenPhrases.length > 0
   const hasSemantic = parsed.semanticPrompt.length > 0
-  const hasEmbedding = !!queryEmbedding && queryEmbedding.length > 0
+  const hasEmbedding = !!queryEmbedding && queryEmbedding.embedding.length > 0
 
   // Outer projection for plans that don't actually carry semantic metadata
   // (phrase-only, semantic-without-embedding). The columns are present so
@@ -251,7 +326,7 @@ function buildSearchPlan(
         semanticMetadata,
       }
     }
-    const sem = buildSemanticSearchSubquery(queryEmbedding, semanticMetadata)
+    const sem = buildSemanticSearchSubquery(queryEmbedding.embedding, semanticMetadata, queryEmbedding.model)
     const semanticPassthrough = semanticMetadata
       ? `,
                  matched_chunk_index,
@@ -281,7 +356,7 @@ function buildSearchPlan(
       semanticMetadata,
     }
   }
-  const sem = buildSemanticSearchSubquery(queryEmbedding, semanticMetadata)
+  const sem = buildSemanticSearchSubquery(queryEmbedding.embedding, semanticMetadata, queryEmbedding.model)
   // LEFT JOIN keeps phrase-matching traces without an embedding (semantic_score
   // defaults to 0.0 in CH for the missing side of an outer join). The lexical
   // filter is the precision gate, so no semantic floor here.
@@ -326,7 +401,7 @@ export function isActiveSearch(parsed: ParsedSearchQuery): boolean {
  * `Effect.serviceOption` keeps `AI` an *optional* dependency — the effect type
  * stays `never` in its requirements channel.
  */
-const generateQueryEmbedding = (semanticPrompt: string): Effect.Effect<readonly number[] | undefined, never> =>
+const generateQueryEmbedding = (semanticPrompt: string): Effect.Effect<QueryEmbedding | undefined, never> =>
   Effect.gen(function* () {
     const aiOption = yield* Effect.serviceOption(AI)
     if (Option.isNone(aiOption)) return undefined
@@ -353,7 +428,7 @@ const generateQueryEmbedding = (semanticPrompt: string): Effect.Effect<readonly 
         Effect.orElseSucceed(() => undefined),
       )
 
-    return result?.embedding
+    return result ? { embedding: result.embedding, model: embedding.model } : undefined
   })
 
 interface PlanSearchOptions {

@@ -1,10 +1,16 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import { DEFAULT_EMBEDDING_CONFIG, resolveEmbeddingConfig } from "@domain/ai"
 import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
 import { TraceSearchRepository, type TraceSearchRepositoryShape } from "@domain/spans"
+import { parseEnv } from "@platform/env"
 import { Effect, Layer } from "effect"
 
 // ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
 const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
+const useSharedMessageEmbeddingsReads = (): boolean =>
+  Effect.runSync(parseEnv("LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS", "boolean", false))
+const resolveSharedEmbeddingModel = (): string =>
+  Effect.runSync(resolveEmbeddingConfig().pipe(Effect.orElseSucceed(() => DEFAULT_EMBEDDING_CONFIG))).model
 
 export const TraceSearchRepositoryLive = Layer.effect(
   TraceSearchRepository,
@@ -60,6 +66,33 @@ export const TraceSearchRepositoryLive = Layer.effect(
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "upsertEmbedding")))
 
+    const upsertMessageOccurrences: TraceSearchRepositoryShape["upsertMessageOccurrences"] = (rows) => {
+      if (rows.length === 0) return Effect.void
+
+      const indexedAt = toClickhouseDateTime(new Date())
+      return chSqlClient
+        .query(async (client) => {
+          await client.insert({
+            table: "trace_message_occurrences",
+            values: rows.map((row) => ({
+              organization_id: row.organizationId as string,
+              project_id: row.projectId as string,
+              trace_id: row.traceId,
+              message_index: row.messageIndex,
+              content_hash: row.contentHash,
+              session_id: row.sessionId as string,
+              start_time: toClickhouseDateTime(row.startTime),
+              role: row.role,
+              is_output: row.isOutput ? 1 : 0,
+              retention_days: row.retentionDays ?? 30,
+              indexed_at: indexedAt,
+            })),
+            format: "JSONEachRow",
+          })
+        })
+        .pipe(Effect.mapError((error) => toRepositoryError(error, "upsertMessageOccurrences")))
+    }
+
     const hasEmbeddingWithHash: TraceSearchRepositoryShape["hasEmbeddingWithHash"] = (
       organizationId,
       projectId,
@@ -91,7 +124,7 @@ export const TraceSearchRepositoryLive = Layer.effect(
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "hasEmbeddingWithHash")))
 
-    const findSemanticHighlightForTrace: TraceSearchRepositoryShape["findSemanticHighlightForTrace"] = (args) =>
+    const findLegacySemanticHighlightForTrace: TraceSearchRepositoryShape["findSemanticHighlightForTrace"] = (args) =>
       chSqlClient
         .query(async (client) => {
           const result = await client.query({
@@ -143,9 +176,76 @@ export const TraceSearchRepositoryLive = Layer.effect(
         })
         .pipe(Effect.mapError((error) => toRepositoryError(error, "findSemanticHighlightForTrace")))
 
+    const findSharedSemanticHighlightForTrace: TraceSearchRepositoryShape["findSemanticHighlightForTrace"] = (args) =>
+      chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT
+                      argMax(o.message_index, semantic_score) AS message_index,
+                      max(semantic_score)                     AS relevance_score,
+                      count() AS row_count
+                    FROM (
+                      SELECT
+                        organization_id,
+                        project_id,
+                        trace_id,
+                        message_index,
+                        argMax(content_hash, indexed_at) AS content_hash,
+                        argMax(role, indexed_at) AS role
+                      FROM trace_message_occurrences
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                      GROUP BY organization_id, project_id, trace_id, message_index
+                    ) AS o
+                    INNER JOIN (
+                      SELECT
+                        content_hash,
+                        (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+                      FROM message_embeddings
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND embedding_model = {embeddingModel:String}
+                    ) AS e ON o.content_hash = e.content_hash
+                    WHERE o.role IN ('user', 'assistant')`,
+            query_params: {
+              organizationId: args.organizationId as string,
+              projectId: args.projectId as string,
+              traceId: args.traceId,
+              embeddingModel: resolveSharedEmbeddingModel(),
+              queryEmbedding: [...args.queryEmbedding],
+            },
+            format: "JSONEachRow",
+          })
+
+          const [row] = await result.json<{
+            message_index: number
+            relevance_score: number
+            row_count: string | number
+          }>()
+
+          if (!row || Number(row.row_count) === 0) return null
+
+          return {
+            chunkIndex: row.message_index,
+            firstMessageIndex: row.message_index,
+            lastMessageIndex: row.message_index,
+            relevanceScore: row.relevance_score,
+          }
+        })
+        .pipe(Effect.mapError((error) => toRepositoryError(error, "findSharedSemanticHighlightForTrace")))
+
+    const findSemanticHighlightForTrace: TraceSearchRepositoryShape["findSemanticHighlightForTrace"] = (args) =>
+      useSharedMessageEmbeddingsReads()
+        ? findSharedSemanticHighlightForTrace(args).pipe(
+            Effect.flatMap((result) => (result ? Effect.succeed(result) : findLegacySemanticHighlightForTrace(args))),
+          )
+        : findLegacySemanticHighlightForTrace(args)
+
     return {
       upsertDocument,
       upsertEmbedding,
+      upsertMessageOccurrences,
       hasEmbeddingWithHash,
       findSemanticHighlightForTrace,
     } satisfies TraceSearchRepositoryShape
