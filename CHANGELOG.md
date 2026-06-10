@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.2.5 - 2026-06-10
+
+### Test mode
+
+- Treated Test Mode as a single sandbox per org: capped all plans to one active sandbox and replaced the sidebar dropdown with a context-aware toggle that find-or-creates the org's sandbox and a mirror of the live project you're in (ref: #3492).
+- Reworked archived sandboxes to surface an inline "Activate" affordance with the rest of the interface inert, threading sandbox status through route context to avoid an active→archived flash on first paint (ref: #3492).
+- Removed the settings Sandboxes list and create modal, and refreshed the public docs to describe the single-sandbox toggle (ref: #3492).
+
 ## v0.2.4 - 2026-06-09
 
 ### Enterprise SSO
