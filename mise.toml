@@ -1,3 +1,4 @@
 [tools]
 node = "25"
+python = "3.13"
 terraform = "1.10.5"
