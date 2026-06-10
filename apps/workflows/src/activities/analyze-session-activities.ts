@@ -5,6 +5,7 @@ import {
   CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
   CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
   CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH,
+  resolveTurnEmbeddings,
   SessionAnalysisRepository,
   segmentSemanticMoments,
 } from "@domain/conversation-intelligence"
@@ -14,8 +15,13 @@ import type { TaxonomyDimension } from "@domain/taxonomy"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive } from "@platform/ai-voyage"
-import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import {
+  EmbedBudgetResolverLive,
+  RedisDistributedLockRepositoryLive,
+  TraceSearchBudgetLive,
+} from "@platform/cache-redis"
+import {
+  MessageEmbeddingRepositoryLive,
   SessionAnalysisRepositoryLive,
   SessionMomentLabelRepositoryLive,
   SessionRepositoryLive,
@@ -167,6 +173,7 @@ const withAnalyzeSessionClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
         SessionSemanticMomentRepositoryLive,
         SessionMomentLabelRepositoryLive,
         TaxonomyObservationRepositoryLive,
+        MessageEmbeddingRepositoryLive,
       ),
       getClickhouseClient(),
       OrganizationId(organizationId),
@@ -175,6 +182,9 @@ const withAnalyzeSessionClickHouse = <A, E, R>(effect: Effect.Effect<A, E, R>, o
 
 const withAnalyzeSessionAi = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient()))
+
+const withAnalyzeSessionEmbeddingBudget = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  effect.pipe(Effect.provide(Layer.provide(TraceSearchBudgetLive(getRedisClient()), EmbedBudgetResolverLive)))
 
 export const loadAnalyzeSessionActivity = (input: AnalyzeSessionActivityInput) =>
   Effect.runPromise(
@@ -226,31 +236,23 @@ export const checkAnalyzeSessionEligibilityActivity = async (
   return { eligible: true, reason: "eligible" }
 }
 
-export const embedAnalyzeSessionTurnsActivity = (input: AnalyzeSessionHashActivityResult) =>
+export const embedAnalyzeSessionTurnsActivity = (
+  input: AnalyzeSessionActivityInput & AnalyzeSessionHashActivityResult,
+) =>
   Effect.runPromise(
     Effect.gen(function* () {
-      const ai = yield* AI
-      const turns = yield* Effect.forEach(
-        input.messages.filter((message) => message.role !== "tool"),
-        (message) =>
-          ai
-            .embed({
-              text: `${message.role}: ${message.text}`,
-              model: CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
-              dimensions: CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
-              inputType: "document",
-            })
-            .pipe(
-              Effect.map((result) => ({
-                index: message.index,
-                role: message.role,
-                content: message.text,
-                embedding: result.embedding,
-              })),
-            ),
-      )
+      const turns = yield* resolveTurnEmbeddings({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        messages: input.messages,
+      })
       return { turns } satisfies AnalyzeSessionEmbeddingActivityResult
-    }).pipe(withAnalyzeSessionAi, withTracing),
+    }).pipe(
+      (effect) => withAnalyzeSessionClickHouse(effect, input.organizationId),
+      withAnalyzeSessionAi,
+      withAnalyzeSessionEmbeddingBudget,
+      withTracing,
+    ),
   )
 
 export const segmentAnalyzeSessionActivity = async (
@@ -342,12 +344,14 @@ export const analyzeSessionActivity = (input: AnalyzeSessionActivityInput) => {
           SessionSemanticMomentRepositoryLive,
           SessionMomentLabelRepositoryLive,
           TaxonomyObservationRepositoryLive,
+          MessageEmbeddingRepositoryLive,
         ),
         getClickhouseClient(),
         OrganizationId(input.organizationId),
       ),
       withPostgres(TaxonomyClusterRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       Effect.provide(RedisDistributedLockRepositoryLive(getRedisClient())),
+      withAnalyzeSessionEmbeddingBudget,
       withAi(Layer.mergeAll(AIGenerateLive, AIEmbedLive), getRedisClient()),
       Effect.tap((result) =>
         Effect.sync(() =>
