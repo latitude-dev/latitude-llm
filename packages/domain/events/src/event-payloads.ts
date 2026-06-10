@@ -83,6 +83,25 @@ export interface EventPayloads {
     readonly triggerScoreId: string
   }
   /**
+   * Emitted by `updateIssueTriageUseCase` whenever the issue's assignee
+   * actually changes (including clears — consumers filter). `assignedAt` is
+   * the triage transaction's `now`, frozen into the outbox payload; it is
+   * the idempotency anchor for downstream notification dedupe, so a
+   * re-assignment (A→B→A) is a distinct event while outbox/queue redelivery
+   * of the same event replays identical data.
+   */
+  IssueAssigneeChanged: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
+    /** New assignee; `null` when the assignment was cleared. */
+    readonly assigneeId: string | null
+    readonly previousAssigneeId: string | null
+    /** User who performed the triage edit (self-assignments never notify). */
+    readonly actorUserId: string
+    readonly assignedAt: string
+  }
+  /**
    * Emitted by `checkIssueEscalationUseCase` when an issue transitions into
    * the escalating state. The use case does not write the issue itself —
    * idempotency comes from `IssueRepository`'s joined `lifecycle.isEscalating`

@@ -225,6 +225,28 @@ export const createDomainEventsWorker = ({
         },
       ),
 
+    IssueAssigneeChanged: (event) =>
+      // Cleared assignments and self-assignments never notify; the producer
+      // use case re-checks both (the rule's testable home). `assignedAt`
+      // discriminates assignment events so a later re-assignment republishes
+      // while outbox redelivery of the same event coalesces.
+      event.payload.assigneeId === null || event.payload.assigneeId === event.payload.actorUserId
+        ? Effect.void
+        : pub.publish(
+            "notifications",
+            "request-issue-assigned-notifications",
+            {
+              organizationId: event.payload.organizationId,
+              issueId: event.payload.issueId,
+              assigneeId: event.payload.assigneeId,
+              actorUserId: event.payload.actorUserId,
+              assignedAt: event.payload.assignedAt,
+            },
+            {
+              dedupeKey: `notifications:request-issue-assigned:${event.payload.issueId}:${event.payload.assignedAt}`,
+            },
+          ),
+
     IncidentClosed: (event) =>
       // Manual lifecycle closes (the user resolved or ignored the issue) close
       // the escalation silently — the recovery notification is meant for

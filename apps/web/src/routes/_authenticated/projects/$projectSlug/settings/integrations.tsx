@@ -1,4 +1,4 @@
-import { NOTIFICATION_GROUPS } from "@domain/shared"
+import { SLACK_ROUTABLE_NOTIFICATION_GROUPS } from "@domain/shared"
 import { Alert, Button, Icon, Modal, SlackIcon, Text, useMountEffect, useToast } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -147,7 +147,7 @@ function ConnectedSlackCard({
       {/* Notification routing */}
       <div className="flex flex-col gap-3 border-t border-border p-4">
         <Text.H5 weight="semibold">Notifications</Text.H5>
-        {NOTIFICATION_GROUPS.map((group) => (
+        {SLACK_ROUTABLE_NOTIFICATION_GROUPS.map((group) => (
           <SlackRouteRow key={group} group={group} integration={integration} />
         ))}
       </div>

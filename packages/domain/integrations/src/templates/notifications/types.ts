@@ -82,6 +82,7 @@ export type SlackRenderDepsByKind = {
   readonly "incident.closed": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
   readonly "wrapped.report": never
   readonly "custom.message": never
+  readonly "issue.assigned": never
 }
 
 export type SlackRenderDepsFor<K extends NotificationKind> = SlackRenderDepsByKind[K]

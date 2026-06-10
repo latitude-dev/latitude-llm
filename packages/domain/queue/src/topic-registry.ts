@@ -113,6 +113,22 @@ const _registry = {
       readonly link: string
     }
     /**
+     * Producer step for issue assignments. Fired by the domain-events
+     * router on `IssueAssigneeChanged` (cleared assignments and
+     * self-assignments are filtered before publish). The consumer
+     * re-checks those rules, re-fetches the issue for the project anchor,
+     * and emits exactly one `create-notification` task targeting the new
+     * assignee. Never fans out to Slack — `personal` is not slack-routable.
+     */
+    "request-issue-assigned-notifications": {
+      readonly organizationId: string
+      readonly issueId: string
+      readonly assigneeId: string
+      readonly actorUserId: string
+      /** ISO timestamp frozen by the triage transaction; idempotency anchor. */
+      readonly assignedAt: string
+    }
+    /**
      * Creator step. One message per recipient. The consumer writes the
      * in-app row idempotently via the `(org_id, user_id, idempotency_key)`
      * unique index and then fans out to channel-specific delivery jobs

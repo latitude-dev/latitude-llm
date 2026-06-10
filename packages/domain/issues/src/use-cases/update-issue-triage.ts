@@ -1,3 +1,4 @@
+import { OutboxEventWriter } from "@domain/events"
 import { MembershipRepository } from "@domain/organizations"
 import {
   BadRequestError,
@@ -18,6 +19,8 @@ import { IssueRepository } from "../ports/issue-repository.ts"
 const updateIssueTriageInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
   issueId: issueIdSchema,
+  /** User performing the edit — carried on `IssueAssigneeChanged` so consumers can skip self-assignments. */
+  actorUserId: cuidSchema,
   // `undefined` (key omitted) leaves the field unchanged; explicit `null` clears it; a value sets it.
   assigneeId: cuidSchema.nullable().optional(),
   priority: issuePrioritySchema.nullable().optional(),
@@ -90,11 +93,34 @@ export const updateIssueTriageUseCase = (input: UpdateIssueTriageInput) =>
           updatedAt: now,
         }
         yield* issueRepository.save(nextIssue)
+
+        // Assignee changes (set / reassign / clear) emit a domain event from
+        // the same transaction; priority-only edits stay silent. `assignedAt`
+        // is frozen here as the per-assignment idempotency anchor downstream.
+        if (nextAssigneeId !== issue.assigneeId) {
+          const outboxEventWriter = yield* OutboxEventWriter
+          yield* outboxEventWriter.write({
+            eventName: "IssueAssigneeChanged",
+            aggregateType: "issue",
+            aggregateId: issue.id,
+            organizationId: issue.organizationId,
+            payload: {
+              organizationId: issue.organizationId,
+              projectId: issue.projectId,
+              issueId: issue.id,
+              assigneeId: nextAssigneeId,
+              previousAssigneeId: issue.assigneeId,
+              actorUserId: parsed.actorUserId,
+              assignedAt: now.toISOString(),
+            },
+          })
+        }
+
         return toResult(nextIssue, true)
       }),
     )
   }).pipe(Effect.withSpan("issues.updateIssueTriage")) as Effect.Effect<
     UpdateIssueTriageResult,
     UpdateIssueTriageError,
-    IssueRepository | MembershipRepository | SqlClient
+    IssueRepository | MembershipRepository | OutboxEventWriter | SqlClient
   >

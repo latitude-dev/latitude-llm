@@ -5,10 +5,11 @@ import {
   NOTIFICATION_KIND_META,
   type NotificationKind,
   requestIncidentNotificationsUseCase,
+  requestIssueAssignedNotificationsUseCase,
   requestWrappedReportNotificationsUseCase,
 } from "@domain/notifications"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
-import { OrganizationId, ProjectId, type SqlClient } from "@domain/shared"
+import { IssueId, NOTIFICATION_GROUP_META, OrganizationId, ProjectId, type SqlClient } from "@domain/shared"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   AlertIncidentRepositoryLive,
@@ -88,6 +89,9 @@ const fanOutSlackRoutes = (
     const kind = first.kind as NotificationKind
     const group = NOTIFICATION_KIND_META[kind]?.group
     if (!group) return
+    // Personal kinds target a single user — never broadcast them to a
+    // shared channel, even if a stale route were somehow configured.
+    if (!NOTIFICATION_GROUP_META[group].slackRoutable) return
     const routes = integration.routes[group] ?? []
     if (routes.length === 0) return
 
@@ -239,6 +243,52 @@ export const createNotificationsWorker = ({ consumer, publisher }: Notifications
         Effect.tapError((error) =>
           Effect.sync(() =>
             logger.error(`notifications.request-wrapped failed wrappedReportId=${payload.wrappedReportId}`, error),
+          ),
+        ),
+        withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),
+        Effect.asVoid,
+        withTracing,
+      ),
+
+    "request-issue-assigned-notifications": (payload) =>
+      requestIssueAssignedNotificationsUseCase({
+        organizationId: OrganizationId(payload.organizationId),
+        issueId: IssueId(payload.issueId),
+        assigneeId: payload.assigneeId,
+        actorUserId: payload.actorUserId,
+        assignedAt: payload.assignedAt,
+      }).pipe(
+        Effect.flatMap((result) => {
+          if (result.status === "skipped") {
+            logger.info(
+              `notifications.request-issue-assigned skipped issueId=${payload.issueId} reason=${result.reason}`,
+            )
+            return Effect.void
+          }
+          // No Slack fan-out: `personal` is not slack-routable.
+          return Effect.all(
+            result.requests.map((req) =>
+              publisher.publish(
+                "notifications",
+                "create-notification",
+                {
+                  organizationId: req.organizationId,
+                  userId: req.userId,
+                  notificationId: req.notificationId,
+                  kind: req.kind,
+                  idempotencyKey: req.idempotencyKey,
+                  projectId: req.projectId,
+                  payload: req.payload,
+                },
+                { dedupeKey: `notifications:create:${req.idempotencyKey}:${req.userId}` },
+              ),
+            ),
+            { concurrency: "unbounded" },
+          ).pipe(Effect.asVoid)
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`notifications.request-issue-assigned failed issueId=${payload.issueId}`, error),
           ),
         ),
         withPostgres(requestLayer, pgClient, OrganizationId(payload.organizationId)),

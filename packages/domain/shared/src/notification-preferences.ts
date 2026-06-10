@@ -9,27 +9,51 @@ import { z } from "zod"
  * entity can carry typed preferences without introducing a circular
  * package dep with `@domain/notifications`.
  */
-export const NOTIFICATION_GROUPS = ["incidents", "wrapped_reports", "custom_messages"] as const
+export const NOTIFICATION_GROUPS = ["incidents", "wrapped_reports", "custom_messages", "personal"] as const
 export type NotificationGroup = (typeof NOTIFICATION_GROUPS)[number]
 export const notificationGroupSchema = z.enum(NOTIFICATION_GROUPS)
 
 export const NOTIFICATION_GROUP_META: Record<
   NotificationGroup,
-  { readonly label: string; readonly description: string }
+  {
+    readonly label: string
+    readonly description: string
+    /**
+     * Whether the group can be routed to org-level Slack channels. Personal
+     * kinds target one specific user, so broadcasting them to a shared
+     * channel is never right — non-routable groups are hidden from the
+     * Slack routes settings, rejected by the route-config server fns, and
+     * skipped by the worker's Slack fan-out.
+     */
+    readonly slackRoutable: boolean
+  }
 > = {
   incidents: {
     label: "Incidents",
     description: "Alerts when issues open, regress, or escalate.",
+    slackRoutable: true,
   },
   wrapped_reports: {
     label: "Wrapped reports",
     description: "Weekly Claude Code Wrapped reports for your projects.",
+    slackRoutable: true,
   },
   custom_messages: {
     label: "Announcements",
     description: "Product announcements and admin messages.",
+    slackRoutable: true,
+  },
+  personal: {
+    label: "Personal",
+    description: "Notifications addressed directly to you, like being assigned to an issue.",
+    slackRoutable: false,
   },
 }
+
+/** Groups eligible for org-level Slack channel routing. */
+export const SLACK_ROUTABLE_NOTIFICATION_GROUPS = NOTIFICATION_GROUPS.filter(
+  (group) => NOTIFICATION_GROUP_META[group].slackRoutable,
+)
 
 /**
  * Per-channel switches inside a group's preferences. Today only `email`

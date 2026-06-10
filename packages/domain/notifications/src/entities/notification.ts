@@ -226,6 +226,23 @@ export const customMessagePayloadSchema = z.object({
 export type CustomMessagePayload = z.infer<typeof customMessagePayloadSchema>
 
 /**
+ * Direct-assignment notification ("X assigned you to <issue>"). Single
+ * recipient — the new assignee. Display names are NOT snapshotted —
+ * renderers resolve actor + issue display data live from the ids.
+ * `assignedAt` rides on the payload because `buildIdempotencyKey` derives
+ * the per-assignment-event dedupe anchor from it: stable across outbox
+ * redelivery (the frozen payload replays the same key), unique across
+ * assignment events (each change writes a new timestamp), so A→B→A
+ * re-notifies A without ever duplicating a single assignment.
+ */
+export const issueAssignedPayloadSchema = z.object({
+  issueId: cuidSchema,
+  actorUserId: cuidSchema,
+  assignedAt: z.iso.datetime(),
+})
+export type IssueAssignedPayload = z.infer<typeof issueAssignedPayloadSchema>
+
+/**
  * Single source of truth for notification kinds. Every kind declares its
  * group (drives the user-visible preferences toggle) and its payload schema
  * (used to validate jsonb at read time). Adding a new kind = adding one
@@ -238,6 +255,7 @@ export const NOTIFICATION_KIND_META = {
   "incident.closed": { group: "incidents", payload: incidentClosedPayloadSchema },
   "wrapped.report": { group: "wrapped_reports", payload: wrappedReportPayloadSchema },
   "custom.message": { group: "custom_messages", payload: customMessagePayloadSchema },
+  "issue.assigned": { group: "personal", payload: issueAssignedPayloadSchema },
 } as const satisfies Record<string, { readonly group: NotificationGroup; readonly payload: z.ZodTypeAny }>
 
 export type NotificationKind = keyof typeof NOTIFICATION_KIND_META

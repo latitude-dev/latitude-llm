@@ -61,6 +61,7 @@ export type RenderDepsByKind = {
   readonly "incident.closed": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
   readonly "wrapped.report": WrappedReportRepository | FeatureFlagRepository | SqlClient
   readonly "custom.message": never
+  readonly "issue.assigned": IssueRepository | UserRepository | SqlClient
 }
 
 export type RenderDepsFor<K extends NotificationKind> = RenderDepsByKind[K]

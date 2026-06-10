@@ -938,7 +938,7 @@ export interface UpdateIssueTriageRecord {
 export const updateIssueTriage = createServerFn({ method: "POST" })
   .inputValidator(updateIssueTriageInputSchema)
   .handler(async ({ data }): Promise<UpdateIssueTriageRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const orgId = OrganizationId(organizationId)
     const pgClient = getPostgresClient()
 
@@ -946,10 +946,15 @@ export const updateIssueTriage = createServerFn({ method: "POST" })
       updateIssueTriageUseCase({
         projectId: data.projectId,
         issueId: IssueId(data.issueId),
+        actorUserId: userId,
         ...(data.assigneeId !== undefined ? { assigneeId: data.assigneeId } : {}),
         ...(data.priority !== undefined ? { priority: data.priority } : {}),
       }).pipe(
-        withPostgres(Layer.mergeAll(IssueRepositoryLive, MembershipRepositoryLive), pgClient, orgId),
+        withPostgres(
+          Layer.mergeAll(IssueRepositoryLive, MembershipRepositoryLive, OutboxEventWriterLive),
+          pgClient,
+          orgId,
+        ),
         withTracing,
       ),
     )
