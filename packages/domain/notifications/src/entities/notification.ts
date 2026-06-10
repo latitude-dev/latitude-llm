@@ -1,3 +1,4 @@
+import { issuePrioritySchema } from "@domain/issues"
 import {
   alertIncidentConditionSchema,
   alertIncidentKindSchema,
@@ -74,6 +75,15 @@ const incidentBasePayloadShape = {
   monitorSlug: z.string().optional(),
   /** Firing alert's condition snapshot, for the humanised summary. */
   condition: alertIncidentConditionSchema.nullable().optional(),
+  /**
+   * Issue triage snapshot at producer time. Present only for issue-sourced
+   * incidents produced after these fields landed; absent for savedSearch
+   * sources and legacy stored rows (hence optional). `null` means
+   * "snapshotted, but unassigned / no priority". The assignee's display
+   * name is NOT snapshotted — renderers resolve it live from the id.
+   */
+  assigneeId: cuidSchema.nullable().optional(),
+  priority: issuePrioritySchema.nullable().optional(),
 }
 
 /**

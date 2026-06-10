@@ -1,3 +1,4 @@
+import type { IssuePriority } from "@domain/issues"
 import { formatHumanReadableAlert } from "@domain/monitors"
 import type { AlertIncidentCondition, AlertIncidentKind } from "@domain/shared"
 import type { ActionsBlock, HeaderBlock, KnownBlock, SectionBlock } from "@slack/web-api"
@@ -28,6 +29,34 @@ export const contextLine = (text: string): KnownBlock => ({
   type: "context",
   elements: [{ type: "mrkdwn", text }],
 })
+
+/** Emoji per manual issue priority for the context-line suffix. */
+const PRIORITY_EMOJI: Record<IssuePriority, string> = {
+  urgent: "\u{1F534}", // red circle
+  high: "\u{1F7E0}", // orange circle
+  medium: "\u{1F7E1}", // yellow circle
+  low: "\u{1F7E2}", // green circle
+}
+
+/**
+ * " · 🟠 High · Assigned to Anna" suffix for the incident context line.
+ * Empty string when the payload carries no triage snapshot (legacy rows,
+ * savedSearch sources) so the line renders exactly as before.
+ */
+export const triageContextSuffix = (input: {
+  readonly priority: IssuePriority | null | undefined
+  readonly assigneeName: string | null | undefined
+}): string => {
+  const parts: string[] = []
+  if (input.priority) {
+    const label = input.priority.charAt(0).toUpperCase() + input.priority.slice(1)
+    parts.push(`${PRIORITY_EMOJI[input.priority]} ${label}`)
+  }
+  if (input.assigneeName) {
+    parts.push(`Assigned to ${input.assigneeName}`)
+  }
+  return parts.length > 0 ? ` \u{B7} ${parts.join(" \u{B7} ")}` : ""
+}
 
 export const projectOrOrgContext = (
   organization: { readonly name: string },

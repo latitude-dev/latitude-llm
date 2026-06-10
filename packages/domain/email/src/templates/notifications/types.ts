@@ -4,6 +4,7 @@ import type { NOTIFICATION_KIND_META, NotificationKind, RenderNotificationEmailE
 import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { SqlClient } from "@domain/shared"
 import type { WrappedReportRepository } from "@domain/spans"
+import type { UserRepository } from "@domain/users"
 import type { Effect } from "effect"
 import type { z } from "zod"
 import type { RenderedEmail } from "../types.ts"
@@ -55,9 +56,9 @@ export interface NotificationEmailRenderContext {
  * `never` and stay as trivial `Effect.tryPromise(() => template(...))`.
  */
 export type RenderDepsByKind = {
-  readonly "incident.event": IssueRepository | SavedSearchRepository | SqlClient
-  readonly "incident.opened": IssueRepository | SavedSearchRepository | SqlClient
-  readonly "incident.closed": IssueRepository | SavedSearchRepository | SqlClient
+  readonly "incident.event": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.opened": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.closed": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
   readonly "wrapped.report": WrappedReportRepository | FeatureFlagRepository | SqlClient
   readonly "custom.message": never
 }

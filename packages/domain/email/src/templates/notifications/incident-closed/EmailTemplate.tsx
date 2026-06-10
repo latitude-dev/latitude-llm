@@ -1,3 +1,4 @@
+import type { IssuePriority } from "@domain/issues"
 import type { IncidentRecovery } from "@domain/notifications"
 import { ALERT_INCIDENT_KIND_SOURCE_TYPE, type AlertIncidentKind, type AlertSeverity } from "@domain/shared"
 import { Section } from "@react-email/components"
@@ -18,6 +19,7 @@ import {
   IssueTimestamp,
   MonitorAttribution,
   type MonitorAttributionInfo,
+  PriorityBadge,
   SectionHeader,
   SeverityBadge,
 } from "../-incident-components.tsx"
@@ -33,6 +35,10 @@ interface IncidentClosedEmailProps {
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
+  /** Issue triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
+  readonly priority: IssuePriority | undefined
+  /** Live-resolved assignee display name; absent when unassigned or unresolvable. */
+  readonly assigneeName: string | undefined
   readonly recovery: IncidentRecovery
   readonly monitor: MonitorAttributionInfo | undefined
   readonly webAppUrl: string
@@ -49,6 +55,8 @@ export function IncidentClosedEmail({
   notificationCreatedAt,
   organizationName,
   projectName,
+  priority,
+  assigneeName,
   recovery,
   monitor,
   webAppUrl,
@@ -68,6 +76,8 @@ export function IncidentClosedEmail({
   const metadataRows = [
     { label: "Project", value: scope },
     { label: "Severity", value: <SeverityBadge severity={severity} /> },
+    ...(priority ? [{ label: "Priority", value: <PriorityBadge priority={priority} /> }] : []),
+    ...(assigneeName ? [{ label: "Assigned to", value: assigneeName }] : []),
   ]
 
   return (
@@ -125,6 +135,8 @@ IncidentClosedEmail.PreviewProps = {
   notificationCreatedAt: new Date("2026-03-18T10:37:00Z"),
   organizationName: "Acme Inc.",
   projectName: "Support agent",
+  priority: "high",
+  assigneeName: "Anna Bosch",
   recovery: { durationMs: 32 * 60 * 1000 },
   monitor: {
     name: "Issue escalating",

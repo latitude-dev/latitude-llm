@@ -12,6 +12,7 @@ import {
 import type { QueueConsumer } from "@domain/queue"
 import { NotificationId, OrganizationId, type SqlClient } from "@domain/shared"
 import type { WrappedReportRepository } from "@domain/spans"
+import type { UserRepository } from "@domain/users"
 import {
   FeatureFlagRepositoryLive,
   IssueRepositoryLive,
@@ -57,6 +58,7 @@ const repoLayer = Layer.mergeAll(
 const rendererLayer = Layer.mergeAll(
   IssueRepositoryLive,
   SavedSearchRepositoryLive,
+  UserRepositoryLive,
   WrappedReportRepositoryLive,
   FeatureFlagRepositoryLive,
 )
@@ -92,7 +94,12 @@ export const createNotificationEmailerWorker = ({ consumer }: NotificationEmaile
   // `Effect.suspend` for TS's call-signature narrowing, so widen the
   // dispatch result to the layer's superset and let `Effect.provide`
   // strip everything except `SqlClient` (the boundary contract).
-  type RendererSupersetR = IssueRepository | WrappedReportRepository | FeatureFlagRepository | SqlClient
+  type RendererSupersetR =
+    | IssueRepository
+    | UserRepository
+    | WrappedReportRepository
+    | FeatureFlagRepository
+    | SqlClient
   const renderEmailAdapter: NotificationEmailRenderer = ({
     notificationId,
     notificationCreatedAt,

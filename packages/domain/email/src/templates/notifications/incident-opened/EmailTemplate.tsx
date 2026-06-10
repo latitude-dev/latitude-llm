@@ -1,3 +1,4 @@
+import type { IssuePriority } from "@domain/issues"
 import type { IncidentBreach, IncidentSampleExcerpt } from "@domain/notifications"
 import {
   ALERT_INCIDENT_KIND_LABEL,
@@ -23,6 +24,7 @@ import {
   IssueTimestamp,
   MonitorAttribution,
   type MonitorAttributionInfo,
+  PriorityBadge,
   SampleExcerptCard,
   SectionHeader,
   SeverityBadge,
@@ -40,6 +42,10 @@ interface IncidentOpenedEmailProps {
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
+  /** Issue triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
+  readonly priority: IssuePriority | undefined
+  /** Live-resolved assignee display name; absent when unassigned or unresolvable. */
+  readonly assigneeName: string | undefined
   readonly tags: readonly string[] | undefined
   readonly breach: IncidentBreach | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
@@ -70,6 +76,8 @@ export function IncidentOpenedEmail({
   notificationCreatedAt,
   organizationName,
   projectName,
+  priority,
+  assigneeName,
   tags,
   breach,
   sampleExcerpt,
@@ -88,6 +96,8 @@ export function IncidentOpenedEmail({
   const metadataRows = [
     { label: "Project", value: scope },
     { label: "Severity", value: <SeverityBadge severity={severity} /> },
+    ...(priority ? [{ label: "Priority", value: <PriorityBadge priority={priority} /> }] : []),
+    ...(assigneeName ? [{ label: "Assigned to", value: assigneeName }] : []),
     ...(tags && tags.length > 0 ? [{ label: "Tags", value: <TagsChips tags={tags} /> }] : []),
   ]
 
@@ -149,6 +159,8 @@ IncidentOpenedEmail.PreviewProps = {
   notificationCreatedAt: new Date("2026-03-18T10:05:00Z"),
   organizationName: "Acme Inc.",
   projectName: "Support agent",
+  priority: "urgent",
+  assigneeName: "Anna Bosch",
   tags: ["env:prod", "service:agents", "model:claude-3.5-sonnet"],
   breach: { triggerRate: 12.5, baselineRate: 4.2, threshold: 7 },
   sampleExcerpt: {

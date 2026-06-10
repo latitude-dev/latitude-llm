@@ -5,6 +5,8 @@ import {
   alertIncidentSchema,
 } from "@domain/alerts"
 import { type Evaluation, EvaluationRepository } from "@domain/evaluations"
+import { createIssueCentroid, type Issue, type IssuePriority, IssueRepository } from "@domain/issues"
+import { createFakeIssueRepository } from "@domain/issues/testing"
 import { type Membership, MembershipRepository, type MembershipRole, type MemberWithUser } from "@domain/organizations"
 import type { AnnotationScore, EvaluationScore } from "@domain/scores"
 import {
@@ -18,6 +20,7 @@ import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@
 import {
   AlertIncidentId,
   ChSqlClient,
+  IssueId,
   MonitorAlertId,
   NotFoundError,
   OrganizationId,
@@ -55,6 +58,12 @@ interface SetupOpts {
   readonly evaluations?: Iterable<Evaluation>
   /** Monitor resolved for `incident.monitorAlertId` by the mute-gate reader. Omit for legacy incidents. */
   readonly monitor?: IncidentMonitorInfo
+  /**
+   * Triage state on the seeded issue row the producer snapshots. Pass
+   * `"missing"` to simulate the issue being deleted between the incident
+   * and the producer run.
+   */
+  readonly issueTriage?: { assigneeId: string | null; priority: IssuePriority | null } | "missing"
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -203,6 +212,32 @@ function setup(opts: SetupOpts = {}) {
     softDeleteByIssueId: () => Effect.die("not used"),
   })
 
+  const triage = opts.issueTriage ?? { assigneeId: null, priority: null }
+  const issueSeed: Issue[] =
+    triage === "missing"
+      ? []
+      : [
+          {
+            id: IssueId(incident.sourceId),
+            organizationId: orgId as string,
+            projectId: projectId as string,
+            slug: "seeded-issue",
+            name: "Seeded issue",
+            description: "Seeded issue description",
+            source: "annotation",
+            assigneeId: triage.assigneeId,
+            priority: triage.priority,
+            centroid: createIssueCentroid(),
+            clusteredAt: new Date("2026-05-01T00:00:00Z"),
+            escalatedAt: null,
+            resolvedAt: null,
+            ignoredAt: null,
+            createdAt: new Date("2026-05-01T00:00:00Z"),
+            updatedAt: new Date("2026-05-01T00:00:00Z"),
+          } satisfies Issue,
+        ]
+  const { repository: issueRepository } = createFakeIssueRepository(issueSeed)
+
   const monitorSeed = new Map<string, IncidentMonitorInfo>()
   if (incident.monitorAlertId !== null && opts.monitor) monitorSeed.set(incident.monitorAlertId, opts.monitor)
   const { reader: monitorReader } = createFakeIncidentMonitorReader(monitorSeed)
@@ -211,6 +246,7 @@ function setup(opts: SetupOpts = {}) {
     Layer.succeed(AlertIncidentRepository, incidentRepo),
     Layer.succeed(EvaluationRepository, evaluationRepository),
     Layer.succeed(IncidentMonitorReader, monitorReader),
+    Layer.succeed(IssueRepository, issueRepository),
     Layer.succeed(MembershipRepository, memberships),
     Layer.succeed(ScoreAnalyticsRepository, analytics),
     Layer.succeed(ScoreRepository, scoreRepository),
@@ -893,5 +929,113 @@ describe("requestIncidentNotificationsUseCase", () => {
     if (result.status !== "ok") throw new Error("unreachable")
     expect(result.requests[0]?.payload).not.toHaveProperty("monitorId")
     expect(result.requests[0]?.payload).not.toHaveProperty("condition")
+  })
+
+  it("snapshots the issue's assignee and priority onto issue-sourced payloads", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.new", startedAt, endedAt: startedAt },
+      memberUserIds: [cuid("ua")],
+      issueTriage: { assigneeId: cuid("ua"), priority: "urgent" },
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.payload.assigneeId).toBe(cuid("ua"))
+    expect(result.requests[0]?.payload.priority).toBe("urgent")
+  })
+
+  it("snapshots nulls when the issue is unassigned with no priority", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.new", startedAt, endedAt: startedAt },
+      memberUserIds: [cuid("ua")],
+      issueTriage: { assigneeId: null, priority: null },
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.payload.assigneeId).toBeNull()
+    expect(result.requests[0]?.payload.priority).toBeNull()
+  })
+
+  it("carries the triage snapshot on the closed side too", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const endedAt = new Date("2026-05-07T10:32:00Z")
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.escalating", startedAt, endedAt },
+      memberUserIds: [cuid("ua")],
+      issueTriage: { assigneeId: cuid("ua"), priority: "high" },
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "closed" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.kind).toBe("incident.closed")
+    expect(result.requests[0]?.payload.assigneeId).toBe(cuid("ua"))
+    expect(result.requests[0]?.payload.priority).toBe("high")
+  })
+
+  it("omits the triage snapshot entirely when the issue row vanished", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: { kind: "issue.new", startedAt, endedAt: startedAt },
+      memberUserIds: [cuid("ua")],
+      issueTriage: "missing",
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.payload).not.toHaveProperty("assigneeId")
+    expect(result.requests[0]?.payload).not.toHaveProperty("priority")
+  })
+
+  it("omits the triage snapshot for savedSearch-sourced incidents", async () => {
+    const startedAt = new Date("2026-05-07T10:00:00Z")
+    const { incidentId, layer } = setup({
+      incident: {
+        sourceType: "savedSearch",
+        sourceId: cuid("ss"),
+        kind: "savedSearch.match",
+        startedAt,
+        endedAt: startedAt,
+      },
+      memberUserIds: [cuid("ua")],
+      issueTriage: { assigneeId: cuid("ua"), priority: "urgent" },
+    })
+
+    const result = await Effect.runPromise(
+      requestIncidentNotificationsUseCase({ alertIncidentId: incidentId, transition: "created" }).pipe(
+        Effect.provide(layer),
+      ),
+    )
+
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") throw new Error("unreachable")
+    expect(result.requests[0]?.payload).not.toHaveProperty("assigneeId")
+    expect(result.requests[0]?.payload).not.toHaveProperty("priority")
   })
 })

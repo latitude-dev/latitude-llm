@@ -36,7 +36,14 @@ export function IssueEscalatingNotification({
       title={opened ? "An issue is escalating." : "An issue stopped escalating."}
       url={url}
     >
-      {live?.name ? <IssueSummaryCard name={live.name} states={states} /> : null}
+      {live?.name ? (
+        <IssueSummaryCard
+          name={live.name}
+          states={states}
+          priority={payload.priority}
+          assigneeId={payload.assigneeId}
+        />
+      ) : null}
       {payload.trend ? <EscalatingTrend trend={payload.trend} states={states} /> : null}
       <MonitorAttribution payload={payload} />
     </BaseNotification>

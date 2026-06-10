@@ -25,7 +25,14 @@ export function IssueNewNotification({ notification, payload }: IncidentRenderer
       title="A new issue has been detected."
       url={url}
     >
-      {live?.name ? <IssueSummaryCard name={live.name} states={states} /> : null}
+      {live?.name ? (
+        <IssueSummaryCard
+          name={live.name}
+          states={states}
+          priority={payload.priority}
+          assigneeId={payload.assigneeId}
+        />
+      ) : null}
       <MonitorAttribution payload={payload} />
     </BaseNotification>
   )
