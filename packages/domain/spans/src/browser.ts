@@ -77,9 +77,9 @@ export type {
   ToolParameterStat,
   ToolParameterStatsResult,
   ToolParameterValueStat,
+  ToolSummary,
   ToolsAnalytics,
   ToolsAnalyticsTotals,
-  ToolSummary,
   ToolUsageMetrics,
 } from "./ports/tool-analytics-repository.ts"
 export { ToolAnalyticsRepository } from "./ports/tool-analytics-repository.ts"

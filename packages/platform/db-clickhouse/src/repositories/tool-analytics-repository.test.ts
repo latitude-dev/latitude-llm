@@ -23,6 +23,12 @@ const SCOPE: ToolAnalyticsScope = {
 const tid = (label: string) => label.padEnd(32, "0")
 const sid = (label: string) => label.padEnd(16, "0")
 
+/** Runtime-checked unwrap (biome forbids non-null assertions in tests). */
+function must<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("expected a value")
+  return value
+}
+
 // Each top-level describe block opens its own chdb session via `setupFixture`
 // (same memory-bounding pattern as score-analytics-repository.test.ts).
 function setupFixture() {
@@ -213,22 +219,22 @@ describe("listToolsWithMetrics", () => {
   })
 
   it("returns the union of defined and called tools", async () => {
-    const result = await fixture.runCh(fixture.repo.listToolsWithMetrics(SCOPE))
+    const result = await fixture.runCh(fixture.repo.listToolsWithMetrics({ ...SCOPE, trendBucketSeconds: 3600 }))
     expect(result.tools.map((t) => t.name)).toEqual(["get_weather", "mystery_tool", "unused_tool"])
 
-    const getWeather = result.tools[0]!
+    const getWeather = must(result.tools[0])
     expect(getWeather.metrics?.calls).toBe(2)
     expect(getWeather.offeredCount).toBe(2)
 
     // Called but never defined.
-    const mystery = result.tools[1]!
+    const mystery = must(result.tools[1])
     expect(mystery.metrics?.calls).toBe(1)
     expect(mystery.offeredCount).toBe(0)
     expect(mystery.selectionRate).toBeNull()
     expect(mystery.lastOffered).toBeNull()
 
     // Defined but never called.
-    const unused = result.tools[2]!
+    const unused = must(result.tools[2])
     expect(unused.metrics).toBeNull()
     expect(unused.offeredCount).toBe(2)
     expect(unused.offeredTraces).toBe(2)
@@ -236,14 +242,14 @@ describe("listToolsWithMetrics", () => {
   })
 
   it("computes usage metrics, rates and totals", async () => {
-    const result = await fixture.runCh(fixture.repo.listToolsWithMetrics(SCOPE))
+    const result = await fixture.runCh(fixture.repo.listToolsWithMetrics({ ...SCOPE, trendBucketSeconds: 3600 }))
 
     expect(result.totals.traces).toBe(3)
     expect(result.totals.sessions).toBe(1)
     expect(result.totals.tracesWithToolCalls).toBe(2)
     expect(result.totals.sessionsWithToolCalls).toBe(1)
 
-    const metrics = result.tools[0]!.metrics!
+    const metrics = must(must(result.tools[0]).metrics)
     expect(metrics.calls).toBe(2)
     expect(metrics.errors).toBe(1)
     expect(metrics.errorRate).toBeCloseTo(0.5)
@@ -256,12 +262,23 @@ describe("listToolsWithMetrics", () => {
     expect(metrics.lastUsed.toISOString()).toBe("2026-03-15T13:00:00.000Z")
 
     // 2 calls over 2 offers.
-    expect(result.tools[0]!.selectionRate).toBeCloseTo(1)
+    expect(must(result.tools[0]).selectionRate).toBeCloseTo(1)
+
+    // Per-tool trend buckets: get_weather called at 12:00 and 13:00 → two hourly buckets.
+    expect(must(result.tools[0]).trend.map((b) => [b.bucketStart, b.calls, b.errors])).toEqual([
+      ["2026-03-15T12:00:00.000Z", 1, 0],
+      ["2026-03-15T13:00:00.000Z", 1, 1],
+    ])
+    expect(must(result.tools[2]).trend).toEqual([])
   })
 
   it("returns empty analytics for a project with no spans", async () => {
     const result = await fixture.runCh(
-      fixture.repo.listToolsWithMetrics({ ...SCOPE, projectId: ProjectId("empty-project-id-000000") }),
+      fixture.repo.listToolsWithMetrics({
+        ...SCOPE,
+        projectId: ProjectId("empty-project-id-000000"),
+        trendBucketSeconds: 3600,
+      }),
     )
     expect(result.tools).toEqual([])
     expect(result.totals).toEqual({ traces: 0, sessions: 0, tracesWithToolCalls: 0, sessionsWithToolCalls: 0 })
@@ -276,19 +293,16 @@ describe("getToolDefinition", () => {
   const fixture = setupFixture()
 
   it("preserves the definition verbatim, including empty parameters", async () => {
-    await fixture.insertSpans([
-      chatSpan({ trace_id: tid("t1"), span_id: sid("c1"), toolDefinitionsJson: DEFS_JSON }),
-    ])
-    const detail = await fixture.runCh(fixture.repo.getToolDefinition({ ...SCOPE, toolName: "get_weather" }))
-    expect(detail).not.toBeNull()
-    expect(detail!.definitionJson).toBe('{"name":"get_weather","description":"Get the weather","parameters":{}}')
-    expect(detail!.definition).toEqual({
+    await fixture.insertSpans([chatSpan({ trace_id: tid("t1"), span_id: sid("c1"), toolDefinitionsJson: DEFS_JSON })])
+    const detail = must(await fixture.runCh(fixture.repo.getToolDefinition({ ...SCOPE, toolName: "get_weather" })))
+    expect(detail.definitionJson).toBe('{"name":"get_weather","description":"Get the weather","parameters":{}}')
+    expect(detail.definition).toEqual({
       name: "get_weather",
       description: "Get the weather",
       parameters: {},
     })
-    expect(detail!.offeredCount).toBe(1)
-    expect(detail!.offeredTraces).toBe(1)
+    expect(detail.offeredCount).toBe(1)
+    expect(detail.offeredTraces).toBe(1)
   })
 
   it("returns the latest definition when it changed over time", async () => {
@@ -307,10 +321,10 @@ describe("getToolDefinition", () => {
         toolDefinitionsJson: defAt("new"),
       }),
     ])
-    const detail = await fixture.runCh(fixture.repo.getToolDefinition({ ...SCOPE, toolName: "evolving" }))
-    expect(detail!.definition?.description).toBe("new")
-    expect(detail!.offeredCount).toBe(2)
-    expect(detail!.lastOffered.toISOString()).toBe("2026-03-20T08:00:00.000Z")
+    const detail = must(await fixture.runCh(fixture.repo.getToolDefinition({ ...SCOPE, toolName: "evolving" })))
+    expect(detail.definition?.description).toBe("new")
+    expect(detail.offeredCount).toBe(2)
+    expect(detail.lastOffered.toISOString()).toBe("2026-03-20T08:00:00.000Z")
   })
 
   it("returns null when the tool was never offered", async () => {
@@ -349,12 +363,12 @@ describe("getToolUsageSummary", () => {
       // Different tool — must not leak into the summary.
       callSpan({ trace_id: tid("t2"), span_id: sid("u3"), tool_name: "other" }),
     ])
-    const summary = await fixture.runCh(fixture.repo.getToolUsageSummary({ ...SCOPE, toolName: "search" }))
-    expect(summary!.calls).toBe(2)
-    expect(summary!.errors).toBe(1)
-    expect(summary!.tracesUsed).toBe(2)
-    expect(summary!.sessionsUsed).toBe(1)
-    expect(summary!.traceUsageRate).toBeCloseTo(1) // both project traces used it
+    const summary = must(await fixture.runCh(fixture.repo.getToolUsageSummary({ ...SCOPE, toolName: "search" })))
+    expect(summary.calls).toBe(2)
+    expect(summary.errors).toBe(1)
+    expect(summary.tracesUsed).toBe(2)
+    expect(summary.sessionsUsed).toBe(1)
+    expect(summary.traceUsageRate).toBeCloseTo(1) // both project traces used it
   })
 
   it("returns null when the tool has no calls", async () => {
@@ -403,9 +417,10 @@ describe("getToolCallHistogram", () => {
       fixture.repo.getToolCallHistogram({ ...SCOPE, toolName: "search", bucketSeconds: 3600 }),
     )
     expect(buckets).toHaveLength(1)
-    expect(buckets[0]!.bucketStart).toBe("2026-03-15T10:00:00.000Z")
-    expect(buckets[0]!.calls).toBe(2)
-    expect(buckets[0]!.errors).toBe(1)
+    const bucket = must(buckets[0])
+    expect(bucket.bucketStart).toBe("2026-03-15T10:00:00.000Z")
+    expect(bucket.calls).toBe(2)
+    expect(bucket.errors).toBe(1)
   })
 
   it("aggregates across all tools when toolName is omitted", async () => {
@@ -442,11 +457,13 @@ describe("getToolParameterStats", () => {
     ])
     const result = await fixture.runCh(fixture.repo.getToolParameterStats({ ...SCOPE, toolName: "search" }))
     expect(result.sampleSize).toBe(3)
-    expect(result.stats[0]!.key).toBe("query")
-    expect(result.stats[0]!.occurrences).toBe(3)
-    expect(result.stats[0]!.topValues[0]).toEqual({ value: '"weather"', count: 2 })
-    expect(result.stats[1]!.key).toBe("limit")
-    expect(result.stats[1]!.occurrences).toBe(2)
+    const queryStat = must(result.stats[0])
+    expect(queryStat.key).toBe("query")
+    expect(queryStat.occurrences).toBe(3)
+    expect(queryStat.topValues[0]).toEqual({ value: '"weather"', count: 2 })
+    const limitStat = must(result.stats[1])
+    expect(limitStat.key).toBe("limit")
+    expect(limitStat.occurrences).toBe(2)
   })
 
   it("returns empty stats when the tool records no inputs", async () => {
@@ -535,7 +552,7 @@ describe("listRecentToolCalls", () => {
     expect(page1.nextCursor).toBeDefined()
 
     const page2 = await fixture.runCh(
-      fixture.repo.listRecentToolCalls({ ...SCOPE, toolName: "search", limit: 2, cursor: page1.nextCursor! }),
+      fixture.repo.listRecentToolCalls({ ...SCOPE, toolName: "search", limit: 2, cursor: must(page1.nextCursor) }),
     )
     expect(page2.items.map((i) => i.toolInput)).toEqual(['{"q":"a"}'])
     expect(page2.hasMore).toBe(false)
@@ -548,7 +565,7 @@ describe("listRecentToolCalls", () => {
 
     const page = await fixture.runCh(fixture.repo.listRecentToolCalls({ ...SCOPE, toolName: "search" }))
     expect(page.items).toHaveLength(1)
-    expect(page.items[0]!.toolInput).toBe('{"v":"new"}')
+    expect(must(page.items[0]).toolInput).toBe('{"v":"new"}')
   })
 
   it("filters to errors and maps status fields", async () => {
@@ -560,17 +577,19 @@ describe("listRecentToolCalls", () => {
       fixture.repo.listRecentToolCalls({ ...SCOPE, toolName: "search", errorsOnly: true }),
     )
     expect(page.items).toHaveLength(1)
-    expect(page.items[0]!.statusCode).toBe("error")
-    expect(page.items[0]!.errorType).toBe("TimeoutError")
-    expect(page.items[0]!.statusMessage).toBe("timed out")
+    const errorCall = must(page.items[0])
+    expect(errorCall.statusCode).toBe("error")
+    expect(errorCall.errorType).toBe("TimeoutError")
+    expect(errorCall.statusMessage).toBe("timed out")
   })
 
   it("truncates oversized payloads and flags them", async () => {
     const bigValue = "x".repeat(5_000)
     await fixture.insertSpans([callAt("u1", 1, { tool_input: `{"blob":"${bigValue}"}` })])
     const page = await fixture.runCh(fixture.repo.listRecentToolCalls({ ...SCOPE, toolName: "search" }))
-    expect(page.items[0]!.toolInputTruncated).toBe(true)
-    expect(page.items[0]!.toolInput.length).toBe(4_096)
-    expect(page.items[0]!.toolOutputTruncated).toBe(false)
+    const truncatedCall = must(page.items[0])
+    expect(truncatedCall.toolInputTruncated).toBe(true)
+    expect(truncatedCall.toolInput.length).toBe(4_096)
+    expect(truncatedCall.toolOutputTruncated).toBe(false)
   })
 })

@@ -128,6 +128,14 @@ type ToolListRow = {
   last_offered: string | null
 }
 
+type ToolTrendRow = {
+  name: string
+  bucket_start: string
+  calls: string
+  errors: string
+  p50_duration_ns: number
+}
+
 type ToolDefinitionRow = {
   definition_json: string
   offered_count: string
@@ -236,16 +244,22 @@ const toUsageMetrics = (
   }
 }
 
-const toToolSummary = (row: ToolListRow, totals: { traces: number; sessions: number }): ToolSummary => {
+const toToolSummary = (
+  row: ToolListRow,
+  totals: { traces: number; sessions: number },
+  trendByTool: ReadonlyMap<string, readonly ToolCallHistogramBucket[]>,
+): ToolSummary => {
   const metrics = toUsageMetrics(row, totals)
   const offeredCount = num(row.offered_count)
+  const name = normalizeCHString(row.name)
   return {
-    name: normalizeCHString(row.name),
+    name,
     metrics,
     offeredCount,
     offeredTraces: num(row.offered_traces),
     lastOffered: row.last_offered ? parseCHDate(row.last_offered) : null,
     selectionRate: offeredCount > 0 ? (metrics?.calls ?? 0) / offeredCount : null,
+    trend: trendByTool.get(name) ?? [],
   }
 }
 
@@ -280,7 +294,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const params = scopeParams(input)
-              const [totalsResult, listResult] = await Promise.all([
+              const [totalsResult, listResult, trendResult] = await Promise.all([
                 client.query({
                   query: `SELECT
                         (SELECT uniqExact(trace_id) FROM spans WHERE ${SCOPE_FILTER}) AS total_traces,
@@ -344,13 +358,32 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                   query_params: { ...params, toolListLimit: TOOL_LIST_LIMIT },
                   format: "JSONEachRow",
                 }),
+                client.query({
+                  // Per-tool trend buckets for the list's sparklines, in one pass.
+                  query: `SELECT
+                        tool_name AS name,
+                        toDateTime(
+                          intDiv(toUnixTimestamp(start_time), {trendBucketSeconds:UInt32}) * {trendBucketSeconds:UInt32},
+                          'UTC'
+                        ) AS bucket_start,
+                        count() AS calls,
+                        countIf(status_code = 2) AS errors,
+                        quantileTDigest(0.5)(duration_ns) AS p50_duration_ns
+                      FROM spans
+                      WHERE ${CALLS_FILTER}
+                      GROUP BY name, bucket_start
+                      ORDER BY name ASC, bucket_start ASC`,
+                  query_params: { ...params, trendBucketSeconds: input.trendBucketSeconds },
+                  format: "JSONEachRow",
+                }),
               ])
               const totalsRows = await totalsResult.json<ToolsTotalsRow>()
               const listRows = await listResult.json<ToolListRow>()
-              return { totalsRows, listRows }
+              const trendRows = await trendResult.json<ToolTrendRow>()
+              return { totalsRows, listRows, trendRows }
             })
             .pipe(
-              Effect.map(({ totalsRows, listRows }): ToolsAnalytics => {
+              Effect.map(({ totalsRows, listRows, trendRows }): ToolsAnalytics => {
                 const totalsRow = totalsRows[0]
                 const totals = {
                   traces: num(totalsRow?.total_traces),
@@ -358,9 +391,21 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                   tracesWithToolCalls: num(totalsRow?.traces_with_tool_calls),
                   sessionsWithToolCalls: num(totalsRow?.sessions_with_tool_calls),
                 }
+                const trendByTool = new Map<string, ToolCallHistogramBucket[]>()
+                for (const row of trendRows) {
+                  const name = normalizeCHString(row.name)
+                  const buckets = trendByTool.get(name) ?? []
+                  buckets.push({
+                    bucketStart: parseCHDate(row.bucket_start).toISOString(),
+                    calls: num(row.calls),
+                    errors: num(row.errors),
+                    p50DurationNs: num(row.p50_duration_ns),
+                  })
+                  trendByTool.set(name, buckets)
+                }
                 return {
                   totals,
-                  tools: listRows.map((row) => toToolSummary(row, totals)),
+                  tools: listRows.map((row) => toToolSummary(row, totals, trendByTool)),
                 }
               }),
             )

@@ -17,10 +17,12 @@ import type { SpanStatusCode, ToolDefinition } from "../entities/span.ts"
 export interface ToolAnalyticsRepositoryShape {
   /**
    * Every tool in the project within the time range — the union of defined
-   * and called tool names — with per-tool usage metrics and offered counts,
-   * plus project-wide totals for ratio denominators.
+   * and called tool names — with per-tool usage metrics, offered counts and
+   * a per-tool call trend, plus project-wide totals for ratio denominators.
    */
-  listToolsWithMetrics(input: ToolAnalyticsScope): Effect.Effect<ToolsAnalytics, RepositoryError, ChSqlClient>
+  listToolsWithMetrics(
+    input: ToolAnalyticsScope & { readonly trendBucketSeconds: number },
+  ): Effect.Effect<ToolsAnalytics, RepositoryError, ChSqlClient>
 
   /**
    * Latest definition seen for one tool in the range (argMax over chat spans).
@@ -127,6 +129,8 @@ export interface ToolSummary {
    * calls the tool multiple times. Null when the tool was never offered.
    */
   readonly selectionRate: number | null
+  /** Sparse per-tool call buckets over the range (`trendBucketSeconds` wide). */
+  readonly trend: readonly ToolCallHistogramBucket[]
 }
 
 /** Project-wide denominators and rollups for the tools overview panel. */
