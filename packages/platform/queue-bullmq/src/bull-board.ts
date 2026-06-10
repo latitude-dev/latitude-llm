@@ -1,6 +1,7 @@
 import { Queue } from "bullmq"
 import type { BullMqConfig } from "./config.ts"
 import { createBullMqRedisConnection } from "./connection.ts"
+import { BULLMQ_PREFIX } from "./constants.ts"
 
 /**
  * Creates read-only BullMQ Queue instances for bull-board to inspect.
@@ -9,5 +10,5 @@ import { createBullMqRedisConnection } from "./connection.ts"
 export function createBullBoardQueues(config: BullMqConfig, topicNames: readonly string[]): Queue[] {
   const connection = createBullMqRedisConnection(config)
 
-  return topicNames.map((name) => new Queue(name, { connection, prefix: "{bull}" }))
+  return topicNames.map((name) => new Queue(name, { connection, prefix: BULLMQ_PREFIX }))
 }

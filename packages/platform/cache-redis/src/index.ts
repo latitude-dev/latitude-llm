@@ -27,4 +27,5 @@ export {
   createRedisConnection,
   createRedisConnectionEffect,
 } from "./connection.ts"
+export { REDIS_KEY_PREFIX } from "./constants.ts"
 export { checkRedisRateLimit, type RateLimitCheckInput, type RateLimitCheckResult } from "./rate-limiter.ts"

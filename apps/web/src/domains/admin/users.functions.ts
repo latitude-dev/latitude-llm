@@ -10,8 +10,8 @@ import { AdminUserRepositoryLive, SqlClientLive, withPostgres } from "@platform/
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
+import Bowser from "bowser"
 import { Effect } from "effect"
-import { UAParser } from "ua-parser-js"
 import { z } from "zod"
 import { adminMiddleware } from "../../server/admin-middleware.ts"
 import { getAdminPostgresClient, getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
@@ -28,7 +28,7 @@ export interface AdminUserDetailsMembershipDto {
  * Pre-parsed view of an active session row, post-processed by the
  * server function so the UI is pure: User-Agent parsing and GeoIP
  * resolution both happen here, not in the browser. The TanStack Start
- * compiler strips the `ua-parser-js` dep + `geoip.ts` module from the
+ * compiler strips the `bowser` dep + `geoip.ts` module from the
  * client bundle.
  */
 export interface AdminUserSessionDto {
@@ -41,9 +41,9 @@ export interface AdminUserSessionDto {
   /** Best-effort OS name parsed from the User-Agent. */
   osName: string | null
   /**
-   * `"desktop"` for parser results without an explicit device-type
-   * (the parser leaves `device.type` undefined for laptops/desktops);
-   * otherwise the parser's value (`"mobile"`, `"tablet"`, etc.).
+   * `"desktop"` for parser results without an explicit platform type
+   * (Bowser leaves `platform.type` unset for laptops/desktops);
+   * otherwise Bowser's value (`"mobile"`, `"tablet"`, `"tv"`).
    */
   deviceKind: string
   geo: GeoIpInfo | null
@@ -67,14 +67,14 @@ export interface AdminUserDetailsDto {
 }
 
 const sessionToDto = (s: AdminUserSession, geo: GeoIpInfo | null): AdminUserSessionDto => {
-  const parsed = s.userAgent ? UAParser(s.userAgent) : null
+  const parsed = s.userAgent ? Bowser.parse(s.userAgent) : null
   return {
     id: s.id,
     ipAddress: s.ipAddress,
     userAgent: s.userAgent,
     browserName: parsed?.browser.name ?? null,
     osName: parsed?.os.name ?? null,
-    deviceKind: parsed?.device.type ?? "desktop",
+    deviceKind: parsed?.platform.type ?? "desktop",
     geo,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),

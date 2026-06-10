@@ -15,6 +15,7 @@ import {
   type WrappedReportType,
 } from "@domain/spans"
 import { MembershipRepositoryLive, WrappedReportRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { parseEnv } from "@platform/env"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -72,6 +73,13 @@ type WrappedPageData =
       readonly found: true
       /** Full record for members; redacted for non-members. */
       readonly record: WrappedReportRecord
+      /**
+       * Trailing-slash-stripped runtime `LAT_WEB_URL`. The route `head()` needs
+       * it to build the absolute `og:image` URL (crawlers fetch it with no
+       * page-relative base), sourced at request time so the build stays
+       * deployment-URL-neutral.
+       */
+      readonly webBaseUrl: string
       /** True iff the viewer is logged in AND belongs to the wrapped's org. */
       readonly isMember: boolean
       readonly loggedIn: boolean
@@ -137,9 +145,12 @@ export const getWrappedPageData = createServerFn({ method: "GET" })
     const leaderboard: LeaderboardData | null =
       leaderboardRaw != null && leaderboardRaw.total >= LEADERBOARD_MIN_COHORT ? leaderboardRaw : null
 
+    const webBaseUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000")).replace(/\/$/, "")
+
     return {
       found: true,
       record: isMember ? record : redactForPublic(record),
+      webBaseUrl,
       isMember,
       loggedIn: userId !== null,
       leaderboard,

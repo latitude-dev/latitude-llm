@@ -113,8 +113,6 @@ jobs:
             ${{ needs.metadata.outputs.registry }}/latitude-${{ inputs.environment }}-${{ matrix.service }}:${{ needs.metadata.outputs.image_tag }}
             ${{ needs.metadata.outputs.registry }}/latitude-${{ inputs.environment }}-${{ matrix.service }}:latest
           build-args: |
-            VITE_LAT_API_URL=${{ vars.VITE_LAT_API_URL }}
-            VITE_LAT_WEB_URL=${{ vars.VITE_LAT_WEB_URL }}
             VITE_LAT_TURNSTILE_SITE_KEY=${{ vars.VITE_LAT_TURNSTILE_SITE_KEY }}
             VITE_LAT_POSTHOG_KEY=${{ vars.VITE_LAT_POSTHOG_KEY }}
             VITE_LAT_POSTHOG_HOST=${{ vars.VITE_LAT_POSTHOG_HOST }}

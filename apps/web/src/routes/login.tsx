@@ -10,7 +10,7 @@ import { lookupSsoForEmail } from "../domains/sso/sso.functions.ts"
 import { appendTrackingParams, gtmHeadScripts, pickTrackingParams } from "../lib/analytics/gtm.ts"
 import { GtmNoScript, SignupCompleteWatcher } from "../lib/analytics/signup-complete-watcher.tsx"
 import { authClient } from "../lib/auth-client.ts"
-import { TURNSTILE_SITE_KEY, WEB_BASE_URL } from "../lib/auth-config.ts"
+import { TURNSTILE_SITE_KEY } from "../lib/auth-config.ts"
 import { toUserMessage } from "../lib/errors.ts"
 import { getPostHogSessionId } from "../lib/posthog/posthog-client.ts"
 
@@ -119,9 +119,8 @@ function LoginPage() {
       const tracking = pickTrackingParams(window.location.search)
       const startParams = new URLSearchParams(tracking)
       if (redirectPath) startParams.set("redirect", redirectPath)
-      const startUrl = `${WEB_BASE_URL}/api/auth/${provider}/start${
-        startParams.toString() ? `?${startParams.toString()}` : ""
-      }`
+      // Same-origin relative path — no baked deployment URL needed.
+      const startUrl = `/api/auth/${provider}/start${startParams.toString() ? `?${startParams.toString()}` : ""}`
       window.location.assign(startUrl)
     } catch (err) {
       setError(toUserMessage(err))
