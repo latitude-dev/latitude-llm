@@ -9,7 +9,7 @@ import {
   SavedSearchId,
   type SqlClient,
 } from "@domain/shared"
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import type { MonitorAlert } from "../entities/monitor.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
 import type { SavedSearchMatchReader } from "../ports/saved-search-match-reader.ts"
@@ -33,9 +33,12 @@ export interface CheckSavedSearchMonitorsResult {
 /**
  * Firing orchestrator, run per (org, project) by both trigger paths. Resolves
  * each active saved-search alert's search and dispatches to the kind's state
- * machine. Per-alert failures are isolated + tallied (not propagated) so one bad
- * alert can't trigger an at-least-once retry that re-fires already-fired `match`
- * incidents. Sequential: each alert opens its own transaction.
+ * machine. Per-alert failures — typed errors AND defects (e.g. a filter
+ * operator the ClickHouse builder can't translate throws while building the
+ * query) — are isolated, logged and tallied (not propagated) so one bad alert
+ * can't kill the sweep or trigger an at-least-once retry that re-fires
+ * already-fired `match` incidents. Sequential: each alert opens its own
+ * transaction.
  */
 export const checkSavedSearchMonitorsUseCase = (
   input: CheckSavedSearchMonitorsInput,
@@ -65,9 +68,18 @@ export const checkSavedSearchMonitorsUseCase = (
       alerts,
       (alert) =>
         runAlert({ organizationId, projectId, alert, now }).pipe(
-          Effect.catch(() =>
-            Effect.sync(() => {
+          // `catchCause`, not `catch`: defects must be isolated too, or a
+          // single throwing alert takes down the whole project sweep.
+          Effect.catchCause((cause) =>
+            Effect.gen(function* () {
               failed += 1
+              yield* Effect.logError("monitors.checkSavedSearchMonitors alert evaluation failed", {
+                monitorId: alert.monitorId,
+                alertId: alert.id,
+                kind: alert.kind,
+                sourceId: alert.source.id,
+                error: Cause.squash(cause),
+              })
             }),
           ),
         ),

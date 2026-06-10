@@ -5,11 +5,11 @@ import {
   type SavedSearchMatchReaderShape,
   type SavedSearchMatchWindowInput,
 } from "@domain/monitors"
-import { ChSqlClient, type ChSqlClientShape, toRepositoryError } from "@domain/shared"
+import { ChSqlClient, type ChSqlClientShape, type RepositoryError, toRepositoryError } from "@domain/shared"
 import { parseSearchQuery } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { isActiveSearch, planSearch } from "./search-plan.ts"
-import { buildTraceFilterClauses, LIST_SELECT } from "./trace-repository.ts"
+import { buildTraceFilterClauses, LIST_SELECT, resolvePercentileFilters } from "./trace-repository.ts"
 
 /** ClickHouse `DateTime64` params take a space-separated, zone-naive string (UTC). */
 const toClickHouseDateTime64 = (value: Date): string => value.toISOString().replace("T", " ").replace("Z", "")
@@ -21,9 +21,14 @@ const toClickHouseDateTime64 = (value: Date): string => value.toISOString().repl
  */
 const buildInnerQuery = (
   input: SavedSearchMatchWindowInput,
-): Effect.Effect<{ readonly sql: string; readonly params: Record<string, unknown> }> =>
+): Effect.Effect<{ readonly sql: string; readonly params: Record<string, unknown> }, RepositoryError, ChSqlClient> =>
   Effect.gen(function* () {
-    const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(input.target.filterSet)
+    // `gtePercentile` filters carry a percentile, not a threshold. Resolve them
+    // to a numeric `gte` against the project's current trace distribution —
+    // the same way the traces page does — so a monitored search matches what
+    // the user sees there. The SQL builder itself only knows scalar operators.
+    const filterSet = yield* resolvePercentileFilters(input.organizationId, input.projectId, input.target.filterSet)
+    const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filterSet)
     const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
     const parsed = input.target.query ? parseSearchQuery(input.target.query) : undefined

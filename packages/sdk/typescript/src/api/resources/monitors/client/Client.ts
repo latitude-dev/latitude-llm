@@ -125,7 +125,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Creates a monitor with one or more saved-search alerts. The slug is derived from `name`.
+     * Creates a monitor with its saved-search alert. The slug is derived from `name`. The watched saved search must not contain a semantic component (unquoted free text) — monitors need an exact match rule, so only quoted literal and backtick phrase terms are allowed.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {LatitudeApi.CreateMonitorBody} request
@@ -578,113 +578,6 @@ export class MonitorsClient {
     }
 
     /**
-     * Adds a saved-search alert to a monitor and returns the updated monitor. System monitors cannot gain alerts.
-     *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
-     * @param {LatitudeApi.CreateMonitorAlertBody} request
-     * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link LatitudeApi.BadRequestError}
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.ForbiddenError}
-     * @throws {@link LatitudeApi.NotFoundError}
-     *
-     * @example
-     *     await client.monitors.createAlert("projectSlug", "monitorSlug", {
-     *         kind: "savedSearch.match",
-     *         source: {
-     *             type: "issue",
-     *             id: "id"
-     *         }
-     *     })
-     */
-    public createAlert(
-        projectSlug: string,
-        monitorSlug: string,
-        request: LatitudeApi.CreateMonitorAlertBody,
-        requestOptions?: MonitorsClient.RequestOptions,
-    ): core.HttpResponsePromise<LatitudeApi.Monitor> {
-        return core.HttpResponsePromise.fromPromise(
-            this.__createAlert(projectSlug, monitorSlug, request, requestOptions),
-        );
-    }
-
-    private async __createAlert(
-        projectSlug: string,
-        monitorSlug: string,
-        request: LatitudeApi.CreateMonitorAlertBody,
-        requestOptions?: MonitorsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<LatitudeApi.Monitor>> {
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
-                `v1/projects/${core.url.encodePathParam(projectSlug)}/monitors/${core.url.encodePathParam(monitorSlug)}/alerts`,
-            ),
-            method: "POST",
-            headers: _headers,
-            contentType: "application/json",
-            queryParameters: requestOptions?.queryParams,
-            requestType: "json",
-            body: request,
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as LatitudeApi.Monitor, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new LatitudeApi.BadRequestError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 403:
-                    throw new LatitudeApi.ForbiddenError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.LatitudeApiError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "POST",
-            "/v1/projects/{projectSlug}/monitors/{monitorSlug}/alerts",
-        );
-    }
-
-    /**
      * Returns a single monitor alert by id.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
@@ -775,93 +668,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Removes an alert from a monitor. A monitor must keep at least one alert; system monitors' alerts cannot be removed.
-     *
-     * @param {string} projectSlug - Project slug (human-readable identifier)
-     * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).
-     * @param {string} alertId - Monitor-alert identifier.
-     * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link LatitudeApi.UnauthorizedError}
-     * @throws {@link LatitudeApi.NotFoundError}
-     *
-     * @example
-     *     await client.monitors.deleteAlert("projectSlug", "monitorSlug", "alertId")
-     */
-    public deleteAlert(
-        projectSlug: string,
-        monitorSlug: string,
-        alertId: string,
-        requestOptions?: MonitorsClient.RequestOptions,
-    ): core.HttpResponsePromise<void> {
-        return core.HttpResponsePromise.fromPromise(
-            this.__deleteAlert(projectSlug, monitorSlug, alertId, requestOptions),
-        );
-    }
-
-    private async __deleteAlert(
-        projectSlug: string,
-        monitorSlug: string,
-        alertId: string,
-        requestOptions?: MonitorsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<void>> {
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.LatitudeApiEnvironment.Production,
-                `v1/projects/${core.url.encodePathParam(projectSlug)}/monitors/${core.url.encodePathParam(monitorSlug)}/alerts/${core.url.encodePathParam(alertId)}`,
-            ),
-            method: "DELETE",
-            headers: _headers,
-            queryParameters: requestOptions?.queryParams,
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: undefined, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 401:
-                    throw new LatitudeApi.UnauthorizedError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                case 404:
-                    throw new LatitudeApi.NotFoundError(
-                        _response.error.body as LatitudeApi.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.LatitudeApiError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "DELETE",
-            "/v1/projects/{projectSlug}/monitors/{monitorSlug}/alerts/{alertId}",
-        );
-    }
-
-    /**
-     * Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may.
+     * Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Re-pointing the alert at a saved search containing a semantic component (unquoted free text) is rejected.
      *
      * @param {string} projectSlug - Project slug (human-readable identifier)
      * @param {string} monitorSlug - Monitor slug (human-readable identifier within the project).

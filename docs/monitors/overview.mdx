@@ -5,7 +5,7 @@ description: Watch your issues and saved searches, and get alerted when somethin
 
 # Monitors
 
-A **monitor** watches your production traffic and opens an **incident** when a condition you care about is met. Each monitor has one or more **alerts**, and each alert watches a single signal with its own condition and severity. When any of a monitor's alerts fires, Latitude records an incident and sends you a notification through your existing notification channels.
+A **monitor** watches your production traffic and opens an **incident** when a condition you care about is met. Each monitor has one **alert**, which watches a single signal with its own condition and severity. When the alert fires, Latitude records an incident and sends you a notification through your existing notification channels.
 
 Monitors live on the **Monitors** page of each project. Open it from the project sidebar.
 
@@ -18,7 +18,7 @@ Monitors live on the **Monitors** page of each project. Open it from the project
 There are two kinds of monitors:
 
 - **System monitors** are set up automatically for every project. They watch your [issues](../issues/overview) and are marked with a **System** badge. You can't create, rename, or delete them, and you can't change what they watch, but you _can_ mute them.
-- **Your monitors** are the ones you create. Today they watch [saved searches](../search/saved-searches). You have full control: add and remove alerts, rename, mute, and delete.
+- **Your monitors** are the ones you create. Today they watch [saved searches](../search/saved-searches). You have full control: edit the alert, rename, mute, and delete.
 
 <Frame caption="System monitors have a System badge next to their name.">
   <img src="/images/monitors/system-monitor-badge.png" alt="A system monitor row showing its name next to the System badge" />
@@ -29,11 +29,11 @@ The Monitors list shows both, with columns for:
 | Column | What it shows |
 | --- | --- |
 | **Monitor** | The monitor's name, plus a **System** badge for system monitors |
-| **Status** | **Live** (alerts are active) or **Muted** (still recording incidents, but not notifying) |
+| **Status** | **Live** (the alert is active) or **Muted** (still recording incidents, but not notifying) |
 | **Last incident** | When the monitor most recently fired, or `—` if it never has |
-| **Condition** | A plain-English summary of the monitor's first alert, with a `+N` badge when it has more |
+| **Condition** | A plain-English summary of the monitor's alert |
 
-Click any row to open its details panel, where you can see every alert, the full incident history, and the mute control.
+Click any row to open its details panel, where you can see the alert, the full incident history, and the mute control.
 
 ## The three system monitors
 
@@ -58,6 +58,10 @@ There are two ways into the create flow:
 1. **From the Monitors page**: click the **Monitor** button in the top-right and pick a saved search inside the form.
 2. **From a saved search**: open the **Saved searches** dropdown next to the search bar on the Traces page. Hover a saved search and click its bell icon for **Create monitor** (or **View monitor** if one already watches it), which opens the same form with that search pre-selected.
 
+<Note>
+Searches containing a **semantic** part (plain unquoted words) can't be monitored. Semantic search ranks the closest traces by meaning instead of applying an exact rule, so a monitor has no match rule to count new traces against. Use quoted `"literal"` or backtick `` `phrase` `` terms — those match exactly, and the monitor counts every match.
+</Note>
+
 <Frame caption="The Saved searches dropdown: hover a saved search and click the bell icon to create a monitor that watches it.">
   <img src="/images/monitors/create-monitor-from-saved-search.png" alt="The Saved searches dropdown with a bell icon to create a monitor on a saved-search row" />
 </Frame>
@@ -66,17 +70,17 @@ The create form asks for:
 
 - **Name**: a human-readable label, e.g. _"Tool error spikes"_.
 - **Description**: optional; what the monitor is for.
-- **One or more alerts**: each alert is a card where you pick the saved search, the alert kind, the condition, and a severity.
-<Frame caption="Create a monitor form: a name, an optional description, and one or more alert cards. The preview sentence at the bottom of each card restates the configuration in plain English.">
+- **An alert**: a card where you pick the saved search, the alert kind, the condition, and a severity.
+<Frame caption="Create a monitor form: a name, an optional description, and the alert card. The preview sentence at the bottom of the card restates the configuration in plain English.">
   <img src="/images/monitors/create-monitor.png" alt="The New monitor form with a saved-search alert and its plain-English preview sentence" />
 </Frame>
-As you fill in an alert, a one-line **preview sentence** at the bottom of the card restates the configuration in plain English, so you can confirm it does what you intend before saving. For example:
+As you fill in the alert, a one-line **preview sentence** at the bottom of the card restates the configuration in plain English, so you can confirm it does what you intend before saving. For example:
 
 ```text
 Alerts each time a new trace matching 'Checkout 5xx errors' is detected.
 ```
 
-Each alert card has a **severity** selector (**Low**, **Medium**, or **High**) that sets the tone of the incident badge and the notification.
+The alert card has a **severity** selector (**Low**, **Medium**, or **High**) that sets the tone of the incident badge and the notification.
 
 
 ## The three saved-search alert kinds
@@ -185,10 +189,10 @@ A muted monitor shows the **Muted** status in the list; a live one shows **Live*
 
 ### Delete
 
-You can **delete** your own monitors from the list's actions menu (or remove individual alerts from the details panel). A few rules:
+You can **delete** your own monitors from the list's actions menu. A few rules:
 
 - **System monitors can't be deleted**: mute them instead.
-- A monitor must always keep **at least one alert**. When you remove the last alert, the UI offers to delete the whole monitor instead.
+- A monitor keeps its alert for life — the alert can't be removed on its own; it's edited in place or deleted along with the monitor.
 - Deleting a monitor stops it firing and hides it from the list. Incidents it already recorded remain queryable.
 
 ### Edit
@@ -199,12 +203,11 @@ What's editable depends on the monitor type:
 | --- | --- | --- |
 | Mute / unmute | ✅ | ✅ |
 | Rename / edit description | ✅ | ❌ |
-| Add / remove alerts | ✅ | ❌ |
 | Change an alert's kind, source, or severity | ✅ | ❌ |
 | Edit a condition value | ✅ | Only the **Issue escalating** sensitivity |
 | Delete the monitor | ✅ | ❌ |
 
-System monitors are **locked**: you can't change their name, alerts, or severities. The single tunable value is the **Issue escalating** sensitivity.
+System monitors are **locked**: you can't change their name, alert, or severity. The single tunable value is the **Issue escalating** sensitivity.
 
 ## How notifications work
 

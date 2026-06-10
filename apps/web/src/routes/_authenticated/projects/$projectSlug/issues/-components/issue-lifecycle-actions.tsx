@@ -28,8 +28,7 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
     case "ignore":
       return {
         title: "Ignore issue",
-        description:
-          "Mark this issue as ignored. We won't monitor or alert you about new occurrences of this issue anymore",
+        description: "Mark this issue as ignored. You won't be alerted about new occurrences of this issue anymore",
         confirmLabel: "Ignore",
         confirmIcon: PauseIcon,
         confirmVariant: "destructive" as const,
@@ -273,9 +272,9 @@ export function IssueLifecycleActions({
               <div className="flex flex-col gap-3">
                 <div className="flex flex-row items-center justify-between gap-4">
                   <div className="flex flex-col gap-1">
-                    <Label htmlFor="keep-monitoring-on-resolve">Keep monitoring this issue</Label>
+                    <Label htmlFor="keep-monitoring-on-resolve">Keep evaluating this issue</Label>
                     <Text.H6 color="foregroundMuted">
-                      Evaluations monitoring this issue will stay active to detect further regressions
+                      Evaluations for this issue will stay active to detect further regressions
                     </Text.H6>
                   </div>
                   <Switch
@@ -283,7 +282,7 @@ export function IssueLifecycleActions({
                     checked={keepMonitoring}
                     onCheckedChange={setKeepMonitoring}
                     disabled={isLifecycleLoading}
-                    aria-label="Keep monitoring this issue"
+                    aria-label="Keep evaluating this issue"
                   />
                 </div>
               </div>

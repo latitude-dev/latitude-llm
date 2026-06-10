@@ -8,14 +8,12 @@ import {
   type AlertDraft,
   type AlertFieldErrors,
   alertFieldErrorsFrom,
-  draftToAlertDraft,
   draftToCondition,
-  emptyAlertDraft,
   hasAlertFieldErrors,
   recordToAlertDraft,
 } from "./alert-form-helpers.ts"
 
-/** Add a new saved-search alert (`alert == null`) or edit an existing one (`alert` set). */
+/** Edit an existing saved-search alert in place. Alerts are never added or deleted from the app. */
 export function MonitorAlertEditModal({
   projectId,
   projectSlug,
@@ -26,15 +24,13 @@ export function MonitorAlertEditModal({
   readonly projectId: string
   readonly projectSlug: string
   readonly monitorId: string
-  readonly alert: MonitorAlertRecord | null
+  readonly alert: MonitorAlertRecord
   readonly onClose: () => void
 }) {
   const { toast } = useToast()
-  const { addAlert, editAlert } = useMonitorAlertActions(projectId)
-  const isEdit = alert !== null
-  const [draft, setDraft] = useState<AlertDraft>(() => (alert ? recordToAlertDraft(alert) : emptyAlertDraft()))
+  const { editAlert } = useMonitorAlertActions(projectId)
+  const [draft, setDraft] = useState<AlertDraft>(() => recordToAlertDraft(alert))
   const [errors, setErrors] = useState<AlertFieldErrors>({})
-  const pending = addAlert.isPending || editAlert.isPending
 
   const onChange = (next: AlertDraft) => {
     setDraft(next)
@@ -47,19 +43,15 @@ export function MonitorAlertEditModal({
       return
     }
     try {
-      if (alert) {
-        await editAlert.mutateAsync({
-          monitorId,
-          alertId: alert.id,
-          kind: draft.kind,
-          source: { type: "savedSearch", id: draft.sourceId },
-          condition: draftToCondition(draft),
-          severity: draft.severity,
-        })
-      } else {
-        await addAlert.mutateAsync({ monitorId, ...draftToAlertDraft(draft) })
-      }
-      toast({ description: isEdit ? "Alert updated." : "Alert added." })
+      await editAlert.mutateAsync({
+        monitorId,
+        alertId: alert.id,
+        kind: draft.kind,
+        source: { type: "savedSearch", id: draft.sourceId },
+        condition: draftToCondition(draft),
+        severity: draft.severity,
+      })
+      toast({ description: "Alert updated." })
       onClose()
     } catch (error) {
       // Surface Zod field errors under the offending control; toast non-field errors.
@@ -80,13 +72,13 @@ export function MonitorAlertEditModal({
       onOpenChange={(next) => {
         if (!next) onClose()
       }}
-      title={isEdit ? "Edit alert" : "Add alert"}
+      title="Edit alert"
       description="Alerts define the conditions that should be met for monitors to open incidents"
       footer={
         <>
           <CloseTrigger />
-          <Button disabled={pending} isLoading={pending} onClick={() => void onSubmit()}>
-            {isEdit ? "Save" : "Add alert"}
+          <Button disabled={editAlert.isPending} isLoading={editAlert.isPending} onClick={() => void onSubmit()}>
+            Save
           </Button>
         </>
       }

@@ -1,6 +1,6 @@
 import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
-import type { Monitor } from "../entities/monitor.ts"
+import type { Monitor, MonitorAlert } from "../entities/monitor.ts"
 import type { MonitorListPage, MonitorRepositoryShape } from "../ports/monitor-repository.ts"
 
 const isLive = (monitor: Monitor) => monitor.deletedAt === null
@@ -125,22 +125,6 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
       Effect.sync(() => {
         monitors.push(monitor)
       }),
-    insertAlert: (alert) =>
-      Effect.sync(() => {
-        // Plain insert, mirroring the live repo: the use-case loads the owning
-        // monitor in the same transaction, so it's expected to exist.
-        const monitor = monitors.find((m) => m.id === alert.monitorId && isLive(m))
-        if (monitor) replace(monitor.id, { ...monitor, alerts: [...monitor.alerts, alert] })
-      }),
-    softDeleteAlert: (alertId) =>
-      Effect.suspend(() => {
-        const monitor = monitors.find((m) => isLive(m) && m.alerts.some((alert) => alert.id === alertId))
-        if (!monitor) return Effect.fail(new NotFoundError({ entity: "MonitorAlert", id: alertId }))
-        // Alert-level soft delete isn't modelled (the entity has no `deletedAt`);
-        // dropping it from the live list mirrors what reads would return.
-        replace(monitor.id, { ...monitor, alerts: monitor.alerts.filter((alert) => alert.id !== alertId) })
-        return Effect.void
-      }),
     setMuted: ({ id, mutedAt }) =>
       Effect.suspend(() => {
         const monitor = liveById(id)
@@ -198,20 +182,45 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
           .flatMap((m) => m.alerts)
           .filter((alert) => alert.source.type === "savedSearch"),
       ),
-    listSavedSearchMonitorSlugs: (projectId) =>
+    listSavedSearchMonitorSummaries: (projectId) =>
       Effect.sync(() => {
-        const earliest = new Map<string, Monitor>()
+        const summaries = new Map<string, { byMonitor: Map<string, Monitor>; severities: MonitorAlert["severity"][] }>()
         for (const monitor of monitors) {
           if (monitor.projectId !== projectId || !isLive(monitor) || monitor.mutedAt !== null) continue
           for (const alert of monitor.alerts) {
             if (alert.source.type !== "savedSearch" || !alert.source.id) continue
-            const current = earliest.get(alert.source.id)
-            if (!current || monitor.createdAt.getTime() < current.createdAt.getTime()) {
-              earliest.set(alert.source.id, monitor)
+            const entry = summaries.get(alert.source.id) ?? {
+              byMonitor: new Map<string, Monitor>(),
+              severities: [],
             }
+            entry.byMonitor.set(monitor.id, monitor)
+            entry.severities.push(alert.severity)
+            summaries.set(alert.source.id, entry)
           }
         }
-        return [...earliest.entries()].map(([savedSearchId, monitor]) => ({ savedSearchId, monitorSlug: monitor.slug }))
+        return [...summaries.entries()].flatMap(([savedSearchId, entry]) => {
+          // Earliest-created first, mirroring the live repo's ordering.
+          const ordered = [...entry.byMonitor.values()].sort(
+            (a, b) => a.createdAt.getTime() - b.createdAt.getTime() || (a.id < b.id ? -1 : 1),
+          )
+          const primary = ordered[0]
+          if (!primary) return []
+          return [
+            {
+              savedSearchId,
+              monitorSlug: primary.slug,
+              monitorCount: ordered.length,
+              severities: entry.severities,
+              monitors: ordered.map((m) => ({
+                slug: m.slug,
+                name: m.name,
+                severities: m.alerts
+                  .filter((alert) => alert.source.type === "savedSearch" && alert.source.id === savedSearchId)
+                  .map((alert) => alert.severity),
+              })),
+            },
+          ]
+        })
       }),
     listProjectsWithActiveSavedSearchAlerts: () =>
       Effect.sync(() => {

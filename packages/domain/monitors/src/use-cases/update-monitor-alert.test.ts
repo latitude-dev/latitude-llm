@@ -1,6 +1,8 @@
 import { type Monitor, type MonitorAlert, MonitorRepository, updateMonitorAlertUseCase } from "@domain/monitors"
 import { createFakeMonitorRepository } from "@domain/monitors/testing"
-import { MonitorAlertId, MonitorId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { type SavedSearch, SavedSearchRepository } from "@domain/saved-searches"
+import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
+import { MonitorAlertId, MonitorId, OrganizationId, ProjectId, SavedSearchId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -37,16 +39,42 @@ const makeMonitor = (overrides: Partial<Monitor> & { alerts: readonly MonitorAle
   updatedAt: at,
 })
 
+const makeSavedSearch = (id: string, query: string | null): SavedSearch => ({
+  id: SavedSearchId(id),
+  organizationId,
+  projectId,
+  slug: `search-${id.slice(0, 4)}`,
+  name: `Search ${id.slice(0, 4)}`,
+  query,
+  filterSet: {},
+  deletedAt: null,
+  createdAt: at,
+  updatedAt: at,
+})
+
+// Exact-match searches are monitorable; the "z" one has a semantic part and is not.
+const SEEDED_SEARCHES: readonly SavedSearch[] = [
+  makeSavedSearch("s".repeat(24), '"500 Internal Server Error"'),
+  makeSavedSearch("t".repeat(24), "`refund payment failed`"),
+  makeSavedSearch("z".repeat(24), "checkout failed"),
+]
+
 const provide = (repo: MonitorRepositoryShape) =>
   Layer.mergeAll(
     Layer.succeed(MonitorRepository, MonitorRepository.of(repo)),
+    Layer.succeed(
+      SavedSearchRepository,
+      SavedSearchRepository.of(createFakeSavedSearchRepository(SEEDED_SEARCHES).repository),
+    ),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
   )
 
-const run = <A, E>(effect: Effect.Effect<A, E, SqlClient | MonitorRepository>, repo: MonitorRepositoryShape) =>
+type UseCaseContext = SqlClient | MonitorRepository | SavedSearchRepository
+
+const run = <A, E>(effect: Effect.Effect<A, E, UseCaseContext>, repo: MonitorRepositoryShape) =>
   Effect.runPromise(effect.pipe(Effect.provide(provide(repo))))
 
-const runError = <A, E>(effect: Effect.Effect<A, E, SqlClient | MonitorRepository>, repo: MonitorRepositoryShape) =>
+const runError = <A, E>(effect: Effect.Effect<A, E, UseCaseContext>, repo: MonitorRepositoryShape) =>
   Effect.runPromise(effect.pipe(Effect.flip, Effect.provide(provide(repo))))
 
 const escalatingMonitor = (system: boolean) =>
@@ -198,5 +226,30 @@ describe("updateMonitorAlertUseCase", () => {
       repo,
     )
     expect(error._tag).toBe("MonitorAlertNotFoundError")
+  })
+
+  it("rejects re-pointing an alert at a saved search with a semantic part", async () => {
+    const monitor = makeMonitor({
+      alerts: [makeAlert({ kind: "savedSearch.match", source: { type: "savedSearch", id: "s".repeat(24) } })],
+    })
+    const { repo, monitors } = createFakeMonitorRepository([monitor])
+    const error = await runError(
+      updateMonitorAlertUseCase({ monitorId, alertId, source: { type: "savedSearch", id: "z".repeat(24) } }),
+      repo,
+    )
+    expect(error._tag).toBe("ValidationError")
+    expect((error as { field: string }).field).toBe("source")
+    expect(monitors[0]?.alerts[0]?.source.id).toBe("s".repeat(24))
+  })
+
+  it("still edits in place an alert already watching a semantic search (source unchanged)", async () => {
+    // Defensive for legacy alerts: only a source CHANGE re-validates monitorability.
+    const monitor = makeMonitor({
+      alerts: [makeAlert({ kind: "savedSearch.match", source: { type: "savedSearch", id: "z".repeat(24) } })],
+    })
+    const { repo, monitors } = createFakeMonitorRepository([monitor])
+    const result = await run(updateMonitorAlertUseCase({ monitorId, alertId, severity: "low" }), repo)
+    expect(result.alerts[0]?.severity).toBe("low")
+    expect(monitors[0]?.alerts[0]?.severity).toBe("low")
   })
 })

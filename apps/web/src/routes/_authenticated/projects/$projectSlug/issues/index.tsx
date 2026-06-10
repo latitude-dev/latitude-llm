@@ -546,9 +546,9 @@ function IssuesPage() {
           <div className="flex flex-col gap-3">
             <div className="flex flex-row items-center justify-between gap-4">
               <div className="flex flex-col gap-1">
-                <Label htmlFor="bulk-keep-monitoring">Keep monitoring these issues</Label>
+                <Label htmlFor="bulk-keep-monitoring">Keep evaluating these issues</Label>
                 <Text.H6 color="foregroundMuted">
-                  Evaluations monitoring these issues will stay active to detect further regressions
+                  Evaluations for these issues will stay active to detect further regressions
                 </Text.H6>
               </div>
               <Switch
@@ -556,7 +556,7 @@ function IssuesPage() {
                 checked={keepMonitoring}
                 onCheckedChange={setKeepMonitoring}
                 disabled={bulkActionLoading}
-                aria-label="Keep monitoring these issues"
+                aria-label="Keep evaluating these issues"
               />
             </div>
           </div>
@@ -567,7 +567,7 @@ function IssuesPage() {
           onOpenChange={setBulkIgnoreModalOpen}
           dismissible
           title="Ignore issues"
-          description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as ignored. We won't monitor or alert you about new occurrences of these issues anymore.`}
+          description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as ignored. You won't be alerted about new occurrences of these issues anymore.`}
           footer={
             <>
               <CloseTrigger />

@@ -1,4 +1,4 @@
-import { SlackIntegrationRepository } from "@domain/integrations"
+import { routeAdmitsPayload, SlackIntegrationRepository } from "@domain/integrations"
 import {
   createNotificationUseCase,
   deleteNotificationsByProjectUseCase,
@@ -92,7 +92,9 @@ const fanOutSlackRoutes = (
     // Personal kinds target a single user — never broadcast them to a
     // shared channel, even if a stale route were somehow configured.
     if (!NOTIFICATION_GROUP_META[group].slackRoutable) return
-    const routes = integration.routes[group] ?? []
+    // Routes can set a minimum incident severity; incidents below it never
+    // reach the channel (payloads without a severity always pass).
+    const routes = (integration.routes[group] ?? []).filter((route) => routeAdmitsPayload(route, first.payload))
     if (routes.length === 0) return
 
     yield* Effect.all(

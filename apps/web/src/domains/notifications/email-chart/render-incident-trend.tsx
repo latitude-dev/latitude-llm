@@ -1,6 +1,6 @@
 import type { IncidentTrend } from "@domain/notifications"
+import { SEVERITY_COLOR } from "@domain/shared"
 import { Resvg } from "@resvg/resvg-js"
-import { INCIDENT_SEVERITY_HEX } from "../../alerts/incident-markers.ts"
 import {
   buildSmoothThresholdPath,
   buildThresholdSegments,
@@ -122,7 +122,7 @@ const resolveIncidentSpan = (trend: IncidentTrend, bucketStartsMs: readonly numb
     bandEnd = lastIndex
   }
 
-  return { bandStart, bandEnd, dotBucket, color: INCIDENT_SEVERITY_HEX[marker.severity] }
+  return { bandStart, bandEnd, dotBucket, color: SEVERITY_COLOR[marker.severity] }
 }
 
 /** Map a threshold point from the drawer's `0..N × 0..100` space into this chart's pixel space. */

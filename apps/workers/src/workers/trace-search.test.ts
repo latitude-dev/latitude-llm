@@ -38,11 +38,7 @@ vi.mock("../clients.ts", () => ({
   getRedisClient: vi.fn(() => ({})),
 }))
 
-import {
-  prioritizeChunksForEmbedding,
-  processRefreshTrace,
-  resolveTraceSearchRetentionDays,
-} from "./trace-search.ts"
+import { prioritizeChunksForEmbedding, processRefreshTrace, resolveTraceSearchRetentionDays } from "./trace-search.ts"
 
 describe("prioritizeChunksForEmbedding", () => {
   it("prioritizes tail chunks first and skips chunks below the embedding floor", () => {

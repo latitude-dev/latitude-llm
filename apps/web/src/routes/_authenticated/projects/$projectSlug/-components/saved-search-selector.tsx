@@ -2,6 +2,11 @@ import {
   Button,
   CloseTrigger,
   cn,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
   Icon,
   Input,
   Modal,
@@ -10,12 +15,17 @@ import {
   PopoverTrigger,
   Text,
   Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
   toast,
 } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
 import {
   BellIcon,
   BellPlusIcon,
+  BookmarkIcon,
   BookmarkPlusIcon,
   ChevronDownIcon,
   FilterIcon,
@@ -24,8 +34,9 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import { useMemo, useState } from "react"
+import { SeverityDots } from "../../../../../domains/alerts/severity-selector.tsx"
 import { useHasFeatureFlag } from "../../../../../domains/feature-flags/feature-flags.collection.ts"
-import { useSavedSearchMonitorSlugs } from "../../../../../domains/monitors/monitors.collection.ts"
+import { useSavedSearchMonitorSummaries } from "../../../../../domains/monitors/monitors.collection.ts"
 import {
   useDeleteSavedSearch,
   useSavedSearchesList,
@@ -35,6 +46,7 @@ import { toUserMessage } from "../../../../../lib/errors.ts"
 import { emptyAlertDraft } from "../monitors/-components/alert-form-helpers.ts"
 import { MonitorCreateModal } from "../monitors/-components/monitor-create-modal.tsx"
 import { SaveSearchModal } from "./save-search-modal.tsx"
+import { SemanticMonitorPopoverContent, searchHasSemanticPart } from "./semantic-monitor-notice.tsx"
 
 /**
  * Dropdown listing the project's saved searches with a filter, per-row delete and
@@ -71,14 +83,18 @@ export function SavedSearchSelector({
   const monitorsEnabled = useHasFeatureFlag("monitors")
 
   const { data: savedSearches } = useSavedSearchesList(projectId)
-  // Batched `savedSearchId -> monitorSlug` map (earliest-created live, unmuted monitor per search),
-  // used to label the per-row action "View monitor" vs "Create monitor". Fetched only while open.
-  const monitorSlugBySavedSearchId = useSavedSearchMonitorSlugs(projectId, { enabled: open && monitorsEnabled })
 
   const selected = useMemo(
     () => savedSearches.find((search) => search.slug === selectedSlug) ?? null,
     [savedSearches, selectedSlug],
   )
+
+  // Batched per-search monitor summaries (primary slug + count + alert severities). Labels the
+  // per-row "View/Create monitor" action and drives the monitored-state chip next to the trigger,
+  // so it's needed while the dropdown is open OR a search is loaded.
+  const monitorSummaries = useSavedSearchMonitorSummaries(projectId, {
+    enabled: monitorsEnabled && (open || selected !== null),
+  })
 
   const filtered = useMemo(() => {
     const trimmed = filter.trim().toLowerCase()
@@ -88,10 +104,10 @@ export function SavedSearchSelector({
 
   const goToMonitor = (record: SavedSearchRecord) => {
     setOpen(false)
-    const existingSlug = monitorSlugBySavedSearchId[record.id]
+    const existingSlug = monitorSummaries[record.id]?.monitorSlug
     if (existingSlug) {
       void navigate({
-        to: "/projects/$projectSlug/monitors",
+        to: "/projects/$projectSlug/monitors/search",
         params: { projectSlug },
         search: { monitorSlug: existingSlug },
       })
@@ -100,6 +116,8 @@ export function SavedSearchSelector({
       setCreateMonitorFor(record)
     }
   }
+
+  const selectedSummary = selected ? monitorSummaries[selected.id] : undefined
 
   return (
     <>
@@ -110,7 +128,14 @@ export function SavedSearchSelector({
             aria-label="Saved searches"
             className="flex h-full shrink-0 cursor-pointer items-center gap-1 self-stretch border-r border-input bg-secondary px-2 text-secondary-foreground transition-colors hover:bg-secondary/80"
           >
-            {selected ? <span className="max-w-40 truncate text-sm">{selected.name}</span> : null}
+            {selected ? (
+              <span className="max-w-40 truncate text-sm">{selected.name}</span>
+            ) : (
+              <>
+                <Icon icon={BookmarkIcon} size="sm" color="foregroundMuted" />
+                <span className="text-muted-foreground text-sm">Searches</span>
+              </>
+            )}
             <Icon icon={ChevronDownIcon} size="sm" color="foregroundMuted" />
           </button>
         </PopoverTrigger>
@@ -137,7 +162,7 @@ export function SavedSearchSelector({
             ) : (
               filtered.map((record) => {
                 const isSelected = record.slug === selectedSlug
-                const hasMonitor = Boolean(monitorSlugBySavedSearchId[record.id])
+                const hasMonitor = Boolean(monitorSummaries[record.id])
                 const filtersCount = Object.keys(record.filterSet).length
                 return (
                   <div
@@ -178,24 +203,40 @@ export function SavedSearchSelector({
                       </span>
                     </button>
                     {monitorsEnabled ? (
-                      <Tooltip
-                        asChild
-                        trigger={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
-                            aria-label={
-                              hasMonitor ? `View monitor for ${record.name}` : `Create monitor for ${record.name}`
-                            }
-                            onClick={() => goToMonitor(record)}
-                          >
-                            <Icon icon={hasMonitor ? BellIcon : BellPlusIcon} size="sm" color="foregroundMuted" />
-                          </Button>
-                        }
-                      >
-                        {hasMonitor ? "View monitor" : "Create monitor"}
-                      </Tooltip>
+                      !hasMonitor && searchHasSemanticPart(record.query) ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100"
+                              aria-label={`Why ${record.name} can't be monitored`}
+                            >
+                              <Icon icon={BellPlusIcon} size="sm" color="foregroundMuted" />
+                            </Button>
+                          </PopoverTrigger>
+                          <SemanticMonitorPopoverContent />
+                        </Popover>
+                      ) : (
+                        <Tooltip
+                          asChild
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
+                              aria-label={
+                                hasMonitor ? `View monitor for ${record.name}` : `Create monitor for ${record.name}`
+                              }
+                              onClick={() => goToMonitor(record)}
+                            >
+                              <Icon icon={hasMonitor ? BellIcon : BellPlusIcon} size="sm" color="foregroundMuted" />
+                            </Button>
+                          }
+                        >
+                          {hasMonitor ? "View monitor" : "Create monitor"}
+                        </Tooltip>
+                      )
                     ) : null}
                     <Tooltip
                       asChild
@@ -251,6 +292,85 @@ export function SavedSearchSelector({
           </div>
         </PopoverContent>
       </Popover>
+      {monitorsEnabled && selected ? (
+        selectedSummary ? (
+          <DropdownMenuRoot modal={false}>
+            <TooltipProvider>
+              <TooltipRoot delayDuration={250}>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={`View monitors for ${selected.name}`}
+                      className="flex h-full shrink-0 cursor-pointer items-center gap-1.5 self-stretch border-input border-r px-2 transition-colors hover:bg-secondary/60"
+                    >
+                      <Icon icon={BellIcon} size="sm" color="foregroundMuted" />
+                      <SeverityDots severities={selectedSummary.severities} />
+                    </button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {selectedSummary.monitors.length} monitor
+                  {selectedSummary.monitors.length === 1 ? "" : "s"}
+                </TooltipContent>
+              </TooltipRoot>
+            </TooltipProvider>
+            <DropdownMenuPortal>
+              <DropdownMenuContent align="start" className="w-96">
+                {selectedSummary.monitors.map((monitor) => (
+                  <DropdownMenuItem
+                    key={monitor.slug}
+                    className="cursor-pointer items-center gap-2"
+                    onSelect={() =>
+                      void navigate({
+                        to: "/projects/$projectSlug/monitors/search",
+                        params: { projectSlug },
+                        search: { monitorSlug: monitor.slug },
+                      })
+                    }
+                  >
+                    <SeverityDots severities={monitor.severities} />
+                    <div className="w-full min-w-0">
+                      <Text.H5 ellipsis noWrap>
+                        {monitor.name}
+                      </Text.H5>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenuPortal>
+          </DropdownMenuRoot>
+        ) : searchHasSemanticPart(selected.query) ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={`Why ${selected.name} can't be monitored`}
+                className="flex h-full shrink-0 cursor-pointer items-center gap-1.5 self-stretch border-input border-r px-2 transition-colors hover:bg-secondary/60"
+              >
+                <Icon icon={BellPlusIcon} size="sm" color="foregroundMuted" />
+              </button>
+            </PopoverTrigger>
+            <SemanticMonitorPopoverContent />
+          </Popover>
+        ) : (
+          <Tooltip
+            asChild
+            trigger={
+              <button
+                type="button"
+                aria-label={`Create a monitor for ${selected.name}`}
+                className="flex h-full shrink-0 cursor-pointer items-center gap-1.5 self-stretch border-input border-r px-2 transition-colors hover:bg-secondary/60"
+                onClick={() => goToMonitor(selected)}
+              >
+                <Icon icon={BellPlusIcon} size="sm" color="foregroundMuted" />
+              </button>
+            }
+          >
+            Create monitor
+          </Tooltip>
+        )
+      ) : null}
       {rowToDelete ? (
         <DeleteSavedSearchModal
           row={rowToDelete}
@@ -280,13 +400,6 @@ export function SavedSearchSelector({
           projectSlug={projectSlug}
           initialAlert={emptyAlertDraft({ sourceId: createMonitorFor.id })}
           onClose={() => setCreateMonitorFor(null)}
-          onCreated={(slug) => {
-            void navigate({
-              to: "/projects/$projectSlug/monitors",
-              params: { projectSlug },
-              search: { monitorSlug: slug },
-            })
-          }}
         />
       ) : null}
     </>
@@ -314,7 +427,11 @@ function DeleteSavedSearchModal({
         onClose()
       },
       onError: (error) => {
-        toast({ variant: "destructive", title: "Could not delete", description: toUserMessage(error) })
+        toast({
+          variant: "destructive",
+          title: "Could not delete",
+          description: toUserMessage(error),
+        })
       },
     })
   }

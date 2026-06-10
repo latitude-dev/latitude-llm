@@ -1,4 +1,4 @@
-import { NOTIFICATION_GROUP_META, type NotificationGroup } from "@domain/shared"
+import { type AlertSeverity, NOTIFICATION_GROUP_META, type NotificationGroup } from "@domain/shared"
 import {
   Button,
   Combobox,
@@ -13,6 +13,7 @@ import {
 } from "@repo/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRef, useState } from "react"
+import { minSeverityHint, SeveritySelector } from "../../../../../../domains/alerts/severity-selector.tsx"
 import {
   configureSlackRoute,
   listSlackChannels,
@@ -65,62 +66,112 @@ export function SlackRouteRow({
   const mutation = useMutation({
     mutationFn: (option: ChannelOption) => {
       if (option.id === "") return removeSlackRoute({ data: { group } })
-      return configureSlackRoute({ data: { group, routes: [{ channelId: option.id, channelName: option.name }] } })
+      // Re-picking the channel keeps the configured severity threshold.
+      return configureSlackRoute({
+        data: {
+          group,
+          routes: [
+            {
+              channelId: option.id,
+              channelName: option.name,
+              ...(currentRoute?.minSeverity ? { minSeverity: currentRoute.minSeverity } : {}),
+            },
+          ],
+        },
+      })
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: SLACK_INTEGRATION_QUERY_KEY }),
+    onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
+  })
+
+  const severityMutation = useMutation({
+    mutationFn: (minSeverity: AlertSeverity) => {
+      if (!currentRoute) return Promise.resolve(null)
+      return configureSlackRoute({
+        data: {
+          group,
+          routes: [{ channelId: currentRoute.channelId, channelName: currentRoute.channelName, minSeverity }],
+        },
+      })
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: SLACK_INTEGRATION_QUERY_KEY }),
     onError: (error) => toast({ variant: "destructive", description: toUserMessage(error) }),
   })
 
   return (
-    <div className="flex flex-row items-center justify-between gap-4">
-      <Text.H5 color="foregroundMuted">{meta.label}</Text.H5>
-      <div className="w-52 shrink-0">
-        <Combobox
-          modal
-          value={selected}
-          onValueChange={(picked) => {
-            setInputValue("")
-            void mutation.mutateAsync(picked ?? DON_T_SEND)
-          }}
-          items={allOptions}
-          itemToStringValue={(item: ChannelOption) => (item.id === "" ? "Don't send" : `#${item.name}`)}
-          isItemEqualToValue={(a: ChannelOption, b: ChannelOption) => a.id === b.id}
-          onOpenChange={(open) => {
-            if (open) void refetch()
-          }}
-          disabled={mutation.isPending}
-        >
-          <Button asChild variant="outline" size="sm" disabled={mutation.isPending} className="w-full justify-between">
-            <ComboboxTrigger ref={triggerRef}>
-              {selected.id === "" ? (
-                <Text.H5 color="foregroundMuted">Don't send</Text.H5>
-              ) : (
-                <Text.H5>#{selected.name}</Text.H5>
-              )}
-            </ComboboxTrigger>
-          </Button>
-          <ComboboxContent anchor={triggerRef} className="w-64">
-            <ComboboxInput
-              placeholder="Search channels…"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              loading={isFetching}
-            />
-            <ComboboxList>
-              {(item: ChannelOption) => (
-                <ComboboxItem value={item}>
-                  {item.id === "" ? (
-                    <Text.H5 color="foregroundMuted">Don't send</Text.H5>
-                  ) : (
-                    <Text.H5>#{item.name}</Text.H5>
-                  )}
-                </ComboboxItem>
-              )}
-            </ComboboxList>
-            <ComboboxEmpty>No channels found.</ComboboxEmpty>
-          </ComboboxContent>
-        </Combobox>
+    // Mirrors the email-notification group cards in account settings; the only
+    // difference is the channel picker where email has a switch.
+    <div className="flex w-full flex-col gap-3 rounded-lg bg-muted/30 p-4">
+      <div className="flex w-full flex-row items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <Text.H5M>{meta.label}</Text.H5M>
+          <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
+        </div>
+        <div className="w-52 shrink-0">
+          <Combobox
+            modal
+            value={selected}
+            onValueChange={(picked) => {
+              setInputValue("")
+              void mutation.mutateAsync(picked ?? DON_T_SEND)
+            }}
+            items={allOptions}
+            itemToStringValue={(item: ChannelOption) => (item.id === "" ? "Don't send" : `#${item.name}`)}
+            isItemEqualToValue={(a: ChannelOption, b: ChannelOption) => a.id === b.id}
+            onOpenChange={(open) => {
+              if (open) void refetch()
+            }}
+            disabled={mutation.isPending}
+          >
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              disabled={mutation.isPending}
+              className="w-full justify-between"
+            >
+              <ComboboxTrigger ref={triggerRef}>
+                {selected.id === "" ? (
+                  <Text.H5 color="foregroundMuted">Don't send</Text.H5>
+                ) : (
+                  <Text.H5>#{selected.name}</Text.H5>
+                )}
+              </ComboboxTrigger>
+            </Button>
+            <ComboboxContent anchor={triggerRef} className="w-64">
+              <ComboboxInput
+                placeholder="Search channels…"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                loading={isFetching}
+              />
+              <ComboboxList>
+                {(item: ChannelOption) => (
+                  <ComboboxItem value={item}>
+                    {item.id === "" ? (
+                      <Text.H5 color="foregroundMuted">Don't send</Text.H5>
+                    ) : (
+                      <Text.H5>#{item.name}</Text.H5>
+                    )}
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+              <ComboboxEmpty>No channels found.</ComboboxEmpty>
+            </ComboboxContent>
+          </Combobox>
+        </div>
       </div>
+      {group === "incidents" && currentRoute ? (
+        <div className="flex flex-row items-center justify-between gap-4 rounded-lg bg-muted/80 px-3 py-2">
+          <Text.H6 color="foregroundMuted">Severity · {minSeverityHint(currentRoute.minSeverity ?? "low")}</Text.H6>
+          <SeveritySelector
+            variant="bordered"
+            value={currentRoute.minSeverity ?? "low"}
+            onSelect={(minSeverity) => void severityMutation.mutateAsync(minSeverity)}
+            disabled={severityMutation.isPending || mutation.isPending}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }

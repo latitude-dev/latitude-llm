@@ -2,49 +2,30 @@ import { ALERT_INCIDENT_KIND_LABEL } from "@domain/shared"
 import {
   Button,
   CopyableText,
-  cn,
   DetailDrawer,
   DetailSection,
   Icon,
   LatitudeLogo,
   Skeleton,
   Status,
-  type StatusProps,
   Text,
   Tooltip,
   useToast,
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  BellIcon,
-  BellOffIcon,
-  LinkIcon,
-  MegaphoneIcon,
-  PencilIcon,
-  ShieldAlertIcon,
-  XIcon,
-} from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, BellIcon, BellOffIcon, LinkIcon, PencilIcon, ShieldAlertIcon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
+import { SeverityStatus } from "../../../../../../domains/alerts/severity-selector.tsx"
 import { useMonitorIncidentStats } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorAlertRecord, MonitorRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
-import { AddAlertButton } from "./add-alert-button.tsx"
-import { MonitorAlertDeleteConfirmModal } from "./monitor-alert-delete-confirm-modal.tsx"
 import { MonitorAlertEditModal } from "./monitor-alert-edit-modal.tsx"
 import { MonitorIncidentsTable, MonitorIncidentsTableSkeleton } from "./monitor-incidents-table.tsx"
 import { MonitorMuteConfirmModal } from "./monitor-mute-confirm-modal.tsx"
 import { MonitorSensitivityEditModal } from "./monitor-sensitivity-edit-modal.tsx"
-
-const SEVERITY_VARIANT: Record<MonitorAlertRecord["severity"], StatusProps["variant"]> = {
-  low: "neutral",
-  medium: "warning",
-  high: "destructive",
-}
 
 const SEVERITY_LABEL: Record<MonitorAlertRecord["severity"], string> = {
   low: "Low",
@@ -77,7 +58,6 @@ function formatCompactElapsed(elapsedMs: number): string {
 
 const elapsedSince = (iso: string): number => Math.max(0, Date.now() - Date.parse(iso))
 
-// Flex `div` so the `gap-*` around the separator holds; bare `<span>` triggers so Radix's hover handlers land on a real DOM node.
 function MonitorDetectedAtValue({
   lastDetectedAtIso,
   firstStartedAtIso,
@@ -110,7 +90,6 @@ function MonitorDetectedAtValue({
   )
 }
 
-/** Icon + "System" badge, styled like a `TagBadge`, shown next to the slug. */
 function SystemTag() {
   return (
     <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground select-none">
@@ -120,73 +99,38 @@ function SystemTag() {
   )
 }
 
-function AlertCard({
+function AlertBlock({
   alert,
   monitor,
   onEdit,
-  onDelete,
 }: {
   readonly alert: MonitorAlertRecord
   readonly monitor: MonitorRecord
   readonly onEdit: () => void
-  readonly onDelete: () => void
 }) {
-  // System monitors only allow editing the issue.escalating sensitivity; user alerts are fully editable.
   const canEdit = !monitor.system || alert.kind === "issue.escalating"
-  // The delete control shows on every user-monitor alert, but a monitor must keep
-  // at least one — so it's disabled (with a hint) when this is the only alert.
-  const deletable = !monitor.system
-  const isLastAlert = monitor.alerts.length <= 1
-
-  const deleteButton = (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-7 px-2"
-      disabled={isLastAlert}
-      onClick={onDelete}
-      aria-label="Delete alert"
-    >
-      <Icon icon={XIcon} size="sm" />
-    </Button>
-  )
-
-  const editButton = (
-    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onEdit} aria-label="Edit alert">
-      <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
-    </Button>
-  )
-
-  // Ghost icon buttons add their own height; trim top padding when present so the row stays balanced.
-  const hasActions = canEdit || deletable
 
   return (
-    <div
-      className={cn("flex flex-col gap-2 rounded-lg border border-border pb-3 pl-3 pr-2", {
-        "pt-2": hasActions,
-        "pt-3": !hasActions,
-      })}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <Status
-            variant={SEVERITY_VARIANT[alert.severity]}
-            label={`${ALERT_INCIDENT_KIND_LABEL[alert.kind]} · ${SEVERITY_LABEL[alert.severity]}`}
-          />
-          {canEdit ? (
-            <Tooltip asChild side="bottom" trigger={<span className="inline-flex shrink-0">{editButton}</span>}>
-              Click to edit this alert
-            </Tooltip>
-          ) : null}
-        </div>
-        {deletable ? (
-          isLastAlert ? (
-            <Tooltip asChild side="bottom" trigger={<span className="inline-flex">{deleteButton}</span>}>
-              A monitor must have at least one alert
-            </Tooltip>
-          ) : (
-            deleteButton
-          )
+    <div className="flex flex-col gap-1">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <SeverityStatus
+          severity={alert.severity}
+          label={`${ALERT_INCIDENT_KIND_LABEL[alert.kind]} · ${SEVERITY_LABEL[alert.severity]}`}
+        />
+        {canEdit ? (
+          <Tooltip
+            asChild
+            side="bottom"
+            trigger={
+              <span className="inline-flex shrink-0">
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onEdit} aria-label="Edit alert">
+                  <Icon icon={PencilIcon} size="xs" color="foregroundMuted" />
+                </Button>
+              </span>
+            }
+          >
+            Click to edit this alert
+          </Tooltip>
         ) : null}
       </div>
       <Text.H5>{alert.summary}</Text.H5>
@@ -194,7 +138,6 @@ function AlertCard({
   )
 }
 
-/** Shown while the monitor list resolves on a deep link, before the panel can mount off it. */
 export function MonitorDetailDrawerSkeleton({ onClose }: { readonly onClose: () => void }) {
   return (
     <DetailDrawer
@@ -223,19 +166,11 @@ export function MonitorDetailDrawerSkeleton({ onClose }: { readonly onClose: () 
             <SummaryField label="Incidents" value={<Skeleton className="h-5 w-10" />} />
           </div>
 
-          <DetailSection icon={<Icon icon={MegaphoneIcon} size="sm" />} label="Alerts" defaultOpen>
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: 2 }, (_, i) => (
-                <div
-                  key={`alert-skeleton-${i}`}
-                  className="flex flex-col gap-2 rounded-lg border border-border px-3 pb-3 pt-3"
-                >
-                  <Skeleton className="h-5 w-44" />
-                  <Skeleton className="h-5 w-full" />
-                </div>
-              ))}
-            </div>
-          </DetailSection>
+          <div className="flex flex-col gap-2">
+            <Text.H6 color="foregroundMuted">Alert</Text.H6>
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-5 w-full" />
+          </div>
 
           <DetailSection
             icon={<Icon icon={ShieldAlertIcon} size="sm" />}
@@ -272,10 +207,9 @@ export function MonitorDetailDrawer({
 }) {
   const { toast } = useToast()
   const [muteConfirmOpen, setMuteConfirmOpen] = useState(false)
-  // `null` = closed; `{ alert: null }` = add; `{ alert }` = edit that alert.
-  const [alertModal, setAlertModal] = useState<{ readonly alert: MonitorAlertRecord | null } | null>(null)
+  // `null` = closed; an alert = edit that alert (alerts are never added or deleted from the app).
+  const [alertModal, setAlertModal] = useState<MonitorAlertRecord | null>(null)
   const [sensitivityAlert, setSensitivityAlert] = useState<MonitorAlertRecord | null>(null)
-  const [alertToDelete, setAlertToDelete] = useState<MonitorAlertRecord | null>(null)
   const muted = monitor.mutedAt != null
   const { data: incidentStats, isLoading: statsLoading } = useMonitorIncidentStats({
     projectId,
@@ -316,13 +250,29 @@ export function MonitorDetailDrawer({
   // System monitors only expose the issue.escalating sensitivity (its own modal);
   // every other editable alert is a user saved-search alert (the alert-form modal).
   const onEditAlert = (alert: MonitorAlertRecord) =>
-    alert.kind === "issue.escalating" ? setSensitivityAlert(alert) : setAlertModal({ alert })
+    alert.kind === "issue.escalating" ? setSensitivityAlert(alert) : setAlertModal(alert)
 
   useHotkeys([
-    { hotkey: "Alt+ArrowDown", callback: () => onNext?.(), options: { enabled: canNavigateNext && !!onNext } },
-    { hotkey: "Alt+ArrowUp", callback: () => onPrev?.(), options: { enabled: canNavigatePrev && !!onPrev } },
-    { hotkey: "J", callback: () => onNext?.(), options: { enabled: canNavigateNext && !!onNext } },
-    { hotkey: "K", callback: () => onPrev?.(), options: { enabled: canNavigatePrev && !!onPrev } },
+    {
+      hotkey: "Alt+ArrowDown",
+      callback: () => onNext?.(),
+      options: { enabled: canNavigateNext && !!onNext },
+    },
+    {
+      hotkey: "Alt+ArrowUp",
+      callback: () => onPrev?.(),
+      options: { enabled: canNavigatePrev && !!onPrev },
+    },
+    {
+      hotkey: "J",
+      callback: () => onNext?.(),
+      options: { enabled: canNavigateNext && !!onNext },
+    },
+    {
+      hotkey: "K",
+      callback: () => onPrev?.(),
+      options: { enabled: canNavigatePrev && !!onPrev },
+    },
   ])
 
   return (
@@ -441,20 +391,14 @@ export function MonitorDetailDrawer({
               />
             </div>
 
-            <DetailSection icon={<Icon icon={MegaphoneIcon} size="sm" />} label="Alerts" defaultOpen>
-              <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
+              <Text.H6 color="foregroundMuted">{monitor.alerts.length > 1 ? "Alerts" : "Alert"}</Text.H6>
+              <div className="flex flex-col gap-4">
                 {monitor.alerts.map((alert) => (
-                  <AlertCard
-                    key={alert.id}
-                    alert={alert}
-                    monitor={monitor}
-                    onEdit={() => onEditAlert(alert)}
-                    onDelete={() => setAlertToDelete(alert)}
-                  />
+                  <AlertBlock key={alert.id} alert={alert} monitor={monitor} onEdit={() => onEditAlert(alert)} />
                 ))}
-                {!monitor.system ? <AddAlertButton onClick={() => setAlertModal({ alert: null })} /> : null}
               </div>
-            </DetailSection>
+            </div>
 
             <DetailSection
               icon={<Icon icon={ShieldAlertIcon} size="sm" />}
@@ -479,7 +423,7 @@ export function MonitorDetailDrawer({
           projectId={projectId}
           projectSlug={projectSlug}
           monitorId={monitor.id}
-          alert={alertModal.alert}
+          alert={alertModal}
           onClose={() => setAlertModal(null)}
         />
       ) : null}
@@ -490,15 +434,6 @@ export function MonitorDetailDrawer({
           monitorId={monitor.id}
           alert={sensitivityAlert}
           onClose={() => setSensitivityAlert(null)}
-        />
-      ) : null}
-
-      {alertToDelete ? (
-        <MonitorAlertDeleteConfirmModal
-          projectId={projectId}
-          monitorId={monitor.id}
-          alert={alertToDelete}
-          onClose={() => setAlertToDelete(null)}
         />
       ) : null}
     </>

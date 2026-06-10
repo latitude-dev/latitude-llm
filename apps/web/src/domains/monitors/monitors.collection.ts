@@ -5,20 +5,19 @@ import { useCallback, useMemo, useState } from "react"
 import { toUserMessage } from "../../lib/errors.ts"
 import {
   createMonitor,
-  createMonitorAlert,
   deleteMonitor,
-  deleteMonitorAlert,
   getMonitorBySlug,
   getMonitorIncidentStats,
   listMonitorIncidents,
   listMonitors,
-  listSavedSearchMonitorSlugs,
+  listSavedSearchMonitorSummaries,
   type MonitorIncidentRecord,
   type MonitorIncidentsCursor,
   type MonitorListRowRecord,
   type MonitorRecord,
   type MonitorSearchRecord,
   muteMonitor,
+  type SavedSearchMonitorSummaryRecord,
   searchMonitorsOrgWide,
   unmuteMonitor,
   updateMonitor,
@@ -42,8 +41,12 @@ const ORG_SEARCH_LIMIT = 8
 const DEFAULT_INCIDENTS_PAGE_SIZE = 50
 const MONITORS_QUERY_STALE_TIME_MS = 30_000
 
-const getListMonitorsQueryKey = (projectId: string, limit: number, searchQuery: string | undefined) =>
-  ["monitors", "list", projectId, limit, searchQuery ?? null] as const
+const getListMonitorsQueryKey = (
+  projectId: string,
+  limit: number,
+  searchQuery: string | undefined,
+  system: boolean | undefined,
+) => ["monitors", "list", projectId, limit, searchQuery ?? null, system ?? null] as const
 
 const getMonitorQueryKey = (projectId: string, slug: string) => ["monitors", "get", projectId, slug] as const
 
@@ -57,13 +60,14 @@ export function useMonitors(input: {
   readonly projectId: string
   readonly limit?: number
   readonly searchQuery?: string
+  readonly system?: boolean
   readonly enabled?: boolean
 }) {
   const limit = input.limit ?? DEFAULT_MONITORS_PAGE_SIZE
   const trimmedSearchQuery = input.searchQuery?.trim() || undefined
 
   const { data, isLoading, isPlaceholderData, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: getListMonitorsQueryKey(input.projectId, limit, trimmedSearchQuery),
+    queryKey: getListMonitorsQueryKey(input.projectId, limit, trimmedSearchQuery, input.system),
     queryFn: ({ pageParam }) =>
       listMonitors({
         data: {
@@ -71,6 +75,7 @@ export function useMonitors(input: {
           limit,
           offset: pageParam,
           ...(trimmedSearchQuery ? { searchQuery: trimmedSearchQuery } : {}),
+          ...(input.system !== undefined ? { system: input.system } : {}),
         },
       }),
     initialPageParam: 0,
@@ -124,7 +129,7 @@ export function useMonitorsSearch(
   return { data: data ?? [], isLoading }
 }
 
-/** @public Consumed by the M4 details panel; not yet wired in M2. */
+/** Point lookup by slug — backs the detail drawer for monitors outside the list (e.g. system monitors). */
 export function useMonitor(input: { readonly projectId: string; readonly slug: string; readonly enabled?: boolean }) {
   return useQuery({
     queryKey: getMonitorQueryKey(input.projectId, input.slug),
@@ -135,20 +140,21 @@ export function useMonitor(input: { readonly projectId: string; readonly slug: s
   })
 }
 
-const EMPTY_SAVED_SEARCH_MONITOR_SLUGS: Record<string, string> = {}
+const EMPTY_SAVED_SEARCH_MONITOR_SUMMARIES: Record<string, SavedSearchMonitorSummaryRecord> = {}
 
 /**
- * Batched `savedSearchId -> monitorSlug` map (earliest-created live, unmuted monitor per saved
- * search) for the saved-search dropdown's "View monitor" deep-link. One call per project.
+ * Batched `savedSearchId -> { monitorSlug, monitorCount, severities }` map (earliest-created
+ * live, unmuted monitor per saved search) backing the saved-search dropdown rows and the
+ * monitored-state chip on the traces page. One call per project.
  */
-export function useSavedSearchMonitorSlugs(projectId: string, { enabled = true }: { enabled?: boolean } = {}) {
+export function useSavedSearchMonitorSummaries(projectId: string, { enabled = true }: { enabled?: boolean } = {}) {
   const { data } = useQuery({
-    queryKey: ["monitors", "savedSearchSlugs", projectId] as const,
-    queryFn: () => listSavedSearchMonitorSlugs({ data: { projectId } }),
+    queryKey: ["monitors", "savedSearchSummaries", projectId] as const,
+    queryFn: () => listSavedSearchMonitorSummaries({ data: { projectId } }),
     staleTime: MONITORS_QUERY_STALE_TIME_MS,
     enabled: enabled && projectId.length > 0,
   })
-  return data ?? EMPTY_SAVED_SEARCH_MONITOR_SLUGS
+  return data ?? EMPTY_SAVED_SEARCH_MONITOR_SUMMARIES
 }
 
 /** @public Consumed by the M4 details panel incidents table; not yet wired in M2. */
@@ -229,6 +235,8 @@ export function useMonitorMuteAction(projectId: string) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["monitors", "list", projectId] }),
           queryClient.invalidateQueries({ queryKey: ["monitors", "get", projectId] }),
+          // Muted monitors drop out of the saved-search summaries (traces-page chip).
+          queryClient.invalidateQueries({ queryKey: ["monitors", "savedSearchSummaries", projectId] }),
         ])
         toast({ description: muted ? "Monitor muted." : "Monitor unmuted." })
       } catch (error) {
@@ -248,6 +256,9 @@ const invalidateMonitorQueries = (queryClient: ReturnType<typeof useQueryClient>
   Promise.all([
     queryClient.invalidateQueries({ queryKey: ["monitors", "list", projectId] }),
     queryClient.invalidateQueries({ queryKey: ["monitors", "get", projectId] }),
+    // Saved-search ↔ monitor summaries back the traces-page chip and selector
+    // rows; creating/deleting/muting monitors changes them.
+    queryClient.invalidateQueries({ queryKey: ["monitors", "savedSearchSummaries", projectId] }),
   ])
 
 /** Create a user monitor (with its alerts). Invalidates the list on success. */
@@ -291,19 +302,15 @@ export function useDeleteMonitor(projectId: string) {
 }
 
 /**
- * Per-alert CRUD used by the details-panel Alerts section: add a new alert,
- * edit an existing alert's configurable values, or remove one. Each invalidates
- * the list + detail queries so the panel reflects the change.
+ * Per-alert actions used by the details-panel alert block: edit an alert's
+ * configurable values in place. Alerts are never added or deleted from the
+ * app — a monitor keeps the single alert it was created with. Invalidates the
+ * list + detail queries so the panel reflects the change.
  */
 export function useMonitorAlertActions(projectId: string) {
   const queryClient = useQueryClient()
   const onSuccess = () => invalidateMonitorQueries(queryClient, projectId)
 
-  const addAlert = useMutation({
-    mutationFn: (input: { readonly monitorId: string } & MonitorAlertDraft) =>
-      createMonitorAlert({ data: { ...input } }),
-    onSuccess,
-  })
   const editAlert = useMutation({
     mutationFn: (input: {
       readonly monitorId: string
@@ -315,11 +322,6 @@ export function useMonitorAlertActions(projectId: string) {
     }) => updateMonitorAlert({ data: input }),
     onSuccess,
   })
-  const removeAlert = useMutation({
-    mutationFn: (input: { readonly monitorId: string; readonly alertId: string }) =>
-      deleteMonitorAlert({ data: input }),
-    onSuccess,
-  })
 
-  return { addAlert, editAlert, removeAlert }
+  return { editAlert }
 }

@@ -1,6 +1,6 @@
 import type { IssuePriority } from "@domain/issues"
 import { formatHumanReadableAlert } from "@domain/monitors"
-import type { AlertIncidentCondition, AlertIncidentKind } from "@domain/shared"
+import { type AlertIncidentCondition, type AlertIncidentKind, SEVERITY_COLOR } from "@domain/shared"
 import type { ActionsBlock, HeaderBlock, KnownBlock, SectionBlock } from "@slack/web-api"
 
 export const header = (text: string): HeaderBlock => ({
@@ -115,16 +115,13 @@ export const trendChartBlock = (notificationId: string | null, webAppUrl: string
 /**
  * Color constants for attachment bars.
  *
- * Severity colors map to a four-tier priority scale (low → critical) so
- * the bar communicates urgency — no emoji prefix needed. `resolved` is
- * always green (incident is over regardless of severity). `wrapped` is
- * Claude Code orange.
+ * Severity tiers come from the shared {@link SEVERITY_COLOR} palette so the
+ * bar matches the web charts and email badges. `resolved` is always green
+ * (incident is over regardless of severity). `wrapped` is Claude Code orange.
  */
 export const COLORS = {
   // Severity tiers — used by incident renderers
-  low: "#F2C94C", // yellow
-  medium: "#F2994A", // orange
-  high: "#E8534B", // red
+  ...SEVERITY_COLOR,
   critical: "#C0392B", // dark red (reserved for future severity tier)
   // Lifecycle overrides
   resolved: "#27AE60", // green — incident recovered regardless of severity

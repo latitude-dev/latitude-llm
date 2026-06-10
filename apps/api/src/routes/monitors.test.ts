@@ -21,6 +21,8 @@ const createSavedSearchRecord = async (
   database: InMemoryPostgres,
   organizationId: string,
   projectId: string,
+  // Monitors reject searches with a semantic part, so the default fixture query is an exact literal.
+  query = '"errors"',
 ): Promise<string> => {
   const id = generateId()
   await database.db.insert(savedSearches).values({
@@ -29,7 +31,7 @@ const createSavedSearchRecord = async (
     projectId,
     slug: `search-${id.slice(0, 8)}`,
     name: `Search ${id}`,
-    query: "errors",
+    query,
     filterSet: {},
   })
   return id
@@ -68,6 +70,7 @@ const createSystemMonitorRecord = async (
 interface UserMonitorSetup {
   readonly organizationId: string
   readonly apiKeyToken: string
+  readonly projectId: string
   readonly projectSlug: string
   readonly savedSearchId: string
 }
@@ -77,7 +80,13 @@ const setupUserMonitorTenant = async (database: InMemoryPostgres): Promise<UserM
   const projectId = generateId()
   const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
   const savedSearchId = await createSavedSearchRecord(database, tenant.organizationId, projectId)
-  return { organizationId: tenant.organizationId, apiKeyToken: tenant.apiKeyToken, projectSlug, savedSearchId }
+  return {
+    organizationId: tenant.organizationId,
+    apiKeyToken: tenant.apiKeyToken,
+    projectId,
+    projectSlug,
+    savedSearchId,
+  }
 }
 
 const matchAlertBody = (savedSearchId: string) => ({
@@ -153,16 +162,59 @@ describe("Monitors Routes Integration", () => {
     expect(monitor.alerts[0]?.condition).toBeNull()
   })
 
-  it<ApiTestContext>("POST / rejects an empty alert list with 400", async ({ app, database }) => {
+  it<ApiTestContext>("semantic saved searches cannot be watched: create and re-point are 400", async ({
+    app,
+    database,
+  }) => {
     const setup = await setupUserMonitorTenant(database)
-    const res = await app.fetch(
+    // Unquoted free text is a semantic component — no exact rule to count matches against.
+    const semanticSearchId = await createSavedSearchRecord(
+      database,
+      setup.organizationId,
+      setup.projectId,
+      "checkout failed",
+    )
+    const headers = { ...createApiKeyAuthHeaders(setup.apiKeyToken), "Content-Type": "application/json" }
+
+    const created = await app.fetch(
       new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors`, {
         method: "POST",
-        headers: { ...createApiKeyAuthHeaders(setup.apiKeyToken), "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Empty", alerts: [] }),
+        headers,
+        body: JSON.stringify({ name: "Semantic watch", alerts: [matchAlertBody(semanticSearchId)] }),
       }),
     )
-    expect(res.status).toBe(400)
+    expect(created.status).toBe(400)
+    expect(((await created.json()) as { error: string }).error).toContain("semantic")
+
+    const monitor = await createUserMonitor(app, setup)
+    const alertId = monitor.alerts[0]?.id as string
+    const repointed = await app.fetch(
+      new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors/${monitor.slug}/alerts/${alertId}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ source: { type: "savedSearch", id: semanticSearchId } }),
+      }),
+    )
+    expect(repointed.status).toBe(400)
+    expect(((await repointed.json()) as { error: string }).error).toContain("semantic")
+  })
+
+  it<ApiTestContext>("POST / requires exactly one alert: empty and two-alert lists are 400", async ({
+    app,
+    database,
+  }) => {
+    const setup = await setupUserMonitorTenant(database)
+    const post = (alerts: unknown[]) =>
+      app.fetch(
+        new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors`, {
+          method: "POST",
+          headers: { ...createApiKeyAuthHeaders(setup.apiKeyToken), "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Wrong alert count", alerts }),
+        }),
+      )
+
+    expect((await post([])).status).toBe(400)
+    expect((await post([matchAlertBody(setup.savedSearchId), matchAlertBody(setup.savedSearchId)])).status).toBe(400)
   })
 
   it<ApiTestContext>("POST / rejects a system-only alert kind with 400", async ({ app, database }) => {
@@ -258,14 +310,15 @@ describe("Monitors Routes Integration", () => {
     expect(missing.status).toBe(404)
   })
 
-  it<ApiTestContext>("alert CRUD: add a second alert, then deleting the last is rejected", async ({
+  it<ApiTestContext>("alerts are immutable in shape: adding and deleting alerts is not exposed", async ({
     app,
     database,
   }) => {
     const setup = await setupUserMonitorTenant(database)
     const created = await createUserMonitor(app, setup)
-    const firstAlertId = created.alerts[0]?.id as string
+    const alertId = created.alerts[0]?.id as string
 
+    // A monitor keeps the single alert it was created with — the POST route no longer exists.
     const add = await app.fetch(
       new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors/${created.slug}/alerts`, {
         method: "POST",
@@ -277,32 +330,16 @@ describe("Monitors Routes Integration", () => {
         }),
       }),
     )
-    expect(add.status).toBe(201)
-    expect(((await add.json()) as MonitorResponse).alerts).toHaveLength(2)
+    expect(add.status).toBe(404)
 
+    // Alerts are edited in place, never deleted — the DELETE route no longer exists either.
     const del = await app.fetch(
-      new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors/${created.slug}/alerts/${firstAlertId}`, {
+      new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors/${created.slug}/alerts/${alertId}`, {
         method: "DELETE",
         headers: createApiKeyAuthHeaders(setup.apiKeyToken),
       }),
     )
-    expect(del.status).toBe(204)
-
-    // The monitor now has a single alert; removing it must be rejected.
-    const remaining = await app.fetch(
-      new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors/${created.slug}/alerts`, {
-        headers: createApiKeyAuthHeaders(setup.apiKeyToken),
-      }),
-    )
-    const lastAlertId = ((await remaining.json()) as { items: { id: string }[] }).items[0]?.id as string
-
-    const delLast = await app.fetch(
-      new Request(`http://localhost/v1/projects/${setup.projectSlug}/monitors/${created.slug}/alerts/${lastAlertId}`, {
-        method: "DELETE",
-        headers: createApiKeyAuthHeaders(setup.apiKeyToken),
-      }),
-    )
-    expect(delLast.status).toBe(400)
+    expect(del.status).toBe(404)
   })
 
   it<ApiTestContext>("mute then unmute toggles mutedAt", async ({ app, database }) => {
@@ -343,14 +380,13 @@ describe("Monitors Routes Integration", () => {
     expect(body.hasMore).toBe(false)
   })
 
-  it<ApiTestContext>("system monitors reject delete, edit, and restructure but allow condition edits + mute", async ({
+  it<ApiTestContext>("system monitors reject delete and edit but allow condition edits + mute", async ({
     app,
     database,
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = generateId()
     const projectSlug = await createProjectRecord(database, tenant.organizationId, projectId)
-    const savedSearchId = await createSavedSearchRecord(database, tenant.organizationId, projectId)
     const system = await createSystemMonitorRecord(database, tenant.organizationId, projectId)
     const headers = createApiKeyAuthHeaders(tenant.apiKeyToken)
     const base = `http://localhost/v1/projects/${projectSlug}/monitors/${system.slug}`
@@ -366,15 +402,6 @@ describe("Monitors Routes Integration", () => {
       }),
     )
     expect(edit.status).toBe(403)
-
-    const addAlert = await app.fetch(
-      new Request(`${base}/alerts`, {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "savedSearch.match", source: { type: "savedSearch", id: savedSearchId } }),
-      }),
-    )
-    expect(addAlert.status).toBe(403)
 
     const severityChange = await app.fetch(
       new Request(`${base}/alerts/${system.alertId}`, {

@@ -1,7 +1,12 @@
 import type { IssuePriority } from "@domain/issues"
 import { formatHumanReadableAlert } from "@domain/monitors"
 import type { IncidentSampleAuthor, IncidentSampleExcerpt } from "@domain/notifications"
-import type { AlertIncidentCondition, AlertIncidentKind, AlertSeverity } from "@domain/shared"
+import {
+  type AlertIncidentCondition,
+  type AlertIncidentKind,
+  type AlertSeverity,
+  SEVERITY_BADGE_COLOR,
+} from "@domain/shared"
 import { Img, Link, Section, Text } from "@react-email/components"
 import type { CSSProperties, ReactNode } from "react"
 // @ts-expect-error TS6133 - React required at runtime for JSX in workers
@@ -134,21 +139,17 @@ export function EmailMetadataTable({
   )
 }
 
-/**
- * Colored severity pill. Medium = amber, high = red. AlertSeverity is
- * a closed set of two today; if a third is added, this falls back to
- * the medium styling and the build doesn't break.
- */
+/** Colored severity pill — low blue, medium amber, high red, from the shared severity palette. */
 export function SeverityBadge({ severity }: { readonly severity: AlertSeverity }) {
-  const palette = severity === "high" ? { bg: "#FEE2E2", fg: "#991B1B" } : { bg: "#FEF3C7", fg: "#92400E" }
+  const palette = SEVERITY_BADGE_COLOR[severity]
   return (
     <span
       style={{
         display: "inline-block",
         padding: "2px 8px",
         borderRadius: 999,
-        backgroundColor: palette.bg,
-        color: palette.fg,
+        backgroundColor: palette.background,
+        color: palette.foreground,
         fontSize: 12,
         fontWeight: 600,
         textTransform: "capitalize",

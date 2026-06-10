@@ -16,7 +16,6 @@ export type { Monitor, MonitorAlert } from "./entities/monitor.ts"
 export { monitorAlertSchema, monitorSchema } from "./entities/monitor.ts"
 export {
   AlertConditionMismatchError,
-  LastMonitorAlertError,
   MonitorAlertNotFoundError,
   SystemMonitorForbiddenError,
 } from "./errors.ts"
@@ -33,7 +32,7 @@ export type {
   MonitorRepositoryShape,
   MonitorSearchResult,
   ProjectWithActiveSavedSearchAlerts,
-  SavedSearchMonitorSlug,
+  SavedSearchMonitorSummary,
 } from "./ports/monitor-repository.ts"
 export { MonitorRepository } from "./ports/monitor-repository.ts"
 export type {
@@ -48,6 +47,11 @@ export type {
   SystemMonitorDefinition,
 } from "./system-monitors.ts"
 export { SYSTEM_MONITOR_DEFINITIONS } from "./system-monitors.ts"
+export {
+  assertMonitorableSavedSearch,
+  SEMANTIC_SEARCH_UNMONITORABLE_MESSAGE,
+  savedSearchQueryIsMonitorable,
+} from "./use-cases/assert-monitorable-saved-search.ts"
 export type { CascadeSourceDeletionInput } from "./use-cases/cascade-source-deletion.ts"
 export { cascadeSourceDeletionUseCase } from "./use-cases/cascade-source-deletion.ts"
 export type {
@@ -57,17 +61,10 @@ export type {
 export { checkSavedSearchMonitorsUseCase } from "./use-cases/check-saved-search-monitors.ts"
 export type { CreateMonitorError, CreateMonitorInput } from "./use-cases/create-monitor.ts"
 export { createMonitorUseCase } from "./use-cases/create-monitor.ts"
-export type {
-  BuildMonitorAlertError,
-  CreateMonitorAlertError,
-  CreateMonitorAlertInput,
-  MonitorAlertInput,
-} from "./use-cases/create-monitor-alert.ts"
-export { buildMonitorAlert, createMonitorAlertUseCase } from "./use-cases/create-monitor-alert.ts"
+export type { BuildMonitorAlertError, MonitorAlertInput } from "./use-cases/create-monitor-alert.ts"
+export { buildMonitorAlert } from "./use-cases/create-monitor-alert.ts"
 export type { DeleteMonitorError, DeleteMonitorInput } from "./use-cases/delete-monitor.ts"
 export { deleteMonitorUseCase } from "./use-cases/delete-monitor.ts"
-export type { DeleteMonitorAlertError, DeleteMonitorAlertInput } from "./use-cases/delete-monitor-alert.ts"
-export { deleteMonitorAlertUseCase } from "./use-cases/delete-monitor-alert.ts"
 export type {
   EvaluateSavedSearchAlertError,
   EvaluateSavedSearchAlertInput,
@@ -92,7 +89,7 @@ export {
   listMonitorsUseCase,
   MAX_MONITORS_PAGE_SIZE,
 } from "./use-cases/list-monitors.ts"
-export { listSavedSearchMonitorSlugsUseCase } from "./use-cases/list-saved-search-monitor-slugs.ts"
+export { listSavedSearchMonitorSummariesUseCase } from "./use-cases/list-saved-search-monitor-summaries.ts"
 export type { SetMonitorMuteError, SetMonitorMuteInput } from "./use-cases/mute-monitor.ts"
 export { muteMonitorUseCase, unmuteMonitorUseCase } from "./use-cases/mute-monitor.ts"
 export type {

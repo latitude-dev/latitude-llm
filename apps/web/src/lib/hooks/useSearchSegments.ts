@@ -139,9 +139,20 @@ export function useSearchSegments(initialValue: string, onSubmit: (value: string
     onSubmit(next)
   }
 
+  // Clearing the box must clear the active search right away — otherwise the
+  // submitted query keeps filtering (and e.g. the Save affordance keeps
+  // showing) for text the input no longer displays.
+  const submitIfCleared = (previous: readonly SearchSegment[], next: readonly SearchSegment[]) => {
+    if (serializeSearchSegments(previous).trim().length === 0) return
+    if (serializeSearchSegments(next).trim().length > 0) return
+    onSubmit("")
+  }
+
   const updateSegment = (segment: SearchSegment, value: string) => {
     const replacement = splitSegmentOnDelimiter(segment, value)
-    setSegments((current) => current.flatMap((item) => (item.id === segment.id ? replacement : [item])))
+    const next = segments.flatMap((item) => (item.id === segment.id ? replacement : [item]))
+    setSegments(next)
+    submitIfCleared(segments, next)
     const focusTarget = replacement[replacement.length - 1]
     if (focusTarget && focusTarget.id !== segment.id) focusSegment(focusTarget.id)
   }
@@ -177,22 +188,23 @@ export function useSearchSegments(initialValue: string, onSubmit: (value: string
   }
 
   const removeSegment = (segment: SearchSegment, allowKeepingSingleSemantic = false) => {
-    setSegments((current) => {
-      const index = current.findIndex((item) => item.id === segment.id)
-      if (index === -1) return current
+    const index = segments.findIndex((item) => item.id === segment.id)
+    if (index === -1) return
 
-      if (current.length === 1) {
-        if (segment.kind === "semantic" && allowKeepingSingleSemantic) return current
-        const next = createSearchSegment("semantic")
-        focusSegment(next.id)
-        return [next]
-      }
-
-      const next = current.filter((item) => item.id !== segment.id)
+    let next: readonly SearchSegment[]
+    if (segments.length === 1) {
+      if (segment.kind === "semantic" && allowKeepingSingleSemantic) return
+      const fresh = createSearchSegment("semantic")
+      focusSegment(fresh.id)
+      next = [fresh]
+    } else {
+      next = segments.filter((item) => item.id !== segment.id)
       const focusTarget = next[Math.max(0, index - 1)] ?? next[0]
       if (focusTarget) focusSegment(focusTarget.id)
-      return next
-    })
+    }
+
+    setSegments(next)
+    submitIfCleared(segments, next)
   }
 
   const focusSearchEnd = () => {

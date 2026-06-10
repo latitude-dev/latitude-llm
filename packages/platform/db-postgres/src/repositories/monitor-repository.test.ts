@@ -270,6 +270,28 @@ describe("MonitorRepositoryLive", () => {
       expect(result.totalCount).toBe(2)
     })
 
+    it("filters on the system flag, excluding filtered rows from totalCount", async () => {
+      const userId = generateId()
+      const systemId = generateId()
+
+      await database.db
+        .insert(monitorsTable)
+        .values([
+          makeMonitorRow({ id: userId, slug: "user-monitor", name: "User monitor" }),
+          makeMonitorRow({ id: systemId, slug: "issue-discovered", name: "Issue discovered", system: true }),
+        ])
+
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* MonitorRepository
+          return yield* repository.list({ projectId, limit: 50, offset: 0, system: false })
+        }).pipe(provideRls(database, organizationId)),
+      )
+
+      expect(result.items.map((m) => m.slug)).toEqual(["user-monitor"])
+      expect(result.totalCount).toBe(1)
+    })
+
     it("respects pagination and reports hasMore", async () => {
       for (let i = 0; i < 5; i++) {
         const created = new Date(2026, 4, 29, 10, i)
@@ -913,67 +935,6 @@ describe("MonitorRepositoryLive", () => {
       expect(result.system).toBe(false)
       expect(result.alerts).toHaveLength(2)
     })
-
-    it("insertAlert adds a live alert to an existing monitor", async () => {
-      const id = generateId()
-      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
-      await database.db.insert(monitorAlertsTable).values(makeAlertRow({ id: generateId(), monitorId: id }))
-
-      await exec((r) =>
-        r.insertAlert({
-          id: MonitorAlertId(generateId()),
-          monitorId: MonitorId(id),
-          kind: "savedSearch.threshold",
-          source: { type: "savedSearch", id: "s".repeat(24) },
-          condition: { kind: "savedSearch.threshold", threshold: { mode: "absolute", count: 100 } },
-          severity: "medium",
-          createdAt: new Date("2026-06-02T10:00:00.000Z"),
-        }),
-      )
-
-      const result = await Effect.runPromise(
-        Effect.gen(function* () {
-          const repository = yield* MonitorRepository
-          return yield* repository.findById(MonitorId(id))
-        }).pipe(provideRls(database, organizationId)),
-      )
-      expect(result.alerts.map((a) => a.kind).sort()).toEqual(["savedSearch.match", "savedSearch.threshold"])
-    })
-
-    it("softDeleteAlert sets deleted_at and drops the alert from reads", async () => {
-      const id = generateId()
-      const keep = generateId()
-      const remove = generateId()
-      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
-      await database.db
-        .insert(monitorAlertsTable)
-        .values([makeAlertRow({ id: keep, monitorId: id }), makeAlertRow({ id: remove, monitorId: id })])
-
-      await exec((r) => r.softDeleteAlert(MonitorAlertId(remove)))
-
-      const [removedRow] = await database.db.select().from(monitorAlertsTable).where(eq(monitorAlertsTable.id, remove))
-      expect(removedRow?.deletedAt).not.toBeNull()
-
-      const result = await Effect.runPromise(
-        Effect.gen(function* () {
-          const repository = yield* MonitorRepository
-          return yield* repository.findById(MonitorId(id))
-        }).pipe(provideRls(database, organizationId)),
-      )
-      expect(result.alerts.map((a) => a.id)).toEqual([keep])
-    })
-
-    it("softDeleteAlert fails NotFoundError for an already-deleted alert", async () => {
-      const id = generateId()
-      const alert = generateId()
-      await database.db.insert(monitorsTable).values(makeMonitorRow({ id, slug: "m", name: "M" }))
-      await database.db
-        .insert(monitorAlertsTable)
-        .values(makeAlertRow({ id: alert, monitorId: id, deletedAt: new Date("2026-06-02T09:00:00.000Z") }))
-
-      const exit = await execExit((r) => r.softDeleteAlert(MonitorAlertId(alert)))
-      expect(Exit.isFailure(exit)).toBe(true)
-    })
   })
 
   describe("listActiveAlertsForSourceEvent", () => {
@@ -1174,7 +1135,7 @@ describe("MonitorRepositoryLive", () => {
       expect(mixedRow[0]?.deletedAt).toBeNull()
     })
 
-    it("listSavedSearchMonitorSlugs maps each search to the earliest-created live, unmuted monitor", async () => {
+    it("listSavedSearchMonitorSummaries maps each search to the earliest live monitor with count + severities", async () => {
       const older = generateId()
       const newer = generateId()
       const muted = generateId()
@@ -1194,8 +1155,8 @@ describe("MonitorRepositoryLive", () => {
         }),
       ])
       await database.db.insert(monitorAlertsTable).values([
-        makeAlertRow({ id: "1".repeat(24), monitorId: older, sourceId: searchX }),
-        makeAlertRow({ id: "2".repeat(24), monitorId: newer, sourceId: searchX }),
+        makeAlertRow({ id: "1".repeat(24), monitorId: older, sourceId: searchX, severity: "low" }),
+        makeAlertRow({ id: "2".repeat(24), monitorId: newer, sourceId: searchX, severity: "high" }),
         makeAlertRow({ id: "3".repeat(24), monitorId: deleted, sourceId: searchX }),
         // searchY is only watched by a muted monitor → excluded.
         makeAlertRow({ id: "4".repeat(24), monitorId: muted, sourceId: searchY }),
@@ -1206,10 +1167,21 @@ describe("MonitorRepositoryLive", () => {
       const rows = await Effect.runPromise(
         Effect.gen(function* () {
           const repository = yield* MonitorRepository
-          return yield* repository.listSavedSearchMonitorSlugs(projectId)
+          return yield* repository.listSavedSearchMonitorSummaries(projectId)
         }).pipe(provideRls(database, organizationId)),
       )
-      expect(rows).toEqual([{ savedSearchId: searchX, monitorSlug: "older" }])
+      expect(rows).toEqual([
+        {
+          savedSearchId: searchX,
+          monitorSlug: "older",
+          monitorCount: 2,
+          severities: ["low", "high"],
+          monitors: [
+            { slug: "older", name: "Older", severities: ["low"] },
+            { slug: "newer", name: "Newer", severities: ["high"] },
+          ],
+        },
+      ])
     })
   })
 
@@ -1250,19 +1222,7 @@ describe("MonitorRepositoryLive", () => {
       return rows[0]?.endedAt ?? null
     }
 
-    it("softDeleteAlert closes the alert's open incident and leaves closed ones untouched", async () => {
-      await seed(generateId())
-      await Effect.runPromise(
-        Effect.gen(function* () {
-          const repository = yield* MonitorRepository
-          yield* repository.softDeleteAlert(alertId)
-        }).pipe(provideRls(database, organizationId)),
-      )
-      expect(await endedAtOf(openId)).not.toBeNull()
-      expect(await endedAtOf(closedId)).toEqual(priorEndedAt)
-    })
-
-    it("softDelete (monitor) closes open incidents of its cascaded alerts", async () => {
+    it("softDelete (monitor) closes open incidents of its cascaded alerts and leaves closed ones untouched", async () => {
       const monitorId = generateId()
       await seed(monitorId)
       await Effect.runPromise(
@@ -1272,6 +1232,7 @@ describe("MonitorRepositoryLive", () => {
         }).pipe(provideRls(database, organizationId)),
       )
       expect(await endedAtOf(openId)).not.toBeNull()
+      expect(await endedAtOf(closedId)).toEqual(priorEndedAt)
     })
 
     it("cascadeSourceDeletion closes open incidents of the soft-deleted alerts", async () => {

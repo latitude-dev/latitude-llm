@@ -112,9 +112,7 @@ const isLatitudeTelemetryProject = (projectId: string) =>
       Effect.orElseSucceed(() => undefined),
     )
 
-    return project
-      ? (Object.values(LATITUDE_TELEMETRY_PROJECT_SLUGS) as string[]).includes(project.slug)
-      : false
+    return project ? (Object.values(LATITUDE_TELEMETRY_PROJECT_SLUGS) as string[]).includes(project.slug) : false
   })
 
 /**

@@ -66,6 +66,37 @@ export const ALERT_SEVERITIES = ["low", "medium", "high"] as const
 export const alertSeveritySchema = z.enum(ALERT_SEVERITIES)
 export type AlertSeverity = z.infer<typeof alertSeveritySchema>
 
+const SEVERITY_RANK: Record<AlertSeverity, number> = { low: 0, medium: 1, high: 2 }
+
+/**
+ * Progressive threshold check used by delivery filters: a `minimum` of
+ * `medium` admits medium and high incidents, `low` admits everything.
+ */
+export const meetsMinSeverity = (severity: AlertSeverity, minimum: AlertSeverity): boolean =>
+  SEVERITY_RANK[severity] >= SEVERITY_RANK[minimum]
+
+/**
+ * Canonical severity palette (Tailwind-500 blue/amber/red). Single source of
+ * truth for every surface that color-codes severity: web chart markers, the
+ * server-rendered incident-trend PNG, Slack attachment bars and email badges.
+ */
+export const SEVERITY_COLOR: Record<AlertSeverity, string> = {
+  low: "#3b82f6",
+  medium: "#f59e0b",
+  high: "#ef4444",
+}
+
+/**
+ * Light-background/dark-foreground pairs (Tailwind 100/800 of the same hues as
+ * {@link SEVERITY_COLOR}) for badge-style rendering, e.g. the email severity pill.
+ */
+export const SEVERITY_BADGE_COLOR: Record<AlertSeverity, { readonly background: string; readonly foreground: string }> =
+  {
+    low: { background: "#dbeafe", foreground: "#1e40af" },
+    medium: { background: "#fef3c7", foreground: "#92400e" },
+    high: { background: "#fee2e2", foreground: "#991b1b" },
+  }
+
 /** Legacy (flag-off) issue-event severity. Flag-on reads severity off the firing alert instead. */
 export const SEVERITY_FOR_KIND: Record<AlertIncidentKind, AlertSeverity> = {
   "issue.new": "medium",

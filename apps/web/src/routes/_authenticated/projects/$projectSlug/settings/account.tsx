@@ -29,6 +29,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { Loader2, LogOut, type LucideIcon, Monitor, TabletSmartphone, Tv } from "lucide-react"
 import { useEffect, useState } from "react"
 import { z } from "zod"
+import { minSeverityHint, SeveritySelector } from "../../../../../domains/alerts/severity-selector.tsx"
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
@@ -536,12 +537,15 @@ function NotificationsSection() {
   // toggle in the on position (matches the opt-out default).
   const prefs: NotificationPreferences = data?.preferences ?? {}
 
-  const setGroupEmail = async (group: (typeof NOTIFICATION_GROUPS)[number], enabled: boolean) => {
+  const patchGroup = async (
+    group: (typeof NOTIFICATION_GROUPS)[number],
+    patch: Partial<NonNullable<NotificationPreferences[(typeof NOTIFICATION_GROUPS)[number]]>>,
+  ) => {
     const next: NotificationPreferences = {
       ...prefs,
-      [group]: { ...(prefs[group] ?? {}), email: enabled },
+      [group]: { ...(prefs[group] ?? {}), ...patch },
     }
-    // Optimistic update so the toggle never lags behind the user's intent.
+    // Optimistic update so the controls never lag behind the user's intent.
     queryClient.setQueryData(["notificationPreferences"], {
       preferences: next,
     })
@@ -555,6 +559,9 @@ function NotificationsSection() {
       toast({ variant: "destructive", description: toUserMessage(error) })
     }
   }
+
+  const setGroupEmail = (group: (typeof NOTIFICATION_GROUPS)[number], enabled: boolean) =>
+    patchGroup(group, { email: enabled })
 
   return (
     <section className="flex flex-col gap-4">
@@ -574,19 +581,37 @@ function NotificationsSection() {
             <div
               key={group}
               id={`notifications-${group}`}
-              className="flex w-full flex-row items-center justify-between gap-4 rounded-lg bg-muted/30 p-4 scroll-mt-8"
+              className="flex w-full flex-col gap-3 rounded-lg bg-muted/30 p-4 scroll-mt-8"
             >
-              <div className="flex flex-col gap-1">
-                <Label htmlFor={inputId}>{meta.label}</Label>
-                <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
+              <div className="flex w-full flex-row items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={inputId}>{meta.label}</Label>
+                  <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
+                </div>
+                <Switch
+                  id={inputId}
+                  checked={enabled}
+                  disabled={isLoading}
+                  onCheckedChange={(checked) => void setGroupEmail(group, checked)}
+                  aria-label={`Toggle email notifications for ${meta.label}`}
+                />
               </div>
-              <Switch
-                id={inputId}
-                checked={enabled}
-                disabled={isLoading}
-                onCheckedChange={(checked) => void setGroupEmail(group, checked)}
-                aria-label={`Toggle email notifications for ${meta.label}`}
-              />
+              {group === "incidents" && enabled ? (
+                <div className="flex flex-row items-center justify-between gap-4 rounded-lg bg-muted/80 px-3 py-2">
+                  <div className="flex flex-row items-baseline gap-1.5">
+                    <Text.H6M>Severity</Text.H6M>
+                    <Text.H6 color="foregroundMuted">
+                      · {minSeverityHint(prefs.incidents?.emailMinSeverity ?? "low")}
+                    </Text.H6>
+                  </div>
+                  <SeveritySelector
+                    variant="bordered"
+                    value={prefs.incidents?.emailMinSeverity ?? "low"}
+                    onSelect={(minSeverity) => void patchGroup("incidents", { emailMinSeverity: minSeverity })}
+                    disabled={isLoading}
+                  />
+                </div>
+              ) : null}
             </div>
           )
         })}

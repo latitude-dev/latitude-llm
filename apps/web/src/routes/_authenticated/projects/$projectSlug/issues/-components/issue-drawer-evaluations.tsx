@@ -14,7 +14,7 @@ import {
 } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
 import { useParams } from "@tanstack/react-router"
-import { BellPlusIcon, FilterIcon, PencilIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lucide-react"
+import { FilterIcon, PencilIcon, RotateCwIcon, ShieldCheckIcon, XIcon } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import {
   type EvaluationSummaryRecord,
@@ -411,11 +411,11 @@ export function IssueDrawerEvaluations({
       <div className="flex w-full items-start gap-3 rounded-lg border border-dashed border-border px-5 py-4">
         <Icon icon={ShieldCheckIcon} size="md" color="foregroundMuted" />
         <div className="flex min-w-0 flex-col gap-1">
-          <Text.H5M>Automatically monitored</Text.H5M>
+          <Text.H5M>Automatically evaluated</Text.H5M>
           <Text.H6 color="foregroundMuted">
             {hasFlaggers
-              ? "This issue is automatically monitored by:"
-              : "This issue is automatically monitored by the system"}
+              ? "This issue is automatically evaluated by:"
+              : "This issue is automatically evaluated by the system"}
           </Text.H6>
           {hasFlaggers ? (
             <div className="flex flex-wrap items-center gap-1 pt-1">
@@ -436,8 +436,7 @@ export function IssueDrawerEvaluations({
         disabled={isActionPending || monitorBlockedByLifecycle}
         isLoading={isGenerating}
       >
-        <Icon icon={BellPlusIcon} size="sm" />
-        {isGenerating ? "Generating" : "Monitor"}
+        {isGenerating ? "Generating" : "Generate evaluation"}
       </Button>
     )
 
@@ -446,12 +445,12 @@ export function IssueDrawerEvaluations({
         <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-dashed border-border px-5 py-4">
           <div className="flex min-w-0 flex-col gap-1">
             <Text.H5M>No evaluations</Text.H5M>
-            <Text.H6 color="foregroundMuted">Generate an evaluation to monitor this issue</Text.H6>
+            <Text.H6 color="foregroundMuted">Generate an evaluation for this issue</Text.H6>
           </div>
           {monitorBlockedByLifecycle ? (
             <Tooltip asChild trigger={<span className="inline-flex">{monitorButton}</span>}>
               <Text.H6 color="foregroundMuted">
-                Unresolve and unignore this issue first to be able to monitor it
+                Unresolve and unignore this issue first to be able to generate an evaluation
               </Text.H6>
             </Tooltip>
           ) : (
@@ -462,14 +461,13 @@ export function IssueDrawerEvaluations({
           open={monitorModalOpen}
           onOpenChange={setMonitorModalOpen}
           dismissible
-          title="Monitor issue"
-          description="We will use the latest traces and related human annotations to generate an evaluation aligned to monitor this issue. This may take some time"
+          title="Generate evaluation"
+          description="We will use the latest traces and related human annotations to generate an evaluation aligned with this issue. This may take some time"
           footer={
             <>
               <CloseTrigger />
               <Button onClick={() => void handleGenerate()} disabled={isActionPending} isLoading={isStartingGenerate}>
-                <Icon icon={BellPlusIcon} size="sm" />
-                {isStartingGenerate ? "Generating" : "Monitor"}
+                {isStartingGenerate ? "Generating" : "Generate"}
               </Button>
             </>
           }
@@ -522,7 +520,7 @@ export function IssueDrawerEvaluations({
                   }
                 >
                   <Text.H6 color="foregroundMuted">
-                    Click to change. We monitor this issue on {formatPercent(primaryEvaluation.trigger.sampling / 100)}{" "}
+                    Click to change. We evaluate this issue on {formatPercent(primaryEvaluation.trigger.sampling / 100)}{" "}
                     of the incoming traces.
                   </Text.H6>
                 </Tooltip>
@@ -569,13 +567,13 @@ export function IssueDrawerEvaluations({
                     className="text-foreground group-hover:text-secondary-foreground/80"
                     onClick={() => setDeleteEvaluationId(primaryEvaluation.id)}
                     disabled={isActionPending}
-                    aria-label="Unmonitor"
+                    aria-label="Remove evaluation"
                   >
                     <Icon icon={XIcon} size="sm" />
                   </Button>
                 }
               >
-                <Text.H6 color="foregroundMuted">Unmonitor</Text.H6>
+                <Text.H6 color="foregroundMuted">Remove evaluation</Text.H6>
               </Tooltip>
               <Button
                 variant="outline"
@@ -622,14 +620,14 @@ export function IssueDrawerEvaluations({
         open={deleteEvaluationId !== null}
         onOpenChange={(open) => (!open ? setDeleteEvaluationId(null) : undefined)}
         dismissible
-        title="Unmonitor issue"
-        description="Are you sure you want to remove the evaluation monitoring this issue? You can generate a new evaluation at any time"
+        title="Remove evaluation"
+        description="Are you sure you want to remove this issue's evaluation? You can generate a new evaluation at any time"
         footer={
           <>
             <CloseTrigger />
             <Button variant="destructive" onClick={() => void handleDelete()} disabled={isDeleting}>
               <Icon icon={XIcon} size="sm" />
-              Unmonitor
+              Remove
             </Button>
           </>
         }

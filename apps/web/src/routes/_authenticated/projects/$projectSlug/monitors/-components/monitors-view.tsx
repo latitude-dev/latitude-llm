@@ -11,6 +11,7 @@ import {
   Text,
   Tooltip,
 } from "@repo/ui"
+import { useNavigate } from "@tanstack/react-router"
 import { BellIcon, BellOffIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import type { MonitorListRowRecord, MonitorRecord } from "../../../../../../domains/monitors/monitors.collection.ts"
@@ -79,6 +80,64 @@ function LastIncidentCell({ summary }: { readonly summary: MonitorsTableRow["las
   return <IncidentStatus startedAtIso={summary.startedAtIso} endedAtIso={summary.endedAtIso} />
 }
 
+/**
+ * The saved search(es) a monitor's alerts watch — states "monitor = saved
+ * search + alerts" in the list, and round-trips to the traces page with the
+ * search loaded.
+ */
+function WatchingCell({
+  alerts,
+  onOpenSearch,
+}: {
+  readonly alerts: MonitorRecord["alerts"]
+  readonly onOpenSearch: (slug: string) => void
+}) {
+  const watched = new Map<string, string>()
+  for (const alert of alerts) {
+    if (alert.sourceSlug && alert.sourceName && !watched.has(alert.sourceSlug)) {
+      watched.set(alert.sourceSlug, alert.sourceName)
+    }
+  }
+  const [first, ...rest] = [...watched.entries()]
+  if (!first) {
+    return (
+      <Text.H6 color="foregroundMuted" noWrap>
+        —
+      </Text.H6>
+    )
+  }
+  const [slug, name] = first
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Tooltip
+        asChild
+        trigger={
+          <button
+            type="button"
+            className="min-w-0 cursor-pointer"
+            aria-label={`Open saved search ${name} on the traces page`}
+            onClick={(event) => {
+              event.stopPropagation()
+              onOpenSearch(slug)
+            }}
+          >
+            <Badge variant="muted" className="max-w-full">
+              <span className="truncate">{name}</span>
+            </Badge>
+          </button>
+        }
+      >
+        View matching traces
+      </Tooltip>
+      {rest.length > 0 ? (
+        <Badge variant="noBorderMuted" className="shrink-0" aria-label={`${rest.length} more saved searches`}>
+          +{rest.length}
+        </Badge>
+      ) : null}
+    </div>
+  )
+}
+
 function ConditionCell({ alerts }: { readonly alerts: MonitorRecord["alerts"] }) {
   const [first, ...rest] = alerts
   if (!first) {
@@ -109,6 +168,8 @@ export function MonitorsView({
   activeMonitorSlug,
   onActiveMonitorChange,
   projectId,
+  projectSlug,
+  showWatching = false,
   sorting,
   onSortChange,
 }: {
@@ -118,9 +179,13 @@ export function MonitorsView({
   readonly activeMonitorSlug: string | undefined
   readonly onActiveMonitorChange: (slug: string | undefined) => void
   readonly projectId: string
+  readonly projectSlug: string
+  /** Show the "Watching" (saved search) column — on for the search-monitors tab only. */
+  readonly showWatching?: boolean
   readonly sorting: MonitorsTableSorting
   readonly onSortChange: (sorting: MonitorsTableSorting) => void
 }) {
+  const navigate = useNavigate()
   const [pendingMute, setPendingMute] = useState<MonitorRecord | null>(null)
   const [renameTarget, setRenameTarget] = useState<MonitorRecord | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<MonitorRecord | null>(null)
@@ -177,6 +242,29 @@ export function MonitorsView({
       minWidth: 153,
       render: (row) => <LastIncidentCell summary={row.lastIncident} />,
     },
+    ...(showWatching
+      ? [
+          {
+            key: "watching",
+            header: "Watching",
+            width: 200,
+            minWidth: 140,
+            maxWidth: 240,
+            render: (row) => (
+              <WatchingCell
+                alerts={row.monitor.alerts}
+                onOpenSearch={(slug) =>
+                  void navigate({
+                    to: "/projects/$projectSlug",
+                    params: { projectSlug },
+                    search: { savedSearch: slug },
+                  })
+                }
+              />
+            ),
+          } satisfies InfiniteTableColumn<MonitorsTableRow>,
+        ]
+      : []),
     {
       key: "condition",
       header: "Condition",

@@ -1,33 +1,7 @@
 import type { AlertIncidentKind, AlertSeverity } from "@domain/alerts"
-import { ALERT_INCIDENT_KIND_LABEL } from "@domain/shared"
+import { ALERT_INCIDENT_KIND_LABEL, SEVERITY_COLOR } from "@domain/shared"
 import type { BarChartOverlay, BarChartOverlayArea, BarChartOverlayLine } from "@repo/ui"
 import type { AlertIncidentRecord } from "./alerts.functions.ts"
-
-/**
- * Severity → Tailwind-aligned chart colors. We don't read these from CSS variables because the
- * `<canvas>` chart layer can't resolve `hsl(var(...))` — eCharts needs concrete strings. Keep
- * these in rough sync with the `Status` variants used elsewhere (warning ≈ amber, destructive ≈
- * red) so the histogram markers feel like the same family as the issue lifecycle badges.
- *
- * Exported so non-eCharts callers (e.g., the SVG-style `IssueTrendBar`) reuse the same palette.
- */
-export const INCIDENT_SEVERITY_COLOR: Record<AlertSeverity, string> = {
-  low: "hsl(217 91% 60%)",
-  medium: "hsl(38 92% 50%)",
-  high: "hsl(0 84% 60%)",
-}
-
-/**
- * Concrete hex equivalents of {@link INCIDENT_SEVERITY_COLOR}, for renderers that can't rely on
- * CSS `hsl()` parsing. usvg (the SVG parser behind the server-side Resvg incident-trend PNG)
- * does not reliably parse the space-separated `hsl(H S% L%)` syntax used above, so the hand-built
- * SVG markup references these instead. Values are the same Tailwind-500 colors (blue/amber/red).
- */
-export const INCIDENT_SEVERITY_HEX: Record<AlertSeverity, string> = {
-  low: "#3b82f6",
-  medium: "#f59e0b",
-  high: "#ef4444",
-}
 
 type TopSymbol = NonNullable<BarChartOverlayLine["topSymbol"]>
 
@@ -222,7 +196,7 @@ export function buildIncidentMarkers({
     for (const incident of bucketIncidents) {
       lines.push({
         categoryIndex: bucketIndex,
-        color: INCIDENT_SEVERITY_COLOR[incident.severity],
+        color: SEVERITY_COLOR[incident.severity],
         dashed: incident.kind === "issue.regressed",
         topSymbol: KIND_TOP_SYMBOL[incident.kind],
       })
@@ -233,7 +207,7 @@ export function buildIncidentMarkers({
     areas.push({
       startCategoryIndex: range.startIndex,
       endCategoryIndex: range.endIndex,
-      color: INCIDENT_SEVERITY_COLOR[range.incident.severity],
+      color: SEVERITY_COLOR[range.incident.severity],
       opacity: 0.16,
     })
   }

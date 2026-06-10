@@ -20,6 +20,6 @@ export interface CreateMonitorBody {
     name: string;
     /** Optional free-form description. */
     description?: string;
-    /** The monitor's alerts. At least one. */
+    /** The monitor's alert. Exactly one. */
     alerts: LatitudeApi.CreateMonitorAlertBody[];
 }

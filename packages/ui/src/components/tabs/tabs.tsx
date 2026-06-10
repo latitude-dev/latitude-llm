@@ -177,14 +177,15 @@ function useSlidingIndicator<T extends string>({ active, options, variant, size 
       return
     }
 
-    const listRect = listElement.getBoundingClientRect()
-    const tabRect = activeTabElement.getBoundingClientRect()
-    const x = tabRect.left - listRect.left - listElement.clientLeft
-    const y = tabRect.top - listRect.top - listElement.clientTop
+    // offset* are layout values, immune to ancestor CSS transforms — measuring
+    // with getBoundingClientRect during a dialog's zoom-in animation captured
+    // ~95%-scaled sizes that ResizeObserver (border-box only) never corrected.
+    const x = activeTabElement.offsetLeft
+    const y = activeTabElement.offsetTop
 
     indicatorElement.style.transform = `translate(${x}px, ${y}px)`
-    indicatorElement.style.width = `${tabRect.width}px`
-    indicatorElement.style.height = `${tabRect.height}px`
+    indicatorElement.style.width = `${activeTabElement.offsetWidth}px`
+    indicatorElement.style.height = `${activeTabElement.offsetHeight}px`
 
     setIsIndicatorVisible(true)
   }, [active])

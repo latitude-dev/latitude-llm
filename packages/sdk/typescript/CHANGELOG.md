@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-alpha.7] - 2026-06-11
+
+### Changed
+
+- **A monitor now has exactly one alert.** `CreateMonitorBody.alerts` requires exactly one entry (was: one or more). The alert is edited in place via `client.monitors.updateAlert` and lives for as long as its monitor.
+- **Saved searches with a semantic component can't be monitored.** `client.monitors.create` and `client.monitors.updateAlert` return 400 when the watched saved search's query contains unquoted free text (semantic search ranks the closest traces by meaning instead of applying an exact rule, so a monitor has no match rule to count against). Only quoted `"literal"` and backtick `` `phrase` `` terms are monitorable.
+
+### Removed
+
+- **`client.monitors.createAlert(...)`** and the `POST /v1/projects/{projectSlug}/monitors/{monitorSlug}/alerts` endpoint — alerts only come into existence with their monitor (`client.monitors.create`).
+- **`client.monitors.deleteAlert(...)`** and the `DELETE /v1/projects/{projectSlug}/monitors/{monitorSlug}/alerts/{alertId}` endpoint — monitor alerts are edited in place (`updateAlert`), never deleted individually. Alerts are still removed when their monitor or watched saved search is deleted.
+
 ## [6.0.0-alpha.6] - 2026-06-05
 
 ### Added

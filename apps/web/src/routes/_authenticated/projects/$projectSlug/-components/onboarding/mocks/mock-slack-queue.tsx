@@ -1,3 +1,4 @@
+import { SEVERITY_COLOR } from "@domain/shared"
 import { cn, Text, useMountEffect } from "@repo/ui"
 import { type ReactNode, useRef, useState } from "react"
 import { usePrefersReducedMotion } from "../motion.ts"
@@ -42,13 +43,6 @@ const KIND_SPARK_CLASS: Record<IncidentKind, string> = {
   resolved: "bg-green-500/60 dark:bg-green-400/60",
 }
 
-// Severity bar colors mirror COLORS in
-// packages/domain/integrations/src/templates/notifications/blocks.ts — resolved is always green.
-const SEVERITY_COLOR: Record<Severity, string> = {
-  low: "#F2C94C",
-  medium: "#F2994A",
-  high: "#E8534B",
-}
 const RESOLVED_COLOR = "#27AE60"
 
 function accentColor(notification: IncidentNotification): string {

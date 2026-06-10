@@ -5542,8 +5542,7 @@
             "items": {
               "$ref": "#/components/schemas/CreateMonitorAlertBody"
             },
-            "minItems": 1,
-            "description": "The monitor's alerts. At least one."
+            "description": "The monitor's alert. Exactly one."
           }
         },
         "required": [
@@ -10908,7 +10907,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "create",
         "summary": "Create monitor",
-        "description": "Creates a monitor with one or more saved-search alerts. The slug is derived from `name`.",
+        "description": "Creates a monitor with its saved-search alert. The slug is derived from `name`. The watched saved search must not contain a semantic component (unquoted free text) — monitors need an exact match rule, so only quoted literal and backtick phrase terms are allowed.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11302,105 +11301,6 @@
             }
           }
         }
-      },
-      "post": {
-        "tags": [
-          "Monitors"
-        ],
-        "x-fern-sdk-group-name": "monitors",
-        "x-fern-sdk-method-name": "createAlert",
-        "summary": "Create monitor alert",
-        "description": "Adds a saved-search alert to a monitor and returns the updated monitor. System monitors cannot gain alerts.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "createMonitorAlert",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Monitor slug (human-readable identifier within the project)."
-            },
-            "required": true,
-            "description": "Monitor slug (human-readable identifier within the project).",
-            "name": "monitorSlug",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateMonitorAlertBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Monitor with the new alert",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Monitor"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "System monitors cannot gain alerts",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/v1/projects/{projectSlug}/monitors/{monitorSlug}/alerts/{alertId}": {
@@ -11500,7 +11400,7 @@
         "x-fern-sdk-group-name": "monitors",
         "x-fern-sdk-method-name": "updateAlert",
         "summary": "Update monitor alert",
-        "description": "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may.",
+        "description": "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Re-pointing the alert at a saved search containing a semantic component (unquoted free text) is rejected.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -11582,78 +11482,6 @@
           },
           "403": {
             "description": "Disallowed change on a system monitor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Monitors"
-        ],
-        "x-fern-sdk-group-name": "monitors",
-        "x-fern-sdk-method-name": "deleteAlert",
-        "summary": "Delete monitor alert",
-        "description": "Removes an alert from a monitor. A monitor must keep at least one alert; system monitors' alerts cannot be removed.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "operationId": "deleteMonitorAlert",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Project slug (human-readable identifier)"
-            },
-            "required": true,
-            "description": "Project slug (human-readable identifier)",
-            "name": "projectSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Monitor slug (human-readable identifier within the project)."
-            },
-            "required": true,
-            "description": "Monitor slug (human-readable identifier within the project).",
-            "name": "monitorSlug",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Monitor-alert identifier."
-            },
-            "required": true,
-            "description": "Monitor-alert identifier.",
-            "name": "alertId",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Alert deleted"
-          },
-          "401": {
-            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {

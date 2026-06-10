@@ -1,15 +1,7 @@
 import { type AlertSeverity, DEFAULT_ESCALATION_SENSITIVITY } from "@domain/shared"
 import { Button, Icon, Input, Select, type TabOption, Tabs, Text } from "@repo/ui"
-import {
-  CircleArrowDown,
-  CircleArrowUp,
-  CircleMinus,
-  EqualApproximately,
-  LineDotRightHorizontal,
-  SparklesIcon,
-  TrendingUp,
-  XIcon,
-} from "lucide-react"
+import { EqualApproximately, LineDotRightHorizontal, SparklesIcon, TrendingUp, XIcon } from "lucide-react"
+import { SeveritySelector } from "../../../../../../domains/alerts/severity-selector.tsx"
 import { useSavedSearchesList } from "../../../../../../domains/saved-searches/saved-searches.collection.ts"
 import {
   type AlertDraft,
@@ -43,11 +35,14 @@ const KIND_TABS: readonly TabOption<UserAlertKind>[] = [
   { id: "savedSearch.escalating", label: "Escalating", icon: <Icon icon={TrendingUp} size="sm" /> },
 ]
 
-const SEVERITY_TABS: readonly TabOption<AlertSeverity>[] = [
-  { id: "low", label: "Low", icon: <Icon icon={CircleArrowDown} size="sm" /> },
-  { id: "medium", label: "Medium", icon: <Icon icon={CircleMinus} size="sm" /> },
-  { id: "high", label: "High", icon: <Icon icon={CircleArrowUp} size="sm" /> },
-]
+// Severity is a triage label: it sets the priority shown on the incidents this
+// alert opens (incident lists, chart markers, notifications) — it doesn't
+// change when or how the alert fires.
+const SEVERITY_HELP: Record<AlertSeverity, string> = {
+  low: "Incidents open as low priority — informational, review when convenient",
+  medium: "Incidents open as medium priority — worth attention soon",
+  high: "Incidents open as high priority — needs immediate attention",
+}
 
 const COMPARISON_OPTIONS: { label: string; value: ComparisonMode }[] = [
   { label: "times", value: "times" },
@@ -211,6 +206,8 @@ export function AlertCardForm({
   disabled,
   onRemove,
   errors,
+  showSourcePicker = true,
+  sourceName,
 }: {
   readonly value: AlertDraft
   readonly onChange: (next: AlertDraft) => void
@@ -219,11 +216,14 @@ export function AlertCardForm({
   readonly disabled?: boolean
   readonly onRemove?: () => void
   readonly errors?: AlertFieldErrors
+  /** Hide the saved-search picker when the caller fixes the source (e.g. the search being created in the save-search modal). */
+  readonly showSourcePicker?: boolean
+  /** Preview-sentence name override for sources that don't exist yet (paired with `showSourcePicker: false`). */
+  readonly sourceName?: string
 }) {
-  const { data: savedSearches } = useSavedSearchesList(projectId)
-  const savedSearchName = value.sourceId
-    ? savedSearches.find((search) => search.id === value.sourceId)?.name
-    : undefined
+  const { data: savedSearches } = useSavedSearchesList(projectId, { enabled: showSourcePicker })
+  const savedSearchName =
+    sourceName ?? (value.sourceId ? savedSearches.find((search) => search.id === value.sourceId)?.name : undefined)
 
   const set = (patch: Partial<AlertDraft>) => onChange({ ...value, ...patch })
 
@@ -251,14 +251,16 @@ export function AlertCardForm({
         <Text.H6 color="foregroundMuted">{KIND_HELP[value.kind]}</Text.H6>
       </div>
 
-      <SavedSearchSourcePicker
-        projectId={projectId}
-        projectSlug={projectSlug}
-        value={value.sourceId}
-        onChange={(sourceId) => set({ sourceId })}
-        {...(disabled ? { disabled: true } : {})}
-        {...(errors?.source ? { errors: [...errors.source] } : {})}
-      />
+      {showSourcePicker ? (
+        <SavedSearchSourcePicker
+          projectId={projectId}
+          projectSlug={projectSlug}
+          value={value.sourceId}
+          onChange={(sourceId) => set({ sourceId })}
+          {...(disabled ? { disabled: true } : {})}
+          {...(errors?.source ? { errors: [...errors.source] } : {})}
+        />
+      ) : null}
 
       {value.kind !== "savedSearch.match" ? (
         <ThresholdWindowForm value={value} onChange={set} errors={errors} {...(disabled ? { disabled: true } : {})} />
@@ -268,15 +270,15 @@ export function AlertCardForm({
         <Text.H6 color="foregroundMuted">{previewAlertSentence(value, savedSearchName)}</Text.H6>
       </div>
 
-      <Tabs<AlertSeverity>
-        variant="secondary"
-        size="sm"
-        options={SEVERITY_TABS}
-        active={value.severity}
-        onSelect={(severity) => {
-          if (!disabled) set({ severity })
-        }}
-      />
+      <div className="flex flex-col gap-1.5">
+        <Text.H5M>Severity</Text.H5M>
+        <SeveritySelector
+          value={value.severity}
+          onSelect={(severity) => set({ severity })}
+          {...(disabled ? { disabled: true } : {})}
+        />
+        <Text.H6 color="foregroundMuted">{SEVERITY_HELP[value.severity]}</Text.H6>
+      </div>
     </div>
   )
 }
