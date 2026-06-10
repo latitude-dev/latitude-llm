@@ -88,7 +88,15 @@ describe("analyzeSessionWorkflow", () => {
       momentCount: 0,
     })
 
-    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "segment", "label", "persist"])
+    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "persist"])
+    expect(mockActivities.embedAnalyzeSessionTurnsActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        analysisHash: "h".repeat(64),
+      }),
+    )
   })
 
   it("short-circuits hash-current sessions before expensive activities", async () => {
@@ -145,11 +153,11 @@ describe("analyzeSessionWorkflow", () => {
   })
 
   it("propagates failed activity errors", async () => {
-    mockActivities.detectAnalyzeSessionLabelsActivity.mockRejectedValueOnce(new Error("label detection failed"))
+    mockActivities.embedAnalyzeSessionTurnsActivity.mockRejectedValueOnce(new Error("embedding warm-up failed"))
 
-    await expect(analyzeSessionWorkflow(input)).rejects.toThrow("label detection failed")
+    await expect(analyzeSessionWorkflow(input)).rejects.toThrow("embedding warm-up failed")
 
-    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed", "segment", "label"])
+    expect(activityOrder()).toEqual(["load", "hash", "eligibility", "embed"])
     expect(mockActivities.persistAnalyzeSessionActivity).not.toHaveBeenCalled()
   })
 })
