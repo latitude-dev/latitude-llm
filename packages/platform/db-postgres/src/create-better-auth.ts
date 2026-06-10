@@ -278,6 +278,16 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     session: {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
+      /**
+       * Disable BA's session "freshness" gate (default: 24h since
+       * `session.createdAt`). With 7-day sessions, the default made
+       * `/unlink-account` fail with "Session is not fresh" for any session
+       * older than a day — most signed-in users. The check guards nothing
+       * else we use (our delete flow is a custom server fn, not BA's
+       * `delete-user`), and we have no re-auth UX to satisfy it: sign-in is
+       * magic-link/OAuth, so "enter your password to continue" isn't a thing.
+       */
+      freshAge: 0,
       cookieCache: {
         enabled: true,
         maxAge: 5 * 60,

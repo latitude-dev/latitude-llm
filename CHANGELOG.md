@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Auth
+
+- Fixed "Session is not fresh" errors when disconnecting a provider in Settings → Account: disabled Better Auth's 24h session-freshness gate (`freshAge: 0`), which blocked unlinking for any session older than a day and guarded no other endpoint we use.
+
 ## v0.2.6 - 2026-06-10
 
 ### Auth
