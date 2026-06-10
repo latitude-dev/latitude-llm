@@ -8,7 +8,7 @@ Infrastructure (Postgres, ClickHouse, Redis, Mailpit, Temporal) runs in Docker, 
 Core observability (trace ingest and viewing) works out of the box. AI-dependent features light up as you add the documented provider keys, see [AI features](#ai-features).
 
 <Note>
-  This guide is for running Latitude locally for development. To self-host a production instance, see the [Deployment guide](/deployment) instead.
+  This guide is for running Latitude locally for development. To self-host a production instance, see the [Deployment guide](/deployment/single-host) instead.
 </Note>
 
 ## Prerequisites
@@ -38,14 +38,14 @@ Core observability (trace ingest and viewing) works out of the box. AI-dependent
   </Step>
 
   <Step title="Create your environment files">
-    The committed `.env.example` carries working local defaults and boots the whole stack API key-free.
+    The `.env.example` file carries working local defaults and boots the whole stack API key-free.
 
     ```bash
     cp .env.example .env.development
     cp .env.example .env.test
     ```
 
-    Then, set `NODE_ENV=test` in `.env.test` (`.env.development` already defaults to `development`). And point `LAT_STORAGE_FS_ROOT` (in both environments) at an **absolute** path for the local object store (the default is `/tmp`).
+    Then, set `NODE_ENV=test` in `.env.test` (`.env.development` already defaults to `development`). And point `LAT_STORAGE_FS_ROOT` (in both environments) at an **absolute** path for the local object store (the default is `/tmp/latitude`, created automatically).
   </Step>
 
   <Step title="Build the workspace">
@@ -159,12 +159,13 @@ Check out the full [Contributing guidelines](/development/contributing).
 
 ## AI features
 
-The local stack runs with **no proprietary API keys**, and the full test suite is guaranteed to pass with no keys set, that said:
+The stack boots and core observability (ingest + trace viewing) works **without API keys**, and the full test suite is guaranteed to pass with no keys set. However, there are AI-dependent features that you must add the relevant keys to your environment file to enable them:
 
-- Semantic trace/issue search and search highlights need **Voyage AI** (`LAT_VOYAGE_API_KEY`).
-- Flaggers, evaluations, conversation intelligence, issue summarization, and AI generation need **Anthropic** (`LAT_ANTHROPIC_API_KEY`) or **Amazon Bedrock** (`LAT_AWS_*`).
-
-Add the relevant keys to `.env.development` to enable those features locally.
+| Provider | Key(s) | Feature |
+| --- | --- | --- |
+| Voyage AI | `LAT_VOYAGE_*` | Semantic trace/issue search, search highlights and issue clustering |
+| Anthropic | `LAT_ANTHROPIC_*` | Flaggers, evaluations, conversation intelligence, issue summarization and AI generation |
+| Amazon Bedrock | `LAT_AWS_*` | Same features as Anthropic (alternative provider) |
 
 ## What's next
 

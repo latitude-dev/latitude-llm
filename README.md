@@ -52,6 +52,8 @@ Latitude shows you **what will break next** in your AI Agent and helps you fix i
 - [Quick start](#-quick-start)
 - [Integrations](#-integrations)
 - [With Claude Code](#-with-claude-code)
+- [Development](#-development)
+- [Self-host](#-self-host)
 - [Community](#-community)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -119,6 +121,17 @@ npx -y @latitude-data/claude-code-telemetry install
 ```
 
 Works in the terminal, the Desktop app, and IDE extensions.
+
+## 🛠️ Development
+
+Check out the [Development setup](https://docs.latitude.so/development/setup) and the [Contributing guide](CONTRIBUTING.md) to get started contributing to Latitude.
+
+## 🏠 Self-host
+
+Latitude is [self-hostable](https://docs.latitude.so/deployment/overview) at any scale, on fully open infrastructure. Pull the ready-to-go container images on [Docker Hub](https://hub.docker.com/u/latitudedata):
+
+- **Single-host (simple)** — a production-grade instance on one machine with Docker Compose, follow the [Single-host guide](https://docs.latitude.so/deployment/single-host).
+- **Cluster (advanced)** — a scalable, highly-available deployment on Kubernetes via a Helm chart, _coming soon._
 
 ## 👥 Community
 

@@ -1,0 +1,137 @@
+---
+title: Configuration
+description: The full Latitude configurable environment-variable reference for self-hosting.
+---
+
+Every application variable is prefixed with `LAT_*`. A few infrastructure variables (`POSTGRES_*`, `CLICKHOUSE_*`) are read directly by the bundled database containers. The committed [`.env.example`](https://github.com/latitude-dev/latitude-llm/blob/development/.env.example) is the canonical starting point — it documents both local development and production: copy it to `.env.production` and apply the values marked **`# For production`** on each line.
+
+Each variable is either **required** (the deployment won't boot or function without it) or **optional** — it has a safe default, or it unlocks a feature that stays disabled until you set it (SSO, AI, email).
+
+## Secrets
+
+Latitude needs two secrets, **generated uniquely per deployment** — never reuse the example values:
+
+| Variable | Notes |
+| --- | --- |
+| `LAT_MASTER_ENCRYPTION_KEY` | Encrypts stored provider credentials and integration tokens. |
+| `LAT_BETTER_AUTH_SECRET` | Signs auth sessions and magic-link tokens. |
+
+Generate each with:
+
+```bash
+openssl rand -hex 32
+```
+
+Moreover, remember to change the default infrastructure passwords (`POSTGRES_PASSWORD_*`, `CLICKHOUSE_PASSWORD`...) too!
+
+## Email
+
+A working email transport is required for anyone to log in. Local development captures mail in Mailpit; **production is not bundled with an email service** — configure exactly one provider.
+
+| Variable | Notes |
+| --- | --- |
+| `LAT_MAILPIT_*` | Local-dev capture only (UI at `:8025`); not for production. |
+| `LAT_SMTP_*` | Any SMTP server (AWS SES, Postmark, SendGrid SMTP, …). |
+| `LAT_MAILGUN_*` | Mailgun API transport. |
+| `LAT_SENDGRID_*` | SendGrid API transport. |
+
+## AI
+
+The stack boots and core observability (ingest + trace viewing) works **without API keys**. AI-dependent features stay disabled until you add the relevant provider key:
+
+| Variable | Provider | Notes |
+| --- | --- | --- |
+| `LAT_VOYAGE_*` | Voyage AI | Embeddings + reranking → semantic trace/issue search, search highlights, issue clustering. Without it, search falls back to lexical. |
+| `LAT_ANTHROPIC_*` | Anthropic | Flaggers, evaluations, conversation intelligence, issue summarization, and AI generation. |
+| `LAT_AWS_*` | Amazon Bedrock | Same features as Anthropic (alternative provider); `_SESSION_TOKEN`, `_BEARER_TOKEN_BEDROCK` also supported. |
+
+## SSO
+
+By default users sign in with email magic links. Add an OAuth provider to enable social sign-in:
+
+| Variable | Notes |
+| --- | --- |
+| `LAT_GOOGLE_*` | Enables Google OAuth sign-in. |
+| `LAT_GITHUB_*` | Enables GitHub OAuth sign-in. |
+| `LAT_ALLOWED_EMAIL_DOMAIN` | Restrict sign-up / sign-in to a single email domain (e.g. your company's). |
+
+## Integrations
+
+Optional, and cleanly no-op when unset:
+
+| Variable | Notes |
+| --- | --- |
+| `LAT_SLACK_*` | Slack notifications and interactivity. |
+| `LAT_IPINFO_TOKEN` | GeoIP enrichment for the sessions panel; uses the free tier when unset. |
+
+## Infrastructure
+
+These wire Latitude to its datastores, depending on your chosen [deployment option](/deployment/overview) you can either point them to the bundled infrastructure services or bring your own infrastructure.
+
+### Application
+
+| Variable | Notes |
+| --- | --- |
+| `NODE_ENV` | Controls under what environment the code runs. Set to `production`. |
+| `LAT_WEB_URL`, `LAT_API_URL`, `LAT_INGEST_URL` | Public URLs where users and clients reach each service. |
+| `LAT_BETTER_AUTH_URL` | Auth base URL — your API origin. |
+| `LAT_TRUSTED_ORIGINS`, `LAT_CORS_ALLOWED_ORIGINS` | Comma-separated list of origins allowed to call the API. |
+| `LAT_WEB_PORT`, `LAT_API_PORT`, `LAT_INGEST_PORT` | Host bind ports (default `3000` / `3001` / `3002`). |
+| `LAT_WORKERS_HEALTH_PORT`, `LAT_WORKFLOWS_HEALTH_PORT` | Health-check ports for the background workers (default `9090` / `9091`). |
+| `LAT_IMAGE_TAG` | Image tag the stack pulls (default `latest`; pin `X.Y.Z` in production). |
+| `LAT_EXPORT_RATE_LIMIT_*`, `LAT_INGEST_TRACE_RATE_LIMIT_*` | Rate-limit tuning for exports and trace ingestion. |
+
+### Postgres
+
+Primary store for projects, users, and metadata. Requires the `vector` (pgvector) extension.
+
+| Variable | Notes |
+| --- | --- |
+| `LAT_DATABASE_URL` | Runtime connection (RLS-bound `latitude_app` user, `latitude` schema). |
+| `LAT_ADMIN_DATABASE_URL` | Superuser connection — migrations, seeds, cross-org queries. |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Bundled-Postgres container credentials. Omit if bringing your own Postgres. |
+| `POSTGRES_RUNTIME_USER`, `POSTGRES_RUNTIME_PASSWORD` | RLS runtime user, created by `docker/init-db.sh`. Omit if bringing your own Postgres. |
+| `LAT_PG_POOL_MAX`, `LAT_PG_IDLE_TIMEOUT_MS`, `LAT_PG_CONNECT_TIMEOUT_MS` | Connection-pool tuning. |
+
+### ClickHouse
+
+OLAP store for spans and telemetry, in a dedicated database.
+
+| Variable | Notes |
+| --- | --- |
+| `CLICKHOUSE_URL`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_DB` | Connection + dedicated database (also read by the bundled ClickHouse container). |
+| `CLICKHOUSE_MIGRATION_URL` | Native-protocol host and port (e.g. `clickhouse://clickhouse:9000`) for the migration tool (goose); credentials and database are taken from the other `CLICKHOUSE_*` variables. |
+| `CLICKHOUSE_CLUSTER_ENABLED` | Set `true` for a clustered ClickHouse; default `false`. |
+
+### Redis
+
+Two Redis roles — a cache and the BullMQ job queue (same server or separate). Latitude namespaces all keys under `latitude:`, so it can share an instance with other apps.
+
+| Variable | Notes |
+| --- | --- |
+| `LAT_REDIS_HOST`, `LAT_REDIS_PORT` | Cache connection. |
+| `LAT_BULLMQ_HOST`, `LAT_BULLMQ_PORT` | Queue connection. |
+| `LAT_REDIS_TLS`, `LAT_REDIS_CLUSTER` | Enable TLS / cluster mode for the cache. |
+| `LAT_BULLMQ_PASSWORD`, `LAT_BULLMQ_CLUSTER` | Queue auth / cluster mode. |
+| `LAT_BULL_BOARD_USERNAME`, `LAT_BULL_BOARD_PASSWORD` | Basic-auth for the queue dashboard. |
+
+### Temporal
+
+Workflow engine for durable background processes.
+
+| Variable | Notes |
+| --- | --- |
+| `LAT_TEMPORAL_ADDRESS`, `LAT_TEMPORAL_NAMESPACE`, `LAT_TEMPORAL_TASK_QUEUE` | Connection, namespace, and task queue. |
+| `LAT_TEMPORAL_API_KEY` | Only for Temporal Cloud. |
+
+### Object storage
+
+Stores ingested payloads, datasets, and exports — shared by all services. Pick one of two drivers with `LAT_STORAGE_DRIVER`: **`fs`** writes to the local filesystem (a path or volume shared by every service), or **`s3`** points at any S3-compatible service — AWS S3, SeaweedFS, MinIO, or any other managed or self-hosted store.
+
+| Variable | Notes |
+| --- | --- |
+| `LAT_STORAGE_DRIVER` | `fs` (local filesystem) or `s3` (any S3-compatible store). |
+| `LAT_STORAGE_FS_ROOT` | Absolute path for the `fs` driver (required when `LAT_STORAGE_DRIVER=fs`). |
+| `LAT_STORAGE_S3_BUCKET`, `LAT_STORAGE_S3_REGION` | Bucket and region (required when `LAT_STORAGE_DRIVER=s3`). |
+| `LAT_STORAGE_S3_ENDPOINT`, `LAT_STORAGE_S3_FORCE_PATH_STYLE` | Set for non-AWS S3 (SeaweedFS, MinIO); omit for AWS S3. |
+| `LAT_STORAGE_S3_ACCESS_KEY_ID`, `LAT_STORAGE_S3_SECRET_ACCESS_KEY` | Omit to use the AWS default credential chain (e.g. an IAM role). |

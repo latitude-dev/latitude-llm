@@ -210,6 +210,14 @@
         ]
       },
       {
+        "group": "Deployment",
+        "pages": [
+          "deployment/overview",
+          "deployment/single-host",
+          "deployment/configuration"
+        ]
+      },
+      {
         "group": "Development",
         "pages": [
           "development/setup",

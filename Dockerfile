@@ -280,7 +280,7 @@ RUN apt-get update && \
   ARCH=$(dpkg --print-architecture) && \
   case "$ARCH" in \
   amd64) GOOSE_ARCH="x86_64" ;; \
-  arm64) GOOSE_ARCH="aarch64" ;; \
+  arm64) GOOSE_ARCH="arm64" ;; \
   *) GOOSE_ARCH="$ARCH" ;; \
   esac && \
   curl -fsSL "https://github.com/pressly/goose/releases/download/v${GOOSE_VERSION}/goose_linux_${GOOSE_ARCH}" \

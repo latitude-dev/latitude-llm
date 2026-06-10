@@ -18,6 +18,7 @@ jobs:
   publish:
     name: Build and Publish
     runs-on: ubuntu-latest
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
     permissions:
       contents: write
 
