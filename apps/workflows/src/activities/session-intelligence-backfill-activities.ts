@@ -16,10 +16,61 @@ export interface ListBackfillSessionsActivityInput extends SessionIntelligenceBa
   readonly sessionLimit: number
 }
 
+export interface ListRecentBackfillSessionsActivityInput extends ListBackfillSessionsActivityInput {
+  readonly startedAfter: string
+}
+
+export interface ListBackfillProjectsActivityInput {
+  readonly organizationId?: string
+  readonly projectId?: string
+}
+
+export interface SelectiveSessionIntelligenceResetActivityInput extends SessionIntelligenceBackfillActivityInput {
+  readonly sessionIds: readonly string[]
+}
+
+export interface BackfillProjectDescriptor {
+  readonly organizationId: string
+  readonly projectId: string
+}
+
 export interface BackfillSessionDescriptor {
   readonly sessionId: string
   readonly triggeringTraceId: string
   readonly triggeringStartTime: string
+}
+
+export async function listSessionIntelligenceBackfillProjectsActivity(
+  input: ListBackfillProjectsActivityInput = {},
+): Promise<readonly BackfillProjectDescriptor[]> {
+  const adminPostgres = getAdminPostgresClient()
+  const clauses = ["deleted_at IS NULL"]
+  const values: string[] = []
+
+  if (input.organizationId) {
+    values.push(input.organizationId)
+    clauses.push(`organization_id = $${values.length}`)
+  }
+  if (input.projectId) {
+    values.push(input.projectId)
+    clauses.push(`id = $${values.length}`)
+  }
+
+  const result = await adminPostgres.pool.query<{
+    readonly organization_id: string
+    readonly project_id: string
+  }>(
+    `SELECT organization_id, id AS project_id
+     FROM latitude.projects
+     WHERE ${clauses.join(" AND ")}
+     ORDER BY organization_id, id`,
+    values,
+  )
+
+  return result.rows.map((row) => ({
+    organizationId: row.organization_id,
+    projectId: row.project_id,
+  }))
 }
 
 export async function resetSessionIntelligenceForProjectActivity(
@@ -36,6 +87,36 @@ export async function resetSessionIntelligenceForProjectActivity(
   ] as const) {
     await clickhouse.command({
       query: `ALTER TABLE ${table} DELETE WHERE organization_id = {organizationId:String} AND project_id = {projectId:String}`,
+      query_params: queryParams,
+      clickhouse_settings: { mutations_sync: "2" },
+    })
+    await clickhouse.command({ query: `OPTIMIZE TABLE ${table} FINAL` })
+  }
+}
+
+export async function resetSessionIntelligenceForSessionsActivity(
+  input: SelectiveSessionIntelligenceResetActivityInput,
+): Promise<void> {
+  if (input.sessionIds.length === 0) return
+
+  const clickhouse = getClickhouseClient()
+  const queryParams = {
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    sessionIds: [...new Set(input.sessionIds)],
+  }
+
+  for (const table of [
+    "session_moment_labels",
+    "session_semantic_moments",
+    "taxonomy_observations",
+    "session_analyses",
+  ] as const) {
+    await clickhouse.command({
+      query: `ALTER TABLE ${table} DELETE
+              WHERE organization_id = {organizationId:String}
+                AND project_id = {projectId:String}
+                AND session_id IN {sessionIds:Array(String)}`,
       query_params: queryParams,
       clickhouse_settings: { mutations_sync: "2" },
     })
@@ -71,6 +152,33 @@ export async function listBackfillSessionsActivity(
         organizationId: OrganizationId(input.organizationId),
         projectId: ProjectId(input.projectId),
         options: { limit: input.sessionLimit, sortBy: "lastActivity", sortDirection: "desc" },
+      })
+      return page.items
+        .filter((session) => session.traceIds.length > 0)
+        .map((session) => ({
+          sessionId: session.sessionId,
+          triggeringTraceId: session.traceIds[0] ?? session.sessionId,
+          triggeringStartTime: session.startTime.toISOString(),
+        }))
+    }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId))),
+  )
+}
+
+export async function listRecentBackfillSessionsActivity(
+  input: ListRecentBackfillSessionsActivityInput,
+): Promise<readonly BackfillSessionDescriptor[]> {
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const repository = yield* SessionRepository
+      const page = yield* repository.listByProjectId({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        options: {
+          limit: input.sessionLimit,
+          sortBy: "lastActivity",
+          sortDirection: "desc",
+          filters: { startTime: [{ op: "gte", value: input.startedAfter }] },
+        },
       })
       return page.items
         .filter((session) => session.traceIds.length > 0)

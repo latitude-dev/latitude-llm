@@ -48,10 +48,17 @@ export {
   seedDemoProjectTraceSearchActivity,
 } from "./seed-demo-project-activities.ts"
 export {
+  type BackfillProjectDescriptor,
   type BackfillSessionDescriptor,
+  type ListBackfillProjectsActivityInput,
+  type ListRecentBackfillSessionsActivityInput,
   listBackfillSessionsActivity,
+  listRecentBackfillSessionsActivity,
+  listSessionIntelligenceBackfillProjectsActivity,
   resetSessionIntelligenceForProjectActivity,
+  resetSessionIntelligenceForSessionsActivity,
   resetTaxonomyForProjectActivity,
+  type SelectiveSessionIntelligenceResetActivityInput,
   type SessionIntelligenceBackfillActivityInput,
   waitForTaxonomyObservationStabilityActivity,
 } from "./session-intelligence-backfill-activities.ts"
