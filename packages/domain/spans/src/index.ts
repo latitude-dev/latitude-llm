@@ -59,6 +59,12 @@ export {
 export type { Trace, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export { SpanDecodingError } from "./errors.ts"
+export {
+  canonicalizeMessageForEmbedding,
+  hashMessageContent,
+  type MessageEmbeddingInput,
+  type MessageEmbeddingRole,
+} from "./helpers/message-embedding.ts"
 export { normalizeLiteralPhrase, stripLoneSurrogates } from "./helpers/normalize-literal-phrase.ts"
 export {
   isLlmCompletionOperation,
@@ -84,6 +90,12 @@ export {
 } from "./helpers.ts"
 export type { EmbedBudgetLimits, EmbedBudgetResolverShape } from "./ports/embed-budget-resolver.ts"
 export { EmbedBudgetResolver } from "./ports/embed-budget-resolver.ts"
+export type {
+  MessageEmbedding,
+  MessageEmbeddingRepositoryShape,
+  MessageEmbeddingUpsert,
+} from "./ports/message-embedding-repository.ts"
+export { MessageEmbeddingRepository } from "./ports/message-embedding-repository.ts"
 export type {
   SessionCountResult,
   SessionDistinctColumn,
@@ -131,8 +143,12 @@ export type {
   TraceSearchChunk,
   TraceSearchDocument,
   TraceSearchDocumentInput,
+  TraceSearchEmbeddingMessage,
 } from "./use-cases/build-trace-search-document.ts"
-export { buildTraceSearchDocument } from "./use-cases/build-trace-search-document.ts"
+export {
+  buildTraceSearchDocument,
+  extractTraceSearchEmbeddingMessages,
+} from "./use-cases/build-trace-search-document.ts"
 export type {
   BuildTracesExportInput,
   BuildTracesExportResult,

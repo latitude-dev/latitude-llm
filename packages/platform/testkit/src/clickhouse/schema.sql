@@ -394,6 +394,21 @@ PRIMARY KEY (organization_id, project_id, start_time)
 ORDER BY (organization_id, project_id, start_time, session_id, trace_id, span_id)
 SETTINGS index_granularity = 8192;
 
+CREATE TABLE message_embeddings
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `content_hash` String CODEC(ZSTD(1)),
+    `embedding` Array(Float32) CODEC(ZSTD(1)),
+    `embedding_model` LowCardinality(String) CODEC(ZSTD(1)),
+    `last_seen_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4)
+)
+ENGINE = ReplacingMergeTree(last_seen_at)
+PARTITION BY toYYYYMM(last_seen_at)
+PRIMARY KEY (organization_id, project_id, content_hash)
+ORDER BY (organization_id, project_id, content_hash)
+SETTINGS index_granularity = 8192;
+
 CREATE TABLE trace_search_documents
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
