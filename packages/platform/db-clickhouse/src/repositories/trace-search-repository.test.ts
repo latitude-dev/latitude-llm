@@ -1,14 +1,18 @@
+import { SessionId } from "@domain/shared"
 import { OrganizationId, ProjectId, SEED_ORG_ID, SEED_PROJECT_ID, TraceId } from "@domain/shared/seeding"
 import {
+  MessageEmbeddingRepository,
+  type MessageEmbeddingRepositoryShape,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
   TRACE_SEARCH_EMBEDDING_MODEL,
   TraceSearchRepository,
   type TraceSearchRepositoryShape,
 } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
-import { Effect } from "effect"
-import { beforeAll, describe, expect, it } from "vitest"
+import { Effect, Layer } from "effect"
+import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { withClickHouse } from "../with-clickhouse.ts"
+import { MessageEmbeddingRepositoryLive } from "./message-embedding-repository.ts"
 import { TraceSearchRepositoryLive } from "./trace-search-repository.ts"
 
 const ORG_ID = OrganizationId(SEED_ORG_ID)
@@ -21,13 +25,25 @@ const ch = setupTestClickHouse()
 
 describe("TraceSearchRepository", () => {
   let repo: TraceSearchRepositoryShape
+  let messageEmbeddingRepo: MessageEmbeddingRepositoryShape
 
   beforeAll(async () => {
-    repo = await Effect.runPromise(
+    const repositories = await Effect.runPromise(
       Effect.gen(function* () {
-        return yield* TraceSearchRepository
-      }).pipe(withClickHouse(TraceSearchRepositoryLive, ch.client, ORG_ID)),
+        return {
+          traceSearch: yield* TraceSearchRepository,
+          messageEmbeddings: yield* MessageEmbeddingRepository,
+        }
+      }).pipe(
+        withClickHouse(Layer.mergeAll(TraceSearchRepositoryLive, MessageEmbeddingRepositoryLive), ch.client, ORG_ID),
+      ),
     )
+    repo = repositories.traceSearch
+    messageEmbeddingRepo = repositories.messageEmbeddings
+  })
+
+  beforeEach(() => {
+    delete process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS
   })
 
   describe("upsertDocument", () => {
@@ -61,6 +77,28 @@ describe("TraceSearchRepository", () => {
           embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
           embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1),
         }),
+      )
+
+      expect(result).toBeUndefined()
+    })
+  })
+
+  describe("upsertMessageOccurrences", () => {
+    it("should upsert occurrence rows", async () => {
+      const result = await Effect.runPromise(
+        repo.upsertMessageOccurrences([
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TEST_TRACE_ID,
+            messageIndex: 3,
+            contentHash: "message-hash",
+            sessionId: SessionId("session-1"),
+            startTime: new Date(),
+            role: "assistant",
+            isOutput: true,
+          },
+        ]),
       )
 
       expect(result).toBeUndefined()
@@ -204,6 +242,52 @@ describe("TraceSearchRepository", () => {
       expect(result?.chunkIndex).toBe(0)
       expect(result?.firstMessageIndex).toBeNull()
       expect(result?.lastMessageIndex).toBeNull()
+    })
+
+    it("uses message occurrences for highlights when shared-message reads are enabled", async () => {
+      process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
+
+      await Effect.runPromise(
+        messageEmbeddingRepo.upsertMany([
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            contentHash: "shared-message-hash",
+            embedding: basisVector(0),
+            embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          },
+        ]),
+      )
+      await Effect.runPromise(
+        repo.upsertMessageOccurrences([
+          {
+            organizationId: ORG_ID,
+            projectId: PROJECT_ID,
+            traceId: TEST_TRACE_ID,
+            messageIndex: 5,
+            contentHash: "shared-message-hash",
+            sessionId: SessionId("session-1"),
+            startTime: new Date(),
+            role: "assistant",
+            isOutput: true,
+          },
+        ]),
+      )
+
+      const result = await Effect.runPromise(
+        repo.findSemanticHighlightForTrace({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TEST_TRACE_ID,
+          queryEmbedding: basisVector(0),
+        }),
+      )
+
+      expect(result).not.toBeNull()
+      expect(result?.chunkIndex).toBe(5)
+      expect(result?.firstMessageIndex).toBe(5)
+      expect(result?.lastMessageIndex).toBe(5)
+      expect(result?.relevanceScore).toBeCloseTo(1, 6)
     })
   })
 })

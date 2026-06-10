@@ -3,8 +3,12 @@ import { ApiKeyId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { createSeedScope, type SeedScope } from "@domain/shared/seeding"
 import {
   buildTraceSearchDocument,
+  canonicalizeMessageForEmbedding,
+  extractTraceSearchEmbeddingMessages,
+  hashMessageContent,
+  MessageEmbeddingRepository,
+  type MessageEmbeddingUpsert,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
-  TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
   TRACE_SEARCH_EMBEDDING_MODEL,
   TraceRepository,
   TraceSearchRepository,
@@ -12,6 +16,7 @@ import {
 import { withAi } from "@platform/ai"
 import { AIEmbedLive } from "@platform/ai-voyage"
 import {
+  MessageEmbeddingRepositoryLive,
   queryClickhouse,
   TraceRepositoryLive,
   TraceSearchRepositoryLive,
@@ -102,6 +107,14 @@ const DEMO_PROJECT_RETENTION_DAYS = 30
  */
 const SEED_TRACE_SEARCH_CONCURRENCY = 8
 
+const uniqueMessagesByHash = <T extends { readonly contentHash: string }>(messages: readonly T[]): readonly T[] => {
+  const byHash = new Map<string, T>()
+  for (const message of messages) {
+    if (!byHash.has(message.contentHash)) byHash.set(message.contentHash, message)
+  }
+  return [...byHash.values()]
+}
+
 /**
  * Emit a Temporal activity heartbeat, no-op when not running inside an
  * activity (unit tests, the local seed-repro path). `Context.current()`
@@ -158,6 +171,7 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
       yield* heartbeat("start")
       const traceRepo = yield* TraceRepository
       const searchRepo = yield* TraceSearchRepository
+      const messageEmbeddingRepo = yield* MessageEmbeddingRepository
       const ai = yield* AI
 
       const indexTrace = (row: DemoTraceRow) =>
@@ -189,27 +203,38 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
             retentionDays: DEMO_PROJECT_RETENTION_DAYS,
           })
 
-          // NOTE: mirrors `prioritizeChunksForEmbedding` in apps/workers/src/workers/trace-search.ts.
-          // Not imported directly because extracting it to @domain/spans is a larger refactor.
-          const eligibleChunks = document.chunks
-            .filter((item) => item.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
-            .sort((a, b) => b.chunkIndex - a.chunkIndex)
-
-          for (const chunk of eligibleChunks) {
-            const hasExisting = yield* searchRepo.hasEmbeddingWithHash(
-              organizationId,
-              projectId,
-              traceId,
-              chunk.chunkIndex,
-              chunk.contentHash,
-            )
-            if (hasExisting) continue
-
-            const embedding = yield* ai
+          const outputStartIndex = trace.allMessages.length - trace.outputMessages.length
+          const hashedMessages = yield* Effect.forEach(
+            extractTraceSearchEmbeddingMessages(trace.allMessages).filter((message) => message.role !== "tool"),
+            (message) =>
+              Effect.gen(function* () {
+                const canonicalText = canonicalizeMessageForEmbedding({ role: message.role, text: message.text })
+                const contentHash = yield* hashMessageContent({ role: message.role, text: message.text })
+                return {
+                  ...message,
+                  canonicalText,
+                  contentHash,
+                  isOutput: message.index >= outputStartIndex,
+                }
+              }),
+          )
+          const uniqueMessages = uniqueMessagesByHash(hashedMessages)
+          const existing = yield* messageEmbeddingRepo.findByHashes({
+            organizationId,
+            projectId,
+            contentHashes: uniqueMessages.map((message) => message.contentHash),
+          })
+          const existingHashes = new Set(
+            existing.filter((row) => row.embeddingModel === TRACE_SEARCH_EMBEDDING_MODEL).map((row) => row.contentHash),
+          )
+          const misses = uniqueMessages.filter((message) => !existingHashes.has(message.contentHash))
+          const embeddingRows = yield* Effect.forEach(misses, (message) =>
+            ai
               .embed({
-                text: chunk.text,
+                text: message.canonicalText,
                 model: TRACE_SEARCH_EMBEDDING_MODEL,
                 dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+                inputType: "document",
                 telemetry: {
                   spanName: "demo-project.trace-search.embed",
                   name: "demo-project-trace-search-embed",
@@ -217,30 +242,39 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
                 },
               })
               .pipe(
+                Effect.map(
+                  (result): MessageEmbeddingUpsert => ({
+                    organizationId,
+                    projectId,
+                    contentHash: message.contentHash,
+                    embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+                    embedding: result.embedding as readonly number[],
+                  }),
+                ),
                 Effect.tapError((err) =>
-                  Effect.logWarning("demo-project trace-search embed failed — skipping chunk", {
-                    chunkIndex: chunk.chunkIndex,
+                  Effect.logWarning("demo-project trace-search embed failed — skipping message", {
+                    messageIndex: message.index,
                     error: err,
                   }),
                 ),
                 Effect.orElseSucceed(() => null),
-              )
-            if (embedding === null) continue
-
-            yield* searchRepo.upsertEmbedding({
+              ),
+          )
+          yield* messageEmbeddingRepo.upsertMany(embeddingRows.filter((row) => row !== null))
+          yield* searchRepo.upsertMessageOccurrences(
+            hashedMessages.map((message) => ({
               organizationId,
               projectId,
               traceId,
-              chunkIndex: chunk.chunkIndex,
+              messageIndex: message.index,
               startTime,
-              contentHash: chunk.contentHash,
-              embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
-              embedding: embedding.embedding as readonly number[],
+              contentHash: message.contentHash,
+              sessionId: trace.sessionId,
+              role: message.role,
+              isOutput: message.isOutput,
               retentionDays: DEMO_PROJECT_RETENTION_DAYS,
-              firstMessageIndex: chunk.firstMessageIndex,
-              lastMessageIndex: chunk.lastMessageIndex,
-            })
-          }
+            })),
+          )
 
           yield* heartbeat(row.trace_id)
         })
@@ -250,7 +284,11 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
         discard: true,
       })
     }).pipe(
-      withClickHouse(Layer.mergeAll(TraceRepositoryLive, TraceSearchRepositoryLive), clickhouse, organizationId),
+      withClickHouse(
+        Layer.mergeAll(TraceRepositoryLive, TraceSearchRepositoryLive, MessageEmbeddingRepositoryLive),
+        clickhouse,
+        organizationId,
+      ),
       withAi(AIEmbedLive, redis),
     ),
   )

@@ -7,6 +7,7 @@ import {
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
   tokenizePhrase,
 } from "@domain/spans"
+import { parseEnv } from "@platform/env"
 import { Effect, Option } from "effect"
 
 /**
@@ -45,6 +46,9 @@ const SEMANTIC_SCAN_LIMIT = 30_000
  * enough that `Array(FixedString(32))` serialization stays under ~2 MB.
  */
 export const MAX_SEARCH_CANDIDATES = 50_000
+
+const useSharedMessageEmbeddingsReads = (): boolean =>
+  Effect.runSync(parseEnv("LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS", "boolean", false))
 
 function escapeLikePattern(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
@@ -128,7 +132,7 @@ function buildLexicalSearchSubquery(parsed: ParsedSearchQuery): {
  * `false` keeps the SQL byte-identical to the pre-PR-2 listing query so
  * existing callers see no change.
  */
-function buildSemanticSearchSubquery(
+function buildLegacySemanticSearchSubquery(
   queryEmbedding: readonly number[],
   semanticMetadata: boolean,
 ): {
@@ -168,6 +172,59 @@ function buildSemanticSearchSubquery(
       semanticScanLimit: SEMANTIC_SCAN_LIMIT,
     },
   }
+}
+
+function buildSharedMessageSemanticSearchSubquery(
+  queryEmbedding: readonly number[],
+  semanticMetadata: boolean,
+): {
+  subquery: string
+  params: Record<string, unknown>
+} {
+  const outerExtraCols = semanticMetadata
+    ? `,
+                argMax(o.message_index, e.semantic_score) AS matched_chunk_index,
+                argMax(o.message_index, e.semantic_score) AS matched_first_message_index,
+                argMax(o.message_index, e.semantic_score) AS matched_last_message_index`
+    : ""
+
+  return {
+    subquery: `SELECT
+                CAST(o.trace_id AS String) AS trace_id,
+                max(e.semantic_score) AS semantic_score${outerExtraCols}
+              FROM trace_message_occurrences AS o
+              INNER JOIN (
+                SELECT
+                  content_hash,
+                  (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
+                FROM message_embeddings
+                WHERE organization_id = {organizationId:String}
+                  AND project_id = {projectId:String}
+                  AND embedding_model = {embeddingModel:String}
+                ORDER BY semantic_score DESC
+                LIMIT {semanticScanLimit:UInt32}
+              ) AS e ON o.content_hash = e.content_hash
+              WHERE o.organization_id = {organizationId:String}
+                AND o.project_id = {projectId:String}
+              GROUP BY o.trace_id`,
+    params: {
+      queryEmbedding: [...queryEmbedding],
+      embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+      semanticScanLimit: SEMANTIC_SCAN_LIMIT,
+    },
+  }
+}
+
+function buildSemanticSearchSubquery(
+  queryEmbedding: readonly number[],
+  semanticMetadata: boolean,
+): {
+  subquery: string
+  params: Record<string, unknown>
+} {
+  return useSharedMessageEmbeddingsReads()
+    ? buildSharedMessageSemanticSearchSubquery(queryEmbedding, semanticMetadata)
+    : buildLegacySemanticSearchSubquery(queryEmbedding, semanticMetadata)
 }
 
 /**
