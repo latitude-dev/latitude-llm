@@ -167,7 +167,9 @@ function ToolDetailPageContent() {
               />
               <div className="mx-1 h-5 w-px bg-border" />
               <Label htmlFor="tool-errors-only" className="cursor-pointer">
-                <Text.H6 color="foregroundMuted">Errors only</Text.H6>
+                <Text.H6 color="foregroundMuted" noWrap>
+                  Errors only
+                </Text.H6>
               </Label>
               <Switch
                 id="tool-errors-only"
