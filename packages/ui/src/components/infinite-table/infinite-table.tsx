@@ -24,7 +24,9 @@ const SELECTION_COLUMN_WIDTH = 48
  * rows (see `getRowGroup`). Data entries point back into `data` by index so
  * selection/active-row/render contracts keep operating on data positions.
  */
-type DisplayRow = { readonly kind: "group"; readonly groupKey: string } | { readonly kind: "data"; readonly dataIndex: number }
+type DisplayRow =
+  | { readonly kind: "group"; readonly groupKey: string }
+  | { readonly kind: "data"; readonly dataIndex: number }
 
 const EXPANDED_SKELETON_CELL_CLASS =
   "px-4 py-2 first:rounded-l-lg last:rounded-r-lg overflow-hidden align-middle text-sm leading-5"

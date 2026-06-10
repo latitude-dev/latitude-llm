@@ -1,5 +1,8 @@
 import { Icon, Select, type SelectOption, Text, useToast } from "@repo/ui"
-import { MinusIcon, SignalHighIcon, SignalLowIcon, SignalMediumIcon, TriangleAlertIcon } from "lucide-react"
+import {
+  ISSUE_PRIORITY_META,
+  type IssuePriorityGroupId,
+} from "../../../../../../../components/issues/issue-priority-meta.tsx"
 import { MemberSelector } from "../../../../../../../components/member-selector.tsx"
 import { useIssueDetail, useUpdateIssueTriage } from "../../../../../../../domains/issues/issues.collection.ts"
 import type { UpdateIssueTriageRecord } from "../../../../../../../domains/issues/issues.functions.ts"
@@ -11,13 +14,15 @@ type Priority = NonNullable<UpdateIssueTriageRecord["priority"]>
 // empty-string value (it reserves "" for the placeholder/clear state).
 const UNSET = "__unset__" as const
 
-const PRIORITY_OPTIONS: SelectOption<Priority | typeof UNSET>[] = [
-  { label: "No priority", value: UNSET, icon: <Icon icon={MinusIcon} size="sm" color="foregroundMuted" /> },
-  { label: "Low", value: "low", icon: <Icon icon={SignalLowIcon} size="sm" color="foregroundMuted" /> },
-  { label: "Medium", value: "medium", icon: <Icon icon={SignalMediumIcon} size="sm" color="foreground" /> },
-  { label: "High", value: "high", icon: <Icon icon={SignalHighIcon} size="sm" color="warningForeground" /> },
-  { label: "Urgent", value: "urgent", icon: <Icon icon={TriangleAlertIcon} size="sm" color="destructive" /> },
-]
+// Ascending urgency in the picker (Linear-style), derived from the shared
+// priority meta so icons/labels match the list group headers and the palette.
+const PRIORITY_OPTIONS: SelectOption<Priority | typeof UNSET>[] = (
+  ["none", "low", "medium", "high", "urgent"] satisfies readonly IssuePriorityGroupId[]
+).map((id) => ({
+  label: ISSUE_PRIORITY_META[id].label,
+  value: id === "none" ? UNSET : id,
+  icon: <Icon icon={ISSUE_PRIORITY_META[id].icon} size="sm" color={ISSUE_PRIORITY_META[id].iconColor} />,
+}))
 
 /**
  * Light-triage controls for the issue page: assignee + priority. Status stays
