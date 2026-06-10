@@ -14,6 +14,7 @@ import type {
   IssueTracePageRecord,
   IssueTraceRecord,
   OrgIssueSearchRecord,
+  RelatedIssueRecord,
   UpdateIssueTriageRecord,
 } from "./issues.functions.ts"
 import {
@@ -23,6 +24,7 @@ import {
   getIssueDimensions,
   getIssueImpact,
   getIssueOccurrences,
+  getRelatedIssues,
   listIssues,
   listIssueTraces,
   searchOrgIssues,
@@ -97,6 +99,8 @@ const getIssueDimensionsQueryKey = (projectId: string, issueId: string, dimensio
 
 const getIssueOccurrencesQueryKey = (projectId: string, issueId: string) =>
   ["issue-occurrences", projectId, issueId] as const
+
+const getRelatedIssuesQueryKey = (projectId: string, issueId: string) => ["related-issues", projectId, issueId] as const
 
 const getIssueTracesQueryKey = (projectId: string, issueId: string) => ["issue-traces", projectId, issueId] as const
 
@@ -324,6 +328,23 @@ export function useIssueDimensions({
   return useQuery({
     queryKey: getIssueDimensionsQueryKey(projectId, issueId, dimension),
     queryFn: (): Promise<IssueDimensionsRecord> => getIssueDimensions({ data: { projectId, issueId, dimension } }),
+    enabled: enabled && projectId.length > 0 && issueId.length > 0,
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
+  })
+}
+
+export function useRelatedIssues({
+  projectId,
+  issueId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly issueId: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: getRelatedIssuesQueryKey(projectId, issueId),
+    queryFn: (): Promise<readonly RelatedIssueRecord[]> => getRelatedIssues({ data: { projectId, issueId } }),
     enabled: enabled && projectId.length > 0 && issueId.length > 0,
     staleTime: ISSUES_QUERY_STALE_TIME_MS,
   })

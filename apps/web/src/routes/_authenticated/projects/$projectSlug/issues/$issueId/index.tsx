@@ -14,6 +14,7 @@ import { IssueLifecycleStatuses } from "../-components/issue-lifecycle-statuses.
 import { IssueExamples } from "./-components/issue-examples.tsx"
 import { IssueNeighborNav } from "./-components/issue-neighbor-nav.tsx"
 import { IssuePatterns } from "./-components/issue-patterns.tsx"
+import { IssueRelated } from "./-components/issue-related.tsx"
 import { IssueSummary } from "./-components/issue-summary.tsx"
 import { IssueTriageControls } from "./-components/issue-triage-controls.tsx"
 
@@ -131,7 +132,10 @@ function IssueDetailPage() {
           }
           trendAside={<IssuePatterns projectId={project.id} issueId={issueId} />}
           beforeTraces={
-            <IssueExamples projectId={project.id} issueId={issueId} onOverlayActiveChange={setOverlayActive} />
+            <>
+              <IssueRelated projectId={project.id} projectSlug={projectSlug} issueId={issueId} />
+              <IssueExamples projectId={project.id} issueId={issueId} onOverlayActiveChange={setOverlayActive} />
+            </>
           }
         />
       </Layout.Content>
