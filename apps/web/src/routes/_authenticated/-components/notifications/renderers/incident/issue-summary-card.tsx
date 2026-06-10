@@ -25,8 +25,8 @@ export function IssueSummaryCard({
 }: {
   readonly name: string
   readonly states: readonly string[]
-  readonly priority?: IssuePriorityValue | null
-  readonly assigneeId?: string | null
+  readonly priority?: IssuePriorityValue | null | undefined
+  readonly assigneeId?: string | null | undefined
 }) {
   const memberByUserId = useMemberByUserIdMap()
   const assignee = assigneeId ? memberByUserId.get(assigneeId) : undefined
