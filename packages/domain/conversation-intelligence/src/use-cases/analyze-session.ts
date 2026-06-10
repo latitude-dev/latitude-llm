@@ -353,7 +353,10 @@ const detectEmbeddingAnchorMoments = (input: {
       for (const { config, positive, contrast } of embeddedAnchors) {
         const sourceTurns = segment.turnIndexes.flatMap((index) => {
           const turn = turnsByIndex.get(index)
-          return turn && config.roles.includes(turn.role) ? [turn] : []
+          const message = messagesByIndex.get(index)
+          return turn && config.roles.includes(turn.role) && message?.isCompactionSummaryCandidate !== true
+            ? [turn]
+            : []
         })
         if (sourceTurns.length === 0) continue
         // Score each turn individually instead of the segment centroid: with
@@ -425,7 +428,14 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
     }
 
     const traceIds = session.traceIds.filter((traceId) => traceId.length === 32).map(TraceId)
-    const rawMessages = sessionConversationMessages(session)
+    const conversationSpine = yield* sessions
+      .findConversationSpineBySessionId({ organizationId, projectId, sessionId })
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.succeed({ source: "session_detail" as const, messages: sessionConversationMessages(session) }),
+        ),
+      )
+    const rawMessages = conversationSpine.messages
     const normalizedMessages = normalizeMessages(rawMessages)
     const document = documentFromMessages(normalizedMessages)
     const analysisHash = yield* hash(`${CONVERSATION_INTELLIGENCE_DETECTOR_VERSION}\0${session.sessionId}\0${document}`)

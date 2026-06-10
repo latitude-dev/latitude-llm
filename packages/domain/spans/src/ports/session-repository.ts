@@ -12,6 +12,7 @@ import { Context, type Effect } from "effect"
 import type { CohortBaselineData } from "../cohort-baselines.ts"
 import type { Session, SessionDetail } from "../entities/session.ts"
 import type { SessionSearchMatch } from "../entities/session-search-match.ts"
+import type { MessageEmbeddingRole } from "../helpers/message-embedding.ts"
 import type { NumericRollup, TraceDistribution, TraceTimeHistogramBucket } from "./trace-repository.ts"
 
 /**
@@ -63,6 +64,20 @@ export interface SessionRepositoryShape {
     readonly projectId: ProjectId
     readonly sessionId: SessionId
   }): Effect.Effect<SessionDetail, NotFoundError | RepositoryError, ChSqlClient>
+
+  /**
+   * Conversation messages in the order analyzed by conversation intelligence.
+   *
+   * The preferred source is trace_message_occurrences: distinct content hashes
+   * ordered by first occurrence across the session. When occurrence rows are not
+   * available yet, implementations fall back to the legacy SessionDetail
+   * reconstruction so old sessions can still be analyzed.
+   */
+  findConversationSpineBySessionId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+  }): Effect.Effect<SessionConversationSpine, NotFoundError | RepositoryError, ChSqlClient>
 
   distinctFilterValues(input: {
     readonly organizationId: OrganizationId
@@ -135,6 +150,22 @@ export interface SessionMetrics {
   readonly tokensTotal: NumericRollup
   readonly timeToFirstTokenNs: NumericRollup
   readonly traceCount: number
+}
+
+export interface SessionConversationSpineMessage {
+  readonly role: MessageEmbeddingRole
+  readonly content: string
+  /**
+   * Heuristic marker for synthetic compaction summaries. They remain part of
+   * the conversation record and segmentation input, but CI excludes them from
+   * anchor-label scoring to avoid labels caused only by a summary sentence.
+   */
+  readonly isCompactionSummaryCandidate?: boolean
+}
+
+export interface SessionConversationSpine {
+  readonly source: "trace_message_occurrences" | "session_detail"
+  readonly messages: readonly SessionConversationSpineMessage[]
 }
 
 const zeroRollup = (): NumericRollup => ({

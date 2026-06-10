@@ -1,6 +1,7 @@
 import { AI, AIError, type AIShape } from "@domain/ai"
 import { type ChSqlClient, isNotFoundError, OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import {
+  hashMessageContent,
   type SessionListPage,
   SessionRepository,
   type SessionRepositoryShape,
@@ -117,6 +118,11 @@ const ch = setupTestClickHouse()
 // chdb materialized views run synchronously per insert; one batched insert per
 // scenario is enough to populate sessions for these tests.
 const insertSpans = (rows: SpanRow[]) => ch.client.insert({ table: "spans", values: rows, format: "JSONEachRow" })
+
+const chatMessage = (role: "user" | "assistant" | "system", content: string) => ({
+  role,
+  parts: [{ type: "text", content }],
+})
 
 /**
  * Throw-on-null helper. Tests are full of "I just inserted this fixture,
@@ -514,6 +520,130 @@ describe("SessionRepository", () => {
       )
 
       expect(isNotFoundError(error)).toBe(true)
+    })
+  })
+
+  describe("findConversationSpineBySessionId", () => {
+    it("reconstructs distinct first-seen messages from trace occurrences for compacted sessions", async () => {
+      const sessionId = "compacted-session"
+      const traceA = "ca".repeat(16)
+      const traceB = "cb".repeat(16)
+      const startA = new Date(Date.UTC(2026, 0, 1, 10, 0, 0))
+      const startB = new Date(Date.UTC(2026, 0, 1, 10, 5, 0))
+      const opening = "I need to change the shipping address on order A-100."
+      const firstAnswer = "I can help update the shipping address."
+      const summary = "Summary: the user discussed order A-100 and shipping address changes."
+      const followUp = "Please ship it to the Barcelona office instead."
+      const finalAnswer = "The shipping address is now the Barcelona office."
+
+      await insertSpans([
+        makeSpanRow({
+          traceId: traceA,
+          spanId: "a".repeat(16),
+          sessionId,
+          startTime: startA,
+          inputMessages: JSON.stringify([chatMessage("user", opening)]),
+          outputMessages: JSON.stringify([chatMessage("assistant", firstAnswer)]),
+        }),
+        makeSpanRow({
+          traceId: traceB,
+          spanId: "b".repeat(16),
+          sessionId,
+          startTime: startB,
+          inputMessages: JSON.stringify([chatMessage("user", summary), chatMessage("user", followUp)]),
+          outputMessages: JSON.stringify([chatMessage("assistant", finalAnswer)]),
+        }),
+      ])
+
+      const occurrenceRow = async (input: {
+        readonly traceId: string
+        readonly messageIndex: number
+        readonly role: "user" | "assistant"
+        readonly text: string
+        readonly startTime: Date
+        readonly isOutput: boolean
+      }) => ({
+        trace_id: input.traceId,
+        message_index: input.messageIndex,
+        content_hash: await Effect.runPromise(hashMessageContent({ role: input.role, text: input.text })),
+        start_time: toClickHouseDateTime(input.startTime),
+        role: input.role,
+        is_output: input.isOutput ? 1 : 0,
+      })
+
+      const rows = await Promise.all([
+        occurrenceRow({
+          traceId: traceA,
+          messageIndex: 0,
+          role: "user",
+          text: opening,
+          startTime: startA,
+          isOutput: false,
+        }),
+        occurrenceRow({
+          traceId: traceA,
+          messageIndex: 1,
+          role: "assistant",
+          text: firstAnswer,
+          startTime: startA,
+          isOutput: true,
+        }),
+        occurrenceRow({
+          traceId: traceB,
+          messageIndex: 0,
+          role: "user",
+          text: summary,
+          startTime: startB,
+          isOutput: false,
+        }),
+        occurrenceRow({
+          traceId: traceB,
+          messageIndex: 1,
+          role: "user",
+          text: followUp,
+          startTime: startB,
+          isOutput: false,
+        }),
+        occurrenceRow({
+          traceId: traceB,
+          messageIndex: 2,
+          role: "assistant",
+          text: finalAnswer,
+          startTime: startB,
+          isOutput: true,
+        }),
+      ])
+
+      await ch.client.insert({
+        table: "trace_message_occurrences",
+        values: rows.map((row) => ({
+          organization_id: ORG_ID as string,
+          project_id: PROJECT_ID as string,
+          session_id: sessionId,
+          retention_days: 30,
+          ...row,
+        })),
+        format: "JSONEachRow",
+      })
+
+      const spine = await runCh(
+        repo.findConversationSpineBySessionId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          sessionId: SessionId(sessionId),
+        }),
+      )
+
+      expect(spine.source).toBe("trace_message_occurrences")
+      expect(spine.messages.map((message) => message.content)).toEqual([
+        opening,
+        firstAnswer,
+        summary,
+        followUp,
+        finalAnswer,
+      ])
+      expect(spine.messages[2]?.isCompactionSummaryCandidate).toBe(true)
+      expect(spine.messages[3]?.isCompactionSummaryCandidate).toBeUndefined()
     })
   })
 
