@@ -999,16 +999,24 @@ export const SessionRepositoryLive = Layer.effect(
             providers: "arrayJoin(groupUniqArrayIfMerge(providers))",
             serviceNames: "arrayJoin(groupUniqArrayIfMerge(service_names))",
           }
-          const expr = COLUMN_EXPRS[column]
-          if (!expr) return []
-
           const searchClause = search ? " AND val ILIKE {search:String}" : ""
 
-          return yield* chSqlClient
-            .query(async (client) => {
-              const result = await client.query({
-                query: `SELECT DISTINCT val FROM (
-                        SELECT ${expr} AS val
+          // Tools have no sessions column — read distinct names off the
+          // execute_tool spans directly (LowCardinality + bloom-indexed).
+          const query =
+            column === "tools"
+              ? `SELECT DISTINCT tool_name AS val
+                      FROM spans
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND operation = 'execute_tool'
+                        AND session_id != ''
+                        AND val != ''${searchClause}
+                      ORDER BY val
+                      LIMIT {limit:UInt32}`
+              : COLUMN_EXPRS[column]
+                ? `SELECT DISTINCT val FROM (
+                        SELECT ${COLUMN_EXPRS[column]} AS val
                         FROM sessions
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
@@ -1016,7 +1024,14 @@ export const SessionRepositoryLive = Layer.effect(
                       )
                       WHERE val != ''${searchClause}
                       ORDER BY val
-                      LIMIT {limit:UInt32}`,
+                      LIMIT {limit:UInt32}`
+                : undefined
+          if (!query) return []
+
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,

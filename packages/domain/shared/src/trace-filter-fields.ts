@@ -56,6 +56,7 @@ export const TRACE_FILTER_FIELDS = [
   { field: "models", type: "multiSelect", label: "Models" },
   { field: "providers", type: "multiSelect", label: "Providers" },
   { field: "serviceNames", type: "multiSelect", label: "Services" },
+  { field: "tools", type: "multiSelect", label: "Tools", tooltip: "Traces with at least one call of the tool." },
   {
     field: "duration",
     type: "numberRange",

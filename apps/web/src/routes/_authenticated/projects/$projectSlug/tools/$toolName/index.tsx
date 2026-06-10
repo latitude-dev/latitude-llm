@@ -1,7 +1,7 @@
 import { Button, CodeBlock, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
-import { ArrowLeftIcon, LockIcon, WrenchIcon } from "lucide-react"
+import { ArrowLeftIcon, LockIcon, TextAlignStartIcon, WrenchIcon } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
 import { useToolDetail } from "../../../../../../domains/tools/tools.collection.ts"
@@ -166,14 +166,36 @@ function ToolDetailPageContent() {
             </div>
           }
           actions={
-            <ToolNeighborNav
-              projectId={project.id}
-              projectSlug={projectSlug}
-              toolName={toolName}
-              range={range}
-              trendBucketSeconds={trendBucketSeconds}
-              overlayActive={overlayActive}
-            />
+            <>
+              <ToolNeighborNav
+                projectId={project.id}
+                projectSlug={projectSlug}
+                toolName={toolName}
+                range={range}
+                trendBucketSeconds={trendBucketSeconds}
+                overlayActive={overlayActive}
+              />
+              <div className="mx-1 h-5 w-px bg-border" />
+              <Button asChild variant="outline" size="sm">
+                <Link
+                  to="/projects/$projectSlug"
+                  params={{ projectSlug }}
+                  search={{
+                    // Traces page filter param: this tool + the same window.
+                    filters: JSON.stringify({
+                      tools: [{ op: "in", value: [toolName] }],
+                      startTime: [
+                        { op: "gte", value: range.fromIso },
+                        { op: "lte", value: range.toIso },
+                      ],
+                    }),
+                  }}
+                >
+                  <Icon icon={TextAlignStartIcon} size="sm" />
+                  View traces
+                </Link>
+              </Button>
+            </>
           }
           description={
             isLoading ? undefined : (

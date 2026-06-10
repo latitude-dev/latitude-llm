@@ -1,5 +1,10 @@
 import type { ChFieldRegistry } from "../filter-builder.ts"
-import { buildHasLlmActivityClause, buildStatusClause, mapDateTime64UtcQueryParam } from "./helpers.ts"
+import {
+  buildHasLlmActivityClause,
+  buildStatusClause,
+  buildToolsClauseFor,
+  mapDateTime64UtcQueryParam,
+} from "./helpers.ts"
 
 export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
   status: { kind: "synthetic", buildClause: buildStatusClause },
@@ -13,6 +18,8 @@ export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
   models: { column: "models", chType: "String", isArray: true, arrayContains: true },
   providers: { column: "providers", chType: "String", isArray: true, arrayContains: true },
   serviceNames: { column: "service_names", chType: "String", isArray: true, arrayContains: true },
+  // No sessions column — resolved via a spans subquery (see buildToolsClauseFor).
+  tools: { kind: "synthetic", buildClause: buildToolsClauseFor("session_id") },
   cost: { column: "cost_total_microcents", chType: "UInt64" },
   duration: { column: "duration_ns", chType: "Int64" },
   ttft: { column: "time_to_first_token_ns", chType: "Int64" },
