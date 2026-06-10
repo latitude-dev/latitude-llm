@@ -226,7 +226,17 @@ function OccurrenceAnnotation({
  * Conversation / Trace tab respectively), like clicking a row in Traces. The
  * current example is reflected in `?example=<scoreId>` for sharable links.
  */
-export function IssueExamples({ projectId, issueId }: { readonly projectId: string; readonly issueId: string }) {
+export function IssueExamples({
+  projectId,
+  issueId,
+  onOverlayActiveChange,
+}: {
+  readonly projectId: string
+  readonly issueId: string
+  /** Notifies the page when the trace sheet opens/closes, so issue-level
+   * prev/next hotkeys can stand down while a trace is showing. */
+  readonly onOverlayActiveChange?: (active: boolean) => void
+}) {
   const { data, isLoading } = useIssueOccurrences({ projectId, issueId })
   const occurrences = useMemo(() => data?.items ?? [], [data])
   const [exampleId, setExampleId] = useParamState("example", "")
@@ -234,6 +244,15 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
     readonly traceId: string
     readonly tab: "conversation" | "trace"
   } | null>(null)
+
+  const openTraceSheet = (traceId: string, tab: "conversation" | "trace") => {
+    setTraceSheet({ traceId, tab })
+    onOverlayActiveChange?.(true)
+  }
+  const closeTraceSheet = () => {
+    setTraceSheet(null)
+    onOverlayActiveChange?.(false)
+  }
 
   const currentIndex = useMemo(() => {
     const found = occurrences.findIndex((occurrence) => occurrence.scoreId === exampleId)
@@ -248,16 +267,19 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
     if (next) setExampleId(next.scoreId)
   }
 
+  // `H`/`L` (not `J`/`K`): the page reserves `J`/`K` for prev/next issue, so
+  // the Examples carousel cycles with the adjacent vim pair. Suppressed while
+  // the trace sheet is open so it doesn't page the example behind it.
   useHotkeys([
     {
-      hotkey: "J",
+      hotkey: "L",
       callback: () => canNext && goTo(currentIndex + 1),
-      options: { enabled: canNext, ignoreInputs: true },
+      options: { enabled: canNext && traceSheet === null, ignoreInputs: true },
     },
     {
-      hotkey: "K",
+      hotkey: "H",
       callback: () => canPrev && goTo(currentIndex - 1),
-      options: { enabled: canPrev, ignoreInputs: true },
+      options: { enabled: canPrev && traceSheet === null, ignoreInputs: true },
     },
   ])
 
@@ -281,19 +303,11 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
               Example {currentIndex + 1} of {occurrences.length}
             </Text.H6>
             <div className="flex flex-row items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTraceSheet({ traceId: current.traceId, tab: "trace" })}
-              >
+              <Button variant="outline" size="sm" onClick={() => openTraceSheet(current.traceId, "trace")}>
                 <Icon icon={ListTreeIcon} size="sm" />
                 See trace
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTraceSheet({ traceId: current.traceId, tab: "conversation" })}
-              >
+              <Button variant="outline" size="sm" onClick={() => openTraceSheet(current.traceId, "conversation")}>
                 <Icon icon={Maximize2Icon} size="sm" />
                 Expand
               </Button>
@@ -313,7 +327,7 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
                   </Button>
                 }
               >
-                Previous example (K)
+                Previous example (H)
               </Tooltip>
               <Tooltip
                 asChild
@@ -330,7 +344,7 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
                   </Button>
                 }
               >
-                Next example (J)
+                Next example (L)
               </Tooltip>
             </div>
           </div>
@@ -344,13 +358,13 @@ export function IssueExamples({ projectId, issueId }: { readonly projectId: stri
         </div>
       )}
 
-      <Sheet open={traceSheet !== null} onClose={() => setTraceSheet(null)} closeAriaLabel="Close trace panel">
+      <Sheet open={traceSheet !== null} onClose={closeTraceSheet} closeAriaLabel="Close trace panel">
         {traceSheet ? (
           <TraceDetailDrawer
             key={`${traceSheet.traceId}-${traceSheet.tab}`}
             projectId={projectId}
             traceId={traceSheet.traceId}
-            onClose={() => setTraceSheet(null)}
+            onClose={closeTraceSheet}
             canNavigateNext={false}
             canNavigatePrev={false}
             urlSyncedTabs={false}

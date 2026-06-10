@@ -1,8 +1,8 @@
-import { Button, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Button, CopyableText, Skeleton, TagList, Text, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon } from "lucide-react"
-import { useHasFeatureFlag } from "../../../../../../domains/feature-flags/feature-flags.collection.ts"
+import { useState } from "react"
 import { useIssueDetail } from "../../../../../../domains/issues/issues.collection.ts"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
@@ -12,6 +12,7 @@ import { IssueDetailBody } from "../-components/issue-detail-drawer.tsx"
 import { IssueLifecycleActions } from "../-components/issue-lifecycle-actions.tsx"
 import { IssueLifecycleStatuses } from "../-components/issue-lifecycle-statuses.tsx"
 import { IssueExamples } from "./-components/issue-examples.tsx"
+import { IssueNeighborNav } from "./-components/issue-neighbor-nav.tsx"
 import { IssuePatterns } from "./-components/issue-patterns.tsx"
 import { IssueSummary } from "./-components/issue-summary.tsx"
 import { IssueTriageControls } from "./-components/issue-triage-controls.tsx"
@@ -47,23 +48,13 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issu
 function IssueDetailPage() {
   const { projectSlug, issueId } = Route.useParams()
   const project = useRouteProject()
-  const hasIssuePage = useHasFeatureFlag("issue-page")
   const { data: issue, isLoading } = useIssueDetail({ projectId: project.id, issueId })
-
-  if (!hasIssuePage) {
-    return (
-      <Layout>
-        <Layout.Content>
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6">
-            <Text.H4M>This page isn't available</Text.H4M>
-            <Link to="/projects/$projectSlug/issues" params={{ projectSlug }} className="underline">
-              <Text.H5 color="primary">Back to issues</Text.H5>
-            </Link>
-          </div>
-        </Layout.Content>
-      </Layout>
-    )
-  }
+  // A trace sheet (from Examples or the Traces table) being open suppresses the
+  // J/K prev/next-issue hotkeys so paging a trace never swaps the issue under it.
+  const [overlayActive, setOverlayActive] = useState(false)
+  // Cycle prev/next over the issue's own lifecycle group so opening an archived
+  // issue still finds neighbors (the active default list wouldn't contain it).
+  const lifecycleGroup = issue && (issue.resolvedAt !== null || issue.ignoredAt !== null) ? "archived" : "active"
 
   return (
     <Layout>
@@ -98,9 +89,23 @@ function IssueDetailPage() {
               )}
             </div>
           }
-          description={isLoading ? undefined : (issue?.description ?? "This issue could not be loaded.")}
+          description={
+            !isLoading && issue ? (
+              <div className="flex max-w-max">
+                <CopyableText value={issue.slug} size="sm" ellipsis tooltip="Copy issue slug" />
+              </div>
+            ) : undefined
+          }
           actions={
             <>
+              <IssueNeighborNav
+                projectId={project.id}
+                projectSlug={projectSlug}
+                issueId={issueId}
+                lifecycleGroup={lifecycleGroup}
+                overlayActive={overlayActive}
+              />
+              <div className="mx-1 h-5 w-px bg-border" />
               <IssueTriageControls projectId={project.id} issueId={issueId} compact />
               <IssueLifecycleActions projectId={project.id} issueId={issueId} compact />
             </>
@@ -110,9 +115,24 @@ function IssueDetailPage() {
           projectId={project.id}
           issueId={issueId}
           variant="page"
-          prepend={<IssueSummary projectId={project.id} issueId={issueId} />}
+          onOverlayActiveChange={setOverlayActive}
+          prepend={
+            <>
+              <div className="flex min-w-0 flex-col gap-2">
+                {isLoading ? (
+                  <Skeleton className="h-5 w-full" />
+                ) : (
+                  <Text.H5 color="foregroundMuted">{issue?.description ?? "This issue could not be loaded."}</Text.H5>
+                )}
+                {!isLoading && issue && issue.tags.length > 0 ? <TagList tags={issue.tags} wrap /> : null}
+              </div>
+              <IssueSummary projectId={project.id} issueId={issueId} />
+            </>
+          }
           trendAside={<IssuePatterns projectId={project.id} issueId={issueId} />}
-          beforeTraces={<IssueExamples projectId={project.id} issueId={issueId} />}
+          beforeTraces={
+            <IssueExamples projectId={project.id} issueId={issueId} onOverlayActiveChange={setOverlayActive} />
+          }
         />
       </Layout.Content>
     </Layout>
