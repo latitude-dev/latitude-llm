@@ -23,7 +23,8 @@ import {
 import { pickTraceHistogramBucketSeconds, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
-import { type IssueSource, IssueState } from "../entities/issue.ts"
+import { ISSUE_PRIORITY_GROUPS, ISSUE_PRIORITY_ORDER } from "../constants.ts"
+import { type IssuePriority, type IssueSource, IssueState } from "../entities/issue.ts"
 import { deriveIssueLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
 import { buildHistogramBucketScaffold, fillBuckets } from "../histogram-buckets.ts"
 import { IssueRepository, type IssueSearchCandidate, type IssueWithLifecycle } from "../ports/issue-repository.ts"
@@ -33,6 +34,15 @@ export type IssuesLifecycleGroup = z.infer<typeof issuesLifecycleGroupSchema>
 
 export const issuesSortFieldSchema = z.enum(["lastSeen", "occurrences", "state"])
 export type IssuesSortField = z.infer<typeof issuesSortFieldSchema>
+
+/** Sentinel accepted by the assignee filter to match issues with no assignee. */
+export const UNASSIGNED_FILTER = "unassigned" as const
+
+export const issueAssigneeFilterSchema = z.union([cuidSchema, z.literal(UNASSIGNED_FILTER)])
+export type IssueAssigneeFilter = z.infer<typeof issueAssigneeFilterSchema>
+
+/** Priority bucket of an issue in the always-grouped list; `"none"` = `priority: null`. */
+export type IssuePriorityGroup = (typeof ISSUE_PRIORITY_GROUPS)[number]
 
 export const issuesSortDirectionSchema = z.enum(["asc", "desc"])
 export type IssuesSortDirection = z.infer<typeof issuesSortDirectionSchema>
@@ -58,6 +68,8 @@ const listIssuesInputSchema = z.object({
    */
   issueIds: z.array(issueIdSchema).optional(),
   lifecycleGroup: issuesLifecycleGroupSchema.optional(),
+  /** Restrict to issues assigned to any of these users; `"unassigned"` matches `assigneeId: null`. */
+  assigneeIds: z.array(issueAssigneeFilterSchema).min(1).optional(),
   search: issueSearchSchema.optional(),
   timeRange: issuesTimeRangeSchema.optional(),
   sort: z
@@ -106,6 +118,8 @@ export interface IssueListItem {
   readonly description: string
   readonly source: IssueSource
   readonly states: readonly string[]
+  readonly assigneeId: string | null
+  readonly priority: IssuePriority | null
   readonly createdAt: Date
   readonly updatedAt: Date
   readonly escalatedAt: Date | null
@@ -132,6 +146,18 @@ export interface ListIssuesResult {
   readonly limit: number
   readonly offset: number
   readonly occurrencesSum: number
+  /**
+   * Issue count per priority group over the fully filtered table set (all
+   * pages), so group headers can show complete totals before every page is
+   * loaded.
+   */
+  readonly priorityCounts: Readonly<Record<IssuePriorityGroup, number>>
+  /**
+   * Issue count per assignee (`"unassigned"` for null) over the lifecycle-,
+   * search-, and time-filtered set but BEFORE the assignee filter — a
+   * "My issues" badge must not zero itself when its own filter is active.
+   */
+  readonly assigneeCounts: Readonly<Record<string, number>>
 }
 
 interface AnalyticsCandidate {
@@ -268,6 +294,39 @@ const matchesLifecycleGroup = (
   return lifecycleGroup === "archived" ? isArchived : !isArchived
 }
 
+const matchesAssigneeFilter = (
+  candidate: AnalyticsCandidate,
+  assigneeIds: readonly IssueAssigneeFilter[] | undefined,
+): boolean => {
+  if (assigneeIds === undefined) {
+    return true
+  }
+
+  return assigneeIds.includes(candidate.issue.assigneeId ?? UNASSIGNED_FILTER)
+}
+
+const toPriorityGroup = (priority: IssuePriority | null): IssuePriorityGroup => priority ?? "none"
+
+const emptyPriorityCounts = (): Record<IssuePriorityGroup, number> =>
+  Object.fromEntries(ISSUE_PRIORITY_GROUPS.map((group) => [group, 0])) as Record<IssuePriorityGroup, number>
+
+const toPriorityCounts = (candidates: readonly AnalyticsCandidate[]): Record<IssuePriorityGroup, number> => {
+  const counts = emptyPriorityCounts()
+  for (const candidate of candidates) {
+    counts[toPriorityGroup(candidate.issue.priority)] += 1
+  }
+  return counts
+}
+
+const toAssigneeCounts = (candidates: readonly AnalyticsCandidate[]): Record<string, number> => {
+  const counts: Record<string, number> = {}
+  for (const candidate of candidates) {
+    const key = candidate.issue.assigneeId ?? UNASSIGNED_FILTER
+    counts[key] = (counts[key] ?? 0) + 1
+  }
+  return counts
+}
+
 const compareDesc = (left: number, right: number): number => right - left
 const compareAsc = (left: number, right: number): number => left - right
 
@@ -302,6 +361,18 @@ const sortCandidates = (
   },
 ): readonly AnalyticsCandidate[] =>
   [...candidates].sort((left, right) => {
+    // Priority grouping is the unconditional primary key: the list is always
+    // grouped Urgent → High → Medium → Low → No priority, and the
+    // user-selected sort applies within each group. Unconditional so exports,
+    // bulk pagination, and issue prev/next stay consistent with the web list.
+    const priorityComparison = compareAsc(
+      ISSUE_PRIORITY_ORDER[toPriorityGroup(left.issue.priority)],
+      ISSUE_PRIORITY_ORDER[toPriorityGroup(right.issue.priority)],
+    )
+    if (priorityComparison !== 0) {
+      return priorityComparison
+    }
+
     if (input.field === "occurrences") {
       const occurrencesComparison =
         input.direction === "asc"
@@ -447,6 +518,8 @@ export const listIssuesUseCase = (
           limit: parsed.limit,
           offset: parsed.offset,
           occurrencesSum: 0,
+          priorityCounts: emptyPriorityCounts(),
+          assigneeCounts: {},
         } satisfies ListIssuesResult
       }
     }
@@ -546,6 +619,8 @@ export const listIssuesUseCase = (
         limit: parsed.limit,
         offset: parsed.offset,
         occurrencesSum: 0,
+        priorityCounts: emptyPriorityCounts(),
+        assigneeCounts: {},
       } satisfies ListIssuesResult
     }
 
@@ -603,14 +678,21 @@ export const listIssuesUseCase = (
             bucketSeconds: histogramBucketSeconds,
           })
 
+    const lifecycleCandidates = analyticsCandidates.filter((candidate) =>
+      matchesLifecycleGroup(candidate, parsed.lifecycleGroup),
+    )
+    // Computed before the assignee filter: the "My issues" badge must keep
+    // reflecting the lifecycle/search/time scope while its own filter is on.
+    const assigneeCounts = toAssigneeCounts(lifecycleCandidates)
     const tableCandidates = sortCandidates(
-      analyticsCandidates.filter((candidate) => matchesLifecycleGroup(candidate, parsed.lifecycleGroup)),
+      lifecycleCandidates.filter((candidate) => matchesAssigneeFilter(candidate, parsed.assigneeIds)),
       {
         field: parsed.sort.field,
         direction: parsed.sort.direction,
         hasSearch: parsed.search !== undefined,
       },
     )
+    const priorityCounts = toPriorityCounts(tableCandidates)
 
     const occurrencesSum = tableCandidates.reduce((sum, candidate) => sum + candidate.windowMetric.occurrences, 0)
     const pageCandidates = tableCandidates.slice(parsed.offset, parsed.offset + parsed.limit)
@@ -693,6 +775,8 @@ export const listIssuesUseCase = (
         description: candidate.issue.description,
         source: candidate.issue.source,
         states: candidate.lifecycleStates,
+        assigneeId: candidate.issue.assigneeId,
+        priority: candidate.issue.priority,
         createdAt: candidate.issue.createdAt,
         updatedAt: candidate.issue.updatedAt,
         escalatedAt: candidate.issue.escalatedAt,
@@ -714,5 +798,7 @@ export const listIssuesUseCase = (
       limit: parsed.limit,
       offset: parsed.offset,
       occurrencesSum,
+      priorityCounts,
+      assigneeCounts,
     } satisfies ListIssuesResult
   }).pipe(Effect.withSpan("issues.listIssues"))
