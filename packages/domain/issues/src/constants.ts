@@ -39,6 +39,54 @@ export const ISSUE_DIMENSION_MIN_SUPPORT = 10
  */
 export const ISSUE_DIMENSION_MIN_RATE_ELEVATION = 0.01
 
+// ---------------------------------------------------------------------------
+// Related issues (Related panel)
+// ---------------------------------------------------------------------------
+
+/**
+ * Useful band of centroid cosine similarity for the Related list's semantic
+ * signal, rescaled linearly to a `[0, 1]` score. Below the floor two issues
+ * are simply unrelated; at/above the ceiling they are effectively duplicate
+ * clusters (discovery would merge a new score into either). Surviving issue
+ * pairs sit *below* the discovery merge thresholds by construction
+ * (`ISSUE_DISCOVERY_MIN_*`), so this band is where all the signal lives.
+ * Provisional values — calibrate against real data before widening use.
+ */
+export const ISSUE_RELATED_SEMANTIC_FLOOR = 0.55
+export const ISSUE_RELATED_SEMANTIC_CEILING = 0.85
+
+/**
+ * Minimum sessions shared with the source issue before a candidate's
+ * co-occurrence is scored at all. Below this, NPMI is meaningless — one or
+ * two coincidental sessions would otherwise post a high score for tiny pairs.
+ */
+export const ISSUE_RELATED_MIN_SHARED_SESSIONS = 3
+
+/**
+ * Minimum combined relatedness (noisy-OR of the semantic and co-occurrence
+ * scores, in `[0, 1]`) for a row to appear in the Related list. Drops
+ * candidates that only barely cleared either signal's own gate.
+ */
+export const ISSUE_RELATED_MIN_RELATEDNESS = 0.05
+
+/** Maximum rows in the Related list. */
+export const ISSUE_RELATED_LIMIT = 8
+
+/**
+ * Candidate pool fetched per signal (pgvector neighbors / co-occurrence
+ * candidates) before scoring, gating, and merging down to
+ * `ISSUE_RELATED_LIMIT`.
+ */
+export const ISSUE_RELATED_CANDIDATE_LIMIT = 25
+
+/**
+ * Window for the co-occurrence signal. Fixed (not wired to a page range
+ * selector): co-occurrence is a behavioral "currently travels together"
+ * signal, while the semantic signal is lifetime by nature (the centroid is a
+ * decayed running sum).
+ */
+export const ISSUE_RELATED_COOCCURRENCE_WINDOW_DAYS = 30
+
 export const NEW_ISSUE_AGE_DAYS = 7
 
 /**

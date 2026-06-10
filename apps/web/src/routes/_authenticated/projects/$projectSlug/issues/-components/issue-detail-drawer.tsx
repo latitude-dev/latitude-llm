@@ -113,6 +113,7 @@ export function IssueDetailBody({
   prepend,
   trendAside,
   beforeTraces,
+  append,
 }: {
   readonly projectId: string
   readonly issueId: string
@@ -132,6 +133,8 @@ export function IssueDetailBody({
   readonly trendAside?: ReactNode
   /** Rendered in the scroll area just before the Traces section (e.g. Examples). */
   readonly beforeTraces?: ReactNode
+  /** Rendered at the end of the scroll area, after the Traces section (e.g. Related issues). */
+  readonly append?: ReactNode
 }) {
   const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
   const {
@@ -407,6 +410,8 @@ export function IssueDetailBody({
               scrollContainerClassName="max-h-[min(28rem,50vh)]"
             />
           </DetailSection>
+
+          {append}
         </div>
 
         {bulkSelection && (

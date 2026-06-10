@@ -165,6 +165,36 @@ export interface IssueDimensionComparison {
   readonly values: readonly DimensionConditionalRate[]
 }
 
+/**
+ * One co-occurrence candidate for the Related-issues list: another issue that
+ * has occurrences in at least one of the source issue's sessions (in range).
+ * Raw session counts only — NPMI scoring, the shared-session floor, and
+ * ranking live in `@domain/issues` so the math is unit-testable without
+ * ClickHouse.
+ */
+export interface IssueCoOccurrence {
+  readonly issueId: IssueId
+  /** Sessions where both the source issue and this issue have an occurrence. */
+  readonly sharedSessions: number
+  /** Sessions where this issue has an occurrence. */
+  readonly theirSessions: number
+}
+
+/**
+ * Session co-occurrence counts for one issue. The probability universe
+ * (`totalSessions`) is **sessions carrying at least one issue occurrence** —
+ * not all project sessions: unscored sessions carry no information about
+ * issue association and would only dilute every probability uniformly.
+ */
+export interface IssueCoOccurrenceAggregate {
+  /** Sessions where the source issue has an occurrence (in range). */
+  readonly mySessions: number
+  /** Sessions with any issue occurrence (in range) — the probability universe. */
+  readonly totalSessions: number
+  /** Top candidates by shared sessions, self-excluded, `sharedSessions ≥ 1`. */
+  readonly candidates: readonly IssueCoOccurrence[]
+}
+
 /** A single time-bucket for issue occurrence time-series. */
 export interface IssueOccurrenceBucket {
   readonly bucket: string // ISO date string
@@ -353,6 +383,20 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly timeRange?: ScoreAnalyticsTimeRange
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<IssueDimensionComparison, RepositoryError, ChSqlClient>
+
+  // -- Per-issue session co-occurrence (Related-issues signal) ---------------
+  // One scan over issue-carrying `scores` in `timeRange`: the source issue's
+  // distinct session set, then GROUP BY issue_id counting shared vs. total
+  // sessions per candidate, self-excluded. Scoreless sessions are outside the
+  // universe by construction (see `IssueCoOccurrenceAggregate`).
+  coOccurrenceByIssue(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly issueId: IssueId
+    readonly timeRange: ScoreAnalyticsTimeRange
+    readonly limit?: number // default 25 candidates
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<IssueCoOccurrenceAggregate, RepositoryError, ChSqlClient>
 
   // -- Per-issue signals for the seasonal-anomaly escalation detector --------
   // Reads:

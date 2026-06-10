@@ -35,6 +35,16 @@ export interface IssueSearchCandidate {
 }
 
 /**
+ * One semantic neighbor of an issue: another issue in the same project ranked
+ * by cosine similarity between the two `centroid_embedding` vectors.
+ */
+export interface IssueCentroidNeighbor {
+  readonly issueId: IssueId
+  /** Cosine similarity in `[-1, 1]` (in practice `[0, 1]` for feedback embeddings). */
+  readonly similarity: number
+}
+
+/**
  * One org-wide search hit for the Command Palette: the matched issue (with lifecycle flags so the
  * caller can derive its states without a second read) plus its owning project's slug/name and the
  * relevance score of whichever tier produced it.
@@ -69,6 +79,22 @@ export interface IssueRepositoryShape {
     readonly query: string
     readonly normalizedEmbedding: readonly number[]
   }): Effect.Effect<readonly IssueSearchCandidate[], RepositoryError, SqlClient>
+  /**
+   * Semantic neighbors for the Related-issues list: the project's other issues
+   * ranked by cosine similarity against this issue's `centroid_embedding`
+   * (exact scan, no ANN index — same trade-off as `hybridSearch`).
+   *
+   * Returns an empty list when the source issue is missing or has no embedding
+   * (zero-mass centroid) — the semantic signal degrades to nothing rather than
+   * failing the whole Related read. Resolved/ignored issues are **included**:
+   * "a similar issue was already resolved" is the most actionable neighbor.
+   * No similarity floor here; gating lives in the domain scorer.
+   */
+  findSimilarByCentroid(input: {
+    readonly projectId: ProjectId
+    readonly issueId: IssueId
+    readonly limit: number
+  }): Effect.Effect<readonly IssueCentroidNeighbor[], RepositoryError, SqlClient>
   /**
    * Org-wide issue search across every project in the organization (RLS-scoped to the caller's
    * org), powering the Command Palette. Two tiers selected by `normalizedEmbedding`:

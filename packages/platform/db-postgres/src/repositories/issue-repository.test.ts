@@ -300,6 +300,113 @@ describe("IssueRepositoryLive", () => {
     expect(items.map((item) => item.issueId)).toEqual([issueId])
   })
 
+  describe("findSimilarByCentroid", () => {
+    const sourceEmbedding = makeEmbedding({ 0: 1 })
+
+    const saveWithEmbedding = (issue: Issue, embedding: number[]) =>
+      Effect.gen(function* () {
+        const repository = yield* IssueRepository
+        yield* repository.save({
+          ...issue,
+          centroid: { ...createIssueCentroid(), base: embedding, mass: 1 },
+        })
+      })
+
+    it("ranks project neighbors by cosine similarity, excluding self and other projects", async () => {
+      const closeNeighborId = IssueId("a".repeat(24))
+      const farNeighborId = IssueId("b".repeat(24))
+      const orthogonalId = IssueId("c".repeat(24))
+      const otherProjectNeighborId = IssueId("d".repeat(24))
+
+      const neighbors = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          yield* saveWithEmbedding(makeIssue(), sourceEmbedding)
+          yield* saveWithEmbedding(
+            makeIssue({ id: closeNeighborId, name: "Close neighbor" }),
+            makeEmbedding({ 0: 0.9, 1: Math.sqrt(1 - 0.9 ** 2) }),
+          )
+          yield* saveWithEmbedding(
+            makeIssue({ id: farNeighborId, name: "Far neighbor" }),
+            makeEmbedding({ 0: 0.6, 1: 0.8 }),
+          )
+          yield* saveWithEmbedding(makeIssue({ id: orthogonalId, name: "Orthogonal" }), makeEmbedding({ 1: 1 }))
+          yield* saveWithEmbedding(
+            makeIssue({ id: otherProjectNeighborId, name: "Other project", projectId: otherProjectId as string }),
+            makeEmbedding({ 0: 0.95, 1: Math.sqrt(1 - 0.95 ** 2) }),
+          )
+
+          return yield* repository.findSimilarByCentroid({ projectId, issueId, limit: 10 })
+        }).pipe(makeProvider(database)),
+      )
+
+      expect(neighbors.map((neighbor) => neighbor.issueId)).toEqual([closeNeighborId, farNeighborId, orthogonalId])
+      expect(neighbors[0]?.similarity).toBeCloseTo(0.9, 5)
+      expect(neighbors[1]?.similarity).toBeCloseTo(0.6, 5)
+      expect(neighbors[2]?.similarity).toBeCloseTo(0, 5)
+    })
+
+    it("includes resolved and ignored neighbors and respects the limit", async () => {
+      const resolvedId = IssueId("a".repeat(24))
+      const ignoredId = IssueId("b".repeat(24))
+
+      const neighbors = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          yield* saveWithEmbedding(makeIssue(), sourceEmbedding)
+          yield* saveWithEmbedding(
+            makeIssue({ id: resolvedId, name: "Resolved twin", resolvedAt: new Date("2026-04-02T00:00:00.000Z") }),
+            makeEmbedding({ 0: 0.9, 1: Math.sqrt(1 - 0.9 ** 2) }),
+          )
+          yield* saveWithEmbedding(
+            makeIssue({ id: ignoredId, name: "Ignored twin", ignoredAt: new Date("2026-04-02T00:00:00.000Z") }),
+            makeEmbedding({ 0: 0.8, 1: 0.6 }),
+          )
+
+          return yield* repository.findSimilarByCentroid({ projectId, issueId, limit: 1 })
+        }).pipe(makeProvider(database)),
+      )
+
+      expect(neighbors.map((neighbor) => neighbor.issueId)).toEqual([resolvedId])
+    })
+
+    it("skips neighbors without an embedding and returns empty when the source has none", async () => {
+      const embeddedNeighborId = IssueId("a".repeat(24))
+      const embeddinglessId = IssueId("b".repeat(24))
+
+      const { fromSource, fromEmbeddingless, fromMissing } = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          yield* saveWithEmbedding(makeIssue(), sourceEmbedding)
+          yield* saveWithEmbedding(
+            makeIssue({ id: embeddedNeighborId, name: "Embedded neighbor" }),
+            makeEmbedding({ 0: 0.7, 1: Math.sqrt(1 - 0.7 ** 2) }),
+          )
+          // Zero-mass centroid → `save` persists a NULL `centroid_embedding`.
+          yield* repository.save(makeIssue({ id: embeddinglessId, name: "No embedding yet" }))
+
+          return {
+            fromSource: yield* repository.findSimilarByCentroid({ projectId, issueId, limit: 10 }),
+            fromEmbeddingless: yield* repository.findSimilarByCentroid({
+              projectId,
+              issueId: embeddinglessId,
+              limit: 10,
+            }),
+            fromMissing: yield* repository.findSimilarByCentroid({
+              projectId,
+              issueId: IssueId("z".repeat(24)),
+              limit: 10,
+            }),
+          }
+        }).pipe(makeProvider(database)),
+      )
+
+      expect(fromSource.map((neighbor) => neighbor.issueId)).toEqual([embeddedNeighborId])
+      expect(fromEmbeddingless).toEqual([])
+      expect(fromMissing).toEqual([])
+    })
+  })
+
   it("lists only visible issues scoped to project, newest-first, and paginates with hasMore", async () => {
     const older = makeIssue({
       id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),

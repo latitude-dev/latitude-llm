@@ -29,6 +29,13 @@ export {
   ISSUE_DISCOVERY_SEARCH_RATIO,
   ISSUE_PRIORITIES,
   ISSUE_REFRESH_THROTTLE_MS,
+  ISSUE_RELATED_CANDIDATE_LIMIT,
+  ISSUE_RELATED_COOCCURRENCE_WINDOW_DAYS,
+  ISSUE_RELATED_LIMIT,
+  ISSUE_RELATED_MIN_RELATEDNESS,
+  ISSUE_RELATED_MIN_SHARED_SESSIONS,
+  ISSUE_RELATED_SEMANTIC_CEILING,
+  ISSUE_RELATED_SEMANTIC_FLOOR,
   ISSUE_SOURCES,
   ISSUE_STATES,
   ISSUE_UPDATE_LOCK_KEY,
@@ -88,6 +95,7 @@ export {
 export { buildHistogramBucketScaffold, fillBuckets } from "./histogram-buckets.ts"
 export { type IssueDiscoveryLockInput, issueDiscoveryLockKey, withIssueDiscoveryLock } from "./locks.ts"
 export {
+  type IssueCentroidNeighbor,
   type IssueLifecycleFlags,
   type IssueListPage,
   IssueRepository,
@@ -97,6 +105,15 @@ export {
   type ListIssuesRepositoryInput,
   type OrgIssueSearchHit,
 } from "./ports/issue-repository.ts"
+export {
+  type CoOccurrenceScoreInput,
+  combinedRelatedness,
+  coOccurrenceRelatednessScore,
+  type RankRelatedIssuesInput,
+  type RelatedIssueSignals,
+  rankRelatedIssues,
+  semanticRelatednessScore,
+} from "./related-issues.ts"
 export {
   type ApplyIssueLifecycleCommandError,
   type ApplyIssueLifecycleCommandInput,
@@ -182,6 +199,12 @@ export {
   type GetIssueTrendResult,
   getIssueTrendUseCase,
 } from "./use-cases/get-issue-trend.ts"
+export {
+  type GetRelatedIssuesError,
+  type GetRelatedIssuesInput,
+  getRelatedIssuesUseCase,
+  type RelatedIssue,
+} from "./use-cases/get-related-issues.ts"
 export {
   type ListIssueTracesError,
   type ListIssueTracesInput,

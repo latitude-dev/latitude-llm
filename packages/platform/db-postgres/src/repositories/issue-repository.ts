@@ -343,6 +343,59 @@ const issueRepositoryCoreLive = Layer.effect(
           }))
         }),
 
+      findSimilarByCentroid: ({ projectId, issueId, limit }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+
+          // Two round-trips instead of a self-join: the source embedding is read
+          // first so the second query can inline it as a pgvector literal (the
+          // same wire-format constraint `hybridSearch` documents — a JS number[]
+          // binds as a Postgres array, which cannot be cast to `vector`).
+          const [source] = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select({ centroidEmbedding: issues.centroidEmbedding })
+              .from(issues)
+              .where(
+                and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.id, issueId)),
+              )
+              .limit(1),
+          )
+
+          // Missing issue or zero-mass centroid (no embedding persisted): the
+          // semantic signal degrades to nothing rather than failing the read.
+          const embedding = source?.centroidEmbedding ?? null
+          if (embedding === null) return []
+          const vector = yield* validateVector(embedding, "IssueRepository.findSimilarByCentroid")
+          const queryVector = sql.raw(`'[${vector.join(",")}]'::vector`)
+
+          // Exact cosine scan over the project's other issues — no ANN index by
+          // design (see the schema comment on `centroidEmbedding`). Resolved and
+          // ignored issues are deliberately included. `save()` only persists
+          // embeddings for CENTROID_EMBEDDING_MODEL, so every non-null row is in
+          // the same embedding space by construction.
+          const similarity = sql<number>`(1::double precision - (${issues.centroidEmbedding} <=> ${queryVector}))`
+          const rows = yield* sqlClient.query((db, organizationId) =>
+            db
+              .select({ issueId: issues.id, similarity })
+              .from(issues)
+              .where(
+                and(
+                  eq(issues.organizationId, organizationId),
+                  eq(issues.projectId, projectId),
+                  ne(issues.id, issueId),
+                  isNotNull(issues.centroidEmbedding),
+                ),
+              )
+              .orderBy(desc(similarity), desc(issues.updatedAt), asc(issues.id))
+              .limit(limit),
+          )
+
+          return rows.map((row) => ({
+            issueId: IssueId(row.issueId),
+            similarity: Number(row.similarity),
+          }))
+        }),
+
       searchOrgWide: ({ query, normalizedEmbedding, preferProjectId, limit }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

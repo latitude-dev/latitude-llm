@@ -10,6 +10,7 @@ import {
   embedIssueSearchQueryUseCase,
   fillBuckets,
   getEscalationOccurrenceThreshold,
+  getRelatedIssuesUseCase,
   type Issue,
   type IssueListItem,
   IssueRepository,
@@ -194,6 +195,11 @@ const issueDimensionsInputSchema = z.object({
 })
 
 const issueOccurrencesInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+})
+
+const relatedIssuesInputSchema = z.object({
   projectId: z.string(),
   issueId: z.string(),
 })
@@ -775,6 +781,66 @@ export const getIssueDimensions = createServerFn({ method: "GET" })
       issueAffectedTraces: comparison.issueAffectedTraces,
       patterns: rankDimensionValues(comparison),
     }
+  })
+
+/** One Related-list row: why another issue relates to this one, plus identity to render/link it. */
+export interface RelatedIssueRecord {
+  readonly issueId: string
+  readonly slug: string
+  readonly name: string
+  readonly description: string
+  readonly states: readonly string[]
+  readonly occurrences: number
+  readonly lastSeenAt: string | null
+  /** Combined ranking score — sort-order only, never displayed. */
+  readonly relatedness: number
+  /** Present when the semantic (centroid cosine) signal contributed. */
+  readonly semantic: {
+    readonly similarity: number
+    readonly score: number
+  } | null
+  /** Present when the session co-occurrence signal contributed. */
+  readonly coOccurrence: {
+    readonly sharedSessions: number
+    readonly sharedSessionsPercent: number
+    readonly score: number
+  } | null
+}
+
+export const getRelatedIssues = createServerFn({ method: "GET" })
+  .inputValidator(relatedIssuesInputSchema)
+  .handler(async ({ data }): Promise<readonly RelatedIssueRecord[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+    const chClient = getClickhouseClient()
+
+    const related = await Effect.runPromise(
+      getRelatedIssuesUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        issueId: IssueId(data.issueId),
+      }).pipe(
+        withPostgres(IssueRepositoryLive, pgClient, orgId),
+        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+        withTracing,
+      ),
+    )
+
+    return related.map(
+      (row): RelatedIssueRecord => ({
+        issueId: row.issueId,
+        slug: row.slug,
+        name: row.name,
+        description: row.description,
+        states: row.states,
+        occurrences: row.occurrences,
+        lastSeenAt: row.lastSeenAt?.toISOString() ?? null,
+        relatedness: row.relatedness,
+        semantic: row.semantic,
+        coOccurrence: row.coOccurrence,
+      }),
+    )
   })
 
 /** An occurrence (annotation score) that pinpoints where the issue manifests in a conversation. */

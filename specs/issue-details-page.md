@@ -44,6 +44,10 @@ The drawer is intentionally **not** the design baseline. We build the page first
 - **Rate-elevation**: `conditionalRate − baseRate`, in percentage points — how much more a value's traces fall into the issue than traces overall. Patterns' sort key.
 - **Coverage**: `affectedTracesWithValue / issueAffectedTraces` — what share of the *issue* a value explains. Distinguishes a strong-and-broad culprit from a strong-but-niche one.
 - **Lift**: `conditionalRate / baseRate` (equivalently `P(v | issue) / P(v)` — the two are algebraically identical). Lift > 1 means over-represented. Kept as a concept; the UI shows the rate pair + rate-elevation rather than the raw multiplier, which is unstable for rare values.
+- **Semantic similarity**: cosine similarity between two issues' centroid embeddings (`issues.centroid_embedding`) — "these two issues *mean* the same failure". Lives in Postgres/pgvector, maintained by the clustering pipeline.
+- **Co-occurrence**: two issues having occurrences in the same **sessions** — "these two issues *travel together*". Measured over the session sets in ClickHouse `scores`.
+- **NPMI** (normalized pointwise mutual information): bounded `[-1, 1]` measure of co-occurrence above chance — `ln(P(A,B) / (P(A)·P(B))) / −ln(P(A,B))`. The numerator is log-lift; the denominator normalizes by the rarity of the joint event, which kills both the rare-pair lift inflation and the big-neighbor chance overlap. Clamped at 0 for the related-issues score.
+- **Relatedness**: the merged ranking score for the Related-issues list — noisy-OR of the normalized semantic and co-occurrence scores: `1 − (1 − semScore)(1 − coocScore)`. Sort-order only; never displayed raw.
 
 ## Conceptual model
 
@@ -54,7 +58,7 @@ The page is organized as a top-to-bottom **report** with a persistent metadata/t
 3. **Trend** — wide, zoomable occurrence histogram with existing escalation/incident overlays.
 4. **Patterns** — a single ranked list of the dimension values (model, provider, tool, tag, finish reason) whose traces most disproportionately fall into this issue vs. the project base rate (rate-elevation), support-gated.
 5. **Where it happens** — distribution of the session-interaction position at which the issue occurs.
-6. **Related** — co-occurring issues (shared traces/sessions, with lift) and a project benchmark rank.
+6. **Related** — a single merged list of the project's most related issues, combining two independent signals: **semantically similar** issues (centroid cosine, pgvector) and **co-occurring** issues (shared sessions, NPMI), ranked by a combined relatedness score; plus a project benchmark rank.
 7. **Examples** — inline carousel cycling through occurrences with the exact message/part highlighted.
 8. **Occurrences** — paginated traces table (the existing list, kept).
 9. **Monitoring** — linked evaluations (the existing section, kept).
@@ -96,6 +100,15 @@ The `Issue` entity, `IssueWithLifecycle`, `IssueDetails`, and `IssueListItem` sh
 
 - `updateIssueTriageUseCase({ issueId, assigneeId?, priority? })` — single use-case that patches assignee and/or priority. Validates the assignee is a member of the issue's organization. Emits no domain event beyond the standard issue update.
 - Read paths (`get-issue-details`, `list-issues`) include the two new fields.
+
+### Postgres — semantic neighbors (`IssueRepository.findSimilarByCentroid`)
+
+New read on the issue repository powering the Related list's semantic signal:
+
+- `findSimilarByCentroid({ projectId, issueId, limit }) → { issueId, similarity }[]` — exact cosine scan of the project's other issues against this issue's `centroid_embedding` (`1 − (centroid_embedding <=> me)`), ordered by similarity, capped at `limit`. Returns an **empty list** when the source issue has no embedding (zero-mass centroid) — the semantic signal simply degrades to nothing.
+- Same-embedding-space comparison is guaranteed by construction: `save()` only persists `centroid_embedding` for `CENTROID_EMBEDDING_MODEL`, so no per-row model guard is needed.
+- **Resolved/ignored issues are included** — "a similar issue was already resolved" is the most actionable row in the list. No similarity floor at the repository layer; gating lives in the domain scorer.
+- No ANN index, same as `hybridSearch`/`searchOrgWide` (exact scan is faster below ~10k issues/project).
 
 ### ClickHouse — new read-only analytics (no migrations)
 
@@ -187,20 +200,34 @@ All methods live on `ScoreAnalyticsRepository` (port: `packages/domain/scores/sr
 
    **Significance gate.** Values are filtered to a minimum trace support (`totalTraces ≥ ISSUE_DIMENSION_MIN_SUPPORT`, a named constant) so a value used by a handful of traces cannot post a "93% rate". When no value clears the gate, `values` is empty and the UI shows "not enough data to compare against the project baseline yet". `baseRate` and `issueAffectedTraces` may be reused from `aggregateImpactByIssue` rather than recomputed.
 
-3. **`coOccurringIssues(issueId, range?) → CoOccurringIssue[]`**
+3. **`coOccurrenceByIssue(issueId, range) → IssueCoOccurrenceAggregate`**
 
    ```typescript
-   type CoOccurringIssue = {
-     issueId: string;
-     sharedTraces: number;        // traces where both issues have an occurrence
-     sharedSessions: number;      // sessions where both have an occurrence
-     coOccurrencePercent: number; // sharedSessions / this-issue affectedSessions
-     lift: number;                // P(other | this session) / P(other across project sessions)
+   type IssueCoOccurrence = {
+     issueId: string;          // the other issue
+     sharedSessions: number;   // sessions where both issues have an occurrence (in range)
+     theirSessions: number;    // sessions where the other issue has an occurrence (in range)
+   };
+
+   type IssueCoOccurrenceAggregate = {
+     mySessions: number;       // sessions where this issue has an occurrence (in range)
+     totalSessions: number;    // sessions with ANY issue occurrence (the probability universe)
+     candidates: IssueCoOccurrence[]; // top N by sharedSessions, self-excluded, sharedSessions ≥ 1
    };
    ```
 
-   - Implemented by selecting the issue's affected `trace_id`/`session_id` set, then `GROUP BY issue_id` over scores on those traces/sessions, excluding `issueId` itself.
-   - Returns top N by lift, with a minimum shared-count floor. Issue name/lifecycle is hydrated from Postgres by the caller (`IN (...)`).
+   - One scan over `scores` in `range`: select the issue's distinct non-empty `session_id` set, then `GROUP BY issue_id` over issue-carrying scores counting `uniqExactIf(session_id, session_id IN mySessions)` vs `uniqExact(session_id)`, excluding `issueId` itself. A second cheap read returns `mySessions` + `totalSessions`.
+   - The probability universe is **sessions carrying at least one issue occurrence** (not all project sessions): unscored sessions carry no information about issue association and would only dilute every probability uniformly.
+   - The repository returns **raw counts only** — NPMI scoring, the shared-session floor, and ranking live in `@domain/issues` (see *Related-issues scoring* below) so the math is unit-testable without ClickHouse.
+   - The window is fixed at the last `ISSUE_RELATED_COOCCURRENCE_WINDOW_DAYS` (30) days — not wired to a page range selector.
+
+   **Related-issues scoring (`@domain/issues`, pure).** The Related list merges two independent signals into one ranking:
+
+   - `semScore = clamp((cosine − ISSUE_RELATED_SEMANTIC_FLOOR) / (ISSUE_RELATED_SEMANTIC_CEILING − ISSUE_RELATED_SEMANTIC_FLOOR), 0, 1)` — a linear rescale of centroid cosine similarity over its *useful* band. Above the ceiling (≈0.85) two clusters are effectively duplicates (discovery would merge new scores into either); below the floor (≈0.55) they are unrelated. Surviving issue pairs sit below the discovery merge threshold *by construction*, so the band is where all the signal lives.
+   - `coocScore = max(0, NPMI)` over the session counts above, gated to `sharedSessions ≥ ISSUE_RELATED_MIN_SHARED_SESSIONS` (3) so one coincidental session cannot post a high score. NPMI is preferred over raw lift (unbounded, inflated for rare pairs) and over Jaccard/overlap percent (inflated by big neighbors that co-occur with everything by chance): its numerator *is* log-lift and its denominator normalizes by joint-event rarity, so both failure modes die at the source.
+   - `relatedness = 1 − (1 − semScore)(1 − coocScore)` (noisy-OR): either signal alone carries a row; a row scoring on both — the "possibly the same issue" case — ranks above either alone. Rows below `ISSUE_RELATED_MIN_RELATEDNESS` are dropped; top `ISSUE_RELATED_LIMIT` survive. The combined score is sort-order only and never displayed.
+
+   The forward design (`lift` displayed, sessions/traces both counted) is superseded: lift's instability for rare values is the same problem Patterns hit (see method #2's reverse-conditioning rationale), and a merged single list needs one bounded, comparable score per signal.
 
 4. **`failurePositionBySession(issueId, range?) → FailurePositionDistribution`**
 
@@ -234,7 +261,7 @@ All methods live on `ScoreAnalyticsRepository` (port: `packages/domain/scores/sr
 
 Extend `issues.functions.ts` with serializable wrappers, fetched by dedicated React Query hooks in `issues.collection.ts` (one hook per analysis block so blocks load and revalidate independently):
 
-- `getIssueImpact`, `getIssueDimensions(dimension)`, `getCoOccurringIssues`, `getIssueFailurePositions`, `getIssueBenchmark`, plus `updateIssueTriage`.
+- `getIssueImpact`, `getIssueDimensions(dimension)`, `getRelatedIssues`, `getIssueFailurePositions`, `getIssueBenchmark`, plus `updateIssueTriage`. `getRelatedIssues` orchestrates the two reads (pgvector neighbors + ClickHouse co-occurrence counts, in parallel), runs the pure domain scorer, and hydrates the surviving rows from Postgres (`findByIds`) with lifecycle states derived server-side.
 - `getIssueDetail` (existing) gains `assigneeId` + `priority`.
 - The **examples** block reuses existing data: `listIssueTraces` + per-trace conversation (`useTraceDetail`) + annotations (`useAnnotationsByTrace`); no new occurrence-fetch endpoint is required beyond surfacing the per-occurrence score anchor (`metadata.messageIndex` / `partIndex` / offsets) for the focused score.
 
@@ -282,9 +309,6 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 │  interaction-position bar chart of the        │  Monitoring                │
 │  session  (median: interaction 3)             │   1 evaluation · 92%       │
 │                                               │   [open ↓]                 │
-│ ── Related issues ────────────────────────────│                            │
-│  co-occurring issues list (shared %, lift)    │                            │
-│                                               │                            │
 │ ── Examples ──────────────────────────────────│                            │
 │  ◀  conversation with highlighted part   ▶    │                            │
 │      feedback card inline on the message      │                            │
@@ -294,6 +318,11 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 │                                               │                            │
 │ ── Monitoring (full) ─────────────────────────│                            │
 │  linked evaluations + alignment + advanced    │                            │
+│                                               │                            │
+│ ── Related issues (card grid, page footer) ───│                            │
+│  [name + badges]  [name + badges]             │                            │
+│  [description…ㅤ]  [description…ㅤ]            │                            │
+│  [chips · stats ]  [chips · stats ]            │                            │
 └──────────────────────────────────────────────┴───────────────────────────┘
 ```
 
@@ -324,7 +353,14 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 
 6. **Where it happens.** A compact bar chart of the **session-interaction position** distribution (`getIssueFailurePositions`): x-axis = interaction index within the conversation (`1, 2, 3, … , 10+`), y-axis = share of occurrences, with a callout for the **median interaction** (e.g. *"usually on interaction 3 of the conversation"*) and a separate note for the single-interaction share. This is the headline "where" insight; it directly tells users whether failures are an opening-turn problem or a long-conversation-degradation problem.
 
-7. **Related issues.** A list from `getCoOccurringIssues`: each row shows the related issue name (hydrated from Postgres), its lifecycle badge, the **shared-session percent**, and a **lift** chip (*"appears in 64% of this issue's sessions — ×8 vs baseline"*). Rows link to that issue's page. Below the list, the **benchmark** summary may also appear here as well as in the rail (*"Top 3% by user reach, top 8% by volume among 214 issues"*). Empty state when no meaningful co-occurrence exists.
+7. **Related issues.** A **single merged set** from `getRelatedIssues`, ranked by the combined relatedness score (semantic ⊕ co-occurrence, noisy-OR), rendered as a **responsive card grid at the bottom of the page** (it is a *"where to go next"* section — navigational, not evidence about this issue — so it reads as a footer, after Occurrences and Monitoring). Each **card** shows:
+
+   - the related issue **name** + lifecycle badges (resolved/ignored included — *"a similar issue was resolved"* is the actionable case),
+   - the issue **description** (2-line clamp) — so users can judge the similarity themselves,
+   - **reason chips that state which signal made it related**: `Similar topic` / `Very similar topic` (semantic — strength bucketed by score, threshold presentational) and `Same conversations · 64%` (co-occurrence, percent = `sharedSessions / mySessions`). Dual-chip cards are implicitly the "possibly the same issue" case — no explicit duplicate claim in v1,
+   - an activity footer: lifetime **occurrence count** + **last seen** (batched `aggregateByIssues` read).
+
+   Cosine values and the combined score are **never displayed** — they rank, the chips explain (each chip carries an explanatory tooltip). Cards link to that issue's page. Project-scoped only. The **benchmark** summary may also appear here as well as in the rail (*"Top 3% by user reach, top 8% by volume among 214 issues"*). Empty state when neither signal produces a row.
 
 8. **Examples.** An inline **occurrence carousel** built on the reusable `Conversation` component (`packages/ui/src/components/genai-conversation/conversation.tsx`) and the annotation-navigation system (`use-annotation-navigation.ts`):
    - Prev/next (and **H/L** keys) cycle through occurrences (scores) of the issue. (Issue-level prev/next on the page uses J/K; examples use H/L to avoid the collision.)
@@ -435,11 +471,15 @@ The page becomes the single issue surface; the drawer and flag are removed. Abso
 
 ### Phase 4 — Related issues + benchmark
 
-- [ ] **P4-1**: `coOccurringIssues` ClickHouse method (shared traces/sessions, lift, self-exclusion, floor) + tests; Postgres hydration of related issue rows.
-- [ ] **P4-2**: `issueBenchmark` method (occurrence + user-reach percentile) + tests.
-- [ ] **P4-3**: Related-issues list + benchmark chips (rail + section), linking to other issue pages.
+Related issues redesigned before build (no v1 shipped): one merged list combining **semantic similarity** (centroid cosine, pgvector) and **co-occurrence** (shared sessions, NPMI), ranked by noisy-OR relatedness. Displayed lift is dropped for the same instability reason Patterns dropped it (see Data model #3).
 
-**Exit gate**: the page shows co-occurring issues with lift and a project benchmark rank.
+- [x] **P4-1**: `IssueRepository.findSimilarByCentroid` (pgvector exact cosine scan, project-scoped, resolved/ignored included, empty when no embedding) + PGlite test.
+- [x] **P4-2**: `coOccurrenceByIssue` ClickHouse method (session co-occurrence counts + probability universe, self-exclusion, 30d window) + chdb tests.
+- [x] **P4-3**: Pure related-issues scorer in `@domain/issues` (semScore band rescale, NPMI with shared-session floor, noisy-OR merge, min-relatedness gate, top N) + unit tests; named constants (`ISSUE_RELATED_*`). *(As built: the scorer is fronted by `getRelatedIssuesUseCase` in `@domain/issues`, which runs the two reads in parallel and hydrates rows — the web fn stays thin.)*
+- [x] **P4-4**: `getRelatedIssues` web function (parallel reads → scorer → Postgres hydration) + hook + Related-issues section (merged list, lifecycle badges, reason chips, empty state), linking to other issue pages.
+- [ ] **P4-5**: `issueBenchmark` method (occurrence + user-reach percentile) + tests; benchmark chips (rail + section). *(Unchanged from the original design; not part of the related-issues build.)*
+
+**Exit gate**: the page shows one ranked list of related issues — semantically similar and/or co-occurring — with reason chips, plus (separately) a project benchmark rank.
 
 ### Phase 5 — Where it happens (session-interaction position)
 

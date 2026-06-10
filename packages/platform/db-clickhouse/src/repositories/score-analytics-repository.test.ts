@@ -658,6 +658,106 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
+  // coOccurrenceByIssue
+  // ------------------------------------------------------------------
+
+  describe("coOccurrenceByIssue", () => {
+    const fixture = setupFixture()
+    const issueSource = "issue_cooccurrencesrc"
+    const issueHeavy = "issue_cooccurrencehvy" // shares 3 sessions
+    const issueLight = "issue_cooccurrencelgt" // shares 1 session
+    const issueDisjoint = "issue_cooccurrencedsj" // shares nothing
+    const issueStale = "issue_cooccurrenceold" // shares only outside the range
+
+    const inRange = "2026-03-15 12:00:00.000"
+    const outOfRange = "2026-01-01 12:00:00.000"
+    const timeRange = {
+      from: new Date("2026-03-01T00:00:00.000Z"),
+      to: new Date("2026-03-31T23:59:59.999Z"),
+    }
+
+    const session = (n: number) => `session-cooc-${n}`
+
+    beforeEach(async () => {
+      await fixture.insertScores([
+        // Source issue: sessions 1-4. Session 1 carries TWO source occurrences
+        // so distinct session counting is exercised.
+        makeScoreRow({ issue_id: issueSource, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ issue_id: issueSource, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ issue_id: issueSource, session_id: session(2), created_at: inRange }),
+        makeScoreRow({ issue_id: issueSource, session_id: session(3), created_at: inRange }),
+        makeScoreRow({ issue_id: issueSource, session_id: session(4), created_at: inRange }),
+        // Sessionless source occurrence: ignored by session co-occurrence.
+        makeScoreRow({ issue_id: issueSource, session_id: "", created_at: inRange }),
+        // Heavy co-occurrer: shares sessions 1-3, plus its own sessions 5-6.
+        makeScoreRow({ issue_id: issueHeavy, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ issue_id: issueHeavy, session_id: session(2), created_at: inRange }),
+        makeScoreRow({ issue_id: issueHeavy, session_id: session(3), created_at: inRange }),
+        makeScoreRow({ issue_id: issueHeavy, session_id: session(5), created_at: inRange }),
+        makeScoreRow({ issue_id: issueHeavy, session_id: session(6), created_at: inRange }),
+        // Light co-occurrer: shares session 1 only, plus its own session 7.
+        makeScoreRow({ issue_id: issueLight, session_id: session(1), created_at: inRange }),
+        makeScoreRow({ issue_id: issueLight, session_id: session(7), created_at: inRange }),
+        // Disjoint issue: session 8 only — must not appear as a candidate.
+        makeScoreRow({ issue_id: issueDisjoint, session_id: session(8), created_at: inRange }),
+        // Stale co-occurrer: shares session 1 but outside the window.
+        makeScoreRow({ issue_id: issueStale, session_id: session(1), created_at: outOfRange }),
+      ])
+    })
+
+    it("counts shared and total sessions per candidate, self-excluded, windowed", async () => {
+      const aggregate = await fixture.runCh(
+        fixture.repo.coOccurrenceByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueSource),
+          timeRange,
+        }),
+      )
+
+      // Sessions 1-4 (the sessionless occurrence doesn't count).
+      expect(aggregate.mySessions).toBe(4)
+      // Universe: sessions 1-8 carry at least one in-range issue occurrence.
+      expect(aggregate.totalSessions).toBe(8)
+      expect(aggregate.candidates).toEqual([
+        { issueId: issueHeavy, sharedSessions: 3, theirSessions: 5 },
+        { issueId: issueLight, sharedSessions: 1, theirSessions: 2 },
+      ])
+    })
+
+    it("respects the candidate limit (trimmed by shared sessions)", async () => {
+      const aggregate = await fixture.runCh(
+        fixture.repo.coOccurrenceByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueSource),
+          timeRange,
+          limit: 1,
+        }),
+      )
+
+      expect(aggregate.candidates.map((candidate) => candidate.issueId)).toEqual([issueHeavy])
+      // Totals are unaffected by the candidate cap.
+      expect(aggregate.mySessions).toBe(4)
+      expect(aggregate.totalSessions).toBe(8)
+    })
+
+    it("returns empty counts for an issue with no in-range sessions", async () => {
+      const aggregate = await fixture.runCh(
+        fixture.repo.coOccurrenceByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueStale),
+          timeRange,
+        }),
+      )
+
+      expect(aggregate.mySessions).toBe(0)
+      expect(aggregate.candidates).toEqual([])
+    })
+  })
+
+  // ------------------------------------------------------------------
   // aggregateDimensionByIssue
   // ------------------------------------------------------------------
 
