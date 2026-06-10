@@ -30,6 +30,16 @@ import { Effect, Option } from "effect"
 const SEMANTIC_SCAN_LIMIT = 30_000
 
 /**
+ * Candidate window for indexed vector retrieval. ClickHouse defaults
+ * `max_limit_for_vector_search_queries` to 100, so semantic plans also carry a
+ * per-query setting that raises the guardrail to this value.
+ */
+const SEMANTIC_VECTOR_LIMIT = 1_000
+const SEMANTIC_VECTOR_SEARCH_SETTINGS = {
+  max_limit_for_vector_search_queries: SEMANTIC_VECTOR_LIMIT,
+} as const
+
+/**
  * Hard cap on the per-trace candidate set returned to the application by
  * `fetchSearchCandidates` (session-level search). Semantic plans already
  * enforce `SEMANTIC_SCAN_LIMIT` server-side, but the lexical and hybrid
@@ -136,6 +146,7 @@ function buildLegacySemanticSearchSubquery(
 ): {
   subquery: string
   params: Record<string, unknown>
+  clickhouseSettings?: Record<string, string | number | boolean>
 } {
   const innerExtraCols = semanticMetadata
     ? `,
@@ -179,6 +190,7 @@ function buildSharedMessageSemanticSearchSubquery(
 ): {
   subquery: string
   params: Record<string, unknown>
+  clickhouseSettings?: Record<string, string | number | boolean>
 } {
   const outerExtraCols = semanticMetadata
     ? `,
@@ -213,27 +225,23 @@ function buildSharedMessageSemanticSearchSubquery(
                   SELECT
                     content_hash,
                     (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
-                  FROM (
-                    SELECT
-                      content_hash,
-                      argMax(embedding, last_seen_at) AS embedding
-                    FROM message_embeddings
-                    WHERE organization_id = {organizationId:String}
-                      AND project_id = {projectId:String}
-                      AND embedding_model = {embeddingModel:String}
-                    GROUP BY content_hash
-                  ) AS latest_embeddings
+                  FROM message_embeddings
+                  WHERE organization_id = {organizationId:String}
+                    AND project_id = {projectId:String}
+                    AND embedding_model = {embeddingModel:String}
+                  ORDER BY cosineDistance(embedding, {queryEmbedding:Array(Float32)}) ASC
+                  LIMIT {semanticVectorLimit:UInt32}
                 ) AS e ON o.content_hash = e.content_hash
                 WHERE o.role IN ('user', 'assistant')
                 ORDER BY semantic_score DESC
-                LIMIT {semanticScanLimit:UInt32}
               ) AS semantic_candidates
               GROUP BY trace_id`,
     params: {
       queryEmbedding: [...queryEmbedding],
       embeddingModel,
-      semanticScanLimit: SEMANTIC_SCAN_LIMIT,
+      semanticVectorLimit: SEMANTIC_VECTOR_LIMIT,
     },
+    clickhouseSettings: SEMANTIC_VECTOR_SEARCH_SETTINGS,
   }
 }
 
@@ -244,6 +252,7 @@ function buildSemanticSearchSubquery(
 ): {
   subquery: string
   params: Record<string, unknown>
+  clickhouseSettings?: Record<string, string | number | boolean>
 } {
   return useSharedMessageEmbeddingsReads()
     ? buildSharedMessageSemanticSearchSubquery(queryEmbedding, semanticMetadata, embeddingModel)
@@ -270,6 +279,7 @@ export type SearchPlan = {
   readonly ranked: boolean
   readonly subquery: string
   readonly params: Record<string, unknown>
+  readonly clickhouseSettings?: Record<string, string | number | boolean>
   readonly semanticMetadata: boolean
 }
 
@@ -354,6 +364,7 @@ function buildSearchPlan(
         ...sem.params,
         minRelevanceScore: TRACE_SEARCH_MIN_RELEVANCE_SCORE,
       },
+      ...(sem.clickhouseSettings ? { clickhouseSettings: sem.clickhouseSettings } : {}),
       semanticMetadata,
     }
   }
@@ -393,6 +404,7 @@ function buildSearchPlan(
                  ON lex.trace_id = sem.trace_id
                GROUP BY lex.trace_id`,
     params: { ...lex.params, ...sem.params },
+    ...(sem.clickhouseSettings ? { clickhouseSettings: sem.clickhouseSettings } : {}),
     semanticMetadata,
   }
 }

@@ -733,6 +733,7 @@ export const TraceRepositoryLive = Layer.effect(
                       }
                     : {}),
                 },
+                ...(plan.clickhouseSettings ? { clickhouse_settings: plan.clickhouseSettings } : {}),
                 format: "JSONEachRow",
               })
               return result.json<TraceListRow & { relevance_score?: number }>()
@@ -798,6 +799,7 @@ export const TraceRepositoryLive = Layer.effect(
                     }
                   : {}),
               },
+              ...(plan?.clickhouseSettings ? { clickhouse_settings: plan.clickhouseSettings } : {}),
               format: "JSONEachRow",
             })
             return result.json<TraceListRow>()
@@ -994,6 +996,7 @@ export const TraceRepositoryLive = Layer.effect(
                     ...filterParams,
                     ...plan.params,
                   },
+                  ...(plan.clickhouseSettings ? { clickhouse_settings: plan.clickhouseSettings } : {}),
                   format: "JSONEachRow",
                 })
                 return result.json<{ total: string }>()
@@ -1039,7 +1042,11 @@ export const TraceRepositoryLive = Layer.effect(
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-          const runQuery = (extraJoinCondition: string, extraParams: Record<string, unknown>) =>
+          const runQuery = (
+            extraJoinCondition: string,
+            extraParams: Record<string, unknown>,
+            clickhouseSettings?: Record<string, string | number | boolean>,
+          ) =>
             chSqlClient
               .query(async (client) => {
                 const result = await client.query({
@@ -1060,6 +1067,7 @@ export const TraceRepositoryLive = Layer.effect(
                     ...filterParams,
                     ...extraParams,
                   },
+                  ...(clickhouseSettings ? { clickhouse_settings: clickhouseSettings } : {}),
                   format: "JSONEachRow",
                 })
                 return result.json<{ last_at: string | null }>()
@@ -1077,7 +1085,11 @@ export const TraceRepositoryLive = Layer.effect(
           const parsed = searchQuery ? parseSearchQuery(searchQuery) : undefined
           if (parsed && isActiveSearch(parsed)) {
             const plan = yield* planSearch(parsed)
-            return yield* runQuery(`AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`, plan.params)
+            return yield* runQuery(
+              `AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`,
+              plan.params,
+              plan.clickhouseSettings,
+            )
           }
 
           return yield* runQuery("", {})
@@ -1090,7 +1102,11 @@ export const TraceRepositoryLive = Layer.effect(
           const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
           const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-          const runQuery = (extraJoinCondition: string, extraParams: Record<string, unknown>) =>
+          const runQuery = (
+            extraJoinCondition: string,
+            extraParams: Record<string, unknown>,
+            clickhouseSettings?: Record<string, string | number | boolean>,
+          ) =>
             chSqlClient
               .query(async (client) => {
                 const result = await client.query({
@@ -1119,6 +1135,7 @@ export const TraceRepositoryLive = Layer.effect(
                     ...filterParams,
                     ...extraParams,
                   },
+                  ...(clickhouseSettings ? { clickhouse_settings: clickhouseSettings } : {}),
                   format: "JSONEachRow",
                 })
                 return result.json<{ total: string }>()
@@ -1131,7 +1148,11 @@ export const TraceRepositoryLive = Layer.effect(
           const parsed = searchQuery ? parseSearchQuery(searchQuery) : undefined
           if (parsed && isActiveSearch(parsed)) {
             const plan = yield* planSearch(parsed)
-            return yield* runQuery(`AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`, plan.params)
+            return yield* runQuery(
+              `AND trace_id IN (SELECT trace_id FROM (${plan.subquery}))`,
+              plan.params,
+              plan.clickhouseSettings,
+            )
           }
 
           return yield* runQuery("", {})
@@ -1196,6 +1217,7 @@ export const TraceRepositoryLive = Layer.effect(
                     ...filterParams,
                     ...plan.params,
                   },
+                  ...(plan.clickhouseSettings ? { clickhouse_settings: plan.clickhouseSettings } : {}),
                   format: "JSONEachRow",
                 })
                 return result.json<TraceMetricsRow>()
@@ -1302,6 +1324,7 @@ export const TraceRepositoryLive = Layer.effect(
                     ...filterParams,
                     ...plan.params,
                   },
+                  ...(plan.clickhouseSettings ? { clickhouse_settings: plan.clickhouseSettings } : {}),
                   format: "JSONEachRow",
                 })
                 return result.json<TraceHistogramBucketRow>()

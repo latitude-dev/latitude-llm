@@ -154,8 +154,8 @@ const createFakeTaxonomyObservationRepository = (seed: readonly TaxonomyMomentOb
   return { repository: repository as TaxonomyObservationRepositoryShape, rows }
 }
 
-const embeddingKey = (row: Pick<MessageEmbedding, "organizationId" | "projectId" | "contentHash">) =>
-  `${row.organizationId}|${row.projectId}|${row.contentHash}`
+const embeddingKey = (row: Pick<MessageEmbedding, "organizationId" | "projectId" | "contentHash" | "embeddingModel">) =>
+  `${row.organizationId}|${row.projectId}|${row.embeddingModel}|${row.contentHash}`
 
 const createFakeMessageEmbeddingRepository = (seed: readonly MessageEmbedding[] = []) => {
   const rows = new Map(seed.map((row) => [embeddingKey(row), row] as const))
@@ -164,7 +164,14 @@ const createFakeMessageEmbeddingRepository = (seed: readonly MessageEmbedding[] 
     findByHashes: ({ organizationId, projectId, contentHashes }) =>
       Effect.sync(() =>
         contentHashes.flatMap((contentHash) => {
-          const row = rows.get(embeddingKey({ organizationId, projectId, contentHash }))
+          const row = rows.get(
+            embeddingKey({
+              organizationId,
+              projectId,
+              contentHash,
+              embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
+            }),
+          )
           return row ? [row] : []
         }),
       ),
@@ -174,7 +181,7 @@ const createFakeMessageEmbeddingRepository = (seed: readonly MessageEmbedding[] 
         for (const row of newRows) {
           rows.set(embeddingKey(row), {
             ...row,
-            lastSeenAt: row.lastSeenAt ?? now,
+            insertedAt: row.insertedAt ?? now,
           })
         }
       }),
@@ -372,7 +379,7 @@ describe("analyzeSessionUseCase", () => {
           contentHash: userHash,
           embedding: [1, 0],
           embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
-          lastSeenAt: now,
+          insertedAt: now,
         },
         {
           organizationId,
@@ -380,7 +387,7 @@ describe("analyzeSessionUseCase", () => {
           contentHash: assistantHash,
           embedding: [0, 1],
           embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
-          lastSeenAt: now,
+          insertedAt: now,
         },
       ],
       ai: {

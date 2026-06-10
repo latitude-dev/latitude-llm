@@ -7,7 +7,7 @@ export interface MessageEmbedding {
   readonly contentHash: string
   readonly embedding: readonly number[]
   readonly embeddingModel: string
-  readonly lastSeenAt: Date
+  readonly insertedAt: Date
 }
 
 export interface MessageEmbeddingUpsert {
@@ -16,7 +16,7 @@ export interface MessageEmbeddingUpsert {
   readonly contentHash: string
   readonly embedding: readonly number[]
   readonly embeddingModel: string
-  readonly lastSeenAt?: Date
+  readonly insertedAt?: Date
 }
 
 export interface MessageEmbeddingRepositoryShape {

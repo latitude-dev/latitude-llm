@@ -21,20 +21,25 @@ describe("planSearch", () => {
     }
   })
 
-  it("applies the shared-message semantic cap after joining to usable occurrences", async () => {
+  it("uses ANN-shaped shared-message vector retrieval before occurrence fan-out", async () => {
     process.env.LAT_TRACE_SEARCH_SHARED_MESSAGE_EMBEDDINGS_READS = "true"
 
     const plan = await Effect.runPromise(planSearch(parseSearchQuery("needle")).pipe(Effect.provide(mockAILayer)))
     const normalizedSql = plan.subquery.replace(/\s+/g, " ")
 
     const messageEmbeddingsIndex = normalizedSql.indexOf("FROM message_embeddings")
+    const vectorOrderIndex = normalizedSql.indexOf(
+      "ORDER BY cosineDistance(embedding, {queryEmbedding:Array(Float32)}) ASC",
+    )
+    const vectorLimitIndex = normalizedSql.indexOf("LIMIT {semanticVectorLimit:UInt32}")
     const occurrenceJoinIndex = normalizedSql.indexOf("ON o.content_hash = e.content_hash")
     const roleFilterIndex = normalizedSql.indexOf("WHERE o.role IN ('user', 'assistant')")
-    const limitIndex = normalizedSql.indexOf("LIMIT {semanticScanLimit:UInt32}")
 
     expect(messageEmbeddingsIndex).toBeGreaterThanOrEqual(0)
+    expect(vectorOrderIndex).toBeGreaterThan(messageEmbeddingsIndex)
+    expect(vectorLimitIndex).toBeGreaterThan(vectorOrderIndex)
+    expect(occurrenceJoinIndex).toBeGreaterThan(vectorLimitIndex)
     expect(occurrenceJoinIndex).toBeGreaterThan(messageEmbeddingsIndex)
     expect(roleFilterIndex).toBeGreaterThan(occurrenceJoinIndex)
-    expect(limitIndex).toBeGreaterThan(roleFilterIndex)
   })
 })

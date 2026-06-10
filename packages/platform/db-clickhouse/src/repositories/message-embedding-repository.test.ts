@@ -34,10 +34,10 @@ describe("MessageEmbeddingRepository", () => {
     expect(rows).toEqual([])
   })
 
-  it("upserts and batch fetches embeddings by content hash", async () => {
+  it("inserts and batch fetches embeddings by content hash", async () => {
     const contentHashA = "hash-a"
     const contentHashB = "hash-b"
-    const lastSeenAt = new Date("2026-06-10T09:00:00.000Z")
+    const insertedAt = new Date("2026-06-10T09:00:00.000Z")
 
     await Effect.runPromise(
       repo.upsertMany([
@@ -47,7 +47,7 @@ describe("MessageEmbeddingRepository", () => {
           contentHash: contentHashA,
           embedding: embedding(0.1),
           embeddingModel: EMBEDDING_MODEL,
-          lastSeenAt,
+          insertedAt,
         },
         {
           organizationId: ORG_ID,
@@ -55,7 +55,7 @@ describe("MessageEmbeddingRepository", () => {
           contentHash: contentHashB,
           embedding: embedding(0.2),
           embeddingModel: EMBEDDING_MODEL,
-          lastSeenAt,
+          insertedAt,
         },
       ]),
     )
@@ -72,13 +72,13 @@ describe("MessageEmbeddingRepository", () => {
     expect(rows[0]?.contentHash).toBe(contentHashA)
     expect(rows[0]?.embeddingModel).toBe(EMBEDDING_MODEL)
     expect(rows[0]?.embedding).toEqual(embedding(0.1))
-    expect(rows[0]?.lastSeenAt.toISOString()).toBe(lastSeenAt.toISOString())
+    expect(rows[0]?.insertedAt.toISOString()).toBe(insertedAt.toISOString())
   })
 
-  it("returns the newest version when a hash has multiple unmerged rows", async () => {
-    const contentHash = "hash-versioned"
-    const older = new Date("2026-06-10T09:00:00.000Z")
-    const newer = new Date("2026-06-10T10:00:00.000Z")
+  it("leaves an existing embedding untouched when the same hash/model is inserted again", async () => {
+    const contentHash = "hash-immutable"
+    const first = new Date("2026-06-10T09:00:00.000Z")
+    const second = new Date("2026-06-10T10:00:00.000Z")
 
     await Effect.runPromise(
       repo.upsertMany([
@@ -88,15 +88,20 @@ describe("MessageEmbeddingRepository", () => {
           contentHash,
           embedding: embedding(0.1),
           embeddingModel: EMBEDDING_MODEL,
-          lastSeenAt: older,
+          insertedAt: first,
         },
+      ]),
+    )
+
+    await Effect.runPromise(
+      repo.upsertMany([
         {
           organizationId: ORG_ID,
           projectId: PROJECT_ID,
           contentHash,
           embedding: embedding(0.3),
           embeddingModel: EMBEDDING_MODEL,
-          lastSeenAt: newer,
+          insertedAt: second,
         },
       ]),
     )
@@ -106,7 +111,7 @@ describe("MessageEmbeddingRepository", () => {
     )
 
     expect(rows).toHaveLength(1)
-    expect(rows[0]?.embedding).toEqual(embedding(0.3))
-    expect(rows[0]?.lastSeenAt.toISOString()).toBe(newer.toISOString())
+    expect(rows[0]?.embedding).toEqual(embedding(0.1))
+    expect(rows[0]?.insertedAt.toISOString()).toBe(first.toISOString())
   })
 })
