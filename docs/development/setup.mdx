@@ -1,0 +1,178 @@
+---
+title: Setup
+description: Run the full Latitude stack on your machine ready for development with hot reload and infrastructure in Docker.
+---
+
+Infrastructure (Postgres, ClickHouse, Redis, Mailpit, Temporal) runs in Docker, while the five Latitude services run directly on your host for fast hot reload.
+
+Core observability (trace ingest and viewing) works out of the box. AI-dependent features light up as you add the documented provider keys, see [AI features](#ai-features).
+
+<Note>
+  This guide is for running Latitude locally for development. To self-host a production instance, see the [Deployment guide](/deployment) instead.
+</Note>
+
+## Prerequisites
+
+- **Node.js 25 and Python 3.13**. If you use [mise](https://mise.jdx.dev), `mise install` provisions both.
+- **pnpm 10**. Enable it with `corepack enable`.
+- **Docker**. Docker Desktop or any Docker Engine, used for the infrastructure containers.
+- **goose** — the ClickHouse migration tool. Install with `brew install goose` (or see [goose releases](https://github.com/pressly/goose/releases) on other platforms).
+- **uv** — the Python package manager for the evaluation optimizer runtime. Install with `brew install uv` (or see [the uv docs](https://docs.astral.sh/uv/getting-started/installation/)).
+
+## Local setup
+
+<Steps>
+  <Step title="Install dependencies">
+    ```bash
+    pnpm install
+    ```
+
+    This also configures the git pre-commit hooks via the `prepare` script.
+
+    ```bash
+    cd packages/platform/op-gepa/python
+    uv venv && uv sync --all-extras --all-groups
+    ```
+
+    Latitude includes a Python sidecar for the evaluation optimizer runtime.
+  </Step>
+
+  <Step title="Create your environment files">
+    The committed `.env.example` carries working local defaults and boots the whole stack API key-free.
+
+    ```bash
+    cp .env.example .env.development
+    cp .env.example .env.test
+    ```
+
+    Then, set `NODE_ENV=test` in `.env.test` (`.env.development` already defaults to `development`). And point `LAT_STORAGE_FS_ROOT` (in both environments) at an **absolute** path for the local object store (the default is `/tmp`).
+  </Step>
+
+  <Step title="Build the workspace">
+    ```bash
+    pnpm build
+    ```
+
+    Some platform packages must be compiled before the database migrations run.
+  </Step>
+
+  <Step title="Start the infrastructure">
+    ```bash
+    docker compose up -d
+    ```
+
+    `docker-compose.yml` is for local **infrastructure-only**: Postgres (with `pgvector` extension), ClickHouse, two Redis instances (cache + BullMQ), Mailpit (local SMTP), and self-hosted Temporal instance and its UI.
+  </Step>
+
+  <Step title="Run the migrations">
+    ```bash
+    pnpm migrate
+    ```
+
+    Runs the Postgres migrations (Drizzle Kit) and the ClickHouse migrations (goose).
+  </Step>
+
+  <Step title="Seed initial data">
+    ```bash
+    pnpm seed
+    ```
+
+    Optionally create a sample organization, with a default project, a handful of users, an API key, and realistic sample telemetry across Postgres and ClickHouse — enough to sign in and exercise traces, search, issues, and evaluations immediately.
+  </Step>
+
+  <Step title="Start the services">
+    Pick whichever you prefer — all run with hot reload:
+
+    <CodeGroup>
+    ```bash tmuxinator
+    # Infra + all services + Postgres studio, each in its own pane.
+    # Requires tmux and tmuxinator. Runs `docker compose up` for you,
+    # so you can skip the standalone infra step above.
+    pnpm tmux
+    ```
+
+    ```bash turbo
+    # Runs every workspace `dev` task together.
+    pnpm dev
+    ```
+
+    ```bash manual
+    # Spin up each service separately.
+    pnpm --filter @app/web dev
+    pnpm --filter @app/api dev
+    pnpm --filter @app/ingest dev
+    pnpm --filter @app/workers dev
+    pnpm --filter @app/workflows dev
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Sign in locally">
+    Open [http://localhost:3000](http://localhost:3000), regsiter or enter a seeded user (`owner@acme.com` or `admin@acme.com`), and click the magic link Mailpit captures at [http://localhost:8025](http://localhost:8025).
+  </Step>
+</Steps>
+
+<Tip>
+  When dependencies, migrations, or generated artifacts drift, `pnpm reset` (clean →
+  install → build → reset DBs) gives you a clean slate; `pnpm catchup` rebuilds and
+  applies any new migrations without dropping data.
+</Tip>
+
+## Local services
+
+Once everything is running, these are the local endpoints you can access:
+
+| Service | URL | Notes |
+| --- | --- | --- |
+| Web UI | [http://localhost:3000](http://localhost:3000) | The Latitude app UI |
+| API | [http://localhost:3001](http://localhost:3001) | Public API; health at `/health` |
+| Ingest | [http://localhost:3002](http://localhost:3002) | OTLP trace ingest; health at `/health` |
+| Workers | [http://localhost:9090](http://localhost:9090) | BullMQ workers; health at `/health` |
+| Workflows | [http://localhost:9091](http://localhost:9091) | Temporal workers; health at `/health` |
+| Mailpit | [http://localhost:8025](http://localhost:8025) | Local inbox — magic links land here |
+| Temporal UI | [http://localhost:8233](http://localhost:8233) | See workflow executions |
+| Drizzle Studio | [https://local.drizzle.studio/?port=3003](https://local.drizzle.studio/?port=3003) | Postgres console — run `pnpm --filter @platform/db-postgres pg:studio` first |
+
+## Contributing workflow
+
+The pre-commit hook runs `pnpm check`, `pnpm typecheck`, and `pnpm knip`. It's configured automatically on `pnpm install`; to (re)configure it in an existing clone run `pnpm prepare`.
+
+Before opening a pull requests, run the same checks CI runs:
+
+| Task | Command |
+| --- | --- |
+| Format | `pnpm format` |
+| Lint | `pnpm check` |
+| Typecheck | `pnpm typecheck` |
+| Dead-code / unused deps | `pnpm knip` |
+| Tests | `pnpm test` |
+
+You can scope any task to a single package with `--filter`, and pass flags after `--`:
+
+```bash
+pnpm --filter @app/api test                          # one package
+pnpm --filter @app/api test -- src/some-file.test.ts # one file
+pnpm --filter @app/api test -- -t "health endpoint"  # by test name
+```
+
+Check out the full [Contributing guidelines](/development/contributing).
+
+## AI features
+
+The local stack runs with **no proprietary API keys**, and the full test suite is guaranteed to pass with no keys set, that said:
+
+- Semantic trace/issue search and search highlights need **Voyage AI** (`LAT_VOYAGE_API_KEY`).
+- Flaggers, evaluations, conversation intelligence, issue summarization, and AI generation need **Anthropic** (`LAT_ANTHROPIC_API_KEY`) or **Amazon Bedrock** (`LAT_AWS_*`).
+
+Add the relevant keys to `.env.development` to enable those features locally.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Contributing" icon="git-pull-request" href="./contributing">
+    How to propose changes, our PR conventions, and the Code of Conduct.
+  </Card>
+  <Card title="Start tracing" icon="rocket" href="../telemetry/start-tracing">
+    Point an application at your local instance and watch traces arrive.
+  </Card>
+</CardGroup>

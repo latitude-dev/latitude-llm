@@ -1,0 +1,55 @@
+---
+title: Contributing
+description: How to contribute to Latitude — set up locally, propose changes, and follow our pull-request conventions and Code of Conduct.
+---
+
+Latitude is open source under the [MIT License](https://github.com/latitude-dev/latitude-llm/blob/development/LICENSE), and contributions are welcome — code, docs, bug reports, and feature ideas alike.
+
+<CardGroup cols={2}>
+  <Card title="Contributing Guide" icon="book-open" href="https://github.com/latitude-dev/latitude-llm/blob/development/CONTRIBUTING.md">
+    The full contribution guide — making changes, reporting issues, the CLA.
+  </Card>
+  <Card title="Code of Conduct" icon="handshake" href="https://github.com/latitude-dev/latitude-llm/blob/development/CODE_OF_CONDUCT.md">
+    The standards we hold ourselves and our community to.
+  </Card>
+</CardGroup>
+
+## Ways to contribute
+
+- Pick up a [good first issue](https://github.com/latitude-dev/latitude-llm/contribute) — curated, newcomer-friendly tasks.
+- Open and vote on [issues](https://github.com/latitude-dev/latitude-llm/issues).
+- Improve the [docs](https://docs.latitude.so).
+
+For typos, small docs fixes, and clearly-scoped bugs, just open a PR. **For new features or anything significant, open an issue first** so we can discuss the approach — undiscussed changes may be rejected.
+
+> If you like the project but don't have time to contribute code: star the repo, share Latitude with people who'd find it useful or mention it at meetups or in your project's README.
+
+## Reporting issues
+
+Search [existing issues](https://github.com/latitude-dev/latitude-llm/issues) first. A good bug report has expected vs. actual behavior, exact repro steps, and your environment. Found a security vulnerability? Don't open a public issue — check out the [Security Policy](https://github.com/latitude-dev/latitude-llm/blob/development/SECURITY.md).
+
+## Opening a pull request
+
+<Steps>
+  <Step title="Branch from the trunk">
+    Fork and branch from `development` (our trunk).
+  </Step>
+  <Step title="Keep it small and focused">
+    Split large changes — schema separate from logic, refactors first.
+  </Step>
+  <Step title="Make the checks pass">
+    Run `pnpm check`, `pnpm typecheck`, `pnpm knip`, and `pnpm test` before pushing.
+  </Step>
+  <Step title="Follow Conventional Commits">
+    Use [Conventional Commits](https://www.conventionalcommits.org/) for commit and PR titles (e.g. `fix(traces): handle empty spans`). We squash-merge.
+  </Step>
+  <Step title="Link the issue and sign the CLA">
+    Reference the issue with `Closes #123`. The first time you open a PR, a bot asks you to sign our Contributor License Agreement — a one-time step. PRs can't be merged until it's signed.
+  </Step>
+</Steps>
+
+> We're a small team, we read everything but may take a few days, longer for big changes. Stale or out-of-scope PRs may be closed, but you're welcome to reopen.
+
+## Community
+
+We all hang out in our [Slack community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw) — a good place to ask questions and share what you're building.
