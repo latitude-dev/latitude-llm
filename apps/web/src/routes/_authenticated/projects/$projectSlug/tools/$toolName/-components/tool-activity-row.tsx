@@ -49,17 +49,20 @@ export function ToolActivityRow({
   toolName,
   range,
   bucketSeconds,
+  errorsOnly,
 }: {
   readonly projectId: string
   readonly toolName: string
   readonly range: ToolsTimeRange
   readonly bucketSeconds: number
+  readonly errorsOnly: boolean
 }) {
   const { data: histogram = [], isLoading } = useToolCallHistogram({
     projectId,
     toolName,
     range,
     bucketSeconds,
+    errorsOnly,
   })
 
   const categories = useMemo(
@@ -68,35 +71,47 @@ export function ToolActivityRow({
   )
 
   const callsSeries = useMemo<readonly ChartSeries[]>(
-    () => [
-      {
-        kind: "bar",
-        name: "Successful calls",
-        values: histogram.map((bucket) => bucket.calls - bucket.errors),
-        color: OK_CALLS_COLOR,
-        axis: "left",
-        stack: "calls",
-      },
-      {
-        kind: "bar",
-        name: "Failed calls",
-        values: histogram.map((bucket) => bucket.errors),
-        color: FAILED_CALLS_COLOR,
-        axis: "left",
-        stack: "calls",
-      },
-      {
-        kind: "line",
-        name: "Error rate %",
-        values: histogram.map((bucket) =>
-          bucket.calls > 0 ? Math.round((bucket.errors / bucket.calls) * 1000) / 10 : 0,
-        ),
-        color: ERROR_RATE_COLOR,
-        axis: "right",
-        smooth: true,
-      },
-    ],
-    [histogram],
+    () =>
+      errorsOnly
+        ? // In failure mode every call IS an error — a single rose series.
+          [
+            {
+              kind: "bar",
+              name: "Failed calls",
+              values: histogram.map((bucket) => bucket.calls),
+              color: FAILED_CALLS_COLOR,
+              axis: "left",
+            },
+          ]
+        : [
+            {
+              kind: "bar",
+              name: "Successful calls",
+              values: histogram.map((bucket) => bucket.calls - bucket.errors),
+              color: OK_CALLS_COLOR,
+              axis: "left",
+              stack: "calls",
+            },
+            {
+              kind: "bar",
+              name: "Failed calls",
+              values: histogram.map((bucket) => bucket.errors),
+              color: FAILED_CALLS_COLOR,
+              axis: "left",
+              stack: "calls",
+            },
+            {
+              kind: "line",
+              name: "Error rate %",
+              values: histogram.map((bucket) =>
+                bucket.calls > 0 ? Math.round((bucket.errors / bucket.calls) * 1000) / 10 : 0,
+              ),
+              color: ERROR_RATE_COLOR,
+              axis: "right",
+              smooth: true,
+            },
+          ],
+    [histogram, errorsOnly],
   )
 
   const latencySeries = useMemo<readonly ChartSeries[]>(
@@ -115,6 +130,7 @@ export function ToolActivityRow({
   )
 
   const isEmpty = histogram.length === 0 || histogram.every((bucket) => bucket.calls === 0)
+  const emptyLabel = errorsOnly ? "No failed calls in this time window" : "No calls in this time window"
   const latencyTooltipTitle = useMemo(
     () => (category: string, dataIndex: number) => {
       const bucket = histogram[dataIndex]
@@ -126,10 +142,10 @@ export function ToolActivityRow({
   return (
     <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
       <ChartPanel
-        title="Calls over time"
+        title={errorsOnly ? "Failed calls over time" : "Calls over time"}
         isLoading={isLoading}
         isEmpty={isEmpty}
-        emptyLabel="No calls in this time window"
+        emptyLabel={emptyLabel}
         className="xl:flex-1"
       >
         <Chart
@@ -141,10 +157,10 @@ export function ToolActivityRow({
         />
       </ChartPanel>
       <ChartPanel
-        title="Latency over time"
+        title={errorsOnly ? "Latency of failed calls" : "Latency over time"}
         isLoading={isLoading}
         isEmpty={isEmpty}
-        emptyLabel="No calls in this time window"
+        emptyLabel={emptyLabel}
         className="xl:w-[420px]"
       >
         <Chart

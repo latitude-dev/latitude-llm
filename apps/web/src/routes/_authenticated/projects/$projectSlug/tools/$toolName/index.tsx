@@ -1,4 +1,4 @@
-import { Button, Icon, Skeleton, Text, Tooltip } from "@repo/ui"
+import { Button, Icon, Label, Skeleton, Status, Switch, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router"
 import { ArrowLeftIcon, LockIcon, TextAlignStartIcon, WrenchIcon } from "lucide-react"
@@ -16,7 +16,6 @@ import {
 } from "../-components/tool-formatters.ts"
 import { ToolActivityRow } from "./-components/tool-activity-row.tsx"
 import { ToolContextPanel } from "./-components/tool-context-panel.tsx"
-import { ToolDefinitionParams } from "./-components/tool-definition-params.tsx"
 import { ToolNeighborNav } from "./-components/tool-neighbor-nav.tsx"
 import { ToolParametersExplorer } from "./-components/tool-parameters-explorer.tsx"
 import { ToolRecentCalls } from "./-components/tool-recent-calls.tsx"
@@ -112,6 +111,8 @@ function ToolDetailPageContent() {
   const project = useRouteProject()
   const [timeFrom] = useParamState("toolsTimeFrom", "")
   const [timeTo] = useParamState("toolsTimeTo", "")
+  const [errorsParam, setErrorsParam] = useParamState("toolErrors", "")
+  const errorsOnly = errorsParam === "1"
   // A trace sheet being open suppresses the J/K prev/next-tool hotkeys.
   const [overlayActive, setOverlayActive] = useState(false)
 
@@ -125,8 +126,9 @@ function ToolDetailPageContent() {
     [range],
   )
 
-  const { data: detail, isLoading } = useToolDetail({ projectId: project.id, toolName, range })
+  const { data: detail, isLoading } = useToolDetail({ projectId: project.id, toolName, range, errorsOnly })
   const usage = detail?.usage ?? null
+  const errorsUsage = detail?.errorsUsage ?? null
   const definition = detail?.definition ?? null
   const notFound = !isLoading && detail !== undefined && usage === null && definition === null
 
@@ -164,6 +166,15 @@ function ToolDetailPageContent() {
                 overlayActive={overlayActive}
               />
               <div className="mx-1 h-5 w-px bg-border" />
+              <Label htmlFor="tool-errors-only" className="cursor-pointer">
+                <Text.H6 color="foregroundMuted">Errors only</Text.H6>
+              </Label>
+              <Switch
+                id="tool-errors-only"
+                checked={errorsOnly}
+                onCheckedChange={(checked) => setErrorsParam(checked ? "1" : "")}
+              />
+              <div className="mx-1 h-5 w-px bg-border" />
               <Button asChild variant="outline" size="sm">
                 <Link
                   to="/projects/$projectSlug"
@@ -197,116 +208,170 @@ function ToolDetailPageContent() {
           }
         />
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6 pt-2">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
-            {/* Usage — headline call metrics. */}
-            <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 xl:flex-1">
+          {/* Usage — headline call metrics, scoped to failures when the
+              errors-only switch is on (error rate stays global). */}
+          <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+            <div className="flex items-center gap-2">
               <Text.H6 color="foregroundMuted">Usage</Text.H6>
-              {!isLoading && usage === null ? (
-                <Text.H5 color="foregroundMuted">
-                  No calls in this window.
-                  {definition
-                    ? ` It was offered to the model ${formatCount(definition.offeredCount)} times — the model never selected it.`
-                    : ""}
-                </Text.H5>
-              ) : (
-                <div className="flex flex-row flex-wrap gap-x-8 gap-y-4">
-                  <MetricTile label="Calls" value={usage ? formatCount(usage.calls) : "-"} isLoading={isLoading} />
-                  <MetricTile
-                    label="Traces using it"
-                    value={usage ? `${formatCount(usage.tracesUsed)} · ${formatPercent(usage.traceUsageRate)}` : "-"}
-                    tooltip="Distinct traces with at least one call of this tool, and their share of all traces in the window."
-                    isLoading={isLoading}
-                  />
-                  <MetricTile
-                    label="Sessions using it"
-                    value={
-                      usage ? `${formatCount(usage.sessionsUsed)} · ${formatPercent(usage.sessionUsageRate)}` : "-"
-                    }
-                    isLoading={isLoading}
-                  />
-                  <MetricTile
-                    label="Calls per offer"
-                    value={
-                      definition && usage
-                        ? formatPercent(definition.offeredCount > 0 ? usage.calls / definition.offeredCount : 0)
-                        : "-"
-                    }
-                    tooltip={
-                      definition
-                        ? `How often the model picks this tool when it's available — offered ${formatCount(definition.offeredCount)} times. Can exceed 100% when one turn calls it multiple times.`
-                        : "Calls per offer needs tool definitions on chat spans."
-                    }
-                    isLoading={isLoading}
-                  />
-                  <MetricTile
-                    label="Error rate"
-                    value={usage ? formatPercent(usage.errorRate) : "-"}
-                    tooltip={usage ? `${formatCount(usage.errors)} of ${formatCount(usage.calls)} calls failed.` : null}
-                    isLoading={isLoading}
-                  />
-                  <MetricTile
-                    label="Duration"
-                    value={
-                      usage ? `${formatDuration(usage.p50DurationNs)} / ${formatDuration(usage.p95DurationNs)}` : "-"
-                    }
-                    tooltip={usage ? `p50 / p95 — avg ${formatDuration(usage.avgDurationNs)}` : null}
-                    isLoading={isLoading}
-                  />
-                  <MetricTile
-                    label="Last called"
-                    value={usage ? relativeTime(new Date(usage.lastUsed)) : "-"}
-                    tooltip={usage ? new Date(usage.lastUsed).toLocaleString() : null}
-                    isLoading={isLoading}
-                  />
-                </div>
-              )}
+              {errorsOnly ? <Status variant="destructive" label="failed calls only" /> : null}
             </div>
-            {/* Definition — readable parameter list from the latest payload. */}
-            <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 xl:w-[500px]">
-              <div className="flex items-center justify-between">
-                <Text.H6 color="foregroundMuted">Parameters</Text.H6>
-                {definition ? (
-                  <Text.H6 color="foregroundMuted">last seen {relativeTime(new Date(definition.lastOffered))}</Text.H6>
-                ) : null}
-              </div>
-              {isLoading ? (
-                <Skeleton className="h-40 w-full" />
-              ) : definition ? (
-                <ToolDefinitionParams definitionJson={definition.definitionJson} />
-              ) : (
-                <Text.H5 color="foregroundMuted">
-                  Definition not found — this tool was called but no chat span in this window carried its definition.
-                </Text.H5>
-              )}
-            </div>
-          </div>
-
-          {/* The deeper sections only make sense once the tool has calls. */}
-          {usage !== null || isLoading ? (
-            <>
-              <ToolActivityRow
-                projectId={project.id}
-                toolName={toolName}
-                range={range}
-                bucketSeconds={trendBucketSeconds}
-              />
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
-                <ToolParametersExplorer projectId={project.id} toolName={toolName} range={range} />
-                <ToolContextPanel
-                  projectId={project.id}
-                  projectSlug={projectSlug}
-                  toolName={toolName}
-                  range={range}
-                  toolTracesUsed={usage?.tracesUsed ?? 0}
+            {!isLoading && usage === null ? (
+              <Text.H5 color="foregroundMuted">
+                No calls in this window.
+                {definition
+                  ? ` It was offered to the model ${formatCount(definition.offeredCount)} times — the model never selected it.`
+                  : ""}
+              </Text.H5>
+            ) : !isLoading && errorsOnly && errorsUsage === null ? (
+              <Text.H5 color="foregroundMuted">
+                No failed calls in this window — all {usage ? formatCount(usage.calls) : ""} calls succeeded.
+              </Text.H5>
+            ) : errorsOnly ? (
+              <div className="flex flex-row flex-wrap gap-x-8 gap-y-4">
+                <MetricTile
+                  label="Failed calls"
+                  value={errorsUsage ? formatCount(errorsUsage.calls) : "-"}
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Affected traces"
+                  value={
+                    errorsUsage
+                      ? `${formatCount(errorsUsage.tracesUsed)} · ${formatPercent(errorsUsage.traceUsageRate)}`
+                      : "-"
+                  }
+                  tooltip="Distinct traces with at least one FAILED call of this tool, and their share of all traces in the window."
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Affected sessions"
+                  value={
+                    errorsUsage
+                      ? `${formatCount(errorsUsage.sessionsUsed)} · ${formatPercent(errorsUsage.sessionUsageRate)}`
+                      : "-"
+                  }
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Error rate"
+                  value={usage ? formatPercent(usage.errorRate) : "-"}
+                  tooltip={
+                    usage
+                      ? `Across ALL calls in this window: ${formatCount(usage.errors)} of ${formatCount(usage.calls)} failed.`
+                      : null
+                  }
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Duration"
+                  value={
+                    errorsUsage
+                      ? `${formatDuration(errorsUsage.p50DurationNs)} / ${formatDuration(errorsUsage.p95DurationNs)}`
+                      : "-"
+                  }
+                  tooltip={
+                    errorsUsage ? `p50 / p95 of failed calls — avg ${formatDuration(errorsUsage.avgDurationNs)}` : null
+                  }
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Last failed"
+                  value={errorsUsage ? relativeTime(new Date(errorsUsage.lastUsed)) : "-"}
+                  tooltip={errorsUsage ? new Date(errorsUsage.lastUsed).toLocaleString() : null}
+                  isLoading={isLoading}
                 />
               </div>
-              <ToolRecentCalls
+            ) : (
+              <div className="flex flex-row flex-wrap gap-x-8 gap-y-4">
+                <MetricTile label="Calls" value={usage ? formatCount(usage.calls) : "-"} isLoading={isLoading} />
+                <MetricTile
+                  label="Traces using it"
+                  value={usage ? `${formatCount(usage.tracesUsed)} · ${formatPercent(usage.traceUsageRate)}` : "-"}
+                  tooltip="Distinct traces with at least one call of this tool, and their share of all traces in the window."
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Sessions using it"
+                  value={usage ? `${formatCount(usage.sessionsUsed)} · ${formatPercent(usage.sessionUsageRate)}` : "-"}
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Calls per offer"
+                  value={
+                    definition && usage
+                      ? formatPercent(definition.offeredCount > 0 ? usage.calls / definition.offeredCount : 0)
+                      : "-"
+                  }
+                  tooltip={
+                    definition
+                      ? `How often the model picks this tool when it's available — offered ${formatCount(definition.offeredCount)} times. Can exceed 100% when one turn calls it multiple times.`
+                      : "Calls per offer needs tool definitions on chat spans."
+                  }
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Error rate"
+                  value={usage ? formatPercent(usage.errorRate) : "-"}
+                  tooltip={usage ? `${formatCount(usage.errors)} of ${formatCount(usage.calls)} calls failed.` : null}
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Duration"
+                  value={
+                    usage ? `${formatDuration(usage.p50DurationNs)} / ${formatDuration(usage.p95DurationNs)}` : "-"
+                  }
+                  tooltip={usage ? `p50 / p95 — avg ${formatDuration(usage.avgDurationNs)}` : null}
+                  isLoading={isLoading}
+                />
+                <MetricTile
+                  label="Last called"
+                  value={usage ? relativeTime(new Date(usage.lastUsed)) : "-"}
+                  tooltip={usage ? new Date(usage.lastUsed).toLocaleString() : null}
+                  isLoading={isLoading}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Charts only make sense once the tool has calls. */}
+          {usage !== null || isLoading ? (
+            <ToolActivityRow
+              projectId={project.id}
+              toolName={toolName}
+              range={range}
+              bucketSeconds={trendBucketSeconds}
+              errorsOnly={errorsOnly}
+            />
+          ) : null}
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
+            {/* Parameters render even for never-called tools — the definition
+                alone still lists what the tool accepts. */}
+            <ToolParametersExplorer
+              projectId={project.id}
+              toolName={toolName}
+              range={range}
+              errorsOnly={errorsOnly}
+              definitionJson={definition?.definitionJson ?? ""}
+            />
+            {usage !== null || isLoading ? (
+              <ToolContextPanel
                 projectId={project.id}
+                projectSlug={projectSlug}
                 toolName={toolName}
                 range={range}
-                onOverlayActiveChange={setOverlayActive}
+                toolTracesUsed={(errorsOnly ? errorsUsage?.tracesUsed : usage?.tracesUsed) ?? 0}
+                errorsOnly={errorsOnly}
               />
-            </>
+            ) : null}
+          </div>
+          {usage !== null || isLoading ? (
+            <ToolRecentCalls
+              projectId={project.id}
+              toolName={toolName}
+              range={range}
+              errorsOnly={errorsOnly}
+              onOverlayActiveChange={setOverlayActive}
+            />
           ) : null}
         </div>
       </Layout.Content>

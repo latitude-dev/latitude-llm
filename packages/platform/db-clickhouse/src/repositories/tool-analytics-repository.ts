@@ -72,6 +72,9 @@ const scopeParams = (scope: ToolAnalyticsScope) => ({
   to: toClickhouseDateTime(scope.to),
 })
 
+// Appended to CALLS_FILTER for the detail page's failure-analysis mode.
+const errorsClause = (errorsOnly: boolean | undefined): string => (errorsOnly ? " AND status_code = 2" : "")
+
 // SQL column per context dimension. Fixed map — never interpolate user input.
 const CONTEXT_DIMENSION_COLUMN: Record<"model" | "provider", string> = {
   model: "model",
@@ -473,7 +476,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                       (SELECT uniqExact(trace_id) FROM spans WHERE ${SCOPE_FILTER}) AS total_traces,
                       (SELECT uniqExactIf(session_id, session_id != '') FROM spans WHERE ${SCOPE_FILTER}) AS total_sessions
                     FROM spans
-                    WHERE ${CALLS_FILTER} AND tool_name = {toolName:String}`,
+                    WHERE ${CALLS_FILTER} AND tool_name = {toolName:String}${errorsClause(input.errorsOnly)}`,
                 query_params: { ...scopeParams(input), toolName: input.toolName },
                 format: "JSONEachRow",
               })
@@ -508,7 +511,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                       countIf(status_code = 2) AS errors,
                       quantileTDigest(0.5)(duration_ns) AS p50_duration_ns
                     FROM spans
-                    WHERE ${CALLS_FILTER}${toolClause}
+                    WHERE ${CALLS_FILTER}${toolClause}${errorsClause(input.errorsOnly)}
                     GROUP BY bucket_start
                     ORDER BY bucket_start ASC`,
                 query_params: {
@@ -545,7 +548,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                     FROM spans
                     WHERE ${CALLS_FILTER}
                       AND tool_name = {toolName:String}
-                      AND tool_input != ''
+                      AND tool_input != ''${errorsClause(input.errorsOnly)}
                     ORDER BY start_time DESC
                     LIMIT {sampleLimit:UInt32}`
           return yield* chSqlClient
@@ -623,6 +626,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
           // `tag` reads tags on the tool-call spans themselves; model/provider
           // attribute the tool's traces via their LLM spans (tool-call spans
           // usually carry no model).
+          const anchorClause = errorsClause(input.errorsOnly)
           const query =
             input.dimension === "tag"
               ? `SELECT
@@ -630,7 +634,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                     uniqExact(trace_id) AS traces,
                     count() AS occurrences
                   FROM spans
-                  WHERE ${CALLS_FILTER} AND tool_name = {toolName:String}
+                  WHERE ${CALLS_FILTER} AND tool_name = {toolName:String}${anchorClause}
                   GROUP BY value
                   ORDER BY traces DESC, value ASC
                   LIMIT {breakdownLimit:UInt16}`
@@ -644,7 +648,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                     AND trace_id IN (
                       SELECT DISTINCT trace_id
                       FROM spans
-                      WHERE ${CALLS_FILTER} AND tool_name = {toolName:String}
+                      WHERE ${CALLS_FILTER} AND tool_name = {toolName:String}${anchorClause}
                     )
                   GROUP BY value
                   ORDER BY traces DESC, value ASC
@@ -684,6 +688,9 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
+                // errorsOnly scopes only the anchor subquery: "traces where
+                // THIS tool failed" — the co-occurring tools' own calls keep
+                // every status.
                 query: `SELECT
                       tool_name AS other_tool,
                       uniqExact(trace_id) AS shared_traces
@@ -693,7 +700,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                       AND trace_id IN (
                         SELECT DISTINCT trace_id
                         FROM spans
-                        WHERE ${CALLS_FILTER} AND tool_name = {toolName:String}
+                        WHERE ${CALLS_FILTER} AND tool_name = {toolName:String}${errorsClause(input.errorsOnly)}
                       )
                     GROUP BY other_tool
                     ORDER BY shared_traces DESC, other_tool ASC

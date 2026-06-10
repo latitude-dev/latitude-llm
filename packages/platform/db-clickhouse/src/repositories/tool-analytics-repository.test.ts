@@ -593,3 +593,80 @@ describe("listRecentToolCalls", () => {
     expect(truncatedCall.toolOutputTruncated).toBe(false)
   })
 })
+
+// ---------------------------------------------------------------------------
+// errorsOnly scoping (failure-analysis mode)
+// ---------------------------------------------------------------------------
+
+describe("errorsOnly scoping", () => {
+  const fixture = setupFixture()
+
+  beforeEach(async () => {
+    await fixture.insertSpans([
+      // Trace t1: search fails (+ lookup succeeds alongside).
+      callSpan({
+        trace_id: tid("t1"),
+        span_id: sid("u1"),
+        tool_name: "search",
+        status_code: 2,
+        error_type: "TimeoutError",
+        tool_input: '{"query":"failing"}',
+        tags: ["prod"],
+        start_time: "2026-03-15 10:00:00.000",
+        end_time: "2026-03-15 10:00:01.000",
+      }),
+      callSpan({ trace_id: tid("t1"), span_id: sid("u2"), tool_name: "lookup" }),
+      // Trace t2: search succeeds (+ render alongside).
+      callSpan({
+        trace_id: tid("t2"),
+        span_id: sid("u3"),
+        tool_name: "search",
+        tool_input: '{"query":"fine"}',
+        tags: ["beta"],
+        start_time: "2026-03-15 11:00:00.000",
+        end_time: "2026-03-15 11:00:01.000",
+      }),
+      callSpan({ trace_id: tid("t2"), span_id: sid("u4"), tool_name: "render" }),
+    ])
+  })
+
+  it("scopes the usage summary to failed calls", async () => {
+    const summary = await fixture.runCh(
+      fixture.repo.getToolUsageSummary({ ...SCOPE, toolName: "search", errorsOnly: true }),
+    )
+    expect(summary).not.toBeNull()
+    expect(summary?.calls).toBe(1)
+    expect(summary?.tracesUsed).toBe(1)
+  })
+
+  it("scopes the histogram to failed calls", async () => {
+    const buckets = await fixture.runCh(
+      fixture.repo.getToolCallHistogram({ ...SCOPE, toolName: "search", bucketSeconds: 3600, errorsOnly: true }),
+    )
+    expect(buckets).toHaveLength(1)
+    expect(buckets[0]?.bucketStart).toBe("2026-03-15T10:00:00.000Z")
+    expect(buckets[0]?.calls).toBe(1)
+  })
+
+  it("samples only failing inputs for parameter stats", async () => {
+    const result = await fixture.runCh(
+      fixture.repo.getToolParameterStats({ ...SCOPE, toolName: "search", errorsOnly: true }),
+    )
+    expect(result.sampleSize).toBe(1)
+    expect(result.stats[0]?.topValues).toEqual([{ value: '"failing"', count: 1 }])
+  })
+
+  it("anchors tag breakdown and co-occurrence on failing calls", async () => {
+    const tags = await fixture.runCh(
+      fixture.repo.getToolContextBreakdown({ ...SCOPE, toolName: "search", dimension: "tag", errorsOnly: true }),
+    )
+    expect(tags).toEqual([{ value: "prod", traces: 1, occurrences: 1 }])
+
+    // Only lookup shares the failing trace; the co-occurring tool itself is
+    // not status-filtered.
+    const coOccurrence = await fixture.runCh(
+      fixture.repo.getToolCoOccurrence({ ...SCOPE, toolName: "search", errorsOnly: true }),
+    )
+    expect(coOccurrence).toEqual([{ otherTool: "lookup", sharedTraces: 1 }])
+  })
+})

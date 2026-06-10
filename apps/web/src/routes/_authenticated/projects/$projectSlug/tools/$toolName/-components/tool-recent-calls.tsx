@@ -1,4 +1,4 @@
-import { CopyableText, InfiniteTable, type InfiniteTableColumn, Label, Sheet, Status, Switch, Text } from "@repo/ui"
+import { CopyableText, InfiniteTable, type InfiniteTableColumn, Sheet, Status, Text } from "@repo/ui"
 import { formatDuration, relativeTime } from "@repo/utils"
 import { useState } from "react"
 import { type ToolsTimeRange, useRecentToolCalls } from "../../../../../../../domains/tools/tools.collection.ts"
@@ -8,22 +8,23 @@ import { TraceDetailDrawer } from "../../../-components/trace-detail-drawer.tsx"
 const STATUS_VARIANT = { ok: "success", error: "destructive", unset: "neutral" } as const
 
 /**
- * Most recent calls of the tool, newest first, with an errors-only switch.
- * Clicking a call opens its trace in a sheet overlay (the issue-examples
- * recipe) so the page context is preserved.
+ * Most recent calls of the tool, newest first, scoped by the page-level
+ * errors-only switch. Clicking a call opens its trace in a sheet overlay
+ * (the issue-examples recipe) so the page context is preserved.
  */
 export function ToolRecentCalls({
   projectId,
   toolName,
   range,
+  errorsOnly,
   onOverlayActiveChange,
 }: {
   readonly projectId: string
   readonly toolName: string
   readonly range: ToolsTimeRange
+  readonly errorsOnly: boolean
   readonly onOverlayActiveChange?: (active: boolean) => void
 }) {
-  const [errorsOnly, setErrorsOnly] = useState(false)
   const [openCall, setOpenCall] = useState<{ traceId: string; spanId: string } | null>(null)
   const { data: calls, isLoading, infiniteScroll } = useRecentToolCalls({ projectId, toolName, range, errorsOnly })
 
@@ -113,13 +114,7 @@ export function ToolRecentCalls({
     // reads muddy when nested inside another bg-secondary panel.
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex items-center justify-between">
-        <Text.H5M color="foreground">Recent calls</Text.H5M>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="tool-errors-only" className="cursor-pointer">
-            <Text.H6 color="foregroundMuted">Errors only</Text.H6>
-          </Label>
-          <Switch id="tool-errors-only" checked={errorsOnly} onCheckedChange={setErrorsOnly} />
-        </div>
+        <Text.H5M color="foreground">{errorsOnly ? "Recent failed calls" : "Recent calls"}</Text.H5M>
       </div>
       <InfiniteTable
         data={calls}

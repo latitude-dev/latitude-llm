@@ -64,28 +64,34 @@ export function ToolContextPanel({
   toolName,
   range,
   toolTracesUsed,
+  errorsOnly,
 }: {
   readonly projectId: string
   readonly projectSlug: string
   readonly toolName: string
   readonly range: ToolsTimeRange
+  /** Denominator: the tool's traces (failing traces in errors mode). */
   readonly toolTracesUsed: number
+  readonly errorsOnly: boolean
 }) {
   const { data: tagRows = [], isLoading: tagsLoading } = useToolContextBreakdown({
     projectId,
     toolName,
     dimension: "tag",
     range,
+    errorsOnly,
   })
   const { data: coOccurrence = [], isLoading: coOccurrenceLoading } = useToolCoOccurrence({
     projectId,
     toolName,
     range,
+    errorsOnly,
   })
+  const tracesNoun = errorsOnly ? "traces where it failed" : "traces calling it"
 
   return (
     <div className="flex min-w-0 flex-col gap-4 overflow-y-auto rounded-lg bg-secondary p-4 xl:max-h-[420px] xl:w-[340px]">
-      <Text.H6 color="foregroundMuted">Where it's used</Text.H6>
+      <Text.H6 color="foregroundMuted">{errorsOnly ? "Where it fails" : "Where it's used"}</Text.H6>
       {coOccurrenceLoading ? (
         <div className="flex flex-col gap-2">
           <Text.H6 color="foregroundMuted">Often used with</Text.H6>
@@ -119,9 +125,9 @@ export function ToolContextPanel({
                   fraction={fraction}
                   tooltip={
                     <span>
-                      {formatCount(row.sharedTraces)} of {formatCount(toolTracesUsed)} traces calling{" "}
-                      <span className="font-mono">{toolName}</span> also call{" "}
-                      <span className="font-mono">{row.otherTool}</span>. Click to open it.
+                      {formatCount(row.sharedTraces)} of the {formatCount(toolTracesUsed)} {tracesNoun} also call{" "}
+                      <span className="font-mono">{row.otherTool}</span>
+                      {errorsOnly ? " (its own calls are not necessarily failing)" : ""}. Click to open it.
                     </span>
                   }
                 />
@@ -147,8 +153,8 @@ export function ToolContextPanel({
                 fraction={fraction}
                 tooltip={
                   <span>
-                    {formatCount(row.traces)} of the {formatCount(toolTracesUsed)} traces calling{" "}
-                    <span className="font-mono">{toolName}</span> carry the {row.value} tag.
+                    {formatCount(row.traces)} of the {formatCount(toolTracesUsed)} {tracesNoun} carry the {row.value}{" "}
+                    tag.
                   </span>
                 }
               />
@@ -157,7 +163,11 @@ export function ToolContextPanel({
         </div>
       ) : null}
       {!coOccurrenceLoading && !tagsLoading && coOccurrence.length === 0 && tagRows.length === 0 ? (
-        <Text.H6 color="foregroundMuted">No co-occurring tools or tags in this window.</Text.H6>
+        <Text.H6 color="foregroundMuted">
+          {errorsOnly
+            ? "No co-occurring tools or tags on failed calls in this window."
+            : "No co-occurring tools or tags in this window."}
+        </Text.H6>
       ) : null}
     </div>
   )

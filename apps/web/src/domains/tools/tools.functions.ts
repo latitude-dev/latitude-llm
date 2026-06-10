@@ -69,7 +69,10 @@ interface ToolDefinitionDetailRecord {
 
 interface ToolDetailRecord {
   readonly definition: ToolDefinitionDetailRecord | null
+  /** Always the global (all-calls) metrics. */
   readonly usage: ToolUsageMetricsRecord | null
+  /** Failed-calls-only metrics; populated only when requested via `errorsOnly`. */
+  readonly errorsUsage: ToolUsageMetricsRecord | null
 }
 
 export interface RecentToolCallRecord {
@@ -196,23 +199,29 @@ export const listProjectTools = createServerFn({ method: "GET" })
   })
 
 export const getProjectToolDetail = createServerFn({ method: "GET" })
-  .inputValidator(toolsScopeSchema.extend({ toolName: toolNameSchema }))
+  .inputValidator(toolsScopeSchema.extend({ toolName: toolNameSchema, errorsOnly: z.boolean().optional() }))
   .handler(async ({ data }): Promise<ToolDetailRecord> => {
     const orgId = await resolveOrgScope(data)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
         const scope = toScope(orgId, data)
-        const [definition, usage] = yield* Effect.all(
+        const [definition, usage, errorsUsage] = yield* Effect.all(
           [
             repo.getToolDefinition({ ...scope, toolName: data.toolName }),
             repo.getToolUsageSummary({ ...scope, toolName: data.toolName }),
+            // Failure-analysis mode also needs the failed-calls metrics; the
+            // global summary stays so the page can show the real error rate.
+            data.errorsOnly
+              ? repo.getToolUsageSummary({ ...scope, toolName: data.toolName, errorsOnly: true })
+              : Effect.succeed(null),
           ],
-          { concurrency: 2 },
+          { concurrency: 3 },
         )
         return {
           definition: definition ? toDefinitionDetailRecord(definition) : null,
           usage: usage ? toUsageMetricsRecord(usage) : null,
+          errorsUsage: errorsUsage ? toUsageMetricsRecord(errorsUsage) : null,
         }
       }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
@@ -227,6 +236,7 @@ export const getToolCallHistogram = createServerFn({ method: "GET" })
         .int()
         .positive()
         .max(90 * 24 * 60 * 60),
+      errorsOnly: z.boolean().optional(),
     }),
   )
   .handler(async ({ data }): Promise<readonly ToolCallHistogramBucket[]> => {
@@ -238,6 +248,7 @@ export const getToolCallHistogram = createServerFn({ method: "GET" })
           ...toScope(orgId, data),
           bucketSeconds: data.bucketSeconds,
           ...(data.toolName === undefined ? {} : { toolName: data.toolName }),
+          ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
         })
       }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
@@ -249,6 +260,7 @@ export const getToolParameterStats = createServerFn({ method: "GET" })
       toolName: toolNameSchema,
       topKeys: z.number().int().min(1).max(50).optional(),
       topValuesPerKey: z.number().int().min(1).max(10).optional(),
+      errorsOnly: z.boolean().optional(),
     }),
   )
   .handler(async ({ data }): Promise<ToolParameterStatsResult> => {
@@ -261,6 +273,7 @@ export const getToolParameterStats = createServerFn({ method: "GET" })
           toolName: data.toolName,
           ...(data.topKeys === undefined ? {} : { topKeys: data.topKeys }),
           ...(data.topValuesPerKey === undefined ? {} : { topValuesPerKey: data.topValuesPerKey }),
+          ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
         })
       }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
@@ -271,6 +284,7 @@ export const getToolContextBreakdown = createServerFn({ method: "GET" })
     toolsScopeSchema.extend({
       toolName: toolNameSchema,
       dimension: z.enum(["model", "provider", "tag"]),
+      errorsOnly: z.boolean().optional(),
     }),
   )
   .handler(async ({ data }): Promise<readonly ToolContextBreakdownRow[]> => {
@@ -282,6 +296,7 @@ export const getToolContextBreakdown = createServerFn({ method: "GET" })
           ...toScope(orgId, data),
           toolName: data.toolName,
           dimension: data.dimension,
+          ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
         })
       }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )
@@ -292,6 +307,7 @@ export const getToolCoOccurrence = createServerFn({ method: "GET" })
     toolsScopeSchema.extend({
       toolName: toolNameSchema,
       limit: z.number().int().min(1).max(50).optional(),
+      errorsOnly: z.boolean().optional(),
     }),
   )
   .handler(async ({ data }): Promise<readonly ToolCoOccurrenceRow[]> => {
@@ -303,6 +319,7 @@ export const getToolCoOccurrence = createServerFn({ method: "GET" })
           ...toScope(orgId, data),
           toolName: data.toolName,
           ...(data.limit === undefined ? {} : { limit: data.limit }),
+          ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
         })
       }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )

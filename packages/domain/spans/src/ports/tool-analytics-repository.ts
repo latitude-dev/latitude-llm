@@ -34,9 +34,13 @@ export interface ToolAnalyticsRepositoryShape {
     input: ToolAnalyticsScope & { readonly toolName: string },
   ): Effect.Effect<ToolDefinitionDetail | null, RepositoryError, ChSqlClient>
 
-  /** Usage metrics for one tool. Returns null when the tool has no calls in the range. */
+  /**
+   * Usage metrics for one tool. Returns null when the tool has no calls in
+   * the range. `errorsOnly` scopes every aggregate to failed calls (the
+   * detail page's failure-analysis mode).
+   */
   getToolUsageSummary(
-    input: ToolAnalyticsScope & { readonly toolName: string },
+    input: ToolAnalyticsScope & { readonly toolName: string; readonly errorsOnly?: boolean },
   ): Effect.Effect<ToolUsageMetrics | null, RepositoryError, ChSqlClient>
 
   /**
@@ -44,7 +48,11 @@ export interface ToolAnalyticsRepositoryShape {
    * across every tool in the project (the list-page overview chart).
    */
   getToolCallHistogram(
-    input: ToolAnalyticsScope & { readonly toolName?: string; readonly bucketSeconds: number },
+    input: ToolAnalyticsScope & {
+      readonly toolName?: string
+      readonly bucketSeconds: number
+      readonly errorsOnly?: boolean
+    },
   ): Effect.Effect<readonly ToolCallHistogramBucket[], RepositoryError, ChSqlClient>
 
   /**
@@ -57,20 +65,34 @@ export interface ToolAnalyticsRepositoryShape {
       readonly toolName: string
       readonly topKeys?: number
       readonly topValuesPerKey?: number
+      readonly errorsOnly?: boolean
     },
   ): Effect.Effect<ToolParameterStatsResult, RepositoryError, ChSqlClient>
 
   /**
    * Where the tool is used: `model` / `provider` attribute the tool's traces
    * via their chat spans; `tag` reads tags on the tool-call spans themselves.
+   * `errorsOnly` anchors on failed calls of the tool.
    */
   getToolContextBreakdown(
-    input: ToolAnalyticsScope & { readonly toolName: string; readonly dimension: ToolContextDimension },
+    input: ToolAnalyticsScope & {
+      readonly toolName: string
+      readonly dimension: ToolContextDimension
+      readonly errorsOnly?: boolean
+    },
   ): Effect.Effect<readonly ToolContextBreakdownRow[], RepositoryError, ChSqlClient>
 
-  /** Other tools called in the same traces as this one, by shared trace count. */
+  /**
+   * Other tools called in the same traces as this one, by shared trace count.
+   * With `errorsOnly`, anchors on traces where THIS tool failed — the other
+   * tools' calls are not status-filtered.
+   */
   getToolCoOccurrence(
-    input: ToolAnalyticsScope & { readonly toolName: string; readonly limit?: number },
+    input: ToolAnalyticsScope & {
+      readonly toolName: string
+      readonly limit?: number
+      readonly errorsOnly?: boolean
+    },
   ): Effect.Effect<readonly ToolCoOccurrenceRow[], RepositoryError, ChSqlClient>
 
   /**

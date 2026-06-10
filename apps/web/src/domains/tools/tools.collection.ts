@@ -45,15 +45,26 @@ export function useToolDetail({
   projectId,
   toolName,
   range,
+  errorsOnly,
 }: {
   readonly projectId: string
   readonly toolName: string
   readonly range: ToolsTimeRange
+  readonly errorsOnly?: boolean
 }) {
   const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-detail", projectId, toolName, range],
-    queryFn: () => getProjectToolDetail({ data: { ...traceScopeData(scope), projectId, toolName, ...range } }),
+    queryKey: [...traceScopeKey(scope), "tools-detail", projectId, toolName, range, errorsOnly ?? false],
+    queryFn: () =>
+      getProjectToolDetail({
+        data: {
+          ...traceScopeData(scope),
+          projectId,
+          toolName,
+          ...range,
+          ...(errorsOnly === undefined ? {} : { errorsOnly }),
+        },
+      }),
     staleTime: 30_000,
     placeholderData: keepPreviousData,
     enabled: projectId.length > 0 && toolName.length > 0,
@@ -65,17 +76,27 @@ export function useToolCallHistogram({
   toolName,
   range,
   bucketSeconds,
+  errorsOnly,
   enabled = true,
 }: {
   readonly projectId: string
   readonly toolName?: string
   readonly range: ToolsTimeRange
   readonly bucketSeconds: number
+  readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
   const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-histogram", projectId, toolName ?? null, range, bucketSeconds],
+    queryKey: [
+      ...traceScopeKey(scope),
+      "tools-histogram",
+      projectId,
+      toolName ?? null,
+      range,
+      bucketSeconds,
+      errorsOnly ?? false,
+    ],
     queryFn: () =>
       getToolCallHistogram({
         data: {
@@ -84,6 +105,7 @@ export function useToolCallHistogram({
           ...range,
           bucketSeconds,
           ...(toolName === undefined ? {} : { toolName }),
+          ...(errorsOnly === undefined ? {} : { errorsOnly }),
         },
       }),
     staleTime: 30_000,
@@ -96,17 +118,28 @@ export function useToolParameterStats({
   projectId,
   toolName,
   range,
+  errorsOnly,
   enabled = true,
 }: {
   readonly projectId: string
   readonly toolName: string
   readonly range: ToolsTimeRange
+  readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
   const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-parameters", projectId, toolName, range],
-    queryFn: () => getToolParameterStats({ data: { ...traceScopeData(scope), projectId, toolName, ...range } }),
+    queryKey: [...traceScopeKey(scope), "tools-parameters", projectId, toolName, range, errorsOnly ?? false],
+    queryFn: () =>
+      getToolParameterStats({
+        data: {
+          ...traceScopeData(scope),
+          projectId,
+          toolName,
+          ...range,
+          ...(errorsOnly === undefined ? {} : { errorsOnly }),
+        },
+      }),
     staleTime: 30_000,
     enabled: enabled && projectId.length > 0 && toolName.length > 0,
   })
@@ -117,19 +150,30 @@ export function useToolContextBreakdown({
   toolName,
   dimension,
   range,
+  errorsOnly,
   enabled = true,
 }: {
   readonly projectId: string
   readonly toolName: string
   readonly dimension: ToolContextDimension
   readonly range: ToolsTimeRange
+  readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
   const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-context", projectId, toolName, dimension, range],
+    queryKey: [...traceScopeKey(scope), "tools-context", projectId, toolName, dimension, range, errorsOnly ?? false],
     queryFn: () =>
-      getToolContextBreakdown({ data: { ...traceScopeData(scope), projectId, toolName, dimension, ...range } }),
+      getToolContextBreakdown({
+        data: {
+          ...traceScopeData(scope),
+          projectId,
+          toolName,
+          dimension,
+          ...range,
+          ...(errorsOnly === undefined ? {} : { errorsOnly }),
+        },
+      }),
     staleTime: 30_000,
     enabled: enabled && projectId.length > 0 && toolName.length > 0,
   })
@@ -139,17 +183,28 @@ export function useToolCoOccurrence({
   projectId,
   toolName,
   range,
+  errorsOnly,
   enabled = true,
 }: {
   readonly projectId: string
   readonly toolName: string
   readonly range: ToolsTimeRange
+  readonly errorsOnly?: boolean
   readonly enabled?: boolean
 }) {
   const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools-co-occurrence", projectId, toolName, range],
-    queryFn: () => getToolCoOccurrence({ data: { ...traceScopeData(scope), projectId, toolName, ...range } }),
+    queryKey: [...traceScopeKey(scope), "tools-co-occurrence", projectId, toolName, range, errorsOnly ?? false],
+    queryFn: () =>
+      getToolCoOccurrence({
+        data: {
+          ...traceScopeData(scope),
+          projectId,
+          toolName,
+          ...range,
+          ...(errorsOnly === undefined ? {} : { errorsOnly }),
+        },
+      }),
     staleTime: 30_000,
     enabled: enabled && projectId.length > 0 && toolName.length > 0,
   })
