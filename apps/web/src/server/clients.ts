@@ -211,6 +211,10 @@ export const getBetterAuth = () => {
             // same value so consent redirects use the same login URL.
             loginPage: `${webUrl}/login`,
             consentPage: `${webUrl}/auth/consent`,
+            // Pi's MCP harness omits `scope` in its authorization request.
+            // Better Auth only returns refresh tokens when the granted scopes
+            // include `offline_access`, so keep that in the AS default rather
+            // than advertising it as a protected-resource requirement.
             defaultScope: "openid offline_access",
             requirePKCE: true,
             // RFC 7591 dynamic client registration. MCP clients (Claude Code,

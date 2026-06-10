@@ -52,19 +52,11 @@
             "items": {
               "type": "string"
             }
-          },
-          "scopes_supported": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "OAuth scopes this resource server understands."
           }
         },
         "required": [
           "resource",
-          "authorization_servers",
-          "scopes_supported"
+          "authorization_servers"
         ]
       },
       "Project": {

@@ -3,6 +3,4 @@
 export interface OAuthProtectedResourceMetadata {
     resource: string;
     authorization_servers: string[];
-    /** OAuth scopes this resource server understands. */
-    scopes_supported: string[];
 }

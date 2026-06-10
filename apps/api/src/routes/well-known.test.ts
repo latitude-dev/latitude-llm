@@ -9,12 +9,11 @@ describe("GET /.well-known/oauth-protected-resource", () => {
     expect(res.status).toBe(200)
   })
 
-  it<ApiTestContext>("returns the API origin, authorization server, and supported scopes", async ({ app }) => {
+  it<ApiTestContext>("returns the API origin and authorization server", async ({ app }) => {
     const res = await app.fetch(new Request("http://localhost/.well-known/oauth-protected-resource"))
     const body = (await res.json()) as {
       resource: string
       authorization_servers: string[]
-      scopes_supported: string[]
     }
 
     // Test env sets LAT_API_URL=http://localhost:3001, LAT_WEB_URL=http://localhost:3000.
@@ -22,7 +21,7 @@ describe("GET /.well-known/oauth-protected-resource", () => {
     // emits — strict OAuth clients (Zed) reject when issuer ≠ AS URL.
     expect(body.resource).toBe(process.env.LAT_API_URL)
     expect(body.authorization_servers).toEqual([process.env.LAT_WEB_URL])
-    expect(body.scopes_supported).toEqual(["openid", "offline_access"])
+    expect(body).not.toHaveProperty("scopes_supported")
   })
 
   it<ApiTestContext>("returns JSON content type", async ({ app }) => {
@@ -37,10 +36,9 @@ describe("GET /.well-known/oauth-protected-resource", () => {
     const body = (await res.json()) as {
       resource: string
       authorization_servers: string[]
-      scopes_supported: string[]
     }
     expect(body.resource).toBe(process.env.LAT_API_URL)
     expect(body.authorization_servers).toEqual([process.env.LAT_WEB_URL])
-    expect(body.scopes_supported).toEqual(["openid", "offline_access"])
+    expect(body).not.toHaveProperty("scopes_supported")
   })
 })

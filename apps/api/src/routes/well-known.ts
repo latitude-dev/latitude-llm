@@ -24,8 +24,6 @@ const ProtectedResourceMetadataSchema = z
     resource: z.string(),
     /** Authorization server issuer URLs that may issue tokens for `resource`. */
     authorization_servers: z.array(z.string()),
-    /** OAuth scopes this resource server understands. */
-    scopes_supported: z.array(z.string()).describe("OAuth scopes this resource server understands."),
   })
   .openapi("OAuthProtectedResourceMetadata")
 
@@ -63,7 +61,6 @@ const buildMetadata = () =>
       // redirect funnels probes to BA's actual `<webUrl>/api/auth/...`
       // location, so the discovery still resolves end-to-end.
       authorization_servers: [webUrl],
-      scopes_supported: ["openid", "offline_access"],
     }
   })
 
