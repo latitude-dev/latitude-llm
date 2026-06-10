@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-06-10
+
+### Changed
+
+- **First stable release of the 3.x line.** No code changes since `3.0.0a8` — this promotes the alpha channel to stable, so a plain `pip install latitude-telemetry` now resolves to the new `Latitude` API instead of the legacy `2.0.4` (`Telemetry` / `Instrumentors`). The `--pre` flag is no longer needed.
+- Version `3.0.0` is skipped on purpose: it was published in February for the deprecated pre-rewrite line and later yanked, and PyPI does not allow reusing yanked version numbers.
+
 ## [3.0.0a8] - 2026-05-16
 
 ### Changed

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-06-10
+
+### Changed
+
+- **First stable release of the 3.x line.** No code changes since `3.0.0-alpha.13` — this promotes the alpha channel to stable. The npm `latest` dist-tag, previously pointing at `3.0.0-alpha.13`, now resolves to a stable version.
+- Version `3.0.0` is skipped on purpose: it was published in February for the deprecated pre-rewrite line, and npm versions are immutable.
+
 ## [3.0.0-alpha.13] - 2026-05-19
 
 ### Fixed
