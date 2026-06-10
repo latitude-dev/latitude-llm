@@ -1,6 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type {
   DimensionConditionalRate,
+  IssueCoOccurrenceAggregate,
   IssueDimension,
   IssueDimensionComparison,
   IssueEscalationSignals,
@@ -49,6 +50,11 @@ import { SCORE_FIELD_REGISTRY } from "../registries/score-fields.ts"
 // tags. Tag distributions converge fast, so a sample of this size captures
 // effectively all tag variants while bounding the join cost for noisy issues.
 const ISSUE_TAG_TRACE_SAMPLE_LIMIT = 200
+
+// Default candidate pool returned by `coOccurrenceByIssue` when the caller
+// doesn't pass a limit. Sized well above the Related list's display cap so the
+// domain scorer has room to gate and re-rank.
+const ISSUE_CO_OCCURRENCE_CANDIDATE_LIMIT = 25
 
 // SQL value expression per dimension. `tag` flattens the span tags array so
 // each tag is counted once per span; the others read a single span column.
@@ -202,6 +208,17 @@ type DimensionRateRow = {
 type DimensionTotalsRow = {
   total_traces: string
   affected_traces: string
+}
+
+type CoOccurrenceCandidateRow = {
+  issue_id: string
+  shared_sessions: string
+  their_sessions: string
+}
+
+type CoOccurrenceTotalsRow = {
+  my_sessions: string
+  total_sessions: string
 }
 
 type IssueOccurrenceBucketRow = {
@@ -1121,6 +1138,84 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           })
 
           return { dimension, baseRate, issueAffectedTraces, values } satisfies IssueDimensionComparison
+        }),
+
+      // -- coOccurrenceByIssue -------------------------------------------------
+      // Session co-occurrence counts for the Related-issues list. Two reads run
+      // concurrently over issue-carrying scores in range:
+      //   1. per-candidate shared/their session counts (GROUP BY issue_id with
+      //      the source issue's session set as an IN subquery),
+      //   2. the source issue's session count + the probability universe
+      //      (sessions with any issue occurrence).
+      // Raw counts only — NPMI scoring/gating lives in `@domain/issues`. The
+      // candidate cap keeps the read bounded; it trims by shared sessions, so a
+      // very small but perfectly-overlapping issue can in principle fall out of
+      // an over-full pool — an accepted trade-off at the default size.
+      coOccurrenceByIssue: ({ organizationId, projectId, issueId, timeRange, limit, options }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const range = buildScoreCreatedAtTimeRange(timeRange, "cooc")
+          const rangeWhere = range.clauses.length > 0 ? ` AND ${range.clauses.join(" AND ")}` : ""
+          const params = {
+            ...scopeParams(organizationId, projectId),
+            issueId: issueId as string,
+            candidateLimit: limit ?? ISSUE_CO_OCCURRENCE_CANDIDATE_LIMIT,
+            ...range.params,
+          }
+
+          const mySessionsSql = `SELECT DISTINCT session_id
+                      FROM scores
+                      WHERE ${scopeClause(options)}
+                        AND issue_id = {issueId:String}
+                        AND session_id != ''${rangeWhere}`
+
+          const candidates = chSqlClient.query<CoOccurrenceCandidateRow[]>(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                      issue_id,
+                      uniqExactIf(session_id, session_id IN (${mySessionsSql})) AS shared_sessions,
+                      uniqExact(session_id) AS their_sessions
+                    FROM scores
+                    WHERE ${scopeClause(options)}
+                      AND issue_id != ''
+                      AND issue_id != {issueId:String}
+                      AND session_id != ''${rangeWhere}
+                    GROUP BY issue_id
+                    HAVING shared_sessions > 0
+                    ORDER BY shared_sessions DESC, their_sessions ASC, issue_id ASC
+                    LIMIT {candidateLimit:UInt32}`,
+              query_params: params,
+              format: "JSONEachRow",
+            })
+            return result.json<CoOccurrenceCandidateRow>()
+          })
+
+          const totals = chSqlClient.query<CoOccurrenceTotalsRow[]>(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                      uniqExactIf(session_id, issue_id = {issueId:String}) AS my_sessions,
+                      uniqExact(session_id) AS total_sessions
+                    FROM scores
+                    WHERE ${scopeClause(options)}
+                      AND issue_id != ''
+                      AND session_id != ''${rangeWhere}`,
+              query_params: params,
+              format: "JSONEachRow",
+            })
+            return result.json<CoOccurrenceTotalsRow>()
+          })
+
+          const [candidateRows, totalsRows] = yield* Effect.all([candidates, totals], { concurrency: 2 })
+
+          return {
+            mySessions: Number(totalsRows[0]?.my_sessions ?? 0),
+            totalSessions: Number(totalsRows[0]?.total_sessions ?? 0),
+            candidates: candidateRows.map((row) => ({
+              issueId: toIssueId(normalizeCHString(row.issue_id)),
+              sharedSessions: Number(row.shared_sessions),
+              theirSessions: Number(row.their_sessions),
+            })),
+          } satisfies IssueCoOccurrenceAggregate
         }),
 
       // -- escalationSignalsByIssues -----------------------------------------

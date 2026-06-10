@@ -43,6 +43,7 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
         costMicrocents: 0,
         tokens: 0,
       }),
+    coOccurrenceByIssue: () => Effect.succeed({ mySessions: 0, totalSessions: 0, candidates: [] }),
     escalationSignalsByIssues: () => Effect.succeed([]),
     aggregateTagsByIssues: () => Effect.succeed([]),
     trendByIssue: () => Effect.succeed([]),
