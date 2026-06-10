@@ -38,6 +38,12 @@ export const FEATURE_FLAGS = {
     name: "Test Mode sandbox",
     description: "Enables the Live ⇄ Sandbox switcher and the sandbox namespace for isolated development traces.",
   },
+  tools: {
+    emoji: "🔧",
+    name: "Tools dashboard",
+    description:
+      "Project-level analytics for LLM tools: every defined and called tool with usage, failure and latency metrics.",
+  },
 } as const satisfies Record<
   string,
   {

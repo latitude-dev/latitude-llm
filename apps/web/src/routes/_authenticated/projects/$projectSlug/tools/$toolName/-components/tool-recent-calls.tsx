@@ -1,0 +1,152 @@
+import { CopyableText, InfiniteTable, type InfiniteTableColumn, Label, Sheet, Status, Switch, Text } from "@repo/ui"
+import { formatDuration, relativeTime } from "@repo/utils"
+import { useState } from "react"
+import { type ToolsTimeRange, useRecentToolCalls } from "../../../../../../../domains/tools/tools.collection.ts"
+import type { RecentToolCallRecord } from "../../../../../../../domains/tools/tools.functions.ts"
+import { TraceDetailDrawer } from "../../../-components/trace-detail-drawer.tsx"
+
+const STATUS_VARIANT = { ok: "success", error: "destructive", unset: "neutral" } as const
+
+/**
+ * Most recent calls of the tool, newest first, with an errors-only switch.
+ * Clicking a call opens its trace in a sheet overlay (the issue-examples
+ * recipe) so the page context is preserved.
+ */
+export function ToolRecentCalls({
+  projectId,
+  toolName,
+  range,
+  onOverlayActiveChange,
+}: {
+  readonly projectId: string
+  readonly toolName: string
+  readonly range: ToolsTimeRange
+  readonly onOverlayActiveChange?: (active: boolean) => void
+}) {
+  const [errorsOnly, setErrorsOnly] = useState(false)
+  const [openTraceId, setOpenTraceId] = useState<string | null>(null)
+  const { data: calls, isLoading, infiniteScroll } = useRecentToolCalls({ projectId, toolName, range, errorsOnly })
+
+  const openTrace = (traceId: string) => {
+    setOpenTraceId(traceId)
+    onOverlayActiveChange?.(true)
+  }
+  const closeTrace = () => {
+    setOpenTraceId(null)
+    onOverlayActiveChange?.(false)
+  }
+
+  const columns: InfiniteTableColumn<RecentToolCallRecord>[] = [
+    {
+      key: "time",
+      header: "Time",
+      width: 110,
+      minWidth: 100,
+      render: (call) => (
+        <span title={new Date(call.startTime).toLocaleString()}>{relativeTime(new Date(call.startTime))}</span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: 90,
+      minWidth: 80,
+      render: (call) => (
+        <Status
+          variant={STATUS_VARIANT[call.statusCode]}
+          label={call.statusCode === "error" ? call.errorType || "error" : call.statusCode}
+        />
+      ),
+    },
+    {
+      key: "duration",
+      header: "Duration",
+      width: 90,
+      minWidth: 80,
+      align: "end",
+      render: (call) => <span className="tabular-nums">{formatDuration(call.durationNs)}</span>,
+    },
+    {
+      key: "input",
+      header: "Input",
+      width: 360,
+      minWidth: 200,
+      render: (call) => (
+        <span className="block min-w-0 truncate font-mono text-xs text-muted-foreground" title={call.toolInput}>
+          {call.toolInput || "-"}
+        </span>
+      ),
+    },
+    {
+      key: "output",
+      header: "Output",
+      width: 280,
+      minWidth: 160,
+      render: (call) =>
+        call.statusCode === "error" && call.statusMessage ? (
+          <span className="block min-w-0 truncate text-xs text-rose-600 dark:text-rose-400" title={call.statusMessage}>
+            {call.statusMessage}
+          </span>
+        ) : (
+          <span className="block min-w-0 truncate font-mono text-xs text-muted-foreground" title={call.toolOutput}>
+            {call.toolOutput || "-"}
+          </span>
+        ),
+    },
+    {
+      key: "trace",
+      header: "Trace",
+      width: 140,
+      minWidth: 120,
+      render: (call) => (
+        // Contain clicks/keys so copying the id doesn't open the sheet.
+        // biome-ignore lint/a11y/noStaticElementInteractions: click containment only
+        <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+          <CopyableText value={call.traceId} size="sm" ellipsis tooltip="Copy trace id" />
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
+      <div className="flex items-center justify-between">
+        <Text.H6 color="foregroundMuted">Recent calls</Text.H6>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="tool-errors-only" className="cursor-pointer">
+            <Text.H6 color="foregroundMuted">Errors only</Text.H6>
+          </Label>
+          <Switch id="tool-errors-only" checked={errorsOnly} onCheckedChange={setErrorsOnly} />
+        </div>
+      </div>
+      <InfiniteTable
+        data={calls}
+        isLoading={isLoading}
+        columns={columns}
+        getRowKey={(call) => call.spanId}
+        onRowClick={(call) => openTrace(call.traceId)}
+        getRowAriaLabel={(call) => `Open trace of call ${call.toolCallId || call.spanId}`}
+        infiniteScroll={infiniteScroll}
+        scrollAreaLayout="intrinsic"
+        className="max-h-[420px]"
+        blankSlate={errorsOnly ? "No failed calls in this time window" : "No calls in this time window"}
+      />
+      <Sheet open={openTraceId !== null} onClose={closeTrace} closeAriaLabel="Close trace panel">
+        {openTraceId ? (
+          <TraceDetailDrawer
+            key={openTraceId}
+            projectId={projectId}
+            traceId={openTraceId}
+            onClose={closeTrace}
+            canNavigateNext={false}
+            canNavigatePrev={false}
+            urlSyncedTabs={false}
+            initialTab="trace"
+            drawerStoreKey="tool-trace-detail-drawer-width"
+            closeLabel="Back to tool"
+          />
+        ) : null}
+      </Sheet>
+    </div>
+  )
+}

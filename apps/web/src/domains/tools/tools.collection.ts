@@ -22,11 +22,19 @@ export interface ToolsTimeRange {
 
 const RECENT_CALLS_BATCH_SIZE = 20
 
-export function useProjectTools({ projectId, range }: { readonly projectId: string; readonly range: ToolsTimeRange }) {
+export function useProjectTools({
+  projectId,
+  range,
+  trendBucketSeconds,
+}: {
+  readonly projectId: string
+  readonly range: ToolsTimeRange
+  readonly trendBucketSeconds: number
+}) {
   const scope = use(TraceScopeContext)
   return useQuery({
-    queryKey: [...traceScopeKey(scope), "tools", projectId, range],
-    queryFn: () => listProjectTools({ data: { ...traceScopeData(scope), projectId, ...range } }),
+    queryKey: [...traceScopeKey(scope), "tools", projectId, range, trendBucketSeconds],
+    queryFn: () => listProjectTools({ data: { ...traceScopeData(scope), projectId, ...range, trendBucketSeconds } }),
     staleTime: 30_000,
     placeholderData: keepPreviousData,
     enabled: projectId.length > 0,

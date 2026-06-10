@@ -47,6 +47,7 @@ export interface ToolSummaryRecord {
   readonly offeredTraces: number
   readonly lastOffered: string | null
   readonly selectionRate: number | null
+  readonly trend: readonly ToolCallHistogramBucket[]
 }
 
 export interface ToolsAnalyticsRecord {
@@ -87,7 +88,7 @@ export interface RecentToolCallRecord {
   readonly toolOutputTruncated: boolean
 }
 
-export interface RecentToolCallsPageRecord {
+interface RecentToolCallsPageRecord {
   readonly items: readonly RecentToolCallRecord[]
   readonly hasMore: boolean
   readonly nextCursor?: { readonly startTimeIso: string; readonly spanId: string }
@@ -116,6 +117,7 @@ const toToolSummaryRecord = (tool: ToolSummary): ToolSummaryRecord => ({
   offeredTraces: tool.offeredTraces,
   lastOffered: tool.lastOffered ? tool.lastOffered.toISOString() : null,
   selectionRate: tool.selectionRate,
+  trend: tool.trend,
 })
 
 const toDefinitionDetailRecord = (detail: ToolDefinitionDetail): ToolDefinitionDetailRecord => ({
@@ -167,13 +169,24 @@ const toScope = (orgId: OrganizationId, data: z.infer<typeof toolsScopeSchema>):
 // ---------------------------------------------------------------------------
 
 export const listProjectTools = createServerFn({ method: "GET" })
-  .inputValidator(toolsScopeSchema)
+  .inputValidator(
+    toolsScopeSchema.extend({
+      trendBucketSeconds: z
+        .number()
+        .int()
+        .positive()
+        .max(90 * 24 * 60 * 60),
+    }),
+  )
   .handler(async ({ data }): Promise<ToolsAnalyticsRecord> => {
     const orgId = await resolveOrgScope(data)
     return Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ToolAnalyticsRepository
-        const analytics = yield* repo.listToolsWithMetrics(toScope(orgId, data))
+        const analytics = yield* repo.listToolsWithMetrics({
+          ...toScope(orgId, data),
+          trendBucketSeconds: data.trendBucketSeconds,
+        })
         return {
           totals: analytics.totals,
           tools: analytics.tools.map(toToolSummaryRecord),
