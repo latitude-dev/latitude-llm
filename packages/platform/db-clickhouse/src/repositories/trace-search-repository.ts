@@ -202,10 +202,16 @@ export const TraceSearchRepositoryLive = Layer.effect(
                       SELECT
                         content_hash,
                         (1 - cosineDistance(embedding, {queryEmbedding:Array(Float32)})) AS semantic_score
-                      FROM message_embeddings
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        AND embedding_model = {embeddingModel:String}
+                      FROM (
+                        SELECT
+                          content_hash,
+                          argMax(embedding, last_seen_at) AS embedding
+                        FROM message_embeddings
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND embedding_model = {embeddingModel:String}
+                        GROUP BY content_hash
+                      ) AS latest_embeddings
                     ) AS e ON o.content_hash = e.content_hash
                     WHERE o.role IN ('user', 'assistant')`,
             query_params: {
