@@ -254,4 +254,64 @@ describe("buildIssuesExportUseCase", () => {
     expect(result.csv).toContain(secondIssue.id)
     expect(result.csv).not.toContain(firstIssue.id)
   })
+
+  it("narrows exported rows to the assignee filter", async () => {
+    const userA = "1".repeat(24)
+    const assignedIssue = makeIssue({
+      id: IssueId("a".repeat(24)),
+      name: "Assigned issue",
+      assigneeId: userA,
+    })
+    const unassignedIssue = makeIssue({
+      id: IssueId("b".repeat(24)),
+      name: "Unassigned issue",
+    })
+    const { repository: issueRepository } = createFakeIssueRepository([assignedIssue, unassignedIssue])
+    const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+      listIssueWindowMetrics: () =>
+        Effect.succeed(
+          [assignedIssue, unassignedIssue].map((issue) => ({
+            issueId: IssueId(issue.id),
+            occurrences: 2,
+            firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+            lastSeenAt: new Date("2026-04-03T00:00:00.000Z"),
+          })),
+        ),
+      aggregateByIssues: ({ issueIds }) =>
+        Effect.succeed(
+          [assignedIssue, unassignedIssue]
+            .map((issue) => ({
+              issueId: IssueId(issue.id),
+              totalOccurrences: 2,
+              recentOccurrences: 1,
+              baselineAvgOccurrences: 1,
+              firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+              lastSeenAt: new Date("2026-04-03T00:00:00.000Z"),
+            }))
+            .filter((occurrence) => issueIds.includes(occurrence.issueId)),
+        ),
+      countDistinctTracesByTimeRange: () => Effect.succeed(10),
+    })
+
+    const result = await Effect.runPromise(
+      buildIssuesExportUseCase({
+        organizationId,
+        projectId,
+        assigneeIds: [userA],
+      }).pipe(
+        Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+        Effect.provideService(EvaluationRepository, createEvaluationRepository()),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(SqlClient, createFakeSqlClient({ organizationId })),
+        Effect.provideService(ChSqlClient, createFakeChSqlClient({ organizationId })),
+        Effect.provideService(
+          TraceRepository,
+          createFakeTraceRepository({ countByProjectId: () => Effect.succeed(10) }).repository,
+        ),
+      ),
+    )
+
+    expect(result.csv).toContain(assignedIssue.id)
+    expect(result.csv).not.toContain(unassignedIssue.id)
+  })
 })

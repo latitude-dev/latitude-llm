@@ -215,7 +215,6 @@ export {
 } from "./use-cases/list-issue-traces.ts"
 export {
   type IssueAssigneeFilter,
-  issueAssigneeFilterSchema,
   type IssueListAnalytics,
   type IssueListAnalyticsCounts,
   type IssueListItem,
@@ -223,6 +222,7 @@ export {
   type IssuesLifecycleGroup,
   type IssuesSortDirection,
   type IssuesSortField,
+  issueAssigneeFilterSchema,
   issueSearchSchema,
   issuesLifecycleGroupSchema,
   issuesSortDirectionSchema,

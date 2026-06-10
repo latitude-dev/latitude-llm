@@ -2,6 +2,7 @@ import { buildIssuesExportFilename, type ExportSelection } from "@domain/exports
 import type { OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import {
+  type IssueAssigneeFilter,
   type IssuesLifecycleGroup,
   type IssuesSortDirection,
   type IssuesSortField,
@@ -15,6 +16,7 @@ export interface BuildIssuesExportInput {
   readonly projectId: ProjectId
   readonly selection?: ExportSelection
   readonly lifecycleGroup?: IssuesLifecycleGroup
+  readonly assigneeIds?: readonly IssueAssigneeFilter[]
   readonly search?: {
     readonly query: string
     readonly normalizedEmbedding: number[]
@@ -64,6 +66,7 @@ export const buildIssuesExportUseCase = Effect.fn("issues.buildIssuesExport")(fu
       limit: ISSUES_EXPORT_BATCH_SIZE,
       offset,
       ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
+      ...(input.assigneeIds?.length ? { assigneeIds: [...input.assigneeIds] } : {}),
       ...(input.search ? { search: input.search } : {}),
       ...(input.timeRange ? { timeRange: input.timeRange } : {}),
       ...(input.sort ? { sort: input.sort } : {}),
