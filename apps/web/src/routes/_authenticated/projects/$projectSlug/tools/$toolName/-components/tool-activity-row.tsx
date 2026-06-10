@@ -84,19 +84,21 @@ export function ToolActivityRow({
             },
           ]
         : [
-            {
-              kind: "bar",
-              name: "Successful calls",
-              values: histogram.map((bucket) => bucket.calls - bucket.errors),
-              color: OK_CALLS_COLOR,
-              axis: "left",
-              stack: "calls",
-            },
+            // Failed calls first: the first series of a stack renders at the
+            // bottom, where a shared baseline makes error volumes comparable.
             {
               kind: "bar",
               name: "Failed calls",
               values: histogram.map((bucket) => bucket.errors),
               color: FAILED_CALLS_COLOR,
+              axis: "left",
+              stack: "calls",
+            },
+            {
+              kind: "bar",
+              name: "Successful calls",
+              values: histogram.map((bucket) => bucket.calls - bucket.errors),
+              color: OK_CALLS_COLOR,
               axis: "left",
               stack: "calls",
             },
