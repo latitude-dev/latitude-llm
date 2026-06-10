@@ -309,9 +309,6 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 │  interaction-position bar chart of the        │  Monitoring                │
 │  session  (median: interaction 3)             │   1 evaluation · 92%       │
 │                                               │   [open ↓]                 │
-│ ── Related issues ────────────────────────────│                            │
-│  co-occurring issues list (shared %, lift)    │                            │
-│                                               │                            │
 │ ── Examples ──────────────────────────────────│                            │
 │  ◀  conversation with highlighted part   ▶    │                            │
 │      feedback card inline on the message      │                            │
@@ -321,6 +318,11 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 │                                               │                            │
 │ ── Monitoring (full) ─────────────────────────│                            │
 │  linked evaluations + alignment + advanced    │                            │
+│                                               │                            │
+│ ── Related issues (card grid, page footer) ───│                            │
+│  [name + badges]  [name + badges]             │                            │
+│  [description…ㅤ]  [description…ㅤ]            │                            │
+│  [chips · stats ]  [chips · stats ]            │                            │
 └──────────────────────────────────────────────┴───────────────────────────┘
 ```
 
@@ -351,16 +353,14 @@ A sticky header, a scrollable main column, and a sticky right metadata/triage ra
 
 6. **Where it happens.** A compact bar chart of the **session-interaction position** distribution (`getIssueFailurePositions`): x-axis = interaction index within the conversation (`1, 2, 3, … , 10+`), y-axis = share of occurrences, with a callout for the **median interaction** (e.g. *"usually on interaction 3 of the conversation"*) and a separate note for the single-interaction share. This is the headline "where" insight; it directly tells users whether failures are an opening-turn problem or a long-conversation-degradation problem.
 
-7. **Related issues.** A **single merged list** from `getRelatedIssues`, ranked by the combined relatedness score (semantic ⊕ co-occurrence, noisy-OR). Each row shows the related issue name (hydrated from Postgres), its lifecycle badge (resolved/ignored included — *"a similar issue was resolved"* is the actionable case), and **reason chips explaining why the row is here** rather than any raw score:
+7. **Related issues.** A **single merged set** from `getRelatedIssues`, ranked by the combined relatedness score (semantic ⊕ co-occurrence, noisy-OR), rendered as a **responsive card grid at the bottom of the page** (it is a *"where to go next"* section — navigational, not evidence about this issue — so it reads as a footer, after Occurrences and Monitoring). Each **card** shows:
 
-   > *Tool call timeout on search* `Ongoing` — appears in **64%** of this issue's sessions
-   > *Hallucinated citations* `Resolved` — **similar failure pattern**
-   > *Wrong refund amounts* `Ongoing` — **similar pattern** · shares **20%** of sessions
+   - the related issue **name** + lifecycle badges (resolved/ignored included — *"a similar issue was resolved"* is the actionable case),
+   - the issue **description** (2-line clamp) — so users can judge the similarity themselves,
+   - **reason chips that state which signal made it related**: `Similar topic` / `Very similar topic` (semantic — strength bucketed by score, threshold presentational) and `Same conversations · 64%` (co-occurrence, percent = `sharedSessions / mySessions`). Dual-chip cards are implicitly the "possibly the same issue" case — no explicit duplicate claim in v1,
+   - an activity footer: lifetime **occurrence count** + **last seen** (batched `aggregateByIssues` read).
 
-   - Co-occurrence rows lead with the **shared-session percent** sentence (`sharedSessions / mySessions`); semantic rows lead with the **similar-pattern** chip; dual-signal rows show both (implicitly the "possibly the same issue" case — no explicit duplicate claim in v1).
-   - Cosine values and the combined score are **never displayed** — they rank, the chips explain.
-   - Rows link to that issue's page. Project-scoped only.
-   - Below the list, the **benchmark** summary may also appear here as well as in the rail (*"Top 3% by user reach, top 8% by volume among 214 issues"*). Empty state when neither signal produces a row.
+   Cosine values and the combined score are **never displayed** — they rank, the chips explain (each chip carries an explanatory tooltip). Cards link to that issue's page. Project-scoped only. The **benchmark** summary may also appear here as well as in the rail (*"Top 3% by user reach, top 8% by volume among 214 issues"*). Empty state when neither signal produces a row.
 
 8. **Examples.** An inline **occurrence carousel** built on the reusable `Conversation` component (`packages/ui/src/components/genai-conversation/conversation.tsx`) and the annotation-navigation system (`use-annotation-navigation.ts`):
    - Prev/next (and **H/L** keys) cycle through occurrences (scores) of the issue. (Issue-level prev/next on the page uses J/K; examples use H/L to avoid the collision.)

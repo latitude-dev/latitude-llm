@@ -27,7 +27,13 @@ export interface GetRelatedIssuesInput {
 export interface RelatedIssue extends RelatedIssueSignals {
   readonly slug: string
   readonly name: string
+  /** Shown on the card so users can judge the similarity themselves. */
+  readonly description: string
   readonly states: readonly IssueState[]
+  /** Lifetime occurrence count; 0 when the issue has no analytics rows. */
+  readonly occurrences: number
+  /** Last occurrence timestamp; null when the issue has no analytics rows. */
+  readonly lastSeenAt: Date | null
 }
 
 export type GetRelatedIssuesError = RepositoryError
@@ -79,28 +85,43 @@ export const getRelatedIssuesUseCase = (
     const ranked = rankRelatedIssues({ neighbors, coOccurrence })
     if (ranked.length === 0) return []
 
-    const issues = yield* issueRepository.findByIds({
-      projectId: input.projectId,
-      issueIds: ranked.map((signals) => IssueId(signals.issueId)),
-    })
+    const rankedIssueIds = ranked.map((signals) => IssueId(signals.issueId))
+    const [issues, occurrenceAggregates] = yield* Effect.all(
+      [
+        issueRepository.findByIds({ projectId: input.projectId, issueIds: rankedIssueIds }),
+        // Lifetime occurrences + last-seen per row, so the card can show how
+        // active each neighbor is. Batched — one read for the whole list.
+        scoreAnalyticsRepository.aggregateByIssues({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          issueIds: rankedIssueIds,
+        }),
+      ],
+      { concurrency: 2 },
+    )
     const issuesById = new Map(issues.map((issue) => [issue.id as string, issue]))
+    const aggregatesById = new Map(occurrenceAggregates.map((aggregate) => [aggregate.issueId as string, aggregate]))
 
     return ranked.flatMap((signals): RelatedIssue[] => {
       // A candidate can vanish between the analytics read and hydration (or
       // exist only in ClickHouse after a Postgres delete) — drop it silently.
       const issue = issuesById.get(signals.issueId)
       if (issue === undefined) return []
+      const aggregate = aggregatesById.get(signals.issueId)
       return [
         {
           ...signals,
           slug: issue.slug,
           name: issue.name,
+          description: issue.description,
           states: deriveIssueLifecycleStates({
             issue,
             isEscalating: issue.lifecycle.isEscalating,
             isRegressed: issue.lifecycle.isRegressed,
             now,
           }),
+          occurrences: aggregate?.totalOccurrences ?? 0,
+          lastSeenAt: aggregate?.lastSeenAt ?? null,
         },
       ]
     })

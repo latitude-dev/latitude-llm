@@ -132,11 +132,9 @@ function IssueDetailPage() {
           }
           trendAside={<IssuePatterns projectId={project.id} issueId={issueId} />}
           beforeTraces={
-            <>
-              <IssueRelated projectId={project.id} projectSlug={projectSlug} issueId={issueId} />
-              <IssueExamples projectId={project.id} issueId={issueId} onOverlayActiveChange={setOverlayActive} />
-            </>
+            <IssueExamples projectId={project.id} issueId={issueId} onOverlayActiveChange={setOverlayActive} />
           }
+          append={<IssueRelated projectId={project.id} projectSlug={projectSlug} issueId={issueId} />}
         />
       </Layout.Content>
     </Layout>

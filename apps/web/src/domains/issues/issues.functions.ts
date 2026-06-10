@@ -788,7 +788,10 @@ export interface RelatedIssueRecord {
   readonly issueId: string
   readonly slug: string
   readonly name: string
+  readonly description: string
   readonly states: readonly string[]
+  readonly occurrences: number
+  readonly lastSeenAt: string | null
   /** Combined ranking score — sort-order only, never displayed. */
   readonly relatedness: number
   /** Present when the semantic (centroid cosine) signal contributed. */
@@ -829,7 +832,10 @@ export const getRelatedIssues = createServerFn({ method: "GET" })
         issueId: row.issueId,
         slug: row.slug,
         name: row.name,
+        description: row.description,
         states: row.states,
+        occurrences: row.occurrences,
+        lastSeenAt: row.lastSeenAt?.toISOString() ?? null,
         relatedness: row.relatedness,
         semantic: row.semantic,
         coOccurrence: row.coOccurrence,

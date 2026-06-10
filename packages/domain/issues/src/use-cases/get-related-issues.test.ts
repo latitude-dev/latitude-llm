@@ -1,4 +1,9 @@
-import { type IssueCoOccurrenceAggregate, ScoreAnalyticsRepository, type ScoreAnalyticsTimeRange } from "@domain/scores"
+import {
+  type IssueCoOccurrenceAggregate,
+  type IssueOccurrenceAggregate,
+  ScoreAnalyticsRepository,
+  type ScoreAnalyticsTimeRange,
+} from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import { ChSqlClient, IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
@@ -53,6 +58,7 @@ const makeIssue = (overrides: Partial<Issue> & { id: Issue["id"] }): Issue => ({
 const buildLayer = (input: {
   readonly issues: readonly Issue[]
   readonly coOccurrence?: IssueCoOccurrenceAggregate
+  readonly occurrenceAggregates?: readonly IssueOccurrenceAggregate[]
   readonly captureTimeRange?: (timeRange: ScoreAnalyticsTimeRange) => void
 }) => {
   const issueRepo = createFakeIssueRepository(input.issues)
@@ -62,6 +68,7 @@ const buildLayer = (input: {
         input.captureTimeRange?.(timeRange)
         return input.coOccurrence ?? { mySessions: 0, totalSessions: 0, candidates: [] }
       }),
+    aggregateByIssues: () => Effect.succeed(input.occurrenceAggregates ?? []),
   })
   return Layer.mergeAll(
     Layer.succeed(IssueRepository, issueRepo.repository),
@@ -96,6 +103,16 @@ describe("getRelatedIssuesUseCase", () => {
         totalSessions: 1000,
         candidates: [{ issueId: coOccurringIssueId, sharedSessions: 10, theirSessions: 20 }], // NPMI ≈ 0.70
       },
+      occurrenceAggregates: [
+        {
+          issueId: resolvedTwinIssueId,
+          totalOccurrences: 42,
+          recentOccurrences: 0,
+          baselineAvgOccurrences: 0,
+          firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+          lastSeenAt: new Date("2026-05-20T00:00:00.000Z"),
+        },
+      ],
     })
 
     const related = await Effect.runPromise(
@@ -109,10 +126,16 @@ describe("getRelatedIssuesUseCase", () => {
     expect(resolvedTwin?.states).toContain("resolved")
     expect(resolvedTwin?.name).toBe(`Issue ${"b".repeat(4)}`)
     expect(resolvedTwin?.slug).toBe(`issue-${"b".repeat(4)}`)
+    expect(resolvedTwin?.description).toBe("An issue")
     expect(resolvedTwin?.semantic?.similarity).toBeCloseTo(0.8, 5)
     expect(resolvedTwin?.coOccurrence).toBeNull()
+    expect(resolvedTwin?.occurrences).toBe(42)
+    expect(resolvedTwin?.lastSeenAt).toEqual(new Date("2026-05-20T00:00:00.000Z"))
 
     expect(coOccurring?.states).toEqual(["ongoing"])
+    // No analytics row for this candidate — stats degrade to zero/null.
+    expect(coOccurring?.occurrences).toBe(0)
+    expect(coOccurring?.lastSeenAt).toBeNull()
     expect(coOccurring?.semantic).toBeNull()
     expect(coOccurring?.coOccurrence?.sharedSessions).toBe(10)
     expect(coOccurring?.coOccurrence?.sharedSessionsPercent).toBeCloseTo(0.5, 10)

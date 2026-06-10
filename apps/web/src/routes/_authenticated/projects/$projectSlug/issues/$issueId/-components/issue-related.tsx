@@ -1,10 +1,16 @@
 import { DetailSection, Icon, Skeleton, Status, Text, Tooltip } from "@repo/ui"
-import { formatCount } from "@repo/utils"
+import { formatCount, relativeTime } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
 import { NetworkIcon } from "lucide-react"
 import { useRelatedIssues } from "../../../../../../../domains/issues/issues.collection.ts"
 import type { RelatedIssueRecord } from "../../../../../../../domains/issues/issues.functions.ts"
 import { IssueLifecycleStatuses } from "../../-components/issue-lifecycle-statuses.tsx"
+
+/**
+ * Semantic score above which the chip reads "Very similar topic" instead of
+ * "Similar topic". Purely presentational — the score itself is never shown.
+ */
+const VERY_SIMILAR_TOPIC_SCORE = 0.66
 
 /** Integer percentage, with `<1%` for a tiny-but-present share so it never reads as 0%. */
 const formatPercent = (fraction: number) => {
@@ -14,24 +20,30 @@ const formatPercent = (fraction: number) => {
 }
 
 /**
- * Reason chips explain *why* a row is in the list — the raw similarity /
- * relatedness numbers are deliberately never shown (they rank, the chips
- * explain). A row carrying both chips is the "possibly the same issue" case
- * and ranks above either signal alone.
+ * Reason chips state *why* the issue is related — a similar **topic**
+ * (semantic centroid similarity) and/or shared **conversations** (session
+ * co-occurrence). The raw similarity / relatedness numbers are deliberately
+ * never shown (they rank, the chips explain). A card carrying both chips is
+ * the "possibly the same issue" case and ranks above either signal alone.
  */
 function ReasonChips({ row }: { readonly row: RelatedIssueRecord }) {
   return (
-    <div className="flex shrink-0 flex-row items-center gap-1.5">
+    <div className="flex min-w-0 flex-row flex-wrap items-center gap-1.5">
       {row.semantic ? (
         <Tooltip
           asChild
           trigger={
             <span className="inline-flex">
-              <Status variant="info" label="Similar pattern" indicator={false} />
+              <Status
+                variant="info"
+                label={row.semantic.score >= VERY_SIMILAR_TOPIC_SCORE ? "Very similar topic" : "Similar topic"}
+                indicator={false}
+              />
             </span>
           }
         >
-          The two issues' failure patterns are semantically similar.
+          The two issues describe semantically similar failures — their occurrences' feedback points at the same kind of
+          problem.
         </Tooltip>
       ) : null}
       {row.coOccurrence ? (
@@ -40,38 +52,49 @@ function ReasonChips({ row }: { readonly row: RelatedIssueRecord }) {
           trigger={
             <span className="inline-flex">
               <Status
-                variant="neutral"
-                label={`In ${formatPercent(row.coOccurrence.sharedSessionsPercent)} of sessions`}
+                variant="warning"
+                label={`Same conversations · ${formatPercent(row.coOccurrence.sharedSessionsPercent)}`}
                 indicator={false}
               />
             </span>
           }
         >
-          Both issues occur together in {formatCount(row.coOccurrence.sharedSessions)} of this issue's sessions over the
-          last 30 days — more than chance would predict.
+          Both issues occur in {formatCount(row.coOccurrence.sharedSessions)} of the same conversations over the last 30
+          days ({formatPercent(row.coOccurrence.sharedSessionsPercent)} of this issue's sessions) — more overlap than
+          chance would predict.
         </Tooltip>
       ) : null}
     </div>
   )
 }
 
-function RelatedIssueRow({ projectSlug, row }: { readonly projectSlug: string; readonly row: RelatedIssueRecord }) {
+function RelatedIssueCard({ projectSlug, row }: { readonly projectSlug: string; readonly row: RelatedIssueRecord }) {
   return (
     <Link
       to="/projects/$projectSlug/issues/$issueId"
       params={{ projectSlug, issueId: row.issueId }}
       aria-label={`Open the ${row.name} issue`}
-      className="group flex flex-row items-center gap-3 rounded-lg bg-secondary p-3 hover:bg-accent"
+      className="group flex flex-col gap-2 rounded-lg bg-secondary p-4 hover:bg-accent"
     >
-      <div className="flex min-w-0 flex-1 flex-row items-center gap-2">
-        <Text.H5 className="min-w-0 truncate group-hover:underline">{row.name}</Text.H5>
-        {/* Resolved/ignored rows are included on purpose — "a similar issue was
+      <div className="flex min-w-0 flex-row items-center gap-2">
+        <Text.H5 className="min-w-0 flex-1 truncate group-hover:underline">{row.name}</Text.H5>
+        {/* Resolved/ignored cards are included on purpose — "a similar issue was
             already resolved" is the most actionable neighbor to surface. */}
         <div className="shrink-0">
           <IssueLifecycleStatuses states={row.states} wrap={false} />
         </div>
       </div>
-      <ReasonChips row={row} />
+      {/* The description lets users judge the similarity themselves. */}
+      <Text.H6 color="foregroundMuted" className="line-clamp-2 flex-1">
+        {row.description}
+      </Text.H6>
+      <div className="flex flex-row items-end justify-between gap-2">
+        <ReasonChips row={row} />
+        <Text.H6 color="foregroundMuted" className="shrink-0 whitespace-nowrap">
+          {formatCount(row.occurrences)} occurrences
+          {row.lastSeenAt ? ` · last seen ${relativeTime(new Date(row.lastSeenAt))}` : ""}
+        </Text.H6>
+      </div>
     </Link>
   )
 }
@@ -79,8 +102,9 @@ function RelatedIssueRow({ projectSlug, row }: { readonly projectSlug: string; r
 /**
  * Related-issues section: one merged list combining two signals — semantic
  * similarity (centroid cosine) and session co-occurrence (NPMI) — ranked by a
- * fused relatedness score computed server-side. Rows link to the related
- * issue's page. See `specs/issue-details-page.md` (Data model #3).
+ * fused relatedness score computed server-side. Rendered as a responsive card
+ * grid at the bottom of the page; cards link to the related issue's page.
+ * See `specs/issue-details-page.md` (Data model #3).
  */
 export function IssueRelated({
   projectId,
@@ -101,19 +125,19 @@ export function IssueRelated({
       contentClassName="pl-0 max-h-none overflow-visible"
     >
       {isLoading ? (
-        <div className="flex flex-col gap-2">
-          {[0, 1].map((rowIndex) => (
-            <Skeleton key={rowIndex} className="h-12 w-full" />
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 2xl:grid-cols-3">
+          {[0, 1, 2].map((cardIndex) => (
+            <Skeleton key={cardIndex} className="h-28 w-full" />
           ))}
         </div>
       ) : !related || related.length === 0 ? (
         <Text.H6 color="foregroundMuted">
-          No related issues found — nothing semantically similar and nothing co-occurring in the same sessions.
+          No related issues found — nothing with a similar topic and nothing occurring in the same conversations.
         </Text.H6>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 2xl:grid-cols-3">
           {related.map((row) => (
-            <RelatedIssueRow key={row.issueId} projectSlug={projectSlug} row={row} />
+            <RelatedIssueCard key={row.issueId} projectSlug={projectSlug} row={row} />
           ))}
         </div>
       )}
