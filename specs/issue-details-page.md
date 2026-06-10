@@ -473,10 +473,10 @@ The page becomes the single issue surface; the drawer and flag are removed. Abso
 
 Related issues redesigned before build (no v1 shipped): one merged list combining **semantic similarity** (centroid cosine, pgvector) and **co-occurrence** (shared sessions, NPMI), ranked by noisy-OR relatedness. Displayed lift is dropped for the same instability reason Patterns dropped it (see Data model #3).
 
-- [ ] **P4-1**: `IssueRepository.findSimilarByCentroid` (pgvector exact cosine scan, project-scoped, resolved/ignored included, empty when no embedding) + PGlite test.
-- [ ] **P4-2**: `coOccurrenceByIssue` ClickHouse method (session co-occurrence counts + probability universe, self-exclusion, 30d window) + chdb tests.
-- [ ] **P4-3**: Pure related-issues scorer in `@domain/issues` (semScore band rescale, NPMI with shared-session floor, noisy-OR merge, min-relatedness gate, top N) + unit tests; named constants (`ISSUE_RELATED_*`).
-- [ ] **P4-4**: `getRelatedIssues` web function (parallel reads → scorer → Postgres hydration) + hook + Related-issues section (merged list, lifecycle badges, reason chips, empty state), linking to other issue pages.
+- [x] **P4-1**: `IssueRepository.findSimilarByCentroid` (pgvector exact cosine scan, project-scoped, resolved/ignored included, empty when no embedding) + PGlite test.
+- [x] **P4-2**: `coOccurrenceByIssue` ClickHouse method (session co-occurrence counts + probability universe, self-exclusion, 30d window) + chdb tests.
+- [x] **P4-3**: Pure related-issues scorer in `@domain/issues` (semScore band rescale, NPMI with shared-session floor, noisy-OR merge, min-relatedness gate, top N) + unit tests; named constants (`ISSUE_RELATED_*`). *(As built: the scorer is fronted by `getRelatedIssuesUseCase` in `@domain/issues`, which runs the two reads in parallel and hydrates rows — the web fn stays thin.)*
+- [x] **P4-4**: `getRelatedIssues` web function (parallel reads → scorer → Postgres hydration) + hook + Related-issues section (merged list, lifecycle badges, reason chips, empty state), linking to other issue pages.
 - [ ] **P4-5**: `issueBenchmark` method (occurrence + user-reach percentile) + tests; benchmark chips (rail + section). *(Unchanged from the original design; not part of the related-issues build.)*
 
 **Exit gate**: the page shows one ranked list of related issues — semantically similar and/or co-occurring — with reason chips, plus (separately) a project benchmark rank.
