@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## v0.2.6 - 2026-06-10
+
+### Auth
+
+- Surfaced OAuth login errors on the login page (previously Google sign-in failures bounced back with no feedback) and added a "Connected accounts" section in Settings → Account to link/unlink Google and GitHub, including unlinking the only connected provider since magic link remains a sign-in path (ref: #3497).
+
+### MCP
+
+- Issued refreshable OAuth tokens for MCP clients so sessions can renew instead of expiring, while keeping offline access out of the RFC 9728 protected-resource metadata (ref: #3373).
+
+### Telemetry
+
+- Promoted the Python (`latitude-telemetry`) and TypeScript (`@latitude-data/telemetry`) SDKs out of alpha to stable 3.0.1, so default installs resolve to the 3.x API instead of the legacy 2.0.4 (ref: #3495).
+
+### OSS self-hosting
+
+- Replaced AGPL-licensed `ua-parser-js` with MIT-licensed `bowser`, namespaced all Redis cache and BullMQ keys under a `latitude:` prefix so Latitude can share a Redis instance, and removed deployment URLs baked into the web bundle so one public image serves any domain (ref: #3491).
+- Documented the key-free local development path with a new Development docs group and refreshed contributing guide (ref: #3498).
+
+### Models
+
+- Updated the bundled models.dev model catalog (ref: #3493).
+
 ## v0.2.5 - 2026-06-10
 
 ### Test mode
