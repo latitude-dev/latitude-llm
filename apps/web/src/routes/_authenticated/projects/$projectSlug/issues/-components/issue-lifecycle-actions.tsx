@@ -181,9 +181,7 @@ export function IssueLifecycleActions({
         group: "Issue",
         keywords: "copy link url share",
         perform: () => {
-          void navigator.clipboard.writeText(
-            `${window.location.origin}/projects/${projectSlug}/issues?issueId=${issueId}`,
-          )
+          void navigator.clipboard.writeText(`${window.location.origin}/projects/${projectSlug}/issues/${issueId}`)
           toast({ description: "Issue link copied to clipboard." })
         },
       })

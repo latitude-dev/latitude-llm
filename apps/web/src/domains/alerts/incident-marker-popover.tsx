@@ -7,22 +7,15 @@ import { formatIncidentKindLabel, INCIDENT_SEVERITY_COLOR, SEVERITY_LABELS } fro
 
 /**
  * Popover anchored at a chart-bucket point, listing every incident touching that bucket. Issue
- * rows link to the issue drawer (`?issueId=…`); saved-search rows link to their monitor
+ * rows link to the issue page (`/issues/<id>`); saved-search rows link to their monitor
  * (`?monitorSlug=…`). The popover is consumer-owned — the chart surfaces the bucket anchor; this
  * component renders the list and the navigation links.
- *
- * `preserveSearchParams=true` is for the issues analytics panel (popover is on the issues page
- * itself), where lifecycle, time filter and sort search params should survive the row-click
- * navigation. `false` (default) ships a fresh `{ issueId }` search — used by the traces
- * overview popover, which navigates cross-route. The `to` is always the absolute issues path
- * either way; only the search-params merge behavior differs.
  */
 interface IncidentMarkerPopoverProps {
   readonly open: boolean
   readonly anchor: { readonly clientX: number; readonly clientY: number } | null
   readonly incidents: readonly AlertIncidentRecord[]
   readonly projectSlug: string
-  readonly preserveSearchParams?: boolean
   readonly onOpenChange: (open: boolean) => void
   /**
    * Optional hover-card grace handlers — wired to the popover content so a consumer can
@@ -52,7 +45,7 @@ function formatTiming(incident: AlertIncidentRecord): string {
 const ROW_CLASS = "flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent focus-visible:bg-accent outline-none"
 
 /**
- * One incident row. Issue incidents link to the issue drawer; saved-search incidents link to their
+ * One incident row. Issue incidents link to the issue page; saved-search incidents link to their
  * monitor (and fall back to a non-interactive row when the monitor alert was deleted). The primary
  * label is the issue name for issues and the saved search name for saved searches, followed (saved
  * search only) by the humanised condition and the "Created by monitor X" attribution.
@@ -60,12 +53,10 @@ const ROW_CLASS = "flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent
 function IncidentRow({
   incident,
   projectSlug,
-  preserveSearchParams,
   onNavigate,
 }: {
   readonly incident: AlertIncidentRecord
   readonly projectSlug: string
-  readonly preserveSearchParams: boolean
   readonly onNavigate: () => void
 }) {
   const isSavedSearch = incident.sourceType === "savedSearch"
@@ -129,13 +120,8 @@ function IncidentRow({
 
   return (
     <Link
-      to="/projects/$projectSlug/issues"
-      params={{ projectSlug }}
-      search={
-        preserveSearchParams
-          ? (prev: Record<string, unknown>) => ({ ...prev, issueId: incident.sourceId })
-          : { issueId: incident.sourceId }
-      }
+      to="/projects/$projectSlug/issues/$issueId"
+      params={{ projectSlug, issueId: incident.sourceId }}
       onClick={onNavigate}
       className={ROW_CLASS}
     >
@@ -149,7 +135,6 @@ export function IncidentMarkerPopover({
   anchor,
   incidents,
   projectSlug,
-  preserveSearchParams = false,
   onOpenChange,
   onContentMouseEnter,
   onContentMouseLeave,
@@ -195,12 +180,7 @@ export function IncidentMarkerPopover({
         <ul className="flex flex-col">
           {incidents.map((incident) => (
             <li key={incident.id}>
-              <IncidentRow
-                incident={incident}
-                projectSlug={projectSlug}
-                preserveSearchParams={preserveSearchParams}
-                onNavigate={() => onOpenChange(false)}
-              />
+              <IncidentRow incident={incident} projectSlug={projectSlug} onNavigate={() => onOpenChange(false)} />
             </li>
           ))}
         </ul>
