@@ -2,9 +2,19 @@
 
 ## Unreleased
 
+## v0.2.7 - 2026-06-10
+
 ### Auth
 
-- Fixed "Session is not fresh" errors when disconnecting a provider in Settings → Account: disabled Better Auth's 24h session-freshness gate (`freshAge: 0`), which blocked unlinking for any session older than a day and guarded no other endpoint we use.
+- Fixed "Session is not fresh" errors when disconnecting a provider in Settings → Account: disabled Better Auth's 24h session-freshness gate (`freshAge: 0`), which blocked unlinking for any session older than a day and guarded no other endpoint we use (ref: e6aa1fb).
+
+### Issues
+
+- Replaced the issue drawer with a full-page Issue view: lifetime impact metrics (occurrences, affected traces/sessions/users, cost and tokens), new assignee and priority triage fields, plus patterns and examples (ref: #3494).
+
+### Spans
+
+- Rendered non-JSON tool input/output (e.g. plain-text errors) as a code block in the span detail panel, matching the JSON path's styling and controls (ref: #3500).
 
 ## v0.2.6 - 2026-06-10
 
