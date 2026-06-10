@@ -183,14 +183,14 @@ This is a behavior change: it shifts `firstMessageIndex`/`lastMessageIndex` on p
 
 - [~] Re-analysis of a grown session embeds only new messages; embedding call volume drop is covered by fixture call-count tests; production metrics validation remains a post-deploy check.
 
-### [ ] Phase 3 - Trace search on the store
+### [~] Phase 3 - Trace search on the store
 
-- [ ] **P3-1**: Create `trace_message_occurrences` via `pnpm --filter @platform/db-clickhouse ch:create trace_message_occurrences` (trace-position replacement key + content-hash projection).
-- [ ] **P3-2**: Rework the trace-search worker write path: per-message hash -> vector ensure (embed-on-miss, budget-gated) -> unconditional idempotent occurrence inserts. Remove chunk building, head+tail truncation, and per-trace chunk dedup from the semantic path (lexical path untouched).
+- [x] **P3-1**: Create `trace_message_occurrences` via `pnpm --filter @platform/db-clickhouse ch:create trace_message_occurrences` (trace-position replacement key + content-hash projection).
+- [x] **P3-2**: Rework the trace-search worker write path: per-message hash -> vector ensure (embed-on-miss, budget-gated) -> unconditional idempotent occurrence inserts. Remove chunk building, head+tail truncation, and per-trace chunk dedup from the semantic path (lexical path untouched).
 - [ ] **P3-3**: Implement the join-based search query (distinct-vector scan -> occurrence fan-out -> per-trace max pool, `message_index` highlights); re-tune the semantic relevance floor against the eval set used for the 0.30 calibration.
 - [ ] **P3-4**: Benchmark the join on the largest orgs (latency + memory) vs the current single-table scan; add/adjust projections as needed.
 - [ ] **P3-5**: Cut over reads behind a flag; after bake, stop writing `trace_search_embeddings` and let TTL drain it (drop table in a later append-only migration).
-- [ ] **P3-6**: Decide backfill vs expire for existing `trace_search_embeddings` rows (default: no backfill; new traces index into the new model, old traces keep working via the old path until cutover, then age out within the 30-day retention).
+- [x] **P3-6**: Decide backfill vs expire for existing `trace_search_embeddings` rows (decision: no backfill; new traces index into the new model, old traces keep working via the old path until cutover, then age out within the 30-day retention).
 
 **Exit gate**:
 
