@@ -11,7 +11,7 @@
 Latitude currently has two parallel tracking systems with overlapping names and separate UIs: **Issues** (auto-created buckets of failed scores, invisibly monitored) and **Monitors** (user-configured alerts over **Saved Searches**). This spec restructures both around four concepts in a pipeline:
 
 ```
-                 definitions create        monitors aggregate         alerts fire on        records the
+                 signals create            monitors aggregate         alerts fire on        records the
                  occurrence rows           the occurrence stream      conditions            firing
   Trace ───────▶ SIGNAL ─────────────────▶ MONITOR ─────────────────▶ ALERT ──────────────▶ INCIDENT ──▶ notifications
                  (write-time matching)     (or saved searches, tools,
