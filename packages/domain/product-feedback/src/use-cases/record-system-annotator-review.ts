@@ -1,3 +1,4 @@
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
 import { Effect } from "effect"
 import { ProductFeedbackClient } from "../ports/product-feedback-client.ts"
 
@@ -32,8 +33,13 @@ export const recordSystemAnnotatorReviewUseCase = Effect.fn("productFeedback.rec
   // whitespace on a dogfood annotation.
   const trimmedComment = input.comment?.trim() ?? ""
 
+  // System-annotator reviews score the flagger pipeline, whose spans are exported
+  // to the flaggers dogfood project — the write must target the same project.
+  const projectSlug = LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers
+
   if (input.decision === "approve") {
     return yield* client.writeAnnotation({
+      projectSlug,
       upstreamScoreId: input.upstreamScoreId,
       passed: true,
       value: 1,
@@ -42,6 +48,7 @@ export const recordSystemAnnotatorReviewUseCase = Effect.fn("productFeedback.rec
   }
 
   return yield* client.writeAnnotation({
+    projectSlug,
     upstreamScoreId: input.upstreamScoreId,
     passed: false,
     value: 0,

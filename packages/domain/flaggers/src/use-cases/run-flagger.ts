@@ -9,6 +9,7 @@ import {
 } from "@domain/ai"
 import {
   CacheStore,
+  LATITUDE_TELEMETRY_PROJECT_SLUGS,
   type NotFoundError,
   OrganizationId,
   ProjectId,
@@ -380,6 +381,7 @@ function getInspectedAgentContext(input: {
               schema: instructionExtractorOutputSchema,
               telemetry: {
                 spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerExtractInstructions,
+                project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
                 tags: [
                   ...AI_GENERATE_TELEMETRY_TAGS.flaggerExtractInstructions,
                   ...reflagSuppressionTags(input.trace.tags),
@@ -634,6 +636,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
       schema: providerFlaggerOutputSchema,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
+        project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
         // If the trace we are classifying is itself flagger-generated, mark this
         // call's output as no-reflag so it is not flagged again (recursion break).
         tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify, ...reflagSuppressionTags(input.trace.tags)],
@@ -668,6 +671,7 @@ export const classifyTraceForFlaggerUseCase = Effect.fn("flaggers.classifyTraceF
       schema: annotationReviewOutputSchema,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerClassify,
+        project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
         tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
         metadata: buildProjectScopedAiMetadata(
           { organizationId: input.organizationId, projectId: input.projectId },

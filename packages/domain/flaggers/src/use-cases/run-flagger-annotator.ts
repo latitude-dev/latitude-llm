@@ -6,7 +6,13 @@ import {
   type AIError,
   buildProjectScopedAiMetadata,
 } from "@domain/ai"
-import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
+import {
+  LATITUDE_TELEMETRY_PROJECT_SLUGS,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  TraceId,
+} from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import { FLAGGER_ANNOTATOR_MAX_TOKENS, FLAGGER_ANNOTATOR_MODEL } from "../constants.ts"
@@ -300,6 +306,7 @@ Return structured data with a single "feedback" field per the system instruction
     schema: flaggerAnnotatorOutputSchema,
     telemetry: {
       spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.flaggerDraft,
+      project: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
       // Same recursion break as classify: a draft for a flagger-generated trace
       // must not itself be flagged.
       tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerDraft, ...reflagSuppressionTags(input.trace.tags)],

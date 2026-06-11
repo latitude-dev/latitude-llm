@@ -10,6 +10,7 @@ import {
 import type { AnnotationScoreMetadata } from "@domain/scores"
 import {
   type BadRequestError,
+  LATITUDE_TELEMETRY_PROJECT_SLUGS,
   OrganizationId,
   ProjectId,
   type RepositoryError,
@@ -192,6 +193,7 @@ export const enrichAnnotationForPublicationUseCase = Effect.fn("annotations.enri
     ...ANNOTATION_ENRICHMENT_MODEL,
     telemetry: {
       spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.annotationEnrichPublication,
+      project: LATITUDE_TELEMETRY_PROJECT_SLUGS.annotationEnrichment,
       tags: [...AI_GENERATE_TELEMETRY_TAGS.annotationEnrichPublication],
       metadata: buildProjectScopedAiMetadata(
         {

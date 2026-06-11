@@ -9,20 +9,21 @@ export const LATITUDE_API_DEFAULT_URL = "https://api.latitude.so"
 
 export interface LatitudeApiConfig {
   readonly apiKey: string
-  readonly projectSlug: string
   readonly baseUrl: string
 }
 
 /**
  * Resolves the `@platform/latitude-api` config from env.
  *
- * Reuses `LAT_LATITUDE_TELEMETRY_API_KEY` and `LAT_LATITUDE_TELEMETRY_PROJECT_SLUG`
- * from the telemetry pipeline so product-feedback annotations land in the same
- * Latitude tenant the LLM spans were exported to — this is what makes the
- * `metadata.scoreId` trace-filter lookup resolve (see PRD: "Identity strategy").
+ * Reuses `LAT_LATITUDE_TELEMETRY_API_KEY` from the telemetry pipeline so
+ * product-feedback annotations land in the same Latitude tenant the LLM spans
+ * were exported to. The target project is no longer global: each write carries
+ * its own `projectSlug` (the per-feature dogfood project the upstream span was
+ * exported to), so the `metadata.scoreId` trace-filter resolves within that
+ * project (see PRD: "Identity strategy").
  *
- * Returns `undefined` when any of the three envs is missing so the client cleanly
- * no-ops in environments that don't dogfood (local dev, CI). Mirrors the
+ * Returns `undefined` when the API key is missing so the client cleanly no-ops in
+ * environments that don't dogfood (local dev, CI). Mirrors the
  * `@platform/analytics-posthog` convention.
  *
  * Note: we deliberately do NOT read an organization id. The API key is already
@@ -36,10 +37,7 @@ export const loadLatitudeApiConfig: Effect.Effect<LatitudeApiConfig | undefined,
     const apiKey = yield* parseEnvOptional("LAT_LATITUDE_TELEMETRY_API_KEY", "string")
     if (!apiKey) return undefined
 
-    const projectSlug = yield* parseEnvOptional("LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", "string")
-    if (!projectSlug) return undefined
-
     const baseUrl = yield* parseEnvOptional("LAT_LATITUDE_API_URL", "string")
-    return { apiKey, projectSlug, baseUrl: baseUrl ?? LATITUDE_API_DEFAULT_URL }
+    return { apiKey, baseUrl: baseUrl ?? LATITUDE_API_DEFAULT_URL }
   },
 )

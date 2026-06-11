@@ -5,9 +5,11 @@ import type { LatitudeApiConfig } from "./config.ts"
 
 const CONFIG: LatitudeApiConfig = {
   apiKey: "lat_test_key",
-  projectSlug: "dogfood",
   baseUrl: "https://api.latitude.test",
 }
+
+// The target project now travels per write (the feature's dogfood project), not on the config.
+const PROJECT_SLUG = "latitude-flaggers"
 
 interface RecordedCall {
   readonly url: string
@@ -40,6 +42,7 @@ describe("createLatitudeApiClient", () => {
     // completion is the whole assertion.
     const exit = await Effect.runPromiseExit(
       client.writeAnnotation({
+        projectSlug: PROJECT_SLUG,
         upstreamScoreId: "abc",
         passed: true,
         value: 1,
@@ -70,6 +73,7 @@ describe("createLatitudeApiClient", () => {
 
     await Effect.runPromise(
       client.writeAnnotation({
+        projectSlug: PROJECT_SLUG,
         upstreamScoreId: "upstream-score-abc",
         passed: true,
         value: 1,
@@ -81,7 +85,7 @@ describe("createLatitudeApiClient", () => {
     const [call] = fake.calls
     if (!call) throw new Error("no fetch call recorded")
 
-    expect(call.url).toBe(`${CONFIG.baseUrl}/v1/projects/dogfood/annotations`)
+    expect(call.url).toBe(`${CONFIG.baseUrl}/v1/projects/${PROJECT_SLUG}/annotations`)
     expect(call.init.method).toBe("POST")
 
     const headers = new Headers(call.init.headers)
@@ -109,6 +113,7 @@ describe("createLatitudeApiClient", () => {
 
     const exit = await Effect.runPromiseExit(
       client.writeAnnotation({
+        projectSlug: PROJECT_SLUG,
         upstreamScoreId: "ambiguous",
         passed: false,
         value: 0,
@@ -134,6 +139,7 @@ describe("createLatitudeApiClient", () => {
 
     const exit = await Effect.runPromiseExit(
       client.writeAnnotation({
+        projectSlug: PROJECT_SLUG,
         upstreamScoreId: "x",
         passed: true,
         value: 1,
@@ -158,6 +164,7 @@ describe("createLatitudeApiClient", () => {
 
     const exit = await Effect.runPromiseExit(
       client.writeAnnotation({
+        projectSlug: PROJECT_SLUG,
         upstreamScoreId: "x",
         passed: true,
         value: 1,
@@ -184,7 +191,13 @@ describe("createLatitudeApiClient", () => {
     const client = createLatitudeApiClient(CONFIG, { fetch: fake.fetch, maxRetries: 0 })
 
     const exit = await Effect.runPromiseExit(
-      client.writeAnnotation({ upstreamScoreId: "x", passed: true, value: 1, feedback: "x" }),
+      client.writeAnnotation({
+        projectSlug: PROJECT_SLUG,
+        upstreamScoreId: "x",
+        passed: true,
+        value: 1,
+        feedback: "x",
+      }),
     )
 
     expect(exit._tag).toBe("Failure")
@@ -205,7 +218,15 @@ describe("createLatitudeApiClient", () => {
     const fake = recordedFetch({ status: 503, body: { error: "boom" } })
     const client = createLatitudeApiClient(CONFIG, { fetch: fake.fetch })
 
-    await Effect.runPromiseExit(client.writeAnnotation({ upstreamScoreId: "x", passed: true, value: 1, feedback: "x" }))
+    await Effect.runPromiseExit(
+      client.writeAnnotation({
+        projectSlug: PROJECT_SLUG,
+        upstreamScoreId: "x",
+        passed: true,
+        value: 1,
+        feedback: "x",
+      }),
+    )
 
     expect(fake.calls.length).toBeGreaterThan(1)
   }, 20_000)
@@ -220,7 +241,15 @@ describe("createLatitudeApiClient", () => {
     const fake = recordedFetch({ status: 503, body: { error: "boom" } })
     const client = createLatitudeApiClient(CONFIG, { fetch: fake.fetch, maxRetries: 0 })
 
-    await Effect.runPromiseExit(client.writeAnnotation({ upstreamScoreId: "x", passed: true, value: 1, feedback: "x" }))
+    await Effect.runPromiseExit(
+      client.writeAnnotation({
+        projectSlug: PROJECT_SLUG,
+        upstreamScoreId: "x",
+        passed: true,
+        value: 1,
+        feedback: "x",
+      }),
+    )
 
     expect(fake.calls).toHaveLength(1)
   })

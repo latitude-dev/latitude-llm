@@ -20,6 +20,10 @@ export const AI_GENERATE_TELEMETRY_TAGS = {
   evaluationJudgeAlignment: ["eval:execute", "alignment"],
   evaluationJudgeOptimization: ["eval:execute", "optimization"],
   evaluationProposeOptimization: ["gepa:propose"],
+  // First taxonomy-naming LLM call: proposes candidate topic themes for a cluster.
+  taxonomyProposeThemes: ["taxonomy:propose-themes"],
+  // Second taxonomy-naming LLM call: collapses the candidates into one cluster name + description.
+  taxonomyNameCluster: ["taxonomy:name-cluster"],
 } as const satisfies Record<string, readonly string[]>
 
 export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
@@ -32,6 +36,8 @@ export const AI_GENERATE_TELEMETRY_SPAN_NAMES = {
   evaluationJudgeAlignment: "evaluation.judge.alignment",
   evaluationJudgeOptimization: "evaluation.judge.optimization",
   evaluationProposeOptimization: "evaluation.propose.optimization",
+  taxonomyProposeThemes: "taxonomy.propose-themes",
+  taxonomyNameCluster: "taxonomy.name-cluster",
 } as const satisfies Record<string, string>
 
 export type ProjectScopedAiIds = {

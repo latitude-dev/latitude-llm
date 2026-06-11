@@ -1,3 +1,4 @@
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
 import { Effect } from "effect"
 import { ProductFeedbackClient } from "../ports/product-feedback-client.ts"
 
@@ -25,8 +26,13 @@ export const recordEnrichmentReviewUseCase = Effect.fn("productFeedback.recordEn
   // comments never reach the outbound payload.
   const trimmedComment = input.comment?.trim() ?? ""
 
+  // Enrichment reviews score the annotation-enrichment generation, whose spans
+  // are exported to the annotation-enrichment dogfood project.
+  const projectSlug = LATITUDE_TELEMETRY_PROJECT_SLUGS.annotationEnrichment
+
   if (input.decision === "good") {
     return yield* client.writeAnnotation({
+      projectSlug,
       upstreamScoreId: input.upstreamScoreId,
       passed: true,
       value: 1,
@@ -35,6 +41,7 @@ export const recordEnrichmentReviewUseCase = Effect.fn("productFeedback.recordEn
   }
 
   return yield* client.writeAnnotation({
+    projectSlug,
     upstreamScoreId: input.upstreamScoreId,
     passed: false,
     value: 0,

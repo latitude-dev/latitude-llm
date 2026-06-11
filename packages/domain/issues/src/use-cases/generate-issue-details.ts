@@ -7,7 +7,7 @@ import {
   buildProjectScopedAiMetadata,
 } from "@domain/ai"
 import { ScoreRepository, type ScoreSource } from "@domain/scores"
-import { IssueId, ProjectId, type RepositoryError } from "@domain/shared"
+import { IssueId, LATITUDE_TELEMETRY_PROJECT_SLUGS, ProjectId, type RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import { ISSUE_DETAILS_GENERATION_MODEL, ISSUE_DETAILS_MAX_OCCURRENCES, ISSUE_NAME_MAX_LENGTH } from "../constants.ts"
@@ -181,6 +181,7 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
       ...ISSUE_DETAILS_GENERATION_MODEL,
       telemetry: {
         spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.issueDetails,
+        project: LATITUDE_TELEMETRY_PROJECT_SLUGS.issueDiscovery,
         tags: [...AI_GENERATE_TELEMETRY_TAGS.issueDetails],
         metadata: buildProjectScopedAiMetadata(
           { organizationId: input.organizationId, projectId: input.projectId },

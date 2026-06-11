@@ -1,3 +1,4 @@
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { ProductFeedbackClient } from "../ports/product-feedback-client.ts"
@@ -20,6 +21,7 @@ describe("recordEnrichmentReviewUseCase", () => {
 
     expect(writes).toHaveLength(1)
     expect(writes[0]).toEqual({
+      projectSlug: LATITUDE_TELEMETRY_PROJECT_SLUGS.annotationEnrichment,
       upstreamScoreId: UPSTREAM_SCORE_ID,
       passed: true,
       value: 1,
@@ -35,6 +37,7 @@ describe("recordEnrichmentReviewUseCase", () => {
     })
 
     expect(writes[0]).toEqual({
+      projectSlug: LATITUDE_TELEMETRY_PROJECT_SLUGS.annotationEnrichment,
       upstreamScoreId: UPSTREAM_SCORE_ID,
       passed: false,
       value: 0,
@@ -60,6 +63,7 @@ describe("recordEnrichmentReviewUseCase", () => {
     })
 
     expect(writes[0]).toEqual({
+      projectSlug: LATITUDE_TELEMETRY_PROJECT_SLUGS.annotationEnrichment,
       upstreamScoreId: UPSTREAM_SCORE_ID,
       passed: true,
       value: 1,

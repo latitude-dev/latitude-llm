@@ -1,5 +1,10 @@
-import { AI } from "@domain/ai"
-import type { OrganizationId, ProjectId } from "@domain/shared"
+import {
+  AI,
+  AI_GENERATE_TELEMETRY_SPAN_NAMES,
+  AI_GENERATE_TELEMETRY_TAGS,
+  buildProjectScopedAiMetadata,
+} from "@domain/ai"
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS, type OrganizationId, type ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import {
@@ -63,6 +68,9 @@ const normalizeName = (name: string): string =>
     .trim()
 
 interface GenerateInput {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly clusterId: TaxonomyCluster["id"]
   readonly mode: "leaf" | "interior" | "root"
   readonly samples: readonly string[]
   readonly parentName?: string
@@ -100,6 +108,15 @@ const generateClusterName = (input: GenerateInput) =>
       const map = yield* ai.generate({
         provider: TAXONOMY_NAMING_MODEL.provider,
         model: TAXONOMY_NAMING_MODEL.model,
+        telemetry: {
+          spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyProposeThemes,
+          project: LATITUDE_TELEMETRY_PROJECT_SLUGS.taxonomy,
+          tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyProposeThemes],
+          metadata: buildProjectScopedAiMetadata(
+            { organizationId: input.organizationId, projectId: input.projectId },
+            { clusterId: input.clusterId, mode: input.mode },
+          ),
+        },
         system: `proposeCandidateThemes: propose concise candidate conversation TOPIC themes for this cluster. ${TOPIC_POLICY} ${modeContext} Return only schema-valid JSON.`,
         prompt: `${parentContext}${forbiddenContext}${retryContext}Samples:\n${sampleLines}`,
         schema: candidateThemesSchema,
@@ -109,6 +126,15 @@ const generateClusterName = (input: GenerateInput) =>
       const reduced = yield* ai.generate({
         provider: TAXONOMY_NAMING_MODEL.provider,
         model: TAXONOMY_NAMING_MODEL.model,
+        telemetry: {
+          spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.taxonomyNameCluster,
+          project: LATITUDE_TELEMETRY_PROJECT_SLUGS.taxonomy,
+          tags: [...AI_GENERATE_TELEMETRY_TAGS.taxonomyNameCluster],
+          metadata: buildProjectScopedAiMetadata(
+            { organizationId: input.organizationId, projectId: input.projectId },
+            { clusterId: input.clusterId, mode: input.mode },
+          ),
+        },
         system: `Collapse candidate themes into ONE conversation TOPIC name (2-5 words) and a one-sentence description of what the user is trying to do. ${TOPIC_POLICY} ${modeContext} The name MUST be clearly distinct from any forbidden names provided. Return only schema-valid JSON with BOTH required string keys: name and description.`,
         prompt: `${parentContext}${forbiddenContext}${retryContext}Samples:\n${sampleLines}\n\nCandidates:\n${JSON.stringify(map.object.candidates)}\n\nReturn JSON exactly like {"name":"Short topic label","description":"One sentence describing what these conversations are about."}`,
         schema: finalNameSchema,
@@ -196,6 +222,9 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
         return row === undefined ? [] : [row.summary]
       })
       generated = yield* generateWithCollisionGuard({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        clusterId: input.clusterId,
         mode: "leaf",
         samples,
         forbiddenNames: [
@@ -214,6 +243,9 @@ export const nameClusterUseCase = (input: NameClusterInput) =>
       // project-wide superset when run through the regular "interior" prompt.
       const isRoot = parent === null
       generated = yield* generateWithCollisionGuard({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        clusterId: input.clusterId,
         mode: isRoot ? "root" : "interior",
         samples: children
           .slice(0, sampleBudget(children.reduce((sum, child) => sum + child.observationCount, 0)))

@@ -92,7 +92,7 @@ export const createLatitudeApiClient = (
     writeAnnotation: (input: ProductFeedbackAnnotationInput) =>
       Effect.tryPromise({
         try: async () => {
-          await sdk.annotations.create(config.projectSlug, {
+          await sdk.annotations.create(input.projectSlug, {
             trace: {
               by: "filters",
               filters: { "metadata.scoreId": [{ op: "eq", value: input.upstreamScoreId }] },

@@ -4,6 +4,10 @@ import type { ProductFeedbackError } from "../errors.ts"
 /**
  * Payload a domain use case hands to `ProductFeedbackClient.writeAnnotation`.
  *
+ * - `projectSlug` is the dogfood project the target span was exported to. The
+ *   `metadata.scoreId` filter only resolves within a single project, so the
+ *   write must target the same per-feature project the upstream generation
+ *   landed in (e.g. flagger reviews -> `latitude-flaggers`).
  * - `upstreamScoreId` identifies the target LLM telemetry span via the
  *   `metadata.scoreId` filter — see the PRD's "Identity strategy". The adapter
  *   encodes it as `trace.by = "filters"` before calling the Latitude public API.
@@ -12,6 +16,7 @@ import type { ProductFeedbackError } from "../errors.ts"
  *   schema) there is no outbound `metadata` bag.
  */
 export interface ProductFeedbackAnnotationInput {
+  readonly projectSlug: string
   readonly upstreamScoreId: string
   readonly passed: boolean
   readonly value: number

@@ -5,6 +5,7 @@ import {
   type GenerateTelemetryCapture,
   type ProjectScopedAiIds,
 } from "@domain/ai"
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
 
 /** Org/project + issue/evaluation context shared by alignment, optimization, and GEPA activities. */
 export type EvaluationAlignmentJudgeTelemetryScope = ProjectScopedAiIds & {
@@ -26,6 +27,7 @@ export const buildEvaluationAlignmentJudgeTelemetryCapture = (input: {
   const { organizationId, projectId, issueId, evaluationId, jobId } = input.scope
   return {
     spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationJudgeAlignment,
+    project: LATITUDE_TELEMETRY_PROJECT_SLUGS.evaluations,
     tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationJudgeAlignment],
     metadata: buildProjectScopedAiMetadata(
       { organizationId, projectId },
@@ -48,6 +50,7 @@ export const buildEvaluationOptimizationJudgeTelemetryCapture = (input: {
   const { organizationId, projectId, issueId, evaluationId, jobId } = input.scope
   return {
     spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationJudgeOptimization,
+    project: LATITUDE_TELEMETRY_PROJECT_SLUGS.evaluations,
     tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationJudgeOptimization],
     metadata: buildProjectScopedAiMetadata(
       { organizationId, projectId },
@@ -70,6 +73,7 @@ export const buildEvaluationJudgeLiveTelemetryCapture = (input: {
   readonly traceId: string
 }): GenerateTelemetryCapture => ({
   spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationJudgeLive,
+  project: LATITUDE_TELEMETRY_PROJECT_SLUGS.evaluations,
   tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationJudgeLive],
   metadata: buildProjectScopedAiMetadata(
     { organizationId: input.organizationId, projectId: input.projectId },
@@ -90,6 +94,7 @@ export const buildEvaluationGepaProposeTelemetryCapture = (
   const { organizationId, projectId, issueId, evaluationId, jobId, evaluationHash, candidateHash } = scope
   return {
     spanName: AI_GENERATE_TELEMETRY_SPAN_NAMES.evaluationProposeOptimization,
+    project: LATITUDE_TELEMETRY_PROJECT_SLUGS.optimizations,
     tags: [...AI_GENERATE_TELEMETRY_TAGS.evaluationProposeOptimization],
     metadata: buildProjectScopedAiMetadata(
       { organizationId, projectId },

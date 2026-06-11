@@ -13,6 +13,7 @@ import {
   SimulationId,
   UserId,
 } from "./id.ts"
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "./telemetry-projects.ts"
 
 // ---------------------------------------------------------------------------
 // Organization, users, project, API key
@@ -326,14 +327,35 @@ export const SEED_PROJECT_NAME = "Support Agent"
 export const SEED_PROJECT_SLUG = "default-project"
 export const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
 
-// Dogfood project — receives LLM telemetry spans emitted by Latitude's own
-// system annotator + enrichment LLM calls, and the product-feedback
-// annotations written by `@platform/latitude-api`. Kept in the same org so the
-// shared API key token works for both. Matches the default
-// `LAT_LATITUDE_TELEMETRY_PROJECT_SLUG` value in `.env.example`.
-export const SEED_LATITUDE_TELEMETRY_PROJECT_ID = ProjectId("rvknrpb3afjbcb7gzw3wlbvf")
-export const SEED_LATITUDE_TELEMETRY_PROJECT_NAME = "Latitude Telemetry"
-export const SEED_LATITUDE_TELEMETRY_PROJECT_SLUG = "latitude-telemetry"
+// Dogfood projects — one per internal AI feature, mirroring
+// `LATITUDE_TELEMETRY_PROJECT_SLUGS`. Each receives the LLM generations that
+// feature exports (and, for flaggers / annotation-enrichment, the product-feedback
+// annotations written back by `@platform/latitude-api`). All live in the seed org
+// so the shared API key token authenticates every one. Slugs come from the shared
+// constant so routing and seed never drift; IDs/names are seed-only.
+export const SEED_LATITUDE_ISSUE_DISCOVERY_PROJECT_ID = ProjectId("issudiscov01afjbcb7gzwla")
+export const SEED_LATITUDE_ISSUE_DISCOVERY_PROJECT_NAME = "Latitude Issue Discovery"
+export const SEED_LATITUDE_ISSUE_DISCOVERY_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.issueDiscovery
+
+export const SEED_LATITUDE_ANNOTATION_ENRICHMENT_PROJECT_ID = ProjectId("annoenrich02afjbcb7gzwlb")
+export const SEED_LATITUDE_ANNOTATION_ENRICHMENT_PROJECT_NAME = "Latitude Annotation Enrichment"
+export const SEED_LATITUDE_ANNOTATION_ENRICHMENT_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.annotationEnrichment
+
+export const SEED_LATITUDE_FLAGGERS_PROJECT_ID = ProjectId("flagrsproj03afjbcb7gzwlc")
+export const SEED_LATITUDE_FLAGGERS_PROJECT_NAME = "Latitude Flaggers"
+export const SEED_LATITUDE_FLAGGERS_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers
+
+export const SEED_LATITUDE_EVALUATIONS_PROJECT_ID = ProjectId("evaluation04afjbcb7gzwld")
+export const SEED_LATITUDE_EVALUATIONS_PROJECT_NAME = "Latitude Evaluations"
+export const SEED_LATITUDE_EVALUATIONS_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.evaluations
+
+export const SEED_LATITUDE_OPTIMIZATIONS_PROJECT_ID = ProjectId("optimizatn05afjbcb7gzwle")
+export const SEED_LATITUDE_OPTIMIZATIONS_PROJECT_NAME = "Latitude Optimizations"
+export const SEED_LATITUDE_OPTIMIZATIONS_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.optimizations
+
+export const SEED_LATITUDE_TAXONOMY_PROJECT_ID = ProjectId("taxonomypr06afjbcb7gzwlf")
+export const SEED_LATITUDE_TAXONOMY_PROJECT_NAME = "Latitude Taxonomy"
+export const SEED_LATITUDE_TAXONOMY_PROJECT_SLUG = LATITUDE_TELEMETRY_PROJECT_SLUGS.taxonomy
 
 // ---------------------------------------------------------------------------
 // Test Mode — second org (empty-sandbox state) and Acme sandboxes

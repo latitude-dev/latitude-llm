@@ -1,4 +1,5 @@
 import { createFakeProductFeedbackClient } from "@domain/product-feedback/testing"
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { TestQueueConsumer } from "../testing/test-queue-consumer.ts"
 import { createProductFeedbackWorker } from "./product-feedback.ts"
@@ -18,6 +19,7 @@ describe("product-feedback worker", () => {
 
     expect(fake.writes).toHaveLength(1)
     expect(fake.writes[0]).toEqual({
+      projectSlug: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
       upstreamScoreId: "score-sys-1",
       passed: true,
       value: 1,
@@ -36,6 +38,7 @@ describe("product-feedback worker", () => {
     })
 
     expect(fake.writes[0]).toEqual({
+      projectSlug: LATITUDE_TELEMETRY_PROJECT_SLUGS.flaggers,
       upstreamScoreId: "score-sys-2",
       passed: false,
       value: 0,
@@ -54,6 +57,7 @@ describe("product-feedback worker", () => {
     })
 
     expect(fake.writes[0]).toEqual({
+      projectSlug: LATITUDE_TELEMETRY_PROJECT_SLUGS.annotationEnrichment,
       upstreamScoreId: "score-enrich-1",
       passed: true,
       value: 1,
@@ -72,6 +76,7 @@ describe("product-feedback worker", () => {
     })
 
     expect(fake.writes[0]).toEqual({
+      projectSlug: LATITUDE_TELEMETRY_PROJECT_SLUGS.annotationEnrichment,
       upstreamScoreId: "score-enrich-2",
       passed: false,
       value: 0,
