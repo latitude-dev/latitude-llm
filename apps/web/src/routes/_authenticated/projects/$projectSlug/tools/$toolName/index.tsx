@@ -17,6 +17,7 @@ import {
 } from "../-components/tool-formatters.ts"
 import { ToolActivityRow } from "./-components/tool-activity-row.tsx"
 import { ToolContextPanel } from "./-components/tool-context-panel.tsx"
+import { ToolDescription } from "./-components/tool-description.tsx"
 import { ToolNeighborNav } from "./-components/tool-neighbor-nav.tsx"
 import { ToolParametersExplorer } from "./-components/tool-parameters-explorer.tsx"
 import { ToolRecentCalls } from "./-components/tool-recent-calls.tsx"
@@ -197,12 +198,13 @@ function ToolDetailPageContent() {
             </>
           }
           description={
-            isLoading ? undefined : (
+            isLoading ? undefined : definition?.definition?.description ? (
+              <ToolDescription key={toolName} toolName={toolName} description={definition.definition.description} />
+            ) : (
               <Text.H5 color="foregroundMuted">
-                {definition?.definition?.description ??
-                  (notFound
-                    ? "No definition or calls were found for this tool in the selected time window."
-                    : "Definition not found — this tool was called but no chat span in this window carried its definition.")}
+                {notFound
+                  ? "No definition or calls were found for this tool in the selected time window."
+                  : "Definition not found — this tool was called but no chat span in this window carried its definition."}
               </Text.H5>
             )
           }
