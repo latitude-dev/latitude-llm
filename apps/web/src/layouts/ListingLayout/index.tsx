@@ -89,9 +89,9 @@ interface HeaderProps {
 
 function Header({ title, badge, description, actions, className }: HeaderProps) {
   return (
-    <div className={cn("flex flex-col gap-1 p-6 pb-0", className)}>
-      <div className="flex min-w-0 flex-row flex-wrap items-start gap-x-4 gap-y-2">
-        <div className="flex min-w-64 flex-1 flex-col gap-1">
+    <div className={cn("@container flex flex-col gap-1 p-6 pb-0", className)}>
+      <div className="flex min-w-0 flex-row flex-wrap items-start gap-x-4 gap-y-2 @max-[45rem]:flex-col">
+        <div className="flex min-w-64 flex-1 flex-col gap-1 @max-[45rem]:min-w-0 @max-[45rem]:flex-none">
           <div className="flex min-w-0 flex-row flex-wrap items-center gap-x-2 gap-y-1">
             {typeof title === "string" ? <Text.H4 className="min-w-0 shrink">{title}</Text.H4> : title}
             {badge ? <span className="shrink-0 flex">{badge}</span> : null}
@@ -104,7 +104,11 @@ function Header({ title, badge, description, actions, className }: HeaderProps) 
             )
           ) : null}
         </div>
-        {actions ? <div className="ml-auto flex shrink-0 flex-row items-center gap-2 self-start">{actions}</div> : null}
+        {actions ? (
+          <div className="ml-auto flex max-w-full shrink-0 flex-row flex-wrap items-center gap-2 self-start @max-[45rem]:w-full @max-[45rem]:justify-between">
+            {actions}
+          </div>
+        ) : null}
       </div>
     </div>
   )
