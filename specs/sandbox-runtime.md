@@ -66,7 +66,7 @@ Per the contract already documented in `dev-docs/evaluations.md`:
 | `issue` / `signal` | — | `{ name, description }` context of the owning entity |
 | `z` | — | Zod, for schemas passed to `llm()` and `parse()` |
 | `parse(value, schema)` | — | Validates an unknown value against a schema |
-| `llm(prompt, options?)` | `llm` | Structured generation through the host (`@domain/ai`); model/provider stay host-managed (`EVALUATION_SCRIPT_RUNTIME_MODEL`); options are host-approved only |
+| `llm(prompt, { schema })` | `llm` | Structured generation through the host (`@domain/ai`); the schema is required — schema-less calls throw in-sandbox; model/provider stay host-managed (`EVALUATION_SCRIPT_RUNTIME_MODEL`); remaining options are host-approved only |
 | `Score(value, feedback?)` | — | The single return type |
 | `Passed(value?, feedback)` / `Failed(value?, feedback)` | — | Sugar over `Score` (`value ?? 1` / `value ?? 0`); keeps stored templates valid |
 

@@ -9,7 +9,6 @@ import {
   type RunResult,
   resolveScriptCapabilities,
   runResultSchema,
-  type SchemaDescriptor,
   ScriptCompileError,
   ScriptLimitExceededError,
   type ScriptLimitKind,
@@ -132,22 +131,19 @@ const installHostLlm = (
     const rawCall: unknown = callHandle === undefined ? undefined : context.dump(callHandle)
     const call = rawCall as { prompt: string; schema?: unknown }
 
-    // Validate the descriptor synchronously, before any host work: a forged
-    // schema is a deterministic script bug and must surface as a script-side
-    // throw (→ ScriptRuntimeError), never as a transient HostCallError that
-    // the retry policy would replay.
-    let schema: SchemaDescriptor | undefined
-    if (call.schema !== undefined) {
-      const descriptor = schemaDescriptorSchema.safeParse(call.schema)
-      if (!descriptor.success) {
-        throw new Error("llm() requires a schema built with the z global")
-      }
-      schema = descriptor.data
+    // Validate the descriptor synchronously, before any host work: a missing
+    // or forged schema is a deterministic script bug and must surface as a
+    // script-side throw (→ ScriptRuntimeError), never as a transient
+    // HostCallError that the retry policy would replay.
+    const descriptor = schemaDescriptorSchema.safeParse(call.schema)
+    if (!descriptor.success) {
+      throw new Error("llm() requires a schema built with the z global")
     }
+    const schema = descriptor.data
 
     const deferred = context.newPromise()
 
-    hostLlm({ prompt: call.prompt, ...(schema !== undefined ? { schema } : {}) }).then(
+    hostLlm({ prompt: call.prompt, schema }).then(
       (result) => {
         if (state.disposed) return
         state.tokens += result.tokens

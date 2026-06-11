@@ -65,7 +65,7 @@ describe("hostile scripts die by budget", () => {
   })
 
   it("kills runs stuck on a host call that never settles by wall clock", async () => {
-    const error = await runError("await llm('x'); return Score(1)", {
+    const error = await runError("await llm('x', { schema: z.object({ ok: z.boolean() }) }); return Score(1)", {
       llm: () => new Promise(() => {}),
     })
     expect(error).toMatchObject({ _tag: "ScriptLimitExceededError", limit: "wall-clock" })

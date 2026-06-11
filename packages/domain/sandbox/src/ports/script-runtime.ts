@@ -22,9 +22,10 @@ export interface ScriptRunContext {
   readonly signal?: ScriptSubjectContext
 }
 
+/** Schema-less generation is out of contract: every `llm()` call declares its output shape. */
 export interface HostLlmCall {
   readonly prompt: string
-  readonly schema?: SchemaDescriptor
+  readonly schema: SchemaDescriptor
 }
 
 /** Metering units match score rows: `duration` ns, `cost` microcents. */

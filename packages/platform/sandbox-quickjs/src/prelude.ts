@@ -76,9 +76,10 @@ export const SANDBOX_PRELUDE = `;(() => {
   }
   if (hostLlm) {
     globalThis.llm = (prompt, options) => {
-      const call = { prompt: String(prompt) }
-      if (options && options.schema) call.schema = strip(options.schema)
-      return hostLlm(call)
+      if (!options || !options.schema) {
+        throw new TypeError("llm() requires a schema: llm(prompt, { schema: z.object({ ... }) })")
+      }
+      return hostLlm({ prompt: String(prompt), schema: strip(options.schema) })
     }
   }
 

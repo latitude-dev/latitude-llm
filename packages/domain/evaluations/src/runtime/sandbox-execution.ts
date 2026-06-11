@@ -1,7 +1,6 @@
 import { AI, AICredentialError, AIError, type GenerateTelemetryCapture } from "@domain/ai"
 import { buildSchemaFromDescriptor, type HostLlmFunction, isScoreMatch, ScriptRuntime } from "@domain/sandbox"
 import { Effect } from "effect"
-import { z } from "zod"
 import { EvaluationExecutionError } from "../errors.ts"
 import {
   EVALUATION_SCRIPT_RUNTIME_MODEL,
@@ -41,7 +40,7 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
       .pipe(Effect.catchTag("ScriptCompileError", (error) => Effect.fail(toExecutionError(error))))
 
     const llm: HostLlmFunction = async (call) => {
-      const schema = call.schema !== undefined ? buildSchemaFromDescriptor(call.schema) : z.unknown()
+      const schema = buildSchemaFromDescriptor(call.schema)
       const result = await Effect.runPromiseWith(services)(
         ai.generate({
           ...EVALUATION_SCRIPT_RUNTIME_MODEL,

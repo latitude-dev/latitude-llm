@@ -294,4 +294,20 @@ if (result.passed) {
     const error = await runError({ script, context: { conversation: [] } })
     expect(error._tag).toBe("ScriptRuntimeError")
   })
+
+  it("rejects llm calls without a schema before reaching the host", async () => {
+    const calls: HostLlmCall[] = []
+    const llm: HostLlmFunction = async (call) => {
+      calls.push(call)
+      return { object: {}, tokens: 0, duration: 0, cost: 0 }
+    }
+
+    for (const source of ["await llm('x'); return Score(1)", "await llm('x', {}); return Score(1)"]) {
+      const script = await compile(source)
+      const error = await runError({ script, context: { conversation: [] }, llm, limits: tightLimits() })
+      expect(error._tag).toBe("ScriptRuntimeError")
+      expect(error.message).toContain("llm() requires a schema")
+    }
+    expect(calls).toHaveLength(0)
+  })
 })
