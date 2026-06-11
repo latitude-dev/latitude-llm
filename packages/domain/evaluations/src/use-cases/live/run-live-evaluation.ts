@@ -10,7 +10,9 @@ import {
   type StripeSubscriptionLookup,
   type UnknownStripePlanError,
 } from "@domain/billing"
-import type { OutboxEventWriter } from "@domain/events"
+import { OutboxEventWriter } from "@domain/events"
+import { type FeatureFlagRepository, hasFeatureFlagUseCase } from "@domain/feature-flags"
+import { DETECTOR_HEALTH_WINDOW_SECONDS, DetectorHealthTracker, type ScriptRuntime } from "@domain/sandbox"
 import {
   type EvaluationScore,
   type ScoreAnalyticsRepository,
@@ -238,12 +240,15 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
+    const sandboxRuntimeEnabled = yield* hasFeatureFlagUseCase({ identifier: "evaluation-sandbox-runtime" })
+
     const executionStartedAt = performance.now()
     const execution = yield* executeLiveEvaluationUseCase({
       evaluationId: evaluation.id,
       script: evaluation.script,
       issue: issueContext,
       conversation: traceDetail.allMessages,
+      runtime: sandboxRuntimeEnabled ? "sandbox" : "legacy",
       telemetry: buildEvaluationJudgeLiveTelemetryCapture({
         organizationId: input.organizationId,
         projectId: input.projectId,
@@ -285,6 +290,41 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         traceId: input.traceId,
       },
     })
+
+    // A failed run is a silent false negative, so runs/errors are counted per
+    // owner as detector health. Accounting is best-effort: a cache hiccup
+    // must never replace the run's own outcome.
+    const detectorHealthTracker = yield* DetectorHealthTracker
+    const detectorHealth = yield* detectorHealthTracker
+      .recordRun({
+        organizationId: billingOrganizationId,
+        projectId,
+        ownerType: "evaluation",
+        ownerId: evaluation.id,
+        errored: execution.kind === "errored",
+      })
+      .pipe(Effect.catch(() => Effect.succeed(null)))
+
+    if (detectorHealth?.newlyDegraded) {
+      const outboxEventWriter = yield* OutboxEventWriter
+      yield* outboxEventWriter
+        .write({
+          eventName: "EvaluationDetectorDegraded",
+          aggregateType: "evaluation",
+          aggregateId: evaluation.id,
+          organizationId: input.organizationId,
+          payload: {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            evaluationId: evaluation.id,
+            runs: detectorHealth.runs,
+            errors: detectorHealth.errors,
+            windowSeconds: DETECTOR_HEALTH_WINDOW_SECONDS,
+          },
+        })
+        .pipe(Effect.catch(() => Effect.void))
+    }
+
     const persistedIssueId =
       execution.kind === "completed" && execution.result.passed === false ? evaluation.issueId : null
     const scoreWriteExit = yield* Effect.exit(
@@ -367,11 +407,14 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     | AI
     | BillingUsagePeriodRepository
     | BillingUsageEventRepository
+    | DetectorHealthTracker
     | EvaluationIssueRepository
     | EvaluationRepository
+    | FeatureFlagRepository
     | OutboxEventWriter
     | ScoreAnalyticsRepository
     | ScoreRepository
+    | ScriptRuntime
     | SettingsReader
     | SqlClient
     | StripeSubscriptionLookup

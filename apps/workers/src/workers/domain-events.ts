@@ -385,6 +385,10 @@ export const createDomainEventsWorker = ({
     DatasetCreated: () => Effect.void,
     EvaluationCreated: () => Effect.void,
     EvaluationAligned: () => Effect.void,
+    // Detector-health degradation is audit-only for now: the outbox row is
+    // the durable surfacing until a notification kind lands with the signals
+    // rollout (specs/sandbox-runtime.md P1-2).
+    EvaluationDetectorDegraded: () => Effect.void,
     AnnotationQueueItemCompleted: () => Effect.void,
     ProjectDeleted: (event) =>
       pub.publish(

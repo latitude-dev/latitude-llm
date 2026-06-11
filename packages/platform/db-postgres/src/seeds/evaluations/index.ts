@@ -15,23 +15,15 @@ import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 function buildJudgeScript(instructions: string): string {
   return `
 const rubric = ${JSON.stringify(instructions)}
-const completion = await llm(\`\${rubric}
+const result = await llm(
+  \`\${rubric}
 
 Issue: \${issue.name}
 Description: \${issue.description}
 
 Conversation JSON:
-\${JSON.stringify(conversation, null, 2)}
-
-Return only JSON with the shape:
-{"passed": boolean, "feedback": string}\`)
-
-const result = parse(
-  typeof completion === "string" ? JSON.parse(completion) : completion,
-  zod.object({
-    passed: zod.boolean(),
-    feedback: zod.string(),
-  }),
+\${JSON.stringify(conversation, null, 2)}\`,
+  { schema: z.object({ passed: z.boolean(), feedback: z.string() }) },
 )
 
 if (result.passed) {
@@ -90,7 +82,7 @@ const accessRecoveryMonitorScript = buildJudgeScript(
 
 const warrantyTrigger: EvaluationTrigger = {
   filter: {
-    serviceName: [{ op: "eq", value: "acme-support-agent" }],
+    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
   },
   turn: "last",
   debounce: 30,
@@ -108,7 +100,7 @@ const warrantyArchivedTrigger: EvaluationTrigger = {
 
 const combinationTrigger: EvaluationTrigger = {
   filter: {
-    serviceName: [{ op: "eq", value: "acme-support-agent" }],
+    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
   },
   turn: "every",
   debounce: 45,
@@ -117,7 +109,7 @@ const combinationTrigger: EvaluationTrigger = {
 
 const returnsTrigger: EvaluationTrigger = {
   filter: {
-    serviceName: [{ op: "eq", value: "acme-support-agent" }],
+    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
   },
   turn: "every",
   debounce: 60,
@@ -126,7 +118,7 @@ const returnsTrigger: EvaluationTrigger = {
 
 const accessTrigger: EvaluationTrigger = {
   filter: {
-    serviceName: [{ op: "eq", value: "acme-support-agent" }],
+    serviceNames: [{ op: "eq", value: "acme-support-agent" }],
   },
   turn: "last",
   debounce: 20,

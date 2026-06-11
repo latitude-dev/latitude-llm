@@ -66,7 +66,7 @@ Per the contract already documented in `dev-docs/evaluations.md`:
 | `issue` / `signal` | — | `{ name, description }` context of the owning entity |
 | `z` | — | Zod, for schemas passed to `llm()` and `parse()` |
 | `parse(value, schema)` | — | Validates an unknown value against a schema |
-| `llm(prompt, options?)` | `llm` | Structured generation through the host (`@domain/ai`); model/provider stay host-managed (`EVALUATION_SCRIPT_RUNTIME_MODEL`); options are host-approved only |
+| `llm(prompt, { schema })` | `llm` | Structured generation through the host (`@domain/ai`); the schema is required — schema-less calls throw in-sandbox; model/provider stay host-managed (`EVALUATION_SCRIPT_RUNTIME_MODEL`); remaining options are host-approved only |
 | `Score(value, feedback?)` | — | The single return type |
 | `Passed(value?, feedback)` / `Failed(value?, feedback)` | — | Sugar over `Score` (`value ?? 1` / `value ?? 0`); keeps stored templates valid |
 
@@ -162,15 +162,16 @@ The swap is deliberately boring:
 
 ### Phase 0 - Runtime package
 
-- [ ] **P0-1**: `@domain/sandbox` — `ScriptRuntime` port, `Score` contract types, capability model, error taxonomy, default limits as named constants.
-- [ ] **P0-2**: `@platform/sandbox-quickjs` — QuickJS-WASM adapter with context pooling, bytecode cache, interrupt limits, host-function bridge; adversarial test suite.
+- [x] **P0-1**: `@domain/sandbox` — `ScriptRuntime` port, `Score` contract types, capability model, error taxonomy, default limits as named constants.
+- [x] **P0-2**: `@platform/sandbox-quickjs` — QuickJS-WASM adapter with context pooling, bytecode cache, interrupt limits, host-function bridge; adversarial test suite.
+  - Implementation notes: the WASM module is the shared/reused unit while every run gets a fresh runtime+context (reusing contexts across tenant runs would leak prototype mutations across the isolation boundary), and `quickjs-emscripten`'s high-level API does not expose bytecode serialization, so the compile cache is keyed by source content hash over compile-only validation rather than persisted bytecode.
 
 **Exit gate**: a raw script with `llm()` runs end-to-end under limits in a worker and in a plain Node CLI context, with metering in `RunResult`.
 
 ### Phase 1 - Evaluations on the runtime
 
-- [ ] **P1-1**: swap `executeEvaluationScript` to sandbox execution behind a feature flag; parity test suite green; errored-run accounting wired to existing errored-score semantics.
-- [ ] **P1-2**: detector-health counters (runs/errors per owner) + degradation surfacing.
+- [x] **P1-1**: swap `executeEvaluationScript` to sandbox execution behind a feature flag (`evaluation-sandbox-runtime`); parity test suite green; errored-run accounting wired to existing errored-score semantics.
+- [x] **P1-2**: detector-health counters (runs/errors per owner) + degradation surfacing.
 
 **Exit gate**: flag on in staging; evaluations byte-compatible; template constraint ready to lift.
 

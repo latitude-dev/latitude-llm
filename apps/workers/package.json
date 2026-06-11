@@ -63,6 +63,7 @@
     "@platform/latitude-api": "workspace:*",
     "@platform/loops": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
+    "@platform/sandbox-quickjs": "workspace:*",
     "@platform/slack": "workspace:*",
     "@platform/storage-object": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",

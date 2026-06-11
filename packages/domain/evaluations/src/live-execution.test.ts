@@ -1,6 +1,8 @@
 import { AI_GENERATE_TELEMETRY_TAGS, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { Effect } from "effect"
+import { ScriptRuntimeError } from "@domain/sandbox"
+import { createFakeScriptRuntime } from "@domain/sandbox/testing"
+import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import type { LiveEvaluationExecutionError } from "./errors.ts"
 import {
@@ -160,7 +162,7 @@ describe("executeLiveEvaluationUseCase", () => {
       executeLiveEvaluationUseCase({
         ...validInput,
         telemetry,
-      }).pipe(Effect.provide(layer)),
+      }).pipe(Effect.provide(Layer.mergeAll(layer, createFakeScriptRuntime().layer))),
     )
 
     expect(result).toEqual(
@@ -197,7 +199,7 @@ describe("executeLiveEvaluationUseCase", () => {
         executeLiveEvaluationUseCase({
           ...validInput,
           script: "const result = 'invalid runtime'",
-        }).pipe(Effect.provide(layer)),
+        }).pipe(Effect.provide(Layer.mergeAll(layer, createFakeScriptRuntime().layer))),
       ),
     ).rejects.toMatchObject({
       _tag: "LiveEvaluationExecutionError",
@@ -206,6 +208,56 @@ describe("executeLiveEvaluationUseCase", () => {
     } satisfies Partial<LiveEvaluationExecutionError>)
 
     expect(calls.generate).toHaveLength(0)
+  })
+
+  it("routes sandbox-runtime executions through the script runtime and derives passed from the threshold", async () => {
+    const { layer: aiLayer, calls: aiCalls } = createFakeAI()
+    const fakeRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 0.2, feedback: "exhibits the issue", duration: 5_000, tokens: 12, cost: 3 }),
+    })
+
+    const result = await Effect.runPromise(
+      executeLiveEvaluationUseCase({
+        ...validInput,
+        // Not a template script: only executable by the sandbox runtime.
+        script: "return Failed(0.2, 'exhibits the issue')",
+        runtime: "sandbox",
+      }).pipe(Effect.provide(Layer.mergeAll(aiLayer, fakeRuntime.layer))),
+    )
+
+    expect(result).toEqual(
+      liveEvaluationExecutionResultSchema.parse({
+        result: { passed: false, value: 0.2, feedback: "exhibits the issue" },
+        duration: 5_000,
+        tokens: 12,
+        cost: 3,
+      }),
+    )
+    expect(fakeRuntime.calls.compile).toHaveLength(1)
+    expect(fakeRuntime.calls.run).toHaveLength(1)
+    expect(fakeRuntime.calls.run[0]?.context.conversation[0]?.role).toBe("user")
+    expect(fakeRuntime.calls.run[0]?.context.issue?.name).toBe("Deployment checklist omission")
+    expect(aiCalls.generate).toHaveLength(0)
+  })
+
+  it("maps sandbox runtime failures to LiveEvaluationExecutionError", async () => {
+    const { layer: aiLayer } = createFakeAI()
+    const fakeRuntime = createFakeScriptRuntime({
+      run: () => Effect.fail(new ScriptRuntimeError({ message: "detector blew up" })),
+    })
+
+    await expect(
+      Effect.runPromise(
+        executeLiveEvaluationUseCase({
+          ...validInput,
+          runtime: "sandbox",
+        }).pipe(Effect.provide(Layer.mergeAll(aiLayer, fakeRuntime.layer))),
+      ),
+    ).rejects.toMatchObject({
+      _tag: "LiveEvaluationExecutionError",
+      evaluationId,
+      message: "detector blew up",
+    } satisfies Partial<LiveEvaluationExecutionError>)
   })
 
   it("preserves AI failures from the shared AI service", async () => {
@@ -222,7 +274,7 @@ describe("executeLiveEvaluationUseCase", () => {
       Effect.runPromise(
         executeLiveEvaluationUseCase({
           ...validInput,
-        }).pipe(Effect.provide(layer)),
+        }).pipe(Effect.provide(Layer.mergeAll(layer, createFakeScriptRuntime().layer))),
       ),
     ).rejects.toBeInstanceOf(AIError)
 

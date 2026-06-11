@@ -4,7 +4,11 @@ import type { EvaluationScore } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
-import { RedisBillingSpendReservationLive, type RedisClient } from "@platform/cache-redis"
+import {
+  RedisBillingSpendReservationLive,
+  type RedisClient,
+  RedisDetectorHealthTrackerLive,
+} from "@platform/cache-redis"
 import {
   type ClickHouseClient,
   ScoreAnalyticsRepositoryLive,
@@ -16,6 +20,7 @@ import {
   BillingUsageEventRepositoryLive,
   BillingUsagePeriodRepositoryLive,
   EvaluationRepositoryLive,
+  FeatureFlagRepositoryLive,
   IssueRepositoryLive,
   OutboxEventWriterLive,
   type PostgresClient,
@@ -24,6 +29,7 @@ import {
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
+import { QuickJsScriptRuntimeLive } from "@platform/sandbox-quickjs"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 
@@ -120,8 +126,6 @@ const logExecuteFailure = (liveEvaluationsLogger: LiveEvaluationsLogger, payload
     }),
   )
 
-// TODO(eval-sandbox): when implementing live evaluation execution, use the same extract-and-call
-// approach from executeEvaluationScript for MVP, then migrate to sandboxed JS runtime.
 export const createLiveEvaluationsWorker = ({
   consumer,
   postgresClient,
@@ -141,6 +145,7 @@ export const createLiveEvaluationsWorker = ({
       withPostgres(
         Layer.mergeAll(
           EvaluationRepositoryLive,
+          FeatureFlagRepositoryLive,
           IssueRepositoryLive,
           OutboxEventWriterLive,
           ScoreRepositoryLive,
@@ -153,7 +158,9 @@ export const createLiveEvaluationsWorker = ({
         pgClient,
         OrganizationId(payload.organizationId),
       ),
+      Effect.provide(QuickJsScriptRuntimeLive),
       Effect.provide(RedisBillingSpendReservationLive(rdClient)),
+      Effect.provide(RedisDetectorHealthTrackerLive(rdClient)),
       withClickHouse(
         Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive),
         chClient,

@@ -1,5 +1,5 @@
 {
-  "name": "@platform/cache-redis",
+  "name": "@platform/sandbox-quickjs",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,14 +12,12 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@domain/billing": "workspace:*",
-    "@domain/integrations": "workspace:*",
     "@domain/sandbox": "workspace:*",
-    "@domain/sandboxes": "workspace:*",
-    "@domain/shared": "workspace:*",
-    "@domain/spans": "workspace:*",
-    "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "ioredis": "catalog:"
+    "quickjs-emscripten": "catalog:"
+  },
+  "devDependencies": {
+    "@domain/ai": "workspace:*",
+    "@domain/evaluations": "workspace:*"
   }
 }
