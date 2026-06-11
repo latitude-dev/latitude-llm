@@ -39,7 +39,6 @@ vi.mock("../clients.ts", () => ({
 }))
 
 import {
-  isConfiguredLatitudeTelemetryProjectSlug,
   prioritizeChunksForEmbedding,
   processRefreshTrace,
   resolveTraceSearchRetentionDays,
@@ -66,19 +65,6 @@ describe("prioritizeChunksForEmbedding", () => {
     ]
 
     expect(prioritizeChunksForEmbedding(chunks).map((chunk) => chunk.chunkIndex)).toEqual([2, 0])
-  })
-})
-
-describe("isConfiguredLatitudeTelemetryProjectSlug", () => {
-  it("matches only the configured Latitude telemetry project slug", () => {
-    expect(isConfiguredLatitudeTelemetryProjectSlug("latitude-telemetry", "latitude-telemetry")).toBe(true)
-    expect(isConfiguredLatitudeTelemetryProjectSlug("customer-api", "latitude-telemetry")).toBe(false)
-    expect(isConfiguredLatitudeTelemetryProjectSlug("latitude-telemetry", undefined)).toBe(false)
-    expect(isConfiguredLatitudeTelemetryProjectSlug("latitude-telemetry", "   ")).toBe(false)
-  })
-
-  it("trims the configured slug from the environment", () => {
-    expect(isConfiguredLatitudeTelemetryProjectSlug("latitude-telemetry", " latitude-telemetry ")).toBe(true)
   })
 })
 

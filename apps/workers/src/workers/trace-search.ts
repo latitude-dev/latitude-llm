@@ -100,18 +100,6 @@ export const prioritizeChunksForEmbedding = (chunks: readonly TraceSearchChunk[]
     .filter((chunk) => chunk.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
     .sort((a, b) => b.chunkIndex - a.chunkIndex)
 
-export const isConfiguredLatitudeTelemetryProjectSlug = (
-  projectSlug: string,
-  configuredProjectSlug: string | undefined,
-) => {
-  const normalizedConfiguredSlug = configuredProjectSlug?.trim()
-  return (
-    normalizedConfiguredSlug !== undefined &&
-    normalizedConfiguredSlug !== "" &&
-    projectSlug === normalizedConfiguredSlug
-  )
-}
-
 const isLatitudeTelemetryProject = (projectId: string) =>
   Effect.gen(function* () {
     const projectRepo = yield* ProjectRepository
@@ -125,9 +113,7 @@ const isLatitudeTelemetryProject = (projectId: string) =>
     )
 
     return project
-      ? Object.values(LATITUDE_TELEMETRY_PROJECT_SLUGS).some((slug) =>
-          isConfiguredLatitudeTelemetryProjectSlug(project.slug, slug),
-        )
+      ? (Object.values(LATITUDE_TELEMETRY_PROJECT_SLUGS) as string[]).includes(project.slug)
       : false
   })
 
