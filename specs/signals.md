@@ -487,7 +487,7 @@ UI: annotate → "Track this as a signal" → explanation + 3–4 example traces
    ├─ derive search_embedding from name + description
    ├─ append score-backed occurrences for the example traces
    ├─ provisionDefaultMonitorUseCase (occurrences monitor + high-severity
-   │    metric.escalating 'expected' alert + signal.regressed alert — same
+   │    metric.escalating 'expected' alert + event.regressed alert — same
    │    monitoring issues get today)
    └─ start Temporal optimize-evaluation, workflow id evaluations:generate:${signalId}  [reuse]
       └─ generates + aligns the evaluation; persists with evaluations.signal_id
