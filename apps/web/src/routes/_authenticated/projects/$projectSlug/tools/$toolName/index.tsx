@@ -191,6 +191,9 @@ function ToolDetailPageContent() {
                         { op: "lte", value: range.toIso },
                       ],
                     }),
+                    // Open the filter sidebar so the applied filters are
+                    // visible — otherwise the scoped view looks unexplained.
+                    filtersOpen: true,
                   }}
                 >
                   <Icon icon={TextAlignStartIcon} size="sm" />
