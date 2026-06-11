@@ -67,6 +67,14 @@ describe("MyRepository", () => {
 
 ### ClickHouse test setup (`@platform/testkit`)
 
+Local developers must build the chdb native binding once before running ClickHouse-backed tests:
+
+```bash
+pnpm --filter @platform/testkit chdb:build
+```
+
+Package-level `test` scripts intentionally do not run that build step; CI builds chdb once in the ClickHouse integration job before running the packages that need it.
+
 ```typescript
 import { setupTestClickHouse } from "@platform/testkit"
 import { beforeAll, describe, it } from "vitest"

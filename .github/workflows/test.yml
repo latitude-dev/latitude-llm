@@ -21,8 +21,8 @@ permissions:
 #
 # - test-unit: light packages, turbo --concurrency=4
 # - test-unit-heavy: PGlite-heavy and web, turbo --concurrency=2
-# - test-integration: chdb consumers, turbo --concurrency=1 (chdb prebuilt
-#                     so the native compile doesn't race the fan-out)
+# - test-integration: chdb consumers, turbo --concurrency=1 (chdb built once
+#                     before tests so package scripts don't compile it)
 jobs:
   test-unit:
     runs-on: ubuntu-latest
@@ -127,10 +127,9 @@ jobs:
       - name: Create .env.test from example
         run: cp .env.example .env.test
 
-      # Prebuild chdb's native binding so the ~2-3 GB compile doesn't race
-      # the api/workers/db-clickhouse test tasks. ensure-chdb-built.mjs is
-      # idempotent, so the package-level `chdb:build &&` prefixes become
-      # no-ops once the binding exists.
+      # Build chdb's native binding once for the ClickHouse-backed test jobs.
+      # Package-level test scripts intentionally do not run this locally; developers
+      # should run `pnpm --filter @platform/testkit chdb:build` once when needed.
       - name: Build chdb native bindings
         run: pnpm --filter @platform/testkit chdb:build
 

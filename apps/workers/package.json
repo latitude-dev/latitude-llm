@@ -15,7 +15,7 @@
     "test-emails:incidents": "tsx src/scripts/send-test-incident-emails.ts",
     "test-slack:notifications": "tsx src/scripts/send-test-slack-notifications.ts",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
-    "test": "pnpm --filter @platform/testkit chdb:build && vitest run --passWithNoTests --dir src"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@bull-board/api": "catalog:",
