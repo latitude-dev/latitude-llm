@@ -47,8 +47,8 @@ Consequences carried through the whole spec:
 - Signals carry **triage metadata** — priority and assignees — but **no lifecycle**. You create or delete signals; resolve/ignore semantics live on monitors.
 - The **routing centroid** (today's issue centroid) is *not* a definition. It is internal machinery that routes new human feedback and failed scores to an existing signal (hybrid pgvector + tsvector search, unchanged from issue discovery). Users never configure it. This is what dissolves the earlier "multiple detectors per signal" idea: the centroid was the second detector in disguise.
 - **Issues are signals** whose definition Latitude bootstraps: `origin = 'discovered'` (clustering pipeline) or `origin = 'annotation'` (the deliberate flow: explain the problem, point at 3–4 example traces, get a signal with a generated aligned evaluation).
-- **Moment labels** (conversation intelligence) are provisioned as default per-project signals with `type = 'label'`.
-- Every signal gets a **default monitor** (occurrences count) provisioned at creation.
+- **Moment labels** (conversation intelligence) are provisioned as default per-project signals with `type = 'semantic'` — the moment definition is the semantic anchor, matched at ingest like any other semantic signal.
+- Every signal gets a **default monitor** provisioned at creation — the same monitoring issues get today: an occurrences monitor carrying a high-severity `metric.escalating` alert in `expected` mode (the seasonal heuristic, so a firing is a high-signal event rather than noise) plus the `signal.regressed` event alert.
 
 ### Saved search
 
@@ -72,7 +72,7 @@ Consequences carried through the whole spec:
 - **Event alerts** fire on discrete events in the target stream: a new matching trace, a new signal discovered (class monitors), a regression.
 - **Metric alerts** fire on the monitor's aggregated value: threshold (absolute / multiplier / expected), and sustained escalation.
 
-Because every signal target is the same occurrence stream, today's two escalation evaluators (the issue seasonal detector and the saved-search bucket machine) merge into **one** `metric.escalating` evaluator. The seasonal grid becomes the `expected` threshold mode; `sensitivity` stays its single knob.
+Today "is this escalating?" is answered by two unrelated implementations that differ only in their input: the issue path runs the seasonal detector (`evaluateSeasonalEscalation`) over per-issue **score counts**, while the saved-search path runs a bucketed sustained-gate over query-time **trace-match counts** — and its `expected` threshold mode already calls the same seasonal detector internally. The logic shape is identical in both: *per-bucket count series → per-bucket threshold → open/close state machine*. Since every signal target now produces the same input (a bucket-count series over `signal_occurrences`), the two merge into **one** `metric.escalating` evaluator: read the series, compute the per-bucket threshold by mode (`absolute` / `multiplier` / `expected`), run one state machine. The seasonal detector survives as the threshold function of `expected` mode, with `sensitivity` as its single knob — and issue escalation stops being special: it is the default monitor's `metric.escalating` alert running in that mode.
 
 ### Incident
 
@@ -86,7 +86,7 @@ Because every signal target is the same occurrence stream, today's two escalatio
 export const SIGNAL_ORIGINS = ["user", "annotation", "discovered", "system"] as const
 export type SignalOrigin = (typeof SIGNAL_ORIGINS)[number]
 
-export const SIGNAL_TYPES = ["filter", "semantic", "evaluation", "rule", "script", "label"] as const
+export const SIGNAL_TYPES = ["filter", "semantic", "evaluation", "rule", "script"] as const
 export type SignalType = (typeof SIGNAL_TYPES)[number]
 
 export const MONITOR_TARGET_TYPES = ["signal", "savedSearch", "traces", "spans", "sessions"] as const
@@ -121,8 +121,9 @@ export type SignalConfig =
                                                                     // linked via evaluations.signal_id
   | { type: "rule";       rule: { kind: "regex" | "levenshtein" | "json-schema"; /* per-kind params */ } }
   | { type: "script";     script: string }                          // same sandboxed JS env as evaluations
-  | { type: "label";      labelSlug: string }                       // conversation-intelligence moment
 ```
+
+Moment labels are `type = 'semantic'` signals provisioned with `origin = 'system'`; there is no dedicated label type.
 
 `minSimilarity` is part of the *definition*: changing it changes membership going forward (definition-changed marker on charts), never retroactively.
 
@@ -262,7 +263,7 @@ The **Issues** tab is today's issues table in spirit (status tabs derived from d
 │  Checkout failures     filter      ▂▃▂▅▇▅▃▂      2          ● Ongoing · 2h   │
 │  Angry users           semantic    ▁▁▂▂▁▂▁▁      1          Closed · 3d ago  │
 │  PII in answers        evaluation  ▂▂▃▃▃▂▃▃      1          —                │
-│  Refund requested 🔇   label       ▃▃▃▄▃▃▃▃      1 (muted)  —                │
+│  Refund requested 🔇   semantic    ▃▃▃▄▃▃▃▃      1 (muted)  —                │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -360,7 +361,6 @@ span ingestion → ClickHouse spans insert → TracesIngested (outbox)          
          ├─ filter definitions  → FilterSet predicate in-process
          ├─ rule definitions    → compiled matcher (sandbox)
          ├─ script definitions  → sandboxed JS (same env as evaluations)
-         ├─ label definitions   → conversation-intelligence classifier output   [reuse]
          └─ matches → SignalOccurrenceRepository.append (CH insert; idempotent via sort key)
       └─ publishes monitors:evaluate (leading-edge throttle, 5 min)            [reuse shape]
 
@@ -368,7 +368,8 @@ semantic definitions (separate hop — needs trace content embeddings):
 trace_search_embeddings chunks written (existing search-indexing pipeline)     [reuse]
 └─ signals:semanticMatch (queue task per trace)
    └─ matchTraceToSemanticSignalsUseCase
-      ├─ load project semantic anchors (anchor_embedding exact scan — hundreds at most)
+      ├─ load project semantic anchors (anchor_embedding exact scan — hundreds at most;
+      │    includes system moment-label signals)
       ├─ max chunk-vs-anchor similarity ≥ config.minSimilarity → match
       └─ SignalOccurrenceRepository.append
 
@@ -388,7 +389,9 @@ UI: annotate → "Track this as a signal" → explanation + 3–4 example traces
    ├─ create signal { origin: 'annotation', type: 'evaluation', config: {} }
    ├─ seed routing centroid from the feedback embeddings (@domain/shared/centroid)  [reuse]
    ├─ append score-backed occurrences for the example traces
-   ├─ provisionDefaultMonitorUseCase (occurrences monitor + default alerts)
+   ├─ provisionDefaultMonitorUseCase (occurrences monitor + high-severity
+   │    metric.escalating 'expected' alert + signal.regressed alert — same
+   │    monitoring issues get today)
    └─ start Temporal optimize-evaluation, workflow id evaluations:generate:${signalId}  [reuse]
       └─ generates + aligns the evaluation; persists with evaluations.signal_id
 frontend polls getSignalAlignmentState (Temporal workflow.describe())           [reuse shape]
@@ -476,7 +479,7 @@ saved_searches row remains (still a bookmark)
 | `monitor_alerts.kind` | `issue.new`→`signal.created` · `issue.regressed`→`signal.regressed` · `savedSearch.match`→`signal.matched` · `savedSearch.threshold`→`metric.threshold` · `issue.escalating`+`savedSearch.escalating`→`metric.escalating` |
 | `monitor_alerts.source_*` | dropped; target moves to the owning monitor |
 | `alert_incidents.source_*` | `target_*` (values remapped in place) |
-| moment labels | provisioned `origin='system'`, `type='label'` signals per project |
+| moment labels | provisioned `origin='system'`, `type='semantic'` signals per project (the moment definition is the anchor) |
 | issue URLs / Monitors routes | redirect into signal pages |
 
 ## Open questions
