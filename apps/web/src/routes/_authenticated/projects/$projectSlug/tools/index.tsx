@@ -47,16 +47,13 @@ function serializeSorting(sorting: ToolsTableSorting): string {
 }
 
 function parseSorting(raw: string): ToolsTableSorting {
-  const [column, direction] = raw.split(":")
-  if (
-    SORT_COLUMNS.includes(column as ToolsTableSorting["column"]) &&
-    SORT_DIRECTIONS.includes(direction as ToolsTableSorting["direction"])
-  ) {
-    return {
-      column: column as ToolsTableSorting["column"],
-      direction: direction as ToolsTableSorting["direction"],
-    }
-  }
+  const [rawColumn, rawDirection] = raw.split(":")
+  // Return the allowlist constants rather than the user-provided strings so
+  // the URL param's taint ends here (CodeQL js/unvalidated-dynamic-method-call
+  // flags the sort-getter lookup otherwise).
+  const column = SORT_COLUMNS.find((candidate) => candidate === rawColumn)
+  const direction = SORT_DIRECTIONS.find((candidate) => candidate === rawDirection)
+  if (column && direction) return { column, direction }
   return DEFAULT_TOOLS_SORTING
 }
 
