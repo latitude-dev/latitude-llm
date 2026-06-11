@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+## v0.2.8 - 2026-06-11
+
+### Issues
+
+- Added a Related issues section on the issue page that combines semantic similarity with session co-occurrence, showing linked issue cards with lifecycle badges, descriptions, activity, and reason chips (ref: #3503).
+- Added issue assignee and priority across the issues list and issue page: priority-grouped rows, assignee column/filter, My issues counts, CSV/export filter support, and command-palette actions to assign issues or set priority (ref: #3505).
+
+### Notifications
+
+- Added issue-assigned notifications in a new personal notification group, delivered in-app and by email with per-assignment idempotency, while incident notifications now snapshot and display issue assignee and priority context (ref: #3505).
+
+### Tools
+
+- Added the Tools dashboard and tool detail pages, backed by ClickHouse tool analytics for defined and called tools, usage/failure/latency trends, parameters, context breakdowns, co-occurrence, recent calls, and tool-based trace/session filters (ref: #3508).
+
+### Conversation intelligence
+
+- Added Temporal workflows and activities to backfill recent session intelligence by project and recent sessions (ref: #3506).
+- Routed internal AI generations into separate dogfood telemetry projects per feature, improving issue clustering and product-feedback attribution (ref: #3390).
+
+### Telemetry
+
+- Fixed Claude Code telemetry exports for very large traces by chunking OTLP uploads, truncating oversized span attributes with metadata, advancing transcript offsets only after successful export, and hardening Stop-hook state locks (ref: #3511).
+
+### OSS self-hosting
+
+- Added single-host production self-hosting: published multi-arch Docker Hub images, a pull-only `docker-stack.yml`, production-focused `.env.example` values, S3 path-style storage support, deployment docs, and fork guards for deployment workflows (ref: #3513).
+
+### Models
+
+- Updated the bundled models.dev catalog (ref: #3510).
+
 ## v0.2.7 - 2026-06-10
 
 ### Auth
