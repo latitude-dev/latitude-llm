@@ -18,6 +18,24 @@ const _registry = {
     readonly sessionLimit: number
     readonly reason: "backoffice"
   }>(),
+  backfillRecentSessionIntelligenceWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly sessionLimit: number
+    readonly startedAfter: string
+    readonly sessionConcurrency?: number
+    readonly gardenAfter?: boolean
+  }>(),
+  backfillRecentSessionIntelligenceForProjectsWorkflow: input<{
+    readonly sessionLimitPerProject: number
+    readonly lookbackDays?: number
+    readonly startedAfter?: string
+    readonly projectConcurrency?: number
+    readonly sessionConcurrencyPerProject?: number
+    readonly gardenAfter?: boolean
+    readonly organizationId?: string
+    readonly projectId?: string
+  }>(),
   refreshEvaluationAlignmentWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string

@@ -13,6 +13,16 @@ export {
   optimizeEvaluationWorkflow,
 } from "./optimize-evaluation-workflow.ts"
 export {
+  type BackfillRecentSessionIntelligenceWorkflowInput,
+  type BackfillRecentSessionIntelligenceWorkflowResult,
+  backfillRecentSessionIntelligenceWorkflow,
+} from "./recent-session-intelligence-backfill-workflow.ts"
+export {
+  type BackfillRecentSessionIntelligenceForProjectsWorkflowInput,
+  type BackfillRecentSessionIntelligenceForProjectsWorkflowResult,
+  backfillRecentSessionIntelligenceForProjectsWorkflow,
+} from "./recent-session-intelligence-projects-backfill-workflow.ts"
+export {
   type RefreshEvaluationAlignmentWorkflowResult,
   refreshEvaluationAlignmentWorkflow,
 } from "./refresh-evaluation-alignment-workflow.ts"
