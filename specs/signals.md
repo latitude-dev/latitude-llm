@@ -153,7 +153,7 @@ export type SignalRule = {
 - `scope` reuses the shared `FilterSet`, including `gtePercentile` — so "traces above the p90 latency" is expressible today. Percentile operators are resolved against a periodically refreshed project estimate at ingest (slightly approximate at write time, exact during backfill).
 - For `evaluation` signals the scope plays the role of today's `EvaluationTrigger.filter` — see "One matching pipeline" below; `sampling`/`turn`/`debounce` stay evaluation-level settings.
 - Definition edits (anchors, threshold, scope) change membership **going forward only** (definition-changed marker on charts), never retroactively.
-- Semantic threshold UX: MVP ships a fixed default with a sensitivity control; the iterative create-time calibration loop is open question 5.
+- Semantic threshold UX: MVP ships a fixed default with a sensitivity control; an iterative create-time calibration loop (show matches → tighten/loosen → repeat) is a possible post-MVP refinement.
 
 ### Postgres: `signals` (evolves `issues`)
 
@@ -225,7 +225,7 @@ monitor_alerts
 ### Postgres: `alert_incidents` (near-unchanged)
 
 - `source_type` / `source_id` → `target_type` / `target_id` (values per the new enums).
-- `kind` values remapped per the migration table.
+- `kind` values remapped from the legacy `issue.*` / `savedSearch.*` kinds (see the `ALERT_KINDS` mapping comments).
 - New: `target_snapshot jsonb null` — the monitor's `(target, metric)` and, for saved-search targets, the resolved `query + filterSet` at open time. Same rationale as the existing `condition` snapshot.
 - Everything else (`monitor_alert_id`, `condition`, `entry_signals`, `exit_eligible_since`, backtracking) carries over.
 
@@ -532,23 +532,6 @@ saved_searches row remains (still a bookmark; plain filter tracking stays
   saved search + monitor — decision 4)
 ```
 
-## Migration (concept level)
-
-| Today | Becomes |
-| --- | --- |
-| `issues` row | `signals` row (`source` annotation→`annotation`, flagger/custom→`user`; `type='evaluation'`; centroid dropped) |
-| `issues.resolved_at` / `ignored_at` | default monitor `resolved_at` / `muted_at` |
-| issue discovery pipeline (`issues:discovery`, `issue-discovery` workflow, locked serialization, centroids) | **removed** (decision 2/3); annotation flow gains suggestion + explicit linking (flow C) |
-| `scores.issue_id` | `scores.signal_id` (rename); backfills `signal_occurrences` from immutable issue-linked scores |
-| `evaluations.issue_id` | `evaluations.signal_id` (rename) |
-| `saved_searches` | unchanged |
-| system monitors (`source_id = NULL`) | **retired**; per-signal default monitors replace them (decision 5) |
-| `monitor_alerts.kind` | `issue.new`→retired · `issue.regressed`→`event.regressed` · `savedSearch.match`→`event.matched` · `savedSearch.threshold`→`metric.threshold` · `issue.escalating`+`savedSearch.escalating`→`metric.escalating` |
-| `monitor_alerts.source_*` | dropped; target moves to the owning monitor |
-| `alert_incidents.source_*` | `target_*` (values remapped in place) |
-| moment labels | provisioned `origin='system'`, `type='semantic'` signals per project (anchor sets carried over verbatim) |
-| issue URLs / Monitors routes | issue URLs redirect into the corresponding signal pages; Monitors routes stay (the page generalizes across targets) |
-
 ## Why signal membership is materialized at write time
 
 **1. Semantic search answers a different question than filters do.** A filter is a per-row yes/no ("is this trace from the last 7 days?") — each row passes on its own merits, so filters stack for free. Semantic search with a vector index answers "the ~1,000 items *most similar in the entire corpus*". Combine them and the filter can only discard from those 1,000: searching "user frustration" + filtering "last 7 days" returns *whichever of the corpus-wide top-1,000 happen to be recent* — maybe 30 results, maybe 0 — while thousands of genuinely frustrated traces from this week sit at #5,000 in the global ranking and are never returned. Doing it correctly means scoring every trace in the window: a full scan, which is why semantic trace search already times out on large projects.
@@ -573,12 +556,3 @@ Settled during the design discussion (LAT-664 + spec review):
 5. **No class monitors.** With user-created signals only, "a new signal was discovered" alerts are meaningless; today's `source_id = NULL` system monitors dissolve into each signal's default monitor. A monitor's `target_id` is required for signal/saved-search/tool targets.
 6. **Signals per project are capped** to a fixed number per plan (this also bounds occurrence write amplification and ingest matching cost).
 7. **Scores are kept with a narrowed role** — they stop being the membership mechanism and remain the verdict ledger: evaluation pass/fail/error analytics, human-feedback ground truth for alignment, and the public `/scores` API (rationale under the occurrences table).
-
-## Open questions
-
-1. **Backfill policy.** Bounded backfill for rule/scope-evaluable signals is in scope (flow F); semantic backfill is feasible within the content-embedding TTL window (embeddings already exist) but is deferred. Exact window and quota TBD.
-2. **Per-plan signal caps.** Decided in principle (decision 6); exact numbers per plan TBD.
-3. **Session-scoped signals.** The occurrence unit is a trace (`session_id` is on the row for future use); session-membership semantics are deferred — a known limitation, accepted as the price of the trace-grained model.
-4. **Rule abstraction final shape.** The `SignalRule` config above is the starting point; the exact part-targeting granularity (per message? per tool call? message ranges?) needs a design pass with real examples before implementation.
-5. **Semantic threshold calibration loop** (post-MVP): iterative create-time tuning — show matches, accept/tighten, repeat. MVP ships a fixed default.
-6. **Ratio metrics.** The Tools dashboard headlines error *rate* and *calls per offer*, but `MonitorMetric` only expresses counts and aggregates. Failed-count `metric.escalating` in `expected` mode approximates rate alerting well; a real ratio metric kind (e.g. `{ kind: 'rate', of: 'errors' }`) is deferred until a concrete need outgrows that approximation.
