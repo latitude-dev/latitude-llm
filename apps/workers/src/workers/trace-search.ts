@@ -1,6 +1,7 @@
 import { AI } from "@domain/ai"
+import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
-import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
   buildTraceSearchDocument,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
@@ -21,6 +22,7 @@ import {
   BillingOverrideRepositoryLive,
   OrganizationRepositoryLive,
   type PostgresClient,
+  ProjectRepositoryLive,
   resolveEffectivePlanCached,
   SettingsReaderLive,
   StripeSubscriptionLookupLive,
@@ -98,6 +100,23 @@ export const prioritizeChunksForEmbedding = (chunks: readonly TraceSearchChunk[]
     .filter((chunk) => chunk.text.length >= TRACE_SEARCH_EMBEDDING_MIN_LENGTH)
     .sort((a, b) => b.chunkIndex - a.chunkIndex)
 
+const isLatitudeTelemetryProject = (projectId: string) =>
+  Effect.gen(function* () {
+    const projectRepo = yield* ProjectRepository
+    const project = yield* projectRepo.findById(ProjectId(projectId)).pipe(
+      Effect.tapError((error) =>
+        Effect.sync(() =>
+          logger.warn(`Could not resolve project ${projectId}; semantic indexing remains enabled`, error),
+        ),
+      ),
+      Effect.orElseSucceed(() => undefined),
+    )
+
+    return project
+      ? (Object.values(LATITUDE_TELEMETRY_PROJECT_SLUGS) as string[]).includes(project.slug)
+      : false
+  })
+
 /**
  * Process a trace search refresh task:
  *  1. Load canonical conversation messages for the trace.
@@ -150,6 +169,11 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
     })
 
     logger.info(`Indexed lexical search document for trace ${traceId}`)
+
+    if (yield* isLatitudeTelemetryProject(projectId)) {
+      logger.info(`Trace ${traceId} belongs to the Latitude telemetry project; skipping semantic search embeddings`)
+      return
+    }
 
     // Chunk indices are assigned in chronological order, so processing them in
     // descending order prioritizes the tail when budget pressure means we may
@@ -267,6 +291,7 @@ export const runTraceSearchRefresh = (payload: RefreshTracePayload, deps: TraceS
     withPostgres(
       Layer.mergeAll(
         BillingOverrideRepositoryLive,
+        ProjectRepositoryLive,
         SettingsReaderLive,
         StripeSubscriptionLookupLive,
         OrganizationRepositoryLive,

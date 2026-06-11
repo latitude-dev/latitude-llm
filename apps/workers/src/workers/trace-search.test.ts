@@ -8,6 +8,7 @@ const { resolveEffectivePlanCachedMock } = vi.hoisted(() => ({
 
 vi.mock("@platform/db-postgres", () => ({
   BillingOverrideRepositoryLive: {},
+  ProjectRepositoryLive: {},
   resolveEffectivePlanCached: resolveEffectivePlanCachedMock,
   SettingsReaderLive: {},
   StripeSubscriptionLookupLive: {},
@@ -37,7 +38,11 @@ vi.mock("../clients.ts", () => ({
   getRedisClient: vi.fn(() => ({})),
 }))
 
-import { prioritizeChunksForEmbedding, processRefreshTrace, resolveTraceSearchRetentionDays } from "./trace-search.ts"
+import {
+  prioritizeChunksForEmbedding,
+  processRefreshTrace,
+  resolveTraceSearchRetentionDays,
+} from "./trace-search.ts"
 
 describe("prioritizeChunksForEmbedding", () => {
   it("prioritizes tail chunks first and skips chunks below the embedding floor", () => {
