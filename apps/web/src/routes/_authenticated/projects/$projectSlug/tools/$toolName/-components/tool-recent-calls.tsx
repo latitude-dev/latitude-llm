@@ -7,11 +7,6 @@ import { TraceDetailDrawer } from "../../../-components/trace-detail-drawer.tsx"
 
 const STATUS_VARIANT = { ok: "success", error: "destructive", unset: "neutral" } as const
 
-/**
- * Most recent calls of the tool, newest first, scoped by the page-level
- * errors-only switch. Clicking a call opens its trace in a sheet overlay
- * (the issue-examples recipe) so the page context is preserved.
- */
 export function ToolRecentCalls({
   projectId,
   toolName,
@@ -110,8 +105,7 @@ export function ToolRecentCalls({
   ]
 
   return (
-    // Plain background — the table rows are themselves bg-secondary, which
-    // reads muddy when nested inside another bg-secondary panel.
+    // Plain background: the table rows are themselves bg-secondary.
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex items-center justify-between">
         <Text.H5M color="foreground">{errorsOnly ? "Recent failed calls" : "Recent calls"}</Text.H5M>

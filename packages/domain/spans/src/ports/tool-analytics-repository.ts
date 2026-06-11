@@ -57,8 +57,8 @@ export interface ToolAnalyticsRepositoryShape {
 
   /**
    * Most common top-level `tool_input` keys and their most common values,
-   * computed over a sample of the most recent calls in the range (see
-   * `sampleSize` in the result — surface it in the UI).
+   * computed over a sample of the most recent calls in the range
+   * (`sampleSize` in the result).
    */
   getToolParameterStats(
     input: ToolAnalyticsScope & {

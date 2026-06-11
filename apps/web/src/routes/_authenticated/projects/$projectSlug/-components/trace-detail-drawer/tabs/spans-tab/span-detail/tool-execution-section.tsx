@@ -25,8 +25,6 @@ export function ToolExecutionSection({ span }: { readonly span: SpanDetailRecord
   const parsedInput = useMemo(() => tryParseJson(span.toolInput), [span.toolInput])
   const parsedOutput = useMemo(() => tryParseJson(span.toolOutput), [span.toolOutput])
   const toolName = span.toolName || span.name
-  // The Tools dashboard link only makes sense for named tools, behind the
-  // flag, on routes that carry a project slug.
   const { projectSlug } = useParams({ strict: false })
   const toolsEnabled = useHasFeatureFlag("tools")
   const showToolLink = toolsEnabled && Boolean(span.toolName) && typeof projectSlug === "string"

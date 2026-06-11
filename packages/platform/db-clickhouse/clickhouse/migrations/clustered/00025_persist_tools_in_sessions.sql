@@ -3,18 +3,6 @@
 
 -- Persist called tools on the sessions rollup — clustered variant.
 -- See unclustered/00025_persist_tools_in_sessions.sql for full notes.
---
--- Persist called tools on the sessions rollup, mirroring models/providers,
--- so tools filters read a plain array column instead of a correlated spans
--- subquery. Only *called* tools (execute_tool spans) are rolled up — tools
--- *defined* on chat spans (tool_names) stay a spans-only concern: they are
--- per-agent-config metadata, not session activity, and the sessions/traces
--- tools filter means "at least one call of the tool".
---
--- 00027 backfills rows written before this MV rebuild. Spans ingested in the
--- DROP→CREATE VIEW window miss the rollup (same exposure 00016 accepted);
--- the backfill repairs `tools` for that window because uniq-array states
--- merge idempotently.
 
 ALTER TABLE sessions ON CLUSTER default
     ADD COLUMN IF NOT EXISTS tools
@@ -22,13 +10,11 @@ ALTER TABLE sessions ON CLUSTER default
 
 DROP VIEW IF EXISTS sessions_mv ON CLUSTER default;
 
+-- View body restates 00016 with `tools` added; see 00016 for column semantics.
 CREATE MATERIALIZED VIEW IF NOT EXISTS sessions_mv ON CLUSTER default TO sessions
 AS SELECT
     s.organization_id,
     s.project_id,
-    -- Every trace must paginate as a session (see 0-problems.md core constraint).
-    -- Spans with no gen_ai.conversation.id synthesize a session keyed on
-    -- trace_id, so orphan traces surface as 1-trace sessions.
     coalesce(nullIf(s.session_id, ''), toString(s.trace_id))         AS session_id,
 
     uniqExactState(s.trace_id)                                       AS trace_count,
@@ -38,15 +24,8 @@ AS SELECT
 
     min(s.start_time)                                                AS min_start_time,
     max(s.end_time)                                                  AS max_end_time,
-    -- Latest span start in the session. Sort by this DESC for
-    -- "most recently active" sessions — mirrors how traces use
-    -- start_time as the activity-recency signal.
     max(s.start_time)                                                AS max_start_time,
 
-    -- Active execution time: sum of root-span durations across the session's
-    -- traces. Wall-clock is recoverable from min/max_*_time directly. See
-    -- 1-parity-traces-sessions.md §"On duration_ns semantics" for rationale
-    -- and limitations (multi-root, concurrent traces, runaway end_time).
     sum(if(
         (s.parent_span_id = '' OR s.parent_span_id = '0000000000000000')
             AND s.end_time > s.start_time,
@@ -81,8 +60,6 @@ AS SELECT
         s.operation = 'execute_tool' AND s.tool_name != '')          AS tools,
     argMaxIfState(s.simulation_id, s.start_time, s.simulation_id != '') AS simulation_id,
 
-    -- Root detection: both bare empty and the all-zeros OTLP sentinel count
-    -- as roots. Same predicate used for duration_ns above.
     argMinIfState(s.span_id, s.start_time,
         s.parent_span_id = '' OR s.parent_span_id = '0000000000000000') AS root_span_id,
     argMinIfState(s.name, s.start_time,
@@ -96,10 +73,7 @@ AS SELECT
 
 FROM spans AS s
 -- Repeat the coalesce expression in GROUP BY (rather than referencing the
--- `session_id` SELECT alias). `spans` also has a `session_id` column, and
--- with `prefer_column_name_to_alias = 1` CH would group by the raw column
--- instead of the coalesced key — silently collapsing every orphan into a
--- single empty-string session row.
+-- `session_id` SELECT alias) — see the 00016 GROUP BY comment.
 GROUP BY
     s.organization_id,
     s.project_id,

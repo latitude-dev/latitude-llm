@@ -40,10 +40,6 @@ function ChartPanel({
   )
 }
 
-/**
- * Activity row of the tool detail page: calls + failures over time (wide)
- * and p50 call latency over time (fixed aside).
- */
 export function ToolActivityRow({
   projectId,
   toolName,

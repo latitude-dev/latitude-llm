@@ -36,11 +36,8 @@ function denseBuckets(
   return result
 }
 
-/**
- * Pure-div per-row sparkline of a tool's calls over the page range. Buckets
- * with failures tint rose. Deliberately not an ECharts instance — the list
- * renders one of these per row.
- */
+// Pure-div sparkline — deliberately not an ECharts instance, since the list
+// renders one of these per row.
 export function ToolTrendBar({
   buckets,
   fromIso,

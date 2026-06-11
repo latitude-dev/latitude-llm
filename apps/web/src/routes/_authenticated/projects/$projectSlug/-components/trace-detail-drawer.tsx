@@ -120,11 +120,7 @@ export type TraceDetailDrawerProps = {
   readonly urlSyncedTabs?: boolean
   /** Used when `urlSyncedTabs` is false; defaults to `"trace"`. */
   readonly initialTab?: TabId
-  /**
-   * Pre-selects a span (pair with `initialTab="spans"` to land on its detail).
-   * Used when `urlSyncedTabs` is false; URL-synced contexts read `spanId` from
-   * the URL instead.
-   */
+  /** Pre-selects a span when `urlSyncedTabs` is false; pair with `initialTab="spans"`. */
   readonly initialSpanId?: string
   /** Overrides the default close control tooltip / screen-reader hint. */
   readonly closeLabel?: ReactNode

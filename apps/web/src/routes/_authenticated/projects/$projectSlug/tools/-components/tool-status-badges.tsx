@@ -3,7 +3,6 @@ import { formatCount } from "@repo/utils"
 import type { ToolSummaryRecord } from "../../../../../../domains/tools/tools.functions.ts"
 import { formatPercent, getToolStatuses, TOOL_CRITICAL_ERROR_RATE } from "./tool-formatters.ts"
 
-/** Status badges for one tool: Unused / Failing / No definition. */
 export function ToolStatusBadges({ tool }: { readonly tool: ToolSummaryRecord }) {
   const statuses = getToolStatuses(tool)
   if (statuses.length === 0) return null

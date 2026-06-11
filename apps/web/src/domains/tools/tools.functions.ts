@@ -20,9 +20,7 @@ import { z } from "zod"
 import { getClickhouseClient } from "../../server/clients.ts"
 import { resolveOrgScope } from "../../server/resolve-org-scope.ts"
 
-// ---------------------------------------------------------------------------
-// Wire records (Dates serialized to ISO strings)
-// ---------------------------------------------------------------------------
+// Wire records: Dates serialized to ISO strings.
 
 export interface ToolUsageMetricsRecord {
   readonly calls: number
@@ -147,10 +145,6 @@ const toRecentToolCallRecord = (call: RecentToolCall): RecentToolCallRecord => (
   toolOutputTruncated: call.toolOutputTruncated,
 })
 
-// ---------------------------------------------------------------------------
-// Input schemas
-// ---------------------------------------------------------------------------
-
 const toolsScopeSchema = z.object({
   sandboxOrgId: z.string().optional(),
   projectId: z.string(),
@@ -166,10 +160,6 @@ const toScope = (orgId: OrganizationId, data: z.infer<typeof toolsScopeSchema>):
   from: new Date(data.fromIso),
   to: new Date(data.toIso),
 })
-
-// ---------------------------------------------------------------------------
-// Server functions
-// ---------------------------------------------------------------------------
 
 export const listProjectTools = createServerFn({ method: "GET" })
   .inputValidator(

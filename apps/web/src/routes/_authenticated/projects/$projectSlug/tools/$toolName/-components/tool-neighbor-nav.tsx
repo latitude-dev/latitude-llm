@@ -6,11 +6,8 @@ import { useMemo } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { type ToolsTimeRange, useProjectTools } from "../../../../../../../domains/tools/tools.collection.ts"
 
-/**
- * Previous/next-tool navigation for the full-page tool view, cycling the
- * default list order (calls desc). `J` = next, `K` = previous, suppressed
- * while a trace sheet is open so paging a trace never swaps the tool.
- */
+// J/K hotkeys are suppressed while a trace sheet is open so paging a trace
+// never swaps the tool.
 export function ToolNeighborNav({
   projectId,
   projectSlug,

@@ -35,7 +35,6 @@ function AggregationItem({
   )
 }
 
-/** Count + share tile, e.g. "1.2K · 34%". */
 function countWithShare(count: number, total: number): string {
   if (total === 0) return formatCount(count)
   return `${formatCount(count)} · ${formatPercent(count / total)}`

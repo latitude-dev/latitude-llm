@@ -14,7 +14,7 @@ import {
   type RecentToolCallRecord,
 } from "./tools.functions.ts"
 
-/** Time window shared by every tools query (ISO strings, range inclusive). */
+/** Inclusive time window shared by every tools query. */
 export interface ToolsTimeRange {
   readonly fromIso: string
   readonly toIso: string

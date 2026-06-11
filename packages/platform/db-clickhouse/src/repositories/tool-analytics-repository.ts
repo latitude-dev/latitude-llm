@@ -24,17 +24,14 @@ import { Effect, Layer } from "effect"
 // Constants & helpers
 // ---------------------------------------------------------------------------
 
-// ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it. (Mirrors the
-// helper used in span-repository.ts.)
+// ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
 const toClickhouseDateTime = (date: Date): string => date.toISOString().replace("Z", "")
 
-// Safety bound on the unified tool list. Tool names are LowCardinality by
-// nature; projects with more distinct names than this are pathological.
+// Safety bound on the unified tool list; more distinct names is pathological.
 const TOOL_LIST_LIMIT = 500
 
-// Recent-calls sample used for parameter stats. Distributions converge fast,
-// so a bounded recent sample captures the shape while bounding the cost of
-// JSON-parsing every tool_input payload.
+// Recent-calls sample for parameter stats — bounds the cost of JSON-parsing
+// every tool_input payload.
 const TOOL_PARAM_SAMPLE_LIMIT = 10_000
 // Parameter values are truncated before grouping to bound aggregation state.
 const TOOL_PARAM_VALUE_CAP = 256
@@ -72,7 +69,6 @@ const scopeParams = (scope: ToolAnalyticsScope) => ({
   to: toClickhouseDateTime(scope.to),
 })
 
-// Appended to CALLS_FILTER for the detail page's failure-analysis mode.
 const errorsClause = (errorsOnly: boolean | undefined): string => (errorsOnly ? " AND status_code = 2" : "")
 
 // SQL column per context dimension. Fixed map — never interpolate user input.
@@ -290,7 +286,6 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
   ToolAnalyticsRepository,
   Effect.gen(function* () {
     return {
-      // -- listToolsWithMetrics ---------------------------------------------
       listToolsWithMetrics: (input) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -414,7 +409,6 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
             )
         }),
 
-      // -- getToolDefinition --------------------------------------------------
       getToolDefinition: (input) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -455,7 +449,6 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
             )
         }),
 
-      // -- getToolUsageSummary ------------------------------------------------
       getToolUsageSummary: (input) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -494,7 +487,6 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
             )
         }),
 
-      // -- getToolCallHistogram -----------------------------------------------
       getToolCallHistogram: (input) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -535,7 +527,6 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
             )
         }),
 
-      // -- getToolParameterStats ----------------------------------------------
       getToolParameterStats: (input) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -619,7 +610,6 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
             )
         }),
 
-      // -- getToolContextBreakdown --------------------------------------------
       getToolContextBreakdown: (input) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -677,7 +667,6 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
             )
         }),
 
-      // -- getToolCoOccurrence --------------------------------------------------
       getToolCoOccurrence: (input) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
@@ -724,7 +713,6 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
             )
         }),
 
-      // -- listRecentToolCalls ----------------------------------------------
       listRecentToolCalls: (input) =>
         Effect.gen(function* () {
           const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>

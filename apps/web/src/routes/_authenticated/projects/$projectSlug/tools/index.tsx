@@ -117,8 +117,8 @@ function ToolsPageContent() {
     [searchInput],
   )
 
-  // Default window: last 30 days. Recomputed only when the URL params change,
-  // so query keys stay stable across re-renders.
+  // Recomputed only when the URL params change, so query keys stay stable
+  // across re-renders.
   const range = useMemo(() => {
     const toMs = timeTo ? Date.parse(timeTo) : Date.now()
     const fromMs = timeFrom ? Date.parse(timeFrom) : toMs - DEFAULT_TOOLS_RANGE_SECONDS * 1000

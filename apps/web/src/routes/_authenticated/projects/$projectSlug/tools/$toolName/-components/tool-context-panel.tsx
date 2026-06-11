@@ -52,12 +52,8 @@ function BreakdownRow({
   )
 }
 
-/**
- * "Where it's used": tag breakdown over the tool's calls, plus the tools it
- * most often shares traces with — each co-occurring tool links to its own
- * page. (Model/provider breakdowns deliberately omitted: most projects run a
- * single model, and the traces filter answers that question better.)
- */
+// Model/provider breakdowns are deliberately omitted: most projects run a
+// single model, and the traces filter answers that question better.
 export function ToolContextPanel({
   projectId,
   projectSlug,

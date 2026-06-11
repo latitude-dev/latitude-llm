@@ -65,7 +65,6 @@ function ToolDetailPage() {
   return <ToolDetailPageContent />
 }
 
-/** Single metric tile, sized like the issue summary tiles. */
 function Tile({ label, children }: { readonly label: string; readonly children: ReactNode }) {
   return (
     <div className="flex min-w-[120px] flex-col gap-1">
@@ -113,7 +112,6 @@ function ToolDetailPageContent() {
   const [timeTo] = useParamState("toolsTimeTo", "")
   const [errorsParam, setErrorsParam] = useParamState("toolErrors", "")
   const errorsOnly = errorsParam === "1"
-  // A trace sheet being open suppresses the J/K prev/next-tool hotkeys.
   const [overlayActive, setOverlayActive] = useState(false)
 
   const range = useMemo(() => {
@@ -182,7 +180,6 @@ function ToolDetailPageContent() {
                   to="/projects/$projectSlug"
                   params={{ projectSlug }}
                   search={{
-                    // Traces page filter param: this tool + the same window.
                     filters: JSON.stringify({
                       tools: [{ op: "in", value: [toolName] }],
                       startTime: [

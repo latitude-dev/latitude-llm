@@ -3,10 +3,6 @@
 
 -- Persist called tools on the traces rollup — clustered variant.
 -- See unclustered/00026_persist_tools_in_traces.sql for full notes.
---
--- Persist called tools on the traces rollup — same change as 00025 made to
--- sessions; see that migration for the full rationale (called vs defined
--- tools, backfill interplay with 00027, MV-rebuild window exposure).
 
 ALTER TABLE traces ON CLUSTER default
     ADD COLUMN IF NOT EXISTS tools

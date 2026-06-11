@@ -30,7 +30,6 @@ function schemaTypeLabel(schema: Record<string, unknown>): string {
   return ""
 }
 
-/** Defined parameters by name, from the JSON-Schema `parameters` of the definition payload. */
 function parseDefinedParameters(definitionJson: string): ReadonlyMap<string, DefinedParameter> {
   const result = new Map<string, DefinedParameter>()
   if (!definitionJson) return result
@@ -79,12 +78,8 @@ function ValueBar({ fraction, muted }: { readonly fraction: number; readonly mut
   )
 }
 
-/**
- * Every parameter we know of — defined in the tool's schema or observed in
- * call inputs — with each one's most common values over a recent sample.
- * "Not included" counts the sampled calls that omit the parameter, so
- * defined-but-never-sent parameters read as "Not included · 100%".
- */
+// "Not included" counts the sampled calls that omit a parameter, so
+// defined-but-never-sent parameters read as "Not included · 100%".
 export function ToolParametersExplorer({
   projectId,
   toolName,
@@ -151,7 +146,6 @@ export function ToolParametersExplorer({
         </div>
       ) : (
         <div className="flex min-h-0 flex-col gap-4 sm:flex-row">
-          {/* Parameter rail: defined-but-never-sent params render dimmed. */}
           <div className="flex min-w-0 flex-col gap-1 overflow-y-auto sm:max-h-[280px] sm:w-[240px] sm:shrink-0">
             {parameters.map((parameter) => {
               const isActive = parameter.name === activeName
@@ -207,7 +201,6 @@ export function ToolParametersExplorer({
               )
             })}
           </div>
-          {/* Top values of the selected parameter, as shares of all sampled calls. */}
           <div className="flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto border-t pt-3 sm:max-h-[280px] sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
             {active ? (
               sampleSize === 0 ? (
