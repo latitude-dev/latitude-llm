@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## v0.2.9 - 2026-06-11
+
+### Monitors
+
+- Improved monitor discoverability with separate Search and Issue monitor tabs, a Watching column that links back to trace searches, and a save-search flow that can create a monitor in one step (ref: #3509).
+- Added monitored-state chips and monitor picker details to saved-search controls, including severity dots and muted-monitor badges so muted monitors remain visible while notifications stay suppressed (ref: #3509, #3522).
+- Added shared severity threshold controls for email and Slack notifications, backed by a unified severity palette used across web charts, Slack blocks, email badges, and pickers (ref: #3509).
+- Hardened saved-search monitor sweeps by isolating per-alert defects and resolving percentile filters consistently with the traces page (ref: #3509).
+
+### Tools
+
+- Added a Common errors breakdown to tool detail error view, clustering similar failed-call outputs with counts, shares, samples, and error-type badges (ref: #3514).
+- Improved tool dashboards with absolute failed-call counts in the error-rate column, clamped long descriptions behind a Show more modal, and preserved search/time params when navigating between tools or opening filtered traces (ref: #3514).
+
+### Traces
+
+- Added span filtering and navigation from session metadata into trace details, including model filter links and a spans filter bar (ref: c05d32f).
+
+### Web UI
+
+- Improved narrow-width usability across navigation, listing headers, toolbars, popovers, settings pages, filters panels, and trace/session drawers so dense pages wrap or overlay instead of clipping or crushing content (ref: #3520).
+
+### Conversation intelligence
+
+- Reduced taxonomy gardening memory pressure by capping clustering samples, using slim clustering rows, and reassigning observations inside ClickHouse instead of round-tripping full rows through workers (ref: #3517).
+- Skipped trace-search embeddings for Latitude telemetry projects to avoid indexing Latitude's own dogfood telemetry (ref: #3436).
+
 ## v0.2.8 - 2026-06-11
 
 ### Issues
