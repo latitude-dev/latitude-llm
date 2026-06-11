@@ -9,8 +9,8 @@ ALTER TABLE spans
     ADD COLUMN IF NOT EXISTS tool_names Array(LowCardinality(String))
         MATERIALIZED arrayMap(x -> JSONExtractString(x, 'name'), JSONExtractArrayRaw(tool_definitions))
         CODEC(ZSTD(1)) AFTER tool_output,
-    ADD INDEX IF NOT EXISTS idx_tool_name  tool_name  TYPE bloom_filter(0.01) GRANULARITY 4,
-    ADD INDEX IF NOT EXISTS idx_tool_names tool_names TYPE bloom_filter(0.01) GRANULARITY 4;
+    ADD INDEX IF NOT EXISTS idx_tool_name  tool_name  TYPE bloom_filter(0.01) GRANULARITY 2,
+    ADD INDEX IF NOT EXISTS idx_tool_names tool_names TYPE bloom_filter(0.01) GRANULARITY 2;
 
 -- +goose Down
 
