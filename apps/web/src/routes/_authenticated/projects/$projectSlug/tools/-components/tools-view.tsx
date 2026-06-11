@@ -31,21 +31,26 @@ export interface ToolsTableSorting {
 
 export const DEFAULT_TOOLS_SORTING: ToolsTableSorting = { column: "calls", direction: "desc" }
 
-const SORT_VALUE: Record<ToolsTableSorting["column"], (tool: ToolSummaryRecord) => number> = {
-  calls: (tool) => tool.metrics?.calls ?? -1,
-  tracesPct: (tool) => tool.metrics?.traceUsageRate ?? -1,
-  selectionRate: (tool) => tool.selectionRate ?? -1,
-  errorRate: (tool) => tool.metrics?.errorRate ?? -1,
-  duration: (tool) => tool.metrics?.p95DurationNs ?? -1,
-  lastCalled: (tool) => (tool.metrics ? Date.parse(tool.metrics.lastUsed) : -1),
-}
+const SORT_BY_CALLS = (tool: ToolSummaryRecord): number => tool.metrics?.calls ?? -1
+
+// A Map (not a plain object) so a sort column that somehow escaped URL-param
+// validation looks up nothing instead of dispatching to an Object.prototype
+// member (CodeQL js/unvalidated-dynamic-method-call).
+const SORT_VALUE = new Map<ToolsTableSorting["column"], (tool: ToolSummaryRecord) => number>([
+  ["calls", SORT_BY_CALLS],
+  ["tracesPct", (tool) => tool.metrics?.traceUsageRate ?? -1],
+  ["selectionRate", (tool) => tool.selectionRate ?? -1],
+  ["errorRate", (tool) => tool.metrics?.errorRate ?? -1],
+  ["duration", (tool) => tool.metrics?.p95DurationNs ?? -1],
+  ["lastCalled", (tool) => (tool.metrics ? Date.parse(tool.metrics.lastUsed) : -1)],
+])
 
 /** Client-side sort — the whole list is loaded in one query. */
 export function sortTools(
   tools: readonly ToolSummaryRecord[],
   sorting: ToolsTableSorting,
 ): readonly ToolSummaryRecord[] {
-  const getValue = SORT_VALUE[sorting.column]
+  const getValue = SORT_VALUE.get(sorting.column) ?? SORT_BY_CALLS
   const sign = sorting.direction === "asc" ? 1 : -1
   return [...tools].sort((a, b) => {
     const diff = (getValue(a) - getValue(b)) * sign
