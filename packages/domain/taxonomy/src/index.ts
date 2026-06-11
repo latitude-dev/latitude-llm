@@ -123,7 +123,9 @@ export {
 export {
   type ListTaxonomyNoiseInput,
   type ListTaxonomyObservationClusterInput,
+  type ReassignTaxonomyObservationByIdInput,
   type ReassignTaxonomyObservationInput,
+  type TaxonomyClusteringObservation,
   type TaxonomyObservationClusterAssignmentCount,
   type TaxonomyObservationClusterOccurrence,
   type TaxonomyObservationClusterTrendCounts,

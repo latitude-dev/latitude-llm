@@ -10,8 +10,10 @@
  *      representative of the whole window rather than biased toward the last
  *      few hours. On large tenants (5M sessions/month) this spreads the budget
  *      across days; small tenants whose corpus fits under the cap see their
- *      whole live window. The sample is deterministic (hash-ordered, no
- *      rand()) so a gardening pass replays identically under Temporal.
+ *      whole live window. The sample is slim (id, start time, embedding) so
+ *      projection metadata does not round-trip through the workflow worker.
+ *      The sample is deterministic (hash-ordered, no rand()) so a gardening
+ *      pass replays identically under Temporal.
  *   2. Build the tree top-down with `buildHierarchicalClusters` using the
  *      per-depth schedule. The schedule encodes broad-at-the-root,
  *      narrow-at-the-leaves without per-corpus tuning.
@@ -26,8 +28,9 @@
  *   5. Materialize and persist the rows. `save` upserts on id, so a
  *      continuation updates its predecessor's row in place (new centroid,
  *      preserved age, carried-over name when the topic barely moved).
- *   6. Re-assign every member observation directly to its leaf cluster
- *      (interior nodes carry derived counts only).
+ *   6. Re-assign every member observation directly to its leaf cluster with a
+ *      ClickHouse-side INSERT SELECT keyed by observation id (interior nodes
+ *      carry derived counts only).
  *   7. Deprecate every previously-active cluster that no new node continued.
  *   8. Emit `continuation` rows for reused ids, `birth` rows for new nodes,
  *      and `death` rows for the deprecated clusters.
@@ -248,7 +251,7 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
     const observationsRepo = yield* TaxonomyObservationRepository
     const clustersRepo = yield* TaxonomyClusterRepository
 
-    const observations = yield* observationsRepo.listForClustering({
+    const observations = yield* observationsRepo.listForClusteringSample({
       organizationId: input.organizationId,
       projectId: input.projectId,
       since: lookbackStart(now),
@@ -411,7 +414,7 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
           const confidence = Math.max(0, Math.min(1, cosineSimilarityNormalized(embedding, leaf.centroid)))
           return [
             {
-              observation,
+              observationId: observation.observationId,
               assignedClusterId: leaf.clusterId,
               assignmentMethod: "gardening_birth" as const,
               assignmentConfidence: confidence,
@@ -421,7 +424,11 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
           ]
         }),
       )
-      yield* observationsRepo.reassignMany(reassignments)
+      yield* observationsRepo.reassignManyById({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        assignments: reassignments,
+      })
     }
 
     // Deprecate every previously-active cluster that no new node continued.

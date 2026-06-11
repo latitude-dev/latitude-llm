@@ -20,7 +20,7 @@
  *
  * Why bisecting K-means with auto-K instead of HDBSCAN / single-linkage:
  *   - We rebuild the whole tree per gardening pass over a bounded sample
- *     (≤10k) and want a single algorithmic primitive that gives both a
+ *     (≤1.5k) and want a single algorithmic primitive that gives both a
  *     coarse-to-fine partition AND a stable per-node centroid suitable for
  *     online assignment. Spherical k-means satisfies both. HDBSCAN is not
  *     ergonomic in JS and produces clusters that don't carry well-defined

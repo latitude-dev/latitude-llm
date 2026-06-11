@@ -86,6 +86,30 @@ export const createFakeTaxonomyObservationRepository = (
         }
       }),
 
+    reassignManyById: ({ organizationId, projectId, assignments }) =>
+      Effect.sync(() => {
+        for (const {
+          observationId,
+          assignedClusterId,
+          assignmentMethod,
+          assignmentConfidence,
+          reassignmentRunId,
+          indexedAt,
+        } of assignments) {
+          const key = observationKey(organizationId, projectId, observationId)
+          const existing = rows.get(key)
+          if (!existing) continue
+          setVersioned(key, {
+            ...existing,
+            assignedClusterId,
+            assignmentMethod,
+            assignmentConfidence,
+            reassignmentRunId,
+            indexedAt,
+          })
+        }
+      }),
+
     filterExistingIds: ({ organizationId, projectId, observationIds }) =>
       Effect.sync(() => {
         const requested = new Set(observationIds)
@@ -145,6 +169,41 @@ export const createFakeTaxonomyObservationRepository = (
           .sort(
             (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
           )
+      }),
+
+    listForClusteringSample: ({ organizationId, projectId, since, limit }) =>
+      Effect.sync(() => {
+        const eligible = [...rows.values()].filter(
+          (observation) =>
+            observation.organizationId === organizationId &&
+            observation.projectId === projectId &&
+            observation.embedding.length > 0 &&
+            observation.startTime >= since,
+        )
+        const dayBuckets = new Map<string, TaxonomyMomentObservation[]>()
+        for (const observation of eligible) {
+          const day = observation.startTime.toISOString().slice(0, 10)
+          const bucket = dayBuckets.get(day) ?? []
+          bucket.push(observation)
+          dayBuckets.set(day, bucket)
+        }
+        const ranked = [...dayBuckets.values()].flatMap((bucket) =>
+          [...bucket]
+            .sort((a, b) => deterministicHash(a.observationId) - deterministicHash(b.observationId))
+            .map((observation, rank) => ({ observation, rank })),
+        )
+        return ranked
+          .sort((a, b) => a.rank - b.rank || a.observation.observationId.localeCompare(b.observation.observationId))
+          .slice(0, limit)
+          .map((entry) => entry.observation)
+          .sort(
+            (a, b) => b.startTime.getTime() - a.startTime.getTime() || a.observationId.localeCompare(b.observationId),
+          )
+          .map((observation) => ({
+            observationId: observation.observationId,
+            embedding: observation.embedding,
+            startTime: observation.startTime,
+          }))
       }),
 
     listByCluster: ({ organizationId, projectId, clusterId, limit, beforeStartTime, beforeObservationId }) =>

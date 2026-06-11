@@ -99,9 +99,9 @@ export const TAXONOMY_GARDENING_MIN_OBSERVATIONS = 15
 
 /** Gardening works over the live taxonomy window: newest observations first. */
 /** Maximum in-memory proposal sample passed to clustering helpers. */
-export const TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX = 10_000
+export const TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX = 1_500
 
-/** Gardening reads are capped to the same bounded sample size as clustering. */
+/** Read-path live window for project/cluster observation pages. */
 export const TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX = 10_000
 
 /** Hard cap on per-cluster batch reads inside the live gardening window. */
