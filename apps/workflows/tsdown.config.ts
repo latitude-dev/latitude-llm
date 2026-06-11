@@ -1,7 +1,7 @@
 import { defineConfig } from "tsdown"
 
 export default defineConfig({
-  entry: ["src/server.ts"],
+  entry: ["src/server.ts", "src/activities/taxonomy-clustering-worker-entry.ts"],
   format: ["cjs"],
   target: "node25",
   outDir: "dist",

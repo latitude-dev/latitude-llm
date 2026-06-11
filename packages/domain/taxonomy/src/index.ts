@@ -1,4 +1,9 @@
-export type { DepthSchedule } from "./clustering.ts"
+export {
+  type BuildHierarchicalClustersInput,
+  buildHierarchicalClusters,
+  type ClusteringTreeNode,
+  type DepthSchedule,
+} from "./clustering.ts"
 export {
   TAXONOMY_ASSIGN_ABSOLUTE_THRESHOLD,
   TAXONOMY_ASSIGN_RELATIVE_MARGIN,
@@ -9,6 +14,8 @@ export {
   TAXONOMY_CLUSTER_LOCK_TTL_SECONDS,
   TAXONOMY_CLUSTER_NAME_MAX_LENGTH,
   TAXONOMY_CLUSTER_STATES,
+  TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+  TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_CONTINUATION_THRESHOLD,
   TAXONOMY_DIMENSIONS,
   TAXONOMY_EMBEDDING_DIMENSIONS,
@@ -42,6 +49,7 @@ export {
   TAXONOMY_TREE_DEPTH_SCHEDULE,
   type TaxonomyObservationWeightScheme,
   type TaxonomyTreeDepthSchedule,
+  taxonomyClusteringSampleLimit,
 } from "./constants.ts"
 export {
   type TaxonomyCentroid,
@@ -167,6 +175,12 @@ export {
   type BuildHierarchicalTaxonomyInput,
   type BuildHierarchicalTaxonomyResult,
   buildHierarchicalTaxonomyUseCase,
+  type HierarchicalTaxonomyPlan,
+  type PersistHierarchicalTaxonomyPlanInput,
+  type PlanHierarchicalTaxonomyInput,
+  persistHierarchicalTaxonomyPlanUseCase,
+  planHierarchicalTaxonomyUseCase,
+  type TaxonomyClusterBuilder,
 } from "./use-cases/build-hierarchical-taxonomy.ts"
 export {
   type ClusterAssignmentDecision,
