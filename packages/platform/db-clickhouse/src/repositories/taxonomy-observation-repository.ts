@@ -11,6 +11,7 @@ import {
 } from "@domain/shared"
 import {
   TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX,
+  type TaxonomyClusteringObservation,
   type TaxonomyMomentObservation,
   TaxonomyObservationRepository,
   taxonomyMomentObservationSchema,
@@ -45,6 +46,12 @@ type TaxonomyObservationRow = {
   readonly end_time: string
   readonly retention_days: number
   readonly indexed_at: string
+}
+
+type TaxonomyClusteringObservationRow = {
+  readonly observation_id: string
+  readonly start_time: string
+  readonly embedding: readonly number[]
 }
 
 const selectColumns = `
@@ -100,6 +107,12 @@ const toInsertRow = (observation: TaxonomyMomentObservation) => ({
   end_time: toClickhouseDateTime(observation.endTime),
   retention_days: observation.retentionDays,
   indexed_at: toClickhouseDateTime(observation.indexedAt),
+})
+
+const toDomainClusteringObservation = (row: TaxonomyClusteringObservationRow): TaxonomyClusteringObservation => ({
+  observationId: row.observation_id,
+  embedding: row.embedding,
+  startTime: parseClickhouseDate(row.start_time),
 })
 
 const toDomainObservation = (row: TaxonomyObservationRow): TaxonomyMomentObservation =>
@@ -176,6 +189,70 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
               await client.insert({ table: "taxonomy_observations", values, format: "JSONEachRow" })
             })
             .pipe(Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.reassignMany")))
+        }),
+
+      reassignManyById: ({ organizationId, projectId, assignments }) =>
+        Effect.gen(function* () {
+          if (assignments.length === 0) return
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const groups = new Map<string, Array<(typeof assignments)[number]>>()
+          for (const assignment of assignments) {
+            const key = `${assignment.assignmentMethod}\0${assignment.reassignmentRunId}\0${assignment.indexedAt.toISOString()}`
+            const group = groups.get(key) ?? []
+            group.push(assignment)
+            groups.set(key, group)
+          }
+
+          yield* chSqlClient
+            .query(async (client) => {
+              for (const group of groups.values()) {
+                const first = group[0]
+                if (!first) continue
+                await client.command({
+                  query: `INSERT INTO taxonomy_observations (${selectColumns})
+                          WITH
+                            {observationIds:Array(String)} AS observationIds,
+                            {assignedClusterIds:Array(String)} AS assignedClusterIds,
+                            {assignmentConfidences:Array(Float32)} AS assignmentConfidences
+                          SELECT
+                            organization_id,
+                            project_id,
+                            observation_id,
+                            session_id,
+                            analysis_hash,
+                            moment_id,
+                            projection_method,
+                            projection_hash,
+                            projection_metadata,
+                            embedding,
+                            assignedClusterIds[indexOf(observationIds, observation_id)],
+                            assignmentConfidences[indexOf(observationIds, observation_id)],
+                            {assignmentMethod:String},
+                            {reassignmentRunId:String},
+                            start_time,
+                            end_time,
+                            retention_days,
+                            {indexedAt:DateTime64(3, 'UTC')}
+                          FROM taxonomy_observations FINAL
+                          WHERE organization_id = {organizationId:String}
+                            AND project_id = {projectId:String}
+                            AND observation_id IN {observationIds:Array(String)}`,
+                  query_params: {
+                    organizationId: organizationId as string,
+                    projectId: projectId as string,
+                    observationIds: group.map((assignment) => assignment.observationId),
+                    assignedClusterIds: group.map((assignment) => assignment.assignedClusterId as string),
+                    assignmentConfidences: group.map((assignment) => assignment.assignmentConfidence),
+                    assignmentMethod: first.assignmentMethod,
+                    reassignmentRunId: first.reassignmentRunId as string,
+                    indexedAt: toClickhouseDateTime(first.indexedAt),
+                  },
+                })
+              }
+            })
+            .pipe(
+              Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.reassignManyById")),
+            )
         }),
 
       filterExistingIds: ({ organizationId, projectId, observationIds }) =>
@@ -290,6 +367,58 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             })
             .pipe(
               Effect.mapError((error) => toRepositoryError(error, "TaxonomyObservationRepository.listForClustering")),
+            )
+        }),
+
+      listForClusteringSample: ({ organizationId, projectId, since, limit }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          observation_id,
+                          start_time,
+                          embedding
+                        FROM taxonomy_observations FINAL
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND length(embedding) > 0
+                          AND start_time >= {since:DateTime64(9, 'UTC')}
+                          AND observation_id IN (
+                            SELECT observation_id
+                            FROM (
+                              SELECT
+                                observation_id,
+                                row_number() OVER (
+                                  PARTITION BY toDate(start_time)
+                                  ORDER BY cityHash64(observation_id)
+                                ) AS rn
+                              FROM taxonomy_observations FINAL
+                              WHERE organization_id = {organizationId:String}
+                                AND project_id = {projectId:String}
+                                AND length(embedding) > 0
+                                AND start_time >= {since:DateTime64(9, 'UTC')}
+                            )
+                            ORDER BY rn ASC, observation_id ASC
+                            LIMIT {limit:UInt32}
+                          )
+                        ORDER BY start_time DESC, observation_id ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  since: toClickhouseDateTime(since),
+                  limit,
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<TaxonomyClusteringObservationRow>()
+              return rows.map(toDomainClusteringObservation)
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyObservationRepository.listForClusteringSample"),
+              ),
             )
         }),
 

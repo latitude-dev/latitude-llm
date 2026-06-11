@@ -35,6 +35,21 @@ export interface ReassignTaxonomyObservationInput {
   readonly indexedAt: Date
 }
 
+export interface ReassignTaxonomyObservationByIdInput {
+  readonly observationId: string
+  readonly assignedClusterId: TaxonomyClusterId
+  readonly assignmentMethod: TaxonomyMomentObservation["assignmentMethod"]
+  readonly assignmentConfidence: number
+  readonly reassignmentRunId: TaxonomyRunId
+  readonly indexedAt: Date
+}
+
+export interface TaxonomyClusteringObservation {
+  readonly observationId: string
+  readonly embedding: readonly number[]
+  readonly startTime: Date
+}
+
 export interface TaxonomyObservationCounts {
   readonly total: number
   readonly assigned: number
@@ -68,6 +83,11 @@ export interface TaxonomyObservationRepositoryShape {
   readonly reassignMany: (
     inputs: readonly ReassignTaxonomyObservationInput[],
   ) => Effect.Effect<void, RepositoryError, ChSqlClient>
+  readonly reassignManyById: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly assignments: readonly ReassignTaxonomyObservationByIdInput[]
+  }) => Effect.Effect<void, RepositoryError, ChSqlClient>
   /**
    * Which of the given observation ids already exist (any version). Lets the
    * analyzer make centroid increments idempotent across activity retries:
@@ -82,9 +102,9 @@ export interface TaxonomyObservationRepositoryShape {
     input: ListTaxonomyNoiseInput,
   ) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
   /**
-   * Newest observations in the live gardening window, regardless of current
-   * assignment. The divisive tree builder rebuilds the project's taxonomy
-   * from scratch each pass and needs to see all members, not just noise.
+   * Full observation rows in the live gardening window, regardless of current
+   * assignment. Prefer `listForClusteringSample` for taxonomy builds so large
+   * metadata columns do not round-trip through workflow activities.
    */
   readonly listForClustering: (input: {
     readonly organizationId: OrganizationId
@@ -92,6 +112,12 @@ export interface TaxonomyObservationRepositoryShape {
     readonly since: Date
     readonly limit: number
   }) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>
+  readonly listForClusteringSample: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly since: Date
+    readonly limit: number
+  }) => Effect.Effect<readonly TaxonomyClusteringObservation[], RepositoryError, ChSqlClient>
   readonly listByCluster: (
     input: ListTaxonomyObservationClusterInput,
   ) => Effect.Effect<readonly TaxonomyMomentObservation[], RepositoryError, ChSqlClient>

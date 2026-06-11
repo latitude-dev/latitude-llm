@@ -141,6 +141,46 @@ describe("TaxonomyObservationRepositoryLive", () => {
     expect(rows[0]?.reassignmentRunId).toBe(runId)
   })
 
+  it("rewrites observations by id without loading full rows into the caller", async () => {
+    const observation = makeObservation({
+      observationId: "i".repeat(24),
+      sessionId: SessionId("reassigned-by-id-session"),
+      projectionMetadata: { summary: "metadata stays server-side" },
+    })
+
+    const rows = await runWithRepository(
+      Effect.gen(function* () {
+        const repo = yield* TaxonomyObservationRepository
+        yield* repo.upsert(observation)
+        yield* repo.reassignManyById({
+          organizationId,
+          projectId,
+          assignments: [
+            {
+              observationId: observation.observationId,
+              assignedClusterId: clusterId,
+              assignmentMethod: "gardening_birth",
+              assignmentConfidence: 0.73,
+              reassignmentRunId: runId,
+              indexedAt: new Date("2026-05-24T12:02:00.000Z"),
+            },
+          ],
+        })
+        return yield* repo.listBySession({ organizationId, projectId, sessionId: observation.sessionId })
+      }),
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      observationId: observation.observationId,
+      assignedClusterId: clusterId,
+      assignmentMethod: "gardening_birth",
+      assignmentConfidence: 0.73,
+      reassignmentRunId: runId,
+      projectionMetadata: { summary: "metadata stays server-side" },
+    })
+  })
+
   it("treats reassignment as one current observation", async () => {
     const observation = makeObservation({ observationId: "u".repeat(24), sessionId: SessionId("current-session") })
 
@@ -209,7 +249,7 @@ describe("TaxonomyObservationRepositoryLive", () => {
             }),
           )
         }
-        return yield* repo.listForClustering({
+        return yield* repo.listForClusteringSample({
           organizationId,
           projectId: stratifiedProjectId,
           since: new Date("2026-05-19T00:00:00.000Z"),

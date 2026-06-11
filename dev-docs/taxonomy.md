@@ -54,7 +54,7 @@ ClickHouse:
 Two distinct bounded reads sit over the observations table:
 
 - **`latestProjectWindow`** — the newest `TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX` (10k) project rows, newest-first. Used by the read/aggregation paths (`listByCluster`, `listAllByCluster`, `listNoise`).
-- **`listForClustering`** — the gardening sample. It does **not** take newest-N; it **day-stratifies** across the lookback window so the rebuilt tree is representative of the whole window instead of biased to the last few hours. Each observation is ranked within its UTC day by `cityHash64(observation_id)` and days are interleaved round-robin (`ORDER BY rn`) up to the limit; the inner scan selects only `observation_id` so the embedding column is never materialized while ranking. The ordering is deterministic (no `rand()`) so a gardening pass replays identically under Temporal.
+- **`listForClusteringSample`** — the gardening sample. It does **not** take newest-N; it **day-stratifies** across the lookback window so the rebuilt tree is representative of the whole window instead of biased to the last few hours. Each observation is ranked within its UTC day by `cityHash64(observation_id)` and days are interleaved round-robin (`ORDER BY rn`) up to the limit; the inner scan selects only `observation_id` so the embedding column is never materialized while ranking. The outer read intentionally returns only `observation_id`, `start_time`, and `embedding` so clustering does not pull projection metadata or full observation rows into the workflow worker. The ordering is deterministic (no `rand()`) so a gardening pass replays identically under Temporal.
 
 ### ReplacingMergeTree version discipline
 
@@ -85,11 +85,11 @@ Each activity is idempotent under Temporal retries via the run-scoped determinis
 
 ### Build (`buildHierarchicalTaxonomyUseCase`)
 
-1. **Sample** up to `TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX` (10k) observations from the `TAXONOMY_NOISE_LOOKBACK_DAYS` (7-day) window via the day-stratified `listForClustering`, regardless of current assignment. Below `TAXONOMY_GARDENING_MIN_OBSERVATIONS` the build returns empty (cold-start gate).
+1. **Sample** up to `TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX` (1.5k) observations from the `TAXONOMY_NOISE_LOOKBACK_DAYS` (7-day) window via the day-stratified `listForClusteringSample`, regardless of current assignment. The cap bounds workflow-worker heap and CPU while the sample stays representative across active days. Below `TAXONOMY_GARDENING_MIN_OBSERVATIONS` the build returns empty (cold-start gate).
 2. **Build the tree top-down** with `buildHierarchicalClusters` (see "Clustering primitives"). All sampled members end up on leaves.
 3. **Persist top-down** (clusters sorted by depth ascending) so a child save never references a missing parent. Interior nodes are stored with `observation_count = 0` and a `split_link_threshold` derived from their children's tightest sibling separation.
 4. **Match new nodes against the previous tree** with the continuity matcher (see "Cross-run continuity"): a confident 1:1 centroid match reuses the old cluster's id, so trends that key on the id stay continuous across passes.
-5. **Reassign every member to its leaf** in bulk (`reassignMany`, `assignment_method = "gardening_birth"`), confidence = cosine to the leaf centroid clamped to `[0,1]`.
+5. **Reassign every member to its leaf** in bulk (`reassignManyById`, `assignment_method = "gardening_birth"`), confidence = cosine to the leaf centroid clamped to `[0,1]`. Reassignment copies unchanged observation columns with ClickHouse-side `INSERT … SELECT`, keyed by observation id, so large metadata and embedding payloads do not round-trip through Node after clustering.
 6. **Deprecate every previously-active cluster** that no new node continued.
 7. **Emit lineage**: a `continuation` row per reused id, a `birth` row per genuinely new node, a `death` row per deprecated cluster.
 
