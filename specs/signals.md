@@ -2,6 +2,8 @@
 
 > **Documentation**: eventual durable homes `dev-docs/signals.md` and an updated `dev-docs/monitors.md`; related current docs: `dev-docs/issues.md`, `dev-docs/scores.md`, `dev-docs/monitors.md`, `dev-docs/notifications.md`, `dev-docs/conversation-intelligence.md`.
 >
+> **Depends on**: `specs/sandbox-runtime.md` — the execution contract for evaluation/rule/script detectors: every detector returns `Score(value, feedback?)` with `value` = signal-exhibition strength, and the host derives membership as `value >= signals.threshold`.
+>
 > **Supersedes (conceptually)**: `specs/monitors.md` and `specs/alerts.md`. Those specs remain accurate descriptions of what is *currently built*; this spec defines the model that replaces their framing. Do not retire them until the migration phases are underway.
 >
 > **Origin**: LAT-664 ("Consolidate monitor situation") — this spec consolidates the two proposals discussed there and the final comment posted on the issue.
@@ -37,7 +39,7 @@ Signal membership is **materialized at write time** — each trace is matched on
   Any matcher composes with any scope: an evaluation that only runs on slow traces, a semantic anchor only checked against traces tagged `foo`. The scope doubles as a cost pre-gate: out-of-scope traces never reach the matchers. Pure filter slices are deliberately *not* signals (decision 4) — that job belongs to saved searches + monitors.
 - Signals carry **triage metadata** — priority and assignees — but **no lifecycle**. You create or delete signals; resolve/ignore semantics live on monitors.
 - Signals are **always created proactively** (decision 2): from the Signals page builder, from a saved search (pre-filling scope and anchors — flow F), or from the annotation flow ("explain the problem, point at 3–4 example traces, get a signal with a generated aligned evaluation"). Today's issues migrate into signals; no pipeline creates them automatically anymore.
-- **Moment labels** (conversation intelligence) are provisioned as default per-project signals with `type = 'semantic'` — their existing anchor sets (`MOMENT_LABEL_ANCHORS`) carry over verbatim, since the semantic config adopts the same shape (multiple positive anchors + contrast anchors + threshold/margin).
+- **Moment labels** (conversation intelligence) are provisioned as default per-project signals with `type = 'semantic'` — their existing anchor sets (`MOMENT_LABEL_ANCHORS`) carry over verbatim, since the semantic config adopts the same shape (multiple positive anchors + contrast anchors + margin; each kind's static gate becomes the signal's `threshold`).
 - Every signal gets a **default monitor** provisioned at creation — the same monitoring issues get today: an occurrences monitor carrying a high-severity `metric.escalating` alert in `expected` mode (the seasonal heuristic, so a firing is a high-signal event rather than noise) plus the `event.regressed` event alert.
 
 ### Saved search
@@ -122,13 +124,13 @@ export type SignalConfig =
   | { type: "script";     script: string }   // user-authored JS, shared sandbox runtime
 
 // Same shape as conversation intelligence's MOMENT_LABEL_ANCHORS — proven in production
-// for moment labels, adopted wholesale (multi-anchor + contrast + threshold/margin):
+// for moment labels, adopted wholesale (multi-anchor + contrast + margin). The detector's
+// value is max(chunk · positiveAnchor); the membership cutoff is NOT config — it is the
+// uniform per-signal signals.threshold knob (specs/sandbox-runtime.md):
 export type SemanticAnchors = {
   anchors: string[]            // positive anchor phrases (1..n); best match wins
   contrastAnchors?: string[]   // negative anchors: a trace matches only if its best positive
                                //   similarity ALSO beats its best contrast similarity by `margin`
-  threshold: number            // cosine-similarity cutoff: max(chunk · anchor) ≥ threshold ⇒ match.
-                               //   This is the membership knob (was `minSimilarity`)
   margin?: number              // required positive-vs-contrast separation (default per constants)
   roles?: ("user" | "assistant")[]  // optionally restrict which conversation turns are compared
 }
@@ -150,10 +152,11 @@ export type SignalRule = {
 }
 ```
 
+- Every matcher executes through the sandbox-runtime contract (semantic via its native batch runner): the run returns `Score(value, feedback?)` with `value` = exhibition strength, and membership is `value >= signals.threshold`. Generated judges are phrased *as the signal* ("does this trace exhibit X?") so judge-yes = high value; legacy quality-phrased evaluations invert values (`1 − value`) or regenerate at migration.
 - `scope` reuses the shared `FilterSet`, including `gtePercentile` — so "traces above the p90 latency" is expressible today. Percentile operators are resolved against a periodically refreshed project estimate at ingest (slightly approximate at write time, exact during backfill).
 - For `evaluation` signals the scope plays the role of today's `EvaluationTrigger.filter` — see "One matching pipeline" below; `sampling`/`turn`/`debounce` stay evaluation-level settings.
 - Definition edits (anchors, threshold, scope) change membership **going forward only** (definition-changed marker on charts), never retroactively.
-- Semantic threshold UX: MVP ships a fixed default with a sensitivity control; an iterative create-time calibration loop (show matches → tighten/loosen → repeat) is a possible post-MVP refinement.
+- Threshold UX: MVP ships a fixed default (`0.5`; rules/judges emit ≈{0,1} so it is degenerate for them) with a sensitivity control for semantic signals; an iterative create-time calibration loop (show matches → tighten/loosen → repeat) is a possible post-MVP refinement.
 
 ### Postgres: `signals` (evolves `issues`)
 
@@ -169,6 +172,9 @@ signals
   type                varchar(32)            -- SignalType (the matcher)
   config              jsonb                  -- SignalConfig (matcher parameters)
   scope               jsonb                  -- FilterSet pre-gate; {} = all traces; composes with any type
+  threshold           float8 DEFAULT 0.5     -- membership cutoff over the detector value
+                                             --   (specs/sandbox-runtime.md); generalizes semantic
+                                             --   minSimilarity to every type; edits apply forward only
   priority            varchar(16) null       -- IssuePriority, carried over (low/medium/high/urgent)
   assignees           varchar(24)[]          -- multi-assignee (annotation_queues precedent)
   search_document     tsvector GENERATED     -- name (A) + description (B); GIN
@@ -246,6 +252,8 @@ signal_occurrences
   span_id                FixedString(16)   DEFAULT ''      -- sentinel convention
   session_id             FixedString(128)  DEFAULT ''
   score_id               FixedString(24)   DEFAULT ''      -- set when a judgment (eval/annotation) backs it
+  value                  Float32                           -- the matching run's detector value (match
+                                                           --   strength: sort/confidence UI for free)
   trace_started_at       DateTime64(9, 'UTC')              -- time axis = the trace's own start time
   duration_ns            UInt64                            -- denormalized trace metrics so metric monitors
   tokens_total           UInt64                            --   aggregate without joining traces
@@ -261,7 +269,7 @@ ORDER BY  (organization_id, project_id, signal_id, trace_started_at, trace_id)
 **Occurrences vs scores** (decision 6). Occurrences are the **membership ledger** ("this trace is in this signal"); scores are the **verdict ledger** ("this judge said pass/fail and why"). A semantic or rule match has no verdict, no feedback, nothing to draft — forcing it into `scores` would pollute evaluation analytics and push trace-volume writes through the canonical mutable Postgres path. Scores stop being the membership mechanism and keep the three jobs occurrences structurally cannot do:
 
 1. **Verdicts that don't match.** Occurrences record only matches; pass rates, error rates, and every confusion matrix also need the *passed* and *errored* runs — the rows that produce no occurrence.
-2. **Human feedback as alignment ground truth.** Annotations need a mutable, draft-able row, and alignment is literally human `passed` verdicts vs evaluation `passed` verdicts on the same traces. The unified score shape across sources is deliberate: human and machine judges emit exactly the same output — a verdict on a trace — with `source` recording who judged; alignment works because both sides live in one table with one shape.
+2. **Human feedback as alignment ground truth.** Annotations need a mutable, draft-able row, and alignment is literally human verdicts vs evaluation verdicts on the same traces. The unified score shape across sources is deliberate: human and machine judges emit exactly the same output — a verdict on a trace — with `source` recording who judged; alignment works because both sides live in one table with one shape. For signal-linked rows, `value` is **signal-exhibition strength** (generated judges are exhibition-phrased; legacy quality-phrased evaluations invert at migration) and `passed` is derived as `value >= threshold` at write time.
 3. **The public `/scores` API** for custom, user-pushed results (an existing machine-facing contract).
 
 The two ledgers link where they meet: `score_id` is set on occurrences produced by judgment-bearing matchers, and `scores.signal_id` survives as the evidence label — not as membership. The ClickHouse score-analytics table loses its issue-trend role to `signal_occurrences` and remains for evaluation/custom source dashboards.
@@ -427,8 +435,8 @@ trace_search_embeddings chunks written
       ├─ load project anchor sets (Redis-cached embeddings, moment-label pattern;
       │    includes system moment-label signals)
       ├─ scope pre-gate: skip signals whose scope the trace fails
-      ├─ per signal: max(chunk · positiveAnchor) ≥ threshold
-      │    AND best-positive − best-contrast ≥ margin → match
+      ├─ per signal: value = max(chunk · positiveAnchor); matched when
+      │    value ≥ signal.threshold AND best-positive − best-contrast ≥ margin
       └─ SignalOccurrenceRepository.append
 
 evaluation matchers (third hop — the evaluation runner inside the pipeline; the
