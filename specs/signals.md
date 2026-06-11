@@ -22,32 +22,7 @@ The one-line mental model for users and docs:
 
 > Latitude groups your traces into **Signals** — buckets you define deliberately, from the Signals page or while annotating. Any signal — or saved search, tool, or your raw traffic — can be watched with **Monitors**; monitors have **Alerts**, and a fired alert opens an **Incident**, which is what notifies you.
 
-## Decisions
-
-Settled during the design discussion (LAT-664 + spec review):
-
-1. **Signal membership is materialized at write time** (see next section — forced, not a preference).
-2. **No automatic issue discovery.** The clustering/discovery pipeline (similarity search + rerank + locked serialization auto-creating issues from scores) is removed. Signals are always created proactively by users — from the Signals page or from the annotation flow. Annotations are matched to *existing* signals via hybrid search suggestions; they never spawn signals on their own.
-3. **No routing centroid.** With discovery gone, the per-signal decayed centroid machinery is removed. Suggesting existing signals while annotating uses hybrid search over signal names/descriptions (lexical tsvector + one derived embedding).
-4. **No pure filter-type signals.** Plain filter slices are correct and cheap at query time, so they stay **saved searches + monitors**. Signals exist for matchers that *require* write-time evaluation (semantic, evaluation, rule, script). Filters appear on signals only as the **scope** pre-gate.
-5. **No class monitors.** With user-created signals only, "a new signal was discovered" alerts are meaningless; today's `source_id = NULL` system monitors dissolve into each signal's default monitor. A monitor's `target_id` is required for signal/saved-search/tool targets.
-6. **Signals per project are capped** to a fixed number per plan (this also bounds occurrence write amplification and ingest matching cost).
-7. **Scores are kept with a narrowed role** — they stop being the membership mechanism and remain the verdict ledger: evaluation pass/fail/error analytics, human-feedback ground truth for alignment, and the public `/scores` API (rationale under the occurrences table).
-
-## Why signal membership is materialized at write time
-
-This is the load-bearing decision of the spec. It is forced, not a preference.
-
-**1. Semantic search answers a different question than filters do.** A filter is a per-row yes/no ("is this trace from the last 7 days?") — each row passes on its own merits, so filters stack for free. Semantic search with a vector index answers "the ~1,000 items *most similar in the entire corpus*". Combine them and the filter can only discard from those 1,000: searching "user frustration" + filtering "last 7 days" returns *whichever of the corpus-wide top-1,000 happen to be recent* — maybe 30 results, maybe 0 — while thousands of genuinely frustrated traces from this week sit at #5,000 in the global ranking and are never returned. Doing it correctly means scoring every trace in the window: a full scan, which is why semantic trace search already times out on large projects.
-
-**2. Tracking over time multiplies that cost forever.** Example: a semantic search "user frustration" with an alert when the last-5-minutes match count exceeds 1σ above its historical average. The 5-minute count is cheap; but μ and σ require the match count of *every historical bucket* — the semantic verdict for every trace in the corpus — recomputed on every evaluation, 288 times a day, even though each trace's verdict is frozen the moment it arrives. The only fix is "score each trace once, on arrival, and remember the result", which **is** write-time materialization; every caching scheme converges to it. Approximations don't help: a σ computed from undercounted buckets makes alerts fire on index noise.
-
-Consequences carried through the whole spec:
-
-- Query-time semantic search remains an **exploration** tool: a ranked best-effort sample on the Traces page. No counts, no histograms, no alerts over a semantic query.
-- Anything that needs **set** semantics — charts, baselines, alerts, "every matching trace" — must be a signal, whose membership is decided per trace at ingest and appended to an immutable occurrence stream.
-- A materialized history is immutable under definition edits: editing a signal changes membership *going forward* only (the chart gets a definition-changed marker). The "editing a virtual signal rewrites its history" policy problem disappears.
-- Occurrences become the universal counting unit (one occurrence = one matched trace), resolving today's inconsistency where issues count scores and saved searches count traces.
+Signal membership is **materialized at write time** — each trace is matched once at ingest and the verdict is remembered as an occurrence row. This is the load-bearing decision of the spec and it is forced, not a preference; the full rationale lives at the end ("Why signal membership is materialized at write time").
 
 ## Concepts
 
@@ -573,6 +548,31 @@ saved_searches row remains (still a bookmark; plain filter tracking stays
 | `alert_incidents.source_*` | `target_*` (values remapped in place) |
 | moment labels | provisioned `origin='system'`, `type='semantic'` signals per project (anchor sets carried over verbatim) |
 | issue URLs / Monitors routes | issue URLs redirect into the corresponding signal pages; Monitors routes stay (the page generalizes across targets) |
+
+## Why signal membership is materialized at write time
+
+**1. Semantic search answers a different question than filters do.** A filter is a per-row yes/no ("is this trace from the last 7 days?") — each row passes on its own merits, so filters stack for free. Semantic search with a vector index answers "the ~1,000 items *most similar in the entire corpus*". Combine them and the filter can only discard from those 1,000: searching "user frustration" + filtering "last 7 days" returns *whichever of the corpus-wide top-1,000 happen to be recent* — maybe 30 results, maybe 0 — while thousands of genuinely frustrated traces from this week sit at #5,000 in the global ranking and are never returned. Doing it correctly means scoring every trace in the window: a full scan, which is why semantic trace search already times out on large projects.
+
+**2. Tracking over time multiplies that cost forever.** Example: a semantic search "user frustration" with an alert when the last-5-minutes match count exceeds 1σ above its historical average. The 5-minute count is cheap; but μ and σ require the match count of *every historical bucket* — the semantic verdict for every trace in the corpus — recomputed on every evaluation, 288 times a day, even though each trace's verdict is frozen the moment it arrives. The only fix is "score each trace once, on arrival, and remember the result", which **is** write-time materialization; every caching scheme converges to it. Approximations don't help: a σ computed from undercounted buckets makes alerts fire on index noise.
+
+Consequences carried through the whole spec:
+
+- Query-time semantic search remains an **exploration** tool: a ranked best-effort sample on the Traces page. No counts, no histograms, no alerts over a semantic query.
+- Anything that needs **set** semantics — charts, baselines, alerts, "every matching trace" — must be a signal, whose membership is decided per trace at ingest and appended to an immutable occurrence stream.
+- A materialized history is immutable under definition edits: editing a signal changes membership *going forward* only (the chart gets a definition-changed marker). The "editing a virtual signal rewrites its history" policy problem disappears.
+- Occurrences become the universal counting unit (one occurrence = one matched trace), resolving today's inconsistency where issues count scores and saved searches count traces.
+
+## Decisions
+
+Settled during the design discussion (LAT-664 + spec review):
+
+1. **Signal membership is materialized at write time** (see "Why signal membership is materialized at write time" — forced, not a preference).
+2. **No automatic issue discovery.** The clustering/discovery pipeline (similarity search + rerank + locked serialization auto-creating issues from scores) is removed. Signals are always created proactively by users — from the Signals page or from the annotation flow. Annotations are matched to *existing* signals via hybrid search suggestions; they never spawn signals on their own.
+3. **No routing centroid.** With discovery gone, the per-signal decayed centroid machinery is removed. Suggesting existing signals while annotating uses hybrid search over signal names/descriptions (lexical tsvector + one derived embedding).
+4. **No pure filter-type signals.** Plain filter slices are correct and cheap at query time, so they stay **saved searches + monitors**. Signals exist for matchers that *require* write-time evaluation (semantic, evaluation, rule, script). Filters appear on signals only as the **scope** pre-gate.
+5. **No class monitors.** With user-created signals only, "a new signal was discovered" alerts are meaningless; today's `source_id = NULL` system monitors dissolve into each signal's default monitor. A monitor's `target_id` is required for signal/saved-search/tool targets.
+6. **Signals per project are capped** to a fixed number per plan (this also bounds occurrence write amplification and ingest matching cost).
+7. **Scores are kept with a narrowed role** — they stop being the membership mechanism and remain the verdict ledger: evaluation pass/fail/error analytics, human-feedback ground truth for alignment, and the public `/scores` API (rationale under the occurrences table).
 
 ## Open questions
 
