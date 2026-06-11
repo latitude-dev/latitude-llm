@@ -1,7 +1,7 @@
 import { AI } from "@domain/ai"
 import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
-import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { LATITUDE_TELEMETRY_PROJECT_SLUGS, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
   buildTraceSearchDocument,
   TRACE_SEARCH_EMBEDDING_DIMENSIONS,
@@ -28,7 +28,6 @@ import {
   StripeSubscriptionLookupLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { parseEnvOptional } from "@platform/env"
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 
@@ -115,17 +114,6 @@ export const isConfiguredLatitudeTelemetryProjectSlug = (
 
 const isLatitudeTelemetryProject = (projectId: string) =>
   Effect.gen(function* () {
-    const configuredProjectSlug = yield* parseEnvOptional("LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", "string").pipe(
-      Effect.tapError((error) =>
-        Effect.sync(() =>
-          logger.warn("Invalid Latitude telemetry project slug config; semantic indexing remains enabled", error),
-        ),
-      ),
-      Effect.orElseSucceed(() => undefined),
-    )
-
-    if (!configuredProjectSlug?.trim()) return false
-
     const projectRepo = yield* ProjectRepository
     const project = yield* projectRepo.findById(ProjectId(projectId)).pipe(
       Effect.tapError((error) =>
@@ -136,7 +124,11 @@ const isLatitudeTelemetryProject = (projectId: string) =>
       Effect.orElseSucceed(() => undefined),
     )
 
-    return project ? isConfiguredLatitudeTelemetryProjectSlug(project.slug, configuredProjectSlug) : false
+    return project
+      ? Object.values(LATITUDE_TELEMETRY_PROJECT_SLUGS).some((slug) =>
+          isConfiguredLatitudeTelemetryProjectSlug(project.slug, slug),
+        )
+      : false
   })
 
 /**
