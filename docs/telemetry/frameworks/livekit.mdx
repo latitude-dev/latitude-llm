@@ -7,7 +7,7 @@ description: Connect your LiveKit voice AI agents to Latitude for observability.
 
 This guide shows you how to send traces from a [**LiveKit Agents**](https://docs.livekit.io/agents/) application to Latitude.
 
-LiveKit Agents ships with built-in OpenTelemetry support and owns its own `TracerProvider`. Instead of bootstrapping telemetry with the `Latitude` class, you attach a **`LatitudeSpanProcessor`** to LiveKit's provider — Latitude then receives the same spans LiveKit emits for LLM, agent, and tool activity.
+LiveKit Agents ships with built-in OpenTelemetry support and owns its own tracer provider. Instead of bootstrapping telemetry with the `Latitude` class, you attach a **`LatitudeSpanProcessor`** to LiveKit's provider — Latitude then receives the same spans LiveKit emits for LLM, agent, and tool activity. This works the same way for the **Python** (`livekit-agents`) and **Node.js** (`@livekit/agents`) SDKs.
 
 <Check>
   You'll keep building your LiveKit agent exactly as you do today. Latitude
@@ -20,7 +20,7 @@ LiveKit Agents ships with built-in OpenTelemetry support and owns its own `Trace
 
 - A **Latitude account** and **API key**
 - A **Latitude project slug**
-- A project that uses **LiveKit Agents** (`livekit-agents`)
+- A project that uses **LiveKit Agents** (`livekit-agents` or `@livekit/agents`)
 
 ---
 
@@ -29,43 +29,91 @@ LiveKit Agents ships with built-in OpenTelemetry support and owns its own `Trace
 <Steps>
 
   <Step title="Install">
-    ```bash pip
-    pip install latitude-telemetry "livekit-agents[openai]"
-    ```
+    <Tabs>
+      <Tab title="Python">
+        ```bash pip
+        pip install latitude-telemetry "livekit-agents[openai]"
+        ```
+      </Tab>
+      <Tab title="TypeScript">
+        <CodeGroup>
+          ```bash npm
+          npm install @latitude-data/telemetry @opentelemetry/sdk-trace-node
+          ```
+
+          ```bash pnpm
+          pnpm add @latitude-data/telemetry @opentelemetry/sdk-trace-node
+          ```
+
+          ```bash yarn
+          yarn add @latitude-data/telemetry @opentelemetry/sdk-trace-node
+          ```
+        </CodeGroup>
+      </Tab>
+    </Tabs>
   </Step>
 
   <Step title="Register the span processor">
-    Build a `TracerProvider`, add the `LatitudeSpanProcessor`, and hand the provider to LiveKit with `set_tracer_provider` inside your entrypoint.
+    Build a tracer provider, add the `LatitudeSpanProcessor`, and hand the provider to LiveKit inside your entrypoint.
 
-    ```python
-    import os
+    <Tabs>
+      <Tab title="Python">
+        ```python
+        import os
 
-    from livekit.agents import AgentSession, JobContext
-    from livekit.agents.telemetry import set_tracer_provider
-    from opentelemetry.sdk.trace import TracerProvider
+        from livekit.agents import AgentSession, JobContext
+        from livekit.agents.telemetry import set_tracer_provider
+        from opentelemetry.sdk.trace import TracerProvider
 
-    from latitude_telemetry import LatitudeSpanProcessor
+        from latitude_telemetry import LatitudeSpanProcessor
 
 
-    def setup_latitude_telemetry():
-        provider = TracerProvider()
-        provider.add_span_processor(
-            LatitudeSpanProcessor(
-                os.environ["LATITUDE_API_KEY"],
-                os.environ["LATITUDE_PROJECT_SLUG"],
+        def setup_latitude_telemetry():
+            provider = TracerProvider()
+            provider.add_span_processor(
+                LatitudeSpanProcessor(
+                    os.environ["LATITUDE_API_KEY"],
+                    os.environ["LATITUDE_PROJECT_SLUG"],
+                )
             )
-        )
-        set_tracer_provider(provider)
+            set_tracer_provider(provider)
 
 
-    async def entrypoint(ctx: JobContext):
-        setup_latitude_telemetry()
+        async def entrypoint(ctx: JobContext):
+            setup_latitude_telemetry()
 
-        session = AgentSession(
-            # ... your STT / LLM / TTS configuration
-        )
-        # ... start your agent as usual
-    ```
+            session = AgentSession(
+                # ... your STT / LLM / TTS configuration
+            )
+            # ... start your agent as usual
+        ```
+      </Tab>
+      <Tab title="TypeScript">
+        ```ts
+        import { telemetry, type JobContext } from "@livekit/agents"
+        import { LatitudeSpanProcessor } from "@latitude-data/telemetry"
+        import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
+
+        function setupLatitudeTelemetry() {
+          const provider = new NodeTracerProvider({
+            spanProcessors: [
+              new LatitudeSpanProcessor(
+                process.env.LATITUDE_API_KEY!,
+                process.env.LATITUDE_PROJECT_SLUG!,
+              ),
+            ],
+          })
+          telemetry.setTracerProvider(provider)
+        }
+
+        export default async function entrypoint(ctx: JobContext) {
+          setupLatitudeTelemetry()
+
+          // ... build and start your AgentSession as usual
+        }
+        ```
+      </Tab>
+    </Tabs>
   </Step>
 
 </Steps>
@@ -87,15 +135,21 @@ LiveKit's LLM spans carry both `gen_ai.*` metadata and the conversation content 
   processor's smart filter forwards only LLM-relevant spans to keep your traces
   focused. To export every LiveKit span, pass options:
 
-  ```python
-  from latitude_telemetry import LatitudeSpanProcessor, LatitudeSpanProcessorOptions
+  <CodeGroup>
+    ```python Python
+    from latitude_telemetry import LatitudeSpanProcessor, LatitudeSpanProcessorOptions
 
-  LatitudeSpanProcessor(
-      api_key,
-      project,
-      LatitudeSpanProcessorOptions(disable_smart_filter=True),
-  )
-  ```
+    LatitudeSpanProcessor(
+        api_key,
+        project,
+        LatitudeSpanProcessorOptions(disable_smart_filter=True),
+    )
+    ```
+
+    ```ts TypeScript
+    new LatitudeSpanProcessor(apiKey, project, { disableSmartFilter: true })
+    ```
+  </CodeGroup>
 </Note>
 
 ---
