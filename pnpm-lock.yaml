@@ -96,6 +96,9 @@ catalogs:
     pg:
       specifier: 8.16.0
       version: 8.16.0
+    quickjs-emscripten:
+      specifier: 0.32.0
+      version: 0.32.0
     react:
       specifier: 19.2.5
       version: 19.2.5
@@ -757,6 +760,9 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
+      '@platform/sandbox-quickjs':
+        specifier: workspace:*
+        version: link:../../packages/platform/sandbox-quickjs
       '@platform/slack':
         specifier: workspace:*
         version: link:../../packages/platform/slack
@@ -1252,6 +1258,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@domain/feature-flags':
+        specifier: workspace:*
+        version: link:../feature-flags
       '@domain/models':
         specifier: workspace:*
         version: link:../models
@@ -1261,6 +1270,9 @@ importers:
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue
+      '@domain/sandbox':
+        specifier: workspace:*
+        version: link:../sandbox
       '@domain/scores':
         specifier: workspace:*
         version: link:../scores
@@ -1622,6 +1634,18 @@ importers:
       typescript:
         specifier: 6.0.3
         version: 6.0.3
+
+  packages/domain/sandbox:
+    dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/domain/sandboxes:
     dependencies:
@@ -1997,6 +2021,9 @@ importers:
       '@domain/integrations':
         specifier: workspace:*
         version: link:../../domain/integrations
+      '@domain/sandbox':
+        specifier: workspace:*
+        version: link:../../domain/sandbox
       '@domain/sandboxes':
         specifier: workspace:*
         version: link:../../domain/sandboxes
@@ -2401,6 +2428,25 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/platform/sandbox-quickjs:
+    dependencies:
+      '@domain/sandbox':
+        specifier: workspace:*
+        version: link:../../domain/sandbox
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.57
+      quickjs-emscripten:
+        specifier: 'catalog:'
+        version: 0.32.0
+    devDependencies:
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../../domain/ai
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../../domain/evaluations
 
   packages/platform/slack:
     dependencies:
@@ -4518,6 +4564,21 @@ packages:
 
   '@isaacs/string-locale-compare@1.1.0':
     resolution: {integrity: sha512-SQ7Kzhh9+D+ZW9MA0zkYv3VXhIDNx+LzM6EJ+/65I3QY+enU6Itte7E5XX7EWrqLW2FN4n06GWzBnPoC3th2aQ==}
+
+  '@jitl/quickjs-ffi-types@0.32.0':
+    resolution: {integrity: sha512-v9T+GQpmk43VDJ7d72sf0Nexhk+ArvtUihW27dy7lqAl0zBObFKtSBBIm5RBjwIhE8VwsPPm9PNuvPvNqLWUEg==}
+
+  '@jitl/quickjs-wasmfile-debug-asyncify@0.32.0':
+    resolution: {integrity: sha512-EX8zbXwGqCgAE764M+qvkHtyXDi/FUoMBea0JnES7vCM3P7a2+EOZOjGv85wtZ2sJhI1oJ+nekmqpOODFDY+hw==}
+
+  '@jitl/quickjs-wasmfile-debug-sync@0.32.0':
+    resolution: {integrity: sha512-LeYWrPGC1uNCTBWvibo3ZLJj0CSVNYUXvJpXMCmuQ5Sap2cCACc3uvGvYV4homHHBAzfw5akoTqMMS4YFRtw+Q==}
+
+  '@jitl/quickjs-wasmfile-release-asyncify@0.32.0':
+    resolution: {integrity: sha512-3oSwPfja12ICz4aIblB58cuY8JlEq5Txt8Cut4VLo+LH47QN+mzCnSgnbB03hWzg1LBcc+VyyI9UOag7a1NF+Q==}
+
+  '@jitl/quickjs-wasmfile-release-sync@0.32.0':
+    resolution: {integrity: sha512-BKNDI/TPBfGlLNGYpLrhcDGXmIk4xHm4MRAisOBnOzpXVn9HZWsfmMAc9WMBrAHjvvds6HOikKeaOBKdPdpVrg==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -11347,6 +11408,13 @@ packages:
   query-selector-shadow-dom@1.0.1:
     resolution: {integrity: sha512-lT5yCqEBgfoMYpf3F2xQRK7zEr1rhIIZuceDK6+xRkJQ4NMbHTwXqk4NkwDwQMNqXgG9r9fyHnzwNVs6zV5KRw==}
 
+  quickjs-emscripten-core@0.32.0:
+    resolution: {integrity: sha512-QFnPfjFey8EqknSrSxe1hZrf1/8z7/6s1QzGOmKo6++02r7QRRX7ZoyNaZh7JuVjWsVW87KnQrbZqnHkOAzUyg==}
+
+  quickjs-emscripten@0.32.0:
+    resolution: {integrity: sha512-So0Sqw869y/S2oE3Nuc0uT3Dhqgvsj8FSrwBdsuTosVsG8ME5/OcudU1GxsrIFdFABgy17GHnTVO9TYV/bLQcA==}
+    engines: {node: '>=16.0.0'}
+
   range-parser@1.2.0:
     resolution: {integrity: sha512-kA5WQoNVo4t9lNx2kQNFCxKeBl5IbbSNBl1M/tLkw9WCn+hxNBAW5Qh8gdhs63CJnhjJ2zQWFoqPJP2sK1AV5A==}
     engines: {node: '>= 0.6'}
@@ -14739,6 +14807,24 @@ snapshots:
       minipass: 7.1.3
 
   '@isaacs/string-locale-compare@1.1.0': {}
+
+  '@jitl/quickjs-ffi-types@0.32.0': {}
+
+  '@jitl/quickjs-wasmfile-debug-asyncify@0.32.0':
+    dependencies:
+      '@jitl/quickjs-ffi-types': 0.32.0
+
+  '@jitl/quickjs-wasmfile-debug-sync@0.32.0':
+    dependencies:
+      '@jitl/quickjs-ffi-types': 0.32.0
+
+  '@jitl/quickjs-wasmfile-release-asyncify@0.32.0':
+    dependencies:
+      '@jitl/quickjs-ffi-types': 0.32.0
+
+  '@jitl/quickjs-wasmfile-release-sync@0.32.0':
+    dependencies:
+      '@jitl/quickjs-ffi-types': 0.32.0
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -22564,7 +22650,7 @@ snapshots:
 
   openapi3-ts@4.5.0:
     dependencies:
-      yaml: 2.8.3
+      yaml: 2.9.0
 
   ora@8.2.0:
     dependencies:
@@ -22981,6 +23067,18 @@ snapshots:
   quansync@1.0.0: {}
 
   query-selector-shadow-dom@1.0.1: {}
+
+  quickjs-emscripten-core@0.32.0:
+    dependencies:
+      '@jitl/quickjs-ffi-types': 0.32.0
+
+  quickjs-emscripten@0.32.0:
+    dependencies:
+      '@jitl/quickjs-wasmfile-debug-asyncify': 0.32.0
+      '@jitl/quickjs-wasmfile-debug-sync': 0.32.0
+      '@jitl/quickjs-wasmfile-release-asyncify': 0.32.0
+      '@jitl/quickjs-wasmfile-release-sync': 0.32.0
+      quickjs-emscripten-core: 0.32.0
 
   range-parser@1.2.0: {}
 
