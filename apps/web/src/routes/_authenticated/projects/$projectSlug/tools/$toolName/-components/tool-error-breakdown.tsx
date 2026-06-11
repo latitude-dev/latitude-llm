@@ -4,8 +4,6 @@ import { type ToolsTimeRange, useToolErrorBreakdown } from "../../../../../../..
 import { TOOL_DETAIL_PANEL_MAX_HEIGHT } from "../../-components/tool-formatters.ts"
 import { ValueBar } from "./value-bar.tsx"
 
-// Takes the latency chart's slot in error view — failed-call latency already
-// lives in the Usage row's Duration tile.
 export function ToolErrorBreakdown({
   projectId,
   toolName,
@@ -15,12 +13,10 @@ export function ToolErrorBreakdown({
   readonly projectId: string
   readonly toolName: string
   readonly range: ToolsTimeRange
-  /** Total failed calls in the window — the bars' denominator. */
   readonly failedCalls: number
 }) {
   const { data: rows = [], isLoading } = useToolErrorBreakdown({ projectId, toolName, range })
   const counted = rows.reduce((sum, row) => sum + row.calls, 0)
-  // failedCalls comes from a separate query; never let "Other" go negative.
   const total = Math.max(failedCalls, counted)
   const other = total - counted
 

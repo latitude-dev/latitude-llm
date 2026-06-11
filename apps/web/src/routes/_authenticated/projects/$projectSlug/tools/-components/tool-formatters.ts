@@ -5,11 +5,7 @@ export const TOOL_CRITICAL_ERROR_RATE = 0.25
 
 export const DEFAULT_TOOLS_RANGE_SECONDS = 30 * 24 * 60 * 60 // last 30 days
 
-// Shared by every two-column row of the tool detail page so the right rail
-// keeps one width across rows.
 export const TOOL_DETAIL_ROW_GRID = "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px]"
-
-// Equal caps keep a row's stretched columns the same height when one overflows.
 export const TOOL_DETAIL_PANEL_MAX_HEIGHT = "xl:max-h-[420px]"
 
 const TARGET_TREND_BUCKETS = 30

@@ -203,7 +203,6 @@ function ToolDetailPageContent() {
             isLoading ? undefined : definition?.definition?.description ? (
               <ToolDescription key={toolName} toolName={toolName} description={definition.definition.description} />
             ) : (
-              // Italics mark these as placeholders, not a literal description.
               <Text.H5 color="foregroundMuted" italic>
                 {notFound
                   ? "No definition or calls were found for this tool in the selected time window."

@@ -83,10 +83,9 @@ export interface ToolAnalyticsRepositoryShape {
   ): Effect.Effect<readonly ToolContextBreakdownRow[], RepositoryError, ChSqlClient>
 
   /**
-   * Most common error outputs of one tool's failed calls, clustered by a
-   * normalized form of the output (numbers/UUIDs/hex runs collapsed) so
-   * variable fragments don't split one error into many buckets. Top `limit`
-   * clusters by size.
+   * Most common error outputs of one tool's failed calls, grouped by a
+   * normalized form (numbers/UUIDs/hex runs collapsed) so variable fragments
+   * don't split one error into many buckets.
    */
   getToolErrorBreakdown(
     input: ToolAnalyticsScope & {

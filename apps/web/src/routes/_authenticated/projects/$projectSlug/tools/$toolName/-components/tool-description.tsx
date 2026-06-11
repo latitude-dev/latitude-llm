@@ -1,7 +1,6 @@
 import { Button, Modal, Text, useMountEffect } from "@repo/ui"
 import { useRef, useState } from "react"
 
-// Tool descriptions are prompt content — providers put no bound on their length.
 export function ToolDescription({
   toolName,
   description,

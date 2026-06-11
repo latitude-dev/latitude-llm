@@ -47,7 +47,6 @@ const TOOL_CO_OCCURRENCE_MAX_LIMIT = 50
 
 const TOOL_ERROR_BREAKDOWN_DEFAULT_LIMIT = 10
 const TOOL_ERROR_BREAKDOWN_MAX_LIMIT = 50
-// Caps bound aggregation state; errors differing only past a cap share a cluster.
 const TOOL_ERROR_SAMPLE_CAP = 1_024
 const TOOL_ERROR_KEY_CAP = 256
 
@@ -691,9 +690,7 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                // UUIDs, hex runs and numbers collapse (in that order — they
-                // nest) so variable fragments don't split one error into many
-                // clusters; `sample` keeps a verbatim representative.
+                // Collapse order matters — the patterns nest.
                 query: `SELECT
                       substring(
                         replaceRegexpAll(
