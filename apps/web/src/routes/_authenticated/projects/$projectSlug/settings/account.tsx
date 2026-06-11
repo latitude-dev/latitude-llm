@@ -354,7 +354,7 @@ function ConnectedAccountsSection() {
           return (
             <div
               key={provider.id}
-              className="flex w-full flex-row items-center justify-between gap-4 rounded-lg bg-muted/30 p-4"
+              className="flex w-full flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-muted/30 p-4"
             >
               <div className="flex flex-row items-center gap-3">
                 {profile ? (
@@ -421,7 +421,7 @@ function SessionsSection() {
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex flex-row items-center justify-between">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-col gap-1">
           <Text.H5 weight="semibold">Sessions</Text.H5>
           <Text.H5 color="foregroundMuted">

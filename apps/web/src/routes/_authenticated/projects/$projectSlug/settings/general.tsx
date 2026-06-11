@@ -225,7 +225,7 @@ function TraceSamplingSection({
         </div>
         {enabled ? (
           <div className="flex w-full flex-col gap-2 border-border border-t p-4">
-            <div className="flex w-full flex-row items-center justify-between gap-4">
+            <div className="flex w-full flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
               <Label htmlFor="trace-sampling-rate" className="shrink-0">
                 Sampling rate
               </Label>

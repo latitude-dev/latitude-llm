@@ -102,12 +102,12 @@ export function SlackRouteRow({
     // Mirrors the email-notification group cards in account settings; the only
     // difference is the channel picker where email has a switch.
     <div className="flex w-full flex-col gap-3 rounded-lg bg-muted/30 p-4">
-      <div className="flex w-full flex-row items-center justify-between gap-4">
+      <div className="flex w-full flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-col gap-1">
           <Text.H5M>{meta.label}</Text.H5M>
           <Text.H6 color="foregroundMuted">{meta.description}</Text.H6>
         </div>
-        <div className="w-52 shrink-0">
+        <div className="w-52 max-w-full shrink-0">
           <Combobox
             modal
             value={selected}
@@ -162,7 +162,7 @@ export function SlackRouteRow({
         </div>
       </div>
       {group === "incidents" && currentRoute ? (
-        <div className="flex flex-row items-center justify-between gap-4 rounded-lg bg-muted/80 px-3 py-2">
+        <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-muted/80 px-3 py-2">
           <Text.H6 color="foregroundMuted">Severity · {minSeverityHint(currentRoute.minSeverity ?? "low")}</Text.H6>
           <SeveritySelector
             variant="bordered"

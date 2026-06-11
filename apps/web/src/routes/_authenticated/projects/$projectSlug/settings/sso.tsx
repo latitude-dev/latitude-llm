@@ -328,7 +328,7 @@ function ProviderCard({
   return (
     <>
       <div className="flex flex-col gap-4 rounded-lg border border-border p-6">
-        <div className="flex flex-row items-center justify-between gap-4">
+        <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex min-w-0 flex-col gap-1">
             <div className="flex flex-row items-center gap-2">
               <Text.H4 weight="bold">{provider.domain}</Text.H4>
@@ -492,7 +492,7 @@ function DangerZoneCard({ provider }: { provider: SsoProviderDto }) {
   }
 
   return (
-    <div className="flex flex-row items-center justify-between gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+    <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-6">
       <div className="flex flex-col gap-1">
         <Text.H5 weight="semibold" color="destructive">
           Remove SSO provider
