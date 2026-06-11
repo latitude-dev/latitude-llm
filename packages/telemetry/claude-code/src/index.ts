@@ -7,7 +7,7 @@ import { loadConfig } from "./config.ts"
 import { collectTraceContext } from "./context.ts"
 import type { Logger } from "./logger.ts"
 import { createLogger } from "./logger.ts"
-import { buildOtlpRequest } from "./otlp.ts"
+import { buildOtlpRequest, chunkOtlpRequest } from "./otlp.ts"
 import { deleteRequest, loadRequestsByMessageId, pruneStaleRequests } from "./request-store.ts"
 import { normalizeInstallFlags, parseFlags, runInstall, runUninstall } from "./setup.ts"
 import { load, save, stateKey, withLock } from "./state.ts"
@@ -141,13 +141,30 @@ async function main(): Promise<void> {
       requestsByMessageId,
     })
 
-    return postTraces({
-      baseUrl: config.baseUrl,
-      apiKey: config.apiKey,
-      project: config.project,
-      payload: otlpRequest,
-      logger,
-    }).then(() => {
+    // Long agentic turns produce payloads far beyond what a single POST can deliver,
+    // so the batch ships as size-bounded chunks. The offset only advances after every
+    // chunk lands — on any failure the whole batch is retried on the next Stop, and
+    // deterministic span IDs make the re-send idempotent server-side.
+    const chunks = chunkOtlpRequest(otlpRequest)
+    if (chunks.length > 1) logger.debug(`payload split into ${chunks.length} chunks`)
+
+    return (async () => {
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i]
+        if (!chunk) continue
+        const ok = await postTraces({
+          baseUrl: config.baseUrl,
+          apiKey: config.apiKey,
+          project: config.project,
+          payload: chunk,
+          logger,
+        })
+        if (!ok) {
+          logger.warn(`chunk ${i + 1}/${chunks.length} failed; keeping offset so the next Stop retries this batch`)
+          return
+        }
+      }
+
       save(key, {
         offset: newOffset,
         buffer: newBuffer,
@@ -160,7 +177,7 @@ async function main(): Promise<void> {
       for (const id of requestsByMessageId.keys()) deleteRequest(id)
       const stalePruned = pruneStaleRequests()
       if (stalePruned > 0) logger.debug(`pruned ${stalePruned} stale request file(s)`)
-    })
+    })()
   })
 }
 

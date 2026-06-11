@@ -6,6 +6,7 @@ import {
   openSync,
   readFileSync,
   renameSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs"
@@ -16,6 +17,9 @@ const STATE_DIR = join(homedir(), ".claude", "state", "latitude")
 const STATE_FILE = join(STATE_DIR, "state.json")
 const LOCK_FILE = join(STATE_DIR, "state.lock")
 const LOCK_TIMEOUT_MS = 2_000
+// A hook killed mid-run (e.g. by Claude Code's hook timeout) leaves its lock file
+// behind; anything older than this is treated as abandoned and broken.
+const LOCK_STALE_MS = 10 * 60_000
 
 interface SessionState {
   offset: number
@@ -71,24 +75,36 @@ export async function withLock<T>(fn: () => Promise<T> | T): Promise<T | undefin
       fd = openSync(LOCK_FILE, "wx")
       break
     } catch {
+      breakStaleLock()
       await sleep(50)
     }
   }
   try {
     return await fn()
   } finally {
+    // Only release the lock we actually acquired — when the wait timed out and we
+    // proceeded anyway, the file belongs to another hook run still in flight.
     if (fd !== undefined) {
       try {
         closeSync(fd)
       } catch {
         // ignore
       }
+      try {
+        unlinkSync(LOCK_FILE)
+      } catch {
+        // already gone
+      }
     }
-    try {
-      unlinkSync(LOCK_FILE)
-    } catch {
-      // lock was never acquired or already gone
-    }
+  }
+}
+
+function breakStaleLock(): void {
+  try {
+    const age = Date.now() - statSync(LOCK_FILE).mtimeMs
+    if (age > LOCK_STALE_MS) unlinkSync(LOCK_FILE)
+  } catch {
+    // lock vanished between the failed acquire and now — fine
   }
 }
 
