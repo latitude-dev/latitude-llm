@@ -34,21 +34,24 @@
 -- String, UInt8) — tool_name is LowCardinality and INSERT...SELECT state
 -- types must match the column exactly.
 
+-- `FROM spans AS s` + `s.session_id` mirrors the MV: the bare column would
+-- collide with the `session_id` SELECT alias and fail name resolution
+-- (code 215) — same pitfall the 00016 GROUP BY comment describes.
 INSERT INTO sessions (organization_id, project_id, session_id, min_start_time, time_of_first_token, tools, retention_days)
 SELECT
-    organization_id,
-    project_id,
-    coalesce(nullIf(session_id, ''), toString(trace_id)) AS session_id,
-    min(start_time) AS min_start_time,
+    s.organization_id,
+    s.project_id,
+    coalesce(nullIf(s.session_id, ''), toString(s.trace_id)) AS session_id,
+    min(s.start_time) AS min_start_time,
     toDateTime64('2261-01-01 00:00:00.000000000', 9, 'UTC') AS time_of_first_token,
-    groupUniqArrayIfState(toString(tool_name), tool_name != '') AS tools,
-    max(retention_days) AS retention_days
-FROM spans
-WHERE operation = 'execute_tool' AND tool_name != ''
+    groupUniqArrayIfState(toString(s.tool_name), s.tool_name != '') AS tools,
+    max(s.retention_days) AS retention_days
+FROM spans AS s
+WHERE s.operation = 'execute_tool' AND s.tool_name != ''
 GROUP BY
-    organization_id,
-    project_id,
-    coalesce(nullIf(session_id, ''), toString(trace_id));
+    s.organization_id,
+    s.project_id,
+    coalesce(nullIf(s.session_id, ''), toString(s.trace_id));
 
 INSERT INTO traces (organization_id, project_id, trace_id, min_start_time, time_of_first_token, tools, retention_days)
 SELECT
