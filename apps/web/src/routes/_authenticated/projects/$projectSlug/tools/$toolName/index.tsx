@@ -201,7 +201,9 @@ function ToolDetailPageContent() {
             isLoading ? undefined : definition?.definition?.description ? (
               <ToolDescription key={toolName} toolName={toolName} description={definition.definition.description} />
             ) : (
-              <Text.H5 color="foregroundMuted">
+              // Italic separates these placeholder messages from real tool
+              // descriptions, which render in the same slot.
+              <Text.H5 color="foregroundMuted" italic>
                 {notFound
                   ? "No definition or calls were found for this tool in the selected time window."
                   : "Definition not found — this tool was called but no chat span in this window carried its definition."}
