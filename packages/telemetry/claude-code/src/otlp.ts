@@ -16,6 +16,26 @@ import type {
 const SCOPE_NAME = "@latitude-data/claude-code-telemetry"
 const SCOPE_VERSION = "0.0.1"
 
+// Byte budgets (JSON string length as a proxy for bytes — the payload is almost
+// entirely ASCII). A long agentic turn can contain hundreds of LLM calls, each
+// embedding the full conversation context; on real sessions that produced single
+// POSTs of 130-340 MB, which can neither finish uploading inside the client
+// timeout nor pass the ingest rate limit (64 MB/min), so the whole turn was lost.
+// Spans under SPAN_BYTE_BUDGET are emitted untouched; oversized spans get their
+// bulkiest attributes truncated, lowest-value content first. The per-attribute
+// caps below sum to roughly SPAN_BYTE_BUDGET.
+const SPAN_BYTE_BUDGET = 128 * 1024
+const INPUT_MESSAGES_CAP = 64 * 1024
+const OUTPUT_MESSAGES_CAP = 32 * 1024
+const SYSTEM_CAP = 16 * 1024
+const TOOL_DEFS_CAP = 16 * 1024
+const TOOL_ARGS_CAP = 16 * 1024
+const USER_PROMPT_CAP = 64 * 1024
+// Each POST is kept under this size so it completes well inside the client
+// timeout even on modest uplinks; one logical trace may span several POSTs
+// (the server groups spans by trace_id, so splitting is transparent).
+const POST_BYTE_BUDGET = 3 * 1024 * 1024
+
 export function buildOtlpRequest(opts: {
   sessionId: string
   userId?: string | undefined
@@ -105,6 +125,7 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
   const durationMs = Math.max(0, turn.endMs - turn.startMs)
   const callCount = turn.calls.length
   const totalToolCalls = turn.calls.reduce((sum, c) => sum + c.toolUses.length, 0)
+  const promptText = clamp(turn.userText, USER_PROMPT_CAP)
 
   const interactionSpan: OtlpSpan = {
     traceId,
@@ -119,14 +140,15 @@ function buildInteractionTree(out: OtlpSpan[], ctx: TreeCtx): void {
       str("interaction.kind", isSubagent ? "subagent" : "user"),
       str("session.id", sessionId),
       userId ? str("user.id", userId) : undefined,
-      str("user_prompt", turn.userText),
+      str("user_prompt", promptText),
       int("user_prompt_length", turn.userText.length),
       int("interaction.duration_ms", durationMs),
       int("interaction.call_count", callCount),
       int("interaction.tool_call_count", totalToolCalls),
       turnNum !== undefined ? int("turn.number", turnNum) : undefined,
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
-      str("gen_ai.input.messages", JSON.stringify([messagePart("user", turn.userText)])),
+      str("gen_ai.input.messages", JSON.stringify([messagePart("user", promptText)])),
+      promptText.length < turn.userText.length ? str("latitude.truncation", "user prompt clamped") : undefined,
       // Diagnostic: per-interaction snapshot of what the hook saw from the intercept.
       // Shows up in the Latitude UI so users can see exactly why llm_request.captured
       // did or didn't land on a given trace.
@@ -168,8 +190,12 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
     : buildCallInputMessages({ callIdx, priorTurns: ctx.priorTurns, turn })
   const outputMessages = [assistantMessageFromCall(call)]
 
-  const systemAttr = captured?.system ? buildSystemInstructions(captured.system) : undefined
-  const toolDefsAttr = captured?.tools && captured.tools.length > 0 ? JSON.stringify(captured.tools) : undefined
+  const payloads = capLlmRequestPayload({
+    inputMessages,
+    outputMessages,
+    systemParts: captured?.system ? buildSystemParts(captured.system) : undefined,
+    toolDefs: captured?.tools && captured.tools.length > 0 ? captured.tools : undefined,
+  })
 
   const callSpan: OtlpSpan = {
     traceId,
@@ -212,10 +238,11 @@ function emitCallAndTools(out: OtlpSpan[], ctx: TreeCtx, call: AssistantCall, ca
         : undefined,
       str("success", "true"),
       isSubagent && subagentLabel ? str("subagent.id", subagentLabel) : undefined,
-      systemAttr ? str("gen_ai.system_instructions", systemAttr) : undefined,
-      toolDefsAttr ? str("gen_ai.tool.definitions", toolDefsAttr) : undefined,
-      str("gen_ai.input.messages", JSON.stringify(inputMessages)),
-      str("gen_ai.output.messages", JSON.stringify(outputMessages)),
+      payloads.systemJson ? str("gen_ai.system_instructions", payloads.systemJson) : undefined,
+      payloads.toolDefsJson ? str("gen_ai.tool.definitions", payloads.toolDefsJson) : undefined,
+      str("gen_ai.input.messages", payloads.inputJson),
+      str("gen_ai.output.messages", payloads.outputJson),
+      payloads.truncationNote ? str("latitude.truncation", payloads.truncationNote) : undefined,
       // Diagnostic: show the lookup outcome per span so it's visible in the UI.
       str("latitude.debug.lookup_message_id", call.messageId),
       str("latitude.debug.request_file_found", captured ? "true" : "false"),
@@ -269,6 +296,22 @@ function buildToolSpan(
   call: ToolCall,
   contextAttrs: OtlpKeyValue[],
 ): OtlpSpan {
+  let argsJson = safeJson(call.input)
+  let resultJson = call.output !== undefined ? safeJson(call.output) : undefined
+  let truncationNote: string | undefined
+  if (argsJson.length + (resultJson?.length ?? 0) > SPAN_BYTE_BUDGET) {
+    const notes: string[] = []
+    if (argsJson.length > TOOL_ARGS_CAP) {
+      argsJson = clamp(argsJson, TOOL_ARGS_CAP)
+      notes.push("tool arguments clamped")
+    }
+    const resultCap = SPAN_BYTE_BUDGET - TOOL_ARGS_CAP
+    if (resultJson !== undefined && resultJson.length > resultCap) {
+      resultJson = clamp(resultJson, resultCap)
+      notes.push("tool result clamped")
+    }
+    truncationNote = notes.join("; ") || undefined
+  }
   return {
     traceId,
     spanId,
@@ -284,8 +327,9 @@ function buildToolSpan(
       userId ? str("user.id", userId) : undefined,
       str("gen_ai.tool.name", call.name),
       str("gen_ai.tool.call.id", call.id),
-      str("gen_ai.tool.call.arguments", safeJson(call.input)),
-      call.output !== undefined ? str("gen_ai.tool.call.result", safeJson(call.output)) : undefined,
+      str("gen_ai.tool.call.arguments", argsJson),
+      resultJson !== undefined ? str("gen_ai.tool.call.result", resultJson) : undefined,
+      truncationNote ? str("latitude.truncation", truncationNote) : undefined,
       call.isError ? str("error.type", "tool_error") : undefined,
       bool("tool.is_error", call.isError === true),
       str("success", call.isError ? "false" : "true"),
@@ -355,16 +399,169 @@ function countCapturedCalls(turn: Turn, requestsByMessageId: Map<string, StoredR
   return turn.calls.reduce((sum, call) => sum + (requestsByMessageId.has(call.messageId) ? 1 : 0), 0)
 }
 
-function buildSystemInstructions(system: AnthropicSystem): string {
-  if (!system) return JSON.stringify([])
+function buildSystemParts(system: AnthropicSystem): MessagePart[] {
+  if (!system) return []
   if (typeof system === "string") {
-    return JSON.stringify([{ type: "text", content: system }])
+    return [{ type: "text", content: system }]
   }
-  const parts = system.map((block) => ({
+  return system.map((block) => ({
     type: "text",
     content: typeof block.text === "string" ? block.text : typeof block.content === "string" ? block.content : "",
   }))
-  return JSON.stringify(parts)
+}
+
+interface LlmRequestPayloads {
+  inputJson: string
+  outputJson: string
+  systemJson: string | undefined
+  toolDefsJson: string | undefined
+  truncationNote: string | undefined
+}
+
+function capLlmRequestPayload(args: {
+  inputMessages: Message[]
+  outputMessages: Message[]
+  systemParts: MessagePart[] | undefined
+  toolDefs: unknown[] | undefined
+}): LlmRequestPayloads {
+  let inputJson = JSON.stringify(args.inputMessages)
+  let outputJson = JSON.stringify(args.outputMessages)
+  let systemJson = args.systemParts ? JSON.stringify(args.systemParts) : undefined
+  let toolDefsJson = args.toolDefs ? JSON.stringify(args.toolDefs) : undefined
+
+  const total = inputJson.length + outputJson.length + (systemJson?.length ?? 0) + (toolDefsJson?.length ?? 0)
+  if (total <= SPAN_BYTE_BUDGET) {
+    return { inputJson, outputJson, systemJson, toolDefsJson, truncationNote: undefined }
+  }
+
+  const notes: string[] = []
+  if (args.toolDefs && toolDefsJson && toolDefsJson.length > TOOL_DEFS_CAP) {
+    const r = capArrayJson(args.toolDefs, TOOL_DEFS_CAP)
+    toolDefsJson = r.json
+    if (r.note) notes.push(`tool definitions: ${r.note}`)
+  }
+  if (args.systemParts && systemJson && systemJson.length > SYSTEM_CAP) {
+    const r = capPartsJson(args.systemParts, SYSTEM_CAP)
+    systemJson = r.json
+    if (r.note) notes.push(`system instructions: ${r.note}`)
+  }
+  if (outputJson.length > OUTPUT_MESSAGES_CAP) {
+    const r = capMessagesJson(args.outputMessages, OUTPUT_MESSAGES_CAP)
+    outputJson = r.json
+    if (r.note) notes.push(`output messages: ${r.note}`)
+  }
+  if (inputJson.length > INPUT_MESSAGES_CAP) {
+    const r = capMessagesJson(args.inputMessages, INPUT_MESSAGES_CAP)
+    inputJson = r.json
+    if (r.note) notes.push(`input messages: ${r.note}`)
+  }
+  return { inputJson, outputJson, systemJson, toolDefsJson, truncationNote: notes.join(" | ") || undefined }
+}
+
+interface CapResult {
+  json: string
+  note?: string
+}
+
+// Keeps the most recent messages that fit the budget — the tail (current prompt and
+// latest tool context) is what the UI shows first; older context is recoverable from
+// earlier llm_request spans of the same session. Always emits valid JSON.
+function capMessagesJson(messages: Message[], maxBytes: number): CapResult {
+  const full = JSON.stringify(messages)
+  if (full.length <= maxBytes) return { json: full }
+
+  let budget = maxBytes - 2 // surrounding brackets
+  let start = messages.length
+  while (start > 0) {
+    const last = messages[start - 1]
+    const cost = JSON.stringify(last).length + 1
+    if (cost > budget) break
+    budget -= cost
+    start--
+  }
+
+  const kept = messages.slice(start)
+  const notes: string[] = []
+  if (kept.length === 0) {
+    // Even the newest message alone exceeds the budget: shrink its parts instead.
+    const last = messages[messages.length - 1]
+    if (last) {
+      const perPart = Math.max(1024, Math.floor(maxBytes / Math.max(1, last.parts.length)) - 64)
+      kept.push({ ...last, parts: last.parts.map((p) => shrinkPart(p, perPart)) })
+      notes.push("shrunk oversized message parts")
+    }
+    start = messages.length - 1
+  }
+  if (start > 0) notes.push(`dropped ${start} oldest of ${messages.length} messages`)
+  return { json: JSON.stringify(kept), note: notes.join("; ") }
+}
+
+function capPartsJson(parts: MessagePart[], maxBytes: number): CapResult {
+  const full = JSON.stringify(parts)
+  if (full.length <= maxBytes) return { json: full }
+  const perPart = Math.max(512, Math.floor(maxBytes / Math.max(1, parts.length)) - 32)
+  return { json: JSON.stringify(parts.map((p) => shrinkPart(p, perPart))), note: `shrunk ${parts.length} part(s)` }
+}
+
+// Keeps whole leading entries that fit the budget. Used for tool definitions, where
+// each entry is self-contained and order carries no recency meaning.
+function capArrayJson(items: unknown[], maxBytes: number): CapResult {
+  const full = JSON.stringify(items)
+  if (full.length <= maxBytes) return { json: full }
+  let budget = maxBytes - 2
+  let end = 0
+  while (end < items.length) {
+    const cost = JSON.stringify(items[end]).length + 1
+    if (cost > budget) break
+    budget -= cost
+    end++
+  }
+  return { json: JSON.stringify(items.slice(0, end)), note: `kept ${end} of ${items.length} entries` }
+}
+
+function shrinkPart(part: MessagePart, maxBytes: number): MessagePart {
+  if (JSON.stringify(part).length <= maxBytes) return part
+  if (typeof part.content === "string") return { ...part, content: clamp(part.content, maxBytes) }
+  if ("response" in part) return { ...part, response: clamp(safeJson(part.response), maxBytes) }
+  if ("arguments" in part) return { ...part, arguments: { truncated: clamp(safeJson(part.arguments), maxBytes) } }
+  return part
+}
+
+function clamp(s: string, maxLength: number): string {
+  if (s.length <= maxLength) return s
+  return `${s.slice(0, maxLength)}… [latitude: truncated ${s.length - maxLength} chars]`
+}
+
+// Splits one export request into several, each under maxBytes when serialized, by
+// distributing spans across copies of the same resource/scope envelope. The server
+// groups spans by trace_id, so a trace arriving across multiple POSTs is assembled
+// identically to one arriving whole.
+export function chunkOtlpRequest(req: OtlpExportRequest, maxBytes = POST_BYTE_BUDGET): OtlpExportRequest[] {
+  const rs = req.resourceSpans[0]
+  const ss = rs?.scopeSpans[0]
+  if (!rs || !ss || req.resourceSpans.length !== 1 || rs.scopeSpans.length !== 1) return [req]
+
+  const wrap = (spans: OtlpSpan[]): OtlpExportRequest => ({
+    resourceSpans: [{ resource: rs.resource, scopeSpans: [{ scope: ss.scope, spans }] }],
+  })
+  const overhead = JSON.stringify(wrap([])).length
+
+  const batches: OtlpSpan[][] = []
+  let current: OtlpSpan[] = []
+  let size = overhead
+  for (const span of ss.spans) {
+    const cost = JSON.stringify(span).length + 1
+    if (current.length > 0 && size + cost > maxBytes) {
+      batches.push(current)
+      current = []
+      size = overhead
+    }
+    current.push(span)
+    size += cost
+  }
+  if (current.length > 0) batches.push(current)
+  if (batches.length <= 1) return [req]
+  return batches.map(wrap)
 }
 
 function convertAnthropicMessages(messages: AnthropicMessage[]): Message[] {

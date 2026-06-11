@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildOtlpRequest } from "./otlp.ts"
+import { buildOtlpRequest, chunkOtlpRequest } from "./otlp.ts"
 import type { StoredRequest } from "./request-store.ts"
 import type { AssistantCall, OtlpKeyValue, ToolCall, Turn, Usage } from "./types.ts"
 
@@ -697,5 +697,124 @@ describe("buildOtlpRequest", () => {
     // Subagent tool is a sibling of the subagent llm_request, parented to the
     // subagent interaction span (same sibling rule applied recursively).
     expect(subTool.parentSpanId).toBe(subInteraction.spanId)
+  })
+})
+
+describe("span size capping", () => {
+  it("leaves spans under the budget untouched", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-cap",
+      turnStartNumber: 1,
+      turns: [baseTurn({ assistantText: "normal sized response" })],
+    })
+    for (const span of otlpSpans(req)) {
+      expect(getAttr(span.attributes, "latitude.truncation")).toBeUndefined()
+    }
+  })
+
+  it("clamps giant tool results and keeps the span bounded", () => {
+    const giant = "x".repeat(500_000)
+    const req = buildOtlpRequest({
+      sessionId: "sess-cap",
+      turnStartNumber: 1,
+      turns: [
+        baseTurn({
+          toolCalls: [{ id: "tool_1", name: "Bash", input: { command: "cat big.log" }, output: giant }],
+        }),
+      ],
+    })
+    const toolSpan = unwrap(otlpSpans(req).find((s) => s.name === "tool:Bash"))
+    const result = unwrap(getAttr(toolSpan.attributes, "gen_ai.tool.call.result"))
+    expect(result.length).toBeLessThan(150_000)
+    expect(result).toContain("[latitude: truncated")
+    expect(getAttr(toolSpan.attributes, "latitude.truncation")).toContain("tool result clamped")
+    expect(JSON.stringify(toolSpan).length).toBeLessThan(200_000)
+  })
+
+  it("drops oldest input messages on oversized llm_request spans, keeping valid JSON", () => {
+    const history: Turn[] = Array.from({ length: 50 }, (_, i) =>
+      baseTurn({
+        userText: `prompt ${i} ${"h".repeat(10_000)}`,
+        assistantText: `answer ${i} ${"a".repeat(10_000)}`,
+        messageId: `msg_h${i}`,
+      }),
+    )
+    const req = buildOtlpRequest({
+      sessionId: "sess-cap",
+      turnStartNumber: 51,
+      turns: [baseTurn({ userText: "latest question", assistantText: "latest answer", messageId: "msg_new" })],
+      conversationHistory: history,
+    })
+    const llm = unwrap(otlpSpans(req).find((s) => s.name === "llm_request"))
+    const inputJson = unwrap(getAttr(llm.attributes, "gen_ai.input.messages"))
+    expect(inputJson.length).toBeLessThanOrEqual(64 * 1024)
+    const messages = JSON.parse(inputJson) as Array<{ role: string; parts: Array<{ content?: string }> }>
+    // The tail (current prompt) survives; the oldest history is what gets dropped.
+    const last = unwrap(messages[messages.length - 1])
+    expect(JSON.stringify(last)).toContain("latest question")
+    expect(getAttr(llm.attributes, "latitude.truncation")).toContain("dropped")
+    expect(JSON.stringify(llm).length).toBeLessThan(256 * 1024)
+  })
+
+  it("clamps oversized user prompts on the interaction span", () => {
+    const req = buildOtlpRequest({
+      sessionId: "sess-cap",
+      turnStartNumber: 1,
+      turns: [baseTurn({ userText: "p".repeat(200_000) })],
+    })
+    const interaction = unwrap(otlpSpans(req).find((s) => s.name === "interaction"))
+    const prompt = unwrap(getAttr(interaction.attributes, "user_prompt"))
+    expect(prompt.length).toBeLessThan(70_000)
+    // The original length is preserved for analytics even when the text is clamped.
+    expect(getAttr(interaction.attributes, "user_prompt_length")).toBe("200000")
+    expect(getAttr(interaction.attributes, "latitude.truncation")).toBe("user prompt clamped")
+  })
+})
+
+describe("chunkOtlpRequest", () => {
+  it("returns the original request when it fits the budget", () => {
+    const req = buildOtlpRequest({ sessionId: "sess-chunk", turnStartNumber: 1, turns: [baseTurn()] })
+    const chunks = chunkOtlpRequest(req)
+    expect(chunks).toHaveLength(1)
+    expect(chunks[0]).toBe(req)
+  })
+
+  it("splits oversized batches preserving every span, order, and the envelope", () => {
+    const turns = Array.from({ length: 10 }, (_, i) =>
+      baseTurn({
+        userText: `turn ${i}`,
+        assistantText: "b".repeat(30_000),
+        messageId: `msg_c${i}`,
+      }),
+    )
+    const req = buildOtlpRequest({ sessionId: "sess-chunk", turnStartNumber: 1, turns })
+    const all = otlpSpans(req)
+    const chunks = chunkOtlpRequest(req, 100_000)
+    expect(chunks.length).toBeGreaterThan(1)
+
+    const reassembled = chunks.flatMap((c) => otlpSpans(c))
+    expect(reassembled.map((s) => s.spanId)).toEqual(all.map((s) => s.spanId))
+    for (const chunk of chunks) {
+      // Multi-span chunks respect the budget; a lone span bigger than the budget
+      // still ships (in its own chunk) rather than being dropped.
+      if (otlpSpans(chunk).length > 1) {
+        expect(JSON.stringify(chunk).length).toBeLessThanOrEqual(100_000)
+      }
+      const rs = unwrap(chunk.resourceSpans[0])
+      expect(rs.resource).toEqual(unwrap(req.resourceSpans[0]).resource)
+      expect(unwrap(rs.scopeSpans[0]).scope).toEqual(unwrap(unwrap(req.resourceSpans[0]).scopeSpans[0]).scope)
+    }
+  })
+
+  it("gives a span larger than the budget its own chunk instead of dropping it", () => {
+    const turns = [
+      baseTurn({ userText: "small", messageId: "msg_s" }),
+      baseTurn({ userText: "big", assistantText: "z".repeat(50_000), messageId: "msg_b" }),
+    ]
+    const req = buildOtlpRequest({ sessionId: "sess-chunk", turnStartNumber: 1, turns })
+    const all = otlpSpans(req)
+    const chunks = chunkOtlpRequest(req, 10_000)
+    const reassembled = chunks.flatMap((c) => otlpSpans(c))
+    expect(reassembled.map((s) => s.spanId)).toEqual(all.map((s) => s.spanId))
   })
 })

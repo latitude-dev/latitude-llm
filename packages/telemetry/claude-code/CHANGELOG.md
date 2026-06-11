@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-06-11
+
 ### Fixed
 
+- **Long agentic turns are no longer silently lost.** A single long turn (hundreds of LLM calls) produced one OTLP POST of 130–340 MB — too big to upload inside the client timeout and over the ingest rate limit — and the hook recorded it as sent anyway. Three changes fix this:
+  - The transcript offset only advances after the export is confirmed delivered (2xx on every chunk). Failed exports are retried on the next Stop; deterministic span IDs make re-sends idempotent server-side.
+  - Exports are split into POSTs of at most 3 MB each. One trace may arrive across several POSTs; the server already assembles spans by `trace_id`.
+  - Spans over 128 KB get their bulkiest attributes truncated (repeated tool definitions, then system prompt, oldest input messages, tool results — in that order), always keeping valid JSON and the most recent context. A `latitude.truncation` attribute records what was cut. Spans under the budget are byte-identical to before. This also removes a `JSON.stringify` RangeError crash on very large sessions.
+- **State lock handling.** A hook run that failed to acquire the state lock no longer deletes the lock file owned by a concurrent run; locks abandoned by killed hooks are broken after 10 minutes.
 - Installer links now point to the current Latitude docs and API key settings URLs.
+
+### Changed
+
+- Per-POST client timeout raised from 10 s to 30 s (each POST is now bounded at 3 MB).
 
 ## [0.0.7] - 2026-04-24
 
