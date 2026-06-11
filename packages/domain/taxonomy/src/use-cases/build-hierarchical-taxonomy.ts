@@ -3,14 +3,16 @@
  * workflow calls to materialize the cluster tree.
  *
  * High level:
- *   1. List up to TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX observations from the
- *      lookback window, regardless of current assignment. The repository
+ *   1. List an adaptive, capped sample from the lookback window, regardless
+ *      of current assignment. The repository
  *      day-stratifies this sample: it ranks each observation within its own
  *      day and interleaves days round-robin, so the bounded sample is
  *      representative of the whole window rather than biased toward the last
  *      few hours. On large tenants (5M sessions/month) this spreads the budget
  *      across days; small tenants whose corpus fits under the cap see their
- *      whole live window. The sample is slim (id, start time, embedding) so
+ *      whole live window, while larger tenants use a system-wide hard cap.
+ *      The sample is slim (id, start
+ *      time, embedding) so
  *      projection metadata does not round-trip through the workflow worker.
  *      The sample is deterministic (hash-ordered, no rand()) so a gardening
  *      pass replays identically under Temporal.
@@ -53,9 +55,14 @@ import {
   type TaxonomyRunId,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { buildHierarchicalClusters, type ClusteringTreeNode } from "../clustering.ts"
+import {
+  type BuildHierarchicalClustersInput,
+  buildHierarchicalClusters,
+  type ClusteringTreeNode,
+} from "../clustering.ts"
 import {
   TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+  TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_CONTINUATION_THRESHOLD,
   TAXONOMY_GARDENING_MIN_OBSERVATIONS,
   TAXONOMY_KMEANS_MAX_ITER,
@@ -65,6 +72,7 @@ import {
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_TREE_DEPTH_SCHEDULE,
+  taxonomyClusteringSampleLimit,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
@@ -78,7 +86,10 @@ import {
 } from "../helpers.ts"
 import { matchTaxonomyLineage } from "../lineage.ts"
 import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.ts"
-import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
+import {
+  type ReassignTaxonomyObservationByIdInput,
+  TaxonomyObservationRepository,
+} from "../ports/taxonomy-observation-repository.ts"
 
 export interface BuildHierarchicalTaxonomyInput {
   readonly organizationId: OrganizationId
@@ -90,6 +101,10 @@ export interface BuildHierarchicalTaxonomyInput {
 
 export interface BuildHierarchicalTaxonomyResult {
   readonly observationsScanned: number
+  readonly observationsAvailable: number
+  readonly observationsSampled: number
+  readonly sampleStrategy: string
+  readonly sampleCap: number
   /** Genuinely new nodes (no confident predecessor). */
   readonly clustersBorn: number
   /** Nodes that reused a previously-active cluster's id (`continuation`). */
@@ -98,6 +113,28 @@ export interface BuildHierarchicalTaxonomyResult {
   readonly leavesAssigned: number
   readonly maxDepthReached: number
   readonly lineage: readonly TaxonomyClusterLineage[]
+}
+
+export type TaxonomyClusterBuilder = (
+  input: BuildHierarchicalClustersInput,
+) => Effect.Effect<ClusteringTreeNode, Error, never>
+
+export interface PlanHierarchicalTaxonomyInput extends BuildHierarchicalTaxonomyInput {
+  readonly clusterBuilder?: TaxonomyClusterBuilder
+}
+
+export interface HierarchicalTaxonomyPlan extends BuildHierarchicalTaxonomyResult {
+  /** Depth-ascending; write boundaries must preserve order so children are not saved before parents. */
+  readonly clusters: readonly TaxonomyCluster[]
+  readonly observationAssignments: readonly ReassignTaxonomyObservationByIdInput[]
+  readonly deprecatedClusterIds: readonly TaxonomyClusterId[]
+}
+
+export interface PersistHierarchicalTaxonomyPlanInput {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly plan: HierarchicalTaxonomyPlan
+  readonly now?: Date
 }
 
 const lookbackStart = (now: Date): Date => new Date(now.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
@@ -242,7 +279,7 @@ const collectNodes = (
   return tempId
 }
 
-export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonomyInput) =>
+export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("taxonomy.projectId", input.projectId)
     yield* Effect.annotateCurrentSpan("taxonomy.runId", input.runId)
@@ -250,28 +287,49 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
     const dimension = input.dimension ?? TaxonomyDimension.Topic
     const observationsRepo = yield* TaxonomyObservationRepository
     const clustersRepo = yield* TaxonomyClusterRepository
+    const since = lookbackStart(now)
+    const counts = yield* observationsRepo.getCounts({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      since,
+    })
+    const sampleLimit = taxonomyClusteringSampleLimit(counts.total)
 
     const observations = yield* observationsRepo.listForClusteringSample({
       organizationId: input.organizationId,
       projectId: input.projectId,
-      since: lookbackStart(now),
-      limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+      since,
+      limit: sampleLimit,
     })
+
+    const baseResult = {
+      observationsScanned: observations.length,
+      observationsAvailable: counts.total,
+      observationsSampled: observations.length,
+      sampleStrategy: TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
+      sampleCap: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+    }
 
     if (observations.length < TAXONOMY_GARDENING_MIN_OBSERVATIONS) {
       return {
-        observationsScanned: observations.length,
+        ...baseResult,
         clustersBorn: 0,
         clustersContinued: 0,
         clustersDeprecated: 0,
         leavesAssigned: 0,
         maxDepthReached: 0,
         lineage: [],
-      } satisfies BuildHierarchicalTaxonomyResult
+        clusters: [],
+        observationAssignments: [],
+        deprecatedClusterIds: [],
+      } satisfies HierarchicalTaxonomyPlan
     }
 
     const normalizedEmbeddings = observations.map((observation) => normalizeTaxonomyEmbedding(observation.embedding))
-    const tree = buildHierarchicalClusters({
+    const clusterBuilder =
+      input.clusterBuilder ??
+      ((builderInput: BuildHierarchicalClustersInput) => Effect.sync(() => buildHierarchicalClusters(builderInput)))
+    const tree = yield* clusterBuilder({
       embeddings: normalizedEmbeddings,
       depthSchedule: TAXONOMY_TREE_DEPTH_SCHEDULE,
       restarts: TAXONOMY_KMEANS_RESTARTS,
@@ -280,16 +338,9 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
       seed: seedFromProjectId(input.projectId),
     })
 
-    // Collect the freshly built nodes before assigning ids. If the entire
-    // corpus collapses to a single leaf at depth 0, the tree is still useful
-    // (and exactly what tiny tenants should see) — it is collected as one root.
     const descriptors: NodeDescriptor[] = []
     collectNodes(tree, null, { value: 0 }, descriptors)
 
-    // Continuity matching: reuse a previously-active cluster's id when a new
-    // node is confidently the same topic (Hungarian 1:1 centroid match). This
-    // keeps cluster ids — and therefore every trend that keys on them — stable
-    // across gardening passes instead of resetting every run.
     const previouslyActive = yield* clustersRepo.listActiveByProject({ projectId: input.projectId, dimension })
     const oldById = new Map(previouslyActive.map((cluster) => [cluster.id as string, cluster] as const))
     const match = matchTaxonomyLineage({
@@ -303,17 +354,12 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
       nameReuseThreshold: TAXONOMY_NAME_REUSE_THRESHOLD,
     })
     const decisionByTempId = new Map(match.decisions.map((decision) => [decision.tempId, decision] as const))
-    // A continuation reuses its predecessor's id; every other node gets a fresh
-    // cuid. Resolve all ids before materializing so child `path`s reference the
-    // resolved parent id.
     const finalIdByTempId = new Map<string, string>()
     for (const node of descriptors) {
       const decision = decisionByTempId.get(node.tempId)
       finalIdByTempId.set(node.tempId, decision?.transition === "continuation" ? decision.reuseId : generateId())
     }
 
-    // Materialize depth-ascending so a parent's id and path are known before
-    // its children build theirs.
     const orderedDescriptors = [...descriptors].sort((a, b) => a.depth - b.depth)
     const pathByTempId = new Map<string, string>()
     const bornClusters: TaxonomyCluster[] = []
@@ -335,9 +381,6 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
 
       const memberEmbeddings = node.memberIndices.map((index) => normalizedEmbeddings[index] ?? [])
       const memberStartTimes = node.memberIndices.map((index) => observations[index]?.startTime ?? now)
-      // PG `observation_count` caches CH's direct-assignment count. Every member
-      // observation is routed to a leaf cluster, so interior nodes carry zero
-      // direct count — clients roll up subtree counts at read time.
       const directCount = node.isLeaf ? node.memberIndices.length : 0
       const cluster = buildPersistedCluster({
         id: finalId,
@@ -352,8 +395,6 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
         memberStartTimes,
         memberCount: directCount,
         now,
-        // Carry the old name only when the topic barely moved; otherwise leave
-        // it "Pending" so the naming step re-names while keeping the stable id.
         name: carryName && old ? old.name : TAXONOMY_PENDING_DISPLAY_NAME,
         description: carryName && old ? old.description : "",
         firstObservedAt: old?.firstObservedAt,
@@ -397,48 +438,30 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
       }
     }
 
-    // Persist clusters top-down (already depth-ascending) so a child save never
-    // references a parent that does not exist yet. `save` upserts on id, so a
-    // continuation cleanly updates the reused row in place.
-    for (const cluster of bornClusters) {
-      yield* clustersRepo.save(cluster)
-    }
+    const observationAssignments = bornLeaves.flatMap((leaf) =>
+      leaf.observationIndices.flatMap((index) => {
+        const observation = observations[index]
+        const embedding = normalizedEmbeddings[index]
+        if (!observation || !embedding) return []
+        const confidence = Math.max(0, Math.min(1, cosineSimilarityNormalized(embedding, leaf.centroid)))
+        return [
+          {
+            observationId: observation.observationId,
+            assignedClusterId: leaf.clusterId,
+            assignmentMethod: "gardening_birth" as const,
+            assignmentConfidence: confidence,
+            reassignmentRunId: input.runId,
+            indexedAt: now,
+          },
+        ]
+      }),
+    )
 
-    // Reassign every member observation directly to its leaf cluster.
-    if (bornLeaves.length > 0) {
-      const reassignments = bornLeaves.flatMap((leaf) =>
-        leaf.observationIndices.flatMap((index) => {
-          const observation = observations[index]
-          const embedding = normalizedEmbeddings[index]
-          if (!observation || !embedding) return []
-          const confidence = Math.max(0, Math.min(1, cosineSimilarityNormalized(embedding, leaf.centroid)))
-          return [
-            {
-              observationId: observation.observationId,
-              assignedClusterId: leaf.clusterId,
-              assignmentMethod: "gardening_birth" as const,
-              assignmentConfidence: confidence,
-              reassignmentRunId: input.runId,
-              indexedAt: now,
-            },
-          ]
-        }),
-      )
-      yield* observationsRepo.reassignManyById({
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        assignments: reassignments,
-      })
-    }
-
-    // Deprecate every previously-active cluster that no new node continued.
-    // Continued clusters keep their id (it is among `finalIds`) and stay active.
     const finalIds = new Set(finalIdByTempId.values())
-    let clustersDeprecated = 0
+    const deprecatedClusterIds: TaxonomyClusterId[] = []
     for (const cluster of previouslyActive) {
       if (finalIds.has(cluster.id)) continue
-      yield* clustersRepo.markDeprecated({ clusterId: cluster.id, timestamp: now })
-      clustersDeprecated++
+      deprecatedClusterIds.push(cluster.id)
       lineage.push({
         id: TaxonomyLineageId(generateId()),
         organizationId: input.organizationId,
@@ -454,12 +477,63 @@ export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonom
     }
 
     return {
-      observationsScanned: observations.length,
+      ...baseResult,
       clustersBorn,
       clustersContinued,
-      clustersDeprecated,
+      clustersDeprecated: deprecatedClusterIds.length,
       leavesAssigned: bornLeaves.reduce((sum, leaf) => sum + leaf.observationIndices.length, 0),
       maxDepthReached: maxDepth,
       lineage,
+      clusters: bornClusters,
+      observationAssignments,
+      deprecatedClusterIds,
+    } satisfies HierarchicalTaxonomyPlan
+  }).pipe(Effect.withSpan("taxonomy.planHierarchicalTaxonomy"))
+
+export const persistHierarchicalTaxonomyPlanUseCase = (input: PersistHierarchicalTaxonomyPlanInput) =>
+  Effect.gen(function* () {
+    const observationsRepo = yield* TaxonomyObservationRepository
+    const clustersRepo = yield* TaxonomyClusterRepository
+    const timestamp = input.now ?? new Date()
+
+    for (const cluster of input.plan.clusters) {
+      yield* clustersRepo.save(cluster)
+    }
+
+    if (input.plan.observationAssignments.length > 0) {
+      yield* observationsRepo.reassignManyById({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        assignments: input.plan.observationAssignments,
+      })
+    }
+
+    for (const clusterId of input.plan.deprecatedClusterIds) {
+      yield* clustersRepo.markDeprecated({ clusterId, timestamp })
+    }
+
+    return {
+      observationsScanned: input.plan.observationsScanned,
+      observationsAvailable: input.plan.observationsAvailable,
+      observationsSampled: input.plan.observationsSampled,
+      sampleStrategy: input.plan.sampleStrategy,
+      sampleCap: input.plan.sampleCap,
+      clustersBorn: input.plan.clustersBorn,
+      clustersContinued: input.plan.clustersContinued,
+      clustersDeprecated: input.plan.clustersDeprecated,
+      leavesAssigned: input.plan.leavesAssigned,
+      maxDepthReached: input.plan.maxDepthReached,
+      lineage: input.plan.lineage,
     } satisfies BuildHierarchicalTaxonomyResult
+  }).pipe(Effect.withSpan("taxonomy.persistHierarchicalTaxonomyPlan"))
+
+export const buildHierarchicalTaxonomyUseCase = (input: BuildHierarchicalTaxonomyInput) =>
+  Effect.gen(function* () {
+    const plan = yield* planHierarchicalTaxonomyUseCase(input)
+    return yield* persistHierarchicalTaxonomyPlanUseCase({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      plan,
+      ...(input.now === undefined ? {} : { now: input.now }),
+    })
   }).pipe(Effect.withSpan("taxonomy.buildHierarchicalTaxonomy"))

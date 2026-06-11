@@ -63,7 +63,7 @@ export interface ClusteringTreeNode {
   readonly depth: number
 }
 
-interface BuildHierarchicalClustersInput {
+export interface BuildHierarchicalClustersInput {
   /** L2-normalized embeddings; all same dimension. */
   readonly embeddings: readonly (readonly number[])[]
   /** One entry per depth (depth 0 = root). When recursion exceeds the array

@@ -1,5 +1,5 @@
 import type { TaxonomyClusterLineage } from "@domain/taxonomy"
-import { CancellationScope, proxyActivities, workflowInfo } from "@temporalio/workflow"
+import { CancellationScope, patched, proxyActivities, workflowInfo } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 import { defaultActivityRetryPolicy } from "./retry-policy.ts"
 
@@ -16,9 +16,13 @@ const {
   assertGardenTaxonomyQualityActivity,
   buildHierarchicalGardenTaxonomyActivity,
   completeGardenTaxonomyRunActivity,
+  deprecateGardenTaxonomyClustersActivity,
   emitGardenTaxonomyLineageActivity,
   failGardenTaxonomyRunActivity,
   planGardenTaxonomyNamingActivity,
+  planHierarchicalGardenTaxonomyActivity,
+  reassignGardenTaxonomyObservationsActivity,
+  saveGardenTaxonomyClustersActivity,
   startGardenTaxonomyRunActivity,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "30 minutes",
@@ -67,7 +71,16 @@ export const gardenTaxonomyWorkflow = async (
 ): Promise<GardenTaxonomyWorkflowResult> => {
   const started = await startGardenTaxonomyRunActivity({ ...input, workflowRunId: workflowInfo().runId })
   try {
-    const built = await buildHierarchicalGardenTaxonomyActivity(started)
+    const useSplitBuild = patched("taxonomy-gardening-split-build-v1")
+    const built = useSplitBuild
+      ? await (async () => {
+          const plan = await planHierarchicalGardenTaxonomyActivity(started)
+          await saveGardenTaxonomyClustersActivity({ ...started, planKey: plan.planKey })
+          await reassignGardenTaxonomyObservationsActivity({ ...started, planKey: plan.planKey })
+          await deprecateGardenTaxonomyClustersActivity({ ...started, planKey: plan.planKey })
+          return plan
+        })()
+      : await buildHierarchicalGardenTaxonomyActivity(started)
     const lineage: TaxonomyClusterLineage[] = [...built.lineage]
     const namingPlan = await planGardenTaxonomyNamingActivity({ ...started, lineage })
     // Name depth by depth, deepest first, and sequentially within a depth
@@ -86,6 +99,11 @@ export const gardenTaxonomyWorkflow = async (
     await emitGardenTaxonomyLineageActivity({ ...started, lineage })
     return completeGardenTaxonomyRunActivity({
       ...started,
+      observationsScanned: built.observationsAvailable ?? built.observationsScanned ?? 0,
+      observationsAvailable: built.observationsAvailable ?? built.observationsScanned ?? 0,
+      observationsSampled: built.observationsSampled ?? built.observationsScanned ?? 0,
+      sampleStrategy: built.sampleStrategy ?? "legacy_full_build",
+      sampleCap: built.sampleCap ?? built.observationsScanned ?? 0,
       noiseScanned: 0,
       clustersBorn: built.clustersBorn,
       clustersMerged: 0,

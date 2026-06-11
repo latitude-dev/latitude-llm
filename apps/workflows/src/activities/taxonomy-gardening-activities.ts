@@ -5,7 +5,12 @@ import {
   emitLineageUseCase,
   isDisplayableTaxonomyName,
   nameClusterUseCase,
+  planHierarchicalTaxonomyUseCase,
+  type ReassignTaxonomyObservationByIdInput,
+  TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+  TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
   TAXONOMY_NOISE_LOOKBACK_DAYS,
+  type TaxonomyCluster,
   type TaxonomyClusterLineage,
   TaxonomyClusterRepository,
   type TaxonomyDimension,
@@ -27,6 +32,7 @@ import {
 import { createLogger, withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.ts"
 
 const logger = createLogger("taxonomy-gardening-workflow")
 
@@ -52,6 +58,10 @@ export interface GardenTaxonomyStepInput extends GardenTaxonomyActivityInput {
 
 export interface GardenTaxonomyCompleteInput extends GardenTaxonomyStepInput {
   readonly observationsScanned: number
+  readonly observationsAvailable: number
+  readonly observationsSampled: number
+  readonly sampleStrategy: string
+  readonly sampleCap: number
   readonly noiseScanned: number
   readonly clustersBorn: number
   readonly clustersMerged: number
@@ -64,10 +74,42 @@ export interface GardenTaxonomyFailInput extends GardenTaxonomyStepInput {
 
 export interface GardenTaxonomyStartResult extends GardenTaxonomyStepInput {
   readonly observationsScanned: number
+  readonly observationsAvailable: number
+  readonly observationsSampled: number
+  readonly sampleStrategy: string
+  readonly sampleCap: number
 }
 
 export interface GardenTaxonomyLineageResult {
   readonly lineage: readonly TaxonomyClusterLineage[]
+}
+
+export interface GardenTaxonomyBuildPlanResult extends GardenTaxonomyLineageResult {
+  readonly observationsScanned: number
+  readonly observationsAvailable: number
+  readonly observationsSampled: number
+  readonly sampleStrategy: string
+  readonly sampleCap: number
+  readonly clustersBorn: number
+  readonly clustersContinued: number
+  readonly clustersDeprecated: number
+  readonly leavesAssigned: number
+  readonly maxDepthReached: number
+  readonly planKey: string
+}
+
+export interface GardenTaxonomyPlanReferenceInput extends GardenTaxonomyStepInput {
+  readonly planKey: string
+}
+
+export type GardenTaxonomySaveClustersInput = GardenTaxonomyPlanReferenceInput
+export type GardenTaxonomyReassignObservationsInput = GardenTaxonomyPlanReferenceInput
+export type GardenTaxonomyDeprecateClustersInput = GardenTaxonomyPlanReferenceInput
+
+interface StoredGardenTaxonomyPlan {
+  readonly clusters: readonly TaxonomyCluster[]
+  readonly observationAssignments: readonly ReassignTaxonomyObservationByIdInput[]
+  readonly deprecatedClusterIds: readonly string[]
 }
 
 export interface GardenTaxonomyNamingPlanResult {
@@ -128,6 +170,52 @@ const errorMessage = (error: unknown): string => {
 
 const gardeningLookbackStart = (now: Date): Date =>
   new Date(now.getTime() - TAXONOMY_NOISE_LOOKBACK_DAYS * 24 * 60 * 60_000)
+
+const TAXONOMY_GARDENING_PLAN_TTL_SECONDS = 14 * 24 * 60 * 60
+
+const gardenTaxonomyPlanKey = (input: GardenTaxonomyStepInput): string =>
+  `org:${input.organizationId}:taxonomy:gardenPlan:${input.runId}`
+
+const storeGardenTaxonomyPlan = (input: GardenTaxonomyStepInput, plan: StoredGardenTaxonomyPlan) =>
+  Effect.tryPromise({
+    try: async () => {
+      const key = gardenTaxonomyPlanKey(input)
+      await getRedisClient().set(key, JSON.stringify(plan), "EX", TAXONOMY_GARDENING_PLAN_TTL_SECONDS)
+      return key
+    },
+    catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+  })
+
+const loadGardenTaxonomyPlan = (input: GardenTaxonomyPlanReferenceInput) =>
+  Effect.tryPromise({
+    try: async () => {
+      const value = await getRedisClient().get(input.planKey)
+      if (value === null) throw new Error(`Missing taxonomy gardening plan artifact: ${input.planKey}`)
+      return JSON.parse(value) as StoredGardenTaxonomyPlan
+    },
+    catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+  })
+
+const reviveDate = (value: Date | string): Date => (value instanceof Date ? value : new Date(value))
+
+const reviveCluster = (cluster: TaxonomyCluster): TaxonomyCluster => ({
+  ...cluster,
+  firstObservedAt: reviveDate(cluster.firstObservedAt),
+  lastObservedAt: reviveDate(cluster.lastObservedAt),
+  clusteredAt: reviveDate(cluster.clusteredAt),
+  createdAt: reviveDate(cluster.createdAt),
+  updatedAt: reviveDate(cluster.updatedAt),
+})
+
+const reviveLineage = (lineage: TaxonomyClusterLineage): TaxonomyClusterLineage => ({
+  ...lineage,
+  createdAt: reviveDate(lineage.createdAt),
+})
+
+const reviveAssignment = (assignment: ReassignTaxonomyObservationByIdInput): ReassignTaxonomyObservationByIdInput => ({
+  ...assignment,
+  indexedAt: reviveDate(assignment.indexedAt),
+})
 
 const withTaxonomyPostgres = <A, E, R>(effect: Effect.Effect<A, E, R>, organizationId: string) =>
   effect.pipe(
@@ -203,6 +291,10 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
     startedAt: now,
     completedAt: null,
     observationsScanned: 0,
+    observationsAvailable: 0,
+    observationsSampled: 0,
+    sampleStrategy: TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
+    sampleCap: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
     noiseScanned: 0,
     clustersBorn: 0,
     clustersMerged: 0,
@@ -223,7 +315,14 @@ export const startGardenTaxonomyRunActivity = (input: GardenTaxonomyActivityInpu
         projectId: run.projectId,
         since: gardeningLookbackStart(now),
       })
-      return { ...step, observationsScanned: counts.total } satisfies GardenTaxonomyStartResult
+      return {
+        ...step,
+        observationsScanned: counts.total,
+        observationsAvailable: counts.total,
+        observationsSampled: 0,
+        sampleStrategy: TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
+        sampleCap: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
+      } satisfies GardenTaxonomyStartResult
     }).pipe(
       (effect) => withTaxonomyPostgres(effect, step.organizationId),
       (effect) => withTaxonomyClickHouse(effect, step.organizationId),
@@ -246,6 +345,93 @@ export const buildHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomySte
       (effect) => withTaxonomyClickHouse(effect, input.organizationId),
       withTaxonomyAiAndRedis,
     ),
+  )
+
+export const planHierarchicalGardenTaxonomyActivity = (input: GardenTaxonomyStepInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow plan hierarchical tree",
+    input,
+    planHierarchicalTaxonomyUseCase({
+      organizationId: OrganizationId(input.organizationId),
+      projectId: ProjectId(input.projectId),
+      runId: TaxonomyRunId(input.runId),
+      dimension: input.dimension,
+      now: new Date(input.now),
+      clusterBuilder: (builderInput) =>
+        Effect.tryPromise({
+          try: () => buildHierarchicalClustersInWorker(builderInput),
+          catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+        }),
+    }).pipe(
+      Effect.flatMap((plan) =>
+        Effect.gen(function* () {
+          const planKey = yield* storeGardenTaxonomyPlan(input, {
+            clusters: plan.clusters,
+            observationAssignments: plan.observationAssignments,
+            deprecatedClusterIds: plan.deprecatedClusterIds.map((clusterId) => clusterId as string),
+          })
+          return {
+            observationsScanned: plan.observationsScanned,
+            observationsAvailable: plan.observationsAvailable,
+            observationsSampled: plan.observationsSampled,
+            sampleStrategy: plan.sampleStrategy,
+            sampleCap: plan.sampleCap,
+            clustersBorn: plan.clustersBorn,
+            clustersContinued: plan.clustersContinued,
+            clustersDeprecated: plan.clustersDeprecated,
+            leavesAssigned: plan.leavesAssigned,
+            maxDepthReached: plan.maxDepthReached,
+            lineage: plan.lineage,
+            planKey,
+          } satisfies GardenTaxonomyBuildPlanResult
+        }),
+      ),
+      (effect) => withTaxonomyPostgres(effect, input.organizationId),
+      (effect) => withTaxonomyClickHouse(effect, input.organizationId),
+    ),
+  )
+
+export const saveGardenTaxonomyClustersActivity = (input: GardenTaxonomySaveClustersInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow save clusters",
+    input,
+    Effect.gen(function* () {
+      const plan = yield* loadGardenTaxonomyPlan(input)
+      const clusters = yield* TaxonomyClusterRepository
+      // Plan clusters are depth-ascending; preserve that order so children are never saved before parents.
+      for (const cluster of plan.clusters) yield* clusters.save(reviveCluster(cluster))
+      return { clustersSaved: plan.clusters.length }
+    }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
+  )
+
+export const reassignGardenTaxonomyObservationsActivity = (input: GardenTaxonomyReassignObservationsInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow reassign observations",
+    input,
+    Effect.gen(function* () {
+      const plan = yield* loadGardenTaxonomyPlan(input)
+      const observations = yield* TaxonomyObservationRepository
+      yield* observations.reassignManyById({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        assignments: plan.observationAssignments.map(reviveAssignment),
+      })
+      return { observationsReassigned: plan.observationAssignments.length }
+    }).pipe((effect) => withTaxonomyClickHouse(effect, input.organizationId)),
+  )
+
+export const deprecateGardenTaxonomyClustersActivity = (input: GardenTaxonomyDeprecateClustersInput) =>
+  runGardenStep(
+    "GardenTaxonomyWorkflow deprecate clusters",
+    input,
+    Effect.gen(function* () {
+      const plan = yield* loadGardenTaxonomyPlan(input)
+      const clusters = yield* TaxonomyClusterRepository
+      for (const clusterId of plan.deprecatedClusterIds) {
+        yield* clusters.markDeprecated({ clusterId: TaxonomyClusterId(clusterId), timestamp: new Date(input.now) })
+      }
+      return { clustersDeprecated: plan.deprecatedClusterIds.length }
+    }).pipe((effect) => withTaxonomyPostgres(effect, input.organizationId)),
   )
 
 export const assertGardenTaxonomyQualityActivity = (input: GardenTaxonomyStepInput) =>
@@ -329,7 +515,7 @@ export const emitGardenTaxonomyLineageActivity = (input: GardenTaxonomyStepInput
   runGardenStep(
     "GardenTaxonomyWorkflow emit lineage",
     input,
-    emitLineageUseCase({ transitions: input.lineage }).pipe((effect) =>
+    emitLineageUseCase({ transitions: input.lineage.map(reviveLineage) }).pipe((effect) =>
       withTaxonomyPostgres(effect, input.organizationId),
     ),
   )
@@ -350,6 +536,10 @@ export const completeGardenTaxonomyRunActivity = (input: GardenTaxonomyCompleteI
         startedAt: new Date(input.now),
         completedAt: new Date(),
         observationsScanned: input.observationsScanned,
+        observationsAvailable: input.observationsAvailable,
+        observationsSampled: input.observationsSampled,
+        sampleStrategy: input.sampleStrategy,
+        sampleCap: input.sampleCap,
         noiseScanned: input.noiseScanned,
         clustersBorn: input.clustersBorn,
         clustersMerged: input.clustersMerged,
@@ -377,6 +567,10 @@ export const failGardenTaxonomyRunActivity = (input: GardenTaxonomyFailInput) =>
         startedAt: new Date(input.now),
         completedAt: new Date(),
         observationsScanned: 0,
+        observationsAvailable: 0,
+        observationsSampled: 0,
+        sampleStrategy: TAXONOMY_CLUSTERING_SAMPLE_STRATEGY,
+        sampleCap: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
         noiseScanned: 0,
         clustersBorn: 0,
         clustersMerged: 0,

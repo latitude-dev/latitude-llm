@@ -10,7 +10,7 @@ import {
 import { createFakeChSqlClient, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { TAXONOMY_EMBEDDING_DIMENSIONS } from "../constants.ts"
+import { TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX, TAXONOMY_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
 import { createTaxonomyCentroid, updateTaxonomyCentroid } from "../helpers.ts"
@@ -18,7 +18,7 @@ import { TaxonomyClusterRepository } from "../ports/taxonomy-cluster-repository.
 import { TaxonomyObservationRepository } from "../ports/taxonomy-observation-repository.ts"
 import { createFakeTaxonomyClusterRepository } from "../testing/fake-taxonomy-cluster-repository.ts"
 import { createFakeTaxonomyObservationRepository } from "../testing/fake-taxonomy-observation-repository.ts"
-import { buildHierarchicalTaxonomyUseCase } from "./build-hierarchical-taxonomy.ts"
+import { buildHierarchicalTaxonomyUseCase, planHierarchicalTaxonomyUseCase } from "./build-hierarchical-taxonomy.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -164,5 +164,40 @@ describe("buildHierarchicalTaxonomyUseCase continuity matching", () => {
     const transitions = result.lineage.map((row) => row.transitionType).sort()
     expect(transitions).toEqual(["birth", "death"])
     expect(clusters.clusters.get("a".repeat(24) as TaxonomyClusterId)?.state).toBe("deprecated")
+  })
+
+  it("reads small corpora whole and applies the system sample cap to large corpora", async () => {
+    const now = new Date("2026-05-24T12:00:00.000Z")
+    const total = 2_000
+    const observations = createFakeTaxonomyObservationRepository(
+      Array.from({ length: total }, (_, index) => makeObservation(index, E1, now)),
+    )
+    const clusters = createFakeTaxonomyClusterRepository([])
+
+    const result = await Effect.runPromise(
+      planHierarchicalTaxonomyUseCase({
+        organizationId,
+        projectId,
+        runId: TaxonomyRunId("r".repeat(24)),
+        dimension: "topic",
+        now,
+        clusterBuilder: (input) =>
+          Effect.succeed({
+            memberIndices: input.embeddings.map((_, index) => index),
+            centroid: input.embeddings[0] ?? [],
+            children: [],
+            depth: 0,
+          }),
+      }).pipe(
+        Effect.provide(Layer.succeed(TaxonomyObservationRepository, observations.repository)),
+        Effect.provide(Layer.succeed(TaxonomyClusterRepository, clusters.repository)),
+        Effect.provide(Layer.succeed(SqlClient, createFakeSqlClient())),
+        Effect.provide(Layer.succeed(ChSqlClient, createFakeChSqlClient())),
+      ),
+    )
+
+    expect(result.observationsAvailable).toBe(total)
+    expect(result.observationsSampled).toBe(TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX)
+    expect(result.sampleCap).toBe(TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX)
   })
 })
