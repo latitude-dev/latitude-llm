@@ -2,6 +2,7 @@ import { customMessageRenderer } from "./custom-message.ts"
 import { incidentClosedRenderer } from "./incident-closed.ts"
 import { incidentEventRenderer } from "./incident-event.ts"
 import { incidentOpenedRenderer } from "./incident-opened.ts"
+import { issueAssignedRenderer } from "./issue-assigned.ts"
 import type { SlackNotificationRendererRegistry } from "./types.ts"
 import { wrappedReportRenderer } from "./wrapped-report.ts"
 
@@ -16,4 +17,5 @@ export const NOTIFICATION_SLACK_RENDERERS: SlackNotificationRendererRegistry = {
   "incident.closed": incidentClosedRenderer,
   "wrapped.report": wrappedReportRenderer,
   "custom.message": customMessageRenderer,
+  "issue.assigned": issueAssignedRenderer,
 }

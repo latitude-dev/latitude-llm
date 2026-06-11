@@ -26,7 +26,14 @@ export function IssueRegressedNotification({ notification, payload }: IncidentRe
       title="A resolved issue has regressed."
       url={url}
     >
-      {live?.name ? <IssueSummaryCard name={live.name} states={states} /> : null}
+      {live?.name ? (
+        <IssueSummaryCard
+          name={live.name}
+          states={states}
+          priority={payload.priority}
+          assigneeId={payload.assigneeId}
+        />
+      ) : null}
       <MonitorAttribution payload={payload} />
     </BaseNotification>
   )

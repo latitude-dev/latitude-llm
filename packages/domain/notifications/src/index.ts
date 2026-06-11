@@ -11,6 +11,7 @@ export type {
   IncidentSampleExcerpt,
   IncidentTrend,
   IncidentTrendMarker,
+  IssueAssignedPayload,
   Notification,
   NotificationKind,
   WrappedReportPayload,
@@ -27,6 +28,7 @@ export {
   incidentTagsSchema,
   incidentTrendPointSchema,
   incidentTrendSchema,
+  issueAssignedPayloadSchema,
   NOTIFICATION_KIND_META,
   NOTIFICATION_KINDS,
   notificationKindSchema,
@@ -94,6 +96,13 @@ export type {
   RequestIncidentNotificationsResult,
 } from "./use-cases/request-incident-notifications.ts"
 export { requestIncidentNotificationsUseCase } from "./use-cases/request-incident-notifications.ts"
+export type {
+  IssueAssignedNotificationRequest,
+  RequestIssueAssignedNotificationsError,
+  RequestIssueAssignedNotificationsInput,
+  RequestIssueAssignedNotificationsResult,
+} from "./use-cases/request-issue-assigned-notifications.ts"
+export { requestIssueAssignedNotificationsUseCase } from "./use-cases/request-issue-assigned-notifications.ts"
 export type {
   RequestWrappedReportNotificationsError,
   RequestWrappedReportNotificationsInput,

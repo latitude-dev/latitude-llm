@@ -22,6 +22,7 @@ import {
   SavedSearchRepositoryLive,
   SlackDeliveryRepositoryLive,
   SlackIntegrationRepositoryLive,
+  UserRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
@@ -66,6 +67,7 @@ const repoLayer = Layer.mergeAll(
   ProjectRepositoryLive,
   SlackIntegrationRepositoryLive,
   SlackDeliveryRepositoryLive,
+  UserRepositoryLive,
 )
 
 const resolveWebAppUrl = (): string => {

@@ -28,6 +28,8 @@ export {
   ISSUE_DISCOVERY_SEARCH_CANDIDATES,
   ISSUE_DISCOVERY_SEARCH_RATIO,
   ISSUE_PRIORITIES,
+  ISSUE_PRIORITY_GROUPS,
+  ISSUE_PRIORITY_ORDER,
   ISSUE_REFRESH_THROTTLE_MS,
   ISSUE_RELATED_CANDIDATE_LIMIT,
   ISSUE_RELATED_COOCCURRENCE_WINDOW_DAYS,
@@ -212,12 +214,15 @@ export {
   listIssueTracesUseCase,
 } from "./use-cases/list-issue-traces.ts"
 export {
+  type IssueAssigneeFilter,
   type IssueListAnalytics,
   type IssueListAnalyticsCounts,
   type IssueListItem,
+  type IssuePriorityGroup,
   type IssuesLifecycleGroup,
   type IssuesSortDirection,
   type IssuesSortField,
+  issueAssigneeFilterSchema,
   issueSearchSchema,
   issuesLifecycleGroupSchema,
   issuesSortDirectionSchema,
@@ -228,6 +233,7 @@ export {
   type ListIssuesResult,
   listIssuesUseCase,
   TAG_AGGREGATION_FALLBACK_DAYS,
+  UNASSIGNED_FILTER,
 } from "./use-cases/list-issues.ts"
 export {
   type RefreshIssueDetailsError,

@@ -432,6 +432,14 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         <InfiniteTableSubheaderDemo />
       </ShowcaseSection>
 
+      <ShowcaseSection
+        theme={theme}
+        title="Infinite Table — grouped rows"
+        description="getRowGroup + renderGroupHeader inject full-width header rows whenever consecutive rows change group. Headers are not selectable or clickable; data must arrive ordered by group."
+      >
+        <InfiniteTableGroupedDemo />
+      </ShowcaseSection>
+
       <Card className={`relative overflow-hidden border-border/70 shadow-xl ${surfaceClass}`}>
         <CardHeader className="relative">
           <CardTitle>
@@ -509,6 +517,43 @@ function InfiniteTableSubheaderDemo() {
         sorting={{ column: "amount", direction: "desc" }}
         defaultSorting={{ column: "amount", direction: "desc" }}
         onSortChange={() => {}}
+      />
+    </div>
+  )
+}
+
+type GroupedDemoRow = DemoRow & { tier: "gold" | "silver" }
+
+const groupedDemoColumns: InfiniteTableColumn<GroupedDemoRow>[] = [
+  { key: "name", header: "Name", render: (r) => r.name },
+  { key: "amount", header: "Amount", align: "end", render: (r) => r.amount },
+]
+
+function InfiniteTableGroupedDemo() {
+  // Ordered by group — the table injects a header whenever the key changes.
+  const data: GroupedDemoRow[] = [
+    { id: "a", name: "Northwind", amount: 210, tier: "gold" },
+    { id: "b", name: "Fabrikam", amount: 120, tier: "gold" },
+    { id: "c", name: "Contoso", amount: 84, tier: "silver" },
+    { id: "d", name: "Adventure Works", amount: 42, tier: "silver" },
+  ]
+
+  return (
+    <div className="h-[260px] min-h-0 flex flex-col rounded-lg border border-border/60">
+      <InfiniteTable
+        {...listingLayoutIntrinsicScroll.infiniteTable}
+        data={data}
+        columns={groupedDemoColumns}
+        getRowKey={(r) => r.id}
+        getRowGroup={(r) => r.tier}
+        renderGroupHeader={(groupKey) => (
+          <div className="flex items-center gap-2 rounded-md bg-secondary px-3 py-1.5">
+            <Text.H6 weight="semibold" className="capitalize">
+              {groupKey}
+            </Text.H6>
+            <Text.H6 color="foregroundMuted">2</Text.H6>
+          </div>
+        )}
       />
     </div>
   )

@@ -1,6 +1,12 @@
 import { type AlertIncident, AlertIncidentRepository, isIssueEscalationEntrySignals } from "@domain/alerts"
 import { EvaluationRepository } from "@domain/evaluations"
-import { buildHistogramBucketScaffold, DEFAULT_ESCALATION_SENSITIVITY_K, fillBuckets } from "@domain/issues"
+import {
+  buildHistogramBucketScaffold,
+  DEFAULT_ESCALATION_SENSITIVITY_K,
+  fillBuckets,
+  type IssuePriority,
+  IssueRepository,
+} from "@domain/issues"
 import type { MembershipRepository } from "@domain/organizations"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import {
@@ -320,6 +326,29 @@ const snapshotSampleExcerpt = (incident: AlertIncident) =>
     return undefined
   })
 
+/** Issue triage state snapshotted onto incident payloads at producer time. */
+interface IssueTriageSnapshot {
+  readonly assigneeId: string | null
+  readonly priority: IssuePriority | null
+}
+
+/**
+ * Snapshot the issue's triage fields (assignee + priority) so renderers can
+ * show who owns the issue and how urgent it was deemed when the incident
+ * fired. Only meaningful for issue-sourced incidents; a missing issue row
+ * (deleted between the incident and this producer) degrades to `null` so the
+ * payload simply omits the fields, like legacy rows.
+ */
+const snapshotIssueTriage = (incident: AlertIncident) =>
+  Effect.gen(function* () {
+    const issues = yield* IssueRepository
+    const issue = yield* issues
+      .findById(IssueId(incident.sourceId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+    if (issue === null) return null
+    return { assigneeId: issue.assigneeId, priority: issue.priority } satisfies IssueTriageSnapshot
+  })
+
 /**
  * Snapshot breach scalars for the opened-side email copy. Returns
  * `undefined` for legacy escalating incidents that don't have
@@ -358,8 +387,9 @@ const buildPayload = (input: {
   readonly tags: readonly string[] | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
   readonly monitor: IncidentMonitorInfo | null
+  readonly triage: IssueTriageSnapshot | null
 }): IncidentEventPayload | IncidentOpenedPayload | IncidentClosedPayload => {
-  const { incident, kind, trend, triggerRatePerHour, tags, sampleExcerpt, monitor } = input
+  const { incident, kind, trend, triggerRatePerHour, tags, sampleExcerpt, monitor, triage } = input
   const base = {
     alertIncidentId: incident.id,
     sourceType: incident.sourceType,
@@ -372,6 +402,10 @@ const buildPayload = (input: {
     ...(monitor ? { monitorId: monitor.monitorId, monitorName: monitor.name, monitorSlug: monitor.slug } : {}),
     ...(incident.condition !== null ? { condition: incident.condition } : {}),
   }
+  // Issue triage snapshot, spread into every variant (incl. closed — the
+  // recovery email still shows who owns the issue); absent for savedSearch
+  // sources and when the issue row vanished.
+  const triageFields = triage ? { assigneeId: triage.assigneeId, priority: triage.priority } : {}
 
   const mutableTags = tags ? [...tags] : undefined
   if (kind === "incident.event") {
@@ -382,6 +416,7 @@ const buildPayload = (input: {
       incidentKind: base.incidentKind,
       severity: base.severity,
       ...attribution,
+      ...triageFields,
       ...(mutableTags ? { tags: mutableTags } : {}),
       ...(sampleExcerpt ? { sampleExcerpt } : {}),
     }
@@ -397,6 +432,7 @@ const buildPayload = (input: {
       incidentKind: base.incidentKind,
       severity: base.severity,
       ...attribution,
+      ...triageFields,
       ...(trend ? { trend } : {}),
       ...(mutableTags ? { tags: mutableTags } : {}),
       ...(breach ? { breach } : {}),
@@ -410,6 +446,7 @@ const buildPayload = (input: {
     incidentKind: base.incidentKind,
     severity: base.severity,
     ...attribution,
+    ...triageFields,
     ...(trend ? { trend } : {}),
     recovery: buildRecovery(incident),
   }
@@ -464,7 +501,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     // Closed kind also skips tags/excerpt: the recovery copy focuses on the descent.
     const isIssueSource = incident.sourceType === "issue"
     const wantsSourceContext = isIssueSource && notificationKind !== "incident.closed"
-    const [trend, triggerRatePerHour, tags, sampleExcerpt] = yield* Effect.all(
+    const [trend, triggerRatePerHour, tags, sampleExcerpt, triage] = yield* Effect.all(
       [
         isIssueSource ? snapshotTrend({ incident, kind: notificationKind, kShort }) : Effect.succeed(null),
         // Only the opened-side breach copy needs the fine-grained hourly rate (issue sources only).
@@ -473,6 +510,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
           : Effect.succeed(null),
         wantsSourceContext ? snapshotTags(incident) : Effect.succeed(undefined),
         wantsSourceContext ? snapshotSampleExcerpt(incident) : Effect.succeed(undefined),
+        isIssueSource ? snapshotIssueTriage(incident) : Effect.succeed(null),
       ],
       { concurrency: "unbounded" },
     )
@@ -495,6 +533,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
       tags,
       sampleExcerpt,
       monitor,
+      triage,
     })
     // Per-kind switch preserves the discriminated-union narrowing
     // `buildIdempotencyKey`'s input requires. A widening cast would
@@ -530,6 +569,7 @@ export const requestIncidentNotificationsUseCase = (input: RequestIncidentNotifi
     | AlertIncidentRepository
     | EvaluationRepository
     | IncidentMonitorReader
+    | IssueRepository
     | MembershipRepository
     | ScoreAnalyticsRepository
     | ScoreRepository

@@ -17,7 +17,7 @@ import { type Issue, IssueState } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
-import { listIssuesUseCase } from "./list-issues.ts"
+import { type ListIssuesInput, listIssuesUseCase } from "./list-issues.ts"
 
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
@@ -216,6 +216,8 @@ describe("listIssuesUseCase", () => {
     expect(result.items).toEqual([])
     expect(result.totalCount).toBe(0)
     expect(result.hasAnyIssues).toBe(false)
+    expect(result.priorityCounts).toEqual({ urgent: 0, high: 0, medium: 0, low: 0, none: 0 })
+    expect(result.assigneeCounts).toEqual({})
     expect(result.analytics.totalTraces).toBe(0)
     expect(result.analytics.histogram.length).toBeGreaterThan(0)
     expect(windowMetricInputs).toEqual([])
@@ -1127,5 +1129,178 @@ describe("listIssuesUseCase", () => {
     )
 
     expect(result.items.map((item) => item.id)).toEqual([oldestIssue.id, newestIssue.id])
+  })
+
+  describe("priority grouping and assignee filtering", () => {
+    const now = new Date("2026-04-10T12:00:00.000Z")
+
+    /**
+     * Runs the use case over seeded issues that all have window activity, so
+     * tests only describe the triage shape (priority/assignee) plus optional
+     * per-issue metrics and the use-case input under test.
+     */
+    const runTriageList = async (input: {
+      readonly seeded: readonly {
+        readonly issue: Issue
+        readonly occurrences?: number
+        readonly lastSeenAt?: Date
+      }[]
+      readonly options?: Partial<ListIssuesInput>
+    }) => {
+      const { repository: issueRepository } = createFakeIssueRepository(input.seeded.map((entry) => entry.issue))
+      const { repository: evaluationRepository } = createEvaluationRepository()
+      const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository({
+        listIssueWindowMetrics: () =>
+          Effect.succeed(
+            input.seeded.map((entry) =>
+              makeWindowMetric({
+                issueId: IssueId(entry.issue.id),
+                occurrences: entry.occurrences ?? 1,
+                lastSeenAt: entry.lastSeenAt ?? new Date("2026-04-09T00:00:00.000Z"),
+              }),
+            ),
+          ),
+        aggregateByIssues: aggregateOccurrences(
+          input.seeded.map((entry) => makeOccurrence({ issueId: IssueId(entry.issue.id) })),
+        ),
+      })
+      traceCount = 10
+
+      return Effect.runPromise(
+        listIssuesUseCase({ organizationId, projectId, now, ...input.options }).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              Layer.succeed(IssueRepository, issueRepository),
+              Layer.succeed(EvaluationRepository, evaluationRepository),
+              Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+              Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
+              Layer.succeed(ChSqlClient, createFakeChSqlClient({ organizationId })),
+              provideTraceRepository,
+            ),
+          ),
+        ),
+      )
+    }
+
+    const lowIssue = makeIssue({ id: IssueId("a".repeat(24)), priority: "low" })
+    const urgentIssue = makeIssue({ id: IssueId("b".repeat(24)), priority: "urgent" })
+    const unsetIssue = makeIssue({ id: IssueId("c".repeat(24)), priority: null })
+    const mediumIssue = makeIssue({ id: IssueId("d".repeat(24)), priority: "medium" })
+    const highIssue = makeIssue({ id: IssueId("e".repeat(24)), priority: "high" })
+    const mixedPrioritySeed = [lowIssue, urgentIssue, unsetIssue, mediumIssue, highIssue].map((issue) => ({ issue }))
+
+    it("groups by priority urgent → high → medium → low → none regardless of the selected sort", async () => {
+      const result = await runTriageList({ seeded: mixedPrioritySeed })
+
+      expect(result.items.map((item) => item.id)).toEqual([
+        urgentIssue.id,
+        highIssue.id,
+        mediumIssue.id,
+        lowIssue.id,
+        unsetIssue.id,
+      ])
+      expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
+      expect(result.items[0]?.priority).toBe("urgent")
+      expect(result.items[0]?.assigneeId).toBeNull()
+    })
+
+    it("applies the user-selected sort within each priority group", async () => {
+      const highQuiet = makeIssue({ id: IssueId("a".repeat(24)), priority: "high" })
+      const highBusy = makeIssue({ id: IssueId("b".repeat(24)), priority: "high" })
+      const lowBusy = makeIssue({ id: IssueId("c".repeat(24)), priority: "low" })
+      const lowQuiet = makeIssue({ id: IssueId("d".repeat(24)), priority: "low" })
+
+      const result = await runTriageList({
+        seeded: [
+          { issue: highQuiet, occurrences: 5 },
+          { issue: highBusy, occurrences: 9 },
+          { issue: lowBusy, occurrences: 7 },
+          { issue: lowQuiet, occurrences: 3 },
+        ],
+        options: { sort: { field: "occurrences", direction: "desc" } },
+      })
+
+      expect(result.items.map((item) => item.id)).toEqual([highBusy.id, highQuiet.id, lowBusy.id, lowQuiet.id])
+    })
+
+    it("keeps priority grouping stable across pagination slices", async () => {
+      const result = await runTriageList({
+        seeded: mixedPrioritySeed,
+        options: { limit: 2, offset: 2 },
+      })
+
+      expect(result.items.map((item) => item.id)).toEqual([mediumIssue.id, lowIssue.id])
+      expect(result.totalCount).toBe(5)
+      expect(result.hasMore).toBe(true)
+      // Header counts cover the whole filtered set, not just the loaded page.
+      expect(result.priorityCounts).toEqual({ urgent: 1, high: 1, medium: 1, low: 1, none: 1 })
+    })
+
+    const userA = "1".repeat(24)
+    const userB = "2".repeat(24)
+    const assignedToA = makeIssue({ id: IssueId("a".repeat(24)), assigneeId: userA, priority: "high" })
+    const assignedToB = makeIssue({ id: IssueId("b".repeat(24)), assigneeId: userB })
+    const unassigned = makeIssue({ id: IssueId("c".repeat(24)), assigneeId: null })
+    const assigneeSeed = [
+      { issue: assignedToA, occurrences: 2 },
+      { issue: assignedToB, occurrences: 3 },
+      { issue: unassigned, occurrences: 4 },
+    ]
+
+    it("filters by assignee and scopes totals and priority counts to the filtered set", async () => {
+      const result = await runTriageList({
+        seeded: assigneeSeed,
+        options: { assigneeIds: [userA] },
+      })
+
+      expect(result.items.map((item) => item.id)).toEqual([assignedToA.id])
+      expect(result.items[0]?.assigneeId).toBe(userA)
+      expect(result.totalCount).toBe(1)
+      expect(result.occurrencesSum).toBe(2)
+      expect(result.priorityCounts).toEqual({ urgent: 0, high: 1, medium: 0, low: 0, none: 0 })
+    })
+
+    it("supports the unassigned sentinel alone and in union with user ids", async () => {
+      const unassignedOnly = await runTriageList({
+        seeded: assigneeSeed,
+        options: { assigneeIds: ["unassigned"] },
+      })
+      expect(unassignedOnly.items.map((item) => item.id)).toEqual([unassigned.id])
+
+      const union = await runTriageList({
+        seeded: assigneeSeed,
+        options: { assigneeIds: [userA, "unassigned"] },
+      })
+      expect(union.items.map((item) => item.id)).toEqual([assignedToA.id, unassigned.id])
+    })
+
+    it("computes assignee counts before the assignee filter so the badge never zeroes itself", async () => {
+      const result = await runTriageList({
+        seeded: assigneeSeed,
+        options: { assigneeIds: [userA] },
+      })
+
+      expect(result.assigneeCounts).toEqual({ [userA]: 1, [userB]: 1, unassigned: 1 })
+    })
+
+    it("scopes assignee counts to the selected lifecycle group", async () => {
+      const activeAssigned = makeIssue({ id: IssueId("a".repeat(24)), assigneeId: userA })
+      const resolvedAssigned = makeIssue({
+        id: IssueId("b".repeat(24)),
+        assigneeId: userA,
+        resolvedAt: new Date("2026-04-08T00:00:00.000Z"),
+      })
+
+      const result = await runTriageList({
+        seeded: [
+          { issue: activeAssigned },
+          { issue: resolvedAssigned, lastSeenAt: new Date("2026-04-07T00:00:00.000Z") },
+        ],
+        options: { lifecycleGroup: "active" },
+      })
+
+      expect(result.items.map((item) => item.id)).toEqual([activeAssigned.id])
+      expect(result.assigneeCounts).toEqual({ [userA]: 1 })
+    })
   })
 })

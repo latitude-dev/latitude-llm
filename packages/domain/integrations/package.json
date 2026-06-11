@@ -22,6 +22,7 @@
     "@domain/organizations": "workspace:*",
     "@domain/saved-searches": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/users": "workspace:*",
     "@slack/web-api": "7.10.0",
     "effect": "catalog:",
     "zod": "catalog:"

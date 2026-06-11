@@ -5,7 +5,7 @@ import React from "react"
 import { buildChartUrl } from "../../../helpers/chart-url.ts"
 import { renderEmail } from "../../../utils/render.ts"
 import { buildMonitorAttribution } from "../-incident-components.tsx"
-import { resolveIncidentSource } from "../-incident-source.ts"
+import { resolveAssigneeName, resolveIncidentSource } from "../-incident-source.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { IncidentOpenedEmail } from "./EmailTemplate.tsx"
 
@@ -21,6 +21,7 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
   Effect.gen(function* () {
     const isSavedSearch = payload.sourceType === "savedSearch"
     const source = yield* resolveIncidentSource(payload)
+    const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
     const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "an issue")
     const issueUrl = isSavedSearch ? undefined : buildIssueUrl(ctx, payload)
 
@@ -53,6 +54,8 @@ export const incidentOpenedRenderer: NotificationEmailRenderer<"incident.opened"
             notificationCreatedAt={ctx.notificationCreatedAt}
             organizationName={ctx.organization.name}
             projectName={ctx.project?.name}
+            priority={payload.priority ?? undefined}
+            assigneeName={assigneeName ?? undefined}
             tags={payload.tags}
             breach={payload.breach}
             sampleExcerpt={payload.sampleExcerpt}

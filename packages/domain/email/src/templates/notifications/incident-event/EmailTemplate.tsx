@@ -1,3 +1,4 @@
+import type { IssuePriority } from "@domain/issues"
 import type { IncidentSampleExcerpt } from "@domain/notifications"
 import {
   ALERT_INCIDENT_KIND_LABEL,
@@ -21,6 +22,7 @@ import {
   IssueTimestamp,
   MonitorAttribution,
   type MonitorAttributionInfo,
+  PriorityBadge,
   SampleExcerptCard,
   SectionHeader,
   SeverityBadge,
@@ -52,6 +54,10 @@ interface IncidentEventEmailProps {
   readonly notificationCreatedAt: Date
   readonly organizationName: string
   readonly projectName: string | undefined
+  /** Issue triage snapshot at incident time; absent on legacy payloads and saved-search sources. */
+  readonly priority: IssuePriority | undefined
+  /** Live-resolved assignee display name; absent when unassigned or unresolvable. */
+  readonly assigneeName: string | undefined
   readonly tags: readonly string[] | undefined
   readonly sampleExcerpt: IncidentSampleExcerpt | undefined
   readonly monitor: MonitorAttributionInfo | undefined
@@ -68,6 +74,8 @@ export function IncidentEventEmail({
   notificationCreatedAt,
   organizationName,
   projectName,
+  priority,
+  assigneeName,
   tags,
   sampleExcerpt,
   monitor,
@@ -82,6 +90,8 @@ export function IncidentEventEmail({
   const metadataRows = [
     { label: "Project", value: scope },
     { label: "Severity", value: <SeverityBadge severity={severity} /> },
+    ...(priority ? [{ label: "Priority", value: <PriorityBadge priority={priority} /> }] : []),
+    ...(assigneeName ? [{ label: "Assigned to", value: assigneeName }] : []),
     ...(tags && tags.length > 0 ? [{ label: "Tags", value: <TagsChips tags={tags} /> }] : []),
   ]
 
@@ -132,6 +142,8 @@ IncidentEventEmail.PreviewProps = {
   notificationCreatedAt: new Date("2026-03-18T10:05:00Z"),
   organizationName: "Acme Inc.",
   projectName: "Support agent",
+  priority: "high",
+  assigneeName: "Anna Bosch",
   tags: ["env:prod", "model:claude-3.5-sonnet", "service:agents"],
   sampleExcerpt: {
     text: "Reviewer flagged a tool-call loop after the third retry — model kept invoking `search` with the same query.",

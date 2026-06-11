@@ -1,4 +1,6 @@
 import {
+  Avatar,
+  Icon,
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableInfiniteScroll,
@@ -9,7 +11,14 @@ import {
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import type { IssueRecord } from "../../../../../../domains/issues/issues.functions.ts"
+import { CircleDashedIcon } from "lucide-react"
+import {
+  ISSUE_PRIORITY_META,
+  type IssuePriorityGroupId,
+} from "../../../../../../components/issues/issue-priority-meta.tsx"
+import type { IssueRecord, IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
+import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
+import type { MemberRecord } from "../../../../../../domains/members/members.functions.ts"
 import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
@@ -22,6 +31,7 @@ export const ISSUES_COLUMN_OPTIONS = [
   { id: "issue", label: "Issue", required: true },
   { id: "tags", label: "Tags" },
   { id: "status", label: "Status" },
+  { id: "assignee", label: "Assignee" },
   { id: "trend", label: "Trend" },
   { id: "seenAt", label: "Seen at" },
   { id: "occurrences", label: "Occurrences" },
@@ -58,6 +68,55 @@ function SeenAtCell({
   )
 }
 
+function AssigneeCell({
+  assigneeId,
+  member,
+}: {
+  readonly assigneeId: string | null
+  readonly member: MemberRecord | undefined
+}) {
+  if (!assigneeId) {
+    return (
+      <div className="flex min-w-0 items-center gap-1.5">
+        <Icon icon={CircleDashedIcon} size="sm" color="foregroundMuted" />
+        <Text.H6 color="foregroundMuted" noWrap ellipsis>
+          Unassigned
+        </Text.H6>
+      </div>
+    )
+  }
+
+  // Hydrated client-side from the members collection; a missing row means the
+  // member left the organization after being assigned.
+  const displayName = member?.name?.trim() && member.name.trim().length > 0 ? member.name.trim() : member?.email
+  return (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <Avatar size="xs" name={displayName ?? "?"} imageSrc={member?.image ?? null} />
+      <Text.H5 className="min-w-0" noWrap ellipsis>
+        {displayName ?? "Former member"}
+      </Text.H5>
+    </div>
+  )
+}
+
+function PriorityGroupHeader({ group, count }: { readonly group: IssuePriorityGroupId; readonly count: number }) {
+  const meta = ISSUE_PRIORITY_META[group]
+  return (
+    // Deliberately NOT a filled band — a full-width rectangle reads as just
+    // another row. Instead: an eyebrow-style section heading (icon +
+    // uppercase label + count) with a hairline rule filling the remaining
+    // width, plus generous top padding to separate it from the group above.
+    <div className="flex items-center gap-2 px-3 pt-5 pb-1.5">
+      <Icon icon={meta.icon} size="sm" color={meta.iconColor} />
+      <Text.H6 weight="semibold" className="uppercase tracking-wide">
+        {meta.label}
+      </Text.H6>
+      <Text.H6 color="foregroundMuted">{formatCount(count)}</Text.H6>
+      <div className="h-px min-w-4 flex-1 bg-border" />
+    </div>
+  )
+}
+
 function MonitoredByTooltip({ evaluationNames }: { readonly evaluationNames: readonly string[] }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -80,6 +139,7 @@ export function IssuesView({
   infiniteScroll,
   sorting,
   occurrencesSum,
+  priorityCounts,
   visibleColumnIds,
   selection,
   onSortChange,
@@ -90,11 +150,14 @@ export function IssuesView({
   readonly infiniteScroll: InfiniteTableInfiniteScroll
   readonly sorting: IssuesTableSorting
   readonly occurrencesSum: number
+  readonly priorityCounts: IssuesListResultRecord["priorityCounts"]
   readonly visibleColumnIds: readonly IssuesColumnId[]
   readonly selection: InfiniteTableSelection
   readonly onSortChange: (sorting: IssuesTableSorting) => void
   readonly projectSlug: string
 }) {
+  const memberByUserId = useMemberByUserIdMap()
+
   const allColumns: readonly InfiniteTableColumn<IssueRecord>[] = [
     {
       key: "issue",
@@ -147,6 +210,18 @@ export function IssuesView({
       header: "Tags",
       width: 150,
       render: (issue) => <TagList tags={issue.tags} />,
+    },
+    {
+      key: "assignee",
+      header: "Assignee",
+      width: 140,
+      minWidth: 110,
+      render: (issue) => (
+        <AssigneeCell
+          assigneeId={issue.assigneeId}
+          member={issue.assigneeId ? memberByUserId.get(issue.assigneeId) : undefined}
+        />
+      ),
     },
     {
       key: "trend",
@@ -234,6 +309,13 @@ export function IssuesView({
               : undefined
           }
           selection={selection}
+          getRowGroup={(issue) => issue.priority ?? "none"}
+          renderGroupHeader={(groupKey) => (
+            <PriorityGroupHeader
+              group={groupKey as IssuePriorityGroupId}
+              count={priorityCounts[groupKey as IssuePriorityGroupId] ?? 0}
+            />
+          )}
           renderRowLink={(issue, props) => (
             <Link
               to="/projects/$projectSlug/issues/$issueId"

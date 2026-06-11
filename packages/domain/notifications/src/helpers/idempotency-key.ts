@@ -4,6 +4,7 @@ import type {
   IncidentClosedPayload,
   IncidentEventPayload,
   IncidentOpenedPayload,
+  IssueAssignedPayload,
   WrappedReportPayload,
 } from "../entities/notification.ts"
 
@@ -11,7 +12,11 @@ import type {
  * Compose the idempotency key used by `(organization_id, user_id,
  * idempotency_key)` to absorb outbox redelivery. The shape is
  * `${kind}:${naturalEntityId}` for kinds with a natural source entity,
- * and `${kind}:${generatedId}` for kinds that should never dedupe
+ * `${kind}:${entityId}:${eventTimestamp}` for kinds whose natural anchor
+ * is a recurring event on the same entity (issue assignments — the
+ * unique index is permanent, so keying on `issueId:assigneeId` alone
+ * would suppress a legitimate later re-assignment forever), and
+ * `${kind}:${generatedId}` for kinds that should never dedupe
  * (custom messages — every send is a distinct event).
  */
 export type BuildIdempotencyKeyInput =
@@ -20,6 +25,7 @@ export type BuildIdempotencyKeyInput =
   | { readonly kind: "incident.closed"; readonly payload: IncidentClosedPayload }
   | { readonly kind: "wrapped.report"; readonly payload: WrappedReportPayload }
   | { readonly kind: "custom.message"; readonly payload: CustomMessagePayload }
+  | { readonly kind: "issue.assigned"; readonly payload: IssueAssignedPayload }
 
 export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => {
   switch (input.kind) {
@@ -31,5 +37,9 @@ export const buildIdempotencyKey = (input: BuildIdempotencyKeyInput): string => 
       return `${input.kind}:${input.payload.wrappedReportId}`
     case "custom.message":
       return `${input.kind}:${generateId()}`
+    case "issue.assigned":
+      // The recipient (assignee) is already part of the unique index, so the
+      // key only needs to discriminate assignment events on the same issue.
+      return `${input.kind}:${input.payload.issueId}:${input.payload.assignedAt}`
   }
 }

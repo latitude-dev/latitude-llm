@@ -56,6 +56,8 @@ export interface IssuesExportPayload extends BaseExportPayload {
   readonly selection?: ExportSelection | undefined
   readonly lifecycleGroup?: "active" | "archived" | undefined
   readonly searchQuery?: string | undefined
+  /** Assignee user ids; `"unassigned"` matches issues with no assignee. */
+  readonly assigneeIds?: readonly string[] | undefined
   readonly timeRange?:
     | {
         readonly fromIso?: string | undefined

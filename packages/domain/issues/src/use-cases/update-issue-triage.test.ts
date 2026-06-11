@@ -1,3 +1,4 @@
+import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { MembershipRepository } from "@domain/organizations"
 import { createFakeMembershipRepository } from "@domain/organizations/testing"
 import { IssueId, OrganizationId, SqlClient } from "@domain/shared"
@@ -15,6 +16,18 @@ const projectId = "pppppppppppppppppppppppp"
 const otherProjectId = "qqqqqqqqqqqqqqqqqqqqqqqq"
 const memberUserId = "uuuuuuuuuuuuuuuuuuuuuuuu"
 const strangerUserId = "wwwwwwwwwwwwwwwwwwwwwwww"
+const actorUserId = "aaaaaaaaaaaaaaaaaaaaaaaa"
+
+const createFakeOutboxEventWriter = () => {
+  const events: OutboxWriteEvent[] = []
+  const service = OutboxEventWriter.of({
+    write: (event) =>
+      Effect.sync(() => {
+        events.push(event)
+      }),
+  })
+  return { events, service }
+}
 
 const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
@@ -39,6 +52,7 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
 const makeProvider = (input: {
   readonly issueRepository: ReturnType<typeof createFakeIssueRepository>["repository"]
   readonly members?: readonly string[]
+  readonly outboxWriter?: ReturnType<typeof createFakeOutboxEventWriter>["service"]
 }) => {
   const members = new Set(input.members ?? [])
   const { repository: membershipRepository } = createFakeMembershipRepository({
@@ -48,6 +62,7 @@ const makeProvider = (input: {
   return Layer.mergeAll(
     Layer.succeed(IssueRepository, input.issueRepository),
     Layer.succeed(MembershipRepository, membershipRepository),
+    Layer.succeed(OutboxEventWriter, input.outboxWriter ?? createFakeOutboxEventWriter().service),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(organizationId) })),
   )
 }
@@ -62,6 +77,7 @@ describe("updateIssueTriageUseCase", () => {
       updateIssueTriageUseCase({
         projectId,
         issueId: issue.id,
+        actorUserId,
         assigneeId: memberUserId,
         priority: "high",
         now,
@@ -85,6 +101,7 @@ describe("updateIssueTriageUseCase", () => {
         updateIssueTriageUseCase({
           projectId,
           issueId: issue.id,
+          actorUserId,
           assigneeId: strangerUserId,
         }).pipe(Effect.provide(makeProvider({ issueRepository, members: [memberUserId] }))),
       ),
@@ -102,6 +119,7 @@ describe("updateIssueTriageUseCase", () => {
       updateIssueTriageUseCase({
         projectId,
         issueId: issue.id,
+        actorUserId,
         assigneeId: null,
         now,
       }).pipe(Effect.provide(makeProvider({ issueRepository, members: [] }))),
@@ -121,6 +139,7 @@ describe("updateIssueTriageUseCase", () => {
       updateIssueTriageUseCase({
         projectId,
         issueId: issue.id,
+        actorUserId,
         priority: "low",
       }).pipe(Effect.provide(makeProvider({ issueRepository, members: [memberUserId] }))),
     )
@@ -140,9 +159,102 @@ describe("updateIssueTriageUseCase", () => {
         updateIssueTriageUseCase({
           projectId,
           issueId: issue.id,
+          actorUserId,
           priority: "high",
         }).pipe(Effect.provide(makeProvider({ issueRepository, members: [memberUserId] }))),
       ),
     ).rejects.toMatchObject({ _tag: "BadRequestError" })
+  })
+
+  it("emits IssueAssigneeChanged with the full payload when the assignee changes", async () => {
+    const now = new Date("2026-04-12T12:00:00.000Z")
+    const issue = makeIssue()
+    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { events, service: outboxWriter } = createFakeOutboxEventWriter()
+
+    await Effect.runPromise(
+      updateIssueTriageUseCase({
+        projectId,
+        issueId: issue.id,
+        actorUserId,
+        assigneeId: memberUserId,
+        now,
+      }).pipe(Effect.provide(makeProvider({ issueRepository, members: [memberUserId], outboxWriter }))),
+    )
+
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({
+      eventName: "IssueAssigneeChanged",
+      aggregateType: "issue",
+      aggregateId: issue.id,
+      organizationId,
+      payload: {
+        organizationId,
+        projectId,
+        issueId: issue.id,
+        assigneeId: memberUserId,
+        previousAssigneeId: null,
+        actorUserId,
+        assignedAt: now.toISOString(),
+      },
+    })
+  })
+
+  it("emits the event on clears and re-assignments", async () => {
+    const issue = makeIssue({ assigneeId: memberUserId })
+    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { events, service: outboxWriter } = createFakeOutboxEventWriter()
+    const provider = makeProvider({ issueRepository, members: [memberUserId], outboxWriter })
+
+    await Effect.runPromise(
+      updateIssueTriageUseCase({
+        projectId,
+        issueId: issue.id,
+        actorUserId,
+        assigneeId: null,
+      }).pipe(Effect.provide(provider)),
+    )
+    await Effect.runPromise(
+      updateIssueTriageUseCase({
+        projectId,
+        issueId: issue.id,
+        actorUserId,
+        assigneeId: memberUserId,
+      }).pipe(Effect.provide(provider)),
+    )
+
+    expect(events.map((event) => (event.payload as { assigneeId: string | null }).assigneeId)).toEqual([
+      null,
+      memberUserId,
+    ])
+    expect((events[1]?.payload as { previousAssigneeId: string | null }).previousAssigneeId).toBeNull()
+  })
+
+  it("emits no event for priority-only changes or no-ops", async () => {
+    const issue = makeIssue({ assigneeId: memberUserId, priority: "low" })
+    const { repository: issueRepository } = createFakeIssueRepository([issue])
+    const { events, service: outboxWriter } = createFakeOutboxEventWriter()
+    const provider = makeProvider({ issueRepository, members: [memberUserId], outboxWriter })
+
+    // Priority-only change: writes the issue but stays silent.
+    await Effect.runPromise(
+      updateIssueTriageUseCase({
+        projectId,
+        issueId: issue.id,
+        actorUserId,
+        priority: "urgent",
+      }).pipe(Effect.provide(provider)),
+    )
+    // No-op: same assignee as stored.
+    await Effect.runPromise(
+      updateIssueTriageUseCase({
+        projectId,
+        issueId: issue.id,
+        actorUserId,
+        assigneeId: memberUserId,
+      }).pipe(Effect.provide(provider)),
+    )
+
+    expect(events).toHaveLength(0)
   })
 })

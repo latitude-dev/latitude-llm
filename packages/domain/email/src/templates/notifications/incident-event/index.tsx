@@ -5,7 +5,7 @@ import { Effect } from "effect"
 import React from "react"
 import { renderEmail } from "../../../utils/render.ts"
 import { buildMonitorAttribution } from "../-incident-components.tsx"
-import { resolveIncidentSource } from "../-incident-source.ts"
+import { resolveAssigneeName, resolveIncidentSource } from "../-incident-source.ts"
 import type { NotificationEmailRenderContext, NotificationEmailRenderer } from "../types.ts"
 import { IncidentEventEmail } from "./EmailTemplate.tsx"
 
@@ -21,6 +21,7 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
   Effect.gen(function* () {
     const isSavedSearch = payload.sourceType === "savedSearch"
     const source = yield* resolveIncidentSource(payload)
+    const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
     const sourceName = source.name ?? (isSavedSearch ? "a saved search" : "an issue")
     const heading = ALERT_INCIDENT_KIND_LABEL[payload.incidentKind] ?? "Incident"
     const monitor = buildMonitorAttribution({
@@ -48,6 +49,8 @@ export const incidentEventRenderer: NotificationEmailRenderer<"incident.event"> 
             notificationCreatedAt={ctx.notificationCreatedAt}
             organizationName={ctx.organization.name}
             projectName={ctx.project?.name}
+            priority={payload.priority ?? undefined}
+            assigneeName={assigneeName ?? undefined}
             tags={payload.tags}
             sampleExcerpt={payload.sampleExcerpt}
             monitor={monitor}

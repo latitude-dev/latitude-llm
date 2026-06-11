@@ -3,6 +3,7 @@ import { NOTIFICATION_KIND_META, type NotificationKind } from "@domain/notificat
 import { isSandbox, OrganizationRepository } from "@domain/organizations"
 import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { NotFoundError, RepositoryError, SlackIntegrationId, SqlClient } from "@domain/shared"
+import type { UserRepository } from "@domain/users"
 import { Data, Effect } from "effect"
 import { SlackDeliveryRepository } from "../ports/slack-delivery-repository.ts"
 import { NOTIFICATION_SLACK_RENDERERS } from "../templates/notifications/registry.ts"
@@ -71,7 +72,12 @@ export const dispatchSlackNotificationUseCase = (
 ): Effect.Effect<
   DispatchSlackOutcome,
   DispatchSlackNotificationError,
-  SqlClient | SlackDeliveryRepository | IssueRepository | SavedSearchRepository | OrganizationRepository
+  | SqlClient
+  | SlackDeliveryRepository
+  | IssueRepository
+  | SavedSearchRepository
+  | OrganizationRepository
+  | UserRepository
 > =>
   Effect.gen(function* () {
     const organizations = yield* OrganizationRepository

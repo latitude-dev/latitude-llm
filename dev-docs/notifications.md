@@ -10,8 +10,8 @@ Multi-channel notification system. Producers fan out to channel-specific workers
 
 | Concept | Where | What it is |
 | --- | --- | --- |
-| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, ...). Each kind declares its group and its payload Zod schema. Incidents fan out across three kinds reflecting the alerts lifecycle: `incident.event` for one-shot kinds (issue.new, issue.regressed — `endedAt = startedAt`), `incident.opened` and `incident.closed` for sustained kinds (issue.escalating). |
-| **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category. The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. |
+| **Kind** | `NOTIFICATION_KIND_META` in `@domain/notifications` | Flat enum identifying the event-type (`incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`, ...). Each kind declares its group and its payload Zod schema. Incidents fan out across three kinds reflecting the alerts lifecycle: `incident.event` for one-shot kinds (issue.new, issue.regressed — `endedAt = startedAt`), `incident.opened` and `incident.closed` for sustained kinds (issue.escalating). `issue.assigned` is the first **personal** (single-recipient) kind — it targets the new assignee only, not the org fan-out. |
+| **Group** | `NOTIFICATION_GROUPS` + `NOTIFICATION_GROUP_META` in `@domain/shared` | User-visible category (`incidents`, `wrapped_reports`, `custom_messages`, `personal`). The preferences UI surfaces one toggle per group; adding a kind to an existing group inherits the user's setting automatically. Each group also declares `slackRoutable` — non-routable groups (`personal`) are hidden from the Slack routes settings, rejected by the route-config server fns, and skipped by the worker's Slack fan-out. |
 | **Channel** | `apps/workers/src/workers/notification-*.ts` + per-channel registries | Delivery surface (in-app, email; Slack and others later). Each channel is one queue topic + one worker + one renderer registry keyed on `NotificationKind`. |
 | **Idempotency key** | `idempotency_key` column on `notifications` | Producer-computed (`buildIdempotencyKey` in `@domain/notifications`). The unique index `(organization_id, user_id, idempotency_key)` absorbs at-least-once redelivery from the outbox + queue layers. |
 | **Project anchor** | `project_id` column on `notifications` (nullable) | Cascade anchor for kinds tied to a project (`incident.*`, `wrapped.report`). On `ProjectDeleted` the domain-events worker fires `notifications:delete-by-project`, which removes every row anchored to the deleted project. Per the platform's no-FK rule, referential integrity is application-layer. |
@@ -25,7 +25,7 @@ Source domain event (IncidentCreated / IncidentClosed / WrappedReady / ...)
   → routed by apps/workers/src/workers/domain-events.ts
      (incidents: forwards a transition hint — "created" / "closed" —
       not a hardcoded notification kind)
-notifications:request-{incident,wrapped-report}-notifications
+notifications:request-{incident,wrapped-report,issue-assigned}-notifications
   → apps/workers/src/workers/notifications.ts
      – incidents: derive kind from incident.endedAt
        (endedAt = startedAt → incident.event;
@@ -33,6 +33,8 @@ notifications:request-{incident,wrapped-report}-notifications
         endedAt > startedAt → incident.closed)
      – gate (incidents only): projectSettings.notifications.incidents[alertKind]
      – resolveRecipients (today: all org members)
+     – issue-assigned: single recipient (the new assignee); router +
+       producer both skip cleared assignments and self-assignments
      – snapshot trend window (sustained kinds: 3h ending at the
        transition, 18 buckets × 10min, both occurrence counts and
        per-bucket escalation thresholds via ScoreAnalyticsRepository)
@@ -131,9 +133,9 @@ If `notificationId` ever leaks to less-trusted surfaces, or chart payloads start
 ## Naming conventions
 
 - **Kind**: `<source>.<event>` style. Examples: `incident.event`, `incident.opened`, `incident.closed`, `wrapped.report`, `custom.message`. Keep it lowercase and dot-separated. The first segment names the source aggregate or domain area; the second names what happened or what kind of thing it is. When a source has both eventful (one-shot) and sustained (open-then-close) flavors, split them into distinct kinds rather than overloading `opened` for both — the kind should reflect what the user actually receives.
-- **Group**: lowercase plural noun (`incidents`, `wrapped_reports`, `custom_messages`). Group keys are user-visible (the settings page label comes from `NOTIFICATION_GROUP_META`), but the keys themselves should be stable since they're persisted in `users.notification_preferences` jsonb.
+- **Group**: lowercase noun (`incidents`, `wrapped_reports`, `custom_messages`, `personal`). Group keys are user-visible (the settings page label comes from `NOTIFICATION_GROUP_META`), but the keys themselves should be stable since they're persisted in `users.notification_preferences` jsonb.
 - **Queue task** for a new source: `request-<group>-notifications` (e.g. `request-incident-notifications`). Mirrors the existing pattern.
-- **Idempotency key**: `${kind}:${naturalEntityId}` when there is a natural source entity, or `${kind}:${generatedId}` when every event is unique by intent (custom messages).
+- **Idempotency key**: `${kind}:${naturalEntityId}` when there is a natural source entity; `${kind}:${entityId}:${eventTimestamp}` when the natural anchor is a recurring event on the same entity (`issue.assigned` keys on `issueId` + the transaction-frozen `assignedAt`, so outbox redelivery coalesces while a later re-assignment to the same user re-notifies — the unique index is permanent, so an id-only key would suppress legitimate later events forever); or `${kind}:${generatedId}` when every event is unique by intent (custom messages).
 
 ## Adding a new kind
 

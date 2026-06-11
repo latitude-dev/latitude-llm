@@ -8,8 +8,9 @@ import {
   projectOrOrgContext,
   sectionMarkdown,
   trendChartBlock,
+  triageContextSuffix,
 } from "./blocks.ts"
-import { resolveSourceName } from "./source-name.ts"
+import { resolveAssigneeName, resolveSourceName } from "./source-name.ts"
 import type { SlackNotificationRenderer } from "./types.ts"
 
 export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"> = (payload, ctx) =>
@@ -25,6 +26,7 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
     const duration = humanizeDurationMs(payload.recovery.durationMs)
 
     const sourceName = yield* resolveSourceName(payload)
+    const assigneeName = yield* resolveAssigneeName(payload.assigneeId)
 
     const attribution = monitorAttributionBlocks({
       webAppUrl: ctx.webAppUrl,
@@ -35,7 +37,7 @@ export const incidentClosedRenderer: SlackNotificationRenderer<"incident.closed"
       condition: payload.condition,
     })
     const context = contextLine(
-      `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}`,
+      `${payload.severity} · ${payload.sourceType} · ${projectOrOrgContext(ctx.organization, ctx.project)}${triageContextSuffix({ priority: payload.priority, assigneeName })}`,
     )
 
     if (isSavedSearch) {

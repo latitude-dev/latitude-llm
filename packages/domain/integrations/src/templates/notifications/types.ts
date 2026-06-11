@@ -2,6 +2,7 @@ import type { IssueRepository } from "@domain/issues"
 import type { NOTIFICATION_KIND_META, NotificationKind } from "@domain/notifications"
 import type { SavedSearchRepository } from "@domain/saved-searches"
 import type { NotificationId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import type { UserRepository } from "@domain/users"
 import type { KnownBlock } from "@slack/web-api"
 import { Data, type Effect } from "effect"
 import type { z } from "zod"
@@ -76,11 +77,12 @@ export class RenderSlackError extends Data.TaggedError("RenderSlackError")<{
  * other kinds need nothing beyond the payload + context.
  */
 export type SlackRenderDepsByKind = {
-  readonly "incident.event": IssueRepository | SavedSearchRepository | SqlClient
-  readonly "incident.opened": IssueRepository | SavedSearchRepository | SqlClient
-  readonly "incident.closed": IssueRepository | SavedSearchRepository | SqlClient
+  readonly "incident.event": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.opened": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
+  readonly "incident.closed": IssueRepository | SavedSearchRepository | UserRepository | SqlClient
   readonly "wrapped.report": never
   readonly "custom.message": never
+  readonly "issue.assigned": never
 }
 
 export type SlackRenderDepsFor<K extends NotificationKind> = SlackRenderDepsByKind[K]

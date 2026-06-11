@@ -10,6 +10,26 @@ export const ISSUE_SOURCES = ["annotation", "flagger", "custom"] as const
 /** Manual triage priority levels, ascending in urgency. Null means "unset". */
 export const ISSUE_PRIORITIES = ["low", "medium", "high", "urgent"] as const
 
+/**
+ * Priority groups in display order for the always-grouped issues list.
+ * `"none"` is the group for issues with `priority = null` and always sorts
+ * last, mirroring how Linear renders a trailing "No priority" section.
+ */
+export const ISSUE_PRIORITY_GROUPS = ["urgent", "high", "medium", "low", "none"] as const
+
+/**
+ * Sort rank per priority group (lower = earlier in the list). Used as the
+ * primary key of the issues-list ordering so rows stay grouped by priority
+ * regardless of the user-selected sort, which applies within each group.
+ */
+export const ISSUE_PRIORITY_ORDER: Readonly<Record<(typeof ISSUE_PRIORITY_GROUPS)[number], number>> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+  none: 4,
+} as const
+
 // ---------------------------------------------------------------------------
 // Dimension patterns (Patterns panel)
 // ---------------------------------------------------------------------------

@@ -378,7 +378,7 @@ The project `Issues` page mirrors the project `Traces` page shell:
 Action-row behavior:
 
 - left side: time range selector and columns selector
-- right side: `Active` / `Archived` tabs plus hybrid search without rerank
+- right side: an assignee filter (multi-select over org members plus an `Unassigned` option), a `My issues` toggle whose count badge reflects the current tab/time/search filters (but not the assignee filter itself), `Active` / `Archived` tabs, plus hybrid search without rerank
 - the time range filters score `created_at` in ClickHouse, not issue-row timestamps in Postgres
 - the lifecycle tabs affect the issues table only, not the analytics panel
 - the page does not expose the generic Traces filter builder or filter drawer
@@ -399,9 +399,11 @@ Analytics panel behavior:
 
 Issues table behavior:
 
+- rows are **always grouped by triage priority** (Linear-style): `Urgent` → `High` → `Medium` → `Low` → `No priority`, with full-width group header rows showing each group's total count over the filtered set. The grouping is the unconditional primary sort key in `listIssuesUseCase`, so exports, bulk pagination, and prev/next issue navigation see the same order; the user-selected sort applies within each group
+- the assignee filter (`assigneeIds`, with an `"unassigned"` sentinel) is honored by the table, bulk lifecycle actions, and CSV exports so select-all always targets the visible set
 - no bulk-selection UI is shown in this revision, even though backend bulk lifecycle actions may still exist for API parity
 - default sorting is last seen descending, then occurrences descending, with search similarity preserved as an additional tie-breaker when search text is present
-- visible columns are `Issue`, `Trend`, `Seen at`, `Occurrences`, `Affected traces`, and `Evaluations`
+- visible columns are `Issue`, `Tags`, `Status`, `Assignee`, `Trend`, `Seen at`, `Occurrences`, and `Affected traces`; `Assignee` hydrates the member's name/avatar client-side from the members collection (the list payload carries only `assigneeId`)
 - `Issue` shows the issue name plus lifecycle tags, with truncation
 - `Seen at` combines recency and age, for example `11d ago / 3y old`
 - `Occurrences` uses the selected time range and its column header also shows the sum across all matched issues
@@ -413,6 +415,8 @@ Issue page behavior:
 - the dedicated route (`/projects/<slug>/issues/<issueId>`) is the single issue surface; it replaced the former right-side drawer. The list row click navigates here, and the legacy `?issueId=` deep link redirects to it
 - page-level time range, lifecycle-tab, and search controls do not apply on the page; issue reads use full history
 - the header shows the issue name + canonical lifecycle status, the resolve/ignore lifecycle actions, the assignee + priority triage pickers, previous/next-issue navigation (buttons + `J`/`K`, cycling the default-sorted list of the issue's own lifecycle group), and a copyable slug; the description and tags sit in a full-width row below
+- the command palette gains contextual `Assign to…` (Me / Unassigned / org members) and `Set priority…` drill-down commands while the page is open, running the same `updateIssueTriage` mutation as the pickers
+- triage fields are functional beyond the page: the issues list groups by priority and filters by assignee, incident notification payloads snapshot `assigneeId`/`priority` for email/Slack/in-app rendering, and changing the assignee emits `IssueAssigneeChanged` which notifies the new assignee (`issue.assigned`, in-app + email; see `dev-docs/notifications.md`)
 - the report body includes the impact summary band (occurrences, affected traces/sessions/users, cost), the Patterns section, a 14-day trend histogram, the linked-evaluations section, an Examples carousel (`H`/`L` cycling), and an infinitely paginated traces table; clicking a trace opens it in an overlay sheet on top of the page
 - linked evaluations show name, last alignment date, alignment metric, manual realign, and per-evaluation archive actions; the alignment badge tooltip surfaces the confusion matrix plus a "Advanced statistics" link button that opens a modal with every metric derivable from it (accuracy, recall, specificity, balanced accuracy, precision, F1, MCC)
 - while a realignment is in flight, the UI shows `Aligning...`

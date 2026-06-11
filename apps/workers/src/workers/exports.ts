@@ -71,6 +71,7 @@ type IssuesExportInput = {
   readonly projectId: ProjectIdType
   readonly selection?: Extract<ExportPayload, { kind: "issues" }>["selection"]
   readonly lifecycleGroup?: "active" | "archived"
+  readonly assigneeIds?: readonly string[]
   readonly search?: {
     readonly query: string
     readonly normalizedEmbedding: number[]
@@ -139,6 +140,7 @@ function generateIssuesExport(
   input: {
     readonly selection?: Extract<ExportPayload, { kind: "issues" }>["selection"]
     readonly lifecycleGroup?: "active" | "archived"
+    readonly assigneeIds?: readonly string[]
     readonly searchQuery?: string
     readonly timeRange?: {
       readonly fromIso?: string | undefined
@@ -156,6 +158,7 @@ function generateIssuesExport(
     projectId,
     ...(input.selection ? { selection: input.selection } : {}),
     ...(input.lifecycleGroup ? { lifecycleGroup: input.lifecycleGroup } : {}),
+    ...(input.assigneeIds?.length ? { assigneeIds: input.assigneeIds } : {}),
     ...(input.sort ? { sort: input.sort } : {}),
     ...(timeRange ? { timeRange } : {}),
   } satisfies Omit<IssuesExportInput, "search">
@@ -208,6 +211,7 @@ function dispatchExport(payload: ExportPayload) {
       return generateIssuesExport(organizationId, projectId, {
         ...(payload.selection ? { selection: payload.selection } : {}),
         ...(payload.lifecycleGroup ? { lifecycleGroup: payload.lifecycleGroup } : {}),
+        ...(payload.assigneeIds?.length ? { assigneeIds: payload.assigneeIds } : {}),
         ...(payload.searchQuery ? { searchQuery: payload.searchQuery } : {}),
         ...(payload.timeRange ? { timeRange: payload.timeRange } : {}),
         ...(payload.sort ? { sort: payload.sort } : {}),

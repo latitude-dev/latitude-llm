@@ -1,3 +1,4 @@
+import type { IssuePriority } from "@domain/issues"
 import { formatHumanReadableAlert } from "@domain/monitors"
 import type { IncidentSampleAuthor, IncidentSampleExcerpt } from "@domain/notifications"
 import type { AlertIncidentCondition, AlertIncidentKind, AlertSeverity } from "@domain/shared"
@@ -154,6 +155,39 @@ export function SeverityBadge({ severity }: { readonly severity: AlertSeverity }
       }}
     >
       {severity}
+    </span>
+  )
+}
+
+const PRIORITY_PALETTE: Record<IssuePriority, { readonly bg: string; readonly fg: string }> = {
+  urgent: { bg: "#FEE2E2", fg: "#991B1B" },
+  high: { bg: "#FEF3C7", fg: "#92400E" },
+  medium: { bg: "#DBEAFE", fg: "#1E40AF" },
+  low: { bg: "#F1F5F9", fg: "#475569" },
+}
+
+/**
+ * Colored priority pill for the issue's manual triage priority — same
+ * shape as `SeverityBadge` so the metadata table reads as one system.
+ * Only rendered when the incident payload snapshotted a non-null
+ * priority.
+ */
+export function PriorityBadge({ priority }: { readonly priority: IssuePriority }) {
+  const palette = PRIORITY_PALETTE[priority]
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "2px 8px",
+        borderRadius: 999,
+        backgroundColor: palette.bg,
+        color: palette.fg,
+        fontSize: 12,
+        fontWeight: 600,
+        textTransform: "capitalize",
+      }}
+    >
+      {priority}
     </span>
   )
 }

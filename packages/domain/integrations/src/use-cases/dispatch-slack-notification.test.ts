@@ -9,6 +9,7 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
+import { UserRepository } from "@domain/users"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { InMemorySlackDeliveryRepositoryLive } from "../testing/in-memory-slack-delivery-repository.ts"
@@ -27,6 +28,11 @@ const NoopIssueRepository = Layer.succeed(IssueRepository, {
   hardDelete: () => Effect.die(new Error("not expected")),
   existsByName: () => Effect.die(new Error("not expected")),
   countBySlug: () => Effect.die(new Error("not expected")),
+} as never)
+
+// Same rationale as NoopIssueRepository: custom.message never resolves an assignee name.
+const NoopUserRepository = Layer.succeed(UserRepository, {
+  findById: () => Effect.die(new Error("UserRepository.findById not expected in this test")),
 } as never)
 
 // Same rationale as NoopIssueRepository: custom.message never resolves a source name.
@@ -120,6 +126,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         Effect.provide(layer),
         Effect.provide(NoopIssueRepository),
         Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopUserRepository),
         Effect.provide(NoopSqlClient),
         Effect.provide(LiveOrg),
       ),
@@ -147,6 +154,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         Effect.provide(layer),
         Effect.provide(NoopIssueRepository),
         Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopUserRepository),
         Effect.provide(NoopSqlClient),
         Effect.provide(LiveOrg),
       ),
@@ -175,6 +183,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         Effect.provide(layer),
         Effect.provide(NoopIssueRepository),
         Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopUserRepository),
         Effect.provide(NoopSqlClient),
         Effect.provide(sandboxOrg),
       ),
@@ -202,6 +211,7 @@ describe("dispatchSlackNotificationUseCase", () => {
         Effect.provide(layer),
         Effect.provide(NoopIssueRepository),
         Effect.provide(NoopSavedSearchRepository),
+        Effect.provide(NoopUserRepository),
         Effect.provide(NoopSqlClient),
         Effect.provide(LiveOrg),
       ),

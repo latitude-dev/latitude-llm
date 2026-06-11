@@ -317,6 +317,72 @@ describe("domain-events dispatcher", () => {
     expect(job?.options?.dedupeKey).toBe("notifications:request-incident-closed:ai-1")
   })
 
+  it("routes IssueAssigneeChanged to notifications:request-issue-assigned-notifications", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("IssueAssigneeChanged", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      issueId: "issue-1",
+      assigneeId: "user-b",
+      previousAssigneeId: "user-a",
+      actorUserId: "user-a",
+      assignedAt: "2026-05-07T10:00:00.000Z",
+    })
+
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(1)
+    const job = published[0]
+    expect(job?.queue).toBe("notifications")
+    expect(job?.task).toBe("request-issue-assigned-notifications")
+    expect(job?.payload).toEqual({
+      organizationId: "org-1",
+      issueId: "issue-1",
+      assigneeId: "user-b",
+      actorUserId: "user-a",
+      assignedAt: "2026-05-07T10:00:00.000Z",
+    })
+    expect(job?.options?.dedupeKey).toBe("notifications:request-issue-assigned:issue-1:2026-05-07T10:00:00.000Z")
+  })
+
+  it("skips IssueAssigneeChanged for cleared assignments and self-assignments", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    await consumer.dispatchTask(
+      "domain-events",
+      "dispatch",
+      envelopeToDispatchPayload(
+        makeEnvelope("IssueAssigneeChanged", {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          issueId: "issue-1",
+          assigneeId: null,
+          previousAssigneeId: "user-a",
+          actorUserId: "user-b",
+          assignedAt: "2026-05-07T10:00:00.000Z",
+        }),
+      ),
+    )
+    await consumer.dispatchTask(
+      "domain-events",
+      "dispatch",
+      envelopeToDispatchPayload(
+        makeEnvelope("IssueAssigneeChanged", {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          issueId: "issue-1",
+          assigneeId: "user-a",
+          previousAssigneeId: null,
+          actorUserId: "user-a",
+          assignedAt: "2026-05-07T11:00:00.000Z",
+        }),
+      ),
+    )
+
+    expect(published).toHaveLength(0)
+  })
+
   it("still notifies on an organic IncidentClosed (reason=threshold)", async () => {
     const { consumer, published } = setupDispatcher()
 

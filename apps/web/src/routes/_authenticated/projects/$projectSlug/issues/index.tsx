@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   CloseTrigger,
   DotIndicator,
@@ -48,7 +49,15 @@ function IssuesBreadcrumb() {
   )
 }
 
-import { ActivityIcon, ArchiveIcon, CheckIcon, DownloadIcon, PauseIcon, SearchIcon } from "lucide-react"
+import {
+  ActivityIcon,
+  ArchiveIcon,
+  CheckIcon,
+  CircleUserRoundIcon,
+  DownloadIcon,
+  PauseIcon,
+  SearchIcon,
+} from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { invalidateIssueQueries, useIssues } from "../../../../../domains/issues/issues.collection.ts"
 import {
@@ -61,11 +70,13 @@ import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { EMPTY_SELECTION, type SelectionState, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
+import { useAuthenticatedUser } from "../../../-route-data.ts"
 import { ColumnsSelector } from "../-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "../-components/export-confirmation-modal.tsx"
 import { useTableColumnSettings } from "../-components/table-column-settings.ts"
 import { TimeFilterDropdown } from "../-components/time-filter-dropdown.tsx"
 import { useRouteProject } from "../-route-data.ts"
+import { AssigneeFilter, UNASSIGNED_FILTER_TOKEN } from "./-components/assignee-filter.tsx"
 import { IssuesAnalyticsPanel } from "./-components/issues-analytics-panel.tsx"
 import { IssuesEmptyState } from "./-components/issues-empty-state.tsx"
 import {
@@ -100,6 +111,25 @@ function parseSorting(raw: string): IssuesTableSorting {
   return DEFAULT_SORTING
 }
 
+// Matches the server's `issueAssigneeFilterSchema`: a 24-char cuid or the
+// unassigned sentinel. Invalid URL tokens are dropped instead of erroring.
+const ASSIGNEE_TOKEN_PATTERN = /^[a-z0-9]{24}$/
+
+function parseAssignees(raw: string): readonly string[] {
+  return [
+    ...new Set(
+      raw
+        .split(",")
+        .map((token) => token.trim())
+        .filter((token) => token === UNASSIGNED_FILTER_TOKEN || ASSIGNEE_TOKEN_PATTERN.test(token)),
+    ),
+  ]
+}
+
+function serializeAssignees(tokens: readonly string[]): string {
+  return tokens.join(",")
+}
+
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issues/")({
   // Preserve every list search param (lifecycle/time/search/sort live in the URL via
   // `useParamState`, not here); we only inspect `issueId` so the legacy drawer deep link
@@ -124,11 +154,13 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issu
 
 function IssuesPage() {
   const project = useRouteProject()
+  const me = useAuthenticatedUser()
   const [lifecycleGroup, setLifecycleGroup] = useParamState("issuesLifecycle", "active", {
     validate: (value): value is "active" | "archived" => value === "active" || value === "archived",
   })
   const [timeFrom, setTimeFrom] = useParamState("issuesTimeFrom", "")
   const [timeTo, setTimeTo] = useParamState("issuesTimeTo", "")
+  const [assigneesParam, setAssigneesParam] = useParamState("issuesAssignees", "")
   const [searchQuery, setSearchQuery] = useParamState("issuesSearch", "")
   const [searchInput, setSearchInput] = useValueWithDefault(searchQuery)
   const [rawSorting, setRawSorting] = useParamState("issuesSort", serializeSorting(DEFAULT_SORTING), {
@@ -167,10 +199,23 @@ function IssuesPage() {
         }
       : undefined
 
+  const assigneeIds = useMemo(() => parseAssignees(assigneesParam), [assigneesParam])
+  const setAssigneeIds = useCallback(
+    (next: readonly string[]) => setAssigneesParam(serializeAssignees(next)),
+    [setAssigneesParam],
+  )
+  const isMyIssuesActive = assigneeIds.length === 1 && assigneeIds[0] === me.id
+  const toggleMyIssues = useCallback(
+    () => setAssigneeIds(isMyIssuesActive ? [] : [me.id]),
+    [isMyIssuesActive, me.id, setAssigneeIds],
+  )
+
   const {
     data: issuesData,
     analytics,
     occurrencesSum,
+    priorityCounts,
+    myIssuesCount,
     totalCount,
     hasAnyIssues,
     isLoading,
@@ -180,6 +225,7 @@ function IssuesPage() {
     projectId: project.id,
     lifecycleGroup,
     sorting,
+    ...(assigneeIds.length > 0 ? { assigneeIds } : {}),
     ...(searchQuery ? { searchQuery } : {}),
     ...(timeRange ? { timeRange } : {}),
   })
@@ -214,6 +260,7 @@ function IssuesPage() {
             field: sorting.column,
             direction: sorting.direction,
           },
+          ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
           ...(searchQuery ? { searchQuery } : {}),
           ...(timeRange ? { timeRange } : {}),
         },
@@ -251,6 +298,7 @@ function IssuesPage() {
             field: sorting.column,
             direction: sorting.direction,
           },
+          ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
           ...(searchQuery ? { searchQuery } : {}),
           ...(timeRange ? { timeRange } : {}),
         },
@@ -293,6 +341,7 @@ function IssuesPage() {
             field: sorting.column,
             direction: sorting.direction,
           },
+          ...(assigneeIds.length > 0 ? { assigneeIds: [...assigneeIds] } : {}),
           ...(searchQuery ? { searchQuery } : {}),
           ...(timeRange ? { timeRange } : {}),
         },
@@ -319,7 +368,8 @@ function IssuesPage() {
     }
   }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
 
-  const hasActiveFilters = lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange)
+  const hasActiveFilters =
+    lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange) || assigneeIds.length > 0
   // Derived from the un-substituted data so a placeholder reload (which forces
   // `issues` to []) does not falsely trigger the empty state.
   const hasNoIssues = !hasAnyIssues && !hasActiveFilters
@@ -377,6 +427,19 @@ function IssuesPage() {
                 />
                 <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
+              <AssigneeFilter value={assigneeIds} onChange={setAssigneeIds} />
+              <Button
+                variant={isMyIssuesActive ? "secondary" : "outline"}
+                size="sm"
+                onClick={toggleMyIssues}
+                aria-pressed={isMyIssuesActive}
+              >
+                <Icon icon={CircleUserRoundIcon} size="sm" />
+                My issues
+                <Badge variant={isMyIssuesActive ? "default" : "muted"} size="small">
+                  {myIssuesCount.toLocaleString()}
+                </Badge>
+              </Button>
               <Tabs
                 variant="bordered"
                 size="sm"
@@ -445,6 +508,7 @@ function IssuesPage() {
           infiniteScroll={infiniteScroll}
           sorting={sorting}
           occurrencesSum={occurrencesSum}
+          priorityCounts={priorityCounts}
           visibleColumnIds={columnSettings.visibleColumnIds}
           selection={selection}
           onSortChange={setSorting}
