@@ -64,7 +64,10 @@ const PARSERS: readonly ContentParser[] = [
   },
   {
     canHandle: (attrs) =>
-      hasKey(attrs, "lk.chat_ctx") || hasKey(attrs, "lk.response.text") || hasKey(attrs, "lk.response.function_calls"),
+      hasKey(attrs, "lk.chat_ctx") ||
+      hasKey(attrs, "lk.response.text") ||
+      hasKey(attrs, "lk.response.function_calls") ||
+      hasKey(attrs, "lk.function_tools"),
     parse: parseLiveKit,
   },
   {

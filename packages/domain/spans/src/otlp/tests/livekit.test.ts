@@ -103,6 +103,65 @@ describe("parseContent (LiveKit)", () => {
     ])
   })
 
+  it("treats the developer role as system instructions and preserves assistant history", () => {
+    const chatCtx = {
+      items: [
+        { type: "message", role: "developer", content: ["Stay concise."] },
+        { type: "message", role: "user", content: ["Hi"] },
+        { type: "message", role: "assistant", content: ["Hello, how can I help?"] },
+      ],
+    }
+
+    const result = parseContent([str("lk.chat_ctx", JSON.stringify(chatCtx))])
+
+    expect(result.systemInstructions).toEqual([{ type: "text", content: "Stay concise." }])
+    expect(result.inputMessages).toEqual([
+      { role: "user", parts: [{ type: "text", content: "Hi" }] },
+      { role: "assistant", parts: [{ type: "text", content: "Hello, how can I help?" }] },
+    ])
+  })
+
+  it("maps audio transcripts and plain-string content to text parts", () => {
+    const chatCtx = {
+      items: [
+        { type: "message", role: "user", content: "Just a string" },
+        {
+          type: "message",
+          role: "user",
+          content: [{ type: "audio_content", transcript: "spoken question" }],
+        },
+      ],
+    }
+
+    const result = parseContent([str("lk.chat_ctx", JSON.stringify(chatCtx))])
+
+    expect(result.inputMessages).toEqual([
+      { role: "user", parts: [{ type: "text", content: "Just a string" }] },
+      { role: "user", parts: [{ type: "text", content: "spoken question" }] },
+    ])
+  })
+
+  it("extracts tool definitions from a span carrying only lk.function_tools", () => {
+    const result = parseContent([str("lk.function_tools", JSON.stringify(TOOL_DEFS))])
+
+    expect(result.toolDefinitions).toEqual([
+      {
+        name: "get_weather",
+        description: "Get current weather for a city",
+        parameters: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
+      },
+    ])
+    expect(result.inputMessages).toEqual([])
+    expect(result.outputMessages).toEqual([])
+  })
+
+  it("degrades gracefully on malformed lk.chat_ctx JSON", () => {
+    const result = parseContent([str("lk.chat_ctx", "{ not valid json"), str("lk.response.text", "ok")])
+
+    expect(result.inputMessages).toEqual([])
+    expect(result.outputMessages).toEqual([{ role: "assistant", parts: [{ type: "text", content: "ok" }] }])
+  })
+
   it("returns empty content when no LiveKit attributes are present", () => {
     const result = parseContent([str("gen_ai.operation.name", "chat")])
 

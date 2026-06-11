@@ -31,9 +31,19 @@ LiveKit Agents ships with built-in OpenTelemetry support and owns its own tracer
   <Step title="Install">
     <Tabs>
       <Tab title="Python">
-        ```bash pip
-        pip install latitude-telemetry "livekit-agents[openai]"
-        ```
+        <CodeGroup>
+          ```bash pip
+          pip install latitude-telemetry "livekit-agents[openai]"
+          ```
+
+          ```bash uv
+          uv add latitude-telemetry "livekit-agents[openai]"
+          ```
+
+          ```bash poetry
+          poetry add latitude-telemetry "livekit-agents[openai]"
+          ```
+        </CodeGroup>
       </Tab>
       <Tab title="TypeScript">
         <CodeGroup>
