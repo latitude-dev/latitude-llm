@@ -61,7 +61,7 @@ Consequences carried through the whole spec:
 
   Any matcher composes with any scope: an evaluation that only runs on slow traces, a semantic anchor only checked against traces tagged `foo`. The scope doubles as a cost pre-gate: out-of-scope traces never reach the matchers. Pure filter slices are deliberately *not* signals (decision 4) — that job belongs to saved searches + monitors.
 - Signals carry **triage metadata** — priority and assignees — but **no lifecycle**. You create or delete signals; resolve/ignore semantics live on monitors.
-- Signals are **always created proactively** (decision 2): from the Signals page builder, from a saved search (pre-filling the scope and, for semantic searches, the anchor), or from the annotation flow ("explain the problem, point at 3–4 example traces, get a signal with a generated aligned evaluation"). Today's issues migrate into signals; no pipeline creates them automatically anymore.
+- Signals are **always created proactively** (decision 2): from the Signals page builder, from a saved search (pre-filling scope and anchors — flow F), or from the annotation flow ("explain the problem, point at 3–4 example traces, get a signal with a generated aligned evaluation"). Today's issues migrate into signals; no pipeline creates them automatically anymore.
 - **Moment labels** (conversation intelligence) are provisioned as default per-project signals with `type = 'semantic'` — their existing anchor sets (`MOMENT_LABEL_ANCHORS`) carry over verbatim, since the semantic config adopts the same shape (multiple positive anchors + contrast anchors + threshold/margin).
 - Every signal gets a **default monitor** provisioned at creation — the same monitoring issues get today: an occurrences monitor carrying a high-severity `metric.escalating` alert in `expected` mode (the seasonal heuristic, so a firing is a high-signal event rather than noise) plus the `event.regressed` event alert.
 
@@ -69,25 +69,16 @@ Consequences carried through the whole spec:
 
 **A virtual view over traces, kept as a concept — and the only home for pure filter tracking.** The exploration bookmark on the Traces page: a stored `query + filterSet` evaluated at read time. Saved searches are directly monitorable (filters are cheap and correct at query time — `SavedSearchMatchReader` machinery reused unchanged). When a user wants a *deeper* membership test (semantic, rule, evaluation, script), the path is **Create signal from this search**, which pre-fills the scope from the filters and the semantic anchor from a semantic prompt.
 
-### Tool (telemetry-emergent target)
-
-Tools — the project Tools dashboard's inventory (PR #3508): every tool agents *define* (`tool_definitions` on chat spans) or *call* (`execute_tool` spans) — are **monitor targets, not signals**. Telemetry already materializes tool calls: an `execute_tool` span with `tool_name`, status, and duration is an occurrence row in everything but name, bloom-indexed in ClickHouse. Per-tool metrics are therefore the "correct and cheap at query time" case (decision 4), like saved searches; creating signals per tool would re-materialize indexed data and burn the per-plan cap on an emergent, possibly large inventory.
-
-- Monitor `target_type = 'tool'`, `target_id = <tool name>`. Tools have no Postgres row, hence no deletion cascade — a tool "disappearing" is just its call count reaching zero.
-- All alert kinds apply unchanged: error-count `metric.escalating` in `expected` mode ("checkout-tool failures above their learned seasonal rate"), `metric.threshold` on p95 duration ("search tool p95 above 3s"), `event.matched` on a deprecated/unused tool ("someone called a tool we removed") — with `resolved_at` + `event.regressed` giving clean re-fire semantics after a cleanup.
-- **No default monitor for tools** — the inventory is emergent and can be large; tool monitors are opt-in. The tool detail page gains the same Monitors / Alerts / Incidents blocks as the signal page, with "Add monitor" pre-filled with the tool target.
-- *Judgments* about tool behavior still belong to **signals**: `SignalRule`'s `part: 'toolCall'` + `jsonSchema` check ("called with arguments violating its schema"), or script/semantic matchers with a `tools has X` scope — the dashboard's new `tools` filter field flows into signal scopes automatically because scope reuses the shared `FilterSet`.
-
-Division of labor: *metrics about a tool* → tool-target monitor (query-time, already indexed); *judgments about tool behavior* → signal with a tool-scoped rule/script matcher (write-time, occurrence-backed).
-
 ### Monitor
 
 **A monitor watches one target over time.** Monitors never own filter definitions; they own:
 
-- a **target**: a signal, a saved search, a **tool** (telemetry-emergent, addressed by name), or a raw stream — `traces`, `spans`, or `sessions` as a whole (e.g. "avg latency of all traffic"). `target_id` is required for signal/saved-search/tool targets; raw streams have none.
+- a **target**: a signal, a saved search, a **tool** (from the Tools dashboard — telemetry-emergent, addressed by name), or a raw stream — `traces`, `spans`, or `sessions` as a whole (e.g. "avg latency of all traffic"). `target_id` is required for signal/saved-search/tool targets; raw streams have none.
 - a **metric**: event/occurrence count (default), or an aggregate over the matched traces — `avg` / `sum` / `p95` of `duration`, `ttft`, `cost`, `tokens`, or `errors`.
 - **mute** (`muted_at`): notifications off; evaluation and incident recording continue.
 - the **lifecycle**: *active* (default), *escalating* (derived: an open sustained incident exists), *resolved* (manual `resolved_at` anchor, or derived from a long quiet period). The first datapoint after `resolved_at` fires an `event.regressed` alert and clears the anchor.
+
+Tool targets get **no default monitor** (the inventory is telemetry-emergent and can be large — tool monitors are opt-in) and no deletion cascade (tools aren't Postgres rows). Tool *metrics* belong here; *judgments* about tool behavior belong to signals — `SignalRule`'s `part: 'toolCall'`, or any matcher scoped with the `tools` filter field.
 
 "Resolve a signal" resolves its default monitor; "ignore" mutes it. The signal page keeps one-click triage; it just writes to the monitor underneath.
 
@@ -98,7 +89,7 @@ Division of labor: *metrics about a tool* → tool-target monitor (query-time, a
 - **Event alerts** fire on discrete events in the target stream: a new matching trace, a regression.
 - **Metric alerts** fire on the monitor's aggregated value: threshold (absolute / multiplier / expected), and sustained escalation.
 
-Today "is this escalating?" is answered by two unrelated implementations that differ only in their input: the issue path runs the seasonal detector (`evaluateSeasonalEscalation`) over per-issue **score counts**, while the saved-search path runs a bucketed sustained-gate over query-time **trace-match counts** — and its `expected` threshold mode already calls the same seasonal detector internally. The logic shape is identical in both: *per-bucket count series → per-bucket threshold → open/close state machine*. Since every signal target now produces the same input (a bucket-count series over `signal_occurrences`), the two merge into **one** `metric.escalating` evaluator: read the series, compute the per-bucket threshold by mode (`absolute` / `multiplier` / `expected`), run one state machine. The seasonal detector survives as the threshold function of `expected` mode, with `sensitivity` as its single knob — and issue escalation stops being special: it is the default monitor's `metric.escalating` alert running in that mode.
+Today "is this escalating?" has two unrelated implementations that differ only in their input: the issue path runs the seasonal detector (`evaluateSeasonalEscalation`) over per-issue **score counts**; the saved-search path runs a bucketed sustained-gate over query-time **trace-match counts** (whose `expected` mode already calls the same detector). The logic shape is identical: *per-bucket count series → per-bucket threshold → open/close state machine*. Since every monitor target now yields that same input shape, the two merge into **one** `metric.escalating` evaluator; the seasonal detector survives as the threshold function of `expected` mode (knob: `sensitivity`), and issue escalation stops being special — it is just the default monitor's escalating alert in that mode.
 
 ### Incident
 
@@ -125,8 +116,7 @@ export type MonitorTargetType = (typeof MONITOR_TARGET_TYPES)[number]
 // 'traces' / 'spans' / 'sessions' — the project's whole raw stream (target_id null)
 
 export const ALERT_KINDS = [
-  // event alerts (point) — target-agnostic names: they apply to signals, saved
-  // searches, and tools alike
+  // event alerts (point) — target-agnostic names: they apply to any target
   "event.matched",     //  ← savedSearch.match  (a new event entered the target stream)
   "event.regressed",   //  ← issue.regressed    (a datapoint after monitor.resolved_at)
   // metric alerts
@@ -185,12 +175,10 @@ export type SignalRule = {
 }
 ```
 
-Moment labels are `type = 'semantic'` signals provisioned with `origin = 'system'` and their existing anchor sets verbatim; there is no dedicated label type.
-
 - `scope` reuses the shared `FilterSet`, including `gtePercentile` — so "traces above the p90 latency" is expressible today. Percentile operators are resolved against a periodically refreshed project estimate at ingest (slightly approximate at write time, exact during backfill).
 - For `evaluation` signals the scope plays the role of today's `EvaluationTrigger.filter` — see "One matching pipeline" below; `sampling`/`turn`/`debounce` stay evaluation-level settings.
-- Anchor and threshold edits change membership **going forward only** (definition-changed marker on charts), never retroactively.
-- Semantic threshold UX: the MVP ships a fixed default threshold with a sensitivity control. A post-MVP refinement is an **iterative calibration loop** at creation time — show sample matches at the current threshold, ask "do these look right?", tighten/loosen, repeat until accepted.
+- Definition edits (anchors, threshold, scope) change membership **going forward only** (definition-changed marker on charts), never retroactively.
+- Semantic threshold UX: MVP ships a fixed default with a sensitivity control; the iterative create-time calibration loop is open question 5.
 
 ### Postgres: `signals` (evolves `issues`)
 
@@ -295,19 +283,13 @@ PARTITION BY toYYYYMM(trace_started_at)
 ORDER BY  (organization_id, project_id, signal_id, trace_started_at, trace_id)
 ```
 
-**Why a new table instead of reusing (or replacing) `scores`.** Scores and occurrences answer different questions and have incompatible shapes:
+**Occurrences vs scores** (decision 7). Occurrences are the **membership ledger** ("this trace is in this signal"); scores are the **verdict ledger** ("this judge said pass/fail and why"). A semantic or rule match has no verdict, no feedback, nothing to draft — forcing it into `scores` would pollute evaluation analytics and push trace-volume writes through the canonical mutable Postgres path. Scores stop being the membership mechanism and keep the three jobs occurrences structurally cannot do:
 
-- A **score** is a canonical *judgment*: `value`, `passed`, `feedback`, draft lifecycle, mutable Postgres row with per-source uniqueness, plus the alignment machinery built on it. A semantic or rule match has none of that — no verdict, no feedback, nothing to draft or edit.
-- An **occurrence** is an append-only *membership fact* at trace volume. Forcing matches into `scores` would pollute evaluation analytics with verdict-less rows and push trace-volume writes through the canonical mutable Postgres path.
-- The two link where they meet: `score_id` is set on occurrences produced by judgment-bearing matchers (evaluations, linked annotations).
-
-**Scores stay, with a narrowed role** (decision 7). They stop being the membership mechanism — `signal_occurrences` is the only membership ledger — and keep three jobs occurrences structurally cannot do:
-
-1. **Verdicts that don't match.** Occurrences record only matches; evaluation quality analytics (pass rate, error rate) and every confusion matrix also need the *passed* and *errored* runs — the rows that produce no occurrence.
-2. **Human feedback as alignment ground truth.** Annotations need a mutable, draft-able row (raw text, edits, message anchors, annotator) — and alignment is literally "human `passed` verdicts vs evaluation `passed` verdicts on the same traces", both sides being score rows. No scores ⇒ no confusion matrix ⇒ no alignment metric ⇒ no trustworthy evaluation matchers.
+1. **Verdicts that don't match.** Occurrences record only matches; pass rates, error rates, and every confusion matrix also need the *passed* and *errored* runs — the rows that produce no occurrence.
+2. **Human feedback as alignment ground truth.** Annotations need a mutable, draft-able row, and alignment is literally human `passed` verdicts vs evaluation `passed` verdicts on the same traces. The unified score shape across sources is deliberate: human and machine judges emit exactly the same output — a verdict on a trace — with `source` recording who judged; alignment works because both sides live in one table with one shape.
 3. **The public `/scores` API** for custom, user-pushed results (an existing machine-facing contract).
 
-Shorthand: occurrences are the **membership ledger** ("this trace is in this signal"); scores are the **verdict ledger** ("this judge said pass/fail and why"). Every signal needs the first to be monitored; evaluation-type signals need the second to stay trustworthy. The unified score shape across sources is deliberate: human annotations and evaluation runs emit exactly the same output — a verdict on a trace — regardless of whether the judge was a machine or a person; `source` records who judged, and alignment works precisely because both sides live in one table with one shape. `scores.signal_id` survives as the label connecting verdicts to the signal they are evidence for — not as membership. The ClickHouse score-analytics table correspondingly loses its issue-trend/occurrence-counting role to `signal_occurrences` and remains only for evaluation/custom source dashboards.
+The two ledgers link where they meet: `score_id` is set on occurrences produced by judgment-bearing matchers, and `scores.signal_id` survives as the evidence label — not as membership. The ClickHouse score-analytics table loses its issue-trend role to `signal_occurrences` and remains for evaluation/custom source dashboards.
 
 Design notes:
 
@@ -319,11 +301,12 @@ Design notes:
 
 ### Navigation
 
-One **Signals** nav item replaces both **Monitors** and **Issues** in the project sidebar. With discovery gone there is no auto-populated inbox to separate from user-built signals — it's one list. Issue URLs (`/projects/$slug/issues/...`) redirect into the corresponding signal pages.
+A **Signals** nav item replaces **Issues**: with discovery gone there is no auto-populated inbox to separate from user-built signals — it's one list, and issue URLs (`/projects/$slug/issues/...`) redirect into the corresponding signal pages. The **Monitors** item stays, generalized: the cross-target view of every active monitor in the project, whatever it watches.
 
 ```
 Traces
-Signals              ← replaces "Monitors" and "Issues" (single list; nothing auto-appears)
+Signals              ← replaces "Issues" (single list; nothing auto-appears)
+Monitors             ← stays: all monitors across targets (signals, saved searches, tools, raw streams)
 Datasets
 Settings
 ```
@@ -428,6 +411,10 @@ One builder, three entry points, one rule: **never let users define membership b
 │              [ Create ]                       │
 └───────────────────────────────────────────────┘
 ```
+
+### Monitors list
+
+Today's monitors dashboard, generalized: one row per monitor across all targets, with a **Target** column (signal / saved search / tool / raw stream, deep-linked to the target's own page), status (Live / Muted / Resolved / Escalating), metric, and last incident. Per-target monitor management still lives on each target's detail page (signal page, tool page, saved-search row); this list is the project-wide operational overview — "what is being watched right now, and what's firing".
 
 ## One matching pipeline
 
@@ -563,7 +550,7 @@ UI: saved-search row / traces page → "Create signal from this search"
    ├─ semantic prompt  → semantic matcher (anchors seeded from the prompt)
    └─ lexical phrases  → rule matcher (contains conditions)
 └─ createSignalUseCase { origin: 'user' } + provisionDefaultMonitorUseCase
-└─ enqueue signals:backfill { signalId, window: 14d }   (rule/scope-evaluable matchers)
+└─ enqueue signals:backfill { signalId, window: 14d }   (rule/script matchers only)
    └─ backfillSignalOccurrencesUseCase: evaluate the definition over historical
       traces in batches → SignalOccurrenceRepository.append
 saved_searches row remains (still a bookmark; plain filter tracking stays
@@ -585,7 +572,7 @@ saved_searches row remains (still a bookmark; plain filter tracking stays
 | `monitor_alerts.source_*` | dropped; target moves to the owning monitor |
 | `alert_incidents.source_*` | `target_*` (values remapped in place) |
 | moment labels | provisioned `origin='system'`, `type='semantic'` signals per project (anchor sets carried over verbatim) |
-| issue URLs / Monitors routes | redirect into signal pages |
+| issue URLs / Monitors routes | issue URLs redirect into the corresponding signal pages; Monitors routes stay (the page generalizes across targets) |
 
 ## Open questions
 
