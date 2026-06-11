@@ -13,9 +13,11 @@ import {
   DEFAULT_TOOLS_RANGE_SECONDS,
   formatPercent,
   pickToolTrendBucketSeconds,
+  TOOL_DETAIL_ROW_GRID,
 } from "../-components/tool-formatters.ts"
 import { ToolActivityRow } from "./-components/tool-activity-row.tsx"
 import { ToolContextPanel } from "./-components/tool-context-panel.tsx"
+import { ToolDescription } from "./-components/tool-description.tsx"
 import { ToolNeighborNav } from "./-components/tool-neighbor-nav.tsx"
 import { ToolParametersExplorer } from "./-components/tool-parameters-explorer.tsx"
 import { ToolRecentCalls } from "./-components/tool-recent-calls.tsx"
@@ -166,7 +168,7 @@ function ToolDetailPageContent() {
               <div className="mx-1 h-5 w-px bg-border" />
               <Label htmlFor="tool-errors-only" className="cursor-pointer">
                 <Text.H6 color="foregroundMuted" noWrap>
-                  Errors only
+                  Error view
                 </Text.H6>
               </Label>
               <Switch
@@ -175,7 +177,8 @@ function ToolDetailPageContent() {
                 onCheckedChange={(checked) => setErrorsParam(checked ? "1" : "")}
               />
               <div className="mx-1 h-5 w-px bg-border" />
-              <Button asChild variant="outline" size="sm">
+              {/* w-auto: asChild lands the face's w-full on the Link, stretching it. */}
+              <Button asChild variant="outline" size="sm" className="w-auto">
                 <Link
                   to="/projects/$projectSlug"
                   params={{ projectSlug }}
@@ -187,6 +190,7 @@ function ToolDetailPageContent() {
                         { op: "lte", value: range.toIso },
                       ],
                     }),
+                    filtersOpen: true,
                   }}
                 >
                   <Icon icon={TextAlignStartIcon} size="sm" />
@@ -196,12 +200,13 @@ function ToolDetailPageContent() {
             </>
           }
           description={
-            isLoading ? undefined : (
-              <Text.H5 color="foregroundMuted">
-                {definition?.definition?.description ??
-                  (notFound
-                    ? "No definition or calls were found for this tool in the selected time window."
-                    : "Definition not found — this tool was called but no chat span in this window carried its definition.")}
+            isLoading ? undefined : definition?.definition?.description ? (
+              <ToolDescription key={toolName} toolName={toolName} description={definition.definition.description} />
+            ) : (
+              <Text.H5 color="foregroundMuted" italic>
+                {notFound
+                  ? "No definition or calls were found for this tool in the selected time window."
+                  : "Definition not found — this tool was called but no chat span in this window carried its definition."}
               </Text.H5>
             )
           }
@@ -340,9 +345,10 @@ function ToolDetailPageContent() {
               range={range}
               bucketSeconds={trendBucketSeconds}
               errorsOnly={errorsOnly}
+              failedCalls={errorsUsage?.calls ?? 0}
             />
           ) : null}
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
+          <div className={TOOL_DETAIL_ROW_GRID}>
             {/* Parameters render even for never-called tools — the definition
                 alone still lists what the tool accepts. */}
             <ToolParametersExplorer

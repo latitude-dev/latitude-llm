@@ -5,6 +5,9 @@ export const TOOL_CRITICAL_ERROR_RATE = 0.25
 
 export const DEFAULT_TOOLS_RANGE_SECONDS = 30 * 24 * 60 * 60 // last 30 days
 
+export const TOOL_DETAIL_ROW_GRID = "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px]"
+export const TOOL_DETAIL_PANEL_MAX_HEIGHT = "xl:max-h-[420px]"
+
 const TARGET_TREND_BUCKETS = 30
 const HOUR_SECONDS = 60 * 60
 const DAY_SECONDS = 24 * HOUR_SECONDS

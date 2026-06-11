@@ -193,17 +193,24 @@ export function ToolsView({
     {
       key: "errorRate",
       header: "Error rate",
-      width: 90,
-      minWidth: 80,
+      width: 110,
+      minWidth: 96,
       align: "end",
       sortKey: "errorRate",
       render: (tool) =>
         tool.metrics ? (
-          <span
-            className={`tabular-nums ${tool.metrics.errorRate >= TOOL_FAILING_ERROR_RATE ? "text-rose-600 dark:text-rose-400" : ""}`}
+          <Tooltip
+            asChild
+            trigger={
+              <span
+                className={`tabular-nums ${tool.metrics.errorRate >= TOOL_FAILING_ERROR_RATE ? "text-rose-600 dark:text-rose-400" : ""}`}
+              >
+                {formatPercent(tool.metrics.errorRate)} · {formatCount(tool.metrics.errors)}
+              </span>
+            }
           >
-            {formatPercent(tool.metrics.errorRate)}
-          </span>
+            {formatCount(tool.metrics.errors)} of {formatCount(tool.metrics.calls)} calls of {tool.name} failed.
+          </Tooltip>
         ) : (
           "-"
         ),

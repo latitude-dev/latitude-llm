@@ -1,10 +1,52 @@
 import { Button, Tooltip } from "@repo/ui"
-import { useHotkeys } from "@tanstack/react-hotkeys"
-import { useNavigate } from "@tanstack/react-router"
+import { type RegisterableHotkey, useHotkeys } from "@tanstack/react-hotkeys"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
-import { useMemo } from "react"
+import { type ReactNode, useMemo } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { type ToolsTimeRange, useProjectTools } from "../../../../../../../domains/tools/tools.collection.ts"
+
+// The Tooltip must wrap the Button directly — a component in between would
+// swallow the trigger props Tooltip injects via asChild.
+function NeighborButton({
+  projectSlug,
+  target,
+  label,
+  hotkey,
+  children,
+}: {
+  readonly projectSlug: string
+  readonly target: string | undefined
+  readonly label: string
+  readonly hotkey: RegisterableHotkey
+  readonly children: ReactNode
+}) {
+  return (
+    <Tooltip
+      asChild
+      side="bottom"
+      trigger={
+        target ? (
+          <Button asChild variant="ghost" className="h-8 w-8 p-0" aria-label={label}>
+            <Link
+              to="/projects/$projectSlug/tools/$toolName"
+              params={{ projectSlug, toolName: target }}
+              search={(prev) => prev}
+            >
+              {children}
+            </Link>
+          </Button>
+        ) : (
+          <Button variant="ghost" className="h-8 w-8 p-0" disabled type="button" aria-label={label}>
+            {children}
+          </Button>
+        )
+      }
+    >
+      {label} <HotkeyBadge hotkey={hotkey} />
+    </Tooltip>
+  )
+}
 
 // J/K hotkeys are suppressed while a trace sheet is open so paging a trace
 // never swaps the tool.
@@ -43,7 +85,11 @@ export function ToolNeighborNav({
 
   const goToTool = (target: string | undefined) => {
     if (!target) return
-    void navigate({ to: "/projects/$projectSlug/tools/$toolName", params: { projectSlug, toolName: target } })
+    void navigate({
+      to: "/projects/$projectSlug/tools/$toolName",
+      params: { projectSlug, toolName: target },
+      search: (prev: Record<string, unknown>) => prev,
+    })
   }
 
   useHotkeys([
@@ -61,42 +107,12 @@ export function ToolNeighborNav({
 
   return (
     <>
-      <Tooltip
-        asChild
-        side="bottom"
-        trigger={
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            disabled={!prevName}
-            onClick={() => goToTool(prevName)}
-            type="button"
-            aria-label="Previous tool"
-          >
-            <ArrowUpIcon className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        }
-      >
-        Previous tool <HotkeyBadge hotkey="K" />
-      </Tooltip>
-      <Tooltip
-        asChild
-        side="bottom"
-        trigger={
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            disabled={!nextName}
-            onClick={() => goToTool(nextName)}
-            type="button"
-            aria-label="Next tool"
-          >
-            <ArrowDownIcon className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        }
-      >
-        Next tool <HotkeyBadge hotkey="J" />
-      </Tooltip>
+      <NeighborButton projectSlug={projectSlug} target={prevName} label="Previous tool" hotkey="K">
+        <ArrowUpIcon className="h-4 w-4 text-muted-foreground" />
+      </NeighborButton>
+      <NeighborButton projectSlug={projectSlug} target={nextName} label="Next tool" hotkey="J">
+        <ArrowDownIcon className="h-4 w-4 text-muted-foreground" />
+      </NeighborButton>
     </>
   )
 }

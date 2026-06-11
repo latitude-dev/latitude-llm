@@ -83,6 +83,18 @@ export interface ToolAnalyticsRepositoryShape {
   ): Effect.Effect<readonly ToolContextBreakdownRow[], RepositoryError, ChSqlClient>
 
   /**
+   * Most common error outputs of one tool's failed calls, grouped by a
+   * normalized form (numbers/UUIDs/hex runs collapsed) so variable fragments
+   * don't split one error into many buckets.
+   */
+  getToolErrorBreakdown(
+    input: ToolAnalyticsScope & {
+      readonly toolName: string
+      readonly limit?: number
+    },
+  ): Effect.Effect<readonly ToolErrorBreakdownRow[], RepositoryError, ChSqlClient>
+
+  /**
    * Other tools called in the same traces as this one, by shared trace count.
    * With `errorsOnly`, anchors on traces where THIS tool failed — the other
    * tools' calls are not status-filtered.
@@ -217,6 +229,16 @@ export interface ToolContextBreakdownRow {
 export interface ToolCoOccurrenceRow {
   readonly otherTool: string
   readonly sharedTraces: number
+}
+
+export interface ToolErrorBreakdownRow {
+  /** Normalized cluster key; empty when the calls carried no error output. */
+  readonly key: string
+  /** Verbatim sample output from the cluster (truncated). */
+  readonly sample: string
+  /** An `error_type` seen in the cluster, preferring non-empty. */
+  readonly errorType: string
+  readonly calls: number
 }
 
 export interface ToolCallCursor {

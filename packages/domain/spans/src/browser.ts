@@ -74,6 +74,7 @@ export type {
   ToolContextDimension,
   ToolCoOccurrenceRow,
   ToolDefinitionDetail,
+  ToolErrorBreakdownRow,
   ToolParameterStat,
   ToolParameterStatsResult,
   ToolParameterValueStat,

@@ -8,7 +8,7 @@ import {
   useToolContextBreakdown,
   useToolCoOccurrence,
 } from "../../../../../../../domains/tools/tools.collection.ts"
-import { formatPercent } from "../../-components/tool-formatters.ts"
+import { formatPercent, TOOL_DETAIL_PANEL_MAX_HEIGHT } from "../../-components/tool-formatters.ts"
 
 const MAX_ROWS_PER_SECTION = 5
 
@@ -86,7 +86,9 @@ export function ToolContextPanel({
   const tracesNoun = errorsOnly ? "traces where it failed" : "traces calling it"
 
   return (
-    <div className="flex min-w-0 flex-col gap-4 overflow-y-auto rounded-lg bg-secondary p-4 xl:max-h-[420px] xl:w-[340px]">
+    <div
+      className={`flex min-w-0 flex-col gap-4 overflow-y-auto rounded-lg bg-secondary p-4 ${TOOL_DETAIL_PANEL_MAX_HEIGHT}`}
+    >
       <Text.H6 color="foregroundMuted">{errorsOnly ? "Where it fails" : "Where it's used"}</Text.H6>
       {coOccurrenceLoading ? (
         <div className="flex flex-col gap-2">

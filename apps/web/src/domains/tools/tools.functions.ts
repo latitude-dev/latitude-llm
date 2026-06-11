@@ -6,6 +6,7 @@ import type {
   ToolContextBreakdownRow,
   ToolCoOccurrenceRow,
   ToolDefinitionDetail,
+  ToolErrorBreakdownRow,
   ToolParameterStatsResult,
   ToolSummary,
   ToolsAnalyticsTotals,
@@ -310,6 +311,27 @@ export const getToolCoOccurrence = createServerFn({ method: "GET" })
           toolName: data.toolName,
           ...(data.limit === undefined ? {} : { limit: data.limit }),
           ...(data.errorsOnly === undefined ? {} : { errorsOnly: data.errorsOnly }),
+        })
+      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+export const getToolErrorBreakdown = createServerFn({ method: "GET" })
+  .inputValidator(
+    toolsScopeSchema.extend({
+      toolName: toolNameSchema,
+      limit: z.number().int().min(1).max(50).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<readonly ToolErrorBreakdownRow[]> => {
+    const orgId = await resolveOrgScope(data)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ToolAnalyticsRepository
+        return yield* repo.getToolErrorBreakdown({
+          ...toScope(orgId, data),
+          toolName: data.toolName,
+          ...(data.limit === undefined ? {} : { limit: data.limit }),
         })
       }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
     )

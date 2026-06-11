@@ -2,7 +2,8 @@ import { Chart, type ChartSeries, HistogramSkeleton, Text } from "@repo/ui"
 import { formatDuration } from "@repo/utils"
 import { useMemo } from "react"
 import { type ToolsTimeRange, useToolCallHistogram } from "../../../../../../../domains/tools/tools.collection.ts"
-import { formatBucketLabel } from "../../-components/tool-formatters.ts"
+import { formatBucketLabel, TOOL_DETAIL_ROW_GRID } from "../../-components/tool-formatters.ts"
+import { ToolErrorBreakdown } from "./tool-error-breakdown.tsx"
 
 const OK_CALLS_COLOR = "hsl(217 91% 60%)"
 const FAILED_CALLS_COLOR = "hsl(0 70% 55%)"
@@ -14,18 +15,16 @@ function ChartPanel({
   isLoading,
   isEmpty,
   emptyLabel,
-  className,
   children,
 }: {
   readonly title: string
   readonly isLoading: boolean
   readonly isEmpty: boolean
   readonly emptyLabel: string
-  readonly className?: string
   readonly children: React.ReactNode
 }) {
   return (
-    <div className={`flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 ${className ?? ""}`}>
+    <div className="flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4">
       <Text.H6 color="foregroundMuted">{title}</Text.H6>
       {isLoading ? (
         <HistogramSkeleton height={200} />
@@ -46,12 +45,14 @@ export function ToolActivityRow({
   range,
   bucketSeconds,
   errorsOnly,
+  failedCalls,
 }: {
   readonly projectId: string
   readonly toolName: string
   readonly range: ToolsTimeRange
   readonly bucketSeconds: number
   readonly errorsOnly: boolean
+  readonly failedCalls: number
 }) {
   const { data: histogram = [], isLoading } = useToolCallHistogram({
     projectId,
@@ -138,13 +139,12 @@ export function ToolActivityRow({
   )
 
   return (
-    <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
+    <div className={TOOL_DETAIL_ROW_GRID}>
       <ChartPanel
         title={errorsOnly ? "Failed calls over time" : "Calls over time"}
         isLoading={isLoading}
         isEmpty={isEmpty}
         emptyLabel={emptyLabel}
-        className="xl:flex-1"
       >
         <Chart
           categories={categories}
@@ -154,22 +154,20 @@ export function ToolActivityRow({
           ariaLabel={`Calls of ${toolName} over time`}
         />
       </ChartPanel>
-      <ChartPanel
-        title={errorsOnly ? "Latency of failed calls" : "Latency over time"}
-        isLoading={isLoading}
-        isEmpty={isEmpty}
-        emptyLabel={emptyLabel}
-        className="xl:w-[420px]"
-      >
-        <Chart
-          categories={categories}
-          series={latencySeries}
-          height={200}
-          xAxisLabelFontSize={10}
-          tooltipTitle={latencyTooltipTitle}
-          ariaLabel={`p50 latency of ${toolName} over time`}
-        />
-      </ChartPanel>
+      {errorsOnly ? (
+        <ToolErrorBreakdown projectId={projectId} toolName={toolName} range={range} failedCalls={failedCalls} />
+      ) : (
+        <ChartPanel title="Latency over time" isLoading={isLoading} isEmpty={isEmpty} emptyLabel={emptyLabel}>
+          <Chart
+            categories={categories}
+            series={latencySeries}
+            height={200}
+            xAxisLabelFontSize={10}
+            tooltipTitle={latencyTooltipTitle}
+            ariaLabel={`p50 latency of ${toolName} over time`}
+          />
+        </ChartPanel>
+      )}
     </div>
   )
 }
