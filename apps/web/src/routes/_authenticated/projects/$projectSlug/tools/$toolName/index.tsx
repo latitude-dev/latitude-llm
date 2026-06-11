@@ -13,6 +13,7 @@ import {
   DEFAULT_TOOLS_RANGE_SECONDS,
   formatPercent,
   pickToolTrendBucketSeconds,
+  TOOL_DETAIL_ROW_GRID,
 } from "../-components/tool-formatters.ts"
 import { ToolActivityRow } from "./-components/tool-activity-row.tsx"
 import { ToolContextPanel } from "./-components/tool-context-panel.tsx"
@@ -342,7 +343,7 @@ function ToolDetailPageContent() {
               errorsOnly={errorsOnly}
             />
           ) : null}
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
+          <div className={TOOL_DETAIL_ROW_GRID}>
             {/* Parameters render even for never-called tools — the definition
                 alone still lists what the tool accepts. */}
             <ToolParametersExplorer

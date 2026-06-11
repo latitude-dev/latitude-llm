@@ -3,6 +3,7 @@ import { formatCount } from "@repo/utils"
 import { ChevronRightIcon, InfoIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { type ToolsTimeRange, useToolParameterStats } from "../../../../../../../domains/tools/tools.collection.ts"
+import { TOOL_DETAIL_PANEL_MAX_HEIGHT } from "../../-components/tool-formatters.ts"
 
 interface DefinedParameter {
   readonly type: string
@@ -123,7 +124,7 @@ export function ToolParametersExplorer({
   const notIncluded = active ? Math.max(0, sampleSize - active.observed) : 0
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-3 rounded-lg bg-secondary p-4">
+    <div className={`flex min-w-0 flex-col gap-3 rounded-lg bg-secondary p-4 ${TOOL_DETAIL_PANEL_MAX_HEIGHT}`}>
       <div className="flex items-center justify-between">
         <Text.H6 color="foregroundMuted">Parameters</Text.H6>
         {sampleSize > 0 ? (
@@ -145,8 +146,8 @@ export function ToolParametersExplorer({
           </Text.H6>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-col gap-4 sm:flex-row">
-          <div className="flex min-w-0 flex-col gap-1 overflow-y-auto sm:max-h-[280px] sm:w-[240px] sm:shrink-0">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 sm:flex-row">
+          <div className="flex min-w-0 flex-col gap-1 overflow-y-auto sm:max-h-[280px] sm:w-[240px] sm:shrink-0 xl:max-h-none">
             {parameters.map((parameter) => {
               const isActive = parameter.name === activeName
               const isUnobserved = parameter.observed === 0 && sampleSize > 0
@@ -201,7 +202,7 @@ export function ToolParametersExplorer({
               )
             })}
           </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto border-t pt-3 sm:max-h-[280px] sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto border-t pt-3 sm:max-h-[280px] sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0 xl:max-h-none">
             {active ? (
               sampleSize === 0 ? (
                 <Text.H6 color="foregroundMuted">
