@@ -36,9 +36,13 @@ function ListingLayout({ children, className }: ListingLayoutProps) {
 
   const main = <div className={cn("flex flex-col h-full gap-3", className)}>{content}</div>
   return (
-    <div className="relative flex flex-row h-full">
+    <div className="@container relative flex flex-row h-full">
       <div className="flex-1 min-w-0 flex flex-col">{main}</div>
-      {aside ? <div className="relative z-10">{aside}</div> : null}
+      {aside ? (
+        <div className="relative z-10 @max-[48rem]:absolute @max-[48rem]:inset-y-0 @max-[48rem]:right-0 @max-[48rem]:z-20 @max-[48rem]:shadow-xl">
+          {aside}
+        </div>
+      ) : null}
     </div>
   )
 }
