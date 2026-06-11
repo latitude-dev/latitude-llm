@@ -102,9 +102,6 @@ export const TAXONOMY_GARDENING_MIN_OBSERVATIONS = 15
 export const TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX = 1_500
 export const TAXONOMY_CLUSTERING_SAMPLE_STRATEGY = "day_stratified_hash_round_robin"
 
-export const taxonomyClusteringSampleLimit = (observationsAvailable: number): number =>
-  Math.min(Math.max(0, Math.floor(observationsAvailable)), TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX)
-
 /** Read-path live window for project/cluster observation pages. */
 export const TAXONOMY_GARDENING_OBSERVATION_WINDOW_MAX = 10_000
 

@@ -72,7 +72,6 @@ import {
   TAXONOMY_NOISE_LOOKBACK_DAYS,
   TAXONOMY_PENDING_DISPLAY_NAME,
   TAXONOMY_TREE_DEPTH_SCHEDULE,
-  taxonomyClusteringSampleLimit,
 } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import { TaxonomyDimension, type TaxonomyDimension as TaxonomyDimensionType } from "../entities/dimension.ts"
@@ -293,13 +292,11 @@ export const planHierarchicalTaxonomyUseCase = (input: PlanHierarchicalTaxonomyI
       projectId: input.projectId,
       since,
     })
-    const sampleLimit = taxonomyClusteringSampleLimit(counts.total)
-
     const observations = yield* observationsRepo.listForClusteringSample({
       organizationId: input.organizationId,
       projectId: input.projectId,
       since,
-      limit: sampleLimit,
+      limit: TAXONOMY_CLUSTERING_PROPOSAL_SAMPLE_MAX,
     })
 
     const baseResult = {

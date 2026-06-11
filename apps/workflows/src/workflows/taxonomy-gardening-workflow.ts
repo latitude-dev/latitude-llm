@@ -30,6 +30,8 @@ const {
     ...defaultActivityRetryPolicy,
     initialInterval: "1 minute",
     maximumInterval: "30 minutes",
+    // A staged plan lost from Redis (eviction, flush) cannot reappear; fail fast and let the next sweep rebuild.
+    nonRetryableErrorTypes: ["TaxonomyGardeningPlanMissingError"],
   },
 })
 
