@@ -72,7 +72,7 @@ export function NotificationBell() {
           ) : null}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} className="w-[360px] p-0">
+      <PopoverContent align="end" sideOffset={8} className="w-[360px] max-w-[calc(100vw-2rem)] p-0">
         {open ? (
           <>
             <NotificationHeader unread={unread} onMarkAll={() => markSeen.mutate()} pending={markSeen.isPending} />

@@ -89,7 +89,7 @@ function MomentLabelBadge({ label, store }: { readonly label: MomentLabelRecord;
           {label.kind.replaceAll("_", " ")}
         </button>
       </PopoverTrigger>
-      <PopoverContent side="bottom" align="start" className="w-96">
+      <PopoverContent side="bottom" align="start" className="w-96 max-w-[calc(100vw-2rem)]">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <MomentLabelEvidence label={label} />

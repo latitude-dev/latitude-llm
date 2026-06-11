@@ -60,7 +60,7 @@ export function AnnotationPopoverContent({
 }
 
 const ANNOTATION_POPOVER_CONTENT_CLASS =
-  "w-[400px] max-h-[70vh] overflow-y-auto p-1 rounded-2xl bg-secondary border-0 shadow"
+  "w-[400px] max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto p-1 rounded-2xl bg-secondary border-0 shadow"
 
 function handleInteractOutside(e: Event) {
   const target = e.target as HTMLElement

@@ -118,7 +118,7 @@ export function AnnotationApprovalPopover({ annotationId, onAction }: Annotation
           </Button>
         </div>
       </PopoverAnchor>
-      <PopoverContent side="bottom" align="end" className="w-96">
+      <PopoverContent side="bottom" align="end" className="w-96 max-w-[calc(100vw-2rem)]">
         {decision !== null && (
           <div className="flex flex-col gap-2">
             <Text.H5 weight="semibold">Tell us why</Text.H5>
