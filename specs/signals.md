@@ -43,7 +43,11 @@ Consequences carried through the whole spec:
 
 **A signal is a tracked bucket of traces: one definition, evaluated per trace at ingest, materialized forever.**
 
-- Exactly **one definition** per signal (see `SignalType` below): a filter set, a semantic anchor + threshold, an aligned evaluation, a code rule, a sandboxed JS script, or a conversation-intelligence label.
+- A signal's definition has two orthogonal parts:
+  - a **scope**: an optional `FilterSet` restricting which traces are considered at all ("traces above the p90 latency", "traces tagged `foo`"). Row-local and cheap, evaluated first; empty scope = all traces.
+  - a **matcher** (`SignalType`): the membership test run on in-scope traces — the scope alone (`filter`), a semantic anchor + threshold, an aligned evaluation, a code rule, or a sandboxed JS script.
+
+  Any matcher composes with any scope: an evaluation that only runs on slow traces, a semantic anchor only checked against traces tagged `foo`. A converted saved search is the degenerate case — scope only, `type = 'filter'`. The scope doubles as a cost pre-gate: out-of-scope traces never reach the expensive matchers.
 - Signals carry **triage metadata** — priority and assignees — but **no lifecycle**. You create or delete signals; resolve/ignore semantics live on monitors.
 - The **routing centroid** (today's issue centroid) is *not* a definition. It is internal machinery that routes new human feedback and failed scores to an existing signal (hybrid pgvector + tsvector search, unchanged from issue discovery). Users never configure it. This is what dissolves the earlier "multiple detectors per signal" idea: the centroid was the second detector in disguise.
 - **Issues are signals** whose definition Latitude bootstraps: `origin = 'discovered'` (clustering pipeline) or `origin = 'annotation'` (the deliberate flow: explain the problem, point at 3–4 example traces, get a signal with a generated aligned evaluation).
@@ -114,8 +118,10 @@ export type MonitorMetric =
 ### Signal definition config (discriminated by `signals.type`)
 
 ```ts
+// The scope is a top-level column (signals.scope), not part of the matcher config:
+// any matcher composes with any scope.
 export type SignalConfig =
-  | { type: "filter";     query?: string; filterSet: FilterSet }   // verbatim saved_searches shape
+  | { type: "filter" }                                              // the scope alone defines membership
   | { type: "semantic";   anchorText: string; minSimilarity: number }
   | { type: "evaluation" }                                          // definition = the evaluations rows
                                                                     // linked via evaluations.signal_id
@@ -124,6 +130,9 @@ export type SignalConfig =
 ```
 
 Moment labels are `type = 'semantic'` signals provisioned with `origin = 'system'`; there is no dedicated label type.
+
+- `scope` reuses the shared `FilterSet`, including `gtePercentile` — so "traces above the p90 latency" is expressible today. Percentile operators are resolved against a periodically refreshed project estimate at ingest (slightly approximate at write time, exact during backfill).
+- For `evaluation` signals the scope plays the role of today's `EvaluationTrigger.filter` — the trigger machinery reads it from the signal; `sampling`/`turn`/`debounce` stay evaluation-level settings.
 
 `minSimilarity` is part of the *definition*: changing it changes membership going forward (definition-changed marker on charts), never retroactively.
 
@@ -138,8 +147,9 @@ signals
   name                varchar(128)
   description         text
   origin              varchar(32)            -- SignalOrigin
-  type                varchar(32)            -- SignalType
-  config              jsonb                  -- SignalConfig
+  type                varchar(32)            -- SignalType (the matcher)
+  config              jsonb                  -- SignalConfig (matcher parameters)
+  scope               jsonb                  -- FilterSet pre-gate; {} = all traces; composes with any type
   anchor_embedding    vector(2048) null      -- type='semantic' only: derived from config.anchorText,
                                              --   matched against TRACE CONTENT embeddings at ingest
   centroid            jsonb null             -- routing index (today's IssueCentroid, relocated):
@@ -311,14 +321,18 @@ One builder, three entry points, one rule: **never let users define membership b
                         ▼                                        ▼
   ┌───────────────────────────────────────────┐   ┌──────────────────────────────────────┐
   │  New signal                               │   │  Track failure mode                  │
-  │  Type:  ◉ Filter  ○ Semantic  ○ Rule      │   │  What is going wrong?                │
-  │         ○ Script                          │   │  ┌────────────────────────────────┐  │
-  │  ┌─────────────────────────────────────┐  │   │  │ The agent promises refunds we  │  │
-  │  │ service = checkout AND status=error │  │   │  │ don't offer…                   │  │
-  │  └─────────────────────────────────────┘  │   │  └────────────────────────────────┘  │
-  │  ┌─────────────────────────────────────┐  │   │  Example traces (3–4):               │
-  │  │ Preview: 1,284 matches, last 7 days │  │   │  ☑ trace #a1f3   ☑ trace #b274      │
-  │  │ …sample rows…                       │  │   │  ☑ trace #c9d1   ☐ + add            │
+  │  Scope (optional filters):                │   │  What is going wrong?                │
+  │  ┌─────────────────────────────────────┐  │   │  ┌────────────────────────────────┐  │
+  │  │ service = checkout AND tag has foo  │  │   │  │ The agent promises refunds we  │  │
+  │  └─────────────────────────────────────┘  │   │  │ don't offer…                   │  │
+  │  Type:  ○ Filter  ◉ Semantic  ○ Rule      │   │  └────────────────────────────────┘  │
+  │         ○ Script                          │   │  Example traces (3–4):               │
+  │  ┌─────────────────────────────────────┐  │   │  ☑ trace #a1f3   ☑ trace #b274      │
+  │  │ "user expresses frustration" ≥ 0.78 │  │   │  ☑ trace #c9d1   ☐ + add            │
+  │  └─────────────────────────────────────┘  │   │                                      │
+  │  ┌─────────────────────────────────────┐  │   │                                      │
+  │  │ Preview: 312 matches, last 7 days   │  │   │                                      │
+  │  │ …sample rows…                       │  │   │                                      │
   │  └─────────────────────────────────────┘  │   │                                      │
   │  Backfill last 14 days?  [✓]              │   │  → creates the signal and generates  │
   │  (filter/rule only)                       │   │    its aligned evaluation             │
@@ -358,9 +372,11 @@ span ingestion → ClickHouse spans insert → TracesIngested (outbox)          
    └─ signals:match (queue task, batched per project)
       └─ matchTracesToSignalsUseCase (@domain/signals)
          ├─ SignalRepository.listActiveDefinitions(projectId)        -- Redis-cached, org-prefixed key
-         ├─ filter definitions  → FilterSet predicate in-process
-         ├─ rule definitions    → compiled matcher (sandbox)
-         ├─ script definitions  → sandboxed JS (same env as evaluations)
+         ├─ scope pre-gate: evaluate each signal's scope FilterSet against the trace
+         │    (row-local, in-process); out-of-scope traces never reach the matcher
+         ├─ type='filter' → in scope = match
+         ├─ type='rule'   → compiled matcher (sandbox)
+         ├─ type='script' → sandboxed JS (same env as evaluations)
          └─ matches → SignalOccurrenceRepository.append (CH insert; idempotent via sort key)
       └─ publishes monitors:evaluate (leading-edge throttle, 5 min)            [reuse shape]
 
@@ -370,10 +386,13 @@ trace_search_embeddings chunks written (existing search-indexing pipeline)     [
    └─ matchTraceToSemanticSignalsUseCase
       ├─ load project semantic anchors (anchor_embedding exact scan — hundreds at most;
       │    includes system moment-label signals)
+      ├─ scope pre-gate: skip anchors whose scope the trace fails (cuts embedding
+      │    comparisons before they happen)
       ├─ max chunk-vs-anchor similarity ≥ config.minSimilarity → match
       └─ SignalOccurrenceRepository.append
 
-evaluation definitions (third hop — existing evaluation triggers):             [reuse]
+evaluation definitions (third hop — existing evaluation triggers; the signal's
+  scope plays the role of EvaluationTrigger.filter):                            [reuse]
 evaluation trigger fires → evaluation runs → failed non-errored score written
   with scores.signal_id (live issue-linked path today)
 └─ after-commit: syncScoreAnalyticsUseCase                                     [reuse]
@@ -458,7 +477,9 @@ regression → flow D, signal.regressed branch
 ```
 UI: saved-search row / traces page → "Convert to signal"
 └─ convertSavedSearchToSignalUseCase
-   ├─ create signal { origin: 'user', type: 'filter', config: copy of query+filterSet }
+   ├─ create signal { origin: 'user', type: 'filter', scope: copy of filterSet }
+   │    (lexical phrases in the search query convert to a 'rule' matcher; a semantic
+   │     prompt converts to a 'semantic' matcher — scope carries the filters either way)
    ├─ provisionDefaultMonitorUseCase
    └─ enqueue signals:backfill { signalId, window: 14d }
       └─ backfillSignalOccurrencesUseCase: query-time evaluation of the filter over
