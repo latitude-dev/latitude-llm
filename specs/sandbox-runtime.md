@@ -17,22 +17,30 @@ This spec defines the real **sandbox runtime**: a portable, host-controlled, res
 
 The contract has two layers: a neutral **verdict layer** that the runtime owns, and **dialects** that compile or map onto it.
 
-### Verdict layer (the runtime's only output shape)
+### Output: membership always, judgment optionally
+
+There is an apparent tension between judgment-bearing detectors (pass/fail + feedback + scoring — what issue-style evaluation signals need for alignment and analytics) and bare membership detectors (rules, scripts — which only confirm assignment). The contract resolves it the same way the storage model does: it mirrors the two ledgers (`specs/signals.md`: occurrences = membership, scores = verdicts) one-to-one, with the cheap output universal and the rich output optional.
 
 ```ts
-type Verdict =
-  | { matched: true;  evidence?: { feedback?: string; value?: number } }
-  | { matched: false; evidence?: { feedback?: string; value?: number } }
-
 type RunResult = {
-  verdict: Verdict
-  duration: number   // ns, wall time of the run including host calls
-  tokens: number     // total tokens consumed by llm() calls (0 for pure runs)
-  cost: number       // microcents consumed by llm() calls (0 for pure runs)
+  matched: boolean        // membership — universal; the only REQUIRED output.
+                          //   Feeds signal_occurrences.
+  judgment?: {            // verdict — evaluation dialect only; exactly today's
+    passed: boolean       //   EvaluationExecutionResultPayload. Feeds the
+    value: number         //   canonical scores path (alignment, pass-rate
+    feedback: string      //   analytics, feedback display).
+  }
+  evidence?: string       // ephemeral "why it matched" — surfaced in previews,
+                          //   dry-runs, and debugging; never persisted.
+  duration: number        // ns, wall time of the run including host calls
+  tokens: number          // total tokens consumed by llm() calls (0 for pure runs)
+  cost: number            // microcents consumed by llm() calls (0 for pure runs)
 }
 ```
 
-`matched` is **neutral membership**, not pass/fail: signals are not always failure modes (a "refund requested" moment is membership without defect polarity). Polarity mapping is dialect-level, never runtime-level. Membership is monotone per (signal, trace) downstream — a later `NoMatch` from a re-run or retry never un-matches (occurrence dedup is first-match-wins), which makes non-deterministic `llm()` detectors safe by construction.
+- `matched` is **neutral membership**, not pass/fail: signals are not always failure modes (a "refund requested" moment is membership without defect polarity). Polarity lives in the dialect mapping: the evaluation dialect derives `matched` from `judgment` via the signal's polarity (default `failed ⇒ matched`; a future "track good behavior" signal flips it). The runtime never hard-codes a direction.
+- Judgment strictly contains membership — `matched` is always derivable from a `judgment`, never the reverse — so the universal layer is the intersection of what all detectors can produce, not a compromise. A regex is never asked for feedback.
+- Membership is monotone per (signal, trace) downstream — a later non-match from a re-run or retry never un-matches (occurrence dedup is first-match-wins), which makes non-deterministic `llm()` detectors safe by construction.
 
 ### Script globals (host-controlled, nothing else in scope)
 
@@ -52,8 +60,8 @@ No ambient I/O: no `fetch`, no timers, no `process`, no dynamic import. Anything
 
 ### Dialects
 
-- **Evaluation dialect** — the script returns `Passed`/`Failed` (today's stored scripts, unchanged). The host maps it to both outputs: a **score** (`{ passed, value, feedback }`, persisted via the existing canonical score path) and a **verdict** (`Failed → matched: true` for failure-mode signals). Existing template scripts run literally under the new runtime and produce byte-identical behavior: the template *is* `const result = await llm(\`…\`, { schema: z.object({ passed, feedback }) }); return result.passed ? Passed(1, …) : Failed(0, …)`.
-- **Detector dialect** — the script returns `Match`/`NoMatch`. Used by signal `script` detectors and by compiled `rule` detectors (`SignalRule` → generated script; the compiled text + content hash are stored, debuggable, and exactly what executes).
+- **Evaluation dialect** — the script returns `Passed`/`Failed` (today's stored scripts, unchanged). The host populates `judgment` from it and derives `matched` via the signal's polarity mapping; the judgment is persisted via the existing canonical score path. Existing template scripts run literally under the new runtime and produce byte-identical behavior: the template *is* `const result = await llm(\`…\`, { schema: z.object({ passed, feedback }) }); return result.passed ? Passed(1, …) : Failed(0, …)`.
+- **Detector dialect** — the script returns `Match(evidence?)`/`NoMatch()`, populating only `matched` (plus the ephemeral `evidence`). Used by signal `script` detectors and by compiled `rule` detectors (`SignalRule` → generated script; the compiled text + content hash are stored, debuggable, and exactly what executes).
 - **Semantic detectors do not run here** — they are a native batch runner behind the same verdict shape (one pass over a trace's chunk embeddings against all anchor sets; per-signal script execution would destroy the batching for zero expressiveness gain). The one principled exception to "everything is a script".
 
 ### Capabilities drive runtime decisions — never the script's origin
