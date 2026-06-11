@@ -78,7 +78,7 @@ interface HeaderProps {
   /** Shown inline after the title (e.g. queue type badge). */
   readonly badge?: ReactNode
   readonly description?: ReactNode
-  /** Right-aligned controls on the same row as the title (e.g. primary actions). */
+  /** Right-aligned controls beside the title; wrap below it when the header is too narrow to fit both. */
   readonly actions?: ReactNode
   readonly className?: string
 }
@@ -86,8 +86,8 @@ interface HeaderProps {
 function Header({ title, badge, description, actions, className }: HeaderProps) {
   return (
     <div className={cn("flex flex-col gap-1 p-6 pb-0", className)}>
-      <div className="flex min-w-0 flex-row items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-row flex-wrap items-start gap-x-4 gap-y-2">
+        <div className="flex min-w-64 flex-1 flex-col gap-1">
           <div className="flex min-w-0 flex-row flex-wrap items-center gap-x-2 gap-y-1">
             {typeof title === "string" ? <Text.H4 className="min-w-0 shrink">{title}</Text.H4> : title}
             {badge ? <span className="shrink-0 flex">{badge}</span> : null}
@@ -100,7 +100,7 @@ function Header({ title, badge, description, actions, className }: HeaderProps) 
             )
           ) : null}
         </div>
-        {actions ? <div className="flex shrink-0 flex-row items-center gap-2 self-start">{actions}</div> : null}
+        {actions ? <div className="ml-auto flex shrink-0 flex-row items-center gap-2 self-start">{actions}</div> : null}
       </div>
     </div>
   )
