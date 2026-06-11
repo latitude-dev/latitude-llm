@@ -1,6 +1,6 @@
 import type { IncidentTrend } from "@domain/notifications"
+import { SEVERITY_COLOR } from "@domain/shared"
 import { describe, expect, it } from "vitest"
-import { INCIDENT_SEVERITY_HEX } from "../../alerts/incident-markers.ts"
 import { buildIncidentTrendSvg } from "./render-incident-trend.tsx"
 
 const HOUR_12_MS = 12 * 60 * 60 * 1000
@@ -38,7 +38,7 @@ describe("buildIncidentTrendSvg", () => {
 
   it("draws the incident severity band and start dot in the severity color", () => {
     const svg = buildIncidentTrendSvg(baseTrend())
-    expect(svg).toContain(INCIDENT_SEVERITY_HEX.high)
+    expect(svg).toContain(SEVERITY_COLOR.high)
     // Band tint.
     expect(svg).toContain('fill-opacity="0.16"')
     // Start dot.

@@ -1,4 +1,9 @@
 import {
+  createMonitorUseCase,
+  SEMANTIC_SEARCH_UNMONITORABLE_MESSAGE,
+  savedSearchQueryIsMonitorable,
+} from "@domain/monitors"
+import {
   createSavedSearch,
   deleteSavedSearch,
   getSavedSearchBySlug,
@@ -9,8 +14,24 @@ import {
   searchSavedSearches,
   updateSavedSearch,
 } from "@domain/saved-searches"
-import { filterSetSchema, OrganizationId, ProjectId, SavedSearchId, UserId } from "@domain/shared"
-import { OutboxEventWriterLive, SavedSearchRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  alertIncidentConditionSchema,
+  alertIncidentKindSchema,
+  alertSeveritySchema,
+  filterSetSchema,
+  OrganizationId,
+  ProjectId,
+  SavedSearchId,
+  SqlClient,
+  UserId,
+  ValidationError,
+} from "@domain/shared"
+import {
+  MonitorRepositoryLive,
+  OutboxEventWriterLive,
+  SavedSearchRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -123,6 +144,22 @@ export const getSavedSearchBySlugFn = createServerFn({ method: "GET" })
     )
   })
 
+const MONITOR_NAME_MAX_LENGTH = 128
+
+/**
+ * Optional companion monitor created alongside a new saved search (the "Monitor
+ * this search" section of the save-search modal). Mirrors the monitors-page
+ * alert fields minus `source` — the source is the search being created, so
+ * only the server can wire it up.
+ */
+const savedSearchMonitorSchema = z.object({
+  kind: alertIncidentKindSchema,
+  condition: alertIncidentConditionSchema.nullable(),
+  severity: alertSeveritySchema,
+})
+
+export type SavedSearchMonitorInput = z.infer<typeof savedSearchMonitorSchema>
+
 export const createSavedSearchFn = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
@@ -130,21 +167,61 @@ export const createSavedSearchFn = createServerFn({ method: "POST" })
       name: nameSchema,
       query: querySchema,
       filterSet: filterSetSchema,
+      monitor: savedSearchMonitorSchema.optional(),
     }),
   )
   .handler(async ({ data }): Promise<SavedSearchRecord> => {
     const { organizationId, userId } = await requireSession()
     const orgId = OrganizationId(organizationId)
+    const monitorInput = data.monitor
+
+    // The modal disables the monitor toggle for queries with a semantic part;
+    // enforce it server-side too (createMonitorUseCase re-checks in-transaction).
+    if (monitorInput && !savedSearchQueryIsMonitorable(data.query)) {
+      throw new ValidationError({ field: "monitor.source", message: SEMANTIC_SEARCH_UNMONITORABLE_MESSAGE })
+    }
+
+    const createSearch = createSavedSearch({
+      projectId: ProjectId(data.projectId),
+      name: data.name,
+      query: data.query,
+      filterSet: data.filterSet,
+      createdByUserId: UserId(userId),
+    })
 
     const created = await Effect.runPromise(
-      createSavedSearch({
-        projectId: ProjectId(data.projectId),
-        name: data.name,
-        query: data.query,
-        filterSet: data.filterSet,
-        createdByUserId: UserId(userId),
-      }).pipe(
-        withPostgres(Layer.mergeAll(SavedSearchRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
+      (monitorInput
+        ? Effect.gen(function* () {
+            const sqlClient = yield* SqlClient
+            // One transaction so a failed monitor never strands the search:
+            // the nested transaction inside `createMonitorUseCase` is pass-through.
+            return yield* sqlClient.transaction(
+              Effect.gen(function* () {
+                const search = yield* createSearch
+                yield* createMonitorUseCase({
+                  organizationId: orgId,
+                  projectId: ProjectId(data.projectId),
+                  name: search.name.slice(0, MONITOR_NAME_MAX_LENGTH),
+                  alerts: [
+                    {
+                      kind: monitorInput.kind,
+                      source: { type: "savedSearch", id: search.id },
+                      condition: monitorInput.condition,
+                      severity: monitorInput.severity,
+                    },
+                  ],
+                })
+                return search
+              }),
+            )
+          })
+        : createSearch
+      ).pipe(
+        withPostgres(
+          Layer.mergeAll(SavedSearchRepositoryLive, OutboxEventWriterLive, MonitorRepositoryLive),
+          getPostgresClient(),
+          orgId,
+        ),
         withTracing,
       ),
     )

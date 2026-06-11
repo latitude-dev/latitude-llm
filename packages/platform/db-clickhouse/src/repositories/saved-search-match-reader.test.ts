@@ -20,7 +20,7 @@ const traceId = (n: number) => `tr${n}`.padEnd(32, "0")
 const spanId = (n: number) => `sp${n}`.padEnd(16, "0")
 
 // One span per trace, so `start_time` (min over the trace) is exactly the span's.
-const span = (n: number, startTime: Date, tags: readonly string[] = [TAG]): SpanRow =>
+const span = (n: number, startTime: Date, tags: readonly string[] = [TAG], durationMs = 1_000): SpanRow =>
   ({
     organization_id: ORG_ID,
     project_id: PROJECT_ID,
@@ -32,7 +32,7 @@ const span = (n: number, startTime: Date, tags: readonly string[] = [TAG]): Span
     api_key_id: "test-api-key",
     simulation_id: "",
     start_time: toCh(startTime),
-    end_time: toCh(new Date(startTime.getTime() + 1_000)),
+    end_time: toCh(new Date(startTime.getTime() + durationMs)),
     name: "ss-match-span",
     service_name: "ss-match-service",
     kind: 0,
@@ -165,6 +165,22 @@ describe("SavedSearchMatchReaderLive", () => {
       reader.countMatches({ organizationId: ORG_ID, projectId: PROJECT_ID, target: tagged, from: t10, to: t11 }),
     )
     // Drops the 'other'-tagged trace → t10 + t1030 only.
+    expect(count).toBe(2)
+  })
+
+  it("resolves gtePercentile filters against the project distribution instead of failing", async () => {
+    // Two slow traces (100s) on top of the four seeded 1s ones; p90 of the
+    // per-trace duration distribution lands between 1s and 100s, so the
+    // resolved `gte` keeps only the slow pair.
+    // n = 5/6: `traceId` pads with zeros, so e.g. `traceId(10)` would collide with `traceId(1)`.
+    await Effect.runPromise(
+      insertJsonEachRow(ch.client, "spans", [span(5, t1030, [TAG], 100_000), span(6, t1030, [TAG], 100_000)]),
+    )
+
+    const slow = { query: null, filterSet: { duration: [{ op: "gtePercentile" as const, value: 90 }] } }
+    const count = await runCh(
+      reader.countMatches({ organizationId: ORG_ID, projectId: PROJECT_ID, target: slow, from: t10, to: t11 }),
+    )
     expect(count).toBe(2)
   })
 

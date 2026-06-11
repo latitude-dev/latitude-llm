@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { alertSeveritySchema } from "./alert-incident-kinds.ts"
 
 /**
  * User-visible groupings. The preferences UI surfaces one toggle per group;
@@ -28,9 +29,14 @@ export const NOTIFICATION_GROUP_META: Record<
     readonly slackRoutable: boolean
   }
 > = {
+  personal: {
+    label: "Assigned to you",
+    description: "Notifications addressed directly to you, like being assigned to an issue.",
+    slackRoutable: false,
+  },
   incidents: {
-    label: "Incidents",
-    description: "Alerts when issues open, regress, or escalate.",
+    label: "Monitors",
+    description: "Get notified when one of your monitors fires.",
     slackRoutable: true,
   },
   wrapped_reports: {
@@ -42,11 +48,6 @@ export const NOTIFICATION_GROUP_META: Record<
     label: "Announcements",
     description: "Product announcements and admin messages.",
     slackRoutable: true,
-  },
-  personal: {
-    label: "Personal",
-    description: "Notifications addressed directly to you, like being assigned to an issue.",
-    slackRoutable: false,
   },
 }
 
@@ -62,12 +63,15 @@ export const SLACK_ROUTABLE_NOTIFICATION_GROUPS = NOTIFICATION_GROUPS.filter(
  */
 export const channelPreferencesSchema = z.object({
   email: z.boolean().optional(),
+  emailMinSeverity: alertSeveritySchema.optional(),
 })
 export type ChannelPreferences = z.infer<typeof channelPreferencesSchema>
 
 const groupPreferencesShape = Object.fromEntries(
   NOTIFICATION_GROUPS.map((g) => [g, channelPreferencesSchema.optional()] as const),
-) as { [G in NotificationGroup]: z.ZodOptional<typeof channelPreferencesSchema> }
+) as {
+  [G in NotificationGroup]: z.ZodOptional<typeof channelPreferencesSchema>
+}
 
 /**
  * User-level notification preferences, keyed by `NotificationGroup`. Stored

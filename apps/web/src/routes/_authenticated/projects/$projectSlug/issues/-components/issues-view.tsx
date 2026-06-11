@@ -117,10 +117,10 @@ function PriorityGroupHeader({ group, count }: { readonly group: IssuePriorityGr
   )
 }
 
-function MonitoredByTooltip({ evaluationNames }: { readonly evaluationNames: readonly string[] }) {
+function EvaluatedByTooltip({ evaluationNames }: { readonly evaluationNames: readonly string[] }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <Text.H6 color="foregroundMuted">Monitored by</Text.H6>
+      <Text.H6 color="foregroundMuted">Evaluated by</Text.H6>
       {evaluationNames.map((evaluationName) => (
         <Text.H6B key={evaluationName}>{evaluationName}</Text.H6B>
       ))}
@@ -177,10 +177,10 @@ export function IssuesView({
                 extraStatuses={[
                   {
                     key: "monitored",
-                    label: "Monitored",
+                    label: "Evaluated",
                     variant: "success",
                     tooltip: (
-                      <MonitoredByTooltip evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)} />
+                      <EvaluatedByTooltip evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)} />
                     ),
                   },
                 ]}

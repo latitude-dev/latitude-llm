@@ -207,4 +207,68 @@ describe("createNotificationUseCase", () => {
     expect(result.notification).not.toBeNull()
     expect(result.emailEligible).toBe(true)
   })
+
+  it("gates email on the group's minimum severity (progressive: medium admits medium and high)", async () => {
+    const prefs: NotificationPreferences = { incidents: { email: true, emailMinSeverity: "medium" } }
+    const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
+
+    const eligibilityFor = async (severity: "low" | "medium" | "high") => {
+      const result = await Effect.runPromise(
+        createNotificationUseCase({
+          organizationId: orgId,
+          userId,
+          notificationId: NotificationId(generateId()),
+          kind: "incident.opened",
+          idempotencyKey: `incident.opened:${cuid(severity)}`,
+          projectId: null,
+          payload: { ...incidentPayload(cuid(severity)), severity },
+        }).pipe(Effect.provide(layer)),
+      )
+      return result.emailEligible
+    }
+
+    expect(await eligibilityFor("low")).toBe(false)
+    expect(await eligibilityFor("medium")).toBe(true)
+    expect(await eligibilityFor("high")).toBe(true)
+  })
+
+  it("still creates the in-app row when minimum severity suppresses the email", async () => {
+    const prefs: NotificationPreferences = { incidents: { email: true, emailMinSeverity: "high" } }
+    const { orgId, userId, rows, layer } = setup({ user: { notificationPreferences: prefs } })
+
+    const result = await Effect.runPromise(
+      createNotificationUseCase({
+        organizationId: orgId,
+        userId,
+        notificationId: NotificationId(generateId()),
+        kind: "incident.opened",
+        idempotencyKey: `incident.opened:${cuid("ai")}`,
+        projectId: null,
+        payload: { ...incidentPayload(cuid("ai")), severity: "low" },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.notification).not.toBeNull()
+    expect(rows).toHaveLength(1)
+    expect(result.emailEligible).toBe(false)
+  })
+
+  it("ignores the minimum severity for payloads without a severity", async () => {
+    const prefs: NotificationPreferences = { incidents: { email: true, emailMinSeverity: "high" } }
+    const { orgId, userId, layer } = setup({ user: { notificationPreferences: prefs } })
+
+    const result = await Effect.runPromise(
+      createNotificationUseCase({
+        organizationId: orgId,
+        userId,
+        notificationId: NotificationId(generateId()),
+        kind: "incident.opened",
+        idempotencyKey: `incident.opened:${cuid("ai")}`,
+        projectId: null,
+        payload: incidentPayload(cuid("ai")),
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(result.emailEligible).toBe(true)
+  })
 })

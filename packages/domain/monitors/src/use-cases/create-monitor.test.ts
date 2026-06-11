@@ -1,6 +1,8 @@
 import { createMonitorUseCase, MonitorRepository } from "@domain/monitors"
 import { createFakeMonitorRepository } from "@domain/monitors/testing"
-import { OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import { type SavedSearch, SavedSearchRepository } from "@domain/saved-searches"
+import { createFakeSavedSearchRepository } from "@domain/saved-searches/testing"
+import { OrganizationId, ProjectId, SavedSearchId, SqlClient } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -9,17 +11,44 @@ import type { MonitorRepositoryShape } from "../ports/monitor-repository.ts"
 const organizationId = OrganizationId("o".repeat(24))
 const projectId = ProjectId("p".repeat(24))
 const savedSearchId = "s".repeat(24)
+const semanticSearchId = "z".repeat(24)
+const at = new Date("2026-06-01T10:00:00.000Z")
+
+const makeSavedSearch = (id: string, query: string | null): SavedSearch => ({
+  id: SavedSearchId(id),
+  organizationId,
+  projectId,
+  slug: `search-${id.slice(0, 4)}`,
+  name: `Search ${id.slice(0, 4)}`,
+  query,
+  filterSet: {},
+  deletedAt: null,
+  createdAt: at,
+  updatedAt: at,
+})
+
+// One exact-match search (monitorable) and one with a semantic part (not).
+const SEEDED_SEARCHES: readonly SavedSearch[] = [
+  makeSavedSearch(savedSearchId, '"500 Internal Server Error"'),
+  makeSavedSearch(semanticSearchId, 'checkout failed "500"'),
+]
 
 const provide = (repo: MonitorRepositoryShape) =>
   Layer.mergeAll(
     Layer.succeed(MonitorRepository, MonitorRepository.of(repo)),
+    Layer.succeed(
+      SavedSearchRepository,
+      SavedSearchRepository.of(createFakeSavedSearchRepository(SEEDED_SEARCHES).repository),
+    ),
     Layer.succeed(SqlClient, createFakeSqlClient({ organizationId })),
   )
 
-const run = <A, E>(effect: Effect.Effect<A, E, SqlClient | MonitorRepository>, repo: MonitorRepositoryShape) =>
+type UseCaseContext = SqlClient | MonitorRepository | SavedSearchRepository
+
+const run = <A, E>(effect: Effect.Effect<A, E, UseCaseContext>, repo: MonitorRepositoryShape) =>
   Effect.runPromise(effect.pipe(Effect.provide(provide(repo))))
 
-const runError = <A, E>(effect: Effect.Effect<A, E, SqlClient | MonitorRepository>, repo: MonitorRepositoryShape) =>
+const runError = <A, E>(effect: Effect.Effect<A, E, UseCaseContext>, repo: MonitorRepositoryShape) =>
   Effect.runPromise(effect.pipe(Effect.flip, Effect.provide(provide(repo))))
 
 const matchAlert = { kind: "savedSearch.match" as const, source: { type: "savedSearch" as const, id: savedSearchId } }
@@ -102,6 +131,37 @@ describe("createMonitorUseCase", () => {
     )
     expect(error._tag).toBe("ValidationError")
     expect((error as { field: string }).field).toBe("kind")
+    expect(monitors).toHaveLength(0)
+  })
+
+  it("rejects an alert watching a saved search with a semantic part", async () => {
+    const { repo, monitors } = createFakeMonitorRepository()
+    const error = await runError(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Semantic watch",
+        alerts: [{ kind: "savedSearch.match", source: { type: "savedSearch", id: semanticSearchId } }],
+      }),
+      repo,
+    )
+    expect(error._tag).toBe("ValidationError")
+    expect((error as { field: string }).field).toBe("source")
+    expect(monitors).toHaveLength(0)
+  })
+
+  it("rejects an alert watching a saved search that does not exist", async () => {
+    const { repo, monitors } = createFakeMonitorRepository()
+    const error = await runError(
+      createMonitorUseCase({
+        organizationId,
+        projectId,
+        name: "Ghost watch",
+        alerts: [{ kind: "savedSearch.match", source: { type: "savedSearch", id: "g".repeat(24) } }],
+      }),
+      repo,
+    )
+    expect(error._tag).toBe("SavedSearchNotFoundError")
     expect(monitors).toHaveLength(0)
   })
 })

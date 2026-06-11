@@ -19,7 +19,7 @@ export function MonitorsEmptyState({
           <Text.H5 color="foregroundMuted" centered>
             {isLoading
               ? "Preparing your monitors view."
-              : "Monitors watch your project's issues and searches and open incidents when their alert conditions are met."}
+              : "Monitors watch your saved searches and your issues. Create one from any search on the Traces page, or right here."}
           </Text.H5>
         </div>
         {!isLoading ? (

@@ -1,7 +1,5 @@
 import {
-  createMonitorAlertUseCase,
   createMonitorUseCase,
-  deleteMonitorAlertUseCase,
   deleteMonitorUseCase,
   getMonitorBySlugUseCase,
   getMonitorIncidentsUseCase,
@@ -21,6 +19,7 @@ import {
   MonitorRepositoryLive,
   NotificationRepositoryLive,
   ProjectRepositoryLive,
+  SavedSearchRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
@@ -73,7 +72,7 @@ const CreateMonitorBodySchema = z
   .object({
     name: z.string().min(1).max(NAME_MAX_LENGTH).describe("Human-readable name. Used to derive the slug."),
     description: z.string().max(DESCRIPTION_MAX_LENGTH).optional().describe("Optional free-form description."),
-    alerts: z.array(CreateMonitorAlertBodySchema).min(1).describe("The monitor's alerts. At least one."),
+    alerts: z.array(CreateMonitorAlertBodySchema).length(1).describe("The monitor's alert. Exactly one."),
   })
   .openapi("CreateMonitorBody")
 
@@ -181,7 +180,8 @@ const createMonitor = monitorEndpoint({
     tags: ["Monitors"],
     ...monitorsFernGroup("create"),
     summary: "Create monitor",
-    description: "Creates a monitor with one or more saved-search alerts. The slug is derived from `name`.",
+    description:
+      "Creates a monitor with its saved-search alert. The slug is derived from `name`. The watched saved search must not contain a semantic component (unquoted free text) — monitors need an exact match rule, so only quoted literal and backtick phrase terms are allowed.",
     security: PROTECTED_SECURITY,
     request: { params: ProjectParamsSchema, body: jsonBody(CreateMonitorBodySchema) },
     responses: openApiResponses({ status: 201, schema: MonitorSchema, description: "Monitor created" }),
@@ -204,7 +204,8 @@ const createMonitor = monitorEndpoint({
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+          // SavedSearchRepository backs the semantic-search monitorability check on the watched search.
+          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, SavedSearchRepositoryLive),
           c.var.postgresClient,
           organizationId,
         ),
@@ -411,50 +412,6 @@ const getMonitorAlert = monitorEndpoint({
   },
 })
 
-const createMonitorAlert = monitorEndpoint({
-  route: createRoute({
-    method: "post",
-    path: "/{monitorSlug}/alerts",
-    name: "createMonitorAlert",
-    tags: ["Monitors"],
-    ...monitorsFernGroup("createAlert"),
-    summary: "Create monitor alert",
-    description:
-      "Adds a saved-search alert to a monitor and returns the updated monitor. System monitors cannot gain alerts.",
-    security: PROTECTED_SECURITY,
-    request: { params: MonitorSlugParamsSchema, body: jsonBody(CreateMonitorAlertBodySchema) },
-    responses: openApiResponses({
-      status: 201,
-      schema: MonitorSchema,
-      description: "Monitor with the new alert",
-      extraErrors: { 403: { description: "System monitors cannot gain alerts" } },
-    }),
-  }),
-  handler: async (c) => {
-    const { projectSlug, monitorSlug } = c.req.valid("param")
-    const body = c.req.valid("json")
-    const organizationId = c.var.organization.id
-
-    const monitor = await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-        return yield* createMonitorAlertUseCase({ monitorId: current.id, ...toMonitorAlertInput(body) })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
-    )
-
-    return c.json(toMonitorResponse(monitor), 201)
-  },
-})
-
 const updateMonitorAlert = monitorEndpoint({
   route: createRoute({
     method: "patch",
@@ -464,7 +421,7 @@ const updateMonitorAlert = monitorEndpoint({
     ...monitorsFernGroup("updateAlert"),
     summary: "Update monitor alert",
     description:
-      "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may.",
+      "Updates an alert and returns the updated monitor. On system monitors only the condition may change; on your own monitors any field may. Re-pointing the alert at a saved search containing a semantic component (unquoted free text) is rejected.",
     security: PROTECTED_SECURITY,
     request: { params: MonitorAlertParamsSchema, body: jsonBody(UpdateMonitorAlertBodySchema) },
     responses: openApiResponses({
@@ -494,7 +451,8 @@ const updateMonitorAlert = monitorEndpoint({
         })
       }).pipe(
         withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
+          // SavedSearchRepository backs the semantic-search monitorability check when the source changes.
+          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive, SavedSearchRepositoryLive),
           c.var.postgresClient,
           organizationId,
         ),
@@ -503,44 +461,6 @@ const updateMonitorAlert = monitorEndpoint({
     )
 
     return c.json(toMonitorResponse(monitor), 200)
-  },
-})
-
-const deleteMonitorAlert = monitorEndpoint({
-  route: createRoute({
-    method: "delete",
-    path: "/{monitorSlug}/alerts/{alertId}",
-    name: "deleteMonitorAlert",
-    tags: ["Monitors"],
-    ...monitorsFernGroup("deleteAlert"),
-    summary: "Delete monitor alert",
-    description:
-      "Removes an alert from a monitor. A monitor must keep at least one alert; system monitors' alerts cannot be removed.",
-    security: PROTECTED_SECURITY,
-    request: { params: MonitorAlertParamsSchema },
-    responses: openApiNoContentResponses({ description: "Alert deleted" }),
-  }),
-  handler: async (c) => {
-    const { projectSlug, monitorSlug, alertId } = c.req.valid("param")
-    const organizationId = c.var.organization.id
-
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const projectRepo = yield* ProjectRepository
-        const project = yield* projectRepo.findBySlug(projectSlug)
-        const current = yield* getMonitorBySlugUseCase({ projectId: project.id, slug: monitorSlug })
-        yield* deleteMonitorAlertUseCase({ monitorId: current.id, alertId: MonitorAlertId(alertId) })
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(ProjectRepositoryLive, MonitorRepositoryLive),
-          c.var.postgresClient,
-          organizationId,
-        ),
-        withTracing,
-      ),
-    )
-
-    return c.body(null, 204)
   },
 })
 
@@ -692,10 +612,8 @@ export const createMonitorsRoutes = () => {
   updateMonitor.mountHttp(app, createTierRateLimiter("medium"))
   deleteMonitor.mountHttp(app, createTierRateLimiter("medium"))
   listMonitorAlerts.mountHttp(app, createTierRateLimiter("low"))
-  createMonitorAlert.mountHttp(app, createTierRateLimiter("medium"))
   getMonitorAlert.mountHttp(app, createTierRateLimiter("low"))
   updateMonitorAlert.mountHttp(app, createTierRateLimiter("medium"))
-  deleteMonitorAlert.mountHttp(app, createTierRateLimiter("medium"))
   listMonitorIncidents.mountHttp(app, createTierRateLimiter("low"))
   muteMonitor.mountHttp(app, createTierRateLimiter("medium"))
   unmuteMonitor.mountHttp(app, createTierRateLimiter("medium"))

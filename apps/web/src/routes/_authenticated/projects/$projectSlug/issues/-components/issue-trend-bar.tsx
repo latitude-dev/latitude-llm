@@ -1,13 +1,10 @@
 import type { AlertSeverity } from "@domain/alerts"
+import { SEVERITY_COLOR } from "@domain/shared"
 import { ChartSkeleton, Text, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useMemo } from "react"
 import type { AlertIncidentRecord } from "../../../../../../domains/alerts/alerts.functions.ts"
-import {
-  formatIncidentKindLabel,
-  groupIncidentsByBucket,
-  INCIDENT_SEVERITY_COLOR,
-} from "../../../../../../domains/alerts/incident-markers.ts"
+import { formatIncidentKindLabel, groupIncidentsByBucket } from "../../../../../../domains/alerts/incident-markers.ts"
 import {
   buildSmoothThresholdPath,
   buildThresholdSegments,
@@ -194,7 +191,7 @@ function IncidentBucketTooltipExtras({ info }: { readonly info: IncidentBucketIn
           <span
             aria-hidden
             className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full"
-            style={{ background: INCIDENT_SEVERITY_COLOR[line.severity] }}
+            style={{ background: SEVERITY_COLOR[line.severity] }}
           />
           <div className="flex flex-col">
             <Text.H6B>{line.label}</Text.H6B>
@@ -428,7 +425,7 @@ export function IssueTrendBar({
                             // across the gap to the next bucket. Only one side extends per pair
                             // to avoid double-tinting in the gap.
                             right: mergeRight ? -4 : 0,
-                            background: INCIDENT_SEVERITY_COLOR[coveringSeverity],
+                            background: SEVERITY_COLOR[coveringSeverity],
                             opacity: 0.16,
                             borderTopLeftRadius: mergeLeft ? 0 : 2,
                             borderBottomLeftRadius: mergeLeft ? 0 : 2,
@@ -475,13 +472,13 @@ export function IssueTrendBar({
                           <span
                             className="absolute bottom-0 top-1 left-1/2 -translate-x-1/2 border-l-2"
                             style={{
-                              borderColor: INCIDENT_SEVERITY_COLOR[incident.severity],
+                              borderColor: SEVERITY_COLOR[incident.severity],
                             }}
                           />
                           <span
                             className="absolute -top-0.5 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full"
                             style={{
-                              background: INCIDENT_SEVERITY_COLOR[incident.severity],
+                              background: SEVERITY_COLOR[incident.severity],
                             }}
                           />
                         </span>

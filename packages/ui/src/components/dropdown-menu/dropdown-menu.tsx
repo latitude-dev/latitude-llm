@@ -45,6 +45,7 @@ type ItemOption = {
   leading?: ReactNode
   /** Marks the item as the currently active selection (highlighted with the primary color). */
   selected?: boolean
+  ellipsis?: boolean
   disabled?: boolean
   hidden?: boolean
 }
@@ -60,6 +61,7 @@ function DropdownItem({
   type = "normal",
   label,
   selected,
+  ellipsis,
   disabled,
 }: ItemOption) {
   const onSelect = useCallback(() => {
@@ -79,8 +81,13 @@ function DropdownItem({
       })}
     >
       {leading ?? (iconProps ? <Icon {...iconProps} /> : null)}
-      <div className="w-full">
-        <Text.H5 color={type === "destructive" ? "destructive" : selected ? "primary" : "foreground"}>{label}</Text.H5>
+      <div className={cn("w-full", { "min-w-0": ellipsis })}>
+        <Text.H5
+          color={type === "destructive" ? "destructive" : selected ? "primary" : "foreground"}
+          {...(ellipsis ? { ellipsis: true, noWrap: true } : {})}
+        >
+          {label}
+        </Text.H5>
       </div>
     </DropdownMenuItem>
   )

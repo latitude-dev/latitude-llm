@@ -1,4 +1,4 @@
-import { NOTIFICATION_GROUPS, type NotificationGroup } from "@domain/shared"
+import { alertSeveritySchema, meetsMinSeverity, NOTIFICATION_GROUPS, type NotificationGroup } from "@domain/shared"
 import { z } from "zod"
 
 /**
@@ -10,9 +10,21 @@ import { z } from "zod"
 export const slackRouteSchema = z.object({
   channelId: z.string().min(1),
   channelName: z.string().min(1),
+  minSeverity: alertSeveritySchema.optional(),
 })
 
 export type SlackRoute = z.infer<typeof slackRouteSchema>
+
+/**
+ * Whether a route accepts a notification payload. Incident payloads carry
+ * `severity`; a route with `minSeverity` drops incidents below it. Payloads
+ * without a severity (wrapped reports, announcements) always pass.
+ */
+export const routeAdmitsPayload = (route: SlackRoute, payload: Record<string, unknown>): boolean => {
+  const severity = alertSeveritySchema.safeParse(payload.severity)
+  if (!severity.success) return true
+  return meetsMinSeverity(severity.data, route.minSeverity ?? "low")
+}
 
 /**
  * Per-group route map persisted on `slack_integration_details.routes`.
@@ -23,7 +35,9 @@ export type SlackRoute = z.infer<typeof slackRouteSchema>
  */
 const slackRoutesShape = Object.fromEntries(
   NOTIFICATION_GROUPS.map((g) => [g, z.array(slackRouteSchema).optional()] as const),
-) as { [G in NotificationGroup]: z.ZodOptional<z.ZodArray<typeof slackRouteSchema>> }
+) as {
+  [G in NotificationGroup]: z.ZodOptional<z.ZodArray<typeof slackRouteSchema>>
+}
 
 export const slackRoutesSchema = z.object(slackRoutesShape)
 export type SlackRoutes = z.infer<typeof slackRoutesSchema>

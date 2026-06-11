@@ -1,3 +1,4 @@
+import type { SavedSearchNotFoundError, SavedSearchRepository } from "@domain/saved-searches"
 import {
   ALERT_INCIDENT_KIND_SOURCE_TYPE,
   type AlertIncidentCondition,
@@ -16,6 +17,7 @@ import { Effect } from "effect"
 import type { Monitor } from "../entities/monitor.ts"
 import { AlertConditionMismatchError, MonitorAlertNotFoundError, SystemMonitorForbiddenError } from "../errors.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
+import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
 
 const USER_CREATABLE = new Set<AlertIncidentKind>(USER_CREATABLE_ALERT_KINDS)
 /** Kinds that carry no `condition` (nothing to configure). Their condition stays `null`. */
@@ -41,6 +43,7 @@ export type UpdateMonitorAlertError =
   | AlertConditionMismatchError
   | SystemMonitorForbiddenError
   | ValidationError
+  | SavedSearchNotFoundError
 
 /**
  * Updates an alert in place. On a user monitor `kind` may change to another user-creatable kind
@@ -49,7 +52,7 @@ export type UpdateMonitorAlertError =
  */
 export const updateMonitorAlertUseCase = (
   input: UpdateMonitorAlertInput,
-): Effect.Effect<Monitor, UpdateMonitorAlertError, SqlClient | MonitorRepository> =>
+): Effect.Effect<Monitor, UpdateMonitorAlertError, SqlClient | MonitorRepository | SavedSearchRepository> =>
   Effect.gen(function* () {
     const sqlClient = yield* SqlClient
     return yield* sqlClient.transaction(
@@ -66,6 +69,7 @@ export const updateMonitorAlertUseCase = (
         const nextCondition = input.condition !== undefined ? input.condition : alert.condition
         const nextSeverity = input.severity ?? alert.severity
         const kindChanged = input.kind !== undefined && input.kind !== alert.kind
+        const sourceIdChanged = input.source !== undefined && input.source.id !== alert.source.id
 
         if (nextSource.type !== ALERT_INCIDENT_KIND_SOURCE_TYPE[nextKind]) {
           return yield* new ValidationError({
@@ -91,6 +95,11 @@ export const updateMonitorAlertUseCase = (
         } else if (kindChanged && !USER_CREATABLE.has(nextKind)) {
           // Only saved-search kinds are user-owned; `issue.*` are system-only.
           return yield* new ValidationError({ field: "kind", message: `Alerts of kind "${nextKind}" cannot be set` })
+        }
+
+        // Re-pointing at a search with a semantic part would leave the monitor without an exact match rule.
+        if (sourceIdChanged && nextSource.type === "savedSearch" && nextSource.id) {
+          yield* assertMonitorableSavedSearch(nextSource.id)
         }
 
         yield* repository.updateAlert({

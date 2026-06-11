@@ -53,7 +53,7 @@ function SeenTile({
  *
  * - **Impact** (`flex-1`): the headline metrics as a tile strip that grows to
  *   fill the row, matching the issues-list analytics panel.
- * - **Evaluations** (fixed ~500px): the monitoring component at its native
+ * - **Evaluations** (fixed ~500px): the issue-evaluations component at its native
  *   width, so it neither wraps (too narrow) nor stretches (too wide).
  *
  * Triage (assignee / priority) and the resolve/ignore lifecycle live in the

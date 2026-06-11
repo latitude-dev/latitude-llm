@@ -35,7 +35,10 @@ export function useMonitorSearchCommands(query: string): readonly PaletteCommand
         subtitle,
         keywords: `${monitor.name} ${monitor.projectName}`,
         perform: () =>
-          navigate({ to: `/projects/${monitor.projectSlug}/monitors`, search: { monitorSlug: monitor.slug } }),
+          navigate({
+            to: `/projects/${monitor.projectSlug}/monitors/${monitor.system ? "issues" : "search"}`,
+            search: { monitorSlug: monitor.slug },
+          }),
       }
     })
   }, [active, monitors, navigate])

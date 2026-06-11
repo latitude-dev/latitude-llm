@@ -28,8 +28,8 @@ import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-
 import { ColumnsSelector } from "./-components/columns-selector.tsx"
 import { ExportConfirmationModal } from "./-components/export-confirmation-modal.tsx"
 import { TRACE_COLUMN_OPTIONS, type TraceColumnId } from "./-components/project-traces-table.tsx"
-import { SaveOrUpdateSearchButton } from "./-components/save-or-update-search-button.tsx"
 import { SaveSearchModal } from "./-components/save-search-modal.tsx"
+import { SaveSearchSegment } from "./-components/save-search-segment.tsx"
 import { SavedSearchSelector } from "./-components/saved-search-selector.tsx"
 import { SearchInput } from "./-components/search-input.tsx"
 import { SessionDetailDrawer } from "./-components/session-detail-drawer.tsx"
@@ -506,7 +506,9 @@ function ProjectPage() {
           <div className="flex w-full items-center gap-2">
             {/* Dropdown + input read as one control: a single rounded-lg border wraps both,
                 with the dropdown flush on the left (square divider, no inner rounding). */}
-            <div className="group/searchbar flex h-8 min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-input transition-colors focus-within:ring-1 focus-within:ring-ring">
+            {/* h-10 = 40px outer → 38px inner past the 1px borders, giving the inset h-7 Save
+                button comfortable clearance so its hover ring doesn't kiss the bar edges. */}
+            <div className="group/searchbar flex h-10 min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-input transition-colors focus-within:ring-1 focus-within:ring-ring">
               <SavedSearchSelector
                 projectId={currentProject.id}
                 projectSlug={projectSlug}
@@ -516,15 +518,16 @@ function ProjectPage() {
                 onSaveCurrent={() => setSaveModalOpen(true)}
                 canSaveCurrent={hasSearchQuery || hasActiveFilters}
               />
+              <SaveSearchSegment
+                projectId={currentProject.id}
+                query={query}
+                filters={filters}
+                selectedSavedSearchSlug={savedSearchSlug}
+                loadedSavedSearch={loadedSavedSearch}
+                onRequestSave={() => setSaveModalOpen(true)}
+              />
               <SearchInput key={query} initialValue={query} onSubmit={handleSubmitQuery} />
             </div>
-            <SaveOrUpdateSearchButton
-              projectId={currentProject.id}
-              query={query}
-              filters={filters}
-              loadedSavedSearch={loadedSavedSearch}
-              onRequestSave={() => setSaveModalOpen(true)}
-            />
           </div>
         </Layout.ActionsRow>
       </Layout.Actions>
@@ -641,6 +644,7 @@ function ProjectPage() {
           open={saveModalOpen}
           onClose={() => setSaveModalOpen(false)}
           projectId={currentProject.id}
+          projectSlug={currentProject.slug}
           query={query || null}
           filterSet={filters}
           onCreated={(record) => {

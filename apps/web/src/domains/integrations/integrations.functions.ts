@@ -24,6 +24,7 @@ import {
   type SlackRoutes,
 } from "@domain/integrations"
 import {
+  alertSeveritySchema,
   type NotificationGroup,
   type RepositoryError,
   SLACK_ROUTABLE_NOTIFICATION_GROUPS,
@@ -189,6 +190,7 @@ const configureSlackRouteSchema = z.object({
       z.object({
         channelId: z.string().min(1),
         channelName: z.string().min(1),
+        minSeverity: alertSeveritySchema.optional(),
       }),
     )
     .max(50),

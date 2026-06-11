@@ -8,6 +8,7 @@ export {
 } from "./entities/slack-integration.ts"
 export {
   emptySlackRoutes,
+  routeAdmitsPayload,
   routesForGroup,
   type SlackRoute,
   type SlackRoutes,

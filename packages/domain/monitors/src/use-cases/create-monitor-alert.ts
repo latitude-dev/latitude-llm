@@ -7,17 +7,13 @@ import {
   generateId,
   MonitorAlertId,
   type MonitorId,
-  type NotFoundError,
-  type RepositoryError,
   SEVERITY_FOR_KIND,
-  SqlClient,
   USER_CREATABLE_ALERT_KINDS,
   ValidationError,
 } from "@domain/shared"
 import { Effect } from "effect"
-import type { Monitor, MonitorAlert } from "../entities/monitor.ts"
-import { AlertConditionMismatchError, SystemMonitorForbiddenError } from "../errors.ts"
-import { MonitorRepository } from "../ports/monitor-repository.ts"
+import type { MonitorAlert } from "../entities/monitor.ts"
+import { AlertConditionMismatchError } from "../errors.ts"
 
 const USER_CREATABLE = new Set<AlertIncidentKind>(USER_CREATABLE_ALERT_KINDS)
 /** Kinds that carry no `condition`; their condition stays `null`. */
@@ -36,21 +32,10 @@ export interface MonitorAlertInput {
 
 export type BuildMonitorAlertError = ValidationError | AlertConditionMismatchError
 
-export interface CreateMonitorAlertInput extends MonitorAlertInput {
-  readonly monitorId: MonitorId
-}
-
-export type CreateMonitorAlertError =
-  | NotFoundError
-  | RepositoryError
-  | ValidationError
-  | AlertConditionMismatchError
-  | SystemMonitorForbiddenError
-
 /**
  * Validates a user-supplied alert against the creatable-kind rules and
- * materialises it as a `MonitorAlert` for `monitorId`. Shared by
- * `createMonitorUseCase` (one per alert) and `createMonitorAlertUseCase`.
+ * materialises it as a `MonitorAlert` for `monitorId`. Used by
+ * `createMonitorUseCase` — alerts only come into existence with their monitor.
  * Severity defaults to the kind's canonical severity; condition defaults to
  * `null`. Every user-creatable kind watches a saved search, so `source.id`
  * (the saved search) is required.
@@ -87,29 +72,4 @@ export const buildMonitorAlert = (
       severity: input.severity ?? SEVERITY_FOR_KIND[input.kind],
       createdAt: now,
     }
-  })
-
-/**
- * Adds a single alert to an existing user monitor. Enforces the
- * user-creatable allowlist, kind/source-type match, and a required saved-search
- * source. Rejects system monitors — they're structurally locked, so no alert
- * may be added to one.
- */
-export const createMonitorAlertUseCase = (
-  input: CreateMonitorAlertInput,
-): Effect.Effect<Monitor, CreateMonitorAlertError, SqlClient | MonitorRepository> =>
-  Effect.gen(function* () {
-    const sqlClient = yield* SqlClient
-    return yield* sqlClient.transaction(
-      Effect.gen(function* () {
-        const repository = yield* MonitorRepository
-        const monitor = yield* repository.findById(input.monitorId)
-        if (monitor.system) {
-          return yield* new SystemMonitorForbiddenError({ monitorId: input.monitorId, operation: "restructured" })
-        }
-        const alert = yield* buildMonitorAlert(input, input.monitorId, new Date())
-        yield* repository.insertAlert(alert)
-        return { ...monitor, alerts: [...monitor.alerts, alert] }
-      }),
-    )
   })

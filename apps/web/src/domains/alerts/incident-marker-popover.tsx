@@ -1,9 +1,10 @@
+import { SEVERITY_COLOR } from "@domain/shared"
 import { Popover, PopoverAnchor, PopoverContent, Text } from "@repo/ui"
 import { Link } from "@tanstack/react-router"
 import { ChevronRightIcon } from "lucide-react"
 import { useRef } from "react"
 import type { AlertIncidentRecord } from "./alerts.functions.ts"
-import { formatIncidentKindLabel, INCIDENT_SEVERITY_COLOR, SEVERITY_LABELS } from "./incident-markers.ts"
+import { formatIncidentKindLabel, SEVERITY_LABELS } from "./incident-markers.ts"
 
 /**
  * Popover anchored at a chart-bucket point, listing every incident touching that bucket. Issue
@@ -68,7 +69,7 @@ function IncidentRow({
       <span
         aria-hidden
         className="mt-1 inline-block size-2 shrink-0 rounded-full"
-        style={{ background: INCIDENT_SEVERITY_COLOR[incident.severity] }}
+        style={{ background: SEVERITY_COLOR[incident.severity] }}
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">

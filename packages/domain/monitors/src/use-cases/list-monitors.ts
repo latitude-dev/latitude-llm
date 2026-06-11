@@ -8,11 +8,10 @@ export const MAX_MONITORS_PAGE_SIZE = 100
 
 export interface ListMonitorsInput {
   readonly projectId: ProjectId
-  /** Default {@link DEFAULT_MONITORS_PAGE_SIZE}, clamped to {@link MAX_MONITORS_PAGE_SIZE}. */
   readonly limit?: number
   readonly offset?: number
-  /** Case-insensitive name substring; blank is treated as no filter. */
   readonly searchQuery?: string
+  readonly system?: boolean
 }
 
 export interface ListMonitorsResult {
@@ -37,6 +36,7 @@ export const listMonitorsUseCase = (
       limit,
       offset,
       ...(trimmedSearchQuery ? { searchQuery: trimmedSearchQuery } : {}),
+      ...(input.system !== undefined ? { system: input.system } : {}),
     })
     return page
   })

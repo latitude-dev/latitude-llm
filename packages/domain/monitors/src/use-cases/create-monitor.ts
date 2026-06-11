@@ -1,3 +1,4 @@
+import type { SavedSearchNotFoundError, SavedSearchRepository } from "@domain/saved-searches"
 import {
   generateId,
   generateSlug,
@@ -12,6 +13,7 @@ import { Effect } from "effect"
 import type { Monitor } from "../entities/monitor.ts"
 import type { AlertConditionMismatchError } from "../errors.ts"
 import { MonitorRepository } from "../ports/monitor-repository.ts"
+import { assertMonitorableSavedSearch } from "./assert-monitorable-saved-search.ts"
 import { buildMonitorAlert, type MonitorAlertInput } from "./create-monitor-alert.ts"
 
 const NAME_MAX_LENGTH = 128
@@ -25,7 +27,11 @@ export interface CreateMonitorInput {
   readonly alerts: readonly MonitorAlertInput[]
 }
 
-export type CreateMonitorError = RepositoryError | ValidationError | AlertConditionMismatchError
+export type CreateMonitorError =
+  | RepositoryError
+  | ValidationError
+  | AlertConditionMismatchError
+  | SavedSearchNotFoundError
 
 /**
  * Creates a non-system monitor with its alerts, atomically. The monitor's
@@ -36,7 +42,7 @@ export type CreateMonitorError = RepositoryError | ValidationError | AlertCondit
  */
 export const createMonitorUseCase = (
   input: CreateMonitorInput,
-): Effect.Effect<Monitor, CreateMonitorError, SqlClient | MonitorRepository> =>
+): Effect.Effect<Monitor, CreateMonitorError, SqlClient | MonitorRepository | SavedSearchRepository> =>
   Effect.gen(function* () {
     const trimmedName = input.name.trim()
     if (trimmedName.length < 1 || trimmedName.length > NAME_MAX_LENGTH) {
@@ -56,6 +62,16 @@ export const createMonitorUseCase = (
         const alerts = yield* Effect.forEach(input.alerts, (alertInput) =>
           buildMonitorAlert(alertInput, monitorId, now),
         )
+
+        // A search with a semantic part has no exact match rule to count against.
+        const watchedSearchIds = [
+          ...new Set(
+            alerts.flatMap((alert) =>
+              alert.source.type === "savedSearch" && alert.source.id ? [alert.source.id] : [],
+            ),
+          ),
+        ]
+        yield* Effect.forEach(watchedSearchIds, assertMonitorableSavedSearch, { discard: true })
 
         const slug = yield* generateSlug({
           name: trimmedName,

@@ -193,7 +193,7 @@ export const MonitorRepositoryLive = Layer.effect(
           )
           return toMonitor(row, alertRows.map(toMonitorAlert))
         }),
-      list: ({ projectId, limit, offset, searchQuery }) =>
+      list: ({ projectId, limit, offset, searchQuery, system }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           const { organizationId } = sqlClient
@@ -202,6 +202,7 @@ export const MonitorRepositoryLive = Layer.effect(
             eq(monitors.projectId, projectId),
             isNull(monitors.deletedAt),
             searchQuery ? ilike(monitors.name, `%${searchQuery}%`) : undefined,
+            system === undefined ? undefined : eq(monitors.system, system),
           )
 
           const [rows, totals] = yield* sqlClient.query(async (db) => {
@@ -434,34 +435,6 @@ export const MonitorRepositoryLive = Layer.effect(
             }
           })
         }),
-      insertAlert: (alert) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const { organizationId } = sqlClient
-          yield* sqlClient.query((db) => db.insert(monitorAlerts).values(toMonitorAlertRow(alert, organizationId)))
-        }),
-      softDeleteAlert: (alertId) =>
-        Effect.gen(function* () {
-          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const { organizationId } = sqlClient
-          const updated = yield* sqlClient.query(async (db) => {
-            const now = new Date()
-            const rows = await db
-              .update(monitorAlerts)
-              .set({ deletedAt: now })
-              .where(
-                and(
-                  eq(monitorAlerts.organizationId, organizationId),
-                  eq(monitorAlerts.id, alertId),
-                  isNull(monitorAlerts.deletedAt),
-                ),
-              )
-              .returning({ id: monitorAlerts.id })
-            if (rows.length > 0) await closeOpenIncidentsForAlerts(db, organizationId, [alertId], now)
-            return rows
-          })
-          if (updated.length === 0) return yield* new NotFoundError({ entity: "MonitorAlert", id: alertId })
-        }),
       setMuted: ({ id, mutedAt }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -604,15 +577,20 @@ export const MonitorRepositoryLive = Layer.effect(
           )
           return rows.map(toMonitorAlert)
         }),
-      listSavedSearchMonitorSlugs: (projectId) =>
+      listSavedSearchMonitorSummaries: (projectId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          // One row per saved search: the earliest-created live, unmuted monitor watching it.
+          // One row per live alert on a live, unmuted monitor; ordering puts the
+          // earliest-created monitor first per saved search so the first row seen
+          // carries the primary deep-link slug.
           const rows = yield* sqlClient.query((db) =>
             db
-              .selectDistinctOn([monitorAlerts.sourceId], {
+              .select({
                 savedSearchId: monitorAlerts.sourceId,
+                monitorId: monitors.id,
                 monitorSlug: monitors.slug,
+                monitorName: monitors.name,
+                severity: monitorAlerts.severity,
               })
               .from(monitorAlerts)
               .innerJoin(monitors, eq(monitors.id, monitorAlerts.monitorId))
@@ -627,11 +605,54 @@ export const MonitorRepositoryLive = Layer.effect(
                   isNull(monitors.mutedAt),
                 ),
               )
-              .orderBy(asc(monitorAlerts.sourceId), asc(monitors.createdAt), asc(monitors.id)),
+              .orderBy(
+                asc(monitorAlerts.sourceId),
+                asc(monitors.createdAt),
+                asc(monitors.id),
+                asc(monitorAlerts.createdAt),
+              ),
           )
-          return rows.flatMap((row) =>
-            row.savedSearchId ? [{ savedSearchId: row.savedSearchId, monitorSlug: row.monitorSlug }] : [],
-          )
+
+          type MonitorEntry = { slug: string; name: string; severities: (typeof rows)[number]["severity"][] }
+          const summaries = new Map<
+            string,
+            {
+              byMonitorId: Map<string, MonitorEntry>
+              monitors: MonitorEntry[]
+              severities: (typeof rows)[number]["severity"][]
+            }
+          >()
+          for (const row of rows) {
+            if (!row.savedSearchId) continue
+            const entry = summaries.get(row.savedSearchId) ?? {
+              byMonitorId: new Map<string, MonitorEntry>(),
+              monitors: [],
+              severities: [],
+            }
+            let monitor = entry.byMonitorId.get(row.monitorId)
+            if (!monitor) {
+              // Row order is earliest monitor first, so `monitors[0]` is the primary.
+              monitor = { slug: row.monitorSlug, name: row.monitorName, severities: [] }
+              entry.byMonitorId.set(row.monitorId, monitor)
+              entry.monitors.push(monitor)
+            }
+            monitor.severities.push(row.severity)
+            entry.severities.push(row.severity)
+            summaries.set(row.savedSearchId, entry)
+          }
+          return [...summaries.entries()].flatMap(([savedSearchId, entry]) => {
+            const primary = entry.monitors[0]
+            if (!primary) return []
+            return [
+              {
+                savedSearchId,
+                monitorSlug: primary.slug,
+                monitorCount: entry.monitors.length,
+                severities: entry.severities,
+                monitors: entry.monitors,
+              },
+            ]
+          })
         }),
       listProjectsWithActiveSavedSearchAlerts: () =>
         Effect.gen(function* () {

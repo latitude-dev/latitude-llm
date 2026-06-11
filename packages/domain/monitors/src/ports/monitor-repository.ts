@@ -31,6 +31,8 @@ export interface ListMonitorsRepositoryInput {
   readonly offset: number
   /** Case-insensitive substring match on `name`; caller normalises. Omit to list all. */
   readonly searchQuery?: string
+  /** Filter on the `system` flag; omit to list user and system monitors alike. */
+  readonly system?: boolean
 }
 
 export interface MonitorLastIncident {
@@ -65,10 +67,24 @@ export interface MonitorSearchResult {
   readonly mutedAt: Date | null
 }
 
-/** The earliest-created live, unmuted monitor watching a given saved search — backs the saved-search dropdown's "View monitor" deep-link. */
-export interface SavedSearchMonitorSlug {
+/**
+ * Per-saved-search monitoring summary. `monitorSlug` is the earliest-created
+ * live, unmuted monitor watching the search (the primary deep-link target);
+ * `severities` covers every live alert on such monitors (one UI dot per
+ * alert); `monitors` lists each distinct watching monitor (earliest first)
+ * so the UI can offer a picker when several watch the same search.
+ */
+export interface SavedSearchMonitorSummary {
   readonly savedSearchId: string
   readonly monitorSlug: string
+  readonly monitorCount: number
+  readonly severities: readonly AlertSeverity[]
+  readonly monitors: readonly {
+    readonly slug: string
+    readonly name: string
+    /** Severities of this monitor's live alerts watching the search. */
+    readonly severities: readonly AlertSeverity[]
+  }[]
 }
 
 export interface MonitorRepositoryShape {
@@ -113,10 +129,6 @@ export interface MonitorRepositoryShape {
   resetSystemMonitors(monitors: readonly Monitor[]): Effect.Effect<readonly Monitor[], RepositoryError, SqlClient>
   /** Insert a new monitor and its alerts atomically. The caller pre-resolves the slug. */
   create(monitor: Monitor): Effect.Effect<void, RepositoryError, SqlClient>
-  /** Insert a single new alert (org resolved from the client). Used to add an alert to a live monitor. */
-  insertAlert(alert: MonitorAlert): Effect.Effect<void, RepositoryError, SqlClient>
-  /** Soft-delete a single live alert + silently close its open incidents (no event). Fails `NotFoundError` if it isn't a live alert. */
-  softDeleteAlert(alertId: MonitorAlertId): Effect.Effect<void, NotFoundError | RepositoryError, SqlClient>
   /** Set or clear `mutedAt` on a live monitor. Fails `NotFoundError` if it doesn't exist. */
   setMuted(input: {
     readonly id: MonitorId
@@ -155,13 +167,13 @@ export interface MonitorRepositoryShape {
   /** Active saved-search alerts in a project (live alert + monitor). Org-scoped — the firing orchestrator resolves + evaluates each. */
   listActiveSavedSearchAlerts(projectId: ProjectId): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
   /**
-   * For every saved search watched by a live, unmuted monitor in the project, the slug of the
-   * earliest-created such monitor (`DISTINCT ON (source_id)`, ordered by monitor `createdAt`/`id`).
-   * Batched — one call covers all the project's saved searches.
+   * For every saved search watched by a live, unmuted monitor in the project: the slug of the
+   * earliest-created such monitor, the distinct monitor count, and the severities of every live
+   * alert watching it. Batched — one call covers all the project's saved searches.
    */
-  listSavedSearchMonitorSlugs(
+  listSavedSearchMonitorSummaries(
     projectId: ProjectId,
-  ): Effect.Effect<readonly SavedSearchMonitorSlug[], RepositoryError, SqlClient>
+  ): Effect.Effect<readonly SavedSearchMonitorSummary[], RepositoryError, SqlClient>
   /** Distinct `(org, project)` pairs with ≥1 active saved-search alert. **Cross-org** (admin client) — backs the 5-minute sweep's per-project fan-out. */
   listProjectsWithActiveSavedSearchAlerts(): Effect.Effect<
     readonly ProjectWithActiveSavedSearchAlerts[],

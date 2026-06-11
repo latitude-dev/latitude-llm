@@ -57,15 +57,15 @@ describe("requestIssueAssignedNotificationsUseCase", () => {
     )
 
     expect(result.status).toBe("ok")
+
     if (result.status !== "ok") throw new Error("unreachable")
+
     expect(result.requests).toHaveLength(1)
-    const request = result.requests[0]!
+    const request = result.requests[0]
     expect(request.userId).toBe(assigneeId)
     expect(request.kind).toBe("issue.assigned")
     expect(request.idempotencyKey).toBe(`issue.assigned:${issueId}:${assignedAt}`)
-    // Project anchor comes from the authoritative issue row.
     expect(request.projectId).toBe(projectId)
-    // The payload carries ids only — names are live-resolved by renderers.
     expect(request.payload).toEqual({ issueId, actorUserId, assignedAt })
   })
 

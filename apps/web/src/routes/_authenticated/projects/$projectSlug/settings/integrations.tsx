@@ -147,9 +147,11 @@ function ConnectedSlackCard({
       {/* Notification routing */}
       <div className="flex flex-col gap-3 border-t border-border p-4">
         <Text.H5 weight="semibold">Notifications</Text.H5>
-        {SLACK_ROUTABLE_NOTIFICATION_GROUPS.map((group) => (
-          <SlackRouteRow key={group} group={group} integration={integration} />
-        ))}
+        <div className="flex w-full flex-col gap-1">
+          {SLACK_ROUTABLE_NOTIFICATION_GROUPS.map((group) => (
+            <SlackRouteRow key={group} group={group} integration={integration} />
+          ))}
+        </div>
       </div>
     </div>
   )
