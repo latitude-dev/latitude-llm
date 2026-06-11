@@ -65,7 +65,7 @@ catalog:
   turbo: 2.9.14
   typescript: 6.0.3
   vite: 8.0.5
-  vitest: 4.1.0
+  vitest: 4.1.8
   zod: 4.3.6
   voyageai: 0.2.1
   "@modelcontextprotocol/sdk": 1.29.0
