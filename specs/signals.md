@@ -99,7 +99,7 @@ export const ALERT_KINDS = [
   "metric.escalating", //  ← issue.escalating + savedSearch.escalating (sustained; unified)
 ] as const
 export type AlertKind = (typeof ALERT_KINDS)[number]
-// issue.new is retired with the discovery pipeline (decision 2/5): nothing is "discovered" anymore.
+// issue.new is retired with the discovery pipeline (decision 2): nothing is "discovered" anymore.
 
 // Severities, AlertCountThreshold (absolute | multiplier | expected) and
 // AlertBaseline carry over verbatim from the current model.
@@ -258,7 +258,7 @@ PARTITION BY toYYYYMM(trace_started_at)
 ORDER BY  (organization_id, project_id, signal_id, trace_started_at, trace_id)
 ```
 
-**Occurrences vs scores** (decision 7). Occurrences are the **membership ledger** ("this trace is in this signal"); scores are the **verdict ledger** ("this judge said pass/fail and why"). A semantic or rule match has no verdict, no feedback, nothing to draft — forcing it into `scores` would pollute evaluation analytics and push trace-volume writes through the canonical mutable Postgres path. Scores stop being the membership mechanism and keep the three jobs occurrences structurally cannot do:
+**Occurrences vs scores** (decision 6). Occurrences are the **membership ledger** ("this trace is in this signal"); scores are the **verdict ledger** ("this judge said pass/fail and why"). A semantic or rule match has no verdict, no feedback, nothing to draft — forcing it into `scores` would pollute evaluation analytics and push trace-volume writes through the canonical mutable Postgres path. Scores stop being the membership mechanism and keep the three jobs occurrences structurally cannot do:
 
 1. **Verdicts that don't match.** Occurrences record only matches; pass rates, error rates, and every confusion matrix also need the *passed* and *errored* runs — the rows that produce no occurrence.
 2. **Human feedback as alignment ground truth.** Annotations need a mutable, draft-able row, and alignment is literally human `passed` verdicts vs evaluation `passed` verdicts on the same traces. The unified score shape across sources is deliberate: human and machine judges emit exactly the same output — a verdict on a trace — with `source` recording who judged; alignment works because both sides live in one table with one shape.
@@ -553,6 +553,5 @@ Settled during the design discussion (LAT-664 + spec review):
 2. **No automatic issue discovery.** The clustering/discovery pipeline (similarity search + rerank + locked serialization auto-creating issues from scores) is removed. Signals are always created proactively by users — from the Signals page or from the annotation flow. Annotations are matched to *existing* signals via hybrid search suggestions; they never spawn signals on their own.
 3. **No routing centroid.** With discovery gone, the per-signal decayed centroid machinery is removed. Suggesting existing signals while annotating uses hybrid search over signal names/descriptions (lexical tsvector + one derived embedding).
 4. **No pure filter-type signals.** Plain filter slices are correct and cheap at query time, so they stay **saved searches + monitors**. Signals exist for matchers that *require* write-time evaluation (semantic, evaluation, rule, script). Filters appear on signals only as the **scope** pre-gate.
-5. **No class monitors.** With user-created signals only, "a new signal was discovered" alerts are meaningless; today's `source_id = NULL` system monitors dissolve into each signal's default monitor. A monitor's `target_id` is required for signal/saved-search/tool targets.
-6. **Signals per project are capped** to a fixed number per plan (this also bounds occurrence write amplification and ingest matching cost).
-7. **Scores are kept with a narrowed role** — they stop being the membership mechanism and remain the verdict ledger: evaluation pass/fail/error analytics, human-feedback ground truth for alignment, and the public `/scores` API (rationale under the occurrences table).
+5. **Signals per project are capped** to a fixed number per plan (this also bounds occurrence write amplification and ingest matching cost).
+6. **Scores are kept with a narrowed role** — they stop being the membership mechanism and remain the verdict ledger: evaluation pass/fail/error analytics, human-feedback ground truth for alignment, and the public `/scores` API (rationale under the occurrences table).
