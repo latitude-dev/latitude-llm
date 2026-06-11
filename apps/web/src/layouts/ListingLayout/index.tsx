@@ -124,12 +124,22 @@ function List({ children, className }: ListProps) {
 }
 
 function Body({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
-  return <div className={cn("flex flex-row flex-1 min-h-0 min-w-0 overflow-hidden", className)}>{children}</div>
+  return (
+    <div className={cn("@container relative flex flex-row flex-1 min-h-0 min-w-0 overflow-hidden", className)}>
+      {children}
+    </div>
+  )
 }
 
 function Sidebar({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
   return (
-    <div className={cn("flex flex-col h-full w-[280px] min-w-[280px] shrink-0 border-r bg-background", className)}>
+    <div
+      className={cn(
+        "flex flex-col h-full w-[280px] min-w-[280px] shrink-0 border-r bg-background",
+        "@max-[48rem]:absolute @max-[48rem]:inset-y-0 @max-[48rem]:left-0 @max-[48rem]:z-20 @max-[48rem]:shadow-xl",
+        className,
+      )}
+    >
       {children}
     </div>
   )
