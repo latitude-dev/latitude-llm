@@ -6,22 +6,33 @@ import { describe, expect, it } from "vitest"
 import { RedisDetectorHealthTrackerLive } from "./detector-health.ts"
 
 // Minimal in-memory ioredis fake covering the ops the tracker uses. Counter
-// semantics only — TTL expiry is a Redis-side cleanup concern.
+// semantics only — TTL expiry is a Redis-side cleanup concern (the window
+// itself is encoded in the key, not in the TTL).
 class FakeRedis {
   readonly store = new Map<string, string>()
 
-  async incr(key: string): Promise<number> {
-    const next = Number(this.store.get(key) ?? "0") + 1
-    this.store.set(key, String(next))
-    return next
-  }
-
-  async expire(_key: string, _ttl: number): Promise<number> {
-    return 1
-  }
-
-  async get(key: string): Promise<string | null> {
-    return this.store.get(key) ?? null
+  pipeline() {
+    const ops: Array<() => unknown> = []
+    const chain = {
+      incr: (key: string) => {
+        ops.push(() => {
+          const next = Number(this.store.get(key) ?? "0") + 1
+          this.store.set(key, String(next))
+          return next
+        })
+        return chain
+      },
+      expire: (_key: string, _ttl: number) => {
+        ops.push(() => 1)
+        return chain
+      },
+      get: (key: string) => {
+        ops.push(() => this.store.get(key) ?? null)
+        return chain
+      },
+      exec: async () => ops.map((op) => [null, op()] as [Error | null, unknown]),
+    }
+    return chain
   }
 
   async set(key: string, value: string, _ex: string, _ttl: number, nx: string): Promise<"OK" | null> {
@@ -87,6 +98,21 @@ describe("RedisDetectorHealthTrackerLive", () => {
 
     const repeat = await recordRun(record({ errored: true }))
     expect(repeat).toMatchObject({ degraded: true, newlyDegraded: false })
+  })
+
+  it("keeps runs, errors, and the degraded marker in the same window bucket", async () => {
+    const { redis, recordRun } = setup()
+
+    for (let i = 0; i < DETECTOR_HEALTH_MIN_RUNS; i += 1) {
+      await recordRun(record({ errored: true }))
+    }
+
+    // Keys end in `...:${ownerId}:${windowBucket}:{runs|errors|degraded}` —
+    // every counter must share one bucket so a late-created errors key can
+    // never outlive its runs key and fabricate an error rate > 1.
+    const buckets = new Set([...redis.store.keys()].map((key) => key.split(":").at(-2)))
+    expect([...redis.store.keys()].map((key) => key.split(":").at(-1)).sort()).toEqual(["degraded", "errors", "runs"])
+    expect(buckets.size).toBe(1)
   })
 
   it("isolates owners from each other", async () => {

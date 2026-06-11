@@ -9,6 +9,7 @@ import {
   type RunResult,
   resolveScriptCapabilities,
   runResultSchema,
+  type SchemaDescriptor,
   ScriptCompileError,
   ScriptLimitExceededError,
   type ScriptLimitKind,
@@ -81,16 +82,25 @@ const mapThrownError = (state: RunState, limits: ScriptRunLimits, dumped: unknow
 
   const erroredName =
     typeof dumped === "object" && dumped !== null && "name" in dumped ? (dumped as { name: unknown }).name : null
-  if (erroredName === HOST_CALL_ERROR_NAME) {
-    return state.hostCallError ?? new HostCallError({ message })
+  // Only trust the HostCallError name when a host call actually failed in
+  // this run — a script setting `error.name` cannot masquerade its own
+  // deterministic throw as a transient (retryable) host failure.
+  if (erroredName === HOST_CALL_ERROR_NAME && state.hostCallError !== null) {
+    return state.hostCallError
   }
 
   return new ScriptRuntimeError({ message })
 }
 
-/** Evaluates a JSON-safe host value into the context as a fresh handle. */
+/**
+ * Evaluates a JSON-safe host value into the context as a fresh handle.
+ * Goes through in-context `JSON.parse` (not an object-literal eval) so a
+ * `"__proto__"` key stays an own data property instead of becoming a
+ * prototype assignment.
+ */
 const jsonToHandle = (context: QuickJSContext, value: unknown): QuickJSHandle => {
-  const result = context.evalCode(`(${JSON.stringify(value ?? null)})`)
+  const json = JSON.stringify(value ?? null)
+  const result = context.evalCode(`JSON.parse(${JSON.stringify(json)})`)
   return context.unwrapResult(result)
 }
 
@@ -121,14 +131,23 @@ const installHostLlm = (
   const fn = context.newFunction("__hostLlm", (callHandle) => {
     const rawCall: unknown = callHandle === undefined ? undefined : context.dump(callHandle)
     const call = rawCall as { prompt: string; schema?: unknown }
-    const deferred = context.newPromise()
 
-    const hostWork = async () => {
-      const schema = call.schema === undefined ? undefined : schemaDescriptorSchema.parse(call.schema)
-      return await hostLlm({ prompt: call.prompt, ...(schema !== undefined ? { schema } : {}) })
+    // Validate the descriptor synchronously, before any host work: a forged
+    // schema is a deterministic script bug and must surface as a script-side
+    // throw (→ ScriptRuntimeError), never as a transient HostCallError that
+    // the retry policy would replay.
+    let schema: SchemaDescriptor | undefined
+    if (call.schema !== undefined) {
+      const descriptor = schemaDescriptorSchema.safeParse(call.schema)
+      if (!descriptor.success) {
+        throw new Error("llm() requires a schema built with the z global")
+      }
+      schema = descriptor.data
     }
 
-    hostWork().then(
+    const deferred = context.newPromise()
+
+    hostLlm({ prompt: call.prompt, ...(schema !== undefined ? { schema } : {}) }).then(
       (result) => {
         if (state.disposed) return
         state.tokens += result.tokens
@@ -219,10 +238,15 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
   }
 
   const runScript = async (input: ScriptRunInput): Promise<RunResult> => {
+    const scriptHasLlm = hasLlmCapability(input.script.capabilities)
+    if (scriptHasLlm && input.llm === undefined) {
+      throw new ScriptRuntimeError({
+        message: "llm-capability script was run without a host llm implementation",
+      })
+    }
+
     const QuickJS = await getQuickJS()
-    const limits =
-      input.limits ??
-      (hasLlmCapability(input.script.capabilities) ? DEFAULT_LLM_SCRIPT_LIMITS : DEFAULT_PURE_SCRIPT_LIMITS)
+    const limits = input.limits ?? (scriptHasLlm ? DEFAULT_LLM_SCRIPT_LIMITS : DEFAULT_PURE_SCRIPT_LIMITS)
 
     const state: RunState = {
       disposed: false,
@@ -254,7 +278,7 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
 
     const context = runtime.newContext()
     try {
-      if (input.llm !== undefined && hasLlmCapability(input.script.capabilities)) {
+      if (input.llm !== undefined && scriptHasLlm) {
         installHostLlm(context, runtime, state, input.llm)
       }
       installHostParse(context)
@@ -285,6 +309,10 @@ export const createQuickJsScriptRuntime = (): ScriptRuntimeShape => {
       promiseHandle.dispose()
       if (settled === WALL_CLOCK_TIMEOUT) {
         state.trippedLimit = "wall-clock"
+        // An in-flight llm() host call keeps running detached after this
+        // (its callbacks are guarded by state.disposed); tokens it still
+        // consumes are not metered into this RunResult — accepted
+        // cost-accounting slack on an already-errored run.
         throw toLimitError("wall-clock", limits)
       }
       if (settled.error) {

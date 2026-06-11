@@ -111,6 +111,38 @@ describe("evaluation executor parity: legacy template bridge vs sandbox runtime"
     }
   }
 
+  it("documents the intentional duration semantics change across executors", async () => {
+    // Legacy reports the model call's own duration as totalDurationNs; the
+    // sandbox reports the whole run's wall time including host calls, per
+    // the RunResult contract in specs/sandbox-runtime.md. Same units, but
+    // not the same measurement — this is the one acknowledged non-parity.
+    const script = wrapPromptAsEvaluationScript(`Judge: ${EVALUATION_CONVERSATION_PLACEHOLDER}`)
+
+    const legacy = await runLegacy(script, true)
+    expect(legacy.execution.totalDurationNs).toBe(DURATION_NS)
+
+    const HOST_DELAY_MS = 25
+    const { layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) =>
+        Effect.promise(async () => {
+          await new Promise((resolve) => setTimeout(resolve, HOST_DELAY_MS))
+          return {
+            object: input.schema.parse(judgment(true)),
+            tokens: TOKENS,
+            duration: DURATION_NS,
+            tokenUsage: TOKEN_USAGE,
+          } satisfies GenerateResult<T>
+        }),
+    })
+    const sandboxedExecution = await Effect.runPromise(
+      executeEvaluationScriptSandboxed({ script, conversation, issue }).pipe(
+        Effect.provide(Layer.mergeAll(aiLayer, QuickJsScriptRuntimeLive)),
+      ),
+    )
+
+    expect(sandboxedExecution.totalDurationNs).toBeGreaterThanOrEqual(HOST_DELAY_MS * 1_000_000)
+  })
+
   it("resolves the conversation placeholder to the exact prompt text", async () => {
     const script = wrapPromptAsEvaluationScript(`Judge: ${EVALUATION_CONVERSATION_PLACEHOLDER}`)
     const { prompts } = await runSandboxed(script, true)

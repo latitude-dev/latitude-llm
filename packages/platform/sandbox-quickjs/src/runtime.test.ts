@@ -266,9 +266,32 @@ if (result.passed) {
     expect(result).toMatchObject({ value: 1, feedback: "recovered" })
   })
 
-  it("calling llm without a host implementation is a runtime error", async () => {
+  it("fails fast when an llm-capability script runs without a host implementation", async () => {
     const script = await compile("await llm('x'); return Score(1)")
     const error = await runError({ script, context: { conversation: [] }, limits: tightLimits() })
+    expect(error._tag).toBe("ScriptRuntimeError")
+    expect(error.message).toContain("without a host llm implementation")
+  })
+
+  it("treats a forged llm() schema as a deterministic script error, never a transient host failure", async () => {
+    const calls: HostLlmCall[] = []
+    const script = await compile("const r = await llm('x', { schema: { kind: 'exploit' } }); return Score(1)")
+    const error = await runError({
+      script,
+      context: { conversation: [] },
+      llm: async (call) => {
+        calls.push(call)
+        return { object: {}, tokens: 0, duration: 0, cost: 0 }
+      },
+    })
+    expect(error._tag).toBe("ScriptRuntimeError")
+    expect(error.message).toContain("requires a schema built with the z global")
+    expect(calls).toHaveLength(0)
+  })
+
+  it("does not let scripts masquerade their own throws as transient host failures", async () => {
+    const script = await compile("const e = new Error('fake'); e.name = 'HostCallError'; throw e")
+    const error = await runError({ script, context: { conversation: [] } })
     expect(error._tag).toBe("ScriptRuntimeError")
   })
 })
