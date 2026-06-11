@@ -38,6 +38,9 @@ vi.mock("@platform/ai", async () => {
   // Matches the real signature: returning `Effect.provide(...)` directly
   // removes `AI` from the requirement channel, so call sites don't need casts.
   return {
+    AIEmbedLive: {},
+    AIGenerateLive: {},
+    AIRerankLive: {},
     withAi: (_layer?: unknown, _redisClient?: unknown) => Eff.provide(Layer.succeed(AI, mockAi)),
   }
 })

@@ -228,11 +228,9 @@ export const ESCALATION_SWEEPER_PATTERN = "0 * * * *"
 /** Half-life for exponential decay of centroid contributions, in seconds (14 days). */
 export const CENTROID_HALF_LIFE_SECONDS = 14 * 24 * 60 * 60
 
-/** Embedding model used for centroid vectors. */
-export const CENTROID_EMBEDDING_MODEL = "voyage-4-large"
-
-/** Embedding dimensionality. */
-export const CENTROID_EMBEDDING_DIMENSIONS = 2048
+// The embedding model is resolved at call time via `resolveEmbeddingConfig()`
+// (`@domain/ai`): default `voyage-4-large` at the fixed `EMBEDDING_DIMENSIONS`
+// (2048), overridable with `LAT_AI_EMBEDDING_{PROVIDER,MODEL}`.
 
 /** Source weights applied when contributing a score embedding to the centroid. */
 export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSource, number>> = {
@@ -270,15 +268,16 @@ export const ISSUE_DISCOVERY_RERANK_CANDIDATES = 25
 /** Minimum rerank relevance score required to accept an existing issue match. */
 export const ISSUE_DISCOVERY_MIN_RELEVANCE = 0.3
 
-/** Rerank model identifier for issue discovery candidate selection. */
-export const ISSUE_DISCOVERY_RERANK_MODEL = "rerank-2.5"
+// The rerank model is resolved at call time via `resolveRerankingConfig()`
+// (`@domain/ai`): default `rerank-2.5` on Voyage, overridable with
+// `LAT_AI_RERANKING_{PROVIDER,MODEL}`.
 
 // ---------------------------------------------------------------------------
 // Issue details generation
 // ---------------------------------------------------------------------------
 
 /** Language model used to generate stable issue names/descriptions. */
-export const ISSUE_DETAILS_GENERATION_MODEL = {
+export const ISSUE_DETAILS_DEFAULT_GENERATION_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",
   reasoning: "high",

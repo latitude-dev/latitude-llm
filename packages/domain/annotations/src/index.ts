@@ -1,4 +1,4 @@
-export { ANNOTATION_ENRICHMENT_MODEL } from "./constants.ts"
+export { ANNOTATION_DEFAULT_ENRICHMENT_MODEL } from "./constants.ts"
 export {
   ANNOTATION_ANCHOR_TEXT_FORMATS,
   type Annotation,

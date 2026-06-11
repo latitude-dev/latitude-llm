@@ -8,8 +8,7 @@ import {
 } from "@domain/monitors"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, SavedSearchMatchReaderLive, withClickHouse } from "@platform/db-clickhouse"
 import {

@@ -1,19 +1,16 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import { ProjectRepository } from "@domain/projects"
 import type { QueueConsumer } from "@domain/queue"
 import { LATITUDE_TELEMETRY_PROJECT_SLUGS, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import {
   buildTraceSearchDocument,
-  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
   TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
-  TRACE_SEARCH_EMBEDDING_MODEL,
   TraceRepository,
   TraceSearchBudget,
   type TraceSearchChunk,
   TraceSearchRepository,
 } from "@domain/spans"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import type { RedisClient } from "@platform/cache-redis"
 import { EmbedBudgetResolverLive, RedisCacheStoreLive, TraceSearchBudgetLive } from "@platform/cache-redis"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -72,26 +69,31 @@ export const resolveTraceSearchRetentionDays = (organizationId: string) =>
   )
 
 /**
- * Generate embedding for search text using the AI embedding service.
+ * Generate embedding for search text using the AI embedding service. Returns
+ * the embedding together with the model that produced it so the stored row
+ * stays tagged with its embedding space.
  */
-const generateEmbedding = (searchText: string): Effect.Effect<readonly number[], never, AI> =>
+const generateEmbedding = (
+  searchText: string,
+): Effect.Effect<{ readonly embedding: readonly number[]; readonly model: string } | null, never, AI> =>
   Effect.gen(function* () {
     const ai = yield* AI
+    const embedding = yield* resolveEmbeddingConfig()
     const result = yield* ai.embed({
       text: searchText,
-      model: TRACE_SEARCH_EMBEDDING_MODEL,
-      dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+      provider: embedding.provider,
+      model: embedding.model,
       telemetry: {
         spanName: "trace-search.embed",
         name: "trace-search-embed",
         tags: ["trace-search", "embedding"],
       },
     })
-    return result.embedding as readonly number[]
+    return { embedding: result.embedding as readonly number[], model: embedding.model }
   }).pipe(
     Effect.orElseSucceed(() => {
       logger.error("Failed to generate embedding")
-      return [] as number[]
+      return null
     }),
   )
 
@@ -223,9 +225,9 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
         break
       }
 
-      const embedding = yield* generateEmbedding(chunk.text)
+      const embedded = yield* generateEmbedding(chunk.text)
 
-      if (embedding.length === 0) {
+      if (embedded === null || embedded.embedding.length === 0) {
         logger.warn(`Failed to generate embedding for trace ${traceId} chunk ${chunk.chunkIndex}, skipping`)
         continue
       }
@@ -237,8 +239,8 @@ export const processRefreshTrace = (payload: RefreshTracePayload) =>
         chunkIndex: chunk.chunkIndex,
         startTime,
         contentHash: chunk.contentHash,
-        embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
-        embedding,
+        embeddingModel: embedded.model,
+        embedding: embedded.embedding,
         retentionDays,
         firstMessageIndex: chunk.firstMessageIndex,
         lastMessageIndex: chunk.lastMessageIndex,

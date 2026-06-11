@@ -18,9 +18,7 @@ import {
   type TaxonomyRun,
   TaxonomyRunRepository,
 } from "@domain/taxonomy"
-import { withAi } from "@platform/ai"
-import { AIGenerateLive } from "@platform/ai-vercel"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisCacheStoreLive, RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import { TaxonomyObservationRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {

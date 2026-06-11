@@ -1,4 +1,5 @@
-import { CENTROID_EMBEDDING_DIMENSIONS, type IssueCentroid, type IssuePriority, type IssueSource } from "@domain/issues"
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
+import type { IssueCentroid, IssuePriority, IssueSource } from "@domain/issues"
 import { sql } from "drizzle-orm"
 import { customType, index, jsonb, text, unique, uuid, varchar, vector } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
@@ -24,7 +25,7 @@ export const issues = latitudeSchema.table(
     // No IVFFlat/HNSW index: issues per project are expected in the hundreds to low thousands, so an
     // exact sequential scan over the project-scoped subset outperforms an approximate index (and
     // sidesteps HNSW's recall/precision tradeoff). Revisit if a single project crosses ~10k issues.
-    centroidEmbedding: vector("centroid_embedding", { dimensions: CENTROID_EMBEDDING_DIMENSIONS }),
+    centroidEmbedding: vector("centroid_embedding", { dimensions: EMBEDDING_DIMENSIONS }),
     searchDocument: tsvector("search_document")
       .generatedAlwaysAs(
         (): ReturnType<typeof sql> => sql`

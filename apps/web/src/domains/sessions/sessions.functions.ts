@@ -28,8 +28,7 @@ import {
   SpanRepository,
 } from "@domain/spans"
 import { TaxonomyClusterRepository } from "@domain/taxonomy"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,

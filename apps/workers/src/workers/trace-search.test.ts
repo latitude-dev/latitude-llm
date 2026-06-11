@@ -15,9 +15,11 @@ vi.mock("@platform/db-postgres", () => ({
   withPostgres: () => (effect: unknown) => effect,
 }))
 
-vi.mock("@domain/ai", () => ({ AI: {} }))
-vi.mock("@platform/ai", () => ({ withAi: () => (effect: unknown) => effect }))
-vi.mock("@platform/ai-voyage", () => ({ AIEmbedLive: {} }))
+vi.mock("@domain/ai", () => ({
+  AI: {},
+  resolveEmbeddingConfig: () => Effect.succeed({ provider: "voyage", model: "voyage-4-large" }),
+}))
+vi.mock("@platform/ai", () => ({ AIEmbedLive: {}, withAi: () => (effect: unknown) => effect }))
 vi.mock("@platform/cache-redis", () => ({
   EmbedBudgetResolverLive: {},
   RedisCacheStoreLive: () => ({}),

@@ -28,7 +28,7 @@ export const GEPA_RPC_METHODS = {
 
 // Opus 4.7 not working:
 // https://github.com/vercel/ai/issues/14773
-export const GEPA_PROPOSER_MODEL = {
+export const GEPA_DEFAULT_PROPOSER_MODEL = {
   provider: "amazon-bedrock",
   model: "anthropic.claude-sonnet-4-6",
   reasoning: "high",

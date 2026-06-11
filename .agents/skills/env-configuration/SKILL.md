@@ -14,7 +14,7 @@ All application environment variables **must** be prefixed with `LAT_` so they d
 **Use `LAT_` for:**
 
 - Database URLs and pool settings (`LAT_DATABASE_URL`, `LAT_PG_POOL_MAX`, …)
-- Service endpoints the app reads (`CLICKHOUSE_URL`, `LAT_REDIS_HOST`, …)
+- Service endpoints the app reads (`LAT_CLICKHOUSE_URL`, `LAT_REDIS_HOST`, …)
 - App ports (`LAT_API_PORT`, `LAT_WEB_PORT`, `LAT_INGEST_PORT`)
 - Auth, email, OAuth, billing, CORS (`LAT_BETTER_AUTH_SECRET`, `LAT_MAILPIT_HOST`, …)
 - Any new variable consumed by Latitude application code

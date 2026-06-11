@@ -30,7 +30,6 @@
   },
   "devDependencies": {
     "@latitude-data/sdk": "workspace:*",
-    "@platform/ai": "workspace:*",
-    "@platform/ai-vercel": "workspace:*"
+    "@platform/ai": "workspace:*"
   }
 }

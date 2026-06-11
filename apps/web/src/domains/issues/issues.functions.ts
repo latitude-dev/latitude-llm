@@ -37,8 +37,7 @@ import {
 } from "@domain/scores"
 import { IssueId, OrganizationId, ProjectId, resolveSettings, SettingsReader } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   EvaluationRepositoryLive,

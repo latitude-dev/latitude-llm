@@ -250,9 +250,6 @@ importers:
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
-      '@platform/ai-voyage':
-        specifier: workspace:*
-        version: link:../../packages/platform/ai-voyage
       '@platform/api-key-auth':
         specifier: workspace:*
         version: link:../../packages/platform/api-key-auth
@@ -477,9 +474,6 @@ importers:
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
-      '@platform/ai-voyage':
-        specifier: workspace:*
-        version: link:../../packages/platform/ai-voyage
       '@platform/api-key-auth':
         specifier: workspace:*
         version: link:../../packages/platform/api-key-auth
@@ -727,12 +721,6 @@ importers:
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
-      '@platform/ai-vercel':
-        specifier: workspace:*
-        version: link:../../packages/platform/ai-vercel
-      '@platform/ai-voyage':
-        specifier: workspace:*
-        version: link:../../packages/platform/ai-voyage
       '@platform/analytics-posthog':
         specifier: workspace:*
         version: link:../../packages/platform/analytics-posthog
@@ -845,12 +833,6 @@ importers:
       '@platform/ai':
         specifier: workspace:*
         version: link:../../packages/platform/ai
-      '@platform/ai-vercel':
-        specifier: workspace:*
-        version: link:../../packages/platform/ai-vercel
-      '@platform/ai-voyage':
-        specifier: workspace:*
-        version: link:../../packages/platform/ai-voyage
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
@@ -986,6 +968,9 @@ importers:
       '@latitude-data/telemetry':
         specifier: workspace:*
         version: link:../../telemetry/typescript
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../../platform/env
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -1358,9 +1343,6 @@ importers:
       '@platform/ai':
         specifier: workspace:*
         version: link:../../platform/ai
-      '@platform/ai-vercel':
-        specifier: workspace:*
-        version: link:../../platform/ai-vercel
 
   packages/domain/integrations:
     dependencies:
@@ -1876,6 +1858,12 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
+      '@platform/ai-vercel':
+        specifier: workspace:*
+        version: link:../ai-vercel
+      '@platform/ai-voyage':
+        specifier: workspace:*
+        version: link:../ai-voyage
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../cache-redis
@@ -1926,6 +1914,15 @@ importers:
       '@ai-sdk/anthropic':
         specifier: 4.0.0-beta.37
         version: 4.0.0-beta.37(zod@4.3.6)
+      '@ai-sdk/google':
+        specifier: 4.0.0-beta.49
+        version: 4.0.0-beta.49(zod@4.3.6)
+      '@ai-sdk/openai':
+        specifier: 4.0.0-beta.44
+        version: 4.0.0-beta.44(zod@4.3.6)
+      '@ai-sdk/openai-compatible':
+        specifier: 3.0.0-beta.36
+        version: 3.0.0-beta.36(zod@4.3.6)
       '@aws-sdk/credential-providers':
         specifier: 3.1045.0
         version: 3.1045.0
@@ -1950,6 +1947,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
+      '@platform/ai-latitude':
+        specifier: workspace:*
+        version: link:../ai-latitude
       '@platform/env':
         specifier: workspace:*
         version: link:../env
@@ -2136,6 +2136,9 @@ importers:
       '@domain/admin':
         specifier: workspace:*
         version: link:../../domain/admin
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../../domain/ai
       '@domain/alerts':
         specifier: workspace:*
         version: link:../../domain/alerts
@@ -2214,6 +2217,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: 'catalog:'
         version: 3.3.0
+      '@platform/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@platform/env':
         specifier: workspace:*
         version: link:../env
@@ -2238,9 +2244,6 @@ importers:
       stripe:
         specifier: 22.1.0
         version: 22.1.0(@types/node@25.9.1)
-      voyageai:
-        specifier: 'catalog:'
-        version: 0.2.1
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -3126,8 +3129,26 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/google@4.0.0-beta.49':
+    resolution: {integrity: sha512-lF+x9Rp2thx5UwERCrWAu8WNAxuSHdEDxIZ1zhbEBVLI+YdfP06S7Dp1POeTgmsgl4L29meiogoSqH6uNIAilg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai-compatible@3.0.0-beta.36':
+    resolution: {integrity: sha512-aYCyXlIgOonStbme/ZvPMntVZWiPcHrvn+HX/awO3SO+leoXv3ZwtAviFRk+2LuX57s+SQrPpMGlU+ZCEIQTHg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/openai@3.0.53':
     resolution: {integrity: sha512-Wld+Rbc05KaUn08uBt06eEuwcgalcIFtIl32Yp+GxuZXUQwOb6YeAuq+C6da4ch6BurFoqEaLemJVwjBb7x+PQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai@4.0.0-beta.44':
+    resolution: {integrity: sha512-kXdGA6vyh9SwL/B11UhODjbw0koFkDA/yD7hacBxMHSZx6l3T9hZLECEwOkn6OZDrQR+vno5Ka/pUyXrG82BkQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -3140,6 +3161,12 @@ packages:
 
   '@ai-sdk/provider-utils@5.0.0-beta.26':
     resolution: {integrity: sha512-nZAB5bvc4wFQnl6JiS8cLYftEqfnPKV0tZEztpX1y7B3XY4fpSD5ReYWGJWThQM3WFcnCw6jqj5wtcQsRSQ1gg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider-utils@5.0.0-beta.30':
+    resolution: {integrity: sha512-X3AxTsFJZr9Mw32SncWJA4/ShU8NA/XjhoallCYdcdQZ2gZZ/cIDyJJ6pNh1aBhicRNHv2ndgI6w/H2NGNIjOA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -13000,10 +13027,28 @@ snapshots:
       '@vercel/oidc': 3.2.0
       zod: 4.3.6
 
+  '@ai-sdk/google@4.0.0-beta.49(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.7
+      '@ai-sdk/provider-utils': 5.0.0-beta.30(zod@4.3.6)
+      zod: 4.3.6
+
+  '@ai-sdk/openai-compatible@3.0.0-beta.36(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.7
+      '@ai-sdk/provider-utils': 5.0.0-beta.30(zod@4.3.6)
+      zod: 4.3.6
+
   '@ai-sdk/openai@3.0.53(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 4.0.0-beta.7
       '@ai-sdk/provider-utils': 4.0.23(zod@4.3.6)
+      zod: 4.3.6
+
+  '@ai-sdk/openai@4.0.0-beta.44(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.7
+      '@ai-sdk/provider-utils': 5.0.0-beta.30(zod@4.3.6)
       zod: 4.3.6
 
   '@ai-sdk/provider-utils@4.0.23(zod@4.3.6)':
@@ -13014,6 +13059,14 @@ snapshots:
       zod: 4.3.6
 
   '@ai-sdk/provider-utils@5.0.0-beta.26(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.7
+      '@standard-schema/spec': 1.1.0
+      '@workflow/serde': 4.1.0
+      eventsource-parser: 3.0.8
+      zod: 4.3.6
+
+  '@ai-sdk/provider-utils@5.0.0-beta.30(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 4.0.0-beta.7
       '@standard-schema/spec': 1.1.0

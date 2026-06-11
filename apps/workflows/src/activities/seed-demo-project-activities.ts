@@ -1,16 +1,13 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import { ApiKeyId, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { createSeedScope, type SeedScope } from "@domain/shared/seeding"
 import {
   buildTraceSearchDocument,
-  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
   TRACE_SEARCH_EMBEDDING_MIN_LENGTH,
-  TRACE_SEARCH_EMBEDDING_MODEL,
   TraceRepository,
   TraceSearchRepository,
 } from "@domain/spans"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import {
   queryClickhouse,
   TraceRepositoryLive,
@@ -205,11 +202,12 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
             )
             if (hasExisting) continue
 
+            const embeddingConfig = yield* resolveEmbeddingConfig()
             const embedding = yield* ai
               .embed({
                 text: chunk.text,
-                model: TRACE_SEARCH_EMBEDDING_MODEL,
-                dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+                provider: embeddingConfig.provider,
+                model: embeddingConfig.model,
                 telemetry: {
                   spanName: "demo-project.trace-search.embed",
                   name: "demo-project-trace-search-embed",
@@ -234,7 +232,7 @@ export const seedDemoProjectTraceSearchActivity = (input: SeedDemoProjectActivit
               chunkIndex: chunk.chunkIndex,
               startTime,
               contentHash: chunk.contentHash,
-              embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+              embeddingModel: embeddingConfig.model,
               embedding: embedding.embedding as readonly number[],
               retentionDays: DEMO_PROJECT_RETENTION_DAYS,
               firstMessageIndex: chunk.firstMessageIndex,

@@ -23,8 +23,7 @@ import {
   mergeTraceHistogramTimeFilters,
   TraceRepository,
 } from "@domain/spans"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   SessionAnalysisRepositoryLive,

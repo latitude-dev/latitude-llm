@@ -1,4 +1,4 @@
-import { AI } from "@domain/ai"
+import { AI, resolveGenerationConfig } from "@domain/ai"
 import {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_DEFAULT_SEED,
@@ -20,12 +20,11 @@ import {
   Optimizer,
   splitOptimizationExamples,
 } from "@domain/optimizations"
-import { withAi } from "@platform/ai"
-import { AIGenerateLive } from "@platform/ai-vercel"
+import { AIGenerateLive, withAi } from "@platform/ai"
 import {
   buildGepaProposalPrompt,
+  GEPA_DEFAULT_PROPOSER_MODEL,
   GEPA_DEFAULT_REFLECTION_SIZE,
-  GEPA_PROPOSER_MODEL,
   GEPA_PROPOSER_SYSTEM_PROMPT,
   GepaOptimizerLive,
   gepaProposalOutputSchema,
@@ -72,8 +71,9 @@ const proposeOptimizationCandidate = (input: {
       }
 
       const ai = yield* AI
+      const modelConfig = yield* resolveGenerationConfig("GEPA_PROPOSER", GEPA_DEFAULT_PROPOSER_MODEL)
       const result = yield* ai.generate({
-        ...GEPA_PROPOSER_MODEL,
+        ...modelConfig,
         telemetry: buildEvaluationGepaProposeTelemetryCapture({
           organizationId: input.organizationId,
           projectId: input.projectId,

@@ -1,8 +1,7 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import { ScoreRepository } from "@domain/scores"
 import { ScoreId } from "@domain/shared"
 import { Effect } from "effect"
-import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_EMBEDDING_MODEL } from "../constants.ts"
 import { ScoreNotFoundForDiscoveryError } from "../errors.ts"
 import { normalizeEmbedding } from "../helpers.ts"
 
@@ -27,6 +26,7 @@ export const embedScoreFeedbackUseCase = Effect.fn("issues.embedScoreFeedback")(
   yield* Effect.annotateCurrentSpan("projectId", input.projectId)
   const scoreRepository = yield* ScoreRepository
   const ai = yield* AI
+  const embeddingConfig = yield* resolveEmbeddingConfig()
 
   const score = yield* scoreRepository
     .findById(ScoreId(input.scoreId))
@@ -39,8 +39,8 @@ export const embedScoreFeedbackUseCase = Effect.fn("issues.embedScoreFeedback")(
   const embed = (text: string, kind: "enriched" | "raw") =>
     ai.embed({
       text,
-      model: CENTROID_EMBEDDING_MODEL,
-      dimensions: CENTROID_EMBEDDING_DIMENSIONS,
+      provider: embeddingConfig.provider,
+      model: embeddingConfig.model,
       telemetry: {
         spanName: kind === "raw" ? "embed-score-raw-feedback" : "embed-score-feedback",
         tags: ["issues", "embedding"],

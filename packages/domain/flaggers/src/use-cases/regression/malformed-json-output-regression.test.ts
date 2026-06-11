@@ -1,10 +1,10 @@
 import { AIGenerate } from "@domain/ai"
 import { LatitudeApiClient } from "@latitude-data/sdk"
-import { AIGenerateLive } from "@platform/ai-vercel"
+import { AIGenerateLive } from "@platform/ai"
 import { Cause, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { FLAGGER_MAX_TOKENS, FLAGGER_MODEL } from "../../constants.ts"
+import { FLAGGER_DEFAULT_CLASSIFIER_MODEL } from "../../constants.ts"
 
 const REGRESSION_DATASET_PROJECT_SLUG = "latitude"
 const MALFORMED_JSON_OUTPUT_REGRESSION_DATASET_SLUG = "malformed-json-output-regression-test"
@@ -182,8 +182,8 @@ describe("flagger malformed JSON output regression dataset", () => {
           Effect.gen(function* () {
             const ai = yield* AIGenerate
             const result = yield* ai.generate<ClassifierOutput>({
-              ...FLAGGER_MODEL,
-              maxTokens: FLAGGER_MAX_TOKENS,
+              ...FLAGGER_DEFAULT_CLASSIFIER_MODEL,
+              maxTokens: FLAGGER_DEFAULT_CLASSIFIER_MODEL.maxTokens,
               system,
               prompt,
               schema: classifierOutputSchema,

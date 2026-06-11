@@ -2,8 +2,7 @@ import { submitApiAnnotationUseCase } from "@domain/annotations"
 import { ProjectRepository } from "@domain/projects"
 import { cuidSchema, UserId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,

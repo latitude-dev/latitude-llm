@@ -5,8 +5,7 @@ import type { AnnotationScore } from "@domain/scores"
 import { BadRequestError, cuidSchema, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import { getTraceAnalyticsUseCase, SpanRepository, TraceRepository } from "@domain/spans"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   MembershipRepositoryLive,

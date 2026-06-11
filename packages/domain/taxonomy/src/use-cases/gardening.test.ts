@@ -1,4 +1,4 @@
-import { AI, type AIShape, type GenerateInput, type GenerateResult } from "@domain/ai"
+import { AI, type AIShape, EMBEDDING_DIMENSIONS, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import {
@@ -15,7 +15,6 @@ import {
 import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { TAXONOMY_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import type { TaxonomyClusterLineage } from "../entities/lineage.ts"
 import type { TaxonomyMomentObservation } from "../entities/observation.ts"
@@ -38,7 +37,7 @@ const runId = TaxonomyRunId("r".repeat(24))
 const now = new Date("2026-05-24T12:00:00.000Z")
 
 const vector = (values: Record<number, number>) => {
-  const result = new Array(TAXONOMY_EMBEDDING_DIMENSIONS).fill(0)
+  const result = new Array(EMBEDDING_DIMENSIONS).fill(0)
   for (const [index, value] of Object.entries(values)) result[Number(index)] = value
   return result
 }

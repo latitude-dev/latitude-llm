@@ -15,20 +15,20 @@ if [ -f "$ENV_FILE" ]; then
   set +a
 fi
 
-if [ -z "${CLICKHOUSE_MIGRATION_URL+x}" ]; then
-  echo "Error: CLICKHOUSE_MIGRATION_URL must be declared"
+if [ -z "${LAT_CLICKHOUSE_MIGRATION_URL+x}" ]; then
+  echo "Error: LAT_CLICKHOUSE_MIGRATION_URL must be declared"
   exit 1
 fi
-if [ -z "${CLICKHOUSE_USER+x}" ]; then
-  echo "Error: CLICKHOUSE_USER must be declared"
+if [ -z "${LAT_CLICKHOUSE_USER+x}" ]; then
+  echo "Error: LAT_CLICKHOUSE_USER must be declared"
   exit 1
 fi
-if [ -z "${CLICKHOUSE_PASSWORD+x}" ]; then
-  echo "Error: CLICKHOUSE_PASSWORD must be declared"
+if [ -z "${LAT_CLICKHOUSE_PASSWORD+x}" ]; then
+  echo "Error: LAT_CLICKHOUSE_PASSWORD must be declared"
   exit 1
 fi
-if [ -z "${CLICKHOUSE_DB+x}" ]; then
-  echo "Error: CLICKHOUSE_DB must be declared"
+if [ -z "${LAT_CLICKHOUSE_DB+x}" ]; then
+  echo "Error: LAT_CLICKHOUSE_DB must be declared"
   exit 1
 fi
 
@@ -39,9 +39,9 @@ if ! command -v goose &>/dev/null; then
 fi
 
 # Strip scheme to get host:port
-CH_HOST_PORT="${CLICKHOUSE_MIGRATION_URL#clickhouse://}"
+CH_HOST_PORT="${LAT_CLICKHOUSE_MIGRATION_URL#clickhouse://}"
 
-if [ "${CLICKHOUSE_CLUSTER_ENABLED:-false}" = "true" ]; then
+if [ "${LAT_CLICKHOUSE_CLUSTER_ENABLED:-false}" = "true" ]; then
   MIGRATIONS_DIR="$PKG_DIR/clickhouse/migrations/clustered"
   IS_CLUSTERED=true
 else
@@ -59,29 +59,29 @@ fi
 
 # Clustered DDL should wait for replica metadata propagation.
 if [ "$IS_CLUSTERED" = "true" ]; then
-  DDL_ALTER_SYNC="${CLICKHOUSE_MIGRATION_ALTER_SYNC:-2}"
-  DDL_TASK_TIMEOUT_SECONDS="${CLICKHOUSE_MIGRATION_DISTRIBUTED_DDL_TASK_TIMEOUT_SECONDS:-300}"
-  DDL_INACTIVE_REPLICA_WAIT_SECONDS="${CLICKHOUSE_MIGRATION_REPLICA_WAIT_TIMEOUT_SECONDS:-300}"
+  DDL_ALTER_SYNC="${LAT_CLICKHOUSE_MIGRATION_ALTER_SYNC:-2}"
+  DDL_TASK_TIMEOUT_SECONDS="${LAT_CLICKHOUSE_MIGRATION_DISTRIBUTED_DDL_TASK_TIMEOUT_SECONDS:-300}"
+  DDL_INACTIVE_REPLICA_WAIT_SECONDS="${LAT_CLICKHOUSE_MIGRATION_REPLICA_WAIT_TIMEOUT_SECONDS:-300}"
 
   DB_QUERY_PARAMS+=("alter_sync=${DDL_ALTER_SYNC}")
   DB_QUERY_PARAMS+=("distributed_ddl_task_timeout=${DDL_TASK_TIMEOUT_SECONDS}")
   DB_QUERY_PARAMS+=("replication_wait_for_inactive_replica_timeout=${DDL_INACTIVE_REPLICA_WAIT_SECONDS}")
 fi
 
-DBSTRING="clickhouse://${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}@${CH_HOST_PORT}/${CLICKHOUSE_DB}"
+DBSTRING="clickhouse://${LAT_CLICKHOUSE_USER}:${LAT_CLICKHOUSE_PASSWORD}@${CH_HOST_PORT}/${LAT_CLICKHOUSE_DB}"
 if [ "${#DB_QUERY_PARAMS[@]}" -gt 0 ]; then
   DB_QUERY_STRING="$(IFS='&'; echo "${DB_QUERY_PARAMS[*]}")"
   DBSTRING="${DBSTRING}?${DB_QUERY_STRING}"
 fi
 
-echo "Running ClickHouse migrations on database: ${CLICKHOUSE_DB}"
+echo "Running ClickHouse migrations on database: ${LAT_CLICKHOUSE_DB}"
 if [ "$IS_CLUSTERED" = "true" ]; then
   echo "Clustered DDL settings: alter_sync=${DDL_ALTER_SYNC}, distributed_ddl_task_timeout=${DDL_TASK_TIMEOUT_SECONDS}, replication_wait_for_inactive_replica_timeout=${DDL_INACTIVE_REPLICA_WAIT_SECONDS}"
 fi
 
-MAX_RETRIES="${CLICKHOUSE_MIGRATION_MAX_RETRIES:-20}"
-RETRY_DELAY_SECONDS="${CLICKHOUSE_MIGRATION_RETRY_DELAY_SECONDS:-5}"
-MAX_RETRY_DELAY_SECONDS="${CLICKHOUSE_MIGRATION_MAX_RETRY_DELAY_SECONDS:-30}"
+MAX_RETRIES="${LAT_CLICKHOUSE_MIGRATION_MAX_RETRIES:-20}"
+RETRY_DELAY_SECONDS="${LAT_CLICKHOUSE_MIGRATION_RETRY_DELAY_SECONDS:-5}"
+MAX_RETRY_DELAY_SECONDS="${LAT_CLICKHOUSE_MIGRATION_MAX_RETRY_DELAY_SECONDS:-30}"
 current_delay_seconds="$RETRY_DELAY_SECONDS"
 
 attempt=1
@@ -106,7 +106,7 @@ while true; do
   if [ "$attempt" -ge "$MAX_RETRIES" ] || [ "$is_retryable_replica_lag" != "true" ]; then
     echo "ClickHouse migrations failed after ${attempt} attempt(s)." >&2
     if [ "$is_retryable_replica_lag" = "true" ]; then
-      echo "Hint: increase CLICKHOUSE_MIGRATION_MAX_RETRIES or CLICKHOUSE_MIGRATION_RETRY_DELAY_SECONDS for heavily loaded clusters." >&2
+      echo "Hint: increase LAT_CLICKHOUSE_MIGRATION_MAX_RETRIES or LAT_CLICKHOUSE_MIGRATION_RETRY_DELAY_SECONDS for heavily loaded clusters." >&2
     fi
     exit "$goose_status"
   fi

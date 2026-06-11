@@ -11,8 +11,7 @@ import {
 import { BadRequestError, OrganizationId, ProjectId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   OutboxEventWriterLive,

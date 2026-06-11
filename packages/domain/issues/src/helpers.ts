@@ -1,3 +1,4 @@
+import { DEFAULT_EMBEDDING_CONFIG, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import type { EntrySignalsSnapshot } from "@domain/alerts"
 import type { IssueEscalationSignals, ScoreSource } from "@domain/scores"
 import {
@@ -7,8 +8,6 @@ import {
   updateCentroid,
 } from "@domain/shared"
 import {
-  CENTROID_EMBEDDING_DIMENSIONS,
-  CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
   ESCALATION_ABSOLUTE_RATE_EXIT_FACTOR,
@@ -28,11 +27,13 @@ const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 /**
  * Create a brand-new issue centroid with the current discovery configuration.
  * Use this only when creating a new issue before it has any clustered scores.
+ * Callers with a resolved embedding config pass its model; the default keeps
+ * tests and legacy paths on the stock configuration.
  */
-export const createIssueCentroid = (): IssueCentroid =>
+export const createIssueCentroid = (model: string = DEFAULT_EMBEDDING_CONFIG.model): IssueCentroid =>
   createCentroid({
-    dimensions: CENTROID_EMBEDDING_DIMENSIONS,
-    model: CENTROID_EMBEDDING_MODEL,
+    dimensions: EMBEDDING_DIMENSIONS,
+    model,
     halfLifeSeconds: CENTROID_HALF_LIFE_SECONDS,
     weights: { ...CENTROID_SOURCE_WEIGHTS },
   }) as IssueCentroid

@@ -4,8 +4,7 @@ import {
 } from "@domain/annotations"
 import { type AnnotationScore, ScoreRepository, writeScoreUseCase } from "@domain/scores"
 import { BadRequestError, OrganizationId, ScoreId } from "@domain/shared"
-import { withAi } from "@platform/ai"
-import { AIGenerateLive } from "@platform/ai-vercel"
+import { AIGenerateLive, withAi } from "@platform/ai"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,

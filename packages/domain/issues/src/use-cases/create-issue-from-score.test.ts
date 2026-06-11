@@ -1,4 +1,5 @@
 import type { GenerateInput, GenerateResult } from "@domain/ai"
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { OutboxEventWriter, type OutboxWriteEvent } from "@domain/events"
 import { type AnnotationScore, type Score, ScoreRepository } from "@domain/scores"
@@ -6,7 +7,6 @@ import { createFakeScoreRepository } from "@domain/scores/testing"
 import { IssueId, OrganizationId, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
 import { createIssueFromScoreUseCase } from "./create-issue-from-score.ts"
@@ -26,7 +26,7 @@ const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
 
 const makeEmbedding = (): number[] =>
-  Array.from({ length: CENTROID_EMBEDDING_DIMENSIONS }, (_, index) => {
+  Array.from({ length: EMBEDDING_DIMENSIONS }, (_, index) => {
     if (index === 0) return 3
     if (index === 1) return 4
     return 0

@@ -38,10 +38,10 @@ if [ -f "$ENV_FILE" ]; then
   set +a
 fi
 
-CH_URL="${CLICKHOUSE_URL:-http://localhost:8123}"
-CH_USER="${CLICKHOUSE_USER:-latitude}"
-CH_PASS="${CLICKHOUSE_PASSWORD:-secret}"
-CH_DB="${CLICKHOUSE_DB:-latitude_development}"
+CH_URL="${LAT_CLICKHOUSE_URL:-http://localhost:8123}"
+CH_USER="${LAT_CLICKHOUSE_USER:-latitude}"
+CH_PASS="${LAT_CLICKHOUSE_PASSWORD:-secret}"
+CH_DB="${LAT_CLICKHOUSE_DB:-latitude_development}"
 OUTPUT="$ROOT_DIR/packages/platform/testkit/src/clickhouse/schema.sql"
 
 tables=$(curl -s "${CH_URL}/?user=${CH_USER}&password=${CH_PASS}&database=${CH_DB}" \

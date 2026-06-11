@@ -21,7 +21,7 @@ import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { FLAGGER_INSTRUCTION_EXTRACTOR_MODEL, FLAGGER_MAX_TOKENS, FLAGGER_MODEL } from "../constants.ts"
+import { FLAGGER_DEFAULT_CLASSIFIER_MODEL, FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL } from "../constants.ts"
 import type { Flagger } from "../entities/flagger.ts"
 import { FlaggerRepository } from "../ports/flagger-repository.ts"
 import { createFakeFlaggerRepository } from "../testing/fake-flagger-repository.ts"
@@ -188,8 +188,8 @@ describe("runFlaggerUseCase", () => {
     expect(result).toEqual({ matched: true, feedback: "Flagger matched with concrete evidence." })
     expect(calls.generate).toHaveLength(2)
     expect(calls.generate[0]).toMatchObject({
-      ...FLAGGER_MODEL,
-      maxTokens: FLAGGER_MAX_TOKENS,
+      ...FLAGGER_DEFAULT_CLASSIFIER_MODEL,
+      maxTokens: FLAGGER_DEFAULT_CLASSIFIER_MODEL.maxTokens,
       telemetry: {
         spanName: "flagger.classify",
         tags: [...AI_GENERATE_TELEMETRY_TAGS.flaggerClassify],
@@ -335,7 +335,7 @@ describe("runFlaggerUseCase", () => {
 
     expect(result).toEqual({ matched: false })
     expect(calls.generate).toHaveLength(2)
-    expect(calls.generate[0]).toMatchObject(FLAGGER_INSTRUCTION_EXTRACTOR_MODEL)
+    expect(calls.generate[0]).toMatchObject(FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL)
     expect(calls.generate[0].system).toContain("You extract agent context")
     expect(calls.generate[1].prompt).toContain("EVALUATED AGENT CONTEXT")
     expect(calls.generate[1].prompt).toContain("dashboard design assistant")
@@ -858,7 +858,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       generate: () =>
         Effect.fail(
           new AIError({
-            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No object generated: response did not match schema.`,
+            message: `AI generation failed (${FLAGGER_DEFAULT_CLASSIFIER_MODEL.provider}/${FLAGGER_DEFAULT_CLASSIFIER_MODEL.model}): No object generated: response did not match schema.`,
             cause: sdkError,
           }),
         ),
@@ -971,7 +971,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       generate: () =>
         Effect.fail(
           new AIError({
-            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No object generated: response did not match schema.`,
+            message: `AI generation failed (${FLAGGER_DEFAULT_CLASSIFIER_MODEL.provider}/${FLAGGER_DEFAULT_CLASSIFIER_MODEL.model}): No object generated: response did not match schema.`,
             cause: sdkError,
           }),
         ),
@@ -1019,7 +1019,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       generate: () =>
         Effect.fail(
           new AIError({
-            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No object generated: response did not match schema.`,
+            message: `AI generation failed (${FLAGGER_DEFAULT_CLASSIFIER_MODEL.provider}/${FLAGGER_DEFAULT_CLASSIFIER_MODEL.model}): No object generated: response did not match schema.`,
             cause: new Error("No object generated: response did not match schema."),
           }),
         ),
@@ -1067,7 +1067,7 @@ ${"Detailed grounding, workflow, callout, and formatting rules. ".repeat(120)}`.
       generate: () =>
         Effect.fail(
           new AIError({
-            message: `AI generation failed (${FLAGGER_MODEL.provider}/${FLAGGER_MODEL.model}): No output generated.`,
+            message: `AI generation failed (${FLAGGER_DEFAULT_CLASSIFIER_MODEL.provider}/${FLAGGER_DEFAULT_CLASSIFIER_MODEL.model}): No output generated.`,
             cause: sdkError,
           }),
         ),

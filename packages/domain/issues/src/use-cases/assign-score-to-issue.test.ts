@@ -1,3 +1,4 @@
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
 import { type AnnotationScore, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
@@ -11,7 +12,6 @@ import {
 } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
@@ -23,7 +23,7 @@ const projectId = "pppppppppppppppppppppppp"
 const otherProjectId = "qqqqqqqqqqqqqqqqqqqqqqqq"
 
 const makeEmbedding = (): number[] =>
-  Array.from({ length: CENTROID_EMBEDDING_DIMENSIONS }, (_, index) => {
+  Array.from({ length: EMBEDDING_DIMENSIONS }, (_, index) => {
     if (index === 0) return 0.6
     if (index === 1) return 0.8
     return 0

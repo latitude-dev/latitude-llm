@@ -1,10 +1,6 @@
+import { DEFAULT_EMBEDDING_CONFIG, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { OrganizationId, ProjectId, SEED_ORG_ID, SEED_PROJECT_ID, TraceId } from "@domain/shared/seeding"
-import {
-  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
-  TRACE_SEARCH_EMBEDDING_MODEL,
-  TraceSearchRepository,
-  type TraceSearchRepositoryShape,
-} from "@domain/spans"
+import { TraceSearchRepository, type TraceSearchRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -58,8 +54,8 @@ describe("TraceSearchRepository", () => {
           chunkIndex: 0,
           startTime: new Date(),
           contentHash: "abc123".repeat(8),
-          embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
-          embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1),
+          embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
+          embedding: new Array(EMBEDDING_DIMENSIONS).fill(0.1),
         }),
       )
 
@@ -87,8 +83,8 @@ describe("TraceSearchRepository", () => {
           chunkIndex: 2,
           startTime: new Date(),
           contentHash,
-          embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
-          embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1),
+          embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
+          embedding: new Array(EMBEDDING_DIMENSIONS).fill(0.1),
         }),
       )
 
@@ -109,7 +105,7 @@ describe("TraceSearchRepository", () => {
     // So `semantic_score = 1 - cosineDistance` is 1.0 for the aligned chunk
     // and 0.0 for any orthogonal chunk.
     const basisVector = (oneAt: number): number[] => {
-      const v = new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0)
+      const v = new Array(EMBEDDING_DIMENSIONS).fill(0)
       v[oneAt] = 1
       return v
     }
@@ -140,7 +136,7 @@ describe("TraceSearchRepository", () => {
           chunkIndex: 0,
           startTime,
           contentHash: "c0".repeat(32),
-          embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
           embedding: basisVector(0),
           firstMessageIndex: 4,
           lastMessageIndex: 7,
@@ -154,7 +150,7 @@ describe("TraceSearchRepository", () => {
           chunkIndex: 1,
           startTime,
           contentHash: "c1".repeat(32),
-          embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
           embedding: basisVector(1),
           firstMessageIndex: 12,
           lastMessageIndex: 14,
@@ -186,7 +182,7 @@ describe("TraceSearchRepository", () => {
           chunkIndex: 0,
           startTime: new Date(),
           contentHash: "legacy".repeat(8).slice(0, 64),
-          embeddingModel: TRACE_SEARCH_EMBEDDING_MODEL,
+          embeddingModel: DEFAULT_EMBEDDING_CONFIG.model,
           embedding: basisVector(0),
         }),
       )

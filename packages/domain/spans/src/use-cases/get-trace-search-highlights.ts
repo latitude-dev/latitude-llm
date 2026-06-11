@@ -1,11 +1,7 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import type { ChSqlClient, OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
 import { Effect, Option } from "effect"
-import {
-  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
-  TRACE_SEARCH_EMBEDDING_MODEL,
-  TRACE_SEARCH_MIN_RELEVANCE_SCORE,
-} from "../constants.ts"
+import { TRACE_SEARCH_MIN_RELEVANCE_SCORE } from "../constants.ts"
 import { TraceRepository } from "../ports/trace-repository.ts"
 import { TraceSearchRepository, type TraceSemanticHighlightMatch } from "../ports/trace-search-repository.ts"
 import { computeTraceSearchHighlights, type TraceSearchHighlightsResult } from "./compute-trace-search-highlights.ts"
@@ -103,11 +99,14 @@ const findSemanticMatch = (args: {
     const aiOption = yield* Effect.serviceOption(AI)
     if (Option.isNone(aiOption)) return null
 
+    const embedding = yield* resolveEmbeddingConfig().pipe(Effect.orElseSucceed(() => undefined))
+    if (embedding === undefined) return null
+
     const embedResult = yield* aiOption.value
       .embed({
         text: args.semanticPrompt,
-        model: TRACE_SEARCH_EMBEDDING_MODEL,
-        dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+        provider: embedding.provider,
+        model: embedding.model,
         inputType: "query",
       })
       .pipe(Effect.orElseSucceed(() => undefined))

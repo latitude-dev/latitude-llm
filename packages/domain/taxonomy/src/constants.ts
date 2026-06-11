@@ -49,9 +49,9 @@ export const TAXONOMY_OBSERVATION_ASSIGNMENT_METHODS = [
 // Embedding + summary
 // ---------------------------------------------------------------------------
 
-/** Same family as `@domain/issues` + trace-search, single embedding-account surface. */
-export const TAXONOMY_EMBEDDING_MODEL = "voyage-4-large"
-export const TAXONOMY_EMBEDDING_DIMENSIONS = 2048
+// The embedding model is resolved at call time via `resolveEmbeddingConfig()`
+// (`@domain/ai`) — same global config as `@domain/issues` + trace-search,
+// single embedding surface, fixed `EMBEDDING_DIMENSIONS` (2048).
 
 export const TAXONOMY_PROJECTION_METHODS = ["moment_text_embedding", "session_user_intent_embedding"] as const
 
@@ -122,10 +122,13 @@ export const TAXONOMY_NOISE_LOOKBACK_DAYS = 7
 export const TAXONOMY_SEARCH_MIN_SCORE = 0.2
 export const TAXONOMY_SEARCH_MIN_VECTOR_SIMILARITY = 0.5
 
-export const TAXONOMY_NAMING_MODEL = {
+export const TAXONOMY_DEFAULT_NAMING_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",
+  temperature: 0.2,
+  maxTokens: 1600,
 } as const
+
 export const TAXONOMY_NAMING_REFRESH_OBSERVATIONS = 25
 export const TAXONOMY_NAMING_TIMEOUT_MS = 60_000
 

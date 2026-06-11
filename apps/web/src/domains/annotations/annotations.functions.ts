@@ -9,8 +9,7 @@ import { WorkflowStarter } from "@domain/queue"
 import type { AnnotationScore, ScoreListPage } from "@domain/scores"
 import { annotationAnchorSchema, ScoreRepository, scoreDraftModeSchema } from "@domain/scores"
 import { ProjectId, ScoreId, TraceId } from "@domain/shared"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,

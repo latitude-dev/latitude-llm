@@ -1,4 +1,4 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import { OrganizationId, ProjectId, SessionId, TaxonomyClusterId, TraceId } from "@domain/shared"
 import { type SessionDetail, SessionRepository } from "@domain/spans"
 import {
@@ -18,8 +18,6 @@ import { z } from "zod"
 import { embedAnchorText, MOMENT_LABEL_ANCHORS } from "../anchors.ts"
 import {
   CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
-  CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
-  CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
   CONVERSATION_INTELLIGENCE_LLM_MAX_DOCUMENT_CHARS,
   CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH,
   CONVERSATION_INTELLIGENCE_RETENTION_DAYS,
@@ -98,14 +96,15 @@ const buildSessionConversationProjectionText = (messages: readonly NormalizedMes
 const embedTurns = (messages: readonly NormalizedMessage[]) =>
   Effect.gen(function* () {
     const ai = yield* AI
+    const embeddingConfig = yield* resolveEmbeddingConfig()
     return yield* Effect.forEach(
       messages.filter((message) => message.role !== "tool"),
       (message) =>
         ai
           .embed({
             text: `${message.role}: ${message.text}`,
-            model: CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
-            dimensions: CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
+            provider: embeddingConfig.provider,
+            model: embeddingConfig.model,
             inputType: "document",
           })
           .pipe(
@@ -480,10 +479,11 @@ export const analyzeSessionUseCase = (input: AnalyzeSessionInput) =>
       const projectionText = buildSessionConversationProjectionText(normalizedMessages)
       if (projectionText.length === 0) return [] as TaxonomyMomentObservation[]
       const ai = yield* AI
+      const embeddingConfig = yield* resolveEmbeddingConfig()
       const projectionEmbedding = yield* ai.embed({
         text: projectionText,
-        model: CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
-        dimensions: CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
+        provider: embeddingConfig.provider,
+        model: embeddingConfig.model,
         inputType: "document",
       })
       const projectionVector = normalizeTaxonomyEmbedding(projectionEmbedding.embedding)

@@ -1,1 +1,1 @@
-export { AIEmbedLive, AIRerankLive } from "./ai.ts"
+export { embedWithVoyage, rerankWithVoyage } from "./ai.ts"

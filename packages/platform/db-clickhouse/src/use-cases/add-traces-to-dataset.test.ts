@@ -1,4 +1,4 @@
-import { AI, AIError, type AIShape } from "@domain/ai"
+import { AI, AIError, type AIShape, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import {
   addTracesToDataset,
   createDatasetFromTraces,
@@ -28,7 +28,7 @@ import {
   TraceId,
 } from "@domain/shared/seeding"
 import type { TraceDetail } from "@domain/spans"
-import { TRACE_SEARCH_EMBEDDING_DIMENSIONS, TraceRepository } from "@domain/spans"
+import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect, Layer } from "effect"
@@ -42,7 +42,7 @@ import { withClickHouse } from "../with-clickhouse.ts"
 /** Mock AI layer that provides a fake embedding service for testing. */
 const mockAILayer = Layer.succeed(AI, {
   generate: () => Effect.fail(new AIError({ message: "Generate not implemented in mock" })),
-  embed: () => Effect.succeed({ embedding: new Array(TRACE_SEARCH_EMBEDDING_DIMENSIONS).fill(0.1) }),
+  embed: () => Effect.succeed({ embedding: new Array(EMBEDDING_DIMENSIONS).fill(0.1) }),
   rerank: () => Effect.fail(new AIError({ message: "Rerank not implemented in mock" })),
 } as AIShape)
 

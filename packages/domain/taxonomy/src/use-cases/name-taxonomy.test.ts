@@ -1,4 +1,4 @@
-import { AI, type AIShape, type GenerateInput, type GenerateResult } from "@domain/ai"
+import { AI, type AIShape, DEFAULT_EMBEDDING_CONFIG, type GenerateInput, type GenerateResult } from "@domain/ai"
 import {
   ChSqlClient,
   DistributedLockRepository,
@@ -11,7 +11,7 @@ import {
 import { createFakeChSqlClient, createFakeDistributedLockRepository, createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { TAXONOMY_CENTROID_HALF_LIFE_SECONDS, TAXONOMY_EMBEDDING_MODEL } from "../constants.ts"
+import { TAXONOMY_CENTROID_HALF_LIFE_SECONDS } from "../constants.ts"
 import type { TaxonomyCluster } from "../entities/cluster.ts"
 import {
   type TaxonomyMomentObservation,
@@ -43,7 +43,7 @@ const cluster = (overrides: Partial<TaxonomyCluster> = {}): TaxonomyCluster => (
   centroid: {
     base: [1, 0],
     mass: 1,
-    model: TAXONOMY_EMBEDDING_MODEL,
+    model: DEFAULT_EMBEDDING_CONFIG.model,
     decay: TAXONOMY_CENTROID_HALF_LIFE_SECONDS,
     weights: { default: 1 },
   },

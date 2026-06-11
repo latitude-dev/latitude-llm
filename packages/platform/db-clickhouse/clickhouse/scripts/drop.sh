@@ -15,20 +15,20 @@ if [ -f "$ENV_FILE" ]; then
 	set +a
 fi
 
-if [ -z "${CLICKHOUSE_MIGRATION_URL+x}" ]; then
-	echo "Error: CLICKHOUSE_MIGRATION_URL must be declared"
+if [ -z "${LAT_CLICKHOUSE_MIGRATION_URL+x}" ]; then
+	echo "Error: LAT_CLICKHOUSE_MIGRATION_URL must be declared"
 	exit 1
 fi
-if [ -z "${CLICKHOUSE_USER+x}" ]; then
-	echo "Error: CLICKHOUSE_USER must be declared"
+if [ -z "${LAT_CLICKHOUSE_USER+x}" ]; then
+	echo "Error: LAT_CLICKHOUSE_USER must be declared"
 	exit 1
 fi
-if [ -z "${CLICKHOUSE_PASSWORD+x}" ]; then
-	echo "Error: CLICKHOUSE_PASSWORD must be declared"
+if [ -z "${LAT_CLICKHOUSE_PASSWORD+x}" ]; then
+	echo "Error: LAT_CLICKHOUSE_PASSWORD must be declared"
 	exit 1
 fi
-if [ -z "${CLICKHOUSE_DB+x}" ]; then
-	echo "Error: CLICKHOUSE_DB must be declared"
+if [ -z "${LAT_CLICKHOUSE_DB+x}" ]; then
+	echo "Error: LAT_CLICKHOUSE_DB must be declared"
 	exit 1
 fi
 
@@ -39,10 +39,10 @@ if ! command -v goose &>/dev/null; then
 fi
 
 # Strip scheme to get host:port
-CH_HOST_PORT="${CLICKHOUSE_MIGRATION_URL#clickhouse://}"
-DBSTRING="clickhouse://${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}@${CH_HOST_PORT}/${CLICKHOUSE_DB}"
+CH_HOST_PORT="${LAT_CLICKHOUSE_MIGRATION_URL#clickhouse://}"
+DBSTRING="clickhouse://${LAT_CLICKHOUSE_USER}:${LAT_CLICKHOUSE_PASSWORD}@${CH_HOST_PORT}/${LAT_CLICKHOUSE_DB}"
 
-if [ "${CLICKHOUSE_CLUSTER_ENABLED:-false}" = "true" ]; then
+if [ "${LAT_CLICKHOUSE_CLUSTER_ENABLED:-false}" = "true" ]; then
 	MIGRATIONS_DIR="$PKG_DIR/clickhouse/migrations/clustered"
 else
 	MIGRATIONS_DIR="$PKG_DIR/clickhouse/migrations/unclustered"

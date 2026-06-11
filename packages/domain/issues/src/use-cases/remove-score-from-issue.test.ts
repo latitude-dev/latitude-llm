@@ -1,8 +1,8 @@
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { IssueId, OrganizationId, SqlClient } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid, updateIssueCentroid } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
@@ -14,7 +14,7 @@ const projectId = "pppppppppppppppppppppppp"
 const issueId = IssueId("iiiiiiiiiiiiiiiiiiiiiiii")
 
 const makeEmbedding = (): number[] =>
-  Array.from({ length: CENTROID_EMBEDDING_DIMENSIONS }, (_, index) => {
+  Array.from({ length: EMBEDDING_DIMENSIONS }, (_, index) => {
     if (index === 0) return 0.6
     if (index === 1) return 0.8
     return 0
@@ -161,7 +161,7 @@ describe("removeScoreFromIssueUseCase", () => {
     const scoreCreatedAt1 = new Date("2026-03-30T08:00:00.000Z")
     const scoreCreatedAt2 = new Date("2026-03-30T10:00:00.000Z")
     const embedding1 = makeEmbedding()
-    const embedding2 = Array.from({ length: CENTROID_EMBEDDING_DIMENSIONS }, (_, i) => (i === 2 ? 1 : 0))
+    const embedding2 = Array.from({ length: EMBEDDING_DIMENSIONS }, (_, i) => (i === 2 ? 1 : 0))
 
     let centroid = updateIssueCentroid({
       centroid: { ...createIssueCentroid(), clusteredAt: new Date("2026-03-29T10:00:00.000Z") },

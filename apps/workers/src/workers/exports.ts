@@ -14,8 +14,7 @@ import {
   type StorageDiskPort,
 } from "@domain/shared"
 import { buildTracesExportUseCase } from "@domain/spans"
-import { withAi } from "@platform/ai"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, withAi } from "@platform/ai"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import {
   DatasetRowRepositoryLive,

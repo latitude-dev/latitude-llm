@@ -1,5 +1,6 @@
+import { EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { describe, expect, it } from "vitest"
-import { TAXONOMY_CENTROID_HALF_LIFE_SECONDS, TAXONOMY_EMBEDDING_DIMENSIONS } from "./constants.ts"
+import { TAXONOMY_CENTROID_HALF_LIFE_SECONDS } from "./constants.ts"
 import type { TaxonomyCentroid } from "./entities/cluster.ts"
 import {
   clamp,
@@ -26,7 +27,7 @@ const normalize = (v: readonly number[]): number[] => normalizeTaxonomyEmbedding
 describe("taxonomy centroid helpers", () => {
   it("creates a centroid with the configured dimensions and weight scheme", () => {
     const centroid = createTaxonomyCentroid()
-    expect(centroid.base).toHaveLength(TAXONOMY_EMBEDDING_DIMENSIONS)
+    expect(centroid.base).toHaveLength(EMBEDDING_DIMENSIONS)
     expect(centroid.mass).toBe(0)
     expect(centroid.decay).toBe(TAXONOMY_CENTROID_HALF_LIFE_SECONDS)
     expect(centroid.weights).toEqual({ default: 1.0 })
@@ -38,7 +39,7 @@ describe("taxonomy centroid helpers", () => {
       ...createTaxonomyCentroid(),
       clusteredAt: baseTimestamp,
     }
-    const embedding = makeVector(TAXONOMY_EMBEDDING_DIMENSIONS, [
+    const embedding = makeVector(EMBEDDING_DIMENSIONS, [
       [0, 1],
       [1, 0],
     ])
@@ -62,7 +63,7 @@ describe("taxonomy centroid helpers", () => {
       ...createTaxonomyCentroid(),
       clusteredAt: start,
     }
-    const embedding = makeVector(TAXONOMY_EMBEDDING_DIMENSIONS, [[0, 1]])
+    const embedding = makeVector(EMBEDDING_DIMENSIONS, [[0, 1]])
     const afterFirst = updateTaxonomyCentroid({
       centroid,
       embedding,
@@ -93,7 +94,7 @@ describe("taxonomy centroid helpers", () => {
       ...createTaxonomyCentroid(),
       clusteredAt: start,
     }
-    const embedding = makeVector(TAXONOMY_EMBEDDING_DIMENSIONS, [[5, 1]])
+    const embedding = makeVector(EMBEDDING_DIMENSIONS, [[5, 1]])
     const added = updateTaxonomyCentroid({
       centroid,
       embedding,

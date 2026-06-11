@@ -1,8 +1,7 @@
+import { DEFAULT_EMBEDDING_CONFIG, EMBEDDING_DIMENSIONS } from "@domain/ai"
 import { createCentroid, normalizeCentroid, normalizeEmbedding, updateCentroid } from "@domain/shared"
 import {
   TAXONOMY_CENTROID_HALF_LIFE_SECONDS,
-  TAXONOMY_EMBEDDING_DIMENSIONS,
-  TAXONOMY_EMBEDDING_MODEL,
   TAXONOMY_OBSERVATION_WEIGHT_SCHEME,
   TAXONOMY_PENDING_DISPLAY_NAME,
   type TaxonomyObservationWeightScheme,
@@ -15,10 +14,10 @@ export const isDisplayableTaxonomyName = (name: string): boolean => name !== TAX
 // Centroid wrappers — taxonomy-shaped delegators to @domain/shared/centroid.
 // ---------------------------------------------------------------------------
 
-export const createTaxonomyCentroid = (): TaxonomyCentroid =>
+export const createTaxonomyCentroid = (model: string = DEFAULT_EMBEDDING_CONFIG.model): TaxonomyCentroid =>
   createCentroid<TaxonomyObservationWeightScheme>({
-    dimensions: TAXONOMY_EMBEDDING_DIMENSIONS,
-    model: TAXONOMY_EMBEDDING_MODEL,
+    dimensions: EMBEDDING_DIMENSIONS,
+    model,
     halfLifeSeconds: TAXONOMY_CENTROID_HALF_LIFE_SECONDS,
     weights: TAXONOMY_OBSERVATION_WEIGHT_SCHEME,
   }) as TaxonomyCentroid

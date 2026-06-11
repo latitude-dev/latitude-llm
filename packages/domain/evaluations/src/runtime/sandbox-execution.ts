@@ -1,9 +1,9 @@
-import { AI, AICredentialError, AIError, type GenerateTelemetryCapture } from "@domain/ai"
+import { AI, AICredentialError, AIError, type GenerateTelemetryCapture, resolveGenerationConfig } from "@domain/ai"
 import { buildSchemaFromDescriptor, type HostLlmFunction, isScoreMatch, ScriptRuntime } from "@domain/sandbox"
 import { Effect } from "effect"
 import { EvaluationExecutionError } from "../errors.ts"
 import {
-  EVALUATION_SCRIPT_RUNTIME_MODEL,
+  EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
   type EvaluationConversationMessage,
   type EvaluationIssueContext,
@@ -34,6 +34,7 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
     const runtime = yield* ScriptRuntime
     const ai = yield* AI
     const services = yield* Effect.context<never>()
+    const modelConfig = yield* resolveGenerationConfig("EVALUATION_JUDGE", EVALUATION_DEFAULT_SCRIPT_RUNTIME_MODEL)
 
     const compiled = yield* runtime
       .compile({ source: input.script })
@@ -43,7 +44,7 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
       const schema = buildSchemaFromDescriptor(call.schema)
       const result = await Effect.runPromiseWith(services)(
         ai.generate({
-          ...EVALUATION_SCRIPT_RUNTIME_MODEL,
+          ...modelConfig,
           system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
           prompt: call.prompt,
           schema,
@@ -55,7 +56,7 @@ export const executeEvaluationScriptSandboxed = Effect.fn("evaluations.executeEv
         object: result.object,
         tokens: result.tokens,
         duration: result.duration,
-        cost: estimateEvaluationScriptCostMicrocents(result),
+        cost: estimateEvaluationScriptCostMicrocents(result, modelConfig),
       }
     }
 

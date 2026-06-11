@@ -7,9 +7,7 @@ import {
   saveFlaggerAnnotationUseCase,
 } from "@domain/flaggers"
 import { OrganizationId } from "@domain/shared"
-import { withAi } from "@platform/ai"
-import { AIGenerateLive } from "@platform/ai-vercel"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisBillingSpendReservationLive, RedisCacheStoreLive } from "@platform/cache-redis"
 import {
   ScoreAnalyticsRepositoryLive,

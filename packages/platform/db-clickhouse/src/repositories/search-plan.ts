@@ -1,9 +1,7 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import {
   normalizeLiteralPhrase,
   type ParsedSearchQuery,
-  TRACE_SEARCH_EMBEDDING_DIMENSIONS,
-  TRACE_SEARCH_EMBEDDING_MODEL,
   TRACE_SEARCH_MIN_RELEVANCE_SCORE,
   tokenizePhrase,
 } from "@domain/spans"
@@ -333,11 +331,19 @@ const generateQueryEmbedding = (semanticPrompt: string): Effect.Effect<readonly 
     const aiOption = yield* Effect.serviceOption(AI)
     if (Option.isNone(aiOption)) return undefined
 
+    const embedding = yield* resolveEmbeddingConfig().pipe(
+      Effect.tapError((error) =>
+        Effect.logWarning("trace-search: invalid embedding configuration; falling back to lexical-only", error),
+      ),
+      Effect.orElseSucceed(() => undefined),
+    )
+    if (embedding === undefined) return undefined
+
     const result = yield* aiOption.value
       .embed({
         text: semanticPrompt,
-        model: TRACE_SEARCH_EMBEDDING_MODEL,
-        dimensions: TRACE_SEARCH_EMBEDDING_DIMENSIONS,
+        provider: embedding.provider,
+        model: embedding.model,
         inputType: "query",
       })
       .pipe(

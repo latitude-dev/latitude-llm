@@ -13,29 +13,26 @@ export const MAX_SUSPICIOUS_SNIPPETS = 5
 export const MAX_EXCERPT_LENGTH = 500
 export const MAX_SNIPPET_EXCERPT_LENGTH = 300
 
-export const FLAGGER_MODEL = {
+export const FLAGGER_DEFAULT_CLASSIFIER_MODEL = {
   provider: "amazon-bedrock",
   model: "anthropic.claude-haiku-4-5-20251001-v1:0",
   temperature: 0,
+  maxTokens: 2048,
 } as const
 
-export const FLAGGER_MAX_TOKENS = 2048
-
-export const FLAGGER_INSTRUCTION_EXTRACTOR_MODEL = {
+export const FLAGGER_DEFAULT_INSTRUCTION_EXTRACTOR_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",
   temperature: 0,
+  maxTokens: 512,
 } as const
 
-export const FLAGGER_INSTRUCTION_EXTRACTOR_MAX_TOKENS = 512
-
-export const FLAGGER_ANNOTATOR_MODEL = {
+export const FLAGGER_DEFAULT_ANNOTATOR_MODEL = {
   provider: "amazon-bedrock",
   model: "minimax.minimax-m2.5",
   temperature: 0.2,
+  maxTokens: 2048,
 } as const
-
-export const FLAGGER_ANNOTATOR_MAX_TOKENS = 2048
 
 export const FLAGGER_DRAFT_DEFAULTS = {
   passed: false,

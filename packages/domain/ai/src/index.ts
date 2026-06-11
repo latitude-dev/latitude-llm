@@ -1,6 +1,7 @@
 import type { ContextOptions } from "@latitude-data/telemetry"
 import { Context, type Effect } from "effect"
 import type { z } from "zod"
+import type { GenerationReasoning } from "./config.ts"
 import type { AICredentialError, AIError } from "./errors.ts"
 
 export {
@@ -9,6 +10,20 @@ export {
   buildProjectScopedAiMetadata,
   type ProjectScopedAiIds,
 } from "./ai-generate-telemetry.ts"
+export {
+  type AIProviderModelConfig,
+  DEFAULT_EMBEDDING_CONFIG,
+  DEFAULT_RERANKING_CONFIG,
+  EMBEDDING_DIMENSIONS,
+  GENERATION_FEATURES,
+  GENERATION_REASONING_LEVELS,
+  type GenerationFeature,
+  type GenerationModelConfig,
+  type GenerationReasoning,
+  resolveEmbeddingConfig,
+  resolveGenerationConfig,
+  resolveRerankingConfig,
+} from "./config.ts"
 export { AICredentialError, AIError } from "./errors.ts"
 export {
   formatGenAIConversation,
@@ -44,7 +59,7 @@ export interface GenerateInput<T> {
   readonly system: string
   readonly prompt: string
   readonly schema: z.ZodType<T>
-  readonly reasoning?: "none" | "provider-default" | "minimal" | "low" | "medium" | "high" | "xhigh"
+  readonly reasoning?: GenerationReasoning
   readonly maxTokens?: number
   readonly temperature?: number
   readonly topP?: number
@@ -80,8 +95,8 @@ export interface GenerateResult<T> {
 
 export interface EmbedInput {
   readonly text: string
+  readonly provider: string
   readonly model: string
-  readonly dimensions: number
   /**
    * Voyage (and most asymmetric embedding models) produce different vectors
    * for documents vs queries. Indexing callers should use `"document"`;
@@ -89,7 +104,7 @@ export interface EmbedInput {
    */
   readonly inputType?: "document" | "query"
   /**
-   * When set, the Voyage adapter wraps the provider call in Latitude `capture` for tracing.
+   * When set, the embedding adapter wraps the provider call in Latitude `capture` for tracing.
    * Excluded from AI cache keys (see `withAICache`).
    */
   readonly telemetry?: GenerateTelemetryCapture
@@ -106,9 +121,10 @@ export interface EmbedResult {
 export interface RerankInput {
   readonly query: string
   readonly documents: readonly string[]
+  readonly provider: string
   readonly model: string
   /**
-   * When set, the Voyage adapter wraps the provider call in Latitude `capture` for tracing.
+   * When set, the rerank adapter wraps the provider call in Latitude `capture` for tracing.
    * Excluded from AI cache keys (see `withAICache`).
    */
   readonly telemetry?: GenerateTelemetryCapture

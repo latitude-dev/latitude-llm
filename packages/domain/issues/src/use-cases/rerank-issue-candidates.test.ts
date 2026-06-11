@@ -1,12 +1,9 @@
+import { AIError, DEFAULT_RERANKING_CONFIG } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { IssueId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import {
-  ISSUE_DISCOVERY_MIN_RELEVANCE,
-  ISSUE_DISCOVERY_RERANK_CANDIDATES,
-  ISSUE_DISCOVERY_RERANK_MODEL,
-} from "../constants.ts"
+import { ISSUE_DISCOVERY_MIN_RELEVANCE, ISSUE_DISCOVERY_RERANK_CANDIDATES } from "../constants.ts"
 import { rerankIssueCandidatesUseCase } from "./rerank-issue-candidates.ts"
 
 describe("rerankIssueCandidatesUseCase", () => {
@@ -30,11 +27,43 @@ describe("rerankIssueCandidatesUseCase", () => {
     )
 
     expect(aiCalls.rerank).toHaveLength(1)
-    expect(aiCalls.rerank[0]?.model).toBe(ISSUE_DISCOVERY_RERANK_MODEL)
+    expect(aiCalls.rerank[0]?.model).toBe(DEFAULT_RERANKING_CONFIG.model)
+    expect(aiCalls.rerank[0]?.provider).toBe(DEFAULT_RERANKING_CONFIG.provider)
     expect(aiCalls.rerank[0]?.documents).toEqual(["Token leakage\n\nAgent exposed API tokens"])
     expect(result).toEqual({
       matchedIssueId: "issue-1",
       similarityScore: 0.92,
+    })
+  })
+
+  it("degrades to the top hybrid-search candidate when reranking is unavailable", async () => {
+    const { layer: aiLayer } = createFakeAI({
+      rerank: () => Effect.fail(new AIError({ message: "Voyage AI is unavailable: set LAT_VOYAGE_API_KEY." })),
+    })
+
+    const result = await Effect.runPromise(
+      rerankIssueCandidatesUseCase({
+        query: "agent exposes tokens",
+        candidates: [
+          {
+            issueId: IssueId("issue-low"),
+            name: "Low score",
+            description: "Low-scored candidate",
+            score: 0.81,
+          },
+          {
+            issueId: IssueId("issue-top"),
+            name: "Top score",
+            description: "Top-scored candidate",
+            score: 0.93,
+          },
+        ],
+      }).pipe(Effect.provide(aiLayer)),
+    )
+
+    expect(result).toEqual({
+      matchedIssueId: "issue-top",
+      similarityScore: 0.93,
     })
   })
 

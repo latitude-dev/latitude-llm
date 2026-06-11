@@ -1,3 +1,4 @@
+import { resolveEmbeddingConfig } from "@domain/ai"
 import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
 import { generateId, generateSlug, ProjectId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
@@ -65,6 +66,7 @@ const loadEligibleScoreOrCurrentOwner = (input: {
 const buildNewIssueFromScore = ({
   score,
   normalizedEmbedding,
+  embeddingModel,
   assignedAt,
   name,
   description,
@@ -72,6 +74,7 @@ const buildNewIssueFromScore = ({
 }: {
   readonly score: Score
   readonly normalizedEmbedding: readonly number[]
+  readonly embeddingModel: string
   readonly assignedAt: Date
   readonly name: string
   readonly description: string
@@ -79,7 +82,7 @@ const buildNewIssueFromScore = ({
 }): Issue => {
   const centroid = updateIssueCentroid({
     centroid: {
-      ...createIssueCentroid(),
+      ...createIssueCentroid(embeddingModel),
       clusteredAt: assignedAt,
     },
     score: {
@@ -118,6 +121,7 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
   Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("scoreId", input.scoreId)
     yield* Effect.annotateCurrentSpan("projectId", input.projectId)
+    const embeddingConfig = yield* resolveEmbeddingConfig()
     const initialScoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
     if (initialScoreResult.action === "already-assigned") {
       return {
@@ -166,6 +170,7 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
         const issue = buildNewIssueFromScore({
           score,
           normalizedEmbedding: input.normalizedEmbedding,
+          embeddingModel: embeddingConfig.model,
           assignedAt,
           name: issueDetails.name,
           description: issueDetails.description,

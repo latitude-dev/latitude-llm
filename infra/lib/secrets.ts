@@ -110,7 +110,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     baseName,
     "clickhouse-url",
     "ClickHouse Cloud URL",
-    process.env.CLICKHOUSE_URL ?? "https://placeholder.clickhouse.cloud:8443",
+    process.env.LAT_CLICKHOUSE_URL ?? "https://placeholder.clickhouse.cloud:8443",
     environment,
     immutableSecretResourceOptions,
   )
@@ -121,7 +121,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     baseName,
     "clickhouse-user",
     "ClickHouse Cloud username",
-    process.env.CLICKHOUSE_USER ?? "default",
+    process.env.LAT_CLICKHOUSE_USER ?? "default",
     environment,
     immutableSecretResourceOptions,
   )
@@ -132,7 +132,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     baseName,
     "clickhouse-password",
     "ClickHouse Cloud password",
-    process.env.CLICKHOUSE_PASSWORD ?? "placeholder-change-me",
+    process.env.LAT_CLICKHOUSE_PASSWORD ?? "placeholder-change-me",
     environment,
     immutableSecretResourceOptions,
   )
@@ -143,7 +143,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     baseName,
     "clickhouse-db",
     "ClickHouse database name",
-    process.env.CLICKHOUSE_DB ?? "latitude",
+    process.env.LAT_CLICKHOUSE_DB ?? "latitude",
     environment,
     immutableSecretResourceOptions,
   )
@@ -154,7 +154,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     baseName,
     "clickhouse-migration-url",
     "ClickHouse native protocol URL for migrations",
-    process.env.CLICKHOUSE_MIGRATION_URL ?? "clickhouse://localhost:9000",
+    process.env.LAT_CLICKHOUSE_MIGRATION_URL ?? "clickhouse://localhost:9000",
     environment,
     immutableSecretResourceOptions,
   )

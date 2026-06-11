@@ -1,9 +1,7 @@
-import { AI } from "@domain/ai"
+import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import {
   analyzeSessionUseCase,
   CONVERSATION_INTELLIGENCE_DETECTOR_VERSION,
-  CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
-  CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
   CONVERSATION_INTELLIGENCE_MIN_CONTENT_LENGTH,
   SessionAnalysisRepository,
   segmentSemanticMoments,
@@ -11,9 +9,7 @@ import {
 import { OrganizationId, ProjectId, SessionId } from "@domain/shared"
 import { SessionRepository } from "@domain/spans"
 import type { TaxonomyDimension } from "@domain/taxonomy"
-import { withAi } from "@platform/ai"
-import { AIGenerateLive } from "@platform/ai-vercel"
-import { AIEmbedLive } from "@platform/ai-voyage"
+import { AIEmbedLive, AIGenerateLive, withAi } from "@platform/ai"
 import { RedisDistributedLockRepositoryLive } from "@platform/cache-redis"
 import {
   SessionAnalysisRepositoryLive,
@@ -230,14 +226,15 @@ export const embedAnalyzeSessionTurnsActivity = (input: AnalyzeSessionHashActivi
   Effect.runPromise(
     Effect.gen(function* () {
       const ai = yield* AI
+      const embeddingConfig = yield* resolveEmbeddingConfig()
       const turns = yield* Effect.forEach(
         input.messages.filter((message) => message.role !== "tool"),
         (message) =>
           ai
             .embed({
               text: `${message.role}: ${message.text}`,
-              model: CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
-              dimensions: CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
+              provider: embeddingConfig.provider,
+              model: embeddingConfig.model,
               inputType: "document",
             })
             .pipe(
@@ -306,12 +303,13 @@ export const detectAnalyzeSessionLabelsActivity = (
   Effect.runPromise(
     Effect.gen(function* () {
       const ai = yield* AI
+      const embeddingConfig = yield* resolveEmbeddingConfig()
       const anchors = yield* Effect.forEach(WORKFLOW_LABEL_ANCHORS, (text) =>
         ai
           .embed({
             text,
-            model: CONVERSATION_INTELLIGENCE_EMBEDDING_MODEL,
-            dimensions: CONVERSATION_INTELLIGENCE_EMBEDDING_DIMENSIONS,
+            provider: embeddingConfig.provider,
+            model: embeddingConfig.model,
             inputType: "document",
           })
           .pipe(Effect.map((result) => result.embedding)),
