@@ -61,7 +61,11 @@ interface ActionsRowProps {
 }
 
 function ActionsRow({ children, className }: ActionsRowProps) {
-  return <div className={cn("flex flex-row gap-2 items-center justify-between min-w-0", className)}>{children}</div>
+  return (
+    <div className={cn("flex flex-row flex-wrap gap-2 items-center justify-between min-w-0", className)}>
+      {children}
+    </div>
+  )
 }
 
 interface ActionRowItemProps {
@@ -70,7 +74,7 @@ interface ActionRowItemProps {
 }
 
 function ActionRowItem({ children, className }: ActionRowItemProps) {
-  return <div className={cn("flex flex-row gap-2 items-center min-w-0 shrink-0", className)}>{children}</div>
+  return <div className={cn("flex flex-row flex-wrap gap-2 items-center min-w-0", className)}>{children}</div>
 }
 
 interface HeaderProps {

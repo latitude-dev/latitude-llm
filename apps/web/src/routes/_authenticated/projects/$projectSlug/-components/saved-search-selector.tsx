@@ -126,17 +126,17 @@ export function SavedSearchSelector({
           <button
             type="button"
             aria-label="Saved searches"
-            className="flex h-full shrink-0 cursor-pointer items-center gap-1 self-stretch border-r border-input bg-secondary px-2 text-secondary-foreground transition-colors hover:bg-secondary/80"
+            className="flex h-full min-w-0 cursor-pointer items-center gap-1 self-stretch border-r border-input bg-secondary px-2 text-secondary-foreground transition-colors hover:bg-secondary/80"
           >
             {selected ? (
-              <span className="max-w-40 truncate text-sm">{selected.name}</span>
+              <span className="min-w-0 max-w-40 truncate text-sm">{selected.name}</span>
             ) : (
               <>
-                <Icon icon={BookmarkIcon} size="sm" color="foregroundMuted" />
+                <Icon icon={BookmarkIcon} size="sm" color="foregroundMuted" className="shrink-0" />
                 <span className="text-muted-foreground text-sm">Searches</span>
               </>
             )}
-            <Icon icon={ChevronDownIcon} size="sm" color="foregroundMuted" />
+            <Icon icon={ChevronDownIcon} size="sm" color="foregroundMuted" className="shrink-0" />
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" sideOffset={6} className="w-80 p-0">
