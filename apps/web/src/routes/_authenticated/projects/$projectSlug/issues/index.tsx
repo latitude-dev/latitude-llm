@@ -30,14 +30,14 @@ function IssuesBreadcrumb() {
   const hasActiveFlaggers = flaggers.some((f) => f.enabled)
 
   return (
-    <span className="flex items-center gap-0">
+    <span className="flex min-w-0 items-center gap-0">
       <BreadcrumbText variant="current">Issues</BreadcrumbText>
       {hasActiveFlaggers && (
         <Tooltip
           side="bottom"
           align="center"
           trigger={
-            <span className="flex h-5 w-5 items-center justify-center cursor-default">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center cursor-default">
               <DotIndicator variant="primary" size="md" ping />
             </span>
           }

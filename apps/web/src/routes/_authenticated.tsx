@@ -176,7 +176,7 @@ function BillingCreditCounter({ organizationId }: { readonly organizationId: str
                 />
               </svg>
             </span>
-            <div className="flex items-baseline gap-1">
+            <div className="hidden items-baseline gap-1 md:flex">
               <Text.H6 weight="medium" color={isOverage ? "destructive" : "foreground"}>
                 {usageLabel}
               </Text.H6>
@@ -234,10 +234,10 @@ function NavHeader() {
   const [activeOrgEmoji, activeOrgName] = extractLeadingEmoji(org.name)
 
   return (
-    <header className="w-full bg-background border-b border-border h-12 flex items-center px-4 shrink-0">
-      <div className="flex items-center gap-2 flex-1">
-        <LatitudeLogo className="h-5 w-5" />
-        <span className="text-muted-foreground text-sm select-none">/</span>
+    <header className="w-full bg-background border-b border-border h-12 flex items-center gap-4 px-4 shrink-0">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <LatitudeLogo className="h-5 w-5 shrink-0" />
+        <span className="text-muted-foreground text-sm select-none shrink-0">/</span>
         <DropdownMenu
           side="bottom"
           align="start"
@@ -253,26 +253,29 @@ function NavHeader() {
           trigger={() => (
             <button
               type="button"
-              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+              className="flex min-w-0 max-w-48 items-center gap-1.5 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
             >
-              {activeOrgEmoji ? <span className="text-base leading-none">{activeOrgEmoji}</span> : null}
-              <span className="text-sm font-medium text-foreground">{activeOrgName || org.name}</span>
-              <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+              {activeOrgEmoji ? <span className="text-base leading-none shrink-0">{activeOrgEmoji}</span> : null}
+              <span className="text-sm font-medium text-foreground truncate">{activeOrgName || org.name}</span>
+              <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
           )}
         />
         <CreateOrganizationModal open={createOrgModalOpen} onOpenChange={setCreateOrgModalOpen} />
         <BreadcrumbTrail />
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex shrink-0 items-center gap-4">
         <button
           type="button"
           onClick={() => commandPalette.setOpen(true)}
+          aria-label="Search"
           className="flex items-center gap-2 rounded-md border border-border px-2 py-1 transition-colors hover:bg-muted"
         >
           <Icon icon={SearchIcon} size="sm" color="foregroundMuted" />
-          <Text.H6 color="foregroundMuted">Search</Text.H6>
-          <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">⌘K</kbd>
+          <span className="hidden items-center gap-2 md:flex">
+            <Text.H6 color="foregroundMuted">Search</Text.H6>
+            <kbd className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground">⌘K</kbd>
+          </span>
         </button>
         <BillingCreditCounter organizationId={organizationId} />
         <NotificationBell />
@@ -280,17 +283,20 @@ function NavHeader() {
           <button
             type="button"
             onClick={() => showIntercom()}
+            aria-label="Help"
             className="flex items-center gap-1.5 hover:text-muted-foreground transition-colors cursor-pointer"
           >
             <Icon icon={LifeBuoy} size="sm" />
-            <Text.H5>Help</Text.H5>
+            <span className="hidden md:block">
+              <Text.H5>Help</Text.H5>
+            </span>
           </button>
         )}
         <a
           href="https://docs.latitude.so"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-foreground hover:text-muted-foreground transition-colors"
+          className="hidden text-sm text-foreground hover:text-muted-foreground transition-colors md:block"
         >
           Docs
         </a>

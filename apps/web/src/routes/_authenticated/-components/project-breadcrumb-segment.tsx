@@ -105,10 +105,12 @@ export function ProjectBreadcrumbSegment() {
       >
         <ComboboxTrigger
           ref={triggerRef}
-          className="flex items-center gap-1 rounded px-2 py-1 transition-colors hover:bg-muted [&>svg]:text-muted-foreground"
+          className="flex min-w-0 max-w-48 items-center gap-1 rounded px-2 py-1 transition-colors hover:bg-muted [&>svg]:text-muted-foreground [&>svg]:shrink-0"
         >
-          {emoji && <span className="text-sm">{emoji}</span>}
-          <Text.H5M color="foregroundMuted">{title}</Text.H5M>
+          {emoji && <span className="text-sm shrink-0">{emoji}</span>}
+          <Text.H5M color="foregroundMuted" ellipsis>
+            {title}
+          </Text.H5M>
         </ComboboxTrigger>
         <ComboboxContent anchor={triggerRef} className="w-80 min-w-80">
           <ComboboxInput
