@@ -102,10 +102,15 @@ function AssigneeCell({
 function PriorityGroupHeader({ group, count }: { readonly group: IssuePriorityGroupId; readonly count: number }) {
   const meta = ISSUE_PRIORITY_META[group]
   return (
-    <div className="flex items-center gap-2 rounded-md bg-secondary px-3 py-1.5">
-      <Icon icon={meta.icon} size="sm" color={meta.iconColor} />
-      <Text.H6 weight="semibold">{meta.label}</Text.H6>
-      <Text.H6 color="foregroundMuted">{formatCount(count)}</Text.H6>
+    // Top padding separates each group from the rows above it; `bg-muted`
+    // (not `bg-secondary`) so the band reads darker than the row background
+    // in both themes.
+    <div className="pt-3">
+      <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-1.5">
+        <Icon icon={meta.icon} size="sm" color={meta.iconColor} />
+        <Text.H6 weight="semibold">{meta.label}</Text.H6>
+        <Text.H6 color="foregroundMuted">{formatCount(count)}</Text.H6>
+      </div>
     </div>
   )
 }
