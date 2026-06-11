@@ -190,6 +190,7 @@ CREATE TABLE sessions
     `models` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
+    `tools` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `simulation_id` AggregateFunction(argMaxIf, FixedString(24), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
     `root_span_id` AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
     `root_span_name` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
@@ -235,6 +236,7 @@ CREATE MATERIALIZED VIEW sessions_mv TO sessions
     `models` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8),
+    `tools` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `simulation_id` AggregateFunction(argMaxIf, FixedString(24), DateTime64(9, 'UTC'), UInt8),
     `root_span_id` AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8),
     `root_span_name` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
@@ -272,6 +274,7 @@ AS SELECT
     groupUniqArrayIfState(s.model, s.model != '') AS models,
     groupUniqArrayIfState(s.provider, s.provider != '') AS providers,
     groupUniqArrayIfState(s.service_name, s.service_name != '') AS service_names,
+    groupUniqArrayIfState(s.tool_name, (s.operation = 'execute_tool') AND (s.tool_name != '')) AS tools,
     argMaxIfState(s.simulation_id, s.start_time, s.simulation_id != '') AS simulation_id,
     argMinIfState(s.span_id, s.start_time, (s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AS root_span_id,
     argMinIfState(s.name, s.start_time, (s.parent_span_id = '') OR (s.parent_span_id = '0000000000000000')) AS root_span_name,
@@ -361,8 +364,8 @@ CREATE TABLE spans
     INDEX idx_tags tags TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_user_id user_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_simulation_id simulation_id TYPE bloom_filter(0.01) GRANULARITY 2,
-    INDEX idx_tool_name tool_name TYPE bloom_filter(0.01) GRANULARITY 4,
-    INDEX idx_tool_names tool_names TYPE bloom_filter(0.01) GRANULARITY 4
+    INDEX idx_tool_name tool_name TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_tool_names tool_names TYPE bloom_filter(0.01) GRANULARITY 2
 )
 ENGINE = ReplacingMergeTree(ingested_at)
 PARTITION BY toYYYYMM(start_time)
@@ -471,6 +474,7 @@ CREATE TABLE traces
     `models` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
+    `tools` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `root_span_id` AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
     `root_span_name` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
     `input_messages` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)),
@@ -513,6 +517,7 @@ CREATE MATERIALIZED VIEW traces_mv TO traces
     `models` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8),
+    `tools` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `root_span_id` AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8),
     `root_span_name` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
     `input_messages` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
@@ -547,6 +552,7 @@ AS SELECT
     groupUniqArrayIfState(model, model != '') AS models,
     groupUniqArrayIfState(provider, provider != '') AS providers,
     groupUniqArrayIfState(service_name, service_name != '') AS service_names,
+    groupUniqArrayIfState(tool_name, (operation = 'execute_tool') AND (tool_name != '')) AS tools,
     argMinIfState(span_id, start_time, parent_span_id = '') AS root_span_id,
     argMinIfState(name, start_time, parent_span_id = '') AS root_span_name,
     argMinIfState(spans.input_messages, start_time, spans.input_messages != '') AS input_messages,

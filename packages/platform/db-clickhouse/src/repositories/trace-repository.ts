@@ -78,6 +78,7 @@ export const LIST_SELECT = `
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
   groupUniqArrayIfMerge(service_names) AS service_names,
+  groupUniqArrayIfMerge(tools)         AS tools,
   argMinIfMerge(root_span_id)   AS root_span_id,
   argMinIfMerge(root_span_name) AS root_span_name
 `
@@ -116,6 +117,7 @@ type TraceListRow = {
   models: string[]
   providers: string[]
   service_names: string[]
+  tools: string[]
   root_span_id: string
   root_span_name: string
 }
@@ -1439,31 +1441,12 @@ export const TraceRepositoryLive = Layer.effect(
             models: "arrayJoin(groupUniqArrayIfMerge(models))",
             providers: "arrayJoin(groupUniqArrayIfMerge(providers))",
             serviceNames: "arrayJoin(groupUniqArrayIfMerge(service_names))",
+            tools: "arrayJoin(groupUniqArrayIfMerge(tools))",
           }
           const searchClause = search ? " AND val ILIKE {search:String}" : ""
 
-          // Tools have no traces column — union called tools (execute_tool
-          // spans) with defined-but-never-called ones (tool_names on chat
-          // spans) so the options match the Tools page inventory.
-          const query =
-            column === "tools"
-              ? `SELECT DISTINCT val FROM (
-                        SELECT tool_name AS val
-                        FROM spans
-                        WHERE organization_id = {organizationId:String}
-                          AND project_id = {projectId:String}
-                          AND operation = 'execute_tool'
-                        UNION ALL
-                        SELECT arrayJoin(tool_names) AS val
-                        FROM spans
-                        WHERE organization_id = {organizationId:String}
-                          AND project_id = {projectId:String}
-                      )
-                      WHERE val != ''${searchClause}
-                      ORDER BY val
-                      LIMIT {limit:UInt32}`
-              : COLUMN_EXPRS[column]
-                ? `SELECT DISTINCT val FROM (
+          const query = COLUMN_EXPRS[column]
+            ? `SELECT DISTINCT val FROM (
                         SELECT ${COLUMN_EXPRS[column]} AS val
                         FROM traces
                         WHERE organization_id = {organizationId:String}
@@ -1473,7 +1456,7 @@ export const TraceRepositoryLive = Layer.effect(
                       WHERE val != ''${searchClause}
                       ORDER BY val
                       LIMIT {limit:UInt32}`
-                : undefined
+            : undefined
           if (!query) return []
 
           return yield* chSqlClient

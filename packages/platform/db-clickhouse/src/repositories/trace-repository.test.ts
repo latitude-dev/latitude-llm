@@ -186,7 +186,7 @@ describe("TraceRepository", () => {
     })
   })
 
-  describe("tools filter (spans subquery)", () => {
+  describe("tools filter (rollup column)", () => {
     beforeEach(async () => {
       // A tool-call span on TRACE_ID so the trace matches a tools filter.
       const toolSpan: SpanRow = {
@@ -203,8 +203,9 @@ describe("TraceRepository", () => {
         tool_name: "lookup_order",
         tool_call_id: "call_1",
       }
-      // A chat span defining a tool that is never called — must still appear
-      // in the multiselect options.
+      // A chat span defining a tool that is never called — must NOT appear
+      // in the multiselect options: the traces tools filter means "at least
+      // one call", and the rollup only carries called tools.
       const chatSpanWithDefs: SpanRow = {
         ...makeSpanRow({
           traceId: TRACE_ID,
@@ -245,7 +246,7 @@ describe("TraceRepository", () => {
       expect(matches).toBe(false)
     })
 
-    it("lists called and defined-but-never-called tools for the multiselect", async () => {
+    it("lists only called tools for the multiselect", async () => {
       const values = await runCh(
         repo.distinctFilterValues({
           organizationId: ORG_ID,
@@ -253,7 +254,7 @@ describe("TraceRepository", () => {
           column: "tools",
         }),
       )
-      expect(values).toEqual(["defined_only_tool", "lookup_order"])
+      expect(values).toEqual(["lookup_order"])
     })
   })
 

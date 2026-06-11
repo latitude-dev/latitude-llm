@@ -2317,8 +2317,10 @@ describe("SessionRepository", () => {
   })
 
   describe("distinctFilterValues: tools", () => {
-    it("lists called and defined tools even when their spans carry no session id", async () => {
+    it("lists called tools from the rollup, including calls whose spans carry no session id", async () => {
       const startTime = new Date(Date.UTC(2026, 0, 10, 10, 0, 0))
+      // No session id: rolls up as a trace-keyed pseudo-session, so the
+      // called tool still surfaces as a filter option.
       const calledNoSession: SpanRow = {
         ...makeSpanRow({ traceId: "d".repeat(32), spanId: "d1".padEnd(16, "0"), startTime }),
         operation: "execute_tool",
@@ -2331,6 +2333,8 @@ describe("SessionRepository", () => {
         tool_name: "sessioned_tool",
         tool_call_id: "call_2",
       }
+      // Defined but never called: not session activity, so it is not a
+      // sessions filter option (the filter means "at least one call").
       const definedNoSession: SpanRow = {
         ...makeSpanRow({ traceId: "f".repeat(32), spanId: "f1".padEnd(16, "0"), startTime }),
         operation: "chat",
@@ -2341,7 +2345,7 @@ describe("SessionRepository", () => {
       const values = await runCh(
         repo.distinctFilterValues({ organizationId: ORG_ID, projectId: PROJECT_ID, column: "tools" }),
       )
-      expect(values).toEqual(["defined_only_tool", "sessioned_tool", "sessionless_tool"])
+      expect(values).toEqual(["sessioned_tool", "sessionless_tool"])
     })
   })
 })

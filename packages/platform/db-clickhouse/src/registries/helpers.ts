@@ -56,52 +56,6 @@ export function buildStatusClause(
   }
 }
 
-function collectToolNames(value: FilterCondition["value"]): readonly string[] {
-  const raw = Array.isArray(value) ? value : [value]
-  return raw.filter((v): v is string => typeof v === "string" && v.length > 0)
-}
-
-/**
- * Tool filters have no column on the traces/sessions rollup tables — tools
- * landed after those materialized views, and MVs cannot be backfilled.
- * Resolve them with a subquery over `execute_tool` spans instead. Relies on
- * the outer query binding `{organizationId}` / `{projectId}` — the same
- * contract the score rollup subquery uses.
- */
-export function buildToolsClauseFor(groupColumn: "trace_id" | "session_id") {
-  return (
-    cond: FilterCondition,
-    paramPrefix: string,
-  ): { readonly clause: string; readonly params: Record<string, unknown> } => {
-    const tools = collectToolNames(cond.value)
-    const param = `${paramPrefix}_tools`
-    const sessionGuard = groupColumn === "session_id" ? "\n          AND session_id != ''" : ""
-    const subquery = `${groupColumn} IN (
-        SELECT DISTINCT ${groupColumn}
-        FROM spans
-        WHERE organization_id = {organizationId:String}
-          AND project_id = {projectId:String}
-          AND operation = 'execute_tool'
-          AND tool_name IN ({${param}:Array(String)})${sessionGuard}
-      )`
-
-    switch (cond.op) {
-      case "eq":
-      case "in": {
-        if (tools.length === 0) return { clause: "1 = 0", params: {} }
-        return { clause: subquery, params: { [param]: tools } }
-      }
-      case "neq":
-      case "notIn": {
-        if (tools.length === 0) return { clause: "1 = 1", params: {} }
-        return { clause: `NOT (${subquery})`, params: { [param]: tools } }
-      }
-      default:
-        throw new Error(`Unsupported tools filter operator: ${cond.op}`)
-    }
-  }
-}
-
 const HAS_LLM_ACTIVITY_FRAGMENT = "(tokens_total > 0 OR length(models) > 0)"
 
 export function buildHasLlmActivityClause(
