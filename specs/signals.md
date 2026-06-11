@@ -32,7 +32,7 @@ Settled during the design discussion (LAT-664 + spec review):
 4. **No pure filter-type signals.** Plain filter slices are correct and cheap at query time, so they stay **saved searches + monitors**. Signals exist for matchers that *require* write-time evaluation (semantic, evaluation, rule, script). Filters appear on signals only as the **scope** pre-gate.
 5. **No class monitors.** With user-created signals only, "a new signal was discovered" alerts are meaningless; today's `source_id = NULL` system monitors dissolve into each signal's default monitor. A monitor's `target_id` is required for signal/saved-search targets.
 6. **Signals per project are capped** to a fixed number per plan (this also bounds occurrence write amplification and ingest matching cost).
-7. **Scores are kept, not deprecated** — they remain the canonical judgment records; occurrences are a separate membership stream (rationale under the occurrences table).
+7. **Scores are kept with a narrowed role** — they stop being the membership mechanism and remain the verdict ledger: evaluation pass/fail/error analytics, human-feedback ground truth for alignment, and the public `/scores` API (rationale under the occurrences table).
 
 ## Why signal membership is materialized at write time
 
@@ -285,7 +285,15 @@ ORDER BY  (organization_id, project_id, signal_id, trace_started_at, trace_id)
 
 - A **score** is a canonical *judgment*: `value`, `passed`, `feedback`, draft lifecycle, mutable Postgres row with per-source uniqueness, plus the alignment machinery built on it. A semantic or rule match has none of that — no verdict, no feedback, nothing to draft or edit.
 - An **occurrence** is an append-only *membership fact* at trace volume. Forcing matches into `scores` would pollute evaluation analytics with verdict-less rows and push trace-volume writes through the canonical mutable Postgres path.
-- The two link where they meet: `score_id` is set on occurrences produced by judgment-bearing matchers (evaluations, linked annotations). Scores are **kept, not deprecated** (decision 7) — evaluations and annotations still need them.
+- The two link where they meet: `score_id` is set on occurrences produced by judgment-bearing matchers (evaluations, linked annotations).
+
+**Scores stay, with a narrowed role** (decision 7). They stop being the membership mechanism — `signal_occurrences` is the only membership ledger — and keep three jobs occurrences structurally cannot do:
+
+1. **Verdicts that don't match.** Occurrences record only matches; evaluation quality analytics (pass rate, error rate) and every confusion matrix also need the *passed* and *errored* runs — the rows that produce no occurrence.
+2. **Human feedback as alignment ground truth.** Annotations need a mutable, draft-able row (raw text, edits, message anchors, annotator) — and alignment is literally "human `passed` verdicts vs evaluation `passed` verdicts on the same traces", both sides being score rows. No scores ⇒ no confusion matrix ⇒ no alignment metric ⇒ no trustworthy evaluation matchers.
+3. **The public `/scores` API** for custom, user-pushed results (an existing machine-facing contract).
+
+Shorthand: occurrences are the **membership ledger** ("this trace is in this signal"); scores are the **verdict ledger** ("this judge said pass/fail and why"). Every signal needs the first to be monitored; evaluation-type signals need the second to stay trustworthy. `scores.signal_id` survives as the label connecting verdicts to the signal they are evidence for — not as membership. The ClickHouse score-analytics table correspondingly loses its issue-trend/occurrence-counting role to `signal_occurrences` and remains only for evaluation/custom source dashboards.
 
 Design notes:
 
