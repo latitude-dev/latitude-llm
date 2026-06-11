@@ -52,7 +52,7 @@ Base config: `tsconfig.base.json`. Typechecking runs under **`tsgo`** (TypeScrip
 ## General principles
 
 - Prefer minimal, explicit abstractions — YAGNI
-- Avoid comments except for genuinely non-obvious reasoning
+- Comments: default to none, one line when needed — see the repo-wide convention in the root `AGENTS.md`. Only traps (code that looks removable or wrong but isn't), non-obvious external constraints, and sibling-complete contract docs (e.g. port JSDoc) earn a comment; never what-narration or design rationale
 
 ## Domain module layout
 
