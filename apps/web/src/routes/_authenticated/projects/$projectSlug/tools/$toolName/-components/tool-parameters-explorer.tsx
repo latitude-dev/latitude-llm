@@ -4,6 +4,7 @@ import { ChevronRightIcon, InfoIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { type ToolsTimeRange, useToolParameterStats } from "../../../../../../../domains/tools/tools.collection.ts"
 import { TOOL_DETAIL_PANEL_MAX_HEIGHT } from "../../-components/tool-formatters.ts"
+import { ValueBar } from "./value-bar.tsx"
 
 interface DefinedParameter {
   readonly type: string
@@ -66,17 +67,6 @@ interface MergedParameter {
   /** Sampled calls whose input contains this parameter. */
   readonly observed: number
   readonly topValues: readonly { readonly value: string; readonly count: number }[]
-}
-
-function ValueBar({ fraction, muted }: { readonly fraction: number; readonly muted?: boolean }) {
-  return (
-    <div className="relative h-2 w-full overflow-hidden rounded bg-muted">
-      <div
-        className={`absolute inset-y-0 left-0 rounded ${muted ? "bg-muted-foreground/40" : "bg-primary/70"}`}
-        style={{ width: `${Math.min(100, Math.max(2, fraction * 100))}%` }}
-      />
-    </div>
-  )
 }
 
 function ParameterBadges({ defined }: { readonly defined: DefinedParameter | undefined }) {

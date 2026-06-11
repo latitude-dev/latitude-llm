@@ -670,3 +670,79 @@ describe("errorsOnly scoping", () => {
     expect(coOccurrence).toEqual([{ otherTool: "lookup", sharedTraces: 1 }])
   })
 })
+
+// ---------------------------------------------------------------------------
+// getToolErrorBreakdown
+// ---------------------------------------------------------------------------
+
+describe("getToolErrorBreakdown", () => {
+  const fixture = setupFixture()
+
+  beforeEach(async () => {
+    await fixture.insertSpans([
+      // Variable durations cluster into one "Timeout after <n>ms" bucket.
+      callSpan({
+        trace_id: tid("t1"),
+        span_id: sid("u1"),
+        tool_name: "search",
+        status_code: 2,
+        error_type: "TimeoutError",
+        status_message: "Timeout after 5023ms",
+      }),
+      callSpan({
+        trace_id: tid("t2"),
+        span_id: sid("u2"),
+        tool_name: "search",
+        status_code: 2,
+        error_type: "TimeoutError",
+        status_message: "Timeout after 4998ms",
+      }),
+      // Empty status_message → the tool's own output is the error signal;
+      // UUIDs collapse so per-call ids don't split the cluster.
+      callSpan({
+        trace_id: tid("t3"),
+        span_id: sid("u3"),
+        tool_name: "search",
+        status_code: 2,
+        tool_output: '{"error":"Rate limit for key 0f8fad5b-d9cb-469f-a165-70867728950e"}',
+      }),
+      callSpan({
+        trace_id: tid("t4"),
+        span_id: sid("u4"),
+        tool_name: "search",
+        status_code: 2,
+        tool_output: '{"error":"Rate limit for key 7c9e6679-7425-40de-944b-e07fc1f90ae7"}',
+      }),
+      // Failed with no error output at all.
+      callSpan({ trace_id: tid("t5"), span_id: sid("u5"), tool_name: "search", status_code: 2 }),
+      // Excluded: a successful call and another tool's failure.
+      callSpan({ trace_id: tid("t6"), span_id: sid("u6"), tool_name: "search", tool_output: "ok!" }),
+      callSpan({
+        trace_id: tid("t7"),
+        span_id: sid("u7"),
+        tool_name: "render",
+        status_code: 2,
+        status_message: "Timeout after 1ms",
+      }),
+    ])
+  })
+
+  it("clusters failed-call outputs by normalized message", async () => {
+    const rows = await fixture.runCh(fixture.repo.getToolErrorBreakdown({ ...SCOPE, toolName: "search" }))
+    expect(rows.map((row) => ({ key: row.key, calls: row.calls }))).toEqual([
+      { key: "Timeout after <n>ms", calls: 2 },
+      { key: '{"error":"Rate limit for key <id>"}', calls: 2 },
+      { key: "", calls: 1 },
+    ])
+    const timeout = must(rows[0])
+    expect(timeout.errorType).toBe("TimeoutError")
+    expect(timeout.sample).toMatch(/^Timeout after (5023|4998)ms$/)
+    expect(must(rows[1]).errorType).toBe("")
+  })
+
+  it("caps the cluster list at limit", async () => {
+    const rows = await fixture.runCh(fixture.repo.getToolErrorBreakdown({ ...SCOPE, toolName: "search", limit: 1 }))
+    expect(rows).toHaveLength(1)
+    expect(must(rows[0]).calls).toBe(2)
+  })
+})

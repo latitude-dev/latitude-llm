@@ -168,7 +168,7 @@ function ToolDetailPageContent() {
               <div className="mx-1 h-5 w-px bg-border" />
               <Label htmlFor="tool-errors-only" className="cursor-pointer">
                 <Text.H6 color="foregroundMuted" noWrap>
-                  Errors only
+                  Error view
                 </Text.H6>
               </Label>
               <Switch
@@ -345,6 +345,7 @@ function ToolDetailPageContent() {
               range={range}
               bucketSeconds={trendBucketSeconds}
               errorsOnly={errorsOnly}
+              failedCalls={errorsUsage?.calls ?? 0}
             />
           ) : null}
           <div className={TOOL_DETAIL_ROW_GRID}>

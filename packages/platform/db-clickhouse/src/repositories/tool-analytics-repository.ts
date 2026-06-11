@@ -10,6 +10,7 @@ import type {
   ToolCoOccurrenceRow,
   ToolDefinition,
   ToolDefinitionDetail,
+  ToolErrorBreakdownRow,
   ToolParameterStat,
   ToolParameterStatsResult,
   ToolSummary,
@@ -43,6 +44,14 @@ const TOOL_PARAM_MAX_TOP_VALUES = 10
 const TOOL_CONTEXT_BREAKDOWN_LIMIT = 50
 const TOOL_CO_OCCURRENCE_DEFAULT_LIMIT = 10
 const TOOL_CO_OCCURRENCE_MAX_LIMIT = 50
+
+const TOOL_ERROR_BREAKDOWN_DEFAULT_LIMIT = 10
+const TOOL_ERROR_BREAKDOWN_MAX_LIMIT = 50
+// Error outputs are capped before normalization (errors differing only past
+// the cap share a cluster) and cluster keys are capped again after it, to
+// bound aggregation state.
+const TOOL_ERROR_SAMPLE_CAP = 1_024
+const TOOL_ERROR_KEY_CAP = 256
 
 const RECENT_CALLS_DEFAULT_LIMIT = 10
 const RECENT_CALLS_MAX_LIMIT = 50
@@ -184,6 +193,13 @@ type ContextBreakdownRow = {
 type CoOccurrenceRow = {
   other_tool: string
   shared_traces: string
+}
+
+type ErrorBreakdownRow = {
+  key: string
+  sample: string
+  error_type: string
+  calls: string
 }
 
 type RecentCallRow = {
@@ -662,6 +678,77 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
                   value: normalizeCHString(row.value),
                   traces: num(row.traces),
                   occurrences: num(row.occurrences),
+                })),
+              ),
+            )
+        }),
+
+      getToolErrorBreakdown: (input) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const limit = Math.min(
+            Math.max(input.limit ?? TOOL_ERROR_BREAKDOWN_DEFAULT_LIMIT, 1),
+            TOOL_ERROR_BREAKDOWN_MAX_LIMIT,
+          )
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                // The error signal lives in status_message (OTel) or, when
+                // that's empty, in the tool's own output. UUIDs, long hex
+                // runs and numbers are collapsed (in that order — they nest)
+                // before grouping so variable fragments don't split one error
+                // into many clusters; `sample` keeps a verbatim
+                // representative for display.
+                query: `SELECT
+                      substring(
+                        replaceRegexpAll(
+                          replaceRegexpAll(
+                            replaceRegexpAll(
+                              raw_output,
+                              '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}',
+                              '<id>'
+                            ),
+                            '[0-9a-fA-F]{16,}',
+                            '<hex>'
+                          ),
+                          '[0-9]+',
+                          '<n>'
+                        ),
+                        1, {keyCap:UInt16}
+                      ) AS key,
+                      any(raw_output) AS sample,
+                      anyIf(error_type, error_type != '') AS error_type,
+                      count() AS calls
+                    FROM (
+                      SELECT
+                        substring(coalesce(nullif(status_message, ''), tool_output), 1, {rawCap:UInt32}) AS raw_output,
+                        error_type
+                      FROM spans
+                      WHERE ${CALLS_FILTER}
+                        AND tool_name = {toolName:String}
+                        AND status_code = 2
+                    )
+                    GROUP BY key
+                    ORDER BY calls DESC, key ASC
+                    LIMIT {breakdownLimit:UInt16}`,
+                query_params: {
+                  ...scopeParams(input),
+                  toolName: input.toolName,
+                  keyCap: TOOL_ERROR_KEY_CAP,
+                  rawCap: TOOL_ERROR_SAMPLE_CAP,
+                  breakdownLimit: limit,
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<ErrorBreakdownRow>()
+            })
+            .pipe(
+              Effect.map((rows): readonly ToolErrorBreakdownRow[] =>
+                rows.map((row) => ({
+                  key: row.key,
+                  sample: row.sample,
+                  errorType: normalizeCHString(row.error_type),
+                  calls: num(row.calls),
                 })),
               ),
             )

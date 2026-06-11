@@ -3,6 +3,7 @@ import { formatDuration } from "@repo/utils"
 import { useMemo } from "react"
 import { type ToolsTimeRange, useToolCallHistogram } from "../../../../../../../domains/tools/tools.collection.ts"
 import { formatBucketLabel, TOOL_DETAIL_ROW_GRID } from "../../-components/tool-formatters.ts"
+import { ToolErrorBreakdown } from "./tool-error-breakdown.tsx"
 
 const OK_CALLS_COLOR = "hsl(217 91% 60%)"
 const FAILED_CALLS_COLOR = "hsl(0 70% 55%)"
@@ -44,12 +45,15 @@ export function ToolActivityRow({
   range,
   bucketSeconds,
   errorsOnly,
+  failedCalls,
 }: {
   readonly projectId: string
   readonly toolName: string
   readonly range: ToolsTimeRange
   readonly bucketSeconds: number
   readonly errorsOnly: boolean
+  /** Total failed calls in the window — the error breakdown's denominator. */
+  readonly failedCalls: number
 }) {
   const { data: histogram = [], isLoading } = useToolCallHistogram({
     projectId,
@@ -151,21 +155,22 @@ export function ToolActivityRow({
           ariaLabel={`Calls of ${toolName} over time`}
         />
       </ChartPanel>
-      <ChartPanel
-        title={errorsOnly ? "Latency of failed calls" : "Latency over time"}
-        isLoading={isLoading}
-        isEmpty={isEmpty}
-        emptyLabel={emptyLabel}
-      >
-        <Chart
-          categories={categories}
-          series={latencySeries}
-          height={200}
-          xAxisLabelFontSize={10}
-          tooltipTitle={latencyTooltipTitle}
-          ariaLabel={`p50 latency of ${toolName} over time`}
-        />
-      </ChartPanel>
+      {errorsOnly ? (
+        // Error view swaps the latency chart for the error breakdown — failed
+        // calls' latency is already in the Usage row's Duration tile.
+        <ToolErrorBreakdown projectId={projectId} toolName={toolName} range={range} failedCalls={failedCalls} />
+      ) : (
+        <ChartPanel title="Latency over time" isLoading={isLoading} isEmpty={isEmpty} emptyLabel={emptyLabel}>
+          <Chart
+            categories={categories}
+            series={latencySeries}
+            height={200}
+            xAxisLabelFontSize={10}
+            tooltipTitle={latencyTooltipTitle}
+            ariaLabel={`p50 latency of ${toolName} over time`}
+          />
+        </ChartPanel>
+      )}
     </div>
   )
 }

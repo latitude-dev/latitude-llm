@@ -8,6 +8,7 @@ import {
   getToolCallHistogram,
   getToolContextBreakdown,
   getToolCoOccurrence,
+  getToolErrorBreakdown,
   getToolParameterStats,
   listProjectTools,
   listRecentToolCalls,
@@ -203,6 +204,34 @@ export function useToolCoOccurrence({
           toolName,
           ...range,
           ...(errorsOnly === undefined ? {} : { errorsOnly }),
+        },
+      }),
+    staleTime: 30_000,
+    enabled: enabled && projectId.length > 0 && toolName.length > 0,
+  })
+}
+
+export function useToolErrorBreakdown({
+  projectId,
+  toolName,
+  range,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly toolName: string
+  readonly range: ToolsTimeRange
+  readonly enabled?: boolean
+}) {
+  const scope = use(TraceScopeContext)
+  return useQuery({
+    queryKey: [...traceScopeKey(scope), "tools-error-breakdown", projectId, toolName, range],
+    queryFn: () =>
+      getToolErrorBreakdown({
+        data: {
+          ...traceScopeData(scope),
+          projectId,
+          toolName,
+          ...range,
         },
       }),
     staleTime: 30_000,
