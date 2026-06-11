@@ -324,6 +324,20 @@ export interface EventPayloads {
     readonly evaluationId: string
     readonly issueId: string
   }
+  /**
+   * Fired (once per health window) when an evaluation's script runs cross the
+   * detector-health degradation threshold — it is failing `errors / runs` of
+   * its executions, each of which is a silent false negative. Emitted by the
+   * live run path; the transition dedupe lives in the detector-health tracker.
+   */
+  EvaluationDetectorDegraded: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly evaluationId: string
+    readonly runs: number
+    readonly errors: number
+    readonly windowSeconds: number
+  }
   AnnotationQueueItemCompleted: {
     readonly organizationId: string
     readonly actorUserId: string

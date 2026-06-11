@@ -16,9 +16,14 @@ import {
   seedBillingUsagePeriod,
 } from "@domain/billing/testing"
 import { OutboxEventWriter, type OutboxEventWriterShape } from "@domain/events"
+import { createFeatureFlag, FeatureFlagRepository } from "@domain/feature-flags"
+import { createFakeFeatureFlagRepository } from "@domain/feature-flags/testing"
+import type { DetectorHealthTracker, ScriptRuntime } from "@domain/sandbox"
+import { createFakeDetectorHealthTracker, createFakeScriptRuntime } from "@domain/sandbox/testing"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
+  CacheError,
   ExternalUserId,
   IssueId,
   NotFoundError,
@@ -241,17 +246,23 @@ function createUseCaseLayer(input: {
   readonly issueRepository?: ReturnType<typeof createIssueRepository> | undefined
   readonly aiLayer?: ReturnType<typeof createFakeAI>["layer"] | undefined
   readonly billingLayer?: ReturnType<typeof createBillingLayer> | undefined
+  readonly featureFlagRepository?: ReturnType<typeof createFakeFeatureFlagRepository>["repository"] | undefined
+  readonly scriptRuntimeLayer?: ReturnType<typeof createFakeScriptRuntime>["layer"] | undefined
+  readonly detectorHealthLayer?: ReturnType<typeof createFakeDetectorHealthTracker>["layer"] | undefined
 }): Layer.Layer<
   | AI
   | BillingOverrideRepository
   | BillingSpendReservation
   | BillingUsageEventRepository
   | BillingUsagePeriodRepository
+  | DetectorHealthTracker
   | EvaluationIssueRepository
   | EvaluationRepository
+  | FeatureFlagRepository
   | ScoreAnalyticsRepository
   | OutboxEventWriter
   | ScoreRepository
+  | ScriptRuntime
   | SettingsReader
   | SqlClient
   | StripeSubscriptionLookup
@@ -269,6 +280,9 @@ function createUseCaseLayer(input: {
     ),
     input.aiLayer ?? createFakeAI().layer,
     input.billingLayer ?? createBillingLayer(),
+    Layer.succeed(FeatureFlagRepository, input.featureFlagRepository ?? createFakeFeatureFlagRepository().repository),
+    input.scriptRuntimeLayer ?? createFakeScriptRuntime().layer,
+    input.detectorHealthLayer ?? createFakeDetectorHealthTracker().layer,
   )
 }
 
@@ -1211,5 +1225,174 @@ describe("runLiveEvaluationUseCase", () => {
     ])
     expect(calls.generate).toHaveLength(1)
     expectImmutableAnalyticsSyncOrder(operations)
+  })
+
+  it("executes through the sandbox runtime when the evaluation-sandbox-runtime flag is enabled", async () => {
+    const evaluation = makeEvaluation({
+      // Not a template script: only executable by the sandbox runtime.
+      script: "return Passed(1, 'no exhibition')",
+    })
+    const issue = makeIssue({
+      id: IssueId(evaluation.issueId),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const featureFlagFixture = createFakeFeatureFlagRepository()
+    featureFlagFixture.featureFlags.set(
+      "evaluation-sandbox-runtime",
+      createFeatureFlag({ identifier: "evaluation-sandbox-runtime", enabledForAll: true }),
+    )
+    const scriptRuntime = createFakeScriptRuntime({
+      run: () => Effect.succeed({ value: 1, feedback: "no exhibition", duration: 9_000, tokens: 0, cost: 0 }),
+    })
+    const { layer: aiLayer, calls } = createFakeAI()
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            issueRepository,
+            aiLayer,
+            featureFlagRepository: featureFlagFixture.repository,
+            scriptRuntimeLayer: scriptRuntime.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    if (result.action !== "persisted") throw new Error("Expected a persisted live evaluation result")
+    expect(result.context.execution).toMatchObject({
+      kind: "completed",
+      result: { passed: true, value: 1, feedback: "no exhibition" },
+      duration: 9_000,
+      tokens: 0,
+      cost: 0,
+    })
+    expect(scriptRuntime.calls.run).toHaveLength(1)
+    expect(scriptRuntime.calls.run[0]?.script.source).toBe(evaluation.script)
+    expect(calls.generate).toHaveLength(0)
+  })
+
+  it("records detector health per run and surfaces the degraded transition through the outbox once", async () => {
+    const evaluation = makeEvaluation({
+      script: VALID_SCRIPT,
+    })
+    const issue = makeIssue({
+      id: IssueId(evaluation.issueId),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const { outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
+    const detectorHealth = createFakeDetectorHealthTracker({
+      recordRun: () => Effect.succeed({ runs: 20, errors: 11, degraded: true, newlyDegraded: true }),
+    })
+    const { layer: aiLayer } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message: "AI generation failed (openai/gpt-5.4): upstream timeout",
+          }),
+        ),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreWriteLayer,
+            issueRepository,
+            aiLayer,
+            detectorHealthLayer: detectorHealth.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    expect(detectorHealth.calls).toEqual([
+      {
+        organizationId: OrganizationId(INPUT.organizationId),
+        projectId: ProjectId(INPUT.projectId),
+        ownerType: "evaluation",
+        ownerId: evaluation.id,
+        errored: true,
+      },
+    ])
+    const degradedEvents = outboxEvents.filter(
+      (event) => (event as { eventName: string }).eventName === "EvaluationDetectorDegraded",
+    )
+    expect(degradedEvents).toEqual([
+      {
+        eventName: "EvaluationDetectorDegraded",
+        aggregateType: "evaluation",
+        aggregateId: evaluation.id,
+        organizationId: INPUT.organizationId,
+        payload: {
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId: evaluation.id,
+          runs: 20,
+          errors: 11,
+          windowSeconds: 3600,
+        },
+      },
+    ])
+  })
+
+  it("does not let detector-health failures replace the run outcome", async () => {
+    const evaluation = makeEvaluation({
+      script: VALID_SCRIPT,
+    })
+    const issue = makeIssue({
+      id: IssueId(evaluation.issueId),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository(() => Effect.succeed(issue))
+    const detectorHealth = createFakeDetectorHealthTracker({
+      recordRun: () => Effect.fail(new CacheError({ message: "redis unavailable" })),
+    })
+    const aiTokenUsage = { input: 40, output: 80 }
+    const { layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) =>
+        Effect.succeed({
+          object: input.schema.parse({ passed: true, value: 1, feedback: "ok" }),
+          tokens: 120,
+          duration: 1_000,
+          tokenUsage: aiTokenUsage,
+        } satisfies GenerateResult<T>),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            issueRepository,
+            aiLayer,
+            detectorHealthLayer: detectorHealth.layer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
   })
 })
