@@ -47,7 +47,10 @@ describe("hostile scripts die by budget", () => {
     expect(Date.now() - startedAt).toBeLessThan(5_000)
   })
 
-  it("kills memory bombs by memory cap", async () => {
+  // The test timeout must outlive the run's 10s wall-clock backstop: if vitest
+  // kills the test first (slow CI under full-suite load), disposal races the
+  // in-flight abort and trips QuickJS's gc_obj_list assertion at JS_FreeRuntime.
+  it("kills memory bombs by memory cap", { timeout: 15_000 }, async () => {
     const error = await runError("const a = []; while (true) { a.push(new Array(65536).fill('x')) }", {
       limits: limits({ memoryBytes: 8 * 1024 * 1024, wallTimeMs: 10_000 }),
     })
