@@ -1,0 +1,109 @@
+---
+title: LiveKit Agents
+description: Connect your LiveKit voice AI agents to Latitude for observability.
+---
+
+## Overview
+
+This guide shows you how to send traces from a [**LiveKit Agents**](https://docs.livekit.io/agents/) application to Latitude.
+
+LiveKit Agents ships with built-in OpenTelemetry support and owns its own `TracerProvider`. Instead of bootstrapping telemetry with the `Latitude` class, you attach a **`LatitudeSpanProcessor`** to LiveKit's provider — Latitude then receives the same spans LiveKit emits for LLM, agent, and tool activity.
+
+<Check>
+  You'll keep building your LiveKit agent exactly as you do today. Latitude
+  observes the LLM spans the framework already produces.
+</Check>
+
+---
+
+## Requirements
+
+- A **Latitude account** and **API key**
+- A **Latitude project slug**
+- A project that uses **LiveKit Agents** (`livekit-agents`)
+
+---
+
+## Steps
+
+<Steps>
+
+  <Step title="Install">
+    ```bash pip
+    pip install latitude-telemetry "livekit-agents[openai]"
+    ```
+  </Step>
+
+  <Step title="Register the span processor">
+    Build a `TracerProvider`, add the `LatitudeSpanProcessor`, and hand the provider to LiveKit with `set_tracer_provider` inside your entrypoint.
+
+    ```python
+    import os
+
+    from livekit.agents import AgentSession, JobContext
+    from livekit.agents.telemetry import set_tracer_provider
+    from opentelemetry.sdk.trace import TracerProvider
+
+    from latitude_telemetry import LatitudeSpanProcessor
+
+
+    def setup_latitude_telemetry():
+        provider = TracerProvider()
+        provider.add_span_processor(
+            LatitudeSpanProcessor(
+                os.environ["LATITUDE_API_KEY"],
+                os.environ["LATITUDE_PROJECT_SLUG"],
+            )
+        )
+        set_tracer_provider(provider)
+
+
+    async def entrypoint(ctx: JobContext):
+        setup_latitude_telemetry()
+
+        session = AgentSession(
+            # ... your STT / LLM / TTS configuration
+        )
+        # ... start your agent as usual
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## What you get
+
+LiveKit's LLM spans carry both `gen_ai.*` metadata and the conversation content in custom `lk.*` attributes. Latitude parses both, so each LLM turn shows up with:
+
+- **Model and provider** — from `gen_ai.request.model` / `gen_ai.provider.name`
+- **Token usage and latency** — input/output tokens, time-to-first-token
+- **Input messages** — the chat context (system prompt, user turns, prior tool calls and results)
+- **Output messages** — the assistant response text and any tool calls the model emitted
+- **Tool definitions** — the function tools available to the agent
+
+<Note>
+  LiveKit produces many non-LLM spans (STT, TTS, VAD). By default the span
+  processor's smart filter forwards only LLM-relevant spans to keep your traces
+  focused. To export every LiveKit span, pass options:
+
+  ```python
+  from latitude_telemetry import LatitudeSpanProcessor, LatitudeSpanProcessorOptions
+
+  LatitudeSpanProcessor(
+      api_key,
+      project,
+      LatitudeSpanProcessorOptions(disable_smart_filter=True),
+  )
+  ```
+</Note>
+
+---
+
+## Seeing Your Traces
+
+Once connected, traces appear automatically in Latitude:
+
+1. Open your **project** in the Latitude dashboard
+2. Each agent turn shows the LLM call with its input/output conversation
+3. Token usage and latency are aggregated at every level

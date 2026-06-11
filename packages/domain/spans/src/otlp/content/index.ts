@@ -5,6 +5,7 @@ import type { OtlpKeyValue } from "../types.ts"
 import { parseClaudeCode } from "./claude-code.ts"
 import { parseGenAICurrent } from "./genai.ts"
 import { parseGenAIDeprecated } from "./genai_deprecated.ts"
+import { parseLiveKit } from "./livekit.ts"
 import { parseOpenInference } from "./openinference.ts"
 import { parseVercel } from "./vercel.ts"
 
@@ -60,6 +61,11 @@ const PARSERS: readonly ContentParser[] = [
       hasKeyPrefix(attrs, "gen_ai.prompt.") ||
       hasKeyPrefix(attrs, "gen_ai.completion."),
     parse: parseGenAIDeprecated,
+  },
+  {
+    canHandle: (attrs) =>
+      hasKey(attrs, "lk.chat_ctx") || hasKey(attrs, "lk.response.text") || hasKey(attrs, "lk.response.function_calls"),
+    parse: parseLiveKit,
   },
   {
     canHandle: (attrs) => hasKey(attrs, "user_prompt"), // Claude Code
