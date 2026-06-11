@@ -404,7 +404,10 @@ export function InfiniteTable<T>({
                   <tbody key={`group-${displayRow.groupKey}`} ref={virtualizer.measureElement} data-index={index}>
                     <tr>
                       <td colSpan={colCount} className="p-0 border-none">
-                        <div className="sticky left-0" style={containerWidth > 0 ? { width: containerWidth } : undefined}>
+                        <div
+                          className="sticky left-0"
+                          style={containerWidth > 0 ? { width: containerWidth } : undefined}
+                        >
                           {renderGroupHeader?.(displayRow.groupKey)}
                         </div>
                       </td>

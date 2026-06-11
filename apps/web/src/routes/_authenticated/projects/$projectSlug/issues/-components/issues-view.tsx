@@ -102,15 +102,17 @@ function AssigneeCell({
 function PriorityGroupHeader({ group, count }: { readonly group: IssuePriorityGroupId; readonly count: number }) {
   const meta = ISSUE_PRIORITY_META[group]
   return (
-    // Top padding separates each group from the rows above it; `bg-muted`
-    // (not `bg-secondary`) so the band reads darker than the row background
-    // in both themes.
-    <div className="pt-3">
-      <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-1.5">
-        <Icon icon={meta.icon} size="sm" color={meta.iconColor} />
-        <Text.H6 weight="semibold">{meta.label}</Text.H6>
-        <Text.H6 color="foregroundMuted">{formatCount(count)}</Text.H6>
-      </div>
+    // Deliberately NOT a filled band — a full-width rectangle reads as just
+    // another row. Instead: an eyebrow-style section heading (icon +
+    // uppercase label + count) with a hairline rule filling the remaining
+    // width, plus generous top padding to separate it from the group above.
+    <div className="flex items-center gap-2 px-3 pt-5 pb-1.5">
+      <Icon icon={meta.icon} size="sm" color={meta.iconColor} />
+      <Text.H6 weight="semibold" className="uppercase tracking-wide">
+        {meta.label}
+      </Text.H6>
+      <Text.H6 color="foregroundMuted">{formatCount(count)}</Text.H6>
+      <div className="h-px min-w-4 flex-1 bg-border" />
     </div>
   )
 }
