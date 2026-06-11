@@ -177,7 +177,9 @@ function ToolDetailPageContent() {
                 onCheckedChange={(checked) => setErrorsParam(checked ? "1" : "")}
               />
               <div className="mx-1 h-5 w-px bg-border" />
-              <Button asChild variant="outline" size="sm">
+              {/* w-auto: the button face's w-full lands directly on the Link
+                  in asChild mode and would stretch it across the header. */}
+              <Button asChild variant="outline" size="sm" className="w-auto">
                 <Link
                   to="/projects/$projectSlug"
                   params={{ projectSlug }}

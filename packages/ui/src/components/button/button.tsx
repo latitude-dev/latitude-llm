@@ -180,13 +180,16 @@ function Button({
   const visibleChildren = isLoading ? stripLeadingIconChild(children) : children
 
   if (asChild) {
-    // Used in combobox.ts <ComboboxInput>
     return (
       <Slot
         ref={ref}
         className={cn(
           buttonContainerVariants({ variant }),
           buttonVariantsConfig({ variant, size }),
+          // The non-asChild branch spaces icon and label through an inner
+          // wrapper div; Slot can't add wrappers, so the gap goes on the
+          // child element itself.
+          "gap-x-1.5",
           className,
           isLoading && "animate-pulse",
         )}
