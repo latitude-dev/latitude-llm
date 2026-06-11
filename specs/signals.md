@@ -14,13 +14,13 @@ Latitude currently has two parallel tracking systems with overlapping names and 
                  definitions create        monitors aggregate         alerts fire on        records the
                  occurrence rows           the occurrence stream      conditions            firing
   Trace ───────▶ SIGNAL ─────────────────▶ MONITOR ─────────────────▶ ALERT ──────────────▶ INCIDENT ──▶ notifications
-                 (write-time matching)     (or saved searches /
+                 (write-time matching)     (or saved searches, tools,
                                             raw telemetry streams)
 ```
 
 The one-line mental model for users and docs:
 
-> Latitude groups your traces into **Signals** — buckets you define deliberately, from the Signals page or while annotating. Any signal — or saved search, or your raw traffic — can be watched with **Monitors**; monitors have **Alerts**, and a fired alert opens an **Incident**, which is what notifies you.
+> Latitude groups your traces into **Signals** — buckets you define deliberately, from the Signals page or while annotating. Any signal — or saved search, tool, or your raw traffic — can be watched with **Monitors**; monitors have **Alerts**, and a fired alert opens an **Incident**, which is what notifies you.
 
 ## Decisions
 
@@ -30,7 +30,7 @@ Settled during the design discussion (LAT-664 + spec review):
 2. **No automatic issue discovery.** The clustering/discovery pipeline (similarity search + rerank + locked serialization auto-creating issues from scores) is removed. Signals are always created proactively by users — from the Signals page or from the annotation flow. Annotations are matched to *existing* signals via hybrid search suggestions; they never spawn signals on their own.
 3. **No routing centroid.** With discovery gone, the per-signal decayed centroid machinery is removed. Suggesting existing signals while annotating uses hybrid search over signal names/descriptions (lexical tsvector + one derived embedding).
 4. **No pure filter-type signals.** Plain filter slices are correct and cheap at query time, so they stay **saved searches + monitors**. Signals exist for matchers that *require* write-time evaluation (semantic, evaluation, rule, script). Filters appear on signals only as the **scope** pre-gate.
-5. **No class monitors.** With user-created signals only, "a new signal was discovered" alerts are meaningless; today's `source_id = NULL` system monitors dissolve into each signal's default monitor. A monitor's `target_id` is required for signal/saved-search targets.
+5. **No class monitors.** With user-created signals only, "a new signal was discovered" alerts are meaningless; today's `source_id = NULL` system monitors dissolve into each signal's default monitor. A monitor's `target_id` is required for signal/saved-search/tool targets.
 6. **Signals per project are capped** to a fixed number per plan (this also bounds occurrence write amplification and ingest matching cost).
 7. **Scores are kept with a narrowed role** — they stop being the membership mechanism and remain the verdict ledger: evaluation pass/fail/error analytics, human-feedback ground truth for alignment, and the public `/scores` API (rationale under the occurrences table).
 
@@ -63,20 +63,31 @@ Consequences carried through the whole spec:
 - Signals carry **triage metadata** — priority and assignees — but **no lifecycle**. You create or delete signals; resolve/ignore semantics live on monitors.
 - Signals are **always created proactively** (decision 2): from the Signals page builder, from a saved search (pre-filling the scope and, for semantic searches, the anchor), or from the annotation flow ("explain the problem, point at 3–4 example traces, get a signal with a generated aligned evaluation"). Today's issues migrate into signals; no pipeline creates them automatically anymore.
 - **Moment labels** (conversation intelligence) are provisioned as default per-project signals with `type = 'semantic'` — their existing anchor sets (`MOMENT_LABEL_ANCHORS`) carry over verbatim, since the semantic config adopts the same shape (multiple positive anchors + contrast anchors + threshold/margin).
-- Every signal gets a **default monitor** provisioned at creation — the same monitoring issues get today: an occurrences monitor carrying a high-severity `metric.escalating` alert in `expected` mode (the seasonal heuristic, so a firing is a high-signal event rather than noise) plus the `signal.regressed` event alert.
+- Every signal gets a **default monitor** provisioned at creation — the same monitoring issues get today: an occurrences monitor carrying a high-severity `metric.escalating` alert in `expected` mode (the seasonal heuristic, so a firing is a high-signal event rather than noise) plus the `event.regressed` event alert.
 
 ### Saved search
 
 **A virtual view over traces, kept as a concept — and the only home for pure filter tracking.** The exploration bookmark on the Traces page: a stored `query + filterSet` evaluated at read time. Saved searches are directly monitorable (filters are cheap and correct at query time — `SavedSearchMatchReader` machinery reused unchanged). When a user wants a *deeper* membership test (semantic, rule, evaluation, script), the path is **Create signal from this search**, which pre-fills the scope from the filters and the semantic anchor from a semantic prompt.
 
+### Tool (telemetry-emergent target)
+
+Tools — the project Tools dashboard's inventory (PR #3508): every tool agents *define* (`tool_definitions` on chat spans) or *call* (`execute_tool` spans) — are **monitor targets, not signals**. Telemetry already materializes tool calls: an `execute_tool` span with `tool_name`, status, and duration is an occurrence row in everything but name, bloom-indexed in ClickHouse. Per-tool metrics are therefore the "correct and cheap at query time" case (decision 4), like saved searches; creating signals per tool would re-materialize indexed data and burn the per-plan cap on an emergent, possibly large inventory.
+
+- Monitor `target_type = 'tool'`, `target_id = <tool name>`. Tools have no Postgres row, hence no deletion cascade — a tool "disappearing" is just its call count reaching zero.
+- All alert kinds apply unchanged: error-count `metric.escalating` in `expected` mode ("checkout-tool failures above their learned seasonal rate"), `metric.threshold` on p95 duration ("search tool p95 above 3s"), `event.matched` on a deprecated/unused tool ("someone called a tool we removed") — with `resolved_at` + `event.regressed` giving clean re-fire semantics after a cleanup.
+- **No default monitor for tools** — the inventory is emergent and can be large; tool monitors are opt-in. The tool detail page gains the same Monitors / Alerts / Incidents blocks as the signal page, with "Add monitor" pre-filled with the tool target.
+- *Judgments* about tool behavior still belong to **signals**: `SignalRule`'s `part: 'toolCall'` + `jsonSchema` check ("called with arguments violating its schema"), or script/semantic matchers with a `tools has X` scope — the dashboard's new `tools` filter field flows into signal scopes automatically because scope reuses the shared `FilterSet`.
+
+Division of labor: *metrics about a tool* → tool-target monitor (query-time, already indexed); *judgments about tool behavior* → signal with a tool-scoped rule/script matcher (write-time, occurrence-backed).
+
 ### Monitor
 
 **A monitor watches one target over time.** Monitors never own filter definitions; they own:
 
-- a **target**: a signal, a saved search, or a raw stream — `traces`, `spans`, or `sessions` as a whole (e.g. "avg latency of all traffic"). `target_id` is required for signal/saved-search targets; raw streams have none.
+- a **target**: a signal, a saved search, a **tool** (telemetry-emergent, addressed by name), or a raw stream — `traces`, `spans`, or `sessions` as a whole (e.g. "avg latency of all traffic"). `target_id` is required for signal/saved-search/tool targets; raw streams have none.
 - a **metric**: event/occurrence count (default), or an aggregate over the matched traces — `avg` / `sum` / `p95` of `duration`, `ttft`, `cost`, `tokens`, or `errors`.
 - **mute** (`muted_at`): notifications off; evaluation and incident recording continue.
-- the **lifecycle**: *active* (default), *escalating* (derived: an open sustained incident exists), *resolved* (manual `resolved_at` anchor, or derived from a long quiet period). The first datapoint after `resolved_at` fires a `signal.regressed` event alert and clears the anchor.
+- the **lifecycle**: *active* (default), *escalating* (derived: an open sustained incident exists), *resolved* (manual `resolved_at` anchor, or derived from a long quiet period). The first datapoint after `resolved_at` fires an `event.regressed` alert and clears the anchor.
 
 "Resolve a signal" resolves its default monitor; "ignore" mutes it. The signal page keeps one-click triage; it just writes to the monitor underneath.
 
@@ -107,15 +118,17 @@ export type SignalOrigin = (typeof SIGNAL_ORIGINS)[number]
 export const SIGNAL_TYPES = ["semantic", "evaluation", "rule", "script"] as const
 export type SignalType = (typeof SIGNAL_TYPES)[number]
 
-export const MONITOR_TARGET_TYPES = ["signal", "savedSearch", "traces", "spans", "sessions"] as const
+export const MONITOR_TARGET_TYPES = ["signal", "savedSearch", "tool", "traces", "spans", "sessions"] as const
 export type MonitorTargetType = (typeof MONITOR_TARGET_TYPES)[number]
-// 'signal' / 'savedSearch' — a specific entity (target_id required)
+// 'signal' / 'savedSearch'        — a specific entity (target_id = its CUID)
+// 'tool'                          — a telemetry-emergent entity (target_id = the tool name)
 // 'traces' / 'spans' / 'sessions' — the project's whole raw stream (target_id null)
 
 export const ALERT_KINDS = [
-  // event alerts (point)
-  "signal.matched",    //  ← savedSearch.match  (a new event entered the target stream)
-  "signal.regressed",  //  ← issue.regressed    (a datapoint after monitor.resolved_at)
+  // event alerts (point) — target-agnostic names: they apply to signals, saved
+  // searches, and tools alike
+  "event.matched",     //  ← savedSearch.match  (a new event entered the target stream)
+  "event.regressed",   //  ← issue.regressed    (a datapoint after monitor.resolved_at)
   // metric alerts
   "metric.threshold",  //  ← savedSearch.threshold (point; absolute | multiplier | expected)
   "metric.escalating", //  ← issue.escalating + savedSearch.escalating (sustained; unified)
@@ -216,9 +229,10 @@ Semantic anchor embeddings are **not** a table column: anchors are embedded once
 ```
 monitors
   id, organization_id, project_id, slug, name, description, system   -- unchanged
-  target_type     varchar(32)            -- 'signal' | 'savedSearch' | 'traces' | 'spans' | 'sessions'
-  target_id       varchar(24) null       -- required for 'signal'/'savedSearch'; NULL for raw streams
-                                         --   ('traces'/'spans'/'sessions' = the whole project stream)
+  target_type     varchar(32)            -- 'signal' | 'savedSearch' | 'tool' | 'traces' | 'spans' | 'sessions'
+  target_id       varchar(128) null      -- entity CUID ('signal'/'savedSearch') or tool name ('tool');
+                                         --   NULL only for raw streams (= the whole project stream).
+                                         --   varchar(128), not 24: tool names are telemetry strings
   metric          jsonb                  -- MonitorMetric: { kind: 'count' } (default) or
                                          --   { kind: 'avg'|'sum'|'p95', field: duration|ttft|cost|tokens|errors }
   is_default      boolean default false  -- the auto-provisioned per-signal monitor; triage writes here
@@ -237,7 +251,7 @@ monitor_alerts
   id, organization_id, monitor_id
   kind            varchar(64)            -- AlertKind
   condition       jsonb null             -- AlertCountThreshold / escalating window / sensitivity; null for
-                                         --   parameterless kinds (signal.matched, signal.regressed)
+                                         --   parameterless kinds (event.matched, event.regressed)
   severity        varchar(16)
   deleted_at      timestamptz null       -- soft-delete preserved: incidents must stay attributable
   created_at, updated_at
@@ -406,6 +420,7 @@ One builder, three entry points, one rule: **never let users define membership b
 │  New monitor                                  │
 │  Watch:   ◉ Signal        [PII in answers ▾]  │
 │           ○ Saved search  [ … ▾]              │
+│           ○ Tool          [ … ▾]              │
 │           ○ All traces / spans / sessions     │
 │  Metric:  ◉ Occurrences   ○ Avg [cost ▾]      │
 │  Alerts:  (optional, card stack as today)     │
@@ -505,11 +520,14 @@ triggers: monitors:evaluate (leading-edge throttle from occurrence/trace activit
    ├─ resolve target reader:
    │    signal        → SignalOccurrenceReader (CH signal_occurrences)          [new]
    │    savedSearch   → SavedSearchMatchReader (CH traces, query+filterSet)     [reuse]
+   │    tool          → ToolCallReader (CH execute_tool spans by tool_name;     [reuse shape]
+   │                      per-bucket call/error counts + latency aggregates —
+   │                      ToolAnalyticsRepository already computes these)
    │    traces/spans/sessions → telemetry readers                               [reuse]
    ├─ compute metric series (count / avg / sum / p95 per bucket)
    └─ per active alert, run the kind's state machine:
-        signal.matched     → point incident per throttle window with ≥1 event   [reuse shape]
-        signal.regressed   → datapoint after monitor.resolved_at → point incident,
+        event.matched      → point incident per throttle window with ≥1 event   [reuse shape]
+        event.regressed    → datapoint after monitor.resolved_at → point incident,
                              clear resolved_at
         metric.threshold   → absolute (one-time) / multiplier (rising edge,
                              silent close) / expected                           [reuse]
@@ -533,7 +551,7 @@ triggers: monitors:evaluate (leading-edge throttle from occurrence/trace activit
               (occurrences keep recording; nothing notifies)
 [Delete]  → deleteSignalUseCase → soft-delete signal; soft-delete its monitors;
               archive linked evaluations; enqueue CH occurrence cleanup
-regression → flow D, signal.regressed branch
+regression → flow D, event.regressed branch
 ```
 
 ### F. Create signal from a saved search (with backfill)
@@ -563,7 +581,7 @@ saved_searches row remains (still a bookmark; plain filter tracking stays
 | `evaluations.issue_id` | `evaluations.signal_id` (rename) |
 | `saved_searches` | unchanged |
 | system monitors (`source_id = NULL`) | **retired**; per-signal default monitors replace them (decision 5) |
-| `monitor_alerts.kind` | `issue.new`→retired · `issue.regressed`→`signal.regressed` · `savedSearch.match`→`signal.matched` · `savedSearch.threshold`→`metric.threshold` · `issue.escalating`+`savedSearch.escalating`→`metric.escalating` |
+| `monitor_alerts.kind` | `issue.new`→retired · `issue.regressed`→`event.regressed` · `savedSearch.match`→`event.matched` · `savedSearch.threshold`→`metric.threshold` · `issue.escalating`+`savedSearch.escalating`→`metric.escalating` |
 | `monitor_alerts.source_*` | dropped; target moves to the owning monitor |
 | `alert_incidents.source_*` | `target_*` (values remapped in place) |
 | moment labels | provisioned `origin='system'`, `type='semantic'` signals per project (anchor sets carried over verbatim) |
@@ -576,3 +594,4 @@ saved_searches row remains (still a bookmark; plain filter tracking stays
 3. **Session-scoped signals.** The occurrence unit is a trace (`session_id` is on the row for future use); session-membership semantics are deferred — a known limitation, accepted as the price of the trace-grained model.
 4. **Rule abstraction final shape.** The `SignalRule` config above is the starting point; the exact part-targeting granularity (per message? per tool call? message ranges?) needs a design pass with real examples before implementation.
 5. **Semantic threshold calibration loop** (post-MVP): iterative create-time tuning — show matches, accept/tighten, repeat. MVP ships a fixed default.
+6. **Ratio metrics.** The Tools dashboard headlines error *rate* and *calls per offer*, but `MonitorMetric` only expresses counts and aggregates. Failed-count `metric.escalating` in `expected` mode approximates rate alerting well; a real ratio metric kind (e.g. `{ kind: 'rate', of: 'errors' }`) is deferred until a concrete need outgrows that approximation.
