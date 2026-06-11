@@ -1,0 +1,150 @@
+---
+title: Single-host
+description: Run a production-grade Latitude instance on a single machine with Docker Compose or Docker Swarm.
+---
+
+Single-host runs the **entire Latitude product on one machine**: all five application services, a one-shot migrations job, and bundled infrastructure (Postgres, ClickHouse, Redis, Temporal, SeaweedFS). It uses the published [Docker images](https://hub.docker.com/u/latitudedata) and a single `.env.production`, all defined in [`docker-stack.yml`](https://github.com/latitude-dev/latitude-llm/blob/development/docker-stack.yml).
+
+<Note>
+  For a scalable, highly-available deployment, deploy Latitude to a Kubernetes cluster using our Helm chart instead, _coming soon_.
+</Note>
+
+## Quick start
+
+<Steps>
+  <Step title="Get the deploy files">
+    Create a folder `mkdir -p latitude` and download all files into it:
+
+    ```bash
+    base=https://raw.githubusercontent.com/latitude-dev/latitude-llm/development
+    curl -fsSL --create-dirs "$base/docker-stack.yml"              -o docker-stack.yml
+    curl -fsSL --create-dirs "$base/.env.example"                  -o .env.example
+    curl -fsSL --create-dirs "$base/docker/init-db.sh"             -o docker/init-db.sh
+    curl -fsSL --create-dirs "$base/docker/seaweedfs/init.sh"      -o docker/seaweedfs/init.sh
+    curl -fsSL --create-dirs "$base/docker/clickhouse/storage.xml" -o docker/clickhouse/storage.xml
+    ```
+
+    Give permissions to the initialization scripts for postgres and seaweedfs:
+
+    ```bash
+    chmod +x docker/init-db.sh docker/seaweedfs/init.sh
+    ```
+  </Step>
+
+  <Step title="Create your environment file">
+    The `.env.example` file documents the neccessary production variables, create a copy of it and modify it to your needs.
+
+    ```bash
+    cp .env.example .env.production
+    ```
+  </Step>
+
+  <Step title="Generate the secrets">
+    Generate a unique value for each key and paste them into `.env.production`:
+
+    ```bash
+    echo "LAT_MASTER_ENCRYPTION_KEY=$(openssl rand -hex 32)"
+    echo "LAT_BETTER_AUTH_SECRET=$(openssl rand -hex 32)"
+    ```
+
+    Moreover, remember to change the default infrastructure passwords (`POSTGRES_PASSWORD_*`, `CLICKHOUSE_PASSWORD`...) too!
+  </Step>
+
+  <Step title="Configure an email transport">
+    Choose one of the email providers supported (Mailgun, Sendgrid, SMTP...) and configure it so login (and other) emails reach you.
+  </Step>
+
+  <Step title="Pull the images and start">
+    ```bash
+    docker compose --env-file .env.production -f docker-stack.yml up -d
+    ```
+
+    The `migrations` container runs first and the application services wait for it to finish.
+
+    <Tip>
+      To pin a specific release instead of `latest`, set `LAT_IMAGE_TAG=X.Y.Z` in `.env.production` (image tags have no leading `v`).
+    </Tip>
+  </Step>
+
+  <Step title="Create the first account">
+    Open the web UI (at your `LAT_WEB_URL`) and register. Latitude sends a magic link through the email transport you configured; click it to finish signing in and create your organization.
+  </Step>
+</Steps>
+
+## Services
+
+| Container | Image | Purpose |
+| --- | --- | --- |
+| `web` | `latitudedata/web` | The Latitude UI |
+| `api` | `latitudedata/api` | Public API & MCP server |
+| `ingest` | `latitudedata/ingest` | OTLP trace ingestion |
+| `workers` | `latitudedata/workers` | BullMQ background jobs |
+| `workflows` | `latitudedata/workflows` | Temporal workers |
+| `migrations` | `latitudedata/migrations` | One-shot Postgres & ClickHouse migrations |
+| `postgres` | `pgvector/pgvector` | Primary store + pgvector |
+| `clickhouse` | `clickhouse/clickhouse-server` | Span/telemetry OLAP store |
+| `redis`, `redis-bullmq` | `redis` | Cache + queues |
+| `temporal` | `temporalio/auto-setup` | Workflow engine (Postgres-backed) |
+| `seaweedfs` | `chrislusf/seaweedfs` | S3-compatible object store |
+
+## AI features
+
+The stack boots and core observability (ingest + trace viewing) works **without API keys**. However, there are AI-dependent features that you must add the relevant keys to your environment file to enable them:
+
+| Provider | Key(s) | Feature |
+| --- | --- | --- |
+| Voyage AI | `LAT_VOYAGE_*` | Semantic trace/issue search, search highlights and issue clustering |
+| Anthropic | `LAT_ANTHROPIC_*` | Flaggers, evaluations, conversation intelligence, issue summarization and AI generation |
+| Amazon Bedrock | `LAT_AWS_*` | Same features as Anthropic (alternative provider) |
+
+## Scaling
+
+`docker-stack.yml` also runs under **Docker Swarm** (`docker swarm init`, then `docker stack deploy -c docker-stack.yml latitude`), which is the better fit for scaling. The stateless application services — `web`, `api`, `ingest`, `workers`, `workflows` — scale horizontally: raise their `deploy.replicas` in the file (or `docker service scale latitude_api=3`), and Swarm load-balances across replicas, including across extra machines joined with `docker swarm join`.
+
+The bundled stateful services (Postgres, ClickHouse, Redis, Temporal, SeaweedFS) stay single-instance — for HA, point them at managed/external instances ([Bring your own infrastructure](#bring-your-own-infrastructure)) or move to the Cluster deployment. On plain Compose (one host), the services with no published ports — `workers` and `workflows` — can still scale directly: `docker compose -f docker-stack.yml up -d --scale workers=3`.
+
+## Backups
+
+Persisted state lives in the `postgres_data`, `clickhouse_data`, `seaweedfs_data`, and `redis_bullmq_data` volumes. Back them up regularly:
+
+- **Postgres** — `docker compose -f docker-stack.yml exec postgres pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"` (the source of truth for projects, users, and metadata).
+- **ClickHouse** — back up `clickhouse_data` or use [ClickHouse `BACKUP`](https://clickhouse.com/docs/en/operations/backup) (span/telemetry data).
+- **Object store** — back up `seaweedfs_data` (or rely on your managed S3's durability).
+
+## Upgrading
+
+Pin a specific `X.Y.Z` tag for Latitude's images in production so upgrades are deliberate. For easiness, you can bump `LAT_IMAGE_TAG` to a new release (or use :latest) in `.env.production`. Then pull the new images and restart the services.
+
+```bash
+docker compose --env-file .env.production -f docker-stack.yml pull
+docker compose --env-file .env.production -f docker-stack.yml up -d
+```
+
+The `migrations` container runs automatically on every `up`, applying any new Postgres and ClickHouse migrations before the application services start.
+
+## TLS and reverse proxy
+
+`docker-stack.yml` publishes `web` (3000), `api` (3001), and `ingest` (3002) on the host over plain HTTP. For anything internet-facing, put a TLS-terminating reverse proxy (Caddy, nginx, Traefik) in front, route your domain(s) to those ports, and set the `LAT_*_URL` / `*_ORIGINS` values to the public `https://` URLs.
+
+## Bring your own infrastructure
+
+Each infra service in `docker-stack.yml` is a clearly-marked, independently removable block. To use an existing or managed datastore, comment out its block and point the matching `LAT_*` value at your instance:
+
+| Dependency | Repoint | Notes |
+| --- | --- | --- |
+| Postgres | `LAT_DATABASE_*`, `LAT_ADMIN_DATABASE_*` | Needs the `vector` (pgvector) extension and a schema-create admin role |
+| ClickHouse | `CLICKHOUSE_*` | Dedicated `CLICKHOUSE_DB` database |
+| Redis (cache) | `LAT_REDIS_*` | Latitude namespaces all keys under `latitude:` |
+| Redis (queue) | `LAT_BULLMQ_*` | Latitude namespaces all keys under `latitude:` |
+| Temporal | `LAT_TEMPORAL_*` | Pointing to Temporal Cloud is recommended |
+| Object storage | `LAT_STORAGE_*` | Point at any S3-compatible store or the local filesystem |
+
+<Warning>
+  If you remove a bundled service that another service lists under `depends_on` (`postgres`/`clickhouse` for `migrations`, `postgres` for `temporal`), delete that reference too, or Compose will refuse to start.
+</Warning>
+
+## Next steps
+
+<Card title="Configuration reference" icon="settings" href="/deployment/configuration">
+  The full Latitude configurable environment-variable reference for self-hosting.
+</Card>

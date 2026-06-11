@@ -52,6 +52,7 @@ export const createStorageDiskEffect = (): Effect.Effect<StorageDiskPort> =>
         const endpoint = yield* parseEnvOptional("LAT_STORAGE_S3_ENDPOINT", "string")
         const accessKeyId = yield* parseEnvOptional("LAT_STORAGE_S3_ACCESS_KEY_ID", "string")
         const secretAccessKey = yield* parseEnvOptional("LAT_STORAGE_S3_SECRET_ACCESS_KEY", "string")
+        const forcePathStyle = yield* parseEnvOptional("LAT_STORAGE_S3_FORCE_PATH_STYLE", "boolean")
 
         const s3Driver = new S3Driver({
           // When keys are omitted the AWS SDK uses the default credential chain
@@ -60,6 +61,7 @@ export const createStorageDiskEffect = (): Effect.Effect<StorageDiskPort> =>
           region,
           bucket,
           ...(endpoint && { endpoint }),
+          ...(forcePathStyle && { forcePathStyle }),
           visibility: "private",
         })
 

@@ -35,7 +35,7 @@ ensure_goose() {
   local goose_arch
   case "$arch" in
     amd64) goose_arch="x86_64" ;;
-    arm64) goose_arch="aarch64" ;;
+    arm64) goose_arch="arm64" ;;
     *) goose_arch="$arch" ;;
   esac
 

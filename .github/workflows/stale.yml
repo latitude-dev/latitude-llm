@@ -7,6 +7,7 @@ on:
 jobs:
   stale:
     runs-on: ubuntu-latest
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
     permissions:
       actions: write
       issues: write

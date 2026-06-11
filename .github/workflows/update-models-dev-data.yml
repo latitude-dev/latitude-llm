@@ -9,6 +9,7 @@ on:
 jobs:
   update-models-data:
     runs-on: ubuntu-latest
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
     permissions:
       contents: write
       pull-requests: write

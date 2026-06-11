@@ -1,0 +1,277 @@
+name: latitude
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+# Each application service waits for the one-shot `migrations` job to finish
+x-app: &app
+  restart: unless-stopped
+  env_file:
+    - .env.production
+  logging: *logging
+  depends_on:
+    migrations:
+      condition: service_completed_successfully
+
+services:
+  # ==========================================================================
+  # Application services (published images: latitudedata/<service>)
+  # ==========================================================================
+  web:
+    <<: *app
+    image: latitudedata/web:${LAT_IMAGE_TAG:-latest}
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:$${LAT_WEB_PORT:-3000}/api/health || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+
+  api:
+    <<: *app
+    image: latitudedata/api:${LAT_IMAGE_TAG:-latest}
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:$${LAT_API_PORT:-3001}/health || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+
+  ingest:
+    <<: *app
+    image: latitudedata/ingest:${LAT_IMAGE_TAG:-latest}
+    ports:
+      - "3002:3002"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:$${LAT_INGEST_PORT:-3002}/health || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+
+  workers:
+    <<: *app
+    image: latitudedata/workers:${LAT_IMAGE_TAG:-latest}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:$${LAT_WORKERS_HEALTH_PORT:-9090}/health || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+
+  workflows:
+    <<: *app
+    image: latitudedata/workflows:${LAT_IMAGE_TAG:-latest}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:$${LAT_WORKFLOWS_HEALTH_PORT:-9091}/health || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+
+  # One-shot: run Postgres (Drizzle Kit) + ClickHouse (goose) migrations, then exit.
+  # The application services above wait for this to complete successfully.
+  migrations:
+    image: latitudedata/migrations:${LAT_IMAGE_TAG:-latest}
+    env_file:
+      - .env.production
+    logging: *logging
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    deploy:
+      restart_policy:
+        condition: none
+
+  # ==========================================================================
+  # Infrastructure — bundled by default. Each block is independently removable;
+  # comment one out and point the matching LAT_* env at your existing instance.
+  # ==========================================================================
+
+  # --- Postgres (primary OLTP store + pgvector) -----------------------------
+  # BYO: remove this block and set LAT_DATABASE_URL / LAT_ADMIN_DATABASE_URL at
+  # an existing Postgres (needs the `vector` extension + a schema-create admin).
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    command: postgres -c wal_level=logical
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *logging
+    deploy:
+      restart_policy:
+        condition: any
+
+  # --- ClickHouse (OLAP span/telemetry store) -------------------------------
+  # BYO: remove this block and set CLICKHOUSE_URL / CLICKHOUSE_MIGRATION_URL etc.
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.2
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./docker/clickhouse/storage.xml:/etc/clickhouse-server/config.d/storage.xml:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'clickhouse-client --user "$$CLICKHOUSE_USER" --password "$$CLICKHOUSE_PASSWORD" --query ''SELECT 1''',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *logging
+    deploy:
+      restart_policy:
+        condition: any
+
+  # --- Redis: cache (distributed locks, rate limiters, budgets) -------------
+  # BYO: remove this block and set LAT_REDIS_HOST / LAT_REDIS_PORT.
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+    deploy:
+      restart_policy:
+        condition: any
+
+  # --- Redis: BullMQ queue (durable; appendonly + noeviction) ---------------
+  # BYO: remove this block and set LAT_BULLMQ_HOST / LAT_BULLMQ_PORT.
+  redis-bullmq:
+    image: redis:7
+    restart: unless-stopped
+    command: redis-server --maxmemory-policy noeviction --appendonly yes
+    volumes:
+      - redis_bullmq_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+    deploy:
+      restart_policy:
+        condition: any
+
+  # --- Temporal (workflow engine; Postgres-backed, no Elasticsearch) --------
+  # auto-setup creates the `temporal` + `temporal_visibility` databases on the
+  # bundled Postgres and the `default` namespace. BYO / Temporal Cloud: remove
+  # this block and set LAT_TEMPORAL_ADDRESS / _NAMESPACE / _API_KEY.
+  temporal:
+    image: temporalio/auto-setup:1.27.2
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-latitude}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_SEEDS: postgres
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+    logging: *logging
+    deploy:
+      restart_policy:
+        condition: any
+
+  # --- SeaweedFS (Apache-2.0 object store, S3 gateway on :8333) -------------
+  # BYO managed S3: remove this block, set LAT_STORAGE_S3_* at your bucket and
+  # drop LAT_STORAGE_S3_ENDPOINT / _FORCE_PATH_STYLE. Or use the `fs` driver on
+  # a shared volume (set LAT_STORAGE_DRIVER=fs).
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.32
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    entrypoint: ["/bin/sh", "/init.sh"]
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333"]
+    volumes:
+      - seaweedfs_data:/data
+      - ./docker/seaweedfs/init.sh:/init.sh:ro
+    logging: *logging
+    deploy:
+      restart_policy:
+        condition: any
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  redis_bullmq_data:
+  seaweedfs_data:

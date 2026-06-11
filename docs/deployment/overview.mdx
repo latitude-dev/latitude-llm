@@ -1,0 +1,38 @@
+---
+title: Overview
+description: Use Latitude as a fully-managed cloud service, or self-host it — from a single machine to a Kubernetes cluster.
+---
+
+Latitude is [MIT-licensed](https://github.com/latitude-dev/latitude-llm/blob/development/LICENSE) and self-hostable at any scale, on fully open infrastructure. However, there are easier ways to start benefiting from Latitude's agent monitoring features in no time.
+
+## Latitude Cloud (recommended)
+
+[**Latitude Cloud**](https://latitude.so) is the fully-managed version — the fastest way to start and the easiest to operate. Sign up, grab an API key, and start sending traces in minutes. There's nothing to install, scale, patch, or back up.
+
+<Card title="Start shipping valuable AI with Latitude Cloud →" icon="cloud" href="https://latitude.so">
+  Free to start — 20K credits/month, 30-day retention, and unlimited seats.
+</Card>
+
+Why most teams choose Cloud:
+
+- **Zero ops.** No servers, databases, queues, or object stores to run, patch, scale, or back up — we handle all of it.
+- **Every AI feature on by default.** Semantic search, flaggers, evaluations, and issue clustering work out of the box — no proprietary AI provider accounts or keys to manage.
+- **Always current.** New features and fixes the moment they ship, with zero-downtime upgrades and no migrations to run yourself.
+- **Scales with you.** Trace spikes, retention, and growth are handled automatically — no capacity planning.
+- **Enterprise-grade security & compliance.** SOC 2, ISO 27001, and GDPR, with managed backups and high availability. See [Security & Compliance](/security/data-protection).
+- **Support from the team that builds Latitude.**
+
+## Self-host
+
+Prefer to run Latitude yourself? It's as easy as pulling the ready-to-go container images on [Docker Hub](https://hub.docker.com/u/latitudedata). Follow these guides to get you deploying Latitude in no time.
+
+<CardGroup cols={2}>
+  <Card title="Single-host (simple)" icon="server" href="/deployment/single-host">
+    A production-grade instance on one machine with Docker Compose.
+  </Card>
+  <Card title="Cluster (advanced)" icon="boxes">
+    A scalable, highly-available deployment on Kubernetes via a Helm chart.
+  </Card>
+</CardGroup>
+
+Latitude is a set of five application services (`web`, `api`, `ingest`, `workers`, `workflows`) backed by Postgres (+ pgvector), ClickHouse, Redis, Temporal, and an object store. Every self-host option deploys the **same images** with the same [configurable values](/deployment/configuration).
