@@ -49,7 +49,6 @@ export {
   TAXONOMY_TREE_DEPTH_SCHEDULE,
   type TaxonomyObservationWeightScheme,
   type TaxonomyTreeDepthSchedule,
-  taxonomyClusteringSampleLimit,
 } from "./constants.ts"
 export {
   type TaxonomyCentroid,

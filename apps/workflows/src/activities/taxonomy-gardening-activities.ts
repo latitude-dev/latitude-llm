@@ -30,7 +30,7 @@ import {
   withPostgres,
 } from "@platform/db-postgres"
 import { createLogger, withTracing } from "@repo/observability"
-import { Effect, Layer } from "effect"
+import { Data, Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 import { buildHierarchicalClustersInWorker } from "./taxonomy-clustering-worker.ts"
 
@@ -186,14 +186,22 @@ const storeGardenTaxonomyPlan = (input: GardenTaxonomyStepInput, plan: StoredGar
     catch: (error) => (error instanceof Error ? error : new Error(String(error))),
   })
 
+class TaxonomyGardeningPlanMissingError extends Data.TaggedError("TaxonomyGardeningPlanMissingError")<{
+  readonly message: string
+}> {}
+
 const loadGardenTaxonomyPlan = (input: GardenTaxonomyPlanReferenceInput) =>
-  Effect.tryPromise({
-    try: async () => {
-      const value = await getRedisClient().get(input.planKey)
-      if (value === null) throw new Error(`Missing taxonomy gardening plan artifact: ${input.planKey}`)
-      return JSON.parse(value) as StoredGardenTaxonomyPlan
-    },
-    catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+  Effect.gen(function* () {
+    const value = yield* Effect.tryPromise({
+      try: () => getRedisClient().get(input.planKey),
+      catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+    })
+    if (value === null) {
+      return yield* new TaxonomyGardeningPlanMissingError({
+        message: `Missing taxonomy gardening plan artifact: ${input.planKey}`,
+      })
+    }
+    return JSON.parse(value) as StoredGardenTaxonomyPlan
   })
 
 const reviveDate = (value: Date | string): Date => (value instanceof Date ? value : new Date(value))
