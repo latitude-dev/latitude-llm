@@ -36,9 +36,13 @@ function ListingLayout({ children, className }: ListingLayoutProps) {
 
   const main = <div className={cn("flex flex-col h-full gap-3", className)}>{content}</div>
   return (
-    <div className="relative flex flex-row h-full">
+    <div className="@container relative flex flex-row h-full">
       <div className="flex-1 min-w-0 flex flex-col">{main}</div>
-      {aside ? <div className="relative z-10">{aside}</div> : null}
+      {aside ? (
+        <div className="relative z-10 @max-[48rem]:absolute @max-[48rem]:inset-y-0 @max-[48rem]:right-0 @max-[48rem]:z-20 @max-[48rem]:shadow-xl">
+          {aside}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -61,7 +65,11 @@ interface ActionsRowProps {
 }
 
 function ActionsRow({ children, className }: ActionsRowProps) {
-  return <div className={cn("flex flex-row gap-2 items-center justify-between min-w-0", className)}>{children}</div>
+  return (
+    <div className={cn("flex flex-row flex-wrap gap-2 items-center justify-between min-w-0", className)}>
+      {children}
+    </div>
+  )
 }
 
 interface ActionRowItemProps {
@@ -70,7 +78,7 @@ interface ActionRowItemProps {
 }
 
 function ActionRowItem({ children, className }: ActionRowItemProps) {
-  return <div className={cn("flex flex-row gap-2 items-center min-w-0 shrink-0", className)}>{children}</div>
+  return <div className={cn("flex flex-row flex-wrap gap-2 items-center min-w-0", className)}>{children}</div>
 }
 
 interface HeaderProps {
@@ -78,16 +86,16 @@ interface HeaderProps {
   /** Shown inline after the title (e.g. queue type badge). */
   readonly badge?: ReactNode
   readonly description?: ReactNode
-  /** Right-aligned controls on the same row as the title (e.g. primary actions). */
+  /** Right-aligned controls beside the title; wrap below it when the header is too narrow to fit both. */
   readonly actions?: ReactNode
   readonly className?: string
 }
 
 function Header({ title, badge, description, actions, className }: HeaderProps) {
   return (
-    <div className={cn("flex flex-col gap-1 p-6 pb-0", className)}>
-      <div className="flex min-w-0 flex-row items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
+    <div className={cn("@container flex flex-col gap-1 p-6 pb-0", className)}>
+      <div className="flex min-w-0 flex-row flex-wrap items-start gap-x-4 gap-y-2 @max-[45rem]:flex-col">
+        <div className="flex min-w-64 flex-1 flex-col gap-1 @max-[45rem]:min-w-0 @max-[45rem]:flex-none">
           <div className="flex min-w-0 flex-row flex-wrap items-center gap-x-2 gap-y-1">
             {typeof title === "string" ? <Text.H4 className="min-w-0 shrink">{title}</Text.H4> : title}
             {badge ? <span className="shrink-0 flex">{badge}</span> : null}
@@ -100,7 +108,11 @@ function Header({ title, badge, description, actions, className }: HeaderProps) 
             )
           ) : null}
         </div>
-        {actions ? <div className="flex shrink-0 flex-row items-center gap-2 self-start">{actions}</div> : null}
+        {actions ? (
+          <div className="ml-auto flex max-w-full shrink-0 flex-row flex-wrap items-center gap-2 self-start @max-[45rem]:w-full @max-[45rem]:justify-between">
+            {actions}
+          </div>
+        ) : null}
       </div>
     </div>
   )
@@ -116,12 +128,22 @@ function List({ children, className }: ListProps) {
 }
 
 function Body({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
-  return <div className={cn("flex flex-row flex-1 min-h-0 min-w-0 overflow-hidden", className)}>{children}</div>
+  return (
+    <div className={cn("@container relative flex flex-row flex-1 min-h-0 min-w-0 overflow-hidden", className)}>
+      {children}
+    </div>
+  )
 }
 
 function Sidebar({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
   return (
-    <div className={cn("flex flex-col h-full w-[280px] min-w-[280px] shrink-0 border-r bg-background", className)}>
+    <div
+      className={cn(
+        "flex flex-col h-full w-[280px] min-w-[280px] shrink-0 border-r bg-background",
+        "@max-[48rem]:absolute @max-[48rem]:inset-y-0 @max-[48rem]:left-0 @max-[48rem]:z-20 @max-[48rem]:shadow-xl",
+        className,
+      )}
+    >
       {children}
     </div>
   )

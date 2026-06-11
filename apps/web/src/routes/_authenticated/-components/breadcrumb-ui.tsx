@@ -16,7 +16,7 @@ export type BreadcrumbLinkProps = Omit<CreateLinkProps, "children"> & {
 export function BreadcrumbLink({ className, children, ...props }: BreadcrumbLinkProps) {
   return (
     <Link {...props} className={cn(linkClass, className)}>
-      <Text.H5M color="foregroundMuted" className="truncate">
+      <Text.H5M color="foregroundMuted" ellipsis>
         {children}
       </Text.H5M>
     </Link>
@@ -37,6 +37,7 @@ export function BreadcrumbText({ children, className, variant = "muted" }: Bread
   return (
     <Text.H5M
       color={variant === "current" ? "foreground" : "foregroundMuted"}
+      ellipsis
       className={cn("px-2 py-1 min-w-0", className)}
     >
       {children}

@@ -127,7 +127,7 @@ function ConnectedSlackCard({
       )}
 
       {/* Identity row */}
-      <div className="flex flex-row items-center justify-between gap-4 p-4">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4">
         <div className="flex min-w-0 flex-row items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
             <Icon icon={SlackIcon} />

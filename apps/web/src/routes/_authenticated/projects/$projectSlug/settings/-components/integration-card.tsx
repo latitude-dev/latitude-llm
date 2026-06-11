@@ -26,7 +26,7 @@ export function IntegrationCard({
   readonly actions?: ReactNode
 }) {
   return (
-    <div className="flex flex-row items-center justify-between gap-4 rounded-lg border border-border p-4">
+    <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-border p-4">
       <div className="flex min-w-0 flex-row items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
           <Icon icon={icon} />

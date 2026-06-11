@@ -79,7 +79,7 @@ export function EnrichmentPopover({ annotationId, rawFeedback }: EnrichmentPopov
             <Icon icon={SparklesIcon} size="xs" color="foregroundMuted" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent side="bottom" align="end" className="w-96">
+        <PopoverContent side="bottom" align="end" className="w-96 max-w-[calc(100vw-2rem)]">
           <div className="flex flex-col gap-2">
             <Text.H5 className="whitespace-pre-wrap">{rawFeedback}</Text.H5>
             <span className="flex items-center gap-1">
