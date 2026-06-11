@@ -5,13 +5,11 @@ export const TOOL_CRITICAL_ERROR_RATE = 0.25
 
 export const DEFAULT_TOOLS_RANGE_SECONDS = 30 * 24 * 60 * 60 // last 30 days
 
-// Every two-column row of the tool detail page shares this template so the
-// right rail (latency chart, context panel) keeps one width and the columns
-// of a row stretch to equal heights.
+// Shared by every two-column row of the tool detail page so the right rail
+// keeps one width across rows.
 export const TOOL_DETAIL_ROW_GRID = "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px]"
 
-// Cap shared by the panels of the parameters/context row; equal caps keep the
-// stretched columns the same height even when one side overflows.
+// Equal caps keep a row's stretched columns the same height when one overflows.
 export const TOOL_DETAIL_PANEL_MAX_HEIGHT = "xl:max-h-[420px]"
 
 const TARGET_TREND_BUCKETS = 30

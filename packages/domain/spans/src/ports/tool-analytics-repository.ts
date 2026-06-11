@@ -85,9 +85,8 @@ export interface ToolAnalyticsRepositoryShape {
   /**
    * Most common error outputs of one tool's failed calls, clustered by a
    * normalized form of the output (numbers/UUIDs/hex runs collapsed) so
-   * variable fragments don't split one error into many buckets. Ordered by
-   * cluster size, capped at `limit` — callers derive an "other" remainder
-   * from the total failed-call count.
+   * variable fragments don't split one error into many buckets. Top `limit`
+   * clusters by size.
    */
   getToolErrorBreakdown(
     input: ToolAnalyticsScope & {
@@ -234,11 +233,11 @@ export interface ToolCoOccurrenceRow {
 }
 
 export interface ToolErrorBreakdownRow {
-  /** Normalized cluster key; empty when the failed calls carried no error output. */
+  /** Normalized cluster key; empty when the calls carried no error output. */
   readonly key: string
   /** Verbatim sample output from the cluster (truncated). */
   readonly sample: string
-  /** An `error_type` seen in the cluster, preferring non-empty values. */
+  /** An `error_type` seen in the cluster, preferring non-empty. */
   readonly errorType: string
   readonly calls: number
 }

@@ -186,9 +186,7 @@ function Button({
         className={cn(
           buttonContainerVariants({ variant }),
           buttonVariantsConfig({ variant, size }),
-          // The non-asChild branch spaces icon and label through an inner
-          // wrapper div; Slot can't add wrappers, so the gap goes on the
-          // child element itself.
+          // Slot can't add the inner wrapper that normally spaces icon and label.
           "gap-x-1.5",
           className,
           isLoading && "animate-pulse",

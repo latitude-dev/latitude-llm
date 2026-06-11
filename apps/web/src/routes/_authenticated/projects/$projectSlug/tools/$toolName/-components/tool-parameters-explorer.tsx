@@ -183,8 +183,7 @@ export function ToolParametersExplorer({
       ? selectedName
       : parameters[0]?.name
   const active = parameters.find((parameter) => parameter.name === activeName)
-  // With a single parameter there is nothing to select — skip the
-  // master-detail split so the lone entry doesn't render as a pressed button.
+  // A single parameter has nothing to select — skip the master-detail split.
   const single = parameters.length === 1 ? parameters[0] : undefined
 
   return (

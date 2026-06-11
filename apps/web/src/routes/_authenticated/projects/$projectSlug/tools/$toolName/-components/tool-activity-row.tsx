@@ -52,7 +52,6 @@ export function ToolActivityRow({
   readonly range: ToolsTimeRange
   readonly bucketSeconds: number
   readonly errorsOnly: boolean
-  /** Total failed calls in the window — the error breakdown's denominator. */
   readonly failedCalls: number
 }) {
   const { data: histogram = [], isLoading } = useToolCallHistogram({
@@ -156,8 +155,6 @@ export function ToolActivityRow({
         />
       </ChartPanel>
       {errorsOnly ? (
-        // Error view swaps the latency chart for the error breakdown — failed
-        // calls' latency is already in the Usage row's Duration tile.
         <ToolErrorBreakdown projectId={projectId} toolName={toolName} range={range} failedCalls={failedCalls} />
       ) : (
         <ChartPanel title="Latency over time" isLoading={isLoading} isEmpty={isEmpty} emptyLabel={emptyLabel}>

@@ -1,11 +1,7 @@
 import { Button, Modal, Text, useMountEffect } from "@repo/ui"
 import { useRef, useState } from "react"
 
-// Tool descriptions are prompt content, so providers put no bound on their
-// length. Clamp the header to two lines and offer the full text in a modal —
-// the "Show more" trigger only appears when the text actually overflows the
-// clamp, measured on the rendered element (a character threshold would
-// misjudge depending on viewport width).
+// Tool descriptions are prompt content — providers put no bound on their length.
 export function ToolDescription({
   toolName,
   description,

@@ -177,8 +177,7 @@ function ToolDetailPageContent() {
                 onCheckedChange={(checked) => setErrorsParam(checked ? "1" : "")}
               />
               <div className="mx-1 h-5 w-px bg-border" />
-              {/* w-auto: the button face's w-full lands directly on the Link
-                  in asChild mode and would stretch it across the header. */}
+              {/* w-auto: asChild lands the face's w-full on the Link, stretching it. */}
               <Button asChild variant="outline" size="sm" className="w-auto">
                 <Link
                   to="/projects/$projectSlug"
@@ -191,8 +190,6 @@ function ToolDetailPageContent() {
                         { op: "lte", value: range.toIso },
                       ],
                     }),
-                    // Open the filter sidebar so the applied filters are
-                    // visible — otherwise the scoped view looks unexplained.
                     filtersOpen: true,
                   }}
                 >
@@ -206,8 +203,7 @@ function ToolDetailPageContent() {
             isLoading ? undefined : definition?.definition?.description ? (
               <ToolDescription key={toolName} toolName={toolName} description={definition.definition.description} />
             ) : (
-              // Italic separates these placeholder messages from real tool
-              // descriptions, which render in the same slot.
+              // Italics mark these as placeholders, not a literal description.
               <Text.H5 color="foregroundMuted" italic>
                 {notFound
                   ? "No definition or calls were found for this tool in the selected time window."

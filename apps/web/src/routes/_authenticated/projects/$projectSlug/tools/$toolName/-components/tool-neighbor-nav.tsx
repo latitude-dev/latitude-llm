@@ -6,13 +6,8 @@ import { type ReactNode, useMemo } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { type ToolsTimeRange, useProjectTools } from "../../../../../../../domains/tools/tools.collection.ts"
 
-/**
- * Real link when a neighbor exists (href, cmd/middle-click), disabled button
- * otherwise. The search params carry over so the error view and the selected
- * time range survive paging between tools. The Tooltip wraps the Button
- * directly — a wrapper component in between would swallow the trigger props
- * Tooltip injects via asChild.
- */
+// The Tooltip must wrap the Button directly — a component in between would
+// swallow the trigger props Tooltip injects via asChild.
 function NeighborButton({
   projectSlug,
   target,
@@ -88,7 +83,6 @@ export function ToolNeighborNav({
     }
   }, [analytics, toolName])
 
-  // Hotkeys are programmatic navigation — the buttons themselves are Links.
   const goToTool = (target: string | undefined) => {
     if (!target) return
     void navigate({
