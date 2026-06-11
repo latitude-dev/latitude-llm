@@ -369,7 +369,7 @@ export function useSessionDistinctValues({
   enabled = true,
 }: {
   readonly projectId: string
-  readonly column: "tags" | "models" | "providers" | "serviceNames"
+  readonly column: "tags" | "models" | "providers" | "serviceNames" | "tools"
   readonly search?: string
   readonly enabled?: boolean
 }) {

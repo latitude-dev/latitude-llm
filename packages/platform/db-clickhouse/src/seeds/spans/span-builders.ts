@@ -353,7 +353,17 @@ export function makeLlmSpan({
   return span
 }
 
-export function makeToolSpan({ base, tool, callId }: { base: SpanBase; tool: ToolConfig; callId: string }): SpanRow {
+export function makeToolSpan({
+  base,
+  tool,
+  callId,
+  error,
+}: {
+  base: SpanBase
+  tool: ToolConfig
+  callId: string
+  error?: { type: string; message: string }
+}): SpanRow {
   const span = makeBaseSpan(base)
   span.name = `execute_tool ${tool.name}`
   span.operation = "execute_tool"
@@ -366,6 +376,12 @@ export function makeToolSpan({ base, tool, callId }: { base: SpanBase; tool: Too
     "gen_ai.tool.name": tool.name,
     "gen_ai.tool.call.id": callId,
     "gen_ai.tool.type": "function",
+  }
+  if (error) {
+    span.status_code = 2
+    span.status_message = error.message
+    span.error_type = error.type
+    span.tool_output = ""
   }
   return span
 }

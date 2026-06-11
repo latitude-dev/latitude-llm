@@ -186,6 +186,78 @@ describe("TraceRepository", () => {
     })
   })
 
+  describe("tools filter (rollup column)", () => {
+    beforeEach(async () => {
+      // A tool-call span on TRACE_ID so the trace matches a tools filter.
+      const toolSpan: SpanRow = {
+        ...makeSpanRow({
+          traceId: TRACE_ID,
+          spanId: "1001a1b2c3d4e5f6",
+          startTime: new Date("2026-03-15T12:00:00Z"),
+          costTotalMicrocents: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+        }),
+        name: "execute_tool lookup_order",
+        operation: "execute_tool",
+        tool_name: "lookup_order",
+        tool_call_id: "call_1",
+      }
+      // A chat span defining a tool that is never called — must NOT appear
+      // in the multiselect options: the traces tools filter means "at least
+      // one call", and the rollup only carries called tools.
+      const chatSpanWithDefs: SpanRow = {
+        ...makeSpanRow({
+          traceId: TRACE_ID,
+          spanId: "1002a1b2c3d4e5f6",
+          startTime: new Date("2026-03-15T12:00:00Z"),
+          costTotalMicrocents: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+        }),
+        name: "chat gpt-test",
+        operation: "chat",
+        tool_definitions: '[{"name":"defined_only_tool","description":"d","parameters":{}}]',
+      }
+      await Effect.runPromise(insertJsonEachRow(ch.client, "spans", [toolSpan, chatSpanWithDefs]))
+    })
+
+    it("matches traces that called the tool", async () => {
+      const matches = await runCh(
+        repo.matchesFiltersByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          filters: { tools: [{ op: "in", value: ["lookup_order"] }] },
+        }),
+      )
+      expect(matches).toBe(true)
+    })
+
+    it("does not match traces without a call of the tool", async () => {
+      const matches = await runCh(
+        repo.matchesFiltersByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          filters: { tools: [{ op: "in", value: ["some_other_tool"] }] },
+        }),
+      )
+      expect(matches).toBe(false)
+    })
+
+    it("lists only called tools for the multiselect", async () => {
+      const values = await runCh(
+        repo.distinctFilterValues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          column: "tools",
+        }),
+      )
+      expect(values).toEqual(["lookup_order"])
+    })
+  })
+
   describe("getCohortBaseline", () => {
     // Use a fresh project id so seeded BASELINE_SPANS don't pollute the cohort.
     const COHORT_PROJECT_ID = ProjectId("cohort-project")

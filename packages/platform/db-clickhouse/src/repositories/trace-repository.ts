@@ -78,6 +78,7 @@ export const LIST_SELECT = `
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
   groupUniqArrayIfMerge(service_names) AS service_names,
+  groupUniqArrayIfMerge(tools)         AS tools,
   argMinIfMerge(root_span_id)   AS root_span_id,
   argMinIfMerge(root_span_name) AS root_span_name
 `
@@ -116,6 +117,7 @@ type TraceListRow = {
   models: string[]
   providers: string[]
   service_names: string[]
+  tools: string[]
   root_span_id: string
   root_span_name: string
 }
@@ -1439,17 +1441,13 @@ export const TraceRepositoryLive = Layer.effect(
             models: "arrayJoin(groupUniqArrayIfMerge(models))",
             providers: "arrayJoin(groupUniqArrayIfMerge(providers))",
             serviceNames: "arrayJoin(groupUniqArrayIfMerge(service_names))",
+            tools: "arrayJoin(groupUniqArrayIfMerge(tools))",
           }
-          const expr = COLUMN_EXPRS[column]
-          if (!expr) return []
-
           const searchClause = search ? " AND val ILIKE {search:String}" : ""
 
-          return yield* chSqlClient
-            .query(async (client) => {
-              const result = await client.query({
-                query: `SELECT DISTINCT val FROM (
-                        SELECT ${expr} AS val
+          const query = COLUMN_EXPRS[column]
+            ? `SELECT DISTINCT val FROM (
+                        SELECT ${COLUMN_EXPRS[column]} AS val
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
@@ -1457,7 +1455,14 @@ export const TraceRepositoryLive = Layer.effect(
                       )
                       WHERE val != ''${searchClause}
                       ORDER BY val
-                      LIMIT {limit:UInt32}`,
+                      LIMIT {limit:UInt32}`
+            : undefined
+          if (!query) return []
+
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query,
                 query_params: {
                   organizationId: organizationId as string,
                   projectId: projectId as string,

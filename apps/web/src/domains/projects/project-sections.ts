@@ -15,11 +15,12 @@ import {
   TextAlignStartIcon,
   UserRound,
   Users,
+  WrenchIcon,
 } from "lucide-react"
 import { useMemo } from "react"
 import { useHasFeatureFlag } from "../feature-flags/feature-flags.collection.ts"
 
-type SectionFlag = "behaviours" | "monitors" | "sso"
+type SectionFlag = "behaviours" | "monitors" | "sso" | "tools"
 
 interface ProjectSection {
   readonly key: string
@@ -47,6 +48,14 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     icon: ShieldAlertIcon,
     path: (slug) => `/projects/${slug}/issues`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/issues`),
+  },
+  {
+    key: "tools",
+    label: "Tools",
+    icon: WrenchIcon,
+    path: (slug) => `/projects/${slug}/tools`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/tools`),
+    flag: "tools",
   },
   {
     key: "behaviours",
@@ -179,7 +188,8 @@ function useSectionFlags(): Record<SectionFlag, boolean> {
   const behaviours = useHasFeatureFlag("behaviours")
   const monitors = useHasFeatureFlag("monitors")
   const sso = useHasFeatureFlag("sso")
-  return useMemo(() => ({ behaviours, monitors, sso }), [behaviours, monitors, sso])
+  const tools = useHasFeatureFlag("tools")
+  return useMemo(() => ({ behaviours, monitors, sso, tools }), [behaviours, monitors, sso, tools])
 }
 
 /** Project sections visible to the current org, in sidebar/palette order. */

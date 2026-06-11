@@ -97,6 +97,26 @@ export { emptySessionMetrics, SessionRepository } from "./ports/session-reposito
 export type { SpanListOptions, SpanMessagesData, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {
+  RecentToolCall,
+  RecentToolCallPage,
+  ToolAnalyticsRepositoryShape,
+  ToolAnalyticsScope,
+  ToolCallCursor,
+  ToolCallHistogramBucket,
+  ToolContextBreakdownRow,
+  ToolContextDimension,
+  ToolCoOccurrenceRow,
+  ToolDefinitionDetail,
+  ToolParameterStat,
+  ToolParameterStatsResult,
+  ToolParameterValueStat,
+  ToolSummary,
+  ToolsAnalytics,
+  ToolsAnalyticsTotals,
+  ToolUsageMetrics,
+} from "./ports/tool-analytics-repository.ts"
+export { ToolAnalyticsRepository } from "./ports/tool-analytics-repository.ts"
+export type {
   NumericRollup,
   TraceDistinctColumn,
   TraceDistribution,
