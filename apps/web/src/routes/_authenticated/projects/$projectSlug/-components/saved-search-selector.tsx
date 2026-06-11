@@ -13,6 +13,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Status,
   Text,
   Tooltip,
   TooltipContent,
@@ -24,6 +25,7 @@ import {
 import { useNavigate } from "@tanstack/react-router"
 import {
   BellIcon,
+  BellOffIcon,
   BellPlusIcon,
   BookmarkIcon,
   BookmarkPlusIcon,
@@ -118,6 +120,8 @@ export function SavedSearchSelector({
   }
 
   const selectedSummary = selected ? monitorSummaries[selected.id] : undefined
+  const selectedAllMuted = selectedSummary?.monitors.every((monitor) => monitor.muted) ?? false
+  const selectedMutedCount = selectedSummary?.monitors.filter((monitor) => monitor.muted).length ?? 0
 
   return (
     <>
@@ -162,7 +166,9 @@ export function SavedSearchSelector({
             ) : (
               filtered.map((record) => {
                 const isSelected = record.slug === selectedSlug
-                const hasMonitor = Boolean(monitorSummaries[record.id])
+                const summary = monitorSummaries[record.id]
+                const hasMonitor = Boolean(summary)
+                const allMuted = hasMonitor && (summary?.monitors.every((monitor) => monitor.muted) ?? false)
                 const filtersCount = Object.keys(record.filterSet).length
                 return (
                   <div
@@ -230,11 +236,15 @@ export function SavedSearchSelector({
                               }
                               onClick={() => goToMonitor(record)}
                             >
-                              <Icon icon={hasMonitor ? BellIcon : BellPlusIcon} size="sm" color="foregroundMuted" />
+                              <Icon
+                                icon={hasMonitor ? (allMuted ? BellOffIcon : BellIcon) : BellPlusIcon}
+                                size="sm"
+                                color="foregroundMuted"
+                              />
                             </Button>
                           }
                         >
-                          {hasMonitor ? "View monitor" : "Create monitor"}
+                          {hasMonitor ? (allMuted ? "View monitor (muted)" : "View monitor") : "Create monitor"}
                         </Tooltip>
                       )
                     ) : null}
@@ -304,7 +314,7 @@ export function SavedSearchSelector({
                       aria-label={`View monitors for ${selected.name}`}
                       className="flex h-full shrink-0 cursor-pointer items-center gap-1.5 self-stretch border-input border-r px-2 transition-colors hover:bg-secondary/60"
                     >
-                      <Icon icon={BellIcon} size="sm" color="foregroundMuted" />
+                      <Icon icon={selectedAllMuted ? BellOffIcon : BellIcon} size="sm" color="foregroundMuted" />
                       <SeverityDots severities={selectedSummary.severities} />
                     </button>
                   </DropdownMenuTrigger>
@@ -312,6 +322,11 @@ export function SavedSearchSelector({
                 <TooltipContent>
                   {selectedSummary.monitors.length} monitor
                   {selectedSummary.monitors.length === 1 ? "" : "s"}
+                  {selectedMutedCount > 0
+                    ? selectedMutedCount === selectedSummary.monitors.length
+                      ? " · muted"
+                      : ` · ${selectedMutedCount} muted`
+                    : ""}
                 </TooltipContent>
               </TooltipRoot>
             </TooltipProvider>
@@ -335,6 +350,7 @@ export function SavedSearchSelector({
                         {monitor.name}
                       </Text.H5>
                     </div>
+                    {monitor.muted ? <Status variant="neutral" label="Muted" /> : null}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

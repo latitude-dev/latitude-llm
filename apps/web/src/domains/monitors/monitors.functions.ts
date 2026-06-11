@@ -195,6 +195,7 @@ export interface SavedSearchMonitorSummaryRecord {
   readonly monitors: readonly {
     readonly slug: string
     readonly name: string
+    readonly muted: boolean
     readonly severities: readonly AlertSeverity[]
   }[]
 }

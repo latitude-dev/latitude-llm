@@ -69,10 +69,12 @@ export interface MonitorSearchResult {
 
 /**
  * Per-saved-search monitoring summary. `monitorSlug` is the earliest-created
- * live, unmuted monitor watching the search (the primary deep-link target);
+ * live monitor watching the search (the primary deep-link target);
  * `severities` covers every live alert on such monitors (one UI dot per
  * alert); `monitors` lists each distinct watching monitor (earliest first)
- * so the UI can offer a picker when several watch the same search.
+ * so the UI can offer a picker when several watch the same search. Muted
+ * monitors are included (flagged via `muted`) — muting silences
+ * notifications, it does not sever the saved-search linkage.
  */
 export interface SavedSearchMonitorSummary {
   readonly savedSearchId: string
@@ -82,6 +84,7 @@ export interface SavedSearchMonitorSummary {
   readonly monitors: readonly {
     readonly slug: string
     readonly name: string
+    readonly muted: boolean
     /** Severities of this monitor's live alerts watching the search. */
     readonly severities: readonly AlertSeverity[]
   }[]
@@ -167,9 +170,9 @@ export interface MonitorRepositoryShape {
   /** Active saved-search alerts in a project (live alert + monitor). Org-scoped — the firing orchestrator resolves + evaluates each. */
   listActiveSavedSearchAlerts(projectId: ProjectId): Effect.Effect<readonly MonitorAlert[], RepositoryError, SqlClient>
   /**
-   * For every saved search watched by a live, unmuted monitor in the project: the slug of the
-   * earliest-created such monitor, the distinct monitor count, and the severities of every live
-   * alert watching it. Batched — one call covers all the project's saved searches.
+   * For every saved search watched by a live monitor (muted included) in the project: the slug of
+   * the earliest-created such monitor, the distinct monitor count, and the severities of every
+   * live alert watching it. Batched — one call covers all the project's saved searches.
    */
   listSavedSearchMonitorSummaries(
     projectId: ProjectId,
