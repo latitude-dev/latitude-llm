@@ -148,6 +148,7 @@ export {
   validateEvaluationScript,
   wrapPromptAsEvaluationScript,
 } from "./runtime/evaluation-execution.ts"
+export { executeEvaluationScriptSandboxed } from "./runtime/sandbox-execution.ts"
 export { collectAlignmentExamplesUseCase } from "./use-cases/alignment/collect-alignment-examples.ts"
 export { evaluateBaselineDraftUseCase } from "./use-cases/alignment/evaluate-baseline-draft.ts"
 export { evaluateDraftAgainstExamplesUseCase } from "./use-cases/alignment/evaluate-draft-against-examples.ts"
@@ -178,11 +179,13 @@ export {
   type LiveEvaluationExecutionResult,
   type LiveEvaluationIssueContext,
   type LiveEvaluationResultPayload,
+  type LiveEvaluationRuntime,
   liveEvaluationConversationInputSchema,
   liveEvaluationExecutionInputSchema,
   liveEvaluationExecutionResultSchema,
   liveEvaluationIssueContextSchema,
   liveEvaluationResultPayloadSchema,
+  liveEvaluationRuntimeSchema,
 } from "./use-cases/live/execute-live-evaluation.ts"
 export { listAllActiveEvaluations } from "./use-cases/live/list-all-active-evaluations.ts"
 export { orchestrateTraceEndLiveEvaluationExecutesUseCase } from "./use-cases/live/orchestrate-trace-end-live-evaluation-executes.ts"

@@ -44,6 +44,12 @@ export const FEATURE_FLAGS = {
     description:
       "Project-level analytics for LLM tools: every defined and called tool with usage, failure and latency metrics.",
   },
+  "evaluation-sandbox-runtime": {
+    emoji: "🧰",
+    name: "Sandboxed evaluation runtime",
+    description:
+      "Executes evaluation scripts in the QuickJS sandbox runtime (full script execution) instead of the template-extraction MVP bridge.",
+  },
 } as const satisfies Record<
   string,
   {
