@@ -36,6 +36,7 @@ import { isGlobalAnnotation } from "./annotations/hooks/use-annotation-navigatio
 import { useConversationAnnotationFocus } from "./annotations/hooks/use-conversation-annotation-focus.ts"
 import { TraceAnnotationsList } from "./annotations/trace-annotations-list.tsx"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
+import { useSpanFilters } from "./trace-detail-drawer/tabs/spans-tab/use-span-filters.ts"
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
 import { TraceTab } from "./trace-detail-drawer/tabs/trace-tab.tsx"
 import { TraceCommandPaletteContributor } from "./trace-detail-drawer/trace-command-palette-contributor.tsx"
@@ -278,6 +279,7 @@ export function TraceDetailBody({
     [annotationsEnabled, annotationTabSuffix, spansTabSuffix],
   )
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set([activeTab]))
+  const { openWithErrors, openWithModel } = useSpanFilters()
 
   // Stable so the palette contributor's command memo doesn't re-register each render.
   const handleSetActiveTab = useCallback(
@@ -309,6 +311,18 @@ export function TraceDetailBody({
   function navigateToSpan(spanId: string | null) {
     handleSetActiveTab("spans")
     onSelectedSpanIdChange(spanId ?? "")
+  }
+
+  function navigateToSpansWithErrors() {
+    openWithErrors()
+    onSelectedSpanIdChange("")
+    handleSetActiveTab("spans")
+  }
+
+  function navigateToSpansWithModel(model: string) {
+    openWithModel(model)
+    onSelectedSpanIdChange("")
+    handleSetActiveTab("spans")
   }
 
   return (
@@ -346,11 +360,19 @@ export function TraceDetailBody({
             {isRecordLoading ? (
               <Skeleton className="h-6 w-12" />
             ) : traceRecord && traceRecord.errorCount > 0 ? (
-              <Status
-                variant="destructive"
-                indicator={false}
-                label={`${formatCount(traceRecord.errorCount)} ${traceRecord.errorCount === 1 ? "error" : "errors"}`}
-              />
+              <button
+                type="button"
+                onClick={navigateToSpansWithErrors}
+                aria-label={`View ${traceRecord.errorCount} errored spans`}
+                className="inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <Status
+                  variant="destructive"
+                  indicator={false}
+                  label={`${formatCount(traceRecord.errorCount)} ${traceRecord.errorCount === 1 ? "error" : "errors"}`}
+                  className="cursor-pointer transition-opacity hover:opacity-80"
+                />
+              </button>
             ) : null}
           </div>
           <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />
@@ -374,6 +396,7 @@ export function TraceDetailBody({
             isSpansLoading={isSpansLoading}
             isRecordLoading={isRecordLoading}
             isDetailLoading={isDetailLoading}
+            onOpenSpansWithModel={navigateToSpansWithModel}
             filters={filters}
             onFiltersChange={onFiltersChange}
           />

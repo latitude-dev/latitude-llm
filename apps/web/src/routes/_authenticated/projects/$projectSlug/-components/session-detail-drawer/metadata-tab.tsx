@@ -17,6 +17,7 @@ import { useSpansBySessionCollection } from "../../../../../../domains/spans/spa
 import { SessionOutlierBadge, type SessionOutlierMetric } from "../session-outlier-badge.tsx"
 import { DurationBar } from "../trace-detail-drawer/duration-bar.tsx"
 import { computeSessionDurationBreakdown } from "../trace-detail-drawer/duration-composition.ts"
+import { ModelFilterLink } from "../trace-detail-drawer/tabs/spans-tab/model-filter-link.tsx"
 import { UsageSummary } from "../trace-detail-drawer/tabs/spans-tab/span-detail/usage-summary.tsx"
 
 // Sessions only expose percentile filters for duration/TTFT/cost
@@ -37,10 +38,14 @@ export function MetadataTab({
   session,
   filters,
   onFiltersChange,
+  spansNavEnabled = false,
+  onOpenSpansWithModel,
 }: {
   readonly session: SessionDetailRecord
   readonly filters?: FilterSet | undefined
   readonly onFiltersChange?: ((filters: FilterSet) => void) | undefined
+  readonly spansNavEnabled?: boolean
+  readonly onOpenSpansWithModel?: ((model: string) => void) | undefined
 }) {
   const hasProviders = session.providers.length > 0
   const hasModels = session.models.length > 0
@@ -130,11 +135,18 @@ export function MetadataTab({
                 {p}
               </Tooltip>
             ))}
-          {hasModels && (
-            <Text.H5 color="foregroundMuted" noWrap>
-              {session.models.join(", ")}
-            </Text.H5>
-          )}
+          {hasModels &&
+            (spansNavEnabled && onOpenSpansWithModel ? (
+              <div className="flex flex-row flex-wrap items-center gap-1.5">
+                {session.models.map((model) => (
+                  <ModelFilterLink key={model} model={model} onClick={() => onOpenSpansWithModel(model)} />
+                ))}
+              </div>
+            ) : (
+              <Text.H5 color="foregroundMuted" noWrap>
+                {session.models.join(", ")}
+              </Text.H5>
+            ))}
         </div>
       )}
 

@@ -1,8 +1,11 @@
 import { Text } from "@repo/ui"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSpansByTraceCollection } from "../../../../../../../domains/spans/spans.collection.ts"
 import { SpanDetail } from "./spans-tab/span-detail/index.tsx"
+import { filterSpansWithAncestors } from "./spans-tab/span-filters.ts"
+import { SpanFiltersBar } from "./spans-tab/span-filters-bar.tsx"
 import { SpanTree, scrollSpanIntoView } from "./spans-tab/span-tree/index.tsx"
+import { useSpanFilters } from "./spans-tab/use-span-filters.ts"
 
 export function SpansTab({
   projectId,
@@ -21,10 +24,20 @@ export function SpansTab({
   readonly onSelectSpan: (spanId: string) => void
   readonly isActive: boolean
 }) {
+  const { filters, clearFilters, toggleErrors, toggleTools, selectModel } = useSpanFilters()
   // Shares the cached spans collection with the Trace tab's fetch (same key → one fetch).
   const { data: spans, isLoading } = useSpansByTraceCollection({ projectId, traceId, startTimeFrom, startTimeTo })
   const [isMinimized, setIsMinimized] = useState(() => selectedSpanId !== "")
   const treeContainerRef = useRef<HTMLDivElement | null>(null)
+  const filteredSpans = useMemo(() => (spans ? filterSpansWithAncestors(spans, filters) : []), [filters, spans])
+
+  // TODO(frontend-use-effect-policy): clear selection when the active filter set
+  // hides the currently selected span.
+  useEffect(() => {
+    if (!selectedSpanId || filteredSpans.length === 0) return
+    const isVisible = filteredSpans.some((span) => span.spanId === selectedSpanId)
+    if (!isVisible) onSelectSpan("")
+  }, [filteredSpans, onSelectSpan, selectedSpanId])
 
   // TODO(frontend-use-effect-policy): scrollSpanIntoView is an imperative DOM
   // operation that cannot be derived during render. It must fire both when
@@ -73,10 +86,36 @@ export function SpansTab({
     )
   }
 
+  if (filteredSpans.length === 0) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <SpanFiltersBar
+          spans={spans}
+          filters={filters}
+          onToggleErrors={toggleErrors}
+          onToggleTools={toggleTools}
+          onSelectModel={selectModel}
+          onClearFilters={clearFilters}
+        />
+        <div className="flex flex-1 items-center justify-center py-6">
+          <Text.H5 color="foregroundMuted">No spans match the active filters</Text.H5>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div ref={treeContainerRef} className="flex flex-col flex-1 overflow-hidden">
-      <SpanTree
+      <SpanFiltersBar
         spans={spans}
+        filters={filters}
+        onToggleErrors={toggleErrors}
+        onToggleTools={toggleTools}
+        onSelectModel={selectModel}
+        onClearFilters={clearFilters}
+      />
+      <SpanTree
+        spans={filteredSpans}
         selectedSpanId={selectedSpanId}
         onSelectSpan={handleSelectSpan}
         isMinimized={isMinimized}
