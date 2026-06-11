@@ -186,7 +186,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
       Effect.sync(() => {
         const summaries = new Map<string, { byMonitor: Map<string, Monitor>; severities: MonitorAlert["severity"][] }>()
         for (const monitor of monitors) {
-          if (monitor.projectId !== projectId || !isLive(monitor) || monitor.mutedAt !== null) continue
+          if (monitor.projectId !== projectId || !isLive(monitor)) continue
           for (const alert of monitor.alerts) {
             if (alert.source.type !== "savedSearch" || !alert.source.id) continue
             const entry = summaries.get(alert.source.id) ?? {
@@ -214,6 +214,7 @@ export const createFakeMonitorRepository = (seed: readonly Monitor[] = []) => {
               monitors: ordered.map((m) => ({
                 slug: m.slug,
                 name: m.name,
+                muted: m.mutedAt !== null,
                 severities: m.alerts
                   .filter((alert) => alert.source.type === "savedSearch" && alert.source.id === savedSearchId)
                   .map((alert) => alert.severity),

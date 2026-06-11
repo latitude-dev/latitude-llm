@@ -580,9 +580,9 @@ export const MonitorRepositoryLive = Layer.effect(
       listSavedSearchMonitorSummaries: (projectId) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          // One row per live alert on a live, unmuted monitor; ordering puts the
-          // earliest-created monitor first per saved search so the first row seen
-          // carries the primary deep-link slug.
+          // One row per live alert on a live monitor (muted included — muting only
+          // silences notifications); ordering puts the earliest-created monitor first
+          // per saved search so the first row seen carries the primary deep-link slug.
           const rows = yield* sqlClient.query((db) =>
             db
               .select({
@@ -590,6 +590,7 @@ export const MonitorRepositoryLive = Layer.effect(
                 monitorId: monitors.id,
                 monitorSlug: monitors.slug,
                 monitorName: monitors.name,
+                monitorMutedAt: monitors.mutedAt,
                 severity: monitorAlerts.severity,
               })
               .from(monitorAlerts)
@@ -602,7 +603,6 @@ export const MonitorRepositoryLive = Layer.effect(
                   isNotNull(monitorAlerts.sourceId),
                   isNull(monitorAlerts.deletedAt),
                   isNull(monitors.deletedAt),
-                  isNull(monitors.mutedAt),
                 ),
               )
               .orderBy(
@@ -613,7 +613,12 @@ export const MonitorRepositoryLive = Layer.effect(
               ),
           )
 
-          type MonitorEntry = { slug: string; name: string; severities: (typeof rows)[number]["severity"][] }
+          type MonitorEntry = {
+            slug: string
+            name: string
+            muted: boolean
+            severities: (typeof rows)[number]["severity"][]
+          }
           const summaries = new Map<
             string,
             {
@@ -632,7 +637,12 @@ export const MonitorRepositoryLive = Layer.effect(
             let monitor = entry.byMonitorId.get(row.monitorId)
             if (!monitor) {
               // Row order is earliest monitor first, so `monitors[0]` is the primary.
-              monitor = { slug: row.monitorSlug, name: row.monitorName, severities: [] }
+              monitor = {
+                slug: row.monitorSlug,
+                name: row.monitorName,
+                muted: row.monitorMutedAt !== null,
+                severities: [],
+              }
               entry.byMonitorId.set(row.monitorId, monitor)
               entry.monitors.push(monitor)
             }

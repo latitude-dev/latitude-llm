@@ -1158,7 +1158,7 @@ describe("MonitorRepositoryLive", () => {
         makeAlertRow({ id: "1".repeat(24), monitorId: older, sourceId: searchX, severity: "low" }),
         makeAlertRow({ id: "2".repeat(24), monitorId: newer, sourceId: searchX, severity: "high" }),
         makeAlertRow({ id: "3".repeat(24), monitorId: deleted, sourceId: searchX }),
-        // searchY is only watched by a muted monitor → excluded.
+        // searchY is only watched by a muted monitor → still listed, flagged muted.
         makeAlertRow({ id: "4".repeat(24), monitorId: muted, sourceId: searchY }),
         // soft-deleted alert on a live monitor → its source (searchZ) excluded.
         makeAlertRow({ id: "5".repeat(24), monitorId: older, sourceId: searchZ, deletedAt: new Date() }),
@@ -1177,9 +1177,16 @@ describe("MonitorRepositoryLive", () => {
           monitorCount: 2,
           severities: ["low", "high"],
           monitors: [
-            { slug: "older", name: "Older", severities: ["low"] },
-            { slug: "newer", name: "Newer", severities: ["high"] },
+            { slug: "older", name: "Older", muted: false, severities: ["low"] },
+            { slug: "newer", name: "Newer", muted: false, severities: ["high"] },
           ],
+        },
+        {
+          savedSearchId: searchY,
+          monitorSlug: "muted",
+          monitorCount: 1,
+          severities: ["medium"],
+          monitors: [{ slug: "muted", name: "Muted", muted: true, severities: ["medium"] }],
         },
       ])
     })
