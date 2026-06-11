@@ -34,6 +34,6 @@ export function useSpanFilters() {
     openWithModel,
     toggleErrors: () => setErrors(!errors),
     toggleTools: () => setTools(!tools),
-    selectModel: (nextModel: string) => setModel(model === nextModel ? "" : nextModel),
+    selectModel: (nextModel: string) => setModel(nextModel),
   }
 }

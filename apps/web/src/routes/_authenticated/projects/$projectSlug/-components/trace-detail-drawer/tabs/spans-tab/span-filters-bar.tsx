@@ -1,4 +1,4 @@
-import { Badge, cn, Icon, Text } from "@repo/ui"
+import { cn, Icon, Select, type SelectOption, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { AlertTriangleIcon, WrenchIcon, XIcon } from "lucide-react"
 import type { ReactNode } from "react"
@@ -15,7 +15,8 @@ type SpanFiltersBarProps = {
 }
 
 const filterButtonClass =
-  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+const ALL_MODELS_VALUE = "__all_models__"
 
 function FilterToggle({
   active,
@@ -54,82 +55,77 @@ export function SpanFiltersBar({
   onClearFilters,
 }: SpanFiltersBarProps) {
   const models = collectSpanModels(spans)
+  const modelOptions: SelectOption<string>[] = [
+    { label: "All models", value: ALL_MODELS_VALUE },
+    ...models.map((model) => ({ label: model, value: model })),
+  ]
   const matchingCount = countMatchingSpans(spans, filters)
   const filtersActive = hasActiveSpanFilters(filters)
 
   return (
-    <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-3">
-      <div className="flex flex-row flex-wrap items-center gap-2">
-        <FilterToggle
-          active={filters.errors}
-          activeClassName="border-destructive-muted-foreground/30 bg-destructive-muted text-destructive-muted-foreground"
-          inactiveClassName="border-border bg-secondary text-muted-foreground hover:bg-muted"
-          onClick={onToggleErrors}
-          ariaLabel={filters.errors ? "Show all spans" : "Show only errored spans"}
-        >
-          <Icon icon={AlertTriangleIcon} size="xs" color={filters.errors ? "destructive" : "foregroundMuted"} />
-          <span>Errors</span>
-        </FilterToggle>
+    <div className="flex shrink-0 border-b border-border px-4 py-3">
+      <div className="flex w-full flex-row flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-row flex-wrap items-center gap-2">
+          <FilterToggle
+            active={filters.errors}
+            activeClassName="border-destructive-muted-foreground/30 bg-destructive-muted text-destructive-muted-foreground"
+            inactiveClassName="border-border bg-secondary text-muted-foreground hover:bg-muted"
+            onClick={onToggleErrors}
+            ariaLabel={filters.errors ? "Show all spans" : "Show only errored spans"}
+          >
+            <Icon icon={AlertTriangleIcon} size="xs" color={filters.errors ? "destructive" : "foregroundMuted"} />
+            <span>Errors</span>
+          </FilterToggle>
 
-        <FilterToggle
-          active={filters.tools}
-          activeClassName="border-accent-foreground/30 bg-accent text-accent-foreground"
-          inactiveClassName="border-border bg-secondary text-muted-foreground hover:bg-muted"
-          onClick={onToggleTools}
-          ariaLabel={filters.tools ? "Show all spans" : "Show only tool spans"}
-        >
-          <Icon icon={WrenchIcon} size="xs" color={filters.tools ? "accent" : "foregroundMuted"} />
-          <span>Tools</span>
-        </FilterToggle>
+          <FilterToggle
+            active={filters.tools}
+            activeClassName="border-accent-foreground/30 bg-accent text-accent-foreground"
+            inactiveClassName="border-border bg-secondary text-muted-foreground hover:bg-muted"
+            onClick={onToggleTools}
+            ariaLabel={filters.tools ? "Show all spans" : "Show only tool spans"}
+          >
+            <Icon icon={WrenchIcon} size="xs" color={filters.tools ? "accent" : "foregroundMuted"} />
+            <span>Tools</span>
+          </FilterToggle>
 
-        {models.length > 0 ? (
-          <>
-            <div className="hidden h-4 w-px shrink-0 bg-border sm:block" aria-hidden />
-            {models.map((model) => {
-              const active = filters.model === model
-              return (
-                <button
-                  key={model}
-                  type="button"
-                  aria-pressed={active}
-                  aria-label={active ? `Clear model filter for ${model}` : `Show only ${model} spans`}
-                  onClick={() => onSelectModel(model)}
-                  className={cn(filterButtonClass, {
-                    "border-primary/30 bg-primary/10 text-foreground": active,
-                    "border-border bg-secondary text-muted-foreground hover:bg-muted": !active,
-                  })}
-                >
-                  <span className="max-w-[12rem] truncate">{model}</span>
-                </button>
-              )
-            })}
-          </>
-        ) : null}
+          {models.length > 0 ? (
+            <Select
+              name="span-model-filter"
+              options={modelOptions}
+              value={filters.model || ALL_MODELS_VALUE}
+              onChange={(nextModel) => onSelectModel(nextModel === ALL_MODELS_VALUE ? "" : nextModel)}
+              width="auto"
+              contentWidth="trigger"
+              size="small"
+              triggerClassName={cn("w-32 shadow-none", {
+                "border-primary/30 bg-primary/10": !!filters.model,
+                "border-border bg-secondary hover:bg-muted": !filters.model,
+              })}
+            />
+          ) : null}
+
+          {filtersActive ? (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              aria-label="Clear span filters"
+              className={cn(
+                filterButtonClass,
+                "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <Icon icon={XIcon} size="xs" color="foregroundMuted" />
+              <span>Clear</span>
+            </button>
+          ) : null}
+        </div>
 
         {filtersActive ? (
-          <button
-            type="button"
-            onClick={onClearFilters}
-            aria-label="Clear span filters"
-            className={cn(
-              filterButtonClass,
-              "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            <Icon icon={XIcon} size="xs" color="foregroundMuted" />
-            <span>Clear</span>
-          </button>
+          <Text.H6 color="foregroundMuted" noWrap className="px-1">
+            {formatCount(matchingCount)} of {formatCount(spans.length)} matching spans
+          </Text.H6>
         ) : null}
       </div>
-
-      {filtersActive ? (
-        <div className="flex flex-row items-center gap-2">
-          <Badge variant="outlineMuted" size="small" shape="rounded" noWrap>
-            {formatCount(matchingCount)} of {formatCount(spans.length)}
-          </Badge>
-          <Text.H6 color="foregroundMuted">matching spans</Text.H6>
-        </div>
-      ) : null}
     </div>
   )
 }
