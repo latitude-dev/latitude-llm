@@ -22,9 +22,6 @@ type LatitudeContextData = {
   sessionId: string | undefined
   userId: string | undefined
   userEmail: string | undefined
-  userPlan: string | undefined
-  userFirstName: string | undefined
-  userLastName: string | undefined
   project: string | undefined
 }
 
@@ -61,9 +58,6 @@ export function capture<T>(name: string, fn: () => T | Promise<T>, options: Cont
     sessionId: options.sessionId ?? existingData?.sessionId,
     userId: options.userId ?? existingData?.userId,
     userEmail: options.userEmail ?? existingData?.userEmail,
-    userPlan: options.userPlan ?? existingData?.userPlan,
-    userFirstName: options.userFirstName ?? existingData?.userFirstName,
-    userLastName: options.userLastName ?? existingData?.userLastName,
     project: projectFromOptions ?? existingData?.project,
   }
 

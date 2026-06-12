@@ -5,8 +5,5 @@ export const ATTRIBUTES = {
   sessionId: "session.id",
   userId: "user.id",
   userEmail: "user.email",
-  userPlan: "user.plan",
-  userFirstName: "user.first_name",
-  userLastName: "user.last_name",
   project: "latitude.project",
 } as const
