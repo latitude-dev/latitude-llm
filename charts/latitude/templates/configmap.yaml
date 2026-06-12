@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "latitude.fullname" . }}-env
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+data:
+  NODE_ENV: production
+
+  # --- Public URLs ---------------------------------------------------------
+  LAT_WEB_URL: {{ required "Set config.webUrl (e.g. https://latitude.example.com)" .Values.config.webUrl | quote }}
+  LAT_API_URL: {{ required "Set config.apiUrl (e.g. https://api.latitude.example.com)" .Values.config.apiUrl | quote }}
+  LAT_INGEST_URL: {{ required "Set config.ingestUrl (e.g. https://ingest.latitude.example.com)" .Values.config.ingestUrl | quote }}
+  LAT_BETTER_AUTH_URL: {{ .Values.config.apiUrl | quote }}
+  LAT_TRUSTED_ORIGINS: {{ .Values.config.webUrl | quote }}
+  LAT_CORS_ALLOWED_ORIGINS: {{ .Values.config.webUrl | quote }}
+
+  # --- Service ports (cluster-internal) -------------------------------------
+  LAT_API_PORT: "3001"
+  LAT_INGEST_PORT: "3002"
+  LAT_WORKERS_HEALTH_PORT: "9090"
+  LAT_WORKFLOWS_HEALTH_PORT: "9091"
+
+  # --- Postgres (bundled-container bootstrap; connection URLs live in the Secret)
+  {{- if .Values.postgres.enabled }}
+  POSTGRES_USER: {{ .Values.postgres.auth.username | quote }}
+  POSTGRES_DB: {{ .Values.postgres.auth.database | quote }}
+  POSTGRES_RUNTIME_USER: {{ .Values.postgres.auth.runtimeUsername | quote }}
+  {{- end }}
+
+  # --- ClickHouse ------------------------------------------------------------
+  {{- if .Values.clickhouse.enabled }}
+  CLICKHOUSE_USER: {{ .Values.clickhouse.auth.username | quote }}
+  CLICKHOUSE_DB: {{ .Values.clickhouse.auth.database | quote }}
+  LAT_CLICKHOUSE_URL: {{ printf "http://%s-clickhouse:8123" (include "latitude.fullname" .) | quote }}
+  LAT_CLICKHOUSE_USER: {{ .Values.clickhouse.auth.username | quote }}
+  LAT_CLICKHOUSE_DB: {{ .Values.clickhouse.auth.database | quote }}
+  LAT_CLICKHOUSE_MIGRATION_URL: {{ printf "clickhouse://%s-clickhouse:9000" (include "latitude.fullname" .) | quote }}
+  LAT_CLICKHOUSE_CLUSTER_ENABLED: "false"
+  {{- else }}
+  LAT_CLICKHOUSE_URL: {{ required "Set clickhouse.external.url when clickhouse.enabled=false" .Values.clickhouse.external.url | quote }}
+  LAT_CLICKHOUSE_USER: {{ required "Set clickhouse.external.username when clickhouse.enabled=false" .Values.clickhouse.external.username | quote }}
+  LAT_CLICKHOUSE_DB: {{ required "Set clickhouse.external.database when clickhouse.enabled=false" .Values.clickhouse.external.database | quote }}
+  LAT_CLICKHOUSE_MIGRATION_URL: {{ required "Set clickhouse.external.migrationUrl when clickhouse.enabled=false" .Values.clickhouse.external.migrationUrl | quote }}
+  LAT_CLICKHOUSE_CLUSTER_ENABLED: {{ .Values.clickhouse.external.clusterEnabled | quote }}
+  {{- end }}
+
+  # --- Redis (cache) ---------------------------------------------------------
+  {{- if .Values.redis.enabled }}
+  LAT_REDIS_HOST: {{ printf "%s-redis" (include "latitude.fullname" .) | quote }}
+  LAT_REDIS_PORT: "6379"
+  {{- else }}
+  LAT_REDIS_HOST: {{ required "Set redis.external.host when redis.enabled=false" .Values.redis.external.host | quote }}
+  LAT_REDIS_PORT: {{ .Values.redis.external.port | quote }}
+  {{- if .Values.redis.external.tls }}
+  LAT_REDIS_TLS: "true"
+  {{- end }}
+  {{- if .Values.redis.external.cluster }}
+  LAT_REDIS_CLUSTER: "true"
+  {{- end }}
+  {{- end }}
+
+  # --- Redis (BullMQ queue) --------------------------------------------------
+  {{- if .Values.redisBullmq.enabled }}
+  LAT_BULLMQ_HOST: {{ printf "%s-redis-bullmq" (include "latitude.fullname" .) | quote }}
+  LAT_BULLMQ_PORT: "6379"
+  {{- else }}
+  LAT_BULLMQ_HOST: {{ required "Set redisBullmq.external.host when redisBullmq.enabled=false" .Values.redisBullmq.external.host | quote }}
+  LAT_BULLMQ_PORT: {{ .Values.redisBullmq.external.port | quote }}
+  {{- if .Values.redisBullmq.external.cluster }}
+  LAT_BULLMQ_CLUSTER: "true"
+  {{- end }}
+  {{- end }}
+
+  # --- Temporal ----------------------------------------------------------------
+  {{- if .Values.temporal.enabled }}
+  LAT_TEMPORAL_ADDRESS: {{ printf "%s-temporal:7233" (include "latitude.fullname" .) | quote }}
+  LAT_TEMPORAL_NAMESPACE: {{ .Values.temporal.namespace | quote }}
+  {{- else }}
+  LAT_TEMPORAL_ADDRESS: {{ required "Set temporal.external.address when temporal.enabled=false" .Values.temporal.external.address | quote }}
+  LAT_TEMPORAL_NAMESPACE: {{ required "Set temporal.external.namespace when temporal.enabled=false" .Values.temporal.external.namespace | quote }}
+  {{- end }}
+  LAT_TEMPORAL_TASK_QUEUE: {{ .Values.config.temporalTaskQueue | quote }}
+
+  # --- Object storage (shared by every service) --------------------------------
+  LAT_STORAGE_DRIVER: s3
+  {{- if .Values.seaweedfs.enabled }}
+  LAT_STORAGE_S3_BUCKET: {{ .Values.seaweedfs.s3.bucket | quote }}
+  LAT_STORAGE_S3_REGION: {{ .Values.seaweedfs.s3.region | quote }}
+  LAT_STORAGE_S3_ENDPOINT: {{ printf "http://%s-seaweedfs:8333" (include "latitude.fullname" .) | quote }}
+  LAT_STORAGE_S3_FORCE_PATH_STYLE: "true"
+  {{- else }}
+  LAT_STORAGE_S3_BUCKET: {{ required "Set seaweedfs.external.bucket when seaweedfs.enabled=false" .Values.seaweedfs.external.bucket | quote }}
+  LAT_STORAGE_S3_REGION: {{ required "Set seaweedfs.external.region when seaweedfs.enabled=false" .Values.seaweedfs.external.region | quote }}
+  {{- with .Values.seaweedfs.external.endpoint }}
+  LAT_STORAGE_S3_ENDPOINT: {{ . | quote }}
+  {{- end }}
+  {{- if .Values.seaweedfs.external.forcePathStyle }}
+  LAT_STORAGE_S3_FORCE_PATH_STYLE: "true"
+  {{- end }}
+  {{- end }}

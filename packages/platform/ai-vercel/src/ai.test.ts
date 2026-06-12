@@ -65,7 +65,7 @@ const originalGoogleApiKey = process.env.LAT_GOOGLE_API_KEY
 const originalCustomAiBaseUrl = process.env.LAT_CUSTOM_AI_BASE_URL
 
 beforeEach(() => {
-  process.env.LAT_AWS_REGION = "us-east-1"
+  process.env.LAT_AWS_REGION = "eu-central-1"
   process.env.LAT_AWS_ACCESS_KEY_ID = "test-access-key"
   process.env.LAT_AWS_SECRET_ACCESS_KEY = "test-secret-key"
   delete process.env.LAT_AWS_SESSION_TOKEN
@@ -115,7 +115,7 @@ describe("createProviderModel", () => {
     expect(model).toBeDefined()
     expect(typeof model).toBe("object")
     expect(createAmazonBedrockMock).toHaveBeenCalledTimes(1)
-    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("eu.anthropic.claude-sonnet-4-20250514-v1:0")
     expect(fromNodeProviderChainMock).not.toHaveBeenCalled()
   })
 
@@ -130,7 +130,7 @@ describe("createProviderModel", () => {
 
     expect(model).toBeDefined()
     expect(typeof model).toBe("object")
-    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    expect(bedrockModelFactoryMock).toHaveBeenCalledWith("eu.anthropic.claude-sonnet-4-20250514-v1:0")
     expect(fromNodeProviderChainMock).toHaveBeenCalledTimes(1)
   })
 

@@ -1,0 +1,262 @@
+# Default values for the Latitude chart.
+#
+# Quick start — the minimum an install must set:
+#   config.webUrl / config.apiUrl / config.ingestUrl   (your public URLs)
+#   secrets.masterEncryptionKey / secrets.betterAuthSecret   (openssl rand -hex 32)
+#   postgres.auth.password / postgres.auth.runtimePassword   (when postgres.enabled)
+#   clickhouse.auth.password                                 (when clickhouse.enabled)
+#
+# Every bundled infrastructure dependency (postgres, clickhouse, redis,
+# redisBullmq, seaweedfs, temporal) is an independent toggle: set
+# <dep>.enabled=false and fill <dep>.external to point Latitude at an
+# existing/managed instance instead.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  registry: docker.io
+  # Public images: <registry>/<repository>/<service>:<tag> for the six services
+  # (web, api, ingest, workers, workflows, migrations).
+  repository: latitudedata
+  # Defaults to the chart's appVersion — the Latitude release this chart
+  # shipped with. Override to pin a different release ("1.2.3", no leading v)
+  # or to track the newest with "latest".
+  tag: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+config:
+  # Public URLs (https, behind your ingress). Required.
+  webUrl: ""
+  apiUrl: ""
+  ingestUrl: ""
+  temporalTaskQueue: latitude-workflows
+  # Extra non-secret environment for every app service and the migrations job —
+  # email transport settings (LAT_SMTP_*/LAT_MAILGUN_*/LAT_SENDGRID_*), the
+  # LAT_AI_* model selection, OAuth, integrations, etc. Standard EnvVar entries
+  # (valueFrom/secretKeyRef works). Put secret values (API keys, passwords) in
+  # secrets.extra instead of a literal `value:` here — literals land readable
+  # in the pod spec.
+  extraEnv: []
+  # - name: LAT_SMTP_HOST
+  #   value: smtp.example.com
+  # - name: LAT_AI_GENERATION_PROVIDER
+  #   value: openai
+
+secrets:
+  # Name of a pre-created Secret to use instead of the chart-managed one.
+  # It must define every key the chart would otherwise render — see the
+  # chart README for the exact list (it depends on which bundles are enabled).
+  existingSecret: ""
+  # 32-byte hex key for AES-256-GCM (openssl rand -hex 32). Required.
+  masterEncryptionKey: ""
+  # Better Auth signing secret (openssl rand -hex 32). Required.
+  betterAuthSecret: ""
+  # Additional secret env vars, merged into the chart-managed Secret and
+  # delivered to every app service — AI provider keys, email transport
+  # passwords, OAuth client secrets. Don't repeat keys the chart already
+  # renders (see the README list).
+  extra: {}
+  # extra:
+  #   LAT_VOYAGE_API_KEY: pa-...
+  #   LAT_SMTP_PASS: "..."
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  # Hosts are derived from config.webUrl / apiUrl / ingestUrl.
+  tls: []
+  # - secretName: latitude-tls
+  #   hosts: [latitude.example.com, api.latitude.example.com, ingest.latitude.example.com]
+
+# ---------------------------------------------------------------------------
+# Application services (published images — no build step)
+# ---------------------------------------------------------------------------
+
+web:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  extraEnv: []
+
+api:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  extraEnv: []
+
+ingest:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  extraEnv: []
+
+workers:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  extraEnv: []
+
+workflows:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  extraEnv: []
+
+# One-shot job that runs Postgres (Drizzle Kit) + ClickHouse (goose) migrations.
+# Runs as a post-install and pre-upgrade Helm hook; retries until the databases
+# are reachable.
+migrations:
+  resources: {}
+  backoffLimit: 12
+  activeDeadlineSeconds: 1800
+
+# Applied to every pod the chart creates.
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ---------------------------------------------------------------------------
+# Bundled infrastructure — each block independently toggleable (bring-your-own)
+# ---------------------------------------------------------------------------
+
+# Primary OLTP store (needs pgvector). BYO: enabled=false + external.* —
+# the target database needs the `vector` extension and an admin role with
+# schema-create.
+postgres:
+  enabled: true
+  image: pgvector/pgvector:pg16
+  auth:
+    # Admin/superuser — used by migrations, seeds, and cross-org queries.
+    username: latitude
+    password: ""
+    database: latitude
+    # Restricted runtime user subject to RLS (created on first boot).
+    runtimeUsername: latitude_app
+    runtimePassword: ""
+  persistence:
+    size: 20Gi
+    storageClass: ""
+  resources: {}
+  external:
+    # postgres://<runtime-user>:<password>@host:5432/<db> (RLS runtime user)
+    databaseUrl: ""
+    # postgres://<admin>:<password>@host:5432/<db> (schema-create admin)
+    adminDatabaseUrl: ""
+
+# OLAP span/telemetry store. BYO: enabled=false + external.*.
+clickhouse:
+  enabled: true
+  image: clickhouse/clickhouse-server:26.2
+  auth:
+    username: latitude
+    password: ""
+    database: latitude
+  persistence:
+    size: 50Gi
+    storageClass: ""
+  resources: {}
+  external:
+    url: "" # http(s)://host:8123
+    username: ""
+    password: ""
+    database: ""
+    # goose migration DSN — host and port ONLY (clickhouse://host:9000);
+    # credentials and database are taken from the values above.
+    migrationUrl: ""
+    clusterEnabled: false
+
+# Cache Redis (distributed locks, rate limiters, budgets) — ephemeral.
+# BYO: enabled=false + external.*. Latitude namespaces every key under
+# `latitude:`, so a shared Redis is safe.
+redis:
+  enabled: true
+  image: redis:7
+  resources: {}
+  external:
+    host: ""
+    port: 6379
+    tls: false
+    cluster: false
+
+# BullMQ queue Redis — durable (appendonly, noeviction). BYO: enabled=false +
+# external.*.
+redisBullmq:
+  enabled: true
+  image: redis:7
+  persistence:
+    size: 5Gi
+    storageClass: ""
+  resources: {}
+  external:
+    host: ""
+    port: 6379
+    password: ""
+    cluster: false
+
+# Workflow engine — single-instance Temporal server backed by Postgres for
+# both the default and visibility stores (no Elasticsearch, no Cassandra).
+# Schema setup runs as one-shot Helm hook jobs (plain server image, not
+# auto-setup). For an HA Temporal use the official temporalio/helm-charts
+# with SQL persistence, or Temporal Cloud — both via enabled=false +
+# external.*.
+temporal:
+  enabled: true
+  serverImage: temporalio/server:1.27.2
+  adminToolsImage: temporalio/admin-tools:1.27
+  # Permanent: baked into the cluster metadata on first boot — never change
+  # it on an existing installation.
+  numHistoryShards: 512
+  namespace: default
+  namespaceRetention: 72h
+  resources: {}
+  # Postgres that hosts the `temporal` + `temporal_visibility` databases.
+  # Defaults to the bundled Postgres (admin user — it creates databases).
+  # Set these when postgres.enabled=false and the bundled Temporal stays on.
+  database:
+    host: ""
+    port: 5432
+    username: ""
+    password: ""
+  external:
+    address: "" # host:7233, or the Temporal Cloud regional endpoint
+    namespace: ""
+    apiKey: ""
+
+# Object store — single-container SeaweedFS (all-in-one `server -s3`), shared
+# by every service behind the s3 driver. BYO: enabled=false + external.* for
+# any S3-compatible/managed store (omit endpoint + forcePathStyle for AWS S3).
+seaweedfs:
+  enabled: true
+  image: chrislusf/seaweedfs:4.32
+  s3:
+    bucket: latitude
+    region: eu-central-1
+    # The bundled SeaweedFS runs without S3 auth (cluster-internal only);
+    # these placeholder credentials just satisfy the AWS SDK.
+    accessKeyId: latitude
+    secretAccessKey: secret
+  persistence:
+    size: 20Gi
+    storageClass: ""
+  resources: {}
+  external:
+    bucket: ""
+    region: ""
+    accessKeyId: ""
+    secretAccessKey: ""
+    endpoint: "" # leave empty for AWS S3
+    forcePathStyle: false

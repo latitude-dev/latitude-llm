@@ -135,7 +135,7 @@ Check out the [Development setup](https://docs.latitude.so/development/setup) an
 Latitude is [self-hostable](https://docs.latitude.so/deployment/overview) at any scale, on fully open infrastructure. Pull the ready-to-go container images on [Docker Hub](https://hub.docker.com/u/latitudedata):
 
 - **Single-host (simple)** — a production-grade instance on one machine with Docker Compose, follow the [Single-host guide](https://docs.latitude.so/deployment/single-host).
-- **Cluster (advanced)** — a scalable, highly-available deployment on Kubernetes via a Helm chart, _coming soon._
+- **Cluster (advanced)** — a scalable, highly-available deployment on Kubernetes via a Helm chart, follow the [Cluster guide](https://docs.latitude.so/deployment/cluster).
 
 ## 👥 Community
 

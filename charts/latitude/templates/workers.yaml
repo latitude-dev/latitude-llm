@@ -1,0 +1,2 @@
+{{/* Background job processor — no Service; the port only serves health checks. */}}
+{{ include "latitude.appDeployment" (dict "root" $ "name" "workers" "port" 9090 "probePath" "/health") }}

@@ -391,7 +391,7 @@ const latitude = new Latitude({
 
 await latitude.ready
 
-const client = new BedrockRuntimeClient({ region: "us-east-1" })
+const client = new BedrockRuntimeClient({ region: "eu-central-1" })
 
 await capture("generate-reply", async () => {
   const command = new InvokeModelCommand({
@@ -423,7 +423,7 @@ latitude = Latitude(
     instrumentations=["bedrock"],
 )
 
-client = boto3.client("bedrock-runtime", region_name="us-east-1")
+client = boto3.client("bedrock-runtime", region_name="eu-central-1")
 
 def generate_reply():
     response = client.invoke_model(
@@ -1033,7 +1033,7 @@ latitude = Latitude(
 def main():
     client = boto3.client(
         "sagemaker-runtime",
-        region_name=os.environ.get("AWS_REGION", "us-east-1"),
+        region_name=os.environ.get("AWS_REGION", "eu-central-1"),
     )
     payload = json.dumps(
         {
@@ -1168,7 +1168,7 @@ AZURE_OPENAI_API_KEY=...`
     case "bedrock":
       return `AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=us-east-1`
+AWS_REGION=eu-central-1`
     case "cohere":
       return "COHERE_API_KEY=..."
     case "togetherai":
@@ -1190,7 +1190,7 @@ AWS_REGION=us-east-1`
     case "sagemaker":
       return `AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=us-east-1
+AWS_REGION=eu-central-1
 SAGEMAKER_ENDPOINT_NAME=...`
     case "watsonx":
       return `WATSONX_API_KEY=...

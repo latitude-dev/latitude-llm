@@ -1,0 +1,121 @@
+{{- if .Values.seaweedfs.enabled }}
+{{/* Mirrors docker/seaweedfs/init.sh: creates the bucket once the S3 gateway is up, then hands off to the stock entrypoint. */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "latitude.fullname" . }}-seaweedfs-init
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seaweedfs
+data:
+  init.sh: |
+    #!/bin/sh
+    set -e
+
+    # Create the storage bucket once the S3 gateway is up (idempotent), then hand
+    # off to the stock SeaweedFS entrypoint so the server keeps PID 1.
+    bucket="${LAT_STORAGE_S3_BUCKET:-latitude}"
+    (
+      until echo "s3.bucket.list" | weed shell >/dev/null 2>&1; do sleep 1; done
+      if echo "s3.bucket.list" | weed shell | awk '{print $1}' | grep -qx "$bucket"; then
+        echo "Bucket '$bucket' already exists."
+      else
+        echo "s3.bucket.create -name $bucket" | weed shell
+      fi
+    ) &
+
+    exec /entrypoint.sh "$@"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "latitude.fullname" . }}-seaweedfs
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seaweedfs
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "latitude.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: seaweedfs
+  ports:
+    - name: s3
+      port: 8333
+      targetPort: s3
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "latitude.fullname" . }}-seaweedfs
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seaweedfs
+spec:
+  serviceName: {{ include "latitude.fullname" . }}-seaweedfs
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "latitude.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: seaweedfs
+  template:
+    metadata:
+      labels:
+        {{- include "latitude.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: seaweedfs
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- include "latitude.podSettings" . | nindent 6 }}
+      containers:
+        - name: seaweedfs
+          image: {{ .Values.seaweedfs.image }}
+          command: ["/bin/sh", "/init.sh"]
+          args: ["server", "-dir=/data", "-s3", "-s3.port=8333"]
+          ports:
+            - name: s3
+              containerPort: 8333
+          env:
+            - name: LAT_STORAGE_S3_BUCKET
+              value: {{ .Values.seaweedfs.s3.bucket | quote }}
+          readinessProbe:
+            tcpSocket:
+              port: s3
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: s3
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- with .Values.seaweedfs.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: init
+              mountPath: /init.sh
+              subPath: init.sh
+      volumes:
+        - name: init
+          configMap:
+            name: {{ include "latitude.fullname" . }}-seaweedfs-init
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with .Values.seaweedfs.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.seaweedfs.persistence.size }}
+{{- end }}

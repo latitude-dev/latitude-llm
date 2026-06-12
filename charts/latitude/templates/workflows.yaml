@@ -1,0 +1,2 @@
+{{/* Temporal worker — no Service; the port only serves health checks. */}}
+{{ include "latitude.appDeployment" (dict "root" $ "name" "workflows" "port" 9091 "probePath" "/health") }}

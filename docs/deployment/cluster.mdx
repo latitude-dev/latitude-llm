@@ -1,0 +1,214 @@
+---
+title: Cluster
+description: Deploy a scalable, highly-available Latitude on any Kubernetes cluster with our Helm chart.
+---
+
+Cluster runs Latitude on **Kubernetes** through a cloud-agnostic [Helm chart](https://github.com/latitude-dev/latitude-llm/tree/development/charts/latitude): a Deployment per application service, a one-shot migrations job, ingress, and bundled infrastructure (Postgres, ClickHouse, Redis, Temporal, SeaweedFS) — every piece replaceable by a managed equivalent. It deploys the published [Docker images](https://hub.docker.com/u/latitudedata).
+
+<Note>
+  For a simpler start on one machine, use the [Single-host](/deployment/single-host) deployment — same images, same configuration contract, no cluster required.
+</Note>
+
+## Quick start
+
+<Steps>
+  <Step title="Get the chart">
+    The chart lives in the Latitude repository under `charts/latitude` — a sparse checkout downloads just that folder:
+
+    ```bash
+    git clone --depth 1 --filter=blob:none --sparse https://github.com/latitude-dev/latitude-llm.git
+    cd latitude-llm
+    git sparse-checkout set charts/latitude
+    cd charts/latitude
+    ```
+  </Step>
+
+  <Step title="Create your values file">
+    Don't name it `values.yaml` — that file already holds the chart's defaults.
+
+    ```yaml my-values.yaml
+    config:
+      webUrl: https://latitude.example.com
+      apiUrl: https://api.latitude.example.com
+      ingestUrl: https://ingest.latitude.example.com
+      extraEnv:
+        # Email transport — required for magic-link sign-in (choose one provider)
+        - name: LAT_SMTP_HOST
+          value: smtp.example.com
+        - name: LAT_SMTP_PORT
+          value: "587"
+        - name: LAT_SMTP_USER
+          value: apikey
+        - name: LAT_SMTP_FROM
+          value: noreply@example.com
+
+    secrets:
+      masterEncryptionKey: # openssl rand -hex 32
+      betterAuthSecret: # openssl rand -hex 32
+      # Optional secret env vars (email passwords, AI provider keys, OAuth
+      # client secrets) — delivered through the chart-managed Secret.
+      extra:
+        LAT_SMTP_PASS: your-smtp-password
+
+    postgres:
+      auth:
+        password: # openssl rand -hex 16
+        runtimePassword: # openssl rand -hex 16
+
+    clickhouse:
+      auth:
+        password: # openssl rand -hex 16
+
+    ingress:
+      className: nginx
+      # tls: [...]
+    ```
+
+    <Warning>
+      The secrets are permanent for the installation — keep this file (or move the keys into a pre-created Secret and set `secrets.existingSecret`). Every future `helm upgrade` must receive the same values.
+    </Warning>
+  </Step>
+
+  <Step title="Install the chart in your cluster">
+    The install brings up the bundled infrastructure, runs database migrations and the Temporal schema setup as one-shot jobs, and starts the five application services.
+
+    ```bash
+    helm install latitude . \
+      --namespace latitude --create-namespace \
+      --values my-values.yaml --timeout 15m
+    ```
+  </Step>
+
+  <Step title="Verify the Latitude services are running">
+    All pods should reach `Running`/`Ready` and the `latitude-migrations`, `latitude-temporal-schema`, and `latitude-temporal-namespace` jobs should show `Complete`.
+
+    ```bash
+    kubectl get pods -n latitude
+    kubectl get jobs -n latitude
+    ```
+  </Step>
+
+  <Step title="Create the first account">
+    Open the web UI (at your `config.webUrl`) and register. Latitude sends a magic link through the email transport you configured; click it to finish signing in and create your organization.
+  </Step>
+</Steps>
+
+## What gets deployed
+
+| Workload | Kind | Purpose |
+| --- | --- | --- |
+| `web`, `api`, `ingest` | Deployment + Service | UI, public API & MCP server, OTLP trace ingestion — exposed via the ingress |
+| `workers`, `workflows` | Deployment | BullMQ background jobs and Temporal workers — internal only |
+| `migrations` | Job (post-install, pre-upgrade) | One-shot Postgres + ClickHouse migrations |
+| `postgres` | StatefulSet + PVC | Primary store + pgvector |
+| `clickhouse` | StatefulSet + PVC | Span/telemetry OLAP store |
+| `redis`, `redis-bullmq` | Deployment / StatefulSet + PVC | Cache + durable queues |
+| `temporal` | Deployment + schema Jobs | Workflow engine, Postgres-backed (no Elasticsearch/Cassandra) |
+| `seaweedfs` | StatefulSet + PVC | S3-compatible object store (single container, same recipe as Single-host) |
+
+## Secrets
+
+Optional non-secret settings (email transport, `LAT_AI_*` model selection, integrations) go in `config.extraEnv` as standard `EnvVar` entries; optional **secret** values (AI provider keys, email passwords, OAuth client secrets) go in `secrets.extra`, which merges them into the chart-managed Secret — never as `extraEnv` literals, which would sit readable in the pod spec.
+
+To manage secrets yourself (e.g. with an external secrets operator), create a Secret carrying the chart's expected keys and set `secrets.existingSecret` — the chart then renders no Secret of its own. The key list is in the [chart README](https://github.com/latitude-dev/latitude-llm/tree/development/charts/latitude#secrets).
+
+See the [secrets reference](/deployment/configuration#secrets) for what each application secret does.
+
+## AI features
+
+The stack boots and core observability (ingest + trace viewing) works **without API keys**. AI-dependent features stay disabled until you add credentials for the providers you configure — keys in `secrets.extra`, `LAT_AI_*` provider/model selection in `config.extraEnv`:
+
+| Capability | Providers | Feature |
+| --- | --- | --- |
+| Generation | Amazon Bedrock (default), Anthropic, OpenAI, Google, or any OpenAI-compatible endpoint | Flaggers, evaluations, issue summarization, taxonomy naming, AI generation |
+| Embeddings | Voyage AI (default), OpenAI, Google, or any OpenAI-compatible endpoint | Semantic trace/issue search, search highlights, issue clustering |
+| Reranking | Voyage AI (default) or Amazon Bedrock | Issue-discovery candidate matching |
+
+Every provider and model is selectable per feature through environment variables — see the [AI configuration reference](/deployment/configuration#ai).
+
+## Scaling
+
+The five application services are stateless and scale horizontally:
+
+```bash
+helm upgrade latitude . --values my-values.yaml --set api.replicas=3
+# or imperatively:
+kubectl scale deploy/latitude-api -n latitude --replicas=3
+```
+
+Every service ships with resource **requests** (HPA-ready); add limits and `HorizontalPodAutoscaler`s to taste. The bundled stateful services stay single-instance by design — for HA move them to managed equivalents ([Bring your own infrastructure](#bring-your-own-infrastructure)).
+
+## Backups
+
+Persistent state lives in the PVCs of `postgres`, `clickhouse`, `redis-bullmq`, and `seaweedfs`. Use your storage provider's volume snapshots, plus:
+
+- **Postgres** — `kubectl exec -n latitude latitude-postgres-0 -- pg_dump -U latitude latitude` (the source of truth for projects, users, and metadata).
+- **ClickHouse** — volume snapshots or [ClickHouse `BACKUP`](https://clickhouse.com/docs/en/operations/backup) (span/telemetry data).
+- **Object store** — volume snapshots (or rely on your managed S3's durability).
+
+## Upgrading
+
+The chart version tracks the Latitude release, and the images default to the chart's `appVersion` — so the chart always deploys the release it shipped with. To upgrade, pull the new chart and run:
+
+```bash
+helm upgrade latitude . --values my-values.yaml
+```
+
+To deviate from the chart's pinned release, set `image.tag` (`X.Y.Z` with no leading `v`, or `latest`). Migrations run as a `pre-upgrade` hook — the schema is upgraded before the new pods roll. Latitude migrations are backward-compatible, so the previous release keeps working during the rollout.
+
+## Health and observability
+
+Every service exposes an HTTP health endpoint, wired as readiness and liveness probes (`/health`; the web app uses `/api/health`; `workers`/`workflows` listen on internal ports 9090/9091). OpenTelemetry export is available through the `LAT_OBSERVABILITY_*` variables via `config.extraEnv`.
+
+## TLS and reverse proxy
+
+The chart's Ingress routes the three public hosts (taken from `config.{web,api,ingest}Url`) to the `web`, `api`, and `ingest` Services over plain HTTP inside the cluster — terminate TLS at your ingress controller. Reference your certificate Secrets in `ingress.tls`, or have cert-manager issue them via `ingress.annotations`:
+
+```yaml
+ingress:
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  tls:
+    - secretName: latitude-tls
+      hosts:
+        - latitude.example.com
+        - api.latitude.example.com
+        - ingest.latitude.example.com
+```
+
+Keep the `config.*Url` values on `https://` — they feed the `LAT_*_URL` and CORS/trusted-origin settings.
+
+## Bring your own infrastructure
+
+Every bundled dependency is an independent toggle: set `<dep>.enabled: false` and fill its `external:` block, and the chart wires the right `LAT_*` configuration at your existing or managed instance instead of deploying the bundle.
+
+```yaml
+postgres:
+  enabled: false
+  external:
+    databaseUrl: postgres://latitude_app:...@my-rds:5432/latitude
+    adminDatabaseUrl: postgres://latitude:...@my-rds:5432/latitude
+
+temporal:
+  enabled: false
+  external:
+    address: my-namespace.a1b2c.tmprl.cloud:7233
+    namespace: my-namespace.a1b2c
+    apiKey: ...
+```
+
+| Dependency | Toggle | Notes |
+| --- | --- | --- |
+| Postgres | `postgres.enabled` | Needs the `vector` (pgvector) extension and a schema-create admin role |
+| ClickHouse | `clickhouse.enabled` | Dedicated database; `external.migrationUrl` is host:port only (`clickhouse://host:9000`) |
+| Redis (cache) | `redis.enabled` | Latitude namespaces all keys under `latitude:`, so a shared Redis is safe |
+| Redis (queue) | `redisBullmq.enabled` | Same namespacing; needs `noeviction` |
+| Temporal | `temporal.enabled` | Temporal Cloud or the official [temporalio/helm-charts](https://github.com/temporalio/helm-charts) (SQL persistence, no Cassandra/Elasticsearch) for an HA cluster |
+| Object storage | `seaweedfs.enabled` | Any S3-compatible store; omit `endpoint`/`forcePathStyle` for AWS S3 |
+
+## Next steps
+
+<Card title="Configuration reference" icon="settings" href="/deployment/configuration">
+  The full Latitude configurable environment-variable reference for self-hosting.
+</Card>
