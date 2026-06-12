@@ -217,6 +217,12 @@ export {
   type ProjectBehaviourNode,
 } from "./use-cases/list-project-behaviours.ts"
 export {
+  type ListUserBehavioursError,
+  type ListUserBehavioursInput,
+  listUserBehavioursUseCase,
+  type UserBehaviourItem,
+} from "./use-cases/list-user-behaviours.ts"
+export {
   type NameClusterInput,
   type NameTaxonomyResult,
   nameClusterUseCase,

@@ -236,6 +236,12 @@ export {
   UNASSIGNED_FILTER,
 } from "./use-cases/list-issues.ts"
 export {
+  type ListUserIssuesError,
+  type ListUserIssuesInput,
+  listUserIssuesUseCase,
+  type UserIssueItem,
+} from "./use-cases/list-user-issues.ts"
+export {
   type RefreshIssueDetailsError,
   type RefreshIssueDetailsInput,
   type RefreshIssueDetailsResult,

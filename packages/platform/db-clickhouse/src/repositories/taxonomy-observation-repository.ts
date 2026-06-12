@@ -638,6 +638,59 @@ export const TaxonomyObservationRepositoryLive = Layer.effect(
             )
         }),
 
+      getClusterCountsByUser: ({ organizationId, projectId, userId }) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT
+                          assigned_cluster_id AS cluster_id,
+                          count() AS count,
+                          min(start_time) AS first_observed_at,
+                          max(start_time) AS last_observed_at
+                        FROM (${latestProjectWindow})
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND assigned_cluster_id != ''
+                          AND session_id IN (
+                            SELECT session_id
+                            FROM sessions
+                            WHERE organization_id = {organizationId:String}
+                              AND project_id = {projectId:String}
+                            GROUP BY organization_id, project_id, session_id
+                            HAVING argMaxIfMerge(user_id) = {userId:String}
+                          )
+                        GROUP BY assigned_cluster_id
+                        ORDER BY count DESC, assigned_cluster_id ASC`,
+                query_params: {
+                  organizationId: organizationId as string,
+                  projectId: projectId as string,
+                  userId: userId as string,
+                  ...latestProjectWindowParams,
+                },
+                format: "JSONEachRow",
+              })
+              const rows = await result.json<{
+                cluster_id: string
+                count: string | number
+                first_observed_at: string
+                last_observed_at: string
+              }>()
+              return rows.map((row) => ({
+                clusterId: TaxonomyClusterId(row.cluster_id),
+                count: Number(row.count),
+                firstObservedAt: parseClickhouseDate(row.first_observed_at),
+                lastObservedAt: parseClickhouseDate(row.last_observed_at),
+              }))
+            })
+            .pipe(
+              Effect.mapError((error) =>
+                toRepositoryError(error, "TaxonomyObservationRepository.getClusterCountsByUser"),
+              ),
+            )
+        }),
+
       getClusterTrendCounts: ({ organizationId, projectId, clusterIds, currentSince, baselineSince, baselineDays }) =>
         Effect.gen(function* () {
           if (clusterIds.length === 0) return []

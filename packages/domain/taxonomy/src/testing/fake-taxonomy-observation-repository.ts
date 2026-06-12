@@ -312,6 +312,8 @@ export const createFakeTaxonomyObservationRepository = (
         return [...counts.entries()].map(([clusterId, count]) => ({ clusterId: clusterId as never, ...count }))
       }),
 
+    getClusterCountsByUser: () => Effect.succeed([]),
+
     getClusterTrendCounts: ({ organizationId, projectId, clusterIds, currentSince, baselineSince, baselineDays }) =>
       Effect.sync(() =>
         clusterIds.map((clusterId) => {

@@ -67,6 +67,7 @@ export {
   type SessionIssueRollup,
   type SessionScoreRollup,
   type TraceScoreRollup,
+  type UserIssueRollup,
 } from "./ports/score-analytics-repository.ts"
 export {
   type ScoreDraftMode,

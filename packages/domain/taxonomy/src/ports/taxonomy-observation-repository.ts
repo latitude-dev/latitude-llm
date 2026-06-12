@@ -1,5 +1,6 @@
 import type {
   ChSqlClient,
+  ExternalUserId,
   OrganizationId,
   ProjectId,
   RepositoryError,
@@ -150,6 +151,16 @@ export interface TaxonomyObservationRepositoryShape {
     readonly clusterIds: readonly TaxonomyClusterId[]
     readonly startTimeFrom?: Date
     readonly startTimeTo?: Date
+  }) => Effect.Effect<readonly TaxonomyObservationClusterAssignmentCount[], RepositoryError, ChSqlClient>
+  /**
+   * Per-cluster observation counts over one end-user's sessions, resolved by
+   * finalizing the `sessions` MV's `user_id` state (observations carry no user
+   * column). Ordered by count desc.
+   */
+  readonly getClusterCountsByUser: (input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly userId: ExternalUserId
   }) => Effect.Effect<readonly TaxonomyObservationClusterAssignmentCount[], RepositoryError, ChSqlClient>
   readonly getClusterTrendCounts: (input: {
     readonly organizationId: OrganizationId
