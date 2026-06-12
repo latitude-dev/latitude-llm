@@ -70,6 +70,10 @@ export type TaxonomyLineageId = Id<"TaxonomyLineageId">
 export type SlackIntegrationId = Id<"SlackIntegrationId">
 export type SlackDeliveryId = Id<"SlackDeliveryId">
 
+// Data-destination IDs
+export type DestinationId = Id<"DestinationId">
+export type DestinationSyncRunId = Id<"DestinationSyncRunId">
+
 // Enterprise SSO IDs
 export type SsoProviderId = Id<"SsoProviderId">
 
@@ -109,6 +113,8 @@ export const TaxonomyRunId = (value: string): TaxonomyRunId => value as Taxonomy
 export const TaxonomyLineageId = (value: string): TaxonomyLineageId => value as TaxonomyLineageId
 export const SlackIntegrationId = (value: string): SlackIntegrationId => value as SlackIntegrationId
 export const SlackDeliveryId = (value: string): SlackDeliveryId => value as SlackDeliveryId
+export const DestinationId = (value: string): DestinationId => value as DestinationId
+export const DestinationSyncRunId = (value: string): DestinationSyncRunId => value as DestinationSyncRunId
 export const SsoProviderId = (value: string): SsoProviderId => value as SsoProviderId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
@@ -147,6 +153,8 @@ export const taxonomyRunIdSchema = cuidSchema.transform(TaxonomyRunId)
 export const taxonomyLineageIdSchema = cuidSchema.transform(TaxonomyLineageId)
 export const slackIntegrationIdSchema = cuidSchema.transform(SlackIntegrationId)
 export const slackDeliveryIdSchema = cuidSchema.transform(SlackDeliveryId)
+export const destinationIdSchema = cuidSchema.transform(DestinationId)
+export const destinationSyncRunIdSchema = cuidSchema.transform(DestinationSyncRunId)
 export const ssoProviderIdSchema = cuidSchema.transform(SsoProviderId)
 
 // The telemetry-related IDs have custom length constraints

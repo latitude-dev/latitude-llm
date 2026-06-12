@@ -188,6 +188,20 @@ No FKs, app-layer integrity, per platform rule.
 
 > **Status legend**: `[ ] pending`, `[~] in progress`, `[x] complete`
 
+### Wave order (parallel execution plan)
+
+Tasks grouped into waves; each wave's tasks are independent of each other (disjoint packages/files) and can run as parallel agents in separate worktrees branched from `development` after the previous wave merges. Critical path: P1-1 → P1-3 → P1-6 → P1-7 → P1-8.
+
+| Wave | Tasks | Unblocked by |
+| --- | --- | --- |
+| 1 | **P1-1** (LAT-666), **P1-4** (LAT-667) | nothing — the two dependency roots |
+| 2 | **P1-2** (LAT-668), **P1-3** (LAT-669), **P1-5** (LAT-670) | P1-1 (entity, ports, event types) |
+| 3 | **P1-6** (LAT-671), **P1-9** (LAT-672), **P2-1** (LAT-674), **P2-3** (LAT-673) | P1-6 ← P1-2 + ports; P1-9 ← P1-3; P2-1 ← P1-5; P2-3 ← P1-1 + P1-3 |
+| 4 | **P1-7** (LAT-675), **P2-2** (LAT-676) | P1-7 ← P1-3/4/5/6; P2-2 ← P2-3 |
+| 5 | **P1-8** (LAT-677), **P2-4** (LAT-678), **P3-3** (LAT-679) | P1-8, P3-3 ← P1-7; P2-4 ← P2-2 (same UI area as P2-2 — never overlap them) |
+| 6 | **P2-5** (LAT-680), **P3-1** (LAT-681), **P3-2** (LAT-682) | P2-5 ← P2-1/2/3; P3-1 ← engine + P2-2; P3-2 is load validation (operational, not a worktree task) |
+| 7 | **P3-4** (LAT-683) | everything — promotes this spec to `dev-docs/` and deletes it |
+
 ### Phase 1 — Sync engine + PostHog destination (flag-gated, no UI)
 
 Goal: a destination row created via script/seed syncs a project's spans into a real PostHog project end-to-end; quarantine and retry behavior covered by tests.
