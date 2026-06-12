@@ -518,6 +518,7 @@ function ProjectPage() {
                 onSaveCurrent={() => setSaveModalOpen(true)}
                 canSaveCurrent={hasSearchQuery || hasActiveFilters}
               />
+              <SearchInput key={query} initialValue={query} onSubmit={handleSubmitQuery} />
               <SaveSearchSegment
                 projectId={currentProject.id}
                 query={query}
@@ -526,7 +527,6 @@ function ProjectPage() {
                 loadedSavedSearch={loadedSavedSearch}
                 onRequestSave={() => setSaveModalOpen(true)}
               />
-              <SearchInput key={query} initialValue={query} onSubmit={handleSubmitQuery} />
             </div>
           </div>
         </Layout.ActionsRow>

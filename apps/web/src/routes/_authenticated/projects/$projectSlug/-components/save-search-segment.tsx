@@ -18,9 +18,8 @@ import { toUserMessage } from "../../../../../lib/errors.ts"
 import { serializeFilters } from "./trace-page-state.ts"
 
 /**
- * Save affordance inset in the search bar's left cluster (a button at the bar's
- * right edge sits ~viewport-width away from the content on big screens). The
- * bar context makes the short labels unambiguous:
+ * Save affordance inset at the search bar's right edge. The bar context makes
+ * the short labels unambiguous:
  *  - hidden when there's nothing to save, and when the selected saved search is unchanged;
  *  - a primary "Save" button when content is present but no saved search is selected;
  *  - a primary "Update ⌄" group once a selected saved search has drifted — Update fires
@@ -80,13 +79,12 @@ export function SaveSearchSegment({
       // its visible rounding on an inner face, so the joining classes ride on
       // `className` rather than relying on ButtonGroup's child selectors alone.
       return (
-        <div className="flex h-full shrink-0 items-center pl-2 pr-1">
+        <div className="flex h-full shrink-0 items-center pl-1 pr-2">
           <ButtonGroup>
-            {/* Outline variant: no per-button hover halo, so the joined halves read as one control. */}
+            {/* before:hidden drops the per-button hover halo, so the joined halves read as one control. */}
             <Button
-              variant="outline"
               size="sm"
-              className="rounded-r-none"
+              className="rounded-r-none before:hidden"
               onClick={updateSearch}
               {...(updateMutation.isPending ? { isLoading: true } : {})}
             >
@@ -95,9 +93,8 @@ export function SaveSearchSegment({
             <DropdownMenuRoot modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="outline"
                   size="sm"
-                  className="rounded-l-none border-l-0 px-1.5"
+                  className="rounded-l-none border-l border-primary-foreground/25 px-1.5 before:hidden"
                   aria-label="More save options"
                 >
                   <Icon icon={ChevronDownIcon} size="sm" />
@@ -124,9 +121,9 @@ export function SaveSearchSegment({
   if (!hasContent) return null
 
   return (
-    <div className="flex h-full shrink-0 items-center pl-2 pr-1">
+    <div className="flex h-full shrink-0 items-center pl-1 pr-2">
       <Button size="sm" onClick={onRequestSave}>
-        Save
+        Save search
       </Button>
     </div>
   )
