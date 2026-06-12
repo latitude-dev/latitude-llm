@@ -428,4 +428,99 @@ describe("Incidents Routes Integration", () => {
 
     expect(res.status).toBe(400)
   })
+
+  it<ApiTestContext>("POST /:incidentId rejects unauthenticated requests with 401", async ({ app }) => {
+    const res = await app.fetch(
+      new Request("http://localhost/v1/projects/foo/incidents/incidresolveunauth000aaa", { method: "POST" }),
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it<ApiTestContext>("POST /:incidentId resolves an ongoing incident and is idempotent", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "5555555555555555ffffffff"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+    const incidentId = "incidresolveongoing00aaa"
+
+    await seedIncident(database, {
+      id: incidentId,
+      organizationId: tenant.organizationId,
+      projectId,
+      sourceType: "issue",
+      sourceId: "issuerrrrrrrrrrrrrrrrrrr",
+      kind: "issue.escalating",
+      severity: "high",
+      startedAt: new Date("2026-06-01T00:00:00.000Z"),
+    })
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/incidents/${incidentId}`, {
+        method: "POST",
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { id: string; endedAt: string | null }
+    expect(body.id).toBe(incidentId)
+    expect(body.endedAt).not.toBeNull()
+
+    // A second resolve returns the incident unchanged.
+    const again = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/incidents/${incidentId}`, {
+        method: "POST",
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+    expect(again.status).toBe(200)
+    const againBody = (await again.json()) as { id: string; endedAt: string | null }
+    expect(againBody.endedAt).toBe(body.endedAt)
+  })
+
+  it<ApiTestContext>("POST /:incidentId returns 404 for an unknown incident", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "6666666666666666ffffffff"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/incidents/incidresolvemissing00aaa`, {
+        method: "POST",
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(res.status).toBe(404)
+  })
+
+  it<ApiTestContext>("POST /:incidentId returns 404 when the incident belongs to another project", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+    const projectId = "7777777777777777ffffffff"
+    const otherProjectId = "8888888888888888ffffffff"
+    const slug = await createProjectRecord(database, tenant.organizationId, projectId)
+    await createProjectRecord(database, tenant.organizationId, otherProjectId)
+    const incidentId = "incidresolveotherprj0aaa"
+
+    await seedIncident(database, {
+      id: incidentId,
+      organizationId: tenant.organizationId,
+      projectId: otherProjectId,
+      sourceType: "issue",
+      sourceId: "issuesssssssssssssssssss",
+      kind: "issue.escalating",
+      severity: "high",
+      startedAt: new Date("2026-06-01T00:00:00.000Z"),
+    })
+
+    const res = await app.fetch(
+      new Request(`http://localhost/v1/projects/${slug}/incidents/${incidentId}`, {
+        method: "POST",
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(res.status).toBe(404)
+  })
 })

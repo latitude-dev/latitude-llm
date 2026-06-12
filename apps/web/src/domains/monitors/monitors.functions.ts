@@ -1,4 +1,4 @@
-import { AlertIncidentRepository } from "@domain/alerts"
+import { AlertIncidentRepository, resolveAlertIncidentUseCase } from "@domain/alerts"
 import { IssueRepository } from "@domain/issues"
 import {
   createMonitorUseCase,
@@ -39,6 +39,7 @@ import {
   IssueRepositoryLive,
   MonitorRepositoryLive,
   NotificationRepositoryLive,
+  OutboxEventWriterLive,
   SavedSearchRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
@@ -123,6 +124,7 @@ const toMonitorRecordResolved = async (orgId: OrganizationId, monitor: Monitor):
 }
 
 export interface MonitorLastIncidentRecord {
+  readonly id: string
   readonly startedAtIso: string
   readonly endedAtIso: string | null
 }
@@ -139,7 +141,7 @@ const toMonitorListRowRecord = (
 ): MonitorListRowRecord => ({
   monitor: toMonitorRecord(monitor, savedSearchRefs),
   lastIncident: last
-    ? { startedAtIso: last.startedAt.toISOString(), endedAtIso: last.endedAt?.toISOString() ?? null }
+    ? { id: last.id, startedAtIso: last.startedAt.toISOString(), endedAtIso: last.endedAt?.toISOString() ?? null }
     : null,
 })
 
@@ -326,6 +328,23 @@ export const muteMonitor = createServerFn({ method: "POST" })
 export const unmuteMonitor = createServerFn({ method: "POST" })
   .inputValidator(monitorMutationInputSchema)
   .handler(({ data }): Promise<MonitorRecord> => runMonitorMute(data.monitorId, false))
+
+const resolveIncidentInputSchema = z.object({ incidentId: z.string() })
+
+export const resolveMonitorIncident = createServerFn({ method: "POST" })
+  .inputValidator(resolveIncidentInputSchema)
+  .handler(async ({ data }): Promise<{ readonly id: string; readonly endedAtIso: string | null }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const incident = await Effect.runPromise(
+      resolveAlertIncidentUseCase({ id: AlertIncidentId(data.incidentId), endedAt: new Date() }).pipe(
+        withPostgres(Layer.mergeAll(AlertIncidentRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
+    return { id: incident.id, endedAtIso: incident.endedAt?.toISOString() ?? null }
+  })
 
 // --- Create / update / delete (M5) -----------------------------------------
 

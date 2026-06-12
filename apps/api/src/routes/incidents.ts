@@ -1,8 +1,13 @@
-import { AlertIncidentRepository } from "@domain/alerts"
+import { AlertIncidentRepository, resolveAlertIncidentUseCase } from "@domain/alerts"
 import { ProjectRepository } from "@domain/projects"
-import { cuidSchema, OrganizationId, ProjectId } from "@domain/shared"
+import { AlertIncidentId, cuidSchema, NotFoundError, OrganizationId, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { AlertIncidentRepositoryLive, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  AlertIncidentRepositoryLive,
+  OutboxEventWriterLive,
+  ProjectRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { withTracing } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { defineApiEndpoint } from "../mcp/index.ts"
@@ -134,8 +139,65 @@ const listIncidents = incidentEndpoint({
   },
 })
 
+const IncidentParamsSchema = ProjectParamsSchema.extend({
+  incidentId: cuidSchema.describe("Incident identifier."),
+})
+
+const resolveIncident = incidentEndpoint({
+  route: createRoute({
+    method: "post",
+    path: "/{incidentId}",
+    name: "resolveIncident",
+    tags: ["Incidents"],
+    ...incidentsFernGroup("resolve"),
+    summary: "Resolve incident",
+    description:
+      "Resolves (closes) an ongoing incident. An already-closed incident is returned unchanged. If the incident's condition triggers again, a new incident will be opened.",
+    security: PROTECTED_SECURITY,
+    request: { params: IncidentParamsSchema },
+    responses: openApiResponses({ status: 200, schema: IncidentSchema, description: "Resolved incident" }),
+  }),
+  handler: async (c) => {
+    const { projectSlug, incidentId } = c.req.valid("param")
+    const organizationId = c.var.organization.id
+
+    const incident = await Effect.runPromise(
+      Effect.gen(function* () {
+        const projectRepo = yield* ProjectRepository
+        const project = yield* projectRepo.findBySlug(projectSlug)
+
+        // Re-tag lookup misses as `Incident` and 404 incidents outside the
+        // project in the path, so callers can't probe other projects' ids.
+        const incidentRepo = yield* AlertIncidentRepository
+        const current = yield* incidentRepo
+          .findById(AlertIncidentId(incidentId))
+          .pipe(
+            Effect.catchTag("NotFoundError", () =>
+              Effect.fail(new NotFoundError({ entity: "Incident", id: incidentId })),
+            ),
+          )
+        if ((current.projectId as string) !== (project.id as string)) {
+          return yield* new NotFoundError({ entity: "Incident", id: incidentId })
+        }
+
+        return yield* resolveAlertIncidentUseCase({ id: current.id, endedAt: new Date() })
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, AlertIncidentRepositoryLive, OutboxEventWriterLive),
+          c.var.postgresClient,
+          organizationId,
+        ),
+        withTracing,
+      ),
+    )
+
+    return c.json(toIncidentResponse(incident), 200)
+  },
+})
+
 export const createIncidentsRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
   listIncidents.mountHttp(app, createTierRateLimiter("low"))
+  resolveIncident.mountHttp(app, createTierRateLimiter("medium"))
   return app
 }

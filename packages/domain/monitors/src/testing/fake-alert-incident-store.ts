@@ -32,6 +32,7 @@ export const createFakeAlertIncidentStore = (seed: readonly AlertIncident[] = []
     findById: () => Effect.die("findById not used by saved-search firing"),
     findOpen: () => Effect.die("findOpen not used by saved-search firing"),
     closeOpen: () => Effect.die("closeOpen not used by saved-search firing"),
+    closeById: () => Effect.die("closeById not used by saved-search firing"),
     listByProjectId: () => Effect.die("listByProjectId not used by saved-search firing"),
     listOpenByKind: () => Effect.die("listOpenByKind not used by saved-search firing"),
     listByMonitorId: () => Effect.die("listByMonitorId not used by saved-search firing"),

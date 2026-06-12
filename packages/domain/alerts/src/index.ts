@@ -46,3 +46,5 @@ export type {
   CreateAlertIncidentFromIssueEventInput,
 } from "./use-cases/create-alert-incident-from-issue-event.ts"
 export { createAlertIncidentFromIssueEventUseCase } from "./use-cases/create-alert-incident-from-issue-event.ts"
+export type { ResolveAlertIncidentError, ResolveAlertIncidentInput } from "./use-cases/resolve-alert-incident.ts"
+export { resolveAlertIncidentUseCase } from "./use-cases/resolve-alert-incident.ts"

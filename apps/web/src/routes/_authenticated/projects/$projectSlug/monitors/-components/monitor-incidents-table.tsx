@@ -1,11 +1,12 @@
 import { InfiniteTable, type InfiniteTableColumn, Status, Text } from "@repo/ui"
 import { formatDuration } from "@repo/utils"
 import { Link } from "@tanstack/react-router"
-import { type ReactNode, useCallback } from "react"
+import { type ReactNode, useCallback, useState } from "react"
 import {
   type MonitorIncidentRecord,
   useMonitorIncidents,
 } from "../../../../../../domains/monitors/monitors.collection.ts"
+import { IncidentResolveConfirmModal } from "./incident-resolve-confirm-modal.tsx"
 import { IncidentStatus } from "./incident-status.tsx"
 
 /** Human-readable, lowercased source-type labels for the deleted-source fallback. */
@@ -44,7 +45,7 @@ function DurationCell({ incident }: { readonly incident: MonitorIncidentRecord }
   return <Text.H6 noWrap>{formatDuration(elapsedMs * 1_000_000)}</Text.H6>
 }
 
-const INCIDENT_COLUMNS: InfiniteTableColumn<MonitorIncidentRecord>[] = [
+const incidentColumns = (onResolve?: (incidentId: string) => void): InfiniteTableColumn<MonitorIncidentRecord>[] => [
   {
     key: "status",
     header: "Status",
@@ -52,7 +53,13 @@ const INCIDENT_COLUMNS: InfiniteTableColumn<MonitorIncidentRecord>[] = [
     sortKey: "status",
     width: 200,
     minWidth: 150,
-    render: (incident) => <IncidentStatus startedAtIso={incident.startedAt} endedAtIso={incident.endedAt} />,
+    render: (incident) => (
+      <IncidentStatus
+        startedAtIso={incident.startedAt}
+        endedAtIso={incident.endedAt}
+        {...(onResolve && incident.endedAt === null ? { onResolve: () => onResolve(incident.id) } : {})}
+      />
+    ),
   },
   {
     key: "source",
@@ -87,7 +94,7 @@ export function MonitorIncidentsTableSkeleton() {
     <InfiniteTable<MonitorIncidentRecord>
       data={[]}
       isLoading
-      columns={INCIDENT_COLUMNS}
+      columns={incidentColumns()}
       getRowKey={(incident) => incident.id}
       defaultSorting={INCIDENT_DEFAULT_SORTING}
       scrollAreaLayout="intrinsic"
@@ -106,6 +113,7 @@ export function MonitorIncidentsTable({
   readonly monitorId: string
 }) {
   const { incidents, isLoading, infiniteScroll } = useMonitorIncidents({ projectId, monitorId })
+  const [resolveTarget, setResolveTarget] = useState<string | null>(null)
 
   // Rows whose source was deleted (or can't be deep-linked) return null and aren't navigable.
   const renderRowLink = useCallback(
@@ -137,17 +145,20 @@ export function MonitorIncidentsTable({
   )
 
   return (
-    <InfiniteTable
-      data={incidents}
-      isLoading={isLoading}
-      columns={INCIDENT_COLUMNS}
-      getRowKey={(incident) => incident.id}
-      infiniteScroll={infiniteScroll}
-      renderRowLink={renderRowLink}
-      defaultSorting={INCIDENT_DEFAULT_SORTING}
-      blankSlate="No incidents yet."
-      scrollAreaLayout="intrinsic"
-      className={INCIDENT_TABLE_CLASS}
-    />
+    <>
+      <InfiniteTable
+        data={incidents}
+        isLoading={isLoading}
+        columns={incidentColumns(setResolveTarget)}
+        getRowKey={(incident) => incident.id}
+        infiniteScroll={infiniteScroll}
+        renderRowLink={renderRowLink}
+        defaultSorting={INCIDENT_DEFAULT_SORTING}
+        blankSlate="No incidents yet."
+        scrollAreaLayout="intrinsic"
+        className={INCIDENT_TABLE_CLASS}
+      />
+      <IncidentResolveConfirmModal projectId={projectId} incidentId={resolveTarget} onOpenChange={setResolveTarget} />
+    </>
   )
 }

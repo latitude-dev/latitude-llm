@@ -241,6 +241,7 @@ export const MonitorRepositoryLive = Layer.effect(
             db
               .select({
                 monitorId: monitorAlerts.monitorId,
+                incidentId: alertIncidents.id,
                 startedAt: alertIncidents.startedAt,
                 endedAt: alertIncidents.endedAt,
               })
@@ -252,7 +253,11 @@ export const MonitorRepositoryLive = Layer.effect(
           const lastIncidentByMonitorId = new Map<string, MonitorLastIncident>()
           for (const row of incidentRows) {
             if (!lastIncidentByMonitorId.has(row.monitorId)) {
-              lastIncidentByMonitorId.set(row.monitorId, { startedAt: row.startedAt, endedAt: row.endedAt })
+              lastIncidentByMonitorId.set(row.monitorId, {
+                id: row.incidentId,
+                startedAt: row.startedAt,
+                endedAt: row.endedAt,
+              })
             }
           }
 

@@ -192,6 +192,25 @@ export const AlertIncidentRepositoryLive = Layer.effect(
               .where(and(eq(alertIncidents.id, id), eq(alertIncidents.organizationId, sqlClient.organizationId))),
           )
         }),
+      closeById: ({ id, endedAt }) =>
+        Effect.gen(function* () {
+          const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .update(alertIncidents)
+              .set({ endedAt })
+              .where(
+                and(
+                  eq(alertIncidents.id, id),
+                  eq(alertIncidents.organizationId, sqlClient.organizationId),
+                  isNull(alertIncidents.endedAt),
+                ),
+              )
+              .returning(),
+          )
+          const row = rows[0]
+          return row ? toDomain(row) : null
+        }),
       listByProjectId: ({ organizationId, projectId, from, to, sourceTypes, sourceId, kinds, severities }) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>

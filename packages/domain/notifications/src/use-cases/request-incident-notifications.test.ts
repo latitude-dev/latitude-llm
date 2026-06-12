@@ -102,6 +102,7 @@ function setup(opts: SetupOpts = {}) {
     findOpenByMonitorAlertId: () => Effect.die("findOpenByMonitorAlertId not used"),
     existsByMonitorAlertId: () => Effect.die("existsByMonitorAlertId not used"),
     setEndedAt: () => Effect.die("setEndedAt not used"),
+    closeById: () => Effect.die("closeById not used"),
   }
 
   const members: MemberWithUser[] = (opts.memberUserIds ?? [cuid("u1"), cuid("u2")]).map((uid, i) => ({

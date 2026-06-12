@@ -134,4 +134,91 @@ export class IncidentsClient {
             "/v1/projects/{projectSlug}/incidents",
         );
     }
+
+    /**
+     * Resolves (closes) an ongoing incident. An already-closed incident is returned unchanged. If the incident's condition triggers again, a new incident will be opened.
+     *
+     * @param {string} projectSlug - Project slug (human-readable identifier)
+     * @param {string} incidentId - Incident identifier.
+     * @param {IncidentsClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link LatitudeApi.BadRequestError}
+     * @throws {@link LatitudeApi.UnauthorizedError}
+     * @throws {@link LatitudeApi.NotFoundError}
+     *
+     * @example
+     *     await client.incidents.resolve("projectSlug", "incidentId")
+     */
+    public resolve(
+        projectSlug: string,
+        incidentId: string,
+        requestOptions?: IncidentsClient.RequestOptions,
+    ): core.HttpResponsePromise<LatitudeApi.Incident> {
+        return core.HttpResponsePromise.fromPromise(this.__resolve(projectSlug, incidentId, requestOptions));
+    }
+
+    private async __resolve(
+        projectSlug: string,
+        incidentId: string,
+        requestOptions?: IncidentsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<LatitudeApi.Incident>> {
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.LatitudeApiEnvironment.Production,
+                `v1/projects/${core.url.encodePathParam(projectSlug)}/incidents/${core.url.encodePathParam(incidentId)}`,
+            ),
+            method: "POST",
+            headers: _headers,
+            queryParameters: requestOptions?.queryParams,
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as LatitudeApi.Incident, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new LatitudeApi.BadRequestError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                case 401:
+                    throw new LatitudeApi.UnauthorizedError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                case 404:
+                    throw new LatitudeApi.NotFoundError(
+                        _response.error.body as LatitudeApi.Error_,
+                        _response.rawResponse,
+                    );
+                default:
+                    throw new errors.LatitudeApiError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(
+            _response.error,
+            _response.rawResponse,
+            "POST",
+            "/v1/projects/{projectSlug}/incidents/{incidentId}",
+        );
+    }
 }
