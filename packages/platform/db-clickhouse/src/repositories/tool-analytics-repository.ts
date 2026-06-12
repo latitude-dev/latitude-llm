@@ -1,6 +1,8 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { ChSqlClient, type ChSqlClientShape } from "@domain/shared"
 import type {
+  RecentDefiningSpan,
+  RecentDefiningSpanPage,
   RecentToolCall,
   RecentToolCallPage,
   SpanStatusCode,
@@ -215,6 +217,16 @@ type RecentCallRow = {
   tool_output_truncated: number
 }
 
+type RecentDefiningSpanRow = {
+  span_id: string
+  trace_id: string
+  session_id: string
+  start_time: string
+  name: string
+  service_name: string
+  model: string
+}
+
 // ---------------------------------------------------------------------------
 // Mappers
 // ---------------------------------------------------------------------------
@@ -289,6 +301,16 @@ const toRecentToolCall = (row: RecentCallRow): RecentToolCall => ({
   toolOutput: row.tool_output_preview,
   toolInputTruncated: row.tool_input_truncated === 1,
   toolOutputTruncated: row.tool_output_truncated === 1,
+})
+
+const toRecentDefiningSpan = (row: RecentDefiningSpanRow): RecentDefiningSpan => ({
+  spanId: normalizeCHString(row.span_id),
+  traceId: normalizeCHString(row.trace_id),
+  sessionId: normalizeCHString(row.session_id),
+  startTime: parseCHDate(row.start_time),
+  name: row.name,
+  serviceName: row.service_name,
+  model: row.model,
 })
 
 // ---------------------------------------------------------------------------
@@ -842,6 +864,56 @@ export const ToolAnalyticsRepositoryLive = Layer.effect(
             .pipe(
               Effect.map((rows): RecentToolCallPage => {
                 const items = rows.slice(0, limit).map(toRecentToolCall)
+                const hasMore = rows.length > limit
+                const last = items[items.length - 1]
+                return {
+                  items,
+                  hasMore,
+                  ...(hasMore && last ? { nextCursor: { startTime: last.startTime, spanId: last.spanId } } : {}),
+                }
+              }),
+            )
+        }),
+
+      listRecentDefiningSpans: (input) =>
+        Effect.gen(function* () {
+          const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
+          const limit = Math.min(Math.max(input.limit ?? RECENT_CALLS_DEFAULT_LIMIT, 1), RECENT_CALLS_MAX_LIMIT)
+          const cursorClause = input.cursor
+            ? " AND (start_time, span_id) < ({cursorStartTime:DateTime64(9, 'UTC')}, {cursorSpanId:FixedString(16)})"
+            : ""
+          return yield* chSqlClient
+            .query(async (client) => {
+              const result = await client.query({
+                query: `SELECT *
+                    FROM (
+                      SELECT span_id, trace_id, session_id, start_time, name, service_name, model
+                      FROM spans
+                      WHERE ${SCOPE_FILTER}
+                        AND has(tool_names, {toolName:String})${cursorClause}
+                      ORDER BY span_id, ingested_at DESC
+                      LIMIT 1 BY span_id
+                    )
+                    ORDER BY start_time DESC, span_id DESC
+                    LIMIT {limitPlusOne:UInt16}`,
+                query_params: {
+                  ...scopeParams(input),
+                  toolName: input.toolName,
+                  limitPlusOne: limit + 1,
+                  ...(input.cursor
+                    ? {
+                        cursorStartTime: toClickhouseDateTime(input.cursor.startTime),
+                        cursorSpanId: input.cursor.spanId,
+                      }
+                    : {}),
+                },
+                format: "JSONEachRow",
+              })
+              return result.json<RecentDefiningSpanRow>()
+            })
+            .pipe(
+              Effect.map((rows): RecentDefiningSpanPage => {
+                const items = rows.slice(0, limit).map(toRecentDefiningSpan)
                 const hasMore = rows.length > limit
                 const last = items[items.length - 1]
                 return {

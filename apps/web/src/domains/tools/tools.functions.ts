@@ -1,5 +1,6 @@
 import { type OrganizationId, ProjectId } from "@domain/shared"
 import type {
+  RecentDefiningSpan,
   RecentToolCall,
   ToolAnalyticsScope,
   ToolCallHistogramBucket,
@@ -96,6 +97,22 @@ interface RecentToolCallsPageRecord {
   readonly nextCursor?: { readonly startTimeIso: string; readonly spanId: string }
 }
 
+export interface RecentDefiningSpanRecord {
+  readonly spanId: string
+  readonly traceId: string
+  readonly sessionId: string
+  readonly startTime: string
+  readonly name: string
+  readonly serviceName: string
+  readonly model: string
+}
+
+interface RecentDefiningSpansPageRecord {
+  readonly items: readonly RecentDefiningSpanRecord[]
+  readonly hasMore: boolean
+  readonly nextCursor?: { readonly startTimeIso: string; readonly spanId: string }
+}
+
 const toUsageMetricsRecord = (metrics: ToolUsageMetrics): ToolUsageMetricsRecord => ({
   calls: metrics.calls,
   errors: metrics.errors,
@@ -128,6 +145,16 @@ const toDefinitionDetailRecord = (detail: ToolDefinitionDetail): ToolDefinitionD
   offeredCount: detail.offeredCount,
   offeredTraces: detail.offeredTraces,
   lastOffered: detail.lastOffered.toISOString(),
+})
+
+const toRecentDefiningSpanRecord = (span: RecentDefiningSpan): RecentDefiningSpanRecord => ({
+  spanId: span.spanId,
+  traceId: span.traceId,
+  sessionId: span.sessionId,
+  startTime: span.startTime.toISOString(),
+  name: span.name,
+  serviceName: span.serviceName,
+  model: span.model,
 })
 
 const toRecentToolCallRecord = (call: RecentToolCall): RecentToolCallRecord => ({
@@ -362,6 +389,43 @@ export const listRecentToolCalls = createServerFn({ method: "GET" })
         })
         return {
           items: page.items.map(toRecentToolCallRecord),
+          hasMore: page.hasMore,
+          ...(page.nextCursor
+            ? {
+                nextCursor: {
+                  startTimeIso: page.nextCursor.startTime.toISOString(),
+                  spanId: page.nextCursor.spanId,
+                },
+              }
+            : {}),
+        }
+      }).pipe(withClickHouse(ToolAnalyticsRepositoryLive, getClickhouseClient(), orgId), withTracing),
+    )
+  })
+
+export const listRecentDefiningSpans = createServerFn({ method: "GET" })
+  .inputValidator(
+    toolsScopeSchema.extend({
+      toolName: toolNameSchema,
+      limit: z.number().int().min(1).max(50).optional(),
+      cursor: z.object({ startTimeIso: z.string().datetime(), spanId: z.string().length(16) }).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<RecentDefiningSpansPageRecord> => {
+    const orgId = await resolveOrgScope(data)
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ToolAnalyticsRepository
+        const page = yield* repo.listRecentDefiningSpans({
+          ...toScope(orgId, data),
+          toolName: data.toolName,
+          ...(data.limit === undefined ? {} : { limit: data.limit }),
+          ...(data.cursor
+            ? { cursor: { startTime: new Date(data.cursor.startTimeIso), spanId: data.cursor.spanId } }
+            : {}),
+        })
+        return {
+          items: page.items.map(toRecentDefiningSpanRecord),
           hasMore: page.hasMore,
           ...(page.nextCursor
             ? {

@@ -119,6 +119,18 @@ export interface ToolAnalyticsRepositoryShape {
       readonly cursor?: ToolCallCursor
     },
   ): Effect.Effect<RecentToolCallPage, RepositoryError, ChSqlClient>
+
+  /**
+   * Most recent chat spans whose definitions include one tool, newest first —
+   * the provenance view for tools that were offered but never called.
+   */
+  listRecentDefiningSpans(
+    input: ToolAnalyticsScope & {
+      readonly toolName: string
+      readonly limit?: number
+      readonly cursor?: ToolCallCursor
+    },
+  ): Effect.Effect<RecentDefiningSpanPage, RepositoryError, ChSqlClient>
 }
 
 export interface ToolAnalyticsScope {
@@ -265,6 +277,22 @@ export interface RecentToolCall {
 
 export interface RecentToolCallPage {
   readonly items: readonly RecentToolCall[]
+  readonly hasMore: boolean
+  readonly nextCursor?: ToolCallCursor
+}
+
+export interface RecentDefiningSpan {
+  readonly spanId: string
+  readonly traceId: string
+  readonly sessionId: string
+  readonly startTime: Date
+  readonly name: string
+  readonly serviceName: string
+  readonly model: string
+}
+
+export interface RecentDefiningSpanPage {
+  readonly items: readonly RecentDefiningSpan[]
   readonly hasMore: boolean
   readonly nextCursor?: ToolCallCursor
 }

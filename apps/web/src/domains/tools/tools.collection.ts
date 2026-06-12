@@ -11,7 +11,9 @@ import {
   getToolErrorBreakdown,
   getToolParameterStats,
   listProjectTools,
+  listRecentDefiningSpans,
   listRecentToolCalls,
+  type RecentDefiningSpanRecord,
   type RecentToolCallRecord,
 } from "./tools.functions.ts"
 
@@ -288,6 +290,59 @@ export function useRecentToolCalls({
   )
 
   const data: readonly RecentToolCallRecord[] = useMemo(
+    () => paginatedData?.pages.flatMap((p) => p?.items ?? []) ?? [],
+    [paginatedData],
+  )
+
+  return { data, isLoading, infiniteScroll }
+}
+
+export function useRecentDefiningSpans({
+  projectId,
+  toolName,
+  range,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly toolName: string
+  readonly range: ToolsTimeRange
+  readonly enabled?: boolean
+}) {
+  const scope = use(TraceScopeContext)
+  const {
+    data: paginatedData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: [...traceScopeKey(scope), "tools-recent-defining", projectId, toolName, range],
+    queryFn: async ({ pageParam }) =>
+      listRecentDefiningSpans({
+        data: {
+          ...traceScopeData(scope),
+          projectId,
+          toolName,
+          ...range,
+          limit: RECENT_CALLS_BATCH_SIZE,
+          ...(pageParam ? { cursor: pageParam } : {}),
+        },
+      }),
+    initialPageParam: undefined as { startTimeIso: string; spanId: string } | undefined,
+    getNextPageParam: (lastPage) => lastPage?.nextCursor,
+    enabled: enabled && projectId.length > 0 && toolName.length > 0,
+  })
+
+  const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(
+    () => ({
+      hasMore: hasNextPage,
+      isLoadingMore: isFetchingNextPage,
+      onLoadMore: fetchNextPage,
+    }),
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  )
+
+  const data: readonly RecentDefiningSpanRecord[] = useMemo(
     () => paginatedData?.pages.flatMap((p) => p?.items ?? []) ?? [],
     [paginatedData],
   )

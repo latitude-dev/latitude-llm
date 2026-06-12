@@ -17,6 +17,7 @@ import {
 } from "../-components/tool-formatters.ts"
 import { ToolActivityRow } from "./-components/tool-activity-row.tsx"
 import { ToolContextPanel } from "./-components/tool-context-panel.tsx"
+import { ToolDefiningTraces } from "./-components/tool-defining-traces.tsx"
 import { ToolDescription } from "./-components/tool-description.tsx"
 import { ToolNeighborNav } from "./-components/tool-neighbor-nav.tsx"
 import { ToolParametersExplorer } from "./-components/tool-parameters-explorer.tsx"
@@ -131,6 +132,7 @@ function ToolDetailPageContent() {
   const errorsUsage = detail?.errorsUsage ?? null
   const definition = detail?.definition ?? null
   const notFound = !isLoading && detail !== undefined && usage === null && definition === null
+  const definedButNeverCalled = !isLoading && detail !== undefined && usage === null && definition !== null
 
   return (
     <Layout>
@@ -184,7 +186,11 @@ function ToolDetailPageContent() {
                   params={{ projectSlug }}
                   search={{
                     filters: JSON.stringify({
-                      tools: [{ op: "in", value: [toolName] }],
+                      // Never-called tools have no calls to match — link to the
+                      // traces whose chat spans defined the tool instead.
+                      ...(definedButNeverCalled
+                        ? { definedTools: [{ op: "in", value: [toolName] }] }
+                        : { tools: [{ op: "in", value: [toolName] }] }),
                       startTime: [
                         { op: "gte", value: range.fromIso },
                         { op: "lte", value: range.toIso },
@@ -375,6 +381,13 @@ function ToolDetailPageContent() {
               toolName={toolName}
               range={range}
               errorsOnly={errorsOnly}
+              onOverlayActiveChange={setOverlayActive}
+            />
+          ) : definedButNeverCalled ? (
+            <ToolDefiningTraces
+              projectId={project.id}
+              toolName={toolName}
+              range={range}
               onOverlayActiveChange={setOverlayActive}
             />
           ) : null}
