@@ -106,7 +106,8 @@
               "telemetry/frameworks/llamaindex",
               "telemetry/frameworks/mastra",
               "telemetry/frameworks/strands",
-              "telemetry/frameworks/livekit"
+              "telemetry/frameworks/livekit",
+              "telemetry/frameworks/elevenlabs"
             ]
           },
           {
