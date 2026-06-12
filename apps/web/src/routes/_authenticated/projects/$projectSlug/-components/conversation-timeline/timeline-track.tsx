@@ -1,4 +1,4 @@
-import { Text } from "@repo/ui"
+import { cn, Text } from "@repo/ui"
 import { type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react"
 import type { ActivityCategory } from "../../../../../../lib/conversation-timeline/build-activity-track.ts"
 import type {
@@ -193,11 +193,14 @@ export function TimelineTrack({
         onPointerMove={(e) => setHoverRatio(pointerRatio(e))}
         onPointerLeave={() => setHoverRatio(null)}
       >
-        <div className="relative h-3 w-full overflow-hidden rounded-sm transition-[height] group-hover:h-3.5">
+        <div className="relative h-4 w-full overflow-hidden rounded-sm">
           {timeline.activity.map((segment) => (
             <div
               key={segment.timelineStartMs}
-              className="absolute top-0 h-full"
+              className={cn(
+                "absolute top-1/2 -translate-y-1/2 transition-[height] duration-100",
+                hoverActivity?.timelineStartMs === segment.timelineStartMs ? "h-full" : "h-3",
+              )}
               style={{
                 left: `${timelineToPct(scale, segment.timelineStartMs)}%`,
                 width: `${((segment.timelineEndMs - segment.timelineStartMs) / total) * 100}%`,
@@ -215,7 +218,10 @@ export function TimelineTrack({
             return (
               <div
                 key={segment.timelineStartMs}
-                className="absolute top-0 h-full border-x border-background bg-background"
+                className={cn(
+                  "absolute top-1/2 -translate-y-1/2 border-x border-background bg-background transition-[height] duration-100",
+                  hoverInGap && hoverSegment.timelineStartMs === segment.timelineStartMs ? "h-full" : "h-3",
+                )}
                 style={{
                   left: `${timelineToPct(scale, segment.timelineStartMs)}%`,
                   width: `${((segment.timelineEndMs - segment.timelineStartMs) / total) * 100}%`,
