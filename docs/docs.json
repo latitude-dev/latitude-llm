@@ -119,6 +119,7 @@
           {
             "group": "Features",
             "pages": [
+              "observability/overview",
               "observability/features/duration",
               "observability/features/environments",
               "observability/filters",
@@ -145,9 +146,10 @@
         ]
       },
       {
-        "group": "Search",
+        "group": "Discovery",
         "pages": [
           "search/overview",
+          "search/behaviours",
           "search/saved-searches",
           {
             "group": "Guides",
@@ -195,6 +197,30 @@
         ]
       },
       {
+        "group": "Test and Fix",
+        "pages": [
+          "test-and-fix/overview",
+          "getting-started/mcp",
+          {
+            "group": "Datasets",
+            "pages": [
+              "datasets/overview",
+              "datasets/add-traces",
+              "datasets/expected-output"
+            ]
+          },
+          "test-and-fix/regression-testing",
+          {
+            "group": "Simulations",
+            "pages": [
+              "simulations/overview",
+              "simulations/cli",
+              "simulations/reporting"
+            ]
+          }
+        ]
+      },
+      {
         "group": "Security and Compliance",
         "pages": [
           "security/data-protection",
@@ -220,7 +246,6 @@
         "group": "More",
         "pages": [
           "getting-started/concepts",
-          "getting-started/mcp",
           "more/sandbox",
           "more/api-reference"
         ]

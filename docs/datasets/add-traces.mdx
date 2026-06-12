@@ -1,0 +1,38 @@
+---
+title: Add traces to a dataset
+description: Build a test set from real production traces by adding them to a dataset from the trace list, search results, or an issue.
+---
+
+<Info>
+  **Where this fits:** This is part of the **Test and Fix** stage. It turns the traces behind a
+  failure into reusable rows in a [Dataset](./overview), ready for
+  [Regression testing](../test-and-fix/regression-testing).
+</Info>
+
+The most realistic test cases are the interactions that actually happened. You can add traces to a dataset directly from the places where you find them: the trace list, [Search](../search/overview) results, or an [issue](../issues/overview).
+
+## Add selected traces
+
+<Steps>
+  <Step title="Select the traces">
+    In the trace list or in search results, select one or more traces. To capture every trace behind
+    a problem, open an [issue](../issues/overview) and add its traces.
+  </Step>
+  <Step title="Choose Add to Dataset">
+    Use **Add to Dataset**. A dialog lets you add the traces to an existing dataset or create a new
+    one in the same step.
+  </Step>
+  <Step title="Confirm">
+    Each trace becomes a row, with the trace input as the row **input** and the agent response as the
+    row **output**. You can add up to 10,000 traces in one import.
+  </Step>
+</Steps>
+
+## Add a whole cohort
+
+You are not limited to hand-picked traces. When you add to a dataset from a filtered view, a saved search, or an issue, the matching traces are added as a group — so a [saved search](../search/saved-searches) for a behaviour or an issue's full set of failures becomes a dataset in one action.
+
+## Next step
+
+- [Add expected output](./expected-output): record what the agent *should* have done so a test can
+  check against it.

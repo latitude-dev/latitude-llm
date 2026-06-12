@@ -20,7 +20,14 @@ PATH="$(ls -d "$HOME"/.nvm/versions/node/v22.*/bin 2>/dev/null | sort -V | tail 
 
 Then open **http://localhost:3333**. A page at `docs/<folder>/<file>.mdx` is served at `http://localhost:3333/<folder>/<file>` (e.g. `docs/monitors/overview.mdx` → `/monitors/overview`). The server hot-reloads on edits to any `.mdx`/`.md` or `docs.json`.
 
-Prefer running it in the background and tailing the output until you see `✓ preview ready`.
+Start it in the **background** — it's a long-lived server that stays up across turns. Startup takes ~30–60s. Don't parse the spinner output to detect readiness (it's noisy and unreliable for an agent); **block on the HTTP endpoint** instead:
+
+```bash
+# blocks until the server answers, then prints the status (307 at root is expected & fine)
+curl -s --retry 60 --retry-all-errors --retry-delay 2 -o /dev/null -w '%{http_code}\n' http://localhost:3333/
+```
+
+When that returns a code, the server is ready (`✓ preview ready` is in the log).
 
 ## Why the `PATH` prefix (node version gotcha)
 
@@ -54,6 +61,18 @@ PATH="$(ls -d "$HOME"/.nvm/versions/node/v22.*/bin 2>/dev/null | sort -V | tail 
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3333/        # 307 redirect to first page — fine
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3333/monitors/overview   # 200 = page resolves
 ```
+
+After adding or renaming pages, check each new path returns `200` (swap in your own routes). A `404` means the file is missing or its slug doesn't match the `docs.json` nav entry.
+
+## One server, reused (don't start a second)
+
+`mint dev` is long-lived: a single instance serves every page and hot-reloads on edits, so reuse it instead of starting another. Before launching, check whether a preview is already up:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3333/   # any code = already running, just use it
+```
+
+If the port is taken by a stale preview and you need a clean restart, stop the existing process first (kill the background task you launched it as, or `pkill -f 'mint dev'`) — otherwise `mint dev` will fail to bind `3333` or silently pick another port.
 
 ## Rules
 

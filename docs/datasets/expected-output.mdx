@@ -1,0 +1,37 @@
+---
+title: Add expected output
+description: Record the correct answer for dataset rows so regression tests can check your agent against a known-good result.
+---
+
+<Info>
+  **Where this fits:** This is part of the **Test and Fix** stage. Expected output turns a
+  [Dataset](./overview) of real traces into a test set with a known-good answer for
+  [Regression testing](../test-and-fix/regression-testing).
+</Info>
+
+**Expected output** is the correct or desired answer for a dataset row. It is what lets a test compare your agent's actual output against a known-good result, rather than only checking the output in isolation. Expected output is optional — many evaluations check a response on its own merits — but it is what makes a row a precise regression case.
+
+## Add expected output to a row
+
+<Steps>
+  <Step title="Open the row">
+    In a [dataset](./overview), open a row to view its input, output, and fields.
+  </Step>
+  <Step title="Fill in the expected output">
+    Add the correct answer in the **Expected output** field. A row with no expected output shows an
+    **Add expected output** prompt, so it is easy to see which rows still need one.
+  </Step>
+</Steps>
+
+## Where the expected answer comes from
+
+When you build a dataset from a failing [issue](../issues/overview), the agent's actual output was wrong — that is why the issue exists. The expected output is the response the agent *should* have produced. Common sources:
+
+- the correct answer a human reviewer would give
+- the behaviour described in the issue or in an [annotation](../annotations/overview)
+- a corrected version of the original output
+
+## Next step
+
+- [Regression testing](../test-and-fix/regression-testing): replay the dataset against your agent and
+  check the results.

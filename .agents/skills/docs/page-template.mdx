@@ -1,0 +1,48 @@
+---
+# COPY THIS FILE when starting a new docs page. Delete these comments.
+# title: short, specific, Title Case. Becomes the H1 and the agent-facing label.
+# description: one sentence stating what the page does AND which loop stage it serves.
+#   This doubles as the summary an LLM/agent surfaces, so make it self-contained.
+title: <Page Title>
+description: <What this page lets you do, and where it sits in the Trace → Discover → Triage → Test & Fix loop.>
+---
+
+{/*
+  STANDARDS (see .agents/skills/docs/SKILL.md):
+  - Loop pervades every page: one orienting sentence below, one "Next step" block at the end.
+    Keep framing to a single sentence — answer-first content comes first, framing brackets it.
+  - LLM readability: answer-first; no load-bearing media (every fact in an image is also in prose);
+    self-contained; descriptive anchor text (never "click here"); one H1; complete runnable code.
+  - Controlled vocabulary: Trace, Span, Session, Signal, Issue, Monitor, Dataset, Regression test.
+    Use the canonical term; link to ../getting-started/concepts on first use.
+*/}
+
+<Info>
+  **Where this fits:** This is the **<stage>** stage of the Latitude loop — after [<previous stage>](<link>),
+  before [<next stage>](<link>). <One clause on what you accomplish here.>
+</Info>
+
+Lead with the answer: what this is and how to do the most common thing, in the first paragraph.
+Put background, options, and edge cases in later sections.
+
+## <Do the main thing>
+
+<Steps>
+  <Step title="<First action>">
+    Imperative, complete, copy-pasteable. Show full code with imports — no `...` elisions on
+    lines a reader needs.
+  </Step>
+  <Step title="<Second action>">
+    Describe what the user sees, in prose. A screenshot or GIF may illustrate it, but the step
+    must be understandable without the image.
+  </Step>
+</Steps>
+
+## <Concept or option, if needed>
+
+Explanation in prose. Define any new term on first use and link to
+[Core Concepts](../getting-started/concepts).
+
+## Next step
+
+- [<Next page in the loop>](<link>): <what they'll do there>.

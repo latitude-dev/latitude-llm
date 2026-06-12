@@ -1,0 +1,64 @@
+---
+title: Regression testing
+description: Replay a dataset of real traces against your agent and check the results with the same evaluations that monitor production, so fixed issues cannot quietly return.
+---
+
+<Info>
+  **Where this fits:** This is the verification step of the **Test and Fix** stage. It takes a
+  [Dataset](../datasets/overview) built from a fixed [issue](../issues/overview) and proves the fix
+  holds before and after you ship.
+</Info>
+
+A **regression test** replays a set of known inputs against your agent and checks the results, so a failure you already fixed cannot return unnoticed. In Latitude, the inputs come from a [Dataset](../datasets/overview) of real traces, and the checks reuse the same [evaluations](../evaluations/overview) that monitor production — so your test quality bar matches your production quality bar.
+
+## The regression loop
+
+<Steps>
+  <Step title="Start from a fixed issue">
+    Build a [dataset](../datasets/overview) from the traces behind an issue and
+    [add expected output](../datasets/expected-output) for the rows you want to check precisely.
+  </Step>
+  <Step title="Replay the inputs against your agent">
+    Run your agent against each row's input to produce fresh outputs.
+  </Step>
+  <Step title="Check the results">
+    Run the issue's [evaluations](../evaluations/overview) against the new outputs. The same monitor
+    that found the failure in production now verifies the fix.
+  </Step>
+  <Step title="Gate and repeat">
+    Pass when the results meet your quality bar; fail to block a regression. Run it again whenever the
+    agent, prompts, tools, or models change.
+  </Step>
+</Steps>
+
+## Run it in CI
+
+<Note>
+  **Coming soon.** The local-first **Simulations** runner — the Latitude CLI and
+  `@latitude-data/sdk` for replaying datasets and running evaluations in your own pipeline — is under
+  active development. The pages below describe the planned design.
+</Note>
+
+The planned workflow runs the same datasets and evaluations from your CI/CD pipeline and returns CI-friendly exit codes, so you can block merges that degrade quality:
+
+<CardGroup cols={2}>
+  <Card title="Simulations overview" icon="flask" href="../simulations/overview">
+    What simulations are and why they match your production quality bar.
+  </Card>
+  <Card title="Simulation CLI" icon="terminal" href="../simulations/cli">
+    Define scenarios with the SDK and run datasets locally or in CI.
+  </Card>
+</CardGroup>
+
+## Available today: export and reuse
+
+Until the runner ships, you can still drive a regression test from a dataset:
+
+- **Export** a [dataset](../datasets/overview) as CSV and replay its inputs in your own test harness.
+- Submit the results back as [scores](../scores/overview) through the [Scores API](../scores/api), so
+  regression results live alongside your production signals.
+
+## Next step
+
+- [Simulation reporting](../simulations/reporting): read results and decide whether a change is safe
+  to ship.

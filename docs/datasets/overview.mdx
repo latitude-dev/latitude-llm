@@ -1,0 +1,64 @@
+---
+title: Datasets
+description: Curate versioned collections of inputs, outputs, and expected outputs from real traces to test and improve your agent — part of the Test and Fix stage.
+---
+
+<Info>
+  **Where this fits:** Datasets are part of the **Test and Fix** stage — after
+  [Issue Discovery](../issues/overview), feeding [Regression testing](../test-and-fix/regression-testing).
+  They turn real traces into reusable test cases.
+</Info>
+
+A **dataset** is a collection of rows you curate for testing and improving your agent. Each row holds an **input**, the agent's **output**, an optional **expected output**, and arbitrary **metadata**. Datasets are versioned, so a saved snapshot stays stable as a test set even as you add more rows.
+
+## What a dataset row contains
+
+| Column | Description |
+| --- | --- |
+| **Input** | The input your agent received (for example, the user message). |
+| **Output** | What your agent actually returned. |
+| **Expected output** | The correct or desired answer, used to check the agent. Optional — see [Add expected output](./expected-output). |
+| **Metadata** | Arbitrary JSON fields carried alongside the row. |
+
+## Create a dataset
+
+You can build a dataset two ways:
+
+<CardGroup cols={2}>
+  <Card title="From real traces" icon="route" href="./add-traces">
+    Select traces from the trace list, search results, or an issue, and add them to a dataset. The
+    most realistic test cases come straight from production.
+  </Card>
+  <Card title="Manually" icon="table">
+    Open **Datasets** in your project, create a new dataset, then import a CSV or add rows one at a
+    time.
+  </Card>
+</CardGroup>
+
+To create one manually:
+
+<Steps>
+  <Step title="Open Datasets">
+    In your project, go to **Datasets** and create a new dataset.
+  </Step>
+  <Step title="Add rows">
+    Use **Import** to upload a CSV, or **Add row** to enter inputs by hand. Each row becomes one
+    test case.
+  </Step>
+  <Step title="Export when needed">
+    Use **Export** to download the rows as CSV for use elsewhere, such as a CI pipeline.
+  </Step>
+</Steps>
+
+## How datasets are used
+
+- **Regression testing**: replay a dataset's inputs against your agent and compare results to the
+  expected outputs and your evaluations. See [Regression testing](../test-and-fix/regression-testing).
+- **Curating test sets**: collect representative traces from [Search](../search/overview) and
+  [Issues](../issues/overview) into a stable, versioned set.
+- **Tracking changes over time**: because datasets are versioned, you can grow a test suite without
+  disturbing earlier snapshots.
+
+## Next step
+
+- [Add traces to a dataset](./add-traces): build a test set from real production traces.
