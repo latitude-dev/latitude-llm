@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-alpha.8] - 2026-06-12
+
+### Added
+
+- **`client.incidents.resolve(projectSlug, incidentId)`** and the `POST /v1/projects/{projectSlug}/incidents/{incidentId}` endpoint — resolves (closes) an ongoing incident and returns it. Resolving an already-closed incident is a no-op that returns it unchanged; an incident id that doesn't exist in the project returns 404. If the incident's condition triggers again, a new incident opens.
+
 ## [6.0.0-alpha.7] - 2026-06-11
 
 ### Changed
