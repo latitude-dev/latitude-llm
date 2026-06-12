@@ -65,6 +65,96 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $password -}}
 {{- end -}}
 
+{{/* host:port of each dependency a service connects to at boot, bundled or external. */}}
+{{- define "latitude.postgresHostPort" -}}
+{{- if .Values.postgres.enabled -}}
+{{- printf "%s-postgres:5432" (include "latitude.fullname" .) -}}
+{{- else -}}
+{{- $host := (urlParse .Values.postgres.external.databaseUrl).host | toString -}}
+{{- if contains ":" $host }}{{ $host }}{{ else }}{{ printf "%s:5432" $host }}{{ end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "latitude.redisHostPort" -}}
+{{- if .Values.redis.enabled -}}
+{{- printf "%s-redis:6379" (include "latitude.fullname" .) -}}
+{{- else -}}
+{{- printf "%s:%v" .Values.redis.external.host .Values.redis.external.port -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "latitude.bullmqHostPort" -}}
+{{- if .Values.redisBullmq.enabled -}}
+{{- printf "%s-redis-bullmq:6379" (include "latitude.fullname" .) -}}
+{{- else -}}
+{{- printf "%s:%v" .Values.redisBullmq.external.host .Values.redisBullmq.external.port -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "latitude.temporalHostPort" -}}
+{{- if .Values.temporal.enabled -}}
+{{- printf "%s-temporal:7233" (include "latitude.fullname" .) -}}
+{{- else -}}
+{{- .Values.temporal.external.address -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "latitude.clickhouseNativeHostPort" -}}
+{{- if .Values.clickhouse.enabled -}}
+{{- printf "%s-clickhouse:9000" (include "latitude.fullname" .) -}}
+{{- else -}}
+{{- $host := (urlParse .Values.clickhouse.external.migrationUrl).host | toString -}}
+{{- if contains ":" $host }}{{ $host }}{{ else }}{{ printf "%s:9000" $host }}{{ end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "latitude.clickhouseHttpHostPort" -}}
+{{- if .Values.clickhouse.enabled -}}
+{{- printf "%s-clickhouse:8123" (include "latitude.fullname" .) -}}
+{{- else -}}
+{{- $url := urlParse .Values.clickhouse.external.url -}}
+{{- $host := $url.host | toString -}}
+{{- if contains ":" $host }}{{ $host }}{{ else if eq $url.scheme "https" }}{{ printf "%s:443" $host }}{{ else }}{{ printf "%s:8123" $host }}{{ end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The full infrastructure set, space-separated host:port — every app service
+waits for all of it. External S3 has no reliable host:port to derive, so the
+object store is only included when the bundled SeaweedFS is on.
+*/}}
+{{- define "latitude.bootDeps" -}}
+{{- $deps := list (include "latitude.postgresHostPort" .) (include "latitude.redisHostPort" .) (include "latitude.bullmqHostPort" .) (include "latitude.clickhouseHttpHostPort" .) (include "latitude.temporalHostPort" .) -}}
+{{- if .Values.seaweedfs.enabled -}}
+{{- $deps = append $deps (printf "%s-seaweedfs:8333" (include "latitude.fullname" .)) -}}
+{{- end -}}
+{{- join " " $deps -}}
+{{- end -}}
+
+{{/*
+Init container that TCP-polls dependencies, so pods wait in Init instead of
+crash-looping into multi-minute restart backoffs. Context: dict with
+  root: $, image: image to run, deps: space-separated host:port string
+*/}}
+{{- define "latitude.waitForDeps" -}}
+- name: wait-for-deps
+  image: {{ .image }}
+  imagePullPolicy: {{ .root.Values.image.pullPolicy }}
+  command:
+    - bash
+    - -c
+    - |
+      for dep in {{ .deps }}; do
+        host="${dep%%:*}"
+        port="${dep##*:}"
+        until (echo > "/dev/tcp/$host/$port") 2>/dev/null; do
+          echo "waiting for $host:$port..."
+          sleep 3
+        done
+        echo "$host:$port is up"
+      done
+{{- end -}}
+
 {{/*
 Shared scheduling and image-pull pod fields.
 */}}
@@ -123,6 +213,8 @@ spec:
         {{- end }}
     spec:
       {{- include "latitude.podSettings" $root | nindent 6 }}
+      initContainers:
+        {{- include "latitude.waitForDeps" (dict "root" $root "image" (include "latitude.image" (dict "root" $root "service" $name)) "deps" (include "latitude.bootDeps" $root)) | nindent 8 }}
       containers:
         - name: {{ $name }}
           image: {{ include "latitude.image" (dict "root" $root "service" $name) }}

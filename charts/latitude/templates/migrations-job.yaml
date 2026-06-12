@@ -24,6 +24,8 @@ spec:
     spec:
       restartPolicy: OnFailure
       {{- include "latitude.podSettings" . | nindent 6 }}
+      initContainers:
+        {{- include "latitude.waitForDeps" (dict "root" $ "image" (include "latitude.image" (dict "root" $ "service" "migrations")) "deps" (printf "%s %s" (include "latitude.postgresHostPort" .) (include "latitude.clickhouseNativeHostPort" .))) | nindent 8 }}
       containers:
         - name: migrations
           image: {{ include "latitude.image" (dict "root" $ "service" "migrations") }}

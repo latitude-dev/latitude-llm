@@ -70,7 +70,7 @@ Cluster runs Latitude on **Kubernetes** through a cloud-agnostic [Helm chart](ht
   </Step>
 
   <Step title="Install the chart in your cluster">
-    The install brings up the bundled infrastructure, runs database migrations and the Temporal schema setup as one-shot jobs, and starts the five application services.
+    The install brings up the bundled infrastructure, runs database migrations and the Temporal schema setup as one-shot jobs, and starts the five application services. App pods wait in `Init:0/1` until their dependencies accept connections, then start once, cleanly — the first install takes a few minutes (image pulls plus volume provisioning).
 
     ```bash
     helm install latitude . \
@@ -206,6 +206,15 @@ temporal:
 | Redis (queue) | `redisBullmq.enabled` | Same namespacing; needs `noeviction` |
 | Temporal | `temporal.enabled` | Temporal Cloud or the official [temporalio/helm-charts](https://github.com/temporalio/helm-charts) (SQL persistence, no Cassandra/Elasticsearch) for an HA cluster |
 | Object storage | `seaweedfs.enabled` | Any S3-compatible store; omit `endpoint`/`forcePathStyle` for AWS S3 |
+
+## Troubleshooting
+
+| Symptom | Meaning and fix |
+| --- | --- |
+| Pod stuck in `Init:0/1` | It's waiting for a dependency — `kubectl logs -n latitude <pod> -c wait-for-deps` prints which `host:port` it's polling. Usually a bundled service still starting, or an unreachable `external:` endpoint. |
+| A hook job failed and `helm install` errored | Read the job logs — `kubectl logs -n latitude job/latitude-migrations` (or `job/latitude-temporal-schema`, `job/latitude-temporal-namespace`) — fix the cause and re-run the install; the jobs are idempotent. |
+| Pod stuck in `Pending` | Usually no default `StorageClass` or an unbound volume claim — check `kubectl get pvc -n latitude`. |
+| `ImagePullBackOff` | Check `image.registry` / `image.tag` and the node's network; the public images live at `docker.io/latitudedata/<service>`. |
 
 ## Next steps
 
