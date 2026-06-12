@@ -8,6 +8,7 @@ import {
   parseClickhouseTime,
   pick,
   pickByWeight,
+  pickSeedUser,
   randInt,
   randomHex,
   randomTimeInWindow,
@@ -26,7 +27,7 @@ export function generateSessionTraces(config: TraceConfig, agent: AgentProfile, 
   const conversationHistory: Message[] = []
   const topic = agent.topics ? pick(agent.topics) : undefined
   const sessionId = `session-${randomHex(8)}`
-  const userId = Math.random() < agent.userIdProbability && agent.userIdPool.length > 0 ? pick(agent.userIdPool) : ""
+  const user = pickSeedUser(agent.userPool, agent.userProbability)
   const environment = pick(agent.environments)
   const tags = [agent.tag, environment]
   const metadata = generateAgentMetadata(agent, environment)
@@ -51,7 +52,8 @@ export function generateSessionTraces(config: TraceConfig, agent: AgentProfile, 
       simulationId: config.simulationId ?? "",
       startTime: sessionCursor,
       sessionId,
-      userId,
+      userId: user?.id ?? "",
+      userEmail: user?.email ?? "",
       serviceName: agent.serviceName,
       tags,
       metadata,

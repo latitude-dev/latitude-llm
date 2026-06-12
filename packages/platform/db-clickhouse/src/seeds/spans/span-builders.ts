@@ -1,4 +1,4 @@
-import type { ModelConfig, ToolConfig } from "@domain/shared/seeding"
+import type { ModelConfig, SeedUser, ToolConfig } from "@domain/shared/seeding"
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -9,6 +9,8 @@ export type SpanRow = {
   project_id: string
   session_id: string
   user_id: string
+  /** Optional so hand-built test rows can omit it; ClickHouse defaults it to ''. */
+  user_email?: string
   trace_id: string
   span_id: string
   parent_span_id: string
@@ -66,6 +68,7 @@ type SpanBase = {
   serviceName: string
   sessionId: string
   userId: string
+  userEmail: string
   organizationId: string
   projectId: string
   apiKeyId: string
@@ -237,6 +240,7 @@ function makeBaseSpan(base: SpanBase): SpanRow {
     project_id: base.projectId,
     session_id: base.sessionId,
     user_id: base.userId,
+    user_email: base.userEmail,
     trace_id: base.traceId,
     span_id: randomHex(16),
     parent_span_id: base.parentSpanId,
@@ -439,6 +443,7 @@ export type TraceContext = {
   startTime: Date
   sessionId: string
   userId: string
+  userEmail: string
   serviceName: string
   tags: string[]
   metadata: Record<string, string>
@@ -459,6 +464,7 @@ export function toBase(
     serviceName: ctx.serviceName,
     sessionId: ctx.sessionId,
     userId: ctx.userId,
+    userEmail: ctx.userEmail,
     organizationId: ctx.organizationId,
     projectId: ctx.projectId,
     apiKeyId: ctx.apiKeyId,
@@ -480,4 +486,9 @@ export function pickByWeight<T extends { weight: number }>(items: readonly T[]):
     if (r <= 0) return item
   }
   return items[items.length - 1] as T
+}
+
+/** Rolls whether a trace/session gets an end-user, then weighted-picks one from the pool. */
+export function pickSeedUser(pool: readonly SeedUser[], probability: number): SeedUser | undefined {
+  return Math.random() < probability && pool.length > 0 ? pickByWeight(pool) : undefined
 }

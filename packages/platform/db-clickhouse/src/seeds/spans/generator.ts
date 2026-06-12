@@ -5,6 +5,7 @@ import {
   clampSpansToWindowEnd,
   pick,
   pickByWeight,
+  pickSeedUser,
   randomTimeInWindow,
   type SpanRow,
   type TraceConfig,
@@ -75,7 +76,7 @@ function generateIndependentTrace(config: TraceConfig, agent: AgentProfile): Spa
 
   const environment = pick(agent.environments)
   const tags = [agent.tag, environment]
-  const userId = Math.random() < agent.userIdProbability && agent.userIdPool.length > 0 ? pick(agent.userIdPool) : ""
+  const user = pickSeedUser(agent.userPool, agent.userProbability)
 
   const metadata: Record<string, string> = {
     environment,
@@ -95,7 +96,8 @@ function generateIndependentTrace(config: TraceConfig, agent: AgentProfile): Spa
     simulationId: config.simulationId ?? "",
     startTime: randomTimeInWindow(config.timeWindow.from, config.timeWindow.to),
     sessionId: "",
-    userId,
+    userId: user?.id ?? "",
+    userEmail: user?.email ?? "",
     serviceName: agent.serviceName,
     tags,
     metadata,
