@@ -595,6 +595,80 @@ describe("listRecentToolCalls", () => {
 })
 
 // ---------------------------------------------------------------------------
+// listRecentDefiningSpans
+// ---------------------------------------------------------------------------
+
+describe("listRecentDefiningSpans", () => {
+  const fixture = setupFixture()
+
+  const chatAt = (label: string, minute: number, overrides: Partial<Parameters<typeof chatSpan>[0]> = {}) =>
+    chatSpan({
+      trace_id: tid(`t${label}`),
+      span_id: sid(`c${label}`),
+      toolDefinitionsJson: DEFS_JSON,
+      start_time: `2026-03-15 12:${String(minute).padStart(2, "0")}:00.000`,
+      ...overrides,
+    })
+
+  it("returns newest defining spans first and paginates with the cursor", async () => {
+    await fixture.insertSpans([chatAt("1", 1), chatAt("2", 2), chatAt("3", 3)])
+
+    const page1 = await fixture.runCh(
+      fixture.repo.listRecentDefiningSpans({ ...SCOPE, toolName: "unused_tool", limit: 2 }),
+    )
+    expect(page1.items.map((item) => item.spanId)).toEqual([sid("c3"), sid("c2")])
+    expect(page1.hasMore).toBe(true)
+
+    const page2 = await fixture.runCh(
+      fixture.repo.listRecentDefiningSpans({
+        ...SCOPE,
+        toolName: "unused_tool",
+        limit: 2,
+        cursor: must(page1.nextCursor),
+      }),
+    )
+    expect(page2.items.map((item) => item.spanId)).toEqual([sid("c1")])
+    expect(page2.hasMore).toBe(false)
+  })
+
+  it("maps span name, service and model, and dedupes re-ingested spans", async () => {
+    await fixture.insertSpans([chatAt("1", 1, { model: "old-model" })])
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    await fixture.insertSpans([chatAt("1", 1, { model: "new-model" })])
+
+    const page = await fixture.runCh(fixture.repo.listRecentDefiningSpans({ ...SCOPE, toolName: "unused_tool" }))
+    expect(page.items).toHaveLength(1)
+    const span = must(page.items[0])
+    expect(span.traceId).toBe(tid("t1"))
+    expect(span.name).toBe("chat test-model")
+    expect(span.serviceName).toBe("test-service")
+    expect(span.model).toBe("new-model")
+  })
+
+  it("does not match calls of the tool or definitions of other tools", async () => {
+    await fixture.insertSpans([
+      callSpan({ trace_id: tid("t1"), span_id: sid("u1"), tool_name: "unused_tool" }),
+      chatSpan({
+        trace_id: tid("t2"),
+        span_id: sid("c2"),
+        toolDefinitionsJson: '[{"name":"other_tool","description":"d","parameters":{}}]',
+      }),
+    ])
+
+    const page = await fixture.runCh(fixture.repo.listRecentDefiningSpans({ ...SCOPE, toolName: "unused_tool" }))
+    expect(page.items).toHaveLength(0)
+    expect(page.hasMore).toBe(false)
+  })
+
+  it("scopes to the time window", async () => {
+    await fixture.insertSpans([chatAt("1", 1, { start_time: "2026-04-10 12:00:00.000" })])
+
+    const page = await fixture.runCh(fixture.repo.listRecentDefiningSpans({ ...SCOPE, toolName: "unused_tool" }))
+    expect(page.items).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // errorsOnly scoping (failure-analysis mode)
 // ---------------------------------------------------------------------------
 

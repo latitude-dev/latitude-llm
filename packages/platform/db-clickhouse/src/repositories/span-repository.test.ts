@@ -121,6 +121,41 @@ describe("SpanRepository", () => {
       expect(spans[0]?.name).toBe("newer")
       expect(spans[0]?.projectId).toBe(PROJECT_ID)
     })
+
+    it("returns the called tool name and the defined tool names", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "4444444444444444",
+            operation: "execute_tool",
+            tool_name: "lookup_order",
+            tool_call_id: "call_1",
+          }),
+          makeSpanRow({
+            span_id: "5555555555555555",
+            operation: "chat",
+            tool_definitions: '[{"name":"defined_only_tool","description":"d","parameters":{}}]',
+          }),
+        ]),
+      )
+
+      const spans = await runCh(
+        repo.listByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          startTimeFrom: new Date("2026-01-01T00:00:00.000Z"),
+          startTimeTo: new Date("2026-01-01T00:00:01.000Z"),
+        }),
+      )
+
+      const toolSpan = spans.find((span) => span.spanId === "4444444444444444")
+      const chatSpan = spans.find((span) => span.spanId === "5555555555555555")
+      expect(toolSpan?.toolName).toBe("lookup_order")
+      expect(toolSpan?.toolNames).toEqual([])
+      expect(chatSpan?.toolName).toBe("")
+      expect(chatSpan?.toolNames).toEqual(["defined_only_tool"])
+    })
   })
 
   describe("listByProjectId", () => {
@@ -418,6 +453,32 @@ describe("SpanRepository", () => {
 
       expect(span.name).toBe("newer")
       expect(span.projectId).toBe(PROJECT_ID)
+    })
+
+    it("returns the materialized tool names despite the SELECT *", async () => {
+      await runCh(
+        insertJsonEachRow(ch.client, "spans", [
+          makeSpanRow({
+            span_id: "6666666666666666",
+            operation: "chat",
+            tool_definitions: '[{"name":"defined_only_tool","description":"d","parameters":{}}]',
+          }),
+        ]),
+      )
+
+      const span = await runCh(
+        repo.findBySpanId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          spanId: SpanId("6666666666666666"),
+          startTimeFrom: new Date("2026-01-01T00:00:00.000Z"),
+          startTimeTo: new Date("2026-01-01T00:00:01.000Z"),
+        }),
+      )
+
+      expect(span.toolNames).toEqual(["defined_only_tool"])
+      expect(span.toolDefinitions).toEqual([{ name: "defined_only_tool", description: "d", parameters: {} }])
     })
   })
 })
