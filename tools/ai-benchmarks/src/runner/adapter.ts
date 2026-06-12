@@ -51,6 +51,7 @@ export function fixtureRowToTraceDetail(row: FixtureRow): TraceDetail {
     costTotalMicrocents: 0,
     sessionId: SessionId(BENCHMARK_SESSION_ID),
     userId: ExternalUserId(BENCHMARK_USER_ID),
+    userEmail: "",
     simulationId: SimulationId(""),
     tags: [],
     metadata: {},

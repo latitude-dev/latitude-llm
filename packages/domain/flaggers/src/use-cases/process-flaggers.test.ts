@@ -71,6 +71,7 @@ const makeTraceDetail = (allMessages: TraceDetail["allMessages"], tags: readonly
   costTotalMicrocents: 0,
   sessionId: SessionId("session-1"),
   userId: ExternalUserId("user"),
+  userEmail: "",
   simulationId: SimulationId(""),
   tags,
   metadata: {},

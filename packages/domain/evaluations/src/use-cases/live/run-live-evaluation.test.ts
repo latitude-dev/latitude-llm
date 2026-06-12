@@ -99,6 +99,7 @@ function makeTraceDetail(
     costTotalMicrocents: 75,
     sessionId: overrides?.sessionId ?? SessionId("session"),
     userId: ExternalUserId("user"),
+    userEmail: "",
     simulationId: SimulationId(""),
     tags: [],
     metadata: {},

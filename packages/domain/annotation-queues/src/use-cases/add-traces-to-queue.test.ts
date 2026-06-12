@@ -82,6 +82,7 @@ function makeTrace(suffix: string): Trace {
     costTotalMicrocents: 15,
     sessionId: SessionId(""),
     userId: ExternalUserId(""),
+    userEmail: "",
     simulationId: SimulationId(""),
     tags: [],
     metadata: {},

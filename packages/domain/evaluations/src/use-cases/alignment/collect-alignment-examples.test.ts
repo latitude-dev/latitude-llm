@@ -55,6 +55,7 @@ function makeTraceDetail(traceId: TraceId): TraceDetail {
     costTotalMicrocents: 0,
     sessionId: SessionId("s".repeat(128)),
     userId: ExternalUserId("u".repeat(24)),
+    userEmail: "",
     simulationId: SimulationId(""),
     tags: [],
     metadata: {},
