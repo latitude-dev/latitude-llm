@@ -36,6 +36,7 @@ export interface ListMonitorsRepositoryInput {
 }
 
 export interface MonitorLastIncident {
+  readonly id: string
   readonly startedAt: Date
   readonly endedAt: Date | null
 }

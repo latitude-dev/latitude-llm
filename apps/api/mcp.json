@@ -7582,6 +7582,479 @@
       }
     },
     {
+      "name": "resolveIncident",
+      "title": "Resolve incident",
+      "description": "Resolves (closes) an ongoing incident. An already-closed incident is returned unchanged. If the incident's condition triggers again, a new incident will be opened.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "description": "Project slug (human-readable identifier)"
+          },
+          "incidentId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Incident identifier."
+          }
+        },
+        "required": [
+          "projectSlug",
+          "incidentId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Stable incident identifier."
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Organization that owns this incident."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Project this incident belongs to."
+          },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "issue",
+              "savedSearch"
+            ],
+            "description": "Kind of entity that triggered the incident. `issue` for issue-lifecycle incidents; `savedSearch` for incidents raised by a monitor watching a search."
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 24,
+            "maxLength": 24,
+            "description": "Id of the entity that triggered the incident (matches `sourceType`)."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "issue.new",
+              "issue.regressed",
+              "issue.escalating",
+              "savedSearch.match",
+              "savedSearch.threshold",
+              "savedSearch.escalating"
+            ],
+            "description": "Reason the incident opened. `issue.new` fires when a new issue is discovered; `issue.regressed` when a resolved issue is detected again; `issue.escalating` when an ongoing issue is being detected more than expected. The `savedSearch.*` kinds are raised by monitors watching a search: `savedSearch.match` on each new matching trace, `savedSearch.threshold` when matching traces are detected above a configured threshold, and `savedSearch.escalating` when they stay above the threshold for a sustained window."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Severity bucket assigned to the incident: `low`, `medium`, or `high`."
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the incident opened."
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 timestamp at which the incident closed, or `null` if still open."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 timestamp at which the incident row was created."
+          },
+          "monitorAlertId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 24,
+                "maxLength": 24
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id of the monitor alert that opened this incident, or `null` when not attributed to a monitor."
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "savedSearch.threshold",
+                        "description": "Threshold alert: opens once the count threshold is crossed."
+                      },
+                      "threshold": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "absolute",
+                                "description": "Compare the match count against a fixed number; read `count`."
+                              },
+                              "count": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991,
+                                "description": "Number of matching traces that opens the incident."
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "count"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "multiplier",
+                                "description": "Compare the match rate against `factor × baseline`; read `factor` and `baseline`."
+                              },
+                              "factor": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
+                              },
+                              "baseline": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "average",
+                                      "period"
+                                    ],
+                                    "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
+                                  },
+                                  "lookback": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "hours",
+                                            "description": "The duration is expressed in whole hours; read `hours`."
+                                          },
+                                          "hours": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of hours."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "hours"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "days",
+                                            "description": "The duration is expressed in whole days; read `days`."
+                                          },
+                                          "days": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of days."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "days"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ],
+                                    "description": "Length of the window used to compute the baseline rate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "lookback"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Fixed-window baseline the current rate is compared against."
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "factor",
+                              "baseline"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "expected",
+                                "description": "Compare against the seasonally-learned expected rate for this time of day/week (the same detector as automatic issue escalation); the only knob is `sensitivity`."
+                              },
+                              "sensitivity": {
+                                "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 6
+                              }
+                            },
+                            "required": [
+                              "mode"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "How the match count/rate is compared."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "threshold"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "savedSearch.escalating",
+                        "description": "Sustained alert: opens only when the threshold stays crossed for the whole `window`."
+                      },
+                      "threshold": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "absolute",
+                                "description": "Compare the match count against a fixed number; read `count`."
+                              },
+                              "count": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991,
+                                "description": "Number of matching traces that opens the incident."
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "count"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "multiplier",
+                                "description": "Compare the match rate against `factor × baseline`; read `factor` and `baseline`."
+                              },
+                              "factor": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "description": "Multiple of the baseline rate that opens the incident (e.g. `3` = 3×)."
+                              },
+                              "baseline": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "average",
+                                      "period"
+                                    ],
+                                    "description": "How the comparison rate is computed. `average` is the rolling rate over the last `lookback`; `period` is the equal-length window immediately before it (e.g. `lookback` of 1 day compares against yesterday) for daily/weekly seasonality."
+                                  },
+                                  "lookback": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "hours",
+                                            "description": "The duration is expressed in whole hours; read `hours`."
+                                          },
+                                          "hours": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of hours."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "hours"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "unit": {
+                                            "type": "string",
+                                            "const": "days",
+                                            "description": "The duration is expressed in whole days; read `days`."
+                                          },
+                                          "days": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0,
+                                            "description": "Number of days."
+                                          }
+                                        },
+                                        "required": [
+                                          "unit",
+                                          "days"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ],
+                                    "description": "Length of the window used to compute the baseline rate."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "lookback"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Fixed-window baseline the current rate is compared against."
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "factor",
+                              "baseline"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "expected",
+                                "description": "Compare against the seasonally-learned expected rate for this time of day/week (the same detector as automatic issue escalation); the only knob is `sensitivity`."
+                              },
+                              "sensitivity": {
+                                "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 6
+                              }
+                            },
+                            "required": [
+                              "mode"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "How the match count/rate is compared."
+                      },
+                      "window": {
+                        "type": "object",
+                        "properties": {
+                          "minutes": {
+                            "type": "integer",
+                            "minimum": 5,
+                            "maximum": 9007199254740991,
+                            "description": "How long the threshold must stay crossed before the incident opens. The incident stays open while the threshold keeps holding over this window and closes once it no longer does. Minimum 5."
+                          }
+                        },
+                        "required": [
+                          "minutes"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Sustained-condition window."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "threshold",
+                      "window"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "issue.escalating",
+                        "description": "System issue-escalation alert; only `sensitivity` is tunable."
+                      },
+                      "sensitivity": {
+                        "description": "Detector sensitivity from 1 (noisiest) to 6 (strictest). Defaults to 3 when omitted.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 6
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The alert's configuration when the incident opened, or `null` for kinds with no parameters."
+          }
+        },
+        "required": [
+          "id",
+          "organizationId",
+          "projectId",
+          "sourceType",
+          "sourceId",
+          "kind",
+          "severity",
+          "startedAt",
+          "endedAt",
+          "createdAt",
+          "monitorAlertId",
+          "condition"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "listDatasets",
       "title": "List project datasets",
       "description": "Returns a cursor-paginated page of datasets in the project.",

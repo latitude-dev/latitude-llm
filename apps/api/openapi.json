@@ -8996,6 +8996,89 @@
         }
       }
     },
+    "/v1/projects/{projectSlug}/incidents/{incidentId}": {
+      "post": {
+        "tags": [
+          "Incidents"
+        ],
+        "x-fern-sdk-group-name": "incidents",
+        "x-fern-sdk-method-name": "resolve",
+        "summary": "Resolve incident",
+        "description": "Resolves (closes) an ongoing incident. An already-closed incident is returned unchanged. If the incident's condition triggers again, a new incident will be opened.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "operationId": "resolveIncident",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Project slug (human-readable identifier)"
+            },
+            "required": true,
+            "description": "Project slug (human-readable identifier)",
+            "name": "projectSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 24,
+              "maxLength": 24,
+              "description": "Incident identifier."
+            },
+            "required": true,
+            "description": "Incident identifier.",
+            "name": "incidentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved incident",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Incident"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects/{projectSlug}/datasets": {
       "get": {
         "tags": [

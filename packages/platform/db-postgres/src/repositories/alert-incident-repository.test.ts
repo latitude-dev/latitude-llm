@@ -604,4 +604,37 @@ describe("AlertIncidentRepositoryLive monitor-alert lookups (saved-search firing
     )
     expect(stillOpen).toBeNull()
   })
+
+  it("closeById closes an open incident once and returns null for closed or other-org rows", async () => {
+    const endedAt = new Date("2026-05-07T13:00:00.000Z")
+    const open = makeRow({
+      id: AlertIncidentId("1".repeat(24)),
+      sourceId: "1".repeat(24),
+      monitorAlertId: alertA,
+      endedAt: null,
+    })
+    const otherOrgOpen = makeRow({
+      id: AlertIncidentId("2".repeat(24)),
+      sourceId: "2".repeat(24),
+      organizationId: otherOrganizationId,
+      endedAt: null,
+    })
+    await database.db.insert(alertIncidentsTable).values([open, otherOrgOpen])
+
+    const [closed, again, foreign] = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* AlertIncidentRepository
+        return [
+          yield* repository.closeById({ id: open.id as AlertIncidentId, endedAt }),
+          yield* repository.closeById({ id: open.id as AlertIncidentId, endedAt }),
+          yield* repository.closeById({ id: otherOrgOpen.id as AlertIncidentId, endedAt }),
+        ] as const
+      }).pipe(makeRlsProvider(database, organizationId)),
+    )
+
+    expect(closed?.id).toEqual(open.id)
+    expect(closed?.endedAt).toEqual(endedAt)
+    expect(again).toBeNull()
+    expect(foreign).toBeNull()
+  })
 })

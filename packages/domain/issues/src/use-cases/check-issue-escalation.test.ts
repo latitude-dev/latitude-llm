@@ -134,6 +134,7 @@ const provideTestLayers = (params: {
     findOpenByMonitorAlertId: () => Effect.die("findOpenByMonitorAlertId not used"),
     existsByMonitorAlertId: () => Effect.die("existsByMonitorAlertId not used"),
     setEndedAt: () => Effect.die("setEndedAt not used"),
+    closeById: () => Effect.die("closeById not used"),
   }
 
   return {

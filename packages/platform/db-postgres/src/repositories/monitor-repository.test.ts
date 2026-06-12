@@ -180,6 +180,8 @@ describe("MonitorRepositoryLive", () => {
       const recentStartedAt = new Date("2026-06-01T09:00:00.000Z")
       const olderStartedAt = new Date("2026-05-20T09:00:00.000Z")
       const olderEndedAt = new Date("2026-05-20T11:00:00.000Z")
+      const recentOngoingIncidentId = AlertIncidentId(generateId())
+      const olderIncidentId = AlertIncidentId(generateId())
       await database.db.insert(alertIncidentsTable).values([
         {
           id: AlertIncidentId(generateId()),
@@ -194,7 +196,7 @@ describe("MonitorRepositoryLive", () => {
           monitorAlertId: recentAlertId,
         },
         {
-          id: AlertIncidentId(generateId()),
+          id: recentOngoingIncidentId,
           organizationId: organizationId as string,
           projectId: projectId as string,
           sourceType: "savedSearch",
@@ -206,7 +208,7 @@ describe("MonitorRepositoryLive", () => {
           monitorAlertId: recentAlertId,
         },
         {
-          id: AlertIncidentId(generateId()),
+          id: olderIncidentId,
           organizationId: organizationId as string,
           projectId: projectId as string,
           sourceType: "savedSearch",
@@ -241,8 +243,13 @@ describe("MonitorRepositoryLive", () => {
       )
 
       expect(result.items.map((m) => m.slug)).toEqual(["recent", "older", "no-incident", "issue-discovered"])
-      expect(result.lastIncidentByMonitorId.get(recentId)).toEqual({ startedAt: recentStartedAt, endedAt: null })
+      expect(result.lastIncidentByMonitorId.get(recentId)).toEqual({
+        id: recentOngoingIncidentId,
+        startedAt: recentStartedAt,
+        endedAt: null,
+      })
       expect(result.lastIncidentByMonitorId.get(olderId)).toEqual({
+        id: olderIncidentId,
         startedAt: olderStartedAt,
         endedAt: olderEndedAt,
       })

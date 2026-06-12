@@ -17,6 +17,7 @@ import {
   type MonitorRecord,
   type MonitorSearchRecord,
   muteMonitor,
+  resolveMonitorIncident,
   type SavedSearchMonitorSummaryRecord,
   searchMonitorsOrgWide,
   unmuteMonitor,
@@ -250,6 +251,41 @@ export function useMonitorMuteAction(projectId: string) {
   )
 
   return { setMuted, isPending }
+}
+
+/**
+ * Resolve an ongoing incident, shared by the dashboard "Last incident" pill
+ * and the details-panel incidents table. Calls the server fn, invalidates the
+ * monitor list + incident queries, and toasts. Re-throws so the caller can
+ * keep its confirmation modal open on failure.
+ */
+export function useIncidentResolveAction(projectId: string) {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const [isPending, setIsPending] = useState(false)
+
+  const resolve = useCallback(
+    async (incidentId: string) => {
+      setIsPending(true)
+      try {
+        await resolveMonitorIncident({ data: { incidentId } })
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["monitors", "list", projectId] }),
+          queryClient.invalidateQueries({ queryKey: ["monitors", "incidents", projectId] }),
+          queryClient.invalidateQueries({ queryKey: ["monitors", "incident-stats", projectId] }),
+        ])
+        toast({ description: "Incident resolved." })
+      } catch (error) {
+        toast({ variant: "destructive", description: toUserMessage(error) })
+        throw error
+      } finally {
+        setIsPending(false)
+      }
+    },
+    [projectId, queryClient, toast],
+  )
+
+  return { resolve, isPending }
 }
 
 const invalidateMonitorQueries = (queryClient: ReturnType<typeof useQueryClient>, projectId: string) =>

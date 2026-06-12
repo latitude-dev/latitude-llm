@@ -133,6 +133,13 @@ export interface AlertIncidentRepositoryShape {
   /** Set `ended_at` on one incident by id (org scope) — the saved-search machines already hold the row; close events (if any) are emitted by the caller. */
   setEndedAt(input: SetAlertIncidentEndedAtInput): Effect.Effect<void, RepositoryError, SqlClient>
   /**
+   * Set `ended_at` on one incident by id (org scope) only while it is still
+   * open, returning the closed row or `null` when the row is missing or
+   * already closed. The atomic guard lets the manual-resolve use case emit
+   * `IncidentClosed` exactly once under concurrent resolves.
+   */
+  closeById(input: SetAlertIncidentEndedAtInput): Effect.Effect<AlertIncident | null, RepositoryError, SqlClient>
+  /**
    * Returns every incident in the project whose lifetime overlaps the optional `[from, to]`
    * window, ordered ascending by `started_at`. Uses the
    * `(organization_id, project_id, started_at)` index. An incident overlaps the window when

@@ -19,6 +19,7 @@ import {
   ListingLayout as Layout,
   listingLayoutIntrinsicScroll,
 } from "../../../../../../layouts/ListingLayout/index.tsx"
+import { IncidentResolveConfirmModal } from "./incident-resolve-confirm-modal.tsx"
 import { IncidentStatus } from "./incident-status.tsx"
 import { MonitorDeleteConfirmModal } from "./monitor-delete-confirm-modal.tsx"
 import { MonitorMuteConfirmModal } from "./monitor-mute-confirm-modal.tsx"
@@ -69,7 +70,13 @@ export function sortMonitorRows(
   })
 }
 
-function LastIncidentCell({ summary }: { readonly summary: MonitorsTableRow["lastIncident"] }) {
+function LastIncidentCell({
+  summary,
+  onResolve,
+}: {
+  readonly summary: MonitorsTableRow["lastIncident"]
+  readonly onResolve: (incidentId: string) => void
+}) {
   if (!summary) {
     return (
       <Text.H6 color="foregroundMuted" noWrap>
@@ -77,7 +84,13 @@ function LastIncidentCell({ summary }: { readonly summary: MonitorsTableRow["las
       </Text.H6>
     )
   }
-  return <IncidentStatus startedAtIso={summary.startedAtIso} endedAtIso={summary.endedAtIso} />
+  return (
+    <IncidentStatus
+      startedAtIso={summary.startedAtIso}
+      endedAtIso={summary.endedAtIso}
+      {...(summary.endedAtIso === null ? { onResolve: () => onResolve(summary.id) } : {})}
+    />
+  )
 }
 
 /**
@@ -189,6 +202,7 @@ export function MonitorsView({
   const [pendingMute, setPendingMute] = useState<MonitorRecord | null>(null)
   const [renameTarget, setRenameTarget] = useState<MonitorRecord | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<MonitorRecord | null>(null)
+  const [resolveTarget, setResolveTarget] = useState<string | null>(null)
   const activeRowKey = activeMonitorSlug
     ? rows.find((r) => r.monitor.slug === activeMonitorSlug)?.monitor.id
     : undefined
@@ -240,7 +254,7 @@ export function MonitorsView({
       sortKey: "lastIncident",
       width: 187,
       minWidth: 153,
-      render: (row) => <LastIncidentCell summary={row.lastIncident} />,
+      render: (row) => <LastIncidentCell summary={row.lastIncident} onResolve={setResolveTarget} />,
     },
     ...(showWatching
       ? [
@@ -327,6 +341,7 @@ export function MonitorsView({
         </Layout.List>
       </Layout.Body>
       <MonitorMuteConfirmModal projectId={projectId} monitor={pendingMute} onOpenChange={setPendingMute} />
+      <IncidentResolveConfirmModal projectId={projectId} incidentId={resolveTarget} onOpenChange={setResolveTarget} />
       {renameTarget ? (
         <MonitorRenameModal
           key={renameTarget.id}
