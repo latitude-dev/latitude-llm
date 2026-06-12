@@ -92,7 +92,13 @@ export type {
   SessionRepositoryShape,
 } from "./ports/session-repository.ts"
 export { emptySessionMetrics, SessionRepository } from "./ports/session-repository.ts"
-export type { SpanListOptions, SpanMessagesData, SpanRepositoryShape } from "./ports/span-repository.ts"
+export type {
+  SpanIngestedAtWindow,
+  SpanIngestionCursor,
+  SpanListOptions,
+  SpanMessagesData,
+  SpanRepositoryShape,
+} from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {
   RecentToolCall,

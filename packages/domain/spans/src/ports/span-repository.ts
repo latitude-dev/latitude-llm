@@ -25,6 +25,23 @@ export interface SpanMessagesData {
 }
 
 /**
+ * Compound watermark for ingestion-ordered window reads. `ingested_at` is
+ * stamped once per ingest request batch, so many spans share an identical
+ * millisecond — `spanId` breaks ties so a limit-truncated read can resume
+ * without skipping same-timestamp siblings. The initial cursor uses an empty
+ * `spanId` sentinel.
+ */
+export interface SpanIngestionCursor {
+  readonly ingestedAt: Date
+  readonly spanId: SpanId
+}
+
+export interface SpanIngestedAtWindow {
+  readonly spans: readonly SpanDetail[]
+  readonly nextCursor: SpanIngestionCursor | null
+}
+
+/**
  * Repository port for spans (ClickHouse).
  */
 export interface SpanRepositoryShape {
@@ -90,6 +107,21 @@ export interface SpanRepositoryShape {
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
   }): Effect.Effect<TraceId | null, RepositoryError, ChSqlClient>
+
+  /**
+   * Settled-row window read: deduped spans (`LIMIT 1 BY span_id`, newest
+   * `ingested_at` wins) ordered by `(ingested_at, span_id)`, strictly after
+   * the compound cursor and up to `windowEnd` inclusive, capped at `limit`.
+   * `nextCursor` is the last returned pair (null on an empty window) — resume
+   * from it to continue a limit-truncated window without losing spans.
+   */
+  listByIngestedAtWindow(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly cursor: SpanIngestionCursor
+    readonly windowEnd: Date
+    readonly limit: number
+  }): Effect.Effect<SpanIngestedAtWindow, RepositoryError, ChSqlClient>
 }
 
 export interface SpanListOptions {
