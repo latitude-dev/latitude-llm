@@ -18,6 +18,7 @@ import {
   pickToolTrendBucketSeconds,
 } from "./-components/tool-formatters.ts"
 import { ToolsAnalyticsPanel } from "./-components/tools-analytics-panel.tsx"
+import { ToolsDiscoveryBanner } from "./-components/tools-discovery-banner.tsx"
 import { ToolsEmptyState } from "./-components/tools-empty-state.tsx"
 import {
   DEFAULT_TOOLS_SORTING,
@@ -156,6 +157,7 @@ function ToolsPageContent() {
 
   const hasAnyTools = (analytics?.tools.length ?? 0) > 0
   const showEmptyState = !isLoading && !hasAnyTools && !searchQuery && statusTab === "all"
+  const hasOnlyDefinedTools = !isLoading && hasAnyTools && (analytics?.totals.tracesWithToolCalls ?? 0) === 0
 
   return (
     <Layout>
@@ -220,6 +222,11 @@ function ToolsPageContent() {
         <ToolsEmptyState isLoading={isLoading} />
       ) : (
         <>
+          {hasOnlyDefinedTools ? (
+            <div className="px-6 pb-2">
+              <ToolsDiscoveryBanner projectId={project.id} />
+            </div>
+          ) : null}
           <div className="px-6">
             <ToolsAnalyticsPanel
               analytics={analytics}
