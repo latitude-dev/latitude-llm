@@ -157,6 +157,7 @@ const toOrphanSession = (row: SessionSearchRow): Session => {
     costOutputMicrocents: 0,
     costTotalMicrocents: Number(row.cost_total_microcents),
     userId: ExternalUserId(""),
+    userEmail: "",
     simulationId: "",
     tags: [],
     metadata: {},

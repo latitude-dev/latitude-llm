@@ -82,6 +82,7 @@ const LIST_SELECT = `
   sum(cost_output_microcents)  AS cost_output_microcents,
   sum(cost_total_microcents)   AS cost_total_microcents,
   argMaxIfMerge(user_id)       AS user_id,
+  argMaxIfMerge(user_email)    AS user_email,
   groupUniqArrayArray(tags)    AS tags,
   maxMap(metadata)             AS metadata,
   groupUniqArrayIfMerge(models)        AS models,
@@ -123,6 +124,7 @@ type SessionListRow = {
   cost_output_microcents: string
   cost_total_microcents: string
   user_id: string
+  user_email: string
   tags: string[]
   metadata: Record<string, string>
   models: string[]
@@ -295,6 +297,7 @@ const toDomainSession = (row: SessionListRow): Session => ({
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
   userId: ExternalUserId(normalizeCHString(row.user_id)),
+  userEmail: normalizeCHString(row.user_email),
   simulationId: SimulationId(normalizeCHString(row.simulation_id)),
   tags: row.tags.map(normalizeCHString),
   metadata: row.metadata ?? {},

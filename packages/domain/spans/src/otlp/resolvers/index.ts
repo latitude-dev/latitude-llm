@@ -6,6 +6,7 @@ import {
   resolveProvider,
   responseModelCandidates,
   sessionIdCandidates,
+  userEmailCandidates,
   userIdCandidates,
 } from "./identity.ts"
 import { resolveOperation } from "./operation.ts"
@@ -23,6 +24,7 @@ interface ResolvedAttributes extends ResolvedUsage {
   readonly finishReasons: readonly string[]
   readonly sessionId: string
   readonly userId: string
+  readonly userEmail: string
   readonly tags: readonly string[]
   readonly metadata: Readonly<Record<string, string>>
   readonly errorType: string
@@ -53,6 +55,7 @@ export function resolveAttributes({
     finishReasons: first(finishReasonsCandidates, spanAttrs) ?? [],
     sessionId: first(sessionIdCandidates, spanAttrs) ?? "",
     userId: first(userIdCandidates, spanAttrs) ?? "",
+    userEmail: first(userEmailCandidates, spanAttrs) ?? "",
     tags: first(tagsCandidates, spanAttrs) ?? [],
     metadata: resolveMetadata(spanAttrs),
     errorType: statusCode === "error" ? (stringAttr(spanAttrs, "error.type") ?? "") : "",

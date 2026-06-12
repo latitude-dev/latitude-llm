@@ -127,6 +127,18 @@ export class LatitudeSpanProcessor implements SpanProcessor {
       if (latitudeData.userId) {
         span.setAttribute(ATTRIBUTES.userId, latitudeData.userId)
       }
+      if (latitudeData.userEmail) {
+        span.setAttribute(ATTRIBUTES.userEmail, latitudeData.userEmail)
+      }
+      if (latitudeData.userPlan) {
+        span.setAttribute(ATTRIBUTES.userPlan, latitudeData.userPlan)
+      }
+      if (latitudeData.userFirstName) {
+        span.setAttribute(ATTRIBUTES.userFirstName, latitudeData.userFirstName)
+      }
+      if (latitudeData.userLastName) {
+        span.setAttribute(ATTRIBUTES.userLastName, latitudeData.userLastName)
+      }
       if (latitudeData.project) {
         span.setAttribute(ATTRIBUTES.project, latitudeData.project)
       }

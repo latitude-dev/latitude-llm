@@ -72,6 +72,7 @@ export const LIST_SELECT = `
   sum(cost_total_microcents)   AS cost_total_microcents,
   argMaxIfMerge(session_id)    AS session_id,
   argMaxIfMerge(user_id)       AS user_id,
+  argMaxIfMerge(user_email)    AS user_email,
   groupUniqArrayArray(tags)    AS tags,
   maxMap(metadata)              AS metadata,
   argMaxIfMerge(simulation_id) AS simulation_id,
@@ -111,6 +112,7 @@ type TraceListRow = {
   cost_total_microcents: string
   session_id: string
   user_id: string
+  user_email: string
   simulation_id: string
   tags: string[]
   metadata: Record<string, string>
@@ -194,6 +196,7 @@ const toBaseFields = (row: TraceListRow): Trace => ({
   costTotalMicrocents: Number(row.cost_total_microcents),
   sessionId: SessionId(normalizeCHString(row.session_id)),
   userId: ExternalUserId(normalizeCHString(row.user_id)),
+  userEmail: normalizeCHString(row.user_email),
   simulationId: SimulationId(normalizeCHString(row.simulation_id)),
   tags: row.tags.map(normalizeCHString),
   metadata: row.metadata ?? {},

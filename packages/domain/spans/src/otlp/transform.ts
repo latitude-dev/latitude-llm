@@ -168,6 +168,7 @@ function transformSpan({
     projectId: ProjectId(projectId),
     sessionId: SessionId(resolved.sessionId),
     userId: ExternalUserId(resolved.userId),
+    userEmail: resolved.userEmail,
     traceId: TraceId(span.traceId),
     spanId: SpanId(span.spanId),
     parentSpanId: span.parentSpanId ?? "",

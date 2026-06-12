@@ -10,6 +10,10 @@ export type ContextOptions = {
   metadata?: Record<string, unknown>
   sessionId?: string
   userId?: string
+  userEmail?: string
+  userPlan?: string
+  userFirstName?: string
+  userLastName?: string
   /**
    * Route the capture (and all child spans) to a specific Latitude project.
    *

@@ -107,3 +107,9 @@ export const userIdCandidates = [
   fromString("langsmith.metadata.user_id"), // LangSmith
   fromString("langfuse.user.id"), // Langfuse
 ]
+
+export const userEmailCandidates = [
+  fromString("user.email"), // Latitude / OpenInference
+  fromString("enduser.email"), // OTEL enduser semconv
+  fromString("langfuse.user.email"), // Langfuse
+]

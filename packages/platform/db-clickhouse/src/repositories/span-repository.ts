@@ -55,7 +55,7 @@ const INT_TO_STATUS_CODE: Record<number, SpanStatusCode> = {
 
 // Columns selected for list/trace queries (excludes large blob payloads).
 const LIST_COLUMNS = `
-  organization_id, project_id, session_id, user_id, trace_id, span_id,
+  organization_id, project_id, session_id, user_id, user_email, trace_id, span_id,
   parent_span_id, api_key_id, simulation_id, start_time, end_time,
   name, service_name, kind, status_code, status_message,
   trace_flags, trace_state, error_type, tags, metadata,
@@ -77,6 +77,7 @@ type SpanListRow = {
   project_id: string
   session_id: string
   user_id: string
+  user_email: string
   trace_id: string
   span_id: string
   parent_span_id: string
@@ -139,6 +140,7 @@ const toBaseFields = (row: SpanListRow) => ({
   projectId: toProjectId(normalizeCHString(row.project_id)),
   sessionId: SessionId(normalizeCHString(row.session_id)),
   userId: ExternalUserId(normalizeCHString(row.user_id)),
+  userEmail: normalizeCHString(row.user_email),
   traceId: toTraceId(normalizeCHString(row.trace_id)),
   spanId: SpanId(normalizeCHString(row.span_id)),
   parentSpanId: normalizeCHString(row.parent_span_id),
@@ -249,6 +251,7 @@ const toInsertRow = (span: SpanDetail) => ({
   project_id: span.projectId as string,
   session_id: span.sessionId,
   user_id: span.userId,
+  user_email: span.userEmail,
   trace_id: span.traceId as string,
   span_id: span.spanId as string,
   parent_span_id: span.parentSpanId,
