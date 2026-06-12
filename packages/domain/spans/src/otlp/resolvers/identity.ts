@@ -102,6 +102,7 @@ export const sessionIdCandidates = [
 
 export const userIdCandidates = [
   fromString("user.id"), // OpenInference / Arize Phoenix
+  fromString("enduser.id"), // OTEL enduser semconv
   fromString("gen_ai.request.user"), // OpenLIT (mirrors OpenAI API user param)
   fromString("traceloop.association.properties.user_id"), // Traceloop / OpenLLMetry
   fromString("langsmith.metadata.user_id"), // LangSmith
