@@ -1,0 +1,65 @@
+name: Update GitHub stars badge
+
+# Reads the repo's star count via the authenticated GitHub API and writes it
+# into .github/badges/stars.json, which the README's shields "endpoint" badge
+# reads. We self-host this instead of using shields' live github/stars badge
+# because that endpoint is shared-rate-limited and frequently renders as
+# "Unable to select next GitHub token from pool".
+
+on:
+  schedule:
+    - cron: "23 6 * * *" # daily at 06:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stars-badge
+  cancel-in-progress: false
+
+jobs:
+  update-badge:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'latitude-dev/latitude-llm' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute star count
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          stars=$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.stargazers_count')
+          echo "Star count: ${stars}"
+
+          # Format as a human-readable message.
+          if [ "$stars" -ge 1000000 ]; then
+            msg=$(awk "BEGIN { printf \"%.1fM\", ${stars}/1000000 }")
+          elif [ "$stars" -ge 1000 ]; then
+            msg=$(awk "BEGIN { printf \"%.1fk\", ${stars}/1000 }")
+          else
+            msg="${stars}"
+          fi
+
+          mkdir -p .github/badges
+          jq -n --arg msg "$msg" \
+            '{schemaVersion: 1, label: "GitHub stars", message: $msg, color: "blue"}' \
+            > .github/badges/stars.json
+
+          echo "Wrote badge:"
+          cat .github/badges/stars.json
+
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .github/badges/stars.json; then
+            echo "Badge unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/badges/stars.json
+          git commit -m "chore: update GitHub stars badge [skip ci]"
+          git push

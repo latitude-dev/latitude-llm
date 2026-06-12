@@ -20,7 +20,7 @@
   <a href="https://github.com/latitude-dev/latitude-llm/graphs/commit-activity" target="_blank"><img alt="Commits last month" src="https://img.shields.io/github/commit-activity/m/latitude-dev/latitude-llm?labelColor=%20%2332b583&color=%20%2312b76a"></a>
   <a href="https://www.npmjs.com/org/latitude-data"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/latitude-dev/latitude-llm/development/.github/badges/npm-downloads.json&logo=npm&logoColor=white" alt="npm downloads"></a>
   <a href="https://pypi.org/project/latitude-telemetry/"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/latitude-dev/latitude-llm/development/.github/badges/pypi-downloads.json&logo=python&logoColor=white" alt="PyPI downloads"></a>
-  <a href="https://github.com/latitude-dev/latitude-llm"><img src="https://img.shields.io/github/stars/latitude-dev/latitude-llm?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/latitude-dev/latitude-llm"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/latitude-dev/latitude-llm/development/.github/badges/stars.json&logo=github&logoColor=white" alt="GitHub stars"></a>
   <a href="https://twitter.com/intent/follow?screen_name=trylatitude" target="_blank"><img src="https://img.shields.io/twitter/follow/trylatitude?logo=X&color=%20%23f5f5f5" alt="Follow on X"></a>
 </p>
 
