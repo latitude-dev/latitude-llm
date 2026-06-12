@@ -25,6 +25,8 @@ const CLUSTER_CHIP_PX = 26
 // Quantizing the measured lane width makes a drag-resize re-cluster only every
 // step instead of every pixel (same-value setState bails out of the render).
 const LANE_WIDTH_QUANTUM_PX = 24
+// Widens zero-width slices (instant messages) so their containing bar matches.
+const ZERO_WIDTH_SLICE_PCT = 0.0001
 
 export interface MarkerHover {
   readonly markers: readonly TimelineMarker[]
@@ -99,6 +101,7 @@ function MarkerClusterChip({
 export function TimelineTrack({
   timeline,
   band,
+  hoverSlice,
   onTrackClick,
   onMarkerClick,
   onMarkerHover,
@@ -106,6 +109,8 @@ export function TimelineTrack({
   readonly timeline: ConversationTimeline
   /** Time band covered by the messages currently on screen; null dims nothing. */
   readonly band: TrackBand | null
+  /** Time slice of the message hovered in the conversation; null highlights nothing. */
+  readonly hoverSlice: TrackBand | null
   readonly onTrackClick: (timelineMs: number) => void
   readonly onMarkerClick: (marker: TimelineMarker) => void
   readonly onMarkerHover: (hover: MarkerHover | null) => void
@@ -194,24 +199,32 @@ export function TimelineTrack({
         onPointerLeave={() => setHoverRatio(null)}
       >
         <div className="relative h-4 w-full overflow-hidden rounded-sm">
-          {timeline.activity.map((segment) => (
-            <div
-              key={segment.timelineStartMs}
-              className={cn(
-                "absolute top-1/2 -translate-y-1/2 transition-[height] duration-100",
-                hoverActivity?.timelineStartMs === segment.timelineStartMs ? "h-full" : "h-3",
-              )}
-              style={{
-                left: `${timelineToPct(scale, segment.timelineStartMs)}%`,
-                width: `${((segment.timelineEndMs - segment.timelineStartMs) / total) * 100}%`,
-                ...(segment.category === "idle"
-                  ? {
-                      backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, ${DURATION_COLORS.idle} 2px, ${DURATION_COLORS.idle} 3px)`,
-                    }
-                  : { backgroundColor: DURATION_COLORS[segment.category] }),
-              }}
-            />
-          ))}
+          {timeline.activity.map((segment) => {
+            const startPct = timelineToPct(scale, segment.timelineStartMs)
+            const endPct = timelineToPct(scale, segment.timelineEndMs)
+            const inHoverSlice =
+              hoverSlice !== null &&
+              endPct > hoverSlice.startPct &&
+              startPct < Math.max(hoverSlice.endPct, hoverSlice.startPct + ZERO_WIDTH_SLICE_PCT)
+            return (
+              <div
+                key={segment.timelineStartMs}
+                className={cn(
+                  "absolute top-1/2 -translate-y-1/2 transition-[height] duration-100",
+                  hoverActivity?.timelineStartMs === segment.timelineStartMs || inHoverSlice ? "h-full" : "h-3",
+                )}
+                style={{
+                  left: `${startPct}%`,
+                  width: `${((segment.timelineEndMs - segment.timelineStartMs) / total) * 100}%`,
+                  ...(segment.category === "idle"
+                    ? {
+                        backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, ${DURATION_COLORS.idle} 2px, ${DURATION_COLORS.idle} 3px)`,
+                      }
+                    : { backgroundColor: DURATION_COLORS[segment.category] }),
+                }}
+              />
+            )
+          })}
 
           {scale.segments.map((segment) => {
             if (segment.kind !== "gap") return null

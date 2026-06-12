@@ -12,7 +12,7 @@ import {
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { DownloadIcon } from "lucide-react"
-import { type ReactNode, type RefObject, useCallback, useMemo, useRef } from "react"
+import { type ReactNode, type RefObject, useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useAuthSession } from "../../../../../../../domains/sessions/session.collection.ts"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
@@ -22,7 +22,10 @@ import type {
   ConversationTimeline,
   TimelineMarker,
 } from "../../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
-import { messageIndexAtTime } from "../../../../../../../lib/conversation-timeline/message-windows.ts"
+import {
+  messageIndexAtTime,
+  visibleRangeToBand,
+} from "../../../../../../../lib/conversation-timeline/message-windows.ts"
 import { wallToTimeline } from "../../../../../../../lib/conversation-timeline/timeline-scale.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
 import {
@@ -119,6 +122,15 @@ function ConversationContent({
   })
 
   const band = useViewportBand({ scrollRef, timeline: timeline ?? null, isActive })
+
+  const [hoveredMessageIndex, setHoveredMessageIndex] = useState<number | null>(null)
+  const hoverSlice = useMemo(
+    () =>
+      timeline && hoveredMessageIndex !== null
+        ? visibleRangeToBand(timeline, hoveredMessageIndex, hoveredMessageIndex)
+        : null,
+    [timeline, hoveredMessageIndex],
+  )
 
   useHotkeys([
     {
@@ -303,7 +315,17 @@ function ConversationContent({
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
-      <div ref={scrollRef} className="flex min-w-0 flex-col py-8 px-4 overflow-y-auto overflow-x-hidden flex-1">
+      <div
+        ref={scrollRef}
+        className="flex min-w-0 flex-col py-8 px-4 overflow-y-auto overflow-x-hidden flex-1"
+        onPointerMove={(e) => {
+          const anchor = e.target instanceof HTMLElement ? e.target.closest("[data-message-index]") : null
+          const raw = anchor?.getAttribute("data-message-index")
+          const index = raw == null ? Number.NaN : Number.parseInt(raw, 10)
+          setHoveredMessageIndex(Number.isNaN(index) ? null : index)
+        }}
+        onPointerLeave={() => setHoveredMessageIndex(null)}
+      >
         <Conversation
           messages={traceDetail.allMessages}
           enableNavigator
@@ -389,6 +411,7 @@ function ConversationContent({
         <TimelineBar
           timeline={timeline}
           band={band}
+          hoverSlice={hoverSlice}
           onTrackClick={handleTrackClick}
           onMarkerClick={handleMarkerClick}
         />
