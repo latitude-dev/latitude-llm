@@ -18,6 +18,7 @@ const buttonContainerVariants = cva(
         default: "bg-transparent",
         destructive: "bg-destructive-muted-foreground hover:bg-destructive-muted-foreground/90",
         outline: "bg-secondary shadow-none hover:bg-secondary/60 hover:shadow-none",
+        "destructive-outline": "bg-secondary shadow-none hover:bg-secondary/60 hover:shadow-none",
         secondary: "bg-secondary hover:bg-secondary/80",
         ghost: "bg-transparent shadow-none hover:shadow-none",
         link: "bg-transparent shadow-none underline-offset-4 hover:underline hover:shadow-none",
@@ -44,6 +45,8 @@ const buttonVariantsConfig = cva(
         destructive: "border-0 bg-transparent text-destructive-foreground",
         outline:
           "border border-input bg-background shadow-none group-hover:bg-secondary group-hover:text-secondary-foreground/80 group-hover:shadow-none",
+        "destructive-outline":
+          "border border-destructive bg-background text-destructive shadow-none group-hover:bg-destructive-muted/40 group-hover:border-destructive-muted-foreground/40 group-hover:shadow-none [&_svg]:text-destructive-muted-foreground/85",
         secondary: "border-0 bg-transparent text-secondary-foreground [&_svg]:text-muted-foreground",
         ghost:
           "border-0 border-transparent bg-transparent text-muted-foreground shadow-none group-hover:bg-muted group-hover:shadow-none",

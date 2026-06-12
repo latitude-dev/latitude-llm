@@ -286,7 +286,7 @@ export const AlertIncidentRepositoryLive = Layer.effect(
             // the latest-started one. We surface both ends: `ended_at` is "last detected at"
             // (the close time), `started_at` is the fallback while it's still ongoing.
             const lastPromise = db
-              .select({ startedAt: alertIncidents.startedAt, endedAt: alertIncidents.endedAt })
+              .select({ id: alertIncidents.id, startedAt: alertIncidents.startedAt, endedAt: alertIncidents.endedAt })
               .from(alertIncidents)
               .innerJoin(monitorAlerts, eq(monitorAlerts.id, alertIncidents.monitorAlertId))
               .where(where)
@@ -299,6 +299,7 @@ export const AlertIncidentRepositoryLive = Layer.effect(
           return {
             total: agg?.total ?? 0,
             firstStartedAt: agg?.firstStartedAt ? new Date(agg.firstStartedAt) : null,
+            lastIncidentId: last ? (last.id as AlertIncidentId) : null,
             lastStartedAt: last?.startedAt ? new Date(last.startedAt) : null,
             lastEndedAt: last?.endedAt ? new Date(last.endedAt) : null,
           }

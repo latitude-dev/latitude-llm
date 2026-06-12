@@ -398,6 +398,7 @@ describe("AlertIncidentRepositoryLive.statsByMonitorId", () => {
     expect(result.total).toBe(3)
     expect(result.firstStartedAt?.toISOString()).toBe("2026-05-07T09:00:00.000Z")
     // Last incident is ongoing, so "last detected at" has no close time and falls back to its start.
+    expect(result.lastIncidentId).toBe(AlertIncidentId("1".repeat(24)))
     expect(result.lastStartedAt?.toISOString()).toBe("2026-05-07T10:00:00.000Z")
     expect(result.lastEndedAt).toBeNull()
   })
@@ -431,6 +432,7 @@ describe("AlertIncidentRepositoryLive.statsByMonitorId", () => {
 
     expect(result.total).toBe(2)
     expect(result.firstStartedAt?.toISOString()).toBe("2026-05-07T09:00:00.000Z")
+    expect(result.lastIncidentId).toBe(AlertIncidentId("2".repeat(24)))
     expect(result.lastStartedAt?.toISOString()).toBe("2026-05-07T09:00:00.000Z")
     expect(result.lastEndedAt?.toISOString()).toBe("2026-05-07T11:00:00.000Z")
   })
@@ -447,6 +449,7 @@ describe("AlertIncidentRepositoryLive.statsByMonitorId", () => {
 
     expect(result.total).toBe(0)
     expect(result.firstStartedAt).toBeNull()
+    expect(result.lastIncidentId).toBeNull()
     expect(result.lastStartedAt).toBeNull()
     expect(result.lastEndedAt).toBeNull()
   })

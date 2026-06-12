@@ -201,6 +201,7 @@ export function useMonitorIncidents(input: {
 interface MonitorIncidentStats {
   readonly total: number
   readonly firstStartedAtIso: string | null
+  readonly lastIncidentId: string | null
   readonly lastStartedAtIso: string | null
   readonly lastEndedAtIso: string | null
 }
@@ -295,6 +296,14 @@ const invalidateMonitorQueries = (queryClient: ReturnType<typeof useQueryClient>
     // Saved-search ↔ monitor summaries back the traces-page chip and selector
     // rows; creating/deleting/muting monitors changes them.
     queryClient.invalidateQueries({ queryKey: ["monitors", "savedSearchSummaries", projectId] }),
+  ])
+
+/** Broad invalidation for bulk actions — the list/detail queries plus the drawer's incidents and stats. */
+export const invalidateAllMonitorQueries = (queryClient: ReturnType<typeof useQueryClient>, projectId: string) =>
+  Promise.all([
+    invalidateMonitorQueries(queryClient, projectId),
+    queryClient.invalidateQueries({ queryKey: ["monitors", "incidents", projectId] }),
+    queryClient.invalidateQueries({ queryKey: ["monitors", "incident-stats", projectId] }),
   ])
 
 /** Create a user monitor (with its alerts). Invalidates the list on success. */

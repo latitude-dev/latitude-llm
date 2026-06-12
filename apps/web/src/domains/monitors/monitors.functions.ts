@@ -1,4 +1,5 @@
 import { AlertIncidentRepository, resolveAlertIncidentUseCase } from "@domain/alerts"
+import { exportSelectionSchema } from "@domain/exports"
 import { IssueRepository } from "@domain/issues"
 import {
   createMonitorUseCase,
@@ -329,6 +330,135 @@ export const unmuteMonitor = createServerFn({ method: "POST" })
   .inputValidator(monitorMutationInputSchema)
   .handler(({ data }): Promise<MonitorRecord> => runMonitorMute(data.monitorId, false))
 
+const bulkMonitorsInputSchema = z.object({
+  projectId: z.string(),
+  selection: exportSelectionSchema,
+  // Filters mirroring the dashboard list query, so `all` / `allExcept`
+  // selections act on exactly the rows the table shows.
+  searchQuery: z.string().max(500).optional(),
+  system: z.boolean().optional(),
+})
+
+type BulkMonitorsInput = z.infer<typeof bulkMonitorsInputSchema>
+
+const BULK_MONITORS_BATCH_SIZE = 100
+
+const resolveBulkSelectionMonitorIds = async (
+  orgId: OrganizationId,
+  data: BulkMonitorsInput,
+): Promise<readonly string[]> => {
+  if (data.selection.mode === "selected") return data.selection.rowIds
+
+  const excluded = data.selection.mode === "allExcept" ? new Set(data.selection.rowIds) : null
+  const trimmedSearchQuery = data.searchQuery?.trim() || undefined
+  const ids: string[] = []
+
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      let offset = 0
+      while (true) {
+        const page = yield* listMonitorsUseCase({
+          projectId: ProjectId(data.projectId),
+          limit: BULK_MONITORS_BATCH_SIZE,
+          offset,
+          ...(trimmedSearchQuery ? { searchQuery: trimmedSearchQuery } : {}),
+          ...(data.system !== undefined ? { system: data.system } : {}),
+        })
+        if (page.items.length === 0) break
+        for (const monitor of page.items) {
+          if (excluded?.has(monitor.id)) continue
+          ids.push(monitor.id)
+        }
+        if (!page.hasMore) break
+        offset += page.limit
+      }
+    }).pipe(withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId), withTracing),
+  )
+
+  return ids
+}
+
+export const bulkMuteMonitors = createServerFn({ method: "POST" })
+  .inputValidator(bulkMonitorsInputSchema)
+  .handler(async ({ data }): Promise<{ readonly mutedCount: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const monitorIds = await resolveBulkSelectionMonitorIds(orgId, data)
+
+    const mutedCount = await Effect.runPromise(
+      Effect.gen(function* () {
+        let count = 0
+        for (const monitorId of monitorIds) {
+          yield* muteMonitorUseCase({ id: MonitorId(monitorId) }).pipe(
+            Effect.catchTag("NotFoundError", () => Effect.void),
+          )
+          count += 1
+        }
+        return count
+      }).pipe(withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId), withTracing),
+    )
+
+    return { mutedCount }
+  })
+
+export const bulkDeleteMonitors = createServerFn({ method: "POST" })
+  .inputValidator(bulkMonitorsInputSchema)
+  .handler(async ({ data }): Promise<{ readonly deletedCount: number; readonly skippedSystemCount: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const monitorIds = await resolveBulkSelectionMonitorIds(orgId, data)
+
+    const counts = await Effect.runPromise(
+      Effect.gen(function* () {
+        let deletedCount = 0
+        let skippedSystemCount = 0
+        for (const monitorId of monitorIds) {
+          const outcome = yield* deleteMonitorUseCase({ id: MonitorId(monitorId) }).pipe(
+            Effect.as("deleted" as const),
+            Effect.catchTags({
+              SystemMonitorForbiddenError: () => Effect.succeed("skipped" as const),
+              NotFoundError: () => Effect.succeed("missing" as const),
+            }),
+          )
+          if (outcome === "deleted") deletedCount += 1
+          if (outcome === "skipped") skippedSystemCount += 1
+        }
+        return { deletedCount, skippedSystemCount }
+      }).pipe(withPostgres(MonitorRepositoryLive, getPostgresClient(), orgId), withTracing),
+    )
+
+    return counts
+  })
+
+export const bulkResolveMonitorLastIncidents = createServerFn({ method: "POST" })
+  .inputValidator(bulkMonitorsInputSchema)
+  .handler(async ({ data }): Promise<{ readonly resolvedCount: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const monitorIds = await resolveBulkSelectionMonitorIds(orgId, data)
+
+    const resolvedCount = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* AlertIncidentRepository
+        let count = 0
+        for (const monitorId of monitorIds) {
+          // Same ongoing-first pick the dashboard's "Last incident" column shows.
+          const page = yield* repository.listByMonitorId({ monitorId: MonitorId(monitorId), limit: 1 })
+          const last = page.items[0]
+          if (!last || last.endedAt !== null) continue
+          yield* resolveAlertIncidentUseCase({ id: last.id, endedAt: new Date() })
+          count += 1
+        }
+        return count
+      }).pipe(
+        withPostgres(Layer.mergeAll(AlertIncidentRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
+        withTracing,
+      ),
+    )
+
+    return { resolvedCount }
+  })
+
 const resolveIncidentInputSchema = z.object({ incidentId: z.string() })
 
 export const resolveMonitorIncident = createServerFn({ method: "POST" })
@@ -481,6 +611,7 @@ export const getMonitorIncidentStats = createServerFn({ method: "GET" })
     }): Promise<{
       readonly total: number
       readonly firstStartedAtIso: string | null
+      readonly lastIncidentId: string | null
       readonly lastStartedAtIso: string | null
       readonly lastEndedAtIso: string | null
     }> => {
@@ -497,6 +628,7 @@ export const getMonitorIncidentStats = createServerFn({ method: "GET" })
       return {
         total: stats.total,
         firstStartedAtIso: stats.firstStartedAt?.toISOString() ?? null,
+        lastIncidentId: stats.lastIncidentId,
         lastStartedAtIso: stats.lastStartedAt?.toISOString() ?? null,
         lastEndedAtIso: stats.lastEndedAt?.toISOString() ?? null,
       }

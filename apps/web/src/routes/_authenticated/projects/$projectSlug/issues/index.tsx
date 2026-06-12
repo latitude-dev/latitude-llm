@@ -56,7 +56,9 @@ import {
   CircleUserRoundIcon,
   DownloadIcon,
   PauseIcon,
+  PlayIcon,
   SearchIcon,
+  XIcon,
 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { invalidateIssueQueries, useIssues } from "../../../../../domains/issues/issues.collection.ts"
@@ -168,6 +170,9 @@ function IssuesPage() {
   })
   const sorting = useMemo(() => parseSorting(rawSorting), [rawSorting])
   const setSorting = useCallback((next: IssuesTableSorting) => setRawSorting(serializeSorting(next)), [setRawSorting])
+  // The archived tab lists resolved/ignored issues, so its bulk actions undo
+  // the lifecycle commands instead of re-applying them.
+  const archived = lifecycleGroup === "archived"
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -291,8 +296,8 @@ function IssuesPage() {
         data: {
           projectId: project.id,
           selection: bulkSelection,
-          command: "resolve",
-          keepMonitoring,
+          command: archived ? "unresolve" : "resolve",
+          ...(archived ? {} : { keepMonitoring }),
           lifecycleGroup,
           sort: {
             field: sorting.column,
@@ -304,14 +309,15 @@ function IssuesPage() {
         },
       })
       const changedCount = result.items.filter((item) => item.changed).length
+      const verb = archived ? "unresolved" : "resolved"
       await invalidateIssueQueries(project.id)
       toast({
         description:
           changedCount === 0
-            ? "No issues were resolved."
+            ? `No issues were ${verb}.`
             : changedCount === 1
-              ? "1 issue resolved."
-              : `${changedCount} issues resolved.`,
+              ? `1 issue ${verb}.`
+              : `${changedCount} issues ${verb}.`,
       })
       selection.clearSelections()
       setBulkResolveModalOpen(false)
@@ -323,7 +329,17 @@ function IssuesPage() {
     } finally {
       setBulkActionLoading(false)
     }
-  }, [keepMonitoring, lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+  }, [
+    archived,
+    keepMonitoring,
+    lifecycleGroup,
+    project.id,
+    searchQuery,
+    selection,
+    sorting.column,
+    sorting.direction,
+    timeRange,
+  ])
 
   const handleBulkIgnore = useCallback(async () => {
     const bulkSelection = selection.bulkSelection
@@ -335,7 +351,7 @@ function IssuesPage() {
         data: {
           projectId: project.id,
           selection: bulkSelection,
-          command: "ignore",
+          command: archived ? "unignore" : "ignore",
           lifecycleGroup,
           sort: {
             field: sorting.column,
@@ -347,14 +363,15 @@ function IssuesPage() {
         },
       })
       const changedCount = result.items.filter((item) => item.changed).length
+      const verb = archived ? "unignored" : "ignored"
       await invalidateIssueQueries(project.id)
       toast({
         description:
           changedCount === 0
-            ? "No issues were ignored."
+            ? `No issues were ${verb}.`
             : changedCount === 1
-              ? "1 issue ignored."
-              : `${changedCount} issues ignored.`,
+              ? `1 issue ${verb}.`
+              : `${changedCount} issues ${verb}.`,
       })
       selection.clearSelections()
       setBulkIgnoreModalOpen(false)
@@ -366,7 +383,7 @@ function IssuesPage() {
     } finally {
       setBulkActionLoading(false)
     }
-  }, [lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
+  }, [archived, lifecycleGroup, project.id, searchQuery, selection, sorting.column, sorting.direction, timeRange])
 
   const hasActiveFilters =
     lifecycleGroup !== "active" || searchQuery !== "" || Boolean(timeRange) || assigneeIds.length > 0
@@ -469,8 +486,8 @@ function IssuesPage() {
               onClick={() => setBulkIgnoreModalOpen(true)}
               disabled={bulkActionLoading}
             >
-              <Icon icon={PauseIcon} size="sm" />
-              Ignore ({selection.selectedCount.toLocaleString()})
+              <Icon icon={archived ? PlayIcon : PauseIcon} size="sm" />
+              {archived ? "Unignore" : "Ignore"} ({selection.selectedCount.toLocaleString()})
             </Button>
             <Button
               variant="outline"
@@ -481,8 +498,8 @@ function IssuesPage() {
               }}
               disabled={bulkActionLoading}
             >
-              <Icon icon={CheckIcon} size="sm" />
-              Resolve ({selection.selectedCount.toLocaleString()})
+              <Icon icon={archived ? XIcon : CheckIcon} size="sm" />
+              {archived ? "Unresolve" : "Resolve"} ({selection.selectedCount.toLocaleString()})
             </Button>
             <Button variant="outline" size="sm" onClick={() => setExportModalOpen(true)} disabled={exporting}>
               <Icon icon={DownloadIcon} size="sm" />
@@ -529,51 +546,71 @@ function IssuesPage() {
           open={bulkResolveModalOpen}
           onOpenChange={setBulkResolveModalOpen}
           dismissible
-          title="Resolve issues"
-          description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as resolved. If any of these issues start occurring again we will alert you and promote them as regressed.`}
+          title={archived ? "Unresolve issues" : "Resolve issues"}
+          description={
+            archived
+              ? `Reopen ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`}. New occurrences won't mark ${selection.selectedCount === 1 ? "it" : "them"} as regressed.`
+              : `Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as resolved. If any of these issues start occurring again we will alert you and promote them as regressed.`
+          }
           footer={
             <>
               <Button variant="outline" onClick={() => setBulkResolveModalOpen(false)} disabled={bulkActionLoading}>
                 Cancel
               </Button>
-              <Button onClick={() => void handleBulkResolve()} disabled={bulkActionLoading}>
-                <Icon icon={CheckIcon} size="sm" />
-                Resolve {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
+              <Button
+                {...(archived ? { variant: "destructive" as const } : {})}
+                onClick={() => void handleBulkResolve()}
+                disabled={bulkActionLoading}
+              >
+                <Icon icon={archived ? XIcon : CheckIcon} size="sm" />
+                {archived ? "Unresolve" : "Resolve"}{" "}
+                {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
               </Button>
             </>
           }
         >
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-row items-center justify-between gap-4">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="bulk-keep-monitoring">Keep evaluating these issues</Label>
-                <Text.H6 color="foregroundMuted">
-                  Evaluations for these issues will stay active to detect further regressions
-                </Text.H6>
+          {!archived && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-row items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="bulk-keep-monitoring">Keep evaluating these issues</Label>
+                  <Text.H6 color="foregroundMuted">
+                    Evaluations for these issues will stay active to detect further regressions
+                  </Text.H6>
+                </div>
+                <Switch
+                  id="bulk-keep-monitoring"
+                  checked={keepMonitoring}
+                  onCheckedChange={setKeepMonitoring}
+                  disabled={bulkActionLoading}
+                  aria-label="Keep evaluating these issues"
+                />
               </div>
-              <Switch
-                id="bulk-keep-monitoring"
-                checked={keepMonitoring}
-                onCheckedChange={setKeepMonitoring}
-                disabled={bulkActionLoading}
-                aria-label="Keep evaluating these issues"
-              />
             </div>
-          </div>
+          )}
         </Modal>
 
         <Modal
           open={bulkIgnoreModalOpen}
           onOpenChange={setBulkIgnoreModalOpen}
           dismissible
-          title="Ignore issues"
-          description={`Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as ignored. You won't be alerted about new occurrences of these issues anymore.`}
+          title={archived ? "Unignore issues" : "Ignore issues"}
+          description={
+            archived
+              ? `Stop ignoring ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`}. New occurrences will surface ${selection.selectedCount === 1 ? "it" : "them"} again.`
+              : `Mark ${selection.selectedCount === 1 ? "this issue" : `${selection.selectedCount} issues`} as ignored. You won't be alerted about new occurrences of these issues anymore.`
+          }
           footer={
             <>
               <CloseTrigger />
-              <Button variant="destructive" onClick={() => void handleBulkIgnore()} disabled={bulkActionLoading}>
-                <Icon icon={PauseIcon} size="sm" />
-                Ignore {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
+              <Button
+                {...(archived ? {} : { variant: "destructive" as const })}
+                onClick={() => void handleBulkIgnore()}
+                disabled={bulkActionLoading}
+              >
+                <Icon icon={archived ? PlayIcon : PauseIcon} size="sm" />
+                {archived ? "Unignore" : "Ignore"}{" "}
+                {selection.selectedCount === 1 ? "Issue" : `${selection.selectedCount} Issues`}
               </Button>
             </>
           }

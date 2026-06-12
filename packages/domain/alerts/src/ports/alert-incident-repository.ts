@@ -95,6 +95,8 @@ export interface MonitorIncidentStats {
   readonly total: number
   /** `started_at` of the first (oldest) incident — "first detected at". */
   readonly firstStartedAt: Date | null
+  /** Last incident's id (ongoing-first pick) — the manual-resolve target while it's open; `null` when the monitor has no incidents. */
+  readonly lastIncidentId: AlertIncidentId | null
   /** Last incident's `started_at` (ongoing-first pick); the fallback for "last detected at" when it's still open. */
   readonly lastStartedAt: Date | null
   /** Last incident's `ended_at` — "last detected at"; `null` while that incident is ongoing. */

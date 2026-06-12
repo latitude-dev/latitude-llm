@@ -3,6 +3,7 @@ import {
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableInfiniteScroll,
+  type InfiniteTableSelection,
   LatitudeLogo,
   type MenuOption,
   optionsColumn,
@@ -134,8 +135,8 @@ function WatchingCell({
               onOpenSearch(slug)
             }}
           >
-            <Badge variant="muted" className="max-w-full">
-              <span className="truncate">{name}</span>
+            <Badge variant="muted" ellipsis className="max-w-full">
+              {name}
             </Badge>
           </button>
         }
@@ -185,6 +186,7 @@ export function MonitorsView({
   showWatching = false,
   sorting,
   onSortChange,
+  selection,
 }: {
   readonly rows: readonly MonitorsTableRow[]
   readonly isLoading: boolean
@@ -197,6 +199,7 @@ export function MonitorsView({
   readonly showWatching?: boolean
   readonly sorting: MonitorsTableSorting
   readonly onSortChange: (sorting: MonitorsTableSorting) => void
+  readonly selection: InfiniteTableSelection
 }) {
   const navigate = useNavigate()
   const [pendingMute, setPendingMute] = useState<MonitorRecord | null>(null)
@@ -261,9 +264,9 @@ export function MonitorsView({
           {
             key: "watching",
             header: "Watching",
-            width: 200,
-            minWidth: 140,
-            maxWidth: 240,
+            width: 180,
+            minWidth: 120,
+            maxWidth: 220,
             render: (row) => (
               <WatchingCell
                 alerts={row.monitor.alerts}
@@ -325,6 +328,7 @@ export function MonitorsView({
             columns={columns}
             getRowKey={(row) => row.monitor.id}
             infiniteScroll={infiniteScroll}
+            selection={selection}
             sorting={sorting}
             defaultSorting={DEFAULT_MONITORS_SORTING}
             onSortChange={(next) =>
