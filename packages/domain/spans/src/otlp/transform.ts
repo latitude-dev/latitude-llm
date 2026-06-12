@@ -216,6 +216,7 @@ function transformSpan({
     outputMessages: content.outputMessages,
     systemInstructions: content.systemInstructions,
     toolDefinitions: content.toolDefinitions,
+    toolNames: content.toolDefinitions.map((definition) => definition.name),
     toolCallId: toolExecution.toolCallId,
     toolName: toolExecution.toolName,
     toolInput: toolExecution.toolInput,

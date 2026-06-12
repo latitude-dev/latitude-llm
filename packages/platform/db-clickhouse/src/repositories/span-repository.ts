@@ -61,6 +61,7 @@ const LIST_COLUMNS = `
   trace_flags, trace_state, error_type, tags, metadata,
   events_json, links_json,
   operation, provider, model, response_model,
+  tool_name, tool_names,
   tokens_input, tokens_output, tokens_cache_read,
   tokens_cache_create, tokens_reasoning,
   cost_input_microcents, cost_output_microcents,
@@ -101,6 +102,8 @@ type SpanListRow = {
   provider: string
   model: string
   response_model: string
+  tool_name: string
+  tool_names: string[]
   tokens_input: number
   tokens_output: number
   tokens_cache_read: number
@@ -130,7 +133,6 @@ type SpanDetailRow = SpanListRow & {
   system_instructions: string
   tool_definitions: string
   tool_call_id: string
-  tool_name: string
   tool_input: string
   tool_output: string
 }
@@ -164,6 +166,8 @@ const toBaseFields = (row: SpanListRow) => ({
   provider: row.provider,
   model: row.model,
   responseModel: row.response_model,
+  toolName: normalizeCHString(row.tool_name),
+  toolNames: row.tool_names.map(normalizeCHString),
   tokensInput: row.tokens_input,
   tokensOutput: row.tokens_output,
   tokensCacheRead: row.tokens_cache_read,
@@ -241,7 +245,6 @@ const toDomainSpanDetail = (row: SpanDetailRow): SpanDetail => ({
   systemInstructions: parseSystem(row.system_instructions),
   toolDefinitions: parseToolDefinitions(row.tool_definitions),
   toolCallId: normalizeCHString(row.tool_call_id),
-  toolName: normalizeCHString(row.tool_name),
   toolInput: row.tool_input,
   toolOutput: row.tool_output,
 })
@@ -558,7 +561,7 @@ export const SpanRepositoryLive = Layer.effect(
           return yield* chSqlClient
             .query(async (client) => {
               const result = await client.query({
-                query: `SELECT *
+                query: `SELECT *, tool_names
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}

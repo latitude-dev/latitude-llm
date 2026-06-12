@@ -30,6 +30,8 @@ export interface SpanRecord {
   readonly operation: Operation
   readonly provider: string
   readonly model: string
+  readonly toolName: string
+  readonly toolNames: readonly string[]
   readonly tokensInput: number
   readonly tokensOutput: number
   readonly costTotalMicrocents: number
@@ -73,7 +75,6 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly systemInstructions: readonly object[]
   readonly toolDefinitions: readonly object[]
   readonly toolCallId: string
-  readonly toolName: string
   readonly toolInput: string
   readonly toolOutput: string
 }
@@ -93,6 +94,8 @@ const serializeSpan = (span: Span): SpanRecord => ({
   operation: span.operation,
   provider: span.provider,
   model: span.model,
+  toolName: span.toolName,
+  toolNames: span.toolNames,
   tokensInput: span.tokensInput,
   tokensOutput: span.tokensOutput,
   costTotalMicrocents: span.costTotalMicrocents,
@@ -137,7 +140,6 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   systemInstructions: span.systemInstructions as readonly object[],
   toolDefinitions: span.toolDefinitions as readonly object[],
   toolCallId: span.toolCallId,
-  toolName: span.toolName,
   toolInput: span.toolInput,
   toolOutput: span.toolOutput,
 })

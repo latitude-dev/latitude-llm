@@ -47,6 +47,8 @@ export function stubListSpan(input: {
     provider: "",
     model: "",
     responseModel: "",
+    toolName: "",
+    toolNames: [],
     tokensInput: 0,
     tokensOutput: 0,
     tokensCacheRead: 0,
