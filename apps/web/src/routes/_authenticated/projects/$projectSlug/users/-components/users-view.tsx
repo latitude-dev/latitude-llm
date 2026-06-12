@@ -107,14 +107,14 @@ function SeenAtCell({ user }: { readonly user: ProjectUserRecord }) {
     <div className="flex min-w-0 items-center gap-1 whitespace-nowrap">
       <Tooltip asChild trigger={<span className="truncate">{formatAgoLabel(user.lastSeenAt)}</span>}>
         <div className="flex flex-col gap-0.5">
-          <Text.H6 color="foregroundMuted">Last seen at</Text.H6>
+          <Text.H6 color="foregroundMuted">Last seen in selected period</Text.H6>
           <Text.H6B>{new Date(user.lastSeenAt).toLocaleString()}</Text.H6B>
         </div>
       </Tooltip>
       <span className="text-muted-foreground">/</span>
       <Tooltip asChild trigger={<span className="truncate">{formatAgeLabel(user.firstSeenAt)}</span>}>
         <div className="flex flex-col gap-0.5">
-          <Text.H6 color="foregroundMuted">First seen at</Text.H6>
+          <Text.H6 color="foregroundMuted">First seen in selected period</Text.H6>
           <Text.H6B>{new Date(user.firstSeenAt).toLocaleString()}</Text.H6B>
         </div>
       </Tooltip>

@@ -2,7 +2,6 @@ import type { UserSortField } from "@domain/spans"
 import type { InfiniteTableInfiniteScroll } from "@repo/ui"
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type {
   ProjectUserRecord,
   ProjectUsersPageRecord,
@@ -23,7 +22,6 @@ import {
   listUserIssues,
 } from "./end-users.functions.ts"
 
-const queryClient = getQueryClient()
 const DEFAULT_USERS_BATCH_SIZE = 50
 const USERS_QUERY_STALE_TIME_MS = 30_000
 
@@ -58,9 +56,6 @@ const getUsersQueryKey = (input: UsersKeyInput) =>
     input.timeRange?.toIso ?? null,
     input.trendBucketSeconds ?? null,
   ] as const
-
-const getUsersOffsetQueryKey = (input: UsersKeyInput, offset: number) =>
-  [...getUsersQueryKey(input), "offset", offset] as const
 
 const buildListUsersRequest = (input: UsersKeyInput, offset: number) => ({
   projectId: input.projectId,
@@ -98,35 +93,16 @@ export function useProjectUsers(input: {
 
   const queryKey = getUsersQueryKey(keyInput)
 
-  const fetchPage = async (offset: number): Promise<ProjectUsersPageRecord> => {
-    const result = await queryClient.fetchQuery({
-      queryKey: getUsersOffsetQueryKey(keyInput, offset),
-      queryFn: () => listProjectUsers({ data: buildListUsersRequest(keyInput, offset) }),
-      staleTime: USERS_QUERY_STALE_TIME_MS,
-    })
-
-    if (result.hasMore) {
-      const nextOffset = result.offset + result.limit
-      void queryClient.prefetchQuery({
-        queryKey: getUsersOffsetQueryKey(keyInput, nextOffset),
-        queryFn: () => listProjectUsers({ data: buildListUsersRequest(keyInput, nextOffset) }),
-        staleTime: USERS_QUERY_STALE_TIME_MS,
-      })
-    }
-
-    return result
-  }
-
   const {
     data: paginatedData,
     isLoading,
-    isPlaceholderData,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam }) => fetchPage(pageParam),
+    queryFn: ({ pageParam }): Promise<ProjectUsersPageRecord> =>
+      listProjectUsers({ data: buildListUsersRequest(keyInput, pageParam) }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined),
     staleTime: USERS_QUERY_STALE_TIME_MS,
@@ -151,7 +127,6 @@ export function useProjectUsers(input: {
     activityBucketSeconds: paginatedData?.pages[0]?.activityBucketSeconds,
     costRollup: paginatedData?.pages[0]?.costRollup,
     isLoading,
-    isReloading: isPlaceholderData,
     infiniteScroll,
   }
 }

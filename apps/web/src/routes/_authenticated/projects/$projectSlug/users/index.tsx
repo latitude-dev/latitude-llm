@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router"
 import { ExternalLinkIcon, SearchIcon, UsersRoundIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useProjectUsers, useUsersOverview } from "../../../../../domains/end-users/end-users.collection.ts"
-import type { ProjectUserRecord } from "../../../../../domains/end-users/end-users.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { useDebounce } from "../../../../../lib/hooks/useDebounce.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -24,7 +23,6 @@ import {
 const DEFAULT_SORTING: UsersTableSorting = { column: "lastSeen", direction: "desc" }
 const USER_SEARCH_DEBOUNCE_MS = 300
 const SORT_PARAM_PATTERN = /^(lastSeen|firstSeen|sessions|errors|tokens|cost|costAvg|costMedian):(asc|desc)$/
-const EMPTY_USERS: readonly ProjectUserRecord[] = []
 
 function serializeSorting(sorting: UsersTableSorting): string {
   return `${sorting.column}:${sorting.direction}`
@@ -111,12 +109,11 @@ function UsersPage() {
   )
 
   const {
-    data: usersData,
+    data: users,
     totalCount,
     activityBucketSeconds,
     costRollup,
     isLoading,
-    isReloading,
     infiniteScroll,
   } = useProjectUsers({
     projectId: project.id,
@@ -131,8 +128,7 @@ function UsersPage() {
     timeRange: range,
   })
 
-  const showSkeletons = isLoading || isReloading
-  const users = isReloading ? EMPTY_USERS : usersData
+  const showSkeletons = isLoading
 
   const hasActiveFilters = searchQuery !== "" || Boolean(timeFrom || timeTo)
   const showEmptyState = !showSkeletons && totalCount === 0 && !hasActiveFilters
