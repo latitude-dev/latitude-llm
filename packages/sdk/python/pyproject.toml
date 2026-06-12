@@ -1,0 +1,48 @@
+[project]
+name = "latitude-sdk"
+version = "6.0.0"
+description = "Official Python SDK for the Latitude API"
+authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
+maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
+readme = "README.md"
+license = "MIT"
+urls.repository = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdk/python"
+urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdk/python#readme"
+urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdk/python#readme"
+requires-python = ">=3.9, <3.15"
+dependencies = [
+    "httpx>=0.21.2",
+    "pydantic>=2.0.0",
+    "typing-extensions>=4.0.0",
+]
+
+[dependency-groups]
+# pytest 9 dropped Python 3.9, which `requires-python` still covers — stay on 8.x.
+dev = [
+    "pytest==8.4.2",
+    "ruff==0.14.14",
+]
+
+[tool.uv]
+# Refuse to resolve PyPI packages published less than 7 days ago.
+# Mirrors `.npmrc minimum-release-age` on the JS side and buys time for
+# malicious releases to be yanked before we pick them up (see the May 2026
+# Mini Shai-Hulud campaign for why). Relative durations land a rolling cutoff
+# — no need to bump a fixed date.
+exclude-newer = "7d"
+
+[tool.pytest.ini_options]
+addopts = "-p no:warnings"
+xfail_strict = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/latitude_sdk"]
+
+# Fern owns (and wipes) everything under `src/`, so the PEP 561 marker lives
+# in the hand-written shell and is injected into the wheel at build time.
+[tool.hatch.build.targets.wheel.force-include]
+"py.typed" = "latitude_sdk/py.typed"

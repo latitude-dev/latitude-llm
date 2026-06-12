@@ -81,12 +81,12 @@ These endpoints stay in `openapi.json` (consumers may still discover them at the
 
 ## Versioning
 
-The SDK is pre-1.0 and ships as `6.0.0-alpha.X`. Bump the alpha tail every time you publish:
+The SDK is stable as of `6.0.0` and follows Semantic Versioning:
 
-- `6.0.0-alpha.1` → `6.0.0-alpha.2` for additive changes.
-- A new alpha is fine for breaking changes too while we're in alpha — document them in the CHANGELOG.
+- Patch/minor bumps for fixes and additive changes.
+- Breaking changes require a major version bump — document them in the CHANGELOG.
 
-The version lives in `packages/sdk/typescript/package.json`. Both internal consumers (`examples/sdks/typescript`, `packages/platform/latitude-api`) reference the SDK via `workspace:*`, so a version bump doesn't ripple inside the monorepo — it only affects the npm publish.
+The version lives in `packages/sdk/typescript/package.json`. Both internal consumers (`packages/sdk/typescript/examples`, `packages/platform/latitude-api`) reference the SDK via `workspace:*`, so a version bump doesn't ripple inside the monorepo — it only affects the npm publish.
 
 ## Changelog
 
@@ -107,7 +107,7 @@ A dedicated workflow (`.github/workflows/publish-typescript-sdk.yml`) handles th
 
 Two in-repo packages already depend on the SDK via `workspace:*`:
 
-- `examples/sdks/typescript` — runnable examples used in the public docs.
+- `packages/sdk/typescript/examples` — runnable examples used in the public docs (the Python mirror lives at `packages/sdk/python/examples`).
 - `packages/platform/latitude-api` — internal wrapper used by other Latitude packages that need to call the API at runtime.
 
 If you ship a breaking SDK change, check both call sites build cleanly before merging.

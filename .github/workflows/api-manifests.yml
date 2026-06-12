@@ -61,7 +61,13 @@ jobs:
         run: ./fern/invoke.sh check
 
       - name: Regenerate Fern-emitted TypeScript SDK
-        run: ./fern/invoke.sh generate --group local --local --force
+        run: ./fern/invoke.sh generate --group local-typescript --local --force
 
       - name: Fail if packages/sdk/typescript/src drifted
         run: git diff --exit-code packages/sdk/typescript/src
+
+      - name: Regenerate Fern-emitted Python SDK
+        run: ./fern/invoke.sh generate --group local-python --local --force
+
+      - name: Fail if packages/sdk/python/src drifted
+        run: git diff --exit-code packages/sdk/python/src

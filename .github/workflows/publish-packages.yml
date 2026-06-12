@@ -74,3 +74,11 @@ jobs:
     with:
       ref: ${{ github.sha }}
     secrets: inherit
+
+  publish-python-sdk:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-python-sdk.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit

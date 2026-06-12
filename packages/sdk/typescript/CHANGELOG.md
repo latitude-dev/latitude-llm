@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-06-12
+
+First stable release of the v6 SDK — the package leaves alpha. The API surface is unchanged from `6.0.0-alpha.8`; from here on, breaking changes only land with a major version bump.
+
+The stable surface covers `client.account`, `client.projects`, `client.members`, `client.apiKeys`, `client.oauthKeys`, `client.traces`, `client.savedSearches`, `client.issues`, `client.incidents`, `client.monitors`, `client.datasets`, `client.scores`, and `client.annotations` — see the alpha entries below for how each landed.
+
 ## [6.0.0-alpha.8] - 2026-06-12
 
 ### Added

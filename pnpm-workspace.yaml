@@ -5,7 +5,6 @@ packages:
   - "!packages/platform/op-gepa/python/**"
   - infra
   - tools/*
-  - examples/**
 
 publicHoistPattern:
   - "@temporalio/*"
