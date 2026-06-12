@@ -2,11 +2,14 @@ import type { MomentKind } from "@domain/conversation-intelligence"
 import { Button, Icon, Popover, PopoverClose, PopoverContent, PopoverTrigger, Text } from "@repo/ui"
 import { XIcon } from "lucide-react"
 import { type RefObject, use, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import type { SessionDetailRecord } from "../../../../../../domains/sessions/sessions.functions.ts"
 import { TraceScopeContext } from "../../../../../../domains/traces/trace-scope.tsx"
 import { useSessionMomentIntelligence } from "../../../../../../domains/traces/traces.collection.ts"
-import type { SessionMomentIntelligenceRecord } from "../../../../../../domains/traces/traces.functions.ts"
+import type { SessionMomentIntelligenceRecord, TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../../lib/hooks/useParamState.ts"
 import { useConversationAnnotationFocus } from "../annotations/hooks/use-conversation-annotation-focus.ts"
+import { findNearestMessageAnchor } from "../conversation-timeline/flash-highlight.ts"
+import { useSessionTimeline } from "../conversation-timeline/use-session-timeline.ts"
 import { ConversationTab as TraceConversationTab } from "../trace-detail-drawer/tabs/conversation-tab.tsx"
 
 const MOMENT_FOCUS_OBSERVER_TIMEOUT_MS = 2000
@@ -105,23 +108,6 @@ function MomentLabelBadge({ label, store }: { readonly label: MomentLabelRecord;
   )
 }
 
-/** Finds the rendered message element closest to `messageIndex` (tool-result
- * messages can be absorbed into their caller, so exact anchors may not render). */
-function findMomentAnchor(container: HTMLElement, messageIndex: number): HTMLElement | null {
-  const exact = container.querySelector<HTMLElement>(`[data-message-index="${messageIndex}"]`)
-  if (exact) return exact
-  let best: { node: HTMLElement; distance: number } | null = null
-  for (const node of container.querySelectorAll<HTMLElement>("[data-message-index]")) {
-    const raw = node.getAttribute("data-message-index")
-    if (raw == null) continue
-    const index = Number.parseInt(raw, 10)
-    if (Number.isNaN(index)) continue
-    const distance = Math.abs(index - messageIndex)
-    if (!best || distance < best.distance) best = { node, distance }
-  }
-  return best?.node ?? null
-}
-
 function findMomentRangeAnchors(
   container: HTMLElement,
   firstMessageIndex: number,
@@ -137,7 +123,7 @@ function findMomentRangeAnchors(
   }
 
   if (anchors.length > 0) return anchors
-  const fallback = findMomentAnchor(container, firstMessageIndex)
+  const fallback = findNearestMessageAnchor(container, firstMessageIndex)
   return fallback ? [fallback] : []
 }
 
@@ -234,7 +220,7 @@ function useScrollToFocusedMoment({
       if (done || !container || anchorIndex === undefined) return true
       const anchors = momentTarget
         ? findMomentRangeAnchors(container, momentTarget.moment.firstMessageIndex, momentTarget.moment.lastMessageIndex)
-        : [findMomentAnchor(container, anchorIndex)].filter((anchor): anchor is HTMLElement => anchor !== null)
+        : [findNearestMessageAnchor(container, anchorIndex)].filter((anchor): anchor is HTMLElement => anchor !== null)
       const anchor = anchors[0]
       if (!anchor) return false
       lastScrolledKey.current = key
@@ -282,7 +268,8 @@ function useScrollToFocusedMoment({
  */
 export function ConversationTab({
   projectId,
-  sessionId,
+  session,
+  traces,
   latestTraceId,
   isActive,
   searchQuery,
@@ -290,7 +277,8 @@ export function ConversationTab({
   focusMomentId,
 }: {
   readonly projectId: string
-  readonly sessionId: string
+  readonly session: SessionDetailRecord
+  readonly traces: readonly TraceRecord[]
   readonly latestTraceId: string
   readonly isActive: boolean
   readonly searchQuery?: string
@@ -298,8 +286,33 @@ export function ConversationTab({
   /** Scrolls to this semantic moment when no label kind is focused. */
   readonly focusMomentId?: string | undefined
 }) {
+  const sessionId = session.sessionId
   // Annotations are an LLM-feedback feature — off under a sandbox scope.
   const annotationsEnabled = !use(TraceScopeContext)
+  const { data: moments } = useSessionMomentIntelligence({ projectId, sessionId })
+
+  const timelineMoments = useMemo(
+    () =>
+      (moments ?? []).flatMap((row) =>
+        row.labels.map((label) => ({
+          id: label.labelId,
+          messageIndex: label.lastMessageIndex,
+          kind: capitalizeMomentKind(label.kind),
+          summary: displayLabelSummary(label.summary),
+          confidence: label.confidence,
+        })),
+      ),
+    [moments],
+  )
+
+  const timeline = useSessionTimeline({
+    projectId,
+    session,
+    traces,
+    latestTraceId,
+    annotationsEnabled,
+    moments: timelineMoments,
+  })
   const [focusAnnotationId, setFocusAnnotationId] = useParamState("annotationId", "")
   const selectedLabelStore = useSelectedLabelStore()
   const { scrollContainerRef, textSelectionPopoverControlsRef, traceDetail, isDetailLoading } =
@@ -311,7 +324,6 @@ export function ConversationTab({
       onFocusConsumed: () => setFocusAnnotationId(""),
       annotationsEnabled,
     })
-  const { data: moments } = useSessionMomentIntelligence({ projectId, sessionId })
 
   // Labels are scored per turn, so each badge anchors to the exact message
   // that triggered the detection (label.lastMessageIndex), not the end of the
@@ -372,6 +384,7 @@ export function ConversationTab({
       annotationsEnabled={annotationsEnabled}
       scrollContainerRef={scrollContainerRef}
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
+      timeline={timeline}
       {...(labelsByMessageIndex.size > 0 ? { messageTrailingSlot } : {})}
       {...(searchQuery ? { searchQuery } : {})}
     />

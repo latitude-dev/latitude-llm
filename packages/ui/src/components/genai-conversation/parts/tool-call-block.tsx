@@ -9,11 +9,18 @@ import { Tooltip } from "../../tooltip/tooltip.tsx"
 import { formatJson } from "./helpers.tsx"
 import type { ToolCallPart, ToolCallResult } from "./types.ts"
 
-function ToolCallStatusIcon({ result }: { readonly result: ToolCallResult | undefined }) {
-  if (!result) return null
+function ToolCallStatusIcon({
+  result,
+  failed = false,
+}: {
+  readonly result: ToolCallResult | undefined
+  readonly failed?: boolean
+}) {
+  if (!result && !failed) return null
 
-  const label = result.isError ? "Error" : "Success"
-  const icon = result.isError ? (
+  const isError = failed || result?.isError === true
+  const label = isError ? "Error" : "Success"
+  const icon = isError ? (
     <XIcon className="w-3.5 h-3.5 text-destructive" />
   ) : (
     <CheckIcon className="w-3.5 h-3.5 text-success" />
@@ -29,17 +36,20 @@ function ToolCallStatusIcon({ result }: { readonly result: ToolCallResult | unde
 export function ToolCallBlock({
   call,
   result,
+  failed = false,
   onNavigateToSpan,
   defaultOpen = false,
 }: {
   readonly call: ToolCallPart
   readonly result?: ToolCallResult | undefined
+  /** The execution span errored — render as failed even if the result part claims success. */
+  readonly failed?: boolean
   readonly onNavigateToSpan?: () => void
   readonly defaultOpen?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const panelId = useId()
-  const isError = result?.isError === true
+  const isError = failed || result?.isError === true
 
   const toggleOpen = () => setOpen((prev) => !prev)
 
@@ -48,6 +58,7 @@ export function ToolCallBlock({
 
   return (
     <div
+      data-tool-call-id={call.id || undefined}
       className={cn("flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border sm:max-w-150", {
         "border-border": !isError,
         "border-destructive": isError,
@@ -63,7 +74,7 @@ export function ToolCallBlock({
         <span className="min-w-0 flex-1 text-left">
           <Text.Mono size="h6">{call.name}</Text.Mono>
         </span>
-        <ToolCallStatusIcon result={result} />
+        <ToolCallStatusIcon result={result} failed={failed} />
         {call.id && <CopyButton value={call.id} tooltip={call.id} />}
         {onNavigateToSpan && (
           <Tooltip

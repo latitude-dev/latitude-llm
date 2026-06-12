@@ -254,7 +254,8 @@ export function SessionSlot({
           <div className={effectiveActiveTab === "conversation" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
             <ConversationTab
               projectId={projectId}
-              sessionId={session.sessionId}
+              session={session}
+              traces={traces}
               latestTraceId={latestTraceId}
               isActive={effectiveActiveTab === "conversation"}
               focusMomentKind={focusMomentKind}

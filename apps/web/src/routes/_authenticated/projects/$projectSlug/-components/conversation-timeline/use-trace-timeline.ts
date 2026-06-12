@@ -1,0 +1,51 @@
+import { useMemo } from "react"
+import { useAnnotationsByTrace } from "../../../../../../domains/annotations/annotations.collection.ts"
+import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
+import { useConversationSpanMaps } from "../../../../../../domains/spans/spans.collection.ts"
+import type { SpanRecord } from "../../../../../../domains/spans/spans.functions.ts"
+import type { TraceDetailRecord, TraceRecord } from "../../../../../../domains/traces/traces.functions.ts"
+import {
+  buildConversationTimeline,
+  type ConversationTimeline,
+} from "../../../../../../lib/conversation-timeline/build-conversation-timeline.ts"
+import { annotatorNameFor, toTimelineAnnotation, toTimelineSpan, toTimelineTrace } from "./timeline-adapters.ts"
+
+export function useTraceTimeline({
+  projectId,
+  traceId,
+  traceRecord,
+  traceDetail,
+  spans,
+  annotationsEnabled,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly traceRecord: TraceRecord | undefined
+  readonly traceDetail: TraceDetailRecord | null | undefined
+  readonly spans: readonly SpanRecord[] | undefined
+  readonly annotationsEnabled: boolean
+}): ConversationTimeline | null {
+  const { data: spanMaps } = useConversationSpanMaps({ projectId, traceId })
+  const { data: annotationsData } = useAnnotationsByTrace({
+    projectId,
+    traceId,
+    draftMode: "include",
+    enabled: annotationsEnabled,
+  })
+  const memberByUserId = useMemberByUserIdMap()
+
+  return useMemo(() => {
+    if (!traceDetail || !spanMaps) return null
+    return buildConversationTimeline({
+      messages: traceDetail.allMessages,
+      spans: (spans ?? []).map(toTimelineSpan),
+      messageSpanMap: spanMaps.messageSpanMap,
+      toolCallSpanMap: spanMaps.toolCallSpanMap,
+      traces: [toTimelineTrace(traceRecord ?? traceDetail)],
+      annotations: (annotationsData?.items ?? []).map((a) =>
+        toTimelineAnnotation(a, annotatorNameFor(a, memberByUserId)),
+      ),
+      moments: [],
+    })
+  }, [traceDetail, traceRecord, spans, spanMaps, annotationsData, memberByUserId])
+}

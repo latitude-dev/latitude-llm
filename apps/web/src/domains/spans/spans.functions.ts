@@ -235,6 +235,51 @@ export const mapConversationToSpans = createServerFn({ method: "GET" })
     },
   )
 
+export const mapSessionConversationToSpans = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      sandboxOrgId: z.string().optional(),
+      projectId: z.string(),
+      sessionId: z.string(),
+      latestTraceId: z.string(),
+      sessionStartTime: dateTimeParamSchema,
+      sessionEndTime: dateTimeParamSchema,
+    }),
+  )
+  .handler(
+    async ({ data }): Promise<{ messageSpanMap: Record<number, string>; toolCallSpanMap: Record<string, string> }> => {
+      const orgId = await resolveOrgScope(data)
+
+      return Effect.runPromise(
+        Effect.gen(function* () {
+          const traceRepo = yield* TraceRepository
+          const spanRepo = yield* SpanRepository
+
+          const projectId = ProjectId(data.projectId)
+          const traceDetail = yield* traceRepo
+            .findByTraceId({ organizationId: orgId, projectId, traceId: TraceId(data.latestTraceId) })
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+          if (!traceDetail) return { messageSpanMap: {}, toolCallSpanMap: {} }
+
+          const spans = yield* spanRepo.findMessagesForSession({
+            organizationId: orgId,
+            projectId,
+            sessionId: SessionId(data.sessionId),
+            startTimeFrom: new Date(data.sessionStartTime.getTime() - 60 * 1000),
+            startTimeTo: new Date(data.sessionEndTime.getTime() + 24 * 60 * 60 * 1000),
+          })
+
+          return buildConversationSpanMaps(traceDetail.allMessages, spans)
+        }).pipe(
+          withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId),
+          withAi(AIEmbedLive, getRedisClient()),
+          withTracing,
+        ),
+      )
+    },
+  )
+
 export const getSpanDetail = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({

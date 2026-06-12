@@ -18,6 +18,7 @@ export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape
     listByProjectId: () => Effect.succeed([]),
     findBySpanId: () => Effect.fail(new NotFoundError({ entity: "Span", id: "" })),
     findMessagesForTrace: () => Effect.succeed([]),
+    findMessagesForSession: () => Effect.succeed([]),
     findLatestOutputTraceId: () => Effect.succeed(null),
     listByIngestedAtWindow: () => Effect.succeed({ spans: [], nextCursor: null }),
     ...overrides,

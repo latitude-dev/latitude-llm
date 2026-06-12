@@ -9,6 +9,7 @@ import {
   listSpansBySession,
   listSpansByTrace,
   mapConversationToSpans,
+  mapSessionConversationToSpans,
   type SpanDetailRecord,
   type SpanRecord,
 } from "./spans.functions.ts"
@@ -159,6 +160,47 @@ export const useSpanDetail = ({
         },
       }),
     staleTime: Infinity, // Span data is immutable once ingested
+  })
+}
+
+export function useSessionConversationSpanMaps({
+  projectId,
+  sessionId,
+  latestTraceId,
+  sessionStartTime,
+  sessionEndTime,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly sessionId: string
+  readonly latestTraceId: string
+  readonly sessionStartTime: string
+  readonly sessionEndTime: string
+  readonly enabled?: boolean
+}) {
+  const scope = use(TraceScopeContext)
+  return useQuery({
+    queryKey: [
+      "sessionConversationSpanMaps",
+      scope?.sandboxOrgId,
+      projectId,
+      sessionId,
+      latestTraceId,
+      sessionStartTime,
+      sessionEndTime,
+    ],
+    queryFn: () =>
+      mapSessionConversationToSpans({
+        data: {
+          ...(scope ? { sandboxOrgId: scope.sandboxOrgId } : {}),
+          projectId,
+          sessionId,
+          latestTraceId,
+          sessionStartTime,
+          sessionEndTime,
+        },
+      }),
+    enabled: enabled && projectId.length > 0 && sessionId.length > 0 && latestTraceId.length > 0,
   })
 }
 

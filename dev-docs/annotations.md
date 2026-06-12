@@ -10,6 +10,8 @@ They are used for:
 - evaluation alignment
 - reliability feedback loops in Latitude UI or in user-owned apps
 
+In the Conversation tab they also surface as timeline event markers (anchored at the annotated message’s generation moment) that scroll to and open the annotation on click; see [`./conversation-timeline.md`](./conversation-timeline.md).
+
 ## Core Rule
 
 Annotations are not a standalone canonical fact table.
