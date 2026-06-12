@@ -15,6 +15,7 @@ import {
   TextAlignStartIcon,
   UserRound,
   Users,
+  UsersRoundIcon,
   WrenchIcon,
 } from "lucide-react"
 import { useMemo } from "react"
@@ -49,6 +50,13 @@ const PROJECT_SECTIONS: readonly ProjectSection[] = [
     path: (slug) => `/projects/${slug}/behaviours`,
     isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/behaviours`),
     flag: "behaviours",
+  },
+  {
+    key: "users",
+    label: "Users",
+    icon: UsersRoundIcon,
+    path: (slug) => `/projects/${slug}/users`,
+    isActive: (pathname, slug) => pathname.startsWith(`/projects/${slug}/users`),
   },
   {
     key: "tools",
