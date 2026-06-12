@@ -108,10 +108,23 @@ const USAGE_DIMENSION_COLUMNS: Record<UserUsageDimension, string> = {
   tool: "tools",
 }
 
+const escapeLikePattern = (value: string): string => value.replace(/[\\%_]/g, "\\$&")
+
+// The search must run after GROUP BY: a user's displayed email is the latest
+// non-empty one across their traces, so filtering per-trace rows would drop
+// the (typically email-less) older traces of a matched user and skew their
+// metrics. `user_email` here resolves to the surrounding query's `argMaxIf`
+// alias — the SELECT must define it, and spelling the aggregate out instead
+// would nest it inside the alias substitution (ILLEGAL_AGGREGATION).
+const USER_SEARCH_HAVING = `HAVING (
+  user_id ILIKE {searchQuery:String}
+  OR user_email ILIKE {searchQuery:String}
+)`
+
 function buildUserScopeClauses(input: {
   readonly searchQuery?: string | undefined
   readonly timeRange?: { readonly from?: Date | undefined; readonly to?: Date | undefined } | undefined
-}): { clauses: string; params: Record<string, unknown> } {
+}): { clauses: string; having: string; params: Record<string, unknown> } {
   const clauses: string[] = []
   const params: Record<string, unknown> = {}
   if (input.timeRange?.from) {
@@ -122,11 +135,12 @@ function buildUserScopeClauses(input: {
     clauses.push("AND start_time < {toTime:DateTime64(9, 'UTC')}")
     params.toTime = toClickhouseDateTime(input.timeRange.to)
   }
+  let having = ""
   if (input.searchQuery) {
-    clauses.push("AND (user_id ILIKE {searchQuery:String} OR user_email ILIKE {searchQuery:String})")
-    params.searchQuery = `%${input.searchQuery}%`
+    having = USER_SEARCH_HAVING
+    params.searchQuery = `%${escapeLikePattern(input.searchQuery)}%`
   }
-  return { clauses: clauses.join("\n          "), params }
+  return { clauses: clauses.join("\n          "), having, params }
 }
 
 export const UserAnalyticsRepositoryLive = Layer.effect(
@@ -153,9 +167,6 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
           [
             chSqlClient.query(async (client) => {
               const result = await client.query({
-                // Filters live one level below the per-user GROUP BY — at this level
-                // `user_email` is the `argMaxIf` alias, so referencing it in WHERE
-                // would be an illegal aggregation.
                 query: `SELECT ${USER_SUMMARY_SELECT}
                       FROM (
                         SELECT *
@@ -164,6 +175,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                           ${scope.clauses}
                       )
                       GROUP BY user_id
+                      ${scope.having}
                       ORDER BY ${sortExpr} ${orderDir}, user_id ASC
                       LIMIT {limit:UInt32} OFFSET {offset:UInt32}`,
                 query_params: { ...baseParams, limit: limit + 1, offset },
@@ -183,6 +195,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                       FROM (
                         SELECT
                           user_id,
+                          argMaxIf(user_email, start_time, user_email != '') AS user_email,
                           sum(trace_cost_microcents)                  AS user_cost_total,
                           avg(trace_cost_microcents)                  AS user_cost_avg,
                           quantileTDigest(0.5)(trace_cost_microcents) AS user_cost_median
@@ -190,6 +203,7 @@ export const UserAnalyticsRepositoryLive = Layer.effect(
                         WHERE user_id != ''
                           ${scope.clauses}
                         GROUP BY user_id
+                        ${scope.having}
                       )`,
                 query_params: baseParams,
                 format: "JSONEachRow",

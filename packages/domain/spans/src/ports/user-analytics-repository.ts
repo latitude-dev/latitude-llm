@@ -16,6 +16,12 @@ export interface ProjectUserSummary {
   readonly firstSeenAt: Date
   readonly lastSeenAt: Date
   readonly traceCount: number
+  /**
+   * Sessions where this user produced at least one trace. The sessions MV
+   * attributes a whole session to its latest identified user, so for
+   * mixed-user sessions this count can exceed what a sessions listing
+   * filtered by `user_id` returns.
+   */
   readonly sessionCount: number
   /** Sessions with at least one errored trace. */
   readonly errorSessionCount: number

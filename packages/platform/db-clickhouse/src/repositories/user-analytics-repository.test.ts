@@ -238,6 +238,16 @@ describe("UserAnalyticsRepository", () => {
       )
       expect(byEmail.items.map((item) => item.userId)).toEqual([USER_A])
 
+      // user-a carries the email on only 1 of 3 traces; matching by email must
+      // still aggregate over all of them.
+      const userA = byEmail.items[0]
+      expect(userA?.traceCount).toBe(3)
+      expect(userA?.sessionCount).toBe(2)
+      expect(userA?.costTotalMicrocents).toBe(600)
+      expect(userA?.firstSeenAt.getTime()).toBe(daysAgo(10).getTime())
+      expect(byEmail.totalCount).toBe(1)
+      expect(byEmail.costRollup.sum).toBe(600)
+
       const byId = await runCh(
         repo.listByProjectId({
           organizationId: ORG_ID,
@@ -246,6 +256,17 @@ describe("UserAnalyticsRepository", () => {
         }),
       )
       expect(byId.items.map((item) => item.userId)).toEqual([USER_B])
+    })
+
+    it("treats LIKE wildcards in the search input as literals", async () => {
+      const page = await runCh(
+        repo.listByProjectId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          options: { searchQuery: "ex_mple" },
+        }),
+      )
+      expect(page.items).toEqual([])
     })
 
     it("scopes metrics to the requested time range", async () => {
