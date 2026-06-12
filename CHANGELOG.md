@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+## v0.3.0 - 2026-06-12
+
+### Evaluations
+
+- Added a QuickJS sandbox script runtime for evaluation scripts behind the `evaluation-sandbox-runtime` feature flag: scripts run fully sandboxed with CPU, memory, and wall-clock budgets, `llm()` host calls require an explicit schema, and per-owner detector health is tracked with degraded events (ref: #3524).
+
+### OSS self-hosting
+
+- Made internal AI features pluggable via `LAT_AI_*` env configuration: per-feature generation overrides resolve to OpenAI, Google, custom OpenAI-compatible, Anthropic, or the default Amazon Bedrock provider, with global embedding and reranking configuration to match (ref: #3521).
+- Renamed app-consumed `CLICKHOUSE_*` env vars to `LAT_CLICKHOUSE_*`; infra injects both names during the transition (ref: #3521).
+- Fixed issue discovery failing on non-default embedding models by making the issue centroid consistency check model-agnostic (ref: #3529).
+
+### Telemetry
+
+- Added a LiveKit Agents content resolver so prompts, responses, tool calls/results, and tool definitions carried on `lk.*` span attributes render in trace details, plus a LiveKit integration guide for Python and Node.js (ref: #3526).
+
+### Conversation intelligence
+
+- Split taxonomy gardening build writes into separate activities, moved clustering into a worker thread, and added adaptive sample sizing with run-level sample metrics (ref: #3519).
+- Gardening runs now fail fast when staged plan artifacts are lost from Redis, instead of retrying for days, so the next cron sweep rebuilds from scratch (ref: #3523).
+
+### Background jobs
+
+- Limited default Temporal activity retries to roughly one hour and made validation failures non-retryable (ref: 8b99c5c).
+
+### Web UI
+
+- Reordered the project sidebar to traces, behaviours, tools, issues, monitors, datasets (ref: #3525).
+- Removed the resolution behaviour trajectory filter from the behaviours page (ref: bd340db).
+
 ## v0.2.9 - 2026-06-11
 
 ### Monitors
