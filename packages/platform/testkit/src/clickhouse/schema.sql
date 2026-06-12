@@ -367,10 +367,10 @@ CREATE TABLE spans
     INDEX idx_service service_name TYPE bloom_filter(0.01) GRANULARITY 4,
     INDEX idx_tags tags TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_user_id user_id TYPE bloom_filter(0.01) GRANULARITY 2,
-    INDEX idx_user_email user_email TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_simulation_id simulation_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_tool_name tool_name TYPE bloom_filter(0.01) GRANULARITY 2,
-    INDEX idx_tool_names tool_names TYPE bloom_filter(0.01) GRANULARITY 2
+    INDEX idx_tool_names tool_names TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_user_email user_email TYPE bloom_filter(0.01) GRANULARITY 2
 )
 ENGINE = ReplacingMergeTree(ingested_at)
 PARTITION BY toYYYYMM(start_time)
