@@ -80,6 +80,7 @@ export const LIST_SELECT = `
   groupUniqArrayIfMerge(providers)     AS providers,
   groupUniqArrayIfMerge(service_names) AS service_names,
   groupUniqArrayIfMerge(tools)         AS tools,
+  groupUniqArrayArray(defined_tools)   AS defined_tools,
   argMinIfMerge(root_span_id)   AS root_span_id,
   argMinIfMerge(root_span_name) AS root_span_name
 `
@@ -120,6 +121,7 @@ type TraceListRow = {
   providers: string[]
   service_names: string[]
   tools: string[]
+  defined_tools: string[]
   root_span_id: string
   root_span_name: string
 }
@@ -1472,6 +1474,7 @@ export const TraceRepositoryLive = Layer.effect(
             providers: "arrayJoin(groupUniqArrayIfMerge(providers))",
             serviceNames: "arrayJoin(groupUniqArrayIfMerge(service_names))",
             tools: "arrayJoin(groupUniqArrayIfMerge(tools))",
+            definedTools: "arrayJoin(groupUniqArrayArray(defined_tools))",
           }
           const searchClause = search ? " AND val ILIKE {search:String}" : ""
 

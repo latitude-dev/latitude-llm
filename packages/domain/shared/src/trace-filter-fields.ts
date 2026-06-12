@@ -58,6 +58,12 @@ export const TRACE_FILTER_FIELDS = [
   { field: "serviceNames", type: "multiSelect", label: "Services" },
   { field: "tools", type: "multiSelect", label: "Tools", tooltip: "Traces with at least one call of the tool." },
   {
+    field: "definedTools",
+    type: "multiSelect",
+    label: "Defined tools",
+    tooltip: "Traces where the tool was offered to the model, whether or not it was called.",
+  },
+  {
     field: "duration",
     type: "numberRange",
     label: "Duration (seconds)",

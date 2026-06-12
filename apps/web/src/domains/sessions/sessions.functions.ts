@@ -482,7 +482,7 @@ export const getSessionDistribution = createServerFn({ method: "GET" })
     )
   })
 
-const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames", "tools"] as const
+const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames", "tools", "definedTools"] as const
 
 export const getSessionDistinctValues = createServerFn({ method: "GET" })
   .inputValidator(

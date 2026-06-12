@@ -246,7 +246,7 @@ export function useTraceDistinctValues({
   enabled = true,
 }: {
   readonly projectId: string
-  readonly column: "tags" | "models" | "providers" | "serviceNames" | "tools"
+  readonly column: "tags" | "models" | "providers" | "serviceNames" | "tools" | "definedTools"
   readonly search?: string
   readonly enabled?: boolean
 }) {
