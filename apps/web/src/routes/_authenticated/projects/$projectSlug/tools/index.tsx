@@ -33,12 +33,13 @@ const SORT_COLUMNS = [
   "calls",
   "tracesPct",
   "selectionRate",
+  "offered",
   "errorRate",
   "duration",
   "lastCalled",
 ] as const satisfies readonly ToolsTableSorting["column"][]
 const SORT_DIRECTIONS = ["asc", "desc"] as const satisfies readonly ToolsTableSorting["direction"][]
-const SORT_PARAM_PATTERN = /^(calls|tracesPct|selectionRate|errorRate|duration|lastCalled):(asc|desc)$/
+const SORT_PARAM_PATTERN = /^(calls|tracesPct|selectionRate|offered|errorRate|duration|lastCalled):(asc|desc)$/
 
 type ToolsStatusTab = "all" | "unused" | "failing"
 
@@ -178,8 +179,18 @@ function ToolsPageContent() {
               size="sm"
               options={[
                 { id: "all", label: "All", icon: <LayoutGridIcon className="w-4 h-4" /> },
-                { id: "unused", label: "Unused", icon: <CircleSlashIcon className="w-4 h-4" /> },
-                { id: "failing", label: "Failing", icon: <TriangleAlertIcon className="w-4 h-4" /> },
+                {
+                  id: "unused",
+                  label: "Unused",
+                  icon: <CircleSlashIcon className="w-4 h-4" />,
+                  tooltip: "Tools offered to the model in this window but never called.",
+                },
+                {
+                  id: "failing",
+                  label: "Failing",
+                  icon: <TriangleAlertIcon className="w-4 h-4" />,
+                  tooltip: "Tools with an error rate of 5% or more in this window.",
+                },
               ]}
               active={statusTab}
               onSelect={(value) => setStatusTab(value)}

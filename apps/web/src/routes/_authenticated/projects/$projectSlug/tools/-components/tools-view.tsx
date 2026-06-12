@@ -17,6 +17,7 @@ export const TOOLS_COLUMN_OPTIONS = [
   { id: "calls", label: "Calls" },
   { id: "tracesPct", label: "% of traces" },
   { id: "selectionRate", label: "Calls per offer" },
+  { id: "offered", label: "Offered" },
   { id: "errorRate", label: "Error rate" },
   { id: "duration", label: "Duration" },
   { id: "lastCalled", label: "Last called" },
@@ -25,7 +26,7 @@ export const TOOLS_COLUMN_OPTIONS = [
 export type ToolsColumnId = (typeof TOOLS_COLUMN_OPTIONS)[number]["id"]
 
 export interface ToolsTableSorting {
-  readonly column: "calls" | "tracesPct" | "selectionRate" | "errorRate" | "duration" | "lastCalled"
+  readonly column: "calls" | "tracesPct" | "selectionRate" | "offered" | "errorRate" | "duration" | "lastCalled"
   readonly direction: "asc" | "desc"
 }
 
@@ -40,6 +41,7 @@ const SORT_VALUE = new Map<ToolsTableSorting["column"], (tool: ToolSummaryRecord
   ["calls", SORT_BY_CALLS],
   ["tracesPct", (tool) => tool.metrics?.traceUsageRate ?? -1],
   ["selectionRate", (tool) => tool.selectionRate ?? -1],
+  ["offered", (tool) => tool.offeredCount],
   ["errorRate", (tool) => tool.metrics?.errorRate ?? -1],
   ["duration", (tool) => tool.metrics?.p95DurationNs ?? -1],
   ["lastCalled", (tool) => (tool.metrics ? Date.parse(tool.metrics.lastUsed) : -1)],
@@ -187,6 +189,32 @@ export function ToolsView({
         ) : (
           <Tooltip asChild trigger={<span>-</span>}>
             Calls per offer needs tool definitions on chat spans — none were found for this tool.
+          </Tooltip>
+        ),
+    },
+    {
+      key: "offered",
+      header: "Offered",
+      width: 100,
+      minWidth: 90,
+      align: "end",
+      sortKey: "offered",
+      render: (tool) =>
+        tool.offeredCount > 0 ? (
+          <Tooltip asChild trigger={<span className="tabular-nums">{formatCount(tool.offeredCount)}</span>}>
+            <div className="flex flex-col gap-0.5">
+              <span>
+                {tool.name} was offered to the model on {formatCount(tool.offeredCount)} chat turns across{" "}
+                {formatCount(tool.offeredTraces)} traces.
+              </span>
+              {tool.lastOffered ? (
+                <Text.H6 color="foregroundMuted">Last offered {relativeTime(new Date(tool.lastOffered))}</Text.H6>
+              ) : null}
+            </div>
+          </Tooltip>
+        ) : (
+          <Tooltip asChild trigger={<span>-</span>}>
+            No chat span in this window carried this tool's definition.
           </Tooltip>
         ),
     },
