@@ -476,7 +476,7 @@ export const SpanRepositoryLive = Layer.effect(
             const result = await client.query({
               query: `SELECT *
                     FROM (
-                      SELECT *
+                      SELECT *, tool_names
                       FROM spans
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
