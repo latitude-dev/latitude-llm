@@ -1,3 +1,5 @@
+export const DEFAULT_SANDBOX_NAME = "Sandbox"
+
 /** Skip the `last_activity_at` write if one already happened within this window. */
 export const SANDBOX_ACTIVITY_STAMP_DEBOUNCE_MS = 5 * 60_000 // 5 minutes
 

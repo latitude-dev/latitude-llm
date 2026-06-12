@@ -112,21 +112,21 @@ export const SandboxRepositoryLive = Layer.effect(
             .pipe(Effect.map((rows) => rows.length))
         }),
 
-      listOrganizationIdsByParentOrgId: (parentOrgId: OrganizationIdType) =>
+      listByParentOrgId: (parentOrgId: OrganizationIdType) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
           return yield* sqlClient
             .query((db) =>
               db
-                .select({ organizationId: sandboxes.organizationId })
+                .select({ organizationId: sandboxes.organizationId, status: sandboxes.status })
                 .from(sandboxes)
                 .innerJoin(organizations, eq(organizations.id, sandboxes.organizationId))
                 .where(eq(organizations.parentOrgId, parentOrgId))
                 .orderBy(desc(sandboxes.createdAt)),
             )
             .pipe(
-              Effect.map((rows): readonly OrganizationIdType[] =>
-                rows.map((row) => OrganizationId(row.organizationId)),
+              Effect.map((rows) =>
+                rows.map((row) => ({ organizationId: OrganizationId(row.organizationId), status: row.status })),
               ),
             )
         }),

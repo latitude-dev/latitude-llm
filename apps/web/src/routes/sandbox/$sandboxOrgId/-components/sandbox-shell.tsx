@@ -3,6 +3,7 @@ import { eq } from "@tanstack/react-db"
 import { getRouteApi, Link, Outlet, useParams, useRouter, useRouterState } from "@tanstack/react-router"
 import { ArrowLeftRight, TextAlignStartIcon } from "lucide-react"
 import { useState } from "react"
+import { SandboxToggle } from "../../../../components/sandbox-toggle.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { useSandboxLifecycleMutations } from "../../../../domains/sandbox/sandbox.collection.ts"
 import { useSandboxProjects } from "../../../../domains/sandbox/sandbox-projects.collection.ts"
@@ -107,6 +108,7 @@ function SandboxStrip({
 }
 
 export function SandboxShell() {
+  const router = useRouter()
   const { sandboxOrgId } = sandboxRoute.useParams()
   const sandbox = sandboxRoute.useRouteContext({ select: (c) => c.sandbox })
   const pathname = useRouterState({
@@ -125,6 +127,21 @@ export function SandboxShell() {
   )
   const liveProjectSlug = linkedProjectId ? liveProject?.slug : undefined
   const isArchived = sandbox.status === "archived"
+  const [isExiting, setIsExiting] = useState(false)
+
+  const exitToLive = async () => {
+    if (isExiting) return
+    setIsExiting(true)
+    try {
+      if (liveProjectSlug) {
+        await router.navigate({ to: "/projects/$projectSlug", params: { projectSlug: liveProjectSlug } })
+      } else {
+        await router.navigate({ to: "/" })
+      }
+    } finally {
+      setIsExiting(false)
+    }
+  }
 
   const tracesTo = projectSlug ? `/sandbox/${sandboxOrgId}/projects/${projectSlug}` : `/sandbox/${sandboxOrgId}`
   const tracesActive = pathname.startsWith(`/sandbox/${sandboxOrgId}/projects/`)
@@ -156,6 +173,9 @@ export function SandboxShell() {
                 <Text.H6 color="foregroundMuted">Sandbox</Text.H6>
               )
             }
+            footer={({ collapsed }) => (
+              <SandboxToggle collapsed={collapsed} checked loading={isExiting} onToggle={() => void exitToLive()} />
+            )}
           >
             {({ collapsed }) => (
               <NavItem

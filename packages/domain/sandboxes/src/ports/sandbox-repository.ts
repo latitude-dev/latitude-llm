@@ -14,14 +14,18 @@ export class SandboxRepository extends Context.Service<
     countActiveByParentOrgId: (parentOrgId: OrganizationId) => Effect.Effect<number, RepositoryError, SqlClient>
     archiveIdle: (cutoff: Date) => Effect.Effect<number, RepositoryError, SqlClient>
     /**
-     * The sandbox org ids under a parent live org (active *and* archived), newest
-     * first. Powers the sidebar toggle, which only needs to know whether the
-     * org's single sandbox exists and its id — the parent scope can't read the
-     * sandbox's own RLS scope, so this is resolved on the admin client.
+     * The sandboxes under a parent live org (active *and* archived), newest
+     * first. Powers the sidebar toggle, which needs the org's single sandbox
+     * id plus its status to prefer an active one — the parent scope can't read
+     * the sandbox's own RLS scope, so this is resolved on the admin client.
      */
-    listOrganizationIdsByParentOrgId: (
+    listByParentOrgId: (
       parentOrgId: OrganizationId,
-    ) => Effect.Effect<readonly OrganizationId[], RepositoryError, SqlClient>
+    ) => Effect.Effect<
+      readonly { readonly organizationId: OrganizationId; readonly status: SandboxStatus }[],
+      RepositoryError,
+      SqlClient
+    >
     /**
      * Take a transaction-scoped advisory lock keyed on the parent org, so the
      * active-cap "count then write" sequence is serialized per parent and two
