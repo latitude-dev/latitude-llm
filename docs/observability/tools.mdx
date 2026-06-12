@@ -1,0 +1,50 @@
+---
+title: Tools
+description: Monitor every tool your agents define and call, with usage, failure, and latency metrics.
+---
+
+# Tools
+
+The Tools page lists every tool your agents define and call, aggregated from your telemetry. Use it to spot tools that are failing, slow, or never used — no extra instrumentation needed beyond the tool calls and definitions already present in your traces.
+
+<Frame>
+  <img src="/images/observability/tools-overview.png" alt="Tools page showing per-tool call volume, error rates, and latency" />
+</Frame>
+
+## The tools dashboard
+
+The dashboard opens with aggregate metrics for the selected time range — tool count, total calls, error rate, the share of traces and sessions using tools, and how many tools went unused — above a histogram of successful and failed calls with the error rate overlaid.
+
+Below, the table shows one row per tool:
+
+- **Trend**: a per-tool sparkline of successful and failed calls
+- **Calls**: call volume, with a column-wide SUM rollup
+- **% of traces**: the share and count of traces that called the tool
+- **Calls per offer**: how often the model calls the tool across the chat turns that offered it. Can exceed 100% when a single turn calls it multiple times, and requires tool definitions on chat spans.
+- **Error rate**: the rate and count of failed calls
+- **Duration**: p50 / p95 call duration
+- **Last called**: most recent call in the period
+
+Tools also carry status badges: **Unused** (defined and offered to the model, but never called), **Failing** (error rate above the warning threshold), and **No definition** (called, but no chat span in the window carried its definition). The All / Unused / Failing tabs filter the list to each state, and the search box matches tool names.
+
+## Tool detail
+
+Open a tool to see its usage stats, calls over time, and latency over time. The parameters panel shows the most frequent values per parameter across recent calls — useful for spotting malformed or repeated inputs — and the context panel shows which tools and tags co-occur in the same traces. Recent calls list each invocation with its status, duration, input, output, and a link to the trace it belongs to.
+
+<Frame>
+  <img src="/images/observability/tool-detail.png" alt="Tool detail page with usage stats, call and latency charts, parameter values, and recent calls" />
+</Frame>
+
+## Error view
+
+Toggle the error view to scope the whole page to failed calls: failed calls over time, common errors grouped by message and error type, the parameter values seen on recent failures, the tools it fails alongside, and the recent failed calls with their error output.
+
+<Frame>
+  <img src="/images/observability/tool-detail-errors.png" alt="Tool detail error view showing failed calls over time, common errors, and recent failures" />
+</Frame>
+
+## Related
+
+- [Traces](./traces): Review individual interactions
+- [Sessions](./sessions): Group traces into conversations
+- [Users](./users): Review activity by end user

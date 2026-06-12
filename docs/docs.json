@@ -130,6 +130,7 @@
               "observability/features/sampling",
               "observability/sessions",
               "observability/users",
+              "observability/tools",
               "observability/features/tags",
               "observability/features/token-cost-tracking",
               "observability/features/trace-ids",
