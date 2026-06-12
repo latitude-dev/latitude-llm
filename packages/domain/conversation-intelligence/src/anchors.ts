@@ -1,6 +1,5 @@
 import { AI, resolveEmbeddingConfig } from "@domain/ai"
 import { Effect } from "effect"
-import {} from "./constants.ts"
 import type { MomentLabelKind as MomentKind } from "./entities/session-moment-label.ts"
 
 interface MomentLabelAnchorConfig {

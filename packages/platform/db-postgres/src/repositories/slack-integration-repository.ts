@@ -16,43 +16,14 @@ import {
   toRepositoryError,
   UserId,
 } from "@domain/shared"
-import { parseEnv } from "@platform/env"
-import { type CryptoError, decrypt, encrypt, hash } from "@repo/utils"
 import { and, eq, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator, PostgresDb } from "../client.ts"
+import { decryptField, encryptField, getEncryptionKey } from "../encryption-key.ts"
 import { integrations } from "../schema/integrations.ts"
 import { slackIntegrationDetails } from "../schema/slack-integration-details.ts"
 
 const SLACK_KIND = "slack" as const
-
-let encryptionKeyCache: Buffer | undefined
-
-const VALID_HEX_32_BYTE_KEY = /^[0-9a-f]{64}$/i
-
-/**
- * Slack tokens share `LAT_MASTER_ENCRYPTION_KEY` with the api-key
- * repository — same AES-256-GCM scheme, same resolution rules
- * (accept 32-byte hex directly, otherwise derive via SHA-256 of the
- * provided secret). The two repositories own private caches; the key
- * derivation is identical.
- */
-const resolveEncryptionKey = (rawSecret: string): Effect.Effect<Buffer, CryptoError> => {
-  const secret = rawSecret.trim()
-  if (VALID_HEX_32_BYTE_KEY.test(secret)) {
-    return Effect.succeed(Buffer.from(secret, "hex"))
-  }
-  return hash(secret).pipe(Effect.map((hashed) => Buffer.from(hashed, "hex")))
-}
-
-const getEncryptionKey = () =>
-  Effect.gen(function* () {
-    if (encryptionKeyCache) return encryptionKeyCache
-    const encryptionKeySecret = yield* parseEnv("LAT_MASTER_ENCRYPTION_KEY", "string")
-    const key = yield* resolveEncryptionKey(encryptionKeySecret)
-    encryptionKeyCache = key
-    return key
-  })
 
 /**
  * Name of the partial unique index that enforces "one active Slack
@@ -93,15 +64,11 @@ type SlackDetailsRow = typeof slackIntegrationDetails.$inferSelect
 
 const toDomainSlackIntegration = (parent: IntegrationRow, details: SlackDetailsRow, encryptionKey: Buffer) =>
   Effect.gen(function* () {
-    const botAccessToken = yield* decrypt(details.botAccessToken, encryptionKey).pipe(
-      Effect.mapError((e) => toRepositoryError(e, "decryptSlackIntegrationToken")),
-    )
+    const botAccessToken = yield* decryptField(details.botAccessToken, encryptionKey, "decryptSlackIntegrationToken")
     const refreshToken =
       details.refreshToken === null
         ? null
-        : yield* decrypt(details.refreshToken, encryptionKey).pipe(
-            Effect.mapError((e) => toRepositoryError(e, "decryptSlackIntegrationRefreshToken")),
-          )
+        : yield* decryptField(details.refreshToken, encryptionKey, "decryptSlackIntegrationRefreshToken")
 
     const integration: SlackIntegration = slackIntegrationSchema.parse({
       id: SlackIntegrationId(parent.id),
@@ -127,15 +94,15 @@ const toDomainSlackIntegration = (parent: IntegrationRow, details: SlackDetailsR
 
 const buildInsertRows = (integration: SlackIntegration, organizationId: string, encryptionKey: Buffer) =>
   Effect.gen(function* () {
-    const botAccessToken = yield* encrypt(integration.botAccessToken, encryptionKey).pipe(
-      Effect.mapError((e) => toRepositoryError(e, "encryptSlackIntegrationToken")),
+    const botAccessToken = yield* encryptField(
+      integration.botAccessToken,
+      encryptionKey,
+      "encryptSlackIntegrationToken",
     )
     const refreshToken =
       integration.refreshToken === null
         ? null
-        : yield* encrypt(integration.refreshToken, encryptionKey).pipe(
-            Effect.mapError((e) => toRepositoryError(e, "encryptSlackIntegrationRefreshToken")),
-          )
+        : yield* encryptField(integration.refreshToken, encryptionKey, "encryptSlackIntegrationRefreshToken")
 
     const parentRow = {
       id: integration.id,
@@ -270,11 +237,15 @@ export const SlackIntegrationRepositoryLive = Layer.effect(
       updateTokens: (integrationId, tokens) =>
         Effect.gen(function* () {
           const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-          const botAccessToken = yield* encrypt(tokens.botAccessToken, encryptionKey).pipe(
-            Effect.mapError((e) => toRepositoryError(e, "encryptSlackIntegrationToken")),
+          const botAccessToken = yield* encryptField(
+            tokens.botAccessToken,
+            encryptionKey,
+            "encryptSlackIntegrationToken",
           )
-          const refreshToken = yield* encrypt(tokens.refreshToken, encryptionKey).pipe(
-            Effect.mapError((e) => toRepositoryError(e, "encryptSlackIntegrationRefreshToken")),
+          const refreshToken = yield* encryptField(
+            tokens.refreshToken,
+            encryptionKey,
+            "encryptSlackIntegrationRefreshToken",
           )
 
           // Single atomic UPDATE — re-encrypts the rotated triple and writes
