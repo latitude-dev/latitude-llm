@@ -11,7 +11,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
-import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon } from "lucide-react"
+import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon, WrenchIcon } from "lucide-react"
 import { useMemo } from "react"
 import type { SpanRecord } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
@@ -193,12 +193,19 @@ export function TraceTab({
       </div>
 
       {/* ── Tools ── */}
-      {(isSpansLoading || toolPills.length > 0) && (
-        <div className="flex flex-col gap-1">
-          <Text.H6 color="foregroundMuted">Tools</Text.H6>
-          {isSpansLoading ? <Skeleton className="h-7 w-48" /> : <ToolPillList tools={toolPills} scopeLabel="trace" />}
-        </div>
-      )}
+      <DetailSection icon={<WrenchIcon className="w-4 h-4" />} label="Tools">
+        {() =>
+          isSpansLoading ? (
+            <Skeleton className="h-7 w-48" />
+          ) : toolPills.length > 0 ? (
+            <ToolPillList tools={toolPills} scopeLabel="trace" />
+          ) : (
+            <Text.H6 color="foregroundMuted" italic>
+              No tools
+            </Text.H6>
+          )
+        }
+      </DetailSection>
 
       {/* ── Metadata ── */}
       <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata" defaultOpen={false}>
