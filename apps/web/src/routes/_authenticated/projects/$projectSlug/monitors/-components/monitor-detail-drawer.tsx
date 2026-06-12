@@ -14,7 +14,16 @@ import {
 } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowUpIcon, BellIcon, BellOffIcon, LinkIcon, PencilIcon, ShieldAlertIcon } from "lucide-react"
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  BellIcon,
+  BellOffIcon,
+  CheckIcon,
+  LinkIcon,
+  PencilIcon,
+  ShieldAlertIcon,
+} from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import { useRegisterCommands } from "../../../../../../components/command-palette/command-palette-provider.tsx"
 import type { PaletteCommand } from "../../../../../../components/command-palette/types.ts"
@@ -22,6 +31,7 @@ import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import { SeverityStatus } from "../../../../../../domains/alerts/severity-selector.tsx"
 import { useMonitorIncidentStats } from "../../../../../../domains/monitors/monitors.collection.ts"
 import type { MonitorAlertRecord, MonitorRecord } from "../../../../../../domains/monitors/monitors.functions.ts"
+import { IncidentResolveConfirmModal } from "./incident-resolve-confirm-modal.tsx"
 import { MonitorAlertEditModal } from "./monitor-alert-edit-modal.tsx"
 import { MonitorIncidentsTable, MonitorIncidentsTableSkeleton } from "./monitor-incidents-table.tsx"
 import { MonitorMuteConfirmModal } from "./monitor-mute-confirm-modal.tsx"
@@ -207,6 +217,7 @@ export function MonitorDetailDrawer({
 }) {
   const { toast } = useToast()
   const [muteConfirmOpen, setMuteConfirmOpen] = useState(false)
+  const [resolveIncidentId, setResolveIncidentId] = useState<string | null>(null)
   // `null` = closed; an alert = edit that alert (alerts are never added or deleted from the app).
   const [alertModal, setAlertModal] = useState<MonitorAlertRecord | null>(null)
   const [sensitivityAlert, setSensitivityAlert] = useState<MonitorAlertRecord | null>(null)
@@ -215,6 +226,10 @@ export function MonitorDetailDrawer({
     projectId,
     monitorId: monitor.id,
   })
+  const ongoingIncidentId =
+    incidentStats && incidentStats.lastIncidentId !== null && incidentStats.lastEndedAtIso === null
+      ? incidentStats.lastIncidentId
+      : null
 
   // Registered only while this monitor is open, scoping these palette commands to it.
   const paletteCommands = useMemo<readonly PaletteCommand[]>(
@@ -228,6 +243,19 @@ export function MonitorDetailDrawer({
         keywords: muted ? "unmute monitor resume notifications bell" : "mute monitor silence notifications bell",
         perform: () => setMuteConfirmOpen(true),
       },
+      ...(ongoingIncidentId
+        ? [
+            {
+              id: `monitor:${monitor.id}:resolve-last-incident`,
+              title: "Resolve last incident",
+              icon: CheckIcon,
+              section: "context",
+              group: "Monitor",
+              keywords: "resolve incident close ongoing",
+              perform: () => setResolveIncidentId(ongoingIncidentId),
+            } satisfies PaletteCommand,
+          ]
+        : []),
       {
         id: `monitor:${monitor.id}:copy-link`,
         title: "Copy monitor link",
@@ -243,7 +271,7 @@ export function MonitorDetailDrawer({
         },
       },
     ],
-    [monitor.id, monitor.slug, muted, projectSlug, toast],
+    [monitor.id, monitor.slug, muted, ongoingIncidentId, projectSlug, toast],
   )
   useRegisterCommands(paletteCommands)
 
@@ -416,6 +444,12 @@ export function MonitorDetailDrawer({
         projectId={projectId}
         monitor={muteConfirmOpen ? monitor : null}
         onOpenChange={(next) => setMuteConfirmOpen(next !== null)}
+      />
+
+      <IncidentResolveConfirmModal
+        projectId={projectId}
+        incidentId={resolveIncidentId}
+        onOpenChange={setResolveIncidentId}
       />
 
       {alertModal ? (

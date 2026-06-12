@@ -173,6 +173,7 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
               <Button variant="outline">Outline</Button>
               <Button variant="ghost">Ghost</Button>
               <Button variant="destructive">Destructive</Button>
+              <Button variant="destructive-outline">Destructive outline</Button>
               <Button variant="link">Link</Button>
             </div>
           </div>

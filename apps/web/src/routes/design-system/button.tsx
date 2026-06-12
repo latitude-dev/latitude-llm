@@ -23,6 +23,7 @@ const VARIANTS = [
   { value: "outline", label: "Outline" },
   { value: "ghost", label: "Ghost" },
   { value: "destructive", label: "Destructive" },
+  { value: "destructive-outline", label: "Destructive outline" },
   { value: "destructive-soft", label: "Destructive soft" },
   { value: "link", label: "Link" },
 ] as const
