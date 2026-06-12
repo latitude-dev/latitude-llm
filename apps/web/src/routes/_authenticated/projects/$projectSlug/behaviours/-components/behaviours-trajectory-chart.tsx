@@ -21,7 +21,6 @@ const CHART_X_PADDING_PERCENT = 2.5
 const metricOptions: ReadonlyArray<{ readonly id: BehaviourTrajectoryMetric; readonly label: string }> = [
   { id: "frequency", label: "Frequency" },
   { id: "escalation", label: "Escalation" },
-  { id: "resolution", label: "Resolution" },
   { id: "churnRisk", label: "Churn risk" },
   { id: "wins", label: "Wins" },
 ]
